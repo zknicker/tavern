@@ -63,7 +63,7 @@ The app-owned side surface where users open and inspect Artifact Panel targets b
 _Avoid_: Workbench, browser shell, output pane, Artifact Space
 
 **Artifact Panel target**:
-A Tavern-owned openable target such as a chat Artifact, Vault page, workspace file, image, or
+A Tavern-owned openable target such as a chat Artifact, Memory file, workspace file, image, or
 generated asset.
 _Avoid_: Local path, browser URL, tool result blob
 
@@ -77,7 +77,7 @@ output. Tavern does not auto-open the Artifact Panel when targets are created.
 _Avoid_: Canvas trigger, automatic artifact presentation, artifact launch
 
 **Inspectable output**:
-A workspace file, Vault page, Markdown or HTML doc, image, or generated asset an agent created or
+A workspace file, Memory file, Markdown or HTML doc, image, or generated asset an agent created or
 updated for the user to inspect.
 _Avoid_: Tavern resource, tool result, attachment
 
@@ -91,14 +91,14 @@ A normal Tavern App React component used to render validated rich-response props
 visual system.
 _Avoid_: Model component, widget primitive
 
-**Vault root**:
-The user-owned Markdown directory that Vault reads and edits.
-_Avoid_: Runtime Vault directory, managed storage, memory store
+**Memory root**:
+The user-owned Markdown directory that Memory reads and edits.
+_Avoid_: Runtime storage root, managed workspace, workbench
 
-**Vault surface**:
-The Tavern Runtime-owned access surface for the Vault root: path resolution, safe reads, writes,
+**Memory surface**:
+The Tavern Runtime-owned access surface for the Memory root: path resolution, safe reads, writes,
 freshness, and status.
-_Avoid_: Wiki pipeline, ingestion system, maintenance job
+_Avoid_: ingestion system, maintenance job
 
 **Charts**:
 The Rich Response Component family for agent-authored chart displays.

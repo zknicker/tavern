@@ -10,7 +10,7 @@ read_when:
 Tavern is a macOS chat app for working with always-on agents.
 
 It gives agents a real chat server to participate in: durable messages,
-participants, sequence, events, Vault-backed knowledge, automations, stats, and playful
+participants, sequence, events, Memory-backed knowledge, automations, stats, and playful
 rewards all belong to Tavern. Tavern Runtime keeps that server alive while the
 app is closed, so automations can run, agents can post, and the app can catch
 up later.
@@ -35,11 +35,8 @@ manage businesses, complete knowledge work, and automate routine tasks.
   turns, chat delivery, and event history keep moving.
 * **Hermes as agent runtime.** Sessions, turns, tools, model calls, files,
   and native transcripts stay execution-owned.
-* **Memory you can inspect.** Hermes handles prompt-time context, while Tavern
-  shows the Vault wiki behind durable agent knowledge.
-* **Vault included.** Give agents a linked Markdown wiki for durable notes,
-  project knowledge, research, and working material instead of stuffing
-  everything into prompts.
+* **Memory you can inspect.** Tavern shows the Markdown Memory root behind
+  durable agent knowledge.
 * **Automations with a face.** Cron jobs, scheduled work, and background runs show
   up as first-class app objects, not invisible daemon trivia.
 * **Work that looks alive.** Tool calls, assistant progress, and final replies
@@ -66,12 +63,11 @@ manage businesses, complete knowledge work, and automate routine tasks.
   summaries, and final replies in one timeline.
 * **Agents.** Model, tool, memory, skill, and toolset configuration for the
   people you actually work with in Tavern.
-* **Workspace.** A browsable view of the managed agent workspace and generated
-  files or assets.
-* **Vault.** A browsable Markdown wiki with pages, backlinks, search, and
-  agent-authored notes.
+* **Workspace.** A browsable view of agent working files, projects, generated
+  assets, and experiments under `workbench/`.
+* **Memory.** A browsable Markdown root with L1 briefings, episodic
+  observations, semantic pages, backlinks, search, and agent-authored notes.
 * **Context management.** Prompt-time continuity for active Hermes turns.
-* **Memory.** Bounded prompt-time assistant memory configured through Settings.
 * **Cron automations.** Scheduled agent work with run history, delivery targets,
   and clear follow-up state, even while the app is closed.
 * **Skills & Toolsets.** Reusable instruction packages and Hermes tool groups.
@@ -81,7 +77,7 @@ manage businesses, complete knowledge work, and automate routine tasks.
   reading logs.
 * **Pets and rewards.** A playful layer for long-running agent work.
 * **TypeScript SDK.** A typed client for the Tavern API: Tavern
-  App, chat, memory inspection, Vault browsing, automations, webhooks,
+  App, chat, Memory browsing, automations, webhooks,
   local tools, and managed Hermes.
 
 ## Features
@@ -90,7 +86,6 @@ manage businesses, complete knowledge work, and automate routine tasks.
 | --- | --- |
 | Chat | [Chat](features/chat.md) |
 | Agents | [Agents](features/agents.md) |
-| Vault | [Vault](features/vault.md) |
 | Context management | [Context management](features/context-management.md) |
 | Memory | [Memory](features/memory.md) |
 | Automations | [Automations](features/automations.md) |

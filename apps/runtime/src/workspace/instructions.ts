@@ -5,6 +5,7 @@ import { namedParams } from '../db/sqlite.ts';
 import { publishRuntimeEvent } from '../tavern/runtime-events.ts';
 import {
     agentNotesFileName,
+    agentWorkDirectoryName,
     renderAgentInstructions,
     renderSeededNotes,
 } from './managed-instructions.ts';
@@ -131,6 +132,7 @@ export async function generateAgentInstructions(db: Database, agentId = defaultA
 
     const agentsPath = path.join(source.workspaceDir, generatedInstructionFileName);
     const notes = await ensureAgentNotes(source.workspaceDir, agentsPath);
+    await ensureAgentWorkDirectory(source.workspaceDir);
     const next = renderAgentInstructions(source.agentName, notes);
     const existing = await fs.readFile(agentsPath, 'utf8').catch(() => null);
     const written = next !== existing;
@@ -231,6 +233,10 @@ async function ensureAgentNotes(workspaceDir: string, agentsPath: string) {
     await fs.mkdir(workspaceDir, { recursive: true });
     await fs.writeFile(notesPath, seed, { mode: 0o600 });
     return seed;
+}
+
+async function ensureAgentWorkDirectory(workspaceDir: string) {
+    await fs.mkdir(path.join(workspaceDir, agentWorkDirectoryName), { recursive: true });
 }
 
 async function migrateLegacyAgentsContent(agentsPath: string) {

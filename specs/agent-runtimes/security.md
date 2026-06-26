@@ -6,7 +6,7 @@ runtime boundaries explicit.
 ## Product Expectations
 
 - Hermes-native credentials stay in managed Hermes's native secret store.
-- Tavern-configured provider credentials stay in Tavern Vault.
+- Tavern-configured provider credentials stay in Tavern-managed secret storage.
 - Tavern Runtime generates the local Hermes Gateway token; the app should not expose it.
 - Tavern does not read Hermes secrets directly.
 - Tavern does not read Hermes SQLite databases, config files, identity files, or home directories
@@ -29,7 +29,7 @@ runtime boundaries explicit.
 ## Secrets
 
 - Hermes-native provider credentials stay in managed Hermes.
-- Provider credentials entered through the Tavern app stay in Tavern Vault and may later be
+- Provider credentials entered through the Tavern app stay in Tavern-managed secret storage and may later be
   transported to Hermes.
 - Tavern-owned memory secrets stay in Tavern.
 - Logs, setup status, model-access status, and app UI must not include raw secret values.

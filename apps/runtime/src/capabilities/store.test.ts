@@ -23,7 +23,7 @@ describe('Runtime capabilities store', () => {
         });
         process.env.CODEX_HOME = path.join(runtimeRoot, 'empty-codex-home');
         process.env.PATH = binPath;
-        process.env.TAVERN_VAULT_PATH = path.join(runtimeRoot, 'wiki');
+        process.env.TAVERN_VAULT_PATH = path.join(runtimeRoot, 'memory');
         process.env.TAVERN_HERMES_PORT = '1';
         const db = initTestDb();
         ensureRuntimeSchema(db);
@@ -49,6 +49,7 @@ describe('Runtime capabilities store', () => {
             'dashboardServer',
             'gateway',
             'models',
+            'plugin.merchbase',
             'skills',
             'vault',
         ]);
@@ -83,7 +84,7 @@ describe('Runtime capabilities store', () => {
         expect(events).toContain('dashboardServer');
     });
 
-    test('records a missing Vault root as degraded until the managed skill is prepared', async () => {
+    test('records a missing Memory root as degraded until the managed skill is prepared', async () => {
         const [capability] = await refreshRuntimeCapabilities({ ids: ['vault'] });
 
         expect(capability).toMatchObject({
@@ -91,15 +92,15 @@ describe('Runtime capabilities store', () => {
             id: 'vault',
             metadata: expect.objectContaining({
                 missing: true,
-                skillPath: expect.stringContaining('skills/vault'),
+                skillPath: expect.stringContaining('skills/memory'),
             }),
-            reason: 'The managed Vault skill has not been prepared yet.',
+            reason: 'The managed Memory skill has not been prepared yet.',
             state: 'degraded',
         });
     });
 
-    test('keeps a readable read-only Vault root browseable', async () => {
-        const hubPath = path.join(runtimeRoot, 'wiki');
+    test('keeps a readable read-only Memory root browseable', async () => {
+        const hubPath = path.join(runtimeRoot, 'memory');
         await mkdir(hubPath, { recursive: true });
         await chmod(hubPath, 0o555);
 
@@ -112,7 +113,7 @@ describe('Runtime capabilities store', () => {
                 metadata: expect.objectContaining({
                     writable: false,
                 }),
-                reason: 'The managed Vault skill has not been prepared yet.',
+                reason: 'The managed Memory skill has not been prepared yet.',
                 state: 'degraded',
             });
         } finally {

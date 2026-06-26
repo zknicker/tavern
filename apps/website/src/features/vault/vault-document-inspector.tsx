@@ -24,7 +24,7 @@ export function VaultDocumentInspector({
         ['Path', page.path],
         ['Updated', formatTimestamp(page.updatedAt)],
         ['Size', `${page.size.toLocaleString()} bytes`],
-        ['Vault path', page.vaultPath],
+        ['Memory path', page.vaultPath],
         ['Links', page.links.map((link) => link.target).join(', ') || 'None'],
     ] as const;
 

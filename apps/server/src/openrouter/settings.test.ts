@@ -27,7 +27,7 @@ test('getOpenRouterSettings reads the OpenRouter stats management key', async ()
     });
 });
 
-test('getOpenRouterSettings migrates a legacy OpenRouter management key from Tavern Vault', async () => {
+test('getOpenRouterSettings migrates a legacy OpenRouter management key from Tavern Secret Storage', async () => {
     spyOn(usageSourceSettings, 'getUsageSourceSettings').mockResolvedValue(null);
     const saveSettings = spyOn(usageSourceSettings, 'saveUsageSourceSettings').mockResolvedValue({
         updatedAt: '2026-06-09T00:00:00.000Z',

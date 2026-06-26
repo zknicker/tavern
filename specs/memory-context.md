@@ -1,7 +1,7 @@
 # Context Management
 
 Context management is the bounded prompt context an active turn receives from
-Hermes, Tavern chat state, participants, activity, and selected wiki material.
+Hermes, Tavern chat state, participants, activity, and selected Memory material.
 
 It is not a durable memory system. It is prompt assembly over existing sources.
 
@@ -10,13 +10,12 @@ It is not a durable memory system. It is prompt assembly over existing sources.
 | Source | Owner | Role |
 | --- | --- | --- |
 | Hermes context management | Hermes | Prompt-time continuity during active turns |
-| Assistant memory | Hermes | Compact `MEMORY.md` and `USER.md` hot memory |
 | Chat and activity state | Tavern Runtime | Recent product state and live work |
 | Participant state | Tavern Runtime | Active people and observed source labels |
-| Vault wiki | Managed `vault` skill and agent file tools | Durable Markdown knowledge |
+| Memory | Runtime APIs, managed `memory` skill, and agent file tools | Durable Markdown knowledge |
 
-Memory context reads from these sources and renders a bounded prompt-facing
-view. It does not persist a synthesized bulletin as canonical memory.
+Context reads from these sources and renders a bounded prompt-facing view. It
+does not persist a synthesized bulletin as canonical memory.
 
 ## Assembly
 
@@ -26,17 +25,14 @@ The prompt-facing context can include:
 * relevant recent activity
 * active participant context
 * Hermes prompt-time context
-* assistant memory snapshot
-* selected Vault pages or search results
+* selected Memory files or search results
 
-Each piece is bounded and source-linked. If the wiki has no useful result, the
-context omits wiki material instead of adding filler.
+Each piece is bounded and source-linked. If Memory has no useful result, the
+context omits Memory material instead of adding filler.
 
 ## Constraints
 
-* Memory context stays bounded.
+* Prompt context stays bounded.
 * Managed Tavern Hermes does not use Lossless Claw.
-* Vault remains the durable knowledge system.
-* Memory settings can show assistant-memory and Vault readiness; Tavern does not
-  maintain a separate memory database.
-* The Vault page browses wiki pages; it is not a separate store.
+* Memory remains the durable knowledge system.
+* The Memory page browses Memory files; it is not a separate store.

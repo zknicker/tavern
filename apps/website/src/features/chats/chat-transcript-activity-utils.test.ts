@@ -116,7 +116,7 @@ test('work group header scopes recovered tool failures', () => {
         toolItem({
             id: 'tool-2',
             name: 'write_file',
-            summaryParts: ['Vault/Notes.md'],
+            summaryParts: ['Memory/Notes.md'],
         }),
     ];
 
@@ -134,7 +134,7 @@ test('active work group header scopes recovery after a failed tool', () => {
             id: 'tool-2',
             name: 'write_file',
             running: true,
-            summaryParts: ['Vault/Notes.md'],
+            summaryParts: ['Memory/Notes.md'],
         }),
     ];
 

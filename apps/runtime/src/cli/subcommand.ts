@@ -73,7 +73,7 @@ function validateArity(spec: CliCommand, sub: SubCommand, parsed: ParsedArgs): v
 function toCliCommand(groupName: string, sub: SubCommand): CliCommand {
     return {
         name: `${groupName} ${sub.name}`,
-        section: groupName === 'engine' ? 'Engine' : groupName === 'vault' ? 'Vault' : 'Status',
+        section: groupName === 'engine' ? 'Engine' : groupName === 'vault' ? 'Memory' : 'Status',
         summary: sub.summary,
         usage: sub.usage,
         flags: sub.flags,

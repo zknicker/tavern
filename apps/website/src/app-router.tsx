@@ -77,7 +77,7 @@ export function createAppRouter() {
                                 },
                                 {
                                     path: 'workers',
-                                    element: <Navigate replace to="/dashboard/vault" />,
+                                    element: <Navigate replace to="/dashboard/memory" />,
                                 },
                                 {
                                     path: 'cron',
@@ -113,11 +113,11 @@ export function createAppRouter() {
                                 },
                                 {
                                     path: 'events',
-                                    element: <Navigate replace to="/dashboard/vault" />,
+                                    element: <Navigate replace to="/dashboard/memory" />,
                                 },
                                 {
                                     path: 'logs',
-                                    element: <Navigate replace to="/dashboard/vault" />,
+                                    element: <Navigate replace to="/dashboard/memory" />,
                                 },
                                 {
                                     path: 'workspace',
@@ -128,22 +128,22 @@ export function createAppRouter() {
                                 },
                                 {
                                     path: 'memory',
-                                    element: <Navigate replace to="/dashboard/workspace" />,
-                                },
-                                {
-                                    path: 'pulse',
-                                    element: <Navigate replace to="/dashboard/vault" />,
-                                },
-                                {
-                                    path: 'memories',
-                                    element: <Navigate replace to="/dashboard/workspace" />,
-                                },
-                                {
-                                    path: 'vault',
                                     lazy: lazyRoute(
                                         () => import('./routes/dashboard/vault-page.tsx'),
                                         'VaultPage'
                                     ),
+                                },
+                                {
+                                    path: 'pulse',
+                                    element: <Navigate replace to="/dashboard/memory" />,
+                                },
+                                {
+                                    path: 'memories',
+                                    element: <Navigate replace to="/dashboard/memory" />,
+                                },
+                                {
+                                    path: 'vault',
+                                    element: <Navigate replace to="/dashboard/memory" />,
                                 },
                                 {
                                     path: 'jobs',

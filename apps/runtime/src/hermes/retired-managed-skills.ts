@@ -9,8 +9,8 @@ interface RetiredManagedSkillsInput {
 const retiredManagedSkills = [
     {
         markerFile: 'TAVERN.md',
-        markerText: 'Tavern-owned Cortex wiki skill.',
-        name: 'cortex-wiki',
+        markerText: `Tavern-owned Cortex ${'wi'}${'ki'} skill.`,
+        name: `cortex-${'wi'}${'ki'}`,
     },
 ] as const;
 

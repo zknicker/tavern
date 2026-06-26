@@ -1355,7 +1355,7 @@ export const agentRuntimeModelsSchema = z.object({
 
 export const vaultConfigSourceSchema = z.enum(['default', 'environment', 'settings']);
 
-export const vaultWikiLinkSchema = z.object({
+export const vaultPageLinkSchema = z.object({
     label: z.string().trim().min(1).nullable(),
     target: z.string().trim().min(1),
 });
@@ -1369,7 +1369,7 @@ export const vaultPageSummarySchema = z.object({
 export const vaultPageSchema = vaultPageSummarySchema.extend({
     body: z.string(),
     frontmatter: z.record(z.string(), z.unknown()).default({}),
-    links: z.array(vaultWikiLinkSchema).default([]),
+    links: z.array(vaultPageLinkSchema).default([]),
     size: z.number().int().nonnegative(),
     vaultPath: z.string().trim().min(1),
 });
@@ -1392,7 +1392,7 @@ export const vaultSavePageSchema = z.object({
 });
 
 export const vaultPathInputSchema = z.object({
-    path: z.string().trim().min(1, 'Enter a Vault path.'),
+    path: z.string().trim().min(1, 'Enter a Memory path.'),
 });
 
 export const vaultMovePathSchema = z.object({
@@ -1451,7 +1451,7 @@ export const vaultStatusSchema = z.object({
     configSource: vaultConfigSourceSchema,
     freshness: vaultFreshnessSchema.default({
         live: false,
-        reason: 'Vault live updates have not started.',
+        reason: 'Memory live updates have not started.',
         state: 'idle',
     }),
     indexExists: z.boolean(),
@@ -1470,7 +1470,7 @@ export const agentRuntimeVaultSettingsSchema = z.object({
 });
 
 export const agentRuntimeSaveVaultSettingsSchema = z.object({
-    vaultPath: z.string().trim().min(1, 'Enter a Vault path.'),
+    vaultPath: z.string().trim().min(1, 'Enter a Memory path.'),
 });
 
 export const agentRuntimeSaveVaultSettingsResultSchema = agentRuntimeVaultSettingsSchema.extend({
@@ -2521,7 +2521,7 @@ export type VaultSavePage = z.infer<typeof vaultSavePageSchema>;
 export type VaultSearchInput = z.input<typeof vaultSearchInputSchema>;
 export type VaultSearchResult = z.infer<typeof vaultSearchResultSchema>;
 export type VaultStatus = z.infer<typeof vaultStatusSchema>;
-export type VaultWikiLink = z.infer<typeof vaultWikiLinkSchema>;
+export type VaultPageLink = z.infer<typeof vaultPageLinkSchema>;
 export type AgentRuntimeVaultSettings = z.infer<typeof agentRuntimeVaultSettingsSchema>;
 export type AgentRuntimeSaveVaultSettings = z.infer<typeof agentRuntimeSaveVaultSettingsSchema>;
 export type AgentRuntimeSaveVaultSettingsResult = z.infer<

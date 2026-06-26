@@ -32,8 +32,8 @@ Tavern's shape is clear:
 | Chat | [Chat API](chat.md) |
 | Admin | [Admin API](admin.md) |
 | Agents | [Agents API](agents.md) |
-| Memory inspection | [Memory API](memory.md) |
-| Vault wiki | [Vault API](vault.md) |
+| Memory | [Memory API](memory.md) |
+| Compatibility vault routes | [Compatibility Vault API](vault.md) |
 | Automations | [Automations API](automations.md) |
 | Skills | [Skills API](skills.md) |
 | Stats | [Stats API](stats.md) |

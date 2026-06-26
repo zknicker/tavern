@@ -8,20 +8,20 @@ import {
     resolveRuntimeAssetsRoot,
 } from './managed-vault.ts';
 
-describe('managed Vault package', () => {
-    it('materializes the managed skill and Vault root', async () => {
+describe('managed Memory package', () => {
+    it('materializes the managed skill and Memory root', async () => {
         const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'tavern-managed-vault-'));
         const assetsRoot = path.join(directory, 'assets');
         const hermesHome = path.join(directory, 'hermes-home');
-        const vaultPath = path.join(directory, 'wiki');
-        const sourceSkill = path.join(assetsRoot, 'hermes', 'skills', 'vault');
+        const vaultPath = path.join(directory, 'memory');
+        const sourceSkill = path.join(assetsRoot, 'hermes', 'skills', 'memory');
         const previousVaultPath = process.env.TAVERN_VAULT_PATH;
 
         try {
             process.env.TAVERN_VAULT_PATH = vaultPath;
             await writeFile(
                 path.join(sourceSkill, 'SKILL.md'),
-                '---\nname: vault\n---\n\nVault body.\n'
+                '---\nname: memory\n---\n\nMemory body.\n'
             );
 
             const vaultPackage = await prepareManagedVaultPackage({
@@ -31,12 +31,21 @@ describe('managed Vault package', () => {
 
             await expect(
                 fs.readFile(path.join(vaultPackage.skillPath, 'SKILL.md'), 'utf8')
-            ).resolves.toContain('Vault body.');
+            ).resolves.toContain('Memory body.');
             await expectOwnerWriteDisabled(vaultPackage.skillPath);
             await expectOwnerWriteDisabled(path.join(vaultPackage.skillPath, 'SKILL.md'));
             await expect(
-                fs.readFile(path.join(vaultPackage.vaultPath, 'INDEX.md'), 'utf8')
-            ).resolves.toBe('# Vault\n');
+                fs.readFile(path.join(vaultPackage.vaultPath, 'TAXONOMY.md'), 'utf8')
+            ).resolves.toContain('# Memory Taxonomy');
+            await expect(
+                fs.readFile(path.join(vaultPackage.vaultPath, 'MEMORY.md'), 'utf8')
+            ).resolves.toBe('# Memory Briefing\n\n');
+            await expect(fs.stat(path.join(vaultPackage.vaultPath, 'projects'))).resolves.toSatisfy(
+                (stats) => stats.isDirectory()
+            );
+            await expect(fs.stat(path.join(vaultPackage.vaultPath, 'routines'))).resolves.toSatisfy(
+                (stats) => stats.isDirectory()
+            );
             expect(vaultPackage.vaultPath).toBe(vaultPath);
 
             await expect(
@@ -48,7 +57,7 @@ describe('managed Vault package', () => {
         }
     });
 
-    it('resolves the configured Vault path', () => {
+    it('resolves the configured Memory path', () => {
         const previousVaultPath = process.env.TAVERN_VAULT_PATH;
         try {
             process.env.TAVERN_VAULT_PATH = '/tmp/tavern-vault-test';
@@ -70,16 +79,16 @@ describe('managed Vault package', () => {
         }
     });
 
-    it('names Vault in the bundled skill trigger metadata', async () => {
+    it('names Memory in the bundled skill trigger metadata', async () => {
         const skill = await fs.readFile(
-            path.join(resolveRuntimeAssetsRoot(), 'hermes', 'skills', 'vault', 'SKILL.md'),
+            path.join(resolveRuntimeAssetsRoot(), 'hermes', 'skills', 'memory', 'SKILL.md'),
             'utf8'
         );
 
-        expect(skill).toContain('name: vault');
-        expect(skill).toContain('Managed by Tavern Runtime');
-        expect(skill).toContain('Vault is the user');
-        expect(skill).toContain('Use `TAVERN_VAULT_PATH`');
+        expect(skill).toContain('name: memory');
+        expect(skill).toContain('Managed by Tavern');
+        expect(skill).toContain('The memory root is durable Markdown');
+        expect(skill).toContain('If `TAVERN_VAULT_PATH` is set');
     });
 });
 

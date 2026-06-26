@@ -29,7 +29,7 @@ const capabilityLabels = {
     'plugin.merchbase': 'MerchBase',
     models: 'Models',
     skills: 'Skills',
-    vault: 'Vault',
+    vault: 'Memory',
 } satisfies Record<RuntimeCapabilityId, string>;
 
 export const settingsCapabilityRequirements = {
@@ -62,7 +62,7 @@ export const routeTabCapabilityRequirements = {
     // Tasks are hidden unless managed Hermes is fully ready because create/run actions execute through Hermes.
     cron: hermesCapabilityRequirements,
     overview: [],
-    vault: ['vault'],
+    memory: ['vault'],
     workspace: ['apiServer'],
 } as const satisfies Record<RouteTab, readonly RuntimeCapabilityId[]>;
 

@@ -146,7 +146,9 @@ export function VaultPageFileTree({
     }, [model, query]);
 
     if (treePaths.length === 0) {
-        return <div className="px-1 py-2 text-muted-foreground text-sm">No Vault pages found.</div>;
+        return (
+            <div className="px-1 py-2 text-muted-foreground text-sm">No memory files found.</div>
+        );
     }
 
     return (

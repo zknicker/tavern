@@ -17,7 +17,8 @@ describe('dashboard route tab', () => {
     test('returns the matching dashboard tab for primary routes', () => {
         expect(getRouteTab('/dashboard/overview')).toBe('overview');
         expect(getRouteTab('/dashboard/workspace')).toBe('workspace');
-        expect(getRouteTab('/dashboard/vault')).toBe('vault');
+        expect(getRouteTab('/dashboard/memory')).toBe('memory');
+        expect(getRouteTab('/dashboard/vault')).toBe('memory');
     });
 
     test('returns null when no dashboard tab is active', () => {

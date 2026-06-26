@@ -48,7 +48,7 @@ export function VaultDocumentPane({
         return (
             <div className="flex h-full min-h-0 flex-col">
                 <div className="flex flex-1 items-center justify-center text-muted-foreground text-sm">
-                    {isLoading ? 'Loading page...' : 'No Vault page selected.'}
+                    {isLoading ? 'Loading file...' : 'No memory file selected.'}
                 </div>
             </div>
         );

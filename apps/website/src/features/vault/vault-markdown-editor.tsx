@@ -18,7 +18,7 @@ import * as React from 'react';
 import { cn } from '../../lib/utils.ts';
 import { getMarkdownStats } from './vault-markdown-editor-utils.ts';
 import { VaultEditorToolbar } from './vault-mdx-toolbar.tsx';
-import { fromMdxEditorMarkdown, toMdxEditorMarkdown } from './vault-wikilink-markdown.ts';
+import { fromMdxEditorMarkdown, toMdxEditorMarkdown } from './vault-memory-link-markdown.ts';
 import './vault-markdown-editor.css';
 
 interface VaultMarkdownEditorProps {

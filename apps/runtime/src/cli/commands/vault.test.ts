@@ -7,7 +7,7 @@ const STATUS_FIXTURE = {
     indexExists: true,
     pageCount: 2,
     readable: true,
-    vaultPath: '/tmp/wiki',
+    vaultPath: '/tmp/memory',
     writable: true,
 };
 
@@ -19,7 +19,7 @@ const PAGE_FIXTURE = {
     size: 14,
     title: 'Alpha',
     updatedAt: '2026-06-17T12:00:00.000Z',
-    vaultPath: '/tmp/wiki',
+    vaultPath: '/tmp/memory',
 };
 
 const SEARCH_FIXTURE = {
@@ -60,9 +60,9 @@ describe('vault status', () => {
 
         await expect(__test.runStatus(args(), deps)).resolves.toBe(0);
 
-        expect(captured.join('')).toContain('Vault');
-        expect(captured.join('')).toContain('/tmp/wiki');
-        expect(captured.join('')).toContain('INDEX.md');
+        expect(captured.join('')).toContain('Memory');
+        expect(captured.join('')).toContain('/tmp/memory');
+        expect(captured.join('')).toContain('TAXONOMY.md');
     });
 
     test('--json emits parsed status', async () => {

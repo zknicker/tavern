@@ -1,27 +1,27 @@
 ---
-summary: Vault API for reading and editing the user's Markdown wiki, status, settings, pages, folders, search results, and backlinks.
+summary: Compatibility vault API for Memory status, settings, pages, folders, search results, and backlinks.
 read_when:
-  - changing Vault page, folder, search, status, settings, or backlink APIs
-  - changing the boundary between Tavern Runtime and Vault files
+  - changing vault-named routes, schemas, or tRPC procedures that serve Memory files
+  - renaming compatibility wire contracts from vault to memory
 ---
 
-# Vault API
+# Compatibility Vault API
 
-The Vault API exposes Tavern Runtime's path-safe read/write surface over the
-user's Markdown wiki.
+`vault` is the current wire name for the Memory file API. Product surfaces call
+the concept Memory.
 
 ## Contract
 
-* The Vault is a filesystem directory, not a Tavern database.
-* Page identity is the Markdown path relative to the Vault root.
+* The root is a filesystem directory, not a Tavern database.
+* Page identity is the Markdown path relative to the Memory root.
 * Page bodies are Markdown file contents after light frontmatter parsing.
 * Page saves replace the Markdown body and preserve existing frontmatter.
-* Backlinks are derived from `[[wikilinks]]` and Markdown links.
+* Backlinks are derived from double-bracket links and Markdown links.
 * Search is lightweight title, path, frontmatter, and body matching.
 * `configSource` is `environment`, `settings`, or `default`.
+* `status.indexExists` means `TAXONOMY.md` exists.
 * `status.freshness` reports whether live file-change notifications are
   watching, idle, or degraded.
-* Content writes require Tavern mutation headers and stay inside the Vault root.
 * Dot directories, absolute paths, and traversal segments are rejected.
 
 ## Surface
@@ -42,16 +42,11 @@ The Runtime API covers:
 * `GET /vault/pages/:path/backlinks`
 * `POST /vault/search`
 
-The tRPC app router exposes the same reads under `vault.status`,
-`vault.settings`, `vault.list`, `vault.get`, `vault.backlinks`, and
-`vault.search`. Content mutations use `vault.createPage`, `vault.savePage`,
-`vault.createFolder`, `vault.deletePage`, `vault.deleteFolder`, and
-`vault.movePath`. Settings writes use `vault.saveSettings`. The live
-subscription `vault.onUpdate` emits best-effort invalidation hints with
-`scope`, `reason`, and optional Markdown `paths`; clients refetch normal Vault
-reads for canonical state.
+The tRPC app router exposes the same reads and mutations under `vault.*`.
+Clients should label these surfaces as Memory.
 
 ## Related Docs
 
-* [Vault feature](../features/vault.md)
-* [Vault spec](../../specs/vault.md)
+* [Memory feature](../features/memory.md)
+* [Memory API](memory.md)
+* [Memory spec](../../specs/memories.md)

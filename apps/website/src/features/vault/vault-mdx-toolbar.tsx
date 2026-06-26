@@ -14,7 +14,6 @@ import {
     TextBoldIcon,
     TextItalicIcon,
     TextUnderlineIcon,
-    WikipediaIcon,
 } from '@hugeicons-pro/core-stroke-rounded';
 import {
     applyBlockType$,
@@ -123,8 +122,8 @@ export function VaultEditorToolbar() {
                         onClick={() => openLinkDialog()}
                     />
                     <ToolbarButton
-                        icon={WikipediaIcon}
-                        label="Wikilink"
+                        icon={Link02Icon}
+                        label="Memory link"
                         onClick={() => insertMarkdown('[[Page name]]')}
                     />
                 </ToolbarGroup>

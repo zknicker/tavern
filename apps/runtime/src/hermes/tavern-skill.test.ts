@@ -24,7 +24,7 @@ describe('managed tavern skill', () => {
         expect(skill).not.toContain('/cron/deliveries');
         expect(skill).not.toContain('## Automations');
         expect(skill).not.toContain('## Assistant Memory');
-        expect(skill).toContain('Vault status');
+        expect(skill).toContain('Memory status');
         expect(skill).toContain('Settings -> Connectors');
         expect(skill).toContain('Settings -> Plugins');
         await expectOwnerWriteDisabled(skillPath);

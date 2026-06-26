@@ -40,7 +40,7 @@ export function resolveSelectedPage(list: VaultListOutput, selected: { path: str
             return exact;
         }
     }
-    return list.pages.find((page) => page.path === 'INDEX.md') ?? list.pages[0] ?? null;
+    return list.pages.find((page) => page.path === 'MEMORY.md') ?? list.pages[0] ?? null;
 }
 
 export function pageKey(page: Pick<VaultPageNode, 'path'>) {
@@ -95,7 +95,7 @@ export function getErrorMessage(error: unknown) {
     if (error instanceof Error && error.message) {
         return error.message;
     }
-    return 'Vault update failed.';
+    return 'Memory update failed.';
 }
 
 function pageSlug(value: string) {

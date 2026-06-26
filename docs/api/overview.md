@@ -47,8 +47,8 @@ cache, and shape data for React, but it does not define a separate product API.
 | Chat | [Chat API](chat.md) |
 | Admin | [Admin API](admin.md) |
 | Agents | [Agents API](agents.md) |
-| Memory inspection | [Memory API](memory.md) |
-| Vault wiki | [Vault API](vault.md) |
+| Memory | [Memory API](memory.md) |
+| Compatibility vault routes | [Compatibility Vault API](vault.md) |
 | Automations | [Automations API](automations.md) |
 | Skills | [Skills API](skills.md) |
 | Stats | [Stats API](stats.md) |
@@ -75,7 +75,7 @@ capabilities.
 ## Contract Rules
 
 * **Durable objects first.** Create messages, responses, activity, artifacts,
-  Vault pages, automations, and skill records before relying on realtime
+  Memory files, automations, and skill records before relying on realtime
   notifications.
 * **Receipts reconcile.** Writes return stable ids, sequence values, cursors, or
   receipts that let callers reconcile optimistic UI and retries.
@@ -86,8 +86,8 @@ capabilities.
 * **Runtime identity rides as metadata.** `session`, `turn`, `run`, and
   `delivery` are runtime facts unless the runtime boundary is being documented.
 * **App clients use Tavern nouns.** Product-facing code speaks in chats,
-  messages, responses, activity, artifacts, agents, memory inspection, Vault
-  pages, automations, skills, and stats.
+  messages, responses, activity, artifacts, agents, Memory files, automations,
+  skills, and stats.
 
 ## Hermes Alignment
 

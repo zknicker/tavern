@@ -95,7 +95,7 @@ function VaultPageSidebarContent({
                     <SearchInput
                         className="min-w-0 flex-1"
                         onChange={(event) => onQueryChange(event.currentTarget.value)}
-                        placeholder="Search pages"
+                        placeholder="Search memory"
                         size="default"
                         value={query}
                     />

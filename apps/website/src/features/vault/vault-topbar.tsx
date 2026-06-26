@@ -115,7 +115,7 @@ function VaultPathBreadcrumb({
     }
 
     return (
-        <Breadcrumb aria-label="Vault path" className="min-w-0" title={path}>
+        <Breadcrumb aria-label="Memory path" className="min-w-0" title={path}>
             <BreadcrumbList className="min-w-0 flex-nowrap gap-1.5 overflow-hidden text-sm sm:gap-1.5">
                 {crumbs.map((crumb) => (
                     <Fragment key={crumb.path}>

@@ -31,8 +31,8 @@ with instruction files, model, execution, tool, memory, and skill policy.
   `SOUL.md` (identity). Clients save the sources through the Runtime-hosted
   agent file API; saving `NOTES.md` regenerates `AGENTS.md`, and the generated
   file is readable for preview through the instructions read surface.
-* Tavern policy includes Vault-first lookup guidance. Managed agents
-  check Vault before external lookup when durable user, project, or prior
+* Tavern policy includes Memory-first lookup guidance. Managed agents
+  check Memory before external lookup when durable user, project, or prior
   decision context may already exist.
 * Hermes-backed settings use narrow domain mutations. Clients update agent
   name, model, thinking default, and messaging bindings through agent and
@@ -43,7 +43,7 @@ with instruction files, model, execution, tool, memory, and skill policy.
 * Execution settings — the model fallback chain, agent timezone, context
   compression, subagent defaults, and web extract summarizer model — are
   Runtime-stored and edited through the agent execution settings API. Agent
-  environment variables are Runtime-stored Vault secrets exposed to the local
+  environment variables are Runtime-stored secrets exposed to the local
   settings UI. Saving either surface rewrites the generated managed runtime
   config or env file and restarts managed Hermes to apply.
 * Runtime execution state is not required just to list agents.

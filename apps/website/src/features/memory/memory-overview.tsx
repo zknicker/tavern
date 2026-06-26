@@ -15,7 +15,7 @@ import {
     formatVaultConfigSource,
     getVaultHealth,
     type VaultHubStatus,
-} from './wiki-status-format.ts';
+} from './memory-status-format.ts';
 
 export function MemoryOverview({ status }: { status: VaultHubStatus | null }) {
     const health = getVaultHealth(status);
@@ -27,14 +27,14 @@ export function MemoryOverview({ status }: { status: VaultHubStatus | null }) {
                 <header className="space-y-2">
                     <h1 className="font-semibold text-2xl tracking-tight">Memory</h1>
                     <p className="max-w-2xl text-muted-foreground text-sm leading-6">
-                        Durable knowledge lives in Vault. The agent reads and maintains those
+                        Durable knowledge lives in Memory. The agent reads and maintains those
                         Markdown files through regular Tasks.
                     </p>
                 </header>
 
                 <MemorySection title="Settings">
                     <SettingsRow
-                        description="Agents can use Vault as durable knowledge."
+                        description="Agents can use Memory as durable knowledge."
                         title="Enable memories"
                         trailingWidth="intrinsic"
                     >
@@ -76,20 +76,20 @@ export function MemoryOverview({ status }: { status: VaultHubStatus | null }) {
                         trailingWidth="intrinsic"
                     >
                         <Button
-                            render={<NavLink to="/dashboard/vault" />}
+                            render={<NavLink to="/dashboard/memory" />}
                             size="sm"
                             variant="outline"
                         >
                             <Icon icon={Folder01Icon} />
-                            <span>Open Vault</span>
+                            <span>Open Memory</span>
                         </Button>
                     </SettingsRow>
                 </MemorySection>
 
-                <MemorySection title="Vault">
+                <MemorySection title="Memory">
                     <SettingsRow
-                        description="Runtime can resolve and inspect the Vault folder."
-                        title="Vault health"
+                        description="Runtime can resolve and inspect the Memory folder."
+                        title="Memory health"
                         trailingWidth="intrinsic"
                     >
                         <Badge variant={health.variant}>{health.label}</Badge>
@@ -105,7 +105,7 @@ export function MemoryOverview({ status }: { status: VaultHubStatus | null }) {
                         <SettingsValue>{status?.pageCount ?? unavailable}</SettingsValue>
                     </SettingsRow>
                     <Separator />
-                    <SettingsRow title="INDEX.md">
+                    <SettingsRow title="TAXONOMY.md">
                         <SettingsValue>{status?.indexExists ? 'Present' : 'Missing'}</SettingsValue>
                     </SettingsRow>
                     <Separator />
@@ -113,7 +113,7 @@ export function MemoryOverview({ status }: { status: VaultHubStatus | null }) {
                         <SettingsValue>{formatVaultAccess(status)}</SettingsValue>
                     </SettingsRow>
                     <Separator />
-                    <SettingsRow title="Vault path">
+                    <SettingsRow title="Memory path">
                         <CodeSnippet lines={status?.vaultPath ?? unavailable} />
                     </SettingsRow>
                 </MemorySection>
@@ -131,12 +131,12 @@ export function MemoryOverview({ status }: { status: VaultHubStatus | null }) {
                     </SettingsRow>
                     <Separator />
                     <SettingsRow
-                        description="File-level changes remain inspectable in Vault."
+                        description="File-level changes remain inspectable in Memory."
                         title="Changed files"
                         trailingWidth="intrinsic"
                     >
                         <Button
-                            render={<NavLink to="/dashboard/vault" />}
+                            render={<NavLink to="/dashboard/memory" />}
                             size="sm"
                             variant="ghost"
                         >

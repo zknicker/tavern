@@ -31,12 +31,12 @@ test('HermesCapabilitiesSummary renders per-capability refresh actions', () => {
                 {
                     capability: 'vault',
                     checkedAt: '2026-05-28T12:00:00.000Z',
-                    displayName: 'Vault',
+                    displayName: 'Memory',
                     errorCode: null,
                     lastHealthyAt: null,
                     metadataJson: '{}',
                     method: 'runtime.capabilities',
-                    reason: 'Vault path is not readable and writable.',
+                    reason: 'Memory path is not readable and writable.',
                     runtimeId: 'runtime-1',
                     state: 'unavailable',
                     technicalMessage: null,
@@ -47,8 +47,8 @@ test('HermesCapabilitiesSummary renders per-capability refresh actions', () => {
         />
     );
 
-    assert.match(markup, /Refresh Vault/);
-    assert.match(markup, /Vault/);
+    assert.match(markup, /Refresh Memory/);
+    assert.match(markup, /Memory/);
 });
 
 test('HermesCapabilitiesSummary groups by category', () => {

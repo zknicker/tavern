@@ -251,7 +251,7 @@ CREATE TABLE IF NOT EXISTS chat_artifacts (
 CREATE INDEX IF NOT EXISTS idx_chat_artifacts_chat_updated
   ON chat_artifacts(chat_id, updated_at, id);
 
-CREATE TABLE IF NOT EXISTS wiki_health_history (
+CREATE TABLE IF NOT EXISTS memory_health_history (
   id                 INTEGER PRIMARY KEY AUTOINCREMENT,
   topic              TEXT NOT NULL,
   scan_id            TEXT,
@@ -263,8 +263,8 @@ CREATE TABLE IF NOT EXISTS wiki_health_history (
   avg_quality        REAL
 );
 
-CREATE INDEX IF NOT EXISTS idx_wiki_health_history_topic
-  ON wiki_health_history(topic, recorded_at);
+CREATE INDEX IF NOT EXISTS idx_memory_health_history_topic
+  ON memory_health_history(topic, recorded_at);
 `;
 
 export function ensureRuntimeSchema(db: Database): void {

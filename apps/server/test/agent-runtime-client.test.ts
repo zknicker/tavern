@@ -55,7 +55,7 @@ test('client sends no Authorization header when constructed without a token', as
     assert.equal(capturedAuthorization, undefined);
 });
 
-test('listCapabilities parses Vault capability rows', async () => {
+test('listCapabilities parses Memory capability rows', async () => {
     const now = new Date().toISOString();
     const fetchMock = mock(async (input: RequestInfo | URL) => {
         assert.equal(String(input), `http://runtime.test${agentRuntimeRoutes.capabilities}`);
@@ -76,11 +76,11 @@ test('listCapabilities parses Vault capability rows', async () => {
                 },
                 {
                     checkedAt: now,
-                    displayName: 'Vault',
+                    displayName: 'Memory',
                     healthy: true,
                     id: 'vault',
                     lastHealthyAt: now,
-                    metadata: { vaultPath: '/Users/zknicker/wiki' },
+                    metadata: { vaultPath: '/Users/zknicker/.tavern/runtime/memory' },
                     nextCheckAt: now,
                     reason: null,
                     state: 'healthy',

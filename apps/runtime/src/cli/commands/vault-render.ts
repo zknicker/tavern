@@ -4,10 +4,10 @@ import { rows, table, ui } from '../ui.ts';
 export function renderVaultStatus(status: VaultStatus): string {
     return rows(
         [
-            { left: 'Vault', right: status.vaultPath },
+            { left: 'Memory', right: status.vaultPath },
             { left: 'Source', right: status.configSource },
             { left: 'Pages', right: String(status.pageCount) },
-            { left: 'INDEX.md', right: status.indexExists ? 'present' : 'missing' },
+            { left: 'TAXONOMY.md', right: status.indexExists ? 'present' : 'missing' },
             { left: 'Access', right: `readable=${status.readable} writable=${status.writable}` },
         ],
         ''
@@ -16,7 +16,7 @@ export function renderVaultStatus(status: VaultStatus): string {
 
 export function renderVaultPages(list: VaultPageList, stream: NodeJS.WriteStream): string {
     if (list.pages.length === 0) {
-        return ui.dim('No Vault pages.', stream);
+        return ui.dim('No Memory files.', stream);
     }
     return table(
         list.pages.map((page) => [page.path, page.title]),

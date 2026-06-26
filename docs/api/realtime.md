@@ -87,10 +87,9 @@ Chat events:
 * `artifact.created`
 * `chat.read`
 
-Automation, memory inspection, skill, and stats events use the same durable
-event log when they affect client-visible Runtime state. Vault file-change
-notifications are app invalidation hints; clients recover by refetching Vault
-reads.
+Automation, Memory, skill, and stats events use the same durable event log when
+they affect client-visible Runtime state. Memory file-change notifications are
+app invalidation hints; clients recover by refetching Memory reads.
 
 Activity events project to live `turn.progress` steps for app patching. The
 step kind comes from the durable activity: `approval` activities project as
@@ -117,7 +116,7 @@ Examples:
 * transient active-turn indicators
 * short-lived hover/debug state
 * app-only invalidation hints
-* Vault file-change invalidation hints
+* Memory file-change invalidation hints
 
 Tool progress, assistant progress, and provider-exposed thinking summaries
 are not ephemeral notifications in Tavern chat. Runtime persists them as
@@ -160,7 +159,7 @@ Product state still comes from:
 
 * `GET /api/chats/{chat_id}/messages`
 * response, activity, and artifact reads for the chat timeline
-* focused resource reads for automations, memory inspection, Vault,
+* focused resource reads for automations, Memory,
   skills, and stats
 
 ## What Is Intentionally Missing

@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { HERMES_HOME, readConfigValue, resolveConfiguredPath } from '../config';
 import { prepareVaultRoot, resolveVaultConfigSync } from '../vault/store';
 
-export const managedVaultSkillName = 'vault';
+export const managedVaultSkillName = 'memory';
 
 interface ManagedVaultPackageInput {
     assetsRoot?: string;

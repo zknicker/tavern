@@ -13,7 +13,7 @@ describe('formatSkillName', () => {
     });
 
     it('collapses redundant qualified prefixes', () => {
-        expect(formatSkillName('wiki:wiki')).toBe('Wiki');
+        expect(formatSkillName('memory:memory')).toBe('Memory');
         expect(formatSkillName('team:custom-skill')).toBe('Team:custom Skill');
     });
 });

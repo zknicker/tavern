@@ -137,10 +137,10 @@ describe('renderStatus', () => {
         const report = baseReport({
             capabilities: [
                 capability({
-                    displayName: 'Vault',
+                    displayName: 'Memory',
                     state: 'degraded',
                     healthy: false,
-                    reason: 'Managed Vault skill has not been prepared.',
+                    reason: 'Managed Memory skill has not been prepared.',
                     updatedAt: '2026-06-10T11:59:50.000Z',
                 }),
                 capability({
@@ -152,8 +152,8 @@ describe('renderStatus', () => {
             ],
         });
         const text = render(report);
-        expect(text).toContain('◐ Vault');
-        expect(text).toContain('just now — Managed Vault skill has not been prepared.');
+        expect(text).toContain('◐ Memory');
+        expect(text).toContain('just now — Managed Memory skill has not been prepared.');
         expect(text).toContain('○ Agent engine API');
         expect(text).toContain('— Managed agent engine API is not reachable.');
     });

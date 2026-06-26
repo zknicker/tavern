@@ -53,9 +53,9 @@ export function VaultPathDialog({
         >
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>{state?.title ?? 'Vault path'}</DialogTitle>
+                    <DialogTitle>{state?.title ?? 'Memory path'}</DialogTitle>
                     <DialogDescription>
-                        {state?.parentPath ? `Under ${state.parentPath}.` : 'At the Vault root.'}
+                        {state?.parentPath ? `Under ${state.parentPath}.` : 'At the Memory root.'}
                     </DialogDescription>
                 </DialogHeader>
                 <form
@@ -125,11 +125,11 @@ export function VaultDeleteDialog({
         >
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Delete {target?.title ?? 'Vault item'}?</DialogTitle>
+                    <DialogTitle>Delete {target?.title ?? 'memory item'}?</DialogTitle>
                     <DialogDescription>
                         {target?.kind === 'folder'
                             ? 'This deletes the folder and all Markdown pages inside it.'
-                            : 'This deletes the Markdown page from the Vault.'}
+                            : 'This deletes the Markdown page from Memory.'}
                     </DialogDescription>
                 </DialogHeader>
                 {errorMessage ? (

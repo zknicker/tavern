@@ -321,10 +321,10 @@ test('ChatTranscript labels recovered tool failures without making the final rep
             toolCall: {
                 callId: 'call-success-write',
                 facts: [],
-                label: 'write · Vault/Notes.md',
+                label: 'write · Memory/Notes.md',
                 name: 'write_file',
                 status: 'ok',
-                summaryParts: ['Vault/Notes.md'],
+                summaryParts: ['Memory/Notes.md'],
             },
         },
         {

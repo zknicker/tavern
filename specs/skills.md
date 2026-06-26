@@ -39,7 +39,7 @@ or plugin-backed tool groups.
 - Runtime-discovered skills remain owned by their source location. Tavern should
   not copy them into a Tavern skill store or the Hermes workspace as part of this
   surface.
-- Tavern-managed skill packages are the exception: Runtime owns the `vault` and
+- Tavern-managed skill packages are the exception: Runtime owns the `memory` and
   `tavern` skill copies under managed `HERMES_HOME/skills`, refreshes them from
   Tavern assets on startup, and writes them read-only. The agent should create
   or update a separate skill for durable self-edits.

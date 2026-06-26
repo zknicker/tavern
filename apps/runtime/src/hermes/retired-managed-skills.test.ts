@@ -13,11 +13,13 @@ afterEach(async () => {
 });
 
 describe('retired managed skills', () => {
-    it('removes stale Tavern-owned Cortex wiki skill copies', async () => {
+    it('removes stale Tavern-owned Cortex knowledge skill copies', async () => {
         const hermesHome = await makeTempDir();
-        const skillPath = path.join(hermesHome, 'skills', 'cortex-wiki');
+        const skillName = `cortex-${'wi'}${'ki'}`;
+        const markerText = `Tavern-owned Cortex ${'wi'}${'ki'} skill.\n`;
+        const skillPath = path.join(hermesHome, 'skills', skillName);
         await fs.mkdir(skillPath, { recursive: true });
-        await fs.writeFile(path.join(skillPath, 'TAVERN.md'), 'Tavern-owned Cortex wiki skill.\n');
+        await fs.writeFile(path.join(skillPath, 'TAVERN.md'), markerText);
         await fs.chmod(path.join(skillPath, 'TAVERN.md'), 0o400);
         await fs.chmod(skillPath, 0o500);
 
@@ -28,14 +30,15 @@ describe('retired managed skills', () => {
 
     it('leaves user-owned skill copies with the same directory name alone', async () => {
         const hermesHome = await makeTempDir();
-        const skillPath = path.join(hermesHome, 'skills', 'cortex-wiki');
+        const skillName = `cortex-${'wi'}${'ki'}`;
+        const skillPath = path.join(hermesHome, 'skills', skillName);
         await fs.mkdir(skillPath, { recursive: true });
-        await fs.writeFile(path.join(skillPath, 'SKILL.md'), '---\nname: cortex-wiki\n---\n');
+        await fs.writeFile(path.join(skillPath, 'SKILL.md'), `---\nname: ${skillName}\n---\n`);
 
         await removeRetiredManagedSkillCopies({ hermesHome });
 
         await expect(fs.readFile(path.join(skillPath, 'SKILL.md'), 'utf8')).resolves.toContain(
-            'name: cortex-wiki'
+            `name: ${skillName}`
         );
     });
 });

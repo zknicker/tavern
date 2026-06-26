@@ -70,8 +70,8 @@ Maintenance
   update         Stage a Runtime upgrade through Homebrew
   restart        Restart the service and wait for health
 
-Vault
-  vault          Browse the Vault wiki (status, list, get, search)
+Memory
+  vault          Browse Memory files (status, list, get, search)
 
 Engine
   engine         Inspect, install, or clean the managed agent engine
@@ -87,17 +87,17 @@ Environment
 descriptions, and examples. Bare `tavern engine` / `tavern vault` print group
 help and exit 1.
 
-## Vault Commands
+## Memory Commands
 
 `tavern vault` commands are thin Runtime clients.
 
-* `status` reports the resolved Vault path, config source, page count,
-  `INDEX.md` presence, and filesystem access.
-* `list` prints Markdown pages relative to the Vault root.
+* `status` reports the resolved Memory path, config source, page count,
+  `TAXONOMY.md` presence, and filesystem access.
+* `list` prints Markdown pages relative to the Memory root.
 * `get <path>` prints a page.
 * `search <query>` prints lightweight search hits.
 
-Writes and maintenance happen through the managed `vault` skill, not the CLI.
+Writes and maintenance happen through the managed `memory` skill, not the CLI.
 
 ## Status
 
@@ -113,7 +113,7 @@ Tavern Runtime v1.4.2
 Capabilities
   ● Codex OAuth          healthy       6m ago
   ● Agent engine API     unavailable   2m ago — Managed agent engine API is not reachable.
-  ◐ Vault                degraded      just now — Managed Vault skill has not been prepared.
+  ◐ Memory               degraded      just now — Managed Memory skill has not been prepared.
 
 Engine
   Pin         5937b95 (pinned)

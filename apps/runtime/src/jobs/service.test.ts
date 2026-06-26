@@ -19,6 +19,6 @@ describe('Runtime jobs service', () => {
         const { jobs } = await listRuntimeJobs();
 
         expect(jobs.map((job) => job.slug)).toEqual(['refresh-runtime-capabilities']);
-        expect(jobs.some((job) => job.slug.startsWith('wiki-'))).toBe(false);
+        expect(jobs.some((job) => job.slug.startsWith('memory-'))).toBe(false);
     });
 });

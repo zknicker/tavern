@@ -14,7 +14,7 @@ choices.
 
 ## Ownership
 
-- Tavern Runtime is canonical for provider credentials, Tavern Vault state, the enabled model
+- Tavern Runtime is canonical for provider credentials, Memory state, the enabled model
   catalog, and Tavern-owned memory model settings.
 - Runtime agents have per-agent execution model settings in Hermes config. Tavern product
   settings expose the primary agent's execution model while preserving per-agent settings
@@ -24,12 +24,12 @@ choices.
   `openai-codex` models.
 - Tavern does not have a global default execution model. Model routing should be configured at the
   agent level or by the Tavern-owned surface that uses the model.
-- Tavern may transport Tavern Vault credentials or enabled model facts to Hermes later, but
-  Tavern Vault remains the source of truth.
+- Tavern may transport Tavern-stored credentials or enabled model facts to Hermes later, but
+  Tavern Runtime remains the source of truth.
 
 ## Provider Access
 
-- OpenRouter credentials entered in the Tavern app stay in Tavern Vault.
+- OpenRouter credentials entered in the Tavern app stay in Tavern-managed secret storage.
 - Tavern-owned provider credentials stay in Tavern. Hermes receives only the generated managed
   runtime config that Tavern chooses to materialize.
 - Codex OAuth uses the local Codex auth file as the credential source. Runtime owns the Tavern
@@ -57,7 +57,7 @@ choices.
 
 ## UI
 
-- `Settings -> Models` edits Tavern Vault credentials and shows Hermes model options.
+- `Settings -> Models` edits Tavern-managed credentials and shows Hermes model options.
 - Agent model edits live under Hermes Settings as top-level agent settings entries. They
   participate in the shared Hermes config draft and save/discard flow.
 - Memory model settings belong to Tavern Runtime memory, not Hermes.

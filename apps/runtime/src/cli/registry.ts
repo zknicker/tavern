@@ -10,10 +10,10 @@ export interface CliFlag {
     valueName?: string;
 }
 
-export type CliSection = 'Server' | 'Status' | 'Maintenance' | 'Vault' | 'Engine';
+export type CliSection = 'Server' | 'Status' | 'Maintenance' | 'Memory' | 'Engine';
 
 /** Section render order in global help. */
-export const SECTION_ORDER: CliSection[] = ['Server', 'Status', 'Maintenance', 'Vault', 'Engine'];
+export const SECTION_ORDER: CliSection[] = ['Server', 'Status', 'Maintenance', 'Memory', 'Engine'];
 
 /** A registered top-level command or command group. */
 export interface CliCommand {
@@ -117,15 +117,15 @@ const restartCommand: CliCommand = {
 
 const vaultCommand: CliCommand = {
     name: 'vault',
-    section: 'Vault',
+    section: 'Memory',
     group: true,
-    summary: 'Browse the Vault wiki (status, list, get, search)',
+    summary: 'Browse Memory files (status, list, get, search)',
     usage: 'tavern vault <status|list|get|search> [flags]',
     flags: [
         { name: '--json', description: 'Emit one JSON document' },
         { name: '--runtime-url', valueName: '<url>', description: 'Override the Runtime API URL' },
     ],
-    examples: ['tavern vault status', 'tavern vault list', 'tavern vault get INDEX.md'],
+    examples: ['tavern vault status', 'tavern vault list', 'tavern vault get MEMORY.md'],
     async run(_args, raw) {
         if (raw.length === 0) {
             const { printGroupHelp } = await import('./help');

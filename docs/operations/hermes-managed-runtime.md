@@ -7,10 +7,10 @@ read_when:
   - changing Hermes startup, dashboard ports, model provider config, Codex auth sync, or Runtime capability checks
   - verifying that multiple Tavern worktrees can run managed Hermes simultaneously
   - cold-start testing a real engine install or the no-co-opt / version-pin guarantees
-  - changing the managed Vault skill package or Vault path handling
+  - changing the managed Memory skill package or Memory path handling
   - changing managed Plugin skills or toolset plugins
   - changing managed Hermes live patches
-  - changing the managed Cortex wiki skill package or managed wiki crons
+  - changing retired managed knowledge-skill cleanup
 ---
 
 # Managed Hermes Runtime
@@ -127,9 +127,9 @@ every Tavern-owned setting that lands in the file is a domain:
 | display | `display.tool_progress`, `display.interim_assistant_messages` | fixed managed policy |
 | cron | `cron.wrap_response` | fixed managed policy |
 | permissions | `approvals.*`, `command_allowlist` | `/permission-settings` store (untouched until first save) |
-| agent env | arbitrary non-reserved env names | `/agent-env` Vault-backed store |
-| connectors | `mcp_servers.<id>` + `TAVERN_MCP_*` env secrets | connector vault records |
-| memory | built-in `MEMORY.md` / `USER.md` memory enabled, external provider empty | fixed managed policy |
+| agent env | arbitrary non-reserved env names | `/agent-env` secure settings store |
+| connectors | `mcp_servers.<id>` + `TAVERN_MCP_*` env secrets | connector secret records |
+| memory | managed Memory root path and read-only `memory` skill prepared | fixed managed policy |
 | plugins | `plugins.enabled` messenger and first-party Plugin toolset packages | fixed managed policy |
 
 Each domain only sets or deletes its own keys, so operator-managed keys
@@ -178,25 +178,26 @@ When Runtime resolves a route, Tavern applies it through Hermes's model API. It
 does not set `model.openai_runtime: codex_app_server`; that remains a Hermes
 opt-in.
 
-Runtime also syncs Vault-backed Codex OAuth material into managed Hermes
+Runtime also syncs Tavern-managed Codex OAuth material into managed Hermes
 `auth.json` when available.
 
-## Managed Vault Package
+## Managed Memory Package
 
-Runtime packages the Tavern-owned Vault skill with managed Hermes. Before
+Runtime packages the Tavern-owned Memory skill with managed Hermes. Before
 launch it copies the prompt-visible skill directory to
-`HERMES_HOME/skills/vault`.
+`HERMES_HOME/skills/memory`.
 
-The Vault path defaults to `~/wiki`. Operators can override it with
-`TAVERN_VAULT_PATH`, and users can configure it from Settings -> Vault. Runtime
-creates the root and `INDEX.md` when the path is saved, then passes the resolved
-path to the engine as `TAVERN_VAULT_PATH`.
+The Memory path defaults to the managed Runtime memory directory. Operators can
+override it with `TAVERN_VAULT_PATH`, and users can configure it from Settings
+-> Memory. Runtime creates the root, `MEMORY.md`, `USER.md`, `TAXONOMY.md`, and
+`episodic/`, then passes the resolved path to the engine as `TAVERN_VAULT_PATH`.
 
-### Changing the managed Vault skill
+### Changing the managed Memory skill
 
-The skill at `apps/runtime/assets/hermes/skills/vault/` is Tavern-owned product
-surface. It routes normal wiki work to Obsidian and bounded research folders to
-llm-wiki. Runtime does not own wiki maintenance prompts or jobs.
+The skill at `apps/runtime/assets/hermes/skills/memory/` is Tavern-owned product
+surface. It teaches the durable Memory root, L1 files, episodic entries,
+semantic pages, and routine memory. Runtime does not own Memory maintenance
+prompts or jobs.
 
 Run `bun run --filter @tavern/runtime test -- src/hermes/managed-vault.test.ts
 src/vault` and start the dev stack to verify skill sync.
@@ -204,7 +205,7 @@ src/vault` and start the dev stack to verify skill sync.
 ## Managed Tavern Skill
 
 Runtime installs the `tavern` skill (`apps/runtime/assets/hermes/skills/tavern`)
-into `HERMES_HOME/skills/tavern` before launch, alongside the Vault skill. It
+into `HERMES_HOME/skills/tavern` before launch, alongside the Memory skill. It
 carries the agent's product knowledge of Tavern — chat and delivery API
 recipes against `TAVERN_RUNTIME_URL`, the automations delivery contract,
 read-only self-configuration lookups, and the settings map for directing the
@@ -229,7 +230,7 @@ underlying Hermes skill and toolset when the Plugin is toggled. The
 plugin-provided `merchbase:merchbase` skill is collision-safe guidance loaded
 through `skill_view`, not an editable flat skill row.
 
-Runtime writes the managed `vault`, `tavern`, and Plugin starter skill
+Runtime writes the managed `memory`, `tavern`, and Plugin starter skill
 directories read-only and the skill text tells agents not to edit them. On the
 next startup Runtime first makes the old managed copy replaceable, deletes it,
 copies the bundled source, and writes it read-only again. Plugin starter
@@ -248,11 +249,10 @@ source copy, and Runtime only refreshes the visible inventory after Hermes
 observes the change.
 
 Runtime also removes retired Tavern-owned managed skill copies when they carry
-an old Tavern marker. The legacy `cortex-wiki` package was replaced by Vault;
-if an older runtime home still has `HERMES_HOME/skills/cortex-wiki/TAVERN.md`
-with the old Tavern-owned package marker, startup deletes that stale managed
-copy. User-created or hub-installed skills with the same directory name are
-left alone unless they carry that marker.
+an old Tavern marker. If an older runtime home still has a retired managed
+knowledge package with the old Tavern-owned package marker, startup deletes
+that stale managed copy. User-created or hub-installed skills with the same
+directory name are left alone unless they carry that marker.
 
 ## Managed Assistant Memory
 
@@ -266,10 +266,8 @@ memory:
   provider: ""
 ```
 
-Hermes stores compact assistant memory under its managed home as
-`memories/MEMORY.md` and `memories/USER.md`. Runtime does not install a memory
-plugin, provision Python packages, or write memory-provider env vars. Durable,
-inspectable knowledge belongs in Vault.
+Runtime exposes durable inspectable knowledge through the Memory root. Hermes
+context management for turns remains separate.
 
 ## Capability Checks
 

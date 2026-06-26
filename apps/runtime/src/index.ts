@@ -53,7 +53,7 @@ async function main(): Promise<void> {
         log.info('Development Vault demos ready', { count: vaultDemoSeed.seeded });
     }
     void startVaultWatcher(resolveVaultConfig).catch((err) => {
-        log.warn('Vault live updates failed to start', { err });
+        log.warn('Memory live updates failed to start', { err });
     });
     runtimeJobs = await startRuntimeJobsManager();
 
@@ -64,7 +64,7 @@ async function main(): Promise<void> {
         .then(async (handle) => {
             hermes = handle;
             await restartVaultWatcher({ emitRootChanged: false }).catch((err) => {
-                log.warn('Vault live updates failed to refresh after engine startup', {
+                log.warn('Memory live updates failed to refresh after engine startup', {
                     err,
                 });
             });
@@ -72,7 +72,7 @@ async function main(): Promise<void> {
                 ids: ['vault', 'gateway'],
                 publishUpdated: true,
             }).catch((err) => {
-                log.warn('Vault capability refresh failed after Hermes startup', {
+                log.warn('Memory capability refresh failed after Hermes startup', {
                     err,
                 });
             });
@@ -103,9 +103,9 @@ async function shutdown(signal: string): Promise<void> {
     shuttingDown = true;
     log.info('Shutdown signal received', { signal });
     closeAgentNotesWatchers();
-    log.info('Stopping Vault live updates');
+    log.info('Stopping Memory live updates');
     await closeVaultWatcher();
-    log.info('Vault live updates stopped');
+    log.info('Memory live updates stopped');
     log.info('Stopping Runtime jobs');
     await runtimeJobs?.stop();
     log.info('Runtime jobs stopped');

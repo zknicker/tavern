@@ -16,13 +16,126 @@ import type {
     VaultSearchResult,
     VaultStatus,
 } from '@tavern/api';
-import { readConfigValue, resolveConfiguredPath } from '../config.ts';
+import { RUNTIME_ROOT, readConfigValue, resolveConfiguredPath } from '../config.ts';
 import { getDb } from '../db/connection.ts';
 import { namedParams } from '../db/sqlite.ts';
 import { getVaultWatcherFreshness, restartVaultWatcher } from './watcher.ts';
 
 const vaultSettingsMetadataKey = 'vault:settings';
-const defaultVaultPath = '~/wiki';
+const defaultVaultPath = path.join(RUNTIME_ROOT, 'memory');
+const rootMemoryDirectories = ['episodic', 'projects', 'routines'] as const;
+const rootMemoryFiles = {
+    'MEMORY.md': '# Memory Briefing\n\n',
+    'TAXONOMY.md': `# Memory Taxonomy
+
+Last updated: 2026-06-25T00:00:00Z
+
+## Invariants
+
+- Unified memory lives under \`memory/\`.
+- Semantic and episodic memory are the source of truth. L1 files (\`MEMORY.md\`, \`USER.md\`) are derived from them.
+- L1 files must stay small enough for prompt loading.
+- Semantic pages use frontmatter plus \`## Current\` and \`## History\`.
+- Episodic memory lives under \`episodic/\` and uses append-only raw Markdown entries grouped by date.
+- Read-time retrieval must not depend on this file.
+- Each semantic write must have one primary home.
+- Episodic references should prefer deterministic read-only getters over search expressions or side-effectful code.
+- Semantic and L1 references should prefer backing Markdown file paths.
+
+## L1 Root Files
+
+\`MEMORY.md\`
+
+What goes here:
+
+- globally reusable operating rules
+- durable default behavior
+- tool and workflow conventions that matter on many tasks
+
+What does not go here:
+
+- detailed world knowledge
+- detailed service, project, or relationship context
+- one-off task context
+
+\`USER.md\`
+
+What goes here:
+
+- stable user profile
+- stable user preferences
+- high-level service, project, or relationship mappings
+- long-running user context worth loading every session
+
+What does not go here:
+
+- detailed workflows for specific services or projects
+- ephemeral session notes
+- dossier-style detail that belongs in semantic or episodic memory
+
+## Bootstrapped Directories
+
+\`episodic/\`
+
+Use for append-only observations from recent conversation or execution evidence.
+
+\`projects/\`
+
+Use for durable project context, goals, decisions, links, and active workstreams.
+
+\`routines/<routine-slug>/MEMORY.md\`
+
+Use for recurring workflow memory owned by that routine.
+
+## Adding Semantic Folders
+
+Do not pre-create broad category folders for every possible subject. Add a new semantic folder only when a stable category needs a durable home and does not fit an existing folder.
+
+Good semantic folders:
+
+- use a concrete noun the user would recognize
+- have more than one likely page or repeated future use
+- do not overlap an existing folder's ownership
+- can be explained with a short "what goes here" rule
+
+Before first use:
+
+- add the folder to this taxonomy
+- define what goes there and what does not
+- prefer the narrowest durable folder over a catch-all
+
+If the category is not yet stable, keep the observation in \`episodic/\` until it is ready to promote.
+
+## Episodic Memory
+
+\`episodic/YYYY-MM-DD.md\`
+
+Use for append-only observations from recent conversation or execution evidence.
+
+Write here when the observation is durable enough to preserve but not stable, repeated, or broad enough to promote.
+
+Each entry should include a timestamp, concrete prose, and a source reference when one exists.
+
+## Write Routing
+
+1. If the fact is secret, credential material, or unsafe to store, do not write it.
+2. If it is temporary task progress or a transcript dump, do not write it.
+3. If it is sparse, event-shaped, uncertain, or raw evidence, append to \`episodic/YYYY-MM-DD.md\`.
+4. If it fits an existing semantic folder, write to the one semantic page that owns that subject.
+5. If it needs a new durable category, update this taxonomy before creating the folder.
+6. Before creating a semantic page, check existing paths, titles, and aliases.
+7. For semantic writes, add a \`## History\` evidence entry first. Update \`## Current\` only when stable understanding changed.
+8. Refresh \`MEMORY.md\` or \`USER.md\` only when the update should be loaded at session start.
+9. If routing friction repeats, update this taxonomy with a short resolver note.
+
+## Promotion
+
+- Promote repeated, strong, or broadly useful episodic observations into semantic memory.
+- Promote only stable, high-value defaults into L1 root files.
+- Do not force every episodic observation into semantic memory.
+`,
+    'USER.md': '# User Briefing\n\n',
+} as const;
 
 interface VaultConfig {
     configuredPath: string | null;
@@ -48,7 +161,7 @@ export async function getVaultStatus(): Promise<VaultStatus> {
     return {
         configSource: config.source,
         freshness: getVaultWatcherFreshness(),
-        indexExists: await isMarkdownFile(path.join(config.vaultPath, 'INDEX.md')),
+        indexExists: await isMarkdownFile(path.join(config.vaultPath, 'TAXONOMY.md')),
         pageCount: files.length,
         readable: await canAccess(config.vaultPath, fsConstants.R_OK),
         vaultPath: config.vaultPath,
@@ -95,7 +208,16 @@ export async function saveVaultSettings(
 
 export async function prepareVaultRoot(vaultPath: string) {
     await fs.mkdir(vaultPath, { recursive: true });
-    await writeIfMissing(path.join(vaultPath, 'INDEX.md'), '# Vault\n');
+    await Promise.all(
+        rootMemoryDirectories.map((directory) =>
+            fs.mkdir(path.join(vaultPath, directory), { recursive: true })
+        )
+    );
+    await Promise.all(
+        Object.entries(rootMemoryFiles).map(([fileName, content]) =>
+            writeIfMissing(path.join(vaultPath, fileName), content)
+        )
+    );
 }
 
 export async function listVaultPages(): Promise<VaultPageList> {
@@ -136,7 +258,7 @@ export async function saveVaultPage(input: VaultSavePage): Promise<VaultPathMuta
     const absolutePath = resolveVaultChildPath(config.vaultPath, relativePath);
     const stat = await fs.stat(absolutePath).catch(() => null);
     if (!(stat?.isFile() && absolutePath.endsWith('.md'))) {
-        throw new Error('Vault page does not exist.');
+        throw new Error('Memory file does not exist.');
     }
 
     const current = await fs.readFile(absolutePath, 'utf8');
@@ -161,7 +283,7 @@ export async function deleteVaultPage(input: VaultPathInput): Promise<VaultPathM
     const absolutePath = resolveVaultChildPath(config.vaultPath, relativePath);
     const stat = await fs.stat(absolutePath).catch(() => null);
     if (!(stat?.isFile() && absolutePath.endsWith('.md'))) {
-        throw new Error('Vault page does not exist.');
+        throw new Error('Memory file does not exist.');
     }
 
     await fs.rm(absolutePath);
@@ -174,7 +296,7 @@ export async function deleteVaultFolder(input: VaultPathInput): Promise<VaultPat
     const absolutePath = resolveVaultChildPath(config.vaultPath, relativePath);
     const stat = await fs.stat(absolutePath).catch(() => null);
     if (!stat?.isDirectory()) {
-        throw new Error('Vault folder does not exist.');
+        throw new Error('Memory folder does not exist.');
     }
 
     await fs.rm(absolutePath, { recursive: true });
@@ -197,20 +319,20 @@ export async function moveVaultPath(input: VaultMovePath): Promise<VaultPathMuta
     const targetStat = await fs.stat(toAbsolutePath).catch(() => null);
 
     if (input.kind === 'page' && !(sourceStat?.isFile() && fromAbsolutePath.endsWith('.md'))) {
-        throw new Error('Vault page does not exist.');
+        throw new Error('Memory file does not exist.');
     }
     if (input.kind === 'folder' && !sourceStat?.isDirectory()) {
-        throw new Error('Vault folder does not exist.');
+        throw new Error('Memory folder does not exist.');
     }
     if (targetStat) {
-        throw new Error('A Vault item already exists at that path.');
+        throw new Error('A Memory item already exists at that path.');
     }
     if (
         input.kind === 'folder' &&
         (toAbsolutePath === fromAbsolutePath ||
             toAbsolutePath.startsWith(`${fromAbsolutePath}${path.sep}`))
     ) {
-        throw new Error('Vault folder cannot be moved into itself.');
+        throw new Error('Memory folder cannot be moved into itself.');
     }
 
     await fs.mkdir(path.dirname(toAbsolutePath), { recursive: true });
@@ -354,7 +476,7 @@ function readStoredVaultSettings(): { updatedAt: string; vaultPath: string } | n
 
     const parsed = JSON.parse(row.value) as { vaultPath?: unknown };
     if (typeof parsed.vaultPath !== 'string' || parsed.vaultPath.trim().length === 0) {
-        throw new Error('Stored Vault settings are invalid; re-save them.');
+        throw new Error('Stored Memory settings are invalid; re-save them.');
     }
 
     return { updatedAt: row.updated_at, vaultPath: parsed.vaultPath.trim() };
@@ -456,7 +578,7 @@ function toPage(file: MarkdownFile): VaultPage {
     return {
         body: parsed.body,
         frontmatter: parsed.frontmatter,
-        links: extractWikiLinks(parsed.body),
+        links: extractMemoryLinks(parsed.body),
         path: file.relativePath,
         size: file.size,
         title,
@@ -528,7 +650,7 @@ function parseFrontmatterValue(value: string): unknown {
     return trimmed.replace(/^["']|["']$/gu, '');
 }
 
-function extractWikiLinks(content: string): VaultPage['links'] {
+function extractMemoryLinks(content: string): VaultPage['links'] {
     return Array.from(content.matchAll(/\[\[([^\]|#]+)(?:#[^\]|]+)?(?:\|([^\]]+))?\]\]/gu)).map(
         (match) => ({
             label: match[2]?.trim() || null,
@@ -546,7 +668,7 @@ function extractLinkTargets(content: string): VaultPage['links'] {
             label: match[1]?.trim() || null,
             target: match[2]?.trim() ?? '',
         }));
-    return [...extractWikiLinks(content), ...markdownLinks];
+    return [...extractMemoryLinks(content), ...markdownLinks];
 }
 
 function normalizeRelativeMarkdownPath(value: string) {
@@ -562,7 +684,7 @@ function normalizeWritableMarkdownPath(value: string) {
 function normalizeWritableFolderPath(value: string) {
     const normalized = normalizeWritableRelativePath(value);
     if (normalized.endsWith('.md')) {
-        throw new Error('Vault folder paths must not end in .md.');
+        throw new Error('Memory folder paths must not end in .md.');
     }
     return normalized;
 }
@@ -577,12 +699,12 @@ function normalizeWritableRelativePath(value: string) {
             (segment) => !segment || segment === '.' || segment === '..' || segment.startsWith('.')
         )
     ) {
-        throw new Error('Vault path must stay inside the Vault and avoid dot directories.');
+        throw new Error('Memory path must stay inside Memory and avoid dot directories.');
     }
 
     const normalized = path.posix.normalize(trimmed);
     if (normalized === '.' || normalized === '..' || normalized.startsWith('../')) {
-        throw new Error('Vault path must stay inside the Vault.');
+        throw new Error('Memory path must stay inside Memory.');
     }
 
     return normalized;
@@ -592,7 +714,7 @@ function resolveVaultChildPath(vaultPath: string, relativePath: string) {
     const root = path.resolve(vaultPath);
     const absolutePath = path.resolve(root, ...relativePath.split('/'));
     if (!isPathInside(absolutePath, root)) {
-        throw new Error('Vault path must stay inside the Vault.');
+        throw new Error('Memory path must stay inside Memory.');
     }
     return absolutePath;
 }

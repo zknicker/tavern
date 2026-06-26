@@ -8,7 +8,7 @@ import { ensureRuntimeSchema } from '../db/schema.ts';
 vi.mock('./watcher.ts', () => ({
     getVaultWatcherFreshness: () => ({
         live: false,
-        reason: 'Vault watcher disabled in store tests.',
+        reason: 'Memory watcher disabled in store tests.',
         state: 'idle',
     }),
     restartVaultWatcher: vi.fn(async () => undefined),
@@ -30,7 +30,7 @@ import {
     searchVault,
 } from './store.ts';
 
-describe('Vault store', () => {
+describe('Memory store', () => {
     let root: string;
     let previousVaultPath: string | undefined;
 
@@ -45,7 +45,12 @@ describe('Vault store', () => {
         await fs.mkdir(path.join(root, 'Concepts'), { recursive: true });
         await fs.mkdir(path.join(root, '.obsidian'), { recursive: true });
         await fs.writeFile(path.join(root, '.obsidian', 'workspace.md'), '# Hidden\n');
-        await fs.writeFile(path.join(root, 'INDEX.md'), '# Vault\n\n[[Projects/Alpha|Alpha]]\n');
+        await fs.writeFile(
+            path.join(root, 'MEMORY.md'),
+            '# Memory Briefing\n\n[[Projects/Alpha|Alpha]]\n'
+        );
+        await fs.writeFile(path.join(root, 'USER.md'), '# User Briefing\n');
+        await fs.writeFile(path.join(root, 'TAXONOMY.md'), '# Memory Taxonomy\n');
         await fs.writeFile(
             path.join(root, 'Projects', 'Alpha.md'),
             [
@@ -74,11 +79,11 @@ describe('Vault store', () => {
         await fs.rm(root, { force: true, recursive: true });
     });
 
-    test('reports Vault status from the configured root', async () => {
+    test('reports Memory status from the configured root', async () => {
         await expect(getVaultStatus()).resolves.toMatchObject({
             configSource: 'environment',
             indexExists: true,
-            pageCount: 3,
+            pageCount: 5,
             readable: true,
             vaultPath: root,
             writable: true,
@@ -91,12 +96,14 @@ describe('Vault store', () => {
         expect(list.folders).toEqual(['Concepts', 'Projects']);
         expect(list.pages.map((page) => page.path).sort()).toEqual([
             'Concepts/Lattice.md',
-            'INDEX.md',
+            'MEMORY.md',
             'Projects/Alpha.md',
+            'TAXONOMY.md',
+            'USER.md',
         ]);
     });
 
-    test('reads a Vault page with frontmatter and links', async () => {
+    test('reads a Memory file with frontmatter and links', async () => {
         const page = await getVaultPage({ path: 'Projects/Alpha.md' });
 
         expect(page).toMatchObject({
@@ -113,7 +120,7 @@ describe('Vault store', () => {
         });
     });
 
-    test('creates pages and folders inside the Vault root', async () => {
+    test('creates pages and folders inside the Memory root', async () => {
         await expect(createVaultFolder({ path: 'Projects/Beta' })).resolves.toMatchObject({
             kind: 'folder',
             path: 'Projects/Beta',
@@ -154,7 +161,7 @@ describe('Vault store', () => {
         ).resolves.toContain('aliases:\n  - alpha brief\n---\n# Alpha Project\n\nUpdated body.');
     });
 
-    test('moves pages and folders inside the Vault root', async () => {
+    test('moves pages and folders inside the Memory root', async () => {
         await expect(
             moveVaultPath({
                 fromPath: 'Projects/Alpha.md',
@@ -185,7 +192,7 @@ describe('Vault store', () => {
         });
     });
 
-    test('deletes pages and folders inside the Vault root', async () => {
+    test('deletes pages and folders inside the Memory root', async () => {
         await expect(deleteVaultPage({ path: 'Concepts/Lattice.md' })).resolves.toMatchObject({
             kind: 'page',
             path: 'Concepts/Lattice.md',
@@ -221,21 +228,19 @@ describe('Vault store', () => {
         });
     });
 
-    test('derives backlinks from wikilinks', async () => {
+    test('derives backlinks from double-bracket links', async () => {
         await expect(listVaultBacklinks({ path: 'Projects/Alpha.md' })).resolves.toMatchObject({
             links: [
                 { fromPath: 'Concepts/Lattice.md', fromTitle: 'Lattice' },
-                { fromPath: 'INDEX.md', fromTitle: 'Vault' },
+                { fromPath: 'MEMORY.md', fromTitle: 'Memory Briefing' },
             ],
             targetPath: 'Projects/Alpha.md',
         });
     });
 
-    test('rejects path traversal outside the Vault root', async () => {
+    test('rejects path traversal outside the Memory root', async () => {
         await expect(getVaultPage({ path: '../outside.md' })).resolves.toBeNull();
-        await expect(createVaultPage({ path: '../outside.md' })).rejects.toThrow(
-            /inside the Vault/
-        );
+        await expect(createVaultPage({ path: '../outside.md' })).rejects.toThrow(/inside Memory/);
         await expect(createVaultFolder({ path: '.obsidian/new' })).rejects.toThrow(
             /dot directories/
         );
@@ -244,9 +249,9 @@ describe('Vault store', () => {
         ).rejects.toThrow(/cannot be moved into itself/);
     });
 
-    test('saves a settings-backed Vault path and creates INDEX.md', async () => {
+    test('saves a settings-backed Memory path and creates root memory files', async () => {
         restoreEnv('TAVERN_VAULT_PATH', previousVaultPath);
-        const nextRoot = path.join(root, 'saved-vault');
+        const nextRoot = path.join(root, 'saved-memory');
 
         await expect(saveVaultSettings({ vaultPath: nextRoot })).resolves.toMatchObject({
             configSource: 'settings',
@@ -257,8 +262,23 @@ describe('Vault store', () => {
             configSource: 'settings',
             effectivePath: nextRoot,
         });
-        await expect(fs.readFile(path.join(nextRoot, 'INDEX.md'), 'utf8')).resolves.toBe(
-            '# Vault\n'
+        await expect(fs.readFile(path.join(nextRoot, 'MEMORY.md'), 'utf8')).resolves.toBe(
+            '# Memory Briefing\n\n'
+        );
+        await expect(fs.readFile(path.join(nextRoot, 'USER.md'), 'utf8')).resolves.toBe(
+            '# User Briefing\n\n'
+        );
+        await expect(fs.readFile(path.join(nextRoot, 'TAXONOMY.md'), 'utf8')).resolves.toContain(
+            '# Memory Taxonomy'
+        );
+        await expect(fs.stat(path.join(nextRoot, 'episodic'))).resolves.toSatisfy((stats) =>
+            stats.isDirectory()
+        );
+        await expect(fs.stat(path.join(nextRoot, 'projects'))).resolves.toSatisfy((stats) =>
+            stats.isDirectory()
+        );
+        await expect(fs.stat(path.join(nextRoot, 'routines'))).resolves.toSatisfy((stats) =>
+            stats.isDirectory()
         );
     });
 });

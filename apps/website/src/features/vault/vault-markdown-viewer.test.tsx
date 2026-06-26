@@ -3,7 +3,7 @@ import test from 'node:test';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { VaultMarkdownViewer } from './vault-markdown-viewer.tsx';
 
-test('VaultMarkdownViewer renders common wiki Markdown blocks', () => {
+test('VaultMarkdownViewer renders common Markdown blocks', () => {
     const markup = renderToStaticMarkup(
         <VaultMarkdownViewer
             value={[
@@ -31,13 +31,13 @@ test('VaultMarkdownViewer renders common wiki Markdown blocks', () => {
     assert.match(markup, /<blockquote/);
 });
 
-test('VaultMarkdownViewer renders navigable wiki links when navigation is provided', () => {
+test('VaultMarkdownViewer renders navigable double-bracket links when navigation is provided', () => {
     const markup = renderToStaticMarkup(
         <VaultMarkdownViewer
             onNavigate={() => {
-                // navigation handled by the Vault container
+                // navigation handled by the Memory container
             }}
-            value="See [[alpha|Alpha Page]] ([Alpha Page](../wiki/alpha.md)) and [docs](https://example.com)."
+            value="See [[alpha|Alpha Page]] ([Alpha Page](../memory/alpha.md)) and [docs](https://example.com)."
         />
     );
 
@@ -46,7 +46,7 @@ test('VaultMarkdownViewer renders navigable wiki links when navigation is provid
     assert.match(markup, /href="https:\/\/example.com"/);
 });
 
-test('VaultMarkdownViewer keeps wiki links inert without a navigation handler', () => {
+test('VaultMarkdownViewer keeps double-bracket links inert without a navigation handler', () => {
     const markup = renderToStaticMarkup(<VaultMarkdownViewer value="See [[alpha|Alpha Page]]." />);
 
     assert.doesNotMatch(markup, /<button/);

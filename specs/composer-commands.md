@@ -78,8 +78,8 @@ Every engine command gets exactly one of three treatments:
      canonical — "get back on track" is served by steering, `/compress`,
      `/clear`, and dismissal instead.
    - They manage subsystems or presentation Tavern owns: `/memory` opens the
-     engine's memory-management surface while Tavern routes normal memory
-     writes through the native memory tool and durable knowledge through Vault;
+     engine's memory-management surface while Tavern routes durable knowledge
+     through Memory;
      `/yolo` toggles dangerous-command approval
      skipping out from under Tavern's permission settings; `/footer` and
      `/voice` are messaging-platform reply presentation Tavern renders

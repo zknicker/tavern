@@ -77,7 +77,7 @@ of explaining every detail itself.
 ## Feature Docs
 
 A feature is something Tavern exposes as a product capability. Good feature
-names are `Chat`, `Agents`, `Memory`, `Vault`, `Cron automations`,
+names are `Chat`, `Agents`, `Memory`, `Cron automations`,
 `Skills`, `Plugins`, `Stats`, `Pets and rewards`, and `TypeScript SDK`.
 
 Implementation nouns are not features. Avoid feature pages named `Frontend`,
@@ -187,7 +187,7 @@ and cleanup or rollback notes when relevant.
 ## Writing Rules
 
 * Use Tavern nouns at the product boundary: `chat`, `message`, `response`,
-  `activity`, `artifact`, `agent`, `memory`, `Vault`, `automation`, `skill`,
+  `activity`, `artifact`, `agent`, `memory`, `automation`, `skill`,
   `stats`, `SDK`.
 * Use runtime nouns only where runtime ownership matters: `session`, `turn`,
   `transcript`, `delivery`, `event`.

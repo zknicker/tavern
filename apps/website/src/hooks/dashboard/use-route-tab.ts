@@ -5,7 +5,7 @@ export const routeTabs = [
     { id: 'overview', label: 'Tavern', path: '/dashboard/overview' },
     { id: 'cron', label: 'Tasks', path: '/dashboard/cron' },
     { id: 'workspace', label: 'Workspace', path: '/dashboard/workspace' },
-    { id: 'vault', label: 'Vault', path: '/dashboard/vault' },
+    { id: 'memory', label: 'Memory', path: '/dashboard/memory' },
 ] as const;
 
 type RouteTab = (typeof routeTabs)[number]['id'];
@@ -20,6 +20,10 @@ export function getRouteTab(pathname: string): RouteTab | null {
     const segments = pathname.split('/').filter(Boolean);
     const primaryTab = segments[1] ?? null;
     const secondaryTab = segments[2] ?? null;
+
+    if (primaryTab === 'vault' || secondaryTab === 'vault') {
+        return 'memory';
+    }
 
     if (isRouteTab(primaryTab)) {
         return primaryTab;

@@ -22,7 +22,7 @@ tavern serve
 tavern status [--json] [--runtime-url <url>]
 tavern token [--json]
 tavern vault list
-tavern vault get INDEX.md
+tavern vault get MEMORY.md
 tavern vault search "theme across project notes"
 tavern vault status
 tavern engine status
@@ -42,7 +42,7 @@ a did-you-mean suggestion. Exit codes are `0` success, `1` operational
 failure, `2` usage error. Read commands support `--json`.
 
 `serve` runs the foreground Runtime process. It starts the Runtime HTTP and
-WebSocket API, Runtime storage, managed Hermes dashboard/API/Gateway, Vault
+WebSocket API, Runtime storage, managed Hermes dashboard/API/Gateway, Memory
 reads, and Runtime jobs. It logs to stdout and stderr, and exits on
 `SIGINT` or `SIGTERM`. The Homebrew service and the dev launchd plist invoke
 `tavern serve` explicitly.
@@ -56,8 +56,8 @@ suppressed.
 
 `vault` commands are thin CLI clients for the managed Runtime. They require a
 running Runtime and use `TAVERN_RUNTIME_URL`, or `http://127.0.0.1:18790` by
-default. They browse the resolved Vault root; writes and maintenance happen
-through the managed `vault` skill. When the Runtime is unreachable they fail
+default. They browse the resolved Memory root; writes and maintenance happen
+through the managed `memory` skill. When the Runtime is unreachable they fail
 with a pointer to `tavern status`.
 
 `tavern` is the preferred CLI. `tavern-runtime` remains as a compatibility

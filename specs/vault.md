@@ -1,90 +1,36 @@
-# Vault
+# Compatibility Vault Contract
 
-Vault is Tavern's durable wiki: a plain-Markdown directory the user owns and
-edits through Tavern or agents.
+`vault` is the compatibility name for Tavern's Memory file API.
 
-## Contract
+The product concept is Memory. User-facing navigation, settings, docs, and
+agent prompts should say Memory. Wire routes and TypeScript types can keep
+`vault` until a deliberate API rename happens.
 
-The Vault path resolves in this order:
+## Compatibility Surface
 
-1. `TAVERN_VAULT_PATH`
-2. Settings -> Vault
-3. `~/wiki`
+Runtime still serves:
 
-Runtime persists the Settings path in Runtime metadata. Environment override
-wins when present.
+* `/vault/status`
+* `/vault/settings`
+* `/vault/pages`
+* `/vault/pages/:path`
+* `/vault/folders`
+* `/vault/move`
+* `/vault/search`
 
-Runtime owns:
+The app still calls tRPC procedures under `vault.*`.
 
-* path resolution
-* read/write access checks
-* Markdown file listing
-* folder listing
-* page reads
-* page and folder creation
-* page body saves that preserve frontmatter
-* page and folder deletion
-* page and folder moves or renames
-* best-effort file-change notifications
-* light frontmatter parsing
-* `[[wikilink]]` and Markdown link extraction
-* backlink derivation
-* simple title, path, frontmatter, and body search
-* Settings -> Vault path updates
+## Status Mapping
 
-Runtime does not own:
+`status.indexExists` reports whether `TAXONOMY.md` exists in the Memory root.
 
-* source ingestion
-* compilation
-* health scoring
-* librarian scans
-* todo queues
-* wiki maintenance jobs
-* automatic wiki rewrites beyond user or agent requests
+`vaultPath` is the Memory root path.
 
-## Freshness
+`TAVERN_VAULT_PATH` remains the environment override until the wire setting is
+renamed.
 
-Runtime watches the resolved Vault root while Runtime is running. File changes
-emit `vault.changed` events with best-effort Markdown path hints. The event is
-an invalidation signal only; clients refetch Vault reads instead of treating the
-event payload as canonical file state.
+## Migration Rule
 
-The watcher does not poll, read file bodies, index the wiki, or couple refresh
-to agent turns. It ignores dot directories and non-Markdown files. Large bursts
-emit a coarse `bulk` invalidation with no path hints.
-
-Settings -> Vault path changes restart the watcher and emit a root invalidation.
-If the operating-system watcher fails, Vault status reports degraded freshness
-while path-safe reads and writes continue when filesystem access allows them.
-
-## Agent Contract
-
-Runtime installs the managed `vault` skill into the managed engine home. The
-generated agent instructions tell agents to use that skill when the user says
-"Vault", "wiki", "knowledge base", or "durable knowledge".
-
-The `vault` skill directs normal wiki editing to the Obsidian skill and bounded
-research folders to the llm-wiki skill. Agents read `INDEX.md` before changing
-structure, update it when navigation changes, search for related notes before
-creating new ones, and add useful wikilinks or backlinks.
-
-## App Surface
-
-The Vault tab shows:
-
-* compact Markdown page and folder tree
-* page body rich Markdown editor
-* edit, split, and preview modes
-* Markdown formatting toolbar
-* read-only wiki preview
-* live updates from external file changes
-* dirty-draft conflict notice when a selected page changes on disk
-* file metadata
-* wikilinks and backlinks
-* search
-* resolved path and access status
-* word, character, line, and draft-link counts
-* add, delete, rename, save, and drag-to-folder move controls
-
-Settings and Memory show Vault readiness and counts. They do not expose hidden
-pipeline controls.
+Do not add new product behavior under a user-facing Vault label. New behavior
+belongs to Memory. Compatibility work should be scoped to old routes, old API
+names, and migration shims.

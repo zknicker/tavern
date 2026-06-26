@@ -37,7 +37,7 @@ describe('Runtime capability gates', () => {
         expect(formatCapabilityDisabledReason(capability)).toBe('Tavern update required.');
     });
 
-    test('gates Memories settings on Vault', () => {
+    test('gates Memories settings on Memory', () => {
         expect(settingsCapabilityRequirements.memories).toEqual(['vault']);
     });
 
@@ -47,6 +47,10 @@ describe('Runtime capability gates', () => {
 
     test('gates the Workspace dashboard tab on Runtime API access', () => {
         expect(routeTabCapabilityRequirements.workspace).toEqual(['apiServer']);
+    });
+
+    test('gates the Memory dashboard tab on Memory', () => {
+        expect(routeTabCapabilityRequirements.memory).toEqual(['vault']);
     });
 
     test('gates Stats settings on model inventory', () => {

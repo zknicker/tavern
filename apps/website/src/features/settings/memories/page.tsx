@@ -17,7 +17,7 @@ import {
     formatVaultConfigSource,
     type VaultHubStatus,
     type VaultSettings,
-} from '../../memory/wiki-status-format.ts';
+} from '../../memory/memory-status-format.ts';
 
 export function MemoriesSettings() {
     const statusQuery = useVaultStatus();
@@ -26,8 +26,8 @@ export function MemoriesSettings() {
 
     return (
         <div>
-            <BadgeDivider className="pb-4" subtext="Vault root and Markdown index status.">
-                Vault
+            <BadgeDivider className="pb-4" subtext="Memory root and taxonomy status.">
+                Memory
             </BadgeDivider>
             <VaultSettingsCard
                 error={
@@ -111,15 +111,15 @@ export function VaultSettingsCard({
                     }}
                 >
                     <SettingsRow
-                        description="Defaults to ~/wiki."
+                        description="Defaults to the managed Runtime memory directory."
                         error={
                             environmentLocked ? 'TAVERN_VAULT_PATH is set by environment.' : null
                         }
-                        title="Vault path"
+                        title="Memory path"
                     >
                         <div className="flex max-w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
                             <Input
-                                aria-label="Vault path"
+                                aria-label="Memory path"
                                 className="font-mono md:flex-1"
                                 disabled={isSaving || environmentLocked}
                                 name="vault-path"
@@ -153,7 +153,7 @@ export function VaultSettingsCard({
                     <SettingsValue>{status.pageCount}</SettingsValue>
                 </SettingsRow>
                 <Separator />
-                <SettingsRow title="INDEX.md">
+                <SettingsRow title="TAXONOMY.md">
                     <SettingsValue>{status.indexExists ? 'Present' : 'Missing'}</SettingsValue>
                 </SettingsRow>
                 <Separator />

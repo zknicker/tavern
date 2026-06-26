@@ -1,11 +1,11 @@
-const WIKI_LINK_HREF_PREFIX = '/.tavern-vault-link/';
+const MEMORY_LINK_HREF_PREFIX = '/.tavern-vault-link/';
 
 export function toMdxEditorMarkdown(value: string) {
-    return transformMarkdownText(value, replaceWikiLinks);
+    return transformMarkdownText(value, replaceMemoryLinks);
 }
 
 export function fromMdxEditorMarkdown(value: string) {
-    return transformMarkdownText(value, replaceEditorWikiLinks);
+    return transformMarkdownText(value, replaceEditorMemoryLinks);
 }
 
 function transformMarkdownText(value: string, transformLine: (line: string) => string) {
@@ -57,7 +57,7 @@ function transformOutsideInlineCode(line: string, transformText: (text: string) 
     return output;
 }
 
-function replaceWikiLinks(text: string) {
+function replaceMemoryLinks(text: string) {
     let output = '';
     let cursor = 0;
 
@@ -74,7 +74,7 @@ function replaceWikiLinks(text: string) {
             break;
         }
 
-        const parsed = parseWikiLink(text.slice(start + 2, end));
+        const parsed = parseMemoryLink(text.slice(start + 2, end));
         if (!parsed) {
             output += text.slice(cursor, end + 2);
             cursor = end + 2;
@@ -82,14 +82,14 @@ function replaceWikiLinks(text: string) {
         }
 
         output += text.slice(cursor, start);
-        output += `[${escapeMarkdownLabel(parsed.label)}](${toEditorWikiLinkHref(parsed.target)})`;
+        output += `[${escapeMarkdownLabel(parsed.label)}](${toEditorMemoryLinkHref(parsed.target)})`;
         cursor = end + 2;
     }
 
     return output;
 }
 
-function replaceEditorWikiLinks(text: string) {
+function replaceEditorMemoryLinks(text: string) {
     let output = '';
     let cursor = 0;
 
@@ -120,7 +120,7 @@ function replaceEditorWikiLinks(text: string) {
             continue;
         }
 
-        const target = fromEditorWikiLinkHref(text.slice(labelEnd + 2, hrefEnd));
+        const target = fromEditorMemoryLinkHref(text.slice(labelEnd + 2, hrefEnd));
         if (!target) {
             output += text.slice(cursor, hrefEnd + 1);
             cursor = hrefEnd + 1;
@@ -129,14 +129,14 @@ function replaceEditorWikiLinks(text: string) {
 
         const label = unescapeMarkdownLabel(text.slice(start + 1, labelEnd)).trim();
         output += text.slice(cursor, start);
-        output += formatWikiLink(target, label || target);
+        output += formatMemoryLink(target, label || target);
         cursor = hrefEnd + 1;
     }
 
     return output;
 }
 
-function parseWikiLink(value: string) {
+function parseMemoryLink(value: string) {
     const [targetPart, ...labelParts] = value.split('|');
     const target = targetPart?.trim() ?? '';
     if (!target) {
@@ -149,22 +149,22 @@ function parseWikiLink(value: string) {
     };
 }
 
-function formatWikiLink(target: string, label: string) {
+function formatMemoryLink(target: string, label: string) {
     return label === target ? `[[${target}]]` : `[[${target}|${label}]]`;
 }
 
-function toEditorWikiLinkHref(target: string) {
-    return `${WIKI_LINK_HREF_PREFIX}${encodeURIComponent(target)}`;
+function toEditorMemoryLinkHref(target: string) {
+    return `${MEMORY_LINK_HREF_PREFIX}${encodeURIComponent(target)}`;
 }
 
-function fromEditorWikiLinkHref(value: string) {
+function fromEditorMemoryLinkHref(value: string) {
     const href = value.trim().replace(/^<|>$/gu, '');
-    if (!href.startsWith(WIKI_LINK_HREF_PREFIX)) {
+    if (!href.startsWith(MEMORY_LINK_HREF_PREFIX)) {
         return null;
     }
 
     try {
-        return decodeURIComponent(href.slice(WIKI_LINK_HREF_PREFIX.length));
+        return decodeURIComponent(href.slice(MEMORY_LINK_HREF_PREFIX.length));
     } catch {
         return null;
     }

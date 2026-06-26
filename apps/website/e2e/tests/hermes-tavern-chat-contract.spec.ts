@@ -41,9 +41,9 @@ test('stores Tavern generated AGENTS.md without runtime bootstrap companion file
     const fullText = await getRuntimeInstructions(runtimeUrl);
 
     expect(fullText).toContain('# Tavern Agent Instructions');
-    expect(fullText).toContain("Vault is the user's central knowledge hub");
-    expect(fullText).toContain('Use the installed `vault` skill');
-    expect(fullText).toContain('The Vault path is `TAVERN_VAULT_PATH`');
+    expect(fullText).toContain('Treat memory as durable Markdown files.');
+    expect(fullText).toContain('Use the installed `memory` skill');
+    expect(fullText).toContain('memory root path through `TAVERN_VAULT_PATH`');
     expect(fullText).not.toContain('# SOUL.md - Who You Are');
     expect(fullText).not.toContain('# TOOLS.md - Local Notes');
     expect(fullText).not.toContain('# IDENTITY.md - Who Am I?');

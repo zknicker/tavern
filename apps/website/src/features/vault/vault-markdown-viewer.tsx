@@ -193,7 +193,7 @@ function renderInlineMarkdown(
         const match =
             matchInlineCode(text, cursor) ??
             matchMarkdownLink(text, cursor) ??
-            matchWikiLink(text, cursor) ??
+            matchMemoryLink(text, cursor) ??
             matchDelimited(text, cursor, '**') ??
             matchDelimited(text, cursor, '__') ??
             matchDelimited(text, cursor, '*');
@@ -215,7 +215,7 @@ type InlineMatch =
     | { code: string; end: number; kind: 'code' }
     | { content: string; end: number; kind: 'emphasis' | 'strong' }
     | { end: number; href: string; kind: 'link'; label: string }
-    | { end: number; kind: 'wikiLink'; label: string; target: string };
+    | { end: number; kind: 'memoryLink'; label: string; target: string };
 
 function renderInlineMatch(match: InlineMatch, key: string, onNavigate?: VaultLinkNavigate) {
     switch (match.kind) {
@@ -230,7 +230,7 @@ function renderInlineMatch(match: InlineMatch, key: string, onNavigate?: VaultLi
                 <em key={key}>{renderInlineMarkdown(match.content, `${key}:em`, onNavigate)}</em>
             );
         case 'link': {
-            if (onNavigate && isWikiPageHref(match.href)) {
+            if (onNavigate && isMemoryPageHref(match.href)) {
                 const href = match.href;
                 return (
                     <PageLink key={key} onNavigate={() => onNavigate(href)}>
@@ -256,7 +256,7 @@ function renderInlineMatch(match: InlineMatch, key: string, onNavigate?: VaultLi
                     {renderInlineMarkdown(match.content, `${key}:strong`, onNavigate)}
                 </strong>
             );
-        case 'wikiLink': {
+        case 'memoryLink': {
             if (onNavigate) {
                 const target = match.target;
                 return (
@@ -286,7 +286,7 @@ function PageLink({ children, onNavigate }: { children: React.ReactNode; onNavig
     );
 }
 
-function isWikiPageHref(href: string) {
+function isMemoryPageHref(href: string) {
     return href.endsWith('.md') && !/^[a-z][a-z0-9+.-]*:/iu.test(href) && !href.startsWith('/');
 }
 
@@ -324,7 +324,7 @@ function matchMarkdownLink(text: string, cursor: number): InlineMatch | null {
     };
 }
 
-function matchWikiLink(text: string, cursor: number): InlineMatch | null {
+function matchMemoryLink(text: string, cursor: number): InlineMatch | null {
     if (!text.startsWith('[[', cursor)) {
         return null;
     }
@@ -337,7 +337,7 @@ function matchWikiLink(text: string, cursor: number): InlineMatch | null {
     const raw = text.slice(cursor + 2, end);
     return {
         end: end + 2,
-        kind: 'wikiLink',
+        kind: 'memoryLink',
         label: raw.split('|').at(-1)?.trim() || raw,
         target: raw.split('|')[0]?.split('#')[0]?.trim() || raw,
     };

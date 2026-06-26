@@ -98,9 +98,9 @@ packages into `~/.tavern/skills`, and it does not describe toolsets to the model
 as Tavern skills.
 
 Runtime-owned workflow packages can still be prepared as managed skills when
-they are part of Tavern's product contract. Vault is the current example:
-Runtime bundles the `vault` managed skill so normal wiki work can route to
-Obsidian and bounded research folders can route to llm-wiki.
+they are part of Tavern's product contract. Memory is the current example:
+Runtime bundles the `memory` managed skill so agents know where durable
+knowledge belongs.
 Runtime also bundles first-party product skills such as `tavern` and Plugin
 starter skills such as `merchbase`. Plugin starter skills teach the agent when
 to use Plugin-owned toolsets; executable Plugin capability lives in Hermes
@@ -110,16 +110,16 @@ toggles are locked because the Plugin record owns enablement. If a Plugin
 reserves a flat skill name already used by a user-owned skill, the user resolves
 that conflict from Settings -> Plugins. Confirming enablement replaces the
 existing skill with the Runtime-owned Plugin starter guide.
-The Runtime-owned `vault`, `tavern`, and Plugin starter skill copies are
+The Runtime-owned `memory`, `tavern`, and Plugin starter skill copies are
 read-only and refreshed from Tavern assets on startup. Agent-created,
 hub-installed, workspace, personal, extra-directory, and plugin-owned skills
 remain owned by their source location and keep their normal Hermes editability.
 Tavern refreshes inventory after Hermes reports skill-related writes; it does
 not become the editor or merge owner for those files.
 
-Assistant memory is not a Tavern skill. Runtime leaves the engine's built-in
-`MEMORY.md` and `USER.md` memory enabled, and agents write compact memory
-through the native memory tool.
+Memory is a Tavern-managed skill and Markdown root. Runtime installs the
+read-only `memory` skill so agents know when to use direct Memory edits and
+where durable context belongs.
 
 Plugins stay owned by the runtime that exposes them. Hermes plugins may add
 skills, workflows, tools, channels, or runtime behavior. Codex native plugins

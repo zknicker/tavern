@@ -48,7 +48,7 @@ export const runtimeCapabilityDefinitions: RuntimeCapabilityDefinition[] = [
         async check() {
             return await checkVaultCapability();
         },
-        displayName: 'Vault',
+        displayName: 'Memory',
         id: 'vault',
         refresh: {
             intervalMs: 5 * minuteMs,
@@ -168,7 +168,7 @@ async function checkVaultCapability(): Promise<RuntimeCapabilityCheckResult> {
             const stat = fs.statSync(vaultPath);
             if (!stat.isDirectory()) {
                 return {
-                    reason: 'Vault path is not a directory.',
+                    reason: 'Memory path is not a directory.',
                     state: 'unavailable',
                     technicalMessage: vaultPath,
                 };
@@ -180,7 +180,7 @@ async function checkVaultCapability(): Promise<RuntimeCapabilityCheckResult> {
                 ? { metadata: existingMetadata, state: 'healthy' }
                 : {
                       metadata: existingMetadata,
-                      reason: 'The managed Vault skill has not been prepared yet.',
+                      reason: 'The managed Memory skill has not been prepared yet.',
                       state: 'degraded',
                   };
         }
@@ -188,12 +188,12 @@ async function checkVaultCapability(): Promise<RuntimeCapabilityCheckResult> {
         fs.accessSync(path.dirname(vaultPath), fs.constants.R_OK | fs.constants.W_OK);
         return {
             metadata: { ...metadata, missing: true },
-            reason: skillReady ? null : 'The managed Vault skill has not been prepared yet.',
+            reason: skillReady ? null : 'The managed Memory skill has not been prepared yet.',
             state: skillReady ? 'healthy' : 'degraded',
         };
     } catch (error) {
         return {
-            reason: 'Vault path is not readable.',
+            reason: 'Memory path is not readable.',
             state: 'unavailable',
             technicalMessage: error instanceof Error ? error.message : String(error),
         };

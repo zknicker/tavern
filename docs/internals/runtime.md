@@ -16,7 +16,7 @@ executor.
 * **Tavern Runtime owns chat and local service connections.** It stores canonical chats,
   messages, participants, events, reads, automations, agents, and delivery
   state. It starts managed Hermes, carries runtime events, stores runtime
-  settings, exposes Vault reads, and exposes Tavern tools to agents.
+  settings, exposes Memory reads, and exposes Tavern tools to agents.
 * **Hermes owns execution.** Sessions, turns, messages, tools, model calls, and
   native Hermes runtime behavior remain Hermes-owned. Tavern stores projected
   execution evidence only where the product needs durable chat, activity,
@@ -27,8 +27,8 @@ executor.
   and message ids; it does not create chats, repair chats, or write chat-level
   Tavern metadata.
 * **Tavern App owns presentation.** The app reads runtime chat history, caches
-  what it needs, and renders chats, activity, settings, memory inspection,
-  Vault, automations, skills, and stats.
+  what it needs, and renders chats, activity, settings, Memory, automations,
+  skills, and stats.
 * **Events are recoverable notifications.** Runtime chat events are durable and
   cursor-backed. Hermes stream events trigger focused ingestion paths; they are
   not durable chat history by themselves.
@@ -79,9 +79,9 @@ the Tavern-managed content (`managed-instructions.ts`), the agent name, and
 `NOTES.md`, written read-only, and rewritten only when the composed bytes
 change — so prompt-cache invalidation happens exactly when a source changes
 and never per turn. The generated file tells the agent it is immutable and
-that `NOTES.md` is its scratch space. The managed content includes Tavern
-environment, memory, Vault, Rich Response, delegation, skill-maintenance, and
-progress guidance. For skill work, it tells agents to inspect the current
+that `NOTES.md` is its durable instructions source. The managed content includes
+Tavern environment, Memory, Workspace/workbench, Rich Response, delegation,
+skill-maintenance, and progress guidance. For skill work, it tells agents to inspect the current
 skill catalog with native skill tools before creating or patching skill
 content. For external skill search, it uses
 `hermes skills search <query> --source skills-sh` unless the user names a
@@ -99,6 +99,11 @@ the agent file API, and via a filesystem watch on `NOTES.md`
 (`workspace/notes-watcher.ts`) for direct agent edits. See
 [workspace.md](../../specs/workspace.md) for the contract.
 
+Runtime also creates `workbench/` under the managed workspace. That directory is
+the user-visible Workspace surface for durable files, projects, code, assets,
+and experiments that are not Memory. The app should expose `workbench/`, not the
+managed workspace root.
+
 Fresh Hermes homes seed `SOUL.md`; they do not seed a default workspace
 `AGENTS.md`. Tavern generates its own workspace context so managed chats always
 load Tavern-specific instructions from the session cwd.
@@ -114,7 +119,7 @@ Without that context, Hermes runs but does not inject the generated `AGENTS.md`,
 including Tavern skills and visible-progress guidance.
 
 Generated instructions also include a compact inspectable-output rule. When an
-agent creates or updates workspace files, Vault pages, Markdown or HTML docs,
+agent creates or updates workspace files, Memory files, Markdown or HTML docs,
 images, or generated assets, its final reply links them with a Markdown link.
 Tools may return the canonical link; otherwise agents use Tavern internal
 links such as `tavern://workspace/path` or `tavern://vault/path`. The app
@@ -123,7 +128,7 @@ the current runtime scope; they are not local absolute paths or external URLs.
 Runtime exposes workspace targets through read-only
 `/workspace/agents/{id}/files` routes that resolve inside the registered agent
 workspace, block traversal and sensitive files, and return preview content.
-Vault targets resolve through the Vault API.
+Memory targets resolve through the Vault API compatibility surface.
 
 The agent's operational access to Tavern ships as the managed `tavern` skill
 (`apps/runtime/src/hermes/tavern-skill.ts`): chat reads and searches, attributed
@@ -135,7 +140,7 @@ at the skill; [tavern-skill.md](../../specs/tavern-skill.md) is the contract.
 
 The Runtime root is the backup unit. It defaults to
 `~/.tavern/runtime` and contains Tavern's runtime chat database, managed
-skills, runtime settings, generated Hermes home/workspace, Vault metadata, and
+skills, runtime settings, generated Hermes home/workspace, Memory metadata, and
 projected Hermes execution evidence. The dev stack uses
 `~/.tavern/dev/<worktree-id>/runtime` by default.
 
@@ -144,12 +149,12 @@ that Tavern renders, inspects, searches, or recovers are persisted in Tavern
 Runtime storage as execution evidence. Hermes remains canonical for native
 execution behavior.
 
-Vault is a Runtime read surface over the user's Markdown wiki. Hermes context
-management for turns remains separate from durable wiki knowledge. Tavern
-reports Vault readiness separately from prompt-time context management.
+Memory is a Runtime read/write surface over durable Markdown knowledge. Hermes
+context management for turns remains separate from durable Memory. Tavern
+reports Memory readiness separately from prompt-time context management.
 
-Memory and Vault product contracts live in [Memories](../../specs/memories.md)
-and [Vault](../../specs/vault.md).
+Memory and compatibility wire contracts live in [Memories](../../specs/memories.md)
+and [Compatibility Vault](../../specs/vault.md).
 
 ## Runtime Ingestion
 
@@ -184,8 +189,8 @@ health and exposes it through the Admin API. Jobs and app surfaces can use
 capability health to decide whether dependent functionality is available. The
 app renders capability health; it does not own Runtime capability checks.
 
-Vault maintenance does not sync from Hermes. Agents perform Vault work through
-the managed `vault` skill.
+Memory maintenance does not sync from Hermes. Agents perform Memory work through
+the managed `memory` skill.
 
 ## Boundaries
 

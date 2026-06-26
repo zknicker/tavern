@@ -8,7 +8,7 @@ test('buildVaultPageTree groups pages by path directories', () => {
         page({ path: 'Projects/Alpha.md', title: 'Alpha' }),
         page({ path: 'Projects/Beta.md', title: 'Beta' }),
         page({ path: 'Concepts/Lattice.md', title: 'Lattice' }),
-        page({ path: 'INDEX.md', title: 'Index' }),
+        page({ path: 'MEMORY.md', title: 'Memory Briefing' }),
     ];
 
     assert.deepEqual(summarizeTree(buildVaultPageTree(pages)), [
@@ -20,7 +20,7 @@ test('buildVaultPageTree groups pages by path directories', () => {
             children: ['Alpha', 'Beta'],
             name: 'Projects',
         },
-        'INDEX',
+        'MEMORY',
     ]);
 });
 
@@ -38,7 +38,7 @@ test('buildVaultPageTree includes empty folders from the list contract', () => {
     ]);
 });
 
-test('resolveVaultLinkTarget resolves wikilink slugs', () => {
+test('resolveVaultLinkTarget resolves memory link slugs', () => {
     const pages = [
         page({ path: 'Projects/Alpha.md', title: 'Alpha' }),
         page({ path: 'Concepts/Beta Note.md', title: 'Beta' }),
@@ -66,8 +66,8 @@ test('resolveVaultLinkTarget resolves relative markdown paths', () => {
 
 function page(input: Partial<VaultPageNode>): VaultPageNode {
     return {
-        path: 'INDEX.md',
-        title: 'Index',
+        path: 'MEMORY.md',
+        title: 'Memory Briefing',
         updatedAt: '2026-06-09T00:00:00.000Z',
         ...input,
     };

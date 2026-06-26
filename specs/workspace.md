@@ -14,10 +14,10 @@ and instructs the agent that the file is immutable and that `NOTES.md` is its
 scratch space. It is composed deterministically from:
 
 * **Tavern-managed content.** The agent's Tavern environment, delegation
-  guidance, the Vault/memory model, the immutability/scratch-space
-  instructions, inspectable output linking, skill-maintenance guidance, and
-  the `tavern` skill pointer ([tavern-skill.md](tavern-skill.md)). Product
-  language; does not name Hermes.
+  guidance, the Memory model, Workspace/workbench rules, generated-file
+  instructions, skill-maintenance guidance, and the `tavern` skill pointer
+  ([tavern-skill.md](tavern-skill.md)). Product language; does not name
+  Hermes.
 * **The agent name.** From the registered agent record.
 * **`NOTES.md`.** Composed verbatim into a Notes section.
 
@@ -37,6 +37,9 @@ managed-region merging.
   never writes it again.
 * **`SOUL.md`** (managed Hermes home) carries identity, voice, tone, and
   durable personality. Tavern never writes it.
+* **`workbench/`** (workspace) is the user-visible Workspace directory. Agents
+  use it for durable files, projects, code, experiments, assets, and other
+  working artifacts that are not Memory.
 
 Fresh Hermes homes seed `SOUL.md`; they do not seed a default workspace
 `AGENTS.md`. Tavern's generated `AGENTS.md` is therefore Tavern's managed
@@ -51,7 +54,7 @@ a different source.
 ## Inspectable Outputs
 
 The generated instructions tell agents to link inspectable outputs in final
-replies: workspace files, Vault pages, Markdown or HTML documents, images, and
+replies: workspace files, Memory files, Markdown or HTML documents, images, and
 generated assets. The rule is intentionally short so it can live in the
 high-priority managed prompt without crowding the user's notes.
 
@@ -61,7 +64,7 @@ return a link, agents use Tavern internal links:
 | Target | Link form |
 | --- | --- |
 | Workspace file or asset | `[name](tavern://workspace/path)` |
-| Vault page | `[name](tavern://vault/path)` |
+| Memory file | `[name](tavern://vault/path)` |
 
 These links are presentation hints for Tavern App. The final answer cites the
 thing the agent created or changed; it does not mention the Artifact Panel or
@@ -90,23 +93,16 @@ The app exposes `NOTES.md` and `SOUL.md` as the editable agent files. The
 `NOTES.md` editor offers a read-only preview of the generated `AGENTS.md`.
 The app does not expose `AGENTS.md` for editing.
 
-The Artifact Panel and Workspace page can read workspace outputs through
-Runtime. Workspace file reads are agent-scoped, read-only, and rooted at the
-registered workspace directory. The app resolves `tavern://workspace/path` with
-the active agent, lists workspace files from Runtime, and previews Markdown,
-sandboxed HTML, images, and text. It does not use absolute local paths as the
-product contract.
+The app's Workspace surface exposes `workbench/`, not the managed workspace
+root. The workspace root can still contain generated instructions, runtime
+state, and legacy cleanup files; those are not the user's browsing surface.
 
-Vault remains the global durable wiki source. Workspace browsing is for files
-and assets the agent produced in its own execution workspace; Vault browsing is
-for durable knowledge pages.
+Knowledge belongs in Memory, not `workbench/`. Operating instructions belong
+in `NOTES.md` or `SOUL.md`, not `workbench/`.
 
 ## Legacy
 
 Generation clears unsupported legacy companion bootstrap files such as
 `TOOLS.md`, `IDENTITY.md`, `USER.md`, `HEARTBEAT.md`, `BOOTSTRAP.md`,
 `MEMORY.md`, and `ROLE.md` from the managed workspace. It does not clear
-`SOUL.md`, and it does not touch the engine's native memory files under the
-managed home `memories/` directory. If legacy files still exist in the managed
-workspace, Workspace treats them as ordinary workspace files, not assistant
-memory.
+`SOUL.md`. The app does not expose the legacy workspace-root files.

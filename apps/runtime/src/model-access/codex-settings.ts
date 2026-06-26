@@ -125,7 +125,7 @@ function getCodexAccountLabel(credentials: LoadedCodexCredentials): string {
         metadata?.email ??
         readStoredAccountEmail(credentials.document) ??
         credentials.credentials.accountId ??
-        (credentials.source === 'manual' ? 'Tavern Vault' : credentials.path)
+        (credentials.source === 'manual' ? 'Tavern Secret Storage' : credentials.path)
     );
 }
 

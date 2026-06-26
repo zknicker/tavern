@@ -46,7 +46,7 @@ function readOpenAiStatus() {
     const settings = getOpenAiSettings();
     return {
         description: settings.hasApiKey
-            ? 'OpenAI API key is saved in Tavern Vault.'
+            ? 'OpenAI API key is saved in Tavern Secret Storage.'
             : 'Add an OpenAI API key.',
         id: 'openai',
         source: settings.hasApiKey ? 'tavern-vault' : null,
@@ -58,7 +58,7 @@ function readOpenRouterStatus() {
     const settings = getOpenRouterSettings();
     return {
         description: settings.hasApiKey
-            ? 'OpenRouter API key is saved in Tavern Vault.'
+            ? 'OpenRouter API key is saved in Tavern Secret Storage.'
             : 'Add an OpenRouter API key.',
         id: 'openrouter',
         source: settings.hasApiKey ? 'tavern-vault' : null,

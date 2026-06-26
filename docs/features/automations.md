@@ -18,8 +18,8 @@ Automations let users ask agents to do work later or on a schedule.
 * **Follow-up state.** Users can see what ran, what failed, and what comes next.
 
 Automations are entirely user-authored. Tavern's own background work, such as
-capability refreshes, runs as Runtime jobs. Vault work belongs to agents through
-the managed `vault` skill, not hidden Runtime maintenance.
+capability refreshes, runs as Runtime jobs. Memory work belongs to agents
+through the managed `memory` skill, not hidden Runtime maintenance.
 
 ## Boundary
 

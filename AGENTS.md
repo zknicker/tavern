@@ -19,9 +19,9 @@ Hermes's plumbing.
 
 | Layer | Owns |
 | --- | --- |
-| Tavern Runtime | Canonical chats, messages, participants, events, reads, automations, deliveries, runtime activity, Vault reads, managed Hermes startup, and Tavern tools. |
+| Tavern Runtime | Canonical chats, messages, participants, events, reads, automations, deliveries, runtime activity, durable memory file access, managed Hermes startup, and Tavern tools. |
 | Tavern App | The Electron/React product surface, local presentation, app cache, app settings, optimistic UI, and tRPC client behavior. |
-| Tavern API / SDK | Stable contracts for chats, realtime, admin/runtime control, automations, Vault, memory inspection, skills, stats, and external clients. |
+| Tavern API / SDK | Stable contracts for chats, realtime, admin/runtime control, automations, durable memory files, skills, stats, and external clients. |
 | Hermes | Native agent execution: agents, sessions, turns, transcripts, files, tools, model calls, context management, and Gateway behavior. |
 
 Use product nouns directly:
@@ -31,7 +31,11 @@ Use product nouns directly:
 - A `turn` is one execution inside a session.
 - Tavern chat history is canonical Tavern Runtime state.
 - Hermes transcripts are execution evidence, not the product timeline.
-- Vault is Tavern's durable knowledge wiki. Context management belongs to Hermes.
+- A memory root is durable Markdown the user and agent can inspect: `MEMORY.md`, `USER.md`,
+  `TAXONOMY.md`, episodic notes, and taxonomy-defined semantic folders.
+- The Memory page is the app view over those files; it is not a separate product, database, or
+  context-management system.
+- Context management belongs to Hermes.
 
 ## Docs Routing
 
@@ -114,7 +118,7 @@ so `docs:list` routes future agents correctly.
 
 ## Runtime And Data
 
-- Runtime owns canonical chat records, durable events, activity state, Vault reads, managed
+- Runtime owns canonical chat records, durable events, activity state, durable memory reads, managed
   Hermes startup, and runtime tools.
 - App storage is cache, settings, local presentation state, and runtime evidence views.
 - Runtime adapters project Tavern primitives plus source facts. They must not author final Tavern

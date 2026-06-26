@@ -19,7 +19,7 @@ export function TavernVaultBadge({ className, ...props }: TavernVaultBadgeProps)
             {...props}
         >
             <Icon className="shrink-0" icon={Shield01Icon} />
-            <span>Tavern Vault</span>
+            <span>Tavern Secret Storage</span>
         </Badge>
     );
 }

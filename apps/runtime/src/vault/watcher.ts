@@ -32,7 +32,7 @@ const pendingPaths = new Set<string>();
 let pendingBulk = false;
 let freshness: VaultFreshness = {
     live: false,
-    reason: 'Vault live updates have not started.',
+    reason: 'Memory live updates have not started.',
     state: 'idle',
 };
 
@@ -104,7 +104,10 @@ export async function restartVaultWatcher({
             reason: null,
             state: 'watching',
         };
-        log.info('Watching Vault root for live updates', { vaultPath: root, watchPath: watchRoot });
+        log.info('Watching Memory root for live updates', {
+            vaultPath: root,
+            watchPath: watchRoot,
+        });
         if (emitRootChanged) {
             publishVaultChanged({ reason: 'settings', scope: 'root' });
         }
@@ -113,7 +116,7 @@ export async function restartVaultWatcher({
             await closeActiveWatcher();
         }
         degradeVaultFreshness(error);
-        log.warn('Vault live updates unavailable', { err: error, vaultPath: root });
+        log.warn('Memory live updates unavailable', { err: error, vaultPath: root });
         if (emitRootChanged) {
             publishVaultChanged({ reason: 'settings', scope: 'root' });
         }
@@ -129,7 +132,7 @@ export async function closeVaultWatcher() {
     await closeActiveWatcher();
     freshness = {
         live: false,
-        reason: 'Vault live updates have stopped.',
+        reason: 'Memory live updates have stopped.',
         state: 'idle',
     };
 }

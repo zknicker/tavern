@@ -42,7 +42,7 @@ describe('Vault watcher', () => {
         });
     });
 
-    test('publishes changes when the Vault root is inside a hidden parent', async () => {
+    test('publishes changes when the Memory root is inside a hidden parent', async () => {
         const hiddenRoot = path.join(root, '.owner', 'Vault');
         await fs.mkdir(hiddenRoot, { recursive: true });
         await startTestVaultWatcher(hiddenRoot);
@@ -69,7 +69,7 @@ describe('Vault watcher', () => {
         expect(event.paths).toEqual(['Projects/2026.06/Alpha.md']);
     });
 
-    test('publishes changed Markdown paths when the Vault root is a symlink', async () => {
+    test('publishes changed Markdown paths when the Memory root is a symlink', async () => {
         const targetRoot = path.join(root, 'TargetVault');
         const linkRoot = path.join(root, 'LinkedVault');
         await fs.mkdir(targetRoot, { recursive: true });

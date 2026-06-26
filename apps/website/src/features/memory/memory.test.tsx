@@ -18,7 +18,7 @@ test('MemoryOverview renders Aside-style memory settings and hub status', () => 
                     indexExists: true,
                     pageCount: 42,
                     readable: true,
-                    vaultPath: '/Users/zknicker/wiki',
+                    vaultPath: '/Users/zknicker/.tavern/runtime/memory',
                     writable: true,
                 }}
             />
@@ -28,7 +28,7 @@ test('MemoryOverview renders Aside-style memory settings and hub status', () => 
     assert.match(markup, /Enable memories/);
     assert.match(markup, /Episodic retention/);
     assert.match(markup, /Open Tasks/);
-    assert.match(markup, /Open Vault/);
+    assert.match(markup, /Open Memory/);
     assert.match(markup, /Settings/);
     assert.match(markup, /Recent runs/);
     assert.match(markup, /Browse files/);

@@ -22,7 +22,7 @@ Participant knowledge sits between participants and memory.
   participant.
 - `participant observations` capture durable knowledge about a participant.
 - `participant relationships` capture durable links between participants.
-- Vault remains the underlying long-term wiki that preserves this knowledge over time.
+- Memory remains the underlying long-term store that preserves this knowledge over time.
 - `activity log` captures recent activity, not long-term person knowledge.
 - `participant context` renders active people using participant identity, participant observations,
   participant relationships, and recent activity.
@@ -45,7 +45,7 @@ A participant observation is a durable statement about a participant.
 - A participant observation should preserve provenance, recency, and whether it is current,
   superseded, contradicted, uncertain, or otherwise inactive.
 
-Participant observations should reuse Vault note types, tags, links, and timeline entries where
+Participant observations should reuse Memory note types, tags, links, and timeline entries where
 appropriate, including:
 
 - `identity`
@@ -108,7 +108,7 @@ Relationships are not just profile facts. They describe how people connect to on
   superseded.
 - A participant relationship should preserve scope using the same `shared`, `agent`, and
   `participant` model as participant observations when point of view matters.
-- A participant relationship should preserve provenance and recency like any other Vault fact.
+- A participant relationship should preserve provenance and recency like any other Memory fact.
 
 Tavern should support durable relationship types such as:
 

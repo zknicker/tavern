@@ -114,8 +114,8 @@ requires ticket/cookie auth for managed runtime, update
 * `~/.tavern/runtime/hermes/home` is the default managed `HERMES_HOME`.
 * `~/.tavern/runtime/hermes/workspace` is the generated managed workspace.
 * `~/.tavern/runtime/data/runtime.db` is Tavern Runtime durable state.
-* The Vault wiki is durable knowledge. Runtime resolves it from
-  `TAVERN_VAULT_PATH`, Settings -> Vault, or `~/wiki`.
+* Memory is durable knowledge. Runtime resolves it from `TAVERN_VAULT_PATH`,
+  Settings -> Memory, or the managed Runtime memory directory.
 * Dev stack state is isolated under `~/.tavern/dev/<worktree-id>/`.
 * Runtime-backed Hermes rows remain scoped to `tavern-hermes-managed`.
 

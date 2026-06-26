@@ -19,8 +19,8 @@ with external tools.
 
 ## Ownership
 
-- Tavern Runtime is canonical for connector records. Secrets live in Tavern
-  Vault; generated managed runtime config and environment receive only the
+- Tavern Runtime is canonical for connector records. Secrets live in Tavern-managed
+  secret storage; generated managed runtime config and environment receive only the
   materialized values the engine needs.
 - Hermes executes connector tools. Tavern does not proxy or reimplement tool
   calls.

@@ -67,7 +67,7 @@ const json = (args: ParsedArgs) => Boolean(args.flags['--json']);
 
 const statusSub: SubCommand = {
     name: 'status',
-    summary: 'Show Vault path, page count, index status, and access',
+    summary: 'Show Memory path, page count, taxonomy status, and access',
     usage: 'tavern vault status [--json] [--runtime-url <url>]',
     flags: jsonAndUrlFlags(),
     positionals: [],
@@ -77,7 +77,7 @@ const statusSub: SubCommand = {
 
 const listSub: SubCommand = {
     name: 'list',
-    summary: 'List Vault pages',
+    summary: 'List Memory files',
     usage: 'tavern vault list [--json] [--runtime-url <url>]',
     flags: jsonAndUrlFlags(),
     positionals: [],
@@ -87,17 +87,17 @@ const listSub: SubCommand = {
 
 const getSub: SubCommand = {
     name: 'get',
-    summary: 'Print one Vault page',
+    summary: 'Print one Memory file',
     usage: 'tavern vault get <path> [--json] [--runtime-url <url>]',
     flags: jsonAndUrlFlags(),
     positionals: ['<path>'],
-    examples: ['tavern vault get INDEX.md'],
+    examples: ['tavern vault get MEMORY.md'],
     run: (args) => runGet(args),
 };
 
 const searchSub: SubCommand = {
     name: 'search',
-    summary: 'Search Vault pages',
+    summary: 'Search Memory files',
     usage: 'tavern vault search <query> [--json] [--runtime-url <url>]',
     flags: jsonAndUrlFlags(),
     positionals: ['<query>'],

@@ -51,7 +51,7 @@ export async function handleVaultRequest(request: Request): Promise<Response | n
     }
 
     if (request.method === 'PUT' && url.pathname === agentRuntimeRoutes.vaultSettings) {
-        const forbiddenResponse = requireTavernMutation(request, 'Vault settings');
+        const forbiddenResponse = requireTavernMutation(request, 'Memory settings');
         if (forbiddenResponse) {
             return forbiddenResponse;
         }
@@ -69,7 +69,7 @@ export async function handleVaultRequest(request: Request): Promise<Response | n
     }
 
     if (request.method === 'POST' && url.pathname === agentRuntimeRoutes.vaultPages) {
-        const forbiddenResponse = requireTavernMutation(request, 'Vault page creation');
+        const forbiddenResponse = requireTavernMutation(request, 'Memory file creation');
         if (forbiddenResponse) {
             return forbiddenResponse;
         }
@@ -78,7 +78,7 @@ export async function handleVaultRequest(request: Request): Promise<Response | n
     }
 
     if (request.method === 'POST' && url.pathname === agentRuntimeRoutes.vaultFolders) {
-        const forbiddenResponse = requireTavernMutation(request, 'Vault folder creation');
+        const forbiddenResponse = requireTavernMutation(request, 'Memory folder creation');
         if (forbiddenResponse) {
             return forbiddenResponse;
         }
@@ -87,7 +87,7 @@ export async function handleVaultRequest(request: Request): Promise<Response | n
     }
 
     if (request.method === 'POST' && url.pathname === agentRuntimeRoutes.vaultMovePath) {
-        const forbiddenResponse = requireTavernMutation(request, 'Vault path moves');
+        const forbiddenResponse = requireTavernMutation(request, 'Memory path moves');
         if (forbiddenResponse) {
             return forbiddenResponse;
         }
@@ -120,7 +120,7 @@ export async function handleVaultRequest(request: Request): Promise<Response | n
     }
 
     if (request.method === 'PUT' && pageMatch?.[1]) {
-        const forbiddenResponse = requireTavernMutation(request, 'Vault page saves');
+        const forbiddenResponse = requireTavernMutation(request, 'Memory file saves');
         if (forbiddenResponse) {
             return forbiddenResponse;
         }
@@ -133,7 +133,7 @@ export async function handleVaultRequest(request: Request): Promise<Response | n
     }
 
     if (request.method === 'DELETE' && pageMatch?.[1]) {
-        const forbiddenResponse = requireTavernMutation(request, 'Vault page deletion');
+        const forbiddenResponse = requireTavernMutation(request, 'Memory file deletion');
         if (forbiddenResponse) {
             return forbiddenResponse;
         }
@@ -146,7 +146,7 @@ export async function handleVaultRequest(request: Request): Promise<Response | n
 
     const folderMatch = url.pathname.match(/^\/vault\/folders\/(.+)$/u);
     if (request.method === 'DELETE' && folderMatch?.[1]) {
-        const forbiddenResponse = requireTavernMutation(request, 'Vault folder deletion');
+        const forbiddenResponse = requireTavernMutation(request, 'Memory folder deletion');
         if (forbiddenResponse) {
             return forbiddenResponse;
         }
