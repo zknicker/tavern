@@ -190,6 +190,8 @@ describe('Tavern Runtime Chat API store', () => {
             { id: 'rsp_demo_tool_headers_completed', status: 'completed' },
             { id: 'rsp_demo_tool_headers_live', status: 'running' },
         ]);
+        expect(listMessages(developmentChatDemoIds.turnTimeline).messages).toHaveLength(40);
+        expect(listResponses(developmentChatDemoIds.turnTimeline).responses).toHaveLength(20);
         expect(getResponseActivity('act_demo_tool_headers_read_sales')).toMatchObject({
             kind: 'tool_call',
             status: 'completed',

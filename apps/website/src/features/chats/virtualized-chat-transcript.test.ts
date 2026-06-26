@@ -8,6 +8,7 @@ import {
     computeStableTranscriptRenderRows,
     getEstimatedTranscriptRowSize,
 } from './chat-transcript-row-model.ts';
+import type { ChatTurnTimelineMarker } from './chat-turn-timeline.tsx';
 import {
     getEstimatedTranscriptOffsetForIndex,
     getRenderedVirtualizedChatAnchorScrollCorrection,
@@ -21,6 +22,7 @@ import {
     getChatVirtualizerScrollBehavior,
     getEstimatedTranscriptBottomOffset,
     getEstimatedTranscriptTailVirtualItems,
+    getVisibleChatTurnTimelineMarkerIds,
     shouldLoadPreviousVirtualizedChatPage,
     shouldReconcileVirtualizedTranscriptEnd,
 } from './virtualized-chat-transcript.tsx';
@@ -149,6 +151,27 @@ test('virtualized chat fallback keeps rendering the tail when the viewport is in
         'day-10',
         'day-11',
     ]);
+});
+
+test('virtualized chat marks timeline turns whose paired rows intersect the viewport', () => {
+    const markers = [
+        timelineMarker({ agentRowIndex: 2, id: 'turn-1', rowIndex: 1 }),
+        timelineMarker({ agentRowIndex: 4, id: 'turn-2', rowIndex: 3 }),
+    ];
+
+    const visibleMarkerIds = getVisibleChatTurnTimelineMarkerIds({
+        markers,
+        scrollOffset: 100,
+        viewportHeight: 100,
+        virtualItems: [
+            virtualItem({ end: 90, index: 1, key: 'turn-1-user', size: 70, start: 20 }),
+            virtualItem({ end: 150, index: 2, key: 'turn-1-agent', size: 60, start: 90 }),
+            virtualItem({ end: 280, index: 3, key: 'turn-2-user', size: 80, start: 200 }),
+            virtualItem({ end: 360, index: 4, key: 'turn-2-agent', size: 80, start: 280 }),
+        ],
+    });
+
+    expect([...visibleMarkerIds]).toEqual(['turn-1']);
 });
 
 test('virtualized chat keeps implicit size adjustments instant while following', () => {
@@ -457,6 +480,26 @@ function virtualItem({
     start: number;
 }) {
     return { end, index, key, lane: 0, size, start } satisfies VirtualItem;
+}
+
+function timelineMarker({
+    agentRowIndex,
+    id,
+    rowIndex,
+}: {
+    agentRowIndex: number;
+    id: string;
+    rowIndex: number;
+}) {
+    return {
+        agentText: 'Done.',
+        agentRowIndex,
+        id,
+        rowIndex,
+        status: 'completed',
+        timestamp: null,
+        userText: 'Question?',
+    } satisfies ChatTurnTimelineMarker;
 }
 
 function thinkingRow(id: string): ChatRow {

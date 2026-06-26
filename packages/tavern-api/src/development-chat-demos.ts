@@ -13,4 +13,5 @@ export const developmentChatDemoIds = {
     richResponseCatalog: 'cht_demo_rich_response_catalog',
     streamingStack: 'cht_demo_streaming_stack',
     toolHeaders: 'cht_demo_tool_headers',
+    turnTimeline: 'cht_demo_turn_timeline',
 } as const;

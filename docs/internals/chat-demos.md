@@ -49,3 +49,4 @@ app-local UI state, not durable Runtime chat rows.
 | `cht_demo_rich_response_catalog` | Stack, Heading, Text, Separator, and Table Rich Response components rendered inline in one real chat. |
 | `cht_demo_streaming_stack` | Running turn with thinking, progress, and tool stack rows. |
 | `cht_demo_tool_headers` | Stable collapsed tool drawer headers for mixed work, approval, and a live running group. |
+| `cht_demo_turn_timeline` | Twenty completed back-and-forth turns for exercising the chat turn timeline rail. |

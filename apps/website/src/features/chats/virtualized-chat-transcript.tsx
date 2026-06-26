@@ -24,6 +24,11 @@ import {
 } from './chat-transcript-row-model.ts';
 import { TranscriptRenderRowItem } from './chat-transcript-rows.tsx';
 import {
+    buildChatTurnTimelineMarkers,
+    type ChatTurnTimelineMarker,
+    ChatTurnTimelineRail,
+} from './chat-turn-timeline.tsx';
+import {
     useChatScrollControllerHandle,
     useChatScrollControllerMode,
 } from './use-chat-scroll-controller.ts';
@@ -227,6 +232,7 @@ export function VirtualizedChatTranscript({
     });
     const totalSize = virtualizer.getTotalSize();
     const initialScrollMeasureKey = `${rows.length}:${totalSize}`;
+    const turnTimelineMarkers = React.useMemo(() => buildChatTurnTimelineMarkers(rows), [rows]);
     const virtualItems = virtualizer.getVirtualItems();
     const usingEstimatedTail = virtualItems.length === 0;
     const renderableVirtualItems = usingEstimatedTail
@@ -236,6 +242,24 @@ export function VirtualizedChatTranscript({
               transcriptEndInset
           )
         : virtualItems;
+    const turnTimelineViewportHeight =
+        virtualizer.scrollRect?.height ??
+        getInitialTranscriptViewportHeight(scrollViewportRef.current);
+    const turnTimelineScrollOffset =
+        virtualizer.scrollOffset ??
+        (usingEstimatedTail
+            ? getEstimatedTranscriptBottomOffset(
+                  rows,
+                  turnTimelineViewportHeight,
+                  transcriptEndInset
+              )
+            : 0);
+    const activeTurnTimelineMarkerIds = getVisibleChatTurnTimelineMarkerIds({
+        markers: turnTimelineMarkers,
+        scrollOffset: turnTimelineScrollOffset,
+        viewportHeight: turnTimelineViewportHeight,
+        virtualItems: renderableVirtualItems,
+    });
     const firstEntryIndex = virtualItems.find((item) => rows[item.index]?.kind === 'entry')?.index;
     useVirtualizedChatAnchorRestore({
         anchorRestorePendingRef,
@@ -398,6 +422,17 @@ export function VirtualizedChatTranscript({
 
     return (
         <div className="relative w-full [overflow-anchor:none]" ref={virtualizer.containerRef}>
+            <ChatTurnTimelineRail
+                activeMarkerIds={activeTurnTimelineMarkerIds}
+                markers={turnTimelineMarkers}
+                onSelect={(marker: ChatTurnTimelineMarker) => {
+                    chatScrollController?.beginHistoryNavigation();
+                    virtualizer.scrollToIndex(marker.rowIndex, {
+                        align: 'center',
+                        behavior: 'smooth',
+                    });
+                }}
+            />
             {renderableVirtualItems.map((virtualItem) => {
                 const row = rows[virtualItem.index];
 
@@ -534,6 +569,44 @@ export function getEstimatedTranscriptTailVirtualItems(
     );
 
     return items.slice(startIndex);
+}
+
+export function getVisibleChatTurnTimelineMarkerIds({
+    markers,
+    scrollOffset,
+    viewportHeight,
+    virtualItems,
+}: {
+    markers: ChatTurnTimelineMarker[];
+    scrollOffset: number;
+    viewportHeight: number;
+    virtualItems: VirtualItem[];
+}) {
+    const visibleMarkerIds = new Set<string>();
+
+    if (markers.length === 0 || virtualItems.length === 0 || viewportHeight <= 0) {
+        return visibleMarkerIds;
+    }
+
+    const viewportStart = scrollOffset;
+    const viewportEnd = scrollOffset + viewportHeight;
+    const visibleRowIndices = new Set<number>();
+
+    for (const item of virtualItems) {
+        if (item.end <= viewportStart || item.start >= viewportEnd) {
+            continue;
+        }
+
+        visibleRowIndices.add(item.index);
+    }
+
+    for (const marker of markers) {
+        if (visibleRowIndices.has(marker.rowIndex) || visibleRowIndices.has(marker.agentRowIndex)) {
+            visibleMarkerIds.add(marker.id);
+        }
+    }
+
+    return visibleMarkerIds;
 }
 
 export function getChatVirtualizerScrollBehavior({

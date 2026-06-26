@@ -47,6 +47,10 @@ happen, and keep the durable timeline as context.
   tab color and chat-specific agent instructions.
 * **Offline catch-up.** Tavern Runtime keeps chat history while the app is
   closed; the app reloads from durable rows and refetches on reconnect.
+* **Turn timeline.** Loaded user-to-agent turns render as a compact hover rail
+  beside the transcript, centered in the chat pane. Hover previews the user
+  message, assistant reply or active status, and turn time. Selecting a dash
+  scrolls the transcript to that turn without changing durable chat state.
 * **Mid-turn steering.** The chat composer stays available while an agent turn
   is running. Drafts entered during an active turn are queued for the same chat
   and agent, then sent when the active response settles. A queued text-only

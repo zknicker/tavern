@@ -14,11 +14,13 @@ import {
 // The time fallback covers reduced motion, where no transition runs, and
 // pointer-downs that never change the panel.
 const anchorFallbackMs = 600;
+const historyNavigationSettleMs = 700;
 
 // Stable per-chat handle for deep transcript components (disclosure triggers,
 // the virtualizer) so they reach the controller without window events.
 export interface ChatScrollControllerHandle {
     beginAnchor: (trigger: HTMLElement) => void;
+    beginHistoryNavigation: () => void;
     getMode: () => ChatScrollMode;
     registerScrollToBottomWriter: (writer: ChatScrollToBottomWriter) => () => void;
     restoreScrollPosition: (state: { isAtBottom: boolean }) => void;
@@ -82,6 +84,7 @@ export function useChatScrollController({
     const scrollToBottomWriterRef = React.useRef<ChatScrollToBottomWriter | null>(null);
     const userScrollIntentRef = React.useRef(false);
     const userScrollIntentTimerRef = React.useRef<number | null>(null);
+    const historyNavigationSettleTimerRef = React.useRef<number | null>(null);
     const [isAtBottom, setIsAtBottom] = React.useState(true);
 
     const notifyModeListeners = React.useCallback(() => {
@@ -151,8 +154,18 @@ export function useChatScrollController({
         };
     }, []);
 
+    const clearHistoryNavigationSettleTimer = React.useCallback(() => {
+        if (historyNavigationSettleTimerRef.current === null) {
+            return;
+        }
+
+        window.clearTimeout(historyNavigationSettleTimerRef.current);
+        historyNavigationSettleTimerRef.current = null;
+    }, []);
+
     const scrollToBottom = React.useCallback(
         (behavior: ScrollBehavior = 'smooth') => {
+            clearHistoryNavigationSettleTimer();
             dispatch({ type: 'followRequested' });
             const scrollToBottomWriter = scrollToBottomWriterRef.current;
 
@@ -164,7 +177,7 @@ export function useChatScrollController({
 
             setIsAtBottom(true);
         },
-        [dispatch, writeScrollToBottom]
+        [clearHistoryNavigationSettleTimer, dispatch, writeScrollToBottom]
     );
 
     const clearAnchor = React.useCallback(() => {
@@ -183,9 +196,36 @@ export function useChatScrollController({
         window.clearTimeout(anchor.fallbackTimer);
     }, []);
 
+    const settleHistoryNavigation = React.useCallback(() => {
+        clearHistoryNavigationSettleTimer();
+
+        const viewport = viewportRef.current;
+        const atBottom = viewport ? isViewportNearBottom(viewport) : true;
+        const transition = dispatch({
+            isAtBottom: atBottom,
+            type: 'historyNavigationSettled',
+        });
+
+        if (transition.mode !== 'anchored') {
+            setIsAtBottom(atBottom);
+        }
+    }, [clearHistoryNavigationSettleTimer, dispatch]);
+
+    const beginHistoryNavigation = React.useCallback(() => {
+        clearAnchor();
+        clearHistoryNavigationSettleTimer();
+        dispatch({ type: 'historyNavigationStarted' });
+        setIsAtBottom(false);
+        historyNavigationSettleTimerRef.current = window.setTimeout(
+            settleHistoryNavigation,
+            historyNavigationSettleMs
+        );
+    }, [clearAnchor, clearHistoryNavigationSettleTimer, dispatch, settleHistoryNavigation]);
+
     const restoreScrollPosition = React.useCallback(
         ({ isAtBottom: restoredAtBottom }: { isAtBottom: boolean }) => {
             clearAnchor();
+            clearHistoryNavigationSettleTimer();
 
             dispatch(
                 restoredAtBottom
@@ -194,7 +234,7 @@ export function useChatScrollController({
             );
             setIsAtBottom(restoredAtBottom);
         },
-        [clearAnchor, dispatch]
+        [clearAnchor, clearHistoryNavigationSettleTimer, dispatch]
     );
 
     const clearUserScrollIntent = React.useCallback(() => {
@@ -303,6 +343,10 @@ export function useChatScrollController({
                 userInitiated: consumeUserScrollIntent(),
             });
 
+            if (transition.mode !== 'historyNavigating') {
+                clearHistoryNavigationSettleTimer();
+            }
+
             if (transition.mode !== 'anchored') {
                 if (transition.action === 'pinBottom') {
                     if (pinPassiveScrollDrift) {
@@ -315,6 +359,7 @@ export function useChatScrollController({
             }
         };
         const handleUserScroll = () => {
+            clearHistoryNavigationSettleTimer();
             markUserScrollIntent();
 
             if (modeRef.current !== 'anchored') {
@@ -393,6 +438,7 @@ export function useChatScrollController({
         };
     }, [
         clearUserScrollIntent,
+        clearHistoryNavigationSettleTimer,
         consumeUserScrollIntent,
         dispatch,
         endAnchor,
@@ -449,11 +495,13 @@ export function useChatScrollController({
     }, [dispatch, enabled, initialScrollKey, writeScrollToBottom]);
 
     React.useEffect(() => clearAnchor, [clearAnchor]);
+    React.useEffect(() => clearHistoryNavigationSettleTimer, [clearHistoryNavigationSettleTimer]);
     React.useEffect(() => clearUserScrollIntent, [clearUserScrollIntent]);
 
     const handle = React.useMemo<ChatScrollControllerHandle>(
         () => ({
             beginAnchor,
+            beginHistoryNavigation,
             getMode,
             registerScrollToBottomWriter,
             restoreScrollPosition,
@@ -462,6 +510,7 @@ export function useChatScrollController({
         }),
         [
             beginAnchor,
+            beginHistoryNavigation,
             getMode,
             registerScrollToBottomWriter,
             restoreScrollPosition,

@@ -1,3 +1,4 @@
+import { developmentChatDemoIds } from '@tavern/api/development-chat-demos';
 import * as React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAgentList } from '../../hooks/agents/use-agent-list.ts';
@@ -29,6 +30,13 @@ import { buildChatPath } from './chat-path.ts';
 import { getSteerableRunId } from './chat-steering.ts';
 
 export const chatDetailLogLimit = 24;
+export const turnTimelineDemoLogLimit = 40;
+
+export function getChatDetailLogLimit(chatId: string) {
+    return chatId === developmentChatDemoIds.turnTimeline
+        ? turnTimelineDemoLogLimit
+        : chatDetailLogLimit;
+}
 
 export function AgentChatDetail({ chatId }: { chatId: string }) {
     const location = useLocation();
@@ -163,7 +171,7 @@ function SyncedAgentChatDetail({ chat, chatId }: { chat: ChatListItem; chatId: s
     const conversationLayout = getChatMessageLayout(chat);
     const timeline = useChatTimeline({
         chatId,
-        limit: chatDetailLogLimit,
+        limit: getChatDetailLogLimit(chatId),
     });
     const rows = timeline.rows;
     const approvalPrompt = useChatApprovalPromptState(rows);

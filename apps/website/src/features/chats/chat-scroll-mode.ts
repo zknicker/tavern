@@ -3,13 +3,15 @@
 // chat surfaces leave item measurement compensation to TanStack Virtual.
 // See specs/chat-scroll-controller.md.
 
-export type ChatScrollMode = 'following' | 'anchored' | 'free';
+export type ChatScrollMode = 'following' | 'anchored' | 'free' | 'historyNavigating';
 
 export type ChatScrollEvent =
     | { type: 'anchorEnded'; isAtBottom: boolean }
     | { type: 'anchorStarted' }
     | { type: 'contentResized' }
     | { type: 'followRequested' }
+    | { type: 'historyNavigationSettled'; isAtBottom: boolean }
+    | { type: 'historyNavigationStarted' }
     | { type: 'scrolled'; isAtBottom: boolean; userInitiated: boolean }
     | { type: 'userScrolled'; isAtBottom: boolean };
 
@@ -29,6 +31,14 @@ export function transitionChatScrollMode(
     switch (event.type) {
         case 'followRequested':
             return { action: 'scrollToBottom', mode: 'following' };
+        case 'historyNavigationStarted':
+            return { action: 'none', mode: 'historyNavigating' };
+        case 'historyNavigationSettled':
+            if (mode !== 'historyNavigating') {
+                return { action: 'none', mode };
+            }
+
+            return { action: 'none', mode: event.isAtBottom ? 'following' : 'free' };
         case 'anchorStarted':
             return { action: 'none', mode: 'anchored' };
         case 'anchorEnded':
@@ -44,6 +54,13 @@ export function transitionChatScrollMode(
             // explicit user input (wheel/touch) may cancel an anchor.
             if (mode === 'anchored') {
                 return { action: 'none', mode };
+            }
+
+            // The first frame of a smooth history navigation can still be
+            // inside the bottom tolerance. Do not resume following until the
+            // scroll leaves the tail or the history navigation settles.
+            if (mode === 'historyNavigating') {
+                return { action: 'none', mode: event.isAtBottom ? mode : 'free' };
             }
 
             if (mode === 'following' && !event.isAtBottom && !event.userInitiated) {

@@ -1,10 +1,13 @@
 import { expect, test } from 'bun:test';
+import { developmentChatDemoIds } from '@tavern/api/development-chat-demos';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { ChatMessage } from '../../components/chats/chat-message.tsx';
 import {
     chatDetailLogLimit,
+    getChatDetailLogLimit,
     isBlockingActiveTurn,
     shouldReleaseDraftHandoff,
+    turnTimelineDemoLogLimit,
 } from './agent-chat-detail.tsx';
 import { AgentPresenceIndicator } from './agent-presence-indicator.tsx';
 import { resolveActivePresenceVerb } from './chat-active-presence-verb.ts';
@@ -13,6 +16,14 @@ import { getSteerableRunId } from './chat-steering.ts';
 
 test('chat detail cold-open loads a narrow transcript tail', () => {
     expect(chatDetailLogLimit).toBeLessThanOrEqual(30);
+});
+
+test('turn timeline demo loads enough messages to show every marker', () => {
+    expect(getChatDetailLogLimit(developmentChatDemoIds.turnTimeline)).toBe(
+        turnTimelineDemoLogLimit
+    );
+    expect(turnTimelineDemoLogLimit).toBe(40);
+    expect(getChatDetailLogLimit('cht_normal')).toBe(chatDetailLogLimit);
 });
 
 test('agent presence indicator keeps a fixed icon box for layout motion', () => {

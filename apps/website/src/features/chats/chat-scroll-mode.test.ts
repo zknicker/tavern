@@ -35,7 +35,7 @@ describe('transitionChatScrollMode', () => {
     });
 
     test('a follow request scrolls to bottom from any mode', () => {
-        for (const mode of ['following', 'anchored', 'free'] as const) {
+        for (const mode of ['following', 'anchored', 'free', 'historyNavigating'] as const) {
             expect(transitionChatScrollMode(mode, { type: 'followRequested' })).toEqual({
                 action: 'scrollToBottom',
                 mode: 'following',
@@ -43,8 +43,55 @@ describe('transitionChatScrollMode', () => {
         }
     });
 
-    test('anchor start takes ownership from any mode', () => {
+    test('history navigation leaves bottom-follow before the virtualizer scroll write', () => {
         for (const mode of ['following', 'anchored', 'free'] as const) {
+            expect(transitionChatScrollMode(mode, { type: 'historyNavigationStarted' })).toEqual({
+                action: 'none',
+                mode: 'historyNavigating',
+            });
+        }
+    });
+
+    test('history navigation does not resume following during near-bottom smooth-scroll frames', () => {
+        expect(
+            transitionChatScrollMode('historyNavigating', {
+                isAtBottom: true,
+                type: 'scrolled',
+                userInitiated: false,
+            })
+        ).toEqual({ action: 'none', mode: 'historyNavigating' });
+        expect(
+            transitionChatScrollMode('historyNavigating', {
+                isAtBottom: false,
+                type: 'scrolled',
+                userInitiated: false,
+            })
+        ).toEqual({ action: 'none', mode: 'free' });
+    });
+
+    test('history navigation settles to the final bottom state', () => {
+        expect(
+            transitionChatScrollMode('historyNavigating', {
+                isAtBottom: true,
+                type: 'historyNavigationSettled',
+            })
+        ).toEqual({ action: 'none', mode: 'following' });
+        expect(
+            transitionChatScrollMode('historyNavigating', {
+                isAtBottom: false,
+                type: 'historyNavigationSettled',
+            })
+        ).toEqual({ action: 'none', mode: 'free' });
+        expect(
+            transitionChatScrollMode('free', {
+                isAtBottom: true,
+                type: 'historyNavigationSettled',
+            })
+        ).toEqual({ action: 'none', mode: 'free' });
+    });
+
+    test('anchor start takes ownership from any mode', () => {
+        for (const mode of ['following', 'anchored', 'free', 'historyNavigating'] as const) {
             expect(transitionChatScrollMode(mode, { type: 'anchorStarted' })).toEqual({
                 action: 'none',
                 mode: 'anchored',
@@ -65,6 +112,12 @@ describe('transitionChatScrollMode', () => {
         expect(
             transitionChatScrollMode('following', { isAtBottom: false, type: 'anchorEnded' })
         ).toEqual({ action: 'none', mode: 'following' });
+        expect(
+            transitionChatScrollMode('historyNavigating', {
+                isAtBottom: false,
+                type: 'anchorEnded',
+            })
+        ).toEqual({ action: 'none', mode: 'historyNavigating' });
     });
 
     test('scroll events from anchor writes do not cancel the anchor', () => {
@@ -146,12 +199,14 @@ describe('virtualizer ownership helpers', () => {
     test('TanStack end anchoring is suspended only during drawer anchoring', () => {
         expect(shouldAnchorVirtualizerToEnd('following')).toBe(true);
         expect(shouldAnchorVirtualizerToEnd('free')).toBe(true);
+        expect(shouldAnchorVirtualizerToEnd('historyNavigating')).toBe(true);
         expect(shouldAnchorVirtualizerToEnd('anchored')).toBe(false);
     });
 
     test('TanStack size-change adjustment keeps tail row growth pinned while following', () => {
         expect(getVirtualizerSizeAdjustmentPredicate('following')?.()).toBe(true);
         expect(getVirtualizerSizeAdjustmentPredicate('free')).toBeUndefined();
+        expect(getVirtualizerSizeAdjustmentPredicate('historyNavigating')).toBeUndefined();
         expect(getVirtualizerSizeAdjustmentPredicate('anchored')?.()).toBe(false);
     });
 });

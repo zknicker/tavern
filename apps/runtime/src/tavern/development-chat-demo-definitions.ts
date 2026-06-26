@@ -15,6 +15,7 @@ import { chartDemo, composedChartDemo } from './development-chat-demo-composed-c
 import { merchbaseSalesChartDemo } from './development-chat-demo-merchbase-sales-chart-definition';
 import { richResponseCatalogDemo } from './development-chat-demo-rich-response-catalog-definition';
 import { toolHeadersDemo } from './development-chat-demo-tool-header-definitions';
+import { turnTimelineDemo } from './development-chat-demo-turn-timeline-definition';
 import type { DevelopmentChatDemo } from './development-chat-demo-types';
 
 export const developmentChatDemos: DevelopmentChatDemo[] = [
@@ -32,4 +33,5 @@ export const developmentChatDemos: DevelopmentChatDemo[] = [
     streamingStackDemo(),
     approvalFlowDemo(),
     toolHeadersDemo(),
+    turnTimelineDemo(),
 ];
