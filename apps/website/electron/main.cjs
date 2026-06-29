@@ -1,12 +1,28 @@
 'use strict';
 
-const { app, BrowserWindow, ipcMain, Menu, nativeTheme, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, Menu, nativeTheme, screen, shell } = require('electron');
 const path = require('node:path');
 const { spawn, execFile, spawnSync } = require('node:child_process');
 const { existsSync } = require('node:fs');
 const electronUpdater = require('electron-updater');
 const { registerEditContextMenuHandlers } = require('./edit-context-menu.cjs');
 const { registerExternalLinkHandlers } = require('./external-link-handlers.cjs');
+const {
+    buildDevWindowUrl,
+    findReattachTarget,
+    isSafeWindowRoute,
+    nextWindowBounds,
+} = require('./window-routing.cjs');
+
+// A broken stdout/stderr pipe (e.g. the dev launcher's reader went away, or a logging
+// library writes after the pipe closed) must never crash the app with an uncaught EPIPE.
+for (const stream of [process.stdout, process.stderr]) {
+    stream.on('error', (error) => {
+        if (error.code !== 'EPIPE') {
+            throw error;
+        }
+    });
+}
 
 const desktopServerOrigin = 'http://127.0.0.1:3180';
 const sidecarStartupDeadlineMs = 10_000;
@@ -22,10 +38,19 @@ const macosTrafficLightPosition = {
 const { autoUpdater } = electronUpdater;
 const useMockUpdater = !app.isPackaged && process.env.TAVERN_ELECTRON_UPDATER_MOCK === '1';
 
+const windows = new Set();
 let mainWindow = null;
 let serverProcess = null;
 let serverReadyPromise = null;
 let updateCheckInterval = null;
+const newWindowOffsetPx = 36;
+// While tearing a tab out, the spawned window follows the cursor, offset so the cursor
+// sits over its tab strip (like grabbing the new window by the torn tab).
+const tearOffFollowMs = 16;
+const tearOffCursorOffset = { x: 120, y: 16 };
+// tearOff = { window, route, sourceId, targetId } while a tab is being torn out.
+let tearOff = null;
+let tearOffTimer = null;
 
 app.setName('Tavern');
 app.setAppUserModelId('build.tavern.desktop');
@@ -44,11 +69,14 @@ if (useMockUpdater) {
     autoUpdater.forceDevUpdateConfig = true;
 }
 
-function createMainWindow() {
-    mainWindow = new BrowserWindow({
+function createWindow({ route, openerBounds } = {}) {
+    const bounds = nextWindowBounds(openerBounds, { offset: newWindowOffsetPx });
+    const window = new BrowserWindow({
         title: 'Tavern',
-        width: 1440,
-        height: 960,
+        width: bounds.width,
+        height: bounds.height,
+        x: bounds.x,
+        y: bounds.y,
         minWidth: 1100,
         minHeight: 760,
         resizable: true,
@@ -67,27 +95,140 @@ function createMainWindow() {
         },
     });
 
-    mainWindow.once('ready-to-show', () => {
-        mainWindow?.show();
+    windows.add(window);
+    mainWindow ??= window;
+
+    window.once('ready-to-show', () => {
+        window.show();
     });
 
-    registerExternalLinkHandlers(mainWindow, {
+    window.on('closed', () => {
+        windows.delete(window);
+
+        if (mainWindow === window) {
+            mainWindow = windows.values().next().value ?? null;
+        }
+    });
+
+    registerExternalLinkHandlers(window, {
         appUrl: process.env.TAVERN_ELECTRON_DEV_URL ?? 'file://',
         openExternal: (url) => shell.openExternal(url),
     });
 
-    void loadMainWindow(mainWindow);
+    void loadWindow(window, route);
+
+    return window;
 }
 
-async function loadMainWindow(window) {
-    const devUrl = process.env.TAVERN_ELECTRON_DEV_URL;
-
-    if (devUrl) {
-        await window.loadURL(devUrl);
+function tickTearOff() {
+    if (!tearOff || tearOff.window.isDestroyed()) {
         return;
     }
 
-    await window.loadFile(path.join(__dirname, '..', 'dist', 'index.html'));
+    const point = screen.getCursorScreenPoint();
+
+    const otherBounds = [];
+    for (const window of windows) {
+        if (window !== tearOff.window && !window.isDestroyed()) {
+            otherBounds.push({ id: window.id, bounds: window.getBounds() });
+        }
+    }
+
+    const targetId = findReattachTarget(otherBounds, point, tearOff.window.id);
+
+    // Dock state machine: while the cursor is over another window's strip the moving
+    // window goes transparent and that window renders a "ghost" tab that follows the cursor
+    // (the controller forwards the cursor; release commits, leaving pops it back out).
+    // It's hidden via opacity, not by moving offscreen — macOS clamps windows back on
+    // screen, which would leave it poking out from an edge.
+    if (targetId !== tearOff.dockedTarget) {
+        if (tearOff.dockedTarget !== null) {
+            BrowserWindow.fromId(tearOff.dockedTarget)?.webContents.send(
+                'desktop:dock:leave',
+                tearOff.route
+            );
+        }
+
+        if (targetId === null) {
+            tearOff.window.setOpacity(1);
+        } else if (tearOff.dockedTarget === null) {
+            tearOff.window.setOpacity(0);
+        }
+
+        tearOff.dockedTarget = targetId;
+    }
+
+    if (tearOff.dockedTarget !== null) {
+        const target = BrowserWindow.fromId(tearOff.dockedTarget);
+
+        if (target && !target.isDestroyed()) {
+            target.webContents.send('desktop:dock:update', {
+                route: tearOff.route,
+                x: point.x - target.getBounds().x,
+            });
+        }
+    }
+
+    // Keep the controller under the cursor (invisible while docked) so it reappears in
+    // place the moment it floats free.
+    if (tearOff.mode === 'self') {
+        // Move the window itself by the cursor delta from grab (preserves grab point).
+        tearOff.window.setPosition(
+            Math.round(tearOff.anchorWin.x + (point.x - tearOff.anchorCursor.x)),
+            Math.round(tearOff.anchorWin.y + (point.y - tearOff.anchorCursor.y))
+        );
+    } else {
+        // A torn-off window snaps under the cursor (grabbed by the torn tab).
+        tearOff.window.setPosition(
+            Math.round(point.x - tearOffCursorOffset.x),
+            Math.round(point.y - tearOffCursorOffset.y)
+        );
+    }
+}
+
+/**
+ * Settle a tear/move on release. If the cursor is over a window's strip (docked), the tab
+ * commits there and the controller window closes. Otherwise a still-floating window stays:
+ * a torn-off window becomes a new window, a self-moved window stays where dropped. An abort
+ * closes a torn window but leaves a self-move in place.
+ */
+function endTearOff(keepWindow) {
+    if (tearOffTimer) {
+        clearInterval(tearOffTimer);
+        tearOffTimer = null;
+    }
+
+    const current = tearOff;
+    tearOff = null;
+
+    if (!current || current.window.isDestroyed()) {
+        return;
+    }
+
+    if (current.dockedTarget !== null) {
+        BrowserWindow.fromId(current.dockedTarget)?.webContents.send(
+            'desktop:dock:commit',
+            current.route
+        );
+        current.window.close();
+        return;
+    }
+
+    if (!keepWindow && current.mode !== 'self') {
+        current.window.close();
+    }
+}
+
+async function loadWindow(window, route) {
+    const devUrl = process.env.TAVERN_ELECTRON_DEV_URL;
+
+    if (devUrl) {
+        await window.loadURL(buildDevWindowUrl(devUrl, route));
+        return;
+    }
+
+    const indexPath = path.join(__dirname, '..', 'dist', 'index.html');
+    await window.loadFile(indexPath, route ? { hash: route } : undefined);
 }
 
 function installAppMenu() {
@@ -127,7 +268,10 @@ function installAppMenu() {
             submenu: [
                 {
                     accelerator: 'CmdOrCtrl+Alt+I',
-                    click: () => mainWindow?.webContents.openDevTools({ mode: 'detach' }),
+                    click: () =>
+                        (BrowserWindow.getFocusedWindow() ?? mainWindow)?.webContents.openDevTools({
+                            mode: 'detach',
+                        }),
                     id: openDevtoolsMenuId,
                     label: 'Open Web Inspector',
                 },
@@ -158,6 +302,65 @@ function registerIpcHandlers() {
     });
 
     ipcMain.handle('desktop:window:start-drag', () => undefined);
+
+    ipcMain.handle('desktop:window:open', (event, route) => {
+        if (!isSafeWindowRoute(route)) {
+            return;
+        }
+
+        const opener = BrowserWindow.fromWebContents(event.sender);
+        createWindow({ route, openerBounds: opener?.getBounds() });
+    });
+
+    ipcMain.handle('desktop:window:close', (event) => {
+        BrowserWindow.fromWebContents(event.sender)?.close();
+    });
+
+    ipcMain.handle('desktop:window:tear-off-start', (event, route) => {
+        if (!isSafeWindowRoute(route)) {
+            return;
+        }
+
+        endTearOff(false);
+        const opener = BrowserWindow.fromWebContents(event.sender);
+        const window = createWindow({ route, openerBounds: opener?.getBounds() });
+        tearOff = { window, route, sourceId: opener?.id ?? null, dockedTarget: null, mode: 'spawn' };
+        tickTearOff();
+        tearOffTimer = setInterval(tickTearOff, tearOffFollowMs);
+    });
+
+    ipcMain.handle('desktop:window:tear-off-finish', () => endTearOff(true));
+    ipcMain.handle('desktop:window:tear-off-cancel', () => endTearOff(false));
+
+    // Dragging a window's only tab moves the window itself; dropping it on another
+    // window's strip merges the two.
+    ipcMain.handle('desktop:window:self-move-start', (event, route) => {
+        if (!isSafeWindowRoute(route)) {
+            return;
+        }
+
+        const window = BrowserWindow.fromWebContents(event.sender);
+
+        if (!window) {
+            return;
+        }
+
+        endTearOff(false);
+        tearOff = {
+            window,
+            route,
+            sourceId: window.id,
+            dockedTarget: null,
+            mode: 'self',
+            anchorCursor: screen.getCursorScreenPoint(),
+            anchorWin: window.getBounds(),
+        };
+        tickTearOff();
+        tearOffTimer = setInterval(tickTearOff, tearOffFollowMs);
+    });
+
+    ipcMain.handle('desktop:window:self-move-finish', () => endTearOff(true));
+    ipcMain.handle('desktop:window:self-move-cancel', () => endTearOff(false));
 
     ipcMain.handle('desktop:window:set-theme', (_event, theme) => {
         nativeTheme.themeSource = theme === 'dark' || theme === 'light' ? theme : 'system';
@@ -255,7 +458,9 @@ autoUpdater.on('error', (error) => {
 });
 
 function sendUpdateStatus(status) {
-    mainWindow?.webContents.send('desktop:update:status', status);
+    for (const window of windows) {
+        window.webContents.send('desktop:update:status', status);
+    }
 }
 
 async function startDesktopServer() {
@@ -415,7 +620,7 @@ function getErrorMessage(error) {
 app.whenReady().then(() => {
     registerIpcHandlers();
     installAppMenu();
-    createMainWindow();
+    createWindow();
     startUpdateMonitor();
 });
 

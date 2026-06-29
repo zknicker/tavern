@@ -14,6 +14,7 @@ module.exports = {
         'electron/external-link-handlers.cjs',
         'electron/main.cjs',
         'electron/preload.cjs',
+        'electron/window-routing.cjs',
         'package.json',
     ],
     extraResources: [
