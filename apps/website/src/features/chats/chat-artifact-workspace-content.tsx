@@ -26,12 +26,29 @@ export function WorkspaceBrowserContent({
     agentId,
     initialDirectoryPath = '',
     sidebarStorageKey = 'tavern.artifactPane.workspaceSidebar.width',
+    selectedPath: controlledSelectedPath,
+    onSelectPath,
 }: {
     agentId: string;
     initialDirectoryPath?: string;
     sidebarStorageKey?: string;
+    /** Controlled open file — when provided, the host owns it (e.g. via the URL) so it
+        survives the tab moving to another window. Omitted callers keep local state. */
+    selectedPath?: null | string;
+    onSelectPath?: (path: null | string) => void;
 }) {
-    const [selectedPath, setSelectedPath] = React.useState<string | null>(null);
+    const [internalSelectedPath, setInternalSelectedPath] = React.useState<string | null>(null);
+    const selectedPath = onSelectPath ? (controlledSelectedPath ?? null) : internalSelectedPath;
+    const setSelectedPath = React.useCallback(
+        (path: null | string) => {
+            if (onSelectPath) {
+                onSelectPath(path);
+            } else {
+                setInternalSelectedPath(path);
+            }
+        },
+        [onSelectPath]
+    );
     const [query, setQuery] = React.useState('');
     const [loadedEntriesByDirectory, setLoadedEntriesByDirectory] =
         React.useState<WorkspaceDirectoryEntries>({});
@@ -71,11 +88,18 @@ export function WorkspaceBrowserContent({
         );
     }, [entriesByDirectory]);
 
+    const previousAgentRef = React.useRef(agentId);
     React.useEffect(() => {
         setLoadedEntriesByDirectory({});
-        setSelectedPath(null);
         setDirectoryLoadError(agentId ? null : 'No active agent workspace is available.');
-    }, [agentId]);
+
+        // Clear the open file only when the agent actually changes, not on mount — a
+        // URL-driven (controlled) selection must survive the initial render.
+        if (previousAgentRef.current !== agentId) {
+            previousAgentRef.current = agentId;
+            setSelectedPath(null);
+        }
+    }, [agentId, setSelectedPath]);
 
     const loadDirectory = React.useCallback(
         async (nextPath: string) => {
@@ -98,7 +122,7 @@ export function WorkspaceBrowserContent({
                 setDirectoryLoadError('Unable to load this workspace folder.');
             }
         },
-        [agentId, loadedEntriesByDirectory, utils.agent.workspaceFiles]
+        [agentId, loadedEntriesByDirectory, setSelectedPath, utils.agent.workspaceFiles]
     );
 
     React.useEffect(() => {

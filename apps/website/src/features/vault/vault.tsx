@@ -41,13 +41,33 @@ import {
 import { type VaultEditorMode, VaultTopbar } from './vault-topbar.tsx';
 
 export function Vault() {
-    const [searchParams] = useSearchParams();
-    const [selectedPage, setSelectedPage] = React.useState<{
-        path: string;
-    } | null>(() => {
-        const path = searchParams.get('path');
-        return path ? { path } : null;
-    });
+    const [searchParams, setSearchParams] = useSearchParams();
+    // The open page lives in the URL (`?path=`) so it is part of the tab's route and
+    // survives the tab being torn off or merged into another window.
+    const selectedPagePath = searchParams.get('path');
+    const selectedPage = React.useMemo(
+        () => (selectedPagePath ? { path: selectedPagePath } : null),
+        [selectedPagePath]
+    );
+    const setSelectedPage = React.useCallback(
+        (next: { path: string } | null) => {
+            setSearchParams(
+                (params) => {
+                    const updated = new URLSearchParams(params);
+
+                    if (next) {
+                        updated.set('path', next.path);
+                    } else {
+                        updated.delete('path');
+                    }
+
+                    return updated;
+                },
+                { replace: true }
+            );
+        },
+        [setSearchParams]
+    );
     const [pathDialog, setPathDialog] = React.useState<VaultPathDialogState | null>(null);
     const [pathDialogError, setPathDialogError] = React.useState<string | null>(null);
     const [deleteTarget, setDeleteTarget] = React.useState<VaultDeleteTarget | null>(null);
@@ -101,7 +121,7 @@ export function Vault() {
         if (selectedPageMissing && selectedPage && !hasDirtyDraft) {
             setSelectedPage(null);
         }
-    }, [hasDirtyDraft, pageNode, selectedPage, selectedPageMissing]);
+    }, [hasDirtyDraft, pageNode, selectedPage, selectedPageMissing, setSelectedPage]);
 
     React.useEffect(() => {
         if (!pageDetail) {
@@ -189,14 +209,10 @@ export function Vault() {
             });
             if (target.kind === 'page' && selectedPage?.path === target.fromPath && result.page) {
                 setSelectedPage({ path: result.page.path });
-            } else if (target.kind === 'folder') {
-                setSelectedPage((current) =>
-                    current
-                        ? {
-                              path: replacePathPrefix(current.path, target.fromPath, result.path),
-                          }
-                        : null
-                );
+            } else if (target.kind === 'folder' && selectedPage) {
+                setSelectedPage({
+                    path: replacePathPrefix(selectedPage.path, target.fromPath, result.path),
+                });
             }
         } catch (error) {
             setMoveError(getErrorMessage(error));
@@ -250,14 +266,10 @@ export function Vault() {
             });
             if (target.kind === 'page' && selectedPage?.path === target.fromPath && result.page) {
                 setSelectedPage({ path: result.page.path });
-            } else if (target.kind === 'folder') {
-                setSelectedPage((current) =>
-                    current
-                        ? {
-                              path: replacePathPrefix(current.path, target.fromPath, result.path),
-                          }
-                        : null
-                );
+            } else if (target.kind === 'folder' && selectedPage) {
+                setSelectedPage({
+                    path: replacePathPrefix(selectedPage.path, target.fromPath, result.path),
+                });
             }
         } catch (error) {
             setMoveError(getErrorMessage(error));
