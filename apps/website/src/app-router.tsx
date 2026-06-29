@@ -68,6 +68,13 @@ export function createAppRouter() {
                                     element: <Navigate replace to="/dashboard/settings/sessions" />,
                                 },
                                 {
+                                    path: 'new/:tabKey',
+                                    lazy: lazyRoute(
+                                        () => import('./routes/dashboard/overview-page.tsx'),
+                                        'OverviewPage'
+                                    ),
+                                },
+                                {
                                     path: 'chats/:chatId',
                                     lazy: lazyRoute(
                                         () => import('./routes/dashboard/agent-chat-page.tsx'),

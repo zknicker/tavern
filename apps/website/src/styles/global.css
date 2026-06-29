@@ -316,6 +316,86 @@
         }
     }
 
+    /* Pop-in for a newly appearing tab: rises from just below the strip with a slight
+       scale, growing from its base. @starting-style runs once on insert, so only new
+       tabs animate — existing tabs keep their node and do not re-pop on re-render. */
+    .chrome-tab-enter {
+        transform-origin: bottom center;
+        transition:
+            opacity 200ms cubic-bezier(0.23, 1, 0.32, 1),
+            transform 200ms cubic-bezier(0.23, 1, 0.32, 1);
+
+        @starting-style {
+            opacity: 0;
+            transform: translateY(9px) scale(0.96);
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .chrome-tab-enter {
+            transition: opacity 140ms cubic-bezier(0.23, 1, 0.32, 1);
+
+            @starting-style {
+                transform: none;
+            }
+        }
+    }
+
+    .chat-approval-flow {
+        position: relative;
+        isolation: isolate;
+    }
+
+    .chat-approval-flow-card {
+        position: relative;
+        z-index: 3;
+        opacity: 1;
+        transform: translate3d(0, 0, 0) scale(1);
+        transform-origin: bottom center;
+        animation: chat-approval-card-in 320ms cubic-bezier(0.22, 0.68, 0.2, 1) both;
+        transition:
+            opacity 180ms cubic-bezier(0.23, 1, 0.32, 1),
+            transform 320ms cubic-bezier(0.22, 0.68, 0.2, 1);
+        will-change: opacity, transform;
+    }
+
+    .chat-approval-flow-active .chat-approval-flow-card {
+        position: absolute;
+        right: 0;
+        bottom: calc(100% - 3.625rem);
+        left: 0;
+    }
+
+    .chat-approval-flow-composer {
+        position: relative;
+        z-index: 2;
+        transform: translate3d(0, 0, 0) scale(1);
+        transform-origin: center center;
+        transition: transform 160ms cubic-bezier(0.23, 1, 0.32, 1);
+        will-change: transform;
+    }
+
+    .chat-approval-flow-active .chat-approval-flow-composer {
+        transform: translate3d(0, 0.5rem, 0) scale(0.972);
+        transition-duration: 480ms;
+        transition-timing-function: cubic-bezier(0.23, 1, 0.32, 1);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .chat-approval-flow-card {
+            animation: none !important;
+            transform: none !important;
+            transition: opacity 120ms cubic-bezier(0.23, 1, 0.32, 1) !important;
+            will-change: auto;
+        }
+
+        .chat-approval-flow-composer {
+            transform: none !important;
+            transition: none !important;
+            will-change: auto;
+        }
+    }
+
     .thinking-indicator-text {
         color: transparent;
         background: linear-gradient(
@@ -601,6 +681,14 @@
         --content-card: var(--card);
         --content-card-border: var(--color-neutral-700);
 
+        /* Browser-shell (topbar tabs): strip chrome behind the content card, the
+           connected active-tab/card fill, the inset hover pill, and the continuous
+           shell hairline. */
+        --browser-strip: color-mix(in srgb, var(--background) 88%, var(--color-black));
+        --browser-card: var(--content-card);
+        --browser-tab-hover: color-mix(in srgb, var(--content-card) 70%, transparent);
+        --browser-hairline: --alpha(var(--color-white) / 14%);
+
         --app-chrome-fill: --alpha(var(--color-neutral-950) / 56%);
         --app-chrome-native-fill: --alpha(#212121 / 55%);
         --app-chrome-backdrop: blur(28px) saturate(1.4);
@@ -723,6 +811,11 @@
 
         --content-card: var(--card);
         --content-card-border: var(--color-neutral-300);
+
+        --browser-strip: color-mix(in srgb, var(--background) 93%, var(--foreground));
+        --browser-card: var(--content-card);
+        --browser-tab-hover: color-mix(in srgb, var(--content-card) 62%, transparent);
+        --browser-hairline: --alpha(var(--color-black) / 13%);
 
         --nav-hover: --alpha(var(--color-black) / 4%);
         --nav-active: --alpha(var(--color-black) / 6%);

@@ -1,6 +1,6 @@
 import { PencilEdit02Icon, PinIcon, PinOffIcon, Trash2 } from '@hugeicons/core-free-icons';
 import { ColorsIcon as ColorsSolidIcon } from '@hugeicons-pro/core-solid-rounded';
-import { Cancel01Icon, ColorsIcon } from '@hugeicons-pro/core-stroke-rounded';
+import { ArrowUpRight01Icon, Cancel01Icon, ColorsIcon } from '@hugeicons-pro/core-stroke-rounded';
 import * as React from 'react';
 import {
     ContextMenu,
@@ -38,6 +38,7 @@ interface SidebarChatContextMenuProps {
     onCloseTab?: (chat: ChatListItem) => void;
     onCustomizeColor?: (chat: ChatListItem, color: string | null) => void;
     onEditSystemPrompt?: (chat: ChatListItem) => void;
+    onOpenInNewWindow?: (chat: ChatListItem) => void;
     onPinChange: (chat: ChatListItem, pinned: boolean) => void;
     onRename: (chat: ChatListItem) => void;
     triggerClassName?: string;
@@ -50,6 +51,7 @@ export function SidebarChatContextMenu({
     onCloseTab,
     onCustomizeColor,
     onEditSystemPrompt,
+    onOpenInNewWindow,
     onPinChange,
     onRename,
     triggerClassName,
@@ -109,6 +111,12 @@ export function SidebarChatContextMenu({
                     <ContextMenuItem onClick={() => onEditSystemPrompt(chat)}>
                         <Icon className={contextMenuIconClassName} icon={PencilEdit02Icon} />
                         Instructions
+                    </ContextMenuItem>
+                ) : null}
+                {onOpenInNewWindow ? (
+                    <ContextMenuItem onClick={() => onOpenInNewWindow(chat)}>
+                        <Icon className={contextMenuIconClassName} icon={ArrowUpRight01Icon} />
+                        Open in new window
                     </ContextMenuItem>
                 ) : null}
                 {canCloseTab ? (

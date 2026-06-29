@@ -7,9 +7,10 @@ import {
     AppShellMain,
 } from './components/ui/app-shell.tsx';
 import { SidebarProvider } from './components/ui/sidebar.tsx';
+import { TavernBrowserShell } from './features/shell/browser-shell/tavern-browser-shell.tsx';
 import { shouldShowMainTopDragFade } from './features/shell/main-top-drag-fade.ts';
 import { AppSidebar } from './features/shell/sidebar.tsx';
-import { AppSidebarTopbar, AppTopbar } from './features/shell/topbar.tsx';
+import { AppSidebarTopbar } from './features/shell/topbar.tsx';
 import { useSidebarPreviewHover } from './features/shell/use-sidebar-preview-hover.ts';
 import {
     useAppLayoutPreference,
@@ -128,18 +129,14 @@ export function Layout() {
 
     return (
         <div className="dashboard-reference-theme flex min-h-screen w-full md:h-dvh md:min-h-0">
-            <AppShell className="w-full">
-                <AppShellDragRegion />
-                <AppTopbar
-                    activeTab={activeTab}
-                    isSettingsRoute={isSettingsRoute}
-                    onNavigateToSettings={navigateToSettings}
-                    onSelectTab={setActiveTab}
-                />
-                <AppShellBody>
-                    <AppShellMain>{outlet}</AppShellMain>
-                </AppShellBody>
-            </AppShell>
+            <TavernBrowserShell
+                activeRouteTab={activeTab}
+                isSettingsRoute={isSettingsRoute}
+                onNavigateToSettings={navigateToSettings}
+                onSelectRouteTab={setActiveTab}
+            >
+                {outlet}
+            </TavernBrowserShell>
         </div>
     );
 }

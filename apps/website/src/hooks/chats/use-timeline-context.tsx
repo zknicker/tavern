@@ -294,13 +294,17 @@ export function useTimelineActions() {
 }
 
 export function useChatRuntimeTimelineState(chatId: string) {
+    return useChatRuntimeTimelineStates()[chatId] ?? emptyRuntimeTimelineState;
+}
+
+export function useChatRuntimeTimelineStates() {
     const timelineStates = React.useContext(TimelineStatesContext);
 
     if (timelineStates === null) {
         throw new Error(
-            'useChatRuntimeTimelineState must be used within a TimelineContextProvider.'
+            'useChatRuntimeTimelineStates must be used within a TimelineContextProvider.'
         );
     }
 
-    return timelineStates[chatId] ?? emptyRuntimeTimelineState;
+    return timelineStates;
 }
