@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { parseUserProfile } from '../../hooks/dashboard/use-user-profile-preference.ts';
+import { parseUserProfile } from '../../hooks/shell/use-user-profile-preference.ts';
 import { AgentEyes } from './agent-eyes.tsx';
 import { resolveTurnAvatarVariant } from './chat-transcript-turn.tsx';
 

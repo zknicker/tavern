@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
 import type { HistoryActorOutput } from '../../lib/trpc.tsx';
 import { useAgentList } from '../agents/use-agent-list.ts';
-import { useUserProfilePreference } from '../dashboard/use-user-profile-preference.ts';
 import { useParticipantList } from '../participants/use-participant-list.ts';
+import { useUserProfilePreference } from '../shell/use-user-profile-preference.ts';
 
 interface ActorProfile {
     avatarUrl: string | null;
