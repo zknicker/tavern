@@ -4,6 +4,7 @@
   "files": {
     "ignoreUnknown": true,
     "includes": [
+      "!.claude/settings.local.json",
       "!.context",
       "!apps/server/dist",
       "!apps/server/drizzle/meta",
