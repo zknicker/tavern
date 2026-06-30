@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { MemoryRouter, useLocation } from 'react-router-dom';
+import { MemoryRouter, useLocation, useNavigate } from 'react-router-dom';
 import { getRouteTab, routeTabs } from '../../../hooks/dashboard/use-route-tab.ts';
 import { getDesktopBridge } from '../../../lib/desktop-bridge.ts';
 import { ChromeTabsProvider } from './chrome-tabs-provider.tsx';
@@ -26,9 +26,25 @@ export function ChromeApp() {
 function ChromeShellFrame() {
     const { state } = useShell();
     const bridge = getDesktopBridge();
+    const navigate = useNavigate();
     const activeRoute =
         state.tabs.find((tab) => tab.id === state.activeId)?.route ?? '/dashboard/overview';
     const pathname = activeRoute.split('?')[0];
+
+    // Mirror the active tab's route into the scratch router so the static channel rail (which
+    // reads useLocation) highlights the right chat. Guarded by a ref so it fires only when the
+    // active tab's route truly changes: react-router recreates `navigate` on every navigation,
+    // and without the guard the effect would re-run on a channel click and revert the scratch
+    // router back to the previous tab's route before the forward lands.
+    const syncedRouteRef = React.useRef<string | null>(null);
+    React.useEffect(() => {
+        if (syncedRouteRef.current === activeRoute) {
+            return;
+        }
+
+        syncedRouteRef.current = activeRoute;
+        navigate(activeRoute, { replace: true });
+    }, [activeRoute, navigate]);
 
     return (
         <TavernBrowserShellFrame

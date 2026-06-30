@@ -84,7 +84,10 @@ export function Layout() {
         return (
             <div className="dashboard-reference-theme flex h-dvh min-h-0 w-full flex-col overflow-hidden bg-[var(--browser-card)]">
                 <ContentViewNavigation />
-                <div className="relative min-h-0 flex-1 overflow-hidden" data-slot="app-shell-main">
+                <div
+                    className="relative flex min-h-0 flex-1 flex-col overflow-hidden"
+                    data-slot="app-shell-main"
+                >
                     {outlet}
                 </div>
             </div>
