@@ -5,7 +5,7 @@ export function useAgentToolsSave() {
 
     return trpc.agent.saveTools.useMutation({
         onSuccess: async () => {
-            await Promise.all([utils.agent.list.invalidate(), utils.hermesConfig.get.invalidate()]);
+            await utils.agent.list.invalidate();
         },
     });
 }

@@ -47,17 +47,6 @@ const schemaStatements = [
         PRIMARY KEY (runtime_id, id)
     );`,
     'CREATE INDEX IF NOT EXISTS skills_runtime_idx ON skills (runtime_id);',
-    `CREATE TABLE IF NOT EXISTS hermes_config_snapshots (
-        runtime_id TEXT PRIMARY KEY NOT NULL,
-        hash TEXT NOT NULL,
-        raw TEXT NOT NULL,
-        config_json TEXT NOT NULL,
-        valid TEXT NOT NULL,
-        issues_json TEXT NOT NULL,
-        last_error TEXT,
-        last_synced_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL
-    );`,
     `CREATE TABLE IF NOT EXISTS claude_code_usage (
         id TEXT PRIMARY KEY NOT NULL,
         snapshot_json TEXT NOT NULL,
@@ -341,10 +330,10 @@ const schemaStatements = [
         provider TEXT,
         model TEXT,
         canonical_model_id TEXT,
-        hermes_api TEXT,
-        hermes_model TEXT,
-        hermes_model_name_id TEXT,
-        hermes_provider TEXT,
+        agent_api TEXT,
+        agent_model TEXT,
+        agent_model_name_id TEXT,
+        agent_provider TEXT,
         stop_reason TEXT,
         usage_json TEXT,
         timestamp TEXT,

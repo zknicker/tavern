@@ -1,10 +1,10 @@
 import { describe, expect, test } from 'bun:test';
 import {
-    listMissingPluginToolsets,
+    listMissingPluginTools,
     rejectPluginSkillEnablement,
-    rejectPluginToolsetEnablement,
+    rejectPluginToolEnablement,
     resolveSkillPlugin,
-    resolveToolsetPlugin,
+    resolveToolPlugin,
 } from './plugin-capabilities.ts';
 
 describe('Plugin capability ownership', () => {
@@ -19,7 +19,7 @@ describe('Plugin capability ownership', () => {
         },
     ];
 
-    test('marks merchbase skill and toolset as Plugin-owned', () => {
+    test('marks merchbase skill and tool as Plugin-owned', () => {
         expect(
             resolveSkillPlugin(
                 {
@@ -34,7 +34,7 @@ describe('Plugin capability ownership', () => {
             enabled: true,
             id: 'merchbase',
         });
-        expect(resolveToolsetPlugin({ id: 'merchbase', name: 'MerchBase' }, plugins)).toEqual({
+        expect(resolveToolPlugin({ id: 'merchbase', name: 'MerchBase' }, plugins)).toEqual({
             displayName: 'MerchBase',
             enabled: true,
             id: 'merchbase',
@@ -49,13 +49,13 @@ describe('Plugin capability ownership', () => {
         expect(() => rejectPluginSkillEnablement('merchbase')).toThrow(
             /managed from Settings -> Plugins/
         );
-        expect(() => rejectPluginToolsetEnablement('merchbase')).toThrow(
+        expect(() => rejectPluginToolEnablement('merchbase')).toThrow(
             /managed from Settings -> Plugins/
         );
     });
 
-    test('provides a placeholder when a Plugin toolset is not reported yet', () => {
-        expect(listMissingPluginToolsets(plugins, new Set())).toMatchObject([
+    test('provides a placeholder when a Plugin tool is not reported yet', () => {
+        expect(listMissingPluginTools(plugins, new Set())).toMatchObject([
             {
                 enabled: true,
                 id: 'merchbase',
@@ -63,6 +63,6 @@ describe('Plugin capability ownership', () => {
                 placeholder: true,
             },
         ]);
-        expect(listMissingPluginToolsets(plugins, new Set(['merchbase']))).toEqual([]);
+        expect(listMissingPluginTools(plugins, new Set(['merchbase']))).toEqual([]);
     });
 });

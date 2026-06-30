@@ -126,8 +126,8 @@ export async function reconcileSyntheticCronTriggerRuns(input: {
                    WHEN manual.delivery_status = 'pending' THEN 'failed'
                    ELSE manual.delivery_status
                  END,
-                 error = COALESCE(manual.error, 'Hermes accepted the manual trigger, but no execution appeared.'),
-                 summary = 'Hermes accepted the manual trigger, but no execution appeared.',
+                 error = COALESCE(manual.error, 'Agent runtime accepted the manual trigger, but no execution appeared.'),
+                 summary = 'Agent runtime accepted the manual trigger, but no execution appeared.',
                  synced_at = $syncedAt
              WHERE manual.runtime_id = $runtimeId
                AND manual.trigger = 'manual'

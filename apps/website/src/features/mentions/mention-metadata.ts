@@ -159,6 +159,7 @@ function normalizeKind(value: unknown): Mention['kind'] | null {
     }
 
     if (
+        value === 'agent' ||
         value === 'app' ||
         value === 'directory' ||
         value === 'file' ||
@@ -174,6 +175,7 @@ function normalizeKind(value: unknown): Mention['kind'] | null {
 
 function readProjection(value: unknown, kind: unknown): Mention['projection'] | null {
     if (
+        value === 'agent-reference' ||
         value === 'capability-reference' ||
         value === 'image-input' ||
         value === 'path-reference' ||
@@ -184,6 +186,10 @@ function readProjection(value: unknown, kind: unknown): Mention['projection'] | 
 
     if (kind === 'skill') {
         return 'skill-context';
+    }
+
+    if (kind === 'agent') {
+        return 'agent-reference';
     }
 
     if (kind === 'app' || kind === 'plugin' || kind === 'tool') {

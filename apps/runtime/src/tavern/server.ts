@@ -4,11 +4,8 @@ import type { Duplex } from 'node:stream';
 
 import { runtimeEventSchema, runtimeRoutes } from '@tavern/api';
 import { type WebSocket, WebSocketServer } from 'ws';
-
 import { getRuntimeApiToken, getRuntimeHost, getRuntimePort } from '../config.ts';
-import { attachTavernChannelSocket, isTavernChannelSocketPath } from './channel-relay.ts';
 import { subscribeToTavernApiEvents } from './chat-api/index.ts';
-import { closeHermesTurnClients } from './hermes-turn-runner.ts';
 import { internalError, toFetchRequest, unauthorized, writeFetchResponse } from './http.ts';
 import { handleTavernRuntimeRequest } from './router.ts';
 import { listProjectedTavernRuntimeEvents } from './runtime-event-projection.ts';
@@ -114,13 +111,7 @@ export function startTavernRuntimeServer(): TavernRuntimeServerHandle {
     const unsubscribeBySocket = new WeakMap<object, () => void>();
 
     server.on('upgrade', (request, socket: Duplex, head) => {
-        if (
-            !(
-                isEventsSocketPath(request.url) ||
-                isTavernApiEventsSocketPath(request.url) ||
-                isTavernChannelSocketPath(request.url)
-            )
-        ) {
+        if (!(isEventsSocketPath(request.url) || isTavernApiEventsSocketPath(request.url))) {
             socket.destroy();
             return;
         }
@@ -137,11 +128,6 @@ export function startTavernRuntimeServer(): TavernRuntimeServerHandle {
     });
 
     wss.on('connection', (socket: WebSocket, request) => {
-        if (isTavernChannelSocketPath(request.url)) {
-            attachTavernChannelSocket(socket);
-            return;
-        }
-
         const url = new URL(request.url ?? '/', 'http://127.0.0.1');
         if (isTavernApiEventsSocketPath(request.url)) {
             const recipientId = url.searchParams.get('recipient_id');
@@ -196,7 +182,6 @@ export function startTavernRuntimeServer(): TavernRuntimeServerHandle {
 
     return {
         stop() {
-            closeHermesTurnClients();
             for (const client of wss.clients as Set<WebSocket>) {
                 client.close();
             }

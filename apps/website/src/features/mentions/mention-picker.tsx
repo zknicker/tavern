@@ -267,6 +267,10 @@ function getGroupLabel(option: MentionOption) {
         return 'Commands';
     }
 
+    if (option.kind === 'agent') {
+        return 'Agents';
+    }
+
     if (option.kind === 'app') {
         return 'Mac apps';
     }

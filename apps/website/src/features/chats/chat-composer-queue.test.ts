@@ -58,7 +58,6 @@ test('promoteQueuedMessage preserves queued composer payload fields', () => {
                         type: 'inline',
                     },
                 ],
-                modelRef: 'openai/gpt-5',
             },
         ],
         'queued_2'
@@ -76,7 +75,6 @@ test('promoteQueuedMessage preserves queued composer payload fields', () => {
             },
         ],
         id: 'queued_2',
-        modelRef: 'openai/gpt-5',
     });
 });
 
@@ -188,12 +186,6 @@ test('queued messages are steerable only when they can become text-only live inp
             ],
         })
     ).toBe(false);
-    expect(
-        isQueuedMessageSteerable({
-            ...message('queued_model', 'use a different model'),
-            modelRef: 'openai/gpt-5',
-        })
-    ).toBe(false);
 });
 
 test('text-only queued messages do not interrupt when steering is closed', () => {
@@ -212,12 +204,6 @@ test('text-only queued messages do not interrupt when steering is closed', () =>
                     type: 'inline',
                 },
             ],
-        })
-    ).toBe(true);
-    expect(
-        shouldInterruptActiveTurnForQueuedMessage({
-            ...message('queued_model', 'send now'),
-            modelRef: 'openai/gpt-5',
         })
     ).toBe(true);
 });

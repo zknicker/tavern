@@ -20,7 +20,7 @@ test('filterRuntimeVisibleSkills hides skills blocked by runtime policy', () => 
             missing: { anyBins: [], bins: [], config: [], env: [], os: [] },
             name: 'github',
             requirements: { anyBins: [], bins: [], config: [], env: [], os: [] },
-            runtimeSource: 'hermes-bundled',
+            runtimeSource: 'runtime-bundled',
             source: 'builtin',
             updatedAt: null,
         },

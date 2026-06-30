@@ -12,7 +12,6 @@ interface LaunchChatDraftInput {
     attachments?: ChatMessageAttachmentInput[];
     content: string;
     metadata?: Record<string, unknown>;
-    modelRef?: string;
 }
 
 interface ChatDraftRouteState {

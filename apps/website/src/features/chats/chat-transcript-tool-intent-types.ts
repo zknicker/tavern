@@ -1,5 +1,4 @@
 export type ToolIntentKind =
-    | 'approval'
     | 'automation'
     | 'browser'
     | 'calendar'

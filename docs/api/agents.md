@@ -9,21 +9,26 @@ read_when:
 
 The Agents API is for the workers users configure and talk to in Tavern.
 
-Agents are client-facing records. Runtime sessions and Hermes execution details
+Agents are client-facing records. Runtime sessions and execution details
 can be attached as metadata, but the API exposes agents as named Tavern workers
 with instruction files, model, execution, tool, memory, and skill policy.
 
 ## Contract
 
 * Agent ids are durable Tavern ids hosted by Tavern Runtime.
+* Runtime bootstraps `agt_primary`, and clients can create, list, configure,
+  and address additional agents.
 * Agent list and detail reads use synced Runtime records. Mounting an app screen
-  must not contact Hermes Gateway or enqueue a background sync job just to
+  must not contact the agent runtime or enqueue a background sync job just to
   discover agents.
-* Agent records expose display name, description, model policy, tool policy,
-  memory policy, skill selections, and availability.
-* Model availability comes from Hermes model options exposed through Runtime.
+* Agent records expose display name, model policy, tool policy, memory policy,
+  skill selections, workspace folder, and availability.
+* Model availability comes from model options exposed through Runtime.
   Clients read the stored snapshot and capability state instead of maintaining a
   Tavern-maintained list.
+* Model records include the Runtime execution kind. Claude Code and Codex model
+  rows execute through the harness route; OpenAI API-key rows execute through
+  the LanguageModel route.
 * Tool and skill controls are inspectable before a run starts.
 * Instruction settings use markdown source files. `AGENTS.md` is a generated
   read-only artifact composed by Runtime; it is not editable. The editable
@@ -34,18 +39,17 @@ with instruction files, model, execution, tool, memory, and skill policy.
 * Tavern policy includes Memory-first lookup guidance. Managed agents
   check Memory before external lookup when durable user, project, or prior
   decision context may already exist.
-* Hermes-backed settings use narrow domain mutations. Clients update agent
+* Agent settings use narrow domain mutations. Clients update agent
   name, model, thinking default, and messaging bindings through agent and
-  messaging APIs instead of editing or saving raw Hermes config JSON.
+  messaging APIs instead of editing or saving raw engine config JSON.
 * Persisted agent settings mean user intent. Runtime startup can apply Tavern
   defaults to the managed engine, but it must not write those defaults into the
   saved agent settings store.
-* Execution settings — the model fallback chain, agent timezone, context
-  compression, subagent defaults, and web extract summarizer model — are
-  Runtime-stored and edited through the agent execution settings API. Agent
-  environment variables are Runtime-stored secrets exposed to the local
-  settings UI. Saving either surface rewrites the generated managed runtime
-  config or env file and restarts managed Hermes to apply.
+* Execution settings currently include the agent timezone. Agent environment
+  variables are Runtime-stored secrets exposed to the local settings UI. Model
+  fallback chains, web page summarizer models, context compression, and subagent
+  defaults are intentionally not exposed until the local agent engine supports
+  them.
 * Runtime execution state is not required just to list agents.
 
 ## Surface
@@ -55,10 +59,11 @@ The API covers:
 * list agents
 * get an agent
 * list an agent's Tavern and external runtime chat references
-* create or update agent settings
+* create agents
+* update agent settings
 * read and update supported agent markdown files
 * read model choices and availability
-* read and update execution settings (model fallbacks, timezone, summarizer model)
+* read and update execution settings (timezone)
 * read and update agent environment variables
 * read and update tool policy
 * read and update memory policy
@@ -67,18 +72,20 @@ The API covers:
 
 ## Runtime Boundary
 
-Hermes owns native execution, tool invocation, model calls, files, and
-sessions. Tavern Runtime owns the first-class agent records, user-editable
+Tavern Runtime owns native execution, tool invocation, model calls, files, and
+sessions. Runtime also owns the first-class agent records, user-editable
 agent controls, and the chat state where agents participate. Tavern App reads
 those records through tRPC/React Query and may keep app-owned presentation
 overlays, but the app database is not the source of truth for agent existence.
+When a client creates an agent without a workspace folder, Runtime assigns the
+workspace under its data root.
 
 Runtime words such as `session`, `turn`, and `run` appear only where the API is
 returning execution metadata for a specific agent activity.
 
 `agent.chats.list` is the agent-scoped chat inventory for agent pages. It
-combines Tavern chats bound to the agent with Runtime-owned Hermes chat
-references such as Discord channels. Hermes chat references are read-only
+combines Tavern chats bound to the agent with Runtime-owned external chat
+references such as Discord channels. External chat references are read-only
 evidence surfaces; they do not appear in the global Tavern sidebar chat list.
 
 ## Related Docs

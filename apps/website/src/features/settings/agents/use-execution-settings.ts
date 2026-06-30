@@ -1,26 +1,13 @@
 import { useRef } from 'react';
 import { mergeDefined } from '../../../lib/merge-defined.ts';
 import { type AppRouterOutputs, trpc } from '../../../lib/trpc.tsx';
-import type { CompressionSettings, WebExtractSummarizerSettings } from './behavior-section.tsx';
-import type { FallbackModelEntry } from './fallback-models-editor.tsx';
-import type { SubagentEffortValue, SubagentModelEntry } from './subagent-rows.tsx';
 
 type ExecutionSettings = AppRouterOutputs['agent']['executionSettings'];
 
 const emptyExecutionSettings: {
-    compression: CompressionSettings | null;
-    fallbackModels: FallbackModelEntry[];
-    subagentEffort: SubagentEffortValue | null;
-    subagentModel: SubagentModelEntry | null;
     timezone: null | string;
-    webExtractSummarizer: WebExtractSummarizerSettings | null;
 } = {
-    compression: null,
-    fallbackModels: [],
-    subagentEffort: null,
-    subagentModel: null,
     timezone: null,
-    webExtractSummarizer: null,
 };
 
 /**

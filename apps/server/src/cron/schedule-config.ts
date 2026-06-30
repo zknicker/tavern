@@ -36,7 +36,7 @@ export const cronScheduleConfigSchema = z.discriminatedUnion('kind', [
 
 export type CronScheduleConfig = z.infer<typeof cronScheduleConfigSchema>;
 
-export type HermesCronSchedule =
+export type AgentCronSchedule =
     | {
           everyMs: number;
           kind: 'every';
@@ -47,7 +47,7 @@ export type HermesCronSchedule =
           tz?: string;
       };
 
-export function buildHermesCronSchedule(config: CronScheduleConfig): HermesCronSchedule {
+export function buildAgentCronSchedule(config: CronScheduleConfig): AgentCronSchedule {
     switch (config.kind) {
         case 'interval':
             return {
@@ -83,7 +83,7 @@ function buildCronSchedule(time: string, dayOfWeek: string, tz: string | undefin
     );
 }
 
-function withTimezone<T extends HermesCronSchedule>(schedule: T, tz: string | undefined): T {
+function withTimezone<T extends AgentCronSchedule>(schedule: T, tz: string | undefined): T {
     const trimmedTimezone = tz?.trim();
 
     if (!trimmedTimezone || schedule.kind !== 'cron') {

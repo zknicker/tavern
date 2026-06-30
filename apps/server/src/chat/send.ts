@@ -15,15 +15,12 @@ import {
     sendChatMessageResultSchema,
 } from './contracts.ts';
 import { getRuntimeChatRecord } from './runtime-chats.ts';
-import { requireStoredTavernSessionKey } from './session-keys.ts';
 
 function buildAgentRuntimeMessageTarget(
-    chat: NonNullable<Awaited<ReturnType<typeof getRuntimeChatRecord>>>['chat'],
-    sessionKey: string
+    chat: NonNullable<Awaited<ReturnType<typeof getRuntimeChatRecord>>>['chat']
 ): AgentRuntimeCreateMessage['target'] {
     return {
         externalId: chat.target ? chat.target.split(':').slice(1).join(':') || null : null,
-        sessionKey,
         target: chat.target ?? chat.id,
         type: chat.platform,
     };
@@ -42,40 +39,20 @@ export async function sendTavernChatMessage(
 
     const chat = chatRecord.chat;
 
-    if (chat.bindings.length !== 1) {
-        throw new Error(`Tavern chat "${parsed.chatId}" must have exactly one bound agent.`);
-    }
-
-    const [binding] = chat.bindings;
-    const agentId = parsed.agentId ?? binding.agentId;
-    const agentRecord = await getAgentRecord(agentId);
-
-    if (agentRecord && agentRecord.runtimeId !== chatRecord.runtimeId) {
-        throw new Error(
-            `Agent "${agentId}" is not part of chat runtime "${chatRecord.runtimeId}".`
-        );
-    }
+    const addressedAgentIds = resolveAddressedAgentIds({
+        chat,
+        requestedAgentId: parsed.agentId,
+        metadata: parsed.metadata,
+    });
+    await assertAgentsBelongToRuntime({
+        agentIds: addressedAgentIds,
+        runtimeId: chatRecord.runtimeId,
+    });
 
     const runtimeClient =
         client === undefined
             ? await createConfiguredAgentRuntimeClientForRuntimeId(chatRecord.runtimeId)
             : client;
-
-    if (!runtimeClient) {
-        throw new Error(`Tavern Runtime connection "${chatRecord.runtimeId}" is not configured.`);
-    }
-
-    await requireRuntimeCapabilityHealthy({
-        capability: 'gateway',
-        client: runtimeClient,
-        runtimeId: chatRecord.runtimeId,
-    });
-
-    if (binding.agentId !== agentId) {
-        throw new Error(`Agent "${agentId}" is not bound to chat "${parsed.chatId}".`);
-    }
-
-    const sessionKey = requireStoredTavernSessionKey(chat, agentId);
 
     const clientMessageId = parsed.clientMessageId ?? `msg_${randomUUID()}`;
     const tavernApi = await createTavernApiClient(chatRecord.runtimeId);
@@ -95,11 +72,9 @@ export async function sendTavernChatMessage(
         metadata: {
             ...(parsed.metadata ?? {}),
             runtime: {
-                agentId,
                 ...(parsed.modelRef ? { modelRef: parsed.modelRef } : {}),
                 runtimeId: chatRecord.runtimeId,
-                sessionKey,
-                source: 'hermes',
+                source: addressedAgentIds.length > 0 ? 'agent-engine' : 'tavern',
             },
         },
         ...(parsed.attachments?.length ? { attachments: parsed.attachments } : {}),
@@ -107,38 +82,130 @@ export async function sendTavernChatMessage(
         nonce: clientMessageId,
         role: 'user',
     });
-    const accepted = await withCapabilityStatus(
-        {
-            capability: 'gateway',
-            method: 'gateway.prompt.submit',
-            runtimeId: chatRecord.runtimeId,
-        },
-        async () =>
-            await runtimeClient.postMessage(chatRecord.chat.id, {
-                agent: {
-                    agentId,
+
+    if (addressedAgentIds.length === 0) {
+        return sendChatMessageResultSchema.parse({
+            acceptedAt: messageReceipt.message.created_at,
+            chatId: parsed.chatId,
+            clientMessageId,
+            status: 'accepted',
+            turns: [],
+        });
+    }
+
+    if (!runtimeClient) {
+        throw new Error(`Tavern Runtime connection "${chatRecord.runtimeId}" is not configured.`);
+    }
+
+    await requireRuntimeCapabilityHealthy({
+        capability: 'gateway',
+        client: runtimeClient,
+        runtimeId: chatRecord.runtimeId,
+    });
+
+    const acceptedTurns = await Promise.all(
+        addressedAgentIds.map((agentId) =>
+            withCapabilityStatus(
+                {
+                    capability: 'gateway',
+                    method: 'gateway.prompt.submit',
+                    runtimeId: chatRecord.runtimeId,
                 },
-                message: {
-                    ...(parsed.attachments?.length ? { attachments: parsed.attachments } : {}),
-                    content: parsed.content,
-                    id: clientMessageId,
-                    ...(parsed.metadata ? { metadata: parsed.metadata } : {}),
-                    ...(parsed.modelRef ? { modelRef: parsed.modelRef } : {}),
-                    nonce: clientMessageId,
-                },
-                target: buildAgentRuntimeMessageTarget(chat, sessionKey),
-            })
+                async () =>
+                    await runtimeClient.postMessage(chatRecord.chat.id, {
+                        agent: {
+                            agentId,
+                        },
+                        message: {
+                            ...(parsed.attachments?.length
+                                ? { attachments: parsed.attachments }
+                                : {}),
+                            content: parsed.content,
+                            id: clientMessageId,
+                            ...(parsed.metadata ? { metadata: parsed.metadata } : {}),
+                            ...(parsed.modelRef ? { modelRef: parsed.modelRef } : {}),
+                            nonce: clientMessageId,
+                        },
+                        target: buildAgentRuntimeMessageTarget(chat),
+                    })
+            ).then((accepted) => ({
+                agentId,
+                runId: accepted.runId,
+            }))
+        )
     );
-    const acceptedSessionKey = accepted.sessionKey ?? sessionKey;
 
     return sendChatMessageResultSchema.parse({
-        acceptedAt: accepted.acceptedAt ?? messageReceipt.message.created_at,
+        acceptedAt: messageReceipt.message.created_at,
         chatId: parsed.chatId,
         clientMessageId,
-        runId: accepted.runId,
-        sessionKey: acceptedSessionKey,
-        status: accepted.status,
+        status: 'accepted',
+        turns: acceptedTurns,
     });
+}
+
+function resolveAddressedAgentIds(input: {
+    chat: NonNullable<Awaited<ReturnType<typeof getRuntimeChatRecord>>>['chat'];
+    metadata: SendChatMessageInput['metadata'];
+    requestedAgentId?: string;
+}) {
+    const chatAgentIds = new Set(input.chat.bindings.map((binding) => binding.agentId));
+
+    if (input.chat.scope === 'dm') {
+        const dmAgentIds = [...chatAgentIds];
+        if (dmAgentIds.length !== 1) {
+            throw new Error(`Agent DM "${input.chat.id}" must have exactly one agent participant.`);
+        }
+        const [agentId] = dmAgentIds;
+        if (input.requestedAgentId && input.requestedAgentId !== agentId) {
+            throw new Error(
+                `Agent "${input.requestedAgentId}" is not part of chat "${input.chat.id}".`
+            );
+        }
+        return [agentId];
+    }
+
+    const generatedAgentChatIds = [...chatAgentIds];
+    if (isGeneratedTavernAgentChat(input.chat.metadata) && generatedAgentChatIds.length === 1) {
+        return generatedAgentChatIds;
+    }
+
+    const mentionedAgentIds = readMentionedAgentIds(input.metadata);
+    for (const agentId of mentionedAgentIds) {
+        if (!chatAgentIds.has(agentId)) {
+            throw new Error(`Agent "${agentId}" is not part of chat "${input.chat.id}".`);
+        }
+    }
+
+    return mentionedAgentIds;
+}
+
+function isGeneratedTavernAgentChat(metadata: Record<string, unknown>) {
+    const tavern = metadata.tavern;
+    return (
+        typeof tavern === 'object' &&
+        tavern !== null &&
+        (tavern as Record<string, unknown>).displayNameSource === 'generated'
+    );
+}
+
+async function assertAgentsBelongToRuntime(input: { agentIds: string[]; runtimeId: string }) {
+    for (const agentId of input.agentIds) {
+        const agentRecord = await getAgentRecord(agentId);
+        if (agentRecord && agentRecord.runtimeId !== input.runtimeId) {
+            throw new Error(`Agent "${agentId}" is not part of chat runtime "${input.runtimeId}".`);
+        }
+    }
+}
+
+function readMentionedAgentIds(metadata: SendChatMessageInput['metadata']) {
+    const addressedAgentIds = metadata?.tavern?.addressedAgentIds ?? [];
+    const mentions = metadata?.tavern?.mentions ?? [];
+    const mentionedAgentIds = mentions
+        .filter((mention) => mention.kind === 'agent')
+        .map((mention) => mention.id);
+
+    return [...new Set([...addressedAgentIds, ...mentionedAgentIds])];
 }
 
 async function createTavernApiClient(runtimeId: string) {

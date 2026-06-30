@@ -12,8 +12,7 @@ state.
 - The agent can operate Tavern on the user's behalf within explicit bounds:
   find and read chats, send messages, and manage automations with Tavern
   delivery semantics.
-- The skill speaks product language. It does not name Hermes or describe
-  engine plumbing.
+- The skill speaks product language. It does not describe agent-engine plumbing.
 - The skill degrades gracefully: when Runtime is unreachable or a capability
   is down, the agent reports the limitation instead of inventing state.
 
@@ -35,7 +34,7 @@ The skill documents and exposes:
 - **Messages.** Send a message to a Tavern chat, attributed to the agent.
 - **Automations.** Create, inspect, update, and delete automations using
   Tavern nouns and the Tavern delivery contract ([cron.md](cron.md)).
-- **Skills.** List the agent's enabled skills and toolsets.
+- **Skills.** List the agent's enabled skills and tools.
 - **Self-configuration (read-only).** Read the agent's own model, effort, and
   enabled capabilities so it can describe its configuration to the user.
 - **Settings map.** Where the user changes each setting in the app, so the
@@ -45,7 +44,7 @@ The skill documents and exposes:
 
 - No raw engine config mutation. Configuration changes route the user to the
   appropriate settings surface.
-- No app-local state: cache, presentation, or app settings.
+- No app-local state: cache, presentation, or app-shell preferences.
 - No secret reads or writes.
 - Message sends and automation writes are attributed to the agent and visible
   in normal chat and automation history; the skill adds no hidden side

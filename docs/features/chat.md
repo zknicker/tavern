@@ -16,13 +16,13 @@ happen, and keep the durable timeline as context.
 * **Durable messages.** User, assistant, and system rows are stable history.
 * **Responses.** Agent work is grouped as a response to a message, with durable
   status from queued through completion or failure.
-* **Activity.** Tool calls, Rich Responses, thinking summaries, commands, approvals,
+* **Activity.** Tool calls, Rich Responses, thinking summaries, commands,
   snippets, and generated outputs render while work is happening and after completion.
   Tool rows label intent only (command, path, target — never results), stay
   neutral when completed, turn red on failure, and shimmer while running.
   Every contiguous tool group renders as a collapsed work drawer from its
   first step. The header shows a stable work summary, such as "Read 2 files,
-  searched code", "Rendered a calendar event", or "Needs approval". It can show
+  searched code" or "Rendered a calendar event". It can show
   a short useful command or target, but noisy commands and search payloads stay
   inside the drawer. If an intermediate tool fails and later work continues, the
   header scopes that as recovered tool work instead of making the final reply
@@ -55,21 +55,24 @@ happen, and keep the durable timeline as context.
   is running. Drafts entered during an active turn are queued for the same chat
   and agent, then sent when the active response settles. A queued text-only
   draft can be steered into the active turn while that turn is still live;
-  queued drafts with attachments or a model override stay normal next-turn
-  messages because steering carries only text. Explicit stopping remains a
-  separate control. A stopped turn settles as `cancelled`; late engine output
-  from that turn is not delivered as the assistant reply.
+  queued drafts with attachments stay normal next-turn messages because
+  steering carries only text. Explicit stopping remains a separate control. A
+  stopped turn settles as `cancelled`; late engine output from that turn is not
+  delivered as the assistant reply.
 * **Composer context.** The composer keeps a compositional input shell with
-  tool, model, attachment, queue, and submit slots. Attachments and per-chat
-  model choices are Tavern controls backed by managed Hermes capabilities and
-  config, not direct app calls into Hermes internals.
+  attachment, queue, and submit slots. Agent model defaults live in Agent
+  settings. Chat-scoped model changes use Runtime session controls such as
+  `/model`, not per-message composer overrides.
   Users can pick or drag files into the composer. Durable chat messages store
   attachment arrays.
-* **Triggers.** `@` autocompletes mentions (skills, plugins, apps, files,
-  directories); `$` autocompletes skills only; a leading `/` opens the agent
-  command palette and submits as a command run instead of a message. See
+* **Triggers.** `@` autocompletes Agents in the current chat; `$`
+  autocompletes skills; a leading `/` opens the agent command palette and
+  submits as a command run instead of a message. See
   [mentions](../../specs/mentions.md) and
   [composer-commands](../../specs/composer-commands.md).
+* **Addressing.** Channel messages are human chat by default. Mentioning one
+  or more agent participants starts one turn per mentioned agent. Agent DMs
+  address the one agent participant automatically.
 * **Dismissal and clear.** Command cards and failed-turn banners can be
   dismissed with a hover X; `/clear` empties the visible timeline and starts
   fresh context. Both soft-delete durable rows in Tavern Runtime — sequence
@@ -175,10 +178,9 @@ transcript only grows:
   bottom, where it resumes following latest content.
 
 Queued composer drafts are app-local until dispatched or explicitly steered. A
-queued draft does not create a durable Tavern message, response, Hermes session
+queued draft does not create a durable Tavern message, response, agent session
 entry, or transcript row while it is only waiting in the composer. The queued
-draft keeps its selected agent, attachments, model override, content, and
-metadata.
+draft keeps its selected agent, attachments, content, and metadata.
 
 The queued draft action follows the payload:
 
@@ -189,10 +191,9 @@ The queued draft action follows the payload:
   restore the queued draft.
 * text-only draft after the active turn settles: keep it as a normal queued
   draft for the next turn.
-* draft with attachments or a model override while a turn is active: promote it
-  to the queue head and stop the active run. After the stop settles, the draft
-  sends through the normal message path so attachment staging and model
-  selection still apply.
+* draft with attachments while a turn is active: promote it to the queue head
+  and stop the active run. After the stop settles, the draft sends through the
+  normal message path so attachment staging still applies.
 * any draft while the chat is idle: send it through the normal message path.
 
 Stopping a live turn interrupts the managed engine session, keeps the session
@@ -203,8 +204,8 @@ The cancelled response renders as a one-line stopped status row in the durable
 timeline. The app may show that stopped row optimistically as soon as the user
 requests a stop; if the stop request fails, the optimistic row is removed.
 
-When Hermes accepts an explicit mid-turn steer, Runtime records a
-`runtimeNotice` activity row with the steered text. Tavern App projects that
+When Runtime accepts an explicit mid-turn steer, it records a `runtimeNotice`
+activity row with the steered text. Tavern App projects that
 activity as a user-styled transcript row at the point it was accepted. It does
 not render a separate steering system notice. The projected steer row is not a
 durable Tavern message and does not change message counts or resend behavior.
@@ -223,19 +224,10 @@ that also patch live through `turn.progress` steps:
   projects these as `worker` rows for the existing worker step; running
   workers count toward live group labels ("Working on …"). Rollups stay in
   metadata for Stats.
-* **Tool approvals.** A pending approval prompt records an `approval`
-  activity and renders in chat as a normal tool row using the requested
-  command as its label. The response controls render as a separate chat-footer
-  prompt (`chat.approval.respond` → Runtime → engine gateway), with once,
-  session, always, and deny choices. The footer prompt previews the command,
-  overlays the prompt bar, and blocks the composer until answered. The row
-  shows the waiting shimmer until the agent resumes. An unanswered prompt times
-  out engine-side and the turn continues as denied.
-* **Clarifications.** A mid-turn agent question records as activity named
-  `clarify` and renders with inline answer controls. The row supports choices,
-  free-text Other answers, Skip, and a Runtime-owned timeout shorter than the
-  engine wait. Answers flow through `chat.clarification.respond` and the row
-  settles as answered, skipped, or timed out.
+* **Clarifications.** An agent question records as tool activity with
+  clarification metadata and renders as a question row. Tavern does not pause
+  the turn for inline answer controls; users can answer with a normal chat
+  message when the answer belongs in the conversation.
 * **Agent presence.** The latest agent turn shows the morphing agent eyes below
   the content, even at rest. The same shared-layout indicator remains 32px while
   the transcript places it under new work or reply text. The eyes use the
@@ -249,7 +241,7 @@ reinstall and syncs through the normal chat list/detail reads. Pinning changes
 tab grouping only; it does not change chat membership, message ordering,
 response delivery, or archive behavior. Pinned tab color is durable Tavern chat
 metadata. Pinned chats can also carry trusted system prompt text that Tavern
-passes through the Hermes turn adapter for that chat.
+passes through Runtime prompt composition for that chat.
 
 ## Contract
 

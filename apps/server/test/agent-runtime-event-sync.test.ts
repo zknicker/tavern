@@ -16,7 +16,7 @@ const emitCronUpdated = mock(() => undefined);
 const emitEngineRestartUpdated = mock(() => undefined);
 const emitJobsUpdated = mock(() => undefined);
 const emitModelUpdated = mock(() => undefined);
-const emitHermesConfigUpdated = mock(() => undefined);
+const emitAgentEngineConfigUpdated = mock(() => undefined);
 const emitOpenRouterSettingsInvalidationCascade = mock(() => undefined);
 const emitOpenRouterSettingsUpdated = mock(() => undefined);
 const emitSessionUpdated = mock(() => undefined);
@@ -28,6 +28,7 @@ const emitVaultUpdated = mock(() => undefined);
 const emitWorkersUpdated = mock(() => undefined);
 const markAgentRuntimeConnectionFailure = mock(async () => undefined);
 const markAgentRuntimeConnectionReachable = mock(async () => undefined);
+const loadAgentRuntimeConnection = mock(async () => undefined);
 const createAgentRuntimeClientForConnection = mock(() => undefined);
 const subscribeAgentRuntimeEventsForConnection = mock(async () => ({
     close() {},
@@ -47,6 +48,7 @@ let tavernApiRequests: Array<{ body: unknown; method: string; path: string }> = 
 
 mock.module('../src/agent-runtime-connection/service.ts', () => ({
     confirmAgentRuntimeConnection,
+    loadAgentRuntimeConnection,
     markAgentRuntimeConnectionFailure,
     markAgentRuntimeConnectionReachable,
     refreshRuntimeOwnedStatus,
@@ -64,7 +66,7 @@ mock.module('../src/api/invalidation-events.ts', () => ({
     emitEngineRestartUpdated,
     emitJobsUpdated,
     emitModelUpdated,
-    emitHermesConfigUpdated,
+    emitAgentEngineConfigUpdated,
     emitOpenRouterSettingsInvalidationCascade,
     emitOpenRouterSettingsUpdated,
     emitSessionUpdated,
@@ -118,7 +120,7 @@ beforeEach(async () => {
     emitCronUpdated.mockClear();
     emitJobsUpdated.mockClear();
     emitModelUpdated.mockClear();
-    emitHermesConfigUpdated.mockClear();
+    emitAgentEngineConfigUpdated.mockClear();
     emitOpenRouterSettingsInvalidationCascade.mockClear();
     emitOpenRouterSettingsUpdated.mockClear();
     emitSessionUpdated.mockClear();
@@ -132,9 +134,14 @@ beforeEach(async () => {
     emitWorkersUpdated.mockClear();
     emitObservedAgentRuntimeEvent.mockClear();
     confirmAgentRuntimeConnection.mockClear();
+    loadAgentRuntimeConnection.mockClear();
     markAgentRuntimeConnectionFailure.mockClear();
     markAgentRuntimeConnectionReachable.mockClear();
     createAgentRuntimeClientForConnection.mockClear();
+    createAgentRuntimeClientForConnection.mockReturnValue({
+        close() {},
+        listEvents: mock(async () => ({ events: [] })),
+    } as never);
     subscribeAgentRuntimeEventsForConnection.mockClear();
     enqueueRuntimeSkillInventoryRefresh.mockClear();
     enqueueRuntimeSkillInventoryRefreshIfStale.mockClear();
@@ -248,13 +255,35 @@ afterEach(() => {
     mock.restore();
 });
 
-test('startAgentRuntimeEventSync refreshes connection state when the stream connects', async () => {
+test('startAgentRuntimeEventSync refreshes connection state and catches up durable events', async () => {
+    const listEvents = mock(async () => ({
+        events: [
+            {
+                timestamp: '2026-05-12T19:00:00.000Z',
+                turn: {
+                    agentId: 'agent:test',
+                    chatId: tavernChatId,
+                    runId: 'run-1',
+                    sessionKey: 'session-1',
+                    startedAt: '2026-05-12T19:00:00.000Z',
+                },
+                type: 'turn.completed' as const,
+            },
+        ],
+    }));
+    createAgentRuntimeClientForConnection.mockReturnValue({
+        close() {},
+        listEvents,
+    } as never);
+
     startAgentRuntimeEventSync();
-    await Promise.resolve();
-    await Promise.resolve();
-    await new Promise((resolve) => setTimeout(resolve, 0));
+    await flushAsyncEventSync();
 
     expect(subscribeAgentRuntimeEventsForConnection).toHaveBeenCalledTimes(1);
+    expect(listEvents).toHaveBeenCalledWith({ limit: 500 });
+    expect(emitChatUpdated).toHaveBeenCalledWith({ chatId: tavernChatId });
+    expect(emitSessionUpdated).toHaveBeenCalledWith({ sessionKey: 'session-1' });
+    expect(emitChatLogUpdated).toHaveBeenCalledWith({ sessionKey: 'session-1' });
     expect(markAgentRuntimeConnectionReachable).toHaveBeenCalledWith({
         connectionId: 'runtime-1',
     });

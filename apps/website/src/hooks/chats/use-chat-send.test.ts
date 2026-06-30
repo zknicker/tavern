@@ -107,8 +107,12 @@ test('useChatSend stores the local user row in app state until the log catches u
     const result = {
         acceptedAt: '2026-04-20T18:15:00.000Z',
         chatId: 'chat-1',
-        runId: 'run_1',
-        sessionKey: 'session-1',
+        turns: [
+            {
+                agentId: 'agent-1',
+                runId: 'run_1',
+            },
+        ],
         status: 'accepted' as const,
     };
 
@@ -124,7 +128,7 @@ test('useChatSend stores the local user row in app state until the log catches u
         {
             chatId: 'chat-1',
             messageId: context?.timelineMessageId,
-            sessionKey: 'session-1',
+            sessionKey: 'run_1',
         },
     ]);
     expect(startedTurns).toEqual([
@@ -139,10 +143,142 @@ test('useChatSend stores the local user row in app state until the log catches u
             agentId: 'agent-1',
             chatId: 'chat-1',
             runId: 'run_1',
-            sessionKey: 'session-1',
+            sessionKey: 'run_1',
             startedAt: '2026-04-20T18:15:00.000Z',
         },
     ]);
+});
+
+test('useChatSend does not start a turn for human-only channel messages', async () => {
+    const startedTurns: unknown[] = [];
+    const acceptedMessages: unknown[] = [];
+    const mutation = createChatSendMutationHandlers({
+        chat: {
+            get: {
+                invalidate: async () => undefined,
+            },
+            list: {
+                invalidate: async () => undefined,
+            },
+            log: {
+                list: {
+                    invalidate: async () => undefined,
+                },
+            },
+        },
+        timelineMessage: {
+            prepareForAppend: () => undefined,
+            add: () => undefined,
+            setSession: (message) => {
+                acceptedMessages.push(message);
+            },
+            remove: () => undefined,
+        },
+        timelineTurn: {
+            clear: () => undefined,
+            start: (turn) => {
+                startedTurns.push(turn);
+            },
+        },
+        session: {
+            get: {
+                invalidate: async () => undefined,
+            },
+            history: {
+                get: {
+                    invalidate: async () => undefined,
+                },
+            },
+            list: {
+                invalidate: async () => undefined,
+            },
+        },
+    });
+    const input = {
+        chatId: 'chat-1',
+        clientMessageId: 'msg_human',
+        content: 'human-only note',
+    };
+    const context = await mutation.onMutate(input);
+
+    await mutation.onSuccess(
+        {
+            acceptedAt: '2026-04-20T18:15:00.000Z',
+            chatId: 'chat-1',
+            turns: [],
+        },
+        input,
+        context
+    );
+
+    expect(startedTurns).toEqual([]);
+    expect(acceptedMessages).toEqual([]);
+});
+
+test('useChatSend starts optimistic turns for mentioned channel agents', async () => {
+    const startedTurns: Array<{ agentId: string }> = [];
+    const mutation = createChatSendMutationHandlers({
+        chat: {
+            get: {
+                invalidate: async () => undefined,
+            },
+            list: {
+                invalidate: async () => undefined,
+            },
+            log: {
+                list: {
+                    invalidate: async () => undefined,
+                },
+            },
+        },
+        timelineMessage: {
+            prepareForAppend: () => undefined,
+            add: () => undefined,
+            setSession: () => undefined,
+            remove: () => undefined,
+        },
+        timelineTurn: {
+            clear: () => undefined,
+            start: (turn) => {
+                startedTurns.push(turn);
+            },
+        },
+        session: {
+            get: {
+                invalidate: async () => undefined,
+            },
+            history: {
+                get: {
+                    invalidate: async () => undefined,
+                },
+            },
+            list: {
+                invalidate: async () => undefined,
+            },
+        },
+    });
+
+    await mutation.onMutate({
+        chatId: 'chat-1',
+        clientMessageId: 'msg_mentions',
+        content: '@Planner @Critic plan',
+        metadata: {
+            tavern: {
+                mentions: [
+                    {
+                        id: 'agent-planner',
+                        kind: 'agent',
+                    },
+                    {
+                        id: 'agent-critic',
+                        kind: 'agent',
+                    },
+                ],
+            },
+        },
+    });
+
+    expect(startedTurns.map((turn) => turn.agentId)).toEqual(['agent-planner', 'agent-critic']);
 });
 
 test('useChatSend removes the local user row if the send fails', async () => {

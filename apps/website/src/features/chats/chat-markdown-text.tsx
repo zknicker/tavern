@@ -16,50 +16,36 @@ export function ChatMarkdownText({
 }) {
     const blocks = parseChatMarkdownBlocks(content);
 
-    if (blocks.some((block) => block.kind === 'heading')) {
-        return blocks.map((block) => {
-            if (block.kind === 'heading') {
-                return (
-                    <ChatMarkdownHeading
-                        animatedRanges={animatedRanges}
-                        block={block}
-                        key={`heading:${block.start}`}
-                        mentions={mentions}
-                    />
-                );
-            }
-
-            if (block.text.trim().length === 0) {
-                return null;
-            }
-
+    return blocks.map((block) => {
+        if (block.kind === 'heading') {
             return (
-                <p
-                    className="my-0 whitespace-pre-wrap break-words [overflow-wrap:anywhere]"
-                    key={`prose:${block.start}`}
-                >
-                    {renderMarkdownInline({
-                        animatedRanges,
-                        content: block.text,
-                        keyPrefix: `prose:${block.start}`,
-                        mentions: sliceMentions(
-                            mentions,
-                            block.start,
-                            block.start + block.text.length
-                        ),
-                        sourceOffset: block.start,
-                    })}
-                </p>
+                <ChatMarkdownHeading
+                    animatedRanges={animatedRanges}
+                    block={block}
+                    key={`heading:${block.start}`}
+                    mentions={mentions}
+                />
             );
-        });
-    }
+        }
 
-    return renderMarkdownInline({
-        animatedRanges,
-        content,
-        keyPrefix: 'message',
-        mentions,
-        sourceOffset: 0,
+        if (block.text.trim().length === 0) {
+            return null;
+        }
+
+        return (
+            <p
+                className="my-0 whitespace-pre-wrap break-words [overflow-wrap:anywhere]"
+                key={`prose:${block.start}`}
+            >
+                {renderMarkdownInline({
+                    animatedRanges,
+                    content: block.text,
+                    keyPrefix: `prose:${block.start}`,
+                    mentions: sliceMentions(mentions, block.start, block.start + block.text.length),
+                    sourceOffset: block.start,
+                })}
+            </p>
+        );
     });
 }
 

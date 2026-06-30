@@ -15,13 +15,11 @@ test('chat composer drafts are restored by chat id', () => {
     writeChatComposerDraft('chat-1', {
         ...createChatComposerDraftState(['agent-1']),
         content: 'do not drop this',
-        modelRef: 'openai/gpt-5',
     });
 
     expect(readChatComposerDraft('chat-1', ['agent-1'])).toMatchObject({
         agentId: 'agent-1',
         content: 'do not drop this',
-        modelRef: 'openai/gpt-5',
     });
     expect(readChatComposerDraft('chat-2', ['agent-1']).content).toBe('');
 });

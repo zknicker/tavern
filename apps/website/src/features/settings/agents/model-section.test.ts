@@ -7,58 +7,83 @@ const models = [
     {
         availability: 'available',
         contextWindow: 400_000,
-        framework: 'hermes',
-        id: 'openai-codex/gpt-5.5',
+        framework: 'agent-engine',
+        id: 'codex/gpt-5.5',
         modelId: 'gpt-5.5',
         name: 'GPT-5.5',
-        provider: 'openai-codex',
+        provider: 'codex',
         reasoning: null,
-        ref: 'openai-codex/gpt-5.5',
+        ref: 'codex/gpt-5.5',
+        supportsChatRouting: true,
+    },
+    {
+        availability: 'available',
+        contextWindow: 400_000,
+        framework: 'agent-engine',
+        id: 'codex/gpt-5.4',
+        modelId: 'gpt-5.4',
+        name: 'GPT-5.4',
+        provider: 'codex',
+        reasoning: null,
+        ref: 'codex/gpt-5.4',
         supportsChatRouting: true,
     },
     {
         availability: 'available',
         contextWindow: 1_000_000,
-        framework: 'hermes',
-        id: 'anthropic/claude-sonnet-4-6',
+        framework: 'agent-engine',
+        id: 'claude/claude-sonnet-4-6',
         modelId: 'claude-sonnet-4-6',
         name: 'Claude Sonnet 4.6',
-        provider: 'anthropic',
+        provider: 'claude',
         reasoning: null,
-        ref: 'anthropic/claude-sonnet-4-6',
+        ref: 'claude/claude-sonnet-4-6',
         supportsChatRouting: true,
     },
     {
         availability: 'available',
         contextWindow: 1_000_000,
-        framework: 'hermes',
-        id: 'anthropic/claude-opus-4-7',
-        modelId: 'claude-opus-4-7',
-        name: 'Claude Opus 4.7',
-        provider: 'anthropic',
+        framework: 'agent-engine',
+        id: 'claude/claude-opus-4-8',
+        modelId: 'claude-opus-4-8',
+        name: 'Claude Opus 4.8',
+        provider: 'claude',
         reasoning: null,
-        ref: 'anthropic/claude-opus-4-7',
+        ref: 'claude/claude-opus-4-8',
         supportsChatRouting: true,
     },
 ] satisfies ModelListOutput['models'];
 
-test('selectModelChoice preserves the selected Hermes model ref', () => {
+test('selectModelChoice preserves the selected agent model ref', () => {
     assert.equal(
         selectModelChoice(models, {
-            modelRef: 'openai-codex/gpt-5.5',
+            modelRef: 'codex/gpt-5.5',
             thinkingDefault: null,
         })?.model.ref,
-        'openai-codex/gpt-5.5'
+        'codex/gpt-5.5'
+    );
+});
+
+test('selectModelChoice treats Codex and Claude entries as model choices, not provider placeholders', () => {
+    assert.equal(
+        models.some((model) => model.ref === 'codex/oauth' || model.ref === 'claude/oauth'),
+        false
+    );
+    assert.deepEqual(
+        models
+            .filter((model) => model.provider === 'codex' || model.provider === 'claude')
+            .map((model) => model.ref),
+        ['codex/gpt-5.5', 'codex/gpt-5.4', 'claude/claude-sonnet-4-6', 'claude/claude-opus-4-8']
     );
 });
 
 test('selectModelChoice chooses the first sorted model without a current selection', () => {
-    assert.equal(selectModelChoice(models, null)?.model.ref, 'anthropic/claude-opus-4-7');
+    assert.equal(selectModelChoice(models, null)?.model.ref, 'claude/claude-opus-4-8');
 });
 
-test('listThinkingOptionsForModelChoice includes the Hermes effort enum for any selected model', () => {
+test('listThinkingOptionsForModelChoice includes the runtime effort enum for any selected model', () => {
     const choice = selectModelChoice(models, {
-        modelRef: 'openai-codex/gpt-5.5',
+        modelRef: 'codex/gpt-5.5',
         thinkingDefault: null,
     });
     assert.deepEqual(

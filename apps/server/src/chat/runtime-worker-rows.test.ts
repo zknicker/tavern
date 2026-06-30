@@ -3,7 +3,7 @@ import test from 'node:test';
 import type { TavernResponseActivity } from '@tavern/sdk';
 import { workerRowFromSubagentActivity } from './runtime-worker-rows.ts';
 
-const actor = { id: 'agt_hermes', kind: 'agent' as const };
+const actor = { id: 'agt_primary', kind: 'agent' as const };
 
 test('projects a subagent activity into a worker row from source facts', () => {
     const row = workerRowFromSubagentActivity({

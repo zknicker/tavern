@@ -1,284 +1,217 @@
+import fs from 'node:fs/promises';
+import path from 'node:path';
 import {
+    type AgentRuntimeAgent,
     type AgentRuntimeCreateMessage,
     type AgentRuntimeSteerTurn,
+    agentRuntimeArchiveAgentSchema,
+    agentRuntimeCreateAgentSchema,
     agentRuntimeRoutes,
+    agentRuntimeUpdateAgentModelSchema,
+    agentRuntimeUpdateAgentNameSchema,
+    agentRuntimeUpdateAgentThinkingDefaultSchema,
+    agentRuntimeUpdateAgentToolsSchema,
+    agentRuntimeUpdateToolEnabledSchema,
 } from '@tavern/api';
+import { defaultAgentEngineAgentId } from '../agent-engine/constants.ts';
+import { unsupportedAgentEngineSurface } from '../agent-engine/errors.ts';
+import { agentEngineTavernSkillPath } from '../agent-engine/instructions.ts';
+import { AGENT_HOME, AGENT_WORKSPACE } from '../config.ts';
 import { getDb } from '../db/connection.ts';
-import { unsupportedHermesSurface } from '../hermes/errors.ts';
-import { createLocalHermesClient } from '../hermes/local-client.ts';
-import { generateRegisteredAgentInstructions } from '../workspace/instructions.ts';
+import { listAgentModels } from '../models/catalog-service.ts';
+import {
+    resolveAgentModelSelection,
+    saveAgentModelSelectionIntent,
+} from '../models/selection-service.ts';
+import {
+    generateRegisteredAgentInstructions,
+    registerAgentWorkspace,
+} from '../workspace/instructions.ts';
 import { agentNotesFileName } from '../workspace/managed-instructions.ts';
+import {
+    deleteStoredAgent,
+    getStoredAgent,
+    listStoredAgents,
+    updateStoredAgent,
+    upsertStoredAgent,
+} from './agents-store.ts';
 import {
     sendTavernChannelMessage,
     steerTavernChannelTurn,
     stopTavernChannelTurn,
 } from './channel-relay.ts';
 import { json } from './http.ts';
+import { getRuntimeTool, listRuntimeTools } from './tool-catalog.ts';
 
-type LocalHermesClient = ReturnType<typeof createLocalHermesClient>;
-
-interface RouteContext {
-    client: LocalHermesClient;
-    request: Request;
-    url: URL;
-}
-
-export async function handleHermesProxyRequest(request: Request): Promise<Response | null> {
+export async function handleAgentProxyRequest(request: Request): Promise<Response | null> {
     const url = new URL(request.url);
-    const client = createLocalHermesClient();
+    const payload = await dispatchAgentEngineStatic({ request, url });
 
-    try {
-        const payload = await dispatch({ client, request, url });
-        return payload === undefined ? null : json(payload);
-    } catch (error) {
-        return json(toRuntimeError(error), 502);
-    } finally {
-        client.close();
-    }
+    return payload === undefined ? null : json(payload);
 }
 
-async function dispatch(context: RouteContext) {
-    const { client, request, url } = context;
+async function dispatchAgentEngineStatic({ request, url }: { request: Request; url: URL }) {
     const method = request.method;
     const segments = url.pathname.split('/').filter(Boolean).map(decodeURIComponent);
 
     if (method === 'GET' && url.pathname === agentRuntimeRoutes.agents) {
-        return await client.listAgents();
+        ensurePrimaryAgent();
+        return withResolvedModelNames(listStoredAgents());
     }
     if (method === 'POST' && url.pathname === agentRuntimeRoutes.agents) {
-        return await client.upsertAgent(await readJson(request));
+        const input = agentRuntimeCreateAgentSchema.parse(await readJson(request));
+        const agent = upsertStoredAgent({
+            agent: {
+                enabledSkillIds: input.enabledSkillIds ?? [],
+                id: input.id,
+                isAdmin: input.isAdmin ?? false,
+                name: input.name,
+                primaryColor: input.primaryColor ?? null,
+                workspaceFolder: resolveAgentWorkspaceFolder(input),
+            },
+        });
+        await fs.mkdir(agent.workspaceFolder, { recursive: true });
+        registerAgentWorkspace(getDb(), {
+            agentId: agent.id,
+            agentName: agent.name,
+            workspaceDir: agent.workspaceFolder,
+        });
+        return withResolvedModelName(agent);
     }
-    if (method === 'GET' && segments[0] === 'agents') {
-        return await dispatchAgentGet(context, segments);
+    if (method === 'DELETE' && segments[0] === 'agents' && segments[1] && !segments[2]) {
+        deleteStoredAgent(segments[1]);
+        return agentRuntimeArchiveAgentSchema.parse({
+            archived: true,
+            id: segments[1],
+        });
     }
-    if (method === 'PATCH' && segments[0] === 'agents' && segments[1] && segments[2] === 'name') {
-        return await client.updateAgentName(segments[1], await readJson(request));
-    }
-    if (method === 'PATCH' && segments[0] === 'agents' && segments[1] && segments[2] === 'model') {
-        return await client.updateAgentModel(segments[1], await readJson(request));
+    if (method === 'GET' && segments[0] === 'agents' && segments[1] && segments[2] === 'config') {
+        ensurePrimaryAgent();
+        const agent = getStoredAgent(segments[1]);
+        return agent ? withResolvedModelName(agent) : undefined;
     }
     if (
         method === 'PATCH' &&
         segments[0] === 'agents' &&
         segments[1] &&
-        segments[2] === 'thinking-default'
+        ['model', 'name', 'thinking-default', 'tools'].includes(segments[2] ?? '')
     ) {
-        return await client.updateAgentThinkingDefault(segments[1], await readJson(request));
-    }
-    if (method === 'PATCH' && segments[0] === 'agents' && segments[1] && segments[2] === 'tools') {
-        return await client.updateAgentTools(segments[1], await readJson(request));
-    }
-    if (method === 'PATCH' && segments[0] === 'agents' && segments[1]) {
-        return unsupportedPayload('Hermes agent setting');
-    }
-    if (method === 'DELETE' && segments[0] === 'agents' && segments[1]) {
-        return await client.deleteAgent(segments[1]);
-    }
-    if (method === 'PUT' && isAgentFileRoute(segments) && segments[3]) {
-        const saved = await client.saveAgentFile(segments[1], segments[3], await readJson(request));
-        if (segments[3] === agentNotesFileName) {
-            // AGENTS.md is generated from NOTES.md; recompose on save.
-            await generateRegisteredAgentInstructions(getDb(), segments[1]);
+        const input = await readJson(request);
+        const agentId = segments[1];
+        if (agentId === defaultAgentEngineAgentId) {
+            ensurePrimaryAgent();
         }
-        return saved;
-    }
-    if (method === 'GET' && url.pathname === agentRuntimeRoutes.hermesConfig) {
-        return await client.getHermesConfig();
-    }
-    if (method === 'PUT' && url.pathname === agentRuntimeRoutes.hermesConfig) {
-        return await client.applyHermesConfig(await readJson(request));
-    }
-    if (url.pathname.startsWith('/model-access')) {
-        return await dispatchModelAccess(context);
-    }
-    if (url.pathname.startsWith('/models')) {
-        return await dispatchModels(context);
-    }
-    if (url.pathname.startsWith('/skills')) {
-        return await dispatchSkills(context, segments);
-    }
-    if (url.pathname.startsWith('/toolsets')) {
-        return await dispatchToolsets(context, segments);
-    }
-    if (url.pathname.startsWith('/hermes/chats') || url.pathname.startsWith('/bindings')) {
-        return await dispatchChats(context, segments);
-    }
-    if (url.pathname.startsWith('/cron')) {
-        return await dispatchCron(context, segments);
-    }
-    if (url.pathname.startsWith('/hermes/sessions')) {
-        return await dispatchSessions(context, segments);
-    }
-    return undefined;
-}
-
-async function dispatchAgentGet(context: RouteContext, segments: string[]) {
-    const { client } = context;
-    const agentId = segments[1];
-    if (!agentId) {
-        return undefined;
-    }
-    if (segments[2] === 'config') {
-        return await client.getAgentConfig(agentId);
-    }
-    if (segments[2] === 'files' && !segments[3]) {
-        return await client.listAgentFiles(agentId);
-    }
-    if (segments[2] === 'files' && segments[3]) {
-        return await client.getAgentFile(agentId, segments[3]);
-    }
-    return undefined;
-}
-
-async function dispatchModelAccess({ client, request, url }: RouteContext) {
-    if (request.method === 'GET' && url.pathname === agentRuntimeRoutes.modelAccess) {
-        return await client.getModelAccess();
-    }
-    if (request.method === 'PUT' && url.pathname === agentRuntimeRoutes.modelAccessApiKey) {
-        return await client.saveModelProviderApiKey(await readJson(request));
-    }
-    const oauthCancelMatch = url.pathname.match(/^\/model-access\/oauth\/sessions\/([^/]+)$/u);
-    if (request.method === 'DELETE' && oauthCancelMatch?.[1]) {
-        return await client.cancelModelProviderOAuth({
-            sessionId: decodeURIComponent(oauthCancelMatch[1]),
-        });
-    }
-    const oauthStartMatch = url.pathname.match(/^\/model-access\/oauth\/([^/]+)\/start$/u);
-    if (request.method === 'POST' && oauthStartMatch?.[1]) {
-        return await client.startModelProviderOAuth({
-            providerId: decodeURIComponent(oauthStartMatch[1]),
-        });
-    }
-    const oauthPollMatch = url.pathname.match(/^\/model-access\/oauth\/([^/]+)\/poll\/([^/]+)$/u);
-    if (request.method === 'GET' && oauthPollMatch?.[1] && oauthPollMatch[2]) {
-        return await client.pollModelProviderOAuth({
-            providerId: decodeURIComponent(oauthPollMatch[1]),
-            sessionId: decodeURIComponent(oauthPollMatch[2]),
-        });
-    }
-    const oauthSubmitMatch = url.pathname.match(/^\/model-access\/oauth\/([^/]+)\/submit$/u);
-    if (request.method === 'POST' && oauthSubmitMatch?.[1]) {
-        const payload = (await readJson(request)) as { code?: unknown; sessionId?: unknown };
-        return await client.submitModelProviderOAuth({
-            code: String(payload.code ?? ''),
-            providerId: decodeURIComponent(oauthSubmitMatch[1]),
-            sessionId: String(payload.sessionId ?? ''),
-        });
-    }
-    if (url.pathname === agentRuntimeRoutes.modelAccessOpenRouterSettings) {
-        if (request.method === 'GET') {
-            return await client.getOpenRouterSettings();
+        let updatedAgent: AgentRuntimeAgent | null = null;
+        if (segments[2] === 'model') {
+            updatedAgent = savePatchedModel(agentId, input);
+        } else if (segments[2] === 'name') {
+            const payload = agentRuntimeUpdateAgentNameSchema.parse(input);
+            updatedAgent = updateStoredAgent({ agentId, name: payload.name });
+        } else if (segments[2] === 'thinking-default') {
+            const payload = agentRuntimeUpdateAgentThinkingDefaultSchema.parse(input);
+            updatedAgent = updateStoredAgent({
+                agentId,
+                thinkingDefault: payload.thinkingDefault,
+            });
+        } else if (segments[2] === 'tools') {
+            const payload = agentRuntimeUpdateAgentToolsSchema.parse(input);
+            updatedAgent = updateStoredAgent({
+                agentId,
+                enabledSkillIds: payload.tools,
+            });
         }
-        if (request.method === 'PUT') {
-            return await client.saveOpenRouterSettings(await readJson(request));
+        if (!updatedAgent) {
+            return undefined;
         }
-        if (request.method === 'DELETE') {
-            return await client.deleteOpenRouterSettings();
+        return agentEngineAgentConfigSnapshot();
+    }
+    if (method === 'GET' && segments[0] === 'agents' && segments[1] && segments[2] === 'files') {
+        const agentId = segments[1];
+        if (segments[3]) {
+            return await readAgentEngineAgentFile(agentId, segments[3]);
         }
+        return {
+            files: await Promise.all(
+                agentEngineAgentFiles(agentId).map(readAgentEngineAgentFileSummary)
+            ),
+        };
     }
-    return undefined;
-}
-
-async function dispatchModels({ client, request, url }: RouteContext) {
-    if (url.pathname !== agentRuntimeRoutes.models) {
-        return undefined;
+    if (method === 'PUT' && segments[0] === 'agents' && segments[1] && segments[2] === 'files') {
+        const agentId = segments[1];
+        const filePath = segments[3];
+        if (!filePath) {
+            return undefined;
+        }
+        const file = resolveAgentEngineAgentFile(agentId, filePath);
+        const body = (await readJson(request)) as { content?: unknown };
+        await fs.mkdir(path.dirname(file.storagePath), { recursive: true });
+        await fs.writeFile(file.storagePath, String(body.content ?? ''), {
+            mode: 0o600,
+        });
+        if (filePath === agentNotesFileName) {
+            await generateRegisteredAgentInstructions(getDb(), agentId);
+        }
+        return await readAgentEngineAgentFile(agentId, filePath);
     }
-    if (request.method === 'GET') {
-        return await client.getModels();
+    if (method === 'GET' && url.pathname === agentRuntimeRoutes.models) {
+        return await listAgentModels();
     }
-    return undefined;
-}
-
-async function dispatchSkills({ client, request, url }: RouteContext, segments: string[]) {
-    if (request.method === 'GET' && url.pathname === agentRuntimeRoutes.skills) {
-        const agentId = url.searchParams.get('agentId');
-        return await client.listSkills(agentId ? { agentId } : undefined);
+    if (method === 'GET' && url.pathname === agentRuntimeRoutes.skills) {
+        return { skills: [agentEngineTavernSkill()] };
     }
-    const skillId = segments[1];
-    if (!skillId) {
-        return undefined;
+    if (method === 'GET' && url.pathname === agentRuntimeRoutes.tools) {
+        return listRuntimeTools();
     }
-    if (request.method === 'GET' && !segments[2]) {
-        return await client.getSkill(skillId);
+    if (method === 'PUT' && segments[0] === 'tools' && segments[1] && segments[2] === 'enabled') {
+        agentRuntimeUpdateToolEnabledSchema.parse(await readJson(request));
+        return getRuntimeTool(segments[1]) ?? undefined;
     }
-    if (request.method === 'PUT' && segments[2] === 'enabled') {
-        return await client.updateSkillEnabled(skillId, await readJson(request));
+    if (method === 'GET' && url.pathname === agentRuntimeRoutes.sessions) {
+        return { sessions: [] };
     }
-    return undefined;
-}
-
-async function dispatchToolsets({ client, request, url }: RouteContext, segments: string[]) {
-    if (request.method === 'GET' && url.pathname === agentRuntimeRoutes.toolsets) {
-        return await client.listToolsets();
+    if (method === 'GET' && url.pathname === agentRuntimeRoutes.sessionPreviews) {
+        return {
+            previews: url.searchParams.getAll('key').map((key) => ({
+                items: [],
+                key,
+                status: 'empty',
+            })),
+        };
     }
-    const toolsetId = segments[1];
-    if (!toolsetId) {
-        return undefined;
+    if (method === 'GET' && url.pathname === agentRuntimeRoutes.chats) {
+        return { chats: [] };
     }
-    if (request.method === 'PUT' && segments[2] === 'enabled') {
-        return await client.updateToolsetEnabled(toolsetId, await readJson(request));
-    }
-    return undefined;
-}
-
-async function dispatchChats({ client, request, url }: RouteContext, segments: string[]) {
-    if (request.method === 'GET' && url.pathname === agentRuntimeRoutes.chats) {
-        return await client.listChats();
-    }
-    if (request.method === 'GET' && url.pathname === agentRuntimeRoutes.bindings) {
-        return await client.listBindings();
-    }
-    if (request.method === 'POST' && url.pathname === agentRuntimeRoutes.bindings) {
-        return await client.upsertBinding(await readJson(request));
-    }
-    if (request.method === 'GET' && url.pathname === agentRuntimeRoutes.discordBindings) {
+    if (method === 'GET' && url.pathname === agentRuntimeRoutes.bindings) {
         return { bindings: [] };
     }
-    if (request.method === 'POST' && url.pathname === agentRuntimeRoutes.discordBindings) {
-        return unsupportedPayload('Hermes does not own Discord bindings.');
+    if (method === 'GET' && url.pathname === agentRuntimeRoutes.discordBindings) {
+        return { bindings: [] };
     }
-    if (
-        segments[0] === 'bindings' &&
-        segments[1] === 'discord' &&
-        segments[2] &&
-        (request.method === 'PUT' || request.method === 'DELETE')
-    ) {
-        return unsupportedPayload('Hermes does not own Discord bindings.');
-    }
-    if (segments[0] === 'bindings' && segments[1] && request.method === 'DELETE') {
-        return await client.deleteBinding(segments[1]);
-    }
-
-    const chatId = segments[0] === 'hermes' && segments[1] === 'chats' ? segments[2] : null;
-    if (!chatId) {
-        return undefined;
-    }
-    if (request.method === 'POST' && segments[3] === 'messages') {
-        const input = (await readJson(request)) as AgentRuntimeCreateMessage;
-        if (isTavernChannelMessage(input)) {
-            return await sendTavernChannelMessage(chatId, input);
+    if (method === 'POST' && segments[0] === 'agent' && segments[1] === 'chats') {
+        const chatId = segments[2];
+        if (chatId && segments[3] === 'messages') {
+            const input = (await readJson(request)) as AgentRuntimeCreateMessage;
+            if (isTavernChannelMessage(input)) {
+                return await sendTavernChannelMessage(chatId, input);
+            }
+            return unsupportedPayload('Non-Tavern agent chat messages');
         }
-        return await client.postMessage(chatId, input);
+        if (chatId && segments[3] === 'turns' && segments[4] && segments[5] === 'steer') {
+            const input = (await readJson(request)) as AgentRuntimeSteerTurn;
+            return await steerTavernChannelTurn(chatId, {
+                ...input,
+                runId: segments[4],
+            });
+        }
+        if (chatId && segments[3] === 'turns' && segments[4] && segments[5] === 'stop') {
+            return await stopTavernChannelTurn({ runId: segments[4] });
+        }
     }
-    if (
-        request.method === 'POST' &&
-        segments[3] === 'turns' &&
-        segments[4] &&
-        segments[5] === 'steer'
-    ) {
-        const input = (await readJson(request)) as AgentRuntimeSteerTurn;
-        return await steerTavernChannelTurn(chatId, {
-            ...input,
-            runId: segments[4],
-        });
+    if (method === 'GET' && url.pathname === agentRuntimeRoutes.cronJobs) {
+        return { jobs: [] };
     }
-    if (
-        request.method === 'POST' &&
-        segments[3] === 'turns' &&
-        segments[4] &&
-        segments[5] === 'stop'
-    ) {
-        return await stopTavernChannelTurn({ runId: segments[4] });
+    if (method === 'GET' && url.pathname === agentRuntimeRoutes.cronRuns) {
+        return { runs: [] };
     }
     return undefined;
 }
@@ -288,106 +221,201 @@ function isTavernChannelMessage(input: AgentRuntimeCreateMessage) {
         return false;
     }
 
-    return (
-        input.target.type === 'tavern' ||
-        input.target.sessionKey?.includes(':tavern:channel:') === true
-    );
+    return input.target.type === 'tavern';
 }
 
-async function dispatchCron({ client, request, url }: RouteContext, segments: string[]) {
-    if (request.method === 'GET' && url.pathname === agentRuntimeRoutes.cronJobs) {
-        return await client.listCronJobs();
-    }
-    if (request.method === 'POST' && url.pathname === agentRuntimeRoutes.cronJobs) {
-        return await client.createCronJob(await readJson(request));
-    }
-    if (request.method === 'GET' && url.pathname === agentRuntimeRoutes.cronRuns) {
-        return await client.listCronRuns();
-    }
-    const cronJobId = segments[0] === 'cron-jobs' ? segments[1] : null;
-    if (cronJobId) {
-        if (request.method === 'GET' && segments.length === 2) {
-            return await client.getCronJob(cronJobId);
-        }
-        if (request.method === 'PATCH' && segments.length === 2) {
-            return await client.updateCronJob(cronJobId, await readJson(request));
-        }
-        if (request.method === 'DELETE' && segments.length === 2) {
-            return await client.deleteCronJob(cronJobId);
-        }
-        if (request.method === 'POST' && segments[2] === 'run') {
-            return await client.runCronJob(cronJobId, await readJson(request));
-        }
-        if (request.method === 'GET' && segments[2] === 'runs') {
-            return await client.listCronRuns(cronJobId);
-        }
-    }
-    return undefined;
-}
-
-async function dispatchSessions({ client, request, url }: RouteContext, segments: string[]) {
-    if (request.method === 'GET' && url.pathname === agentRuntimeRoutes.sessions) {
-        return await client.listSessions();
-    }
-    if (request.method === 'GET' && url.pathname === agentRuntimeRoutes.sessionPreviews) {
-        const keys = url.searchParams.getAll('key');
-        const limit = url.searchParams.get('limit');
-        const maxChars = url.searchParams.get('maxChars');
-        return await client.listSessionPreviews({
-            keys,
-            ...(limit ? { limit: Number(limit) } : {}),
-            ...(maxChars ? { maxChars: Number(maxChars) } : {}),
-        });
-    }
-    const sessionKey = segments[0] === 'hermes' && segments[1] === 'sessions' ? segments[2] : null;
-    if (!sessionKey) {
-        return undefined;
-    }
-    if (request.method === 'GET' && segments[3] === 'messages') {
-        const limit = url.searchParams.get('limit');
-        return await client.listSessionMessages(
-            sessionKey,
-            limit ? { limit: Number(limit) } : undefined
-        );
-    }
-    if (request.method === 'GET' && segments[3] === 'graph') {
-        return await client.getSessionGraph(sessionKey);
-    }
-    if (request.method === 'GET' && segments[3] === 'prompt') {
-        const prompt = await client.getSessionPrompt(sessionKey);
-        return prompt ?? undefined;
-    }
-    if (request.method === 'POST' && segments[3] === 'resync') {
-        return await client.resyncSession(sessionKey);
-    }
-    return undefined;
-}
-
-async function readJson(request: Request): Promise<never> {
-    return (await request.json().catch(() => ({}))) as never;
-}
-
-function isAgentFileRoute(segments: string[]) {
-    return segments[0] === 'agents' && segments[1] && segments[2] === 'files';
-}
-
-function toRuntimeError(error: unknown) {
-    return {
-        code: readErrorCode(error),
-        message: error instanceof Error ? error.message : 'Hermes request failed.',
-        retryable: true,
-    };
-}
-
-function readErrorCode(error: unknown) {
-    return typeof error === 'object' &&
-        error !== null &&
-        'code' in error &&
-        typeof error.code === 'string'
-        ? error.code
-        : 'hermes_request_failed';
+async function readJson(request: Request): Promise<unknown> {
+    return await request.json().catch(() => ({}));
 }
 
 function unsupportedPayload(message: string) {
-    return unsupportedHermesSurface(message);
+    return unsupportedAgentEngineSurface(message);
+}
+
+function savePatchedModel(agentId: string, input: unknown) {
+    const payload = agentRuntimeUpdateAgentModelSchema.parse(input);
+    const agent = getStoredAgent(agentId);
+
+    if (!agent) {
+        return null;
+    }
+
+    saveAgentModelSelectionIntent({
+        agentId,
+        modelName: payload.model,
+    });
+
+    return agent;
+}
+
+function ensurePrimaryAgent() {
+    return upsertStoredAgent({
+        agent: {
+            enabledSkillIds: [],
+            id: defaultAgentEngineAgentId,
+            isAdmin: true,
+            name: 'Tavern',
+            primaryColor: null,
+            workspaceFolder: AGENT_WORKSPACE,
+        },
+    });
+}
+
+function resolveAgentWorkspaceFolder(input: { id: string; workspaceFolder?: string }) {
+    return input.workspaceFolder ?? path.join(AGENT_HOME, 'agents', input.id, 'workspace');
+}
+
+function withResolvedModelNames(input: ReturnType<typeof listStoredAgents>) {
+    return {
+        agents: input.agents.map(withResolvedModelName),
+    };
+}
+
+function withResolvedModelName(agent: NonNullable<ReturnType<typeof getStoredAgent>>) {
+    const model = resolveAgentModelSelection({ agentId: agent.id });
+    return {
+        ...agent,
+        modelName: {
+            model: model.model,
+            provider: model.provider,
+        },
+        thinkingDefault: agent.thinkingDefault ?? null,
+    };
+}
+
+function agentEngineAgent() {
+    return withResolvedModelName(ensurePrimaryAgent());
+}
+
+function agentConfigEntry(agent: ReturnType<typeof agentEngineAgent>) {
+    return {
+        id: agent.id,
+        model: agent.modelName,
+        name: agent.name,
+        thinkingDefault: agent.thinkingDefault,
+        tools: { allow: agent.enabledSkillIds },
+    };
+}
+
+function agentConfigHash(agents: ReturnType<typeof agentEngineAgent>[]) {
+    return `agent-engine:${agents
+        .map((agent) => `${agent.id}:${agent.modelName.provider}/${agent.modelName.model}`)
+        .join(',')}`;
+}
+
+function agentEngineAgentConfigSnapshot() {
+    ensurePrimaryAgent();
+    const agents = listStoredAgents().agents.map(withResolvedModelName);
+
+    return {
+        config: {
+            agents: {
+                list: agents.map(agentConfigEntry),
+            },
+        },
+        hash: agentConfigHash(agents),
+        issues: [],
+        raw: null,
+        valid: true,
+    };
+}
+
+function agentEngineTavernSkill() {
+    const skillDir = path.dirname(agentEngineTavernSkillPath);
+
+    return {
+        allowedTools: null,
+        baseDir: skillDir,
+        bundled: true,
+        commandVisible: true,
+        configChecks: [],
+        description: 'Use Tavern chat context, memory, files, and local tools.',
+        disabled: false,
+        eligible: true,
+        filePath: agentEngineTavernSkillPath,
+        id: 'tavern-agent',
+        install: [],
+        missing: emptySkillRequirements(),
+        modelVisible: true,
+        name: 'tavern-agent',
+        primaryEnv: null,
+        requirements: emptySkillRequirements(),
+        runtimeSource: 'Agent engine',
+        skillKey: 'tavern-agent',
+        source: 'builtin',
+        updatedAt: null,
+        userInvocable: true,
+    };
+}
+
+function emptySkillRequirements() {
+    return {
+        anyBins: [],
+        bins: [],
+        config: [],
+        env: [],
+        os: [],
+    };
+}
+
+function agentEngineAgentFiles(agentId: string) {
+    const agent =
+        agentId === defaultAgentEngineAgentId ? ensurePrimaryAgent() : getStoredAgent(agentId);
+    if (!agent) {
+        throw unsupportedAgentEngineSurface(`agent "${agentId}"`);
+    }
+    return [
+        {
+            mediaType: 'text/markdown',
+            path: agentNotesFileName,
+            storagePath: path.join(agent.workspaceFolder, agentNotesFileName),
+        },
+        {
+            mediaType: 'text/markdown',
+            path: 'SOUL.md',
+            storagePath: path.join(AGENT_HOME, 'SOUL.md'),
+        },
+    ];
+}
+
+async function readAgentEngineAgentFile(agentId: string, filePath: string) {
+    const file = resolveAgentEngineAgentFile(agentId, filePath);
+    const stats = await readFileStats(file.storagePath);
+    return {
+        content: await fs.readFile(file.storagePath, 'utf8').catch(() => ''),
+        mediaType: file.mediaType,
+        path: file.path,
+        sizeBytes: stats?.size ?? 0,
+        updatedAt: stats?.updatedAt ?? null,
+    };
+}
+
+async function readAgentEngineAgentFileSummary(
+    file: ReturnType<typeof agentEngineAgentFiles>[number]
+) {
+    const stats = await readFileStats(file.storagePath);
+    return {
+        mediaType: file.mediaType,
+        path: file.path,
+        sizeBytes: stats?.size ?? 0,
+        updatedAt: stats?.updatedAt ?? null,
+    };
+}
+
+function resolveAgentEngineAgentFile(agentId: string, filePath: string) {
+    const file = agentEngineAgentFiles(agentId).find((candidate) => candidate.path === filePath);
+    if (!file) {
+        throw unsupportedAgentEngineSurface(`agent file "${filePath}"`);
+    }
+    return file;
+}
+
+async function readFileStats(filePath: string) {
+    const stats = await fs.stat(filePath).catch(() => null);
+    return stats
+        ? {
+              size: stats.size,
+              updatedAt: stats.mtime.toISOString(),
+          }
+        : null;
 }

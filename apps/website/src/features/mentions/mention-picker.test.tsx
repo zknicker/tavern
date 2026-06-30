@@ -58,3 +58,37 @@ test('MentionPicker honors option group labels', () => {
     assert.match(markup, /Models/);
     assert.doesNotMatch(markup, /Commands/);
 });
+
+test('MentionPicker groups agent mentions separately from skills', () => {
+    const agentOption: MentionOption = {
+        description: 'Agent in this chat',
+        id: 'agt_primary',
+        insertText: '@Tavern',
+        kind: 'agent',
+        label: 'Tavern',
+        projection: 'agent-reference',
+    };
+    const skillOption: MentionOption = {
+        description: 'Use Tavern chat context, memory, files, and local tools.',
+        id: '/skills/tavern/SKILL.md',
+        insertText: 'tavern',
+        kind: 'skill',
+        label: 'Tavern Agent',
+        projection: 'skill-context',
+    };
+    const markup = renderToStaticMarkup(
+        <MentionPicker
+            activeIndex={0}
+            hasQuery
+            isPathSearchActive={false}
+            isPathSearchLoading={false}
+            onSelect={() => undefined}
+            options={[agentOption, skillOption]}
+        />
+    );
+
+    assert.match(markup, /Agents/);
+    assert.match(markup, /Skills/);
+    assert.ok(markup.indexOf('Agents') < markup.indexOf('Tavern'));
+    assert.ok(markup.indexOf('Skills') < markup.indexOf('Tavern Agent'));
+});

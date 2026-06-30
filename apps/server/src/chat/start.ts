@@ -23,6 +23,7 @@ function buildChatDisplayName(input: StartChatInput) {
 
 export async function startTavernChat(input: StartChatInput) {
     const parsed = startChatInputSchema.parse(input);
+    const metadata = mergeStartChatAddressing(parsed);
     const created = await createTavernChat({
         agentIds: parsed.agentId ? [parsed.agentId] : undefined,
         displayName: buildChatDisplayName(parsed),
@@ -34,9 +35,27 @@ export async function startTavernChat(input: StartChatInput) {
         chatId: created.chatId,
         ...(parsed.clientMessageId ? { clientMessageId: parsed.clientMessageId } : {}),
         content: parsed.content,
-        ...(parsed.metadata ? { metadata: parsed.metadata } : {}),
+        ...(metadata ? { metadata } : {}),
         ...(parsed.modelRef ? { modelRef: parsed.modelRef } : {}),
     });
 
     return sendChatMessageResultSchema.parse(accepted);
+}
+
+function mergeStartChatAddressing(input: StartChatInput) {
+    if (!input.agentId) {
+        return input.metadata;
+    }
+
+    const existing = input.metadata;
+    const addressedAgentIds = new Set(existing?.tavern?.addressedAgentIds ?? []);
+    addressedAgentIds.add(input.agentId);
+
+    return {
+        ...(existing ?? {}),
+        tavern: {
+            ...(existing?.tavern ?? {}),
+            addressedAgentIds: [...addressedAgentIds],
+        },
+    };
 }

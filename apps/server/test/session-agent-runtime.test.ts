@@ -83,11 +83,11 @@ function mockRuntimeChatFetch(chats = [runtimeTavernChat()]) {
             });
         }
 
-        if (url.pathname === '/hermes/chats') {
+        if (url.pathname === '/agent/chats') {
             return Response.json({ chats: [] });
         }
 
-        if (url.pathname === '/hermes/sessions') {
+        if (url.pathname === '/agent/sessions') {
             return Response.json({
                 sessions: (await listSessionRecords()).flatMap((record) => {
                     const session = parseSessionRecord(record);
@@ -104,6 +104,7 @@ function runtimeTavernChat() {
     return {
         created_at: '2026-04-15T21:27:15.953Z',
         id: 'chat-support',
+        kind: 'channel',
         metadata: {
             runtime: {
                 source: 'tavern',
@@ -114,12 +115,26 @@ function runtimeTavernChat() {
                 displayName: 'Support Chat',
             },
         },
+        participants: [
+            {
+                id: 'profile:self',
+                joined_at: '2026-04-15T21:27:15.953Z',
+                kind: 'human',
+                label: 'User',
+            },
+            {
+                id: 'support',
+                joined_at: '2026-04-15T21:27:15.953Z',
+                kind: 'agent',
+                label: 'Support',
+            },
+        ],
         title: 'Support Chat',
         updated_at: '2026-04-15T21:28:10.000Z',
     };
 }
 
-test('session queries read bounded Hermes session history', async () => {
+test('session queries read bounded runtime session history', async () => {
     mockRuntimeChatFetch();
     spyOn(agentRuntimeClient, 'createConfiguredAgentRuntimeClient').mockReturnValue({
         close: () => {},
@@ -518,11 +533,11 @@ test('session queries read bounded Hermes session history', async () => {
         }),
     } as never);
     await saveAgentRuntimeConnection({
-        baseUrl: 'http://hermes.test',
+        baseUrl: 'http://agent-runtime.test',
         id: 'runtime-1',
         lastCheckedAt: null,
         lastError: null,
-        name: 'Hermes',
+        name: 'Agent Runtime',
     });
     await syncAgentsForRuntime({
         agents: [
@@ -717,7 +732,7 @@ test('session queries read bounded Hermes session history', async () => {
     });
 });
 
-test('session prompt reads live Hermes prompt inspection', async () => {
+test('session prompt reads live runtime prompt inspection', async () => {
     spyOn(agentRuntimeClient, 'createConfiguredAgentRuntimeClient').mockReturnValue({
         close: () => {},
         getSessionPrompt: async (_sessionKey: string) => ({
@@ -730,7 +745,7 @@ test('session prompt reads live Hermes prompt inspection', async () => {
                     content: 'Base instructions',
                     id: 'base:agent-runtime',
                     kind: 'base',
-                    label: 'Hermes Base Instructions',
+                    label: 'Base Instructions',
                 },
                 {
                     content: '## Soul\n\nBe precise and calm.',
@@ -759,11 +774,11 @@ test('session prompt reads live Hermes prompt inspection', async () => {
         }),
     } as never);
     await saveAgentRuntimeConnection({
-        baseUrl: 'http://hermes.test',
+        baseUrl: 'http://agent-runtime.test',
         id: 'runtime-1',
         lastCheckedAt: null,
         lastError: null,
-        name: 'Hermes',
+        name: 'Agent Runtime',
     });
     await syncSessionsForRuntime({
         runtimeId: 'runtime-1',
@@ -815,11 +830,11 @@ test('session summaries hydrate session id from the durable runtime column', asy
         }),
     } as never);
     await saveAgentRuntimeConnection({
-        baseUrl: 'http://hermes.test',
+        baseUrl: 'http://agent-runtime.test',
         id: 'runtime-1',
         lastCheckedAt: null,
         lastError: null,
-        name: 'Hermes',
+        name: 'Agent Runtime',
     });
     await syncSessionsForRuntime({
         runtimeId: 'runtime-1',

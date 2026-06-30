@@ -129,7 +129,7 @@ function buildCapabilitySnapshot(states: Record<string, AgentRuntimeCapabilityHe
         })),
         health: { ok: true, status: 'healthy', timestamp },
         info: {
-            agentRuntimeId: 'tavern-hermes-managed',
+            agentRuntimeId: 'tavern-agent-engine',
             name: 'Tavern Runtime',
             protocolVersion: agentRuntimeProtocolVersion,
             version: '1.0.0',

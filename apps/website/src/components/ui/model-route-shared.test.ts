@@ -5,10 +5,6 @@ import { buildChatRoutingConfiguredModelOptions, buildModelOptions } from './mod
 function createModelList(): ModelListOutput {
     return {
         agents: [],
-        defaults: {
-            fallbackModels: [],
-            primaryModel: null,
-        },
         defaultsThinkingLevel: null,
         models: [
             {
@@ -52,7 +48,6 @@ function createModelList(): ModelListOutput {
             hasApiKey: false,
             updatedAt: null,
         },
-        subAgentDefaultModel: null,
         subAgentThinkingLevel: null,
     };
 }

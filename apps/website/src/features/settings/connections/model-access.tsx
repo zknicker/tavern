@@ -139,7 +139,7 @@ export function ModelAccessSettings() {
                         connectedProviders.map((provider, index) => (
                             <div key={provider.provider}>
                                 {index > 0 ? <Separator /> : null}
-                                <ConnectedHermesProviderRow provider={provider} />
+                                <ConnectedAgentProviderRow provider={provider} />
                             </div>
                         ))
                     ) : (
@@ -275,7 +275,7 @@ function handleStartProviderOAuth({
     );
 }
 
-function ConnectedHermesProviderRow({ provider }: { provider: ModelInventoryProvider }) {
+function ConnectedAgentProviderRow({ provider }: { provider: ModelInventoryProvider }) {
     const providerConfig = getModelProviderConfig(provider.provider);
 
     return (

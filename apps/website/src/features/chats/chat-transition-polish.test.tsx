@@ -9,7 +9,7 @@ import {
     shouldReleaseDraftHandoff,
     turnTimelineDemoLogLimit,
 } from './agent-chat-detail.tsx';
-import { AgentPresenceIndicator } from './agent-presence-indicator.tsx';
+import { AgentStatusIndicator } from './agent-status-indicator.tsx';
 import { resolveActivePresenceVerb } from './chat-active-presence-verb.ts';
 import { resolveDraftHandoffFrame } from './chat-draft-detail.tsx';
 import { getSteerableRunId } from './chat-steering.ts';
@@ -26,20 +26,18 @@ test('turn timeline demo loads enough messages to show every marker', () => {
     expect(getChatDetailLogLimit('cht_normal')).toBe(chatDetailLogLimit);
 });
 
-test('agent presence indicator keeps a fixed icon box for layout motion', () => {
-    const markup = renderToStaticMarkup(<AgentPresenceIndicator activeReply={null} rows={[]} />);
+test('agent status indicator keeps a fixed icon box for layout motion', () => {
+    const markup = renderToStaticMarkup(<AgentStatusIndicator activeReply={null} rows={[]} />);
 
     expect(markup).toContain('height:32px');
     expect(markup).toContain('width:32px');
     expect(markup).toContain('Agent idle');
 });
 
-test('agent presence indicator leaves emotion changes to the eye spring', () => {
-    const idleMarkup = renderToStaticMarkup(
-        <AgentPresenceIndicator activeReply={null} rows={[]} />
-    );
+test('agent status indicator leaves emotion changes to the eye spring', () => {
+    const idleMarkup = renderToStaticMarkup(<AgentStatusIndicator activeReply={null} rows={[]} />);
     const thinkingMarkup = renderToStaticMarkup(
-        <AgentPresenceIndicator
+        <AgentStatusIndicator
             activeReply={{
                 agentId: 'agent-1',
                 isThinking: true,

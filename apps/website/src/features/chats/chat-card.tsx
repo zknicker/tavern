@@ -2,12 +2,6 @@ import * as React from 'react';
 import { useChatTimeline } from '../../hooks/chats/use-chat-timeline.ts';
 import type { AgentListOutput } from '../../lib/trpc.tsx';
 import { cn } from '../../lib/utils.ts';
-import {
-    ChatApprovalFlow,
-    ChatApprovalFlowComposer,
-    ChatApprovalPrompt,
-    useChatApprovalPromptState,
-} from './chat-approval-prompt.tsx';
 import { getChatCardDomId } from './chat-card-dom-id.ts';
 import { ChatCardHeader } from './chat-card-header.tsx';
 import type { ChatListItem } from './chat-list-data.ts';
@@ -46,10 +40,6 @@ export function ChatCard({
     const hasActiveReply = timeline.activeReply !== null;
     const hasActiveTurn = timeline.activeTurn !== null || hasActiveReply;
     const hasTimelineContent = rowCount > 0 || hasActiveReply || timeline.failedTurn !== null;
-    const approvalPrompt = useChatApprovalPromptState(rows);
-    const pendingApprovalBlockReason = approvalPrompt.isActive
-        ? 'Respond to the pending approval before sending another message.'
-        : null;
     const isInitialTranscriptPending =
         timeline.isPending && !timeline.historyLoaded && !hasActiveReply;
     const followKey = getChatTimelineFollowKey({
@@ -111,37 +101,23 @@ export function ChatCard({
                 </div>
             </div>
 
-            <ChatApprovalFlow active={approvalPrompt.isActive}>
-                <ChatApprovalPrompt
-                    chatId={chat.id}
-                    className="border-r-[3px] border-r-border/70 bg-chrome/40 px-3 pt-2"
-                    hasError={approvalPrompt.hasError}
-                    onAnswerError={approvalPrompt.markAnswerError}
-                    onAnswered={approvalPrompt.markAnswered}
-                    prompt={approvalPrompt.prompt}
-                />
-                <ChatApprovalFlowComposer>
-                    <ChatMessageComposer
-                        activeRunId={
-                            timeline.activeTurn?.runId ?? timeline.activeReply?.runId ?? null
-                        }
-                        agentRuntimeSyncLabel={chat.agentRuntimeSyncLabel}
-                        agents={agents}
-                        blockReason={pendingApprovalBlockReason}
-                        boundAgentIds={chat.boundAgentIds}
-                        canSend={chat.canSend}
-                        chatId={chat.id}
-                        isDisabled={chat.isDisabled}
-                        isReplyActive={hasActiveTurn}
-                        steerRunId={getSteerableRunId({
-                            activeReply: timeline.activeReply,
-                            activeTurn: timeline.activeTurn,
-                            rows,
-                        })}
-                        variant="compact"
-                    />
-                </ChatApprovalFlowComposer>
-            </ChatApprovalFlow>
+            <ChatMessageComposer
+                activeRunId={timeline.activeTurn?.runId ?? timeline.activeReply?.runId ?? null}
+                agentRuntimeSyncLabel={chat.agentRuntimeSyncLabel}
+                agents={agents}
+                boundAgentIds={chat.boundAgentIds}
+                canSend={chat.canSend}
+                chatId={chat.id}
+                conversationKind={chat.conversationKind}
+                isDisabled={chat.isDisabled}
+                isReplyActive={hasActiveTurn}
+                steerRunId={getSteerableRunId({
+                    activeReply: timeline.activeReply,
+                    activeTurn: timeline.activeTurn,
+                    rows,
+                })}
+                variant="compact"
+            />
         </div>
     );
 }

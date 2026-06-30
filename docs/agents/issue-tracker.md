@@ -7,12 +7,14 @@ read_when:
 
 # Issue tracker: Linear
 
-Issues and PRDs for this repo live in Linear under the `TAVERN` team.
+Issues and PRDs for this repo live in Linear under the `PRD` team with the
+`Tavern` product label.
 
 ## Conventions
 
 - Use Linear tooling for issue operations, not GitHub Issues or local markdown.
-- Create Tavern repo work in the Linear `TAVERN` team unless the user names another team.
+- Create Tavern repo work in the Linear `PRD` team unless the user names another team.
+- Apply the `Tavern` label to Tavern repo issues.
 - If a skill needs to create an issue and the Linear project is ambiguous, ask for the target
   project before creating it.
 - If a skill needs to fetch a ticket, use the Linear issue key or URL the user provides.
@@ -20,7 +22,8 @@ Issues and PRDs for this repo live in Linear under the `TAVERN` team.
 
 ## Publishing work
 
-When a skill says "publish to the issue tracker," create a Linear issue in the `TAVERN` team.
+When a skill says "publish to the issue tracker," create a Linear issue in the `PRD` team with
+the `Tavern` label.
 
 ## Fetching work
 

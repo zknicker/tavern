@@ -17,7 +17,7 @@ import {
 } from '../../../hooks/connections/runtime-version-gate.ts';
 import { useConnectAgentRuntime } from '../../../hooks/connections/use-connect-agent-runtime.ts';
 import { type AgentRuntimeConnectionOutput, trpc } from '../../../lib/trpc.tsx';
-import { HermesCapabilitiesSummary } from './hermes-capabilities-table.tsx';
+import { AgentCapabilitiesSummary } from './agent-capabilities-table.tsx';
 
 interface AgentRuntimeSettingsPanelProps {
     isChecking?: boolean;
@@ -41,7 +41,7 @@ function CapabilitySection({
 }) {
     return (
         <div>
-            <HermesCapabilitiesSummary
+            <AgentCapabilitiesSummary
                 capabilities={capabilities}
                 emptyLabel={emptyLabel}
                 onCapabilityClick={onCapabilityClick}

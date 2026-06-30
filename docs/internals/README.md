@@ -1,8 +1,8 @@
 ---
-summary: Internals index for Tavern architecture, app/runtime ownership, data model, frontend structure, React conventions, and Hermes adapter behavior.
+summary: Internals index for Tavern architecture, app/runtime ownership, data model, frontend structure, React conventions, and agent-engine behavior.
 read_when:
   - changing Tavern architecture, ownership boundaries, or implementation layout
-  - looking for app, runtime, data model, frontend, or Hermes adapter internals
+  - looking for app, runtime, data model, frontend, or agent-engine internals
 ---
 
 # Internals
@@ -21,4 +21,4 @@ Internals docs explain how Tavern is built. Product-facing behavior belongs in
 | Chat demos | [Chat Demos](chat-demos.md) |
 | Tool presentation | [Tool Presentation](tool-presentation.md) |
 | Rich Responses | [Rich Responses](rich-responses.md) |
-| Hermes runtime adapter | [Tavern Hermes Runtime Adapter](tavern-hermes-runtime-adapter.md) |
+| Agent engine runtime | [Agent Engine Runtime](agent-engine-runtime.md) |

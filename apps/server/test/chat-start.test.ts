@@ -19,9 +19,13 @@ test('startTavernChat creates a bound chat and sends the first message', async (
         acceptedAt: '2026-04-06T14:00:00.000Z',
         chatId: firstChatId,
         clientMessageId: 'msg_1',
-        runId: 'run-1',
-        sessionKey: `agent:agent:planner:tavern:channel:${firstChatId}`,
         status: 'accepted',
+        turns: [
+            {
+                agentId: 'agent:planner',
+                runId: 'run-1',
+            },
+        ],
     });
 
     const result = await startTavernChat({
@@ -33,9 +37,13 @@ test('startTavernChat creates a bound chat and sends the first message', async (
         acceptedAt: '2026-04-06T14:00:00.000Z',
         chatId: firstChatId,
         clientMessageId: 'msg_1',
-        runId: 'run-1',
-        sessionKey: `agent:agent:planner:tavern:channel:${firstChatId}`,
         status: 'accepted',
+        turns: [
+            {
+                agentId: 'agent:planner',
+                runId: 'run-1',
+            },
+        ],
     });
     assert.deepEqual(createSpy.mock.calls[0]?.[0], {
         agentIds: ['agent:planner'],
@@ -46,6 +54,11 @@ test('startTavernChat creates a bound chat and sends the first message', async (
         agentId: 'agent:planner',
         chatId: firstChatId,
         content: 'Plan the spring launch and outline the next three moves.',
+        metadata: {
+            tavern: {
+                addressedAgentIds: ['agent:planner'],
+            },
+        },
     });
 });
 
@@ -57,9 +70,13 @@ test('startTavernChat trims long first messages into a stable chat display name'
         acceptedAt: '2026-04-06T14:00:00.000Z',
         chatId: secondChatId,
         clientMessageId: 'msg_2',
-        runId: 'run-2',
-        sessionKey: `agent:agent:planner:tavern:channel:${secondChatId}`,
         status: 'accepted',
+        turns: [
+            {
+                agentId: 'agent:planner',
+                runId: 'run-2',
+            },
+        ],
     });
 
     await startTavernChat({

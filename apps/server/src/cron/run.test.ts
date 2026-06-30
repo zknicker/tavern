@@ -86,7 +86,7 @@ function createSyntheticTriggerRun() {
         sessionId: null,
         sessionKey: null,
         status: 'running' as const,
-        summary: 'Hermes queued force cron run.',
+        summary: 'Agent engine queued force cron run.',
     };
 }
 
@@ -97,7 +97,7 @@ afterEach(() => {
     databaseClient.exec('DELETE FROM agent_runtime_connections;');
 });
 
-test('runCronJob forwards the manual run request to Hermes', async () => {
+test('runCronJob forwards the manual run request to the agent runtime', async () => {
     await syncCronJobsForRuntime({
         jobs: [createAgentRuntimeCronJob()],
         runtimeId: 'runtime-1',
@@ -155,7 +155,7 @@ test('runCronJob forwards the manual run request to Hermes', async () => {
     assert.equal(emitCronUpdatedSpy.mock.calls.length, 1);
 });
 
-test('runCronJob does not persist Hermes trigger acknowledgements as run history', async () => {
+test('runCronJob does not persist runtime trigger acknowledgements as run history', async () => {
     await syncCronJobsForRuntime({
         jobs: [createAgentRuntimeCronJob()],
         runtimeId: 'runtime-1',
@@ -190,7 +190,7 @@ test('runCronJob does not persist Hermes trigger acknowledgements as run history
     assert.equal(runs.runs.length, 0);
 });
 
-test('runCronJob rejects missing cron jobs before calling Hermes', async () => {
+test('runCronJob rejects missing cron jobs before calling the runtime', async () => {
     const runAgentRuntimeCronSpy = spyOn(agentRuntimeCron, 'runCronJob').mockResolvedValue(
         createAgentRuntimeCronRun()
     );

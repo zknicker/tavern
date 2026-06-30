@@ -27,7 +27,7 @@ const directConversationMessageLayout: ConversationMessageLayout = {
 
 export function ChatTranscript({
     activeReply,
-    agentPresenceColor = null,
+    agentStatusColor = null,
     chatId,
     conversationLayout = directConversationMessageLayout,
     currentSessionKey,
@@ -44,7 +44,7 @@ export function ChatTranscript({
     showThinkingText,
 }: {
     activeReply: ChatActiveReply | null;
-    agentPresenceColor?: string | null;
+    agentStatusColor?: string | null;
     chatId?: string;
     conversationLayout?: ConversationMessageLayout;
     currentSessionKey?: string | null;
@@ -130,7 +130,7 @@ export function ChatTranscript({
                 <VirtualizedChatTranscript
                     activePresenceVerb={activePresenceVerb}
                     activeReply={activeReply}
-                    agentPresenceColor={agentPresenceColor}
+                    agentStatusColor={agentStatusColor}
                     failedTurn={failedTurn}
                     fetchPreviousPage={fetchPreviousPage}
                     followKey={followKey}
@@ -147,7 +147,7 @@ export function ChatTranscript({
                         <TranscriptRenderRowItem
                             activePresenceVerb={activePresenceVerb}
                             activeReply={activeReply}
-                            agentPresenceColor={agentPresenceColor}
+                            agentStatusColor={agentStatusColor}
                             failedTurn={failedTurn}
                             key={row.id}
                             presenceRows={rows}

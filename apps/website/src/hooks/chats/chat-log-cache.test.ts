@@ -143,7 +143,7 @@ test('progress patch renders live reasoning as one thinking row instead of a too
     });
 });
 
-test('progress patch keeps preamble and normalized Hermes tool activity stable through completion', () => {
+test('progress patch keeps preamble and normalized tool activity stable through completion', () => {
     const withPreamble = patchChatLogWithProgress(emptyLog(), {
         step: {
             detail: 'I will run a timed shell check before the final reply.',
@@ -366,32 +366,6 @@ test('progress patch tracks a worker step through running and completed states',
             kind: 'subagent',
             status: 'succeeded',
             title: 'Summarize the repo',
-        },
-    });
-});
-
-test('progress patch renders an approval step as a pending approval tool row', () => {
-    const log = patchChatLogWithProgress(emptyLog(), {
-        step: {
-            detail: 'Dangerous delete',
-            id: 'run-1_approval_1',
-            kind: 'approval',
-            label: 'Approval',
-            status: 'active',
-            toolName: 'approval',
-        },
-        timestamp: '2026-05-22T19:00:01.000Z',
-        turn,
-    });
-
-    expect(log?.rows).toHaveLength(1);
-    expect(log?.rows[0]).toMatchObject({
-        completedAt: null,
-        kind: 'tool',
-        sessionKey: turn.sessionKey,
-        toolCall: {
-            name: 'approval',
-            summaryParts: ['Dangerous delete'],
         },
     });
 });

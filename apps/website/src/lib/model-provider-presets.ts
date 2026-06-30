@@ -14,7 +14,7 @@ export const configuredModelProviders = [
         accessId: 'codex',
         color: '#3B82F6',
         configName: 'openai-codex',
-        displayName: 'OpenAI Codex',
+        displayName: 'Codex',
         icon: ChatGptIcon,
         logo: openAiLogo,
     },

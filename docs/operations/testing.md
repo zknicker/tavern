@@ -38,8 +38,8 @@ commands you ran and anything you did not verify.
 | Runtime handler tests | Boot, process wiring, HTTP payload shape, event delivery, or route-owned error/auth/transport behavior. | Use the real Bun handler or a started local service only when the handler owns meaningful behavior. |
 | Contract/API/SDK gates | `packages/tavern-api`, OpenAPI, SDK client shape, generated types, or cross-boundary request/response contracts. | Run `@tavern/api check`, SDK tests/typecheck, and update docs with the product contract. |
 | App component/hook tests | React state rules, cache invalidation, optimistic UI, row models, filters, keyboard behavior, or rendering transforms. | Prefer hook/model/component tests before e2e. Use the `react-best-practices` skill for nontrivial React architecture. |
-| App e2e | Browser-level app contracts: navigation, reload recovery, websocket reconnect, full chat identity, user flows, or layout-critical behavior. | Use deterministic Playwright against isolated ports, isolated DBs/runtime dirs, managed Runtime, real managed Hermes, and a mock model provider. |
-| Runtime adapter tests | Hermes REST/SSE mapping, event projection, delivery semantics, managed lifecycle, or capability degradation. | Verify against Hermes API fixtures or the deterministic Hermes mock. Do not rely on memory for event names or payloads. |
+| App e2e | Browser-level app contracts: navigation, reload recovery, websocket reconnect, full chat identity, user flows, or layout-critical behavior. | Use deterministic Playwright against isolated ports, isolated DBs/runtime dirs, managed Runtime, and a mock model provider. |
+| Runtime executor tests | AI SDK executor mapping, event projection, delivery semantics, local sandbox behavior, or capability degradation. | Verify with Runtime fixtures, deterministic fake executors, or opt-in harness smoke tests. |
 | Live/manual smoke | Real provider behavior, local environment diagnosis, or release confidence that deterministic lanes cannot cover. | Keep opt-in. Record temporary chat ids/titles and clean up only those records. |
 
 ## Lane Selection
@@ -55,8 +55,8 @@ Choose the smallest lane that proves the changed behavior.
   error mapping, streaming, or transport semantics.
 * **Frontend state or rendering rule:** prefer hook/model/component tests. Use
   e2e for browser-level contracts and real user flows.
-* **Hermes adapter semantics:** use Hermes-shaped fixtures or the deterministic
-  Hermes mock for the exact behavior Tavern depends on.
+* **Executor semantics:** use Runtime fixtures, deterministic fake executors, or
+  opt-in harness smoke tests for the exact behavior Tavern depends on.
 
 ## Writing Tests
 
@@ -77,17 +77,16 @@ Choose the smallest lane that proves the changed behavior.
 ## App E2E
 
 Use Playwright against the real app frontend and app backend for end-to-end contracts.
-The deterministic lane must not point at a developer or production Hermes
-home. It should use isolated ports, isolated databases, isolated runtime dirs,
-managed Tavern Runtime, real managed Hermes, and the e2e OpenAI-compatible
-model provider mock.
+The deterministic lane must not point at developer model-provider credentials.
+It should use isolated ports, isolated databases, isolated runtime dirs,
+managed Tavern Runtime, and the deterministic e2e model provider mock.
 
 Chat e2e should prove identity and recovery, not styling details:
 
 * accepted user message appears once
 * tool/progress activity appears before the final reply and remains after reload
-* assistant progress updates appear before and between tool activity when Hermes
-  emits them
+* assistant progress updates appear before and between tool activity when the
+  executor emits them
 * thinking text is persisted and appears only when the Appearance setting enables
   inline thinking display
 * final assistant message appears once
@@ -101,14 +100,14 @@ timers. Preflight verifies Playwright Chromium and builds the SDK with visible
 terminal progress.
 
 Keep timing thresholds limited to deterministic mock-provider runs. Live
-Hermes smoke can print timing summaries, but should not fail normal CI on real
+harness smoke can print timing summaries, but should not fail normal CI on real
 model latency.
 
 ## Runtime Adapter Contracts
 
-When changing Hermes routes, SSE events, chat behavior, or delivery semantics,
-verify against Hermes-shaped fixtures, the deterministic Hermes e2e mock, or the
-official Hermes app source when a concrete ambiguity remains.
+When changing executor routes, event projection, chat behavior, or delivery
+semantics, verify against Runtime fixtures, the deterministic e2e mock, or an
+opt-in live harness smoke when a concrete ambiguity remains.
 
 Add raw-frame or fixture-backed tests for behavior Tavern depends on.
 
@@ -127,6 +126,16 @@ exact chat ids or titles left behind.
 Live provider tests are opt-in. They are not part of normal CI or default local
 test lanes because they spend provider credits and depend on local tools,
 network, and account state.
+
+For OpenAI API-key agent execution, use the gated Runtime smoke:
+
+```sh
+TAVERN_OPENAI_LIVE_SMOKE=1 bun test apps/runtime/src/tavern/language-model-agent-executor.test.ts
+```
+
+That lane requires `OPENAI_API_KEY` or `TAVERN_AGENT_API_KEY` and uses the
+current cheap OpenAI agent model path. It proves an AI SDK language-model turn
+can complete and persist Tavern-native response state.
 
 Memory has no provider-backed live smoke lane. Runtime tests should cover path
 resolution, Markdown reads, search, and backlinks with temporary Memory

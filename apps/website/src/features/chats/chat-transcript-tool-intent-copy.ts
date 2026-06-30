@@ -1,11 +1,6 @@
 import type { ToolIntentCopy, ToolIntentKind } from './chat-transcript-tool-intent-types.ts';
 
 export const intentCopy: Record<ToolIntentKind, ToolIntentCopy> = {
-    approval: {
-        active: 'Needs approval',
-        completed: 'Requested approval',
-        priority: 11,
-    },
     automation: {
         active: 'Managing automations',
         completed: 'Managed automations',
@@ -130,8 +125,6 @@ export const intentCopy: Record<ToolIntentKind, ToolIntentCopy> = {
 
 export function activeVerb(kind: ToolIntentKind) {
     switch (kind) {
-        case 'approval':
-            return 'Waiting on';
         case 'automation':
             return 'Managing';
         case 'browser':
@@ -183,8 +176,6 @@ export function activeVerb(kind: ToolIntentKind) {
 
 export function completedVerb(kind: ToolIntentKind) {
     switch (kind) {
-        case 'approval':
-            return 'Asked';
         case 'automation':
             return 'Managed';
         case 'browser':

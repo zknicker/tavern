@@ -1,7 +1,6 @@
 export const developmentChatDemoIds = {
     activityTurn: 'cht_demo_activity_turn',
     artifactLinks: 'cht_demo_artifact_links',
-    approvalFlow: 'cht_demo_approval_flow',
     attachment: 'cht_demo_attachment',
     calendarDay: 'cht_demo_calendar_day',
     calendarEvent: 'cht_demo_calendar_event',

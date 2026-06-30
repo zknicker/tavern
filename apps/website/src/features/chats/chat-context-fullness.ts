@@ -26,7 +26,7 @@ export function getChatContextFullness(input: {
 
     const tokenCount =
         readTokenCount(message.metadata.totalTokens) ?? readUsageTokenCount(message.metadata.usage);
-    const modelValue = message.metadata.model ?? message.metadata.hermesModel;
+    const modelValue = message.metadata.model ?? message.metadata.agentModel;
     const providerValue = message.metadata.provider;
 
     if (!(tokenCount && typeof modelValue === 'string' && typeof providerValue === 'string')) {

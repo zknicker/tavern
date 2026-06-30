@@ -165,7 +165,7 @@ function steerNoticeToChatRows(input: {
                             title: 'Steered active turn',
                         },
                         runId: input.runId,
-                        source: 'hermes',
+                        source: 'agent-engine',
                     },
                 },
                 sender: 'You',
@@ -298,7 +298,7 @@ function progressStepToMessageRow(input: {
                 runtime: {
                     runId: input.turn.runId,
                     sessionKey: input.turn.sessionKey,
-                    source: 'hermes',
+                    source: 'agent-engine',
                 },
             },
             sender: input.turn.agentId,
@@ -609,12 +609,7 @@ function toolTarget(step: ChatTurnProgressStep) {
 
     const detail = step.detail?.trim();
 
-    if (
-        step.kind === 'approval' ||
-        step.kind === 'message' ||
-        step.kind === 'reasoning' ||
-        step.kind === 'plan'
-    ) {
+    if (step.kind === 'message' || step.kind === 'reasoning' || step.kind === 'plan') {
         return detail ?? stripToolVerb(step.label);
     }
 

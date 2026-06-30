@@ -1,8 +1,4 @@
-import {
-    activityTurnDemo,
-    approvalFlowDemo,
-    streamingStackDemo,
-} from './development-chat-demo-activity-definitions';
+import { activityTurnDemo, streamingStackDemo } from './development-chat-demo-activity-definitions';
 import {
     artifactLinksDemo,
     attachmentDemo,
@@ -31,7 +27,6 @@ export const developmentChatDemos: DevelopmentChatDemo[] = [
     attachmentDemo(),
     activityTurnDemo(),
     streamingStackDemo(),
-    approvalFlowDemo(),
     toolHeadersDemo(),
     turnTimelineDemo(),
 ];

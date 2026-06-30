@@ -1,10 +1,10 @@
 import { describe, expect, test } from 'bun:test';
-import { buildHermesCronSchedule, cronScheduleConfigSchema } from './schedule-config.ts';
+import { buildAgentCronSchedule, cronScheduleConfigSchema } from './schedule-config.ts';
 
-describe('buildHermesCronSchedule', () => {
-    test('maps interval configs to Hermes every schedules', () => {
+describe('buildAgentCronSchedule', () => {
+    test('maps interval configs to runtime every schedules', () => {
         expect(
-            buildHermesCronSchedule({
+            buildAgentCronSchedule({
                 everyMs: 300_000,
                 kind: 'interval',
             })
@@ -16,7 +16,7 @@ describe('buildHermesCronSchedule', () => {
 
     test('maps daily configs to cron expressions', () => {
         expect(
-            buildHermesCronSchedule({
+            buildAgentCronSchedule({
                 kind: 'daily',
                 time: '09:15',
                 tz: 'America/New_York',
@@ -30,7 +30,7 @@ describe('buildHermesCronSchedule', () => {
 
     test('maps weekday configs to Monday through Friday cron expressions', () => {
         expect(
-            buildHermesCronSchedule({
+            buildAgentCronSchedule({
                 kind: 'weekdays',
                 time: '08:00',
             })
@@ -42,7 +42,7 @@ describe('buildHermesCronSchedule', () => {
 
     test('maps weekly configs to the selected day and time', () => {
         expect(
-            buildHermesCronSchedule({
+            buildAgentCronSchedule({
                 dayOfWeek: 1,
                 kind: 'weekly',
                 time: '16:30',
@@ -55,7 +55,7 @@ describe('buildHermesCronSchedule', () => {
 
     test('maps custom configs to trimmed cron expressions', () => {
         expect(
-            buildHermesCronSchedule({
+            buildAgentCronSchedule({
                 expr: '  0 7 * * *  ',
                 kind: 'custom',
                 tz: 'UTC',

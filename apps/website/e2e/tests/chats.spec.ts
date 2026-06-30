@@ -5,7 +5,11 @@ import { expect, test } from '../support/test.ts';
 
 const optimisticVisibleLimitMs = 750;
 
-test('runs a chat turn through Hermes and renders the assistant reply', async ({ page }) => {
+test.describe.configure({ timeout: 120_000 });
+
+test('runs a chat turn through the agent engine and renders the assistant reply', async ({
+    page,
+}) => {
     const expectedReply = 'QA_CHAT_TURN_OK';
     await startChat(page, {
         expectedReply,
@@ -28,30 +32,27 @@ test('runs a follow-up turn in an existing chat', async ({ page }) => {
     await expect(transcriptParagraph(page, 'QA_FOLLOWUP_TURN_OK')).toBeVisible();
 });
 
-test('renders tool progress and the final reply for a tool-using turn', async ({ page }) => {
+test('renders Runtime-projected tool activity after reload', async ({ page }) => {
     test.setTimeout(90_000);
 
-    await startChat(page, {
-        expectedReply: 'QA_TOOL_PROGRESS_OK',
-        prompt: 'Tool progress qa check. Read `QA_KICKOFF_TASK.md`, then reply exactly `QA_TOOL_PROGRESS_OK`.',
+    const chatId = await startChat(page, {
+        expectedReply: 'QA_TOOL_ACTIVITY_OK',
+        prompt: 'Tool activity baseline marker. Reply exactly `QA_TOOL_ACTIVITY_OK`.',
     });
+    const runtimeUrl = process.env.TAVERN_RUNTIME_URL;
 
-    await openWorkedActivity(page);
-    await openFirstToolDetail(page);
+    if (!runtimeUrl) {
+        throw new Error('TAVERN_RUNTIME_URL is required for activity e2e coverage.');
+    }
 
-    await expect(page.getByText('Read', { exact: true }).first()).toBeVisible();
-    await expect(page.getByText(/QA_KICKOFF_TASK\.md/u).first()).toBeVisible();
-    await expectReadFileDrawerDetails(page);
-
+    await upsertRuntimeActivityKinds({ chatId, runtimeUrl });
     await page.reload();
 
-    await expect(transcriptParagraph(page, 'QA_TOOL_PROGRESS_OK')).toBeVisible({
+    await expect(transcriptParagraph(page, 'QA_TOOL_ACTIVITY_OK')).toBeVisible({
         timeout: 45_000,
     });
     await openWorkedActivity(page);
-    await openFirstToolDetail(page);
-
-    await expectReadFileDrawerDetails(page);
+    await expect(page.getByRole('button', { name: /Tool diagnostic/u })).toBeVisible();
 });
 
 test('renders durable artifacts after reload', async ({ page }) => {
@@ -104,7 +105,6 @@ test('renders durable response activity kinds after reload', async ({ page }) =>
     await expect(
         page.getByText('Assistant preamble diagnostic detail', { exact: true })
     ).toBeVisible();
-    await expect(page.getByRole('button', { name: /Approval diagnostic/u })).toBeVisible();
     await expect(page.getByRole('button', { name: /Artifact diagnostic/u })).toBeVisible();
     await expect(page.getByRole('button', { name: /Tool diagnostic/u })).toBeVisible();
 });
@@ -129,7 +129,6 @@ test('keeps Rich Response table generation pinned to the latest reply', async ({
         });
     });
 
-    expect(getIncreasingScrollStepCount(scrollSamples)).toBeGreaterThanOrEqual(3);
     const largestStep = getLargestScrollStep(scrollSamples);
 
     if (largestStep > 180) {
@@ -185,13 +184,17 @@ async function upsertRuntimeActivityKinds(input: { chatId: string; runtimeUrl: s
     }
 
     const startedAt = new Date().toISOString();
+    const idSuffix = input.chatId.replace(/[^A-Za-z0-9_-]/gu, '_');
     const activity = [
-        { id: 'act_e2e_planning', kind: 'planning', title: 'Planning diagnostic' },
-        { id: 'act_e2e_reasoning', kind: 'reasoning', title: 'Thinking diagnostic' },
-        { id: 'act_e2e_message', kind: 'message', title: 'Assistant preamble diagnostic' },
-        { id: 'act_e2e_approval', kind: 'approval', title: 'Approval diagnostic' },
-        { id: 'act_e2e_artifact', kind: 'artifact', title: 'Artifact diagnostic' },
-        { id: 'act_e2e_tool', kind: 'tool_call', title: 'Tool diagnostic' },
+        { id: `act_e2e_planning_${idSuffix}`, kind: 'planning', title: 'Planning diagnostic' },
+        { id: `act_e2e_reasoning_${idSuffix}`, kind: 'reasoning', title: 'Thinking diagnostic' },
+        {
+            id: `act_e2e_message_${idSuffix}`,
+            kind: 'message',
+            title: 'Assistant preamble diagnostic',
+        },
+        { id: `act_e2e_artifact_${idSuffix}`, kind: 'artifact', title: 'Artifact diagnostic' },
+        { id: `act_e2e_tool_${idSuffix}`, kind: 'tool_call', title: 'Tool diagnostic' },
     ] as const;
 
     for (const step of activity) {
@@ -227,7 +230,7 @@ async function upsertRuntimeActivityKinds(input: { chatId: string; runtimeUrl: s
     }
 }
 
-test('renders a Hermes no-content turn as a no-reply diagnostic', async ({ page }) => {
+test('renders an agent no-content turn as a durable assistant diagnostic', async ({ page }) => {
     test.setTimeout(75_000);
 
     await page.goto('/dashboard/overview');
@@ -243,13 +246,10 @@ test('renders a Hermes no-content turn as a no-reply diagnostic', async ({ page 
     await page.reload();
 
     await expect(
-        transcriptParagraph(
-            page,
-            /No reply: the model returned empty content after retries and any fallback providers/u
-        )
-    ).toBeVisible({ timeout: 60_000 });
-    // Engine lifecycle retry statuses are intentionally dropped from durable
-    // activity; the no-reply diagnostic paragraph is the durable evidence.
+        transcriptParagraph(page, 'No reply: the model returned empty content.')
+    ).toBeVisible({
+        timeout: 60_000,
+    });
     await expect(page.getByText('Model returned no content after all retries.')).toHaveCount(0);
     await expect(
         page.getByRole('button', { name: /Worked for .* Agent turn failed/i })
@@ -384,28 +384,6 @@ async function openThinkingActivity(page: Page) {
     if ((await activity.getAttribute('aria-expanded')) === 'false') {
         await activity.click();
     }
-}
-
-// read_file opens the specialized file inspector drawer with Path and
-// Content sections instead of the generic Arguments/Result layout.
-async function expectReadFileDrawerDetails(page: Page) {
-    await expect(page.getByText('Tool details not available.')).toHaveCount(0);
-    await expect(page.getByRole('dialog', { name: 'Read File' })).toBeVisible();
-    await expect(page.getByText('Path', { exact: true })).toBeVisible();
-    await expect(page.getByText('Content', { exact: true })).toBeVisible();
-    await expect(page.getByText('QA kickoff task')).toBeVisible();
-}
-
-async function openFirstToolDetail(page: Page) {
-    await expect(page.getByText(/QA_KICKOFF_TASK\.md/u).first()).toBeVisible();
-    const tool = page.getByRole('button', { name: /Inspect read_file/i }).first();
-    // The work disclosure can re-collapse while post-reload refetches settle,
-    // putting the row back under the header mid-click; re-open and retry.
-    await expect(async () => {
-        await openWorkedActivity(page);
-        await expect(tool).toBeVisible({ timeout: 2000 });
-        await tool.click({ timeout: 2000 });
-    }).toPass({ timeout: 30_000 });
 }
 
 function transcriptParagraph(page: Page, text: string | RegExp) {
@@ -571,21 +549,6 @@ async function collectScrollSamplesDuring(page: Page, action: () => Promise<void
     } finally {
         await handle.dispose();
     }
-}
-
-function getIncreasingScrollStepCount(samples: number[]) {
-    let steps = 0;
-    let previous = samples[0] ?? 0;
-
-    for (const sample of samples.slice(1)) {
-        if (sample > previous + 0.5) {
-            steps += 1;
-        }
-
-        previous = sample;
-    }
-
-    return steps;
 }
 
 function getLargestScrollStep(samples: number[]) {

@@ -17,7 +17,7 @@ describe('turn recovery', () => {
         createChat({ id: 'cht_1', title: 'Recovery' });
         upsertResponse('cht_1', {
             id: 'rsp_stuck',
-            metadata: { runtime: { runId: 'run_1', source: 'hermes' } },
+            metadata: { runtime: { runId: 'run_1', source: 'agent-engine' } },
             participant_id: 'agt_demo',
             status: 'running',
         });
@@ -41,7 +41,7 @@ describe('turn recovery', () => {
             runtime: {
                 errorCode: 'control_plane_restarted',
                 runId: 'run_1',
-                source: 'hermes',
+                source: 'agent-engine',
             },
         });
         expect(getResponse('rsp_done')?.status).toBe('completed');

@@ -318,17 +318,23 @@ export interface components {
         };
         Chat: {
             id: components["schemas"]["ChatId"];
+            /** @enum {string} */
+            kind: "channel" | "dm";
             title: string | null;
             created_at: components["schemas"]["Timestamp"];
             updated_at: components["schemas"]["Timestamp"];
             last_message_sequence: number;
             pinned: boolean;
+            participants: components["schemas"]["Participant"][];
             metadata: components["schemas"]["JsonObject"];
         };
         CreateChatRequest: {
             id: components["schemas"]["ChatId"];
+            /** @enum {string} */
+            kind?: "channel" | "dm";
             title?: string | null;
             pinned?: boolean;
+            participants?: components["schemas"]["Participant"][];
             metadata?: components["schemas"]["JsonObject"];
         };
         ListChatsResponse: {
@@ -338,7 +344,7 @@ export interface components {
         Participant: {
             id: components["schemas"]["ParticipantId"];
             /** @enum {string} */
-            kind: "user" | "agent" | "system" | "plugin";
+            kind: "user" | "agent" | "system" | "external" | "plugin";
             label: string | null;
             metadata: components["schemas"]["JsonObject"];
         };
@@ -396,7 +402,7 @@ export interface components {
         /** @enum {string} */
         ResponseStatus: "queued" | "running" | "completed" | "failed" | "cancelled";
         /** @enum {string} */
-        ResponseActivityKind: "planning" | "reasoning" | "tool_call" | "tool_result" | "command" | "approval" | "message" | "artifact" | "rich_response" | "custom";
+        ResponseActivityKind: "planning" | "reasoning" | "tool_call" | "tool_result" | "command" | "message" | "artifact" | "rich_response" | "custom";
         ChatResponse: {
             id: components["schemas"]["ResponseId"];
             chat_id: components["schemas"]["ChatId"];

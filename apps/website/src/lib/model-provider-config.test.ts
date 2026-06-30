@@ -12,11 +12,11 @@ test('provider config normalizes known model providers for the app UI', () => {
         accessDisplayName: 'Codex',
         color: '#3B82F6',
         configName: 'openai-codex',
-        displayName: 'OpenAI Codex',
+        displayName: 'Codex',
     });
 });
 
-test('provider config resolves branded Hermes provider variants to SVGL logos', () => {
+test('provider config resolves branded runtime provider variants to SVGL logos', () => {
     expect(getModelProviderConfig('xai')).toMatchObject({
         configName: 'xai',
         displayName: 'xAI',
@@ -56,14 +56,7 @@ test('provider config tolerates runtime display names as provider identifiers', 
     });
 });
 
-test('provider config resolves discovered Hermes providers to brand logos', () => {
-    expect(getModelProviderConfig('nous')).toMatchObject({
-        configName: 'nous',
-        displayName: 'Nous Portal',
-        logo: {
-            light: 'https://thesvg.org/icons/nousresearch-hermes/default.svg',
-        },
-    });
+test('provider config resolves discovered runtime providers to brand logos', () => {
     expect(getModelProviderConfig('alibaba-coding-plan')).toMatchObject({
         configName: 'alibaba-coding-plan',
         displayName: 'Alibaba Cloud (Coding Plan)',
@@ -133,14 +126,14 @@ test('access ids resolve back to the same provider branding', () => {
     expect(getModelProviderConfigFromAccessId('codex')).toMatchObject({
         accessDisplayName: 'Codex',
         configName: 'openai-codex',
-        displayName: 'OpenAI Codex',
+        displayName: 'Codex',
     });
 });
 
-test('model config uses Hermes labels without repeating the provider label', () => {
+test('model config uses provider labels without repeating the provider label', () => {
     expect(
         getModelIdentityConfig({
-            fallbackName: 'OpenAI Codex',
+            fallbackName: 'Codex',
             modelId: 'gpt-5.4',
             providerId: 'openai-codex',
         })
@@ -157,7 +150,7 @@ test('model config uses Hermes labels without repeating the provider label', () 
     });
 });
 
-test('model option labels fall back to model ids when Hermes metadata is missing', () => {
+test('model option labels fall back to model ids when metadata is missing', () => {
     expect(
         formatModelOptionLabel({
             modelId: 'gpt-5.4-mini',

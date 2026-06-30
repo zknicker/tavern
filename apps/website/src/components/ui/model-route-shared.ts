@@ -2,21 +2,10 @@ import { formatModelOptionLabel } from '../../lib/model-provider-config.ts';
 import type { ModelListOutput } from '../../lib/trpc.tsx';
 
 export interface ModelOptionItem {
-    availability: 'available' | 'configured';
+    availability: ModelListOutput['models'][number]['availability'];
     label: string;
     provider: string;
     value: string;
-}
-
-export function buildRoute(primaryModel: string | null, fallbackModels: string[]) {
-    return [primaryModel, ...fallbackModels].filter((entry): entry is string => Boolean(entry));
-}
-
-export function splitRoute(route: string[]) {
-    return {
-        fallbackModels: route.slice(1),
-        primaryModel: route[0] ?? null,
-    };
 }
 
 function parseAgentRuntimeModelRef(value: string) {
@@ -54,27 +43,9 @@ export function createModelOption(value: string) {
 function buildIncludedModelRefs(data: ModelListOutput | undefined) {
     const refs = new Set<string>();
 
-    for (const modelRef of buildRoute(
-        data?.defaults.primaryModel ?? null,
-        data?.defaults.fallbackModels ?? []
-    )) {
-        refs.add(modelRef);
-    }
-
-    if (data?.subAgentDefaultModel) {
-        refs.add(data.subAgentDefaultModel);
-    }
-
     for (const agent of data?.agents ?? []) {
-        for (const modelRef of buildRoute(
-            agent.effective.primaryModel,
-            agent.effective.fallbackModels
-        )) {
-            refs.add(modelRef);
-        }
-
-        if (agent.subAgentModel) {
-            refs.add(agent.subAgentModel);
+        if (agent.modelRef) {
+            refs.add(agent.modelRef);
         }
     }
 

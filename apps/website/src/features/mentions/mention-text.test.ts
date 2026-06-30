@@ -236,6 +236,40 @@ describe('mention text helpers', () => {
         });
     });
 
+    it('keeps agent mentions as addressable Tavern metadata', () => {
+        const compiled = compileMentionSubmission('@Planner please review this', [
+            {
+                end: 8,
+                id: 'agent:planner',
+                kind: 'agent',
+                label: 'Planner',
+                projection: 'agent-reference',
+                start: 0,
+                text: '@Planner',
+            },
+        ]);
+
+        expect(compiled).toEqual({
+            content: '@Planner please review this',
+            mentions: [
+                {
+                    end: 8,
+                    id: 'agent:planner',
+                    kind: 'agent',
+                    label: 'Planner',
+                    projection: 'agent-reference',
+                    start: 0,
+                    text: '@Planner',
+                },
+            ],
+        });
+        expect(buildMentionMetadata(compiled.mentions)).toEqual({
+            tavern: {
+                mentions: compiled.mentions,
+            },
+        });
+    });
+
     it('compiles app, plugin, file, and directory mentions with spec markdown', () => {
         const cases = [
             {

@@ -1,11 +1,9 @@
 import { developmentChatDemoIds } from '@tavern/api/development-chat-demos';
 import {
-    activityRuntimeMetadata,
     assistantMessage,
     completedResponse,
     type DevelopmentChatDemo,
     demoAgentId,
-    demoTime,
     messageActivity,
     responseRuntimeMetadata,
     toolActivity,
@@ -148,13 +146,6 @@ function completedToolHeaderActivities(input: DemoToolHeaderActivityInput) {
             toolCallId: 'call_demo_tool_headers_search_sales',
             toolName: 'search_files',
         }),
-        messageActivity({
-            ...input,
-            detail: 'Finally, a completed approval row keeps the drawer details available while the collapsed header uses decision-language.',
-            id: 'act_demo_tool_headers_decision_intro',
-            sequence: 8,
-        }),
-        approvalActivity(input),
     ];
 }
 
@@ -189,44 +180,6 @@ function liveToolHeaderActivities(input: DemoToolHeaderActivityInput) {
             toolName: 'terminal',
         }),
     ];
-}
-
-function approvalActivity(input: DemoToolHeaderActivityInput) {
-    const command = "python3 - <<'PY'\nprint('header summaries stay calm')\nPY";
-
-    return {
-        completed_at: demoTime,
-        id: 'act_demo_tool_headers_approval',
-        kind: 'approval' as const,
-        metadata: {
-            approval: {
-                command,
-                description: 'run a generated verification snippet',
-                patternKey: 'demo:tool-header-approval',
-                patternKeys: ['demo:tool-header-approval'],
-            },
-            runtime: activityRuntimeMetadata({
-                ...input,
-                id: 'act_demo_tool_headers_approval',
-                sequence: 9,
-                toolCallId: 'call_demo_tool_headers_approval',
-                toolName: 'approval',
-            }),
-            tool: {
-                arguments: {
-                    command,
-                    reason: 'run a generated verification snippet',
-                },
-                name: 'approval',
-                result: { decision: 'approved' },
-            },
-        },
-        sequence: 9,
-        started_at: demoTime,
-        status: 'completed' as const,
-        summary: 'Run generated verification snippet',
-        title: 'Run generated verification snippet',
-    };
 }
 
 interface DemoToolHeaderActivityInput {

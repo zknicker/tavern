@@ -6,7 +6,7 @@ const sourceLabels = new Map<string, string>([
     ['clawhub', 'ClawHub'],
     ['claude-marketplace', 'Claude Marketplace'],
     ['github', 'GitHub'],
-    ['hermes-index', 'Index'],
+    ['agent-index', 'Index'],
     ['lobehub', 'LobeHub'],
     ['official', 'Official'],
     ['skills-sh', 'skills.sh'],

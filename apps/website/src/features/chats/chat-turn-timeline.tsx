@@ -26,14 +26,17 @@ export interface ChatTurnTimelineMarker {
 
 export function ChatTurnTimelineRail({
     activeMarkerIds,
+    anchorRef,
     markers,
     onSelect,
 }: {
     activeMarkerIds?: ReadonlySet<string>;
+    anchorRef?: React.RefObject<HTMLDivElement | null>;
     markers: ChatTurnTimelineMarker[];
     onSelect: (marker: ChatTurnTimelineMarker) => void;
 }) {
     const [hoveredId, setHoveredId] = React.useState<string | null>(null);
+    const anchorStyle = useChatTurnTimelineAnchor(anchorRef);
     const hoveredIndex = hoveredId ? markers.findIndex((marker) => marker.id === hoveredId) : null;
 
     if (markers.length === 0) {
@@ -43,9 +46,18 @@ export function ChatTurnTimelineRail({
     return (
         <nav
             aria-label="Chat turn timeline"
-            className="pointer-events-none absolute top-0 bottom-0 -left-2 z-20 hidden w-12 md:block"
+            className={cn(
+                'pointer-events-none z-20 hidden w-12 md:block',
+                anchorStyle ? 'fixed' : 'absolute top-0 bottom-0 -left-2'
+            )}
+            style={anchorStyle}
         >
-            <ol className="sticky top-1/2 flex max-h-[calc(100vh-11rem)] w-12 -translate-y-1/2 flex-col items-start justify-center gap-0.5 py-2">
+            <ol
+                className={cn(
+                    'flex max-h-[calc(100vh-11rem)] w-12 flex-col items-start justify-center gap-0.5 py-2',
+                    anchorStyle ? 'h-full' : 'sticky top-1/2 -translate-y-1/2'
+                )}
+            >
                 {markers.map((marker, index) => {
                     const isHovered = hoveredId === marker.id;
                     const isOnScreen = activeMarkerIds?.has(marker.id) ?? false;
@@ -100,6 +112,42 @@ export function ChatTurnTimelineRail({
             </ol>
         </nav>
     );
+}
+
+function useChatTurnTimelineAnchor(anchorRef?: React.RefObject<HTMLDivElement | null>) {
+    const [style, setStyle] = React.useState<React.CSSProperties | undefined>();
+
+    React.useLayoutEffect(() => {
+        const anchor = anchorRef?.current;
+
+        if (!anchor) {
+            setStyle(undefined);
+            return;
+        }
+
+        const updateStyle = () => {
+            const rect = anchor.getBoundingClientRect();
+
+            setStyle({
+                height: rect.height,
+                left: rect.left + 18,
+                top: rect.top,
+            });
+        };
+
+        updateStyle();
+
+        const resizeObserver = new ResizeObserver(updateStyle);
+        resizeObserver.observe(anchor);
+        window.addEventListener('resize', updateStyle);
+
+        return () => {
+            resizeObserver.disconnect();
+            window.removeEventListener('resize', updateStyle);
+        };
+    }, [anchorRef]);
+
+    return style;
 }
 
 export function buildChatTurnTimelineMarkers(

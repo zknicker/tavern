@@ -15,6 +15,7 @@ test('ChatMarkdownText wraps animated streaming text ranges', () => {
         />
     );
 
+    expect(markup).toContain('<p');
     expect(markup).toContain('Hello ');
     expect(markup).toContain('chat-streaming-text-chunk');
     expect(markup).toContain('chat-streaming-text-unit');

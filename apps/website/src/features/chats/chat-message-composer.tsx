@@ -2,7 +2,6 @@ import { StopIcon } from '@hugeicons-pro/core-solid-rounded';
 import * as React from 'react';
 import { Icon } from '../../components/ui/icon.tsx';
 import {
-    buildChatRoutingConfiguredModelOptions,
     buildChatRoutingModelOptions,
     type ModelOptionItem,
 } from '../../components/ui/model-route-shared.ts';
@@ -58,7 +57,6 @@ import {
     ChatComposerAgentSelector,
     ChatComposerAttachmentButton,
     ChatComposerContextFullness,
-    ChatComposerModelSelector,
 } from './chat-composer-tools.tsx';
 import type { ChatContextFullness } from './chat-context-fullness.ts';
 
@@ -73,6 +71,7 @@ export function ChatMessageComposer({
     boundAgentIds,
     canSend: chatCanSend,
     chatId,
+    conversationKind,
     contextFullness = null,
     isDisabled,
     isReplyActive,
@@ -86,6 +85,7 @@ export function ChatMessageComposer({
     boundAgentIds: string[];
     canSend: boolean;
     chatId: string;
+    conversationKind: string;
     contextFullness?: ChatContextFullness | null;
     isDisabled: boolean;
     isReplyActive: boolean;
@@ -107,25 +107,15 @@ export function ChatMessageComposer({
     const [pendingSteerQueuedIds, setPendingSteerQueuedIds] = React.useState<ReadonlySet<string>>(
         () => new Set()
     );
-    const { agentId, attachments, content, editingQueuedMessageId, mentions, modelRef } =
-        composerDraft.draft;
-    const {
-        setAgentId,
-        setAttachments,
-        setContent,
-        setEditingQueuedMessageId,
-        setMentions,
-        setModelRef,
-    } = composerDraft;
+    const { agentId, attachments, content, editingQueuedMessageId, mentions } = composerDraft.draft;
+    const { setAgentId, setAttachments, setContent, setEditingQueuedMessageId, setMentions } =
+        composerDraft;
     const allModelOptions = React.useMemo(
         () => buildChatRoutingModelOptions(modelList.data),
         [modelList.data]
     );
-    const modelOptions = React.useMemo(
-        () => buildChatRoutingConfiguredModelOptions(modelList.data),
-        [modelList.data]
-    );
     const isCompact = variant === 'compact';
+    const isAgentDm = conversationKind === 'direct';
     const trimmedContent = content.trim();
     const hasPayload = trimmedContent.length > 0 || attachments.length > 0;
     const canSendToRuntime = gatewayCapability.healthy;
@@ -133,7 +123,11 @@ export function ChatMessageComposer({
     const isSendBlocked = sendMessage.isPending || isReplyActive;
     const isComposerBlocked = isDisabled || blockReason !== null;
     const canQueue =
-        chatCanSend && canSendToRuntime && !isComposerBlocked && agentId.length > 0 && hasPayload;
+        chatCanSend &&
+        canSendToRuntime &&
+        !isComposerBlocked &&
+        (!isAgentDm || agentId.length > 0) &&
+        hasPayload;
     const canSend = canQueue && !isSendBlocked;
     const canSubmit = isSendBlocked ? canQueue : canSend;
     const canDispatchQueued =
@@ -219,6 +213,7 @@ export function ChatMessageComposer({
         commandArgumentOptions: resolveCommandArgumentOptions,
         content,
         contextFullness,
+        mentionableAgentIds: boundAgentIds,
         onCommandAction: (command) => {
             void handleCommandAction(command);
         },
@@ -254,7 +249,6 @@ export function ChatMessageComposer({
 
         const submission = buildChatComposerSubmission({ content, mentions });
         const submittedAttachments = attachments;
-        const submittedModelRef = modelRef ?? undefined;
         setContent('');
         setMentions([]);
         setAttachments([]);
@@ -266,20 +260,18 @@ export function ChatMessageComposer({
                 ...(submittedAttachments.length ? { attachments: submittedAttachments } : {}),
                 content: submission.content,
                 metadata: submission.metadata,
-                ...(submittedModelRef ? { modelRef: submittedModelRef } : {}),
             });
             setEditingQueuedMessageId(null);
             return;
         }
 
         await sendMessage.mutateAsync({
-            agentId,
+            ...(isAgentDm ? { agentId } : {}),
             ...(submittedAttachments.length ? { attachments: submittedAttachments } : {}),
             chatId,
             clientMessageId: `msg_${crypto.randomUUID()}`,
             content: submission.content,
             metadata: submission.metadata,
-            ...(submittedModelRef ? { modelRef: submittedModelRef } : {}),
         });
     }
 
@@ -357,13 +349,12 @@ export function ChatMessageComposer({
         drainingQueueRef.current = true;
         sendMessage.mutate(
             {
-                agentId: entry.agentId,
+                ...(isAgentDm ? { agentId: entry.agentId } : {}),
                 ...(entry.attachments?.length ? { attachments: entry.attachments } : {}),
                 chatId,
                 clientMessageId: `msg_${crypto.randomUUID()}`,
                 content: entry.content,
                 metadata: entry.metadata,
-                ...(entry.modelRef ? { modelRef: entry.modelRef } : {}),
             },
             {
                 onError: () => {
@@ -392,7 +383,6 @@ export function ChatMessageComposer({
         setContent(entry.content);
         setMentions([]);
         setAttachments(entry.attachments ?? []);
-        setModelRef(entry.modelRef ?? null);
         setAttachmentError(null);
         mentionComposer.focusTextEditor();
     }
@@ -556,12 +546,6 @@ export function ChatMessageComposer({
                         disabled={isComposerBlocked}
                         onAgentChange={setAgentId}
                     />
-                    <ModelSelectorSlot
-                        disabled={isComposerBlocked || !canSendToRuntime}
-                        modelOptions={modelOptions}
-                        modelRef={modelRef}
-                        onModelChange={setModelRef}
-                    />
                 </PromptInputTools>
                 <PromptInputActions>
                     {contextFullness ? (
@@ -622,31 +606,6 @@ export function getComposerPrimaryAction(input: {
     isReplyActive: boolean;
 }) {
     return input.activeRunId && input.isReplyActive && !input.hasDraftPayload ? 'stop' : 'submit';
-}
-
-function ModelSelectorSlot({
-    disabled,
-    modelOptions,
-    modelRef,
-    onModelChange,
-}: {
-    disabled: boolean;
-    modelOptions: readonly ModelOptionItem[];
-    modelRef: string | null;
-    onModelChange: (modelRef: string | null) => void;
-}) {
-    if (modelOptions.length === 0) {
-        return null;
-    }
-
-    return (
-        <ChatComposerModelSelector
-            disabled={disabled}
-            modelOptions={modelOptions}
-            onModelChange={onModelChange}
-            value={modelRef}
-        />
-    );
 }
 
 function createModelCommandOptions(models: readonly ModelOptionItem[]): MentionOption[] {

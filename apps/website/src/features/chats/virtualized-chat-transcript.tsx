@@ -47,7 +47,7 @@ export const chatVirtualizerFollowOnAppendBehavior = 'auto' satisfies ScrollBeha
 export function VirtualizedChatTranscript({
     activeReply,
     activePresenceVerb = null,
-    agentPresenceColor = null,
+    agentStatusColor = null,
     failedTurn = null,
     fetchPreviousPage,
     followKey = null,
@@ -60,7 +60,7 @@ export function VirtualizedChatTranscript({
 }: {
     activeReply: ChatActiveReply | null;
     activePresenceVerb?: string | null;
-    agentPresenceColor?: string | null;
+    agentStatusColor?: string | null;
     failedTurn?: ChatTurnFailure | null;
     fetchPreviousPage?: () => void;
     followKey?: string | null;
@@ -424,6 +424,7 @@ export function VirtualizedChatTranscript({
         <div className="relative w-full [overflow-anchor:none]" ref={virtualizer.containerRef}>
             <ChatTurnTimelineRail
                 activeMarkerIds={activeTurnTimelineMarkerIds}
+                anchorRef={scrollViewportRef}
                 markers={turnTimelineMarkers}
                 onSelect={(marker: ChatTurnTimelineMarker) => {
                     chatScrollController?.beginHistoryNavigation();
@@ -451,7 +452,7 @@ export function VirtualizedChatTranscript({
                         <TranscriptRenderRowItem
                             activePresenceVerb={activePresenceVerb}
                             activeReply={activeReply}
-                            agentPresenceColor={agentPresenceColor}
+                            agentStatusColor={agentStatusColor}
                             failedTurn={failedTurn}
                             presenceRows={presenceRows}
                             row={row}

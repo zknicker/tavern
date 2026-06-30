@@ -7,7 +7,7 @@ import { getAgent as getAgentRecord } from '../storage/agents.ts';
 import { saveCronJobRecord } from '../storage/cron-jobs.ts';
 import { syncAgentRuntimeCron } from '../sync/agent-runtime-sync.ts';
 import { addCronJobParamsSchema } from './contracts.ts';
-import { buildHermesCronSchedule } from './schedule-config.ts';
+import { buildAgentCronSchedule } from './schedule-config.ts';
 
 async function resolveCronRuntimeId(input: {
     agentId?: string | null;
@@ -67,7 +67,7 @@ export async function createCronJob(input: unknown) {
             id: jobId,
             name: parsed.name,
             payload: parsed.payload,
-            schedule: buildHermesCronSchedule(parsed.scheduleConfig),
+            schedule: buildAgentCronSchedule(parsed.scheduleConfig),
             wakeMode: parsed.wakeMode,
         },
         runtimeClient

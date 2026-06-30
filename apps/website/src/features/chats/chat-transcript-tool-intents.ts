@@ -159,8 +159,6 @@ function formatFailedToolIntent(item: ActivityItem) {
 
 function failedIntentNoun(kind: ToolIntentKind) {
     switch (kind) {
-        case 'approval':
-            return 'approval';
         case 'automation':
             return 'automation';
         case 'browser':
@@ -254,7 +252,6 @@ function formatIntent(
         options.preferSubject &&
         intent.subject &&
         intent.subjectVisibility === 'header' &&
-        intent.kind !== 'approval' &&
         intent.kind !== 'clarification'
     ) {
         return `${mode === 'active' ? activeVerb(intent.kind) : completedVerb(intent.kind)} ${

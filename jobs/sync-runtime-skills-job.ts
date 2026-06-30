@@ -1,5 +1,4 @@
 import { type ZodType, z } from 'zod';
-import { syncHermesConfigSnapshots } from '../apps/server/src/hermes-config/service.ts';
 import {
     refreshRuntimeSkillInventory,
     runtimeSkillInventoryRefreshIntervalMs,
@@ -18,11 +17,6 @@ export const syncRuntimeSkillsJob = defineJob('sync-runtime-skills')
         runOnStart: true,
     })
     .work(async ({ log }) => {
-        await syncHermesConfigSnapshots({ log }).catch(async (error) => {
-            const message = error instanceof Error ? error.message : String(error);
-            await log(`Runtime config snapshot refresh failed: ${message}`);
-        });
-
         const result = await refreshRuntimeSkillInventory({ log });
 
         if (result.refreshed === 0) {

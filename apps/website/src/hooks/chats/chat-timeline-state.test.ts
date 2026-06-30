@@ -319,7 +319,7 @@ test('removeOptimisticStoppedTurn removes only the local stopped row', () => {
     expect(next.activeReply?.runId).toBe('run-1');
 });
 
-test('patchTimelineProgress updates the same preamble and Hermes tool rows through completion', () => {
+test('patchTimelineProgress updates the same preamble and tool rows through completion', () => {
     const withPreamble = patchTimelineProgress(startTimelineTurn(emptyTimelineState(), turn), {
         step: {
             detail: 'I will inspect the workspace before replying.',

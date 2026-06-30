@@ -4,7 +4,7 @@ Tavern stores runtime-observed participants as source provenance. The app does n
 manage an identity directory or reconcile external accounts.
 
 This keeps provider details available for audit and routing while avoiding fragile automatic merges
-across Discord, Slack, iMessage, Telegram, or Hermes.
+across Discord, Slack, iMessage, Telegram, or local agent executors.
 
 ## Model
 
@@ -35,7 +35,7 @@ provenance.
 
 ## Runtime Mapping
 
-The Hermes adapter normalizes provider-native data before Tavern stores it.
+The Runtime adapter normalizes provider-native data before Tavern stores it.
 
 Examples:
 

@@ -32,10 +32,6 @@ export function createDevStackEnvironment({
         ...baseEnvironment,
         DATABASE_PATH: baseEnvironment.DATABASE_PATH ?? statePaths.databasePath,
         TAVERN_DEV_STACK: baseEnvironment.TAVERN_DEV_STACK ?? '1',
-        // Dev stacks share one system Hermes; never download an engine per machine.
-        TAVERN_HERMES_ALLOW_SYSTEM: baseEnvironment.TAVERN_HERMES_ALLOW_SYSTEM ?? '1',
-        TAVERN_HERMES_AUTO_INSTALL: baseEnvironment.TAVERN_HERMES_AUTO_INSTALL ?? '0',
-        TAVERN_HERMES_PORT: baseEnvironment.TAVERN_HERMES_PORT ?? resolvedPorts.hermesPort,
         TAVERN_RUNTIME_PORT: baseEnvironment.TAVERN_RUNTIME_PORT ?? resolvedPorts.runtimePort,
         TAVERN_RUNTIME_ROOT: baseEnvironment.TAVERN_RUNTIME_ROOT ?? statePaths.runtimeRoot,
         // Use the runtime root's persisted token (same file the runtime and CLI
@@ -172,11 +168,6 @@ export function assertDevStackPortsAvailable({ mode, ports, repositoryRoot }) {
             label: 'website',
             port: Number(ports.websitePort),
         },
-        {
-            enabled: hasRuntime,
-            label: 'managed Hermes',
-            port: Number(devEnvironment.TAVERN_HERMES_PORT),
-        },
     ];
 
     const blockers = definitions
@@ -224,12 +215,6 @@ export function cleanupStaleProcesses({
             cwd: path.join(repositoryRoot, 'apps', 'runtime'),
             enabled: hasRuntime,
             port: Number(devEnvironment.TAVERN_RUNTIME_PORT),
-        },
-        {
-            commandPattern: 'hermes dashboard',
-            cwd: path.join(repositoryRoot, 'apps', 'runtime'),
-            enabled: hasRuntime,
-            port: Number(devEnvironment.TAVERN_HERMES_PORT),
         },
         {
             commandPattern: null,
@@ -386,13 +371,7 @@ function createDevStackStatePaths({ baseEnvironment, repositoryRoot }) {
 }
 
 function resolveDevStackStateRoot(stackId) {
-    const canonicalRoot = path.join(os.homedir(), '.tavern', 'dev', stackId);
-    const legacyRoot = path.join(os.homedir(), '.tavern-hermes', 'dev', stackId);
-    if (!fs.existsSync(canonicalRoot) && fs.existsSync(legacyRoot)) {
-        // Keep using existing per-stack state; move it with: mv ~/.tavern-hermes ~/.tavern
-        return legacyRoot;
-    }
-    return canonicalRoot;
+    return path.join(os.homedir(), '.tavern', 'dev', stackId);
 }
 
 export function getRuntimeBaseUrl(environment = process.env) {

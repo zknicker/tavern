@@ -84,9 +84,9 @@ export function createChatSendMutationHandlers(utils: ChatSendMutationUtils) {
                 timestamp,
             });
 
-            if (input.agentId) {
+            for (const agentId of inputAgentIds(input)) {
                 utils.timelineTurn.start({
-                    agentId: input.agentId,
+                    agentId,
                     chatId: input.chatId,
                     runId: optimisticRunId,
                     sessionKey: '',
@@ -120,26 +120,31 @@ export function createChatSendMutationHandlers(utils: ChatSendMutationUtils) {
             result: {
                 acceptedAt: string;
                 chatId: string;
-                runId: string;
-                sessionKey?: string | null;
+                turns: Array<{
+                    agentId: string;
+                    runId: string;
+                }>;
             },
-            input: { agentId?: string },
+            _input: unknown,
             context: ChatSendMutationContext | undefined
         ) => {
-            if (context) {
+            const firstTurn = result.turns[0] ?? null;
+            const turnReference = firstTurn?.runId ?? null;
+
+            if (context && turnReference) {
                 utils.timelineMessage.setSession({
                     chatId: result.chatId,
                     messageId: context.timelineMessageId,
-                    sessionKey: result.sessionKey ?? null,
+                    sessionKey: turnReference,
                 });
             }
 
-            if (result.sessionKey && input.agentId) {
+            for (const turn of result.turns) {
                 utils.timelineTurn.start({
-                    agentId: input.agentId,
+                    agentId: turn.agentId,
                     chatId: result.chatId,
-                    runId: result.runId,
-                    sessionKey: result.sessionKey,
+                    runId: turn.runId,
+                    sessionKey: turn.runId,
                     startedAt: result.acceptedAt,
                 });
             }
@@ -152,4 +157,25 @@ export function createChatSendMutationHandlers(utils: ChatSendMutationUtils) {
             ]);
         },
     };
+}
+
+function inputAgentIds(input: { agentId?: string; metadata?: Record<string, unknown> }) {
+    if (input.agentId) {
+        return [input.agentId];
+    }
+
+    const tavern = readRecord(input.metadata?.tavern);
+    const mentions = Array.isArray(tavern?.mentions) ? tavern.mentions : [];
+    const agentIds = mentions.flatMap((mention) => {
+        const record = readRecord(mention);
+        return record?.kind === 'agent' && typeof record.id === 'string' ? [record.id] : [];
+    });
+
+    return [...new Set(agentIds)];
+}
+
+function readRecord(value: unknown): Record<string, unknown> | null {
+    return typeof value === 'object' && value !== null && !Array.isArray(value)
+        ? (value as Record<string, unknown>)
+        : null;
 }

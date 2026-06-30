@@ -430,10 +430,7 @@ export class DevStackController extends EventEmitter {
         this.update((snapshot) => {
             snapshot.processes[source].status = 'stopping';
         });
-        this.addLog(
-            source,
-            source === 'runtime' ? 'stopping; waiting for managed Hermes' : 'stopping'
-        );
+        this.addLog(source, source === 'runtime' ? 'stopping runtime' : 'stopping');
 
         if (options.expected) {
             this.expectedProcessStops.add(source);

@@ -120,7 +120,7 @@ function resolveToolSubject(item: ActivityItem, normalizedName: string) {
         return null;
     }
 
-    if (normalizedName === 'approval' || normalizedName === 'clarify') {
+    if (normalizedName === 'clarify') {
         return null;
     }
 

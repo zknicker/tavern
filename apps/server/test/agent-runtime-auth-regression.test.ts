@@ -151,7 +151,7 @@ test('saved connection authJson is cleared when auth is explicitly null', async 
     assert.equal(record.authJson, null, 'authJson must be null after explicit auth: null clear');
 });
 
-test('settings and connector client requests carry the Authorization header', async () => {
+test('settings and mcpServer client requests carry the Authorization header', async () => {
     globalThis.fetch = mock(async (input: RequestInfo | URL, init?: RequestInit) => {
         const headers = new Headers(init?.headers);
         capturedRequests.push({
@@ -168,14 +168,9 @@ test('settings and connector client requests carry the Authorization header', as
     // is that every outbound request carries the bearer token.
     const calls: Array<() => Promise<unknown>> = [
         () => client.getExecutionSettings(),
-        () => client.getPermissionSettings(),
-        () =>
-            client.savePermissionSettings({
-                approvalMode: 'allow',
-            }),
-        () => client.listConnectors(),
-        () => client.deleteConnector('connector-1'),
-        () => client.testConnector('connector-1'),
+        () => client.listMcpServers(),
+        () => client.removeMcpServer('mcpServer-1'),
+        () => client.testMcpServer('mcpServer-1'),
         () => client.listCommands(),
         () =>
             client.runCommand({

@@ -1,6 +1,7 @@
 node_modules
 dist
 .env
+.tavern
 apps/server/data
 .DS_Store
 .*.bun-build

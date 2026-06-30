@@ -18,7 +18,7 @@ function createDraft(overrides: Partial<ChatStartDraft> = {}): ChatStartDraft {
         realAcceptedAt: null,
         realChatId: null,
         realRunId: null,
-        realSessionKey: null,
+        realTurnReference: null,
         status: 'queued',
         title: 'Hello',
         ...overrides,
@@ -48,7 +48,7 @@ describe('buildDraftActiveReply', () => {
                     realAcceptedAt: '2026-05-13T12:00:01.000Z',
                     realChatId: 'chat-1',
                     realRunId: 'run-1',
-                    realSessionKey: 'session-1',
+                    realTurnReference: 'asb_chat_1_agent_1_1',
                     status: 'reconciled',
                 })
             )
@@ -56,7 +56,7 @@ describe('buildDraftActiveReply', () => {
             agentId: 'agent-1',
             isThinking: true,
             runId: 'run-1',
-            sessionKey: 'session-1',
+            sessionKey: 'asb_chat_1_agent_1_1',
             startedAt: '2026-05-13T12:00:01.000Z',
             text: '',
         });

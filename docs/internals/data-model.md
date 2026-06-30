@@ -9,70 +9,72 @@ read_when:
 
 Tavern Runtime is the always-on chat server.
 
-Hermes is an agent runtime participating in Tavern chats. It owns sessions,
-turns, tools, model calls, files, and native transcripts. Tavern Runtime owns
-chats, messages, responses, activity, artifacts, participants, sequence, events,
-reads, soft deletes, automations, deliveries, and the product timeline.
+Agents participate in Tavern chats as Runtime-owned chat participants. An agent
+participant is an Agent seat, and the seat points at its current Agent session.
+The engine owns model calls, tools, files, and native execution details. Tavern
+Runtime owns chats, participants, Agent sessions, messages, responses, activity,
+artifacts, sequence, events, reads, soft deletes, automations, deliveries, and
+the product timeline.
 
 ## Source Files
 
-| Layer | Source | Role |
-| --- | --- | --- |
-| Runtime schema | `apps/runtime/src/db/schema.ts` | Runtime SQLite schema and fresh setup |
-| Runtime chat store | `apps/runtime/src/tavern/chat-api/` | OpenAPI-backed chat, message, response, activity, artifact, delivery, read, and event store |
-| Runtime channel relay | `apps/runtime/src/tavern/channel-relay.ts` | Durable message acceptance and managed Hermes turn startup |
-| Runtime channel outbox | `apps/runtime/src/tavern/channel-store.ts` | Private relay queue and accepted-message receipt state for channel-style ingress |
-| Memory store | `apps/runtime/src/vault/` | Runtime read API over durable Markdown Memory files |
-| Runtime chat tests | `apps/runtime/src/tavern/chat-api-store.test.ts` | Contract, identity, sequence, event, read, and route behavior |
-| Runtime timeline tests | `apps/runtime/src/tavern/chat-api-timeline.test.ts` | Turn-aligned history pages, cursor stability, and window alignment |
-| App schema | `apps/server/src/db/bootstrap.ts` | App SQLite fresh setup |
-| App Drizzle schema | `apps/server/src/db/schema/` | Typed app cache and synced runtime tables |
-| Tavern API package | `packages/tavern-api/src/` | OpenAPI-generated and Zod-backed API contracts |
-| Hermes state | Managed Hermes store | Native execution and transcripts |
+| Layer                    | Source                                              | Role                                                                                        |
+| ------------------------ | --------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Runtime schema           | `apps/runtime/src/db/schema.ts`                     | Runtime SQLite schema and fresh setup                                                       |
+| Runtime chat store       | `apps/runtime/src/tavern/chat-api/`                 | OpenAPI-backed chat, message, response, activity, artifact, delivery, read, and event store |
+| Runtime channel relay    | `apps/runtime/src/tavern/channel-relay.ts`          | Durable message acceptance and agent turn startup                                           |
+| Runtime agent sessions   | `apps/runtime/src/tavern/agent-session-store.ts`    | Agent seat current session state, rotation, and repair                                      |
+| Runtime model profiles   | `apps/runtime/src/models/runtime-profile-store.ts`  | Per-agent default execution model for new Agent sessions                                     |
+| Vault store              | `apps/runtime/src/vault/`                           | Runtime read API over the user's Markdown wiki                                              |
+| Runtime chat tests       | `apps/runtime/src/tavern/chat-api-store.test.ts`    | Contract, identity, sequence, event, read, and route behavior                               |
+| Runtime timeline tests   | `apps/runtime/src/tavern/chat-api-timeline.test.ts` | Turn-aligned history pages, cursor stability, and window alignment                          |
+| App schema               | `apps/server/src/db/bootstrap.ts`                   | App SQLite fresh setup                                                                      |
+| App Drizzle schema       | `apps/server/src/db/schema/`                        | Typed app cache and synced runtime tables                                                   |
+| Tavern API package       | `packages/tavern-api/src/`                          | OpenAPI-generated and Zod-backed API contracts                                              |
+| Agent execution evidence | Runtime SQLite                                      | Native execution and transcripts                                                            |
 
 ## Store Boundaries
 
-| Store | Owner | Contents |
-| --- | --- | --- |
-| Runtime SQLite | Tavern Runtime | Canonical chat model, automation delivery, channel ingress, cursor-backed events, read markers, runtime metadata |
-| App SQLite | Tavern App | Client cache, app-local settings, and presentation state |
-| Memory | Managed `memory` skill and agent file tools | Markdown pages under the configured Memory root |
-| Hermes state | Hermes | Sessions, turns, tools, model calls, transcripts, and files |
+| Store                    | Owner                                      | Contents                                                                                                                          |
+| ------------------------ | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------- |
+| Runtime SQLite           | Tavern Runtime                             | Canonical chat model, automation delivery, agent seats, Agent sessions, cursor-backed events, read markers, runtime metadata |
+| App SQLite               | Tavern App                                 | Client cache, app-shell preferences, and presentation state                                                                       |
+| Vault wiki               | Managed `vault` skill and agent file tools | Markdown pages under the configured wiki root                                                                                     |
+| Agent execution evidence | Tavern Runtime                             | Sessions, turns, tools, model calls, transcripts, and files                                                                       |
 
 Runtime SQLite is the product source of truth for chat. App SQLite can cache for
 fast UI, but reconnect and hard reload recover from Runtime history and cursors.
-Hermes transcripts are execution evidence linked to Tavern messages and stored
+Agent transcripts are execution evidence linked to Tavern messages and stored
 through Tavern Runtime.
 
-The channel relay has a small Runtime outbox for channel-style ingress. It
-stores only relay state: request id, durable message id, route, cursor, and
-acceptance. It does not store message content, nonce, sequence, participants,
-or duplicate history. It references existing Runtime chat and message ids; it
-never creates chats or repairs chat metadata.
+The channel relay writes durable chat records and dispatches through the
+agent seat's current Agent session. It does not keep a private outbox, duplicate
+message history, or invent chat metadata.
 
 ## IDs
 
 Use semantic prefixes at the Tavern API boundary.
 
-| Prefix | Entity |
-| --- | --- |
-| `cht_` | chat |
-| `msg_` | message |
-| `rsp_` | response |
-| `act_` | response activity |
-| `art_` | artifact |
-| `usr_` | user participant |
-| `agt_` | agent participant |
+| Prefix | Entity             |
+| ------ | ------------------ |
+| `cht_` | chat               |
+| `msg_` | message            |
+| `rsp_` | response           |
+| `act_` | response activity  |
+| `art_` | artifact           |
+| `usr_` | user participant   |
+| `agt_` | agent participant  |
 | `sys_` | system participant |
-| `evt_` | event |
-| `del_` | delivery |
-| `rt_` | runtime connection |
+| `ags_` | Agent session      |
+| `evt_` | event              |
+| `del_` | delivery           |
+| `rt_`  | runtime connection |
 
 Read markers are scoped records, not standalone product ids.
-Hermes ids and runtime agent ids remain source ids. Store them in runtime
+Engine ids and runtime agent ids remain source ids. Store them in runtime
 metadata or source fields, not as Tavern product ids unless Tavern minted them.
 
-Memory file identity is the Markdown path relative to the configured Memory root.
+Vault page identity is the Markdown path relative to the configured wiki root.
 
 ## Runtime Chat Tables
 
@@ -90,9 +92,45 @@ chat_reads
 
 These tables live in Runtime SQLite and back the OpenAPI chat contract.
 
-`tavern_channel_outbox` also lives in Runtime SQLite, but it is not chat
-history. It is the private relay queue for channel-style ingress and hydrates
-frames from existing `chats` and `chat_messages` rows.
+Agent sessions also live in Runtime SQLite. They are execution routing state,
+not chat history.
+
+Agent turns also live in Runtime SQLite. They are durable execution state linked
+to messages and responses, while active stream state remains in Runtime memory.
+
+Agent runtime profiles also live in Runtime SQLite. They are per-agent
+execution defaults for new Agent sessions, not agent identity fields.
+
+```text
+agent_runtime_profiles
+  agent_id              TEXT PRIMARY KEY
+  default_model_json    TEXT NOT NULL
+  sandbox_mode          TEXT NOT NULL        -- none, docker, podman
+  created_at            TEXT NOT NULL
+  updated_at            TEXT NOT NULL
+
+agent_model_selections
+  agent_id              TEXT PRIMARY KEY
+  provider_id           TEXT NOT NULL
+  model_id              TEXT NOT NULL
+  status                TEXT NOT NULL        -- unknown, valid, invalid
+  invalid_reason        TEXT
+  last_validated_at     TEXT
+  updated_at            TEXT NOT NULL
+```
+
+Rules:
+
+- One row exists at most per Runtime agent.
+- Missing runtime profiles resolve to Runtime provider defaults.
+- `agents.raw_json` does not store model choices.
+- Catalog rows are read inventory.
+- `agent_runtime_profiles.default_model_json` sets the model for future Agent
+  sessions.
+- `agent_sessions.effective_model_json` is the model actually used by that
+  session.
+- The app changes the model for the current Tavern Agent seat by writing the
+  current Agent session model, not by mutating app-local settings.
 
 ## `chats`
 
@@ -101,23 +139,27 @@ Durable conversation containers.
 ```text
 chats
   id                    TEXT PRIMARY KEY
-  kind                  TEXT NOT NULL        -- channel, dm, thread
+  kind                  TEXT NOT NULL        -- channel, dm
   title                 TEXT
   pinned                INTEGER NOT NULL DEFAULT 0
-  status                TEXT NOT NULL        -- active, archived
-  created_by            TEXT
   metadata_json         TEXT NOT NULL DEFAULT '{}'
   created_at            TEXT NOT NULL
   updated_at            TEXT NOT NULL
-  archived_at           TEXT
+  last_message_sequence INTEGER NOT NULL DEFAULT 0
 ```
 
 Indexes:
 
 ```text
-idx_chats_updated_at(updated_at)
-idx_chats_status_updated_at(status, updated_at)
+PRIMARY KEY(id)
 ```
+
+Rules:
+
+- Runtime bootstraps the fresh Tavern workspace with `cht_general` as
+  `kind: channel` and a primary agent DM as `kind: dm`.
+- A DM has exactly two participants.
+- Chat archival and presentation state currently live in `metadata_json`.
 
 ## `chat_participants`
 
@@ -125,24 +167,18 @@ Actors that can author messages or receive private events.
 
 ```text
 chat_participants
-  id                    TEXT PRIMARY KEY
-  chat_id               TEXT NOT NULL
-  kind                  TEXT NOT NULL        -- user, agent, system, external
-  source                TEXT NOT NULL        -- tavern, hermes, discord, system
-  source_id             TEXT
-  agent_id              TEXT
-  observed_label        TEXT
-  metadata_json         TEXT NOT NULL DEFAULT '{}'
-  joined_at             TEXT NOT NULL
-  last_seen_at          TEXT
+  chat_id                  TEXT NOT NULL
+  id                       TEXT NOT NULL
+  kind                     TEXT NOT NULL        -- user, agent, system, external, plugin
+  label                    TEXT
+  metadata_json            TEXT NOT NULL DEFAULT '{}'
+  current_agent_session_id TEXT
 ```
 
 Indexes:
 
 ```text
-idx_chat_participants_chat(chat_id)
-idx_chat_participants_source(source, source_id)
-idx_chat_participants_agent(agent_id)
+PRIMARY KEY(chat_id, id)
 ```
 
 Do not merge participants by display name. Participant labels are source
@@ -162,12 +198,12 @@ chat_messages
   content               TEXT NOT NULL
   attachment_json       TEXT
   nonce                 TEXT
-  source                TEXT NOT NULL        -- tavern, hermes, automation, system
+  source                TEXT NOT NULL        -- tavern, agent-engine, automation, system
   request_id            TEXT
   delivery_id           TEXT
   run_id                TEXT
-  session_key           TEXT
-  session_id            TEXT
+  agent_session_id      TEXT
+  engine_session_id     TEXT
   metadata_json         TEXT NOT NULL DEFAULT '{}'
   created_at            TEXT NOT NULL
   updated_at            TEXT NOT NULL
@@ -183,17 +219,20 @@ idx_chat_messages_chat_sequence(chat_id, sequence)
 idx_chat_messages_author(author_participant_id)
 idx_chat_messages_delivery(delivery_id)
 idx_chat_messages_run(run_id)
-idx_chat_messages_session(session_key)
+idx_chat_messages_agent_session(agent_session_id)
 ```
 
 Rules:
 
-* Message creation is durable before model work starts.
-* Sequence is assigned in the message insert transaction.
-* Duplicate `message.id` returns the existing message.
-* Duplicate `(chat_id, nonce)` returns the existing message.
-* Content, timestamp, and display text are never duplicate keys.
-* Soft delete updates `status` and `deleted_at`; it keeps the row and sequence.
+- Message creation is durable before model work starts.
+- A channel message starts no agent work unless its Tavern mention metadata
+  addresses one or more agent participants in that chat.
+- An agent DM addresses its one agent participant implicitly.
+- Sequence is assigned in the message insert transaction.
+- Duplicate `message.id` returns the existing message.
+- Duplicate `(chat_id, nonce)` returns the existing message.
+- Content, timestamp, and display text are never duplicate keys.
+- Soft delete updates `status` and `deleted_at`; it keeps the row and sequence.
 
 Message body fields are rendered content only. `content` stores the durable text
 body. `attachment_json` stores the durable attachment array for the message.
@@ -230,15 +269,62 @@ idx_chat_responses_chat_updated(chat_id, updated_at, id)
 
 Rules:
 
-* A response is the chat product record for one participant's attempt to answer
+- A response is the chat product record for one participant's attempt to answer
   or act on a message.
-* Runtime, session, run, and turn ids remain metadata on the response.
-* `created_at` defines stable response pagination. `updated_at` changes when
+- Runtime, session, run, and turn ids remain metadata on the response.
+- `created_at` defines stable response pagination. `updated_at` changes when
   activity or final state changes.
-* Running responses are durable and recoverable after reload.
-* Completion or failure updates the same response row.
-* Soft delete sets `deleted_at` and keeps the row; activity and artifacts
+- Running responses are durable and recoverable after reload.
+- Completion or failure updates the same response row.
+- Soft delete sets `deleted_at` and keeps the row; activity and artifacts
   follow their response out of the timeline. Dismissal and chat clear use it.
+
+## `agent_turns`
+
+Durable execution records for one Agent seat handling one triggering message.
+
+```text
+agent_turns
+  id                      TEXT PRIMARY KEY        -- run_...
+  chat_id                 TEXT NOT NULL
+  agent_session_id        TEXT NOT NULL
+  agent_participant_id    TEXT NOT NULL
+  agent_id                TEXT NOT NULL
+  trigger_message_id      TEXT NOT NULL
+  response_id             TEXT NOT NULL
+  status                  TEXT NOT NULL           -- queued, running, completed, failed, cancelled
+  attempt                 INTEGER NOT NULL
+  output_message_ids_json TEXT NOT NULL DEFAULT '[]'
+  activity_ids_json       TEXT NOT NULL DEFAULT '[]'
+  metadata_json           TEXT NOT NULL DEFAULT '{}'
+  created_at              TEXT NOT NULL
+  updated_at              TEXT NOT NULL
+  started_at              TEXT
+  completed_at            TEXT
+```
+
+Indexes:
+
+```text
+idx_agent_turns_session_status(agent_session_id, status, created_at)
+idx_agent_turns_chat_updated(chat_id, updated_at)
+```
+
+Rules:
+
+- A turn is owned by one Agent session and one Agent seat.
+- A turn points at the durable triggering message and response row.
+- `output_message_ids_json` records durable assistant message ids produced by
+  the turn.
+- `activity_ids_json` records durable response activity ids produced by the
+  turn.
+- One Agent seat may have at most one running turn for its current Agent
+  session. Later addressed messages queue as `queued` turns.
+- Different Agent seats may have running turns concurrently.
+- Active streaming and cancellation handles are transient Runtime memory, not
+  chat history.
+- Stop transitions a queued or running turn to `cancelled` and settles the
+  linked response as `cancelled`.
 
 ## `chat_response_activity`
 
@@ -250,7 +336,7 @@ chat_response_activity
   response_id              TEXT NOT NULL
   chat_id                  TEXT NOT NULL
   sequence                 INTEGER NOT NULL
-  kind                     TEXT NOT NULL        -- planning, reasoning, tool_call, tool_result, command, approval, message, artifact, rich_response, custom
+  kind                     TEXT NOT NULL        -- planning, reasoning, tool_call, tool_result, command, message, artifact, rich_response, custom
   status                   TEXT NOT NULL        -- queued, running, completed, failed, cancelled
   title                    TEXT NOT NULL
   detail                   TEXT
@@ -272,15 +358,15 @@ idx_chat_response_activity_chat_sequence(chat_id, sequence)
 
 Rules:
 
-* Activity rows are statusful and updated in place as work progresses.
-* Activity ids are global and cannot move between chats or responses.
-* Tool calls, tool results, thinking summaries, plans, approvals, and message
+- Activity rows are statusful and updated in place as work progresses.
+- Activity ids are global and cannot move between chats or responses.
+- Tool calls, tool results, thinking summaries, plans, and message
   references are activity.
-* Runtime tool ids, tool names, arguments, results, and source facts live in
+- Runtime tool ids, tool names, arguments, results, and source facts live in
   `metadata_json`.
-* Reload recovery reads the same activity rows for running and completed
+- Reload recovery reads the same activity rows for running and completed
   responses.
-* Hidden chain-of-thought is never stored here.
+- Hidden chain-of-thought is never stored here.
 
 ## `chat_artifacts`
 
@@ -311,10 +397,10 @@ idx_chat_artifacts_chat_updated(chat_id, updated_at, id)
 
 Rules:
 
-* Artifacts are renderable outputs, not tool calls by themselves.
-* Code blocks, screenshots, generated images, files, diffs, documents, and
+- Artifacts are renderable outputs, not tool calls by themselves.
+- Code blocks, screenshots, generated images, files, diffs, documents, and
   charts are artifacts.
-* Tool activity may reference artifacts it produced.
+- Tool activity may reference artifacts it produced.
 
 ## `chat_events`
 
@@ -340,12 +426,12 @@ idx_chat_events_chat_cursor(chat_id, cursor)
 
 Rules:
 
-* Insert durable events in the same transaction as the mutation.
-* Cursor is monotonic inside Runtime SQLite.
-* Websocket delivery is best-effort.
-* Clients recover by asking for events after a cursor or by reading the durable
+- Insert durable events in the same transaction as the mutation.
+- Cursor is monotonic inside Runtime SQLite.
+- Websocket delivery is best-effort.
+- Clients recover by asking for events after a cursor or by reading the durable
   resource.
-* Large state lives in tables, not event payloads.
+- Large state lives in tables, not event payloads.
 
 ## `chat_reads`
 
@@ -368,9 +454,9 @@ PRIMARY KEY(chat_id, reader_id)
 
 Rules:
 
-* Reads are monotonic per `(chat_id, reader_id)`.
-* The server caps `last_read_sequence` to the chat's current last sequence.
-* Read events are private to the reader.
+- Reads are monotonic per `(chat_id, reader_id)`.
+- The server caps `last_read_sequence` to the chat's current last sequence.
+- Read events are private to the reader.
 
 ## `chat_deliveries`
 
@@ -392,40 +478,74 @@ Duplicate `delivery.id` returns the existing delivery receipt. Duplicate
 assistant `message.id` links the delivery to the existing durable message
 instead of creating another message row.
 
-## Runtime Execution Evidence
+## `agent_sessions`
 
-Hermes execution links to Tavern messages.
+Stable execution context for one agent seat in one Chat. Rotating the current
+session starts a fresh context for that agent in that Chat without removing the
+agent participant or changing other chats that use the same agent definition.
 
 ```text
-runtime_sessions
-  session_key           TEXT PRIMARY KEY
-  session_id            TEXT
-  chat_id               TEXT NOT NULL
-  agent_id              TEXT NOT NULL
-  status                TEXT
-  started_at            TEXT
-  updated_at            TEXT NOT NULL
+agent_sessions
+  id                     TEXT PRIMARY KEY
+  chat_id                TEXT NOT NULL
+  agent_participant_id   TEXT NOT NULL
+  agent_id               TEXT NOT NULL
+  generation             INTEGER NOT NULL
+  effective_model_json   TEXT NOT NULL
+  runtime_session_id     TEXT
+  resume_state_json      TEXT
+  status                 TEXT NOT NULL        -- active, archived, stopped
+  created_at             TEXT NOT NULL
+  updated_at             TEXT NOT NULL
+  archived_at            TEXT
+```
 
+Rules:
+
+- One agent seat points at one current Agent session through
+  `chat_participants.current_agent_session_id`.
+- Starting a new session archives previous active sessions for that seat and
+  updates only that seat's current pointer.
+- `effective_model_json` stores the model used by that session. Same
+  execution-kind model changes update the current session in place.
+- Switching to a model with a different execution kind starts a new Agent
+  session for that seat and archives the previous active session.
+- Runtime repair chooses the latest active session when the current pointer is
+  missing and archives extra active sessions. If none exists, Runtime creates a
+  new session.
+
+Uniqueness:
+
+```text
+UNIQUE(chat_id, agent_participant_id, generation)
+```
+
+## Runtime Execution Evidence
+
+Agent execution evidence links to Tavern messages through the Agent session.
+The engine session id is execution evidence, not product routing identity.
+
+```text
 runtime_turns
   id                    TEXT PRIMARY KEY
-  chat_id               TEXT NOT NULL
+  conversation_id       TEXT NOT NULL
   request_message_id    TEXT
   response_id           TEXT
   response_message_id   TEXT
   agent_id              TEXT NOT NULL
-  session_key           TEXT NOT NULL
-  hermes_run_id       TEXT
+  agent_session_id      TEXT NOT NULL
+  engine_run_id         TEXT
   status                TEXT NOT NULL
   started_at            TEXT
   finished_at           TEXT
 
 runtime_transcript_messages
   id                    TEXT PRIMARY KEY
-  chat_id               TEXT
+  conversation_id       TEXT
   message_id            TEXT
-  session_key           TEXT NOT NULL
-  session_id            TEXT
-  hermes_message_id   TEXT
+  agent_session_id      TEXT NOT NULL
+  engine_session_id     TEXT
+  engine_message_id     TEXT
   seq                   INTEGER
   role                  TEXT NOT NULL
   content_text          TEXT
@@ -438,7 +558,7 @@ runtime_tool_calls
   response_id           TEXT
   activity_id           TEXT
   message_id            TEXT
-  session_key           TEXT NOT NULL
+  agent_session_id      TEXT NOT NULL
   run_id                TEXT
   tool_call_id          TEXT
   tool_name             TEXT NOT NULL
@@ -447,31 +567,29 @@ runtime_tool_calls
   updated_at            TEXT NOT NULL
 ```
 
-Hermes transcript messages, tool calls, links, and artifacts are runtime
+Agent transcript messages, tool calls, links, and artifacts are runtime
 evidence. Sync paths map user-visible work into responses, response activity,
 and artifacts by stable ids. They enrich the UI, but they do not replace
 canonical chat history.
 
-## Memory Files
+## Vault Files
 
-Tavern Runtime does not store Memory page tables. It resolves the Memory root and
+Tavern Runtime does not store Vault page tables. It resolves the Vault root and
 reads Markdown files directly.
 
 ```text
-MEMORY.md
-USER.md
-TAXONOMY.md
-episodic/2026-06-25.md
+INDEX.md
 projects/example.md
+research/example/...
 ```
 
 Rules:
 
-* Runtime never creates a second canonical copy of Memory pages.
-* Page identity is the Markdown path relative to the Memory root.
-* Frontmatter parsing is light and display-oriented.
-* Double-bracket links and backlinks are derived from Markdown bodies.
-* Imports, research, and maintenance are agent workflows, not Runtime jobs.
+- Runtime never creates a second canonical copy of wiki pages.
+- Page identity is the Markdown path relative to the Vault root.
+- Frontmatter parsing is light and display-oriented.
+- Wikilinks and backlinks are derived from Markdown bodies.
+- Imports, research, and maintenance are agent workflows, not Runtime jobs.
 
 ## Transaction Rules
 
@@ -512,52 +630,54 @@ Read update:
 
 ## App Cache And Evidence
 
-App tables are cache, settings, or execution evidence:
+App tables are cache, presentation, or execution evidence:
 
-| Current table | Runtime role |
-| --- | --- |
-| `session_runs` | runtime session/turn evidence linked to `chat_responses` |
-| `session_messages` | `runtime_transcript_messages` evidence |
-| `session_message_parts` | transcript evidence and candidate `chat_artifacts` |
-| `session_tool_calls` | tool evidence linked to `chat_response_activity` |
-| `session_artifacts` | candidate `chat_artifacts` |
-| `session_deliveries` | `chat_deliveries` or runtime delivery evidence |
-| `cron_jobs` | `automations` |
-| `cron_runs` | `automation_runs` |
+| Current table           | Runtime role                                             |
+| ----------------------- | -------------------------------------------------------- |
+| `session_runs`          | runtime session/turn evidence linked to `chat_responses` |
+| `session_messages`      | `runtime_transcript_messages` evidence                   |
+| `session_message_parts` | transcript evidence and candidate `chat_artifacts`       |
+| `session_tool_calls`    | tool evidence linked to `chat_response_activity`         |
+| `session_artifacts`     | candidate `chat_artifacts`                               |
+| `session_deliveries`    | `chat_deliveries` or runtime delivery evidence           |
+| `cron_jobs`             | `automations`                                            |
+| `cron_runs`             | `automation_runs`                                        |
 
 ## FTS
 
 Search has first-class indexing for:
 
-* chat messages
-* Memory pages and files
+- chat messages
+- Vault pages and files
 
 SQLite FTS mirrors durable text fields through triggers or explicit
 transactional writes. Search indexes are derived state, not the source of truth.
 
 ## Invariants
 
-* Tavern Runtime chat history is canonical product state.
-* Chat pinned state is a first-class Runtime chat field, not app-local
+- Tavern Runtime chat history is canonical product state.
+- Chat pinned state is a first-class Runtime chat field, not app-local
   presentation state.
-* Hermes transcript history is runtime-owned evidence.
-* Runtime adapters preserve source ids and metadata without authoring final
+- The agent Chat participant is the stable Agent seat for an agent in a Chat.
+- Agent sessions can rotate without changing the Agent seat.
+- Agent transcript history is runtime-owned execution evidence.
+- Runtime adapters preserve source ids and metadata without authoring final
   Tavern presentation.
-* Reconciliation uses ids, nonces, sequences, delivery ids, session keys, and
-  run ids.
-* Reconciliation never uses content/timestamp duplicate detection.
-* Events notify; runtime durable reads recover.
-* Response activity is durable and statusful.
-* App-local progress hints never become a second chat history.
-* Memory reads fail visibly when the configured root is missing or unreadable.
+- Reconciliation uses ids, nonces, sequences, delivery ids, Agent session ids,
+  and run ids.
+- Reconciliation never uses content/timestamp duplicate detection.
+- Events notify; runtime durable reads recover.
+- Response activity is durable and statusful.
+- App-local progress hints never become a second chat history.
+- Vault reads fail visibly when the configured root is missing or unreadable.
 
 ## Related Docs
 
-* [API overview](../api/overview.md)
-* [Chat API](../api/chat.md)
-* [Realtime](../api/realtime.md)
-* [Tavern Runtime](runtime.md)
-* [Architecture overview](architecture-overview.md)
-* [Tavern Runtime Chat Server](../../specs/runtime-chat-server.md)
-* [Memories](../../specs/memories.md)
-* [Compatibility Vault](../../specs/vault.md)
+- [API overview](../api/overview.md)
+- [Chat API](../api/chat.md)
+- [Realtime](../api/realtime.md)
+- [Tavern Runtime](runtime.md)
+- [Architecture overview](architecture-overview.md)
+- [Tavern Runtime Chat Server](../../specs/runtime-chat-server.md)
+- [Memories](../../specs/memories.md)
+- [Vault](../../specs/vault.md)

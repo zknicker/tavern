@@ -37,7 +37,8 @@ export const settingsCapabilityRequirements = {
     agent: ['apiServer', 'models'],
     'notes-md': [],
     appearance: [],
-    connectors: ['apiServer'],
+    channels: ['apiServer'],
+    mcp: ['apiServer'],
     plugins: ['apiServer'],
     jobs: [],
     memories: ['vault'],
@@ -46,11 +47,11 @@ export const settingsCapabilityRequirements = {
     skills: ['apiServer', 'skills'],
     'soul-md': [],
     stats: ['models'],
-    toolsets: ['apiServer', 'skills'],
+    tools: ['apiServer', 'skills'],
     updates: [],
 } as const satisfies Record<string, readonly RuntimeCapabilityId[]>;
 
-export const hermesCapabilityRequirements = [
+export const agentCapabilityRequirements = [
     'apiServer',
     'dashboardServer',
     'gateway',
@@ -59,8 +60,8 @@ export const hermesCapabilityRequirements = [
 ] as const satisfies readonly RuntimeCapabilityId[];
 
 export const routeTabCapabilityRequirements = {
-    // Tasks are hidden unless managed Hermes is fully ready because create/run actions execute through Hermes.
-    cron: hermesCapabilityRequirements,
+    // Tasks are hidden unless the agent runtime is fully ready because create/run actions execute there.
+    cron: agentCapabilityRequirements,
     overview: [],
     memory: ['vault'],
     workspace: ['apiServer'],

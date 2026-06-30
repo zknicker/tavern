@@ -1,4 +1,8 @@
-import { type AgentRuntimeAgent, agentRuntimeAgentListSchema } from '@tavern/api';
+import {
+    type AgentRuntimeAgent,
+    agentRuntimeAgentListSchema,
+    agentRuntimeAgentSchema,
+} from '@tavern/api';
 import { getDb } from '../db/connection';
 import type { Database } from '../db/sqlite';
 import { namedParams } from '../db/sqlite';
@@ -32,6 +36,65 @@ export function getStoredAgent(agentId: string, db: Database = getDb()) {
     return row ? rowToAgent(row) : null;
 }
 
+export function upsertStoredAgent(input: {
+    agent: AgentRuntimeAgent;
+    db?: Database;
+    syncedAt?: string;
+}) {
+    const db = input.db ?? getDb();
+    const syncedAt = input.syncedAt ?? new Date().toISOString();
+    const existing = getStoredAgent(input.agent.id, db);
+    const agent = agentRuntimeAgentSchema.parse({
+        ...input.agent,
+        thinkingDefault: input.agent.thinkingDefault ?? existing?.thinkingDefault ?? undefined,
+    });
+
+    writeStoredAgent({
+        agent,
+        createdAt: existing ? undefined : syncedAt,
+        db,
+        syncedAt,
+    });
+
+    const saved = getStoredAgent(agent.id, db);
+    if (!saved) {
+        throw new Error(`Agent "${agent.id}" was not persisted.`);
+    }
+    return saved;
+}
+
+export function deleteStoredAgent(agentId: string, db: Database = getDb()) {
+    db.prepare('DELETE FROM agents WHERE id = $id').run(namedParams({ id: agentId }));
+}
+
+export function updateStoredAgent(input: {
+    agentId: string;
+    db?: Database;
+    enabledSkillIds?: string[];
+    name?: string;
+    thinkingDefault?: AgentRuntimeAgent['thinkingDefault'];
+}) {
+    const db = input.db ?? getDb();
+    const existing = getStoredAgent(input.agentId, db);
+    if (!existing) {
+        return null;
+    }
+
+    return upsertStoredAgent({
+        agent: {
+            ...existing,
+            ...(input.enabledSkillIds === undefined
+                ? {}
+                : { enabledSkillIds: input.enabledSkillIds }),
+            ...(input.name === undefined ? {} : { name: input.name }),
+            ...(input.thinkingDefault === undefined
+                ? {}
+                : { thinkingDefault: input.thinkingDefault }),
+        },
+        db,
+    });
+}
+
 export function replaceStoredAgents(input: {
     agents: AgentRuntimeAgent[];
     syncedAt?: string;
@@ -59,54 +122,7 @@ export function replaceStoredAgents(input: {
     db.exec('BEGIN IMMEDIATE');
     try {
         for (const agent of input.agents) {
-            db.prepare(
-                `INSERT INTO agents (
-                    id,
-                    name,
-                    primary_color,
-                    workspace_folder,
-                    enabled_skill_ids_json,
-                    is_admin,
-                    raw_json,
-                    last_synced_at,
-                    created_at,
-                    updated_at
-                )
-                VALUES (
-                    $id,
-                    $name,
-                    $primaryColor,
-                    $workspaceFolder,
-                    $enabledSkillIdsJson,
-                    $isAdmin,
-                    $rawJson,
-                    $lastSyncedAt,
-                    $createdAt,
-                    $updatedAt
-                )
-                ON CONFLICT(id) DO UPDATE SET
-                    name = excluded.name,
-                    primary_color = excluded.primary_color,
-                    workspace_folder = excluded.workspace_folder,
-                    enabled_skill_ids_json = excluded.enabled_skill_ids_json,
-                    is_admin = excluded.is_admin,
-                    raw_json = excluded.raw_json,
-                    last_synced_at = excluded.last_synced_at,
-                    updated_at = excluded.updated_at`
-            ).run(
-                namedParams({
-                    createdAt: syncedAt,
-                    enabledSkillIdsJson: JSON.stringify(agent.enabledSkillIds),
-                    id: agent.id,
-                    isAdmin: agent.isAdmin ? 1 : 0,
-                    lastSyncedAt: syncedAt,
-                    name: agent.name,
-                    primaryColor: agent.primaryColor,
-                    rawJson: stableAgentJson(agent),
-                    updatedAt: syncedAt,
-                    workspaceFolder: agent.workspaceFolder,
-                })
-            );
+            writeStoredAgent({ agent, createdAt: syncedAt, db, syncedAt });
         }
 
         const nextIds = input.agents.map((agent) => agent.id);
@@ -129,14 +145,17 @@ export function replaceStoredAgents(input: {
 }
 
 function rowToAgent(row: AgentRow): AgentRuntimeAgent {
-    return {
+    const raw = parseRawAgent(row.raw_json);
+
+    return agentRuntimeAgentSchema.parse({
         enabledSkillIds: parseEnabledSkillIds(row.enabled_skill_ids_json),
         id: row.id,
         isAdmin: row.is_admin === 1,
         name: row.name,
         primaryColor: row.primary_color,
+        ...(raw?.thinkingDefault === undefined ? {} : { thinkingDefault: raw.thinkingDefault }),
         workspaceFolder: row.workspace_folder,
-    };
+    });
 }
 
 function parseEnabledSkillIds(value: string) {
@@ -159,6 +178,75 @@ function stableAgentJson(agent: AgentRuntimeAgent) {
         isAdmin: agent.isAdmin,
         name: agent.name,
         primaryColor: agent.primaryColor,
+        ...(agent.thinkingDefault === undefined ? {} : { thinkingDefault: agent.thinkingDefault }),
         workspaceFolder: agent.workspaceFolder,
     });
+}
+
+function parseRawAgent(value: string) {
+    try {
+        const parsed = JSON.parse(value) as unknown;
+        const result = agentRuntimeAgentSchema.safeParse(parsed);
+        return result.success ? result.data : null;
+    } catch {
+        return null;
+    }
+}
+
+function writeStoredAgent(input: {
+    agent: AgentRuntimeAgent;
+    createdAt?: string;
+    db: Database;
+    syncedAt: string;
+}) {
+    input.db
+        .prepare(
+            `INSERT INTO agents (
+                id,
+                name,
+                primary_color,
+                workspace_folder,
+                enabled_skill_ids_json,
+                is_admin,
+                raw_json,
+                last_synced_at,
+                created_at,
+                updated_at
+            )
+            VALUES (
+                $id,
+                $name,
+                $primaryColor,
+                $workspaceFolder,
+                $enabledSkillIdsJson,
+                $isAdmin,
+                $rawJson,
+                $lastSyncedAt,
+                $createdAt,
+                $updatedAt
+            )
+            ON CONFLICT(id) DO UPDATE SET
+                name = excluded.name,
+                primary_color = excluded.primary_color,
+                workspace_folder = excluded.workspace_folder,
+                enabled_skill_ids_json = excluded.enabled_skill_ids_json,
+                is_admin = excluded.is_admin,
+                raw_json = excluded.raw_json,
+                last_synced_at = excluded.last_synced_at,
+                updated_at = excluded.updated_at`
+        )
+        .run(
+            namedParams({
+                createdAt: input.createdAt ?? input.syncedAt,
+                enabledSkillIdsJson: JSON.stringify(input.agent.enabledSkillIds),
+                id: input.agent.id,
+                isAdmin: input.agent.isAdmin ? 1 : 0,
+                lastSyncedAt: input.syncedAt,
+                name: input.agent.name,
+                primaryColor: input.agent.primaryColor,
+                rawJson: stableAgentJson(input.agent),
+                updatedAt: input.syncedAt,
+                workspaceFolder: input.agent.workspaceFolder,
+            })
+        );
 }

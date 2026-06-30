@@ -4,8 +4,8 @@ This folder holds Playwright coverage for user-facing dashboard behavior.
 
 ## Lane
 
-- The default lane runs the website, server, Tavern Runtime, and real managed Hermes.
-- The Hermes model provider mock drives deterministic inference behind Hermes' `custom` OpenAI-compatible provider.
+- The default lane runs the website, server, Tavern Runtime, and the local agent engine.
+- Runtime's deterministic e2e language model drives inference for browser tests.
 - Tests stay user-shaped: drive setup through the UI or real runtime contracts, then assert visible behavior over time.
 
 ## Chat Timing
@@ -18,13 +18,12 @@ New-chat responsiveness is covered with browser-visible marks for submit, optimi
 - `preflight.ts`: verifies Playwright Chromium before Playwright starts its `webServer` readiness timers.
 - `start-tavern-server.ts`: boots the real Tavern server with a run-scoped SQLite database.
 - `start-tavern-runtime.ts`: boots the real Tavern Runtime with a run-scoped data root.
-- `hermes/start-mock-provider.ts`: starts the deterministic OpenAI-compatible model provider mock.
 - `support/test.ts`: shared Playwright exports.
 - `tests/*.spec.ts`: user-facing specs grouped by surface area.
 
 ## Rules
 
-- Do not point automated e2e tests at a developer or production Hermes home, config, or DB.
+- Do not point automated e2e tests at a developer or production agent home, config, or DB.
 - Do not add mock-only product APIs for convenience.
 - Keep expensive dependency setup in preflight, not Playwright `webServer` startup.
 - Prefer one focused e2e regression over broad fixture setup and dozens of brittle assertions.

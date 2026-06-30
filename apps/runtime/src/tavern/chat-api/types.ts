@@ -1,4 +1,9 @@
-import type { TavernChatMessage, TavernChatResponse, TavernResponseActivity } from '@tavern/api';
+import type {
+    TavernApiSchema,
+    TavernChatMessage,
+    TavernChatResponse,
+    TavernResponseActivity,
+} from '@tavern/api';
 
 export interface DeliveryReceipt {
     cursor: string;
@@ -30,6 +35,7 @@ export interface DeleteReceipt {
 export interface ChatRow {
     created_at: string;
     id: string;
+    kind: 'channel' | 'dm';
     last_message_sequence: number;
     metadata_json: string;
     pinned: number;
@@ -38,8 +44,10 @@ export interface ChatRow {
 }
 
 export interface ParticipantRow {
+    chat_id: string;
+    current_agent_session_id: string | null;
     id: string;
-    kind: TavernChatMessage['author']['kind'];
+    kind: TavernApiSchema<'Participant'>['kind'];
     label: string | null;
     metadata_json: string;
 }

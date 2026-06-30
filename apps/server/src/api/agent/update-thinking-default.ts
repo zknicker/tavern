@@ -1,6 +1,6 @@
 import { agentRuntimeThinkingLevelSchema } from '@tavern/api';
 import { z } from 'zod';
-import { updateHermesAgentThinkingDefault } from '../../hermes-settings/service.ts';
+import { updateAgentThinkingDefault } from '../../agent-settings/service.ts';
 import { publicProcedure } from '../trpc.ts';
 
 export const updateAgentThinkingDefaultProcedure = publicProcedure
@@ -10,4 +10,4 @@ export const updateAgentThinkingDefaultProcedure = publicProcedure
             thinkingDefault: agentRuntimeThinkingLevelSchema.nullable(),
         })
     )
-    .mutation(async ({ input }) => await updateHermesAgentThinkingDefault(input));
+    .mutation(async ({ input }) => await updateAgentThinkingDefault(input));

@@ -12,8 +12,8 @@ Plugins are first-party Tavern Runtime capabilities for external systems.
 Runtime owns their durable settings, write-only secrets, health checks, and
 read-oriented domain actions.
 
-Engine package docs use "Hermes plugin package" when referring to a package
-under `HERMES_HOME/plugins`.
+Plugin package docs refer to Tavern-managed packages that bundle tool code,
+agent guidance, and product-owned read actions.
 
 ## Storage
 
@@ -23,8 +23,8 @@ Plugin records live in dedicated Runtime SQLite tables:
 * `runtime_plugin_secrets`: write-only credential `secret_json`.
 * `runtime_capabilities`: current health such as `plugin.merchbase`.
 
-Do not store Plugin settings in generic runtime metadata, Hermes home, skill
-files, CLI config, or checked-in env files.
+Do not store Plugin settings in generic runtime metadata, skill files, CLI
+config, or checked-in env files.
 
 ## Runtime Routes
 
@@ -78,32 +78,32 @@ ingestion control, setup repair, account switching, and secret changes remain
 settings/user-managed flows.
 
 Runtime ships the MerchBase starter guide in two places. The collision-safe copy
-is bundled in the managed `merchbase` Hermes plugin package as the read-only
-plugin skill `merchbase:merchbase`. Runtime also installs an auto-visible flat
+is bundled in the managed `merchbase` Plugin package as the read-only Plugin
+skill `merchbase:merchbase`. Runtime also installs an auto-visible flat
 `skills/merchbase` copy when that path is empty or already Runtime-owned. If an
 unmarked user-authored `skills/merchbase` exists, MerchBase settings report a
 skill conflict. Enabling the Plugin reserves the `merchbase` skill name:
 Runtime deletes that existing skill directory and installs the managed copy so
 the Plugin owns the flat skill.
 
-Runtime also installs and enables a managed Hermes plugin package,
-`merchbase`. That package registers the `merchbase` toolset with named read
+Runtime also installs and enables a managed Plugin package,
+`merchbase`. That package registers `merchbase` tools with named read
 tools for status, sales summary, sales records, sales series, sales breakdown,
 products, product catalog, designs, and design facets. Agents should use those
 tools rather than raw Runtime HTTP routes.
 
-Settings -> Plugins owns MerchBase enablement. The `merchbase` toolset row in
-Settings -> Toolsets -> Plugins is a read-only reflection of that setting. When
+Settings -> Plugins owns MerchBase enablement. The `merchbase` tool row in
+Settings -> Tools -> Plugins is a read-only reflection of that setting. When
 Runtime owns the flat `skills/merchbase` copy, Settings -> Skills -> Plugins
 also shows that read-only skill row. The collision-safe plugin skill remains
 available as `merchbase:merchbase` through `skill_view`; it is not projected as
-an editable user skill. Direct skill or toolset enablement changes are rejected
+an editable user skill. Direct skill or tool enablement changes are rejected
 for Plugin-owned capabilities. Once the Plugin is enabled, the flat `merchbase`
 name is reserved for Tavern's managed guide.
 
 The generic read action endpoint accepts `{ "action": string, "input": object }`
-for a strict allowlist. It is internal plumbing for the managed Hermes toolset,
-server bridge, and Runtime-owned widgets, not an agent prompting contract. It
+for a strict allowlist. It is internal plumbing for Runtime-owned tools,
+server bridges, and Runtime-owned widgets, not an agent prompting contract. It
 does not expose sync, ripcord, ingestion, setup mutation, account switching, or
 secret changes.
 
@@ -129,16 +129,15 @@ agent-side setup:
    require a Tavern caller and immediately refresh the Plugin capability.
 4. Add a Runtime capability named `plugin.<id>` whose check proves the
    configured service can answer the agent-visible reads.
-5. If agents should reason over the service, install a managed Hermes plugin
-   package whose package name, toolset id, and public tool names use the Plugin
-   id.
+5. If agents should reason over the service, install a managed Plugin package
+   whose package name and public tool names use the Plugin id.
 6. If agents need usage guidance, bundle a plugin skill with the same Plugin
    name and have the tools point agents at the package-qualified skill name,
    such as `merchbase:merchbase`. A flat starter skill may also be installed for
    auto-visible prompt behavior. If the Plugin needs to reserve that flat name,
    expose a settings conflict so the UI can warn before enabling. Enabling the
    Plugin replaces that flat skill with the managed starter skill.
-7. Register Plugin-owned flat skills and toolsets in the server skill projection
+7. Register Plugin-owned flat skills and tools in the server skill projection
    so Settings shows them in the Plugins tabs and rejects direct enablement
    writes. Treat plugin skills as collision-safe guidance unless the Settings
    product explicitly projects plugin skills.

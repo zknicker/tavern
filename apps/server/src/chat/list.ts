@@ -14,13 +14,16 @@ import {
     resolveParticipantIdsForSourceIdentities,
 } from '../storage/participants.ts';
 import { type Chat, chatListSchema, chatSchema } from './contracts.ts';
-import { resolveChatScope, resolveObservedConversationKind } from './conversation-kind.ts';
+import {
+    resolveChatScope,
+    resolveConversationKindFromConfiguredScope,
+    resolveObservedConversationKind,
+} from './conversation-kind.ts';
 import {
     listRuntimeChatRecords,
     type RuntimeChatRecord,
     readRuntimeChatDisplayName,
 } from './runtime-chats.ts';
-import { findChatSessionKeyForAgent } from './session-keys.ts';
 import { buildChatId, compareChatActors, resolveChatIdentityFromId } from './shared.ts';
 import {
     type ChatSource,
@@ -364,14 +367,13 @@ export async function listChatDetails(options?: { chatId?: string; includeExtern
                 targetParticipant,
             });
             const conversationKind =
-                identity.type === 'tavern' && !identity.target
-                    ? 'group'
-                    : resolveObservedConversationKind({
-                          configured: agentRuntimeChat !== null,
-                          participants: uniqueParticipants,
-                          target: identity.target,
-                          type: identity.type,
-                      });
+                resolveConversationKindFromConfiguredScope(agentRuntimeChat?.scope ?? null) ??
+                resolveObservedConversationKind({
+                    configured: agentRuntimeChat !== null,
+                    participants: uniqueParticipants,
+                    target: identity.target,
+                    type: identity.type,
+                });
             const title = presentChatTitle({
                 conversationKind,
                 displayName,
@@ -381,13 +383,7 @@ export async function listChatDetails(options?: { chatId?: string; includeExtern
             });
             const canSend =
                 agentRuntimeChat !== null &&
-                boundAgentIds.some((agentId) => {
-                    const agent = agentById.get(agentId);
-
-                    return agent
-                        ? Boolean(findChatSessionKeyForAgent(agentRuntimeChat, agent.id))
-                        : false;
-                });
+                boundAgentIds.some((agentId) => agentById.has(agentId));
 
             return {
                 boundAgentIds,
@@ -406,7 +402,11 @@ export async function listChatDetails(options?: { chatId?: string; includeExtern
                 participants: uniqueParticipants,
                 agentRuntimeSync: null,
                 platformMetadata: agentRuntimeChat?.platformMetadata ?? null,
-                scope: resolveChatScope(identity.target),
+                scope:
+                    agentRuntimeChat?.scope &&
+                    ['channel', 'dm', 'group', 'topic'].includes(agentRuntimeChat.scope)
+                        ? agentRuntimeChat.scope
+                        : resolveChatScope(identity.target),
                 sessionCount: chatSessions.length,
                 source,
                 systemPrompt: readRuntimeChatSystemPrompt(agentRuntimeChat),
@@ -535,20 +535,19 @@ function resolveObservedParticipants(input: {
                 chatId: input.chatId,
             });
 
-            return input.participantById.get(resolvedParticipantId) ?? null;
+            return {
+                participant,
+                stored: input.participantById.get(resolvedParticipantId) ?? null,
+            };
         })
-        .flatMap((participant) => {
-            if (!participant) {
-                return [];
-            }
-
+        .flatMap(({ participant, stored }) => {
             return [
                 {
-                    actorId: participant.id,
+                    actorId: stored?.id ?? participant.participantId,
                     actorType: 'participant' as const,
-                    avatar: resolveParticipantAvatar(participant),
-                    name: resolveParticipantName(participant),
-                    primaryColor: resolveParticipantColor(participant),
+                    avatar: stored ? resolveParticipantAvatar(stored) : null,
+                    name: stored ? resolveParticipantName(stored) : participant.name,
+                    primaryColor: stored ? resolveParticipantColor(stored) : null,
                 },
             ];
         });
@@ -566,14 +565,25 @@ function getPrimaryObservedParticipant(input: {
         return null;
     }
 
-    return (
+    const stored =
         input.participantById.get(
             resolveRuntimeParticipantId({
                 idsByRuntimeParticipantKey: input.idsByRuntimeParticipantKey,
                 participant,
                 chatId: input.chatId,
             })
-        ) ?? null
+        ) ?? null;
+
+    return (
+        stored ?? {
+            accountKey: null,
+            externalId: participant.externalId,
+            id: participant.participantId,
+            labels: participant.observedLabels,
+            lastSeenAt: null,
+            observedName: participant.name,
+            provider: participant.platform,
+        }
     );
 }
 

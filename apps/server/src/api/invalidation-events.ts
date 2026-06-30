@@ -19,7 +19,6 @@ export const tavernEventNames = {
     jobsUpdated: 'jobs.updated',
     modelUpdated: 'model.updated',
     openRouterSettingsUpdated: 'open-router-settings.updated',
-    hermesConfigUpdated: 'hermes-config.updated',
     agentRuntimeCapabilityUpdated: 'agent-runtime-capability.updated',
     agentRuntimeUpdated: 'agent-runtime.updated',
     sessionUpdated: 'session.updated',
@@ -125,10 +124,6 @@ export function emitCronUpdated() {
 
 export function emitOpenRouterSettingsUpdated() {
     emitTavernEvent(tavernEventNames.openRouterSettingsUpdated);
-}
-
-export function emitHermesConfigUpdated() {
-    emitTavernEvent(tavernEventNames.hermesConfigUpdated);
 }
 
 export function emitAgentRuntimeUpdated() {

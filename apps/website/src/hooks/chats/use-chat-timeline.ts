@@ -3,6 +3,8 @@ import { applyLogSnapshot, applyReplySnapshot } from './chat-timeline-state.ts';
 import { useChatTimelinePage } from './use-chat-timeline-page.ts';
 import { useChatRuntimeTimelineState, useTimelineActions } from './use-timeline-context.tsx';
 
+const activeTurnRefetchIntervalMs = 1000;
+
 export function useChatTimeline(input: { chatId: string; limit: number }) {
     const query = useChatTimelinePage({
         id: input.chatId,
@@ -21,6 +23,20 @@ export function useChatTimeline(input: { chatId: string; limit: number }) {
     React.useEffect(() => {
         setLog(input.chatId, query.data);
     }, [input.chatId, query.data, setLog]);
+
+    const activeReplyRunId = timelineWithLog.activeReply?.runId ?? null;
+
+    React.useEffect(() => {
+        if (!activeReplyRunId) {
+            return;
+        }
+
+        const interval = window.setInterval(() => {
+            void query.refetch();
+        }, activeTurnRefetchIntervalMs);
+
+        return () => window.clearInterval(interval);
+    }, [activeReplyRunId, query.refetch]);
 
     return {
         ...query,

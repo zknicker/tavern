@@ -1,6 +1,10 @@
-import type { AgentRuntimeChat, TavernChat } from '@tavern/api';
+import type {
+    AgentRuntimeChat,
+    AgentRuntimeChatParticipant,
+    TavernApiSchema,
+    TavernChat,
+} from '@tavern/api';
 import { TavernApiError } from '@tavern/sdk';
-import { buildTavernChatSessionKey } from '../agent-runtime/chats.ts';
 import {
     createAgentRuntimeClientForConnection,
     createTavernClientForConnection,
@@ -29,6 +33,8 @@ export type TavernChatDisplayNameSource = 'explicit' | 'generated';
 export interface TavernChatTabAppearance {
     color: string | null;
 }
+
+const localHumanParticipantId = 'usr_tavern';
 
 export async function listRuntimeChatRecords(options?: {
     chatId?: string;
@@ -123,6 +129,7 @@ export async function createRuntimeTavernChat(input: {
             id: input.id,
             tabAppearance: emptyTabAppearance(),
         }),
+        participants: buildRuntimeTavernParticipants(input.agentIds),
         pinned: false,
         title: input.displayName,
     });
@@ -150,6 +157,7 @@ export async function updateRuntimeTavernChat(input: {
             id: input.id,
             tabAppearance: metadata?.tabAppearance ?? emptyTabAppearance(),
         }),
+        participants: buildRuntimeTavernParticipants(input.agentIds),
         pinned,
         title: input.displayName,
     });
@@ -290,15 +298,6 @@ export function readRuntimeChatDisplayName(chat: AgentRuntimeChat) {
     return typeof displayName === 'string' && displayName.trim() ? displayName.trim() : null;
 }
 
-export function runtimeChatSessionKeys(chat: AgentRuntimeChat) {
-    return Array.isArray(chat.metadata.sessionKeys)
-        ? chat.metadata.sessionKeys.filter(
-              (sessionKey): sessionKey is string =>
-                  typeof sessionKey === 'string' && sessionKey.trim().length > 0
-          )
-        : [];
-}
-
 async function requireRuntimeChatClient() {
     const connection = await getActiveAgentRuntimeConnection();
 
@@ -341,19 +340,16 @@ async function getTavernChatOrNull(
 
 function tavernChatToRuntimeChat(chat: TavernChat): AgentRuntimeChat {
     const metadata = readTavernChatMetadata(chat);
-    const sessionKeys = metadata.agentIds.map((agentId) =>
-        buildTavernChatSessionKey(agentId, chat.id)
-    );
-    const target = `chat:${chat.id}`;
+    const agentIds = resolveTavernChatAgentIds(chat, metadata);
+    const target = `${chat.kind}:${chat.id}`;
 
     return {
         bindingId: null,
-        bindings: metadata.agentIds.map((agentId) => ({ agentId })),
+        bindings: agentIds.map((agentId) => ({ agentId })),
         id: chat.id,
         inboundMode: 'active',
         metadata: {
             ...chat.metadata,
-            sessionKeys,
             tavern: {
                 ...metadata,
                 archived: metadata.archived,
@@ -363,34 +359,52 @@ function tavernChatToRuntimeChat(chat: TavernChat): AgentRuntimeChat {
             },
         },
         parentTarget: null,
-        participants: metadata.agentIds.map((agentId) => ({
-            agentId,
-            type: 'agent',
-        })),
+        participants: chat.participants.flatMap(toRuntimeChatParticipants),
         platform: 'tavern',
         platformMetadata: {
             chatId: chat.id,
             conversationId: null,
             observedLabels: [metadata.displayName],
             provider: 'tavern',
-            sourceRecords: sessionKeys.map((sessionKey) => ({
-                chatId: chat.id,
-                clientMessageId: null,
-                conversationId: null,
-                deliveryId: null,
-                runId: null,
-                sessionKey,
-                source: {
-                    channel: 'tavern',
-                    target,
-                },
-            })),
+            sourceRecords: [],
         },
         requiresTrigger: false,
-        scope: null,
+        scope: chat.kind === 'dm' ? 'dm' : 'channel',
         target,
         trigger: null,
     };
+}
+
+function toRuntimeChatParticipants(
+    participant: TavernChat['participants'][number]
+): AgentRuntimeChatParticipant[] {
+    if (participant.kind === 'agent') {
+        return [{ agentId: participant.id, type: 'agent' }];
+    }
+
+    if (participant.kind === 'system' || participant.kind === 'plugin') {
+        return [];
+    }
+
+    return [
+        {
+            accountKey: null,
+            externalId: null,
+            name: participant.label ?? participant.id,
+            observedLabels: participant.label ? [participant.label] : [participant.id],
+            participantId: participant.id,
+            platform: 'tavern',
+            type: 'participant',
+        },
+    ];
+}
+
+function resolveTavernChatAgentIds(chat: TavernChat, metadata: TavernChatMetadata) {
+    const participantAgentIds = chat.participants
+        .filter((participant) => participant.kind === 'agent')
+        .map((participant) => participant.id);
+
+    return [...new Set([...participantAgentIds, ...metadata.agentIds])];
 }
 
 function readTavernChatMetadata(chat: TavernChat): TavernChatMetadata {
@@ -431,7 +445,6 @@ function buildRuntimeTavernChatMetadata(input: {
         runtime: {
             source: 'tavern',
         },
-        sessionKeys: input.agentIds.map((agentId) => buildTavernChatSessionKey(agentId, input.id)),
         tavern: {
             agentIds: input.agentIds,
             archived: input.archived,
@@ -454,6 +467,23 @@ function readTavernChatTabAppearance(input: unknown): TavernChatTabAppearance {
             ? record.color
             : null;
     return { color };
+}
+
+function buildRuntimeTavernParticipants(agentIds: string[]): TavernApiSchema<'Participant'>[] {
+    return [
+        {
+            id: localHumanParticipantId,
+            kind: 'user',
+            label: 'You',
+            metadata: { source: 'tavern' },
+        },
+        ...agentIds.map((agentId) => ({
+            id: agentId,
+            kind: 'agent' as const,
+            label: null,
+            metadata: { agentId, source: 'tavern' },
+        })),
+    ];
 }
 
 function emptyTabAppearance(): TavernChatTabAppearance {

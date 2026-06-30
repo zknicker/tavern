@@ -2,7 +2,7 @@ import type { AgentRuntimeSessionMessage } from '@tavern/api';
 import { asc, desc, eq, inArray } from 'drizzle-orm';
 import { db } from '../db/index.ts';
 import { sessionMessagesTable } from '../db/schema.ts';
-import { normalizeHermesModelIdentity } from '../model/hermes-mapping.ts';
+import { normalizeAgentModelIdentity } from '../model/model-mapping.ts';
 import {
     type RuntimeParticipantSource,
     resolveRuntimeParticipantSourceIdentities,
@@ -42,9 +42,9 @@ export async function syncSessionMessagesForRuntime(input: {
         const sessionKey = runtimeSessionKey;
 
         for (const [index, message] of messages.entries()) {
-            const modelInfo = normalizeHermesModelIdentity({
-                model: message.metadata?.hermesModel ?? message.metadata?.model ?? null,
-                provider: message.metadata?.hermesProvider ?? message.metadata?.provider ?? null,
+            const modelInfo = normalizeAgentModelIdentity({
+                model: message.metadata?.agentModel ?? message.metadata?.model ?? null,
+                provider: message.metadata?.agentProvider ?? message.metadata?.provider ?? null,
             });
             const id = buildSessionMessageId({
                 messageId: message.id,
@@ -72,11 +72,11 @@ export async function syncSessionMessagesForRuntime(input: {
                     externalMessageId: message.id,
                     id,
                     model: modelInfo?.modelId ?? message.metadata?.model ?? null,
-                    hermesApi: message.metadata?.hermesApi ?? message.metadata?.api ?? null,
-                    hermesModel: modelInfo?.hermesModel ?? message.metadata?.hermesModel ?? null,
-                    hermesModelNameId: modelInfo?.hermesModelNameId ?? null,
-                    hermesProvider:
-                        modelInfo?.hermesProvider ?? message.metadata?.hermesProvider ?? null,
+                    agentApi: message.metadata?.agentApi ?? message.metadata?.api ?? null,
+                    agentModel: modelInfo?.agentModel ?? message.metadata?.agentModel ?? null,
+                    agentModelNameId: modelInfo?.agentModelNameId ?? null,
+                    agentProvider:
+                        modelInfo?.agentProvider ?? message.metadata?.agentProvider ?? null,
                     provider: modelInfo?.provider ?? message.metadata?.provider ?? null,
                     rawJson: JSON.stringify(message),
                     role: message.senderType,
@@ -100,12 +100,11 @@ export async function syncSessionMessagesForRuntime(input: {
                         canonicalModelId: modelInfo?.modelRef ?? null,
                         contentText: message.content,
                         model: modelInfo?.modelId ?? message.metadata?.model ?? null,
-                        hermesApi: message.metadata?.hermesApi ?? message.metadata?.api ?? null,
-                        hermesModel:
-                            modelInfo?.hermesModel ?? message.metadata?.hermesModel ?? null,
-                        hermesModelNameId: modelInfo?.hermesModelNameId ?? null,
-                        hermesProvider:
-                            modelInfo?.hermesProvider ?? message.metadata?.hermesProvider ?? null,
+                        agentApi: message.metadata?.agentApi ?? message.metadata?.api ?? null,
+                        agentModel: modelInfo?.agentModel ?? message.metadata?.agentModel ?? null,
+                        agentModelNameId: modelInfo?.agentModelNameId ?? null,
+                        agentProvider:
+                            modelInfo?.agentProvider ?? message.metadata?.agentProvider ?? null,
                         provider: modelInfo?.provider ?? message.metadata?.provider ?? null,
                         rawJson: JSON.stringify(message),
                         role: message.senderType,

@@ -5,14 +5,14 @@ bug history or stale plans.
 
 Tavern is an always-on agent chat system backed by Tavern Runtime. Tavern Runtime owns canonical
 chats, messages, responses, activity, artifacts, participants, event cursors, automations,
-deliveries, Memory, generated config policy, and jobs. Tavern App owns the first-party Mac client,
-cache, presentation metadata, and app settings. Hermes owns native
-agent execution, sessions, turns, transcripts, files, tools, applied model/runtime config, platform
-bindings, and prompt-time memory.
+deliveries, Vault, generated instruction policy, executable agent settings, native agent
+execution, sessions, turns, transcripts, files, tools, model routing, provider state, platform
+bindings, prompt-time memory, and jobs. Tavern App owns the first-party Mac client, cache,
+presentation metadata, and app-shell preferences.
 
-Tavern currently supports one runtime product: Hermes. `packages/tavern-api` is the
-cross-boundary contract so product APIs stay stable and do not mirror Hermes design choices
-directly.
+Tavern currently supports one local agent engine implementation inside Runtime.
+`packages/tavern-api` is the cross-boundary contract so product APIs stay stable and do not mirror
+agent-engine implementation choices directly.
 
 ## Rules
 
@@ -22,11 +22,11 @@ directly.
 - Keep obsolete migration history and research notes out of `specs/`. Durable architecture specs
   can include migration phases and open questions while a design is in flight.
 - Update `packages/tavern-api` when a cross-boundary first-party contract changes.
-- Keep runtime-specific behavior in `agent-runtimes/` or adapter package docs.
+- Keep Runtime-specific behavior in `agent-runtimes/` or agent-engine docs.
 
 ## Core Specs
 
-- `tavern.md`: product relationship between Tavern, Tavern Runtime, and Hermes.
+- `tavern.md`: product relationship between Tavern App, Tavern Runtime, and the local agent engine.
 - `runtime-chat-server.md`: always-on runtime-owned chat server design.
 - `runtime-boundary.md`: ownership boundaries and runtime expectations.
 - `sync-model.md`: runtime mapping, freshness, deletion, edit, event, and job behavior.
@@ -38,8 +38,8 @@ directly.
   focused product surfaces.
 - `clarifications.md`: mid-turn questions, skip/timeout answers, and runtime
   response wiring.
-- `connectors.md`: user-configured MCP servers as a settings surface.
-- `permissions.md`: approval modes and the command allowlist.
+- `mcp.md`: user-configured MCP servers as a settings surface.
+- `permissions.md`: static tool grants, sandbox mode, and command allowlist.
 - `workspace.md`: the generated `AGENTS.md` artifact and its editable
   sources (`NOTES.md`, `SOUL.md`).
 - `tavern-skill.md`: the agent's product knowledge of and operational access
@@ -47,28 +47,25 @@ directly.
 
 ## Memory Specs
 
-- `memories.md`: durable Memory root, person memory, and memory
+- `memories.md`: Vault durable knowledge, person memory, and memory
   inspection surfaces.
-- `memory-context.md`: bounded prompt-facing context assembled from Hermes
-  context management, chat state, participants, and selected Memory material.
-- `memory-lifecycle.md`: Memory lifecycle, correction, forgetting, and
+- `memory-context.md`: bounded prompt-facing context assembled from Runtime
+  context management, chat state, participants, and selected wiki material.
+- `memory-lifecycle.md`: Vault lifecycle, correction, forgetting, and
   maintenance through Tasks and crons.
 - `memory-persistence.md`: historical memory persistence design; do not extend
-  it for new Memory work.
+  it for new wiki work.
 - `participant-knowledge.md`: participant identity resolution and person-level
   knowledge.
 
-## Compatibility Specs
+## Vault Specs
 
-- `vault.md`: compatibility wire contract for vault-named Memory routes.
+- `vault.md`: Vault-backed durable knowledge browser and Runtime contract.
 
 ## Runtime Specs
 
 - `../docs/internals/runtime.md`: Tavern Runtime ownership and sync flow.
-- `../docs/operations/hermes-runtime-upgrade.md`: managed Hermes version bump and state
-  migration process.
-- `agent-runtimes/README.md`: Hermes runtime spec index.
-- `agent-runtimes/agent-runtimes.md`: Hermes runtime model.
-- `agent-runtimes/hermes-gateway.md`: implemented Hermes Gateway adapter contract.
+- `agent-runtimes/README.md`: agent runtime spec index.
+- `agent-runtimes/agent-runtimes.md`: local agent runtime model.
 - `agent-runtimes/agents.md`, `agent-runtimes/chats.md`, `agent-runtimes/sessions.md`,
   `agent-runtimes/security.md`: focused runtime-facing expectations.

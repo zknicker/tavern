@@ -18,12 +18,6 @@ import {
     thinkingOptions,
 } from '../../../components/ui/thinking-shared.ts';
 import type { ModelListOutput } from '../../../lib/trpc.tsx';
-import { type FallbackModelEntry, FallbackModelsEditor } from './fallback-models-editor.tsx';
-import {
-    type SubagentEffortValue,
-    type SubagentModelEntry,
-    SubagentRows,
-} from './subagent-rows.tsx';
 import type { AgentModelDraft, ThinkingLevelValue } from './types.ts';
 
 type Model = ModelListOutput['models'][number];
@@ -33,28 +27,14 @@ const inheritThinkingValue = '__inherit__';
 
 export function AgentModelSection({
     disabled,
-    fallbackModels,
-    fallbacksDisabled,
     modelOptions,
     onChange,
-    onFallbacksChange,
-    onSubagentEffortChange,
-    onSubagentModelChange,
-    subagentEffort,
-    subagentModel,
     syncError,
     value,
 }: {
     disabled: boolean;
-    fallbackModels: FallbackModelEntry[];
-    fallbacksDisabled: boolean;
     modelOptions: Model[];
     onChange: (value: AgentModelDraft | null) => void;
-    onFallbacksChange: (next: FallbackModelEntry[]) => void;
-    onSubagentEffortChange: (next: SubagentEffortValue | null) => void;
-    onSubagentModelChange: (next: SubagentModelEntry | null) => void;
-    subagentEffort: SubagentEffortValue | null;
-    subagentModel: SubagentModelEntry | null;
     syncError: string | null;
     value: AgentModelDraft | null;
 }) {
@@ -87,7 +67,7 @@ export function AgentModelSection({
                             }}
                             value={value?.modelRef ?? undefined}
                         >
-                            <SelectTrigger>
+                            <SelectTrigger aria-label="Agent model">
                                 <SelectValue placeholder="Choose model">
                                     {selectedChoice ? selectedChoice.model.name : undefined}
                                 </SelectValue>
@@ -155,32 +135,6 @@ export function AgentModelSection({
                             </SelectContent>
                         </Select>
                     </SettingsRow>
-
-                    <Separator />
-
-                    <SettingsRow
-                        description="Tried in order when the primary model fails."
-                        title="Fallback models"
-                    >
-                        <FallbackModelsEditor
-                            disabled={fallbacksDisabled}
-                            fallbackModels={fallbackModels}
-                            modelOptions={modelOptions}
-                            onChange={onFallbacksChange}
-                            primaryModelRef={value?.modelRef ?? null}
-                        />
-                    </SettingsRow>
-
-                    <Separator />
-
-                    <SubagentRows
-                        disabled={fallbacksDisabled}
-                        modelOptions={modelOptions}
-                        onSubagentEffortChange={onSubagentEffortChange}
-                        onSubagentModelChange={onSubagentModelChange}
-                        subagentEffort={subagentEffort}
-                        subagentModel={subagentModel}
-                    />
                 </Card>
             </CardFrame>
         </section>

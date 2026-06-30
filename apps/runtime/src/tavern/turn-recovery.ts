@@ -14,7 +14,7 @@ interface InterruptedResponseRow {
 
 /**
  * Finalizes chat responses orphaned in a non-terminal state by a Runtime
- * restart. The Hermes stream consumer lives in process memory, so a restart
+ * restart. The agent stream consumer lives in process memory, so a restart
  * mid-turn leaves the canonical response row running forever while the engine
  * finishes (or finished) on its own. Runs once at startup, before new turns.
  */

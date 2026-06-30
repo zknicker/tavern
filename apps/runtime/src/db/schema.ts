@@ -71,34 +71,39 @@ CREATE TABLE IF NOT EXISTS agents (
 CREATE INDEX IF NOT EXISTS idx_agents_name
   ON agents(name, id);
 
-CREATE TABLE IF NOT EXISTS hermes_session_mappings (
-  tavern_session_key TEXT PRIMARY KEY,
-  hermes_session_key TEXT NOT NULL,
+CREATE TABLE IF NOT EXISTS agent_runtime_profiles (
+  agent_id           TEXT PRIMARY KEY,
+  default_model_json TEXT NOT NULL,
+  sandbox_mode       TEXT NOT NULL DEFAULT 'none' CHECK (sandbox_mode IN ('docker', 'none', 'podman')),
   created_at         TEXT NOT NULL,
-  updated_at         TEXT NOT NULL
+  updated_at         TEXT NOT NULL,
+  FOREIGN KEY(agent_id) REFERENCES agents(id) ON DELETE CASCADE
 );
 
-CREATE TABLE IF NOT EXISTS tavern_channel_outbox (
-  request_id        TEXT PRIMARY KEY,
-  message_id        TEXT NOT NULL UNIQUE,
-  chat_id           TEXT NOT NULL,
-  conversation_kind TEXT NOT NULL CHECK (conversation_kind IN ('channel', 'dm', 'thread')),
-  account_id        TEXT NOT NULL DEFAULT 'default',
-  agent_id          TEXT NOT NULL,
-  session_key       TEXT NOT NULL,
-  run_id            TEXT NOT NULL,
-  cursor            INTEGER NOT NULL,
-  accepted_at       TEXT NOT NULL,
-  plugin_accepted_at TEXT,
-  FOREIGN KEY(chat_id) REFERENCES chats(id) ON DELETE CASCADE,
-  FOREIGN KEY(message_id) REFERENCES chat_messages(id) ON DELETE CASCADE
+CREATE TABLE IF NOT EXISTS agent_model_selections (
+  agent_id          TEXT PRIMARY KEY,
+  provider_id       TEXT NOT NULL,
+  model_id          TEXT NOT NULL,
+  status            TEXT NOT NULL CHECK (status IN ('invalid', 'unknown', 'valid')),
+  invalid_reason    TEXT,
+  last_validated_at TEXT,
+  updated_at        TEXT NOT NULL,
+  FOREIGN KEY(agent_id) REFERENCES agents(id) ON DELETE CASCADE
 );
 
-CREATE INDEX IF NOT EXISTS idx_tavern_channel_outbox_pending
-  ON tavern_channel_outbox(plugin_accepted_at, cursor);
+CREATE TABLE IF NOT EXISTS model_catalog_cache (
+  provider_id TEXT PRIMARY KEY,
+  source_kind TEXT NOT NULL,
+  models_json TEXT NOT NULL,
+  warning TEXT,
+  refreshed_at TEXT NOT NULL,
+  expires_at TEXT,
+  fingerprint TEXT
+);
 
 CREATE TABLE IF NOT EXISTS chats (
   id                    TEXT PRIMARY KEY,
+  kind                  TEXT NOT NULL DEFAULT 'channel' CHECK (kind IN ('channel', 'dm')),
   title                 TEXT,
   pinned                INTEGER NOT NULL DEFAULT 0 CHECK (pinned IN (0, 1)),
   metadata_json         TEXT NOT NULL DEFAULT '{}',
@@ -108,14 +113,69 @@ CREATE TABLE IF NOT EXISTS chats (
 );
 
 CREATE TABLE IF NOT EXISTS chat_participants (
-  chat_id       TEXT NOT NULL,
-  id            TEXT NOT NULL,
-  kind          TEXT NOT NULL CHECK (kind IN ('user', 'agent', 'system', 'plugin')),
-  label         TEXT,
-  metadata_json TEXT NOT NULL DEFAULT '{}',
+  chat_id                  TEXT NOT NULL,
+  id                       TEXT NOT NULL,
+  kind                     TEXT NOT NULL CHECK (kind IN ('user', 'agent', 'system', 'external', 'plugin')),
+  label                    TEXT,
+  metadata_json            TEXT NOT NULL DEFAULT '{}',
+  current_agent_session_id TEXT,
   PRIMARY KEY(chat_id, id),
   FOREIGN KEY(chat_id) REFERENCES chats(id) ON DELETE CASCADE
 );
+
+CREATE TABLE IF NOT EXISTS agent_sessions (
+  id                     TEXT PRIMARY KEY,
+  chat_id                TEXT NOT NULL,
+  agent_participant_id   TEXT NOT NULL,
+  agent_id               TEXT NOT NULL,
+  generation             INTEGER NOT NULL CHECK (generation > 0),
+  effective_model_json   TEXT NOT NULL,
+  runtime_session_id     TEXT,
+  resume_state_json      TEXT,
+  status                 TEXT NOT NULL CHECK (status IN ('active', 'archived', 'stopped')),
+  created_at             TEXT NOT NULL,
+  updated_at             TEXT NOT NULL,
+  archived_at            TEXT,
+  UNIQUE(chat_id, agent_participant_id, generation),
+  FOREIGN KEY(chat_id) REFERENCES chats(id) ON DELETE CASCADE,
+  FOREIGN KEY(chat_id, agent_participant_id) REFERENCES chat_participants(chat_id, id) ON DELETE CASCADE,
+  FOREIGN KEY(agent_id) REFERENCES agents(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_agent_sessions_seat_generation
+  ON agent_sessions(chat_id, agent_participant_id, generation DESC);
+
+CREATE INDEX IF NOT EXISTS idx_agent_sessions_agent
+  ON agent_sessions(agent_id, status, updated_at);
+
+CREATE TABLE IF NOT EXISTS agent_turns (
+  id                      TEXT PRIMARY KEY,
+  chat_id                 TEXT NOT NULL,
+  agent_session_id        TEXT NOT NULL,
+  agent_participant_id    TEXT NOT NULL,
+  agent_id                TEXT NOT NULL,
+  trigger_message_id      TEXT NOT NULL,
+  response_id             TEXT NOT NULL,
+  status                  TEXT NOT NULL CHECK (status IN ('queued', 'running', 'completed', 'failed', 'cancelled')),
+  attempt                 INTEGER NOT NULL CHECK (attempt > 0),
+  output_message_ids_json TEXT NOT NULL DEFAULT '[]',
+  activity_ids_json       TEXT NOT NULL DEFAULT '[]',
+  metadata_json           TEXT NOT NULL DEFAULT '{}',
+  created_at              TEXT NOT NULL,
+  updated_at              TEXT NOT NULL,
+  started_at              TEXT,
+  completed_at            TEXT,
+  FOREIGN KEY(chat_id) REFERENCES chats(id) ON DELETE CASCADE,
+  FOREIGN KEY(agent_session_id) REFERENCES agent_sessions(id) ON DELETE CASCADE,
+  FOREIGN KEY(trigger_message_id) REFERENCES chat_messages(id) ON DELETE CASCADE,
+  FOREIGN KEY(response_id) REFERENCES chat_responses(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_agent_turns_session_status
+  ON agent_turns(agent_session_id, status, created_at);
+
+CREATE INDEX IF NOT EXISTS idx_agent_turns_chat_updated
+  ON agent_turns(chat_id, updated_at);
 
 CREATE TABLE IF NOT EXISTS chat_messages (
   id                TEXT PRIMARY KEY,
@@ -207,7 +267,7 @@ CREATE TABLE IF NOT EXISTS chat_response_activity (
   response_id    TEXT NOT NULL,
   chat_id        TEXT NOT NULL,
   sequence       INTEGER NOT NULL,
-  kind           TEXT NOT NULL CHECK (kind IN ('planning', 'reasoning', 'tool_call', 'tool_result', 'command', 'approval', 'message', 'artifact', 'rich_response', 'custom')),
+  kind           TEXT NOT NULL CHECK (kind IN ('planning', 'reasoning', 'tool_call', 'tool_result', 'command', 'message', 'artifact', 'rich_response', 'custom')),
   status         TEXT NOT NULL CHECK (status IN ('queued', 'running', 'completed', 'failed', 'cancelled')),
   title          TEXT NOT NULL,
   detail         TEXT,
@@ -271,6 +331,11 @@ export function ensureRuntimeSchema(db: Database): void {
     db.exec(RUNTIME_SCHEMA);
     repairRuntimeSchema(db);
     ensureColumn(db, {
+        column: 'kind',
+        definition: "TEXT NOT NULL DEFAULT 'channel' CHECK (kind IN ('channel', 'dm'))",
+        table: 'chats',
+    });
+    ensureColumn(db, {
         column: 'pinned',
         definition: 'INTEGER NOT NULL DEFAULT 0 CHECK (pinned IN (0, 1))',
         table: 'chats',
@@ -279,6 +344,11 @@ export function ensureRuntimeSchema(db: Database): void {
         column: 'deleted_at',
         definition: 'TEXT',
         table: 'chat_responses',
+    });
+    ensureColumn(db, {
+        column: 'current_agent_session_id',
+        definition: 'TEXT',
+        table: 'chat_participants',
     });
 }
 

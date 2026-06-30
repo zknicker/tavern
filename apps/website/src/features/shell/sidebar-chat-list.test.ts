@@ -12,7 +12,7 @@ import {
     getSidebarDraftPath,
     hasLocalActiveTurn,
     isSidebarTavernChat,
-} from './sidebar-chat-list.tsx';
+} from './sidebar-chat-list-model.ts';
 
 function createChat(overrides: Partial<ChatListItem> = {}): ChatListItem {
     return {
@@ -65,7 +65,7 @@ function createDraft(overrides: Partial<ChatStartDraft> = {}): ChatStartDraft {
         realAcceptedAt: null,
         realChatId: null,
         realRunId: null,
-        realSessionKey: null,
+        realTurnReference: null,
         status: 'queued',
         title: 'Hello',
         ...overrides,
@@ -90,12 +90,38 @@ describe('sidebar chat list', () => {
 
     test('groups pinned chats separately from recent chats', () => {
         const pinned = createChat({ id: 'pinned', isPinned: true });
-        const recent = createChat({ id: 'recent' });
+        const recent = createChat({ conversationKind: 'channel', id: 'recent' });
         const groups = buildSidebarChatGroups([pinned, recent]);
 
         expect(groups.pinnedChats).toEqual([pinned]);
+        expect(groups.channels).toEqual([recent]);
+        expect(groups.directMessages).toEqual([]);
         expect(groups.recentChats).toEqual([recent]);
         expect(groups.allChats).toEqual([pinned, recent]);
+    });
+
+    test('splits workspace chats into channels and direct messages', () => {
+        const channel = createChat({
+            conversationKind: 'channel',
+            id: 'channel',
+            title: '#general',
+        });
+        const dm = createChat({
+            conversationKind: 'direct',
+            id: 'dm',
+            title: 'Tavern',
+        });
+        const group = createChat({
+            conversationKind: 'group',
+            id: 'group',
+            title: 'Legacy group',
+        });
+
+        const groups = buildSidebarChatGroups([channel, dm, group]);
+
+        expect(groups.channels).toEqual([channel]);
+        expect(groups.directMessages).toEqual([dm]);
+        expect(groups.recentChats).toEqual([channel, dm, group]);
     });
 
     test('keeps draft chats visible until their synced chat appears', () => {

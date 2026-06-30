@@ -74,7 +74,7 @@ CREATE TABLE chat_response_activity (
   response_id    TEXT NOT NULL,
   chat_id        TEXT NOT NULL,
   sequence       INTEGER NOT NULL,
-  kind           TEXT NOT NULL CHECK (kind IN ('planning', 'reasoning', 'tool_call', 'tool_result', 'command', 'approval', 'message', 'artifact', 'widget', 'custom')),
+  kind           TEXT NOT NULL CHECK (kind IN ('planning', 'reasoning', 'tool_call', 'tool_result', 'command', 'message', 'artifact', 'widget', 'custom')),
   status         TEXT NOT NULL CHECK (status IN ('queued', 'running', 'completed', 'failed', 'cancelled')),
   title          TEXT NOT NULL,
   detail         TEXT,

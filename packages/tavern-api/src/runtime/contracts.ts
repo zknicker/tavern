@@ -208,53 +208,19 @@ export const agentRuntimeSaveOpenRouterSettingsSchema = z
         'Enter an OpenRouter key.'
     );
 
-export const agentRuntimeHermesModelNameSchema = z.object({
+export const agentRuntimeModelNameSchema = z.object({
     baseUrl: z.string().trim().url().optional(),
     model: z.string().trim().min(1),
     provider: z.string().trim().min(1),
 });
 
-export const agentRuntimeSubagentEffortSchema = z.enum([
-    'none',
-    'minimal',
-    'low',
-    'medium',
-    'high',
-    'xhigh',
-]);
-
-export const agentRuntimeCompressionSettingsSchema = z.object({
-    enabled: z.boolean(),
-    protectLastMessages: z.number().int().min(0).max(400),
-    thresholdPercent: z.number().int().min(10).max(95),
-});
-
-export const agentRuntimeWebExtractSummarizerSettingsSchema =
-    agentRuntimeHermesModelNameSchema.extend({
-        timeoutSeconds: z.number().int().min(30).max(900),
-    });
-
 export const agentRuntimeExecutionSettingsSchema = z.object({
-    /** null = engine default; the compression keys are left untouched. */
-    compression: agentRuntimeCompressionSettingsSchema.nullable().default(null),
-    fallbackModels: z.array(agentRuntimeHermesModelNameSchema),
-    /** null = subagents inherit the primary model. */
-    subagentModel: agentRuntimeHermesModelNameSchema.nullable().default(null),
-    /** null = subagents inherit the primary thinking effort. */
-    subagentEffort: agentRuntimeSubagentEffortSchema.nullable().default(null),
     timezone: z.string().nullable(),
     updatedAt: z.string().datetime().nullable(),
-    /** null = engine default; web_extract summaries use the primary chat model. */
-    webExtractSummarizer: agentRuntimeWebExtractSummarizerSettingsSchema.nullable().default(null),
 });
 
 export const agentRuntimeSaveExecutionSettingsSchema = z.object({
-    compression: agentRuntimeCompressionSettingsSchema.nullable().optional(),
-    fallbackModels: z.array(agentRuntimeHermesModelNameSchema).max(10).optional(),
-    subagentModel: agentRuntimeHermesModelNameSchema.nullable().optional(),
-    subagentEffort: agentRuntimeSubagentEffortSchema.nullable().optional(),
     timezone: z.string().trim().min(1).nullable().optional(),
-    webExtractSummarizer: agentRuntimeWebExtractSummarizerSettingsSchema.nullable().optional(),
 });
 
 export const agentRuntimeSaveExecutionSettingsResultSchema =
@@ -262,29 +228,7 @@ export const agentRuntimeSaveExecutionSettingsResultSchema =
         restartScheduled: z.boolean(),
     });
 
-export const agentRuntimeApprovalModeSchema = z.enum(['allow', 'ask', 'deny']);
-
-const agentRuntimeCommandAllowlistSchema = z.array(z.string().trim().min(1).max(512)).max(200);
-
-export const agentRuntimePermissionSettingsSchema = z.object({
-    approvalMode: agentRuntimeApprovalModeSchema,
-    automationApprovalMode: agentRuntimeApprovalModeSchema,
-    commandAllowlist: agentRuntimeCommandAllowlistSchema,
-    updatedAt: z.string().datetime().nullable(),
-});
-
-export const agentRuntimeSavePermissionSettingsSchema = z.object({
-    approvalMode: agentRuntimeApprovalModeSchema.optional(),
-    automationApprovalMode: agentRuntimeApprovalModeSchema.optional(),
-    commandAllowlist: agentRuntimeCommandAllowlistSchema.optional(),
-});
-
-export const agentRuntimeSavePermissionSettingsResultSchema =
-    agentRuntimePermissionSettingsSchema.extend({
-        restartScheduled: z.boolean(),
-    });
-
-const agentRuntimeReservedEnvPrefixes = ['TAVERN_', 'HERMES_'] as const;
+const agentRuntimeReservedEnvPrefixes = ['TAVERN_'] as const;
 const agentRuntimeReservedEnvNames = new Set(['OPENAI_API_KEY', 'OPENROUTER_API_KEY']);
 
 function isAgentRuntimeReservedEnvName(name: string) {
@@ -350,81 +294,6 @@ export const agentRuntimeRunCommandSchema = z.object({
 export const agentRuntimeRunCommandResultSchema = z.object({
     output: z.string(),
     status: z.enum(['completed', 'failed']),
-});
-
-export const agentRuntimeConnectorTransportSchema = z.enum(['command', 'url']);
-
-const agentRuntimeConnectorIdSchema = z
-    .string()
-    .trim()
-    .min(1)
-    .max(64)
-    .regex(/^[a-z0-9][a-z0-9-]*$/u, 'Use lowercase letters, digits, and dashes.');
-
-const agentRuntimeConnectorSecretNameSchema = z.string().trim().min(1).max(128);
-
-/** API view of a connector secret entry: values are write-only. */
-const agentRuntimeConnectorSecretFieldSchema = z.object({
-    hasValue: z.boolean(),
-    name: agentRuntimeConnectorSecretNameSchema,
-});
-
-/**
- * Save input secret entry. Omitted value keeps the stored value for that
- * name; entries absent from the list are removed.
- */
-const agentRuntimeSaveConnectorSecretFieldSchema = z.object({
-    name: agentRuntimeConnectorSecretNameSchema,
-    value: z.string().min(1).max(4096).optional(),
-});
-
-export const agentRuntimeConnectorSchema = z.object({
-    args: z.array(z.string().trim().min(1).max(1024)),
-    command: z.string().trim().min(1).max(1024).nullable(),
-    env: z.array(agentRuntimeConnectorSecretFieldSchema),
-    headers: z.array(agentRuntimeConnectorSecretFieldSchema),
-    id: agentRuntimeConnectorIdSchema,
-    name: z.string().trim().min(1).max(80),
-    timeoutSeconds: z.number().int().min(1).max(600).nullable(),
-    transport: agentRuntimeConnectorTransportSchema,
-    updatedAt: z.string().datetime(),
-    url: z.string().trim().url().nullable(),
-});
-
-export const agentRuntimeConnectorListSchema = z.object({
-    connectors: z.array(agentRuntimeConnectorSchema),
-});
-
-export const agentRuntimeSaveConnectorSchema = z
-    .object({
-        args: z.array(z.string().trim().min(1).max(1024)).max(32).default([]),
-        command: z.string().trim().min(1).max(1024).nullable().default(null),
-        env: z.array(agentRuntimeSaveConnectorSecretFieldSchema).max(32).default([]),
-        headers: z.array(agentRuntimeSaveConnectorSecretFieldSchema).max(32).default([]),
-        name: z.string().trim().min(1).max(80),
-        timeoutSeconds: z.number().int().min(1).max(600).nullable().default(null),
-        transport: agentRuntimeConnectorTransportSchema,
-        url: z.string().trim().url().nullable().default(null),
-    })
-    .refine(
-        (value) => (value.transport === 'command' ? Boolean(value.command) : Boolean(value.url)),
-        'A command transport needs a command; a URL transport needs a URL.'
-    );
-
-export const agentRuntimeSaveConnectorResultSchema = agentRuntimeConnectorSchema.extend({
-    restartScheduled: z.boolean(),
-});
-
-export const agentRuntimeDeleteConnectorResultSchema = z.object({
-    deleted: z.boolean(),
-    id: agentRuntimeConnectorIdSchema,
-    restartScheduled: z.boolean(),
-});
-
-export const agentRuntimeConnectorTestResultSchema = z.object({
-    id: agentRuntimeConnectorIdSchema,
-    message: z.string(),
-    ok: z.boolean(),
 });
 
 export const agentRuntimeThinkingLevelSchema = z.enum([
@@ -784,39 +653,43 @@ export const agentRuntimeMerchbaseActionResultSchema = z
     })
     .strict();
 
-export const agentRuntimeHermesConfigSchema = z.record(z.string(), z.unknown());
+export const agentRuntimeAgentEngineConfigSchema = z.record(z.string(), z.unknown());
 
-export const agentRuntimeHermesConfigSnapshotSchema = z.object({
-    config: agentRuntimeHermesConfigSchema,
+export const agentRuntimeAgentEngineConfigSnapshotSchema = z.object({
+    config: agentRuntimeAgentEngineConfigSchema,
     hash: z.string().trim().min(1),
     issues: z.array(z.unknown()).default([]),
     raw: z.string().nullable(),
     valid: z.boolean().nullable(),
 });
 
-export const agentRuntimeApplyHermesConfigSchema = z.object({
+export const agentRuntimeApplyAgentEngineConfigSchema = z.object({
     baseHash: z.string().trim().min(1),
-    config: agentRuntimeHermesConfigSchema,
+    config: agentRuntimeAgentEngineConfigSchema,
 });
 
-const agentRuntimeHermesConfigMutationSchema = z.object({});
+const agentRuntimeAgentEngineConfigMutationSchema = z.object({});
 
-export const agentRuntimeUpdateAgentNameSchema = agentRuntimeHermesConfigMutationSchema.extend({
-    name: z.string().trim().min(1),
-});
+export const agentRuntimeUpdateAgentNameSchema = agentRuntimeAgentEngineConfigMutationSchema.extend(
+    {
+        name: z.string().trim().min(1),
+    }
+);
 
-export const agentRuntimeUpdateAgentModelSchema = agentRuntimeHermesConfigMutationSchema.extend({
-    model: agentRuntimeHermesModelNameSchema,
-});
+export const agentRuntimeUpdateAgentModelSchema =
+    agentRuntimeAgentEngineConfigMutationSchema.extend({
+        model: agentRuntimeModelNameSchema,
+    });
 
 export const agentRuntimeUpdateAgentThinkingDefaultSchema =
-    agentRuntimeHermesConfigMutationSchema.extend({
+    agentRuntimeAgentEngineConfigMutationSchema.extend({
         thinkingDefault: agentRuntimeThinkingLevelSchema.nullable(),
     });
 
-export const agentRuntimeUpdateAgentToolsSchema = agentRuntimeHermesConfigMutationSchema.extend({
-    tools: z.array(z.string().trim().min(1)),
-});
+export const agentRuntimeUpdateAgentToolsSchema =
+    agentRuntimeAgentEngineConfigMutationSchema.extend({
+        tools: z.array(z.string().trim().min(1)),
+    });
 
 export const agentRuntimeDiscordAllowBotsSchema = z.union([z.boolean(), z.literal('mentions')]);
 
@@ -831,32 +704,33 @@ export const agentRuntimeDiscordBindingGuildSchema = z.object({
     requireMention: z.boolean(),
 });
 
-export const agentRuntimeSaveDiscordBindingSchema = agentRuntimeHermesConfigMutationSchema.extend({
-    accountId: z.string().trim().min(1).optional(),
-    agentId: z.string().trim().min(1),
-    allowBots: agentRuntimeDiscordAllowBotsSchema,
-    bindingId: z.string().trim().min(1).optional(),
-    enabled: z.boolean(),
-    groupPolicy: agentRuntimeDiscordGroupPolicySchema,
-    guilds: z.array(agentRuntimeDiscordBindingGuildSchema).default([]),
-    inboundMode: agentRuntimeInboundModeSchema,
-    match: z
-        .object({
-            dmUserIds: z.array(z.string().trim().min(1)).default([]),
-            parentChannelIds: z.array(z.string().trim().min(1)).default([]),
-        })
-        .default({
-            dmUserIds: [],
-            parentChannelIds: [],
-        }),
-    mentionPatterns: z.array(z.string().trim().min(1)).default([]),
-    metadata: agentRuntimeJsonRecordSchema.default({}),
-    name: z.string().trim().min(1),
-    replyToMode: agentRuntimeDiscordReplyToModeSchema,
-    token: z.string().trim().min(1).nullable().optional(),
-});
+export const agentRuntimeSaveDiscordBindingSchema =
+    agentRuntimeAgentEngineConfigMutationSchema.extend({
+        accountId: z.string().trim().min(1).optional(),
+        agentId: z.string().trim().min(1),
+        allowBots: agentRuntimeDiscordAllowBotsSchema,
+        bindingId: z.string().trim().min(1).optional(),
+        enabled: z.boolean(),
+        groupPolicy: agentRuntimeDiscordGroupPolicySchema,
+        guilds: z.array(agentRuntimeDiscordBindingGuildSchema).default([]),
+        inboundMode: agentRuntimeInboundModeSchema,
+        match: z
+            .object({
+                dmUserIds: z.array(z.string().trim().min(1)).default([]),
+                parentChannelIds: z.array(z.string().trim().min(1)).default([]),
+            })
+            .default({
+                dmUserIds: [],
+                parentChannelIds: [],
+            }),
+        mentionPatterns: z.array(z.string().trim().min(1)).default([]),
+        metadata: agentRuntimeJsonRecordSchema.default({}),
+        name: z.string().trim().min(1),
+        replyToMode: agentRuntimeDiscordReplyToModeSchema,
+        token: z.string().trim().min(1).nullable().optional(),
+    });
 
-export const agentRuntimeDeleteDiscordBindingSchema = agentRuntimeHermesConfigMutationSchema;
+export const agentRuntimeDeleteDiscordBindingSchema = agentRuntimeAgentEngineConfigMutationSchema;
 
 export const agentRuntimeDiscordBindingStatusSchema = z.enum(['configured', 'disabled', 'error']);
 export const agentRuntimeDiscordTokenSourceSchema = z.enum([
@@ -903,7 +777,7 @@ export const agentRuntimeAgentSchema = z.object({
     id: z.string().trim().min(1),
     isAdmin: z.boolean(),
     name: z.string().trim().min(1),
-    hermesModelName: agentRuntimeHermesModelNameSchema.nullable().optional(),
+    modelName: agentRuntimeModelNameSchema.nullable().optional(),
     primaryColor: z.string().trim().min(1).nullable(),
     thinkingDefault: agentRuntimeThinkingLevelSchema.nullable().optional(),
     workspaceFolder: z.string().trim().min(1),
@@ -924,7 +798,7 @@ export const agentRuntimeCreateAgentSchema = z.object({
     isAdmin: z.boolean().optional(),
     name: z.string().trim().min(1),
     primaryColor: z.string().trim().min(1).nullable().optional(),
-    workspaceFolder: z.string().trim().min(1),
+    workspaceFolder: z.string().trim().min(1).optional(),
 });
 
 export const agentRuntimeUpdateAgentSchema = z.object({
@@ -1106,21 +980,22 @@ export const agentRuntimeSkillListSchema = z.object({
     skills: z.array(agentRuntimeSkillSummarySchema),
 });
 
-export const agentRuntimeToolsetSchema = z.object({
+export const agentRuntimeToolSchema = z.object({
     configured: z.boolean(),
     description: z.string().nullable(),
     enabled: z.boolean(),
     id: z.string().trim().min(1),
     label: z.string().trim().min(1),
     name: z.string().trim().min(1),
+    readOnly: z.boolean().default(false),
     tools: z.array(z.string().trim().min(1)).default([]),
 });
 
-export const agentRuntimeToolsetListSchema = z.object({
-    toolsets: z.array(agentRuntimeToolsetSchema),
+export const agentRuntimeToolListSchema = z.object({
+    tools: z.array(agentRuntimeToolSchema),
 });
 
-export const agentRuntimeUpdateToolsetEnabledSchema = z.object({
+export const agentRuntimeUpdateToolEnabledSchema = z.object({
     enabled: z.boolean(),
 });
 
@@ -1304,10 +1179,27 @@ export const agentRuntimeArchiveBindingSchema = z.object({
     id: z.string().trim().min(1),
 });
 
+export const agentRuntimeModelExecutionKindSchema = z.enum(['harness', 'language-model']);
+
+export const agentRuntimeModelAvailabilitySchema = z.enum(['available', 'degraded', 'unavailable']);
+
+export const agentRuntimeModelSourceKindSchema = z.enum(['curated', 'live', 'merged']);
+
+export const agentRuntimeModelRouteSchema = z.object({
+    baseUrl: z.string().trim().url().nullable().default(null),
+    model: z.string().trim().min(1),
+    provider: z.string().trim().min(1),
+});
+
 export const agentRuntimeModelCatalogEntrySchema = z.object({
+    availability: agentRuntimeModelAvailabilitySchema.default('available'),
+    executionKind: agentRuntimeModelExecutionKindSchema.default('language-model'),
     id: z.string().trim().min(1),
     label: z.string().trim().min(1).nullable(),
+    metadata: agentRuntimeJsonRecordSchema.default({}),
     provider: z.string().trim().min(1).nullable(),
+    route: agentRuntimeModelRouteSchema,
+    sourceKind: agentRuntimeModelSourceKindSchema.default('curated'),
 });
 
 export const agentRuntimeModelProviderAuthTypeSchema = z.enum([
@@ -1645,6 +1537,54 @@ export const agentRuntimeCronRunListSchema = z.object({
     runs: z.array(agentRuntimeCronRunSchema),
 });
 
+export const agentRuntimeFrontendSchema = z.enum(['cli', 'discord', 'sdk', 'tavern', 'telegram']);
+
+export const agentRuntimeAgentSessionStatusSchema = z.enum(['active', 'archived', 'stopped']);
+
+export const agentRuntimeAgentSessionSchema = z.object({
+    agentId: z.string().trim().min(1),
+    agentParticipantId: z.string().trim().min(1),
+    archivedAt: z.string().datetime().nullable(),
+    chatId: z.string().trim().min(1),
+    createdAt: z.string().datetime(),
+    effectiveModel: agentRuntimeModelNameSchema,
+    generation: z.number().int().positive(),
+    id: z.string().trim().min(1),
+    resumeState: agentRuntimeJsonRecordSchema.nullable(),
+    runtimeSessionId: z.string().trim().min(1).nullable(),
+    status: agentRuntimeAgentSessionStatusSchema,
+    updatedAt: z.string().datetime(),
+});
+
+export const agentRuntimeProfileSchema = z.object({
+    agentId: z.string().trim().min(1),
+    defaultModel: agentRuntimeModelNameSchema,
+    sandboxMode: z.enum(['docker', 'none', 'podman']).default('none'),
+    updatedAt: z.string().datetime(),
+});
+
+export const agentRuntimeStartAgentSessionSchema = z.object({
+    agentParticipantId: z.string().trim().min(1).optional(),
+});
+
+export const agentRuntimeStartAgentSessionResultSchema = z.object({
+    session: agentRuntimeAgentSessionSchema,
+});
+
+export const agentRuntimeCurrentAgentSessionResultSchema = z.object({
+    session: agentRuntimeAgentSessionSchema.nullable(),
+});
+
+export const agentRuntimeUpdateAgentSessionModelSchema = z.object({
+    agentParticipantId: z.string().trim().min(1).optional(),
+    model: agentRuntimeModelNameSchema,
+});
+
+export const agentRuntimeUpdateAgentSessionModelResultSchema = z.object({
+    rotated: z.boolean(),
+    session: agentRuntimeAgentSessionSchema,
+});
+
 export const agentRuntimeRunCronSchema = z.object({
     mode: z.enum(['enqueue', 'force']).default('force'),
 });
@@ -1785,6 +1725,7 @@ export const agentRuntimeSessionArtifactSchema = z.object({
 });
 
 export const agentRuntimeMentionProjectionSchema = z.enum([
+    'agent-reference',
     'capability-reference',
     'image-input',
     'path-reference',
@@ -1795,7 +1736,7 @@ export const agentRuntimeMentionSchema = z
     .object({
         end: z.number().int().nonnegative(),
         id: z.string().trim().min(1),
-        kind: z.enum(['app', 'directory', 'file', 'image', 'plugin', 'skill']),
+        kind: z.enum(['agent', 'app', 'directory', 'file', 'image', 'plugin', 'skill']),
         label: z.string().trim().min(1),
         metadata: z.record(z.string(), z.unknown()).optional(),
         projection: agentRuntimeMentionProjectionSchema,
@@ -1809,6 +1750,7 @@ export const agentRuntimeMentionSchema = z
 
 export const agentRuntimeTavernMessageMetadataSchema = z
     .object({
+        addressedAgentIds: z.array(z.string().trim().min(1)).optional(),
         mentions: z.array(agentRuntimeMentionSchema).optional(),
     })
     .passthrough();
@@ -1822,9 +1764,9 @@ export const agentRuntimeMessageMetadataSchema = z
         inputTokens: z.number().int().nonnegative().nullable().optional(),
         isError: z.boolean().nullable().optional(),
         model: z.string().trim().min(1).optional(),
-        hermesApi: z.string().trim().min(1).optional(),
-        hermesModel: z.string().trim().min(1).optional(),
-        hermesProvider: z.string().trim().min(1).optional(),
+        agentApi: z.string().trim().min(1).optional(),
+        agentModel: z.string().trim().min(1).optional(),
+        agentProvider: z.string().trim().min(1).optional(),
         outputTokens: z.number().int().nonnegative().nullable().optional(),
         parts: z.array(z.record(z.string(), z.unknown())).nullable().optional(),
         provider: agentRuntimeModelProviderIdSchema.optional(),
@@ -1942,7 +1884,6 @@ export const agentRuntimeSessionResyncSchema = z.object({
 
 export const chatTargetSchema = z.object({
     externalId: z.string().trim().min(1).nullable(),
-    sessionKey: z.string().trim().min(1).nullable().optional(),
     target: z.string().trim().min(1),
     type: z.string().trim().min(1),
 });
@@ -1977,7 +1918,6 @@ export const agentRuntimeMessageAcceptedSchema = z.object({
     nonce: z.string().trim().min(1).optional(),
     runId: z.string().trim().min(1),
     sequence: z.number().int().positive().optional(),
-    sessionKey: z.string().trim().min(1).nullable(),
     status: z.literal('accepted'),
 });
 
@@ -2001,17 +1941,6 @@ export const agentRuntimeSteerTurnResultSchema = z.object({
     steered: z.boolean(),
 });
 
-export const agentRuntimeApprovalChoiceSchema = z.enum(['once', 'session', 'always', 'deny']);
-
-export const agentRuntimeApprovalRespondSchema = z.object({
-    all: z.boolean().optional(),
-    choice: agentRuntimeApprovalChoiceSchema,
-});
-
-export const agentRuntimeApprovalRespondResultSchema = z.object({
-    resolved: z.number().int().nonnegative(),
-});
-
 export const agentRuntimeClarificationDispositionSchema = z.enum([
     'answered',
     'skipped',
@@ -2027,67 +1956,6 @@ export const agentRuntimeClarificationPromptSchema = z.object({
     requestId: z.string().trim().min(1),
 });
 
-export const agentRuntimeClarificationRespondSchema = z.object({
-    answer: z.string().trim().min(1),
-    disposition: agentRuntimeClarificationDispositionSchema.optional(),
-    requestId: z.string().trim().min(1),
-});
-
-export const agentRuntimeClarificationRespondResultSchema = z.object({
-    resolved: z.boolean(),
-});
-
-export const tavernChannelConversationSchema = z.object({
-    groupChannel: z.string().trim().min(1).nullable().optional(),
-    groupSubject: z.string().trim().min(1).nullable().optional(),
-    groupSystemPrompt: z.string().trim().min(1).nullable().optional(),
-    id: z.string().trim().min(1),
-    kind: z.enum(['channel', 'dm', 'thread']),
-    label: z.string().trim().min(1).nullable(),
-    parentId: z.string().trim().min(1).nullable().optional(),
-    threadRootId: z.string().trim().min(1).nullable().optional(),
-});
-
-export const tavernChannelMessageSchema = z.object({
-    attachments: z.array(z.unknown()).default([]),
-    author: z
-        .object({
-            id: z.string().trim().min(1),
-            name: z.string().trim().min(1),
-        })
-        .optional(),
-    id: z.string().trim().min(1),
-    metadata: agentRuntimeMessageMetadataSchema.optional(),
-    nonce: z.string().trim().min(1).optional(),
-    parentMessageId: z.string().trim().min(1).nullable().optional(),
-    senderId: z.string().trim().min(1),
-    senderName: z.string().trim().min(1),
-    sequence: z.number().int().positive().optional(),
-    text: z.string().trim().min(1),
-    threadRootId: z.string().trim().min(1).nullable().optional(),
-    timestamp: z.string().datetime(),
-});
-
-export const tavernChannelHistoryEntrySchema = z.object({
-    body: z.string(),
-    messageId: z.string().trim().min(1).optional(),
-    sender: z.string().trim().min(1).optional(),
-    timestamp: z.number().int().nonnegative().optional(),
-});
-
-export const tavernChannelInboundMessageSchema = z.object({
-    accountId: z.string().trim().min(1),
-    agentId: z.string().trim().min(1),
-    conversation: tavernChannelConversationSchema,
-    cursor: z.number().int().nonnegative(),
-    kind: z.literal('inbound-message'),
-    message: tavernChannelMessageSchema,
-    recentMessages: z.array(tavernChannelHistoryEntrySchema).default([]),
-    requestId: z.string().trim().min(1),
-    sessionKey: z.string().trim().min(1),
-    turnId: z.string().trim().min(1).optional(),
-});
-
 export const tavernChannelMessageAcceptedFrameSchema = z.object({
     accepted: agentRuntimeMessageAcceptedSchema,
     kind: z.literal('message-accepted'),
@@ -2099,11 +1967,6 @@ export const tavernChannelRuntimeLogFrameSchema = z.object({
     kind: z.literal('runtime-log'),
     payload: z.record(z.string(), z.unknown()).default({}),
 });
-
-export const tavernChannelClientFrameSchema = z.discriminatedUnion('kind', [
-    tavernChannelMessageAcceptedFrameSchema,
-    tavernChannelRuntimeLogFrameSchema,
-]);
 
 export const agentRuntimeTurnSchema = z.object({
     agentId: z.string().trim().min(1),
@@ -2128,7 +1991,6 @@ export const agentRuntimeTurnProgressStepSchema = z.object({
     detail: z.string().trim().min(1).nullable().optional(),
     id: z.string().trim().min(1),
     kind: z.enum([
-        'approval',
         'artifact',
         'command',
         'message',
@@ -2196,7 +2058,6 @@ export const agentRuntimeChatMessageAcceptedEventSchema = z.object({
     chatId: z.string().trim().min(1),
     message: agentRuntimeChatAcceptedMessageSchema,
     runId: z.string().trim().min(1),
-    sessionKey: z.string().trim().min(1),
     timestamp: z.string().datetime(),
     type: z.literal('chat.messageAccepted'),
 });
@@ -2561,26 +2422,13 @@ export type AgentRuntimeModelProviderOAuthSubmit = z.infer<
 export type AgentRuntimeOpenAiSettings = z.infer<typeof agentRuntimeOpenAiSettingsSchema>;
 export type AgentRuntimeSaveOpenAiSettings = z.infer<typeof agentRuntimeSaveOpenAiSettingsSchema>;
 export type AgentRuntimeOpenRouterSettings = z.infer<typeof agentRuntimeOpenRouterSettingsSchema>;
-export type AgentRuntimeHermesModelName = z.infer<typeof agentRuntimeHermesModelNameSchema>;
+export type AgentRuntimeModelName = z.infer<typeof agentRuntimeModelNameSchema>;
 export type AgentRuntimeExecutionSettings = z.infer<typeof agentRuntimeExecutionSettingsSchema>;
-export type AgentRuntimeSubagentEffort = z.infer<typeof agentRuntimeSubagentEffortSchema>;
-export type AgentRuntimeCompressionSettings = z.infer<typeof agentRuntimeCompressionSettingsSchema>;
-export type AgentRuntimeWebExtractSummarizerSettings = z.infer<
-    typeof agentRuntimeWebExtractSummarizerSettingsSchema
->;
 export type AgentRuntimeSaveExecutionSettings = z.infer<
     typeof agentRuntimeSaveExecutionSettingsSchema
 >;
 export type AgentRuntimeSaveExecutionSettingsResult = z.infer<
     typeof agentRuntimeSaveExecutionSettingsResultSchema
->;
-export type AgentRuntimeApprovalMode = z.infer<typeof agentRuntimeApprovalModeSchema>;
-export type AgentRuntimePermissionSettings = z.infer<typeof agentRuntimePermissionSettingsSchema>;
-export type AgentRuntimeSavePermissionSettings = z.infer<
-    typeof agentRuntimeSavePermissionSettingsSchema
->;
-export type AgentRuntimeSavePermissionSettingsResult = z.infer<
-    typeof agentRuntimeSavePermissionSettingsResultSchema
 >;
 export type AgentRuntimeAgentEnv = z.infer<typeof agentRuntimeAgentEnvSchema>;
 export type AgentRuntimeAgentEnvVariable = z.infer<typeof agentRuntimeAgentEnvVariableSchema>;
@@ -2590,20 +2438,13 @@ export type AgentRuntimeCommand = z.infer<typeof agentRuntimeCommandSchema>;
 export type AgentRuntimeCommandList = z.infer<typeof agentRuntimeCommandListSchema>;
 export type AgentRuntimeRunCommand = z.infer<typeof agentRuntimeRunCommandSchema>;
 export type AgentRuntimeRunCommandResult = z.infer<typeof agentRuntimeRunCommandResultSchema>;
-export type AgentRuntimeConnectorTransport = z.infer<typeof agentRuntimeConnectorTransportSchema>;
-export type AgentRuntimeConnector = z.infer<typeof agentRuntimeConnectorSchema>;
-export type AgentRuntimeConnectorList = z.infer<typeof agentRuntimeConnectorListSchema>;
-export type AgentRuntimeSaveConnector = z.infer<typeof agentRuntimeSaveConnectorSchema>;
-export type AgentRuntimeSaveConnectorResult = z.infer<typeof agentRuntimeSaveConnectorResultSchema>;
-export type AgentRuntimeDeleteConnectorResult = z.infer<
-    typeof agentRuntimeDeleteConnectorResultSchema
+export type AgentRuntimeAgentEngineConfig = z.infer<typeof agentRuntimeAgentEngineConfigSchema>;
+export type AgentRuntimeAgentEngineConfigSnapshot = z.infer<
+    typeof agentRuntimeAgentEngineConfigSnapshotSchema
 >;
-export type AgentRuntimeConnectorTestResult = z.infer<typeof agentRuntimeConnectorTestResultSchema>;
-export type AgentRuntimeHermesConfig = z.infer<typeof agentRuntimeHermesConfigSchema>;
-export type AgentRuntimeHermesConfigSnapshot = z.infer<
-    typeof agentRuntimeHermesConfigSnapshotSchema
+export type AgentRuntimeApplyAgentEngineConfig = z.infer<
+    typeof agentRuntimeApplyAgentEngineConfigSchema
 >;
-export type AgentRuntimeApplyHermesConfig = z.infer<typeof agentRuntimeApplyHermesConfigSchema>;
 export type AgentRuntimeUpdateAgentName = z.infer<typeof agentRuntimeUpdateAgentNameSchema>;
 export type AgentRuntimeUpdateAgentModel = z.infer<typeof agentRuntimeUpdateAgentModelSchema>;
 export type AgentRuntimeUpdateAgentThinkingDefault = z.infer<
@@ -2617,7 +2458,10 @@ export type AgentRuntimeDeleteDiscordBinding = z.infer<
 export type AgentRuntimeDiscordBinding = z.infer<typeof agentRuntimeDiscordBindingSchema>;
 export type AgentRuntimeDiscordBindingList = z.infer<typeof agentRuntimeDiscordBindingListSchema>;
 export type AgentRuntimeModelCatalogEntry = z.infer<typeof agentRuntimeModelCatalogEntrySchema>;
+export type AgentRuntimeModelAvailability = z.infer<typeof agentRuntimeModelAvailabilitySchema>;
+export type AgentRuntimeModelExecutionKind = z.infer<typeof agentRuntimeModelExecutionKindSchema>;
 export type AgentRuntimeModels = z.infer<typeof agentRuntimeModelsSchema>;
+export type AgentRuntimeProfile = z.infer<typeof agentRuntimeProfileSchema>;
 export type AgentRuntimeSkillFile = z.infer<typeof agentRuntimeSkillFileSchema>;
 export type AgentRuntimeSaveWorkspaceInstructions = z.infer<
     typeof agentRuntimeSaveWorkspaceInstructionsSchema
@@ -2644,16 +2488,30 @@ export type AgentRuntimeSkill = z.infer<typeof agentRuntimeSkillSchema>;
 export type AgentRuntimeSkillDeletedEvent = z.infer<typeof agentRuntimeSkillDeletedEventSchema>;
 export type AgentRuntimeSkillList = z.infer<typeof agentRuntimeSkillListSchema>;
 export type AgentRuntimeSkillSummary = z.infer<typeof agentRuntimeSkillSummarySchema>;
-export type AgentRuntimeToolset = z.infer<typeof agentRuntimeToolsetSchema>;
-export type AgentRuntimeToolsetList = z.infer<typeof agentRuntimeToolsetListSchema>;
-export type AgentRuntimeUpdateToolsetEnabled = z.infer<
-    typeof agentRuntimeUpdateToolsetEnabledSchema
->;
+export type AgentRuntimeTool = z.infer<typeof agentRuntimeToolSchema>;
+export type AgentRuntimeToolList = z.infer<typeof agentRuntimeToolListSchema>;
+export type AgentRuntimeUpdateToolEnabled = z.infer<typeof agentRuntimeUpdateToolEnabledSchema>;
 export type AgentRuntimeMacApp = z.infer<typeof agentRuntimeMacAppSchema>;
 export type AgentRuntimeMacAppList = z.infer<typeof agentRuntimeMacAppListSchema>;
 export type AgentRuntimeSkillUpdatedEvent = z.infer<typeof agentRuntimeSkillUpdatedEventSchema>;
 export type AgentRuntimeSaveOpenRouterSettings = z.infer<
     typeof agentRuntimeSaveOpenRouterSettingsSchema
+>;
+export type AgentRuntimeFrontend = z.infer<typeof agentRuntimeFrontendSchema>;
+export type AgentRuntimeAgentSession = z.infer<typeof agentRuntimeAgentSessionSchema>;
+export type AgentRuntimeAgentSessionStatus = z.infer<typeof agentRuntimeAgentSessionStatusSchema>;
+export type AgentRuntimeStartAgentSession = z.infer<typeof agentRuntimeStartAgentSessionSchema>;
+export type AgentRuntimeStartAgentSessionResult = z.infer<
+    typeof agentRuntimeStartAgentSessionResultSchema
+>;
+export type AgentRuntimeCurrentAgentSessionResult = z.infer<
+    typeof agentRuntimeCurrentAgentSessionResultSchema
+>;
+export type AgentRuntimeUpdateAgentSessionModel = z.infer<
+    typeof agentRuntimeUpdateAgentSessionModelSchema
+>;
+export type AgentRuntimeUpdateAgentSessionModelResult = z.infer<
+    typeof agentRuntimeUpdateAgentSessionModelResultSchema
 >;
 export type AgentRuntimeSession = z.infer<typeof agentRuntimeSessionSchema>;
 export type AgentRuntimeSessionList = z.infer<typeof agentRuntimeSessionListSchema>;
@@ -2682,26 +2540,10 @@ export type AgentRuntimeStopTurn = z.infer<typeof agentRuntimeStopTurnSchema>;
 export type AgentRuntimeStopTurnResult = z.infer<typeof agentRuntimeStopTurnResultSchema>;
 export type AgentRuntimeSteerTurn = z.infer<typeof agentRuntimeSteerTurnSchema>;
 export type AgentRuntimeSteerTurnResult = z.infer<typeof agentRuntimeSteerTurnResultSchema>;
-export type AgentRuntimeApprovalChoice = z.infer<typeof agentRuntimeApprovalChoiceSchema>;
-export type AgentRuntimeApprovalRespond = z.infer<typeof agentRuntimeApprovalRespondSchema>;
-export type AgentRuntimeApprovalRespondResult = z.infer<
-    typeof agentRuntimeApprovalRespondResultSchema
->;
 export type AgentRuntimeClarificationDisposition = z.infer<
     typeof agentRuntimeClarificationDispositionSchema
 >;
 export type AgentRuntimeClarificationPrompt = z.infer<typeof agentRuntimeClarificationPromptSchema>;
-export type AgentRuntimeClarificationRespond = z.infer<
-    typeof agentRuntimeClarificationRespondSchema
->;
-export type AgentRuntimeClarificationRespondResult = z.infer<
-    typeof agentRuntimeClarificationRespondResultSchema
->;
-export type TavernChannelConversation = z.infer<typeof tavernChannelConversationSchema>;
-export type TavernChannelHistoryEntry = z.infer<typeof tavernChannelHistoryEntrySchema>;
-export type TavernChannelMessage = z.infer<typeof tavernChannelMessageSchema>;
-export type TavernChannelInboundMessage = z.infer<typeof tavernChannelInboundMessageSchema>;
-export type TavernChannelClientFrame = z.infer<typeof tavernChannelClientFrameSchema>;
 export type TavernChannelMessageAcceptedFrame = z.infer<
     typeof tavernChannelMessageAcceptedFrameSchema
 >;

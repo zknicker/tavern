@@ -1,11 +1,10 @@
 import { agentRouter } from './agent/router.ts';
 import { agentRuntimeRouter } from './agent-runtime/router.ts';
 import { chatRouter } from './chat/router.ts';
-import { connectorRouter } from './connector/router.ts';
 import { cronRouter } from './cron/router.ts';
-import { hermesConfigRouter } from './hermes-config/router.ts';
 import { jobsRouter } from './jobs/router.ts';
 import { logRouter } from './log/router.ts';
+import { mcpRouter } from './mcp/router.ts';
 import { mentionRouter } from './mention/router.ts';
 import { messagingPlatformRouter } from './messaging-platform/router.ts';
 import { modelRouter } from './model/router.ts';
@@ -25,7 +24,7 @@ import { workerRouter } from './worker/router.ts';
 export const appRouter = createRouter({
     agent: agentRouter,
     chat: chatRouter,
-    connector: connectorRouter,
+    mcp: mcpRouter,
     cron: cronRouter,
     jobs: jobsRouter,
     log: logRouter,
@@ -34,7 +33,6 @@ export const appRouter = createRouter({
     modelAccess: modelAccessRouter,
     model: modelRouter,
     openAiSettings: openAiSettingsRouter,
-    hermesConfig: hermesConfigRouter,
     openRouterSettings: openRouterSettingsRouter,
     participant: participantRouter,
     plugin: pluginRouter,

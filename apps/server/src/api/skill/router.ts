@@ -12,24 +12,15 @@ import {
 import { skillHubUninstallProcedure } from './hub-uninstall.ts';
 import { listSkillsProcedure } from './list.ts';
 import { listRuntimeSkillsProcedure } from './list-runtime.ts';
-import {
-    addMcpServerProcedure,
-    installMcpCatalogEntryProcedure,
-    mcpCatalogProcedure,
-    mcpServersProcedure,
-    removeMcpServerProcedure,
-    setMcpServerEnabledProcedure,
-    testMcpServerProcedure,
-} from './mcp.ts';
 import { onSkillUpdate } from './on-update.ts';
 import { setSkillEnabledProcedure } from './set-enabled.ts';
-import { setToolsetEnabledProcedure } from './set-toolset-enabled.ts';
+import { setToolEnabledProcedure } from './set-tool-enabled.ts';
 import {
-    runToolsetPostSetupProcedure,
-    saveToolsetEnvProcedure,
-    setToolsetProviderProcedure,
-    toolsetConfigProcedure,
-} from './toolset-setup.ts';
+    runToolPostSetupProcedure,
+    saveToolEnvProcedure,
+    setToolProviderProcedure,
+    toolConfigProcedure,
+} from './tool-setup.ts';
 
 export const skillRouter = createRouter({
     list: listSkillsProcedure,
@@ -37,7 +28,7 @@ export const skillRouter = createRouter({
     runtimeList: listRuntimeSkillsProcedure,
     onUpdate: onSkillUpdate,
     setEnabled: setSkillEnabledProcedure,
-    setToolsetEnabled: setToolsetEnabledProcedure,
+    setToolEnabled: setToolEnabledProcedure,
     hubAvailable: skillHubAvailableProcedure,
     hubPreview: skillHubPreviewProcedure,
     hubScan: skillHubScanProcedure,
@@ -46,15 +37,8 @@ export const skillRouter = createRouter({
     hubTaps: skillHubTapListProcedure,
     hubTapAdd: skillHubTapAddProcedure,
     hubTapRemove: skillHubTapRemoveProcedure,
-    toolsetConfig: toolsetConfigProcedure,
-    setToolsetProvider: setToolsetProviderProcedure,
-    saveToolsetEnv: saveToolsetEnvProcedure,
-    runToolsetPostSetup: runToolsetPostSetupProcedure,
-    mcpServers: mcpServersProcedure,
-    addMcpServer: addMcpServerProcedure,
-    removeMcpServer: removeMcpServerProcedure,
-    testMcpServer: testMcpServerProcedure,
-    setMcpServerEnabled: setMcpServerEnabledProcedure,
-    mcpCatalog: mcpCatalogProcedure,
-    installMcpCatalogEntry: installMcpCatalogEntryProcedure,
+    toolConfig: toolConfigProcedure,
+    setToolProvider: setToolProviderProcedure,
+    saveToolEnv: saveToolEnvProcedure,
+    runToolPostSetup: runToolPostSetupProcedure,
 });

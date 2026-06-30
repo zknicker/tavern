@@ -9,11 +9,6 @@ import type { ChatActiveReply } from '../../hooks/chats/chat-timeline-state.ts';
 import { type ChatLogOutput, trpc } from '../../lib/trpc.tsx';
 import { ArtifactLogEntry } from '../sessions/log/event-entry/artifact-entry.tsx';
 import { ToolDrawerBody } from '../sessions/tools/tool-drawer-body.tsx';
-import {
-    ChatApprovalPrompt,
-    getPendingChatApprovalPrompt,
-    getVisibleChatApprovalPrompt,
-} from './chat-approval-prompt.tsx';
 import { ChatTranscript } from './chat-transcript.tsx';
 import { SystemStep } from './chat-transcript-system-step.tsx';
 import { getActiveReplyDisplayText } from './chat-transcript-turn.tsx';
@@ -65,7 +60,7 @@ test('ChatTranscript renders hover time and copy action without session or usage
     assert.doesNotMatch(markup, /aria-label="View session"/);
     assert.ok(
         markup.indexOf('aria-label="Copy message"') < markup.indexOf('Agent idle'),
-        'agent presence renders below message hover actions'
+        'agent status renders below message hover actions'
     );
     assert.doesNotMatch(markup, /aria-label="Collapse message"/);
     assert.doesNotMatch(markup, /session 9f83ac/);
@@ -1061,94 +1056,6 @@ test('ToolStep shimmers running tool rows like the thinking indicator', () => {
     assert.match(markup, />Using</);
 });
 
-test('ToolStep renders approval rows as ordinary tool rows', () => {
-    const markup = renderToStaticMarkup(
-        <ToolStep index={0} isLast row={pendingApprovalRow('approval-1', 'rm -rf build')} />
-    );
-
-    assert.match(markup, />Using</);
-    assert.match(markup, /rm -rf build/);
-    assert.doesNotMatch(markup, />Approve</);
-    assert.doesNotMatch(markup, />Deny</);
-    assert.doesNotMatch(markup, /Needs approval/);
-});
-
-test('ChatTranscript keeps approval actions out of the work log', () => {
-    const rows = [
-        pendingApprovalRow('approval-1', 'rm -rf build'),
-        pendingApprovalRow('approval-2', 'deploy production'),
-    ];
-    const markup = renderTranscript(rows, { chatId: 'cht_1' });
-    const prompt = getPendingChatApprovalPrompt(rows);
-
-    assert.equal(countMatches(markup, />Allow once</g), 0);
-    assert.equal(countMatches(markup, />Deny</g), 0);
-    assert.match(markup, /rm -rf build/);
-    assert.match(markup, /deploy production/);
-    assert.doesNotMatch(markup, /Needs approval/);
-    assert.deepEqual(prompt, {
-        command: 'rm -rf build',
-        description: null,
-        id: 'approval-1',
-        sessionKey: 'agent:tiny:session-1',
-    });
-});
-
-test('ChatApprovalPrompt renders the oldest pending approval choices', () => {
-    const prompt = getPendingChatApprovalPrompt([
-        pendingApprovalRow('approval-1', 'rm -rf build', {
-            description: 'delete in root path',
-            summary: 'delete in root path',
-        }),
-        pendingApprovalRow('approval-2', 'deploy production'),
-    ]);
-    const markup = renderApprovalPrompt(prompt);
-
-    assert.match(markup, /Do you want to approve this command\?/);
-    assert.doesNotMatch(markup, /Question 1 of 1/);
-    assert.match(markup, /rm -rf build/);
-    assert.match(markup, /Reason: delete in root path/);
-    assert.doesNotMatch(markup, /deploy production/);
-    assert.match(markup, />Allow once</);
-    assert.match(markup, />Allow session</);
-    assert.match(markup, />Always allow</);
-    assert.match(markup, />Deny</);
-});
-
-test('getVisibleChatApprovalPrompt hides a locally answered pending approval', () => {
-    const first = pendingApprovalRow('approval-1', 'rm -rf build');
-    const second = pendingApprovalRow('approval-2', 'deploy production');
-    const answeredApprovalIds = new Set(['approval-1']);
-
-    assert.equal(
-        getVisibleChatApprovalPrompt({
-            answeredApprovalIds,
-            rows: [first, second],
-        }),
-        null
-    );
-
-    assert.deepEqual(
-        getVisibleChatApprovalPrompt({
-            answeredApprovalIds,
-            rows: [
-                {
-                    ...first,
-                    completedAt: '2026-03-31T15:00:02.000Z',
-                    toolCall: { ...first.toolCall, status: 'completed' },
-                },
-                second,
-            ],
-        }),
-        {
-            command: 'deploy production',
-            description: null,
-            id: 'approval-2',
-            sessionKey: 'agent:tiny:session-1',
-        }
-    );
-});
-
 test('ToolStep keeps older tool rows inspectable when call id is missing', () => {
     const markup = renderToStaticMarkup(
         <ToolStep
@@ -1759,7 +1666,7 @@ test('ChatTranscript renders active tool progress as one-line status rows', () =
     assert.doesNotMatch(markup, />start</);
 });
 
-test('ChatTranscript renders a pending clarification prompt inline', () => {
+test('ChatTranscript renders a pending clarification as a read-only question row', () => {
     const markup = renderActiveTranscript(
         {
             agentId: 'tiny',
@@ -1801,15 +1708,15 @@ test('ChatTranscript renders a pending clarification prompt inline', () => {
         ]
     );
 
-    assert.match(markup, /Needs answer[\s\S]*Which part of California\?/);
-    assert.match(markup, /Los Angeles/);
-    assert.match(markup, /San Francisco/);
-    assert.match(markup, />Other</);
-    assert.match(markup, />Skip</);
+    assert.match(markup, /Needs an answer[\s\S]*Which part of California\?/);
+    assert.doesNotMatch(markup, /Los Angeles/);
+    assert.doesNotMatch(markup, /San Francisco/);
+    assert.doesNotMatch(markup, />Other</);
+    assert.doesNotMatch(markup, />Skip</);
     assert.doesNotMatch(markup, /Using[\s\S]*Which part of California\?/);
 });
 
-test('ChatTranscript renders one answer input for free-text clarification prompts', () => {
+test('ChatTranscript renders free-text clarifications as read-only question rows', () => {
     const markup = renderActiveTranscript(
         {
             agentId: 'tiny',
@@ -1851,8 +1758,8 @@ test('ChatTranscript renders one answer input for free-text clarification prompt
         ]
     );
 
-    assert.match(markup, /Needs answer[\s\S]*Which city should I use\?/);
-    assert.equal(countMatches(markup, />Answer</g), 1);
+    assert.match(markup, /Needs an answer[\s\S]*Which city should I use\?/);
+    assert.equal(countMatches(markup, />Answer</g), 0);
     assert.doesNotMatch(markup, />Other</);
 });
 
@@ -2089,7 +1996,6 @@ test('ChatTranscript keeps hidden reasoning out of live presence by default', ()
 });
 
 type ChatRow = NonNullable<ChatLogOutput>['rows'][number];
-type ToolChatRow = Extract<ChatRow, { kind: 'tool' }>;
 
 function renderTranscript(
     rows: ChatRow[],
@@ -2167,67 +2073,6 @@ function renderActiveTranscript(
             </QueryClientProvider>
         </trpc.Provider>
     );
-}
-
-function renderApprovalPrompt(
-    prompt: ReturnType<typeof getPendingChatApprovalPrompt>,
-    chatId = 'cht_1'
-) {
-    const queryClient = new QueryClient({
-        defaultOptions: {
-            queries: {
-                retry: false,
-            },
-        },
-    });
-    const client = trpc.createClient({
-        links: [
-            httpLink({
-                url: 'http://127.0.0.1:1/trpc',
-            }),
-        ],
-    });
-
-    return renderToStaticMarkup(
-        <trpc.Provider client={client} queryClient={queryClient}>
-            <QueryClientProvider client={queryClient}>
-                <ChatApprovalPrompt chatId={chatId} prompt={prompt} />
-            </QueryClientProvider>
-        </trpc.Provider>
-    );
-}
-
-function pendingApprovalRow(
-    id: string,
-    command: string,
-    options: { description?: string | null; summary?: string } = {}
-): ToolChatRow {
-    return {
-        approval: {
-            command,
-            description: options.description ?? null,
-            patternKey: null,
-            patternKeys: [],
-        },
-        actor: { id: 'tiny', kind: 'agent' },
-        completedAt: null,
-        connectsToNext: false,
-        connectsToPrevious: false,
-        id,
-        isFirstInGroup: true,
-        kind: 'tool',
-        sessionKey: 'agent:tiny:session-1',
-        spawnedRelationships: [],
-        startedAt: '2026-03-31T15:00:00.000Z',
-        toolCall: {
-            callId: null,
-            facts: [],
-            label: command,
-            name: 'approval',
-            status: 'running',
-            summaryParts: [options.summary ?? command],
-        },
-    };
 }
 
 function richResponseRow(id: string): ChatRow {

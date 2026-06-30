@@ -1,4 +1,5 @@
 import {
+    agentRuntimeAgentSessionSchema,
     agentRuntimeChatPlatformMetadataSchema,
     agentRuntimeTavernMessageMetadataSchema,
 } from '@tavern/api';
@@ -227,8 +228,12 @@ export const sendChatMessageResultSchema = z.object({
     acceptedAt: z.string().datetime(),
     chatId: z.string().trim().min(1),
     clientMessageId: z.string().trim().min(1),
-    runId: z.string().trim().min(1),
-    sessionKey: z.string().trim().min(1).nullable(),
+    turns: z.array(
+        z.object({
+            agentId: z.string().trim().min(1),
+            runId: z.string().trim().min(1),
+        })
+    ),
     status: z.literal('accepted'),
 });
 
@@ -254,32 +259,14 @@ export const steerChatTurnResultSchema = z.object({
     steered: z.boolean(),
 });
 
-export const respondToChatApprovalInputSchema = z.object({
+export const startChatAgentSessionInputSchema = z.object({
+    agentParticipantId: z.string().trim().min(1).optional(),
     chatId: z.string().trim().min(1),
-    choice: z.enum(['once', 'session', 'always', 'deny']),
-    sessionKey: z.string().trim().min(1),
 });
 
-export const respondToChatApprovalResultSchema = z.object({
-    resolved: z.number().int().nonnegative(),
-});
-
-export const respondToChatClarificationDispositionSchema = z.enum([
-    'answered',
-    'skipped',
-    'timeout',
-]);
-
-export const respondToChatClarificationInputSchema = z.object({
-    answer: z.string().trim().min(1),
+export const startChatAgentSessionResultSchema = z.object({
     chatId: z.string().trim().min(1),
-    disposition: respondToChatClarificationDispositionSchema.optional(),
-    requestId: z.string().trim().min(1),
-    sessionKey: z.string().trim().min(1),
-});
-
-export const respondToChatClarificationResultSchema = z.object({
-    resolved: z.boolean(),
+    session: agentRuntimeAgentSessionSchema,
 });
 
 export const chatLogMessageRowSchema = messageRowSchema;
@@ -352,9 +339,5 @@ export type StopChatTurnInput = z.infer<typeof stopChatTurnInputSchema>;
 export type StopChatTurnResult = z.infer<typeof stopChatTurnResultSchema>;
 export type SteerChatTurnInput = z.infer<typeof steerChatTurnInputSchema>;
 export type SteerChatTurnResult = z.infer<typeof steerChatTurnResultSchema>;
-export type RespondToChatApprovalInput = z.infer<typeof respondToChatApprovalInputSchema>;
-export type RespondToChatApprovalResult = z.infer<typeof respondToChatApprovalResultSchema>;
-export type RespondToChatClarificationInput = z.infer<typeof respondToChatClarificationInputSchema>;
-export type RespondToChatClarificationResult = z.infer<
-    typeof respondToChatClarificationResultSchema
->;
+export type StartChatAgentSessionInput = z.infer<typeof startChatAgentSessionInputSchema>;
+export type StartChatAgentSessionResult = z.infer<typeof startChatAgentSessionResultSchema>;

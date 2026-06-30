@@ -40,11 +40,6 @@ export async function listModelInventory(): Promise<ModelInventory> {
                 warning: null,
             });
 
-        if (!provider.isConnected) {
-            providersById.set(parsed.provider, provider);
-            continue;
-        }
-
         provider.models.push({
             canDelete: false,
             capabilities: ['general'],

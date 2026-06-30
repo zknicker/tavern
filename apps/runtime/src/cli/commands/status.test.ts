@@ -51,10 +51,11 @@ function snapshot(over: Partial<RuntimeSnapshot> = {}): RuntimeSnapshot {
 }
 
 const engineSection: StatusEngineSection = {
-    pin: { kind: 'commit', ref: '5937b95192bc02a98a8a29d44caffd71f2b25694', source: 'pinned' },
+    mode: 'local-ai-sdk',
+    provider: 'openai',
     resolved: {
-        path: '/home/u/.tavern/engine/ed711e/hermes-agent/venv/bin/hermes',
-        tier: 'managed',
+        detail: 'Agent and AI SDK package dependencies',
+        tier: 'package',
     },
 };
 
@@ -183,7 +184,14 @@ describe('runStatusCommand', () => {
         expect(doc.service).toEqual({ state: 'running', via: 'homebrew' });
         expect(doc.runtime.version).toBe('1.4.2');
         expect(doc.capabilities).toHaveLength(1);
-        expect(doc.engine.pin.source).toBe('pinned');
+        expect(doc.engine).toMatchObject({
+            mode: 'local-ai-sdk',
+            provider: 'openai',
+            resolved: {
+                detail: 'Agent and AI SDK package dependencies',
+                tier: 'package',
+            },
+        });
     });
 
     test('--json nulls unavailable sections rather than omitting keys', async () => {

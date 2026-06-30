@@ -6,24 +6,33 @@ import type {
     MentionPathOutput,
 } from '../../lib/trpc.tsx';
 import { trpc } from '../../lib/trpc.tsx';
-import type { MentionOption } from './mention-types.ts';
+import type { MentionOption, MentionTrigger } from './mention-types.ts';
 
 export function useMentionOptions({
     agentId,
     query,
+    agents,
+    mentionableAgentIds = [],
+    trigger,
 }: {
     agentId: string;
     agents: AgentListOutput['agents'];
+    mentionableAgentIds?: readonly string[];
     query: string;
+    trigger: MentionTrigger | null;
 }) {
     const debouncedPathQuery = useDebouncedValue(query, 150);
+    const shouldQueryInventory = trigger === '$';
     const inventory = trpc.mention.inventory.useQuery(
         {
             agentId: agentId || undefined,
         },
-        queryPolicy.agentRuntimeSnapshot
+        {
+            ...queryPolicy.agentRuntimeSnapshot,
+            enabled: Boolean(agentId) && shouldQueryInventory,
+        }
     );
-    const shouldSearchPaths = shouldSearchPathMentions(debouncedPathQuery);
+    const shouldSearchPaths = shouldQueryInventory && shouldSearchPathMentions(debouncedPathQuery);
     const paths = trpc.mention.paths.useQuery(
         {
             agentId: agentId || undefined,
@@ -37,30 +46,53 @@ export function useMentionOptions({
 
     const options = React.useMemo(() => {
         return selectMentionOptionsForQuery({
+            agents,
             inventoryData: inventory.data,
+            mentionableAgentIds,
             pathData: paths.data,
             query,
         });
-    }, [inventory.data, paths.data, query]);
+    }, [agents, inventory.data, mentionableAgentIds, paths.data, query]);
 
     return {
         isPathSearchLoading:
+            shouldQueryInventory &&
             shouldSearchPathMentions(query) &&
             (debouncedPathQuery !== query || paths.isLoading || paths.isFetching),
-        isPathSearchActive: shouldSearchPathMentions(query),
+        isPathSearchActive: shouldQueryInventory && shouldSearchPathMentions(query),
         options,
     };
 }
 
 export function selectMentionOptionsForQuery({
+    agents = [],
     inventoryData,
+    mentionableAgentIds = [],
     pathData,
     query,
 }: {
+    agents?: AgentListOutput['agents'];
     inventoryData?: MentionInventoryOutput;
+    mentionableAgentIds?: readonly string[];
     pathData?: MentionPathOutput;
     query: string;
 }) {
+    const agentOptions = filterMentionOptionsForQuery(
+        mentionableAgentIds.map((agentId) => {
+            const agent = agents.find((entry) => entry.id === agentId);
+            const label = agent?.name ?? agentId;
+            return {
+                description: 'Agent in this chat',
+                id: agentId,
+                insertText: label.startsWith('@') ? label : `@${label}`,
+                kind: 'agent' as const,
+                label,
+                projection: 'agent-reference' as const,
+                sourceLabel: 'Agents',
+            };
+        }),
+        query
+    );
     const inventoryOptions = inventoryData
         ? filterMentionOptionsForQuery(inventoryData.options, query)
         : [];
@@ -69,7 +101,7 @@ export function selectMentionOptionsForQuery({
             ? pathData.options
             : [];
 
-    return [...inventoryOptions, ...pathOptions];
+    return [...agentOptions, ...inventoryOptions, ...pathOptions];
 }
 
 export function filterMentionOptionsForQuery(options: MentionOption[], query: string) {

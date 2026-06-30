@@ -143,7 +143,7 @@ test('cancelled response maps to a stopped system row', () => {
             systemKind: 'turnStatus',
             timestamp: '2026-06-08T12:01:00.000Z',
             turnStatus: {
-                agentId: 'agt_hermes',
+                agentId: 'agt_primary',
                 runId: 'response-cancelled',
                 sessionKey: 'response-cancelled',
                 status: 'stopped',
@@ -247,7 +247,7 @@ function response(input: {
         created_at: '2026-06-08T12:00:00.000Z',
         id: input.id,
         metadata: input.metadata ?? {},
-        participant_id: 'agt_hermes',
+        participant_id: 'agt_primary',
         request_message_id: 'message-user',
         response_message_id: input.responseMessageId ?? null,
         status: input.status,

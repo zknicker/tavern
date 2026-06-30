@@ -4,7 +4,6 @@ export * from './schema/agent-thought-snapshots.ts';
 export * from './schema/agents.ts';
 export * from './schema/cache.ts';
 export * from './schema/cron.ts';
-export * from './schema/hermes-config-snapshots.ts';
 export * from './schema/jobs.ts';
 export * from './schema/logs.ts';
 export * from './schema/messaging-bindings.ts';

@@ -5,7 +5,7 @@ info:
   summary: OpenAPI contract for Tavern Runtime chat and realtime clients.
   description: >
     Tavern API is the runtime-hosted contract for clients, bots, webhooks,
-    automations, managed Hermes, and tests. This first slice covers durable
+    automations, agent runtime, and tests. This first slice covers durable
     chat state and realtime recovery.
 servers:
   - url: http://127.0.0.1:18790
@@ -546,7 +546,7 @@ components:
       pattern: '^art_[A-Za-z0-9_-]+$'
     ParticipantId:
       type: string
-      pattern: '^(usr|agt|sys)_[A-Za-z0-9_-]+$'
+      pattern: '^(usr|agt|sys|ext)_[A-Za-z0-9_-]+$'
     UserParticipantId:
       type: string
       pattern: '^usr_[A-Za-z0-9_-]+$'
@@ -573,15 +573,20 @@ components:
       additionalProperties: false
       required:
         - id
+        - kind
         - title
         - created_at
         - updated_at
         - last_message_sequence
         - pinned
+        - participants
         - metadata
       properties:
         id:
           $ref: '#/components/schemas/ChatId'
+        kind:
+          type: string
+          enum: [channel, dm]
         title:
           type: [string, 'null']
         created_at:
@@ -593,6 +598,10 @@ components:
           minimum: 0
         pinned:
           type: boolean
+        participants:
+          type: array
+          items:
+            $ref: '#/components/schemas/Participant'
         metadata:
           $ref: '#/components/schemas/JsonObject'
     CreateChatRequest:
@@ -603,10 +612,17 @@ components:
       properties:
         id:
           $ref: '#/components/schemas/ChatId'
+        kind:
+          type: string
+          enum: [channel, dm]
         title:
           type: [string, 'null']
         pinned:
           type: boolean
+        participants:
+          type: array
+          items:
+            $ref: '#/components/schemas/Participant'
         metadata:
           $ref: '#/components/schemas/JsonObject'
     ListChatsResponse:
@@ -635,7 +651,7 @@ components:
           $ref: '#/components/schemas/ParticipantId'
         kind:
           type: string
-          enum: [user, agent, system, plugin]
+          enum: [user, agent, system, external, plugin]
         label:
           type: [string, 'null']
         metadata:
@@ -802,7 +818,7 @@ components:
       enum: [queued, running, completed, failed, cancelled]
     ResponseActivityKind:
       type: string
-      enum: [planning, reasoning, tool_call, tool_result, command, approval, message, artifact, rich_response, custom]
+      enum: [planning, reasoning, tool_call, tool_result, command, message, artifact, rich_response, custom]
     ChatResponse:
       type: object
       additionalProperties: false

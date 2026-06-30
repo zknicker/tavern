@@ -1,5 +1,5 @@
 ---
-summary: Tavern App boundary for the Electron product shell, React/tRPC client, app cache/settings, runtime adapters, and optimistic UI rules.
+summary: Tavern App boundary for the Electron product shell, React/tRPC client, app cache, presentation state, runtime adapters, and optimistic UI rules.
 read_when:
   - changing the local app backend, tRPC procedures, client cache, or app-owned settings
   - changing how Tavern App consumes Tavern Runtime or Tavern API records
@@ -10,6 +10,11 @@ read_when:
 Tavern App is the Electron product surface and first-party Tavern Runtime client.
 Its React client and local Node/tRPC layer are one app boundary, not the
 canonical chat server.
+
+Tavern App must not gain execution ownership from the agent-engine integration.
+Anything a headless Runtime API client needs to run the agent belongs to
+Runtime. The app can proxy, translate, cache, and render; it cannot become the
+source of truth for agent behavior.
 
 ## Ownership
 
@@ -23,21 +28,26 @@ canonical chat server.
 * **Agent records are runtime-owned.** Tavern App lists, reads, and edits agents
   through first-class Tavern APIs hosted by Runtime. App storage may keep
   presentation overlays, but it does not decide whether an agent exists.
-* **Runtime adapters stay behind adapters.** Hermes Gateway payloads and
+* **Agent execution settings are runtime-owned.** Model catalog, selected model,
+  provider availability, tool policy, instructions, sessions, turns, and
+  response activity come from Runtime. App settings screens invoke Runtime API
+  mutations; they do not maintain a separate executable config.
+* **Runtime adapters stay behind adapters.** Agent-engine payloads and
   plugin-specific details do not leak into product domains.
-* **Settings save product intent.** App settings call narrow tRPC mutations such
-  as agent name, model, thinking default, and messaging binding updates. The app
-  does not maintain a global Hermes config draft or send arbitrary config
+* **Settings save through Runtime.** App settings call narrow mutations such as
+  agent name, model, thinking default, and messaging binding updates. The app
+  does not maintain a global agent-engine config draft or send arbitrary config
   JSON for user-facing settings.
-* **App storage is cache and settings.** App screens can cache runtime records
-  and app-local settings, but runtime durable reads recover after the app has
-  been closed.
+* **App storage is cache and presentation.** App screens can cache runtime
+  records and app-shell preferences, but runtime durable reads recover after the
+  app has been closed.
 * **Optimistic UI is presentation state.** It can bridge one-frame chat handoffs,
   but it must not become durable chat history.
 
 ## Data Shape
 
-App storage includes client cache, presentation state, and local settings.
+App storage includes client cache, presentation state, and app-shell
+preferences.
 Canonical chat, agent, participant, session, and execution evidence records
 belong in Tavern Runtime.
 
@@ -56,11 +66,11 @@ connection exists in app storage, the app opens the dashboard even when Runtime
 is disconnected or version-mismatched. Runtime health, update, and capability
 problems surface inside the normal app shell.
 
-Runtime-owned transitions, such as managed Hermes dashboard/API/Gateway
-readiness or model/skill inventory refreshes, emit `capability.updated` from
-Tavern Runtime. App-observed capability checks write through the capability
-status recorder, which emits the same app invalidation event when the persisted
-capability state changes.
+Runtime-owned transitions, such as agent-engine readiness or model/skill
+inventory refreshes, emit `capability.updated` from Tavern Runtime.
+App-observed capability checks write through the capability status recorder,
+which emits the same app invalidation event when the persisted capability state
+changes.
 
 Do not use broad startup refreshes or global polling to keep capability UI
 current. The flow is current query data plus capability-specific events.

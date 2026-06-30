@@ -65,7 +65,7 @@ test('unreachable saved Runtime keeps its URL without reporting a version mismat
     await storage.saveAgentRuntimeConnection({
         baseUrl: 'https://zachs-mac-mini.taila0b849.ts.net:18790',
         enabled: true,
-        id: 'tavern-hermes-managed',
+        id: 'tavern-agent-engine',
         isActive: true,
         lastCheckedAt: new Date().toISOString(),
         lastError: null,
@@ -97,7 +97,7 @@ test('startup load can use a saved Runtime without refreshing capabilities', asy
     await storage.saveAgentRuntimeConnection({
         baseUrl: 'https://zachs-mac-mini.taila0b849.ts.net:18790',
         enabled: true,
-        id: 'tavern-hermes-managed',
+        id: 'tavern-agent-engine',
         isActive: true,
         lastCheckedAt: null,
         lastError: null,
@@ -131,7 +131,7 @@ test('connection snapshot can read a saved Runtime without refreshing capabiliti
     await storage.saveAgentRuntimeConnection({
         baseUrl: 'https://zachs-mac-mini.taila0b849.ts.net:18790',
         enabled: true,
-        id: 'tavern-hermes-managed',
+        id: 'tavern-agent-engine',
         isActive: true,
         lastCheckedAt: null,
         lastError: 'connect timeout',
@@ -179,7 +179,7 @@ test('Tavern Runtime environment override does not replace the saved Runtime URL
     await storage.saveAgentRuntimeConnection({
         baseUrl: 'https://zachs-mac-mini.example:18790',
         enabled: true,
-        id: 'tavern-hermes-managed',
+        id: 'tavern-agent-engine',
         isActive: true,
         lastCheckedAt: new Date().toISOString(),
         lastError: null,
@@ -187,7 +187,7 @@ test('Tavern Runtime environment override does not replace the saved Runtime URL
     });
 
     const connection = await agentRuntimeConnection.loadAgentRuntimeConnection();
-    const saved = await storage.getAgentRuntimeConnection('tavern-hermes-managed');
+    const saved = await storage.getAgentRuntimeConnection('tavern-agent-engine');
 
     assert.equal(connection?.source, 'environment');
     assert.equal(connection?.baseUrl, 'http://127.0.0.1:18790');

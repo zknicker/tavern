@@ -1,5 +1,5 @@
 ---
-summary: Current single-agent product boundary for runtime execution, settings ownership, and synced sessions.
+summary: Current agent product boundary for Runtime-managed agents, settings ownership, and synced sessions.
 read_when:
   - changing how users work with the managed agent
   - changing model, tool, memory, or skill access for the managed agent
@@ -7,13 +7,19 @@ read_when:
 
 # Agents
 
-Tavern currently presents one managed agent. The app does not expose an Agents
-page or a sidebar Agents section.
+Tavern Runtime supports multiple managed agents. Tavern App exposes a compact
+Settings -> Agent list/create/edit surface while the main chat UI can continue
+to feel primary-agent-first.
 
 ## Current Contract
 
-* **Single managed agent.** Tavern routes new work through the primary Runtime
-  agent.
+* **Bootstrapped agent.** Tavern bootstraps `agt_primary` so a fresh Runtime is
+  immediately useful.
+* **Runtime-managed agent records.** Runtime can store multiple agents with
+  independent names, enabled skill ids, model choices, and workspace folders.
+  Settings -> Agent lists those agents, creates new agents, and edits the
+  selected agent's display name, color, model, thinking default, timezone, and
+  environment variables.
 * **Instruction files.** `AGENTS.md` is a generated, read-only artifact that
   Runtime composes from its sources; nobody edits it. Settings exposes the
   sources: `NOTES.md` for durable notes and instructions (with a preview of
@@ -21,24 +27,25 @@ page or a sidebar Agents section.
   agent edits both source files directly with its file tools.
 * **New chats.** Starting a direct chat belongs to the normal New Chat flow, not
   an agent landing page.
-* **Global tools and skills.** Per-agent tool policy and per-agent skill
-  assignment are not product surfaces. The managed agent receives the available
-  Runtime tools and installed skills.
+* **Agent tools and skills.** Runtime stores per-agent enabled skill ids.
+  Built-in tools are currently all enabled and read-only; per-agent tool grants
+  can layer on later.
 * **Sessions.** Synced Tavern, system, and external chats are visible from
   Settings -> Sessions with source filters.
 
 ## App surfaces
 
 The primary app sidebar lists product areas and chats. It does not list agents.
-Legacy agent URLs redirect to Settings -> Sessions. Agent configuration lives in
-Settings, including display name, color, notes and personality files, model
-choice, model fallbacks, subagent defaults, thinking effort, timezone, web
-extract summarizer model, context compression, permissions, agent environment
-variables, connectors, skills, memory, sessions, and jobs.
+Agent configuration lives in Settings, including the agent picker, display
+name, color, notes and personality files, model choice, thinking effort,
+timezone, agent environment variables, channels, MCP servers, skills, Memory,
+sessions, and jobs. Model fallbacks, web page summarizer model, context
+compression, permission prompts, and subagent model defaults are not settings
+surfaces until the local agent engine supports them.
 
 ## Runtime boundary
 
-Hermes owns native execution. Tavern Runtime owns the managed agent record,
-available capabilities, and canonical chat state. Tavern App displays the
-managed agent through first-class Tavern APIs and keeps configuration surfaces
-global unless a per-agent control is explicitly reintroduced.
+Tavern Runtime owns local agent execution, managed agent records, available
+capabilities, and canonical chat state. Tavern App creates and edits agents
+through first-class Tavern APIs; it does not write agent engine files or choose
+runtime workspace paths.

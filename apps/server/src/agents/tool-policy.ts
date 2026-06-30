@@ -1,4 +1,4 @@
-import { updateHermesAgentTools } from '../hermes-settings/service.ts';
+import { updateAgentTools } from '../agent-settings/service.ts';
 import { getAgent as getCatalogAgent } from './catalog.ts';
 import { buildAgentToolPolicy } from './tool-policy-defaults.ts';
 
@@ -10,7 +10,7 @@ export async function saveAgentToolPolicy(input: { agentId: string; tools: strin
     }
 
     const tools = normalizeToolNames(input.tools);
-    await updateHermesAgentTools({ agentId: agent.id, tools });
+    await updateAgentTools({ agentId: agent.id, tools });
 
     return { tools };
 }

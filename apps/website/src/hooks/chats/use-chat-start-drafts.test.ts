@@ -12,7 +12,7 @@ function createDraft(overrides: Partial<ChatStartDraft> = {}): ChatStartDraft {
         realAcceptedAt: null,
         realChatId: null,
         realRunId: null,
-        realSessionKey: null,
+        realTurnReference: null,
         status: 'queued',
         title: 'Hello',
         ...overrides,

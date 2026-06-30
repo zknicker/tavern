@@ -8,6 +8,82 @@ the docs to read before changing behavior.
 
 ## Language
 
+**Chat**:
+A durable Tavern conversation container, shaped like a channel or DM, where humans, agents, system
+actors, and external actors can participate.
+_Avoid_: Agent session, thread, executor channel, transcript
+
+**Channel**:
+A named multi-participant Chat in a Tavern workspace.
+_Avoid_: Room, group chat
+
+**DM**:
+A one-to-one Chat between two participants.
+_Avoid_: Private channel, direct channel
+
+**Chat participant**:
+One actor with membership in a Chat, such as a human user, Tavern agent, system actor, or external
+identity.
+_Avoid_: Worker, sender, runtime identity
+
+**Agent seat**:
+An agent Chat participant in a specific Chat, owning that agent's current session binding for the
+Chat.
+_Avoid_: Agent presence, session key, runtime route
+
+**Agent session**:
+The rotatable execution continuity record for an Agent seat.
+_Avoid_: Chat, seat, runtime session
+
+**Agent turn**:
+One execution attempt by an Agent seat inside an Agent session.
+_Avoid_: Agent run, Chat, session
+
+**Active turn stream**:
+Transient Runtime state for an in-progress Agent turn, used for live updates before durable Chat
+messages and activity are complete.
+_Avoid_: Chat history, UIMessage array, browser request
+
+**Agent executor**:
+A small Runtime implementation boundary that turns an Agent turn request into Tavern turn events.
+_Avoid_: Agent engine, provider adapter, harness wrapper
+
+**Agent addressing**:
+The rule that decides which agent participants should create Agent turns for a Chat message.
+_Avoid_: Session routing, runtime routing, trigger parsing
+
+**Model record**:
+A concrete runnable model route, including its model ref, display metadata, capabilities, auth
+surface, and execution kind.
+_Avoid_: Model alias, provider option, model family
+
+**Agent runtime profile**:
+An agent's selected Model record plus execution policies for tools, memory, and sandboxing.
+_Avoid_: Provider config, harness config, model config
+
+**Effective model**:
+The Model record an Agent session currently uses. Agent runtime profiles provide defaults, but
+current model selection is session-scoped.
+_Avoid_: Global agent model, provider setting
+
+**Tool grant**:
+A static decision that lets an agent use a tool without per-call approval.
+_Avoid_: Approval request, permission prompt, per-call confirmation
+
+**Sandbox mode**:
+The execution environment for an agent's tools and harness processes: none, Docker, or Podman.
+_Avoid_: Approval mode, runtime prompt
+
+**Local workspace sandbox**:
+A Sandbox mode of none where Tavern gives an agent a host filesystem workspace under the Tavern data
+root and runs child processes directly from that workspace.
+_Avoid_: Secure sandbox, container, VM
+
+**Assignable primitive**:
+A Tavern capability that can be attached to an agent definition, such as a Tool, Skill, MCP server,
+Memory namespace, or Channel membership.
+_Avoid_: Runtime plugin, harness setting, bundled feature
+
 **Rich Response**:
 One assistant-authored, app-rendered UI island attached to an assistant response.
 _Avoid_: Widget, UI block, widget kit, AG-UI component, ChatKit widget
@@ -42,12 +118,12 @@ _Avoid_: Skill setup, tool availability, connection wizard state
 **Plugin settings**:
 Runtime-owned durable Plugin configuration, stored in dedicated Plugin tables and edited
 through Tavern settings.
-_Avoid_: Runtime metadata key, Hermes config, CLI config, skill config
+_Avoid_: Runtime metadata key, executor config, CLI config, skill config
 
 **Plugin secret**:
 Write-only credential material for a Plugin, stored in the Runtime Plugin secret store and
 masked in API reads.
-_Avoid_: Environment variable, Hermes home file, checked-in config
+_Avoid_: Environment variable, executor home file, checked-in config
 
 **Plugin action**:
 A Runtime-owned operation exposed by a Plugin to Tavern surfaces such as Rich Responses,

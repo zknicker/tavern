@@ -9,8 +9,8 @@ export function getActiveMentionQuery(
     }
 
     const beforeCaret = content.slice(0, caretIndex);
-    // `@` opens the full picker; `$` opens it filtered to skills. Both
-    // trigger at start-of-input or after whitespace.
+    // `@` addresses agents; `$` references skills. Both trigger at
+    // start-of-input or after whitespace.
     const mentionMatch = /(?:^|\s)([@$])([^\s@$]*)$/u.exec(beforeCaret);
 
     if (mentionMatch?.index !== undefined) {
@@ -221,7 +221,7 @@ function formatMentionLabel(mention: Mention) {
         return `$${mention.text}`;
     }
 
-    if (mention.kind === 'app' || mention.kind === 'plugin') {
+    if (mention.kind === 'agent' || mention.kind === 'app' || mention.kind === 'plugin') {
         return mention.label.startsWith('@') ? mention.label : `@${mention.label}`;
     }
 

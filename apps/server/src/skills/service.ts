@@ -6,21 +6,18 @@ import {
     listAgentRuntimeSkills,
     setAgentRuntimeSkillEnabled,
 } from '../agent-runtime/skills.ts';
-import {
-    listAgentRuntimeToolsets,
-    setAgentRuntimeToolsetEnabled,
-} from '../agent-runtime/toolsets.ts';
+import { listAgentRuntimeTools, setAgentRuntimeToolEnabled } from '../agent-runtime/tools.ts';
 import { emitSkillInvalidationCascade } from '../api/invalidation-events.ts';
 import { getActiveAgentRuntimeConnection } from '../storage/agent-runtime-connections.ts';
 import {
     type SkillList,
     type SkillSummary,
     setSkillEnabledInputSchema,
-    setToolsetEnabledInputSchema,
+    setToolEnabledInputSchema,
     skillIdSchema,
     skillListSchema,
     skillSummarySchema,
-    type ToolsetSummary,
+    type ToolSummary,
 } from './contracts.ts';
 import {
     enqueueRuntimeSkillInventoryRefresh,
@@ -28,22 +25,22 @@ import {
 } from './inventory-job.ts';
 import { getCachedRuntimeSkillInventory, refreshRuntimeSkillInventory } from './inventory-sync.ts';
 import {
-    listMissingPluginToolsets,
+    listMissingPluginTools,
     rejectPluginSkillEnablement,
-    rejectPluginToolsetEnablement,
+    rejectPluginToolEnablement,
     resolveSkillPlugin,
-    resolveToolsetPlugin,
+    resolveToolPlugin,
     type SkillPluginRef,
 } from './plugin-capabilities.ts';
 
 export async function listSkills(): Promise<SkillList> {
-    const [runtime, toolsets, plugins] = await Promise.all([
+    const [runtime, tools, plugins] = await Promise.all([
         getActiveAgentRuntimeConnection(),
-        listAgentRuntimeToolsets().catch(() => []),
+        listAgentRuntimeTools().catch(() => []),
         listAgentRuntimePlugins().catch(() => []),
     ]);
     const skillRuntimeId = getSkillInventoryRuntimeId(runtime);
-    const runtimeToolsets = toolsets ?? [];
+    const runtimeTools = tools ?? [];
     const runtimePlugins = plugins ?? [];
     const cachedInventory = skillRuntimeId
         ? await getCachedRuntimeSkillInventory(skillRuntimeId).catch(() => null)
@@ -55,13 +52,10 @@ export async function listSkills(): Promise<SkillList> {
         skills: filterRuntimeVisibleSkills(cachedInventory?.skills ?? []).map((skill) =>
             buildSkillSummary(skill, runtimePlugins)
         ),
-        toolsets: [
-            ...runtimeToolsets,
-            ...listMissingPluginToolsets(
-                runtimePlugins,
-                new Set(runtimeToolsets.map((toolset) => toolset.id))
-            ),
-        ].map((toolset) => buildToolsetSummary(toolset, runtimePlugins)),
+        tools: [
+            ...runtimeTools,
+            ...listMissingPluginTools(runtimePlugins, new Set(runtimeTools.map((tool) => tool.id))),
+        ].map((tool) => buildToolSummary(tool, runtimePlugins)),
     });
 }
 
@@ -96,14 +90,14 @@ export async function setSkillEnabled(input: unknown): Promise<SkillList> {
     return await listSkills();
 }
 
-export async function setToolsetEnabled(input: unknown): Promise<SkillList> {
-    const parsed = setToolsetEnabledInputSchema.parse(input);
-    rejectPluginToolsetEnablement(parsed.toolsetId);
-    const updated = await setAgentRuntimeToolsetEnabled(parsed.toolsetId, {
+export async function setToolEnabled(input: unknown): Promise<SkillList> {
+    const parsed = setToolEnabledInputSchema.parse(input);
+    rejectPluginToolEnablement(parsed.toolId);
+    const updated = await setAgentRuntimeToolEnabled(parsed.toolId, {
         enabled: parsed.enabled,
     });
     if (!updated) {
-        throw new Error('Runtime toolset enablement is unavailable.');
+        throw new Error('Runtime tool enablement is unavailable.');
     }
 
     emitSkillInvalidationCascade();
@@ -169,49 +163,51 @@ function buildSkillSummary(
 }
 
 function resolveSkillSurface(): SkillSummary['surface'] {
-    return 'hermes';
+    return 'agent';
 }
 
-function buildToolsetSummary(
-    toolset: {
+function buildToolSummary(
+    tool: {
         configured: boolean;
         description: null | string;
         enabled: boolean;
         id: string;
         label: string;
         placeholder?: boolean;
+        readOnly?: boolean;
         tools: string[];
     },
     plugins: Awaited<ReturnType<typeof listAgentRuntimePlugins>>
-): ToolsetSummary {
-    const plugin = resolveToolsetPlugin({ ...toolset, name: toolset.label }, plugins ?? []);
-    const enabled = plugin ? plugin.enabled : toolset.enabled;
-    const diagnostic = resolveToolsetDiagnostic({ enabled, plugin, toolset });
+): ToolSummary {
+    const plugin = resolveToolPlugin({ ...tool, name: tool.label }, plugins ?? []);
+    const enabled = plugin ? plugin.enabled : tool.enabled;
+    const diagnostic = resolveToolDiagnostic({ enabled, plugin, tool });
     return {
-        configured: toolset.configured,
-        description: toolset.description,
+        configured: tool.configured,
+        description: tool.description,
         diagnostic,
         enabled,
-        id: toolset.id,
-        name: toolset.label,
+        id: tool.id,
+        name: tool.label,
         plugin,
-        tools: toolset.tools,
+        readOnly: tool.readOnly ?? false,
+        tools: tool.tools,
         usability: diagnostic ? 'not_usable' : enabled ? 'enabled' : 'disabled',
     };
 }
 
-function resolveToolsetDiagnostic(input: {
+function resolveToolDiagnostic(input: {
     enabled: boolean;
     plugin: SkillPluginRef | null;
-    toolset: { configured: boolean; placeholder?: boolean };
+    tool: { configured: boolean; placeholder?: boolean };
 }) {
     if (input.plugin && !input.plugin.enabled) {
         return `Enable ${input.plugin.displayName} in Plugins.`;
     }
-    if (input.plugin && 'placeholder' in input.toolset) {
+    if (input.plugin && 'placeholder' in input.tool) {
         return `Restart the agent engine to load ${input.plugin.displayName} tools.`;
     }
-    if (input.enabled && !input.toolset.configured) {
+    if (input.enabled && !input.tool.configured) {
         return input.plugin
             ? `Finish ${input.plugin.displayName} setup in Plugins.`
             : 'Required provider keys are missing.';

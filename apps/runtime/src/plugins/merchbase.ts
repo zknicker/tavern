@@ -17,13 +17,7 @@ import {
 } from '@tavern/api';
 import * as z from 'zod';
 import type { RuntimeCapabilityCheckResult } from '../capabilities/definitions';
-import { HERMES_HOME, readConfigValue, resolveConfiguredPath } from '../config';
-import { createLocalHermesClient } from '../hermes/local-client';
-import {
-    ensureManagedMerchbaseSkill,
-    getMerchbaseSkillConflict,
-    isManagedMerchbaseSkillInstalled,
-} from '../hermes/merchbase-skill';
+import { readConfigValue } from '../config';
 import {
     getPlugin,
     readPluginConfig,
@@ -85,7 +79,7 @@ export function getMerchbaseSettings(): AgentRuntimeMerchbaseSettings {
         defaultMarketplace: effective.defaultMarketplace,
         enabled: effective.enabled,
         enablementSource: effective.enablementSource,
-        skillConflict: getMerchbaseSkillConflict({ hermesHome: resolveEffectiveHermesHome() }),
+        skillConflict: null,
         updatedAt: effective.updatedAt,
     });
 }
@@ -119,24 +113,12 @@ export function saveMerchbaseSettings(
     return getMerchbaseSettings();
 }
 
-export async function ensureMerchbaseSkillForEnablement(input: { hermesHome?: string } = {}) {
-    await ensureManagedMerchbaseSkill({
-        hermesHome: input.hermesHome ?? resolveEffectiveHermesHome(),
-        replaceExisting: true,
-    });
+export async function ensureMerchbaseSkillForEnablement(_input: { agentHome?: string } = {}) {
+    return;
 }
 
-export async function applyMerchbaseAgentCapabilityEnablement(enabled: boolean) {
-    const client = createLocalHermesClient();
-    try {
-        const operations: Promise<unknown>[] = [client.updateToolsetEnabled(pluginId, { enabled })];
-        if (await isManagedMerchbaseSkillInstalled()) {
-            operations.push(client.updateSkillEnabled(pluginId, { enabled }));
-        }
-        await Promise.allSettled(operations);
-    } finally {
-        client.close();
-    }
+export async function applyMerchbaseAgentCapabilityEnablement(_enabled: boolean) {
+    return;
 }
 
 export async function checkMerchbaseCapability(): Promise<RuntimeCapabilityCheckResult> {
@@ -285,12 +267,6 @@ function requireReadyMerchbaseSettings(): EffectiveMerchbaseSettings {
         throw new Error('MerchBase needs an API key.');
     }
     return settings;
-}
-
-function resolveEffectiveHermesHome() {
-    return resolveConfiguredPath(
-        readConfigValue('TAVERN_HERMES_HOME') ?? readConfigValue('HERMES_HOME') ?? HERMES_HOME
-    );
 }
 
 function withDefaultMarketplace<TInput extends { marketplace?: string }>(

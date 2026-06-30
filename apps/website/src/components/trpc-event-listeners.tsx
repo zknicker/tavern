@@ -8,7 +8,6 @@ import {
     useRuntimeConnectionEvents,
 } from '../hooks/connections/use-runtime-events.ts';
 import { useCronEvents } from '../hooks/cron/use-cron-events.ts';
-import { useHermesConfigEvents } from '../hooks/hermes-config/use-hermes-config-events.ts';
 import { useModelEvents } from '../hooks/models/use-model-events.ts';
 import { useUsageEvents } from '../hooks/models/use-usage-events.ts';
 import { useSessionEvents } from '../hooks/sessions/use-session-events.ts';
@@ -26,7 +25,6 @@ export function TrpcEventListeners() {
     useCronEvents();
     useModelEvents();
     useOpenRouterSettingsEvents();
-    useHermesConfigEvents();
     useSessionEvents();
     useSkillEvents();
     useUsageEvents();

@@ -1,0 +1,447 @@
+import path from 'node:path';
+import type { HarnessV1 } from '@ai-sdk/harness';
+import {
+    HarnessAgent,
+    type HarnessAgentResumeSessionState,
+    type HarnessAgentSession,
+} from '@ai-sdk/harness/agent';
+import { type ClaudeCodeAuthOptions, createClaudeCode } from '@ai-sdk/harness-claude-code';
+import { createCodex } from '@ai-sdk/harness-codex';
+import type { Context, ToolSet } from '@ai-sdk/provider-utils';
+import type { AgentRuntimeThinkingLevel } from '@tavern/api';
+import type { GenerateTextResult } from 'ai';
+import { createLocalTrustedSandboxProvider } from '../agent-engine/local-trusted-sandbox.ts';
+import { readConfigValue } from '../config.ts';
+import {
+    hasRenderableRichResponse,
+    parseRichResponseFromAssistantContent,
+    richResponseActivity,
+} from '../rich-responses/render.ts';
+import type { AgentExecutor, AgentExecutorInput } from './agent-executor.ts';
+import { updateAgentSessionRuntimeState } from './agent-session-store.ts';
+import {
+    createDelivery,
+    getMessage,
+    listRecentMessagesBefore,
+    upsertResponse,
+    upsertResponseActivity,
+} from './chat-api/index.ts';
+
+const emptyAssistantMessageDiagnostic = 'No reply: the harness returned empty content.';
+
+interface ActiveHarnessTurn {
+    controller: AbortController;
+    session?: { destroy(): Promise<void> };
+}
+
+export function createHarnessAgentExecutor(): AgentExecutor {
+    const active = new Map<string, ActiveHarnessTurn>();
+
+    return {
+        async execute(input) {
+            const controller = new AbortController();
+            const activeTurn: ActiveHarnessTurn = { controller };
+            active.set(input.runId, activeTurn);
+            try {
+                return await executeHarnessTurn(input, controller.signal, activeTurn);
+            } finally {
+                active.delete(input.runId);
+            }
+        },
+        async stop(runId) {
+            const turn = active.get(runId);
+            if (!turn) {
+                return false;
+            }
+            turn.controller.abort();
+            await turn.session?.destroy().catch(() => {});
+            return true;
+        },
+    };
+}
+
+async function executeHarnessTurn(
+    input: AgentExecutorInput,
+    abortSignal: AbortSignal,
+    activeTurn: ActiveHarnessTurn
+) {
+    const startedAt = new Date().toISOString();
+    const runtime = runtimeMetadata(input);
+
+    const agent = createHarnessAgent(input, createLocalTrustedSandboxProvider);
+    let session: HarnessAgentSession | undefined;
+    let result: GenerateTextResult<ToolSet, Context, never>;
+    try {
+        session = await agent.createSession({
+            abortSignal,
+            resumeFrom: input.agentSession.resumeState as
+                | HarnessAgentResumeSessionState
+                | undefined,
+            sessionId: input.agentSession.runtimeSessionId ?? input.agentSession.id,
+        });
+        activeTurn.session = session;
+
+        result = await agent.generate({
+            abortSignal,
+            prompt: harnessPrompt(input),
+            session,
+        });
+        const resumeState = await session.stop();
+        activeTurn.session = undefined;
+        updateAgentSessionRuntimeState({
+            id: input.agentSession.id,
+            resumeState: resumeState as Record<string, unknown>,
+            runtimeSessionId: session.sessionId,
+        });
+    } catch (error) {
+        activeTurn.session = undefined;
+        await session?.destroy().catch(() => {});
+        throw formatHarnessExecutionError(input, error);
+    }
+
+    const completedAt = new Date().toISOString();
+    const activityIds = persistHarnessToolActivities(input, result, {
+        completedAt,
+        runtime,
+        startedAt,
+    });
+    const responseContent = result.text.trim() || emptyAssistantMessageDiagnostic;
+    const richResponse = parseRichResponseFromAssistantContent(responseContent);
+    const messageContent = richResponse?.displayContent ?? responseContent;
+    const messageId = assistantMessageId(input.runId);
+    const deliveryId = deliveryIdForRun(input.runId);
+    const receipt = createDelivery(input.chatId, {
+        agent_id: input.agentSession.agentParticipantId,
+        id: deliveryId,
+        message: {
+            attachments: [],
+            author_id: input.agentSession.agentParticipantId,
+            content: messageContent,
+            id: messageId,
+            metadata: {
+                runtime: {
+                    ...runtime,
+                    model: input.agentSession.effectiveModel,
+                },
+            },
+            role: 'assistant',
+        },
+        metadata: {
+            runtime: {
+                ...runtime,
+                model: input.agentSession.effectiveModel,
+            },
+        },
+        turn_id: input.runId,
+    });
+
+    const allActivityIds = [...activityIds];
+    if (hasRenderableRichResponse(richResponse)) {
+        const richResponseActivityId = richResponseActivityIdForRun(input.runId);
+        upsertResponseActivity(
+            input.chatId,
+            input.responseId,
+            richResponseActivity({
+                activityId: richResponseActivityId,
+                agentId: input.agent.id,
+                fallbackText: richResponse.fallbackText,
+                messageId,
+                render: richResponse.render,
+                runId: input.runId,
+                sessionKey: input.agentSession.id,
+                source: 'agent-engine',
+                startedAt,
+                timestamp: completedAt,
+            })
+        );
+        allActivityIds.push(richResponseActivityId);
+    }
+
+    upsertResponse(input.chatId, {
+        completed_at: completedAt,
+        id: input.responseId,
+        metadata: {
+            runtime: {
+                ...runtime,
+                completedAt,
+                model: input.agentSession.effectiveModel,
+            },
+        },
+        participant_id: input.agentSession.agentParticipantId,
+        request_message_id: input.requestMessageId,
+        response_message_id: receipt.message.id,
+        status: 'completed',
+        summary: 'Agent response completed.',
+    });
+
+    return {
+        activityIds: allActivityIds,
+        outputMessageIds: [receipt.message.id],
+    };
+}
+
+function createHarnessAgent(
+    input: AgentExecutorInput,
+    sandboxFactory: typeof createLocalTrustedSandboxProvider
+) {
+    const harness = createHarness(input);
+    return new HarnessAgent({
+        harness,
+        id: input.agent.id,
+        instructions: systemPrompt(input),
+        permissionMode: 'allow-all',
+        sandbox: sandboxFactory(localTrustedSandboxOptions(input)),
+    });
+}
+
+function localTrustedSandboxOptions(input: AgentExecutorInput) {
+    if (input.agentSession.effectiveModel.provider !== 'codex') {
+        return { rootDir: input.agent.workspaceFolder };
+    }
+    const homeDir = path.join(input.agent.workspaceFolder, '.home');
+    return {
+        authProfiles: ['codex'] as const,
+        env: {
+            CODEX_HOME: path.join(homeDir, '.codex'),
+            HOME: homeDir,
+        },
+        rootDir: input.agent.workspaceFolder,
+    };
+}
+
+function createHarness(input: AgentExecutorInput): HarnessV1<ToolSet> {
+    const model = input.agentSession.effectiveModel.model;
+    if (input.agentSession.effectiveModel.provider === 'claude') {
+        return createClaudeCode({
+            auth: claudeCodeAuthOptions(),
+            maxTurns: 8,
+            model,
+            thinking: claudeThinking(input.agent.thinkingDefault),
+        }) as HarnessV1<ToolSet>;
+    }
+    if (input.agentSession.effectiveModel.provider === 'codex') {
+        return createCodex({
+            model,
+            reasoningEffort: codexReasoningEffort(input.agent.thinkingDefault),
+        }) as HarnessV1<ToolSet>;
+    }
+    throw new Error(
+        `Model provider "${input.agentSession.effectiveModel.provider}" is not a harness executor route.`
+    );
+}
+
+export function claudeCodeAuthOptions(): ClaudeCodeAuthOptions | undefined {
+    const authToken =
+        readConfigValue('TAVERN_AGENT_CLAUDE_CODE_AUTH_TOKEN') ??
+        readConfigValue('ANTHROPIC_AUTH_TOKEN');
+    const baseUrl =
+        readConfigValue('TAVERN_AGENT_CLAUDE_CODE_BASE_URL') ??
+        readConfigValue('ANTHROPIC_BASE_URL');
+    if (!(authToken || baseUrl)) {
+        return undefined;
+    }
+    return {
+        anthropic: {
+            ...(authToken ? { authToken } : {}),
+            ...(baseUrl ? { baseUrl } : {}),
+        },
+    };
+}
+
+export function formatHarnessExecutionError(input: AgentExecutorInput, error: unknown): Error {
+    const message = errorMessage(error);
+    if (
+        input.agentSession.effectiveModel.provider === 'claude' &&
+        /401|authenticat|credential/iu.test(message)
+    ) {
+        return new Error(
+            [
+                'Claude Code failed to authenticate for Tavern agent execution.',
+                'Verify `claude -p "hello"` works in this shell, or run `claude setup-token` and set TAVERN_AGENT_CLAUDE_CODE_AUTH_TOKEN for the Runtime.',
+                `Original error: ${message}`,
+            ].join(' ')
+        );
+    }
+    if (error instanceof Error) {
+        return error;
+    }
+    return new Error(message);
+}
+
+function harnessPrompt(input: AgentExecutorInput) {
+    const request = getMessage(input.requestMessageId);
+    const previousMessages = request
+        ? listRecentMessagesBefore(input.chatId, {
+              beforeSequence: request.sequence,
+              limit: 24,
+          })
+        : [];
+    const messages = [...previousMessages, ...(request ? [request] : [])].filter(
+        (message) =>
+            !message.deleted_at && (message.role === 'assistant' || message.role === 'user')
+    );
+    const transcript = messages
+        .map((message) => {
+            const label = message.author.label ?? message.author.id;
+            return `${label}: ${message.content}`;
+        })
+        .join('\n');
+
+    return [
+        'Recent Tavern chat context:',
+        transcript || '(no previous messages)',
+        '',
+        `Current message for ${input.agent.name}:`,
+        input.content,
+    ].join('\n');
+}
+
+function systemPrompt(input: AgentExecutorInput) {
+    return [
+        `You are ${input.agent.name}, a Tavern agent participating in a shared chat.`,
+        'Answer as yourself in the current conversation.',
+        'Use your built-in tools when they help. Tool use is approved by this trusted local runtime.',
+        'Keep replies concise and useful.',
+    ].join('\n');
+}
+
+function persistHarnessToolActivities(
+    input: AgentExecutorInput,
+    result: GenerateTextResult<ToolSet, Context, never>,
+    eventInput: {
+        completedAt: string;
+        runtime: ReturnType<typeof runtimeMetadata>;
+        startedAt: string;
+    }
+) {
+    const toolResults = new Map(
+        result.toolResults.map((toolResult) => [toolResult.toolCallId, toolResult])
+    );
+    const activityIds: string[] = [];
+    for (const toolCall of result.toolCalls) {
+        const activityId = toolActivityIdForRun(input.runId, toolCall.toolCallId);
+        const toolResult = toolResults.get(toolCall.toolCallId);
+        activityIds.push(activityId);
+        upsertResponseActivity(input.chatId, input.responseId, {
+            completed_at: eventInput.completedAt,
+            detail: toolActivityDetail(toolCall.toolName, toolCall.input),
+            id: activityId,
+            kind: 'tool_call',
+            metadata: {
+                runtime: {
+                    ...eventInput.runtime,
+                    model: input.agentSession.effectiveModel,
+                },
+                tool: {
+                    arguments: toolCall.input,
+                    name: toolCall.toolName,
+                    ...(toolResult ? { result: toolResult.output } : {}),
+                },
+                toolCallId: toolCall.toolCallId,
+                toolName: toolCall.toolName,
+            },
+            started_at: eventInput.startedAt,
+            status: 'completed',
+            title: toolActivityTitle(toolCall.toolName, toolCall.input, toolCall.title),
+        });
+    }
+    return activityIds;
+}
+
+function claudeThinking(value: AgentRuntimeThinkingLevel | null | undefined) {
+    if (value === 'off') {
+        return 'off';
+    }
+    if (value === 'adaptive') {
+        return 'adaptive';
+    }
+    return value ? 'on' : undefined;
+}
+
+function codexReasoningEffort(value: AgentRuntimeThinkingLevel | null | undefined) {
+    if (value === 'low' || value === 'minimal') {
+        return 'low';
+    }
+    if (value === 'medium') {
+        return 'medium';
+    }
+    if (value && value !== 'off') {
+        return 'high';
+    }
+    return undefined;
+}
+
+function runtimeMetadata(input: AgentExecutorInput) {
+    return {
+        agentId: input.agent.id,
+        agentSessionId: input.agentSession.id,
+        engine: 'agent-engine',
+        messageId: input.requestMessageId,
+        runId: input.runId,
+        source: 'agent-engine',
+    };
+}
+
+function assistantMessageId(runId: string) {
+    return `msg_${sanitizeId(runId)}_assistant`;
+}
+
+function deliveryIdForRun(runId: string) {
+    return `del_${sanitizeId(runId)}_assistant`;
+}
+
+function toolActivityIdForRun(runId: string, toolCallId: string) {
+    return `act_${sanitizeId(runId)}_tool_${sanitizeId(toolCallId)}`;
+}
+
+function richResponseActivityIdForRun(runId: string) {
+    return `act_${sanitizeId(runId)}_rich_response`;
+}
+
+function sanitizeId(value: string) {
+    return value.replace(/[^A-Za-z0-9_-]/g, '_');
+}
+
+function toolActivityTitle(toolName: string, input: unknown, title?: string) {
+    if (title) {
+        return title;
+    }
+    const subject = toolActivitySubject(toolName, input);
+    return subject ?? `Used ${toolName}`;
+}
+
+function toolActivityDetail(toolName: string, input: unknown) {
+    const record = isRecord(input) ? input : {};
+    if (toolName === 'bash' && typeof record.command === 'string') {
+        return record.command;
+    }
+    if ((toolName === 'read' || toolName === 'read_file') && typeof record.file_path === 'string') {
+        return record.file_path;
+    }
+    return undefined;
+}
+
+function toolActivitySubject(toolName: string, input: unknown) {
+    const record = isRecord(input) ? input : {};
+    if (toolName === 'bash' && typeof record.command === 'string') {
+        return 'terminal';
+    }
+    if ((toolName === 'read' || toolName === 'read_file') && typeof record.file_path === 'string') {
+        return record.file_path;
+    }
+    return null;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+    return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function errorMessage(error: unknown) {
+    if (error instanceof Error) {
+        return error.message;
+    }
+    if (typeof error === 'string') {
+        return error;
+    }
+    return String(error);
+}

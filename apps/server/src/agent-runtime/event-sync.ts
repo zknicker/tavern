@@ -1,6 +1,7 @@
 import type { AgentRuntimeEvent } from '@tavern/api';
 import {
     confirmAgentRuntimeConnection,
+    loadAgentRuntimeConnection,
     markAgentRuntimeConnectionFailure,
     markAgentRuntimeConnectionReachable,
     refreshRuntimeOwnedStatus,
@@ -27,7 +28,10 @@ import {
     hasActiveTurnSession,
     markTurnSessionActive,
 } from './active-turn-sessions.ts';
-import { subscribeAgentRuntimeEventsForConnection } from './drivers.ts';
+import {
+    createAgentRuntimeClientForConnection,
+    subscribeAgentRuntimeEventsForConnection,
+} from './drivers.ts';
 import { emitObservedAgentRuntimeEvent } from './events.ts';
 
 type RuntimeConnectionRecord = Awaited<
@@ -319,6 +323,7 @@ function connectRuntimeEvents(connection: RuntimeConnectionRecord, revision: num
             }
 
             activeEventConnections.set(connection.id, subscription);
+            void catchUpRuntimeEvents(connection, revision);
             void markConnectionReachable(connection).catch((error) => {
                 console.warn('[tavern] failed to mark runtime reachable', error);
             });
@@ -337,6 +342,26 @@ function connectRuntimeEvents(connection: RuntimeConnectionRecord, revision: num
         });
 }
 
+async function catchUpRuntimeEvents(connection: RuntimeConnectionRecord, revision: number) {
+    try {
+        const client = createAgentRuntimeClientForConnection(connection);
+        const { events } = await client.listEvents({ limit: 500 });
+        client.close();
+
+        if (revision !== connectionRevision) {
+            return;
+        }
+
+        for (const event of events) {
+            await applyObservedAgentRuntimeEvent(event, connection);
+        }
+    } catch (error) {
+        if (revision === connectionRevision) {
+            console.warn('[tavern] failed to catch up runtime events', error);
+        }
+    }
+}
+
 export function refreshAgentRuntimeEventSync() {
     if (!started) {
         return;
@@ -348,6 +373,14 @@ export function refreshAgentRuntimeEventSync() {
     const revision = connectionRevision;
 
     void listReachableAgentRuntimeConnections()
+        .then(async (connections) => {
+            if (connections.length > 0 || revision !== connectionRevision) {
+                return connections;
+            }
+
+            await loadAgentRuntimeConnection();
+            return await listReachableAgentRuntimeConnections();
+        })
         .then((connections) => {
             if (revision !== connectionRevision) {
                 return;

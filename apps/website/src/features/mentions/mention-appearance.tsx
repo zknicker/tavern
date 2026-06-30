@@ -15,6 +15,7 @@ import { cn } from '../../lib/utils.ts';
 import type { MentionOptionKind } from './mention-types.ts';
 
 const mentionIconKeys = [
+    'agent',
     'chrome',
     'command',
     'file',
@@ -49,6 +50,7 @@ interface MentionAppearanceInput {
 type MentionAppearanceOverride = Partial<MentionAppearance>;
 
 const defaultMentionAppearance = {
+    agent: { icon: 'agent', tone: 'mention' },
     app: { icon: 'plugin', tone: 'mention' },
     command: { icon: 'command', tone: 'mention' },
     directory: { icon: 'folder', tone: 'path' },
@@ -95,6 +97,7 @@ const capabilityAppearanceOverrides = {
 } satisfies Record<string, MentionAppearanceOverride>;
 
 const mentionIconMap = {
+    agent: CubeIcon,
     chrome: ChromeIcon,
     command: CommandLineIcon,
     file: File01Icon,

@@ -8,8 +8,7 @@ import { databaseClient, db } from '../db/index.ts';
 import { agentRuntimeConnectionsTable } from '../db/schema.ts';
 import { formatSkillInventorySyncStateId } from './skills.ts';
 
-export const managedHermesRuntimeId = 'tavern-hermes-managed';
-export const agentRuntimeConnectionId = managedHermesRuntimeId;
+export const agentRuntimeConnectionId = 'tavern-agent-engine';
 
 export async function listAgentRuntimeConnections() {
     const record = await getActiveAgentRuntimeConnection();
@@ -351,7 +350,6 @@ function deleteRuntimeData(runtimeId: string) {
         deleteColumnValue('agents', 'runtime_id', runtimeId);
         deleteColumnValue('cron_jobs', 'runtime_id', runtimeId);
         deleteColumnValue('cron_runs', 'runtime_id', runtimeId);
-        deleteColumnValue('hermes_config_snapshots', 'runtime_id', runtimeId);
         deleteColumnValue('session_runs', 'runtime', runtimeId);
         deleteColumnValue('skills', 'runtime_id', runtimeId);
         deleteColumnValue('sync_state', 'id', formatSkillInventorySyncStateId(runtimeId));

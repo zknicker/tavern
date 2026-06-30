@@ -9,7 +9,7 @@ read_when:
 
 The TypeScript SDK is how TypeScript code talks to the Tavern API.
 
-Tavern App uses it. Bots use it. Webhooks use it. Managed Hermes uses it.
+Tavern App uses it. Bots use it. Webhooks use it. Local tools use it.
 Tests use it. The SDK does not care whether the current implementation passes
 through React, tRPC, SQLite, or local Node code.
 
@@ -32,10 +32,10 @@ Tavern App, bot, webhook, runtime, or local tool
   -> Tavern Runtime
 ```
 
-For managed Hermes:
+For agent execution:
 
 ```text
-Hermes stream events -> Tavern Runtime adapter -> Chat API store -> Tavern API reads
+AI SDK executor -> Tavern Runtime stores -> Tavern API reads
 ```
 
 ## Packages
@@ -69,7 +69,7 @@ Ownership:
 
 * `@tavern/api`: client-facing contracts
 * `@tavern/sdk`: TypeScript client wrapper
-* runtime adapters: Hermes REST, Gateway, stream-event, and model-provider mapping
+* runtime code: model-provider mapping, turn execution, and event projection
 * runtime code: canonical chat storage, events, automation delivery
 * app code: cache, presentation, hooks, UI
 

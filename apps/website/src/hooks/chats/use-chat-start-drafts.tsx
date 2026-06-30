@@ -14,11 +14,10 @@ export interface ChatStartDraft {
     errorMessage: string | null;
     id: string;
     metadata?: Record<string, unknown>;
-    modelRef?: string;
     realAcceptedAt: string | null;
     realChatId: string | null;
     realRunId: string | null;
-    realSessionKey: string | null;
+    realTurnReference: string | null;
     status: ChatStartDraftStatus;
     title: string;
 }
@@ -28,7 +27,6 @@ interface CreateChatStartDraftInput {
     attachments?: ChatMessageAttachmentInput[];
     content: string;
     metadata?: Record<string, unknown>;
-    modelRef?: string;
 }
 
 interface ChatStartDraftContextValue {
@@ -43,7 +41,7 @@ interface ChatStartDraftContextValue {
         chatId: string;
         draftId: string;
         runId: string;
-        sessionKey: string | null;
+        turnReference: string | null;
     }) => void;
     removeReconciledDrafts: (chatId: string) => ChatStartDraft[];
     restoreDrafts: (drafts: ChatStartDraft[]) => void;
@@ -66,11 +64,10 @@ export function ChatStartDraftProvider({ children }: PropsWithChildren) {
             errorMessage: null,
             id: `tavern-draft-chat:${crypto.randomUUID()}`,
             metadata: input.metadata,
-            ...(input.modelRef ? { modelRef: input.modelRef } : {}),
             realAcceptedAt: null,
             realChatId: null,
             realRunId: null,
-            realSessionKey: null,
+            realTurnReference: null,
             status: 'queued',
             title: buildStartedChatDisplayName(titleContent),
         };
@@ -118,7 +115,7 @@ export function ChatStartDraftProvider({ children }: PropsWithChildren) {
             chatId: string;
             draftId: string;
             runId: string;
-            sessionKey: string | null;
+            turnReference: string | null;
         }) => {
             updateDraft(input.draftId, (draft) => ({
                 ...draft,
@@ -126,7 +123,7 @@ export function ChatStartDraftProvider({ children }: PropsWithChildren) {
                 realAcceptedAt: input.acceptedAt,
                 realChatId: input.chatId,
                 realRunId: input.runId,
-                realSessionKey: input.sessionKey,
+                realTurnReference: input.turnReference,
                 status: 'reconciled',
             }));
         },

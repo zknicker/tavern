@@ -33,13 +33,13 @@ Chats are Tavern's shared conversation surfaces.
 
 - Tavern-owned chats are created, named, bound, ordered, renamed, and archived by Tavern Runtime
   through Tavern API.
-- Hermes does not create, name, rename, archive, or delete Tavern-owned chats.
+- Agent engines do not create, name, rename, archive, or delete Tavern-owned chats.
 - Archiving a chat hides it from normal Tavern chat lists without deleting its chat row. Runtime
   session and message records may continue to reference that stable chat id.
-- Hermes may observe sessions and messages that belong to a Tavern chat. Those observations
-  attach to the Runtime-owned chat by session key and chat id.
-- Runtime-observed external platform conversations, such as Discord channels or DMs, may still be
-  represented as chats because the external platform owns those conversation containers.
+- Runtime may observe agent sessions and messages that belong to a Tavern chat.
+  Those observations attach through the Runtime-owned agent participant for that chat.
+- External platform conversations, such as Discord channels or DMs, are separate first-class
+  frontend conversations for Tavern agents. They do not automatically appear as Tavern App chats.
 
 ## Identity And Labels
 
@@ -48,8 +48,8 @@ Chats are Tavern's shared conversation surfaces.
   presentation metadata.
 - For external runtime-observed chats, labels are Tavern presentation derived from synced primitive
   data.
-- The Hermes adapter must not provide final Tavern chat names.
-- The Hermes adapter must not create Tavern chats from Hermes sessions. Tavern sessions are
+- The Runtime adapter must not provide final Tavern chat names.
+- The Runtime adapter must not create Tavern chats from agent sessions. Tavern sessions are
   runtime facts that attach to an existing Tavern chat; they are not a chat catalog.
 - Direct chats prefer participant names as their primary title.
 - Channel-style chats prefer the source-native room or thread name as their primary title.
@@ -71,10 +71,11 @@ Chats are Tavern's shared conversation surfaces.
 
 - A chat makes it easy to understand which agent participated.
 - A runtime-observed chat includes typed chat participants.
-- A chat participant is either an agent or an observed external participant.
-- The Hermes adapter owns platform-specific parsing before Tavern receives the chat. Tavern
+- A chat participant is a typed actor in that conversation: local user, agent,
+  system, plugin, or observed external participant.
+- The Runtime adapter owns platform-specific parsing before Tavern receives the chat. Tavern
   does not parse Discord-specific fields to understand chat membership.
-- The primary agent participates in a chat through concrete sessions.
+- The primary agent participates in a chat as an agent participant with a current agent session.
 - Runtime records may still include multiple bound agents when product behavior needs them, but
   normal Tavern chat UI does not expose agent choice.
 - A new session for the agent stays inside the same chat unless Tavern explicitly starts a

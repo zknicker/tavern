@@ -14,15 +14,15 @@ execution state.
 - Ownership is per domain.
 - Tavern Runtime-owned domains include chats, messages, events, reads, automations, deliveries,
   memory, runtime health, sync state, generated config policy, and jobs.
-- Tavern App-owned domains include client cache, app settings, and presentation overlays.
-- Hermes domains include native execution sessions, turns, transcripts, logs, skills,
-  tools, model routing, channel bindings, and provider secrets unless Hermes explicitly delegates
-  a domain to Tavern.
+- Tavern App-owned domains include client cache, app-shell preferences, and presentation overlays.
+- Tavern Runtime-owned execution domains include sessions, turns, transcripts, logs, skills,
+  tools, model routing, channel bindings, and provider secrets. The local agent engine is an
+  implementation detail behind Runtime APIs.
 
 ## Runtime Expectations
 
 - Tavern maps runtime data into Tavern product behavior and terminology.
-- Tavern edits runtime-owned config through supported runtime APIs or plugins.
+- Tavern App edits runtime-owned config through supported Runtime APIs or plugins.
 - Tavern does not maintain duplicate canonical records for runtime-owned config.
 - Runtime-native edits remain valid and refresh Tavern through sync and events.
 - Periodic sync refreshes runtime evidence and observed history. It does not make runtime-native

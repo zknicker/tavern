@@ -1,6 +1,5 @@
 import runtimePackage from '../../../package.json';
-import { engineBinaryPath, readEngineMarker, resolveHermesPin } from '../../hermes/engine';
-import { resolveEngineResolution } from '../../hermes/engine-resolution';
+import { readConfigValue } from '../../config';
 import { type Brew, brew } from '../brew';
 import type { ParsedArgs } from '../parse';
 import { localRuntimeUrl, probeRuntimeSnapshot, type RuntimeSnapshot } from '../runtime-probe';
@@ -95,25 +94,11 @@ function parseServiceState(stdout: string): string {
     }
 }
 
-/** Local engine resolution for the Engine section, reusing hermes helpers. */
+/** Local engine resolution for the agent/AI SDK engine. */
 function readEngineSection(): StatusEngineSection {
-    const pin = resolveHermesPin();
-    const resolution = resolveEngineResolution();
-    const resolved = resolution
-        ? { path: resolution.binaryPath, tier: resolution.tier }
-        : fallbackResolved(pin);
     return {
-        pin: { kind: pin.kind, ref: pin.ref, source: pin.source },
-        resolved,
+        mode: 'local-ai-sdk',
+        provider: readConfigValue('TAVERN_AGENT_PROVIDER'),
+        resolved: { detail: 'Agent and AI SDK package dependencies', tier: 'package' },
     };
-}
-
-function fallbackResolved(
-    pin: ReturnType<typeof resolveHermesPin>
-): StatusEngineSection['resolved'] {
-    const marker = readEngineMarker(pin);
-    if (marker) {
-        return { path: marker.binaryPath, tier: 'managed' };
-    }
-    return { path: engineBinaryPath(pin), tier: 'unresolved' };
 }

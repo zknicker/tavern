@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { agentRuntimeMessageMetadataSchema } from '@tavern/api';
-import { HERMES_HOME } from '../config';
+import { AGENT_HOME } from '../config';
 
 interface SkillContext {
     content: string;
@@ -9,10 +9,7 @@ interface SkillContext {
     path: string;
 }
 
-export async function projectTavernMessageForHermes(input: {
-    content: string;
-    metadata?: unknown;
-}) {
+export async function projectTavernMessageForAgent(input: { content: string; metadata?: unknown }) {
     const skills = await resolveMentionedSkills(input.metadata);
     if (skills.length === 0) {
         return input.content;
@@ -117,7 +114,7 @@ function skillPathCandidates(input: {
     for (const name of [input.name, input.id]) {
         const normalized = stripSkillSigil(name);
         if (normalized && !normalized.includes('/') && !normalized.includes(':')) {
-            paths.add(path.join(HERMES_HOME, 'skills', normalized, 'SKILL.md'));
+            paths.add(path.join(AGENT_HOME, 'skills', normalized, 'SKILL.md'));
         }
     }
 

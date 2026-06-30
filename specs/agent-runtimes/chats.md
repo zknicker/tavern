@@ -15,7 +15,7 @@ Runtime chats are conversation surfaces known to a connected runtime.
 
 - A chat has a stable runtime identity.
 - A runtime chat does not carry a final Tavern display name. Runtime adapters return stable
-  primitive identity, participants, bindings, session keys, and typed platform metadata; Tavern
+  primitive identity, participants, agent bindings, execution references, and typed platform metadata; Tavern
   derives presentation from those facts.
 - A chat may have durable conversation history and runtime activity history.
 - A chat may have participation rules, such as whether a trigger is required.

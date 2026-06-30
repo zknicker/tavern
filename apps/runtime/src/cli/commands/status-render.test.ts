@@ -35,14 +35,11 @@ function baseReport(over: Partial<StatusReport> = {}): StatusReport {
         runtimeIsLocal: true,
         capabilities: [capability({})],
         engine: {
-            pin: {
-                kind: 'commit',
-                ref: '5937b95192bc02a98a8a29d44caffd71f2b25694',
-                source: 'pinned',
-            },
+            mode: 'local-ai-sdk',
+            provider: 'openai',
             resolved: {
-                path: '~/.tavern/engine/ed711e/hermes-agent/venv/bin/hermes',
-                tier: 'managed',
+                detail: 'Agent and AI SDK package dependencies',
+                tier: 'package',
             },
         },
         ...over,
@@ -97,8 +94,9 @@ describe('renderStatus', () => {
         expect(text).toContain('Binary   v1.4.2 · up to date');
         expect(text).toContain('● Codex OAuth');
         expect(text).toContain('6m ago');
-        expect(text).toContain('Pin       5937b95 (commit, pinned)');
-        expect(text).toContain('(managed)');
+        expect(text).toContain('Mode      local-ai-sdk');
+        expect(text).toContain('Provider  openai');
+        expect(text).toContain('Resolved  Agent and AI SDK package dependencies (package)');
     });
 
     test('stale process: running < binary surfaces staged hint', () => {

@@ -35,7 +35,7 @@ test('runtime client remains configured when the last health check failed', asyn
     const runtimeId = 'runtime-with-degraded-status';
     await saveRuntimeConnection({
         id: runtimeId,
-        lastError: 'Failed to connect to Hermes Gateway.',
+        lastError: 'Failed to connect to the agent runtime.',
     });
 
     const client = await createConfiguredAgentRuntimeClientForRuntimeId(runtimeId);

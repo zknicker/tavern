@@ -1,8 +1,8 @@
 ---
-summary: Durable chat API for messages, responses, activity, artifacts, receipts, reads, events, soft deletes, and Hermes metadata.
+summary: Durable chat API for messages, responses, activity, artifacts, receipts, reads, events, soft deletes, and runtime metadata.
 read_when:
   - changing chat messages, responses, activity, artifacts, receipts, history, or timeline recovery
-  - changing how Hermes, bots, webhooks, or local tools send chat work into Tavern
+  - changing how agent runtimes, bots, webhooks, or local tools send chat work into Tavern
   - changing chat turn stop or steering contracts
 ---
 
@@ -29,8 +29,63 @@ Tavern Runtime is the durable source for chat objects.
 | `delivery` | Durable receipt | Runtime SQLite |
 | `event` | Recoverable notification | Runtime SQLite |
 
-App SQLite is a cache and presentation store. Hermes transcripts are execution
-evidence linked to Tavern messages.
+App SQLite is a cache and presentation store. Agent execution traces are
+execution evidence linked to Tavern messages.
+
+## Chats And Participants
+
+A `chat` is a Runtime-owned conversation container. Tavern-owned chats use
+`kind: "channel"` for shared room-style conversations and `kind: "dm"` for
+one-to-one direct messages. Runtime bootstraps the local workspace with
+`#general`, the local human participant, the primary Tavern agent participant,
+and the primary agent DM.
+
+`chat.participants` is the membership contract for the chat shell. Participant
+rows use Tavern product ids such as `usr_...`, `agt_...`, and `sys_...`, plus
+observed `external` participants for non-Tavern frontends. Agent session
+state attaches to agent participants. The app must not infer routing from a
+route id or display name.
+
+An agent participant is the Chat's Agent seat. Runtime stores that seat's
+current Agent session and exposes a Runtime command to rotate it:
+
+```http
+GET  /agent/chats/{chat_id}/agent-sessions/current?agentParticipantId=
+POST /agent/chats/{chat_id}/agent-sessions/new
+PATCH /agent/chats/{chat_id}/agent-sessions/model
+```
+
+`GET current` returns the current Agent session for that Chat seat or `null`.
+`POST new` archives older active sessions for that seat and updates only the
+current chat's agent participant. `PATCH model` changes the current session's
+effective model; same execution-kind changes update in place, and cross-kind
+changes rotate to a new Agent session. Other chats using the same agent
+definition keep their own current sessions and models.
+
+## Addressing
+
+Sending a message and invoking an agent are separate operations.
+
+In a `channel`, a normal human message creates only a durable message. It does
+not start agent work. A channel message starts agent work only for agent
+participants explicitly mentioned in `metadata.tavern.mentions` with
+`kind: "agent"` and `projection: "agent-reference"`. Mentioning multiple
+agent participants creates one independent turn request for each mentioned
+Agent seat.
+
+In an agent `dm`, the one agent participant is addressed implicitly. The user
+does not need to mention the agent, and the app must not invent routing ids from
+route params, display names, or engine session ids.
+
+The server resolves addressing through Runtime-owned chat participants and the
+current Agent session for each addressed Agent seat. `chat.send` returns
+`turns: []` for a human-only message and one `turns[]` entry per accepted agent
+turn.
+
+Each accepted agent turn creates a durable Runtime turn record linked to the
+triggering message and response. The turn records queue/running/completed/
+failed/cancelled execution state. The response and activity rows remain the UI
+read model for chat history.
 
 ## Endpoints
 
@@ -66,8 +121,9 @@ The Tavern app keeps list and detail reads separate:
   the sidebar and overview contract, not a full chat detail payload. List items
   include `hasActiveTurn` so compact views can show in-progress agent work
   without reading the full chat log. List items also include `isPinned` so the
-  app can render durable focus-area chats above recent chats. External Hermes
-  chat references belong to `agent.chats.list`, not the global Tavern chat list.
+  app can render durable focus-area chats above recent chats. External
+  execution references belong to `agent.chats.list`, not the global Tavern chat
+  list.
 * `chat.get` returns one full chat record by `chatId`.
 * `chat.setPinned` changes one chat's durable pinned state.
 * `chat.updateTabAppearance` changes the durable color metadata for a pinned
@@ -92,6 +148,9 @@ completed activity without remounting the transcript. Streamed final reply text
 stays app-local until the final assistant message is persisted.
 
 `chat.stop` and `chat.steer` are turn-control mutations, not message writes.
+`chat.stop` settles a queued or running Runtime turn as cancelled and settles
+the linked response as cancelled. It does not delete the triggering message or
+any previously delivered output.
 `chat.steer` accepts `chatId`, active `runId`, text `content`, and optional
 message metadata. It forwards text into the live agent turn and returns
 `steered: true` only after Runtime accepts and records the steer. Steering does
@@ -101,10 +160,11 @@ row without rendering a separate system notice, and may do that optimistically
 while the mutation is pending. If Runtime rejects the steer or the call fails,
 clients should remove the optimistic row and restore any local queued draft.
 Message totals and durable message search remain unchanged. Messages with
-attachments or model overrides must use the normal message send path. App
-clients should offer steering while the turn is still active. Progress,
-narration, and tool activity do not close the steering window; a completed turn
-or durable assistant reply does.
+attachments must use the normal message send path. Model changes are Runtime
+session controls, not message composer payloads. App clients should offer
+steering while the turn is still active. Progress, narration, and tool activity
+do not close the steering window; a completed turn or durable assistant reply
+does.
 
 ## Messages
 
@@ -114,6 +174,9 @@ system message before work starts.
 Messages have one text body and durable attachments. Agent work such
 as thinking summaries, tool calls, tool results, assistant progress, and status
 updates belongs to `response` and `activity` records, not message body fields.
+
+Tool access is configured through static Tool grants and sandbox mode. Enabled
+tools are auto-approved. Tavern does not expose an approval response endpoint.
 
 Request:
 
@@ -127,9 +190,10 @@ Request:
   "attachments": [],
   "metadata": {
     "runtime": {
-      "source": "hermes",
+      "source": "agent-engine",
       "agentId": "main",
-      "sessionKey": "agent:main:tavern:channel:..."
+      "agentSessionId": "ags_...",
+      "runId": "run_..."
     }
   }
 }
@@ -211,10 +275,10 @@ in metadata or source fields; never use it as the Tavern timeline cursor.
 ## Chat Instructions
 
 Pinned Tavern chats can carry trusted chat-specific instructions in
-`metadata.tavern.groupSystemPrompt`. Tavern passes that value through the Hermes
-turn adapter only while the chat is pinned. Generated temporary chat titles do
-not become durable execution labels; pinned chats and explicitly renamed chats
-may use their display name as the conversation label.
+`metadata.tavern.groupSystemPrompt`. Tavern passes that value through the
+agent turn adapter only while the chat is pinned. Generated temporary chat
+titles do not become durable execution labels; pinned chats and explicitly
+renamed chats may use their display name as the conversation label.
 
 ## Deliveries
 
@@ -238,10 +302,10 @@ Request:
   },
   "metadata": {
     "runtime": {
-      "source": "hermes",
+      "source": "agent-engine",
       "agentId": "main",
-      "sessionKey": "agent:main:tavern:channel:...",
-      "sessionId": "...",
+      "agentSessionId": "ags_...",
+      "engineSessionId": "...",
       "runId": "run_..."
     }
   }
@@ -268,16 +332,15 @@ instead of creating a second row.
 Activity is durable work performed as part of a response.
 
 A response is one participant's attempt to answer or act on a chat message. Most
-responses are authored by agents, but the Tavern noun stays chat-first:
-Hermes turns, runs, and transcript ids are runtime metadata on the response,
-not the product identity.
+responses are authored by agents, but the Tavern noun stays chat-first: agent
+turns, runs, and transcript ids are runtime metadata on the response, not the
+product identity.
 
 Activity can include:
 
 * planning and thinking summaries
 * tool calls and tool results
 * commands
-* approvals
 * code snippets
 * image, file, diff, or document outputs
 * final assistant message references
@@ -298,7 +361,6 @@ Common activity kinds:
 | `tool_call` | Runtime tool work with stable tool identity. |
 | `tool_result` | Tool result material when it is represented separately. |
 | `command` | Shell-like command work when the runtime exposes it as a command. |
-| `approval` | User or system approval request and decision. |
 | `artifact` | Renderable output, patch, file, image, document, or diff summary. |
 | `rich_response` | App-rendered assistant UI from a validated Rich Response Spec. |
 | `custom` | Runtime-specific activity with typed metadata. |
@@ -307,11 +369,6 @@ Clients open activity detail surfaces by stable activity id:
 `GET /api/chats/{chat_id}/activity/{activity_id}`. The returned row is the same
 durable activity used by timeline rendering, including runtime tool metadata and
 artifact links.
-
-Approval activity metadata carries `approval.command`, optional
-`approval.description`, and optional pattern keys. Chat timeline tool rows
-project this as `approval` so clients can show the exact command in approval
-prompts while keeping row labels concise.
 
 Activity ids are global Tavern ids. Updating an activity id that belongs to a
 different chat or response is a contract error. Runtime adapters must include
@@ -328,8 +385,8 @@ turn identity when their source item ids can repeat across turns.
   "artifact_ids": ["art_..."],
   "metadata": {
     "runtime": {
-      "source": "hermes",
-      "sessionKey": "agent:main:tavern:channel:...",
+      "source": "agent-engine",
+      "agentSessionId": "ags_...",
       "turnId": "...",
       "toolCallId": "call_...",
       "toolName": "bash"
@@ -424,15 +481,15 @@ timeline. Hard delete is not part of the Chat API. Dismissing a command card
 or failed turn in the app and the `/clear` composer command both ride this
 contract.
 
-## Hermes Metadata
+## Runtime Metadata
 
-Hermes identity stays in metadata:
+Agent execution identity stays in metadata:
 
 ```text
 runtime.source
 runtime.agentId
-runtime.sessionKey
-runtime.sessionId
+runtime.agentSessionId
+runtime.engineSessionId
 runtime.runId
 runtime.turnId
 runtime.deliveryId
@@ -441,7 +498,7 @@ runtime.toolCallId
 runtime.toolName
 ```
 
-Hermes transcript sync upserts by stable Tavern ids when they are present.
+Agent transcript sync upserts by stable Tavern ids when they are present.
 Transcript rows without Tavern identity remain execution evidence. Tavern links
 them through response and activity metadata when possible; they are not matched
 to existing Tavern messages by content or timestamp.
@@ -452,7 +509,7 @@ to existing Tavern messages by content or timestamp.
 * Content/timestamp duplicate detection.
 * Hidden chain-of-thought as message content or activity.
 * Runtime session sequence as the Tavern timeline cursor.
-* Hermes transcript rows as canonical chat history.
+* Agent transcript rows as canonical chat history.
 
 ## Related Docs
 
@@ -460,4 +517,4 @@ to existing Tavern messages by content or timestamp.
 * [Data model](../internals/data-model.md)
 * [Chat feature](../features/chat.md)
 * [Tavern Runtime Chat Server](../../specs/runtime-chat-server.md)
-* [Tavern Hermes Runtime Adapter](../internals/tavern-hermes-runtime-adapter.md)
+* [Agent Engine Runtime](../internals/agent-engine-runtime.md)

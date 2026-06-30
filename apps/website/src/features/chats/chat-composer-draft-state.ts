@@ -8,7 +8,6 @@ export interface ChatComposerDraftState {
     content: string;
     editingQueuedMessageId: string | null;
     mentions: Mention[];
-    modelRef: string | null;
 }
 
 type DraftValue<T> = T | ((current: T) => T);
@@ -111,16 +110,6 @@ export function useChatComposerDraftState({
         [updateDraft]
     );
 
-    const setModelRef = React.useCallback(
-        (value: DraftValue<string | null>) => {
-            updateDraft((current) => ({
-                ...current,
-                modelRef: resolveDraftValue(value, current.modelRef),
-            }));
-        },
-        [updateDraft]
-    );
-
     return {
         draft,
         setAgentId,
@@ -128,7 +117,6 @@ export function useChatComposerDraftState({
         setContent,
         setEditingQueuedMessageId,
         setMentions,
-        setModelRef,
     };
 }
 
@@ -141,7 +129,6 @@ export function createChatComposerDraftState(
         content: '',
         editingQueuedMessageId: null,
         mentions: [],
-        modelRef: null,
     };
 }
 

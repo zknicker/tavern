@@ -49,9 +49,9 @@ Every engine command gets exactly one of three treatments:
    engine's session `config.set` path, matching the engine client. `/model`
    and `/reasoning` are deliberately session-scoped overrides: they tune the
    current chat-bound engine session and never write Tavern agent settings.
-2. **Tavern binding commands.** Hermes owns native session identity,
-   transcripts, reset semantics, model overrides, and tool state. Tavern owns
-   the binding between a Tavern chat participant and a Hermes session. `/new`
+2. **Tavern binding commands.** Runtime owns native session identity,
+   transcripts, reset semantics, session model state, and tool state. Runtime owns
+   the binding between a Tavern chat participant and an agent session. `/new`
    and `/clear` rotate that binding; `/clear` additionally clears the Tavern
    timeline (see Execution). `/status` reads the current binding without
    opening a new engine session. Their catalog descriptions are rewritten
@@ -80,8 +80,8 @@ Every engine command gets exactly one of three treatments:
    - They manage subsystems or presentation Tavern owns: `/memory` opens the
      engine's memory-management surface while Tavern routes durable knowledge
      through Memory;
-     `/yolo` toggles dangerous-command approval
-     skipping out from under Tavern's permission settings; `/footer` and
+     `/yolo` changes tool safety semantics outside Tavern's static grants;
+     `/footer` and
      `/voice` are messaging-platform reply presentation Tavern renders
      itself; `/help` prints the engine's full command list, contradicting
      the palette.
@@ -101,8 +101,8 @@ engine commands always pass through with the default treatment.
 
 Engine descriptions are user-facing copy, so Runtime sanitizes them before
 they reach the palette: the engine name and its install paths are rewritten
-into agent-first language ("Hermes" → "the agent", "Hermes Agent" → "agent
-engine", `~/.hermes/skills/` → "the agent's skills directory"), per the
+into agent-first language (engine names → "the agent", engine agent names → "agent
+engine", engine skill paths → "the agent's skills directory"), per the
 product-language boundary in Coding Rule 11.
 
 ## Execution
@@ -116,10 +116,11 @@ catalog command executes as a command instead of starting a chat turn:
 3. Bare `/model` opens app-side model completion before Runtime is called. When
    the user picks a model, the app submits `/model <provider/model>` through
    the same command path.
-4. Runtime derives the chat's canonical channel session key and uses the same
-   long-lived Hermes client used by normal chat turns. Runtime opens or resumes
-   the chat-bound live engine session and executes the command through the
-   gateway. `/model <provider/model>` is the Tavern/App canonical ref form;
+4. Runtime resolves the chat's addressed agent participant and its current
+   agent session, then uses the same long-lived engine client used by normal
+   chat turns. Runtime opens or resumes the chat-bound live engine session and
+   executes the command through the gateway. `/model <provider/model>` is the
+   Tavern/App canonical ref form;
    Runtime translates it to the engine's native `model --provider provider`
    argument and uses `config.set` with `key: "model"` so the next turn sees the
    same session model as the engine client. Other default engine commands use
@@ -139,17 +140,18 @@ catalog command executes as a command instead of starting a chat turn:
 Unknown leading-slash text falls through and sends as a normal message.
 Command execution mutates live session state only through the engine's own
 command semantics. Tavern does not parse or reimplement individual commands,
-with `/new`, `/clear`, and `/status` as the binding-aware exceptions.
+with `/new`, `/clear`, and `/status` as the current-session-aware exceptions.
 
 ### /new, /clear, and /status
 
-`/new` and `/clear` rotate the Hermes session bound to this chat participant:
-Runtime closes the live engine session when one is open and drops the synced
-session mapping, so the chat's next message opens a brand-new engine session
-under the same Tavern session key. The engine's own `/new` handler is
-deliberately not used unless Runtime can observe the new Hermes session id and
-atomically update the binding; otherwise the fresh context can silently diverge
-from the session normal chat turns use.
+`/new` and `/clear` rotate the addressed agent participant's current agent
+session in this chat: Runtime closes the live engine session when one is open
+and archives the previous session, so the chat's next message opens a
+brand-new engine session for the same agent participant. The engine's own
+`/new` handler is deliberately not used unless Runtime can observe the new
+engine session id and atomically update the participant's current session;
+otherwise the fresh context can silently diverge from the session normal chat
+turns use.
 
 `/new` stops there: fresh context, timeline untouched.
 
@@ -196,6 +198,6 @@ have no dismiss control until the durable refetch fills the id in.
 - Argument hints from the engine's subcommand metadata.
 - Standing goals (`/goal`) as a proper Tavern feature. Requires
   engine-initiated turn ingestion: a persistent per-session listener that
-  projects turns Runtime did not start into durable responses, plus approval
-  routing for mid-goal tool approvals. Until then the engine's goal loop runs
+  projects turns Runtime did not start into durable responses. Until then the
+  engine's goal loop runs
   off-screen, so the commands stay suppressed.

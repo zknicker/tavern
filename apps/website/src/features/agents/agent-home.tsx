@@ -5,14 +5,13 @@ import { Link } from 'react-router-dom';
 import { Icon } from '../../components/ui/icon.tsx';
 import { usePrimaryAgentSuspense } from '../../hooks/agents/use-agent-list.ts';
 import { useMessagingPlatformListSuspense } from '../../hooks/connections/use-messaging-platform-list.ts';
-import { useHermesConfig } from '../../hooks/hermes-config/use-hermes-config.ts';
 import { useSkillList } from '../../hooks/skills/use-skill-list.ts';
 import type { AgentListOutput, MessagingPlatformListOutput } from '../../lib/trpc.tsx';
 import { StartChatComposer } from '../chats/start-chat-composer.tsx';
 import { DiscordIcon } from '../settings/connections/messaging-platform-discord-icon.tsx';
 import { formatDiscordBindingInboundMode } from '../settings/connections/messaging-platform-shared.ts';
 import { AgentCapabilities } from './agent-capabilities.tsx';
-import { buildAgentPath, buildAgentSettingsPath } from './agent-path.ts';
+import { buildAgentPath } from './agent-path.ts';
 import { AgentRecentChats } from './agent-recent-chats.tsx';
 import { readAgentToolPolicyView } from './agent-tool-policy.ts';
 import { MissingAgentState } from './missing-agent-state.tsx';
@@ -20,7 +19,6 @@ import { MissingAgentState } from './missing-agent-state.tsx';
 export function AgentHome() {
     const [primaryAgent] = usePrimaryAgentSuspense();
     const [messagingPlatformData] = useMessagingPlatformListSuspense();
-    const hermesConfig = useHermesConfig();
     const skillQuery = useSkillList();
     const agent = primaryAgent.agent;
 
@@ -34,8 +32,7 @@ export function AgentHome() {
     const skills = skillQuery.data?.skills ?? [];
     const enabledSkills = skills.filter((skill) => agent.enabledSkillIds.includes(skill.id));
     const toolPolicy = readAgentToolPolicyView({
-        agentId: agent.id,
-        config: hermesConfig.data?.snapshot?.config,
+        tools: agent.enabledSkillIds,
     });
 
     return (
@@ -136,13 +133,13 @@ function AgentChannels({
                         icon={renderMessagingBindingIcon(binding)}
                         key={binding.id}
                         title={formatMessagingBindingTitle(binding)}
-                        to={buildAgentSettingsPath(agent.id)}
+                        to="/dashboard/settings/channels"
                     />
                 ))}
 
                 <Link
                     className="group flex flex-col gap-3 rounded-xl border border-border border-dashed px-4 py-4 transition-colors hover:border-border-strong hover:bg-accent/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    to={buildAgentSettingsPath(agent.id)}
+                    to="/dashboard/settings/channels"
                 >
                     <span className="flex size-7 items-center justify-center rounded-md border border-border bg-background text-muted-foreground transition-colors group-hover:text-foreground">
                         <Icon className="size-3.5" icon={Add01Icon} />

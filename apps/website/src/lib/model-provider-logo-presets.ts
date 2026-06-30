@@ -111,12 +111,6 @@ export const logoModelProviderPresets = [
         { light: 'https://thesvg.org/icons/minimax/default.svg' },
     ],
     ['mistral', 'Mistral AI', '#FF7000', { light: 'https://svgl.app/library/mistral-ai_logo.svg' }],
-    [
-        'nous',
-        'Nous Portal',
-        '#2D6376',
-        { light: 'https://thesvg.org/icons/nousresearch-hermes/default.svg' },
-    ],
     ['novita', 'NovitaAI', '#7C3AED', { light: 'https://thesvg.org/icons/novita/default.svg' }],
     ['nvidia', 'NVIDIA NIM', '#76B900', { light: 'https://thesvg.org/icons/nvidia/default.svg' }],
     ['ollama', 'Ollama', '#111827', ollamaLogo],

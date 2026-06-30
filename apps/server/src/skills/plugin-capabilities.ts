@@ -2,7 +2,7 @@ import type {
     AgentRuntimePlugin,
     AgentRuntimePluginId,
     AgentRuntimeSkillSummary,
-    AgentRuntimeToolset,
+    AgentRuntimeTool,
 } from '@tavern/api';
 
 export interface SkillPluginRef {
@@ -16,10 +16,10 @@ interface PluginCapabilityDefinition {
     id: AgentRuntimePluginId;
     skillNames: readonly string[];
     skillRuntimeSources: readonly string[];
+    toolDescription: string;
+    toolIds: readonly string[];
+    toolLabel: string;
     tools: readonly string[];
-    toolsetDescription: string;
-    toolsetIds: readonly string[];
-    toolsetLabel: string;
 }
 
 const pluginCapabilityDefinitions = [
@@ -28,9 +28,9 @@ const pluginCapabilityDefinitions = [
         id: 'merchbase',
         skillRuntimeSources: ['tavern-plugin:merchbase'],
         skillNames: ['merchbase'],
-        toolsetDescription: 'Read-only MerchBase sales, product, catalog, and design tools.',
-        toolsetLabel: 'MerchBase',
-        toolsetIds: ['merchbase'],
+        toolDescription: 'Read-only MerchBase sales, product, catalog, and design tools.',
+        toolLabel: 'MerchBase',
+        toolIds: ['merchbase'],
         tools: [
             'merchbase_status',
             'merchbase_sales_summary',
@@ -51,7 +51,7 @@ const pluginCapabilityDefinitions = [
     },
 ] satisfies PluginCapabilityDefinition[];
 
-export interface PluginToolsetPlaceholder {
+export interface PluginToolPlaceholder {
     configured: boolean;
     description: string;
     enabled: boolean;
@@ -61,20 +61,20 @@ export interface PluginToolsetPlaceholder {
     tools: string[];
 }
 
-export function listMissingPluginToolsets(
+export function listMissingPluginTools(
     plugins: AgentRuntimePlugin[],
-    existingToolsetIds: Set<string>
-): PluginToolsetPlaceholder[] {
+    existingToolIds: Set<string>
+): PluginToolPlaceholder[] {
     return pluginCapabilityDefinitions
-        .filter((definition) => !definition.toolsetIds.some((id) => existingToolsetIds.has(id)))
+        .filter((definition) => !definition.toolIds.some((id) => existingToolIds.has(id)))
         .map((definition) => {
             const plugin = buildPluginRef(definition, plugins);
             return {
                 configured: false,
-                description: definition.toolsetDescription,
+                description: definition.toolDescription,
                 enabled: plugin.enabled,
-                id: definition.toolsetIds[0] ?? definition.id,
-                label: definition.toolsetLabel,
+                id: definition.toolIds[0] ?? definition.id,
+                label: definition.toolLabel,
                 placeholder: true,
                 tools: [...definition.tools],
             };
@@ -94,13 +94,12 @@ export function resolveSkillPlugin(
     return definition ? buildPluginRef(definition, plugins) : null;
 }
 
-export function resolveToolsetPlugin(
-    toolset: Pick<AgentRuntimeToolset, 'id' | 'name'>,
+export function resolveToolPlugin(
+    tool: Pick<AgentRuntimeTool, 'id' | 'name'>,
     plugins: AgentRuntimePlugin[]
 ): SkillPluginRef | null {
     const definition = pluginCapabilityDefinitions.find(
-        (candidate) =>
-            candidate.toolsetIds.includes(toolset.id) || candidate.toolsetIds.includes(toolset.name)
+        (candidate) => candidate.toolIds.includes(tool.id) || candidate.toolIds.includes(tool.name)
     );
     return definition ? buildPluginRef(definition, plugins) : null;
 }
@@ -125,13 +124,13 @@ export function rejectPluginSkillEnablement(
     }
 }
 
-export function rejectPluginToolsetEnablement(toolsetId: string) {
+export function rejectPluginToolEnablement(toolId: string) {
     const definition = pluginCapabilityDefinitions.find((candidate) =>
-        candidate.toolsetIds.includes(toolsetId)
+        candidate.toolIds.includes(toolId)
     );
     if (definition) {
         throw new Error(
-            `${definition.displayName} toolset enablement is managed from Settings -> Plugins.`
+            `${definition.displayName} tool enablement is managed from Settings -> Plugins.`
         );
     }
 }

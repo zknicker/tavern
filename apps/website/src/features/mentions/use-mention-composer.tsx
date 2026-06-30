@@ -5,7 +5,8 @@ import type { ChatContextFullness } from '../chats/chat-context-fullness.ts';
 import { MentionEditor, type MentionEditorHandle } from './mention-editor.tsx';
 import { MentionPicker } from './mention-picker.tsx';
 import type { ActiveMentionQuery, Mention, MentionOption } from './mention-types.ts';
-import { filterCommandOptionsForQuery, useCommandOptions } from './use-command-options.ts';
+import { selectVisibleOptions } from './mention-visible-options.ts';
+import { useCommandOptions } from './use-command-options.ts';
 import { useMentionOptions } from './use-mention-options.ts';
 
 export interface MentionComposerState {
@@ -30,6 +31,7 @@ export function useMentionComposer({
     commandArgumentOptions,
     content,
     contextFullness = null,
+    mentionableAgentIds = [],
     onCommandAction,
     onTextChange,
     onSubmit,
@@ -41,6 +43,7 @@ export function useMentionComposer({
     commandArgumentOptions?: (query: ActiveMentionQuery) => MentionOption[] | null;
     content: string;
     contextFullness?: ChatContextFullness | null;
+    mentionableAgentIds?: readonly string[];
     onCommandAction?: (command: string) => void;
     onTextChange: (content: string) => void;
     onSubmit?: () => void;
@@ -58,7 +61,9 @@ export function useMentionComposer({
     const mentionOptionsState = useMentionOptions({
         agentId,
         agents,
+        mentionableAgentIds,
         query: activeQuery?.query ?? '',
+        trigger: activeQuery?.trigger ?? null,
     });
     const commandOptions = useCommandOptions({ contextFullness, enabled: supportsCommands });
     const trigger = activeQuery?.trigger ?? '@';
@@ -215,8 +220,10 @@ export function useMentionComposer({
         handleMentionSelect,
         handleTextChange,
         hasQuery: Boolean(activeQuery),
-        isPathSearchActive: trigger === '@' && mentionOptionsState.isPathSearchActive,
-        isPathSearchLoading: trigger === '@' && mentionOptionsState.isPathSearchLoading,
+        isPathSearchActive:
+            trigger !== '@' && trigger !== '$' && mentionOptionsState.isPathSearchActive,
+        isPathSearchLoading:
+            trigger !== '@' && trigger !== '$' && mentionOptionsState.isPathSearchLoading,
         onActiveQueryChange: handleActiveQueryChange,
         options: visibleMentionOptions,
         prefetchMentionOptions,
@@ -232,40 +239,6 @@ function isSameMentionQuery(left: ActiveMentionQuery, right: ActiveMentionQuery 
         left.start === right.start &&
         left.trigger === right.trigger
     );
-}
-
-function selectVisibleOptions({
-    activeQuery,
-    commandArgumentOptions,
-    commandOptions,
-    mentionOptions,
-    supportsCommands,
-}: {
-    activeQuery: ActiveMentionQuery | null;
-    commandArgumentOptions?: MentionOption[] | null;
-    commandOptions: MentionOption[];
-    mentionOptions: MentionOption[];
-    supportsCommands: boolean;
-}) {
-    if (!activeQuery) {
-        return [];
-    }
-
-    if (activeQuery.trigger === '/') {
-        if (commandArgumentOptions) {
-            return commandArgumentOptions;
-        }
-
-        return supportsCommands
-            ? filterCommandOptionsForQuery(commandOptions, activeQuery.query)
-            : [];
-    }
-
-    if (activeQuery.trigger === '$') {
-        return mentionOptions.filter((option) => option.kind === 'skill');
-    }
-
-    return mentionOptions;
 }
 
 export function MentionComposerEditor({

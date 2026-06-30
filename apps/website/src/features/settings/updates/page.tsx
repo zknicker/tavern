@@ -90,7 +90,7 @@ export function UpdatesSettings() {
                 </Card>
             </CardFrame>
             <p className="px-3.5 pt-3 text-muted-foreground text-xs">
-                Agent execution powered by Hermes.
+                Agent execution powered by Tavern Runtime.
             </p>
         </div>
     );

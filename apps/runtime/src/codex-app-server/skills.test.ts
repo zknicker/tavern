@@ -1,10 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-    listCodexAppServerSkills,
-    mapCodexSkillsResult,
-    mergeHermesAndCodexSkills,
-} from './skills';
+import { listCodexAppServerSkills, mapCodexSkillsResult, mergeAgentAndCodexSkills } from './skills';
 
 describe('Codex app-server skills', () => {
     it('maps Codex skills into runtime skill summaries', () => {
@@ -41,8 +37,8 @@ describe('Codex app-server skills', () => {
         ]);
     });
 
-    it('keeps shared installed skills as Hermes rows', () => {
-        const merged = mergeHermesAndCodexSkills(
+    it('keeps shared installed skills as agent rows', () => {
+        const merged = mergeAgentAndCodexSkills(
             [
                 createSkill({
                     filePath: '/Users/me/.agents/skills/agent-browser/SKILL.md',

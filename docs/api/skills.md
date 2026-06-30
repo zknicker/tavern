@@ -1,132 +1,68 @@
 ---
-summary: Skills & Toolsets API for skill catalog reads, skill enablement, runtime toolset enablement, and setup blocker metadata.
+summary: Skills and Tools API for skill catalog reads, skill enablement, Runtime tool inventory, MCP server management, and setup blocker metadata.
 read_when:
-  - changing skill catalog, setup blocker, runtime toolset, or agent access APIs
+  - changing skill catalog, setup blocker, Runtime tool inventory, MCP management, or agent access APIs
   - changing how clients list reusable runtime abilities and runtime tool access
 ---
 
-# Skills & Toolsets API
+# Skills and Tools API
 
-The Skills & Toolsets API backs the Skills & Toolsets settings page. It exposes
-the runtime-visible instruction packages and tool groups configured in the
-managed Hermes instance.
+The Skills and Tools API backs Settings -> Skills, Settings -> Tools, and the
+MCP capability records used by Settings -> MCP.
 
-Skills are runtime instruction packages with setup blocker metadata and
-enablement state.
-
-Toolsets are Hermes-owned groups of tools. They control which runtime tool
-groups are enabled for new sessions. A toolset is not a skill row unless Hermes
-also exposes a concrete skill for it.
+Skills are reusable instruction packages. Tools are executable agent actions.
+MCP servers are agent-engine connection records that may expose external tools.
 
 ## Contract
 
-* Skill ids are stable within the runtime source.
+* Skill ids are stable within the Runtime source.
 * Setup requirements and source state are visible.
 * A skill can be visible while Runtime reports setup blockers.
-* Toolset ids are stable Hermes toolset names.
-* Toolset enablement separates the user's choice from whether Hermes reports the
-  toolset as configured and usable.
-* Runtime toolset details are exposed as metadata for diagnostics, not as copied
-  Tavern skill instructions.
-* Skill content updates are not a Tavern merge contract. Outside Runtime-owned
-  read-only skills, Hermes and the agent edit the skill source in place.
+* Tool ids are Runtime-native tool names.
+* Tool enablement separates the user's choice from whether Runtime reports the
+  tool as usable.
+* Runtime may mark built-in tools as `readOnly`. Read-only tools are inventory
+  facts, not user-toggleable settings.
+* MCP server records are separate from tool records.
+* Runtime tool details are diagnostics, not copied Tavern skill instructions.
+* Plugin-owned skills and tools are read-only reflections of Plugin state.
 
 ## Surface
 
 The API covers:
 
 * list visible skills
-* read one installed skill's detail, rendered from Runtime-owned skill source
-  content
-* enable or disable runtime-managed Hermes skills
+* enable or disable Runtime skills
 * read setup requirements
-* list Hermes toolsets visible to Tavern
-* enable or disable a Hermes toolset
-* read runtime-provided usability and diagnostic text
-* list available skills from chosen sources — the built-in library, tap
-  listings, and the installed map (`skill.hubAvailable`) — preview a skill's
-  SKILL.md and file manifest (`skill.hubPreview`), and read its security scan
-  verdict (`skill.hubScan`)
-* install and uninstall hub skills (`skill.hubInstall`, `skill.hubUninstall`)
-* manage custom GitHub skill sources ("taps": `skill.hubTaps`,
-  `skill.hubTapAdd`, `skill.hubTapRemove`)
-* read a toolset's provider matrix (`skill.toolsetConfig`) and run setup
-  (`skill.setToolsetProvider`, `skill.saveToolsetEnv`,
-  `skill.runToolsetPostSetup`)
-* manage MCP servers and the MCP catalog (`skill.mcpServers`,
-  `skill.addMcpServer`, `skill.removeMcpServer`, `skill.testMcpServer`,
-  `skill.setMcpServerEnabled`, `skill.mcpCatalog`,
-  `skill.installMcpCatalogEntry`)
-* identify Plugin-owned skills and toolsets with Plugin metadata so clients can
-  show them in Plugins tabs and lock their enablement controls
+* list Runtime-visible tools
+* enable or disable Runtime tools where Runtime allows it
+* read Runtime-provided usability and diagnostic text
+* list available skills from chosen sources
+* preview, scan, install, and uninstall available skills
+* manage custom skill sources
+* manage MCP servers and the MCP catalog
+* identify Plugin-owned skills and tools with Plugin metadata
 
 ## Runtime Boundary
 
-Hermes owns skill discovery, toolset discovery, eligibility, dependency checks,
-prompt loading, and execution.
+Runtime owns skill discovery, tool discovery, tool eligibility, MCP server
+records, dependency checks, prompt loading, static tool grants, sandboxing, and
+execution.
 
-Skill list reads return the latest Runtime SQLite skill inventory snapshot.
-Runtime refreshes that snapshot on startup, every 15 minutes, and after
-skill-related writes. The refresh job emits the skill update event only when the
-stored inventory changes, so the app can refetch without blocking settings
-navigation on live Hermes discovery.
+The first agent-engine pass exposes the built-in local tools as enabled,
+configured, read-only Runtime tools. Later per-agent customization can add
+mutable grants without changing the inventory ownership boundary.
 
-Managed Hermes bundled skills stay available to Hermes itself, but Tavern
-configures `skills.allowBundled` to a Tavern sentinel allowlist with no real
-bundled skill ids, so bundled skills are not eligible for agent prompt
-injection. The Skills & Toolsets API hides skills Hermes reports as blocked by
-runtime allowlist policy.
+The app reads Runtime inventory and sends supported mutations back to Runtime.
+It does not write discovered skill directories, authored tool files, MCP server
+files, or Plugin-generated project files.
 
-Toolsets remain Hermes-owned. Tavern reads them from Hermes and sends supported
-enablement changes back through Runtime. Codex app-server skills are not merged
-into the Tavern skill catalog.
-
-Plugin-owned skills and toolsets are different from user-managed rows: their
-enablement is controlled by Settings -> Plugins. The Skills & Toolsets API
-returns the Plugin reference on those summaries and rejects
-direct enablement mutations for them.
-When an enabled Plugin reserves a flat skill name, the Plugin settings flow owns
-the replacement warning and enablement action. Skills settings only
-shows the resulting Runtime-owned row.
-
-Install mechanics stay engine-owned: quarantine, scanning, install policy, and
-the install lockfile live in the engine. Runtime runs the engine CLI directly
-for install (`skills install --yes`) and uninstall (answering the confirm
-prompt over stdin) because the engine dashboard's spawn endpoints mishandle
-the installer's confirmation prompts and report success on cancel. Runtime
-verifies the result against the hub lockfile — tolerating the engine's
-source-prefixed identifiers (e.g. `skills-sh/owner/repo/...`) — then refreshes
-the skill inventory snapshot and emits the skill update event.
-
-Skill-content update requests run as agent work through Hermes skill tooling.
-The agent can fetch source material, merge or patch the installed skill, and
-explain the result. Runtime observes the changed inventory afterward; the
-Skills & Toolsets API does not implement source merge policy or expose
-version-control state. Tavern's generated workspace instructions tell agents
-to inspect the current skill catalog before adding or updating skill content,
-then use native skill tools for the actual read/create/patch. For external
-skill search, the instructions use
-`hermes skills search <query> --source skills-sh` unless the user names a
-different source.
-
-The available-skills view is Runtime-owned local reads with no engine HTTP and
-no centralized index: the built-in library comes from the resolved engine
-install's `optional-skills/` directory, tap listings come from the GitHub
-contents API (token from `GITHUB_TOKEN`/`GH_TOKEN` or `gh auth token`, results
-cached briefly), and the installed map comes from the engine's
-`skills/.hub/lock.json`. Taps themselves live in `skills/.hub/taps.json`; the
-engine has no HTTP surface for either file, so Runtime reads and writes them
-directly under the managed engine home. The engine's multi-source hub search is
-not exposed as a Tavern API surface.
-
-Toolset setup proxies the engine provider matrix at
-`/toolsets/{id}/config|provider|env|post-setup`. MCP servers and the curated MCP
-catalog proxy at `/mcp/*`. Env values are written into the engine's env store
-and come back only as set/unset status; server summaries keep env values
-redacted.
+Runtime refreshes skill and tool inventory after startup and after capability
+writes. App surfaces should refetch on Runtime capability events instead of
+blocking navigation on live discovery.
 
 ## Related Docs
 
-* [Skills & Toolsets feature](../features/skills.md)
+* [Skills and Tools feature](../features/skills.md)
 * [Agents API](agents.md)
 * [API overview](overview.md)

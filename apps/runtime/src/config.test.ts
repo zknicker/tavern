@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 describe('runtime config paths', () => {
     const originalHome = process.env.HOME;
-    const originalHermesHome = process.env.TAVERN_HERMES_HOME;
+    const originalAgentHome = process.env.TAVERN_AGENT_HOME;
     const originalRuntimeRoot = process.env.TAVERN_RUNTIME_ROOT;
     let home: string;
 
@@ -18,21 +18,19 @@ describe('runtime config paths', () => {
 
     afterEach(async () => {
         restoreEnv('HOME', originalHome);
-        restoreEnv('TAVERN_HERMES_HOME', originalHermesHome);
+        restoreEnv('TAVERN_AGENT_HOME', originalAgentHome);
         restoreEnv('TAVERN_RUNTIME_ROOT', originalRuntimeRoot);
         vi.resetModules();
         await fs.rm(home, { force: true, recursive: true });
     });
 
-    it('expands a configured Hermes home path under the user home', async () => {
-        process.env.TAVERN_HERMES_HOME = '~/.tavern-hermes/runtime/hermes/home';
+    it('expands a configured agent home path under the user home', async () => {
+        process.env.TAVERN_AGENT_HOME = '~/.tavern/runtime/agent';
         vi.resetModules();
 
         const config = await import('./config');
 
-        expect(config.HERMES_HOME).toBe(
-            path.join(home, '.tavern-hermes', 'runtime', 'hermes', 'home')
-        );
+        expect(config.AGENT_HOME).toBe(path.join(home, '.tavern', 'runtime', 'agent'));
     });
 
     it('uses the user runtime root for source runs by default', async () => {

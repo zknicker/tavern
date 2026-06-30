@@ -4,13 +4,14 @@ import { dispatch } from './cli/main';
 import { DATA_DIR } from './config';
 import { initDb } from './db/connection';
 import { ensureRuntimeSchema } from './db/schema';
-import { type ManagedHermesHandle, startHermesForRuntime } from './hermes/supervisor';
 import { type RuntimeJobsManager, startRuntimeJobsManager } from './jobs/manager';
 import { ensureRuntimeJobsSchema } from './jobs/schema';
 import { log } from './log';
+import { seedWorkspaceChats } from './tavern/bootstrap-chats';
 import { demoAgentId } from './tavern/development-chat-demo-types';
 import { seedDevelopmentChatDemos } from './tavern/development-chat-demos';
 import { seedDevelopmentVaultDemos } from './tavern/development-vault-demos';
+import { ensurePrimaryManagedAgent } from './tavern/managed-agent';
 import { startTavernRuntimeServer } from './tavern/server';
 import { recoverInterruptedChatResponses } from './tavern/turn-recovery';
 import { resolveVaultConfig } from './vault/store';
@@ -20,9 +21,7 @@ import { getAgentWorkspaceSource } from './workspace/instructions';
 import { closeAgentNotesWatchers } from './workspace/notes-watcher';
 
 let runtimeServer: ReturnType<typeof startTavernRuntimeServer> | null = null;
-let hermes: ManagedHermesHandle | null = null;
 let runtimeJobs: RuntimeJobsManager | null = null;
-let hermesStartup: Promise<ManagedHermesHandle> | null = null;
 let shuttingDown = false;
 
 async function main(): Promise<void> {
@@ -32,6 +31,15 @@ async function main(): Promise<void> {
     const db = initDb(dbPath);
     ensureRuntimeSchema(db);
     ensureRuntimeJobsSchema(db);
+    const managedAgent = ensurePrimaryManagedAgent(db);
+    const workspaceChatsSeed = seedWorkspaceChats({
+        agentId: managedAgent.id,
+        agentName: managedAgent.name,
+        db,
+    });
+    if (workspaceChatsSeed.seeded > 0) {
+        log.info('Workspace chats ready', { count: workspaceChatsSeed.seeded });
+    }
     log.info('Runtime DB ready', { path: dbPath });
     const recoveredTurns = recoverInterruptedChatResponses(db);
     if (recoveredTurns > 0) {
@@ -53,49 +61,31 @@ async function main(): Promise<void> {
         log.info('Development Vault demos ready', { count: vaultDemoSeed.seeded });
     }
     void startVaultWatcher(resolveVaultConfig).catch((err) => {
-        log.warn('Memory live updates failed to start', { err });
+        log.warn('Vault live updates failed to start', { err });
     });
     runtimeJobs = await startRuntimeJobsManager();
 
     runtimeServer = startTavernRuntimeServer();
     log.info('Tavern Runtime running', { url: runtimeServer.url.toString() });
 
-    hermesStartup = startHermesForRuntime()
-        .then(async (handle) => {
-            hermes = handle;
-            await restartVaultWatcher({ emitRootChanged: false }).catch((err) => {
-                log.warn('Memory live updates failed to refresh after engine startup', {
-                    err,
-                });
-            });
-            await refreshRuntimeCapabilities({
-                ids: ['vault', 'gateway'],
-                publishUpdated: true,
-            }).catch((err) => {
-                log.warn('Memory capability refresh failed after Hermes startup', {
-                    err,
-                });
-            });
-            if (shuttingDown) {
-                void handle.stop();
-            }
-            return handle;
-        })
-        .catch((err) => {
-            log.error('Managed Hermes API startup failed', { err });
-            throw err;
+    await restartVaultWatcher({ emitRootChanged: false }).catch((err) => {
+        log.warn('Vault live updates failed to refresh after agent startup', {
+            err,
         });
-
-    void hermesStartup.catch(() => undefined);
+    });
+    await refreshRuntimeCapabilities({
+        ids: ['vault', 'gateway', 'apiServer', 'models', 'skills'],
+        publishUpdated: true,
+    }).catch((err) => {
+        log.warn('Capability refresh failed after agent startup', {
+            err,
+        });
+    });
 }
 
 async function shutdown(signal: string): Promise<void> {
     if (shuttingDown) {
-        log.warn('Shutdown already in progress; forcing managed Hermes API stop', {
-            signal,
-        });
-        const handle = hermes ?? (await hermesStartup?.catch(() => null));
-        await handle?.stop({ force: true });
+        log.warn('Shutdown already in progress; exiting', { signal });
         process.exit(signal === 'SIGINT' ? 130 : 143);
         return;
     }
@@ -103,23 +93,15 @@ async function shutdown(signal: string): Promise<void> {
     shuttingDown = true;
     log.info('Shutdown signal received', { signal });
     closeAgentNotesWatchers();
-    log.info('Stopping Memory live updates');
+    log.info('Stopping Vault live updates');
     await closeVaultWatcher();
-    log.info('Memory live updates stopped');
+    log.info('Vault live updates stopped');
     log.info('Stopping Runtime jobs');
     await runtimeJobs?.stop();
     log.info('Runtime jobs stopped');
     log.info('Stopping Runtime server');
     runtimeServer?.stop();
     log.info('Runtime server stopped');
-    const handle = hermes ?? (await hermesStartup?.catch(() => null));
-    if (handle) {
-        log.info('Waiting for managed Hermes API to stop');
-    }
-    await handle?.stop();
-    if (handle) {
-        log.info('Managed Hermes API stopped');
-    }
     process.exit(0);
 }
 

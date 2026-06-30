@@ -158,7 +158,10 @@ export function cancelledResponseToChatRow(response: TavernChatResponse): ChatLo
             turnStatus: {
                 agentId: runtimeMetadataString(response, 'agentId') ?? response.participant_id,
                 runId: runtimeMetadataString(response, 'runId') ?? response.id,
-                sessionKey: runtimeMetadataString(response, 'sessionKey') ?? response.id,
+                sessionKey:
+                    runtimeMetadataString(response, 'agentSessionId') ??
+                    runtimeMetadataString(response, 'sessionKey') ??
+                    response.id,
                 status: 'stopped' as const,
                 text: response.summary?.trim() || 'Response stopped.',
             },
@@ -228,7 +231,9 @@ function activityToChatRows(
     agentNamesById: ReadonlyMap<string, string>
 ): ChatLogPage['rows'] {
     const response = responsesById.get(activity.response_id) ?? null;
-    const sessionKey = runtimeMetadataString(response, 'sessionKey');
+    const sessionKey =
+        runtimeMetadataString(response, 'agentSessionId') ??
+        runtimeMetadataString(response, 'sessionKey');
     const actor = {
         id: runtimeMetadataString(response, 'agentId') ?? response?.participant_id ?? 'agt_unknown',
         kind: 'agent' as const,
@@ -331,7 +336,6 @@ function activityToChatRows(
             id: activity.id,
             isFirstInGroup: true,
             kind: 'tool' as const,
-            approval: approvalFromActivity(activity),
             clarification: clarificationFromActivity(activity),
             responseId: activity.response_id,
             sessionKey,
@@ -380,7 +384,9 @@ function steerMessageRowFromNotice(
             senderType: 'user' as const,
             sourceSessionId: runtimeMetadataString(response, 'sessionId'),
             sourceSessionKey:
+                readString(runtime.agentSessionId) ??
                 readString(runtime.sessionKey) ??
+                runtimeMetadataString(response, 'agentSessionId') ??
                 runtimeMetadataString(response, 'sessionKey') ??
                 '',
             tavernAgentId: null,
@@ -417,7 +423,10 @@ function activityToMessageRows(
                 sender: actor.id,
                 senderType: 'agent' as const,
                 sourceSessionId: runtimeMetadataString(response, 'sessionId'),
-                sourceSessionKey: runtimeMetadataString(response, 'sessionKey') ?? '',
+                sourceSessionKey:
+                    runtimeMetadataString(response, 'agentSessionId') ??
+                    runtimeMetadataString(response, 'sessionKey') ??
+                    '',
                 tavernAgentId: actor.id,
                 timestamp: activity.started_at,
             },
@@ -556,7 +565,6 @@ function isRenderableActivity(
         activity.kind === 'tool_call' ||
         activity.kind === 'tool_result' ||
         activity.kind === 'command' ||
-        activity.kind === 'approval' ||
         activity.kind === 'artifact' ||
         activity.kind === 'custom' ||
         activity.kind === 'reasoning' ||
@@ -567,9 +575,6 @@ function isRenderableActivity(
 function activityName(activity: TavernResponseActivity) {
     if (activity.kind === 'command') {
         return 'command';
-    }
-    if (activity.kind === 'approval') {
-        return 'approval';
     }
     if (activity.kind === 'artifact') {
         return 'artifact';
@@ -592,8 +597,7 @@ function activitySummaryParts(activity: TavernResponseActivity) {
 
     if (
         detail &&
-        (activity.kind === 'approval' ||
-            activity.kind === 'message' ||
+        (activity.kind === 'message' ||
             activity.kind === 'reasoning' ||
             activity.kind === 'planning')
     ) {
@@ -639,22 +643,6 @@ function readIsoString(value: unknown) {
     return new Date(Date.parse(value)).toISOString();
 }
 
-function approvalFromActivity(activity: TavernResponseActivity) {
-    const approval = readRecord(activity.metadata.approval);
-    const command = readString(approval.command);
-
-    if (!(activity.kind === 'approval' && command)) {
-        return null;
-    }
-
-    return {
-        command,
-        description: readOptionalString(approval.description),
-        patternKey: readOptionalString(approval.patternKey),
-        patternKeys: readStringArray(approval.patternKeys),
-    };
-}
-
 function clarificationFromActivity(activity: TavernResponseActivity) {
     const clarification = readRecord(activity.metadata.clarification);
     const requestId = readString(clarification.requestId);
@@ -698,7 +686,10 @@ function activeReplyFromResponses(
         agentId: runtimeMetadataString(response, 'agentId') ?? response.participant_id,
         isThinking: true,
         runId: runtimeMetadataString(response, 'runId') ?? response.id,
-        sessionKey: runtimeMetadataString(response, 'sessionKey') ?? response.id,
+        sessionKey:
+            runtimeMetadataString(response, 'agentSessionId') ??
+            runtimeMetadataString(response, 'sessionKey') ??
+            response.id,
         startedAt: runtimeMetadataString(response, 'startedAt') ?? response.created_at,
         text: response.summary ?? '',
     };
@@ -730,7 +721,10 @@ export function failedTurnFromResponses(
                 runtimeMetadataString(failedResponse, 'agentId') ?? failedResponse.participant_id,
             chatId: failedResponse.chat_id,
             runId: runtimeMetadataString(failedResponse, 'runId') ?? failedResponse.id,
-            sessionKey: runtimeMetadataString(failedResponse, 'sessionKey') ?? failedResponse.id,
+            sessionKey:
+                runtimeMetadataString(failedResponse, 'agentSessionId') ??
+                runtimeMetadataString(failedResponse, 'sessionKey') ??
+                failedResponse.id,
             startedAt:
                 runtimeMetadataString(failedResponse, 'startedAt') ?? failedResponse.created_at,
         },

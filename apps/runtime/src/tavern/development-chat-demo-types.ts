@@ -19,7 +19,7 @@ export type DevelopmentDemoResponse = TavernUpsertResponseRequest & {
     activities?: TavernUpsertResponseActivityRequest[];
 };
 
-export const demoAgentId = 'agt_hermes';
+export const demoAgentId = 'agt_primary';
 export const demoUserParticipantId = 'usr_demo';
 export const demoTime = '2026-06-18T15:00:00.000Z';
 

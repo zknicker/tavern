@@ -165,8 +165,8 @@ function messageCreatedToRuntimeEvent(
     }
 
     const agentId = metadataRuntimeString(message.metadata, 'agentId');
-    const sessionKey = metadataRuntimeString(message.metadata, 'sessionKey');
-    if (!(agentId && sessionKey)) {
+    const agentSessionId = metadataRuntimeString(message.metadata, 'agentSessionId');
+    if (!(agentId && agentSessionId)) {
         return null;
     }
 
@@ -184,8 +184,7 @@ function messageCreatedToRuntimeEvent(
             threadRootId: message.thread_root_id ?? message.id,
             timestamp: message.created_at,
         },
-        runId: createRunId(message.id),
-        sessionKey,
+        runId: metadataRuntimeString(message.metadata, 'runId') ?? createRunId(message.id),
         timestamp,
         type: 'chat.messageAccepted',
     };
@@ -240,20 +239,14 @@ function activityEventToRuntimeEvents(
 }
 
 function activityStepDetail(activity: TavernResponseActivity) {
-    if (activity.kind !== 'approval') {
-        return activity.detail;
-    }
-
-    const tool = isRecord(activity.metadata.tool) ? activity.metadata.tool : {};
-    const argumentsValue = isRecord(tool.arguments) ? tool.arguments : {};
-    return readRequiredString(argumentsValue.command) ?? activity.detail;
+    return activity.detail;
 }
 
 function messageToTurn(
     message: TavernChatMessage
 ): Extract<AgentRuntimeEvent, { type: 'turn.started' }>['turn'] {
     const runId = metadataRuntimeString(message.metadata, 'runId');
-    const sessionKey = metadataRuntimeString(message.metadata, 'sessionKey');
+    const sessionKey = runtimeTurnReference(message.metadata);
 
     if (!(runId && sessionKey)) {
         throw new Error(`Delivered Tavern message ${message.id} is missing runtime turn metadata.`);
@@ -275,7 +268,7 @@ function responseToTurn(
         agentId: metadataRuntimeString(response.metadata, 'agentId') ?? response.participant_id,
         chatId: response.chat_id,
         runId: metadataRuntimeString(response.metadata, 'runId') ?? response.id,
-        sessionKey: metadataRuntimeString(response.metadata, 'sessionKey') ?? response.id,
+        sessionKey: runtimeTurnReference(response.metadata) ?? response.id,
         startedAt: metadataRuntimeString(response.metadata, 'startedAt') ?? response.created_at,
     };
 }
@@ -287,7 +280,7 @@ function activityToTurn(
         agentId: metadataRuntimeString(activity.metadata, 'agentId') ?? 'main',
         chatId: activity.chat_id,
         runId: metadataRuntimeString(activity.metadata, 'runId') ?? activity.response_id,
-        sessionKey: metadataRuntimeString(activity.metadata, 'sessionKey') ?? activity.response_id,
+        sessionKey: runtimeTurnReference(activity.metadata) ?? activity.response_id,
         startedAt: metadataRuntimeString(activity.metadata, 'startedAt') ?? activity.started_at,
     };
 }
@@ -304,9 +297,6 @@ function activityKind(activity: TavernResponseActivity) {
     }
 
     const kind = activity.kind;
-    if (kind === 'approval') {
-        return 'approval' as const;
-    }
     if (kind === 'reasoning') {
         return 'reasoning' as const;
     }
@@ -391,6 +381,13 @@ function metadataRuntimeString(metadata: Record<string, unknown>, key: string) {
 
     const value = (runtime as Record<string, unknown>)[key];
     return typeof value === 'string' ? value : null;
+}
+
+function runtimeTurnReference(metadata: Record<string, unknown>) {
+    return (
+        metadataRuntimeString(metadata, 'agentSessionId') ??
+        metadataRuntimeString(metadata, 'sessionKey')
+    );
 }
 
 function metadataString(metadata: Record<string, unknown>, key: string) {

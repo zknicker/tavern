@@ -242,7 +242,7 @@ export function longContentDemo(): DevelopmentChatDemo {
         chatId: developmentChatDemoIds.longContent,
         title: 'Demo: Long Content',
         request: longPastedOAuthJson,
-        reply: `Auth URL created. Open this URL:\n\n${longOAuthConsentUrl}\n\nAfter approval, copy the localhost callback URL and paste it here.`,
+        reply: `Auth URL created. Open this URL:\n\n${longOAuthConsentUrl}\n\nAfter authorizing, copy the localhost callback URL and paste it here.`,
         slug: 'long_content',
         summary: 'Shows long pasted JSON and a long URL in chat.',
     });

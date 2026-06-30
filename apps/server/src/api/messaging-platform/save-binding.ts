@@ -45,5 +45,5 @@ export const saveMessagingBindingProcedure = publicProcedure
             throw new Error(`Unsupported messaging platform "${input.platform}".`);
         }
 
-        throw new Error('Managed Hermes Discord binding edits are not available in Tavern yet.');
+        throw new Error('Agent Discord binding edits are not available in Tavern yet.');
     });

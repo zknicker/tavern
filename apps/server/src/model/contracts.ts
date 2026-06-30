@@ -1,7 +1,12 @@
 import { agentRuntimeModelProviderIdSchema, parseAgentRuntimeModelRef } from '@tavern/api';
 import { z } from 'zod';
 
-export const modelAvailabilitySchema = z.enum(['configured', 'available']);
+export const modelAvailabilitySchema = z.enum([
+    'available',
+    'configured',
+    'degraded',
+    'unavailable',
+]);
 export const thinkingLevelSchema = z.enum([
     'off',
     'minimal',
@@ -43,11 +48,6 @@ export const modelSchema = z.object({
     supportsChatRouting: z.boolean(),
 });
 
-export const modelSelectionSchema = z.object({
-    fallbackModels: z.array(modelRefSchema),
-    primaryModel: modelRefSchema.nullable(),
-});
-
 export const agentModelSettingSchema = z.object({
     agentId: z.string().min(1),
     agentName: z.string().min(1),
@@ -56,13 +56,10 @@ export const agentModelSettingSchema = z.object({
     provider: z.string().min(1).nullable(),
     syncError: z.string().nullable(),
     syncedAt: z.string().nullable(),
-    effective: modelSelectionSchema,
     effectiveThinkingDefault: thinkingLevelSchema.nullable(),
     isOverridden: z.boolean(),
     isThinkingOverridden: z.boolean(),
-    override: modelSelectionSchema,
     overrideThinkingDefault: thinkingLevelSchema.nullable(),
-    subAgentModel: modelRefSchema.nullable(),
 });
 
 export const openRouterSettingsSchema = z.object({
@@ -72,11 +69,9 @@ export const openRouterSettingsSchema = z.object({
 
 export const modelListSchema = z.object({
     agents: z.array(agentModelSettingSchema),
-    defaults: modelSelectionSchema,
     defaultsThinkingLevel: thinkingLevelSchema.nullable(),
     models: z.array(modelSchema),
     openRouter: openRouterSettingsSchema,
-    subAgentDefaultModel: modelRefSchema.nullable(),
     subAgentThinkingLevel: thinkingLevelSchema.nullable(),
 });
 

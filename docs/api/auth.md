@@ -1,5 +1,5 @@
 ---
-summary: Local-owner trust model for Tavern App, Runtime credentials, managed Hermes access, external clients, and secret storage.
+summary: Local-owner trust model for Tavern App, Runtime credentials, model-provider credentials, external clients, and secret storage.
 read_when:
   - changing local app auth, runtime trust, secrets, or operator identity
   - exposing Tavern API access to external clients
@@ -7,58 +7,51 @@ read_when:
 
 # Auth
 
-Tavern is a local-owner app.
-
-The owner is the person running the app and the paired Tavern Runtime. Auth is
-therefore narrower than a hosted team chat server, but every boundary still
-needs explicit trust.
+Tavern is a local-owner app. The owner controls the App process, Runtime host,
+workspace files, and model-provider credentials.
 
 ## Trust Boundaries
 
-| Boundary | Trust Rule |
+| Boundary | Trust |
 | --- | --- |
 | Electron shell and local Node app | One Tavern App product boundary |
 | Tavern App to Tavern Runtime | Paired local transport with runtime credentials |
-| Tavern Runtime to managed Hermes | Generated Gateway credentials and runtime config |
+| Runtime to model providers | Provider-specific local OAuth or API-key credentials |
 | External client to Tavern API | Explicit Tavern-issued credentials when exposed |
 | Agent/tool access to Tavern data | Narrow tool/API capability, not raw database access |
 
 ## Secrets
 
-Model provider credentials belong to Hermes-managed provider configuration.
-Tavern does not keep a separate model-provider credential store for providers
-that Hermes manages.
+Model provider credentials belong to their provider integration:
 
-Telemetry-only credentials belong to the feature that reads the telemetry. For
-example, OpenRouter account activity uses a management key stored as Stats
-source settings because that key is not the same as the Hermes inference key.
+- Claude Code and Codex use the local OAuth sessions owned by their CLIs.
+  Claude Code Runtime turns may also use `TAVERN_AGENT_CLAUDE_CODE_AUTH_TOKEN`
+  from `claude setup-token` when non-interactive `claude -p` cannot use the
+  local Claude.ai login.
+- OpenAI/API-key routes read `OPENAI_API_KEY` or `TAVERN_AGENT_API_KEY`.
+- Plugin credentials live in Plugin-specific secret storage.
 
 Do not put secrets in:
 
-* docs
-* fixtures
-* e2e scripts
-* checked-in runtime config
-* Hermes transcript metadata
+- Chat messages
+- response activity metadata
+- e2e scripts
+- checked-in config
+- checked-in env files
+
+Telemetry-only credentials belong to the feature that reads telemetry. For
+example, OpenRouter account activity uses a management key stored as Stats
+source settings, not as an inference credential.
 
 ## Runtime Access
 
-The app talks to Tavern Runtime through the configured runtime URL and a bearer
-token. The Runtime generates a token on first start and keeps it in its host config
-file (`<runtime-root>/tavern.json`, `token` key, mode 0600). Override with `TAVERN_RUNTIME_TOKEN`. The health route is unauthenticated.
-Managed Hermes receives generated Gateway credentials from Tavern Runtime.
+The Runtime HTTP API is protected by the configured Tavern Runtime token. The
+Runtime generates a token on first start and keeps it in its host config file
+(`<runtime-root>/tavern.json`, `token` key, mode `0600`). Override with
+`TAVERN_RUNTIME_TOKEN`. The health route is unauthenticated.
 
-**Pairing**: when the Runtime host is remote, run `tavern token` on the host to
-print the bearer token, then paste it into Settings → Tavern Runtime (or the
-onboarding Runtime token field). See [Runtime Deployment](../operations/runtime-deploy.md#pairing-the-app-to-a-remote-runtime).
+When the Runtime host is remote, run `tavern token` on the host to display the
+pairing token, then save that token in the App settings.
 
 Clients use Tavern API or TypeScript SDK surfaces instead of reading local
-SQLite files, runtime stores, or Hermes state directly.
-
-## Local-Owner Model
-
-Tavern does not model hosted teams, workspace roles, OAuth login, or public
-multi-tenant API tokens as core auth concepts.
-
-Those features can be added without changing the local-owner rule: privileged
-access enters through explicit Tavern credentials and narrow capabilities.
+SQLite files, runtime stores, or executor state directly.

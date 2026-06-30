@@ -2,12 +2,8 @@ import { fileURLToPath } from 'node:url';
 import { defineConfig } from '@playwright/test';
 
 const runId = process.env.TAVERN_E2E_RUN_ID ?? 'default';
-const hermesBaseUrl = process.env.TAVERN_HERMES_BASE_URL ?? 'http://127.0.0.1:44080/v1';
-const hermesModel = process.env.TAVERN_HERMES_MODEL ?? 'tavern-e2e-tools';
-const hermesProvider = process.env.TAVERN_HERMES_PROVIDER ?? 'custom';
-const hermesProviderPort = Number.parseInt(process.env.TAVERN_HERMES_PROVIDER_PORT ?? '44080', 10);
-const hermesToken = process.env.TAVERN_HERMES_TOKEN ?? `tavern-e2e-hermes-${runId}`;
-const hermesPort = Number.parseInt(process.env.TAVERN_HERMES_PORT ?? '9119', 10);
+const agentModel = process.env.TAVERN_AGENT_MODEL ?? 'tavern-e2e-tools';
+const agentProvider = process.env.TAVERN_AGENT_PROVIDER ?? 'e2e';
 const runtimePort = Number.parseInt(process.env.TAVERN_RUNTIME_PORT ?? '18790', 10);
 const serverPort = Number.parseInt(process.env.TAVERN_SERVER_PORT ?? '8081', 10);
 const websitePort = Number.parseInt(process.env.TAVERN_WEBSITE_PORT ?? '3101', 10);
@@ -33,30 +29,11 @@ function buildWebServers() {
     return [
         {
             command: [
-                `TAVERN_E2E_RUN_ID=${runId}`,
-                `TAVERN_HERMES_MODEL=${hermesModel}`,
-                `TAVERN_HERMES_PROVIDER_PORT=${hermesProviderPort}`,
-                'bun e2e/hermes/start-mock-provider.ts',
-            ].join(' '),
-            reuseExistingServer: false,
-            stderr: 'pipe',
-            stdout: 'pipe',
-            timeout: 30_000,
-            url: `http://127.0.0.1:${hermesProviderPort}/health`,
-        },
-        {
-            command: [
+                'NODE_ENV=development',
                 `TAVERN_E2E_RUN_ID=${runId}`,
                 `TAVERN_RUNTIME_PORT=${runtimePort}`,
-                `TAVERN_HERMES_BASE_URL=${hermesBaseUrl}`,
-                `TAVERN_HERMES_MODEL=${hermesModel}`,
-                `TAVERN_HERMES_PORT=${hermesPort}`,
-                'TAVERN_HERMES_API_KEY=tavern-e2e-mock-key',
-                `TAVERN_HERMES_PROVIDER=${hermesProvider}`,
-                `TAVERN_HERMES_TOKEN=${hermesToken}`,
-                // e2e must never download an engine; resolve the dev machine's Hermes.
-                'TAVERN_HERMES_ALLOW_SYSTEM=1',
-                'TAVERN_HERMES_AUTO_INSTALL=0',
+                `TAVERN_AGENT_MODEL=${agentModel}`,
+                `TAVERN_AGENT_PROVIDER=${agentProvider}`,
                 'bun e2e/start-tavern-runtime.ts',
             ].join(' '),
             reuseExistingServer: false,

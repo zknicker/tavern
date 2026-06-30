@@ -36,18 +36,6 @@ test('active work group header prefers a stable group summary over a new running
     expect(label).toBe('Searched code, ran a command');
 });
 
-test('active work label treats approval as a decision state', () => {
-    const label = getActiveWorkLabel([
-        toolItem({
-            name: 'approval',
-            running: true,
-            summaryParts: ["curl -L --silent 'https://duckduckgo.com/html/?q=site%3Anasa.gov'"],
-        }),
-    ]);
-
-    expect(label).toBe('Needs approval');
-});
-
 test('active work label never echoes a bare tool name as the target', () => {
     const command = getActiveWorkLabel([
         toolItem({ label: 'terminal', name: 'terminal', running: true, summaryParts: [] }),

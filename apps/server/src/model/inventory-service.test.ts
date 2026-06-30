@@ -7,59 +7,83 @@ afterEach(() => {
     mock.restore();
 });
 
-test('listModelInventory lists Hermes providers and hides models from disconnected providers', async () => {
+test('listModelInventory lists agent providers and keeps curated models for disconnected providers', async () => {
     spyOn(runtimeModels, 'getAgentRuntimeModels').mockImplementation(async () => ({
         apiKeyOptions: [],
         models: [
             {
-                id: 'openai-codex/gpt-5.5',
+                availability: 'available',
+                executionKind: 'language-model',
+                id: 'codex/gpt-5.5',
                 label: 'GPT-5.5',
-                provider: 'openai-codex',
+                metadata: {},
+                provider: 'codex',
+                route: { baseUrl: null, model: 'gpt-5.5', provider: 'codex' },
+                sourceKind: 'curated',
             },
             {
-                id: 'anthropic/claude-sonnet-4-6',
+                availability: 'available',
+                executionKind: 'language-model',
+                id: 'codex/gpt-5.4',
+                label: 'GPT-5.4',
+                metadata: {},
+                provider: 'codex',
+                route: { baseUrl: null, model: 'gpt-5.4', provider: 'codex' },
+                sourceKind: 'curated',
+            },
+            {
+                availability: 'available',
+                executionKind: 'language-model',
+                id: 'claude/claude-sonnet-4-6',
                 label: 'Claude Sonnet 4.6',
-                provider: 'anthropic',
+                metadata: {},
+                provider: 'claude',
+                route: { baseUrl: null, model: 'claude-sonnet-4-6', provider: 'claude' },
+                sourceKind: 'curated',
             },
         ],
         providers: [
             {
                 authenticated: true,
                 authType: 'oauth_external',
-                id: 'openai-codex',
+                id: 'codex',
                 keyEnv: null,
-                label: 'OpenAI Codex',
-                modelCount: 1,
-                oauthFlow: 'device_code',
+                label: 'Codex',
+                modelCount: 2,
+                oauthFlow: 'external',
                 warning: null,
             },
             {
                 authenticated: false,
-                authType: 'api_key',
-                id: 'anthropic',
+                authType: 'oauth_external',
+                id: 'claude',
                 keyEnv: null,
-                label: 'Anthropic',
-                modelCount: 0,
-                oauthFlow: null,
-                warning: 'paste ANTHROPIC_API_KEY to activate',
+                label: 'Claude Code',
+                modelCount: 1,
+                oauthFlow: 'external',
+                warning: 'claude is not installed',
             },
         ],
         updatedAt: '2026-06-08T12:00:00.000Z',
     }));
 
     const inventory = await listModelInventory();
-    const codex = inventory.providers.find((provider) => provider.provider === 'openai-codex');
-    const anthropic = inventory.providers.find((provider) => provider.provider === 'anthropic');
+    const codex = inventory.providers.find((provider) => provider.provider === 'codex');
+    const claude = inventory.providers.find((provider) => provider.provider === 'claude');
 
     assert.equal(codex?.isConnected, true);
-    assert.equal(codex?.models.length, 1);
-    assert.equal(anthropic?.isConnected, false);
-    assert.equal(anthropic?.authAction, 'api-key');
-    assert.equal(anthropic?.keyEnv, 'ANTHROPIC_API_KEY');
-    assert.equal(anthropic?.models.length, 0);
+    assert.deepEqual(
+        codex?.models.map((model) => model.ref),
+        ['codex/gpt-5.4', 'codex/gpt-5.5']
+    );
+    assert.equal(claude?.isConnected, false);
+    assert.deepEqual(
+        claude?.models.map((model) => model.ref),
+        ['claude/claude-sonnet-4-6']
+    );
 });
 
-test('listModelInventory keeps provider rows direct and passes through Hermes api-key options', async () => {
+test('listModelInventory keeps provider rows direct and passes through api-key options', async () => {
     spyOn(runtimeModels, 'getAgentRuntimeModels').mockImplementation(async () => ({
         apiKeyOptions: [
             {
@@ -81,7 +105,7 @@ test('listModelInventory keeps provider rows direct and passes through Hermes ap
                 label: 'OpenRouter',
                 modelCount: 0,
                 oauthFlow: null,
-                warning: 'run `hermes model` to configure (api_key)',
+                warning: 'configure the provider API key to activate',
             },
         ],
         updatedAt: '2026-06-08T12:00:00.000Z',
@@ -108,7 +132,7 @@ test('listModelInventory treats external OAuth providers as manual setup', async
                 label: 'Qwen OAuth',
                 modelCount: 0,
                 oauthFlow: 'external',
-                warning: 'run `hermes model` to configure (oauth_external)',
+                warning: 'configure the provider OAuth session to activate',
             },
             {
                 authenticated: false,
@@ -118,7 +142,7 @@ test('listModelInventory treats external OAuth providers as manual setup', async
                 label: 'xAI OAuth',
                 modelCount: 0,
                 oauthFlow: 'loopback',
-                warning: 'run `hermes model` to configure (oauth_external)',
+                warning: 'configure the provider OAuth session to activate',
             },
         ],
         updatedAt: '2026-06-08T12:00:00.000Z',
@@ -132,7 +156,7 @@ test('listModelInventory treats external OAuth providers as manual setup', async
     assert.equal(xai?.authAction, 'oauth');
 });
 
-test('listModelInventory prefers Hermes OAuth over api-key setup when both are available', async () => {
+test('listModelInventory prefers OAuth over api-key setup when both are available', async () => {
     spyOn(runtimeModels, 'getAgentRuntimeModels').mockImplementation(async () => ({
         apiKeyOptions: [],
         models: [],

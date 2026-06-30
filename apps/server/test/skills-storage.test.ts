@@ -6,6 +6,7 @@ import test from 'node:test';
 
 const directory = mkdtempSync(join(tmpdir(), 'tavern-skills-storage-'));
 process.env.DATABASE_PATH = join(directory, 'test.sqlite');
+const originalFetch = globalThis.fetch;
 
 const [
     { ensureDatabaseSchema },
@@ -31,8 +32,8 @@ const [
 ensureDatabaseSchema();
 
 test.beforeEach(() => {
+    globalThis.fetch = originalFetch;
     databaseClient.exec('delete from agent_runtime_connections');
-    databaseClient.exec('delete from hermes_config_snapshots');
     databaseClient.exec('delete from skills');
     databaseClient.exec("delete from sync_state where kind = 'skill'");
 });
@@ -164,5 +165,57 @@ test('skill service keeps cached skill rows for temporarily unhealthy runtimes',
             id: skill.id,
         })),
         [{ dependencyState: 'ready', id: 'browser' }]
+    );
+});
+
+test('skill service exposes Runtime read-only tools', async () => {
+    await saveAgentRuntimeConnection({
+        baseUrl: 'http://runtime.test',
+        enabled: true,
+        id: 'runtime-1',
+        isActive: true,
+        lastCheckedAt: '2026-06-02T00:00:00.000Z',
+        lastError: null,
+        name: 'Runtime',
+    });
+    globalThis.fetch = async (input) => {
+        const url = new URL(String(input));
+        if (url.pathname === '/tools') {
+            return Response.json({
+                tools: [
+                    {
+                        configured: true,
+                        description: 'Run shell commands inside the agent workspace.',
+                        enabled: true,
+                        id: 'bash',
+                        label: 'Bash',
+                        name: 'bash',
+                        readOnly: true,
+                        tools: ['bash'],
+                    },
+                ],
+            });
+        }
+        if (url.pathname === '/plugins') {
+            return Response.json({ plugins: [] });
+        }
+        throw new Error(`Unexpected fetch: ${url.pathname}`);
+    };
+
+    const tools = (await listSkills()).tools;
+    assert.deepEqual(
+        tools.find((tool) => tool.id === 'bash'),
+        {
+            configured: true,
+            description: 'Run shell commands inside the agent workspace.',
+            diagnostic: null,
+            enabled: true,
+            id: 'bash',
+            name: 'Bash',
+            plugin: null,
+            readOnly: true,
+            tools: ['bash'],
+            usability: 'enabled',
+        }
     );
 });

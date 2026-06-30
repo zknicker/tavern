@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { updateHermesAgentModel } from '../../hermes-settings/service.ts';
+import { updateAgentModel } from '../../agent-settings/service.ts';
 import { publicProcedure } from '../trpc.ts';
 
 export const updateAgentModelProcedure = publicProcedure
@@ -9,4 +9,4 @@ export const updateAgentModelProcedure = publicProcedure
             modelRef: z.string().trim().min(1),
         })
     )
-    .mutation(async ({ input }) => await updateHermesAgentModel(input));
+    .mutation(async ({ input }) => await updateAgentModel(input));

@@ -12,17 +12,16 @@ Always-on Tavern guidance for AI coding assistants.
 
 ## Architecture Map
 
-Tavern has three first-party layers plus Hermes execution. Tavern is the product; Hermes
-is the agent engine behind it. Tavern Runtime manages the Hermes dependency — users
-install only Tavern and experience Hermes's abilities as the assistant's abilities, never
-Hermes's plumbing.
+Tavern has three first-party layers plus an internal agent engine. Tavern is the product.
+Tavern Runtime manages the engine dependency — users install only Tavern and experience
+the engine's abilities as the assistant's abilities, never its plumbing.
 
 | Layer | Owns |
 | --- | --- |
-| Tavern Runtime | Canonical chats, messages, participants, events, reads, automations, deliveries, runtime activity, durable memory file access, managed Hermes startup, and Tavern tools. |
+| Tavern Runtime | Canonical chats, messages, participants, events, reads, automations, deliveries, runtime activity, Memory reads, agent execution, and Tavern tools. |
 | Tavern App | The Electron/React product surface, local presentation, app cache, app settings, optimistic UI, and tRPC client behavior. |
-| Tavern API / SDK | Stable contracts for chats, realtime, admin/runtime control, automations, durable memory files, skills, stats, and external clients. |
-| Hermes | Native agent execution: agents, sessions, turns, transcripts, files, tools, model calls, context management, and Gateway behavior. |
+| Tavern API / SDK | Stable contracts for chats, realtime, admin/runtime control, automations, Memory, skills, stats, and external clients. |
+| Agent engine | Agent execution: instructions, turns, tools, model calls, and projected activity. |
 
 Use product nouns directly:
 
@@ -30,12 +29,8 @@ Use product nouns directly:
 - A `session` is one runtime agent's durable conversation or execution record inside a chat.
 - A `turn` is one execution inside a session.
 - Tavern chat history is canonical Tavern Runtime state.
-- Hermes transcripts are execution evidence, not the product timeline.
-- A memory root is durable Markdown the user and agent can inspect: `MEMORY.md`, `USER.md`,
-  `TAXONOMY.md`, episodic notes, and taxonomy-defined semantic folders.
-- The Memory page is the app view over those files; it is not a separate product, database, or
-  context-management system.
-- Context management belongs to Hermes.
+- Agent execution traces are execution evidence, not the product timeline.
+- Memory is Tavern's durable knowledge surface.
 
 ## Docs Routing
 
@@ -64,10 +59,9 @@ so `docs:list` routes future agents correctly.
 9. Prefer immutable patterns and explicit validation at boundaries.
 10. Handle edge cases and external failures explicitly; do not swallow errors.
 11. Keep comments, docs, and user-facing text short and in plain product language.
-    User-facing copy must not name Hermes; frame engine abilities as the agent's or
-    assistant's abilities ("agent engine" for technical surfaces). Internal identifiers,
-    env vars, API fields, and file names keep Hermes naming. The single permitted UI
-    mention is the "powered by Hermes" credit on the updates/about settings surface.
+    User-facing copy must not name internal engine dependencies; frame engine abilities as the
+    agent's or assistant's abilities ("agent engine" for technical surfaces). Internal identifiers,
+    env vars, API fields, and file names should use Tavern or agent-engine naming.
 12. Use concise product names. Avoid vague names such as `provider`, `manager`, `helper`, or `data`
     when a domain term exists.
 13. Use kebab-case file names.
@@ -100,9 +94,9 @@ so `docs:list` routes future agents correctly.
   to shared records when a focused query can expose that activity.
 - Keep optimistic chat rows app-local. Do not patch durable chat history to show optimistic rows.
 - Keep hooks granular and capability-first under `apps/website/src/hooks/<capability>`.
-- Runtime and managed Hermes feature gates must use Runtime capabilities as the singular
+- Runtime and agent-engine feature gates must use Runtime capabilities as the singular
   readiness contract. Do not gate app behavior on app-local connection `lastError`, sync
-  timestamps, process guesses, or cached Hermes state. Add a Runtime capability when the
+  timestamps, process guesses, or cached engine state. Add a Runtime capability when the
   requirement is not represented. Prefer primitive capability gates such as `gateway` over
   umbrella feature names.
 - Prefer COSS UI components backed by Base UI for shared app primitives. Do not add new shadcn or
@@ -118,15 +112,17 @@ so `docs:list` routes future agents correctly.
 
 ## Runtime And Data
 
-- Runtime owns canonical chat records, durable events, activity state, durable memory reads, managed
-  Hermes startup, and runtime tools.
+- Runtime owns canonical chat records, durable events, activity state, Memory reads, agent
+  execution, and runtime tools.
 - App storage is cache, settings, local presentation state, and runtime evidence views.
 - Runtime adapters project Tavern primitives plus source facts. They must not author final Tavern
   presentation such as display names or fake chat workspace folders.
 - Preserve participant source labels as observed labels. Do not merge participants by display name
   or reintroduce observed-identity linking without a current product spec.
-- Message sends to agent runtimes must use a synced session key for the selected agent/chat pair.
-  Do not derive Discord channel, Discord DM, or opaque runtime session keys from chat targets.
+- Message sends to agents must resolve a Runtime-owned agent presence for the selected
+  frontend conversation and agent, then use that presence's current session binding.
+  Do not let apps or external frontends invent routing ids from Discord channels, DMs,
+  Tavern chat ids, or opaque engine session ids.
 - If a runtime record is missing a required stable id, timestamp, schedule, file content, or actor,
   fail the mapping or mark the capability degraded instead of inventing a value.
 - Treat `apps/server/src/db/bootstrap.ts` as fresh-schema setup only. For local SQLite migrations,
@@ -162,32 +158,18 @@ so `docs:list` routes future agents correctly.
 - Update `.env.example` when environment variables change.
 - If requirements are unclear, update the relevant spec and ask.
 
-## Hermes Work
+## Agent Engine Work
 
-- Tavern Runtime owns managed Hermes startup, model config, capability checks, and the Tavern
-  chat-to-Hermes adapter. Hermes is a managed Runtime dependency, not a user-facing product
-  surface; see Coding Rule 11 for the product-language boundary.
-- The current adapter lives in `apps/runtime/src/hermes/` and
-  `apps/runtime/src/tavern/hermes-turn-runner.ts`; there is no first-party Hermes plugin package in
-  `packages/`.
-- Runtime acquires the engine binary, not just its lifecycle. It resolves `TAVERN_HERMES_BIN`, then
-  a pinned managed install under `~/.tavern/engine/<pin>`, then (only with
-  `TAVERN_HERMES_ALLOW_SYSTEM`) a system install, and bootstraps the pinned engine when none is
-  found. Production runs the pin and ignores a host's own Hermes; the dev stack sets
-  `TAVERN_HERMES_ALLOW_SYSTEM=1`/`TAVERN_HERMES_AUTO_INSTALL=0` to reuse the machine's Hermes. See
-  [hermes-managed-runtime](docs/operations/hermes-managed-runtime.md) for resolution tiers, the
-  `tavern engine` CLI, the pin in `apps/runtime/src/hermes/engine.ts`, and cold-start verification.
-- Do not restart or deploy to the global `~/.hermes` Gateway for local Tavern Runtime work; it
-  conflicts with managed dev ports and bypasses worktree-isolated state.
-- For managed Hermes changes, run the normal runtime dev stack or
+- Tavern Runtime owns model config, capability checks, instruction composition, tool exposure,
+  and the Tavern chat-to-agent turn runner. The engine dependency is internal and not a
+  user-facing product surface; see Coding Rule 11 for the product-language boundary.
+- The current implementation lives under `apps/runtime/src/agent-engine/`. That module may use
+  AI SDK, ACP, or other implementation dependencies internally, but public ids, env vars, docs,
+  app copy, API metadata, and inspectable runtime records must use Tavern or agent-engine naming.
+- Runtime executes turns with local AI SDK `LanguageModel` instances. It does not run Vercel
+  Gateway infrastructure or a managed external engine process.
+- For agent-engine changes, run the normal runtime dev stack or
   `bun run --filter @tavern/runtime build` to verify Runtime startup and adapter code.
-- For Gateway method, event, chat, session, or turn semantics, treat shipped Hermes web/operator
-  behavior as the contract. Hermes is not an npm package; inspect the installed engine source at the
-  resolved engine path (`tavern engine status` shows it — `~/.tavern/engine/<pin>/hermes-agent` for a
-  managed install, `~/.hermes/hermes-agent` for a system install) only when a concrete ambiguity
-  remains.
-- When Tavern depends on a specific Gateway RPC, event shape, or delivery behavior, add or update a
-  focused raw-frame or fixture-backed test. Do not rely on memory for event names or payload shape.
 
 ## Agent skills
 

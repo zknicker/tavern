@@ -1,14 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { ensureHermesBinary, isSystemInstallAllowed } from '../../hermes/bootstrap.ts';
-import {
-    enginePinDirName,
-    engineRoot,
-    listEnginePinDirs,
-    readEngineMarker,
-    resolveHermesPin,
-} from '../../hermes/engine.ts';
-import { resolveEngineStatus } from '../../hermes/engine-resolution.ts';
+import { AGENT_HOME, readConfigValue } from '../../config.ts';
 import type { ParsedArgs } from '../parse.ts';
 import type { SubCommand } from '../subcommand.ts';
 import { writeJson } from '../ui.ts';
@@ -16,10 +8,7 @@ import { type EngineStatusReport, renderEngineStatus } from './engine-render.ts'
 
 /** Injectable side effects so tests run subcommands against fixtures. */
 export interface EngineDeps {
-    /** Dir name of the current pin's install, kept by `clean` unless --all. */
-    currentPinDir(): string;
-    install(onLine: (line: string) => void): Promise<{ binaryPath: string; tier: string }>;
-    /** All installed pin dir names under the engine root. */
+    install(): Promise<{ detail: string; tier: 'package' }>;
     listInstalls(): string[];
     log(text: string): void;
     removeInstall(dirName: string): Promise<void>;
@@ -30,12 +19,16 @@ export interface EngineDeps {
 function defaultDeps(): EngineDeps {
     return {
         status: readEngineStatus,
-        install: async (onLine) =>
-            await ensureHermesBinary({ forceInstall: true, onInstallerLine: onLine }),
-        listInstalls: listEnginePinDirs,
-        currentPinDir: () => enginePinDirName(resolveHermesPin()),
-        removeInstall: (dirName) =>
-            fs.rm(path.join(engineRoot(), dirName), { force: true, recursive: true }),
+        install: async () => {
+            await fs.mkdir(AGENT_HOME, { recursive: true });
+            return {
+                detail: 'Agent package dependencies are installed by bun',
+                tier: 'package',
+            };
+        },
+        listInstalls: () => [],
+        removeInstall: async (dirName) =>
+            await fs.rm(path.join(AGENT_HOME, dirName), { force: true, recursive: true }),
         log: (text) => console.log(text),
         write: (text) => process.stdout.write(text),
     };
@@ -43,7 +36,7 @@ function defaultDeps(): EngineDeps {
 
 const statusSub: SubCommand = {
     name: 'status',
-    summary: 'Show the engine pin, root, resolution, and installs',
+    summary: 'Show the local agent engine status',
     usage: 'tavern engine status [--json]',
     flags: [{ name: '--json', description: 'Emit one JSON document' }],
     positionals: [],
@@ -53,7 +46,7 @@ const statusSub: SubCommand = {
 
 const installSub: SubCommand = {
     name: 'install',
-    summary: 'Install the managed agent engine for the current pin',
+    summary: 'Prepare the local agent home',
     usage: 'tavern engine install',
     flags: [],
     positionals: [],
@@ -63,11 +56,16 @@ const installSub: SubCommand = {
 
 const cleanSub: SubCommand = {
     name: 'clean',
-    summary: 'Remove engine installs, keeping the current pin unless --all',
+    summary: 'Remove local agent engine install artifacts',
     usage: 'tavern engine clean [--all]',
-    flags: [{ name: '--all', description: 'Remove every installed pin' }],
+    flags: [
+        {
+            name: '--all',
+            description: 'Accepted for compatibility; all local artifacts are removed',
+        },
+    ],
     positionals: [],
-    examples: ['tavern engine clean', 'tavern engine clean --all'],
+    examples: ['tavern engine clean'],
     run: (args) => runClean(args),
 };
 
@@ -87,45 +85,40 @@ async function runStatus(args: ParsedArgs, overrides?: Partial<EngineDeps>): Pro
 
 async function runInstall(_args: ParsedArgs, overrides?: Partial<EngineDeps>): Promise<number> {
     const deps = { ...defaultDeps(), ...overrides };
-    const resolved = await deps.install((line) => deps.log(line));
-    deps.log(`Agent engine ready: ${resolved.binaryPath} (${resolved.tier})`);
+    const resolved = await deps.install();
+    deps.log(`Agent engine ready: ${resolved.detail} (${resolved.tier})`);
     return 0;
 }
 
-async function runClean(args: ParsedArgs, overrides?: Partial<EngineDeps>): Promise<number> {
+async function runClean(_args: ParsedArgs, overrides?: Partial<EngineDeps>): Promise<number> {
     const deps = { ...defaultDeps(), ...overrides };
-    const keep = args.flags['--all'] ? null : deps.currentPinDir();
     const removed: string[] = [];
 
     for (const dirName of deps.listInstalls()) {
-        if (keep && dirName === keep) {
-            continue;
-        }
         await deps.removeInstall(dirName);
         removed.push(dirName);
     }
 
-    if (removed.length === 0) {
-        deps.log('Nothing to clean.');
-        return 0;
-    }
-    deps.log(`Removed engine installs: ${removed.join(', ')}`);
-    if (keep) {
-        deps.log(`Kept current pin: ${keep}`);
-    }
+    deps.log(
+        removed.length === 0
+            ? 'Nothing to clean.'
+            : `Removed engine artifacts: ${removed.join(', ')}`
+    );
     return 0;
 }
 
 /** Build the engine status report; key order is the `--json` contract. */
 function readEngineStatus(): EngineStatusReport {
-    const pin = resolveHermesPin();
+    const provider = readConfigValue('TAVERN_AGENT_PROVIDER');
     return {
-        engineRoot: engineRoot(),
-        installedPins: listEnginePinDirs(),
-        marker: readEngineMarker(pin),
-        pin,
-        resolved: resolveEngineStatus(),
-        systemAllowed: isSystemInstallAllowed(),
+        agentHome: AGENT_HOME,
+        installedPins: [],
+        mode: 'local-ai-sdk',
+        provider,
+        resolved: {
+            detail: 'Agent and AI SDK package dependencies',
+            tier: 'package',
+        },
     };
 }
 

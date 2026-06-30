@@ -1,7 +1,6 @@
 import { Archive02Icon, Plus } from '@hugeicons/core-free-icons';
 import * as React from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { resolveTavernChatName } from '../../components/chats/chat-display.ts';
 import { Icon } from '../../components/ui/icon.tsx';
 import { Button } from '../../components/ui/primitives/button.tsx';
 import {
@@ -12,7 +11,6 @@ import {
     SidebarMenuItem,
 } from '../../components/ui/sidebar.tsx';
 import { Spinner } from '../../components/ui/spinner.tsx';
-import type { ChatTimelineState } from '../../hooks/chats/chat-timeline-state.ts';
 import { useChatArchive } from '../../hooks/chats/use-chat-archive.ts';
 import { getChatDraftRouteState } from '../../hooks/chats/use-chat-draft-launch.ts';
 import { useChatList } from '../../hooks/chats/use-chat-list.ts';
@@ -31,7 +29,7 @@ import {
 import { markChatTiming } from '../../lib/chat-timing.ts';
 import { cn } from '../../lib/utils.ts';
 import { buildChatList, type ChatListItem } from '../chats/chat-list-data.ts';
-import { buildChatPath, buildNewChatDraftPath } from '../chats/chat-path.ts';
+import { buildChatPath } from '../chats/chat-path.ts';
 import { getPinnedTabColorStyle } from './pinned-tab-options.ts';
 import {
     canRenameSidebarChat,
@@ -40,6 +38,15 @@ import {
     SidebarChatRenameDialog,
     SidebarChatSystemPromptDialog,
 } from './sidebar-chat-actions.tsx';
+import {
+    buildSidebarChatGroups,
+    buildSidebarDraftChatList,
+    formatSidebarActivityLabel,
+    getSidebarChatTitle,
+    getSidebarDraftActivityLabel,
+    getSidebarDraftPath,
+    hasLocalActiveTurn,
+} from './sidebar-chat-list-model.ts';
 
 export function AppSidebarChatList() {
     const location = useLocation();
@@ -176,14 +183,14 @@ export function AppSidebarChatList() {
                         </SidebarGroupContent>
                     </SidebarGroup>
                 ) : null}
-                <SidebarGroup className="group/chats pt-1">
+                <SidebarGroup className="group/channels pt-1">
                     <div className="relative flex h-8 items-center px-2">
                         <div className="font-medium text-[var(--nav-section-label)] text-sm">
-                            Chats
+                            Channels
                         </div>
                         <Button
-                            aria-label="New chat"
-                            className="absolute top-1/2 right-[0.0625rem] -translate-y-1/2 opacity-0 group-focus-within/chats:opacity-100 group-hover/chats:opacity-100 [&_svg]:size-[1.0625rem]"
+                            aria-label="New channel"
+                            className="absolute top-1/2 right-[0.0625rem] -translate-y-1/2 opacity-0 group-focus-within/channels:opacity-100 group-hover/channels:opacity-100 [&_svg]:size-[1.0625rem]"
                             disabled={!newChatGate.healthy}
                             render={
                                 newChatGate.healthy ? (
@@ -191,11 +198,51 @@ export function AppSidebarChatList() {
                                 ) : undefined
                             }
                             size="icon-xs"
-                            title={newChatDisabledReason ?? 'New chat'}
+                            title={newChatDisabledReason ?? 'New channel'}
                             variant="ghost"
                         >
                             <Icon aria-hidden="true" icon={Plus} />
                         </Button>
+                    </div>
+                    <SidebarGroupContent>
+                        <SidebarMenu>
+                            {sidebarChats.channels.map((chat) => {
+                                const isArchivePending =
+                                    archiveChat.isPending &&
+                                    archiveChat.variables?.chatId === chat.id;
+
+                                return (
+                                    <SidebarRecentChatItem
+                                        chat={chat}
+                                        isActive={location.pathname === buildChatPath(chat.id)}
+                                        isArchivePending={isArchivePending}
+                                        key={chat.id}
+                                        onArchive={(selectedChat) => {
+                                            void archiveSidebarChat(selectedChat);
+                                        }}
+                                        onCustomizeColor={(selectedChat, color) => {
+                                            tabAppearance.reset();
+                                            void setPinnedTabColor(selectedChat, color);
+                                        }}
+                                        onEditSystemPrompt={(selectedChat) => {
+                                            systemPrompt.reset();
+                                            setEditingSystemPromptChat(selectedChat);
+                                        }}
+                                        onPinChange={(selectedChat, pinned) => {
+                                            void pinSidebarChat(selectedChat, pinned);
+                                        }}
+                                        onRename={openRename}
+                                    />
+                                );
+                            })}
+                        </SidebarMenu>
+                    </SidebarGroupContent>
+                </SidebarGroup>
+                <SidebarGroup className="group/dms pt-1">
+                    <div className="relative flex h-8 items-center px-2">
+                        <div className="font-medium text-[var(--nav-section-label)] text-sm">
+                            Direct messages
+                        </div>
                     </div>
                     <SidebarGroupContent>
                         <SidebarMenu>
@@ -215,7 +262,7 @@ export function AppSidebarChatList() {
                                     />
                                 );
                             })}
-                            {sidebarChats.recentChats.map((chat) => {
+                            {sidebarChats.directMessages.map((chat) => {
                                 const isArchivePending =
                                     archiveChat.isPending &&
                                     archiveChat.variables?.chatId === chat.id;
@@ -469,64 +516,4 @@ function SidebarChatArchiveAction({
             <Icon aria-hidden="true" icon={Archive02Icon} />
         </Button>
     );
-}
-
-export function formatSidebarActivityLabel(label: string) {
-    if (label.endsWith(' ago')) {
-        return label.slice(0, -4);
-    }
-
-    return label;
-}
-
-export function buildSidebarChatList(chats: ChatListItem[]) {
-    return chats.filter(isSidebarTavernChat);
-}
-
-export function buildSidebarChatGroups(chats: ChatListItem[]) {
-    const allChats = buildSidebarChatList(chats);
-
-    return {
-        allChats,
-        pinnedChats: allChats.filter((chat) => chat.isPinned),
-        recentChats: allChats.filter((chat) => !chat.isPinned),
-    };
-}
-
-export function buildSidebarDraftChatList(drafts: ChatStartDraft[], chats: ChatListItem[]) {
-    const syncedChatIds = new Set(chats.map((chat) => chat.id));
-
-    return drafts
-        .filter((draft) => !(draft.realChatId && syncedChatIds.has(draft.realChatId)))
-        .sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt));
-}
-
-export function getSidebarDraftPath(draft: ChatStartDraft) {
-    return draft.realChatId ? buildChatPath(draft.realChatId) : buildNewChatDraftPath();
-}
-
-export function getSidebarDraftActivityLabel(draft: Pick<ChatStartDraft, 'status'>) {
-    if (draft.status === 'error') {
-        return 'failed';
-    }
-
-    if (draft.status === 'queued' || draft.status === 'creating') {
-        return 'starting';
-    }
-
-    return 'just now';
-}
-
-export function isSidebarTavernChat(
-    chat: Pick<ChatListItem, 'framework' | 'type'>
-): chat is ChatListItem {
-    return chat.framework === 'tavern' && chat.type === 'tavern';
-}
-
-export function getSidebarChatTitle(chat: ChatListItem) {
-    return resolveTavernChatName(chat);
-}
-
-export function hasLocalActiveTurn(state: Pick<ChatTimelineState, 'activeTurn'>) {
-    return state.activeTurn !== null;
 }

@@ -29,6 +29,7 @@ mock.module('../settings/layout/sidebar-nav.tsx', () => ({
 }));
 
 const { AppSidebar } = await import('./sidebar.tsx');
+mock.restore();
 
 describe('AppSidebar', () => {
     test('renders update affordance above Settings in the footer', () => {

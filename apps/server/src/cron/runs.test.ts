@@ -211,7 +211,7 @@ test('reconcileSyntheticCronTriggerRuns removes trigger acknowledgements with re
             sessionId: 'trigger_cron_standup_1780000000000',
             sessionKey: 'trigger_cron_standup_1780000000000',
             status: 'running',
-            summary: 'Hermes queued force cron run.',
+            summary: 'Agent engine queued force cron run.',
             syncedAt: '2026-04-16T12:01:00.000Z',
             trigger: 'manual',
         },

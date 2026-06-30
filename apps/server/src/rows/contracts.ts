@@ -22,13 +22,6 @@ export const clarificationRowSchema = z.object({
     requestId: z.string(),
 });
 
-export const approvalRowSchema = z.object({
-    command: z.string(),
-    description: z.string().nullable(),
-    patternKey: z.string().nullable(),
-    patternKeys: z.array(z.string()),
-});
-
 export const messageRowMessageSchema = sessionMessageSchema.extend({
     sourceSessionId: z.string().nullable(),
     sourceSessionKey: z.string(),
@@ -47,7 +40,6 @@ export const messageRowSchema = z.object({
 
 export const toolRowSchema = z.object({
     actor: actorRefSchema.nullable(),
-    approval: approvalRowSchema.nullable().optional(),
     completedAt: z.string().nullable(),
     clarification: clarificationRowSchema.nullable().optional(),
     connectsToNext: z.boolean(),

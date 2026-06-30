@@ -16,10 +16,11 @@ export interface StatusRuntimeSection {
     version: string | null;
 }
 
-/** Engine section: pin and resolved binary, from local engine resolution. */
+/** Engine section: local agent/AI SDK engine status. */
 export interface StatusEngineSection {
-    pin: { kind: string; ref: string; source: string };
-    resolved: { path: string; tier: string } | null;
+    mode: string;
+    provider: string | null;
+    resolved: { detail: string; tier: string } | null;
 }
 
 /**
@@ -141,14 +142,12 @@ function renderCapabilities(
 function renderEngine(engine: StatusEngineSection, stream: NodeJS.WriteStream): string {
     const title = heading('Engine', stream);
     const resolved = engine.resolved
-        ? `${engine.resolved.path} (${engine.resolved.tier})`
-        : "none — run 'tavern engine install'";
+        ? `${engine.resolved.detail} (${engine.resolved.tier})`
+        : 'not configured';
     const body = rows(
         [
-            {
-                left: 'Pin',
-                right: `${shortRef(engine.pin.ref)} (${engine.pin.kind}, ${engine.pin.source})`,
-            },
+            { left: 'Mode', right: engine.mode },
+            { left: 'Provider', right: engine.provider ?? 'not configured' },
             { left: 'Resolved', right: resolved },
         ],
         '  '
@@ -193,10 +192,6 @@ export function relativeTime(iso: string | null, now: number): string {
     }
     const days = Math.round(deltaMs / 86_400_000);
     return `${days}d ago`;
-}
-
-function shortRef(ref: string): string {
-    return ref.length > 12 && /^[0-9a-f]+$/i.test(ref) ? ref.slice(0, 7) : ref;
 }
 
 /** True when semantic-ish version `a` sorts before `b`. Falls back to string. */

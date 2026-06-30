@@ -1,11 +1,9 @@
 import { developmentChatDemoIds } from '@tavern/api/development-chat-demos';
 import {
-    activityRuntimeMetadata,
     assistantMessage,
     completedResponse,
     type DevelopmentChatDemo,
     demoAgentId,
-    demoTime,
     messageActivity,
     reasoningActivity,
     responseRuntimeMetadata,
@@ -126,7 +124,7 @@ export function streamingStackDemo(): DevelopmentChatDemo {
             userMessage({
                 chatId,
                 content:
-                    'Check the deployment notes, run whatever tools you need, and stop for approval if the security scan is high.',
+                    'Check the deployment notes, run whatever tools you need, and report any high-risk security findings clearly.',
                 id: requestMessageId,
                 nonce: 'demo-streaming-stack-request',
             }),
@@ -180,79 +178,6 @@ export function streamingStackDemo(): DevelopmentChatDemo {
                         toolName: 'bash',
                         toolResult: { severity: 'high', status: 'blocked' },
                     }),
-                ],
-            },
-        ],
-    };
-}
-
-export function approvalFlowDemo(): DevelopmentChatDemo {
-    const chatId = developmentChatDemoIds.approvalFlow;
-    const runId = 'run_demo_approval_flow';
-    const requestMessageId = 'msg_demo_approval_flow_request';
-
-    return {
-        chatId,
-        title: 'Demo: Approval Flow',
-        messages: [
-            userMessage({
-                chatId,
-                content: 'Try again, but ask before deleting anything risky.',
-                id: requestMessageId,
-                nonce: 'demo-approval-flow-request',
-            }),
-        ],
-        responses: [
-            {
-                id: 'rsp_demo_approval_flow',
-                metadata: responseRuntimeMetadata({ chatId, requestMessageId, runId }),
-                participant_id: demoAgentId,
-                request_message_id: requestMessageId,
-                response_message_id: null,
-                status: 'running',
-                summary: '',
-                activities: [
-                    messageActivity({
-                        chatId,
-                        detail: 'Retrying the delete now with your confirmation.',
-                        id: 'act_demo_approval_flow_update',
-                        requestMessageId,
-                        runId,
-                        sequence: 1,
-                    }),
-                    {
-                        id: 'act_demo_approval_flow_prompt',
-                        kind: 'approval',
-                        metadata: {
-                            approval: {
-                                command: 'rm -rf /tmp/tavern-approval-preview-nonexistent',
-                                description: 'delete in root path',
-                                patternKey: 'demo:delete-root-path',
-                                patternKeys: ['demo:delete-root-path'],
-                            },
-                            runtime: activityRuntimeMetadata({
-                                chatId,
-                                id: 'act_demo_approval_flow_prompt',
-                                requestMessageId,
-                                runId,
-                                sequence: 2,
-                                toolCallId: 'call_demo_approval_prompt',
-                                toolName: 'approval',
-                            }),
-                            tool: {
-                                arguments: {
-                                    command: 'rm -rf /tmp/tavern-approval-preview-nonexistent',
-                                    reason: 'delete in root path',
-                                },
-                                name: 'approval',
-                            },
-                        },
-                        sequence: 2,
-                        started_at: demoTime,
-                        status: 'running',
-                        summary: 'Security scan - high risk delete request',
-                        title: 'Security scan - high risk delete request',
-                    },
                 ],
             },
         ],

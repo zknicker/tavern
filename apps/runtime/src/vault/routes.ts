@@ -17,8 +17,7 @@ import {
     vaultSearchResultSchema,
     vaultStatusSchema,
 } from '@tavern/api';
-import { writeManagedHermesConfigFile } from '../hermes/model-config';
-import { requestManagedHermesRestart } from '../hermes/supervisor';
+import { signalAgentSettingsApplied } from '../agent-engine/settings-apply';
 import { forbidden, json, notFound } from '../tavern/http';
 import {
     createVaultFolder,
@@ -57,8 +56,7 @@ export async function handleVaultRequest(request: Request): Promise<Response | n
         }
         const input = agentRuntimeSaveVaultSettingsSchema.parse(await readJson(request));
         const settings = await saveVaultSettings(input);
-        await writeManagedHermesConfigFile();
-        const restartScheduled = requestManagedHermesRestart();
+        const restartScheduled = signalAgentSettingsApplied();
         return json(
             agentRuntimeSaveVaultSettingsResultSchema.parse({ ...settings, restartScheduled })
         );

@@ -14,8 +14,7 @@ custom presentation for a specific tool.
 ## Pipeline
 
 1. **Runtime** stores each tool call as a response activity with full
-   `metadata.tool.arguments` and `metadata.tool.result`
-   (`apps/runtime/src/tavern/hermes-turn-runner.ts`). Nothing is truncated at
+   `metadata.tool.arguments` and `metadata.tool.result`. Nothing is truncated at
    this layer.
 2. **Server projection** turns activities into timeline tool rows
    (`apps/server/src/chat/runtime-chat-api.ts`). Row labels come from
@@ -41,9 +40,9 @@ custom presentation for a specific tool.
   first step** (`apps/website/src/features/chats/chat-transcript-activity.tsx`
   → `WorkingLog` group mode). The header is permanent and uses the
   `chat-transcript-tool-intents.ts` entrypoint to summarize the top tool intent
-  families: "Read 2 files, searched code", "Updated tasks", "Needs approval".
+  families: "Read 2 files, searched code" or "Updated tasks".
   Short commands and file paths can
-  appear in the header; long commands, approval commands, browser payloads, and
+  appear in the header; long commands, browser payloads, and
   search queries stay in the drawer. Active headers latch meaningful copy and
   animate short text changes with SlotText, so fast tool state changes do not
   flash between raw commands and "Working". If a failed tool is followed by
@@ -78,31 +77,19 @@ renderer. If the collapsed group header uses the wrong family, update
 `chat-transcript-tool-intent-resolver.ts`; if the words or priority are wrong,
 update `chat-transcript-tool-intent-copy.ts`.
 
-## Worked example: tool approvals
+## Worked example: passive tool evidence
 
-Approval prompts intentionally use the normal tool-row renderer. The blocking
-approval surface owns the user's choice, so the chat timeline stays an
-execution log instead of a second approval UI:
+Tool activity is chat evidence, not a second control surface:
 
-1. The runtime records a pending prompt as an `approval` activity with the
-   command and reason in `metadata.tool.arguments`
-   (`apps/runtime/src/tavern/hermes-gateway-activities.ts`).
-2. The activity projects as a tool row named `approval` (durable) and an
-   `approval` progress step (live), both with the same row id.
-3. `buildToolSummaryFromValues` summarizes the row with the command rather
-   than the approval reason. The row/drawer can show the command, while the
-   collapsed group header uses "Needs approval" so it does not flash a raw
-   command while waiting.
-4. The row falls through to `GenericToolStep`, inheriting the standard
-   running shimmer, drawer behavior, and status colors.
-5. The chat footer derives the oldest pending approval from loaded chat rows,
-   previews the command from `row.approval.command`, overlays the prompt bar,
-   blocks the composer, and renders `AskUserQuestions` with once, session,
-   always, and deny choices.
-6. The footer prompt calls `chat.approval.respond`, which reaches the engine
-   gateway through the Runtime session approval endpoint.
-7. The runtime completes the activity when the agent resumes, which flips the
-   row to its settled state everywhere without app-side bookkeeping.
+1. Runtime records the tool call with the source tool name, arguments summary,
+   status, and durable activity id.
+2. The activity projects as a tool row and optional live progress step with the
+   same row id.
+3. `buildToolSummaryFromValues` summarizes the row from source facts.
+4. The row falls through to `GenericToolStep` unless a tool-specific renderer
+   exists.
+5. The transcript renders the row as evidence. Users control future tool access
+   through settings, not through per-call prompts in the chat footer.
 
 ## Worked example: clarifications
 
@@ -111,9 +98,7 @@ The clarification row (`tool-steps/clarification-tool-step.tsx`, registered as
 
 1. Runtime records `clarify.request` as custom response activity with
    `metadata.clarification` and projects it as a `tool` step named `clarify`.
-2. The renderer composes `ToolTimelineStep` with `AskUserQuestions` so choices,
-   Other, Skip, and pending state live inside the work log.
-3. The buttons call `chat.clarification.respond`, which reaches Runtime and the
-   engine `clarify.respond` RPC.
-4. Runtime owns the timeout and sends an explicit timeout answer before the
-   engine fallback can fire.
+2. The renderer composes `ToolTimelineStep` with a question label and any
+   historical settled state.
+3. Tavern does not expose a per-question response route; users answer through
+   normal chat messages when needed.

@@ -3,8 +3,8 @@ summary: Runtime-owned capability health; the singular feature-gating contract b
 read_when:
   - changing Runtime capability checks, capability storage, or capability APIs
   - changing job enablement that depends on Runtime readiness
-  - gating Tavern App features on Runtime or managed Hermes readiness
-  - changing chat send, runtime sync, skills, models, mentions, jobs, or Hermes-backed app behavior
+  - gating Tavern App features on Runtime or agent-engine readiness
+  - changing chat send, runtime sync, skills, models, mentions, jobs, or agent-backed app behavior
   - changing the Tavern Runtime settings capability table
 ---
 
@@ -19,8 +19,8 @@ pages can use capability health to decide whether a feature is available,
 degraded, or blocked.
 
 Capabilities are not quality scores. Domain freshness, content quality, missing
-Memory topics, and broken Memory links belong to domain status APIs or future
-Tasks workflows, not Runtime capability health.
+wiki topics, and broken wiki links belong to domain status APIs or future Tasks
+workflows, not Runtime capability health.
 
 The app only renders capability state. It does not decide whether a Runtime
 capability is healthy.
@@ -29,17 +29,17 @@ capability is healthy.
 
 Runtime capabilities are the app's singular readiness interface.
 
-If an app feature needs Runtime or managed Hermes behavior, it must gate on
+If an app feature needs Runtime or agent-engine behavior, it must gate on
 the relevant Runtime capability health. Do not gate feature availability on
 app-local connection fields such as `lastError`, sync timestamps, stored
-Hermes state, or inferred process status.
+agent-engine state, or inferred process status.
 
 Add a new capability when the existing ids do not describe the feature
 requirement. Keep the capability check in Runtime, expose it through
 `/capabilities`, and have the app read only the returned health record.
 
 Prefer primitive capabilities over umbrella feature names. For example, if a
-chat send only needs the managed Hermes Gateway to be ready, gate on
+chat send only needs the Runtime agent stream to be ready, gate on
 `gateway` instead of inventing a broader `agentExecution` or `agentTurns`
 capability.
 
@@ -62,7 +62,7 @@ Each capability has a stable id and one current health record.
 `healthy` is the simple interface. `state` and messages explain why.
 
 `displayName` and `reason` are product copy: they render directly in the app, so they use
-product vocabulary ("agent engine", "the assistant") and never name Hermes. Runtime is the
+product vocabulary ("agent engine", "the assistant") and never name internal dependencies. Runtime is the
 single source for capability display names; the app renders `displayName` and falls back
 to the capability id.
 
@@ -73,7 +73,7 @@ to the capability id.
 | Runtime | Capability definitions, checks, storage, API, and update job. |
 | App backend | Runtime client/proxy and optional local cache for presentation only. |
 | App UI | Rendering status, reason, timestamps, and actions. |
-| Hermes | Execution-owned facts that Runtime may inspect while checking a capability. |
+| Agent engine | Execution-owned facts that Runtime may inspect while checking a capability. |
 
 The app must not invent Runtime capability rows, run Runtime capability checks,
 or use app-local capability state as the source of truth for Runtime job
@@ -174,7 +174,7 @@ Runtime connection checks run in the background. Synced records render from the
 best local data available, and empty synced results are valid first-boot states.
 
 Controls that can capture local draft state stay interactive while Runtime
-boots. Commit actions that need Runtime or managed Hermes behavior disable
+boots. Commit actions that need Runtime or agent-engine behavior disable
 until the specific required capability is healthy. Surfaces whose only useful
 content comes from Runtime may stay hidden or render an empty state until
 synced data arrives.
@@ -185,8 +185,8 @@ gate.
 
 ## Capability Events
 
-Runtime emits `capability.updated` after a capability write. Managed Hermes
-state changes use the same path: Gateway down writes updated Runtime capability
+Runtime emits `capability.updated` after a capability write. Agent-engine
+state changes use the same path: stream down writes updated Runtime capability
 health, Runtime emits `capability.updated`, App backend re-fetches the
 runtime's capability snapshot into its cached runtime-owned status, emits
 `agent-runtime-capability.updated`, and the frontend invalidates
@@ -198,27 +198,27 @@ event that does not refresh the cache leaves the app on the snapshot taken at
 connect time (for example, engine checks still warming during startup).
 
 Frontend controls must render from the refreshed capability record. Do not
-disable sends, cron actions, or other Hermes-backed actions from app-local
+disable sends, cron actions, or other agent-backed actions from app-local
 connection status.
 
 ## Capability Examples
 
-Runtime capabilities cover first-party Runtime services, managed Hermes
-adapter checks, and external dependencies.
+Runtime capabilities cover first-party Runtime services, agent-engine checks,
+and external dependencies.
 
 | Capability | Healthy when |
 | --- | --- |
-| `dashboardServer` | Runtime can reach managed Hermes dashboard status at `/api/status`. |
-| `apiServer` | Runtime can make an authenticated managed Hermes REST API call. |
-| `gateway` | Runtime can open managed Hermes Gateway WebSocket `/api/ws`. |
-| `vault` | The configured Memory root can be read and the managed `memory` skill has been prepared. Runtime reports write access in capability metadata because agent Memory maintenance needs it, but read-only roots remain browseable. |
-| `models` | Runtime can reach managed Hermes model inventory at `/api/model/options`. |
-| `skills` | Runtime can reach managed Hermes skill inventory at `/api/skills`. App-side capability methods under `skills` also track the skill hub (`skill-hub.*`), toolset setup (`toolsets.config`/`toolsets.setup`), and MCP management (`mcp.*`) surfaces. |
+| `dashboardServer` | Runtime can reach agent-engine dashboard status. |
+| `apiServer` | Runtime can make an authenticated agent-engine API call. |
+| `gateway` | Runtime can open the agent-engine event stream. |
+| `vault` | The configured Vault root can be read and the managed `vault` skill has been prepared. Runtime reports write access in capability metadata because agent wiki maintenance needs it, but read-only roots remain browseable. |
+| `models` | Runtime can reach model inventory. |
+| `skills` | Runtime can reach skill inventory. App-side capability methods under `skills` also track the skill hub (`skill-hub.*`), tool setup, and MCP management (`mcp.*`) surfaces. |
 | `plugin.merchbase` | Runtime has an enabled MerchBase Plugin, an API key, and can read the configured MerchBase account. |
 
 Plain Tavern CRUD, timeline, mentions, cron, and logging surfaces are not
 capabilities by themselves. Add a capability only when a user-facing action
-depends on a distinct Runtime-owned service or Hermes probe.
+depends on a distinct Runtime-owned service or agent-engine probe.
 
 ## App Rendering
 

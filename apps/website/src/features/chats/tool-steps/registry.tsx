@@ -24,6 +24,10 @@ const toolStepRenderers = {
 } satisfies Record<string, ToolStepRenderer>;
 
 export function ToolStep(props: ToolStepRendererProps) {
+    if (props.row.clarification) {
+        return <ClarificationToolStep {...props} />;
+    }
+
     const Renderer = resolveToolStepRenderer(props.row.toolCall.name);
     return <Renderer {...props} />;
 }

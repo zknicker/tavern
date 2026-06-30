@@ -1,3 +1,4 @@
+import type { AgentRuntimeAgent } from '@tavern/api';
 import { createAgentRuntimeClientForConnection } from '../agent-runtime/client-factory.ts';
 import { getAgentRuntimeModels } from '../agent-runtime/models.ts';
 import { listAgentCatalog } from '../agents/catalog.ts';
@@ -5,27 +6,18 @@ import { getOpenRouterSettings } from '../openrouter/settings.ts';
 import { listConfiguredAgentRuntimeConnections } from '../storage/agent-runtime-connections.ts';
 import { listAgents as listAgentRecords, parseAgentRawJson } from '../storage/agents.ts';
 import { modelListSchema } from './contracts.ts';
-import { formatHermesModelName, normalizeHermesModelIdentity } from './hermes-mapping.ts';
+import { formatAgentModelName, normalizeAgentModelIdentity } from './model-mapping.ts';
 
-function parseRuntimeModelCatalogEntry(input: { id: string; provider: null | string }) {
-    const separatorIndex = input.id.indexOf('/');
-    const provider =
-        input.provider ?? (separatorIndex > 0 ? input.id.slice(0, separatorIndex) : null);
-    const model = separatorIndex > 0 ? input.id.slice(separatorIndex + 1) : input.id;
-
-    return provider ? { model, provider } : null;
-}
-
-function createEmptySelection() {
+function parseRuntimeModelCatalogEntry(input: { route: { model: string; provider: string } }) {
     return {
-        fallbackModels: [],
-        primaryModel: null,
+        model: input.route.model,
+        provider: input.route.provider,
     };
 }
 
 async function buildModels() {
     const runtimes = await listConfiguredAgentRuntimeConnections();
-    const modelsByRef = new Map<string, ReturnType<typeof createHermesModel>>();
+    const modelsByRef = new Map<string, ReturnType<typeof createAgentModel>>();
 
     for (const runtime of runtimes) {
         const client = createAgentRuntimeClientForConnection(runtime);
@@ -35,15 +27,11 @@ async function buildModels() {
             for (const model of response?.models ?? []) {
                 const parsed = parseRuntimeModelCatalogEntry(model);
 
-                if (!parsed) {
-                    continue;
-                }
-
-                const ref = formatHermesModelName(parsed);
+                const ref = formatAgentModelName(parsed);
                 modelsByRef.set(
                     ref,
-                    createHermesModel({
-                        availability: 'available',
+                    createAgentModel({
+                        availability: model.availability ?? 'available',
                         label: model.label ?? null,
                         model: parsed.model,
                         provider: parsed.provider,
@@ -64,39 +52,69 @@ async function buildModels() {
 }
 
 async function buildAgentSettings() {
-    const [agents, agentRecords] = await Promise.all([listAgentCatalog(), listAgentRecords()]);
+    const [agents, agentRecords, runtimeAgentsByKey] = await Promise.all([
+        listAgentCatalog(),
+        listAgentRecords(),
+        listRuntimeAgentFactsByKey(),
+    ]);
     const agentRecordsById = new Map(
         agentRecords.map((agentRecord) => [agentRecord.id, agentRecord] as const)
     );
-    return agents.map((agent) => {
-        const agentRecord = agentRecordsById.get(agent.id);
-        const rawAgent = agentRecord ? parseAgentRawJson(agentRecord) : null;
-        const runtimeModelName = rawAgent?.hermesModelName ?? null;
-        const runtimeThinkingDefault = rawAgent?.thinkingDefault ?? null;
-        const runtimeModel = runtimeModelName
-            ? normalizeHermesModelIdentity({
-                  model: runtimeModelName.model,
-                  provider: runtimeModelName.provider,
-              })
-            : null;
+    return Promise.all(
+        agents.map(async (agent) => {
+            const agentRecord = agentRecordsById.get(agent.id);
+            const rawAgent = agentRecord ? parseAgentRawJson(agentRecord) : null;
+            const runtimeAgent = runtimeAgentsByKey.get(`${agent.runtimeId}:${agent.id}`)?.agent;
+            const runtimeModelName = runtimeAgent
+                ? (runtimeAgent.modelName ?? null)
+                : (rawAgent?.modelName ?? null);
+            const runtimeThinkingDefault =
+                runtimeAgent && 'thinkingDefault' in runtimeAgent
+                    ? (runtimeAgent.thinkingDefault ?? null)
+                    : (rawAgent?.thinkingDefault ?? null);
+            const runtimeModel = runtimeModelName
+                ? normalizeAgentModelIdentity({
+                      model: runtimeModelName.model,
+                      provider: runtimeModelName.provider,
+                  })
+                : null;
 
-        return {
-            agentId: agent.id,
-            agentName: agent.name,
-            effective: createEmptySelection(),
-            effectiveThinkingDefault: runtimeThinkingDefault,
-            isOverridden: Boolean(runtimeModel),
-            isThinkingOverridden: runtimeThinkingDefault !== null,
-            model: runtimeModel?.modelId ?? null,
-            modelRef: runtimeModel?.modelRef ?? null,
-            provider: runtimeModel?.provider ?? null,
-            override: createEmptySelection(),
-            overrideThinkingDefault: runtimeThinkingDefault,
-            subAgentModel: null,
-            syncError: null,
-            syncedAt: agentRecord?.lastSyncedAt ?? null,
-        };
-    });
+            return {
+                agentId: agent.id,
+                agentName: agent.name,
+                effectiveThinkingDefault: runtimeThinkingDefault,
+                isOverridden: Boolean(runtimeModel),
+                isThinkingOverridden: runtimeThinkingDefault !== null,
+                model: runtimeModel?.modelId ?? null,
+                modelRef: runtimeModel?.modelRef ?? null,
+                overrideThinkingDefault: runtimeThinkingDefault,
+                provider: runtimeModel?.provider ?? null,
+                syncError: null,
+                syncedAt: agentRecord?.lastSyncedAt ?? null,
+            };
+        })
+    );
+}
+
+async function listRuntimeAgentFactsByKey() {
+    const runtimes = await listConfiguredAgentRuntimeConnections();
+    const agents = new Map<string, { agent: AgentRuntimeAgent }>();
+
+    for (const runtime of runtimes) {
+        const client = createAgentRuntimeClientForConnection(runtime);
+        try {
+            const response = await client.listAgents();
+            for (const agent of response.agents) {
+                agents.set(`${runtime.id}:${agent.id}`, {
+                    agent,
+                });
+            }
+        } finally {
+            client.close();
+        }
+    }
+
+    return agents;
 }
 
 export async function listModels() {
@@ -108,30 +126,28 @@ export async function listModels() {
 
     return modelListSchema.parse({
         agents,
-        defaults: createEmptySelection(),
         defaultsThinkingLevel: null,
         models,
         openRouter: {
             hasApiKey: Boolean(openRouterSettings?.hasApiKey),
             updatedAt: openRouterSettings?.updatedAt ?? null,
         },
-        subAgentDefaultModel: null,
         subAgentThinkingLevel: null,
     });
 }
 
-function createHermesModel(input: {
-    availability: 'available' | 'configured';
+function createAgentModel(input: {
+    availability: 'available' | 'configured' | 'degraded' | 'unavailable';
     label: string | null;
     model: string;
     provider: string;
 }) {
-    const ref = formatHermesModelName(input);
+    const ref = formatAgentModelName(input);
 
     return {
         availability: input.availability,
         contextWindow: null,
-        framework: 'hermes',
+        framework: 'agent-engine',
         id: ref,
         modelId: input.model,
         name: input.label?.trim() || input.model,

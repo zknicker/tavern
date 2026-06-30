@@ -10,7 +10,6 @@ export interface ChatComposerQueuedMessage {
     createdAt: string;
     id: string;
     metadata?: Record<string, unknown>;
-    modelRef?: string;
 }
 
 export function useChatComposerQueue(chatId: string) {
@@ -187,11 +186,7 @@ export function canStartQueuedSteer(input: {
 }
 
 export function isQueuedMessageSteerable(entry: ChatComposerQueuedMessage) {
-    return (
-        entry.content.trim().length > 0 &&
-        !entry.attachments?.length &&
-        entry.modelRef === undefined
-    );
+    return entry.content.trim().length > 0 && !entry.attachments?.length;
 }
 
 export function shouldInterruptActiveTurnForQueuedMessage(entry: ChatComposerQueuedMessage) {
@@ -253,9 +248,6 @@ function parseQueuedMessage(value: unknown): ChatComposerQueuedMessage[] {
             ? (row.metadata as Record<string, unknown>)
             : undefined;
     const attachments = parseAttachments(row.attachments);
-    const modelRef =
-        typeof row.modelRef === 'string' && row.modelRef.trim() ? row.modelRef : undefined;
-
     return [
         {
             agentId: row.agentId,
@@ -264,7 +256,6 @@ function parseQueuedMessage(value: unknown): ChatComposerQueuedMessage[] {
             createdAt: row.createdAt,
             id: row.id,
             ...(metadata ? { metadata } : {}),
-            ...(modelRef ? { modelRef } : {}),
         },
     ];
 }

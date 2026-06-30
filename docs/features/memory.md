@@ -1,59 +1,50 @@
 ---
-summary: Memory feature for durable Markdown knowledge, L1 briefings, semantic pages, episodic observations, and Memory browsing.
+summary: Memory feature for assistant memory, Vault knowledge, and the context-management boundary.
 read_when:
-  - changing Memory browsing, Memory settings, durable knowledge storage, or agent memory prompts
-  - changing the boundary between Memory, Workspace, and managed runtime context
+  - changing assistant memory, memory visibility, Vault status, or Vault-backed knowledge expectations
+  - changing the boundary between prompt-time context and durable wiki knowledge
 ---
 
 # Memory
 
-Memory is Tavern's durable knowledge store. It is plain Markdown on the local
-filesystem, owned by the user and maintained by the user and agents.
+Tavern has two memory surfaces:
 
-Memory replaces the old separate knowledge surface. Users browse one Memory
-root; direct Memory edits and maintenance workflows write that same root.
-
-## Root Layout
-
-Runtime seeds the configured Memory root with:
-
-* `MEMORY.md` — compact agent operating briefing
-* `USER.md` — compact user briefing
-* `TAXONOMY.md` — routing rules for Memory writes
-* `episodic/` — append-only dated observations
-* `projects/` — durable project context and decisions
-* `routines/` — recurring workflow memory
-
-Other semantic folders are not pre-guessed. Agents add them to `TAXONOMY.md`
-only when a stable repeated category needs its own durable home.
+* **Assistant memory.** Runtime enables the engine's built-in prompt-time
+  memory files: `MEMORY.md` for compact assistant operating notes and
+  `USER.md` for stable user profile facts. Agents write them through the
+  native `memory` tool. The files are not Vault pages and are not skill
+  packages.
+* **Vault knowledge.** Vault is the browsable wiki. Durable knowledge that
+  users inspect lives in Markdown files. Agents use the managed Vault skill to
+  route normal wiki work to Obsidian and bounded research folders to llm-wiki.
 
 ## In The App
 
-The Memory page shows the Memory file browser and editor. Users can inspect
-Markdown files, folders, search results, backlinks, metadata, and live file
-status. The legacy `/dashboard/vault` route redirects to `/dashboard/memory`.
+Memory is configured through Settings. The top-level Workspace page browses the
+managed agent workspace, and the Vault page browses durable wiki knowledge.
 
-Settings -> Memory controls the Memory path. If `TAVERN_VAULT_PATH` is set, the
-environment path wins until the wire setting is renamed.
+Users can inspect Vault knowledge through Vault:
 
-## Agent Contract
+* the resolved Vault path
+* Markdown page counts
+* filesystem read/write health
+* pages, links, backlinks, and search results
 
-The main chat agent does not turn ordinary task progress into Memory edits.
-Memory maintenance workflows handle normal capture. When a user explicitly asks
-the agent to remember, forget, or update durable context, the agent uses the
-managed `memory` skill and reads `TAXONOMY.md` before changing Memory
-structure.
+## Contract
 
-Maintenance workflows write raw observations to `episodic/YYYY-MM-DD.md`,
-promote stable project or routine knowledge into semantic pages, add new
-semantic folders only through `TAXONOMY.md`, and refresh `MEMORY.md` or
-`USER.md` only when the context is valuable enough to load at session start.
+User-facing durable knowledge visibility is file-backed. Vault reads wiki
+Markdown. Workspace reads managed agent workspace files. Neither surface exposes
+model settings, hidden queues, generated schemas, or internal repair controls.
 
-The `memory` managed skill describes this contract to the agent. Internal API
-and tRPC names can still say `vault` for compatibility.
+Assistant memory is engine execution state. It can affect what the agent
+recalls during work, but it is not the Vault wiki and is not edited through the
+wiki browser. Durable, inspectable knowledge belongs in Vault; generated files
+and assets belong in Workspace.
 
 ## Boundary
 
-Memory stores knowledge. Workspace stores working files under `workbench/`.
-Prompt context stays bounded and should retrieve selected Memory material
-rather than loading the whole root.
+Vault is the browsable wiki. Agents maintain it through the managed `vault`
+skill.
+
+See [Vault](../../specs/vault.md) and
+[Context management](context-management.md).

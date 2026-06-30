@@ -11,7 +11,7 @@ Stats turn runtime and provider activity into something users can scan.
 
 ## In the box
 
-* **Connected sources.** Show stats only for Hermes providers that are connected
+* **Connected sources.** Show stats only for providers that are connected
   and have a Tavern-supported stats source.
 * **Usage.** Show Codex limits and OpenRouter account activity when those
   providers are connected.

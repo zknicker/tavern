@@ -1,9 +1,5 @@
 import * as React from 'react';
 import {
-    buildChatRoutingConfiguredModelOptions,
-    type ModelOptionItem,
-} from '../../components/ui/model-route-shared.ts';
-import {
     PromptInput,
     PromptInputActions,
     PromptInputBody,
@@ -14,7 +10,6 @@ import {
 } from '../../components/ui/prompt-input.tsx';
 import { useChatDraftLaunch } from '../../hooks/chats/use-chat-draft-launch.ts';
 import { runtimeUnhealthyTooltip, useCapability } from '../../hooks/connections/use-capability.ts';
-import { useModelList } from '../../hooks/models/use-model-list.ts';
 import type { AgentListOutput } from '../../lib/trpc.tsx';
 import { cn } from '../../lib/utils.ts';
 import {
@@ -36,7 +31,7 @@ import {
 import { useComposerFileDrop } from './chat-composer-file-drop.ts';
 import { handleChatComposerKeyDown } from './chat-composer-keyboard.ts';
 import { ChatComposerMainDropOverlay } from './chat-composer-main-drop-overlay.tsx';
-import { ChatComposerAttachmentButton, ChatComposerModelSelector } from './chat-composer-tools.tsx';
+import { ChatComposerAttachmentButton } from './chat-composer-tools.tsx';
 
 type Agent = AgentListOutput['agents'][number];
 const CHAT_COMPOSER_PLACEHOLDER = "Let's go on an adventure...";
@@ -55,17 +50,11 @@ export function StartChatComposer({
     const launchChatDraft = useChatDraftLaunch();
     const gatewayCapability = useCapability('gateway');
     const apiCapability = useCapability('apiServer');
-    const modelList = useModelList();
     const fileInputRef = React.useRef<HTMLInputElement | null>(null);
     const [attachments, setAttachments] = React.useState<ChatComposerAttachment[]>([]);
     const [attachmentError, setAttachmentError] = React.useState<string | null>(null);
-    const [modelRef, setModelRef] = React.useState<string | null>(null);
     const [prompt, setPrompt] = React.useState('');
     const [mentions, setMentions] = React.useState<Mention[]>([]);
-    const modelOptions = React.useMemo(
-        () => buildChatRoutingConfiguredModelOptions(modelList.data),
-        [modelList.data]
-    );
 
     const canSendToRuntime = gatewayCapability.healthy && apiCapability.healthy;
     const canUseMentions = Boolean(agent);
@@ -97,7 +86,6 @@ export function StartChatComposer({
         const submission = compileMentionSubmission(submittedPrompt, submittedMentions);
         const metadata = buildMentionMetadata(submission.mentions);
         const submittedAttachments = attachments;
-        const submittedModelRef = modelRef ?? undefined;
 
         setPrompt('');
         setMentions([]);
@@ -108,7 +96,6 @@ export function StartChatComposer({
             ...(submittedAttachments.length ? { attachments: submittedAttachments } : {}),
             content: submission.content.trim(),
             metadata,
-            ...(submittedModelRef ? { modelRef: submittedModelRef } : {}),
         });
     });
     const mentionComposer = useMentionComposer({
@@ -217,12 +204,6 @@ export function StartChatComposer({
                         disabled={!canSendToRuntime}
                         onClick={() => fileInputRef.current?.click()}
                     />
-                    <ModelSelectorSlot
-                        disabled={!canSendToRuntime}
-                        modelOptions={modelOptions}
-                        modelRef={modelRef}
-                        onModelChange={setModelRef}
-                    />
                 </PromptInputTools>
                 <PromptInputActions>
                     <PromptInputSubmit
@@ -239,31 +220,6 @@ export function StartChatComposer({
                 </PromptInputActions>
             </PromptInputFooter>
         </PromptInput>
-    );
-}
-
-function ModelSelectorSlot({
-    disabled,
-    modelOptions,
-    modelRef,
-    onModelChange,
-}: {
-    disabled: boolean;
-    modelOptions: readonly ModelOptionItem[];
-    modelRef: string | null;
-    onModelChange: (modelRef: string | null) => void;
-}) {
-    if (modelOptions.length === 0) {
-        return null;
-    }
-
-    return (
-        <ChatComposerModelSelector
-            disabled={disabled}
-            modelOptions={modelOptions}
-            onModelChange={onModelChange}
-            value={modelRef}
-        />
     );
 }
 

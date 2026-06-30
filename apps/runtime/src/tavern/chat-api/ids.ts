@@ -10,12 +10,6 @@ export function createRunId(messageId: string) {
     return `run_${stripPrefix(messageId, 'msg_')}`;
 }
 
-// Canonical Tavern channel session key for an agent/chat pair. Must match the
-// app server's derivation for message sends (see specs/composer-commands.md).
-export function createAgentChannelSessionKey(agentId: string, chatId: string) {
-    return `agent:${agentId}:tavern:channel:${chatId}`;
-}
-
 export function assertTavernIdPrefix(
     value: string | null | undefined,
     prefix: string,

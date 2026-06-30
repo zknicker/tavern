@@ -29,7 +29,7 @@ export function McpCatalogList({ open }: { open: boolean }) {
         return (
             <EmptyState
                 className="py-12"
-                description="The runtime did not report any catalog toolsets."
+                description="The runtime did not report any catalog MCP servers."
                 title="No catalog entries"
             />
         );

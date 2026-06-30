@@ -7,22 +7,21 @@ import { readEnvFile } from './env.ts';
 import { isValidTimezone } from './timezone.ts';
 
 const envConfig = readEnvFile([
-    'HERMES_HOME',
-    'TAVERN_HERMES_ALLOW_SYSTEM',
-    'TAVERN_HERMES_AUTO_INSTALL',
-    'TAVERN_HERMES_BIN',
-    'TAVERN_HERMES_BRANCH',
-    'TAVERN_HERMES_COMMIT',
-    'TAVERN_HERMES_HOME',
-    'TAVERN_HERMES_HOST',
-    'TAVERN_HERMES_MODEL',
-    'TAVERN_HERMES_API_KEY',
-    'TAVERN_HERMES_BASE_URL',
-    'TAVERN_HERMES_PORT',
-    'TAVERN_HERMES_PROVIDER',
-    'TAVERN_HERMES_TOKEN',
-    'TAVERN_CLARIFICATION_TIMEOUT_MS',
-    'HERMES_DASHBOARD_SESSION_TOKEN',
+    'TAVERN_AGENT_MODEL_PROVIDER',
+    'TAVERN_AGENT_API_KEY',
+    'TAVERN_AGENT_BASE_URL',
+    'TAVERN_AGENT_CLAUDE_CODE_COMMAND',
+    'TAVERN_AGENT_CLAUDE_CODE_AUTH_TOKEN',
+    'TAVERN_AGENT_CLAUDE_CODE_BASE_URL',
+    'TAVERN_AGENT_CLAUDE_MODEL',
+    'TAVERN_AGENT_CODEX_CLI_COMMAND',
+    'TAVERN_AGENT_CODEX_MODEL',
+    'TAVERN_AGENT_HOME',
+    'TAVERN_AGENT_MODEL',
+    'TAVERN_AGENT_MODEL_DISCOVERY_TIMEOUT_MS',
+    'TAVERN_AGENT_OPENAI_MODEL',
+    'TAVERN_AGENT_PROVIDER',
+    'TAVERN_AGENT_WORKSPACE',
     'TAVERN_RUNTIME_ASSETS_DIR',
     'TAVERN_RUNTIME_HOST',
     'TAVERN_RUNTIME_PORT',
@@ -37,6 +36,8 @@ const envConfig = readEnvFile([
     'CODEX_MODEL',
     'OPENAI_API_KEY',
     'OPENROUTER_API_KEY',
+    'ANTHROPIC_AUTH_TOKEN',
+    'ANTHROPIC_BASE_URL',
     'TZ',
 ]);
 
@@ -64,56 +65,17 @@ function resolveRuntimeRoot(): string {
 }
 
 function resolveDefaultRuntimeRoot(): string {
-    const canonicalRoot = path.join(homeDir, '.tavern', 'runtime');
-    const legacyRoot = path.join(homeDir, '.tavern-hermes', 'runtime');
-    if (!fs.existsSync(path.join(homeDir, '.tavern')) && fs.existsSync(legacyRoot)) {
-        // One-line migration hint; Runtime never moves operator data itself.
-        console.warn(
-            `Tavern Runtime is using legacy state at ${legacyRoot}. Move it with: mv ~/.tavern-hermes ~/.tavern`
-        );
-        return legacyRoot;
-    }
-    return canonicalRoot;
+    return path.join(homeDir, '.tavern', 'runtime');
 }
 
 export const RUNTIME_ROOT = resolveRuntimeRoot();
 export const DATA_DIR = path.join(RUNTIME_ROOT, 'data');
-export const HERMES_ROOT = path.join(RUNTIME_ROOT, 'hermes');
-export const HERMES_WORKSPACE = path.join(HERMES_ROOT, 'workspace');
-export const HERMES_HOME = resolveConfiguredPath(
-    readConfigValue('TAVERN_HERMES_HOME') ??
-        readConfigValue('HERMES_HOME') ??
-        path.join(HERMES_ROOT, 'home')
+export const AGENT_HOME = resolveConfiguredPath(
+    readConfigValue('TAVERN_AGENT_HOME') ?? path.join(RUNTIME_ROOT, 'agent')
 );
-export const HERMES_DASHBOARD_SESSION_TOKEN = resolveHermesDashboardSessionToken();
-
-function resolveHermesDashboardSessionToken(): string {
-    const configured =
-        readConfigValue('TAVERN_HERMES_TOKEN') ?? readConfigValue('HERMES_DASHBOARD_SESSION_TOKEN');
-    if (configured) {
-        return configured;
-    }
-
-    const tokenPath = path.join(HERMES_HOME, 'dashboard-session-token');
-    try {
-        const existing = fs.readFileSync(tokenPath, 'utf8').trim();
-        if (existing) {
-            return existing;
-        }
-    } catch {
-        // First run creates the managed local token below.
-    }
-
-    const token = randomBytes(32).toString('base64url');
-    fs.mkdirSync(path.dirname(tokenPath), { recursive: true });
-    fs.writeFileSync(tokenPath, `${token}\n`, { mode: 0o600 });
-    try {
-        fs.chmodSync(tokenPath, 0o600);
-    } catch {
-        // chmod is best-effort on non-POSIX filesystems.
-    }
-    return token;
-}
+export const AGENT_WORKSPACE = resolveConfiguredPath(
+    readConfigValue('TAVERN_AGENT_WORKSPACE') ?? path.join(RUNTIME_ROOT, 'agent', 'workspace')
+);
 
 function resolveRuntimeApiToken(): string {
     const configured = readConfigValue('TAVERN_RUNTIME_TOKEN');

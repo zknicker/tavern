@@ -20,7 +20,7 @@ import { formatShortTime } from '../../lib/format.ts';
 import { springs } from '../../lib/springs.ts';
 import { cn } from '../../lib/utils.ts';
 import { AgentRichResponse } from '../../rich-responses/render-rich-response.tsx';
-import { AgentPresenceIndicator } from './agent-presence-indicator.tsx';
+import { AgentStatusIndicator } from './agent-status-indicator.tsx';
 import { getActivePresenceVerb } from './chat-active-presence-verb.ts';
 import { CommandRunEntry } from './chat-command-card.tsx';
 import { ChatMarkdownText } from './chat-markdown-text.tsx';
@@ -60,7 +60,7 @@ import { useRevealedText } from './use-revealed-text.ts';
 const rowClassName = 'relative w-full px-3';
 const newTurnGapClassName = '';
 const hoverGroupClassName = 'group';
-const agentPresenceSize = 32;
+const agentStatusSize = 32;
 const presenceLabelExitTransition = {
     duration: 0.12,
     ease: [0.4, 0, 0.2, 1],
@@ -74,7 +74,7 @@ const reducedPresenceLabelTransition = { duration: 0.08 } satisfies Transition;
 export function TranscriptEntryView({
     activeReply,
     activePresenceVerb = null,
-    agentPresenceColor = null,
+    agentStatusColor = null,
     chatId,
     conversationLayout,
     currentSessionKey,
@@ -88,7 +88,7 @@ export function TranscriptEntryView({
 }: {
     activeReply: ChatActiveReply | null;
     activePresenceVerb?: string | null;
-    agentPresenceColor?: string | null;
+    agentStatusColor?: string | null;
     chatId?: string;
     conversationLayout: ConversationMessageLayout;
     currentSessionKey?: string | null;
@@ -136,7 +136,7 @@ export function TranscriptEntryView({
         <AgentTurn
             activePresenceVerb={activePresenceVerb}
             activeReply={activeReply}
-            agentPresenceColor={agentPresenceColor}
+            agentStatusColor={agentStatusColor}
             chatId={chatId}
             currentSessionKey={currentSessionKey}
             defaultOpenWorkGroups={defaultOpenWorkGroups}
@@ -151,10 +151,10 @@ export function TranscriptEntryView({
     );
 }
 
-function AgentPresenceBlock({
+function AgentStatusBlock({
     activeReply,
     activePresenceVerb,
-    agentPresenceColor,
+    agentStatusColor,
     entry,
     failedTurn,
     presenceRows,
@@ -162,7 +162,7 @@ function AgentPresenceBlock({
 }: {
     activeReply: ChatActiveReply | null;
     activePresenceVerb?: string | null;
-    agentPresenceColor: string | null;
+    agentStatusColor: string | null;
     entry: Extract<TranscriptEntry, { kind: 'turn' }>;
     failedTurn: ChatTurnFailure | null;
     presenceRows: TranscriptRow[];
@@ -183,23 +183,23 @@ function AgentPresenceBlock({
         : (getActivityStart(activityItems) ?? turnStartedAt ?? entry.timestamp);
     const presenceNow = usePresenceNow(turnActive, workStart);
     const presenceTimingLabel = turnActive
-        ? getAgentPresenceTimingLabel({
+        ? getAgentStatusTimingLabel({
               now: presenceNow,
               start: workStart,
               verb: activePresenceVerb ?? getActivePresenceVerb(activeReply?.runId ?? entry.id),
           })
         : null;
     return (
-        <AgentPresenceRow
+        <AgentStatusRow
             label={presenceTimingLabel}
             presence={
-                <AgentPresenceIndicator
+                <AgentStatusIndicator
                     activeReply={presenceActiveReply}
                     className="translate-y-px"
-                    color={actorProfile?.primaryColor ?? agentPresenceColor}
+                    color={actorProfile?.primaryColor ?? agentStatusColor}
                     failedTurn={failedTurn}
                     rows={presenceRows}
-                    size={agentPresenceSize}
+                    size={agentStatusSize}
                 />
             }
         />
@@ -260,7 +260,7 @@ function UserTurn({
 function AgentTurn({
     activeReply,
     activePresenceVerb,
-    agentPresenceColor,
+    agentStatusColor,
     chatId,
     currentSessionKey,
     defaultOpenWorkGroups,
@@ -274,7 +274,7 @@ function AgentTurn({
 }: {
     activeReply: ChatActiveReply | null;
     activePresenceVerb: string | null;
-    agentPresenceColor: string | null;
+    agentStatusColor: string | null;
     chatId?: string;
     currentSessionKey?: string | null;
     defaultOpenWorkGroups: boolean;
@@ -328,10 +328,10 @@ function AgentTurn({
                                 />
                             ))}
                             {showPresence ? (
-                                <AgentPresenceBlock
+                                <AgentStatusBlock
                                     activePresenceVerb={activePresenceVerb}
                                     activeReply={activeReply}
-                                    agentPresenceColor={agentPresenceColor}
+                                    agentStatusColor={agentStatusColor}
                                     entry={entry}
                                     failedTurn={failedTurn}
                                     presenceRows={presenceRows}
@@ -346,7 +346,7 @@ function AgentTurn({
     );
 }
 
-function AgentPresenceRow({
+function AgentStatusRow({
     label,
     presence,
 }: {
@@ -576,7 +576,7 @@ function isActiveStatusSegment(segment: AgentItemSegment) {
     return segment.kind === 'item' && segment.item.kind === 'activeStatus';
 }
 
-function getAgentPresenceTimingLabel({
+function getAgentStatusTimingLabel({
     now,
     start,
     verb,

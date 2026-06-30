@@ -1,24 +1,21 @@
+import { Refresh04Icon } from '@hugeicons-pro/core-solid-rounded';
 import { developmentChatDemoIds } from '@tavern/api/development-chat-demos';
 import * as React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
+import { Icon } from '../../components/ui/icon.tsx';
+import { Button } from '../../components/ui/primitives/button.tsx';
 import { useAgentList } from '../../hooks/agents/use-agent-list.ts';
 import type { ChatTimelineState } from '../../hooks/chats/chat-timeline-state.ts';
 import { getChatDraftRouteState } from '../../hooks/chats/use-chat-draft-launch.ts';
 import { useChatDraftStart } from '../../hooks/chats/use-chat-draft-start.ts';
 import { useChatGet } from '../../hooks/chats/use-chat-list.ts';
+import { useChatStartAgentSession } from '../../hooks/chats/use-chat-start-agent-session.ts';
 import { useChatStartDrafts } from '../../hooks/chats/use-chat-start-drafts.tsx';
 import { useChatTimeline } from '../../hooks/chats/use-chat-timeline.ts';
 import { useChatVirtualizationPreference } from '../../hooks/chats/use-chat-virtualization-preference.ts';
-import { useChatRuntimeTimelineState } from '../../hooks/chats/use-timeline-context.tsx';
 import { useModelList } from '../../hooks/models/use-model-list.ts';
 import { MissingAgentState } from '../agents/missing-agent-state.tsx';
 import { ArtifactPanelOpenProvider } from './artifact-panel-context.tsx';
-import {
-    ChatApprovalFlow,
-    ChatApprovalFlowComposer,
-    ChatApprovalPrompt,
-    useChatApprovalPromptState,
-} from './chat-approval-prompt.tsx';
 import { ChatArtifactPanel, useChatArtifactPanelState } from './chat-artifact-panel.tsx';
 import { getChatContextFullness } from './chat-context-fullness.ts';
 import { ChatDetailFrame } from './chat-detail-frame.tsx';
@@ -45,7 +42,6 @@ export function AgentChatDetail({ chatId }: { chatId: string }) {
     const chatQuery = useChatGet({ chatId }, { enabled: !isDraftRoute });
     const drafts = useChatStartDrafts();
     const routeDraft = drafts.getDraft(routeState?.draftChatId);
-    const handoffState = useChatRuntimeTimelineState(chatId);
     const [releasedDraftId, setReleasedDraftId] = React.useState<string | null>(null);
     const chat = React.useMemo(
         () => (chatQuery.data ? buildChatListItem(chatQuery.data) : null),
@@ -61,10 +57,6 @@ export function AgentChatDetail({ chatId }: { chatId: string }) {
 
     React.useEffect(() => {
         if (routeDraft?.realChatId !== chatId || !chat) {
-            return;
-        }
-
-        if (!shouldReleaseDraftHandoff(handoffState)) {
             return;
         }
 
@@ -90,7 +82,7 @@ export function AgentChatDetail({ chatId }: { chatId: string }) {
         return () => {
             cancelled = true;
         };
-    }, [chat, chatId, handoffState, routeDraft]);
+    }, [chat, chatId, routeDraft]);
 
     if (isDraftRoute) {
         if (!routeDraft) {
@@ -174,10 +166,6 @@ function SyncedAgentChatDetail({ chat, chatId }: { chat: ChatListItem; chatId: s
         limit: getChatDetailLogLimit(chatId),
     });
     const rows = timeline.rows;
-    const approvalPrompt = useChatApprovalPromptState(rows);
-    const pendingApprovalBlockReason = approvalPrompt.isActive
-        ? 'Respond to the pending approval before sending another message.'
-        : null;
     const totalMessages = timeline.totalMessages;
     const contextFullness = modelsQuery.data
         ? getChatContextFullness({
@@ -186,6 +174,12 @@ function SyncedAgentChatDetail({ chat, chatId }: { chat: ChatListItem; chatId: s
           })
         : null;
     const artifactPanel = useChatArtifactPanelState(chatId);
+    const startAgentSession = useChatStartAgentSession();
+    const isTurnBlocking = isBlockingActiveTurn({
+        activeReply: timeline.activeReply,
+        activeTurn: timeline.activeTurn,
+        agentsPending: agentsQuery.isPending,
+    });
 
     if (!(agent || agentsQuery.isPending)) {
         return <MissingAgentState agentId={agentId} />;
@@ -195,7 +189,7 @@ function SyncedAgentChatDetail({ chat, chatId }: { chat: ChatListItem; chatId: s
         <ArtifactPanelOpenProvider onOpen={artifactPanel.open}>
             <ChatDetailFrame
                 activeReply={timeline.activeReply}
-                agentPresenceColor={agent?.effectivePrimaryColor ?? null}
+                agentStatusColor={agent?.effectivePrimaryColor ?? null}
                 artifactPanel={<ChatArtifactPanel agentId={agentId} state={artifactPanel} />}
                 chatId={chat.id}
                 conversationLayout={conversationLayout}
@@ -205,42 +199,44 @@ function SyncedAgentChatDetail({ chat, chatId }: { chat: ChatListItem; chatId: s
                 failedTurn={timeline.failedTurn}
                 fetchPreviousPage={timeline.fetchPreviousPage}
                 footer={
-                    <ChatApprovalFlow active={approvalPrompt.isActive}>
-                        <ChatApprovalPrompt
-                            chatId={chat.id}
-                            hasError={approvalPrompt.hasError}
-                            onAnswerError={approvalPrompt.markAnswerError}
-                            onAnswered={approvalPrompt.markAnswered}
-                            prompt={approvalPrompt.prompt}
-                        />
-                        <ChatApprovalFlowComposer>
-                            <ChatMessageComposer
-                                activeRunId={
-                                    timeline.activeTurn?.runId ??
-                                    timeline.activeReply?.runId ??
-                                    null
+                    <>
+                        <div className="mx-auto flex w-full max-w-[60rem] justify-end px-6 pb-2">
+                            <Button
+                                disabled={!agentId || isTurnBlocking}
+                                loading={startAgentSession.isPending}
+                                onClick={() =>
+                                    startAgentSession.mutate({
+                                        agentParticipantId: agentId,
+                                        chatId: chat.id,
+                                    })
                                 }
-                                agentRuntimeSyncLabel={chat.agentRuntimeSyncLabel}
-                                agents={agents}
-                                blockReason={pendingApprovalBlockReason}
-                                boundAgentIds={chat.boundAgentIds}
-                                canSend={chat.canSend}
-                                chatId={chat.id}
-                                contextFullness={contextFullness}
-                                isDisabled={chat.isDisabled}
-                                isReplyActive={isBlockingActiveTurn({
-                                    activeReply: timeline.activeReply,
-                                    activeTurn: timeline.activeTurn,
-                                    agentsPending: agentsQuery.isPending,
-                                })}
-                                steerRunId={getSteerableRunId({
-                                    activeReply: timeline.activeReply,
-                                    activeTurn: timeline.activeTurn,
-                                    rows,
-                                })}
-                            />
-                        </ChatApprovalFlowComposer>
-                    </ChatApprovalFlow>
+                                size="xs"
+                                variant="ghost"
+                            >
+                                <Icon icon={Refresh04Icon} />
+                                New session
+                            </Button>
+                        </div>
+                        <ChatMessageComposer
+                            activeRunId={
+                                timeline.activeTurn?.runId ?? timeline.activeReply?.runId ?? null
+                            }
+                            agentRuntimeSyncLabel={chat.agentRuntimeSyncLabel}
+                            agents={agents}
+                            boundAgentIds={chat.boundAgentIds}
+                            canSend={chat.canSend}
+                            chatId={chat.id}
+                            contextFullness={contextFullness}
+                            conversationKind={chat.conversationKind}
+                            isDisabled={chat.isDisabled}
+                            isReplyActive={isTurnBlocking}
+                            steerRunId={getSteerableRunId({
+                                activeReply: timeline.activeReply,
+                                activeTurn: timeline.activeTurn,
+                                rows,
+                            })}
+                        />
+                    </>
                 }
                 hasPreviousPage={timeline.hasPreviousPage}
                 historyLoaded={timeline.historyLoaded}

@@ -1,9 +1,10 @@
-export type MentionKind = 'app' | 'directory' | 'file' | 'image' | 'plugin' | 'skill';
+export type MentionKind = 'agent' | 'app' | 'directory' | 'file' | 'image' | 'plugin' | 'skill';
 // Picker options cover one extra kind: commands render in the same picker but
 // execute as actions and never serialize into stored Mention metadata.
 export type MentionOptionKind = MentionKind | 'command';
 export type MentionTrigger = '@' | '$' | '/';
 export type MentionProjection =
+    | 'agent-reference'
     | 'capability-reference'
     | 'image-input'
     | 'path-reference'

@@ -34,7 +34,7 @@ export interface AgentInstructionReadResult {
 }
 
 export const generatedInstructionFileName = 'AGENTS.md';
-export const hermesBootstrapFileNamesToClear = [
+export const legacyBootstrapFileNamesToClear = [
     'BOOTSTRAP.md',
     'HEARTBEAT.md',
     'IDENTITY.md',
@@ -140,7 +140,7 @@ export async function generateAgentInstructions(db: Database, agentId = defaultA
     if (written) {
         await fs.mkdir(source.workspaceDir, { recursive: true });
         await writeReadOnlyFile(agentsPath, next);
-        await clearHermesBootstrapFiles(source.workspaceDir);
+        await clearLegacyBootstrapFiles(source.workspaceDir);
     }
 
     const renderedAt = new Date().toISOString();
@@ -208,9 +208,9 @@ export async function readRenderedAgentInstructions(db: Database, agentId = defa
     } satisfies AgentInstructionReadResult;
 }
 
-export async function clearHermesBootstrapFiles(workspaceDir: string) {
+export async function clearLegacyBootstrapFiles(workspaceDir: string) {
     await Promise.all(
-        hermesBootstrapFileNamesToClear.map((fileName) =>
+        legacyBootstrapFileNamesToClear.map((fileName) =>
             fs.writeFile(path.join(workspaceDir, fileName), '', { mode: 0o600 })
         )
     );

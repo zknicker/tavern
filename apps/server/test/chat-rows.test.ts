@@ -387,7 +387,7 @@ test('buildChatRows skips non-tool system messages', () => {
                 message: {
                     actor: null,
                     tavernAgentId: null,
-                    content: 'Hermes runtime status',
+                    content: 'Agent runtime status',
                     id: 'system-status',
                     sender: 'system',
                     senderType: 'system',

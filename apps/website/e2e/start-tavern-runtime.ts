@@ -8,16 +8,17 @@ const runtimeRoot = path.join(workspaceRoot, '.context', 'e2e', runId, 'tavern-r
 
 rmSync(runtimeRoot, { force: true, recursive: true });
 mkdirSync(runtimeRoot, { recursive: true });
-mkdirSync(path.join(runtimeRoot, 'hermes', 'workspace'), { recursive: true });
+mkdirSync(path.join(runtimeRoot, 'agent', 'workspace'), { recursive: true });
 writeFileSync(
-    path.join(runtimeRoot, 'hermes', 'workspace', 'QA_KICKOFF_TASK.md'),
+    path.join(runtimeRoot, 'agent', 'workspace', 'QA_KICKOFF_TASK.md'),
     '# QA kickoff task\n\nThis file exists so e2e tool-read tests can inspect a deterministic workspace fixture.\n'
 );
 
 process.env.TAVERN_RUNTIME_ROOT = runtimeRoot;
-process.env.TAVERN_HERMES_HOME = path.join(runtimeRoot, 'hermes', 'home');
+process.env.TAVERN_AGENT_HOME = path.join(runtimeRoot, 'agent');
+process.env.TAVERN_AGENT_WORKSPACE = path.join(runtimeRoot, 'agent', 'workspace');
 process.env.TAVERN_RUNTIME_TOKEN = process.env.TAVERN_RUNTIME_TOKEN ?? 'e2e-runtime-token';
-process.env.NODE_ENV = 'test';
+process.env.NODE_ENV ??= 'test';
 
 process.chdir(workspaceRoot);
 

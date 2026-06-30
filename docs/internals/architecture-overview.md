@@ -1,98 +1,91 @@
 ---
-summary: Tavern architecture layers for App, API, SDK, Runtime, Runtime SQLite, App SQLite, Hermes execution, and event recovery.
+summary: Tavern architecture layers for App, API, SDK, Runtime, SQLite state, AI SDK agent execution, and event recovery.
 read_when:
-  - changing the boundary between Tavern App, Tavern Runtime, and Hermes
+  - changing the boundary between Tavern App and Tavern Runtime
   - changing realtime recovery, Runtime data flow, or managed runtime ownership
 ---
 
 # Architecture Overview
 
-Tavern is an always-on local chat server plus a polished Mac client.
-
-Tavern Runtime owns the canonical chat server and local service connections. Tavern App
-is the first-party client for that server. Hermes owns native agent execution.
+Tavern is a chat app for humans and agents. Runtime is the product backend.
+Agent executors are implementation details behind Runtime.
 
 ```mermaid
 flowchart LR
-    user[User]
-    app[Tavern App<br/>Electron + React + local Node]
-    api[Tavern API<br/>runtime contract]
-    appdb[(App SQLite<br/>cache + settings)]
-    runtime[Tavern Runtime<br/>chat server + tools + managed services]
-    runtimedb[(Runtime SQLite<br/>chat + events + execution state)]
-    memory[Memory<br/>Markdown browser]
-    memoryfiles[(Memory<br/>Markdown files)]
-    hermes[Hermes<br/>sessions + turns + tools + transcripts]
-    hermesstate[(Hermes state<br/>native execution store)]
+    app["Tavern App<br/>Electron + React"]
+    server["Tavern Server<br/>tRPC and app cache"]
+    sdk["@tavern/api + SDK<br/>typed contracts"]
+    runtime["Tavern Runtime<br/>canonical chat + agent state"]
+    db["Runtime SQLite"]
+    engine["Agent engine<br/>AI SDK HarnessAgent + LanguageModel"]
 
-    user --> app
-    app --> api
-    api --> runtime
-    app --> appdb
-    runtime --> runtimedb
-    runtime --> memory
-    memory --> memoryfiles
-    runtime --> hermes
-    hermes --> hermesstate
-    hermes --> runtime
-    runtime --> api
+    app <--> server
+    server <--> sdk
+    sdk <--> runtime
+    runtime <--> db
+    runtime <--> engine
 ```
 
 ## Layers
 
-* **Tavern App** presents chats, responses, activity, artifacts, agents,
-  Memory, automations, skills, stats, and settings. React
-  and the local Node/tRPC layer are implementation pieces of one client
-  boundary.
-* **Tavern API** is the client-facing contract for chat, agents, Memory,
-  automations, skills, stats, and settings. The
-  runtime is the authoritative host for chat and execution-facing API state.
-* **TypeScript SDK** is a client wrapper around the Tavern API for bots,
-  webhooks, automations, managed Hermes, local tools, and other clients.
-* **App SQLite** stores client cache, app-local settings, and presentation state.
-* **Tavern Runtime** stores canonical chat state, responses, activity,
-  artifacts, starts managed Hermes, applies Tavern-owned config, runs
-  automations, carries runtime events, exposes Memory reads, and exposes
-  Tavern tools to agents.
-* **Runtime SQLite** stores chats, messages, responses, activity, artifacts,
-  participants, events, reads, channel ingress, execution evidence, and runtime
-  metadata.
-* **Memory** is the app and Runtime read surface for durable Markdown
-  knowledge. Agents maintain it through the managed `memory` skill.
-* **Hermes** owns agent execution: sessions, turns, model calls, tools, files,
-  and native transcripts.
+| Layer | Owns |
+| --- | --- |
+| Tavern App | Electron shell, React routes, local presentation, optimistic UI, and app-local cache. |
+| Tavern Server | Thin tRPC facade, app cache, connection setup, and UI-friendly projections. |
+| Tavern API / SDK | Stable contracts for chats, realtime, agents, models, tools, memory, jobs, and Runtime admin. |
+| Tavern Runtime | Canonical Chats, messages, participants, Agent sessions, Agent turns, model catalog, tools, Memory reads, and execution. |
+| Agent engine | Runtime-internal execution through AI SDK HarnessAgent and LanguageModel routes. |
 
-## State And Transport
+## Product Model
 
-* `~/.tavern/runtime` is the default backup root for Tavern-owned
-  Runtime state. `TAVERN_RUNTIME_ROOT` can point Runtime at another root.
-* Runtime SQLite is the durable source for chats, messages, responses, activity,
-  artifacts, participants, events, reads, automation delivery, channel ingress,
-  accepted message identity, execution evidence, and runtime metadata.
-* Memory reads pages, links, backlinks, and search results from the root
-  resolved by Runtime.
-* App SQLite is a client cache and app-local settings store.
-* Hermes stores native execution state.
-* Tavern maps Hermes execution into Tavern messages, responses, artifacts,
-  activity, and runtime evidence. It does not replace canonical Tavern chat
-  history.
-* Runtime creates and updates Tavern chat records through the Chat API before
-  Hermes dispatch. The Hermes relay is transport only: it references
-  existing chat and message ids, and it must not create chats or mutate
-  Tavern-owned chat metadata.
-* Websocket events are notifications and freshness signals, not durable storage.
-* Response activity is durable and statusful. Running and completed tool rows
-  use the same records.
-* Chat UIs render response activity from `chat.log.list`. App-local active reply
-  state is only for pre-activity thinking, streamed reply text, and failures.
-* Live response activity events patch the `chat.log.list` cache by stable row id.
-  Completion and recovery reads reconcile the same ids from Runtime storage.
-* Missed live events are recovered through runtime chat history, response reads,
-  activity reads, artifact reads, or focused sync.
+- A **Chat** is a durable conversation container. It can be a channel or a DM.
+- A **Chat participant** is a human, Agent, system actor, or external actor in a
+  Chat.
+- An **Agent seat** is an Agent participant in a Chat.
+- An **Agent session** is the current execution context for one Agent seat.
+- An **Agent turn** is one execution attempt inside an Agent session.
 
-## Cross-Cutting Docs
+The Chat timeline is canonical product state. Agent execution traces are
+evidence, not the product timeline.
 
-* [API overview](../api/overview.md) - client-facing and runtime-facing surfaces.
-* [Data model](data-model.md) - tables, ids, and invariants.
-* [Realtime](../api/realtime.md) - durable vs ephemeral events, reconnect recovery.
-* [Auth](../api/auth.md) - local owner and runtime trust model.
+## Runtime Boundary
+
+Runtime is the source of truth for values that affect execution:
+
+- model catalog
+- Agent default model
+- current Agent session
+- Agent session effective model
+- tool inventory and grants
+- sandbox mode
+- turn queue and turn status
+- response activity and assistant messages
+
+Tavern App and Server must not reconstruct those values from UI state or a
+random chatroom. Settings that change execution call Runtime. Headless clients
+can perform the same actions through Runtime API.
+
+## Execution Boundary
+
+Runtime chooses the executor by model record `executionKind`.
+
+- `harness`: Claude Code and Codex through AI SDK HarnessAgent.
+- `language-model`: OpenAI, OpenAI-compatible, and deterministic e2e through AI
+  SDK LanguageModel routes.
+
+Executors write Tavern-native messages and activity through Runtime stores.
+Provider-specific details remain metadata.
+
+## Recovery
+
+Realtime streams are delivery paths, not storage. If a browser reconnects, it
+refetches durable Runtime chat state and subscribes to active turn events.
+Runtime must settle failed, cancelled, and interrupted turns as durable Tavern
+state.
+
+## References
+
+- [ADR 0007](../adr/0007-chat-participants-own-agent-sessions.md)
+- [Agent Engine Runtime](agent-engine-runtime.md)
+- [Data Model](data-model.md)
+- [Realtime](../api/realtime.md)

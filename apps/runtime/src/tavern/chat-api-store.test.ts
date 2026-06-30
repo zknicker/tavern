@@ -5,6 +5,12 @@ import { closeDb, getDb, initTestDb } from '../db/connection';
 import { ensureRuntimeSchema } from '../db/schema';
 import { namedParams } from '../db/sqlite';
 import {
+    defaultAgentDmChatId,
+    defaultWorkspaceChannelId,
+    localHumanParticipantId,
+    seedWorkspaceChats,
+} from './bootstrap-chats';
+import {
     clearChat,
     createChat,
     createDelivery,
@@ -42,12 +48,12 @@ describe('Tavern Runtime Chat API store', () => {
         createChat({ id: 'cht_1', title: 'Test' });
         upsertResponse('cht_1', {
             id: 'rsp_cmd_1',
-            metadata: { runtime: { agentId: 'agt_hermes', source: 'command' } },
-            participant_id: 'agt_hermes',
+            metadata: { runtime: { agentId: 'agt_primary', source: 'command' } },
+            participant_id: 'agt_primary',
             status: 'completed',
         });
         upsertResponseActivity('cht_1', 'rsp_cmd_1', {
-            detail: 'Hermes CLI Status',
+            detail: 'Agent CLI Status',
             id: 'act_rsp_cmd_1',
             kind: 'command',
             metadata: { command: { status: 'completed', text: '/status' } },
@@ -181,10 +187,6 @@ describe('Tavern Runtime Chat API store', () => {
         expect(listResponses(developmentChatDemoIds.streamingStack).responses).toMatchObject([
             { id: 'rsp_demo_streaming_stack', status: 'running' },
         ]);
-        expect(getResponseActivity('act_demo_approval_flow_prompt')).toMatchObject({
-            kind: 'approval',
-            status: 'running',
-        });
         expect(listMessages(developmentChatDemoIds.toolHeaders).messages).toHaveLength(3);
         expect(listResponses(developmentChatDemoIds.toolHeaders).responses).toMatchObject([
             { id: 'rsp_demo_tool_headers_completed', status: 'completed' },
@@ -244,8 +246,8 @@ describe('Tavern Runtime Chat API store', () => {
         createChat({ id: 'cht_1' });
         upsertResponse('cht_1', {
             id: 'rsp_cmd_1',
-            metadata: { runtime: { agentId: 'agt_hermes', source: 'command' } },
-            participant_id: 'agt_hermes',
+            metadata: { runtime: { agentId: 'agt_primary', source: 'command' } },
+            participant_id: 'agt_primary',
             status: 'completed',
         });
 
@@ -271,7 +273,7 @@ describe('Tavern Runtime Chat API store', () => {
         createMessage('cht_1', messageInput('msg_1', 'nonce_1', 'hello'));
         upsertResponse('cht_1', {
             id: 'rsp_1',
-            participant_id: 'agt_hermes',
+            participant_id: 'agt_primary',
             status: 'completed',
         });
 
@@ -347,6 +349,83 @@ describe('Tavern Runtime Chat API store', () => {
                 status: 'running',
             })
         ).toThrow('Response id must use a rsp_ id.');
+    });
+
+    it('creates and reads channel and DM chats with participants', () => {
+        createChat({
+            id: 'cht_channel',
+            kind: 'channel',
+            participants: [
+                { id: 'usr_tavern', kind: 'user', label: 'You', metadata: {} },
+                { id: 'agt_primary', kind: 'agent', label: 'Tavern', metadata: {} },
+            ],
+            title: '#general',
+        });
+        createChat({
+            id: 'cht_dm',
+            kind: 'dm',
+            participants: [
+                { id: 'usr_tavern', kind: 'user', label: 'You', metadata: {} },
+                { id: 'agt_primary', kind: 'agent', label: 'Tavern', metadata: {} },
+            ],
+            title: 'Tavern',
+        });
+
+        expect(getChat('cht_channel')).toMatchObject({
+            id: 'cht_channel',
+            kind: 'channel',
+            participants: [
+                { id: 'agt_primary', kind: 'agent', label: 'Tavern' },
+                { id: 'usr_tavern', kind: 'user', label: 'You' },
+            ],
+            title: '#general',
+        });
+        expect(getChat('cht_dm')).toMatchObject({
+            id: 'cht_dm',
+            kind: 'dm',
+            title: 'Tavern',
+        });
+        expect(() =>
+            createChat({
+                id: 'cht_bad_dm',
+                kind: 'dm',
+                participants: [{ id: 'usr_tavern', kind: 'user', label: 'You', metadata: {} }],
+            })
+        ).toThrow('A DM chat must have exactly two participants.');
+    });
+
+    it('bootstraps the default workspace channel and agent DM', () => {
+        const first = seedWorkspaceChats({
+            agentId: 'agt_primary',
+            agentName: 'Tavern',
+            db: getDb(),
+        });
+        const second = seedWorkspaceChats({
+            agentId: 'agt_primary',
+            agentName: 'Tavern',
+            db: getDb(),
+        });
+
+        expect(first.seeded).toBe(2);
+        expect(second.seeded).toBe(0);
+        expect(getChat(defaultWorkspaceChannelId)).toMatchObject({
+            id: defaultWorkspaceChannelId,
+            kind: 'channel',
+            participants: [
+                { id: 'agt_primary', kind: 'agent', label: 'Tavern' },
+                { id: localHumanParticipantId, kind: 'user', label: 'You' },
+            ],
+            title: '#general',
+        });
+        expect(getChat(defaultAgentDmChatId)).toMatchObject({
+            id: defaultAgentDmChatId,
+            kind: 'dm',
+            participants: [
+                { id: 'agt_primary', kind: 'agent', label: 'Tavern' },
+                { id: localHumanParticipantId, kind: 'user', label: 'You' },
+            ],
+            title: 'Tavern',
+        });
     });
 
     it('stores pinned chat state as a durable chat field', () => {
@@ -709,8 +788,8 @@ describe('Tavern Runtime Chat API store', () => {
                     metadata: {
                         runtime: {
                             agentId: 'agt_1',
+                            agentSessionId: 'ags_1',
                             runId: 'run_1',
-                            sessionKey: 'session_1',
                             source: 'test',
                         },
                     },
@@ -984,7 +1063,8 @@ describe('Tavern Runtime Chat API routes', () => {
                 metadata: {
                     runtime: {
                         agentId: 'agt_1',
-                        sessionKey: 'session_1',
+                        agentSessionId: 'ags_1',
+                        runId: 'run_1',
                     },
                 },
             })
@@ -1002,10 +1082,36 @@ describe('Tavern Runtime Chat API routes', () => {
                         sequence: 1,
                         text: 'hello',
                     },
-                    sessionKey: 'session_1',
+                    runId: 'run_1',
                     type: 'chat.messageAccepted',
                 },
             ],
+        });
+    });
+
+    it('filters runtime projection events after a durable cursor', async () => {
+        await handleTavernRuntimeRequest(jsonRequest('POST', '/api/chats', { id: 'cht_1' }));
+        for (const index of [1, 2]) {
+            await handleTavernRuntimeRequest(
+                jsonRequest('POST', '/api/chats/cht_1/messages', {
+                    ...messageInput(`msg_${index}`, `nonce_${index}`, `hello ${index}`),
+                    metadata: {
+                        runtime: {
+                            agentId: 'agt_1',
+                            agentSessionId: 'ags_1',
+                            runId: `run_${index}`,
+                        },
+                    },
+                })
+            );
+        }
+
+        const response = await handleTavernRuntimeRequest(
+            getRequest(`${runtimeRoutes.events}?after_cursor=1`)
+        );
+
+        await expect(response.json()).resolves.toMatchObject({
+            events: [{ message: { id: 'msg_2' }, runId: 'run_2', type: 'chat.messageAccepted' }],
         });
     });
 });

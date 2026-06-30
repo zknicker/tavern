@@ -1,5 +1,5 @@
 ---
-summary: Scheduled work feature for cron automations, run history, delivery targets, follow-up state, and Runtime/Hermes ownership.
+summary: Scheduled work feature for cron automations, run history, delivery targets, follow-up state, and Runtime ownership.
 read_when:
   - changing scheduled work, recurring runs, or automation history
   - changing cron delivery or run history presentation
@@ -24,5 +24,4 @@ through the managed `memory` skill, not hidden Runtime maintenance.
 ## Boundary
 
 Tavern Runtime owns automation records, schedule editing, delivery targets, run
-history, and chat delivery state. Hermes owns the native agent execution that
-an automation triggers.
+history, chat delivery state, and native agent execution for automation runs.

@@ -3,7 +3,6 @@ import assert from 'node:assert/strict';
 import { createAgentRuntimeClient } from '../src/agent-runtime/client.ts';
 
 const chatId = '220f46ed-2d7c-41dd-9d7e-d02691f1afc3';
-const sessionKey = `agent:agent:planner:tavern:channel:${chatId}`;
 
 afterEach(() => {
     mock.restore();
@@ -11,7 +10,7 @@ afterEach(() => {
 
 test('postMessage submits a chat-scoped runtime message', async () => {
     const fetchSpy = spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
-        assert.equal(String(input), `http://agent-runtime.test/hermes/chats/${chatId}/messages`);
+        assert.equal(String(input), `http://agent-runtime.test/agent/chats/${chatId}/messages`);
         assert.equal(init?.method, 'POST');
         assert.deepEqual(JSON.parse(String(init?.body)), {
             agent: {
@@ -23,7 +22,6 @@ test('postMessage submits a chat-scoped runtime message', async () => {
             },
             target: {
                 externalId: null,
-                sessionKey,
                 target: `chat:${chatId}`,
                 type: 'tavern',
             },
@@ -33,7 +31,6 @@ test('postMessage submits a chat-scoped runtime message', async () => {
             JSON.stringify({
                 acceptedAt: '2026-04-06T12:00:00.000Z',
                 runId: 'run-1',
-                sessionKey,
                 status: 'accepted',
             }),
             {
@@ -54,7 +51,6 @@ test('postMessage submits a chat-scoped runtime message', async () => {
         },
         target: {
             externalId: null,
-            sessionKey,
             target: `chat:${chatId}`,
             type: 'tavern',
         },
@@ -63,7 +59,6 @@ test('postMessage submits a chat-scoped runtime message', async () => {
     assert.deepEqual(result, {
         acceptedAt: '2026-04-06T12:00:00.000Z',
         runId: 'run-1',
-        sessionKey,
         status: 'accepted',
     });
     assert.equal(fetchSpy.mock.calls.length, 1);

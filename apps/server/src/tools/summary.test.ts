@@ -117,15 +117,15 @@ test('buildToolSummaryFromValues summarizes terminal cmd arguments as commands',
     );
 });
 
-test('buildToolSummaryFromValues summarizes approvals by command instead of description', () => {
+test('buildToolSummaryFromValues summarizes command tools by command instead of description', () => {
     const summary = buildToolSummaryFromValues({
         argumentsValue: {
             command: "curl -L --silent 'https://duckduckgo.com/html/?q=site%3Anasa.gov'",
             description: 'Security scan — [HIGH] Invalid characters in hostname.',
         },
-        callId: 'call-approval',
+        callId: 'call-command',
         isError: false,
-        name: 'approval',
+        name: 'terminal',
         resultValue: null,
     });
 

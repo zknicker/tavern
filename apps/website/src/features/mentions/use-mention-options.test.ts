@@ -54,6 +54,37 @@ describe('filterMentionOptionsForQuery', () => {
 });
 
 describe('selectMentionOptionsForQuery', () => {
+    it('lists agents from the active chat before general inventory', () => {
+        const helium = createOption({ label: 'Helium' });
+
+        expect(
+            selectMentionOptionsForQuery({
+                agents: [
+                    {
+                        id: 'agent:planner',
+                        name: 'Planner',
+                    },
+                ] as never,
+                inventoryData: {
+                    options: [helium],
+                },
+                mentionableAgentIds: ['agent:planner'],
+                pathData: undefined,
+                query: 'Pla',
+            })
+        ).toEqual([
+            {
+                description: 'Agent in this chat',
+                id: 'agent:planner',
+                insertText: '@Planner',
+                kind: 'agent',
+                label: 'Planner',
+                projection: 'agent-reference',
+                sourceLabel: 'Agents',
+            },
+        ]);
+    });
+
     it('filters warmed inventory options locally', () => {
         const helium = createOption({ label: 'Helium' });
         const chrome = createOption({ label: 'Chrome' });

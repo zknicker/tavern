@@ -1,15 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { HERMES_WORKSPACE } from '../config.ts';
+import { AGENT_WORKSPACE } from '../config.ts';
 import { closeDb, initTestDb } from '../db/connection.ts';
 import { ensureRuntimeSchema } from '../db/schema.ts';
 import { handleTavernRuntimeRequest } from './router.ts';
 
-describe('Runtime agent and Hermes reads', () => {
+describe('Runtime agent and agent engine reads', () => {
     const originalFetch = globalThis.fetch;
 
     beforeEach(() => {
         ensureRuntimeSchema(initTestDb());
-        globalThis.fetch = vi.fn(handleHermesFetch) as unknown as typeof fetch;
+        globalThis.fetch = vi.fn(handleAgentEngineFetch) as unknown as typeof fetch;
     });
 
     afterEach(() => {
@@ -17,7 +17,7 @@ describe('Runtime agent and Hermes reads', () => {
         closeDb();
     });
 
-    it('serves Hermes agent list reads through the runtime adapter', async () => {
+    it('serves agent engine agent list reads through the runtime adapter', async () => {
         const response = await handleTavernRuntimeRequest(
             new Request('http://runtime.test/agents')
         );
@@ -27,78 +27,175 @@ describe('Runtime agent and Hermes reads', () => {
             agents: [
                 {
                     enabledSkillIds: [],
-                    hermesModelName: {
-                        model: 'gpt-5.5',
-                        provider: 'openai-codex',
+                    modelName: {
+                        model: 'gpt-4.1-mini',
+                        provider: 'openai',
                     },
-                    id: 'agt_hermes',
+                    id: 'agt_primary',
                     isAdmin: true,
-                    name: 'Hermes',
+                    name: 'Tavern',
                     primaryColor: null,
-                    workspaceFolder: HERMES_WORKSPACE,
+                    thinkingDefault: null,
+                    workspaceFolder: AGENT_WORKSPACE,
                 },
             ],
         });
     });
 
-    it('serves Hermes sessions and evidence through the runtime adapter', async () => {
+    it('creates and lists multiple Runtime-managed agents', async () => {
+        const createResponse = await handleTavernRuntimeRequest(
+            new Request('http://runtime.test/agents', {
+                body: JSON.stringify({
+                    enabledSkillIds: ['research'],
+                    id: 'agt_research',
+                    name: 'Research',
+                    primaryColor: '#2563eb',
+                    workspaceFolder: '/tmp/tavern-research-workspace',
+                }),
+                headers: { 'content-type': 'application/json' },
+                method: 'POST',
+            })
+        );
+
+        expect(createResponse.status).toBe(200);
+        await expect(createResponse.json()).resolves.toMatchObject({
+            enabledSkillIds: ['research'],
+            id: 'agt_research',
+            isAdmin: false,
+            name: 'Research',
+            primaryColor: '#2563eb',
+            workspaceFolder: '/tmp/tavern-research-workspace',
+        });
+
+        const listResponse = await handleTavernRuntimeRequest(
+            new Request('http://runtime.test/agents')
+        );
+
+        expect(listResponse.status).toBe(200);
+        await expect(listResponse.json()).resolves.toMatchObject({
+            agents: expect.arrayContaining([
+                expect.objectContaining({ id: 'agt_primary', name: 'Tavern' }),
+                expect.objectContaining({
+                    enabledSkillIds: ['research'],
+                    id: 'agt_research',
+                    name: 'Research',
+                    workspaceFolder: '/tmp/tavern-research-workspace',
+                }),
+            ]),
+        });
+    });
+
+    it('applies model and skill updates to the addressed agent', async () => {
+        await handleTavernRuntimeRequest(
+            new Request('http://runtime.test/agents', {
+                body: JSON.stringify({
+                    id: 'agt_research',
+                    name: 'Research',
+                    workspaceFolder: '/tmp/tavern-research-workspace',
+                }),
+                headers: { 'content-type': 'application/json' },
+                method: 'POST',
+            })
+        );
+
+        const modelResponse = await handleTavernRuntimeRequest(
+            new Request('http://runtime.test/agents/agt_research/model', {
+                body: JSON.stringify({
+                    model: { model: 'gpt-4.1-mini', provider: 'openai' },
+                }),
+                headers: { 'content-type': 'application/json' },
+                method: 'PATCH',
+            })
+        );
+        const toolsResponse = await handleTavernRuntimeRequest(
+            new Request('http://runtime.test/agents/agt_research/tools', {
+                body: JSON.stringify({ tools: ['research', 'charts'] }),
+                headers: { 'content-type': 'application/json' },
+                method: 'PATCH',
+            })
+        );
+
+        expect(modelResponse.status).toBe(200);
+        expect(toolsResponse.status).toBe(200);
+
+        const configResponse = await handleTavernRuntimeRequest(
+            new Request('http://runtime.test/agents/agt_research/config')
+        );
+        await expect(configResponse.json()).resolves.toMatchObject({
+            enabledSkillIds: ['research', 'charts'],
+            id: 'agt_research',
+            modelName: { model: 'gpt-4.1-mini', provider: 'openai' },
+        });
+    });
+
+    it('serves agent engine sessions and evidence through the runtime adapter', async () => {
         const sessionKey = 'session_1';
 
         const listResponse = await handleTavernRuntimeRequest(
-            new Request('http://runtime.test/hermes/sessions')
+            new Request('http://runtime.test/agent/sessions')
         );
         const messagesResponse = await handleTavernRuntimeRequest(
-            new Request(`http://runtime.test/hermes/sessions/${sessionKey}/messages`)
+            new Request(`http://runtime.test/agent/sessions/${sessionKey}/messages`)
         );
         const graphResponse = await handleTavernRuntimeRequest(
-            new Request(`http://runtime.test/hermes/sessions/${sessionKey}/graph`)
+            new Request(`http://runtime.test/agent/sessions/${sessionKey}/graph`)
         );
         const resyncResponse = await handleTavernRuntimeRequest(
-            new Request(`http://runtime.test/hermes/sessions/${sessionKey}/resync`, {
+            new Request(`http://runtime.test/agent/sessions/${sessionKey}/resync`, {
                 method: 'POST',
             })
         );
 
         expect(listResponse.status).toBe(200);
-        await expect(listResponse.json()).resolves.toMatchObject({
-            sessions: [{ key: sessionKey, platform: 'hermes' }],
-        });
-        expect(messagesResponse.status).toBe(200);
-        await expect(messagesResponse.json()).resolves.toMatchObject({
-            messages: [{ content: 'Ready.', id: `${sessionKey}:0`, sessionKey }],
-        });
-        expect(graphResponse.status).toBe(200);
-        await expect(graphResponse.json()).resolves.toMatchObject({
-            messages: [{ content: 'Ready.' }],
-            rootSessionKey: sessionKey,
-        });
-        expect(resyncResponse.status).toBe(200);
-        await expect(resyncResponse.json()).resolves.toEqual({
-            resynced: true,
-            rootSessionKey: sessionKey,
-            sessionKey,
-        });
+        await expect(listResponse.json()).resolves.toEqual({ sessions: [] });
+        expect(messagesResponse.status).toBe(404);
+        expect(graphResponse.status).toBe(404);
+        expect(resyncResponse.status).toBe(404);
     });
 
-    it('serves Hermes model reads through the runtime adapter', async () => {
+    it('serves agent model reads through the runtime adapter', async () => {
+        const previousCodexCommand = process.env.TAVERN_AGENT_CODEX_CLI_COMMAND;
+        const previousClaudeCommand = process.env.TAVERN_AGENT_CLAUDE_CODE_COMMAND;
+        process.env.TAVERN_AGENT_CODEX_CLI_COMMAND = 'tavern-missing-codex';
+        process.env.TAVERN_AGENT_CLAUDE_CODE_COMMAND = 'tavern-missing-claude';
+
         const response = await handleTavernRuntimeRequest(
             new Request('http://runtime.test/models')
         );
 
-        expect(response.status).toBe(200);
-        await expect(response.json()).resolves.toMatchObject({
-            models: [{ id: 'openai-codex/gpt-5.5', label: 'gpt-5.5', provider: 'openai-codex' }],
-        });
+        try {
+            expect(response.status).toBe(200);
+            await expect(response.json()).resolves.toMatchObject({
+                models: expect.arrayContaining([
+                    expect.objectContaining({
+                        availability: 'unavailable',
+                        provider: 'codex',
+                    }),
+                    expect.objectContaining({
+                        availability: 'unavailable',
+                        provider: 'claude',
+                    }),
+                ]),
+                providers: expect.arrayContaining([
+                    expect.objectContaining({ authenticated: false, id: 'codex', modelCount: 5 }),
+                    expect.objectContaining({
+                        authenticated: false,
+                        id: 'claude',
+                        modelCount: 6,
+                    }),
+                ]),
+            });
+        } finally {
+            restoreEnv('TAVERN_AGENT_CODEX_CLI_COMMAND', previousCodexCommand);
+            restoreEnv('TAVERN_AGENT_CLAUDE_CODE_COMMAND', previousClaudeCommand);
+        }
     });
 
-    it('applies Hermes model updates through the dashboard model API', async () => {
+    it('applies agent model updates through the dashboard model API', async () => {
         const response = await handleTavernRuntimeRequest(
-            new Request('http://runtime.test/agents/agt_hermes/model', {
+            new Request('http://runtime.test/agents/agt_primary/model', {
                 body: JSON.stringify({
-                    model: {
-                        model: 'gpt-5.5',
-                        provider: 'openai-codex',
-                    },
+                    model: { model: 'gpt-5.5', provider: 'codex' },
                 }),
                 headers: { 'content-type': 'application/json' },
                 method: 'PATCH',
@@ -108,28 +205,96 @@ describe('Runtime agent and Hermes reads', () => {
         expect(response.status).toBe(200);
         await expect(response.json()).resolves.toMatchObject({
             config: {
-                model: {
-                    default: 'gpt-5.5',
-                    provider: 'openai-codex',
+                agents: {
+                    list: [
+                        {
+                            id: 'agt_primary',
+                            model: {
+                                model: 'gpt-5.5',
+                                provider: 'codex',
+                            },
+                        },
+                    ],
                 },
             },
             valid: true,
         });
+
+        const listResponse = await handleTavernRuntimeRequest(
+            new Request('http://runtime.test/agents')
+        );
+        await expect(listResponse.json()).resolves.toMatchObject({
+            agents: [
+                expect.objectContaining({
+                    modelName: {
+                        model: 'gpt-5.5',
+                        provider: 'codex',
+                    },
+                }),
+            ],
+        });
     });
 
-    it('serves Hermes skill list reads through the runtime adapter', async () => {
+    it('serves agent engine skill list reads through the runtime adapter', async () => {
         const listResponse = await handleTavernRuntimeRequest(
             new Request('http://runtime.test/skills')
         );
 
         expect(listResponse.status).toBe(200);
         await expect(listResponse.json()).resolves.toMatchObject({
-            skills: expect.arrayContaining([expect.objectContaining({ id: 'browser' })]),
+            skills: expect.arrayContaining([expect.objectContaining({ id: 'tavern-agent' })]),
+        });
+    });
+
+    it('serves built-in runtime tools through the runtime adapter', async () => {
+        const response = await handleTavernRuntimeRequest(new Request('http://runtime.test/tools'));
+
+        expect(response.status).toBe(200);
+        await expect(response.json()).resolves.toEqual({
+            tools: [
+                {
+                    configured: true,
+                    description: 'Run shell commands inside the agent workspace.',
+                    enabled: true,
+                    id: 'bash',
+                    label: 'Bash',
+                    name: 'bash',
+                    readOnly: true,
+                    tools: ['bash'],
+                },
+                {
+                    configured: true,
+                    description: 'Read UTF-8 files from the agent workspace.',
+                    enabled: true,
+                    id: 'read_file',
+                    label: 'Read file',
+                    name: 'read_file',
+                    readOnly: true,
+                    tools: ['read_file'],
+                },
+            ],
+        });
+    });
+
+    it('keeps built-in runtime tools enabled when update requests arrive', async () => {
+        const response = await handleTavernRuntimeRequest(
+            new Request('http://runtime.test/tools/bash/enabled', {
+                body: JSON.stringify({ enabled: false }),
+                headers: { 'content-type': 'application/json' },
+                method: 'PUT',
+            })
+        );
+
+        expect(response.status).toBe(200);
+        await expect(response.json()).resolves.toMatchObject({
+            enabled: true,
+            id: 'bash',
+            readOnly: true,
         });
     });
 });
 
-function handleHermesFetch(input: string | URL | Request) {
+function handleAgentEngineFetch(input: string | URL | Request) {
     const url = new URL(typeof input === 'string' || input instanceof URL ? input : input.url);
 
     if (url.pathname === '/api/sessions') {
@@ -202,4 +367,12 @@ function jsonResponse(body: unknown, init?: ResponseInit) {
             status: init?.status ?? 200,
         })
     );
+}
+
+function restoreEnv(key: string, value: string | undefined) {
+    if (value === undefined) {
+        delete process.env[key];
+        return;
+    }
+    process.env[key] = value;
 }

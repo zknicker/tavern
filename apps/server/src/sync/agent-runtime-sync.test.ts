@@ -46,7 +46,7 @@ test('syncAgentRuntimeSession projects only the requested session', async () => 
                 };
             },
         },
-        runtimeId: 'hermes-local',
+        runtimeId: 'agent-local',
         sessionKey: 'agent:main:tavern:channel:second-chat',
         syncedAt: '2026-05-13T12:02:00.000Z',
     });
@@ -84,7 +84,7 @@ test('syncAgentRuntimeSessionMessagesWithRetry retries empty history', async () 
             },
         },
         retryDelaysMs: [1],
-        runtimeId: 'hermes-local',
+        runtimeId: 'agent-local',
         sessionKey,
     });
 
@@ -122,7 +122,7 @@ test('syncAgentRuntimeSessionMessages reads accepted Tavern prompts by stable me
                         }),
                         createMessage({
                             agentId: 'main',
-                            chatId: `hermes:${sessionKey}`,
+                            chatId: `agent:${sessionKey}`,
                             content: 'Reply.',
                             id: 'assistant-message',
                             sender: 'assistant',
@@ -135,7 +135,7 @@ test('syncAgentRuntimeSessionMessages reads accepted Tavern prompts by stable me
                 };
             },
         },
-        runtimeId: 'hermes-local',
+        runtimeId: 'agent-local',
         sessionKey,
     });
 
@@ -175,7 +175,7 @@ test('syncAgentRuntimeAgents syncs managed workspace instructions', async () => 
                 };
             },
         } as unknown as TavernAgentRuntimeClient,
-        runtimeId: 'hermes-local',
+        runtimeId: 'agent-local',
     });
 
     assert.deepEqual(savedInstructions, {
@@ -209,7 +209,7 @@ test('syncAgentRuntimeAgents refreshes workspace instruction names without a pro
                 };
             },
         } as unknown as TavernAgentRuntimeClient,
-        runtimeId: 'hermes-local',
+        runtimeId: 'agent-local',
     });
 
     assert.deepEqual(savedInstructions, {

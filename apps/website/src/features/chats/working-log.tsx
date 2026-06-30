@@ -55,6 +55,7 @@ export function WorkingLog({
     const defaultOpen = defaultOpenOverride ?? inferredDefaultOpen;
     const [open, setOpen] = React.useState(defaultOpen);
     const disclosureAnchor = useDisclosureScrollAnchor();
+    const panelId = React.useId();
 
     React.useEffect(() => {
         if (groupMode) {
@@ -103,6 +104,7 @@ export function WorkingLog({
             >
                 {rowHover.hoverLayer}
                 <ThinkingStepsHeader
+                    aria-controls={panelId}
                     className={
                         groupMode
                             ? 'relative z-10 w-full py-1.5 pr-2 pl-3 font-normal text-muted-foreground/85 text-sm outline-none transition-none hover:bg-surface-1 hover:text-muted-foreground/85 focus-visible:bg-surface-1 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset'
@@ -140,12 +142,12 @@ export function WorkingLog({
                     )}
                 </ThinkingStepsHeader>
                 <ThinkingStepsContent
-                    className={showDurationHeader ? undefined : 'relative z-10 pt-1'}
+                    className={showDurationHeader ? undefined : 'relative z-10 min-h-28 pt-1'}
+                    id={panelId}
                 >
                     {items.map((item, index) => (
                         <ActivityStep
                             animateEnter={isActive}
-                            canRespondToClarification={item.row.id === firstPendingClarificationId}
                             chatId={chatId}
                             currentSessionKey={currentSessionKey}
                             index={index}
@@ -164,7 +166,7 @@ function findFirstPendingClarificationId(items: ActivityItem[]) {
     const item = items.find(
         (candidate) =>
             candidate.row.kind === 'tool' &&
-            candidate.row.toolCall.name.trim().toLowerCase() === 'clarify' &&
+            Boolean(candidate.row.clarification) &&
             !candidate.row.completedAt &&
             !hasErrorStatus(candidate.row.toolCall.status)
     );

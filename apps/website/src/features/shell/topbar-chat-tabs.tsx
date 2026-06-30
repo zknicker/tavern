@@ -53,7 +53,7 @@ import {
     buildSidebarChatGroups,
     formatSidebarActivityLabel,
     getSidebarDraftActivityLabel,
-} from './sidebar-chat-list.tsx';
+} from './sidebar-chat-list-model.ts';
 
 const openChatTabsStorageKey = 'tavern.chatTabs.openChatIds.v1';
 const openChatTabsChangedEvent = 'tavern:open-chat-tabs-changed';

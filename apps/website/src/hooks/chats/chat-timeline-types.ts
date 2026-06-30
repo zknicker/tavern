@@ -25,7 +25,6 @@ export interface ChatTurnProgressStep {
     detail?: string | null;
     id: string;
     kind:
-        | 'approval'
         | 'artifact'
         | 'command'
         | 'message'

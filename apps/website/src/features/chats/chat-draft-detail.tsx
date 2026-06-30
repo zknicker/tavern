@@ -120,7 +120,7 @@ export function ChatDraftDetail({
     return (
         <ChatDetailFrame
             activeReply={handoffFrame.activeReply}
-            agentPresenceColor={selectedAgent?.effectivePrimaryColor ?? null}
+            agentStatusColor={selectedAgent?.effectivePrimaryColor ?? null}
             chatId={timelineChatId}
             emptyLabel=""
             failedTurn={handoffFrame.failedTurn}
@@ -132,6 +132,7 @@ export function ChatDraftDetail({
                         boundAgentIds={boundAgentIds}
                         canSend
                         chatId={composerChatId}
+                        conversationKind="direct"
                         isDisabled={false}
                         isReplyActive={isDraftReplyActive({
                             activeReply: handoffFrame.activeReply,
@@ -232,7 +233,7 @@ export function buildDraftActiveReply(draft: ChatStartDraft | null): ChatActiveR
         agentId: draft.agentId,
         isThinking: true,
         runId: draft.realRunId ?? createChatRunId(draft.clientMessageId),
-        sessionKey: draft.realSessionKey ?? draft.realChatId ?? draft.id,
+        sessionKey: draft.realTurnReference ?? draft.realChatId ?? draft.id,
         startedAt: draft.realAcceptedAt ?? draft.createdAt,
         text: '',
     };

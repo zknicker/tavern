@@ -45,17 +45,19 @@ export function useChatDraftStart(input: {
                 clientMessageId: routeDraft.clientMessageId,
                 content: routeDraft.content,
                 metadata: routeDraft.metadata,
-                ...(routeDraft.modelRef ? { modelRef: routeDraft.modelRef } : {}),
             })
             .then((started) => {
+                const firstTurn = started.turns[0] ?? null;
+                const runId = firstTurn?.runId ?? routeDraft.clientMessageId;
+
                 logTiming('client.startChat', { chatId: started.chatId });
                 flushSync(() => {
                     drafts.reconcileDraft({
                         acceptedAt: started.acceptedAt,
                         chatId: started.chatId,
                         draftId: routeDraft.id,
-                        runId: started.runId,
-                        sessionKey: started.sessionKey,
+                        runId,
+                        turnReference: firstTurn?.runId ?? null,
                     });
                     timelineStore.moveMessages({
                         fromChatId: routeDraft.id,
@@ -64,15 +66,17 @@ export function useChatDraftStart(input: {
                     timelineStore.setMessageSession({
                         chatId: started.chatId,
                         messageId: routeDraft.clientMessageId,
-                        sessionKey: started.sessionKey,
+                        sessionKey: firstTurn?.runId ?? null,
                     });
-                    timelineState.startTurn({
-                        agentId: routeDraft.agentId,
-                        chatId: started.chatId,
-                        runId: started.runId,
-                        sessionKey: started.sessionKey ?? started.chatId,
-                        startedAt: started.acceptedAt,
-                    });
+                    if (firstTurn) {
+                        timelineState.startTurn({
+                            agentId: firstTurn.agentId,
+                            chatId: started.chatId,
+                            runId: firstTurn.runId,
+                            sessionKey: firstTurn.runId,
+                            startedAt: started.acceptedAt,
+                        });
+                    }
                 });
                 logTiming('client.sendMessageDispatched', { chatId: started.chatId });
 

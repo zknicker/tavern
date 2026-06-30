@@ -18,7 +18,7 @@ import { TranscriptEntryView } from './chat-transcript-turn.tsx';
 interface TranscriptRenderRowProps {
     activePresenceVerb?: string | null;
     activeReply: ChatActiveReply | null;
-    agentPresenceColor?: string | null;
+    agentStatusColor?: string | null;
     failedTurn?: ChatTurnFailure | null;
     presenceRows: TranscriptRow[];
     row: TranscriptRenderRow;
@@ -27,7 +27,7 @@ interface TranscriptRenderRowProps {
 interface TranscriptRenderRowViewProps {
     activePresenceVerb?: string | null;
     activeReply: ChatActiveReply | null;
-    agentPresenceColor?: string | null;
+    agentStatusColor?: string | null;
     failedTurn?: ChatTurnFailure | null;
     presenceRows: TranscriptRow[];
     row: TranscriptRenderRow;
@@ -58,7 +58,7 @@ const TranscriptRenderRowView = React.memo(
     ({
         activeReply,
         activePresenceVerb = null,
-        agentPresenceColor = null,
+        agentStatusColor = null,
         failedTurn = null,
         presenceRows,
         row,
@@ -83,7 +83,7 @@ const TranscriptRenderRowView = React.memo(
             <TranscriptEntryView
                 activePresenceVerb={row.showPresence ? activePresenceVerb : null}
                 activeReply={activeReply}
-                agentPresenceColor={agentPresenceColor}
+                agentStatusColor={agentStatusColor}
                 chatId={chatId}
                 conversationLayout={conversationLayout}
                 currentSessionKey={currentSessionKey}
@@ -123,7 +123,7 @@ function arePresencePropsEqual(
     }
 
     return (
-        previous.agentPresenceColor === next.agentPresenceColor &&
+        previous.agentStatusColor === next.agentStatusColor &&
         previous.failedTurn === next.failedTurn &&
         previous.presenceRows === next.presenceRows
     );

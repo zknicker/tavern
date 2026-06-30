@@ -5,7 +5,7 @@ import {
     modelInventorySnapshotSchema,
 } from './inventory-contracts.ts';
 
-test('modelInventorySnapshotSchema accepts Hermes provider records without usage labels', () => {
+test('modelInventorySnapshotSchema accepts provider records without usage labels', () => {
     expect(
         modelInventorySnapshotSchema.parse({
             models: [

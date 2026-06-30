@@ -1,6 +1,7 @@
 import type { ComponentType } from 'react';
 import { createBrowserRouter, createHashRouter, Navigate } from 'react-router-dom';
 import { AppFrame } from './components/app-frame.tsx';
+import { buildDefaultWorkspaceChatPath } from './features/chats/chat-path.ts';
 import { DashboardSetupGate } from './features/onboarding/dashboard-setup-gate.tsx';
 import { Layout } from './layout.tsx';
 import { isPackagedDesktopApp } from './lib/agent-runtime.ts';
@@ -36,7 +37,7 @@ export function createAppRouter() {
                 },
                 {
                     index: true,
-                    element: <Navigate replace to="/dashboard/overview" />,
+                    element: <Navigate replace to={buildDefaultWorkspaceChatPath()} />,
                 },
                 {
                     path: 'dashboard',
@@ -47,7 +48,9 @@ export function createAppRouter() {
                             children: [
                                 {
                                     index: true,
-                                    element: <Navigate replace to="overview" />,
+                                    element: (
+                                        <Navigate replace to={buildDefaultWorkspaceChatPath()} />
+                                    ),
                                 },
                                 {
                                     path: 'overview',
@@ -73,7 +76,9 @@ export function createAppRouter() {
                                 },
                                 {
                                     path: 'chats',
-                                    element: <Navigate replace to="/dashboard/overview" />,
+                                    element: (
+                                        <Navigate replace to={buildDefaultWorkspaceChatPath()} />
+                                    ),
                                 },
                                 {
                                     path: 'workers',
@@ -234,11 +239,10 @@ export function createAppRouter() {
                                             ),
                                         },
                                         {
-                                            path: 'toolsets',
+                                            path: 'tools',
                                             lazy: lazyRoute(
-                                                () =>
-                                                    import('./routes/dashboard/toolsets-page.tsx'),
-                                                'ToolsetsPage'
+                                                () => import('./routes/dashboard/tools-page.tsx'),
+                                                'ToolsPage'
                                             ),
                                         },
                                         {
@@ -252,13 +256,18 @@ export function createAppRouter() {
                                             ),
                                         },
                                         {
-                                            path: 'connectors',
+                                            path: 'channels',
                                             lazy: lazyRoute(
                                                 () =>
-                                                    import(
-                                                        './routes/dashboard/connectors-page.tsx'
-                                                    ),
-                                                'ConnectorsPage'
+                                                    import('./routes/dashboard/channels-page.tsx'),
+                                                'ChannelsPage'
+                                            ),
+                                        },
+                                        {
+                                            path: 'mcp',
+                                            lazy: lazyRoute(
+                                                () => import('./routes/dashboard/mcp-page.tsx'),
+                                                'McpPage'
                                             ),
                                         },
                                         {

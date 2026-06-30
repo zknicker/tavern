@@ -1,6 +1,4 @@
 import {
-    agentRuntimeMcpCatalogInstallSchema,
-    agentRuntimeMcpServerCreateSchema,
     agentRuntimePluginIdSchema,
     agentRuntimeSkillHubTapSchema,
     agentRuntimeSkillRequirementsSchema,
@@ -25,51 +23,38 @@ export const skillHubTapRemoveInputSchema = z.object({
     repo: z.string().trim().min(1).max(200),
 });
 
-export const toolsetIdInputSchema = z.object({
-    toolsetId: skillIdSchema,
+export const toolIdInputSchema = z.object({
+    toolId: skillIdSchema,
 });
 
-export const toolsetProviderSelectInputSchema = z.object({
+export const toolProviderSelectInputSchema = z.object({
     provider: z.string().trim().min(1).max(100),
-    toolsetId: skillIdSchema,
+    toolId: skillIdSchema,
 });
 
-export const toolsetEnvSaveInputSchema = z.object({
+export const toolEnvSaveInputSchema = z.object({
     env: z.record(z.string().trim().min(1), z.string().max(4000)),
-    toolsetId: skillIdSchema,
+    toolId: skillIdSchema,
 });
 
-export const toolsetPostSetupInputSchema = z.object({
+export const toolPostSetupInputSchema = z.object({
     key: z.string().trim().min(1).max(100),
-    toolsetId: skillIdSchema,
+    toolId: skillIdSchema,
 });
-
-export const mcpServerCreateInputSchema = agentRuntimeMcpServerCreateSchema;
-
-export const mcpServerNameInputSchema = z.object({
-    name: z.string().trim().min(1).max(100),
-});
-
-export const mcpServerEnabledInputSchema = z.object({
-    enabled: z.boolean(),
-    name: z.string().trim().min(1).max(100),
-});
-
-export const mcpCatalogInstallInputSchema = agentRuntimeMcpCatalogInstallSchema;
 
 export const setSkillEnabledInputSchema = z.object({
     enabled: z.boolean(),
     skillId: skillIdSchema,
 });
 
-export const setToolsetEnabledInputSchema = z.object({
+export const setToolEnabledInputSchema = z.object({
     enabled: z.boolean(),
-    toolsetId: skillIdSchema,
+    toolId: skillIdSchema,
 });
 
 export const skillDependencyStateSchema = z.enum(['missing', 'ready', 'unknown']);
 export const skillPluginUsabilitySchema = z.enum(['disabled', 'enabled', 'not_usable']);
-export const skillRuntimeSurfaceSchema = z.literal('hermes');
+export const skillRuntimeSurfaceSchema = z.literal('agent');
 
 export const skillPluginRefSchema = z
     .object({
@@ -96,7 +81,7 @@ export const skillSummarySchema = z.object({
     version: z.string().min(1).nullable(),
 });
 
-export const toolsetSummarySchema = z.object({
+export const toolSummarySchema = z.object({
     configured: z.boolean(),
     description: z.string().nullable(),
     diagnostic: z.string().nullable(),
@@ -104,15 +89,16 @@ export const toolsetSummarySchema = z.object({
     id: z.string().min(1),
     name: z.string().min(1),
     plugin: skillPluginRefSchema.nullable(),
+    readOnly: z.boolean(),
     tools: z.array(z.string().min(1)),
     usability: skillPluginUsabilitySchema,
 });
 
 export const skillListSchema = z.object({
     skills: z.array(skillSummarySchema),
-    toolsets: z.array(toolsetSummarySchema),
+    tools: z.array(toolSummarySchema),
 });
 
 export type SkillList = z.infer<typeof skillListSchema>;
 export type SkillSummary = z.infer<typeof skillSummarySchema>;
-export type ToolsetSummary = z.infer<typeof toolsetSummarySchema>;
+export type ToolSummary = z.infer<typeof toolSummarySchema>;

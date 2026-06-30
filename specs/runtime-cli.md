@@ -117,7 +117,7 @@ Capabilities
 
 Engine
   Pin         5937b95 (pinned)
-  Resolved    ~/.tavern/engine/ed711e.../hermes-agent/venv/bin/hermes (managed)
+  Resolved    ~/.tavern/engine/ed711e.../agent-engine (managed)
 ```
 
 `--json` emits one object with `binary`, `service`, `runtime`,

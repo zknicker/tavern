@@ -403,17 +403,11 @@ function QueuedStackCard({
             ) : null}
             <span
                 className={cn(
-                    'pointer-events-none min-w-0 flex-1',
-                    entry.modelRef ? 'flex flex-col justify-center' : 'truncate',
+                    'pointer-events-none min-w-0 flex-1 truncate',
                     !expanded && index > 0 ? 'opacity-0' : 'opacity-100'
                 )}
             >
                 <span className="truncate text-foreground/80">{label}</span>
-                {entry.modelRef ? (
-                    <span className="truncate text-muted-foreground/70 text-xs">
-                        {entry.modelRef}
-                    </span>
-                ) : null}
             </span>
             <div
                 className={cn(

@@ -16,9 +16,13 @@ test('startTavernChat stores the deterministic Tavern chat name', async () => {
         acceptedAt: '2026-04-17T18:00:00.000Z',
         chatId: '220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
         clientMessageId: 'msg_1',
-        runId: 'run-1',
-        sessionKey: 'session:chat-1',
         status: 'accepted',
+        turns: [
+            {
+                agentId: 'claw',
+                runId: 'run-1',
+            },
+        ],
     });
 
     const result = await startTavernChat({
@@ -30,9 +34,13 @@ test('startTavernChat stores the deterministic Tavern chat name', async () => {
         acceptedAt: '2026-04-17T18:00:00.000Z',
         chatId: '220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
         clientMessageId: 'msg_1',
-        runId: 'run-1',
-        sessionKey: 'session:chat-1',
         status: 'accepted',
+        turns: [
+            {
+                agentId: 'claw',
+                runId: 'run-1',
+            },
+        ],
     });
     assert.deepEqual(createTavernChat.mock.calls, [
         [
@@ -49,6 +57,11 @@ test('startTavernChat stores the deterministic Tavern chat name', async () => {
                 agentId: 'claw',
                 chatId: '220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
                 content: 'Hey!',
+                metadata: {
+                    tavern: {
+                        addressedAgentIds: ['claw'],
+                    },
+                },
             },
         ],
     ]);
@@ -62,9 +75,13 @@ test('startTavernChat can defer agent resolution to chat creation', async () => 
         acceptedAt: '2026-04-17T18:00:00.000Z',
         chatId: '220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
         clientMessageId: 'msg_1',
-        runId: 'run-1',
-        sessionKey: 'session:chat-1',
         status: 'accepted',
+        turns: [
+            {
+                agentId: 'claw',
+                runId: 'run-1',
+            },
+        ],
     });
 
     await startTavernChat({
@@ -99,9 +116,13 @@ test('startTavernChat preserves the optimistic first message identity', async ()
         acceptedAt: '2026-04-17T18:00:00.000Z',
         chatId: '220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
         clientMessageId: 'msg_draft_1',
-        runId: 'run-1',
-        sessionKey: 'session:chat-1',
         status: 'accepted',
+        turns: [
+            {
+                agentId: 'claw',
+                runId: 'run-1',
+            },
+        ],
     });
 
     await startTavernChat({
@@ -134,6 +155,7 @@ test('startTavernChat preserves the optimistic first message identity', async ()
                 content: 'Hey!',
                 metadata: {
                     tavern: {
+                        addressedAgentIds: ['claw'],
                         mentions: [
                             {
                                 end: 5,

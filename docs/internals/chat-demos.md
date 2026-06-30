@@ -38,7 +38,6 @@ app-local UI state, not durable Runtime chat rows.
 | --- | --- |
 | `cht_demo_activity_turn` | Assistant progress messages and grouped tool activity in one completed turn. |
 | `cht_demo_artifact_links` | Assistant Markdown links that open inspectable Vault and workspace targets in the Artifact Panel. |
-| `cht_demo_approval_flow` | A running response blocked on approval activity. |
 | `cht_demo_attachment` | Durable user message attachment rendering. |
 | `cht_demo_calendar_day` | Calendar Day Rich Response activity rendered inline in a real chat. |
 | `cht_demo_calendar_event` | Calendar Event Rich Response activity rendered inline in a real chat. |
@@ -48,5 +47,5 @@ app-local UI state, not durable Runtime chat rows.
 | `cht_demo_long_content` | Long pasted JSON and long URL wrapping. |
 | `cht_demo_rich_response_catalog` | Stack, Heading, Text, Separator, and Table Rich Response components rendered inline in one real chat. |
 | `cht_demo_streaming_stack` | Running turn with thinking, progress, and tool stack rows. |
-| `cht_demo_tool_headers` | Stable collapsed tool drawer headers for mixed work, approval, and a live running group. |
+| `cht_demo_tool_headers` | Stable collapsed tool drawer headers for mixed work and a live running group. |
 | `cht_demo_turn_timeline` | Twenty completed back-and-forth turns for exercising the chat turn timeline rail. |

@@ -1,6 +1,3 @@
-import fs from 'node:fs/promises';
-import os from 'node:os';
-import path from 'node:path';
 import { agentRuntimeMutationHeaders, agentRuntimeMutationOrigins } from '@tavern/api';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { getRuntimeCapability, refreshRuntimeCapabilities } from '../capabilities/store';
@@ -8,7 +5,6 @@ import { closeDb, getDb, initTestDb } from '../db/connection';
 import { ensureRuntimeSchema } from '../db/schema';
 import { subscribeToRuntimeEvents } from '../tavern/runtime-events';
 import {
-    ensureMerchbaseSkillForEnablement,
     getMerchbasePlugin,
     getMerchbaseSettings,
     queryMerchbaseAction,
@@ -28,7 +24,6 @@ vi.mock('@merchbase/http-client', () => ({
 }));
 
 const envKeys = [
-    'TAVERN_HERMES_HOME',
     'TAVERN_MERCHBASE_API_KEY',
     'TAVERN_MERCHBASE_BASE_URL',
     'TAVERN_MERCHBASE_DEFAULT_ACCOUNT',
@@ -36,14 +31,11 @@ const envKeys = [
     'TAVERN_MERCHBASE_ENABLED',
 ] as const;
 
-const tempDirs: string[] = [];
-
 describe('MerchBase Plugin settings', () => {
     beforeEach(async () => {
         for (const key of envKeys) {
             process.env[key] = '';
         }
-        process.env.TAVERN_HERMES_HOME = await makeTempDir();
         merchbaseClientMock.createClient.mockReset();
         merchbaseClientMock.accountsGetQuery.mockReset();
         merchbaseClientMock.salesSummaryQuery.mockReset();
@@ -64,7 +56,6 @@ describe('MerchBase Plugin settings', () => {
 
     afterEach(async () => {
         closeDb();
-        await Promise.all(tempDirs.splice(0).map((dir) => removeWritable(dir)));
         for (const key of envKeys) {
             delete process.env[key];
         }
@@ -173,21 +164,6 @@ describe('MerchBase Plugin settings', () => {
         });
     });
 
-    test('replaces a user-owned merchbase skill when enabling the Plugin', async () => {
-        const hermesHome = await makeTempDir();
-        const skillPath = path.join(hermesHome, 'skills', 'merchbase');
-        await fs.mkdir(skillPath, { recursive: true });
-        await fs.writeFile(
-            path.join(skillPath, 'SKILL.md'),
-            '---\nname: merchbase\n---\n\nUser owned instructions.\n'
-        );
-
-        await expect(ensureMerchbaseSkillForEnablement({ hermesHome })).resolves.toBeUndefined();
-        await expect(fs.readFile(path.join(skillPath, 'SKILL.md'), 'utf8')).resolves.toContain(
-            'Managed by Tavern Runtime'
-        );
-    });
-
     test('refreshes and publishes MerchBase capability after settings saves', async () => {
         saveMerchbaseSettings({ enabled: false });
         await refreshRuntimeCapabilities({ ids: ['plugin.merchbase'] });
@@ -241,31 +217,3 @@ describe('MerchBase Plugin settings', () => {
         }
     });
 });
-
-async function makeTempDir() {
-    const directory = await fs.mkdtemp(path.join(os.tmpdir(), 'merchbase-plugin-'));
-    tempDirs.push(directory);
-    return directory;
-}
-
-async function removeWritable(filePath: string) {
-    await makeWritable(filePath);
-    await fs.rm(filePath, { force: true, recursive: true });
-}
-
-async function makeWritable(filePath: string) {
-    const stats = await fs.lstat(filePath).catch(() => null);
-    if (!stats || stats.isSymbolicLink()) {
-        return;
-    }
-
-    if (stats.isDirectory()) {
-        await fs.chmod(filePath, 0o700).catch(() => undefined);
-        await Promise.all(
-            (await fs.readdir(filePath)).map((entry) => makeWritable(path.join(filePath, entry)))
-        );
-        return;
-    }
-
-    await fs.chmod(filePath, 0o600).catch(() => undefined);
-}

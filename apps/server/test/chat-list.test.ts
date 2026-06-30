@@ -88,10 +88,62 @@ test('listChats includes Tavern chats before any synced activity exists', async 
     assert.equal(listedChats(result)[0]?.id, planningChatId);
     assert.equal(listedChats(result)[0]?.displayName, 'Planning');
     assert.deepEqual(listedChats(result)[0]?.boundAgentIds, ['agent:planner']);
-    assert.equal(listedChats(result)[0]?.participants[0]?.name, 'Planner');
+    assert.deepEqual(
+        listedChats(result)[0]?.participants.map((participant) => participant.name),
+        ['You', 'Planner']
+    );
     assert.equal(listedChats(result)[0]?.sessionCount, 0);
     assert.equal(listedChats(result)[0]?.isPinned, false);
     assert.equal(listedChats(result)[0]?.lastActivityAt, '2026-04-06T12:01:00.000Z');
+});
+
+test('listChats projects Runtime-owned Tavern channels and DMs', async () => {
+    await syncAgentsForRuntime({
+        agents: [runtimeAgent('agt_primary', 'Tavern', 'tavern')],
+        runtimeId: 'runtime-1',
+    });
+    tavernChats.push(
+        runtimeTavernChat({
+            agentIds: ['agt_primary'],
+            displayName: '#general',
+            id: 'cht_general',
+            kind: 'channel',
+            updatedAt: '2026-04-06T12:01:00.000Z',
+        })
+    );
+    tavernChats.push(
+        runtimeTavernChat({
+            agentIds: ['agt_primary'],
+            displayName: 'Tavern',
+            id: 'cht_tavern_agent_dm',
+            kind: 'dm',
+            updatedAt: '2026-04-06T12:02:00.000Z',
+        })
+    );
+
+    const result = await listChats();
+    const chats = listedChats(result);
+
+    assert.equal(chats.find((chat) => chat.id === 'cht_general')?.conversationKind, 'channel');
+    assert.equal(chats.find((chat) => chat.id === 'cht_general')?.scope, 'channel');
+    assert.equal(
+        chats.find((chat) => chat.id === 'cht_tavern_agent_dm')?.conversationKind,
+        'direct'
+    );
+    assert.equal(chats.find((chat) => chat.id === 'cht_tavern_agent_dm')?.scope, 'dm');
+    assert.deepEqual(
+        chats
+            .find((chat) => chat.id === 'cht_general')
+            ?.participants.map((participant) => ({
+                actorId: participant.actorId,
+                actorType: participant.actorType,
+                name: participant.name,
+            })),
+        [
+            { actorId: 'usr_tavern', actorType: 'participant', name: 'You' },
+            { actorId: 'agt_primary', actorType: 'agent', name: 'Tavern' },
+        ]
+    );
 });
 
 test('listChats exposes pinned Tavern chat state', async () => {
@@ -172,7 +224,7 @@ test('listChats hides archived Runtime-owned Tavern chats while synced sessions 
     );
 });
 
-test('agent chat list labels Hermes internal runtime sessions by source', async () => {
+test('agent chat list labels internal runtime sessions by source', async () => {
     await syncAgentsForRuntime({
         agents: [
             {
@@ -186,7 +238,7 @@ test('agent chat list labels Hermes internal runtime sessions by source', async 
         ],
         runtimeId: 'runtime-1',
     });
-    const internalChatId = 'hermes:internal:agent:main:cron:8300bbe8-7fb6-4ffb-aa7e-7f19005775c6';
+    const internalChatId = 'agent:internal:agent:main:cron:8300bbe8-7fb6-4ffb-aa7e-7f19005775c6';
     runtimeChats = [
         {
             bindingId: null,
@@ -308,7 +360,7 @@ test('agent chat list keeps non-Tavern session-only runtime surfaces visible', a
         ],
         runtimeId: 'runtime-1',
     });
-    const internalChatId = 'hermes:internal:agent:main:cron:session-only';
+    const internalChatId = 'agent:internal:agent:main:cron:session-only';
 
     await syncSessionsForRuntime({
         runtimeId: 'runtime-1',
@@ -545,6 +597,7 @@ async function mockRuntimeFetch(input: RequestInfo | URL, init?: RequestInit) {
     if (url.pathname === '/agents' && request.method === 'GET') {
         return Response.json({
             agents: [
+                runtimeAgent('agt_primary', 'Tavern', 'tavern'),
                 runtimeAgent('agent:planner', 'Planner', 'planning'),
                 runtimeAgent('blippy', 'Blippy', 'blippy'),
                 runtimeAgent('main', 'Main', 'main'),
@@ -560,11 +613,11 @@ async function mockRuntimeFetch(input: RequestInfo | URL, init?: RequestInit) {
         });
     }
 
-    if (url.pathname === '/hermes/chats' && request.method === 'GET') {
+    if (url.pathname === '/agent/chats' && request.method === 'GET') {
         return Response.json({ chats: runtimeChats });
     }
 
-    if (url.pathname === '/hermes/sessions' && request.method === 'GET') {
+    if (url.pathname === '/agent/sessions' && request.method === 'GET') {
         return Response.json({
             sessions: (await listSessionRecords()).flatMap((record) => {
                 const session = parseSessionRecord(record);
@@ -626,12 +679,15 @@ function runtimeTavernChat(input: {
     archived?: boolean;
     displayName: string;
     id: string;
+    kind?: 'channel' | 'dm';
     pinned?: boolean;
     updatedAt: string;
 }): TavernChat {
+    const kind = input.kind ?? 'channel';
     return {
         created_at: input.updatedAt,
         id: input.id,
+        kind,
         last_message_sequence: 0,
         metadata: {
             runtime: {
@@ -646,6 +702,15 @@ function runtimeTavernChat(input: {
                 displayName: input.displayName,
             },
         },
+        participants: [
+            { id: 'usr_tavern', kind: 'user', label: 'You', metadata: {} },
+            ...input.agentIds.map((agentId) => ({
+                id: agentId,
+                kind: 'agent' as const,
+                label: agentId,
+                metadata: {},
+            })),
+        ],
         pinned: input.pinned ?? false,
         title: input.displayName,
         updated_at: input.updatedAt,

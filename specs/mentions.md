@@ -7,20 +7,20 @@ read_when:
 
 # Mentions
 
-Mentions are `@` references that compile to markdown plus optional metadata.
+Mentions are typed composer references that compile to markdown plus optional
+metadata.
 
 A mention is just markdown. It is auto-completed into the composer when the
-Tavern user types `@` and chooses a skill, plugin, app, file, or directory.
-Metadata is stored with the message so Tavern can render chips and project
-runtime context. The message must still make sense if metadata is missing.
+Tavern user types a supported trigger and chooses an Agent or skill. Metadata
+is stored with the message so Tavern can render chips and project runtime
+context. The message must still make sense if metadata is missing.
 
 ## Triggers
 
-- `@` after start-of-input or whitespace opens the full picker: skills,
-  plugins, apps, files, and directories.
-- `$` after start-of-input or whitespace opens the same picker filtered to
-  skills only, matching the `$skill` serialization sigil. Path search does not
-  run for `$` queries.
+- `@` after start-of-input or whitespace opens agent mentions for Agents in the
+  current chat. `@` is reserved for addressing Agents.
+- `$` after start-of-input or whitespace opens skill mentions, matching the
+  `$skill` serialization sigil. Path search does not run for `$` queries.
 - `/` at the very start of the composer opens the command palette, which is a
   separate surface — see [composer-commands](./composer-commands.md). Commands
   are not mentions.
@@ -46,9 +46,10 @@ Supported projections:
 
 ## Mention Kinds
 
-Tavern supports these mention kinds:
+Tavern supports these mention kinds in stored metadata and rendering:
 
 - `skill`: an agent skill available through the selected runtime or agent.
+- `agent`: an Agent seat participating in the current chat.
 - `plugin`: a plugin-level capability such as Chrome, Computer Use, or a native
   Codex plugin.
 - `app`: an app-backed connector or native Codex app capability.
@@ -66,6 +67,8 @@ adds, if anything, when sending the message to the agent:
 
 - Capability references preserve plugin and app markdown URIs without adding
   hidden prompt text.
+- Agent references address an Agent seat in a channel. They do not select a
+  model, create a session, or route through display names.
 - Skill context loads explicit skill instructions when the runtime exposes the
   skill.
 - Path references preserve file and directory paths for the agent to inspect
@@ -75,6 +78,7 @@ adds, if anything, when sending the message to the agent:
 
 | Kind | Visible text | Projection | Runtime behavior |
 | --- | --- | --- | --- |
+| `agent` | `@Planner` | `agent-reference` | Address the matching Agent seat in the current chat. Channel sends create one turn per mentioned agent. Agent DMs address their one agent participant without a mention. |
 | `skill` | `[$ui](/Users/zknicker/.agents/skills/ui/SKILL.md)` | `skill-context` | Inject a Codex-style `<skill>` block with the skill name, path, description, and instructions when the runtime exposes the skill. |
 | `plugin` | `[@Computer](plugin://computer-use@openai-bundled)` | `capability-reference` | Preserve the markdown URI. Do not enable the plugin from the mention alone. |
 | `app` | `[@Helium](plugin://computer-use@openai-bundled)` | `capability-reference` | Preserve the Codex plugin URI with the selected app name as the label. Let the Codex Computer Use tools resolve the app. Do not install, connect, or authorize the app from the mention alone. |
@@ -98,6 +102,7 @@ Examples:
 | Markdown | Rendered intent |
 | --- | --- |
 | `[@Chrome](plugin://chrome@openai-bundled)` | Chrome icon plus `Chrome` label. |
+| `@Planner` | Agent icon plus `Planner` label. |
 | `[@Computer](plugin://computer-use@openai-bundled)` | Computer Use icon plus `Computer` label. |
 | `[$ui](/Users/zknicker/.agents/skills/ui/SKILL.md)` | Skill icon plus `ui` label. |
 | `[mentions.md](/Users/zknicker/.codex/worktrees/1b41/tavern/specs/mentions.md)` | File icon plus `mentions.md` label. |
@@ -115,6 +120,7 @@ Default rendering is kind-based:
 
 | Kind | Default appearance |
 | --- | --- |
+| `agent` | Agent icon and mention tone. |
 | `skill` | Skill icon and skill tone. |
 | `plugin` | Plugin icon and capability tone. |
 | `app` | Plugin icon and capability tone. |
@@ -123,10 +129,10 @@ Default rendering is kind-based:
 | `image` | Image icon and path tone. |
 
 Known bundled skills and plugins may override only presentation. For example,
-Hermes's `github` skill can render as `GitHub` with a GitHub icon while it
-still serializes and projects as a `skill` mention. Hermes's `gh-issues`
-skill can render as `GitHub Issues` with the same icon while retaining its
-exact runtime skill id.
+a `github` skill can render as `GitHub` with a GitHub icon while it still
+serializes and projects as a `skill` mention. A `gh-issues` skill can render
+as `GitHub Issues` with the same icon while retaining its exact runtime skill
+id.
 
 Skill options use the runtime skill id as insertion text and derive a display
 label for rendering. For example, `agent-browser` inserts and serializes as
@@ -174,6 +180,7 @@ Examples:
 
 | Source | Option identity | Serialized markdown |
 | --- | --- | --- |
+| Agent | `kind: "agent"`, `id: "agt_planner"`, `insertText: "@Planner"`, `projection: "agent-reference"` | `@Planner` |
 | Skill | `kind: "skill"`, `id: "/Users/zknicker/.agents/skills/ui/SKILL.md"`, `insertText: "ui"`, `projection: "skill-context"` | `[$ui](/Users/zknicker/.agents/skills/ui/SKILL.md)` |
 | Plugin | `kind: "plugin"`, `id: "plugin://computer-use@openai-bundled"`, `insertText: "Computer Use"`, `projection: "capability-reference"` | `[@Computer Use](plugin://computer-use@openai-bundled)` |
 | App | `kind: "app"`, `id: "plugin://computer-use@openai-bundled"`, `insertText: "Helium"`, `metadata.bundleId: "net.imput.helium"`, `projection: "capability-reference"` | `[@Helium](plugin://computer-use@openai-bundled)` |
@@ -184,17 +191,20 @@ Examples:
 Mention autocomplete combines concrete source APIs:
 
 - `mention.inventory` returns bounded mention sources that are safe to fetch
-  once and filter locally: skills, plugins, and Mac apps.
-- `mention.paths` searches unbounded workspace paths separately. It is
-  query-driven and may show an independent `Files` loading state while the
-  search is in progress.
+  once and filter locally. The composer uses the bounded inventory for `$`
+  skill lookup; `@` agent lookup comes from the current chat's Agent
+  participants.
+- `mention.paths` searches unbounded workspace paths separately when a
+  composer trigger supports path lookup. Current chat composers do not expose
+  path lookup through `@` or `$`.
 
 Inventory sources:
 
+- Agent options come from the selected chat's agent participants.
 - Skills come from the selected runtime agent's skill list.
-- Plugins come from enabled Codex plugin manifests, such as
+- Plugins may come from enabled Codex plugin manifests, such as
   `plugin://computer-use@openai-bundled`.
-- Mac apps come from Tavern Runtime's local macOS app inventory. Runtime uses
+- Mac apps may come from Tavern Runtime's local macOS app inventory. Runtime uses
   running app state and recent-use metadata for autocomplete ordering. App
   options may include a small native app icon data URL for presentation. App
   mentions keep `kind: "app"` in Tavern metadata and serialize with the Codex
@@ -215,9 +225,9 @@ and metadata, but stored metadata must keep the selected `kind`, `id`,
 
 ## Runtime Behavior
 
-Skills use `skill-context`. Tavern stores the structured mention and the
-Hermes Tavern Messenger projects selected skills into the agent-facing prompt
-as Codex-style skill context when the runtime exposes the skill.
+Skills use `skill-context`. Tavern stores the structured mention and Runtime
+projects selected skills into the agent-facing prompt when the skill is
+enabled for the Agent.
 
 Example:
 
@@ -231,9 +241,8 @@ Example:
 
 Plugins and apps use `capability-reference` when they are already available in
 the runtime context. Tavern preserves the markdown and does not add a hidden
-reference block. Native Codex plugins follow Hermes's Codex app-server runtime
-contract: Hermes config determines which Codex tools are available for a Codex
-thread, and the model uses those tools from the visible prompt.
+reference block. Native Codex tools follow the Runtime tool availability
+contract, and the model uses those tools from the visible prompt.
 
 Computer Use app autocomplete uses Tavern Runtime's local macOS app inventory.
 The app server reads the inventory from Runtime; it does not enumerate local

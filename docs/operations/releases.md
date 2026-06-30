@@ -37,7 +37,7 @@ Before every release, inspect the changed files and choose one lane:
 | --- | --- | --- | --- |
 | App-only | UI, desktop shell, docs, app cache, app presentation, or any change that does not require a new Runtime behavior | unchanged | unchanged |
 | Compatible Runtime | Runtime bugfix or operational improvement that users can safely defer because the old Runtime still preserves correct core behavior | bump with app release | unchanged |
-| Required Runtime | App depends on new Runtime API, storage, capability, event, job, managed Hermes behavior, or CLI behavior; or the release fixes correctness-critical Runtime behavior | bump with app release | bump to the release version |
+| Required Runtime | App depends on new Runtime API, storage, capability, event, job, executor behavior, or CLI behavior; or the release fixes correctness-critical Runtime behavior | bump with app release | bump to the release version |
 
 Default to **App-only** unless the app needs new Runtime behavior. Runtime
 updates are operator work; do not force one for a desktop-only patch. When a
@@ -83,16 +83,8 @@ artifacts and Runtime tarballs to `TAVERN_RELEASE_S3_URI`, verifies each S3
 object is visible, commits release metadata, pushes `main`, pushes the version
 tag, creates the GitHub Release, and updates the Homebrew tap formula.
 
-Runtime artifacts also include the Hermes installer snapshot at
-`runtime-assets/hermes/installer/install.sh`; the build fails if it is
-missing. When a release bumps the Hermes engine pin
-(`apps/runtime/src/hermes/engine.ts`), refresh that snapshot in the same
-change (see its `SOURCE.md`).
-
-Before shipping a Runtime release that changes engine resolution, the bundled
-installer snapshot, or the pin, run the
-[cold-start verification](hermes-managed-runtime.md#cold-start-verification) —
-the automated lanes do not exercise a real bootstrap install.
+Runtime artifacts include the Runtime CLI, assets, schemas, and bundled
+resources required by the local service.
 
 ## Compatibility Floor Rules
 
@@ -100,8 +92,8 @@ the automated lanes do not exercise a real bootstrap install.
   imply Runtime updates.
 * **Raise the floor when the app calls a new Runtime contract.** This includes
   new or changed Runtime API fields, capability ids, websocket events, durable
-  records, managed Hermes lifecycle behavior, Runtime CLI behavior, or
-  Hermes adapter behavior that the app requires.
+  records, executor behavior, Runtime CLI behavior, or adapter behavior that
+  the app requires.
 * **Raise the floor for correctness-critical Runtime fixes.** This includes
   fixes for chat/session binding, model selection, command routing, skill
   projection, tool execution, auth, data integrity, updater correctness, or any
@@ -124,8 +116,8 @@ Raise `tavern.runtime.minimumVersion` when any answer is yes:
   error shape?
 * Does the app require a new Runtime capability id, health state, event, durable
   record, job, or storage invariant?
-* Does the app require new managed Hermes startup, dashboard/API/Gateway,
-  model config, or adapter behavior?
+* Does the app require new model-provider startup, model config, or executor
+  behavior?
 * Does the app require new Runtime CLI, Homebrew service, artifact layout, port,
   or environment behavior?
 * Does this release fix a core Runtime correctness bug in chat execution,

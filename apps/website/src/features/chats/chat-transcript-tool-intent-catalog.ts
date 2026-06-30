@@ -3,11 +3,10 @@ import type { ToolIntentKind } from './chat-transcript-tool-intent-types.ts';
 export const commandToolNames = ['bash', 'command', 'exec', 'process', 'shell', 'terminal', 'zsh'];
 export const longHeaderSubjectLimit = 72;
 
-// Current managed Hermes built-ins, Tavern first-party tools, and Tavern-owned
+// Current agent runtime built-ins, Tavern first-party tools, and Tavern-owned
 // session/tool rows. Unknown plugin or MCP tools still fall through to shape
 // inference and then a generic tool summary.
 export const mappedToolIntentNames = [
-    'approval',
     'bash',
     'browser_back',
     'browser_cdp',
@@ -100,7 +99,6 @@ export const mappedToolIntentNames = [
 ] as const;
 
 export const exactToolKinds = {
-    approval: 'approval',
     bash: 'command',
     browser_back: 'browser',
     browser_cdp: 'browser',

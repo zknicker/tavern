@@ -12,7 +12,7 @@ mock.module('../src/agents/catalog.ts', () => ({
             id: 'main',
             name: 'Main',
             primaryColor: null,
-            runtimeId: 'tavern-hermes-managed',
+            runtimeId: 'tavern-agent-engine',
             updatedAt: '2026-05-18T12:00:00.000Z',
         },
     ]),
@@ -164,7 +164,7 @@ test('listRuntimeChatRows maps Tavern API messages and keeps preamble/reasoning 
     });
 });
 
-test('listRuntimeChatTimeline accepts Hermes custom provider message metadata', async () => {
+test('listRuntimeChatTimeline accepts custom provider message metadata', async () => {
     await saveAgentRuntimeConnection({
         baseUrl: 'http://runtime.test',
         enabled: true,
@@ -198,8 +198,8 @@ test('listRuntimeChatTimeline accepts Hermes custom provider message metadata', 
                         content: 'QA_CUSTOM_PROVIDER_OK',
                         id: 'msg_final',
                         metadata: {
-                            hermesModel: 'tavern-e2e-tools',
-                            hermesProvider: 'custom',
+                            agentModel: 'tavern-e2e-tools',
+                            agentProvider: 'custom',
                             model: 'tavern-e2e-tools',
                             provider: 'custom',
                             runtime: {
@@ -231,14 +231,14 @@ test('listRuntimeChatTimeline accepts Hermes custom provider message metadata', 
         message: {
             content: 'QA_CUSTOM_PROVIDER_OK',
             metadata: {
-                hermesProvider: 'custom',
+                agentProvider: 'custom',
                 provider: 'custom',
             },
         },
     });
 });
 
-test('getChatLogPage preserves completed openai-codex Hermes provider metadata', async () => {
+test('getChatLogPage preserves completed openai-codex provider metadata', async () => {
     await saveAgentRuntimeConnection({
         baseUrl: 'http://runtime.test',
         enabled: true,
@@ -272,8 +272,8 @@ test('getChatLogPage preserves completed openai-codex Hermes provider metadata',
                         content: 'Hi.',
                         id: 'msg_final',
                         metadata: {
-                            hermesModel: 'gpt-5.5-codex',
-                            hermesProvider: 'openai-codex',
+                            agentModel: 'gpt-5.5-codex',
+                            agentProvider: 'openai-codex',
                             model: 'gpt-5.5-codex',
                             provider: 'openai-codex',
                             runtime: {
@@ -303,7 +303,7 @@ test('getChatLogPage preserves completed openai-codex Hermes provider metadata',
         kind: 'message',
         message: {
             metadata: {
-                hermesProvider: 'openai-codex',
+                agentProvider: 'openai-codex',
                 provider: 'openai-codex',
             },
         },
@@ -339,7 +339,7 @@ test('listRuntimeChatRows maps Tavern API artifacts into chat timeline rows', as
                         id: 'art_report_1',
                         kind: 'document',
                         message_id: null,
-                        metadata: { runtime: { source: 'hermes' } },
+                        metadata: { runtime: { source: 'agent-engine' } },
                         mime_type: 'text/markdown',
                         response_id: 'rsp_run_1',
                         title: 'Report',
@@ -382,7 +382,7 @@ test('listRuntimeChatRows maps Tavern API artifacts into chat timeline rows', as
                 payload: {
                     contentRef: 'file:///tmp/report.md',
                     contentText: '# Report',
-                    metadata: { runtime: { source: 'hermes' } },
+                    metadata: { runtime: { source: 'agent-engine' } },
                     title: 'Report',
                 },
             },
@@ -615,7 +615,7 @@ test('listRuntimeChatRows places steers between surrounding activity and shows t
                                 },
                                 runId: 'run_1',
                                 sessionKey: 'session_1',
-                                source: 'hermes',
+                                source: 'agent-engine',
                                 startedAt: '2026-05-18T12:00:01.500Z',
                             },
                         },

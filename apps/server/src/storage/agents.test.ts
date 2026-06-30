@@ -33,18 +33,18 @@ test('syncAgentsForRuntime replaces missing config rows for one runtime only', a
             createAgent({ id: 'planner', name: 'Planner' }),
             createAgent({ id: 'writer', name: 'Writer' }),
         ],
-        runtimeId: 'hermes-primary',
+        runtimeId: 'agent-primary',
         syncedAt: firstSync,
     });
     await agentStorage.syncAgentsForRuntime({
         agents: [createAgent({ id: 'claw', name: 'Claw' })],
-        runtimeId: 'hermes-main',
+        runtimeId: 'agent-main',
         syncedAt: firstSync,
     });
 
     await agentStorage.syncAgentsForRuntime({
         agents: [createAgent({ id: 'planner', name: 'Planner Prime' })],
-        runtimeId: 'hermes-primary',
+        runtimeId: 'agent-primary',
         syncedAt: secondSync,
     });
 
@@ -59,22 +59,22 @@ test('syncAgentsForRuntime replaces missing config rows for one runtime only', a
     );
 });
 
-test('listAgents scopes rows to the active Hermes runtime', async () => {
+test('listAgents scopes rows to the active agent runtime', async () => {
     await agentStorage.syncAgentsForRuntime({
         agents: [createAgent({ id: 'planner', name: 'Planner' })],
-        runtimeId: 'hermes-primary',
+        runtimeId: 'agent-primary',
     });
     await agentStorage.syncAgentsForRuntime({
         agents: [createAgent({ id: 'claw', name: 'Claw' })],
-        runtimeId: 'hermes-main',
+        runtimeId: 'agent-main',
     });
     await connectionStorage.saveAgentRuntimeConnection({
-        baseUrl: 'wss://hermes.example',
+        baseUrl: 'wss://agent-runtime.example',
         enabled: true,
-        id: 'hermes-main',
+        id: 'agent-main',
         lastCheckedAt: '2026-05-05T12:00:00.000Z',
         lastError: null,
-        name: 'Hermes',
+        name: 'Agent Runtime',
     });
 
     const agents = await agentStorage.listAgents();

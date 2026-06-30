@@ -19,7 +19,7 @@ build one-off status handling for each page.
 
 ## Goals
 
-- Keep dashboard pages usable when Hermes is partially broken.
+- Keep dashboard pages usable when the agent engine is partially broken.
 - Report which runtime capability failed instead of marking the whole runtime offline.
 - Preserve existing records when a sync path fails.
 - Make diagnostics and CI failures explain the affected runtime surface.
@@ -37,8 +37,8 @@ The first slice should still be small enough to land safely, but it should use t
 contracts, helpers, and API shape that the full implementation uses. A narrow slice is only a
 delivery strategy, not a different design.
 
-The Hermes slice is `dashboardServer`, `apiServer`, `gateway`, `models`, and `skills` because those
-surfaces prove the important managed Hermes cases:
+The agent-engine slice is `dashboardServer`, `apiServer`, `gateway`, `models`, and `skills`
+because those surfaces prove the important agent-engine cases:
 
 - dashboard process reachability through `/api/status`
 - authenticated REST API reachability through `/api/sessions`
@@ -47,13 +47,13 @@ surfaces prove the important managed Hermes cases:
 - skill inventory through `/api/skills`
 
 Tavern CRUD, synced chat records, cron records, mentions, and logs are not capability ids unless
-they depend on a distinct Runtime-owned service or Hermes probe.
+they depend on a distinct Runtime-owned service or agent-engine probe.
 
 ## Deferred Scope
 
 These items are intentionally not part of the first slice:
 
-- channel, memory, or Hermes Doctor surfaces
+- channel, memory, or agent diagnostic surfaces
 - copyable rich diagnostic bundles
 - page-specific warning banners
 - CI communication regression runner
@@ -61,9 +61,9 @@ These items are intentionally not part of the first slice:
 
 ## Non-Goals
 
-- Tavern App does not bundle, start, repair, or shell out to Hermes.
-- Tavern App does not read Hermes runtime state, gateway logs, or Hermes config files directly.
-- Tavern does not require every runtime to support every Hermes capability.
+- Tavern App does not bundle, start, repair, or shell out to the local agent engine.
+- Tavern App does not read agent-engine runtime state, logs, or config files directly.
+- Tavern does not require every runtime to support every agent-engine capability.
 - Tavern does not hide malformed runtime responses behind compatibility fallbacks.
 
 ## Capability States
@@ -94,28 +94,28 @@ Each capability record includes:
 
 The app may show `reason`. Diagnostic copy/export may include `technicalMessage`.
 
-## Hermes Capabilities
+## Agent Engine Capabilities
 
-The Hermes adapter reports capability state for these surfaces:
+Runtime reports capability state for these surfaces:
 
-| Capability | Hermes surface | Primary Tavern impact |
+| Capability | Runtime surface | Primary Tavern impact |
 | --- | --- | --- |
-| `dashboardServer` | `GET /api/status` | managed Hermes process visibility |
-| `apiServer` | `GET /api/sessions` | authenticated Hermes REST calls and Runtime sync |
-| `gateway` | `WS /api/ws` | Tavern chat sends and live Hermes events |
+| `dashboardServer` | status route | agent process visibility |
+| `apiServer` | session routes | authenticated Runtime calls and sync |
+| `gateway` | event stream | Tavern chat sends and live agent events |
 | `models` | `GET /api/model/options` | model inventory |
 | `skills` | `GET /api/skills` | skill inventory |
 
-Future `channels` capabilities may be added when Hermes exposes stable gateway
+Future `channels` capabilities may be added when Runtime exposes stable
 surfaces that Tavern can consume without local filesystem access.
 
-The Runtime also reports Memory and model-access capabilities that are
-independent of managed Hermes process reachability: `codexOAuth` and
+The Runtime also reports Vault and model-access capabilities that are
+independent of agent-engine process reachability: `codexOAuth` and
 `vault`.
 
 ## Adapter Behavior
 
-The Hermes adapter owns raw runtime error classification.
+Runtime owns raw runtime error classification.
 
 - Unsupported RPC methods map to `unavailable`.
 - Auth, pairing, token, or permission failures map to `unauthorized`.
@@ -156,7 +156,7 @@ Current related tables:
 - `agent_runtime_connections` stores the Tavern Runtime endpoint plus coarse health fields such as
   `last_checked_at`, `last_error`, and `last_synced_at`.
 - `sync_state` stores primitive sync freshness keyed by `kind` and `id`. It answers questions such
-  as "did agent sync for this runtime succeed?" not "is the Hermes models capability available?"
+  as "did agent sync for this runtime succeed?" not "is the models capability available?"
 - Runtime-backed tables such as `agents`, `chats`, `session_runs`, `session_messages`, `cron_jobs`, and
   `cron_runs` store runtime-owned records and row-level sync timestamps.
 
@@ -221,7 +221,7 @@ path. A polished dashboard view belongs to a later diagnostics workstream.
 2. Add the Runtime `runtime_capabilities` table and storage helpers.
 3. Add Runtime capability checks that convert dependency failures into typed capability failures.
 4. Expose the stored state through Runtime `/capabilities`.
-5. Wire the Hermes slice: `dashboardServer`, `apiServer`, `gateway`, `models`, and `skills`.
+5. Wire the agent-engine slice: `dashboardServer`, `apiServer`, `gateway`, `models`, and `skills`.
 6. Add Runtime, server client, and app rendering tests for the first slice.
 7. Repeat the same pattern across the remaining capability table.
 8. Add minimal app visibility only if the API path cannot otherwise be verified.
@@ -261,9 +261,9 @@ The first-slice test set is smaller:
 
 ## Acceptance Criteria
 
-- Tavern can represent "Hermes reachable, skills unavailable."
-- Tavern can represent "Hermes dashboard reachable, API unavailable, Gateway unavailable."
-- Malformed Hermes payloads fail narrowly and do not create fake records.
+- Tavern can represent "agent engine reachable, skills unavailable."
+- Tavern can represent "agent engine reachable, API unavailable, event stream unavailable."
+- Malformed agent-engine payloads fail narrowly and do not create fake records.
 - Runtime connection status, primitive sync state, and capability state are distinct.
 - The diagnostics surface has enough structured data to explain which capability failed and why.
 

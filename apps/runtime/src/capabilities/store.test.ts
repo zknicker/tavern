@@ -11,7 +11,6 @@ import { getRuntimeCapability, listRuntimeCapabilities, refreshRuntimeCapabiliti
 
 describe('Runtime capabilities store', () => {
     let runtimeRoot: string;
-    const originalHermesPort = process.env.TAVERN_HERMES_PORT;
     const originalPath = process.env.PATH;
 
     beforeEach(async () => {
@@ -23,8 +22,7 @@ describe('Runtime capabilities store', () => {
         });
         process.env.CODEX_HOME = path.join(runtimeRoot, 'empty-codex-home');
         process.env.PATH = binPath;
-        process.env.TAVERN_VAULT_PATH = path.join(runtimeRoot, 'memory');
-        process.env.TAVERN_HERMES_PORT = '1';
+        process.env.TAVERN_VAULT_PATH = path.join(runtimeRoot, 'wiki');
         const db = initTestDb();
         ensureRuntimeSchema(db);
         ensureRuntimeJobsSchema(db);
@@ -34,7 +32,6 @@ describe('Runtime capabilities store', () => {
         vi.restoreAllMocks();
         closeDb();
         process.env.CODEX_HOME = undefined;
-        process.env.TAVERN_HERMES_PORT = originalHermesPort;
         process.env.PATH = originalPath;
         process.env.TAVERN_VAULT_PATH = undefined;
         await rm(runtimeRoot, { force: true, recursive: true });
@@ -84,23 +81,24 @@ describe('Runtime capabilities store', () => {
         expect(events).toContain('dashboardServer');
     });
 
-    test('records a missing Memory root as degraded until the managed skill is prepared', async () => {
+    test('records a missing creatable Vault root as healthy', async () => {
         const [capability] = await refreshRuntimeCapabilities({ ids: ['vault'] });
 
         expect(capability).toMatchObject({
-            healthy: false,
+            healthy: true,
             id: 'vault',
             metadata: expect.objectContaining({
+                configSource: 'environment',
                 missing: true,
-                skillPath: expect.stringContaining('skills/memory'),
+                vaultPath: path.join(runtimeRoot, 'wiki'),
             }),
-            reason: 'The managed Memory skill has not been prepared yet.',
-            state: 'degraded',
+            reason: null,
+            state: 'healthy',
         });
     });
 
-    test('keeps a readable read-only Memory root browseable', async () => {
-        const hubPath = path.join(runtimeRoot, 'memory');
+    test('keeps a readable read-only Vault root browseable', async () => {
+        const hubPath = path.join(runtimeRoot, 'wiki');
         await mkdir(hubPath, { recursive: true });
         await chmod(hubPath, 0o555);
 
@@ -108,13 +106,13 @@ describe('Runtime capabilities store', () => {
             const [capability] = await refreshRuntimeCapabilities({ ids: ['vault'] });
 
             expect(capability).toMatchObject({
-                healthy: false,
+                healthy: true,
                 id: 'vault',
                 metadata: expect.objectContaining({
                     writable: false,
                 }),
-                reason: 'The managed Memory skill has not been prepared yet.',
-                state: 'degraded',
+                reason: null,
+                state: 'healthy',
             });
         } finally {
             await chmod(hubPath, 0o755);

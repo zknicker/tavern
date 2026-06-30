@@ -1,9 +1,8 @@
 ---
-summary: Local development workflow for managed dev stack startup, Hermes runtime state, and verification pointers.
+summary: Local development workflow for dev stack startup, Runtime state, and verification pointers.
 read_when:
   - running Tavern locally or changing managed runtime development workflow
   - changing local stack startup, ports, or developer verification
-  - changing the dev-stack Hermes engine defaults (TAVERN_HERMES_ALLOW_SYSTEM, TAVERN_HERMES_AUTO_INSTALL)
 ---
 
 # Development
@@ -16,8 +15,7 @@ Run the full managed development stack:
 bun run dev
 ```
 
-This starts Tavern Runtime, managed Hermes, the local app backend, and the
-website dev server.
+This starts Tavern Runtime, the local app backend, and the website dev server.
 
 The dev stack uses worktree-isolated development state by default:
 
@@ -27,10 +25,9 @@ The dev stack uses worktree-isolated development state by default:
 ```
 
 The stack derives a stable port group from the worktree path. Website, server,
-Tavern Runtime, and managed Hermes each get one port from that group, so multiple
-Tavern worktrees can run at the same time without sharing Runtime state or a
-managed Hermes dashboard. This keeps the managed dev Runtime out of the packaged
-app's `~/.tavern/tavern.sqlite` state and away from pre-Hermes dev databases.
+and Tavern Runtime each get one port from that group, so multiple Tavern
+worktrees can run at the same time without sharing Runtime state. This keeps the
+managed dev Runtime out of the packaged app's `~/.tavern/tavern.sqlite` state.
 
 To intentionally share one dev workspace across worktrees, run:
 
@@ -49,7 +46,7 @@ Set `TAVERN_DEV_STACK_ID` to choose the state directory name, or
 `TAVERN_DEV_PORT_BASE` to choose the first port in the four-port group:
 
 ```bash
-TAVERN_DEV_STACK_ID=hermes-a TAVERN_DEV_PORT_BASE=43000 bun run dev
+TAVERN_DEV_STACK_ID=agent-a TAVERN_DEV_PORT_BASE=43000 bun run dev
 ```
 
 That example uses ports `43000` through `43003`. Set `DATABASE_PATH` or
@@ -62,17 +59,9 @@ this checkout's real website port. The `dev-port` helper and the dev stack
 derive the same four-port group from the checkout path, or from
 `TAVERN_DEV_STACK_ID` when it is set.
 
-Set `TAVERN_HERMES_HOME`, `TAVERN_HERMES_BIN`, `TAVERN_HERMES_HOST`,
-`TAVERN_HERMES_PORT`, or `TAVERN_HERMES_TOKEN` when a dev run should use a
-specific Hermes install or dashboard process.
-
-The dev stack sets `TAVERN_HERMES_ALLOW_SYSTEM=1` and
-`TAVERN_HERMES_AUTO_INSTALL=0` by default: dev runs resolve the machine's
-existing Hermes install and never download a managed engine. (Production does
-the opposite — it ignores system installs and runs the pinned managed engine.)
-On a dev machine without Hermes, set `TAVERN_HERMES_AUTO_INSTALL=1` to let
-Runtime bootstrap the pinned engine into `~/.tavern/engine/` once, shared
-across worktrees.
+Use `TAVERN_AGENT_PROVIDER`, `TAVERN_AGENT_MODEL`, and provider-specific
+`TAVERN_AGENT_*` model variables when a dev run should use a specific local
+model provider.
 
 The Runtime API requires a bearer token. The dev stack reads (or creates) the
 token from `<runtime root>/tavern.json` — the same config file the Runtime and
@@ -101,12 +90,11 @@ hand; the file regenerates each session.
 
 From the terminal, stop the dev stack with `Ctrl+C` or `kill -TERM <dev-stack-pid>`.
 The stack sends `SIGTERM` to every managed child process immediately, then waits
-for each one to exit before returning control to the shell. Runtime owns managed
-Hermes shutdown, so the Runtime process logs while it waits for Hermes to exit.
+for each one to exit before returning control to the shell.
 
 In desktop mode, quitting the app with `Cmd+Q` also lets the stack unwind. The
 desktop process exits first, then the stack signals the remaining website, app
-backend, Runtime, and managed Hermes processes.
+backend, and Runtime processes.
 
 ## Verification
 

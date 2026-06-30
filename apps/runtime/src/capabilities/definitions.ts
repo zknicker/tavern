@@ -6,9 +6,11 @@ import type {
     AgentRuntimeCapabilityHealthId,
     AgentRuntimeCapabilityHealthState,
 } from '@tavern/api';
-import { createLocalHermesClient } from '../hermes/local-client.ts';
-import { getManagedVaultSkillPath } from '../hermes/managed-vault.ts';
-import { getManagedHermesState } from '../hermes/state.ts';
+import {
+    hasConfiguredAgentModelAccess,
+    resolveAgentModelSummary,
+} from '../agent-engine/model-config.ts';
+import { AGENT_WORKSPACE } from '../config.ts';
 import { loadVaultBackedCodexCredentials } from '../model-access/codex-settings.ts';
 import { checkMerchbaseCapability } from '../plugins/merchbase.ts';
 import { resolveVaultConfig } from '../vault/store.ts';
@@ -48,7 +50,7 @@ export const runtimeCapabilityDefinitions: RuntimeCapabilityDefinition[] = [
         async check() {
             return await checkVaultCapability();
         },
-        displayName: 'Memory',
+        displayName: 'Vault',
         id: 'vault',
         refresh: {
             intervalMs: 5 * minuteMs,
@@ -57,13 +59,7 @@ export const runtimeCapabilityDefinitions: RuntimeCapabilityDefinition[] = [
     },
     {
         async check() {
-            return await checkManagedHermesCapability({
-                check: async (client) => {
-                    await client.getStatus();
-                },
-                metadata: { endpoint: '/api/status' },
-                unavailableReason: 'The agent engine is not running.',
-            });
+            return checkAgentEngineCapability({ capability: 'engine' });
         },
         displayName: 'Agent engine',
         id: 'dashboardServer',
@@ -74,13 +70,7 @@ export const runtimeCapabilityDefinitions: RuntimeCapabilityDefinition[] = [
     },
     {
         async check() {
-            return await checkManagedHermesCapability({
-                check: async (client) => {
-                    await client.assertApiReady();
-                },
-                metadata: { endpoint: '/api/sessions' },
-                unavailableReason: 'The agent engine is not accepting requests.',
-            });
+            return checkAgentEngineCapability({ capability: 'api' });
         },
         displayName: 'Agent engine API',
         id: 'apiServer',
@@ -91,13 +81,7 @@ export const runtimeCapabilityDefinitions: RuntimeCapabilityDefinition[] = [
     },
     {
         async check() {
-            return await checkManagedHermesCapability({
-                check: async (client) => {
-                    await client.assertGatewayReady();
-                },
-                metadata: { endpoint: '/api/ws' },
-                unavailableReason: 'The live connection to your agent is unavailable.',
-            });
+            return checkAgentEngineCapability({ capability: 'gateway' });
         },
         displayName: 'Agent connection',
         id: 'gateway',
@@ -108,13 +92,7 @@ export const runtimeCapabilityDefinitions: RuntimeCapabilityDefinition[] = [
     },
     {
         async check() {
-            return await checkManagedHermesCapability({
-                check: async (client) => {
-                    await client.getModels();
-                },
-                metadata: { endpoint: '/api/model/options' },
-                unavailableReason: "The assistant's model inventory is not reachable.",
-            });
+            return checkAgentEngineCapability({ capability: 'models' });
         },
         displayName: 'Models',
         id: 'models',
@@ -125,13 +103,7 @@ export const runtimeCapabilityDefinitions: RuntimeCapabilityDefinition[] = [
     },
     {
         async check() {
-            return await checkManagedHermesCapability({
-                check: async (client) => {
-                    await client.listSkills();
-                },
-                metadata: { endpoint: '/api/skills' },
-                unavailableReason: "The assistant's skill inventory is not reachable.",
-            });
+            return checkAgentEngineCapability({ capability: 'skills' });
         },
         displayName: 'Skills',
         id: 'skills',
@@ -156,44 +128,33 @@ export const runtimeCapabilityDefinitions: RuntimeCapabilityDefinition[] = [
 async function checkVaultCapability(): Promise<RuntimeCapabilityCheckResult> {
     const config = await resolveVaultConfig();
     const vaultPath = config.vaultPath;
-    const skillPath = getManagedVaultSkillPath();
     const metadata = {
         configSource: config.source,
-        skillPath,
         vaultPath,
     };
     try {
-        const skillReady = fs.existsSync(path.join(skillPath, 'SKILL.md'));
         if (fs.existsSync(vaultPath)) {
             const stat = fs.statSync(vaultPath);
             if (!stat.isDirectory()) {
                 return {
-                    reason: 'Memory path is not a directory.',
+                    reason: 'Vault path is not a directory.',
                     state: 'unavailable',
                     technicalMessage: vaultPath,
                 };
             }
             fs.accessSync(vaultPath, fs.constants.R_OK);
             const writable = canAccess(vaultPath, fs.constants.W_OK);
-            const existingMetadata = { ...metadata, writable };
-            return skillReady
-                ? { metadata: existingMetadata, state: 'healthy' }
-                : {
-                      metadata: existingMetadata,
-                      reason: 'The managed Memory skill has not been prepared yet.',
-                      state: 'degraded',
-                  };
+            return { metadata: { ...metadata, writable }, state: 'healthy' };
         }
 
         fs.accessSync(path.dirname(vaultPath), fs.constants.R_OK | fs.constants.W_OK);
         return {
             metadata: { ...metadata, missing: true },
-            reason: skillReady ? null : 'The managed Memory skill has not been prepared yet.',
-            state: skillReady ? 'healthy' : 'degraded',
+            state: 'healthy',
         };
     } catch (error) {
         return {
-            reason: 'Memory path is not readable.',
+            reason: 'Vault path is not readable.',
             state: 'unavailable',
             technicalMessage: error instanceof Error ? error.message : String(error),
         };
@@ -209,41 +170,26 @@ function canAccess(targetPath: string, mode: number): boolean {
     }
 }
 
-async function checkManagedHermesCapability(input: {
-    check(client: ReturnType<typeof createLocalHermesClient>): Promise<void>;
-    metadata?: Record<string, unknown>;
-    unavailableReason: string;
-}): Promise<RuntimeCapabilityCheckResult> {
-    const bootstrap = getManagedHermesState().bootstrap;
-    if (bootstrap.phase === 'installing') {
+function checkAgentEngineCapability(input: {
+    capability: 'api' | 'engine' | 'gateway' | 'models' | 'skills';
+}): RuntimeCapabilityCheckResult {
+    const model = resolveAgentModelSummary();
+    const metadata = {
+        capability: input.capability,
+        model: model.model,
+        provider: model.provider,
+        workspace: AGENT_WORKSPACE,
+    };
+
+    if (input.capability === 'models' && !hasConfiguredAgentModelAccess()) {
         return {
-            metadata: { ...input.metadata, bootstrap: 'installing' },
-            reason: 'Tavern is setting up the agent engine. First-time setup can take a few minutes.',
-            state: 'unavailable',
-        };
-    }
-    if (bootstrap.phase === 'failed') {
-        return {
-            metadata: { ...input.metadata, bootstrap: 'failed' },
-            reason: bootstrap.message ?? 'The agent engine could not be set up.',
-            state: 'unavailable',
+            metadata,
+            reason: "The assistant's model credentials are not configured.",
+            state: 'unauthorized',
         };
     }
 
-    const client = createLocalHermesClient();
-    try {
-        await input.check(client);
-        return { metadata: input.metadata, state: 'healthy' };
-    } catch (error) {
-        return {
-            metadata: input.metadata,
-            reason: input.unavailableReason,
-            state: 'unavailable',
-            technicalMessage: error instanceof Error ? error.message : String(error),
-        };
-    } finally {
-        client.close();
-    }
+    return { metadata, state: 'healthy' };
 }
 
 export function getRuntimeCapabilityDefinition(id: AgentRuntimeCapabilityHealthId) {

@@ -2,9 +2,9 @@ import { describe, expect, test } from 'bun:test';
 import type { AgentRuntimeConnectionOutput } from '../../lib/trpc.tsx';
 import { getRuntimeVersionMismatchDescription } from './runtime-version-gate.ts';
 import {
+    agentCapabilityRequirements,
     formatCapabilityDisabledReason,
     getCapability,
-    hermesCapabilityRequirements,
     routeTabCapabilityRequirements,
     settingsCapabilityRequirements,
 } from './use-capability.ts';
@@ -57,13 +57,13 @@ describe('Runtime capability gates', () => {
         expect(settingsCapabilityRequirements.stats).toEqual(['models']);
     });
 
-    test('keeps workspace instruction files editable without Hermes capabilities', () => {
+    test('keeps workspace instruction files editable without agent runtime capabilities', () => {
         expect(settingsCapabilityRequirements['notes-md']).toEqual([]);
         expect(settingsCapabilityRequirements['soul-md']).toEqual([]);
     });
 
-    test('gates Tasks on managed Hermes capabilities', () => {
-        expect(routeTabCapabilityRequirements.cron).toEqual(hermesCapabilityRequirements);
+    test('gates Tasks on agent runtime capabilities', () => {
+        expect(routeTabCapabilityRequirements.cron).toEqual(agentCapabilityRequirements);
     });
 
     test('explains old Runtime version mismatch beside green capability probes', () => {

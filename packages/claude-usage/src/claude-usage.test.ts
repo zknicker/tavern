@@ -188,6 +188,9 @@ describe('getClaudeUsage', () => {
     });
 
     it('loads credentials from Keychain when the file is absent', async () => {
+        const tempDir = await mkdtemp(path.join(os.tmpdir(), 'claude-usage-'));
+        tempDirs.push(tempDir);
+
         const fetchMock = vi.fn<typeof fetch>().mockResolvedValueOnce(
             new Response(
                 JSON.stringify({
@@ -202,6 +205,7 @@ describe('getClaudeUsage', () => {
 
         const usage = await getClaudeUsage({
             fetch: fetchMock,
+            homeDir: tempDir,
             readKeychain: async () =>
                 JSON.stringify({
                     claudeAiOauth: {

@@ -1,27 +1,27 @@
 import {
-    agentRuntimeApprovalRespondResultSchema,
-    agentRuntimeApprovalRespondSchema,
-    agentRuntimeClarificationRespondResultSchema,
-    agentRuntimeClarificationRespondSchema,
+    agentRuntimeCurrentAgentSessionResultSchema,
     agentRuntimeMacAppListSchema,
     agentRuntimeMutationHeaders,
     agentRuntimeMutationOrigins,
     agentRuntimeRoutes,
+    agentRuntimeStartAgentSessionResultSchema,
+    agentRuntimeStartAgentSessionSchema,
+    agentRuntimeUpdateAgentSessionModelResultSchema,
+    agentRuntimeUpdateAgentSessionModelSchema,
     agentRuntimeUpdateRequestSchema,
     agentRuntimeUpdateSchema,
     runtimeEventListSchema,
     runtimeHealthSchema,
     runtimeRoutes,
 } from '@tavern/api';
+import { handleAgentEnvRequest } from '../agent-engine/agent-env-routes';
+import { handleCommandsRequest } from '../agent-engine/command-routes';
+import { handleExecutionSettingsRequest } from '../agent-engine/execution-settings';
+import { handleMcpRequest } from '../agent-engine/mcp-routes';
+import { handleMcpServersRequest } from '../agent-engine/mcp-server-routes';
+import { handleSkillHubRequest } from '../agent-engine/skill-hub-routes';
+import { handleToolSetupRequest } from '../agent-engine/tool-setup-routes';
 import { handleRuntimeCapabilitiesRequest } from '../capabilities/routes';
-import { handleAgentEnvRequest } from '../hermes/agent-env-routes';
-import { handleCommandsRequest } from '../hermes/command-routes';
-import { handleConnectorsRequest } from '../hermes/connector-routes';
-import { handleExecutionSettingsRequest } from '../hermes/execution-settings';
-import { handleMcpRequest } from '../hermes/mcp-routes';
-import { handlePermissionSettingsRequest } from '../hermes/permission-settings';
-import { handleSkillHubRequest } from '../hermes/skill-hub-routes';
-import { handleToolsetSetupRequest } from '../hermes/toolset-setup-routes';
 import { handleRuntimeJobsRequest } from '../jobs/routes';
 import { listMacApps } from '../mac-apps/inventory';
 import { handleModelAccessRequest } from '../model-access/model-access';
@@ -30,11 +30,16 @@ import { handleOpenRouterSettingsRequest } from '../model-access/openrouter-sett
 import { handlePluginsRequest } from '../plugins/routes';
 import { handleVaultRequest } from '../vault/routes';
 import { handleWorkspaceRequest } from '../workspace/routes';
+import {
+    readCurrentAgentSession,
+    startNewAgentSession,
+    updateCurrentAgentSessionModel,
+} from './agent-session-store';
+import { createMessage } from './chat-api';
 import { handleTavernApiRequest } from './chat-api-router';
-import { deliverHermesCronToTavernChat } from './cron-delivery';
-import { respondToHermesApproval, respondToHermesClarification } from './hermes-turn-runner';
+import { deliverAgentCronToTavernChat } from './cron-delivery';
 import { forbidden, json, notFound, readJson } from './http';
-import { handleHermesProxyRequest } from './proxy';
+import { handleAgentProxyRequest } from './proxy';
 import { listProjectedTavernRuntimeEvents } from './runtime-event-projection';
 import { getRuntimeHealth } from './status';
 import { getRuntimeUpdateStatus, restartRuntimeForUpdate, startRuntimeUpdate } from './update';
@@ -58,7 +63,7 @@ export async function handleTavernRuntimeRequest(request: Request): Promise<Resp
     }
 
     if (request.method === 'POST' && url.pathname === '/cron/deliveries') {
-        const receipt = deliverHermesCronToTavernChat(await readJson(request));
+        const receipt = deliverAgentCronToTavernChat(await readJson(request));
         return json(
             {
                 chat_id: receipt.message.chat_id,
@@ -101,19 +106,14 @@ export async function handleTavernRuntimeRequest(request: Request): Promise<Resp
         return executionSettingsResponse;
     }
 
-    const permissionSettingsResponse = await handlePermissionSettingsRequest(request);
-    if (permissionSettingsResponse) {
-        return permissionSettingsResponse;
-    }
-
     const agentEnvResponse = await handleAgentEnvRequest(request);
     if (agentEnvResponse) {
         return agentEnvResponse;
     }
 
-    const connectorsResponse = await handleConnectorsRequest(request);
-    if (connectorsResponse) {
-        return connectorsResponse;
+    const mcpServersResponse = await handleMcpServersRequest(request);
+    if (mcpServersResponse) {
+        return mcpServersResponse;
     }
 
     const pluginsResponse = await handlePluginsRequest(request);
@@ -131,9 +131,9 @@ export async function handleTavernRuntimeRequest(request: Request): Promise<Resp
         return skillHubResponse;
     }
 
-    const toolsetSetupResponse = await handleToolsetSetupRequest(request);
-    if (toolsetSetupResponse) {
-        return toolsetSetupResponse;
+    const toolSetupResponse = await handleToolSetupRequest(request);
+    if (toolSetupResponse) {
+        return toolSetupResponse;
     }
 
     const mcpResponse = await handleMcpRequest(request);
@@ -185,9 +185,11 @@ export async function handleTavernRuntimeRequest(request: Request): Promise<Resp
 
     if (request.method === 'GET' && url.pathname === runtimeRoutes.events) {
         const limit = Number(url.searchParams.get('limit') ?? 500);
+        const afterCursor = Number(url.searchParams.get('after_cursor') ?? 0);
         return json(
             runtimeEventListSchema.parse({
                 events: listProjectedTavernRuntimeEvents({
+                    afterCursor: Number.isFinite(afterCursor) ? afterCursor : 0,
                     limit: Number.isFinite(limit) ? limit : 500,
                 }).map((entry) => entry.event),
             })
@@ -196,38 +198,109 @@ export async function handleTavernRuntimeRequest(request: Request): Promise<Resp
 
     const segments = url.pathname.split('/').filter(Boolean).map(decodeURIComponent);
 
+    if (
+        request.method === 'POST' &&
+        segments[0] === 'agent' &&
+        segments[1] === 'chats' &&
+        segments[2] &&
+        segments[3] === 'agent-sessions' &&
+        segments[4] === 'new'
+    ) {
+        const input = agentRuntimeStartAgentSessionSchema.parse(await readJson(request));
+        const session = startNewAgentSession({
+            agentParticipantId: input.agentParticipantId,
+            chatId: segments[2],
+        });
+        createMessage(segments[2], {
+            author_id: 'sys_tavern',
+            content: `Started new session: ${session.id}`,
+            id: sessionNoticeMessageId(session.id),
+            metadata: {
+                tavern: {
+                    agentParticipantId: session.agentParticipantId,
+                    kind: 'new_session',
+                    sessionId: session.id,
+                },
+            },
+            role: 'system',
+        });
+        return json(
+            agentRuntimeStartAgentSessionResultSchema.parse({
+                session,
+            })
+        );
+    }
+
+    if (
+        request.method === 'PATCH' &&
+        segments[0] === 'agent' &&
+        segments[1] === 'chats' &&
+        segments[2] &&
+        segments[3] === 'agent-sessions' &&
+        segments[4] === 'model'
+    ) {
+        const input = agentRuntimeUpdateAgentSessionModelSchema.parse(await readJson(request));
+        return json(
+            agentRuntimeUpdateAgentSessionModelResultSchema.parse(
+                updateCurrentAgentSessionModel({
+                    agentParticipantId: input.agentParticipantId,
+                    chatId: segments[2],
+                    model: input.model,
+                })
+            )
+        );
+    }
+
+    if (
+        request.method === 'GET' &&
+        segments[0] === 'agent' &&
+        segments[1] === 'chats' &&
+        segments[2] &&
+        segments[3] === 'agent-sessions' &&
+        segments[4] === 'current'
+    ) {
+        return json(
+            agentRuntimeCurrentAgentSessionResultSchema.parse({
+                session: readCurrentAgentSession({
+                    agentParticipantId: url.searchParams.get('agentParticipantId') ?? undefined,
+                    chatId: segments[2],
+                }),
+            })
+        );
+    }
+
     if (request.method === 'GET' && url.pathname === agentRuntimeRoutes.agents) {
-        const response = await handleHermesProxyRequest(request);
+        const response = await handleAgentProxyRequest(request);
         return response ?? notFound();
     }
 
     if (request.method === 'GET' && url.pathname === agentRuntimeRoutes.chats) {
-        const response = await handleHermesProxyRequest(request);
+        const response = await handleAgentProxyRequest(request);
         return response ?? notFound();
     }
 
     if (request.method === 'GET' && url.pathname === agentRuntimeRoutes.models) {
-        const response = await handleHermesProxyRequest(request);
+        const response = await handleAgentProxyRequest(request);
         return response ?? notFound();
     }
 
     if (request.method === 'GET' && url.pathname === agentRuntimeRoutes.skills) {
-        const response = await handleHermesProxyRequest(request);
+        const response = await handleAgentProxyRequest(request);
         return response ?? notFound();
     }
 
     if (request.method === 'GET' && segments[0] === 'skills' && segments[1] && !segments[2]) {
-        const response = await handleHermesProxyRequest(request);
+        const response = await handleAgentProxyRequest(request);
         return response ?? notFound();
     }
 
     if (request.method === 'GET' && url.pathname === agentRuntimeRoutes.sessions) {
-        const response = await handleHermesProxyRequest(request);
+        const response = await handleAgentProxyRequest(request);
         return response ?? notFound();
     }
 
     if (request.method === 'GET' && url.pathname === agentRuntimeRoutes.sessionPreviews) {
-        const response = await handleHermesProxyRequest(request);
+        const response = await handleAgentProxyRequest(request);
         return response ?? notFound();
     }
 
@@ -237,7 +310,7 @@ export async function handleTavernRuntimeRequest(request: Request): Promise<Resp
         segments[1] &&
         segments[2] === 'config'
     ) {
-        const response = await handleHermesProxyRequest(request);
+        const response = await handleAgentProxyRequest(request);
         return response ?? notFound();
     }
 
@@ -247,49 +320,32 @@ export async function handleTavernRuntimeRequest(request: Request): Promise<Resp
         segments[1] &&
         segments[2] === 'config'
     ) {
-        const response = await handleHermesProxyRequest(request);
+        const response = await handleAgentProxyRequest(request);
         return response ?? notFound();
     }
 
-    const hermesSessionKey =
-        segments[0] === 'hermes' && segments[1] === 'sessions' ? segments[2] : null;
-    if (hermesSessionKey && request.method === 'GET' && segments[3] === 'messages') {
-        const response = await handleHermesProxyRequest(request);
+    const agentSessionKey =
+        segments[0] === 'agent' && segments[1] === 'sessions' ? segments[2] : null;
+    if (agentSessionKey && request.method === 'GET' && segments[3] === 'messages') {
+        const response = await handleAgentProxyRequest(request);
         return response ?? notFound();
     }
 
-    if (hermesSessionKey && request.method === 'GET' && segments[3] === 'graph') {
-        const response = await handleHermesProxyRequest(request);
+    if (agentSessionKey && request.method === 'GET' && segments[3] === 'graph') {
+        const response = await handleAgentProxyRequest(request);
         return response ?? notFound();
     }
 
-    if (hermesSessionKey && request.method === 'POST' && segments[3] === 'resync') {
-        const response = await handleHermesProxyRequest(request);
+    if (agentSessionKey && request.method === 'POST' && segments[3] === 'resync') {
+        const response = await handleAgentProxyRequest(request);
         return response ?? notFound();
     }
 
-    if (hermesSessionKey && request.method === 'POST' && segments[3] === 'approval') {
-        const payload = agentRuntimeApprovalRespondSchema.parse(await readJson(request));
-        return json(
-            agentRuntimeApprovalRespondResultSchema.parse(
-                await respondToHermesApproval({ ...payload, sessionKey: hermesSessionKey })
-            )
-        );
-    }
-
-    if (hermesSessionKey && request.method === 'POST' && segments[3] === 'clarification') {
-        const payload = agentRuntimeClarificationRespondSchema.parse(await readJson(request));
-        return json(
-            agentRuntimeClarificationRespondResultSchema.parse(
-                await respondToHermesClarification({
-                    ...payload,
-                    sessionKey: hermesSessionKey,
-                })
-            )
-        );
-    }
-
-    const proxyResponse = await handleHermesProxyRequest(request);
+    const proxyResponse = await handleAgentProxyRequest(request);
 
     return proxyResponse ?? notFound();
+}
+
+function sessionNoticeMessageId(sessionId: string) {
+    return `msg_${sessionId}_notice`.replace(/[^A-Za-z0-9_-]/g, '_');
 }
