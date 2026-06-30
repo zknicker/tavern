@@ -85,8 +85,6 @@ import {
     type AgentRuntimeSkillHubTapList,
     type AgentRuntimeSkillHubUninstallInput,
     type AgentRuntimeSkillSummary,
-    type AgentRuntimeStartAgentSession,
-    type AgentRuntimeStartAgentSessionResult,
     type AgentRuntimeStartModelProviderOAuth,
     type AgentRuntimeSteerTurn,
     type AgentRuntimeSteerTurnResult,
@@ -213,8 +211,6 @@ import {
     agentRuntimeSkillHubUninstallInputSchema,
     agentRuntimeSkillListSchema,
     agentRuntimeSkillSchema,
-    agentRuntimeStartAgentSessionResultSchema,
-    agentRuntimeStartAgentSessionSchema,
     agentRuntimeStartModelProviderOAuthSchema,
     agentRuntimeSteerTurnResultSchema,
     agentRuntimeSteerTurnSchema,
@@ -448,10 +444,6 @@ export interface TavernAgentRuntimeClient {
         input: AgentRuntimeToolProviderSelect
     ): Promise<AgentRuntimeToolProviderSelectResult>;
     setMcpServerEnabled(name: string, enabled: boolean): Promise<{ ok: boolean }>;
-    startAgentSession(
-        chatId: string,
-        input: AgentRuntimeStartAgentSession
-    ): Promise<AgentRuntimeStartAgentSessionResult>;
     startModelProviderOAuth(input: AgentRuntimeStartModelProviderOAuth): Promise<unknown>;
     startUpdate(input?: { targetVersion?: null | string }): Promise<AgentRuntimeUpdate>;
     steerChatTurn(
@@ -2043,27 +2035,6 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         }
 
         return agentRuntimeMessageAcceptedSchema.parse(await response.json());
-    }
-
-    async startAgentSession(chatId: string, input: AgentRuntimeStartAgentSession) {
-        const payload = agentRuntimeStartAgentSessionSchema.parse(input);
-        const response = await fetch(
-            `${this.#baseUrl}${agentRuntimeRoutes.chatAgentSessionNew(chatId)}`,
-            {
-                body: JSON.stringify(payload),
-                headers: {
-                    ...this.#authHeaders,
-                    'content-type': 'application/json',
-                },
-                method: 'POST',
-            }
-        );
-
-        if (!response.ok) {
-            await readErrorResponse(response);
-        }
-
-        return agentRuntimeStartAgentSessionResultSchema.parse(await response.json());
     }
 
     async getCurrentAgentSession(input: { agentParticipantId?: string; chatId: string }) {

@@ -47,20 +47,22 @@ state attaches to agent participants. The app must not infer routing from a
 route id or display name.
 
 An agent participant is the Chat's Agent seat. Runtime stores that seat's
-current Agent session and exposes a Runtime command to rotate it:
+current Agent session:
 
 ```http
 GET  /agent/chats/{chat_id}/agent-sessions/current?agentParticipantId=
-POST /agent/chats/{chat_id}/agent-sessions/new
 PATCH /agent/chats/{chat_id}/agent-sessions/model
 ```
 
 `GET current` returns the current Agent session for that Chat seat or `null`.
-`POST new` archives older active sessions for that seat and updates only the
-current chat's agent participant. `PATCH model` changes the current session's
-effective model; same execution-kind changes update in place, and cross-kind
-changes rotate to a new Agent session. Other chats using the same agent
-definition keep their own current sessions and models.
+Rotating the seat to a fresh session is a composer command: `/new` starts fresh
+context, and `/clear` rotates and also clears the timeline. Rotating archives
+older active sessions for that seat and updates only the current chat's agent
+participant. See [Composer Commands](../../specs/composer-commands.md). `PATCH
+model` changes the current session's effective model; same execution-kind
+changes update in place, and cross-kind changes rotate to a new Agent session.
+Other chats using the same agent definition keep their own current sessions and
+models.
 
 ## Addressing
 

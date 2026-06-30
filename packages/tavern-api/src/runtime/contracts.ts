@@ -1563,14 +1563,6 @@ export const agentRuntimeProfileSchema = z.object({
     updatedAt: z.string().datetime(),
 });
 
-export const agentRuntimeStartAgentSessionSchema = z.object({
-    agentParticipantId: z.string().trim().min(1).optional(),
-});
-
-export const agentRuntimeStartAgentSessionResultSchema = z.object({
-    session: agentRuntimeAgentSessionSchema,
-});
-
 export const agentRuntimeCurrentAgentSessionResultSchema = z.object({
     session: agentRuntimeAgentSessionSchema.nullable(),
 });
@@ -2500,10 +2492,6 @@ export type AgentRuntimeSaveOpenRouterSettings = z.infer<
 export type AgentRuntimeFrontend = z.infer<typeof agentRuntimeFrontendSchema>;
 export type AgentRuntimeAgentSession = z.infer<typeof agentRuntimeAgentSessionSchema>;
 export type AgentRuntimeAgentSessionStatus = z.infer<typeof agentRuntimeAgentSessionStatusSchema>;
-export type AgentRuntimeStartAgentSession = z.infer<typeof agentRuntimeStartAgentSessionSchema>;
-export type AgentRuntimeStartAgentSessionResult = z.infer<
-    typeof agentRuntimeStartAgentSessionResultSchema
->;
 export type AgentRuntimeCurrentAgentSessionResult = z.infer<
     typeof agentRuntimeCurrentAgentSessionResultSchema
 >;

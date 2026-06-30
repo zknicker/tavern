@@ -11,7 +11,7 @@ import {
     updateCurrentAgentSessionModel,
 } from './agent-session-store';
 import { upsertStoredAgent } from './agents-store';
-import { createChat, listMessages } from './chat-api';
+import { createChat } from './chat-api';
 import { handleTavernRuntimeRequest } from './router';
 
 describe('Tavern Runtime agent sessions', () => {
@@ -126,45 +126,6 @@ describe('Tavern Runtime agent sessions', () => {
         ).toEqual([
             [first.id, 'archived'],
             [second.id, 'active'],
-        ]);
-    });
-
-    it('rotates a chat agent session through the Runtime HTTP command', async () => {
-        seedAgentChat({ chatId: 'cht_one', model: 'gpt-4.1-mini' });
-
-        const response = await handleTavernRuntimeRequest(
-            new Request(`http://runtime.test${agentRuntimeRoutes.chatAgentSessionNew('cht_one')}`, {
-                body: JSON.stringify({ agentParticipantId: 'agt_primary' }),
-                headers: { 'content-type': 'application/json' },
-                method: 'POST',
-            })
-        );
-        const payload = await response.json();
-
-        expect(response.status).toBe(200);
-        expect(payload).toMatchObject({
-            session: {
-                agentParticipantId: 'agt_primary',
-                chatId: 'cht_one',
-                generation: 1,
-                id: 'ags_cht_one_agt_primary_1',
-                status: 'active',
-            },
-        });
-        expect(listMessages('cht_one').messages).toMatchObject([
-            {
-                author: { id: 'sys_tavern', kind: 'system' },
-                content: 'Started new session: ags_cht_one_agt_primary_1',
-                id: 'msg_ags_cht_one_agt_primary_1_notice',
-                metadata: {
-                    tavern: {
-                        agentParticipantId: 'agt_primary',
-                        kind: 'new_session',
-                        sessionId: 'ags_cht_one_agt_primary_1',
-                    },
-                },
-                role: 'system',
-            },
         ]);
     });
 

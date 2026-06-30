@@ -1,15 +1,11 @@
-import { Refresh04Icon } from '@hugeicons-pro/core-solid-rounded';
 import { developmentChatDemoIds } from '@tavern/api/development-chat-demos';
 import * as React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { Icon } from '../../components/ui/icon.tsx';
-import { Button } from '../../components/ui/primitives/button.tsx';
 import { useAgentList } from '../../hooks/agents/use-agent-list.ts';
 import type { ChatTimelineState } from '../../hooks/chats/chat-timeline-state.ts';
 import { getChatDraftRouteState } from '../../hooks/chats/use-chat-draft-launch.ts';
 import { useChatDraftStart } from '../../hooks/chats/use-chat-draft-start.ts';
 import { useChatGet } from '../../hooks/chats/use-chat-list.ts';
-import { useChatStartAgentSession } from '../../hooks/chats/use-chat-start-agent-session.ts';
 import { useChatStartDrafts } from '../../hooks/chats/use-chat-start-drafts.tsx';
 import { useChatTimeline } from '../../hooks/chats/use-chat-timeline.ts';
 import { useModelList } from '../../hooks/models/use-model-list.ts';
@@ -172,7 +168,6 @@ function SyncedAgentChatDetail({ chat, chatId }: { chat: ChatListItem; chatId: s
           })
         : null;
     const artifactPanel = useChatArtifactPanelState(chatId);
-    const startAgentSession = useChatStartAgentSession();
     const isTurnBlocking = isBlockingActiveTurn({
         activeReply: timeline.activeReply,
         activeTurn: timeline.activeTurn,
@@ -196,44 +191,25 @@ function SyncedAgentChatDetail({ chat, chatId }: { chat: ChatListItem; chatId: s
                 failedTurn={timeline.failedTurn}
                 fetchPreviousPage={timeline.fetchPreviousPage}
                 footer={
-                    <>
-                        <div className="mx-auto flex w-full max-w-[60rem] justify-end px-6 pb-2">
-                            <Button
-                                disabled={!agentId || isTurnBlocking}
-                                loading={startAgentSession.isPending}
-                                onClick={() =>
-                                    startAgentSession.mutate({
-                                        agentParticipantId: agentId,
-                                        chatId: chat.id,
-                                    })
-                                }
-                                size="xs"
-                                variant="ghost"
-                            >
-                                <Icon icon={Refresh04Icon} />
-                                New session
-                            </Button>
-                        </div>
-                        <ChatMessageComposer
-                            activeRunId={
-                                timeline.activeTurn?.runId ?? timeline.activeReply?.runId ?? null
-                            }
-                            agentRuntimeSyncLabel={chat.agentRuntimeSyncLabel}
-                            agents={agents}
-                            boundAgentIds={chat.boundAgentIds}
-                            canSend={chat.canSend}
-                            chatId={chat.id}
-                            contextFullness={contextFullness}
-                            conversationKind={chat.conversationKind}
-                            isDisabled={chat.isDisabled}
-                            isReplyActive={isTurnBlocking}
-                            steerRunId={getSteerableRunId({
-                                activeReply: timeline.activeReply,
-                                activeTurn: timeline.activeTurn,
-                                rows,
-                            })}
-                        />
-                    </>
+                    <ChatMessageComposer
+                        activeRunId={
+                            timeline.activeTurn?.runId ?? timeline.activeReply?.runId ?? null
+                        }
+                        agentRuntimeSyncLabel={chat.agentRuntimeSyncLabel}
+                        agents={agents}
+                        boundAgentIds={chat.boundAgentIds}
+                        canSend={chat.canSend}
+                        chatId={chat.id}
+                        contextFullness={contextFullness}
+                        conversationKind={chat.conversationKind}
+                        isDisabled={chat.isDisabled}
+                        isReplyActive={isTurnBlocking}
+                        steerRunId={getSteerableRunId({
+                            activeReply: timeline.activeReply,
+                            activeTurn: timeline.activeTurn,
+                            rows,
+                        })}
+                    />
                 }
                 hasPreviousPage={timeline.hasPreviousPage}
                 header={<ChatRoomTopbar chat={chat} />}

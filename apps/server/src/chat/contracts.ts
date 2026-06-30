@@ -1,5 +1,4 @@
 import {
-    agentRuntimeAgentSessionSchema,
     agentRuntimeChatPlatformMetadataSchema,
     agentRuntimeTavernMessageMetadataSchema,
 } from '@tavern/api';
@@ -247,16 +246,6 @@ export const steerChatTurnResultSchema = z.object({
     steered: z.boolean(),
 });
 
-export const startChatAgentSessionInputSchema = z.object({
-    agentParticipantId: z.string().trim().min(1).optional(),
-    chatId: z.string().trim().min(1),
-});
-
-export const startChatAgentSessionResultSchema = z.object({
-    chatId: z.string().trim().min(1),
-    session: agentRuntimeAgentSessionSchema,
-});
-
 export const chatLogMessageRowSchema = messageRowSchema;
 export const chatLogToolRowSchema = toolRowSchema;
 export const chatLogWorkerRowSchema = workerRowSchema;
@@ -325,5 +314,3 @@ export type StopChatTurnInput = z.infer<typeof stopChatTurnInputSchema>;
 export type StopChatTurnResult = z.infer<typeof stopChatTurnResultSchema>;
 export type SteerChatTurnInput = z.infer<typeof steerChatTurnInputSchema>;
 export type SteerChatTurnResult = z.infer<typeof steerChatTurnResultSchema>;
-export type StartChatAgentSessionInput = z.infer<typeof startChatAgentSessionInputSchema>;
-export type StartChatAgentSessionResult = z.infer<typeof startChatAgentSessionResultSchema>;

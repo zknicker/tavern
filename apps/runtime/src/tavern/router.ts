@@ -4,8 +4,6 @@ import {
     agentRuntimeMutationHeaders,
     agentRuntimeMutationOrigins,
     agentRuntimeRoutes,
-    agentRuntimeStartAgentSessionResultSchema,
-    agentRuntimeStartAgentSessionSchema,
     agentRuntimeUpdateAgentSessionModelResultSchema,
     agentRuntimeUpdateAgentSessionModelSchema,
     agentRuntimeUpdateRequestSchema,
@@ -30,12 +28,7 @@ import { handleOpenRouterSettingsRequest } from '../model-access/openrouter-sett
 import { handlePluginsRequest } from '../plugins/routes';
 import { handleVaultRequest } from '../vault/routes';
 import { handleWorkspaceRequest } from '../workspace/routes';
-import {
-    readCurrentAgentSession,
-    startNewAgentSession,
-    updateCurrentAgentSessionModel,
-} from './agent-session-store';
-import { createMessage } from './chat-api';
+import { readCurrentAgentSession, updateCurrentAgentSessionModel } from './agent-session-store';
 import { handleTavernApiRequest } from './chat-api-router';
 import { deliverAgentCronToTavernChat } from './cron-delivery';
 import { forbidden, json, notFound, readJson } from './http';
@@ -199,39 +192,6 @@ export async function handleTavernRuntimeRequest(request: Request): Promise<Resp
     const segments = url.pathname.split('/').filter(Boolean).map(decodeURIComponent);
 
     if (
-        request.method === 'POST' &&
-        segments[0] === 'agent' &&
-        segments[1] === 'chats' &&
-        segments[2] &&
-        segments[3] === 'agent-sessions' &&
-        segments[4] === 'new'
-    ) {
-        const input = agentRuntimeStartAgentSessionSchema.parse(await readJson(request));
-        const session = startNewAgentSession({
-            agentParticipantId: input.agentParticipantId,
-            chatId: segments[2],
-        });
-        createMessage(segments[2], {
-            author_id: 'sys_tavern',
-            content: `Started new session: ${session.id}`,
-            id: sessionNoticeMessageId(session.id),
-            metadata: {
-                tavern: {
-                    agentParticipantId: session.agentParticipantId,
-                    kind: 'new_session',
-                    sessionId: session.id,
-                },
-            },
-            role: 'system',
-        });
-        return json(
-            agentRuntimeStartAgentSessionResultSchema.parse({
-                session,
-            })
-        );
-    }
-
-    if (
         request.method === 'PATCH' &&
         segments[0] === 'agent' &&
         segments[1] === 'chats' &&
@@ -354,8 +314,4 @@ export async function handleTavernRuntimeRequest(request: Request): Promise<Resp
     const proxyResponse = await handleAgentProxyRequest(request);
 
     return proxyResponse ?? notFound();
-}
-
-function sessionNoticeMessageId(sessionId: string) {
-    return `msg_${sessionId}_notice`.replace(/[^A-Za-z0-9_-]/g, '_');
 }
