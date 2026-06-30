@@ -44,6 +44,7 @@ export const settingsCapabilityRequirements = {
     'agent-tools': ['apiServer', 'skills'],
     'notes-md': [],
     appearance: [],
+    profile: [],
     channels: ['apiServer'],
     mcp: ['apiServer'],
     plugins: ['apiServer'],

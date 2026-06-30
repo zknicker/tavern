@@ -201,6 +201,16 @@ export function createAppRouter() {
                                             ),
                                         },
                                         {
+                                            path: 'profile',
+                                            lazy: lazyRoute(
+                                                () =>
+                                                    import(
+                                                        './routes/app/settings-profile-page.tsx'
+                                                    ),
+                                                'SettingsProfilePage'
+                                            ),
+                                        },
+                                        {
                                             path: 'updates',
                                             lazy: lazyRoute(
                                                 () =>
