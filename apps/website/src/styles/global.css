@@ -832,6 +832,16 @@
         -webkit-app-region: no-drag;
     }
 
+    [data-window-drag-disabled],
+    [data-window-drag-disabled] *,
+    [data-window-drag-disabled]::before,
+    [data-window-drag-disabled]::after,
+    [data-window-drag-disabled] *::before,
+    [data-window-drag-disabled] *::after {
+        app-region: no-drag;
+        -webkit-app-region: no-drag;
+    }
+
     html.macos-electron
         :is(
             button,

@@ -31,6 +31,7 @@ describe('AppShell drag regions', () => {
         expect(draggableMarkup).toContain('data-window-drag-region=""');
         expect(draggableMarkup).not.toContain('no-drag');
         expect(disabledMarkup).not.toContain('data-window-drag-region=""');
+        expect(disabledMarkup).toContain('data-window-drag-disabled=""');
         expect(disabledMarkup).toContain('no-drag');
     });
 });

@@ -10,6 +10,7 @@ import { SidebarProvider } from './components/ui/sidebar.tsx';
 import { shouldShowMainTopDragFade } from './features/shell/main-top-drag-fade.ts';
 import { AppSidebar } from './features/shell/sidebar.tsx';
 import { AppSidebarTopbar, AppTopbar } from './features/shell/topbar.tsx';
+import { useSidebarPreviewHover } from './features/shell/use-sidebar-preview-hover.ts';
 import {
     useAppLayoutPreference,
     useAppLayoutSearchParam,
@@ -32,35 +33,16 @@ export function Layout() {
     const [isSidebarPinnedOpen, setIsSidebarPinnedOpenState] = React.useState(
         getInitialSidebarPinnedOpen
     );
-    const [isSidebarPreviewOpen, setIsSidebarPreviewOpen] = React.useState(false);
-    const sidebarPreviewCloseTimeoutRef = React.useRef<number | null>(null);
-    const clearSidebarPreviewCloseTimeout = React.useCallback(() => {
-        if (sidebarPreviewCloseTimeoutRef.current !== null) {
-            window.clearTimeout(sidebarPreviewCloseTimeoutRef.current);
-            sidebarPreviewCloseTimeoutRef.current = null;
-        }
-    }, []);
-    const openSidebarPreview = React.useCallback(() => {
-        clearSidebarPreviewCloseTimeout();
-        setIsSidebarPreviewOpen(true);
-    }, [clearSidebarPreviewCloseTimeout]);
-    const closeSidebarPreview = React.useCallback(() => {
-        clearSidebarPreviewCloseTimeout();
-        setIsSidebarPreviewOpen(false);
-    }, [clearSidebarPreviewCloseTimeout]);
-    const scheduleSidebarPreviewClose = React.useCallback(() => {
-        clearSidebarPreviewCloseTimeout();
-        sidebarPreviewCloseTimeoutRef.current = window.setTimeout(() => {
-            setIsSidebarPreviewOpen(false);
-            sidebarPreviewCloseTimeoutRef.current = null;
-        }, 120);
-    }, [clearSidebarPreviewCloseTimeout]);
-    React.useEffect(
-        () => () => {
-            clearSidebarPreviewCloseTimeout();
-        },
-        [clearSidebarPreviewCloseTimeout]
-    );
+    const {
+        closeSidebarPreview,
+        openSidebarPreview,
+        scheduleSidebarPreviewClose,
+        showSidebarPreview,
+    } = useSidebarPreviewHover({
+        enabled: appLayout.mode === 'sidebar',
+        isPinnedOpen: isSidebarPinnedOpen,
+        sidebarWrapperRef,
+    });
     const setSidebarPinnedOpen = React.useCallback((open: boolean) => {
         setIsSidebarPinnedOpenState(open);
 
@@ -70,8 +52,6 @@ export function Layout() {
     }, []);
 
     const isSettingsRoute = location.pathname.startsWith('/dashboard/settings');
-    const showSidebarPreview =
-        appLayout.mode === 'sidebar' && !isSidebarPinnedOpen && isSidebarPreviewOpen;
     const showMainTopDragFade = shouldShowMainTopDragFade(location.pathname);
     const currentPath = `${location.pathname}${location.search}${location.hash}`;
     const lastAppPathRef = React.useRef('/dashboard/overview');

@@ -99,7 +99,9 @@ export function AppShellTopbar({
             className
         ),
         'data-slot': 'app-shell-topbar',
-        ...(nativeDragRegion ? { 'data-window-drag-region': '' } : {}),
+        ...(nativeDragRegion
+            ? { 'data-window-drag-region': '' }
+            : { 'data-window-drag-disabled': '' }),
     };
 
     return useRender({

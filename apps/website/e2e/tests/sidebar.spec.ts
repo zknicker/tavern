@@ -49,9 +49,68 @@ test('collapsed sidebar preview stays open over the top-left chrome', async ({ p
     const previewTopbar = page.locator('[data-slot="app-shell-topbar"]');
     await expect(previewTopbar).toHaveClass(/no-drag/u);
     await expect(previewTopbar).not.toHaveAttribute('data-window-drag-region', '');
+    await expect(previewTopbar).toHaveAttribute('data-window-drag-disabled', '');
 
     await page.mouse.move(48, 44);
     await page.waitForTimeout(180);
 
     await expect(wrapper).toHaveAttribute('data-sidebar-preview-open', 'true');
+});
+
+test('collapsed sidebar preview stays open throughout the revealed sidebar rectangle', async ({
+    page,
+}) => {
+    await page.addInitScript(() => {
+        window.localStorage.setItem('tavern.app.layout.mode.v2', 'sidebar');
+        window.localStorage.setItem('tavern.sidebar.pinnedOpen.v1', 'false');
+    });
+
+    await page.goto('/dashboard/overview');
+    const sidebar = page.locator('[data-slot="sidebar"]');
+    const wrapper = page.locator('[data-slot="sidebar-wrapper"]');
+
+    await page.mouse.move(4, 220);
+    await expect(wrapper).toHaveAttribute('data-sidebar-preview-open', 'true');
+
+    const sidebarContainer = page.locator('[data-slot="sidebar-container"]');
+    const sidebarBox = await sidebarContainer.boundingBox();
+    const trigger = page.locator('[data-slot="sidebar-trigger"]');
+    const triggerBox = await trigger.boundingBox();
+
+    if (!sidebarBox) {
+        throw new Error('Sidebar container was not visible.');
+    }
+
+    if (!triggerBox) {
+        throw new Error('Sidebar trigger was not visible.');
+    }
+
+    const keepOpenPoints = [
+        {
+            x: sidebarBox.x + sidebarBox.width - 4,
+            y: triggerBox.y + triggerBox.height / 2,
+        },
+        {
+            x: sidebarBox.x + sidebarBox.width / 2,
+            y: sidebarBox.y + 76,
+        },
+        {
+            x: sidebarBox.x + sidebarBox.width - 4,
+            y: sidebarBox.y + sidebarBox.height - 24,
+        },
+    ];
+
+    for (const point of keepOpenPoints) {
+        await page.mouse.move(point.x, point.y, { steps: 8 });
+        await page.waitForTimeout(180);
+        await expect(wrapper).toHaveAttribute('data-sidebar-preview-open', 'true');
+    }
+
+    await page.mouse.move(
+        triggerBox.x + triggerBox.width / 2,
+        triggerBox.y + triggerBox.height / 2
+    );
+    await page.mouse.down();
+    await page.mouse.up();
+    await expect(sidebar).toHaveAttribute('data-state', 'expanded');
 });
