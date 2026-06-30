@@ -16,6 +16,7 @@ import {
     completedResponse,
     type DevelopmentChatDemo,
     demoTime,
+    ownerMessage,
     userMessage,
 } from './development-chat-demo-types';
 
@@ -483,5 +484,73 @@ export function lineChartDemoProps(): RichResponseLineChartProps {
         ],
         title: 'Daily Traffic',
         xKey: 'date',
+    };
+}
+
+// A short exchange authored by the app owner (`usr_tavern`) rather than the
+// other demo participant, so the consolidated demo shows the viewer's own
+// right-anchored, avatar-less bubbles alongside the left roster.
+const selfDemoTurns = [
+    {
+        ask: 'Can you give me a quick status on the launch?',
+        reply: 'All green — the last deploy passed and there are no open incidents.',
+    },
+    {
+        ask: 'Nice. Anything I should double-check before I sign off?',
+        reply: 'Just confirm the release note reads cleanly; everything else is verified.',
+    },
+] as const;
+
+export function selfMessagesDemo(): DevelopmentChatDemo {
+    const chatId = developmentChatDemoIds.demo;
+
+    return {
+        chatId,
+        title: 'Demo: Your Messages',
+        messages: selfDemoTurns.flatMap((turn, index) => {
+            const ids = selfDemoTurnIds(index);
+
+            return [
+                ownerMessage({
+                    chatId,
+                    content: turn.ask,
+                    id: ids.requestMessageId,
+                    nonce: `${ids.slug}-request`,
+                }),
+                assistantMessage({
+                    chatId,
+                    content: turn.reply,
+                    id: ids.responseMessageId,
+                    nonce: `${ids.slug}-response`,
+                    requestMessageId: ids.requestMessageId,
+                    runId: ids.runId,
+                }),
+            ];
+        }),
+        responses: selfDemoTurns.map((turn, index) => {
+            const ids = selfDemoTurnIds(index);
+
+            return completedResponse({
+                chatId,
+                id: ids.responseId,
+                requestMessageId: ids.requestMessageId,
+                responseMessageId: ids.responseMessageId,
+                runId: ids.runId,
+                summary: turn.reply,
+            });
+        }),
+    };
+}
+
+function selfDemoTurnIds(index: number) {
+    const number = String(index + 1).padStart(2, '0');
+    const slug = `demo-self-${number}`;
+
+    return {
+        requestMessageId: `msg_demo_self_${number}_request`,
+        responseId: `rsp_demo_self_${number}`,
+        responseMessageId: `msg_demo_self_${number}_response`,
+        runId: `run_demo_self_${number}`,
+        slug,
     };
 }

@@ -6,6 +6,7 @@ import {
     calendarDayDemo,
     calendarEventDemo,
     longContentDemo,
+    selfMessagesDemo,
 } from './development-chat-demo-basic-definitions';
 import { chartDemo } from './development-chat-demo-composed-chart-definition';
 import { merchbaseSalesChartDemo } from './development-chat-demo-merchbase-sales-chart-definition';
@@ -31,6 +32,7 @@ export const developmentChatDemos: DevelopmentChatDemo[] = [
         activityTurnDemo(),
         completedOnly(toolHeadersDemo(), ['rsp_demo_tool_headers_completed']),
         firstCompletedTurns(turnTimelineDemo(), 8),
+        selfMessagesDemo(),
         streamingStackDemo(),
     ]),
 ];

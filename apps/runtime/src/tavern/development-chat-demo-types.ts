@@ -22,14 +22,26 @@ export type DevelopmentDemoResponse = TavernUpsertResponseRequest & {
 
 export const demoAgentId = 'agt_primary';
 export const demoUserParticipantId = 'usr_demo';
+// The app owner (local human participant, see the server's
+// `localHumanParticipantId`). Messages authored here render as the viewer's own
+// right-anchored, avatar-less bubbles instead of the left roster.
+export const demoOwnerParticipantId = 'usr_tavern';
 export const demoTime = '2026-06-18T15:00:00.000Z';
 
 export function userMessage(input: DemoMessageInput): DevelopmentDemoMessage {
+    return humanMessage(input, demoUserParticipantId);
+}
+
+export function ownerMessage(input: DemoMessageInput): DevelopmentDemoMessage {
+    return humanMessage(input, demoOwnerParticipantId);
+}
+
+function humanMessage(input: DemoMessageInput, authorId: string): DevelopmentDemoMessage {
     const { chatId, createdAt = demoTime, ...message } = input;
 
     return {
         ...message,
-        author_id: demoUserParticipantId,
+        author_id: authorId,
         createdAt,
         metadata: { runtime: { source: 'development-demo', sessionKey: sessionKey(chatId) } },
         role: 'user',
