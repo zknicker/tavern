@@ -37,7 +37,7 @@ execution evidence linked to Tavern messages.
 A `chat` is a Runtime-owned conversation container. Tavern-owned chats use
 `kind: "channel"` for shared room-style conversations and `kind: "dm"` for
 one-to-one direct messages. Runtime bootstraps the local workspace with
-`#general`, the local human participant, the primary Tavern agent participant,
+`general`, the local human participant, the primary Tavern agent participant,
 and the primary agent DM.
 
 `chat.participants` is the membership contract for the chat shell. Participant
@@ -120,16 +120,14 @@ The Tavern app keeps list and detail reads separate:
 * `chat.list` returns ordered Tavern chat ids plus lightweight list items. It is
   the sidebar and overview contract, not a full chat detail payload. List items
   include `hasActiveTurn` so compact views can show in-progress agent work
-  without reading the full chat log. List items also include `isPinned` so the
-  app can render durable focus-area chats above recent chats. External
-  execution references belong to `agent.chats.list`, not the global Tavern chat
-  list.
+  without reading the full chat log. Channels and DMs are durable rooms in the
+  app sidebar. External execution references belong to `agent.chats.list`, not
+  the global Tavern chat list.
 * `chat.get` returns one full chat record by `chatId`.
-* `chat.setPinned` changes one chat's durable pinned state.
-* `chat.updateTabAppearance` changes the durable color metadata for a pinned
-  Tavern chat tab.
+* `chat.updateTabAppearance` changes the durable channel color metadata for a
+  Tavern chat.
 * `chat.updateSystemPrompt` changes trusted chat-specific agent instructions
-  for a pinned Tavern chat. Empty text clears the prompt.
+  for a Tavern chat. Empty text clears the prompt.
 * `chat.log.list` returns turn-aligned pages of durable timeline rows for one
   chat, including messages, responses, running and completed activity, and
   renderable artifacts. Pages walk backward from the newest message with a
@@ -139,8 +137,8 @@ Invalidate `chat.list` when membership or list ordering can change. Invalidate
 `chat.get` when one chat's detail fields can change. Response and activity
 events update the app timeline by stable ids. Durable log invalidation belongs
 when messages, responses, activity, or artifacts are persisted.
-Pinned state, pinned tab color, and pinned system prompt changes invalidate
-`chat.list` and the changed `chat.get` record.
+Channel color and system prompt changes invalidate `chat.list` and the changed
+`chat.get` record.
 
 Live turn progress updates the visible `chat.log.list` cache by activity id.
 The eventual durable read returns the same row ids, so running activity becomes
@@ -274,11 +272,11 @@ in metadata or source fields; never use it as the Tavern timeline cursor.
 
 ## Chat Instructions
 
-Pinned Tavern chats can carry trusted chat-specific instructions in
+Tavern chats can carry trusted chat-specific instructions in
 `metadata.tavern.groupSystemPrompt`. Tavern passes that value through the
-agent turn adapter only while the chat is pinned. Generated temporary chat
-titles do not become durable execution labels; pinned chats and explicitly
-renamed chats may use their display name as the conversation label.
+agent turn adapter for the chat. Generated temporary chat titles do not become
+durable execution labels; explicitly renamed chats may use their display name
+as the conversation label.
 
 ## Deliveries
 

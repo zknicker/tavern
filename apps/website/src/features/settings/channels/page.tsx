@@ -7,6 +7,7 @@ import { Separator } from '../../../components/ui/separator.tsx';
 import { SettingsRow } from '../../../components/ui/settings-row.tsx';
 import { usePrimaryAgentSuspense } from '../../../hooks/agents/use-agent-list.ts';
 import { useMessagingPlatformList } from '../../../hooks/connections/use-messaging-platform-list.ts';
+import { appRoutes } from '../../../lib/app-routes.ts';
 import type { MessagingPlatformListOutput } from '../../../lib/trpc.tsx';
 import { formatDiscordBindingInboundMode } from '../connections/messaging-platform-shared.ts';
 
@@ -27,7 +28,7 @@ export function ChannelsSettingsPage() {
                         title="Tavern"
                         trailingWidth="intrinsic"
                     >
-                        <Button render={<Link to="/dashboard/chats" />} size="sm" variant="outline">
+                        <Button render={<Link to={appRoutes.chats} />} size="sm" variant="outline">
                             Open chats
                         </Button>
                     </SettingsRow>

@@ -1,6 +1,7 @@
 import { Archive02Icon, Plus } from '@hugeicons/core-free-icons';
 import * as React from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { ChannelIconBox } from '../../components/chats/channel-icon-box.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import { Button } from '../../components/ui/primitives/button.tsx';
 import {
@@ -14,7 +15,6 @@ import { Spinner } from '../../components/ui/spinner.tsx';
 import { useChatArchive } from '../../hooks/chats/use-chat-archive.ts';
 import { getChatDraftRouteState } from '../../hooks/chats/use-chat-draft-launch.ts';
 import { useChatList } from '../../hooks/chats/use-chat-list.ts';
-import { useChatPin } from '../../hooks/chats/use-chat-pin.ts';
 import type { ChatStartDraft } from '../../hooks/chats/use-chat-start-drafts.tsx';
 import { useChatStartDrafts } from '../../hooks/chats/use-chat-start-drafts.tsx';
 import { useChatSystemPrompt } from '../../hooks/chats/use-chat-system-prompt.ts';
@@ -26,11 +26,11 @@ import {
     newChatCapabilityRequirements,
     useCapability,
 } from '../../hooks/connections/use-capability.ts';
+import { appRoutes } from '../../lib/app-routes.ts';
 import { markChatTiming } from '../../lib/chat-timing.ts';
-import { cn } from '../../lib/utils.ts';
 import { buildChatList, type ChatListItem } from '../chats/chat-list-data.ts';
 import { buildChatPath } from '../chats/chat-path.ts';
-import { getPinnedTabColorStyle } from './pinned-tab-options.ts';
+import { getChannelColorStyle } from './channel-color-options.ts';
 import {
     canRenameSidebarChat,
     getErrorMessage,
@@ -56,7 +56,6 @@ export function AppSidebarChatList() {
     const drafts = useChatStartDrafts();
     const updateChat = useChatUpdate();
     const archiveChat = useChatArchive();
-    const pinChat = useChatPin();
     const systemPrompt = useChatSystemPrompt();
     const tabAppearance = useChatTabAppearance();
     const [renamingChat, setRenamingChat] = React.useState<ChatListItem | null>(null);
@@ -103,7 +102,7 @@ export function AppSidebarChatList() {
                 await archiveChat.mutateAsync({ chatId: chat.id });
 
                 if (location.pathname === buildChatPath(chat.id)) {
-                    await navigate('/dashboard/overview');
+                    await navigate(appRoutes.overview);
                 }
             } catch (error) {
                 // biome-ignore lint/suspicious/noAlert: Keep sidebar failures visible without adding a global toast dependency.
@@ -112,18 +111,7 @@ export function AppSidebarChatList() {
         },
         [archiveChat, location.pathname, navigate]
     );
-    const pinSidebarChat = React.useCallback(
-        async (chat: ChatListItem, pinned: boolean) => {
-            try {
-                await pinChat.mutateAsync({ chatId: chat.id, pinned });
-            } catch (error) {
-                // biome-ignore lint/suspicious/noAlert: Keep sidebar failures visible without adding a global toast dependency.
-                window.alert(getErrorMessage(error));
-            }
-        },
-        [pinChat]
-    );
-    const setPinnedTabColor = React.useCallback(
+    const setChannelColor = React.useCallback(
         async (chat: ChatListItem, color: string | null) => {
             try {
                 await tabAppearance.mutateAsync({
@@ -141,48 +129,6 @@ export function AppSidebarChatList() {
     return (
         <>
             <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain">
-                {sidebarChats.pinnedChats.length > 0 ? (
-                    <SidebarGroup className="group/pinned pt-1">
-                        <div className="relative flex h-8 items-center px-2">
-                            <div className="font-medium text-[var(--nav-section-label)] text-sm">
-                                Pinned
-                            </div>
-                        </div>
-                        <SidebarGroupContent>
-                            <SidebarMenu>
-                                {sidebarChats.pinnedChats.map((chat) => {
-                                    const isArchivePending =
-                                        archiveChat.isPending &&
-                                        archiveChat.variables?.chatId === chat.id;
-
-                                    return (
-                                        <SidebarRecentChatItem
-                                            chat={chat}
-                                            isActive={location.pathname === buildChatPath(chat.id)}
-                                            isArchivePending={isArchivePending}
-                                            key={chat.id}
-                                            onArchive={(selectedChat) => {
-                                                void archiveSidebarChat(selectedChat);
-                                            }}
-                                            onCustomizeColor={(selectedChat, color) => {
-                                                tabAppearance.reset();
-                                                void setPinnedTabColor(selectedChat, color);
-                                            }}
-                                            onEditSystemPrompt={(selectedChat) => {
-                                                systemPrompt.reset();
-                                                setEditingSystemPromptChat(selectedChat);
-                                            }}
-                                            onPinChange={(selectedChat, pinned) => {
-                                                void pinSidebarChat(selectedChat, pinned);
-                                            }}
-                                            onRename={openRename}
-                                        />
-                                    );
-                                })}
-                            </SidebarMenu>
-                        </SidebarGroupContent>
-                    </SidebarGroup>
-                ) : null}
                 <SidebarGroup className="group/channels pt-1">
                     <div className="relative flex h-8 items-center px-2">
                         <div className="font-medium text-[var(--nav-section-label)] text-sm">
@@ -194,7 +140,7 @@ export function AppSidebarChatList() {
                             disabled={!newChatGate.healthy}
                             render={
                                 newChatGate.healthy ? (
-                                    <NavLink to="/dashboard/overview" />
+                                    <NavLink to={appRoutes.overview} />
                                 ) : undefined
                             }
                             size="icon-xs"
@@ -222,14 +168,11 @@ export function AppSidebarChatList() {
                                         }}
                                         onCustomizeColor={(selectedChat, color) => {
                                             tabAppearance.reset();
-                                            void setPinnedTabColor(selectedChat, color);
+                                            void setChannelColor(selectedChat, color);
                                         }}
                                         onEditSystemPrompt={(selectedChat) => {
                                             systemPrompt.reset();
                                             setEditingSystemPromptChat(selectedChat);
-                                        }}
-                                        onPinChange={(selectedChat, pinned) => {
-                                            void pinSidebarChat(selectedChat, pinned);
                                         }}
                                         onRename={openRename}
                                     />
@@ -278,14 +221,11 @@ export function AppSidebarChatList() {
                                         }}
                                         onCustomizeColor={(selectedChat, color) => {
                                             tabAppearance.reset();
-                                            void setPinnedTabColor(selectedChat, color);
+                                            void setChannelColor(selectedChat, color);
                                         }}
                                         onEditSystemPrompt={(selectedChat) => {
                                             systemPrompt.reset();
                                             setEditingSystemPromptChat(selectedChat);
-                                        }}
-                                        onPinChange={(selectedChat, pinned) => {
-                                            void pinSidebarChat(selectedChat, pinned);
                                         }}
                                         onRename={openRename}
                                     />
@@ -394,7 +334,6 @@ function SidebarRecentChatItem({
     onArchive,
     onCustomizeColor,
     onEditSystemPrompt,
-    onPinChange,
     onRename,
 }: {
     chat: ChatListItem;
@@ -403,16 +342,13 @@ function SidebarRecentChatItem({
     onArchive: (chat: ChatListItem) => void;
     onCustomizeColor: (chat: ChatListItem, color: string | null) => void;
     onEditSystemPrompt: (chat: ChatListItem) => void;
-    onPinChange: (chat: ChatListItem, pinned: boolean) => void;
     onRename: (chat: ChatListItem) => void;
 }) {
     const title = getSidebarChatTitle(chat);
     const path = buildChatPath(chat.id);
     const timelineState = useChatRuntimeTimelineState(chat.id);
     const hasActiveTurn = chat.hasActiveTurn || hasLocalActiveTurn(timelineState);
-    const pinnedTabColorStyle = getPinnedTabColorStyle(
-        chat.isPinned ? chat.tabAppearance.color : null
-    );
+    const channelColorStyle = getChannelColorStyle(chat.tabAppearance.color);
 
     return (
         <SidebarMenuItem>
@@ -421,22 +357,16 @@ function SidebarRecentChatItem({
                 onArchive={onArchive}
                 onCustomizeColor={onCustomizeColor}
                 onEditSystemPrompt={onEditSystemPrompt}
-                onPinChange={onPinChange}
                 onRename={onRename}
             >
                 <SidebarMenuButton
-                    className={cn(
-                        'font-normal group-focus-within/menu-item:bg-sidebar-accent group-focus-within/menu-item:text-sidebar-accent-foreground group-hover/menu-item:bg-sidebar-accent group-hover/menu-item:text-sidebar-accent-foreground',
-                        pinnedTabColorStyle
-                            ? 'group-focus-within/menu-item:bg-[var(--pinned-tab-bg-hover-light)] group-hover/menu-item:bg-[var(--pinned-tab-bg-hover-light)] data-active:bg-[var(--pinned-tab-bg-active-light)] dark:data-active:bg-[var(--pinned-tab-bg-active-dark)] dark:group-hover/menu-item:bg-[var(--pinned-tab-bg-hover-dark)] dark:group-focus-within/menu-item:bg-[var(--pinned-tab-bg-hover-dark)]'
-                            : null
-                    )}
+                    className="font-normal group-focus-within/menu-item:bg-sidebar-accent group-focus-within/menu-item:text-sidebar-accent-foreground group-hover/menu-item:bg-sidebar-accent group-hover/menu-item:text-sidebar-accent-foreground"
                     isActive={isActive}
                     render={<NavLink to={path} />}
-                    style={pinnedTabColorStyle}
                     tooltip={title}
                 >
-                    <span className="flex min-w-0 flex-1 items-center gap-3">
+                    <span className="flex min-w-0 flex-1 items-center gap-2.5">
+                        <SidebarChatIcon chat={chat} style={channelColorStyle} />
                         <span className="min-w-0 flex-1 truncate">{title}</span>
                         <SidebarChatActivity chat={chat} hidden={hasActiveTurn} />
                         {hasActiveTurn && !isArchivePending ? (
@@ -452,6 +382,34 @@ function SidebarRecentChatItem({
             </SidebarChatContextMenu>
         </SidebarMenuItem>
     );
+}
+
+function SidebarChatIcon({
+    chat,
+    style,
+}: {
+    chat: ChatListItem;
+    style: React.CSSProperties | undefined;
+}) {
+    if (chat.conversationKind === 'channel') {
+        return <ChannelIconBox size="sidebar" style={style} />;
+    }
+
+    return (
+        <span
+            aria-hidden="true"
+            className="flex size-[1.125rem] shrink-0 items-center justify-center rounded-[0.375rem] bg-sidebar-accent font-medium text-[0.625rem] text-sidebar-muted"
+        >
+            {getSidebarParticipantInitial(chat)}
+        </span>
+    );
+}
+
+function getSidebarParticipantInitial(chat: ChatListItem) {
+    const name = chat.targetParticipant?.name ?? chat.participants[0]?.name ?? chat.title;
+    const normalized = name.trim();
+
+    return (normalized[0] ?? '?').toUpperCase();
 }
 
 function SidebarChatActivity({ chat, hidden }: { chat: ChatListItem; hidden: boolean }) {

@@ -11,6 +11,7 @@ import {
 } from '../../components/ui/breadcrumb.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import { Button } from '../../components/ui/primitives/button.tsx';
+import { appRoutes } from '../../lib/app-routes.ts';
 
 interface CronEditorHeaderProps {
     canEdit: boolean;
@@ -55,7 +56,7 @@ export function CronEditorHeader({
                                 event.preventDefault();
                                 onBack();
                             }}
-                            render={<Link to="/dashboard/cron" />}
+                            render={<Link to={appRoutes.tasks} />}
                             title="Back to automations"
                         >
                             Automations

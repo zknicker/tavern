@@ -18,7 +18,6 @@ export async function listAgentChats(input: { agentId: string }) {
                 hasActiveTurn: chat.hasActiveTurn,
                 id: chat.id,
                 isEnabled: chat.isEnabled,
-                isPinned: chat.isPinned,
                 lastActivityAt: chat.lastActivityAt,
                 latestSession: chat.latestSession,
                 participants: chat.participants,

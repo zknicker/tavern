@@ -6,6 +6,7 @@ import type {
 
 export interface DevelopmentChatDemo {
     chatId: string;
+    color?: string | null;
     messages: DevelopmentDemoMessage[];
     responses: DevelopmentDemoResponse[];
     title: string;

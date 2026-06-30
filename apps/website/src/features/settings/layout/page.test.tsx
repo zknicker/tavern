@@ -5,11 +5,11 @@ import { useLayoutContext } from '../../shell/use-layout-context.ts';
 import { SettingsLayout } from './page.tsx';
 
 describe('SettingsLayout', () => {
-    test('forwards the dashboard layout context to settings child routes', () => {
+    test('forwards the app layout context to settings child routes', () => {
         const markup = renderToStaticMarkup(
             <MemoryRouter initialEntries={['/settings/probe']}>
                 <Routes>
-                    <Route element={<DashboardLayoutProbe />} path="/settings">
+                    <Route element={<AppLayoutProbe />} path="/settings">
                         <Route element={<SettingsLayout />}>
                             <Route element={<SettingsChildProbe />} path="probe" />
                         </Route>
@@ -22,7 +22,7 @@ describe('SettingsLayout', () => {
     });
 });
 
-function DashboardLayoutProbe() {
+function AppLayoutProbe() {
     return <Outlet context={{ navigateToSettings: () => undefined }} />;
 }
 

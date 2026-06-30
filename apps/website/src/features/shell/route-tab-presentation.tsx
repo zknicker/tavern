@@ -2,7 +2,7 @@ import type { IconSvgElement } from '@hugeicons/react';
 import { Database02Icon, Folder01Icon, Joystick04Icon } from '@hugeicons-pro/core-stroke-rounded';
 import { TavernLogo } from '../../components/tavern-logo.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
-import type { RouteTab } from '../../hooks/dashboard/use-route-tab.ts';
+import type { RouteTab } from '../../hooks/shell/use-route-tab.ts';
 import { cn } from '../../lib/utils.ts';
 
 const routeTabIconNodeClassName =
@@ -26,7 +26,7 @@ export function getRouteTabIcon(tab: RouteTab): IconSvgElement | undefined {
             return Folder01Icon;
         case 'memory':
             return Database02Icon;
-        case 'cron':
+        case 'tasks':
         case 'overview':
             return undefined;
     }
@@ -34,7 +34,7 @@ export function getRouteTabIcon(tab: RouteTab): IconSvgElement | undefined {
 
 export function getRouteTabIconNode(tab: RouteTab, className = routeTabIconNodeClassName) {
     switch (tab) {
-        case 'cron':
+        case 'tasks':
             return (
                 <Icon aria-hidden="true" className={className} icon={Joystick04Icon} size={20} />
             );

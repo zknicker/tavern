@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Card } from '../../components/ui/card.tsx';
-import { useSearch } from '../../hooks/dashboard/use-search.ts';
+import { useSearch } from '../../hooks/shell/use-search.ts';
 import { EmptyState } from '../shell/empty-state.tsx';
 import { SessionCard } from './session-card.tsx';
 import { getSessionCardDomId } from './session-card-dom-id.ts';

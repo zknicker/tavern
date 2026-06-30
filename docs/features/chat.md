@@ -36,15 +36,12 @@ happen, and keep the durable timeline as context.
 * **Artifacts.** Code, images, files, diffs, documents, and charts render as
   durable outputs attached to messages or response activity.
 * **Receipts.** Message creation and assistant delivery are acknowledged by id.
-* **Chat tabs.** Pinned chats always appear first in the topbar. Unpinned chats
-  appear only while locally open during the current app session, sorted by chat
-  creation time. Restarting the app clears unpinned topbar tabs without
-  archiving them. `Cmd+T` opens the new-chat surface; `Cmd+W` or a tab close
-  button removes the current unpinned chat from the topbar. The overflow chat
-  menu can reopen any non-archived chat.
-* **Pinned chats.** Users can pin durable chats as focus-area homes. Pinned
-  chats stay in the tab strip, survive app restarts, and can carry a custom
-  tab color and chat-specific agent instructions.
+* **Channels and DMs.** Channels and direct messages are durable chat rooms in
+  the sidebar. Channels render with a hash icon and optional channel color.
+  Opening a chat shows a room topbar with the chat name and current
+  participants. There is no separate pinned-chat state.
+* **Chat appearance and instructions.** Tavern chats can carry durable channel
+  color and trusted chat-specific agent instructions.
 * **Offline catch-up.** Tavern Runtime keeps chat history while the app is
   closed; the app reloads from durable rows and refetches on reconnect.
 * **Mid-turn steering.** The chat composer stays available while an agent turn
@@ -229,14 +226,13 @@ that also patch live through `turn.progress` steps:
   agent's configured color, stay visible at rest, and live reply state plus
   active progress rows drive the expression.
 
-## Pinned chats
+## Chat Appearance
 
-Pinned chat state is durable Tavern Runtime chat state. It survives app
-reinstall and syncs through the normal chat list/detail reads. Pinning changes
-tab grouping only; it does not change chat membership, message ordering,
-response delivery, or archive behavior. Pinned tab color is durable Tavern chat
-metadata. Pinned chats can also carry trusted system prompt text that Tavern
-passes through Runtime prompt composition for that chat.
+Channel color is durable Tavern chat metadata. It colors the channel hash icon
+and supporting room chrome only; it does not change chat membership, message
+ordering, response delivery, or archive behavior. Tavern chats can also carry
+trusted system prompt text that Tavern passes through Runtime prompt
+composition for that chat.
 
 ## Contract
 

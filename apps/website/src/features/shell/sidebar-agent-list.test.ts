@@ -31,7 +31,7 @@ describe('AppSidebarAgentList', () => {
         const markup = renderToStaticMarkup(
             React.createElement(
                 MemoryRouter,
-                { initialEntries: ['/dashboard/chats/chat-1'] },
+                { initialEntries: ['/chats/chat-1'] },
                 React.createElement(
                     SidebarProvider,
                     null,
@@ -54,7 +54,7 @@ describe('AppSidebarAgentList', () => {
         const markup = renderToStaticMarkup(
             React.createElement(
                 MemoryRouter,
-                { initialEntries: ['/dashboard/agent'] },
+                { initialEntries: ['/agent'] },
                 React.createElement(
                     SidebarProvider,
                     null,

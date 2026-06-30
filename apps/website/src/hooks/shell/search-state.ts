@@ -1,3 +1,5 @@
+import { appRoutes } from '../../lib/app-routes.ts';
+
 export interface SearchConfig {
     placeholder: string;
 }
@@ -7,7 +9,7 @@ const searchConfigs: Array<{
     match: (pathname: string) => boolean;
 }> = [
     {
-        match: (pathname) => pathname === '/dashboard/cron',
+        match: (pathname) => pathname === appRoutes.tasks,
         config: {
             placeholder: 'Filter jobs...',
         },

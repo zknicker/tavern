@@ -141,7 +141,7 @@ chats
   id                    TEXT PRIMARY KEY
   kind                  TEXT NOT NULL        -- channel, dm
   title                 TEXT
-  pinned                INTEGER NOT NULL DEFAULT 0
+  pinned                INTEGER NOT NULL DEFAULT 0  -- legacy Runtime field; Tavern App ignores it
   metadata_json         TEXT NOT NULL DEFAULT '{}'
   created_at            TEXT NOT NULL
   updated_at            TEXT NOT NULL
@@ -157,7 +157,8 @@ PRIMARY KEY(id)
 Rules:
 
 - Runtime bootstraps the fresh Tavern workspace with `cht_general` as
-  `kind: channel` and a primary agent DM as `kind: dm`.
+  `kind: channel`, display name `general`, seeded channel color, and a primary
+  agent DM as `kind: dm`.
 - A DM has exactly two participants.
 - Chat archival and presentation state currently live in `metadata_json`.
 
@@ -656,8 +657,8 @@ transactional writes. Search indexes are derived state, not the source of truth.
 ## Invariants
 
 - Tavern Runtime chat history is canonical product state.
-- Chat pinned state is a first-class Runtime chat field, not app-local
-  presentation state.
+- Channels and DMs are durable chat rooms; Tavern App does not model pinned
+  chats.
 - The agent Chat participant is the stable Agent seat for an agent in a Chat.
 - Agent sessions can rotate without changing the Agent seat.
 - Agent transcript history is runtime-owned execution evidence.

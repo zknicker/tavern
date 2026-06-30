@@ -1,7 +1,9 @@
+import { appRoutes } from '../../lib/app-routes.ts';
+
 export const defaultWorkspaceChannelId = 'cht_general';
 
 export function buildChatPath(chatId: string) {
-    return `/dashboard/chats/${chatId}`;
+    return appRoutes.chat(chatId);
 }
 
 export function buildDefaultWorkspaceChatPath() {
@@ -9,5 +11,5 @@ export function buildDefaultWorkspaceChatPath() {
 }
 
 export function buildNewChatDraftPath() {
-    return '/dashboard/chats/new';
+    return appRoutes.newChatDraft;
 }

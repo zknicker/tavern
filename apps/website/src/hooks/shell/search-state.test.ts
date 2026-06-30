@@ -1,16 +1,16 @@
 import { describe, expect, test } from 'bun:test';
 import { getSearchConfig, setSearchQuery } from './search-state.ts';
 
-describe('dashboard search state', () => {
+describe('shell search state', () => {
     test('returns the expected placeholder for supported routes', () => {
-        expect(getSearchConfig('/dashboard/cron')).toEqual({
+        expect(getSearchConfig('/tasks')).toEqual({
             placeholder: 'Filter jobs...',
         });
     });
 
     test('returns null when the route does not support search', () => {
-        expect(getSearchConfig('/dashboard/overview')).toBeNull();
-        expect(getSearchConfig('/dashboard/settings')).toBeNull();
+        expect(getSearchConfig('/overview')).toBeNull();
+        expect(getSearchConfig('/settings')).toBeNull();
     });
 
     test('sets the q param while preserving unrelated params', () => {

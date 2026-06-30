@@ -1,4 +1,4 @@
-import { PencilEdit02Icon, PinIcon, PinOffIcon, Trash2 } from '@hugeicons/core-free-icons';
+import { PencilEdit02Icon, Trash2 } from '@hugeicons/core-free-icons';
 import { ColorsIcon as ColorsSolidIcon } from '@hugeicons-pro/core-solid-rounded';
 import { ArrowUpRight01Icon, Cancel01Icon, ColorsIcon } from '@hugeicons-pro/core-stroke-rounded';
 import * as React from 'react';
@@ -27,7 +27,7 @@ import { Input } from '../../components/ui/primitives/input.tsx';
 import { Textarea } from '../../components/ui/textarea.tsx';
 import { cn } from '../../lib/utils.ts';
 import type { ChatListItem } from '../chats/chat-list-data.ts';
-import { pinnedTabColorOptions } from './pinned-tab-options.ts';
+import { channelColorOptions } from './channel-color-options.ts';
 
 const contextMenuIconClassName = 'size-4';
 
@@ -39,7 +39,6 @@ interface SidebarChatContextMenuProps {
     onCustomizeColor?: (chat: ChatListItem, color: string | null) => void;
     onEditSystemPrompt?: (chat: ChatListItem) => void;
     onOpenInNewWindow?: (chat: ChatListItem) => void;
-    onPinChange: (chat: ChatListItem, pinned: boolean) => void;
     onRename: (chat: ChatListItem) => void;
     triggerClassName?: string;
 }
@@ -52,13 +51,12 @@ export function SidebarChatContextMenu({
     onCustomizeColor,
     onEditSystemPrompt,
     onOpenInNewWindow,
-    onPinChange,
     onRename,
     triggerClassName,
 }: SidebarChatContextMenuProps) {
-    const canCustomizePinnedTab = chat.isPinned && onCustomizeColor;
+    const canCustomizeColor = canCustomizeSidebarChatColor(chat) && onCustomizeColor;
     const canEditSystemPrompt = canEditSidebarChatSystemPrompt(chat) && onEditSystemPrompt;
-    const canCloseTab = onCloseTab && !chat.isPinned;
+    const canCloseTab = Boolean(onCloseTab);
 
     return (
         <ContextMenu>
@@ -73,14 +71,7 @@ export function SidebarChatContextMenu({
                     <Icon className={contextMenuIconClassName} icon={PencilEdit02Icon} />
                     Rename chat
                 </ContextMenuItem>
-                <ContextMenuItem onClick={() => onPinChange(chat, !chat.isPinned)}>
-                    <Icon
-                        className={contextMenuIconClassName}
-                        icon={chat.isPinned ? PinOffIcon : PinIcon}
-                    />
-                    {chat.isPinned ? 'Unpin chat' : 'Pin chat'}
-                </ContextMenuItem>
-                {canCustomizePinnedTab ? (
+                {canCustomizeColor ? (
                     <ContextMenuSub>
                         <ContextMenuSubTrigger>
                             <Icon className={contextMenuIconClassName} icon={ColorsIcon} />
@@ -91,7 +82,7 @@ export function SidebarChatContextMenu({
                                 <Icon className={contextMenuIconClassName} icon={ColorsIcon} />
                                 Default
                             </ContextMenuItem>
-                            {pinnedTabColorOptions.map((option) => (
+                            {channelColorOptions.map((option) => (
                                 <ContextMenuItem
                                     key={option.id}
                                     onClick={() => onCustomizeColor(chat, option.value)}
@@ -119,7 +110,7 @@ export function SidebarChatContextMenu({
                         Open in new window
                     </ContextMenuItem>
                 ) : null}
-                {canCloseTab ? (
+                {canCloseTab && onCloseTab ? (
                     <ContextMenuItem onClick={() => onCloseTab(chat)}>
                         <Icon className={contextMenuIconClassName} icon={Cancel01Icon} />
                         Close tab
@@ -198,7 +189,7 @@ function SidebarChatSystemPromptForm({
             <DialogHeader className="pe-6">
                 <DialogTitle>Chat instructions</DialogTitle>
                 <DialogDescription>
-                    Set trusted instructions the agent should follow in this pinned chat.
+                    Set trusted instructions the agent should follow in this chat.
                 </DialogDescription>
             </DialogHeader>
             <DialogPanel className="grid gap-3">
@@ -328,8 +319,14 @@ export function canRenameSidebarChat(chat: Pick<ChatListItem, 'boundAgentIds'>) 
     return chat.boundAgentIds.length === 1;
 }
 
-export function canEditSidebarChatSystemPrompt(chat: Pick<ChatListItem, 'isPinned' | 'type'>) {
-    return chat.isPinned && chat.type === 'tavern';
+export function canCustomizeSidebarChatColor(
+    chat: Pick<ChatListItem, 'conversationKind' | 'type'>
+) {
+    return chat.type === 'tavern' && chat.conversationKind === 'channel';
+}
+
+export function canEditSidebarChatSystemPrompt(chat: Pick<ChatListItem, 'type'>) {
+    return chat.type === 'tavern';
 }
 
 export function normalizeSidebarChatSystemPrompt(systemPrompt: string) {

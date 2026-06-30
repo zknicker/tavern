@@ -45,11 +45,11 @@ describe('Runtime capability gates', () => {
         expect(settingsCapabilityRequirements.plugins).toEqual(['apiServer']);
     });
 
-    test('gates the Workspace dashboard tab on Runtime API access', () => {
+    test('gates the Workspace app tab on Runtime API access', () => {
         expect(routeTabCapabilityRequirements.workspace).toEqual(['apiServer']);
     });
 
-    test('gates the Memory dashboard tab on Memory', () => {
+    test('gates the Memory app tab on Memory', () => {
         expect(routeTabCapabilityRequirements.memory).toEqual(['vault']);
     });
 
@@ -63,7 +63,7 @@ describe('Runtime capability gates', () => {
     });
 
     test('gates Tasks on agent runtime capabilities', () => {
-        expect(routeTabCapabilityRequirements.cron).toEqual(agentCapabilityRequirements);
+        expect(routeTabCapabilityRequirements.tasks).toEqual(agentCapabilityRequirements);
     });
 
     test('explains old Runtime version mismatch beside green capability probes', () => {

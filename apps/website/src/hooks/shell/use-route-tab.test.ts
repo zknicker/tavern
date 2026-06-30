@@ -1,0 +1,40 @@
+import { describe, expect, test } from 'bun:test';
+import { getRouteTab, routeTabs } from './use-route-tab.ts';
+
+describe('app route tab', () => {
+    test('labels the task tab as Tasks', () => {
+        expect(routeTabs.find((tab) => tab.id === 'tasks')?.label).toBe('Tasks');
+    });
+
+    test('exposes Workspace as an app tab', () => {
+        expect(routeTabs.find((tab) => tab.id === 'workspace')).toEqual({
+            id: 'workspace',
+            label: 'Workspace',
+            path: '/workspace',
+        });
+    });
+
+    test('returns the matching app tab for primary routes', () => {
+        expect(getRouteTab('/overview')).toBe('overview');
+        expect(getRouteTab('/tasks')).toBe('tasks');
+        expect(getRouteTab('/workspace')).toBe('workspace');
+        expect(getRouteTab('/memory')).toBe('memory');
+        expect(getRouteTab('/vault')).toBe('memory');
+    });
+
+    test('keeps legacy dashboard tab detection during redirects', () => {
+        expect(getRouteTab('/dashboard/overview')).toBe('overview');
+        expect(getRouteTab('/dashboard/cron')).toBe('tasks');
+        expect(getRouteTab('/dashboard/workspace')).toBe('workspace');
+        expect(getRouteTab('/dashboard/memory')).toBe('memory');
+        expect(getRouteTab('/dashboard/vault')).toBe('memory');
+    });
+
+    test('returns null when no app tab is active', () => {
+        expect(getRouteTab('/agent')).toBeNull();
+        expect(getRouteTab('/stats')).toBeNull();
+        expect(getRouteTab('/skills')).toBeNull();
+        expect(getRouteTab('/settings')).toBeNull();
+        expect(getRouteTab('/settings/theme')).toBeNull();
+    });
+});

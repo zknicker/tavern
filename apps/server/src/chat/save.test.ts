@@ -1,18 +1,17 @@
 import { afterEach, mock, spyOn, test } from 'bun:test';
 import assert from 'node:assert/strict';
 import * as runtimeChats from './runtime-chats.ts';
-import { updateTavernChatSystemPrompt } from './save.ts';
+import { updateTavernChatSystemPrompt, updateTavernChatTabAppearance } from './save.ts';
 
 afterEach(() => {
     mock.restore();
 });
 
-test('updateTavernChatSystemPrompt stores prompt text only for pinned Tavern chats', async () => {
+test('updateTavernChatSystemPrompt stores prompt text for Tavern chats', async () => {
     spyOn(runtimeChats, 'getRuntimeChatRecord').mockResolvedValue({
         chat: {
             platform: 'tavern',
         },
-        isPinned: true,
     } as Awaited<ReturnType<typeof runtimeChats.getRuntimeChatRecord>>);
     const updateSystemPrompt = spyOn(
         runtimeChats,
@@ -38,12 +37,63 @@ test('updateTavernChatSystemPrompt stores prompt text only for pinned Tavern cha
     ]);
 });
 
-test('updateTavernChatSystemPrompt rejects unpinned chats', async () => {
+test('updateTavernChatTabAppearance stores channel color for Tavern channels', async () => {
     spyOn(runtimeChats, 'getRuntimeChatRecord').mockResolvedValue({
         chat: {
             platform: 'tavern',
+            scope: 'channel',
         },
-        isPinned: false,
+    } as Awaited<ReturnType<typeof runtimeChats.getRuntimeChatRecord>>);
+    const updateTabAppearance = spyOn(
+        runtimeChats,
+        'updateRuntimeTavernChatTabAppearance'
+    ).mockResolvedValue(undefined);
+
+    const result = await updateTavernChatTabAppearance({
+        chatId: 'cht_1',
+        color: '#22c55e',
+    });
+
+    assert.deepEqual(result, {
+        chatId: 'cht_1',
+        tabAppearance: {
+            color: '#22c55e',
+        },
+    });
+    assert.deepEqual(updateTabAppearance.mock.calls, [
+        [
+            {
+                chatId: 'cht_1',
+                tabAppearance: {
+                    color: '#22c55e',
+                },
+            },
+        ],
+    ]);
+});
+
+test('updateTavernChatTabAppearance rejects Tavern DMs', async () => {
+    spyOn(runtimeChats, 'getRuntimeChatRecord').mockResolvedValue({
+        chat: {
+            platform: 'tavern',
+            scope: 'dm',
+        },
+    } as Awaited<ReturnType<typeof runtimeChats.getRuntimeChatRecord>>);
+
+    await assert.rejects(
+        updateTavernChatTabAppearance({
+            chatId: 'cht_1',
+            color: '#22c55e',
+        }),
+        /Only Tavern channels/
+    );
+});
+
+test('updateTavernChatSystemPrompt rejects non-Tavern chats', async () => {
+    spyOn(runtimeChats, 'getRuntimeChatRecord').mockResolvedValue({
+        chat: {
+            platform: 'discord',
+        },
     } as Awaited<ReturnType<typeof runtimeChats.getRuntimeChatRecord>>);
 
     await assert.rejects(
@@ -51,6 +101,6 @@ test('updateTavernChatSystemPrompt rejects unpinned chats', async () => {
             chatId: 'cht_1',
             systemPrompt: 'Nope',
         }),
-        /Only pinned chats/
+        /Only Tavern chats/
     );
 });

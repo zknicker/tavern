@@ -27,6 +27,7 @@ export function ChatDetailFrame({
     failedTurn,
     footer,
     hasPreviousPage = false,
+    header,
     historyLoaded,
     isFetchingPreviousPage = false,
     isPending,
@@ -45,6 +46,7 @@ export function ChatDetailFrame({
     failedTurn?: ChatTurnFailure | null;
     footer: React.ReactNode;
     hasPreviousPage?: boolean;
+    header?: React.ReactNode;
     historyLoaded: boolean;
     isFetchingPreviousPage?: boolean;
     isPending: boolean;
@@ -77,14 +79,14 @@ export function ChatDetailFrame({
         >
             <div className="flex min-h-0 flex-1 overflow-hidden">
                 <div className="relative flex min-w-0 flex-1 flex-col">
-                    <div className="absolute top-3 left-1/2 z-10 -translate-x-1/2">
-                        <ChatTranscriptLoadingIndicator
-                            className="shrink-0"
-                            visible={isInitialTranscriptPending}
-                        />
-                    </div>
-
+                    {header}
                     <div className="relative min-h-0 flex-1">
+                        <div className="absolute top-3 left-1/2 z-10 -translate-x-1/2">
+                            <ChatTranscriptLoadingIndicator
+                                className="shrink-0"
+                                visible={isInitialTranscriptPending}
+                            />
+                        </div>
                         <MessageScroller>
                             <MessageScrollerViewport
                                 className="px-6 py-4"

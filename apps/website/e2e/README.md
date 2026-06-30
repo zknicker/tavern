@@ -1,6 +1,6 @@
 # Website E2E
 
-This folder holds Playwright coverage for user-facing dashboard behavior.
+This folder holds Playwright coverage for user-facing app behavior.
 
 ## Lane
 

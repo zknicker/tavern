@@ -24,8 +24,7 @@ person to choose among internal runtime workers.
 - Tavern exposes Runtime's per-agent thinking setting as model effort when the Runtime supports it.
 - Tavern reads and writes supported agent config through Runtime APIs.
 - Tavern does not keep a competing canonical agent config store.
-- Tavern may keep local presentation overlays such as color, pinned state, and local
-  notes.
+- Tavern may keep local presentation overlays such as color and local notes.
 - Tavern exposes agent display name and color as editable agent settings on the agent record.
 - Tavern exposes the agent timezone as a Runtime-stored execution setting (system default when
   unset); it governs schedules and time-aware answers.

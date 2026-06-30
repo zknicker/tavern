@@ -9,6 +9,7 @@ import { useCronRun } from '../../hooks/cron/use-cron-run.ts';
 import { useCronRuns } from '../../hooks/cron/use-cron-runs.ts';
 import { useCronUpdate } from '../../hooks/cron/use-cron-update.ts';
 import { useOptimisticCronRuns } from '../../hooks/cron/use-optimistic-cron-runs.ts';
+import { appRoutes } from '../../lib/app-routes.ts';
 import type { CronDeliveryTargetsOutput, CronGetOutput } from '../../lib/trpc.tsx';
 import { cn } from '../../lib/utils.ts';
 import { CronDeleteDialog } from './cron-delete-dialog.tsx';
@@ -70,7 +71,7 @@ export function CronEditor() {
     const isLoadingEditor = !(shouldRenderForm || isMissingJob);
 
     const handleBack = React.useCallback(() => {
-        navigate('/dashboard/cron');
+        navigate(appRoutes.tasks);
     }, [navigate]);
 
     return (
@@ -131,7 +132,7 @@ export function CronEditor() {
                             await createMutation.mutateAsync(buildCronCreateInput(formState));
                         }
 
-                        navigate('/dashboard/cron');
+                        navigate(appRoutes.tasks);
                     }}
                     runs={optimisticCronRuns.runs}
                 />
@@ -167,7 +168,7 @@ export function CronEditor() {
                     }
 
                     await deleteMutation.mutateAsync({ jobId: job.id });
-                    navigate('/dashboard/cron');
+                    navigate(appRoutes.tasks);
                 }}
             />
         </div>

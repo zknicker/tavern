@@ -8,6 +8,7 @@ import {
     SidebarMenuItem,
 } from '../../components/ui/sidebar.tsx';
 import type { AgentRailItem } from '../../hooks/agents/use-agent-rail.ts';
+import { appRoutes } from '../../lib/app-routes.ts';
 import { buildAgentPath, getActiveAgentPage } from '../agents/agent-path.ts';
 
 const supportsLiveSidebarAgentActivity = false;
@@ -20,7 +21,7 @@ export function AppSidebarAgentList({ sidebarAgents }: { sidebarAgents: AgentRai
     const location = useLocation();
     const activeAgentPage = getActiveAgentPage(location.pathname);
     const agent = sidebarAgents[0] ?? null;
-    const agentPath = agent ? buildAgentPath(agent.id) : '/dashboard/agent';
+    const agentPath = agent ? buildAgentPath(agent.id) : appRoutes.settingsSessions;
     const isActiveAgent = activeAgentPage !== null;
     const hasLiveActivity = agent ? resolveSidebarAgentActive(agent) : false;
 

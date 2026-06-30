@@ -16,6 +16,7 @@ import {
     getRuntimeVersionMismatchReason,
 } from '../../../hooks/connections/runtime-version-gate.ts';
 import { useConnectAgentRuntime } from '../../../hooks/connections/use-connect-agent-runtime.ts';
+import { appRoutes } from '../../../lib/app-routes.ts';
 import { type AgentRuntimeConnectionOutput, trpc } from '../../../lib/trpc.tsx';
 import { AgentCapabilitiesSummary } from './agent-capabilities-table.tsx';
 
@@ -133,7 +134,7 @@ function RuntimeCompatibilityAlert({ connection }: { connection: RuntimeConnecti
             <AlertDescription>{getRuntimeVersionMismatchDescription(connection)}</AlertDescription>
             <AlertAction>
                 <Button
-                    render={<NavLink to="/dashboard/settings/updates" />}
+                    render={<NavLink to={appRoutes.settingsUpdates} />}
                     size="sm"
                     variant="destructive-soft"
                 >

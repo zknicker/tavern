@@ -15,11 +15,12 @@ import { useSidebarPreviewHover } from './features/shell/use-sidebar-preview-hov
 import {
     useAppLayoutPreference,
     useAppLayoutSearchParam,
-} from './hooks/dashboard/use-app-layout-preference.ts';
-import { useRouteTab } from './hooks/dashboard/use-route-tab.ts';
+} from './hooks/shell/use-app-layout-preference.ts';
+import { useRouteTab } from './hooks/shell/use-route-tab.ts';
+import { appRoutes } from './lib/app-routes.ts';
 import { getDesktopBridge, getDesktopSurface } from './lib/desktop-bridge.ts';
 
-export interface DashboardLayoutContextValue {
+export interface AppLayoutContextValue {
     navigateToSettings: () => void;
 }
 
@@ -53,10 +54,10 @@ export function Layout() {
         }
     }, []);
 
-    const isSettingsRoute = location.pathname.startsWith('/dashboard/settings');
+    const isSettingsRoute = location.pathname.startsWith(appRoutes.settings);
     const showMainTopDragFade = shouldShowMainTopDragFade(location.pathname);
     const currentPath = `${location.pathname}${location.search}${location.hash}`;
-    const lastAppPathRef = React.useRef('/dashboard/overview');
+    const lastAppPathRef = React.useRef<string>(appRoutes.overview);
     React.useEffect(() => {
         if (!isSettingsRoute) {
             lastAppPathRef.current = currentPath;
@@ -67,7 +68,7 @@ export function Layout() {
             lastAppPathRef.current = currentPath;
         }
 
-        navigate('/dashboard/settings');
+        navigate(appRoutes.settings);
     }, [currentPath, isSettingsRoute, navigate]);
     const navigateBackToApp = React.useCallback(() => navigate(lastAppPathRef.current), [navigate]);
     const outlet = (
@@ -82,7 +83,7 @@ export function Layout() {
     // the window's chrome web contents draws the tab strip and toolbar.
     if (getDesktopSurface() === 'content') {
         return (
-            <div className="dashboard-reference-theme flex h-dvh min-h-0 w-full flex-col overflow-hidden bg-[var(--browser-card)]">
+            <div className="app-reference-theme flex h-dvh min-h-0 w-full flex-col overflow-hidden bg-[var(--browser-card)]">
                 <ContentViewNavigation />
                 <div
                     className="relative flex min-h-0 flex-1 flex-col overflow-hidden"
@@ -97,7 +98,7 @@ export function Layout() {
     if (appLayout.mode === 'sidebar') {
         return (
             <SidebarProvider
-                className="dashboard-reference-theme flex min-h-screen w-full md:h-dvh md:min-h-0"
+                className="app-reference-theme flex min-h-screen w-full md:h-dvh md:min-h-0"
                 data-sidebar-preview-open={showSidebarPreview ? 'true' : undefined}
                 onOpenChange={(open) => {
                     if (!open) {
@@ -145,7 +146,7 @@ export function Layout() {
     }
 
     return (
-        <div className="dashboard-reference-theme flex min-h-screen w-full md:h-dvh md:min-h-0">
+        <div className="app-reference-theme flex min-h-screen w-full md:h-dvh md:min-h-0">
             <TavernBrowserShell
                 activeRouteTab={activeTab}
                 isSettingsRoute={isSettingsRoute}

@@ -1,7 +1,6 @@
 import type { MouseEventHandler } from 'react';
 import { AppShellTopbar, AppShellTopbarSidebarSlot } from '../../components/ui/app-shell.tsx';
 import { SidebarTrigger } from '../../components/ui/sidebar.tsx';
-
 export function AppSidebarTopbar({
     isExpanded,
     isPreview = false,

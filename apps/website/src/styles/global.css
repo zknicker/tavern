@@ -1049,6 +1049,10 @@
         );
     }
 
+    .app-shell-main:has([data-slot='chat-room-topbar']) .app-shell-main-top-drag-fade {
+        top: 3rem;
+    }
+
     .app-shell:has([data-slot='sidebar'][data-state='collapsed'][data-collapsible='offcanvas'])
         .app-shell-main-top-drag-fade {
         left: calc(var(--traffic-light-inset) + 2.75rem);
@@ -1186,7 +1190,7 @@
 }
 
 @layer base {
-    .dashboard-reference-theme {
+    .app-reference-theme {
         --content-card: var(--card);
     }
 

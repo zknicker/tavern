@@ -1,6 +1,6 @@
 import * as React from 'react';
 import type { AgentRuntimeConnectionOutput } from '../../lib/trpc.tsx';
-import type { RouteTab } from '../dashboard/use-route-tab.ts';
+import type { RouteTab } from '../shell/use-route-tab.ts';
 import { getRuntimeVersionMismatchReason } from './runtime-version-gate.ts';
 import { useRuntimeConnection } from './use-runtime-connection.ts';
 
@@ -61,7 +61,7 @@ export const agentCapabilityRequirements = [
 
 export const routeTabCapabilityRequirements = {
     // Tasks are hidden unless the agent runtime is fully ready because create/run actions execute there.
-    cron: agentCapabilityRequirements,
+    tasks: agentCapabilityRequirements,
     overview: [],
     memory: ['vault'],
     workspace: ['apiServer'],

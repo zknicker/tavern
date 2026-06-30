@@ -42,10 +42,10 @@ export function seedDevelopmentChatDemos({
                 id: demo.chatId,
                 metadata: tavernChatMetadata({
                     agentIds: [demoAgentId],
+                    color: demo.color ?? null,
                     displayName: demo.title,
                     id: demo.chatId,
                 }),
-                pinned: false,
                 title: demo.title,
             },
             db
@@ -153,7 +153,12 @@ function setMessageTimestamp(messageId: string, timestamp: string, db: Database)
     );
 }
 
-function tavernChatMetadata(input: { agentIds: string[]; displayName: string; id: string }) {
+function tavernChatMetadata(input: {
+    agentIds: string[];
+    color: string | null;
+    displayName: string;
+    id: string;
+}) {
     return {
         runtime: {
             source: 'tavern',
@@ -164,7 +169,7 @@ function tavernChatMetadata(input: { agentIds: string[]; displayName: string; id
             archived: false,
             displayName: input.displayName,
             displayNameSource: 'explicit',
-            tabAppearance: { color: null },
+            tabAppearance: { color: input.color },
         },
     };
 }

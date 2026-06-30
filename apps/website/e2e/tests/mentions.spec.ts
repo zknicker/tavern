@@ -2,7 +2,7 @@ import type { Page } from '@playwright/test';
 import { expect, test } from '../support/test.ts';
 
 test('focuses the homepage composer with adventure placeholder copy', async ({ page }) => {
-    await page.goto('/dashboard/overview');
+    await page.goto('/overview');
 
     const composer = page.locator('#home-prompt');
 
@@ -14,7 +14,7 @@ test('focuses the homepage composer with adventure placeholder copy', async ({ p
 test('autocompletes runtime skills with the dollar trigger', async ({ page }) => {
     const skill = await firstInventorySkill(page);
 
-    await page.goto('/dashboard/overview');
+    await page.goto('/overview');
 
     const composer = page.locator('#home-prompt');
     await composer.click();
@@ -35,7 +35,7 @@ test('autocompletes runtime skills with the dollar trigger', async ({ page }) =>
 });
 
 test('dollar trigger filters the picker to skills', async ({ page }) => {
-    await page.goto('/dashboard/overview');
+    await page.goto('/overview');
 
     const composer = page.locator('#home-prompt');
     await composer.click();
@@ -57,7 +57,7 @@ test('backspace removes a mention chip without moving the caret to a new line', 
 }) => {
     const skill = await firstInventorySkill(page);
 
-    await page.goto('/dashboard/overview');
+    await page.goto('/overview');
 
     const composer = page.locator('#home-prompt');
     await composer.click();
@@ -78,7 +78,7 @@ test('backspace removes a mention chip without moving the caret to a new line', 
 test('keeps mention chips editable in common composer flows', async ({ page }) => {
     const skill = await firstInventorySkill(page);
 
-    await page.goto('/dashboard/overview');
+    await page.goto('/overview');
 
     const composer = page.locator('#home-prompt');
 
@@ -91,7 +91,7 @@ test('keeps mention chips editable in common composer flows', async ({ page }) =
 
     await expect(composer).toContainText(new RegExp(`^${escapeRegExp(skill.label)} done$`, 'u'));
 
-    await page.goto('/dashboard/overview');
+    await page.goto('/overview');
     await composer.click();
     await composer.pressSequentially('Use $zz');
 
@@ -105,7 +105,7 @@ test('keeps mention chips editable in common composer flows', async ({ page }) =
 });
 
 test('inserts a newline on Shift+Enter in the mention composer', async ({ page }) => {
-    await page.goto('/dashboard/overview');
+    await page.goto('/overview');
 
     const composer = page.locator('#home-prompt');
     await composer.click();
@@ -123,7 +123,7 @@ test('inserts a newline on Shift+Enter in the mention composer', async ({ page }
 });
 
 test('keeps keyboard selection visible in the skill picker', async ({ page }) => {
-    await page.goto('/dashboard/overview');
+    await page.goto('/overview');
 
     const composer = page.locator('#home-prompt');
     await composer.click();
@@ -187,7 +187,7 @@ test('submits mention markdown plus Tavern metadata without starting a turn', as
     ];
 
     for (const testCase of cases) {
-        await page.goto('/dashboard/overview');
+        await page.goto('/overview');
 
         const chatStartRequest = waitForBlockedChatStart(page);
         const composer = page.locator('#home-prompt');

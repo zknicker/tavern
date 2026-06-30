@@ -1,9 +1,9 @@
 import { describe, expect, test } from 'bun:test';
 import type { RuntimeConnectionStatus } from '../../hooks/connections/use-runtime-connection.ts';
-import { shouldRedirectToRuntimeOnboarding } from './dashboard-setup-gate.tsx';
+import { shouldRedirectToRuntimeOnboarding } from './runtime-setup-gate.tsx';
 
-describe('dashboard setup gate', () => {
-    test('keeps runtime startup and reconnect states on the dashboard', () => {
+describe('runtime setup gate', () => {
+    test('keeps runtime startup and reconnect states in the app', () => {
         const statuses: RuntimeConnectionStatus[] = [
             'checking',
             'error',
@@ -37,7 +37,7 @@ describe('dashboard setup gate', () => {
         ).toBe(false);
     });
 
-    test('keeps configured version contract states on the dashboard', () => {
+    test('keeps configured version contract states in the app', () => {
         expect(
             shouldRedirectToRuntimeOnboarding({
                 hasConfiguredRuntime: true,

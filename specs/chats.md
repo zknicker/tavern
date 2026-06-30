@@ -23,8 +23,8 @@ Chats are Tavern's shared conversation surfaces.
   in the chat screen chrome.
 - When transcript rows first arrive for a normal chat load, durable history mounts without
   transcript entrance motion.
-- When a new Tavern chat moves from the optimistic `/dashboard/chats/new` draft route to the real
-  `/dashboard/chats/:chatId` route, rows already visible in the draft must not replay entrance
+- When a new Tavern chat moves from the optimistic `/chats/new` draft route to the real
+  `/chats/:chatId` route, rows already visible in the draft must not replay entrance
   animation after reconciliation.
 - Optimistic draft rows are app-local presentation state. They reconcile to the real chat
   route without becoming a separate durable transcript source.

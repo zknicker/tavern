@@ -20,7 +20,7 @@ function getAgentRuntimeTitle(
         return 'Could not load saved Tavern Runtime state.';
     }
 
-    return 'Dashboard is running on synced data only.';
+    return 'Tavern is running on synced data only.';
 }
 
 export function AgentRuntimeConnectionBadge() {

@@ -22,7 +22,6 @@ export function createChat(input: TavernCreateChatRequest, db: Database = getDb(
         const participants = input.participants ?? existing.participants;
         validateChatShape({ kind, participants });
         const metadata = input.metadata ?? existing.metadata;
-        const pinned = input.pinned ?? existing.pinned;
         const title = input.title ?? existing.title;
         const shouldTouch =
             kind !== existing.kind ||
@@ -35,7 +34,6 @@ export function createChat(input: TavernCreateChatRequest, db: Database = getDb(
                 `UPDATE chats
                  SET kind = $kind,
                      title = $title,
-                     pinned = $pinned,
                      metadata_json = $metadataJson,
                      updated_at = $updatedAt
                  WHERE id = $id`
@@ -44,7 +42,6 @@ export function createChat(input: TavernCreateChatRequest, db: Database = getDb(
                     id: input.id,
                     kind,
                     metadataJson: JSON.stringify(metadata),
-                    pinned: pinned ? 1 : 0,
                     title,
                     updatedAt,
                 })
@@ -71,7 +68,7 @@ export function createChat(input: TavernCreateChatRequest, db: Database = getDb(
                 kind,
                 metadataJson: JSON.stringify(input.metadata ?? {}),
                 now,
-                pinned: input.pinned ? 1 : 0,
+                pinned: 0,
                 title: input.title ?? null,
             })
         );
@@ -135,7 +132,6 @@ function rowToChat(row: ChatRow, db: Database): TavernChat {
         last_message_sequence: row.last_message_sequence,
         metadata: JSON.parse(row.metadata_json) as Record<string, unknown>,
         participants: listChatParticipants(row.id, db),
-        pinned: row.pinned === 1,
         title: row.title,
         updated_at: row.updated_at,
     };

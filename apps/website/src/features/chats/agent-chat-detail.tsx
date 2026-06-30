@@ -13,6 +13,7 @@ import { useChatStartAgentSession } from '../../hooks/chats/use-chat-start-agent
 import { useChatStartDrafts } from '../../hooks/chats/use-chat-start-drafts.tsx';
 import { useChatTimeline } from '../../hooks/chats/use-chat-timeline.ts';
 import { useModelList } from '../../hooks/models/use-model-list.ts';
+import { appRoutes } from '../../lib/app-routes.ts';
 import { MissingAgentState } from '../agents/missing-agent-state.tsx';
 import { ArtifactPanelOpenProvider } from './artifact-panel-context.tsx';
 import { ChatArtifactPanel, useChatArtifactPanelState } from './chat-artifact-panel.tsx';
@@ -23,6 +24,7 @@ import { buildChatListItem, type ChatListItem } from './chat-list-data.ts';
 import { ChatMessageComposer } from './chat-message-composer.tsx';
 import { getChatMessageLayout } from './chat-message-layout.ts';
 import { buildChatPath } from './chat-path.ts';
+import { ChatRoomTopbar } from './chat-room-topbar.tsx';
 import { getSteerableRunId } from './chat-steering.ts';
 
 export const chatDetailLogLimit = 24;
@@ -83,7 +85,7 @@ export function AgentChatDetail({ chatId }: { chatId: string }) {
 
     if (isDraftRoute) {
         if (!routeDraft) {
-            return <Navigate replace to="/dashboard/overview" />;
+            return <Navigate replace to={appRoutes.overview} />;
         }
 
         return <ChatDraftDetail draft={routeDraft} timelineChatId={routeDraft.id} />;
@@ -102,7 +104,7 @@ export function AgentChatDetail({ chatId }: { chatId: string }) {
             return <ChatDraftDetail draft={null} timelineChatId={chatId} />;
         }
 
-        return <Navigate replace to="/dashboard/overview" />;
+        return <Navigate replace to={appRoutes.overview} />;
     }
 
     return <SyncedAgentChatDetail chat={chat} chatId={chatId} />;
@@ -234,6 +236,7 @@ function SyncedAgentChatDetail({ chat, chatId }: { chat: ChatListItem; chatId: s
                     </>
                 }
                 hasPreviousPage={timeline.hasPreviousPage}
+                header={<ChatRoomTopbar chat={chat} />}
                 historyLoaded={timeline.historyLoaded}
                 isFetchingPreviousPage={timeline.isFetchingPreviousPage}
                 isPending={timeline.isPending}

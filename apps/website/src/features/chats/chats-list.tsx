@@ -10,7 +10,7 @@ import {
     EmptyTitle,
 } from '../../components/ui/empty.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
-import { useSearch } from '../../hooks/dashboard/use-search.ts';
+import { useSearch } from '../../hooks/shell/use-search.ts';
 import type { AgentListOutput } from '../../lib/trpc.tsx';
 import { ChatCard } from './chat-card.tsx';
 import type { ChatListItem } from './chat-list-data.ts';

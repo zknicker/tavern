@@ -1,5 +1,5 @@
 import { ScrollArea } from '../../components/ui/scroll-area.tsx';
-import { useSearch } from '../../hooks/dashboard/use-search.ts';
+import { useSearch } from '../../hooks/shell/use-search.ts';
 import type { WorkerListOutput } from '../../lib/trpc.tsx';
 import { EmptyState } from '../shell/empty-state.tsx';
 import { filterWorkers, type WorkersFilterType } from './filter-workers.ts';

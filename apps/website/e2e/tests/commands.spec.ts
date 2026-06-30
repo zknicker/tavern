@@ -146,12 +146,12 @@ async function startChat(
     page: Page,
     { expectedReply, prompt }: { expectedReply: string; prompt: string }
 ) {
-    await page.goto('/dashboard/overview');
+    await page.goto('/overview');
 
     await fillComposer(page, '#home-prompt', prompt);
     await page.getByRole('button', { name: 'Start chat' }).click();
 
-    await page.waitForURL((url) => /^\/dashboard\/chats\/(?!new$)[^/]+$/.test(url.pathname), {
+    await page.waitForURL((url) => /^\/chats\/(?!new$)[^/]+$/.test(url.pathname), {
         timeout: 30_000,
     });
     await expect(

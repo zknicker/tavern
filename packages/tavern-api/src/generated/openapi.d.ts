@@ -324,7 +324,6 @@ export interface components {
             created_at: components["schemas"]["Timestamp"];
             updated_at: components["schemas"]["Timestamp"];
             last_message_sequence: number;
-            pinned: boolean;
             participants: components["schemas"]["Participant"][];
             metadata: components["schemas"]["JsonObject"];
         };
@@ -333,7 +332,6 @@ export interface components {
             /** @enum {string} */
             kind?: "channel" | "dm";
             title?: string | null;
-            pinned?: boolean;
             participants?: components["schemas"]["Participant"][];
             metadata?: components["schemas"]["JsonObject"];
         };

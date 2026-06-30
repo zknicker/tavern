@@ -2,7 +2,7 @@ import type { Page } from '@playwright/test';
 import { expect, test } from '../support/test.ts';
 
 test('agent settings hide unsupported legacy engine controls', async ({ page }) => {
-    await page.goto('/dashboard/settings/agent');
+    await page.goto('/settings/agent');
 
     await expect(page.getByRole('combobox', { name: 'Agent model' })).toBeVisible();
     await expect(page.getByText('Fallback models')).toHaveCount(0);
@@ -18,7 +18,7 @@ test('agent model select saves and reflects the selected Runtime model', async (
     const originalModel = await readPrimaryAgentModel();
     const targetModel = { label: 'GPT-5.5 openai', model: 'gpt-5.5', provider: 'openai' };
 
-    await page.goto('/dashboard/settings/agent');
+    await page.goto('/settings/agent');
     await expect(page.getByText('Thinking')).toBeVisible();
 
     try {
@@ -85,7 +85,7 @@ async function restorePrimaryAgentModel(
         return;
     }
 
-    await page.goto('/dashboard/settings/agent');
+    await page.goto('/settings/agent');
     const modelSelect = agentModelSelect(page);
     await expect(modelSelect).toBeVisible();
     await modelSelect.click();
