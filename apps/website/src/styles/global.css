@@ -357,6 +357,96 @@
         font-size: 0.8125em;
         line-height: 1.35;
     }
+
+    .wrap-break-word {
+        overflow-wrap: anywhere;
+        word-break: normal;
+    }
+
+    .scrollbar-gutter-stable {
+        scrollbar-gutter: stable;
+    }
+
+    .scrollbar-none {
+        scrollbar-width: none;
+    }
+
+    .scrollbar-none::-webkit-scrollbar {
+        display: none;
+    }
+
+    .scrollbar-thin {
+        scrollbar-width: thin;
+        scrollbar-color: color-mix(in srgb, var(--border) 72%, transparent) transparent;
+    }
+
+    .scrollbar-thin::-webkit-scrollbar {
+        width: 0.5rem;
+        height: 0.5rem;
+    }
+
+    .scrollbar-thin::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .scrollbar-thin::-webkit-scrollbar-thumb {
+        border: 2px solid transparent;
+        border-radius: 999px;
+        background: color-mix(in srgb, var(--border) 72%, transparent);
+        background-clip: padding-box;
+    }
+
+    .scroll-fade-b {
+        --scroll-fade-size: 2rem;
+        -webkit-mask-image: linear-gradient(
+            to bottom,
+            #000 0,
+            #000 calc(100% - var(--scroll-fade-size)),
+            transparent 100%
+        );
+        mask-image: linear-gradient(
+            to bottom,
+            #000 0,
+            #000 calc(100% - var(--scroll-fade-size)),
+            transparent 100%
+        );
+    }
+
+    .scroll-fade-x {
+        --scroll-fade-size: 1.25rem;
+        -webkit-mask-image: linear-gradient(
+            to right,
+            transparent 0,
+            #000 var(--scroll-fade-size),
+            #000 calc(100% - var(--scroll-fade-size)),
+            transparent 100%
+        );
+        mask-image: linear-gradient(
+            to right,
+            transparent 0,
+            #000 var(--scroll-fade-size),
+            #000 calc(100% - var(--scroll-fade-size)),
+            transparent 100%
+        );
+    }
+
+    .shimmer {
+        position: relative;
+        overflow: hidden;
+    }
+
+    .shimmer::after {
+        position: absolute;
+        inset: 0;
+        content: '';
+        background: linear-gradient(
+            90deg,
+            transparent,
+            color-mix(in srgb, var(--foreground) 16%, transparent),
+            transparent
+        );
+        animation: shimmer 1.4s ease-in-out infinite;
+    }
 }
 
 @supports (corner-shape: superellipse(1.5)) {

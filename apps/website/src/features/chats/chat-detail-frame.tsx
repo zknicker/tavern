@@ -1,18 +1,18 @@
-import { ArrowDown01Icon } from '@hugeicons-pro/core-stroke-rounded';
-import type * as React from 'react';
-import { useLocation } from 'react-router-dom';
-import { Icon } from '../../components/ui/icon.tsx';
-import { Button } from '../../components/ui/primitives/button.tsx';
+import * as React from 'react';
+import {
+    MessageScroller,
+    MessageScrollerButton,
+    MessageScrollerContent,
+    MessageScrollerProvider,
+    MessageScrollerViewport,
+} from '../../components/ui/message-scroller.tsx';
 import type { ChatActiveReply, ChatTurnFailure } from '../../hooks/chats/chat-timeline-state.ts';
 import type { ChatLogOutput } from '../../lib/trpc.tsx';
+import { ChatScrollPositionMemory } from './chat-scroll-position-memory.tsx';
 import { ChatTimeline } from './chat-timeline.tsx';
-import { getChatTimelineFollowKey } from './chat-timeline-follow-key.ts';
 import { ChatTranscriptLoadingIndicator } from './chat-transcript-loading-indicator.tsx';
 import type { ConversationMessageLayout } from './chat-transcript-model.ts';
-import {
-    ChatScrollControllerProvider,
-    useChatScrollController,
-} from './use-chat-scroll-controller.ts';
+import { ChatTurnTimeline, type ChatTurnTimelineMarker } from './chat-turn-timeline.tsx';
 
 export function ChatDetailFrame({
     activeReply,
@@ -21,7 +21,6 @@ export function ChatDetailFrame({
     conversationLayout,
     defaultOpenWorkGroups = false,
     emptyLabel,
-    enableVirtualization = true,
     error,
     artifactPanel,
     fetchPreviousPage,
@@ -40,7 +39,6 @@ export function ChatDetailFrame({
     conversationLayout?: ConversationMessageLayout;
     defaultOpenWorkGroups?: boolean;
     emptyLabel: string;
-    enableVirtualization?: boolean;
     error?: unknown;
     artifactPanel?: React.ReactNode;
     fetchPreviousPage?: () => void;
@@ -53,41 +51,30 @@ export function ChatDetailFrame({
     rows: NonNullable<ChatLogOutput>['rows'];
     totalMessages: number;
 }) {
-    const location = useLocation();
+    const viewportRef = React.useRef<HTMLDivElement | null>(null);
+    const contentRef = React.useRef<HTMLDivElement | null>(null);
+    const [turnTimelineMarkers, setTurnTimelineMarkers] = React.useState<ChatTurnTimelineMarker[]>(
+        []
+    );
     const hasActiveReply = activeReply !== null;
     const hasTimelineContent = rows.length > 0 || hasActiveReply || failedTurn !== null;
     const isInitialTranscriptPending = isPending && !historyLoaded && !hasActiveReply;
-    const followKey = getChatTimelineFollowKey({
-        activeReply,
-        failedTurn,
-    });
-    const initialScrollKey = isInitialTranscriptPending ? null : `${chatId}:${location.key}`;
-    const chatScroll = useChatScrollController({
-        enabled: !isInitialTranscriptPending && hasTimelineContent,
-        followContentResizes: !enableVirtualization,
-        followKey: enableVirtualization ? null : followKey,
-        initialScrollKey: enableVirtualization ? null : initialScrollKey,
-        pinPassiveScrollDrift: !enableVirtualization,
-    });
-    // The scroll controller owns its own viewport listeners; this handler only
-    // drives the non-virtualized previous-page fetch.
     const handleScroll = () => {
-        const viewport = chatScroll.viewportRef.current;
+        const viewport = viewportRef.current;
 
-        if (
-            enableVirtualization ||
-            !viewport ||
-            viewport.scrollTop > 160 ||
-            !hasPreviousPage ||
-            isFetchingPreviousPage
-        ) {
+        if (!viewport || viewport.scrollTop > 160 || !hasPreviousPage || isFetchingPreviousPage) {
             return;
         }
 
         fetchPreviousPage?.();
     };
+
     return (
-        <ChatScrollControllerProvider value={chatScroll.handle}>
+        <MessageScrollerProvider
+            autoScroll={hasTimelineContent}
+            defaultScrollPosition="end"
+            scrollPreviousItemPeek={64}
+        >
             <div className="flex min-h-0 flex-1 overflow-hidden">
                 <div className="relative flex min-w-0 flex-1 flex-col">
                     <div className="absolute top-3 left-1/2 z-10 -translate-x-1/2">
@@ -98,19 +85,18 @@ export function ChatDetailFrame({
                     </div>
 
                     <div className="relative min-h-0 flex-1">
-                        <div
-                            className="h-full min-h-0 overflow-y-auto px-6 py-4 [scrollbar-gutter:stable]"
-                            onScroll={handleScroll}
-                            ref={chatScroll.viewportRef}
-                        >
-                            <div
-                                className="mx-auto min-h-full w-full max-w-[60rem]"
-                                ref={chatScroll.contentRef}
+                        <MessageScroller>
+                            <MessageScrollerViewport
+                                className="px-6 py-4"
+                                onScroll={handleScroll}
+                                ref={viewportRef}
                             >
                                 {isInitialTranscriptPending ? null : error ? (
-                                    <div className="px-2 py-4 text-muted-foreground text-sm">
-                                        Unable to load this chat transcript right now.
-                                    </div>
+                                    <MessageScrollerContent className="mx-auto w-full max-w-[60rem]">
+                                        <div className="px-2 py-4 text-muted-foreground text-sm">
+                                            Unable to load this chat transcript right now.
+                                        </div>
+                                    </MessageScrollerContent>
                                 ) : hasTimelineContent ? (
                                     <ChatTimeline
                                         activeReply={activeReply}
@@ -119,49 +105,49 @@ export function ChatDetailFrame({
                                         conversationLayout={conversationLayout}
                                         defaultOpenWorkGroups={defaultOpenWorkGroups}
                                         failedTurn={failedTurn}
-                                        fetchPreviousPage={fetchPreviousPage}
-                                        followKey={enableVirtualization ? followKey : null}
-                                        hasPreviousPage={hasPreviousPage}
-                                        initialScrollKey={
-                                            enableVirtualization ? initialScrollKey : null
-                                        }
-                                        isFetchingPreviousPage={isFetchingPreviousPage}
+                                        onTurnTimelineMarkersChange={setTurnTimelineMarkers}
                                         rows={rows}
-                                        scrollViewportRef={
-                                            enableVirtualization
-                                                ? chatScroll.viewportRef
-                                                : undefined
-                                        }
+                                        scrollContentRef={contentRef}
                                         totalMessages={totalMessages}
                                     />
                                 ) : (
-                                    <div className="px-2 py-4 text-muted-foreground text-sm">
-                                        {emptyLabel}
-                                    </div>
+                                    <MessageScrollerContent className="mx-auto w-full max-w-[60rem]">
+                                        <div className="px-2 py-4 text-muted-foreground text-sm">
+                                            {emptyLabel}
+                                        </div>
+                                    </MessageScrollerContent>
                                 )}
-                            </div>
-                        </div>
+                            </MessageScrollerViewport>
+                            <ChatTurnTimeline
+                                anchorRef={viewportRef}
+                                markers={
+                                    hasTimelineContent && !isInitialTranscriptPending
+                                        ? turnTimelineMarkers
+                                        : []
+                                }
+                            />
+                            <ChatScrollPositionMemory
+                                chatId={chatId}
+                                enabled={hasTimelineContent && !isInitialTranscriptPending}
+                                key={chatId}
+                                viewportRef={viewportRef}
+                            />
+                            {hasTimelineContent ? (
+                                <MessageScrollerButton
+                                    aria-label="Jump to latest message"
+                                    className="z-10"
+                                    direction="end"
+                                    size="icon-sm"
+                                    variant="secondary"
+                                />
+                            ) : null}
+                        </MessageScroller>
                     </div>
-
-                    {hasTimelineContent && !chatScroll.isAtBottom ? (
-                        <div className="pointer-events-none relative z-10 flex justify-center">
-                            <Button
-                                aria-label="Jump to latest message"
-                                className="pointer-events-auto -mt-11 rounded-full bg-background/92 shadow-black/10 shadow-lg backdrop-blur"
-                                onClick={() => chatScroll.scrollToBottom()}
-                                size="icon"
-                                type="button"
-                                variant="outline"
-                            >
-                                <Icon className="size-4" icon={ArrowDown01Icon} />
-                            </Button>
-                        </div>
-                    ) : null}
 
                     {footer}
                 </div>
                 {artifactPanel}
             </div>
-        </ChatScrollControllerProvider>
+        </MessageScrollerProvider>
     );
 }

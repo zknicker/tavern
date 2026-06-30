@@ -36,7 +36,8 @@ test('chat turn timeline pairs adjacent user and agent turns by session', () => 
         {
             agentText: 'Model availability comes from Runtime capabilities.',
             agentRowIndex: 1,
-            id: 'response-1',
+            id: 'user-1:response-1',
+            messageId: 'user-1',
             rowIndex: 0,
             status: 'completed',
             timestamp: '2026-06-26T15:00:00.000Z',
@@ -66,6 +67,46 @@ test('chat turn timeline skips agent turns from another session', () => {
     expect(buildChatTurnTimelineMarkers(rows)).toEqual([]);
 });
 
+test('chat turn timeline scopes marker ids to the user turn', () => {
+    const rows = [
+        messageTurnRow({
+            content: 'First merged demo request.',
+            id: 'user-1',
+            participant: 'user',
+            senderType: 'user',
+            sessionKey: 'session-1',
+        }),
+        messageTurnRow({
+            content: 'First response.',
+            id: 'agent-1',
+            participant: 'agent',
+            responseId: 'response-shared',
+            senderType: 'agent',
+            sessionKey: 'session-1',
+        }),
+        messageTurnRow({
+            content: 'Second merged demo request.',
+            id: 'user-2',
+            participant: 'user',
+            senderType: 'user',
+            sessionKey: 'session-2',
+        }),
+        messageTurnRow({
+            content: 'Second response.',
+            id: 'agent-2',
+            participant: 'agent',
+            responseId: 'response-shared',
+            senderType: 'agent',
+            sessionKey: 'session-2',
+        }),
+    ];
+
+    expect(buildChatTurnTimelineMarkers(rows).map((marker) => marker.id)).toEqual([
+        'user-1:response-shared',
+        'user-2:response-shared',
+    ]);
+});
+
 test('chat turn timeline previews active agent turns', () => {
     const rows = [
         messageTurnRow({
@@ -83,6 +124,7 @@ test('chat turn timeline previews active agent turns', () => {
             agentText: 'Thinking...',
             agentRowIndex: 1,
             id: 'user-1:agent-active',
+            messageId: 'user-1',
             rowIndex: 0,
             status: 'active',
             timestamp: '2026-06-26T15:00:00.000Z',
@@ -94,24 +136,27 @@ test('chat turn timeline previews active agent turns', () => {
 test('chat turn timeline renders a single loaded turn', () => {
     const markup = renderToStaticMarkup(
         React.createElement(ChatTurnTimelineRail, {
+            activeMarkerIds: new Set(['turn-1']),
             markers: [
                 {
                     agentText: 'Done.',
                     agentRowIndex: 1,
                     id: 'turn-1',
+                    messageId: 'user-1',
                     rowIndex: 0,
                     status: 'completed',
                     timestamp: '2026-06-26T15:00:00.000Z',
                     userText: 'Do the thing.',
                 },
             ],
-            activeMarkerIds: new Set(['turn-1']),
             onSelect: () => {},
         })
     );
 
     expect(markup).toContain('Chat turn timeline');
     expect(markup).toContain('Preview turn 1: Do the thing.');
+    expect(markup).toContain('data-slot="chat-turn-timeline"');
+    expect(markup).toContain('absolute');
     expect(markup).toContain('top-1/2');
     expect(markup).toContain('-translate-y-1/2');
     expect(markup).toContain('-left-2');

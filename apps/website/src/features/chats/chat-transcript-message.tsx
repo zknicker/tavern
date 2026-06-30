@@ -1,3 +1,12 @@
+import { FileTextIcon } from 'lucide-react';
+import {
+    Attachment,
+    AttachmentContent,
+    AttachmentDescription,
+    AttachmentMedia,
+    AttachmentTitle,
+    AttachmentTrigger,
+} from '../../components/ui/attachment.tsx';
 import type { ChatLogOutput, SessionHistoryOutput } from '../../lib/trpc.tsx';
 import { cn } from '../../lib/utils.ts';
 import { readMentionsFromMetadata } from '../mentions/mention-metadata.ts';
@@ -89,14 +98,23 @@ export function ChatTranscriptMessageAttachments({
                 const dataUrl = `data:${attachment.mediaType};base64,${attachment.dataBase64}`;
 
                 return (
-                    <a
-                        className="w-fit max-w-full truncate rounded-md border border-border/50 bg-background px-2.5 py-1.5 text-foreground text-sm transition-colors hover:bg-muted"
-                        download={attachment.filename}
-                        href={dataUrl}
-                        key={attachment.filename}
-                    >
-                        {attachment.filename}
-                    </a>
+                    <Attachment key={attachment.filename}>
+                        <AttachmentMedia>
+                            <FileTextIcon />
+                        </AttachmentMedia>
+                        <AttachmentContent>
+                            <AttachmentTitle>{attachment.filename}</AttachmentTitle>
+                            <AttachmentDescription>{attachment.mediaType}</AttachmentDescription>
+                        </AttachmentContent>
+                        <AttachmentTrigger
+                            aria-label={`Download ${attachment.filename}`}
+                            render={
+                                <a download={attachment.filename} href={dataUrl}>
+                                    <span className="sr-only">Download {attachment.filename}</span>
+                                </a>
+                            }
+                        />
+                    </Attachment>
                 );
             })}
         </>
@@ -118,29 +136,36 @@ function MessageFileReference({
 }: {
     attachment: Extract<MessageAttachment, { type: 'file' }>;
 }) {
+    const description = getFileAttachmentDescription(attachment);
+
     return (
-        <div className="w-fit max-w-full rounded-md border border-border/50 bg-muted/35 px-2.5 py-1.5 text-sm">
-            <div className="flex min-w-0 flex-wrap items-center gap-2">
-                <span className="min-w-0 truncate font-medium text-foreground">
-                    {attachment.filename}
-                </span>
-                <span className="rounded-sm bg-background px-1.5 py-0.5 text-muted-foreground text-xs">
-                    File reference
-                </span>
-                {attachment.sizeBytes !== null && attachment.sizeBytes !== undefined ? (
-                    <span className="text-muted-foreground text-xs tabular-nums">
-                        {formatAttachmentBytes(attachment.sizeBytes)}
-                    </span>
-                ) : null}
-                {attachment.mediaType ? (
-                    <span className="text-muted-foreground text-xs">{attachment.mediaType}</span>
-                ) : null}
-            </div>
-            <div className="mt-1 truncate font-mono text-muted-foreground text-xs">
-                {attachment.path}
-            </div>
-        </div>
+        <Attachment>
+            <AttachmentMedia>
+                <FileTextIcon />
+            </AttachmentMedia>
+            <AttachmentContent>
+                <AttachmentTitle>{attachment.filename}</AttachmentTitle>
+                {description ? <AttachmentDescription>{description}</AttachmentDescription> : null}
+                <AttachmentDescription className="font-mono">
+                    {attachment.path}
+                </AttachmentDescription>
+            </AttachmentContent>
+        </Attachment>
     );
+}
+
+function getFileAttachmentDescription(attachment: Extract<MessageAttachment, { type: 'file' }>) {
+    const parts = ['File reference'];
+
+    if (attachment.sizeBytes !== null && attachment.sizeBytes !== undefined) {
+        parts.push(formatAttachmentBytes(attachment.sizeBytes));
+    }
+
+    if (attachment.mediaType) {
+        parts.push(attachment.mediaType);
+    }
+
+    return parts.join(' - ');
 }
 
 function isImageAttachment(attachment: Extract<MessageAttachment, { type: 'inline' }>) {

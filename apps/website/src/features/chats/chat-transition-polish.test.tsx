@@ -4,10 +4,10 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { ChatMessage } from '../../components/chats/chat-message.tsx';
 import {
     chatDetailLogLimit,
+    demoChannelLogLimit,
     getChatDetailLogLimit,
     isBlockingActiveTurn,
     shouldReleaseDraftHandoff,
-    turnTimelineDemoLogLimit,
 } from './agent-chat-detail.tsx';
 import { AgentStatusIndicator } from './agent-status-indicator.tsx';
 import { resolveActivePresenceVerb } from './chat-active-presence-verb.ts';
@@ -18,11 +18,9 @@ test('chat detail cold-open loads a narrow transcript tail', () => {
     expect(chatDetailLogLimit).toBeLessThanOrEqual(30);
 });
 
-test('turn timeline demo loads enough messages to show every marker', () => {
-    expect(getChatDetailLogLimit(developmentChatDemoIds.turnTimeline)).toBe(
-        turnTimelineDemoLogLimit
-    );
-    expect(turnTimelineDemoLogLimit).toBe(40);
+test('demo channel loads enough messages to show representative coverage', () => {
+    expect(getChatDetailLogLimit(developmentChatDemoIds.demo)).toBe(demoChannelLogLimit);
+    expect(demoChannelLogLimit).toBe(48);
     expect(getChatDetailLogLimit('cht_normal')).toBe(chatDetailLogLimit);
 });
 
@@ -103,13 +101,20 @@ function getFirstPathData(markup: string) {
     return /<path d="([^"]+)"/.exec(markup)?.[1] ?? null;
 }
 
-test('assistant chat message prose keeps the live tail text-line height', () => {
+test('chat message prose uses the shadcn bubble content styling', () => {
     const assistant = renderToStaticMarkup(<ChatMessage from="assistant">Done</ChatMessage>);
     const user = renderToStaticMarkup(<ChatMessage from="user">Done</ChatMessage>);
 
-    expect(assistant).not.toContain('py-2');
-    expect(assistant).toContain('min-h-5');
-    expect(user).toContain('py-2');
+    for (const markup of [assistant, user]) {
+        expect(markup).toContain('data-slot="bubble-content"');
+        expect(markup).toContain('rounded-xl');
+        expect(markup).toContain('px-3');
+        expect(markup).toContain('py-2');
+        expect(markup).toContain('leading-relaxed');
+    }
+
+    expect(assistant).toContain('data-variant="ghost"');
+    expect(user).toContain('data-variant="secondary"');
 });
 
 test('chat message wraps long pasted tokens inside the bubble', () => {
@@ -118,26 +123,29 @@ test('chat message wraps long pasted tokens inside the bubble', () => {
     for (const from of ['user', 'assistant'] as const) {
         const markup = renderToStaticMarkup(<ChatMessage from={from}>{longToken}</ChatMessage>);
 
-        expect(markup).toContain('min-w-0 max-w-[80%]');
-        expect(markup).toContain('min-w-0 max-w-full');
-        expect(markup).toContain('[overflow-wrap:anywhere]');
+        expect(markup).toContain('data-slot="bubble"');
+        expect(markup).toContain('max-w-[80%]');
+        expect(markup).toContain('min-w-0');
+        expect(markup).toContain('max-w-full');
+        expect(markup).toContain('wrap-break-word');
     }
 });
 
-test('chat message meta row reserves flow height', () => {
+test('chat message meta row uses the shadcn footer in normal flow', () => {
     const markup = renderToStaticMarkup(
         <ChatMessage actions={<button type="button">Copy</button>} from="user" time="12:00">
             Done
         </ChatMessage>
     );
 
-    expect(markup).toContain('opacity-0');
-    expect(markup).toContain('min-h-7');
+    expect(markup).toContain('data-slot="message-footer"');
+    expect(markup).toContain('px-3');
+    expect(markup).not.toContain('opacity-0');
     expect(markup).not.toContain('absolute');
     expect(markup).not.toContain('top-full');
 });
 
-test('chat message disabled copy action keeps the live reply gutter', () => {
+test('chat message disabled copy action stays in the shadcn footer', () => {
     const markup = renderToStaticMarkup(
         <ChatMessage
             actions={
@@ -151,7 +159,7 @@ test('chat message disabled copy action keeps the live reply gutter', () => {
         </ChatMessage>
     );
 
-    expect(markup).toContain('min-h-7');
+    expect(markup).toContain('data-slot="message-footer"');
     expect(markup).toContain('disabled=""');
     expect(markup).not.toContain('absolute');
 });

@@ -1,4 +1,11 @@
 import * as React from 'react';
+import {
+    MessageScroller,
+    MessageScrollerContent,
+    MessageScrollerItem,
+    MessageScrollerProvider,
+    MessageScrollerViewport,
+} from '../../components/ui/message-scroller.tsx';
 import type { ChatActiveReply, ChatTurnFailure } from '../../hooks/chats/chat-timeline-state.ts';
 import { useChatThinkingDisplayPreference } from '../../hooks/chats/use-chat-thinking-display-preference.ts';
 import { markChatTiming } from '../../lib/chat-timing.ts';
@@ -18,11 +25,14 @@ import {
     type StableTranscriptRenderRowsState,
 } from './chat-transcript-row-model.ts';
 import { TranscriptRenderRowItem } from './chat-transcript-rows.tsx';
-import { VirtualizedChatTranscript } from './virtualized-chat-transcript.tsx';
+import {
+    buildChatTurnTimelineMarkers,
+    type ChatTurnTimelineMarker,
+} from './chat-turn-timeline.tsx';
 
 const directConversationMessageLayout: ConversationMessageLayout = {
-    showAgentIdentity: false,
-    showHumanIdentity: false,
+    showAgentIdentity: true,
+    showHumanIdentity: true,
 };
 
 export function ChatTranscript({
@@ -32,15 +42,11 @@ export function ChatTranscript({
     conversationLayout = directConversationMessageLayout,
     currentSessionKey,
     defaultOpenWorkGroups = false,
-    fetchPreviousPage,
     failedTurn = null,
-    hasPreviousPage = false,
-    followKey = null,
     hiddenCount = 0,
-    initialScrollKey = null,
-    isFetchingPreviousPage = false,
     rows,
-    scrollViewportRef,
+    onTurnTimelineMarkersChange,
+    scrollContentRef,
     showThinkingText,
 }: {
     activeReply: ChatActiveReply | null;
@@ -49,15 +55,11 @@ export function ChatTranscript({
     conversationLayout?: ConversationMessageLayout;
     currentSessionKey?: string | null;
     defaultOpenWorkGroups?: boolean;
-    fetchPreviousPage?: () => void;
     failedTurn?: ChatTurnFailure | null;
-    hasPreviousPage?: boolean;
-    followKey?: string | null;
     hiddenCount?: number;
-    initialScrollKey?: string | null;
-    isFetchingPreviousPage?: boolean;
+    onTurnTimelineMarkersChange?: (markers: ChatTurnTimelineMarker[]) => void;
     rows: TranscriptRow[];
-    scrollViewportRef?: React.RefObject<HTMLDivElement | null>;
+    scrollContentRef?: React.RefObject<HTMLDivElement | null>;
     showThinkingText?: boolean;
 }) {
     const chatThinkingDisplay = useChatThinkingDisplayPreference();
@@ -77,6 +79,10 @@ export function ChatTranscript({
         [entries, hiddenCount]
     );
     const transcriptRows = useStableTranscriptRenderRows(rawTranscriptRows);
+    const turnTimelineMarkers = React.useMemo(
+        () => buildChatTurnTimelineMarkers(transcriptRows),
+        [transcriptRows]
+    );
     const latestAgentMessage = React.useMemo(() => getLatestAgentMessage(rows), [rows]);
     const activePresenceVerb = useActivePresenceVerb(activeReply);
     const renderContext = React.useMemo(
@@ -124,40 +130,54 @@ export function ChatTranscript({
         });
     }, [latestAgentMessage]);
 
-    return (
+    React.useEffect(() => {
+        onTurnTimelineMarkersChange?.(turnTimelineMarkers);
+    }, [onTurnTimelineMarkersChange, turnTimelineMarkers]);
+
+    const transcript = (
         <TranscriptRenderProvider value={renderContext}>
-            {scrollViewportRef ? (
-                <VirtualizedChatTranscript
-                    activePresenceVerb={activePresenceVerb}
-                    activeReply={activeReply}
-                    agentStatusColor={agentStatusColor}
-                    failedTurn={failedTurn}
-                    fetchPreviousPage={fetchPreviousPage}
-                    followKey={followKey}
-                    hasPreviousPage={hasPreviousPage}
-                    initialScrollKey={initialScrollKey}
-                    isFetchingPreviousPage={isFetchingPreviousPage}
-                    presenceRows={rows}
-                    rows={transcriptRows}
-                    scrollViewportRef={scrollViewportRef}
-                />
-            ) : (
-                transcriptRows.map((row) =>
-                    row.kind === 'hiddenCount' && hiddenCount === 0 ? null : (
-                        <TranscriptRenderRowItem
-                            activePresenceVerb={activePresenceVerb}
-                            activeReply={activeReply}
-                            agentStatusColor={agentStatusColor}
-                            failedTurn={failedTurn}
-                            key={row.id}
-                            presenceRows={rows}
-                            row={row}
-                        />
-                    )
-                )
-            )}
+            <div className="relative mx-auto min-h-full w-full max-w-[60rem]">
+                <MessageScrollerContent className="w-full" ref={scrollContentRef}>
+                    {transcriptRows.map((row) =>
+                        row.kind === 'hiddenCount' && hiddenCount === 0 ? null : (
+                            <MessageScrollerItem
+                                key={row.id}
+                                messageId={row.id}
+                                scrollAnchor={isTranscriptRenderRowScrollAnchor(row)}
+                            >
+                                <TranscriptRenderRowItem
+                                    activePresenceVerb={activePresenceVerb}
+                                    activeReply={activeReply}
+                                    agentStatusColor={agentStatusColor}
+                                    failedTurn={failedTurn}
+                                    presenceRows={rows}
+                                    row={row}
+                                />
+                            </MessageScrollerItem>
+                        )
+                    )}
+                </MessageScrollerContent>
+            </div>
         </TranscriptRenderProvider>
     );
+
+    if (!scrollContentRef) {
+        return (
+            <MessageScrollerProvider defaultScrollPosition="end" scrollPreviousItemPeek={64}>
+                <MessageScroller>
+                    <MessageScrollerViewport>{transcript}</MessageScrollerViewport>
+                </MessageScroller>
+            </MessageScrollerProvider>
+        );
+    }
+
+    return transcript;
+}
+
+function isTranscriptRenderRowScrollAnchor(
+    row: ReturnType<typeof buildTranscriptRenderRows>[number]
+) {
+    return row.kind === 'entry' && row.entry.kind === 'turn' && row.entry.participant === 'user';
 }
 
 function useStableTranscriptRenderRows(rows: ReturnType<typeof buildTranscriptRenderRows>) {

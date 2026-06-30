@@ -12,6 +12,12 @@ import { SlotText } from 'slot-text/react';
 import { ChatMessage } from '../../components/chats/chat-message.tsx';
 import { CopyButton } from '../../components/ui/copy-button.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
+import {
+    Message,
+    MessageAvatar,
+    MessageContent,
+    MessageHeader,
+} from '../../components/ui/message.tsx';
 import { useActorProfile } from '../../hooks/actors/use-actor.ts';
 import { isLocalTimelineMessageMetadata } from '../../hooks/chats/chat-timeline-messages.ts';
 import type { ChatActiveReply, ChatTurnFailure } from '../../hooks/chats/chat-timeline-state.ts';
@@ -57,7 +63,7 @@ import { getItemSessionKey, isActivityBackedMessageRow } from './chat-transcript
 import { RuntimeNoticeEntry } from './chat-transcript-system-step.tsx';
 import { useRevealedText } from './use-revealed-text.ts';
 
-const rowClassName = 'relative w-full px-3';
+const rowClassName = 'relative w-full px-3 py-1';
 const newTurnGapClassName = '';
 const hoverGroupClassName = 'group';
 const agentStatusSize = 32;
@@ -217,44 +223,82 @@ function UserTurn({
     const displayName = actorProfile?.name ?? getTurnFallbackName(entry) ?? 'You';
     const lastMessage = getLastMessage(entry.items);
 
-    if (!layout.showHumanIdentity) {
-        return (
-            <div
-                className={cn(rowClassName, 'flex flex-col items-end gap-1.5', newTurnGapClassName)}
-            >
-                {entry.items.map((item) => (
-                    <UserTurnItem
-                        className="max-w-[min(42rem,78%)]"
-                        item={item}
-                        key={getTranscriptItemKey(item)}
-                        showMeta={isMessageItem(item, lastMessage)}
-                    />
-                ))}
-            </div>
-        );
-    }
+    return (
+        <Message align="start" className={cn(rowClassName, newTurnGapClassName)}>
+            <TurnAvatar color={actorProfile?.primaryColor} name={displayName} />
+            <MessageContent className="gap-1.5 pt-0.5">
+                {layout.showHumanIdentity ? (
+                    <TurnHeader displayName={displayName} timestamp={entry.timestamp} />
+                ) : null}
+                <div className="flex min-w-0 flex-col gap-1.5">
+                    {entry.items.map((item) => (
+                        <UserTurnItem
+                            item={item}
+                            key={getTranscriptItemKey(item)}
+                            showMeta={isMessageItem(item, lastMessage)}
+                        />
+                    ))}
+                </div>
+            </MessageContent>
+        </Message>
+    );
+}
+
+function TurnAvatar({ color, name }: { color?: string | null; name: string }) {
+    const style = color
+        ? ({
+              '--chat-avatar-color': color,
+          } as React.CSSProperties)
+        : undefined;
 
     return (
-        <div className={cn(rowClassName, 'flex justify-end', newTurnGapClassName)}>
-            <div className="relative min-w-0 max-w-[min(42rem,82%)]">
-                <div className="relative min-w-0">
-                    <div className="mb-1.5 min-w-0 truncate pr-4 text-right font-medium text-[0.8125rem] text-muted-foreground/80 leading-none">
-                        {displayName}
-                    </div>
-                    <div className="flex flex-col items-end gap-1.5">
-                        {entry.items.map((item) => (
-                            <UserTurnItem
-                                className="max-w-[100%]"
-                                item={item}
-                                key={getTranscriptItemKey(item)}
-                                showMeta={isMessageItem(item, lastMessage)}
-                            />
-                        ))}
-                    </div>
-                </div>
-            </div>
-        </div>
+        <MessageAvatar
+            className={cn(
+                'size-8 min-w-8 self-start rounded-full font-semibold text-xs shadow-xs ring-1 ring-border/50',
+                color
+                    ? 'bg-[var(--chat-avatar-color)] text-white'
+                    : 'bg-muted text-muted-foreground'
+            )}
+            style={style}
+        >
+            {getActorInitials(name)}
+        </MessageAvatar>
     );
+}
+
+function TurnHeader({ displayName, timestamp }: { displayName: string; timestamp: string | null }) {
+    return (
+        <MessageHeader className="gap-2 px-0">
+            <span className="min-w-0 truncate font-semibold text-foreground text-sm leading-5">
+                {displayName}
+            </span>
+            {timestamp ? (
+                <time
+                    className="shrink-0 text-muted-foreground/65 text-xs tabular-nums"
+                    dateTime={timestamp}
+                >
+                    {formatShortTime(timestamp)}
+                </time>
+            ) : null}
+        </MessageHeader>
+    );
+}
+
+function getActorInitials(name: string) {
+    const parts = name
+        .trim()
+        .split(/\s+/)
+        .filter((part) => part.length > 0);
+
+    if (parts.length === 0) {
+        return '?';
+    }
+
+    if (parts.length === 1) {
+        return parts[0]?.slice(0, 2).toUpperCase() ?? '?';
+    }
+
+    return `${parts[0]?.[0] ?? ''}${parts.at(-1)?.[0] ?? ''}`.toUpperCase();
 }
 
 function AgentTurn({
@@ -298,51 +342,49 @@ function AgentTurn({
         hasStoppedTurn(items, activeReply?.runId) || (!activeReply && hasAnyStoppedTurn(items));
     const turnActive = isActiveTurn(items, activeReply, lastMessage);
     return (
-        <div
+        <Message
+            align="start"
             className={cn(
                 rowClassName,
                 showIdentity ? newTurnGapClassName : followsRuntimeNotice ? 'mt-0' : null
             )}
         >
-            <div>
-                <div className={cn(hoverGroupClassName, 'w-full min-w-0')}>
-                    {showIdentity ? (
-                        <div className="mb-1.5 min-w-0 truncate font-medium text-[0.8125rem] text-muted-foreground/80 leading-none">
-                            {displayName}
-                        </div>
-                    ) : null}
-                    <div className="relative min-w-0">
-                        <div className="flex min-w-0 flex-col gap-3">
-                            {visibleSegments.map((segment, index) => (
-                                <AgentTurnSegment
-                                    chatId={chatId}
-                                    currentSessionKey={currentSessionKey}
-                                    defaultOpenWorkGroups={defaultOpenWorkGroups}
-                                    key={segment.key}
-                                    lastMessage={lastMessage}
-                                    segment={segment}
-                                    turnActive={turnActive && index === visibleSegments.length - 1}
-                                    turnCompletedAt={turnCompletedAt}
-                                    turnStartedAt={turnStartedAt}
-                                    turnStopped={turnStopped}
-                                />
-                            ))}
-                            {showPresence ? (
-                                <AgentStatusBlock
-                                    activePresenceVerb={activePresenceVerb}
-                                    activeReply={activeReply}
-                                    agentStatusColor={agentStatusColor}
-                                    entry={entry}
-                                    failedTurn={failedTurn}
-                                    presenceRows={presenceRows}
-                                    turnStartedAt={turnStartedAt}
-                                />
-                            ) : null}
-                        </div>
+            <TurnAvatar color={actorProfile?.primaryColor ?? agentStatusColor} name={displayName} />
+            <MessageContent className="gap-1.5 pt-0.5">
+                {showIdentity ? (
+                    <TurnHeader displayName={displayName} timestamp={entry.timestamp} />
+                ) : null}
+                <div className={cn(hoverGroupClassName, 'relative min-w-0')}>
+                    <div className="flex min-w-0 flex-col gap-3">
+                        {visibleSegments.map((segment, index) => (
+                            <AgentTurnSegment
+                                chatId={chatId}
+                                currentSessionKey={currentSessionKey}
+                                defaultOpenWorkGroups={defaultOpenWorkGroups}
+                                key={segment.key}
+                                lastMessage={lastMessage}
+                                segment={segment}
+                                turnActive={turnActive && index === visibleSegments.length - 1}
+                                turnCompletedAt={turnCompletedAt}
+                                turnStartedAt={turnStartedAt}
+                                turnStopped={turnStopped}
+                            />
+                        ))}
+                        {showPresence ? (
+                            <AgentStatusBlock
+                                activePresenceVerb={activePresenceVerb}
+                                activeReply={activeReply}
+                                agentStatusColor={agentStatusColor}
+                                entry={entry}
+                                failedTurn={failedTurn}
+                                presenceRows={presenceRows}
+                                turnStartedAt={turnStartedAt}
+                            />
+                        ) : null}
                     </div>
                 </div>
-            </div>
-        </div>
+            </MessageContent>
+        </Message>
     );
 }
 
@@ -762,7 +804,6 @@ function AssistantReplyText({
             actions={actions}
             animateEnter={false}
             attachments={attachments}
-            className="max-w-[100%]"
             from="assistant"
         >
             {message ? (

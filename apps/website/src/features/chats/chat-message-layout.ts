@@ -9,22 +9,9 @@ interface ChatMessageLayoutInput {
 }
 
 export function getChatMessageLayout(chat: ChatMessageLayoutInput) {
-    const agentIds = new Set(chat.boundAgentIds);
-    const humanIds = new Set<string>();
-
-    for (const participant of chat.participants) {
-        if (participant.actorType === 'agent') {
-            agentIds.add(participant.actorId);
-            continue;
-        }
-
-        humanIds.add(participant.actorId);
-    }
-
-    const humanCount = Math.max(humanIds.size, 1);
-
+    void chat;
     return {
-        showAgentIdentity: agentIds.size > 1,
-        showHumanIdentity: humanCount > 1,
+        showAgentIdentity: true,
+        showHumanIdentity: true,
     } satisfies ConversationMessageLayout;
 }

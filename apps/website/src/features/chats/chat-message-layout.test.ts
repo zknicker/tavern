@@ -16,14 +16,14 @@ const baseChat = {
     ],
 };
 
-test('hides identities for a direct human and agent chat', () => {
+test('uses channel identities for a direct human and agent chat', () => {
     assert.deepEqual(getChatMessageLayout(baseChat), {
-        showAgentIdentity: false,
-        showHumanIdentity: false,
+        showAgentIdentity: true,
+        showHumanIdentity: true,
     });
 });
 
-test('shows agent identity when a chat has multiple agents', () => {
+test('keeps channel identities when a chat has multiple agents', () => {
     assert.deepEqual(
         getChatMessageLayout({
             ...baseChat,
@@ -31,12 +31,12 @@ test('shows agent identity when a chat has multiple agents', () => {
         }),
         {
             showAgentIdentity: true,
-            showHumanIdentity: false,
+            showHumanIdentity: true,
         }
     );
 });
 
-test('shows human identity when a chat has multiple humans', () => {
+test('keeps channel identities when a chat has multiple humans', () => {
     assert.deepEqual(
         getChatMessageLayout({
             ...baseChat,
@@ -49,7 +49,7 @@ test('shows human identity when a chat has multiple humans', () => {
             ],
         }),
         {
-            showAgentIdentity: false,
+            showAgentIdentity: true,
             showHumanIdentity: true,
         }
     );

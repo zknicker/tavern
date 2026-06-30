@@ -53,8 +53,9 @@ test('ChatTranscript renders hover time and copy action without session or usage
     assert.doesNotMatch(markup, /in 524/);
     assert.doesNotMatch(markup, /cached 29k/);
     assert.doesNotMatch(markup, /total 29k/);
-    assert.match(markup, /group-hover:pointer-events-auto group-hover:opacity-100/);
-    assert.doesNotMatch(markup, /group-focus-within:opacity-100/);
+    assert.match(markup, /data-slot="message-scroller"/);
+    assert.match(markup, /data-slot="message-scroller-item"/);
+    assert.match(markup, /data-slot="bubble-content"/);
     assert.doesNotMatch(markup, /opacity:0;transform/);
     assert.match(markup, /aria-label="Copy message"/);
     assert.doesNotMatch(markup, /aria-label="View session"/);
@@ -81,6 +82,7 @@ test('ChatTranscript animates only local optimistic user messages', () => {
     const markup = renderTranscript(localTimeline?.rows ?? []);
 
     assert.match(markup, /Can you check this\?/);
+    assert.match(markup, /data-slot="message"/);
     assert.match(markup, /style="transform-origin:bottom right;opacity:0;transform/);
 });
 
@@ -173,7 +175,8 @@ test('ChatTranscript renders active replies through the chat message shell', () 
         text: 'Done.',
     });
 
-    assert.match(markup, /group relative flex/);
+    assert.match(markup, /data-slot="message"/);
+    assert.match(markup, /data-slot="bubble"/);
     assert.match(markup, /transform-origin:bottom left/);
     assert.doesNotMatch(markup, /pb-6/);
     assert.doesNotMatch(markup, /style="transform-origin:bottom left;opacity:0;transform/);
@@ -193,7 +196,8 @@ test('ChatTranscript renders completed active replies as one full message block'
     assert.match(markup, /First line\./);
     assert.match(markup, /Second line\./);
     assert.match(markup, /Third line\./);
-    assert.match(markup, /group relative flex/);
+    assert.match(markup, /data-slot="message"/);
+    assert.match(markup, /data-slot="bubble"/);
     assert.doesNotMatch(markup, /chat-streaming-text-unit/);
 });
 
@@ -222,7 +226,8 @@ test('ChatTranscript renders loaded multiline assistant replies as one message b
     assert.match(markup, /First line\./);
     assert.match(markup, /Second line\./);
     assert.match(markup, /Third line\./);
-    assert.match(markup, /group relative flex/);
+    assert.match(markup, /data-slot="message"/);
+    assert.match(markup, /data-slot="bubble"/);
     assert.doesNotMatch(markup, /chat-streaming-text-unit/);
 });
 

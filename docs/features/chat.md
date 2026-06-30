@@ -47,10 +47,6 @@ happen, and keep the durable timeline as context.
   tab color and chat-specific agent instructions.
 * **Offline catch-up.** Tavern Runtime keeps chat history while the app is
   closed; the app reloads from durable rows and refetches on reconnect.
-* **Turn timeline.** Loaded user-to-agent turns render as a compact hover rail
-  beside the transcript, centered in the chat pane. Hover previews the user
-  message, assistant reply or active status, and turn time. Selecting a dash
-  scrolls the transcript to that turn without changing durable chat state.
 * **Mid-turn steering.** The chat composer stays available while an agent turn
   is running. Drafts entered during an active turn are queued for the same chat
   and agent, then sent when the active response settles. A queued text-only
@@ -164,18 +160,17 @@ transcript only grows:
 * Step enter animations are tied to DOM insertion during a live turn
   (`@starting-style`), not to step status, so fast tools still animate and
   history never replays.
-* The full transcript virtualizes visible rows only: hidden thinking evidence
-  does not reserve transcript height while the Appearance setting hides
-  thinking text. TanStack Virtual owns follow-on-append, measured row size
-  compensation, prepend anchoring, and pinned-end anchoring. Tavern leaves the
-  library's default size-change adjustment in place so upward scroll input wins,
-  and suppresses it only while disclosure anchoring is active. The local scroll
-  controller tracks bottom state, latest-message requests, jump-button
-  requests, and disclosure anchoring; virtualized detail chats delegate those
-  bottom writes back to TanStack Virtual so there is only one measured-row
-  writer. While the app is running, returning to a chat restores the first
-  visible transcript row and offset unless the user last left that chat at the
-  bottom, where it resumes following latest content.
+* The detail transcript uses the shadcn Base UI chat components directly:
+  `MessageScroller` owns pinned-end autoscroll, prepend preservation, scroll
+  fades, and the latest-message button; transcript rows render as
+  `MessageScrollerItem` plus the registry `Message`, `Bubble`, `Attachment`,
+  and `Marker` primitives. Tavern does not layer a custom chat scroll
+  controller or virtualized transcript over the shadcn scroller. Reopening a
+  chat restores the remembered visible message through shadcn's scroller hooks;
+  chats without remembered position open at the bottom.
+* The left turn timeline rail summarizes loaded user-to-agent turns and marks
+  the visible turn with shadcn visibility state. Selecting a rail mark jumps to
+  that turn through shadcn `scrollToMessage`.
 
 Queued composer drafts are app-local until dispatched or explicitly steered. A
 queued draft does not create a durable Tavern message, response, agent session

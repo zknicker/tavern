@@ -12,7 +12,6 @@ import { useChatGet } from '../../hooks/chats/use-chat-list.ts';
 import { useChatStartAgentSession } from '../../hooks/chats/use-chat-start-agent-session.ts';
 import { useChatStartDrafts } from '../../hooks/chats/use-chat-start-drafts.tsx';
 import { useChatTimeline } from '../../hooks/chats/use-chat-timeline.ts';
-import { useChatVirtualizationPreference } from '../../hooks/chats/use-chat-virtualization-preference.ts';
 import { useModelList } from '../../hooks/models/use-model-list.ts';
 import { MissingAgentState } from '../agents/missing-agent-state.tsx';
 import { ArtifactPanelOpenProvider } from './artifact-panel-context.tsx';
@@ -27,12 +26,10 @@ import { buildChatPath } from './chat-path.ts';
 import { getSteerableRunId } from './chat-steering.ts';
 
 export const chatDetailLogLimit = 24;
-export const turnTimelineDemoLogLimit = 40;
+export const demoChannelLogLimit = 48;
 
 export function getChatDetailLogLimit(chatId: string) {
-    return chatId === developmentChatDemoIds.turnTimeline
-        ? turnTimelineDemoLogLimit
-        : chatDetailLogLimit;
+    return chatId === developmentChatDemoIds.demo ? demoChannelLogLimit : chatDetailLogLimit;
 }
 
 export function AgentChatDetail({ chatId }: { chatId: string }) {
@@ -156,7 +153,6 @@ export function isBlockingActiveTurn(input: {
 function SyncedAgentChatDetail({ chat, chatId }: { chat: ChatListItem; chatId: string }) {
     const agentsQuery = useAgentList();
     const modelsQuery = useModelList();
-    const chatVirtualization = useChatVirtualizationPreference();
     const agentId = resolveChatAgentId(chat);
     const agents = agentsQuery.data?.agents ?? [];
     const agent = agents.find((entry) => entry.id === agentId) ?? null;
@@ -194,7 +190,6 @@ function SyncedAgentChatDetail({ chat, chatId }: { chat: ChatListItem; chatId: s
                 chatId={chat.id}
                 conversationLayout={conversationLayout}
                 emptyLabel="No synced messages for this chat yet."
-                enableVirtualization={chatVirtualization.enabled}
                 error={timeline.error}
                 failedTurn={timeline.failedTurn}
                 fetchPreviousPage={timeline.fetchPreviousPage}

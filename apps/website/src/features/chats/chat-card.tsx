@@ -1,4 +1,9 @@
 import * as React from 'react';
+import {
+    MessageScroller,
+    MessageScrollerProvider,
+    MessageScrollerViewport,
+} from '../../components/ui/message-scroller.tsx';
 import { useChatTimeline } from '../../hooks/chats/use-chat-timeline.ts';
 import type { AgentListOutput } from '../../lib/trpc.tsx';
 import { cn } from '../../lib/utils.ts';
@@ -8,12 +13,8 @@ import type { ChatListItem } from './chat-list-data.ts';
 import { ChatMessageComposer } from './chat-message-composer.tsx';
 import { getSteerableRunId } from './chat-steering.ts';
 import { ChatTimeline } from './chat-timeline.tsx';
-import { getChatTimelineFollowKey } from './chat-timeline-follow-key.ts';
 import { ChatTranscriptLoadingIndicator } from './chat-transcript-loading-indicator.tsx';
-import {
-    ChatScrollControllerProvider,
-    useChatScrollController,
-} from './use-chat-scroll-controller.ts';
+import { ChatTurnTimeline, type ChatTurnTimelineMarker } from './chat-turn-timeline.tsx';
 
 const chatSummaryLimit = 20;
 
@@ -42,14 +43,11 @@ export function ChatCard({
     const hasTimelineContent = rowCount > 0 || hasActiveReply || timeline.failedTurn !== null;
     const isInitialTranscriptPending =
         timeline.isPending && !timeline.historyLoaded && !hasActiveReply;
-    const followKey = getChatTimelineFollowKey({
-        activeReply: timeline.activeReply,
-        failedTurn: timeline.failedTurn,
-    });
-    const chatScroll = useChatScrollController({
-        enabled: !isInitialTranscriptPending && hasTimelineContent,
-        followKey,
-    });
+    const contentRef = React.useRef<HTMLDivElement | null>(null);
+    const viewportRef = React.useRef<HTMLDivElement | null>(null);
+    const [turnTimelineMarkers, setTurnTimelineMarkers] = React.useState<ChatTurnTimelineMarker[]>(
+        []
+    );
 
     React.useEffect(() => {
         if (!timeline.error) {
@@ -79,27 +77,38 @@ export function ChatCard({
                 <ChatCardHeader chat={chat} onArchive={onArchive} onEdit={onEdit} />
             </div>
 
-            <div
-                className="scrollbar-hidden min-h-0 flex-1 overflow-y-auto overflow-x-hidden border-r-[3px] border-r-border/70"
-                ref={chatScroll.viewportRef}
+            <MessageScrollerProvider
+                autoScroll={!isInitialTranscriptPending && hasTimelineContent}
+                defaultScrollPosition="end"
+                scrollPreviousItemPeek={64}
             >
-                <div ref={chatScroll.contentRef}>
-                    {isInitialTranscriptPending ? null : hasTimelineContent ? (
-                        <ChatScrollControllerProvider value={chatScroll.handle}>
+                <MessageScroller className="border-r-[3px] border-r-border/70">
+                    <MessageScrollerViewport className="px-3 py-3" ref={viewportRef}>
+                        {isInitialTranscriptPending ? null : hasTimelineContent ? (
                             <ChatTimeline
                                 activeReply={timeline.activeReply}
                                 failedTurn={timeline.failedTurn}
+                                onTurnTimelineMarkersChange={setTurnTimelineMarkers}
                                 rows={rows}
+                                scrollContentRef={contentRef}
                                 totalMessages={totalMessages}
                             />
-                        </ChatScrollControllerProvider>
-                    ) : (
-                        <div className="px-3 py-3 font-mono text-muted-foreground text-xs">
-                            No synced messages for this chat yet.
-                        </div>
-                    )}
-                </div>
-            </div>
+                        ) : (
+                            <div className="px-3 py-3 font-mono text-muted-foreground text-xs">
+                                No synced messages for this chat yet.
+                            </div>
+                        )}
+                    </MessageScrollerViewport>
+                    <ChatTurnTimeline
+                        anchorRef={viewportRef}
+                        markers={
+                            hasTimelineContent && !isInitialTranscriptPending
+                                ? turnTimelineMarkers
+                                : []
+                        }
+                    />
+                </MessageScroller>
+            </MessageScrollerProvider>
 
             <ChatMessageComposer
                 activeRunId={timeline.activeTurn?.runId ?? timeline.activeReply?.runId ?? null}

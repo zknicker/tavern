@@ -118,7 +118,7 @@ test('active and durable assistant reply wrappers keep the same text geometry', 
     const metrics = await page.evaluate(() => {
         const readMetrics = (id: string) => {
             const root = document.getElementById(id);
-            const body = root?.querySelector('.min-h-5');
+            const body = root?.querySelector('[data-slot="bubble-content"]');
             const textRoot = body?.querySelector('[data-selectable-text]') ?? body;
 
             if (
@@ -305,10 +305,6 @@ const chatMessageCss = `
         gap: 6px;
         font-size: 14px;
         line-height: 1.5;
-    }
-
-    .min-h-5 {
-        min-height: 20px;
     }
 
     .max-w-full {

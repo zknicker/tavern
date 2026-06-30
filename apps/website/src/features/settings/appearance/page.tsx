@@ -4,11 +4,9 @@ import { Tick02Icon } from '@hugeicons-pro/core-stroke-rounded';
 import { type ThemePreference, useTheme } from '../../../components/theme-provider.tsx';
 import { BadgeDivider } from '../../../components/ui/badge-divider.tsx';
 import { Icon } from '../../../components/ui/icon.tsx';
-import { Separator } from '../../../components/ui/separator.tsx';
 import { SettingsRow } from '../../../components/ui/settings-row.tsx';
 import { Switch } from '../../../components/ui/switch.tsx';
 import { useChatThinkingDisplayPreference } from '../../../hooks/chats/use-chat-thinking-display-preference.ts';
-import { useChatVirtualizationPreference } from '../../../hooks/chats/use-chat-virtualization-preference.ts';
 import { useAppLayoutPreference } from '../../../hooks/dashboard/use-app-layout-preference.ts';
 import { cn } from '../../../lib/utils.ts';
 
@@ -27,7 +25,6 @@ export function AppearanceSettings() {
     const { setTheme, theme } = useTheme();
     const appLayout = useAppLayoutPreference();
     const chatThinkingDisplay = useChatThinkingDisplayPreference();
-    const chatVirtualization = useChatVirtualizationPreference();
 
     return (
         <div className="space-y-8">
@@ -136,19 +133,6 @@ export function AppearanceSettings() {
                                 aria-label="Show thinking text"
                                 checked={chatThinkingDisplay.enabled}
                                 onCheckedChange={chatThinkingDisplay.setEnabled}
-                            />
-                        </div>
-                    </SettingsRow>
-                    <Separator />
-                    <SettingsRow
-                        description="Keep long chats smooth while scrolling."
-                        title="Virtualize chat history"
-                    >
-                        <div className="flex justify-start md:justify-end">
-                            <Switch
-                                aria-label="Virtualize chat history"
-                                checked={chatVirtualization.enabled}
-                                onCheckedChange={chatVirtualization.setEnabled}
                             />
                         </div>
                     </SettingsRow>

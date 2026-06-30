@@ -14,7 +14,6 @@ import {
 } from './chat-transcript-activity-utils.ts';
 import { ThinkingSteps, ThinkingStepsContent, ThinkingStepsHeader } from './thinking-steps.tsx';
 import { ToolRowHoverRoot, useToolRowHoverGroup } from './tool-row-hover.ts';
-import { useChatScrollControllerHandle } from './use-chat-scroll-controller.ts';
 import { useStableWorkGroupLabel, WorkGroupHeaderText } from './work-group-header-text.tsx';
 
 export function WorkingLog({
@@ -174,21 +173,9 @@ function findFirstPendingClarificationId(items: ActivityItem[]) {
     return item?.row.id ?? null;
 }
 
-// Manual disclosure toggles anchor the trigger's viewport position through
-// the chat scroll controller, which owns scrollTop and releases the anchor
-// when the panel's height transition settles. No-op outside a chat scroll
-// area (session log, layout previews).
 function useDisclosureScrollAnchor() {
-    const controller = useChatScrollControllerHandle();
     const triggerRef = React.useRef<HTMLButtonElement | null>(null);
-
-    const capture = React.useCallback(() => {
-        const trigger = triggerRef.current;
-
-        if (trigger) {
-            controller?.beginAnchor(trigger);
-        }
-    }, [controller]);
+    const capture = React.useCallback(() => {}, []);
 
     const captureFromKeyboard = React.useCallback(
         (event: React.KeyboardEvent<HTMLButtonElement>) => {

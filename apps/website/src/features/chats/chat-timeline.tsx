@@ -1,7 +1,9 @@
+import type * as React from 'react';
 import type { ChatActiveReply, ChatTurnFailure } from '../../hooks/chats/chat-timeline-state.ts';
 import type { ChatLogOutput } from '../../lib/trpc.tsx';
 import { ChatTranscript } from './chat-transcript.tsx';
 import type { ConversationMessageLayout } from './chat-transcript-model.ts';
+import type { ChatTurnTimelineMarker } from './chat-turn-timeline.tsx';
 
 export function ChatTimeline({
     activeReply,
@@ -9,14 +11,10 @@ export function ChatTimeline({
     chatId,
     conversationLayout,
     defaultOpenWorkGroups = false,
-    fetchPreviousPage,
     failedTurn,
-    hasPreviousPage = false,
-    followKey = null,
-    initialScrollKey = null,
-    isFetchingPreviousPage = false,
+    onTurnTimelineMarkersChange,
     rows,
-    scrollViewportRef,
+    scrollContentRef,
     showThinkingText,
     totalMessages,
 }: {
@@ -25,39 +23,29 @@ export function ChatTimeline({
     chatId?: string;
     conversationLayout?: ConversationMessageLayout;
     defaultOpenWorkGroups?: boolean;
-    fetchPreviousPage?: () => void;
     failedTurn?: ChatTurnFailure | null;
-    followKey?: string | null;
-    hasPreviousPage?: boolean;
-    initialScrollKey?: string | null;
-    isFetchingPreviousPage?: boolean;
+    onTurnTimelineMarkersChange?: (markers: ChatTurnTimelineMarker[]) => void;
     rows: NonNullable<ChatLogOutput>['rows'];
-    scrollViewportRef?: React.RefObject<HTMLDivElement | null>;
+    scrollContentRef?: React.RefObject<HTMLDivElement | null>;
     showThinkingText?: boolean;
     totalMessages: number;
 }) {
     const hiddenCount = Math.max(totalMessages - countDurableMessageRows(rows), 0);
 
     return (
-        <div className="flex flex-col gap-3 py-1">
-            <ChatTranscript
-                activeReply={activeReply}
-                agentStatusColor={agentStatusColor}
-                chatId={chatId}
-                conversationLayout={conversationLayout}
-                defaultOpenWorkGroups={defaultOpenWorkGroups}
-                failedTurn={failedTurn}
-                fetchPreviousPage={fetchPreviousPage}
-                followKey={followKey}
-                hasPreviousPage={hasPreviousPage}
-                hiddenCount={hiddenCount}
-                initialScrollKey={initialScrollKey}
-                isFetchingPreviousPage={isFetchingPreviousPage}
-                rows={rows}
-                scrollViewportRef={scrollViewportRef}
-                showThinkingText={showThinkingText}
-            />
-        </div>
+        <ChatTranscript
+            activeReply={activeReply}
+            agentStatusColor={agentStatusColor}
+            chatId={chatId}
+            conversationLayout={conversationLayout}
+            defaultOpenWorkGroups={defaultOpenWorkGroups}
+            failedTurn={failedTurn}
+            hiddenCount={hiddenCount}
+            onTurnTimelineMarkersChange={onTurnTimelineMarkersChange}
+            rows={rows}
+            scrollContentRef={scrollContentRef}
+            showThinkingText={showThinkingText}
+        />
     );
 }
 
