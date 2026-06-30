@@ -7,6 +7,7 @@ import * as React from 'react';
 import { cn } from '../../../lib/utils.ts';
 import { Skeleton } from '../skeleton.tsx';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../tooltip.tsx';
+import { useSidebarOptional } from './context.tsx';
 
 export function SidebarMenu({ className, ...props }: React.ComponentProps<'ul'>) {
     return (
@@ -68,7 +69,12 @@ export function SidebarMenuButton({
         isActive?: boolean;
         tooltip?: string | React.ComponentProps<typeof TooltipContent>;
     } & VariantProps<typeof sidebarMenuButtonVariants>) {
+    const state = useSidebarOptional()?.state ?? 'expanded';
     const renderTooltipDisabledState = Boolean(disabled && tooltip);
+    // Only surface the tooltip when the label is hidden (collapsed rail) or when a disabled
+    // item must explain itself — otherwise it just duplicates the visible label and, over a
+    // desktop content view, paints behind the native page.
+    const showTooltip = Boolean(tooltip) && (state === 'collapsed' || renderTooltipDisabledState);
     const button = useRender({
         defaultTagName: 'button',
         props: mergeProps<'button'>(
@@ -87,7 +93,7 @@ export function SidebarMenuButton({
             },
             props
         ),
-        render: tooltip ? <TooltipTrigger render={render} /> : render,
+        render: showTooltip ? <TooltipTrigger render={render} /> : render,
         state: {
             slot: 'sidebar-menu-button',
             sidebar: 'menu-button',
@@ -97,7 +103,7 @@ export function SidebarMenuButton({
         },
     });
 
-    if (!tooltip) {
+    if (!showTooltip) {
         return button;
     }
 

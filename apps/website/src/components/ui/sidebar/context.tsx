@@ -39,6 +39,12 @@ export function useSidebar() {
     return context;
 }
 
+/** Like {@link useSidebar} but returns null outside a provider instead of throwing — for
+ * primitives (menu buttons) that may render in plain page content without a sidebar shell. */
+export function useSidebarOptional() {
+    return React.useContext(SidebarContext);
+}
+
 function useIsMobile() {
     const [isMobile, setIsMobile] = React.useState(false);
 
