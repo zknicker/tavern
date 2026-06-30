@@ -1,4 +1,5 @@
 import type { TavernCreateMessageRequest } from '@tavern/api';
+import { obsoleteDevelopmentChatDemoIds } from '@tavern/api/development-chat-demos';
 import { AGENT_WORKSPACE } from '../config';
 import type { Database } from '../db/sqlite';
 import { namedParams } from '../db/sqlite';
@@ -33,6 +34,7 @@ export function seedDevelopmentChatDemos({
         agentName: 'Tavern',
         workspaceDir: AGENT_WORKSPACE,
     });
+    pruneObsoleteDevelopmentDemoChats(db);
 
     for (const demo of developmentChatDemos) {
         createChat(
@@ -63,6 +65,28 @@ export function seedDevelopmentChatDemos({
     }
 
     return { seeded: developmentChatDemos.length };
+}
+
+function pruneObsoleteDevelopmentDemoChats(db: Database) {
+    const transaction = db.transaction(() => {
+        for (const chatId of obsoleteDevelopmentChatDemoIds) {
+            const params = namedParams({ chatId });
+
+            db.prepare('DELETE FROM chat_artifacts WHERE chat_id = $chatId').run(params);
+            db.prepare('DELETE FROM chat_response_activity WHERE chat_id = $chatId').run(params);
+            db.prepare('DELETE FROM agent_turns WHERE chat_id = $chatId').run(params);
+            db.prepare('DELETE FROM chat_responses WHERE chat_id = $chatId').run(params);
+            db.prepare('DELETE FROM chat_deliveries WHERE chat_id = $chatId').run(params);
+            db.prepare('DELETE FROM chat_reads WHERE chat_id = $chatId').run(params);
+            db.prepare('DELETE FROM chat_events WHERE chat_id = $chatId').run(params);
+            db.prepare('DELETE FROM agent_sessions WHERE chat_id = $chatId').run(params);
+            db.prepare('DELETE FROM chat_messages WHERE chat_id = $chatId').run(params);
+            db.prepare('DELETE FROM chat_participants WHERE chat_id = $chatId').run(params);
+            db.prepare('DELETE FROM chats WHERE id = $chatId').run(params);
+        }
+    });
+
+    transaction();
 }
 
 function replaceResponseActivities(responseId: string, db: Database) {

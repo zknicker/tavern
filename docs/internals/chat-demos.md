@@ -15,16 +15,19 @@ rendering, and composer code paths without asking an agent to generate data.
 ## Contract
 
 * The dev stack sets `TAVERN_DEV_STACK=1`.
-* Runtime startup seeds demo chats only when that flag is present.
-* Demo chats use stable `cht_`, `msg_`, `rsp_`, and `act_` ids so seeding is
+* Runtime startup seeds the `cht_demo` channel only when that flag is present.
+* Demo rows use stable `cht_`, `msg_`, `rsp_`, and `act_` ids so seeding is
   idempotent across restarts.
 * Demo response activity is replaced from the current demo definition on each
   seed, so changed demo activity sequences do not leave stale rows behind.
-* Demo chats are normal Tavern chats. They appear in the sidebar `Chats` list and
+* The demo channel is a normal Tavern chat. It appears in the sidebar `Chats` list and
   open through `/dashboard/chats/:id`.
 * Do not add a separate Demos tab, lab route, or preview-only page for them.
-* Demos are single-user, single-agent unless the product explicitly brings back
+* The demo channel is single-user, single-agent unless the product explicitly brings back
   multi-user or multi-agent chat support.
+* Obsolete per-feature demo chats are removed during dev seeding so local
+  workspaces converge back to the single `demo` channel without stale stable-id
+  conflicts.
 
 Do not add route-local transcript fixtures for demo coverage. If a demo needs to
 show a chat behavior, seed the Runtime rows that live chat would read.
@@ -36,16 +39,4 @@ app-local UI state, not durable Runtime chat rows.
 
 | Chat | Demonstrates |
 | --- | --- |
-| `cht_demo_activity_turn` | Assistant progress messages and grouped tool activity in one completed turn. |
-| `cht_demo_artifact_links` | Assistant Markdown links that open inspectable Vault and workspace targets in the Artifact Panel. |
-| `cht_demo_attachment` | Durable user message attachment rendering. |
-| `cht_demo_calendar_day` | Calendar Day Rich Response activity rendered inline in a real chat. |
-| `cht_demo_calendar_event` | Calendar Event Rich Response activity rendered inline in a real chat. |
-| `cht_demo_charts` | Bar, Line, and Composed Chart Rich Response activity rendered inline in one real chat. |
-| `cht_demo_composed_chart` | Composed Chart Rich Response activity rendered inline in a real chat. |
-| `cht_demo_line_chart` | Line Chart Rich Response activity rendered inline in a real chat. |
-| `cht_demo_long_content` | Long pasted JSON and long URL wrapping. |
-| `cht_demo_rich_response_catalog` | Stack, Heading, Text, Separator, and Table Rich Response components rendered inline in one real chat. |
-| `cht_demo_streaming_stack` | Running turn with thinking, progress, and tool stack rows. |
-| `cht_demo_tool_headers` | Stable collapsed tool drawer headers for mixed work and a live running group. |
-| `cht_demo_turn_timeline` | Twenty completed back-and-forth turns for exercising the chat turn timeline rail. |
+| `cht_demo` | A representative channel named `demo` covering chart Rich Responses, MerchBase chart rendering, Rich Response primitives, calendar displays, artifact links, long-token wrapping, attachments, completed progress/tool work, stable tool drawer headers, sampled multi-turn history, and one final running turn with thinking/progress/tool rows. |
