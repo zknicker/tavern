@@ -13,7 +13,7 @@ export function SettingsLayout() {
 
     return (
         <div className="grid min-h-full grid-cols-[260px_minmax(0,1fr)] md:h-full md:min-h-0">
-            <aside className="flex min-h-0 w-[260px] shrink-0 flex-col border-border/60 border-r bg-transparent">
+            <aside className="flex min-h-0 w-[260px] shrink-0 flex-col border-sidebar-border border-r bg-[var(--sidebar)]">
                 <SettingsSidebarNav />
             </aside>
             <SettingsContent layoutContext={layoutContext} />
