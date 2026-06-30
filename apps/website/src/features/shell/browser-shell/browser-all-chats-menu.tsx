@@ -13,7 +13,7 @@ import { useChatList } from '../../../hooks/chats/use-chat-list.ts';
 import type { ChatListItem } from '../../chats/chat-list-data.ts';
 import { buildChatList } from '../../chats/chat-list-data.ts';
 import { buildChatPath } from '../../chats/chat-path.ts';
-import { buildSidebarChatGroups, formatSidebarActivityLabel } from '../sidebar-chat-list.tsx';
+import { buildSidebarChatGroups, formatSidebarActivityLabel } from '../sidebar-chat-list-model.ts';
 import { formatTopbarChatActivityTitle, sortChatsByCreatedAt } from './chat-tabs-model.ts';
 
 /** The right-cluster "all chats" menu — navigates the active tab to any chat. */

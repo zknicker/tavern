@@ -27,12 +27,15 @@ test('nextWindowBounds centers the first window and offsets the rest', () => {
         y: undefined,
     });
 
-    assert.deepEqual(nextWindowBounds({ x: 100, y: 80, width: 1200, height: 800 }, { offset: 36 }), {
-        width: 1200,
-        height: 800,
-        x: 136,
-        y: 116,
-    });
+    assert.deepEqual(
+        nextWindowBounds({ x: 100, y: 80, width: 1200, height: 800 }, { offset: 36 }),
+        {
+            width: 1200,
+            height: 800,
+            x: 136,
+            y: 116,
+        }
+    );
 });
 
 test('buildDevWindowUrl seeds the dev server path route', () => {

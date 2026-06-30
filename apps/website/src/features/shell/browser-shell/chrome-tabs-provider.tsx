@@ -11,7 +11,7 @@ import type { DesktopTabsState } from '../../../lib/desktop-bridge.ts';
 import { getDesktopBridge } from '../../../lib/desktop-bridge.ts';
 import type { ChatListItem } from '../../chats/chat-list-data.ts';
 import { buildChatList } from '../../chats/chat-list-data.ts';
-import { buildSidebarChatGroups } from '../sidebar-chat-list.tsx';
+import { buildSidebarChatGroups } from '../sidebar-chat-list-model.ts';
 import { buildNewTabPath } from './chat-tabs-model.ts';
 import { describeRoute } from './describe-route.tsx';
 import type { DockEntry } from './dock-entry-context.ts';

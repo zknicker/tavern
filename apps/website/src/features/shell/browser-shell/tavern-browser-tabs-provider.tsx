@@ -13,7 +13,7 @@ import { useChatRuntimeTimelineStates } from '../../../hooks/chats/use-timeline-
 import { getDesktopBridge, isElectronDesktopApp } from '../../../lib/desktop-bridge.ts';
 import type { ChatListItem } from '../../chats/chat-list-data.ts';
 import { buildChatList } from '../../chats/chat-list-data.ts';
-import { buildSidebarChatGroups } from '../sidebar-chat-list.tsx';
+import { buildSidebarChatGroups } from '../sidebar-chat-list-model.ts';
 import type { BrowserTab } from './browser-tab-store.ts';
 import { useBrowserTabs } from './browser-tab-store.ts';
 import { buildNewTabPath } from './chat-tabs-model.ts';

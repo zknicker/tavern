@@ -423,7 +423,7 @@ function closeTab(window, tabId) {
 function reorderTabs(window, orderedIds) {
     const entry = windowContent.get(window.id);
 
-    if (!entry || !Array.isArray(orderedIds)) {
+    if (!(entry && Array.isArray(orderedIds))) {
         return;
     }
 
@@ -440,7 +440,7 @@ function reorderTabs(window, orderedIds) {
 function navigateActiveTab(window, route) {
     const entry = windowContent.get(window.id);
 
-    if (!entry || !isSafeWindowRoute(route)) {
+    if (!(entry && isSafeWindowRoute(route))) {
         return;
     }
 
@@ -463,7 +463,7 @@ function reportTabRoute(window, tab) {
 function positionActiveView(window) {
     const entry = windowContent.get(window.id);
 
-    if (!(entry && entry.bounds && entry.activeId)) {
+    if (!(entry?.bounds && entry.activeId)) {
         return;
     }
 
@@ -513,7 +513,10 @@ function currentTabs(window) {
     const entry = windowContent.get(window.id);
 
     return entry
-        ? { activeId: entry.activeId, tabs: entry.tabs.map((tab) => ({ id: tab.id, route: tab.route })) }
+        ? {
+              activeId: entry.activeId,
+              tabs: entry.tabs.map((tab) => ({ id: tab.id, route: tab.route })),
+          }
         : { activeId: null, tabs: [] };
 }
 
@@ -621,10 +624,7 @@ function tickTearOff() {
     } else {
         // A torn-off window snaps under the cursor, keeping the tab where it was grabbed.
         const offset = tearOff.cursorOffset ?? tearOffCursorOffset;
-        tearOff.window.setPosition(
-            Math.round(point.x - offset.x),
-            Math.round(point.y - offset.y)
-        );
+        tearOff.window.setPosition(Math.round(point.x - offset.x), Math.round(point.y - offset.y));
     }
 }
 
