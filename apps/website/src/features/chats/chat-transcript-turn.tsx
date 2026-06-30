@@ -26,6 +26,7 @@ import { formatShortTime } from '../../lib/format.ts';
 import { springs } from '../../lib/springs.ts';
 import { cn } from '../../lib/utils.ts';
 import { AgentRichResponse } from '../../rich-responses/render-rich-response.tsx';
+import { AgentEyes } from './agent-eyes.tsx';
 import { AgentStatusIndicator } from './agent-status-indicator.tsx';
 import { getActivePresenceVerb } from './chat-active-presence-verb.ts';
 import { CommandRunEntry } from './chat-command-card.tsx';
@@ -63,8 +64,22 @@ import { getItemSessionKey, isActivityBackedMessageRow } from './chat-transcript
 import { RuntimeNoticeEntry } from './chat-transcript-system-step.tsx';
 import { useRevealedText } from './use-revealed-text.ts';
 
-const rowClassName = 'relative w-full px-3 py-1';
+// `group/turn` is the hover unit for a whole message: hovering the row reveals
+// its actions (the copy button next to the timestamp, or above the owner's own
+// bubble). Spacing is intentionally tight — the row's own `py` padding carries
+// most of the room between messages, with only a small gap between scroller
+// items (see chat-transcript.tsx).
+const rowClassName = 'group/turn w-full px-3 py-1.5';
+// Message actions stay hidden until the row is hovered or focused. No
+// transition — the affordance tracks the pointer instantly.
+const hoverActionsClassName =
+    'flex items-center gap-0.5 opacity-0 focus-within:opacity-100 group-hover/turn:opacity-100';
 const newTurnGapClassName = '';
+// Pin the identity avatar to the top of the row. The shadcn MessageAvatar
+// defaults to self-end and lifts by -translate-y-8 when the message has a
+// footer; our roster layout keeps it aligned with the name header instead.
+const turnAvatarBaseClassName =
+    'size-8 min-w-8 self-start ring-1 ring-border/50 group-has-data-[slot=message-footer]/message:translate-y-0';
 const hoverGroupClassName = 'group';
 const agentStatusSize = 32;
 const presenceLabelExitTransition = {
@@ -222,20 +237,64 @@ function UserTurn({
     const actorProfile = useActorProfile(entry.actor);
     const displayName = actorProfile?.name ?? getTurnFallbackName(entry) ?? 'You';
     const lastMessage = getLastMessage(entry.items);
+    // The app owner's own turn reads as a right-anchored, avatar-less bubble.
+    // Other people in the chat use the same left roster as agents.
+    const isSelf = actorProfile?.isSelf ?? false;
+
+    if (isSelf) {
+        return (
+            <Message align="start" className={cn(rowClassName, newTurnGapClassName)}>
+                <MessageContent className="pt-0.5">
+                    {lastMessage ? (
+                        <div className={cn(hoverActionsClassName, 'justify-end gap-2 pe-0.5')}>
+                            <span className="min-w-0 truncate font-semibold text-foreground text-sm leading-5">
+                                {displayName}
+                            </span>
+                            {entry.timestamp ? (
+                                <time
+                                    className="shrink-0 text-muted-foreground/65 text-xs tabular-nums"
+                                    dateTime={entry.timestamp}
+                                >
+                                    {formatShortTime(entry.timestamp)}
+                                </time>
+                            ) : null}
+                            <TranscriptMessageActions value={lastMessage.content} />
+                        </div>
+                    ) : null}
+                    {entry.items.map((item) => (
+                        <UserTurnItem from="user" item={item} key={getTranscriptItemKey(item)} />
+                    ))}
+                </MessageContent>
+            </Message>
+        );
+    }
 
     return (
         <Message align="start" className={cn(rowClassName, newTurnGapClassName)}>
-            <TurnAvatar color={actorProfile?.primaryColor} name={displayName} />
+            <TurnAvatar
+                actorKind={actorProfile?.kind ?? 'participant'}
+                avatarUrl={actorProfile?.avatarUrl}
+                color={actorProfile?.primaryColor}
+                name={displayName}
+            />
             <MessageContent className="gap-1.5 pt-0.5">
                 {layout.showHumanIdentity ? (
-                    <TurnHeader displayName={displayName} timestamp={entry.timestamp} />
+                    <TurnHeader
+                        actions={
+                            lastMessage ? (
+                                <TranscriptMessageActions value={lastMessage.content} />
+                            ) : null
+                        }
+                        displayName={displayName}
+                        timestamp={entry.timestamp}
+                    />
                 ) : null}
                 <div className="flex min-w-0 flex-col gap-1.5">
                     {entry.items.map((item) => (
                         <UserTurnItem
+                            from="assistant"
                             item={item}
                             key={getTranscriptItemKey(item)}
-                            showMeta={isMessageItem(item, lastMessage)}
                         />
                     ))}
                 </div>
@@ -244,7 +303,59 @@ function UserTurn({
     );
 }
 
-function TurnAvatar({ color, name }: { color?: string | null; name: string }) {
+function getActiveReplyText(items: TranscriptItem[]) {
+    for (const item of items) {
+        if (item.kind === 'activeReply') {
+            return item.reply.text ?? '';
+        }
+    }
+
+    return '';
+}
+
+function TurnAvatar({
+    actorKind,
+    avatarUrl,
+    color,
+    name,
+}: {
+    actorKind: 'agent' | 'participant' | 'profile';
+    avatarUrl?: string | null;
+    color?: string | null;
+    name: string;
+}) {
+    // Agents wear the Tavern eyes as their identity avatar; people use an
+    // uploaded image, falling back to initials.
+    const variant = resolveTurnAvatarVariant(actorKind, avatarUrl);
+
+    if (variant === 'eyes') {
+        return (
+            <MessageAvatar className={cn(turnAvatarBaseClassName, 'bg-muted')}>
+                <AgentEyes
+                    animated={false}
+                    aria-hidden
+                    className="overflow-visible"
+                    color={color ?? 'var(--muted-foreground)'}
+                    size={20}
+                />
+            </MessageAvatar>
+        );
+    }
+
+    if (variant === 'image') {
+        return (
+            <MessageAvatar className={turnAvatarBaseClassName}>
+                <img
+                    alt={`${name} avatar`}
+                    className="size-full object-cover"
+                    height={32}
+                    src={avatarUrl ?? undefined}
+                    width={32}
+                />
+            </MessageAvatar>
+        );
+    }
+
     const style = color
         ? ({
               '--chat-avatar-color': color,
@@ -254,7 +365,8 @@ function TurnAvatar({ color, name }: { color?: string | null; name: string }) {
     return (
         <MessageAvatar
             className={cn(
-                'size-8 min-w-8 self-start rounded-full font-semibold text-xs shadow-xs ring-1 ring-border/50',
+                turnAvatarBaseClassName,
+                'rounded-full font-semibold text-xs shadow-xs',
                 color
                     ? 'bg-[var(--chat-avatar-color)] text-white'
                     : 'bg-muted text-muted-foreground'
@@ -266,7 +378,15 @@ function TurnAvatar({ color, name }: { color?: string | null; name: string }) {
     );
 }
 
-function TurnHeader({ displayName, timestamp }: { displayName: string; timestamp: string | null }) {
+function TurnHeader({
+    actions,
+    displayName,
+    timestamp,
+}: {
+    actions?: React.ReactNode;
+    displayName: string;
+    timestamp: string | null;
+}) {
     return (
         <MessageHeader className="gap-2 px-0">
             <span className="min-w-0 truncate font-semibold text-foreground text-sm leading-5">
@@ -280,8 +400,20 @@ function TurnHeader({ displayName, timestamp }: { displayName: string; timestamp
                     {formatShortTime(timestamp)}
                 </time>
             ) : null}
+            {actions ? <span className={hoverActionsClassName}>{actions}</span> : null}
         </MessageHeader>
     );
+}
+
+export function resolveTurnAvatarVariant(
+    actorKind: 'agent' | 'participant' | 'profile',
+    avatarUrl?: string | null
+): 'eyes' | 'image' | 'initials' {
+    if (actorKind === 'agent') {
+        return 'eyes';
+    }
+
+    return avatarUrl ? 'image' : 'initials';
 }
 
 function getActorInitials(name: string) {
@@ -341,6 +473,12 @@ function AgentTurn({
     const turnStopped =
         hasStoppedTurn(items, activeReply?.runId) || (!activeReply && hasAnyStoppedTurn(items));
     const turnActive = isActiveTurn(items, activeReply, lastMessage);
+    const copyValue = lastMessage?.content ?? getActiveReplyText(items);
+    const headerActions = lastMessage ? (
+        <TranscriptMessageActions value={lastMessage.content} />
+    ) : copyValue ? (
+        <TranscriptMessageActions disabled value={copyValue} />
+    ) : null;
     return (
         <Message
             align="start"
@@ -349,10 +487,18 @@ function AgentTurn({
                 showIdentity ? newTurnGapClassName : followsRuntimeNotice ? 'mt-0' : null
             )}
         >
-            <TurnAvatar color={actorProfile?.primaryColor ?? agentStatusColor} name={displayName} />
+            <TurnAvatar
+                actorKind="agent"
+                color={actorProfile?.primaryColor ?? agentStatusColor}
+                name={displayName}
+            />
             <MessageContent className="gap-1.5 pt-0.5">
                 {showIdentity ? (
-                    <TurnHeader displayName={displayName} timestamp={entry.timestamp} />
+                    <TurnHeader
+                        actions={headerActions}
+                        displayName={displayName}
+                        timestamp={entry.timestamp}
+                    />
                 ) : null}
                 <div className={cn(hoverGroupClassName, 'relative min-w-0')}>
                     <div className="flex min-w-0 flex-col gap-3">
@@ -362,7 +508,6 @@ function AgentTurn({
                                 currentSessionKey={currentSessionKey}
                                 defaultOpenWorkGroups={defaultOpenWorkGroups}
                                 key={segment.key}
-                                lastMessage={lastMessage}
                                 segment={segment}
                                 turnActive={turnActive && index === visibleSegments.length - 1}
                                 turnCompletedAt={turnCompletedAt}
@@ -571,7 +716,6 @@ function AgentTurnSegment({
     chatId,
     currentSessionKey,
     defaultOpenWorkGroups,
-    lastMessage,
     segment,
     turnActive,
     turnCompletedAt,
@@ -581,7 +725,6 @@ function AgentTurnSegment({
     chatId?: string;
     currentSessionKey?: string | null;
     defaultOpenWorkGroups: boolean;
-    lastMessage: Extract<TranscriptRow, { kind: 'message' }>['message'] | null;
     segment: AgentItemSegment;
     turnActive: boolean;
     turnCompletedAt: string | null;
@@ -605,12 +748,7 @@ function AgentTurnSegment({
     }
 
     return (
-        <AgentTurnItem
-            chatId={chatId}
-            currentSessionKey={currentSessionKey}
-            item={segment.item}
-            lastMessage={lastMessage}
-        />
+        <AgentTurnItem chatId={chatId} currentSessionKey={currentSessionKey} item={segment.item} />
     );
 }
 
@@ -669,15 +807,7 @@ function usePresenceNow(enabled: boolean, start: string | null) {
     return now;
 }
 
-function UserTurnItem({
-    className,
-    item,
-    showMeta,
-}: {
-    className?: string;
-    item: TranscriptItem;
-    showMeta: boolean;
-}) {
+function UserTurnItem({ from, item }: { from: 'assistant' | 'user'; item: TranscriptItem }) {
     if (item.kind !== 'row' || item.row.kind !== 'message') {
         return null;
     }
@@ -688,12 +818,9 @@ function UserTurnItem({
 
     return body ? (
         <ChatMessage
-            actions={showMeta ? <TranscriptMessageActions value={message.content} /> : null}
             animateEnter={isLocalTimelineMessageMetadata(message.metadata)}
             attachments={attachments}
-            className={className}
-            from="user"
-            time={showMeta ? formatShortTime(message.timestamp) : null}
+            from={from}
         >
             {body}
         </ChatMessage>
@@ -704,18 +831,15 @@ function AgentTurnItem({
     chatId,
     currentSessionKey,
     item,
-    lastMessage,
 }: {
     chatId?: string;
     currentSessionKey?: string | null;
     item: TranscriptItem;
-    lastMessage: Extract<TranscriptRow, { kind: 'message' }>['message'] | null;
 }) {
     if (item.kind === 'activeReply') {
         return (
             <AssistantReplyText
                 content={getActiveReplyDisplayText(item.reply.text ?? '')}
-                copyValue={item.reply.text ?? ''}
                 revealKey={item.reply.runId}
                 revealText={isStreamingActiveReply(item.reply)}
             />
@@ -731,11 +855,7 @@ function AgentTurnItem({
     }
 
     if (item.kind === 'row' && item.row.kind === 'message') {
-        const message = item.row.message;
-
-        return (
-            <AssistantReplyText message={message} showActions={message.id === lastMessage?.id} />
-        );
+        return <AssistantReplyText message={item.row.message} />;
     }
 
     if (item.kind === 'row' && item.row.kind === 'rich_response') {
@@ -767,18 +887,14 @@ function AssistantNarrationText({ item }: { item: TranscriptItem }) {
 
 function AssistantReplyText({
     content,
-    copyValue,
     message,
     revealKey,
     revealText = false,
-    showActions = false,
 }: {
     content?: string;
-    copyValue?: string;
     message?: TranscriptMessage;
     revealKey?: string;
     revealText?: boolean;
-    showActions?: boolean;
 }) {
     const fullContent = content ?? (message ? getTranscriptMessageContent(message) : '');
     const revealedText = useRevealedText(fullContent, {
@@ -791,21 +907,9 @@ function AssistantReplyText({
             shouldReduceMotion !== true && (revealText || revealedText.length < fullContent.length),
     });
     const attachments = message ? renderTranscriptMessageAttachments(message.attachments) : null;
-    const actions = message ? (
-        showActions ? (
-            <TranscriptMessageActions value={message.content} />
-        ) : null
-    ) : (
-        <TranscriptMessageActions disabled value={copyValue ?? revealedText} />
-    );
 
     return (
-        <ChatMessage
-            actions={actions}
-            animateEnter={false}
-            attachments={attachments}
-            from="assistant"
-        >
+        <ChatMessage animateEnter={false} attachments={attachments} from="assistant">
             {message ? (
                 <ChatTranscriptMessageContent
                     animatedRanges={animatedRanges}
@@ -859,7 +963,7 @@ function AgentTurnFailure({
                     aria-label="Dismiss failed response"
                     className={cn(
                         messageActionButtonClassName,
-                        'ml-1 align-text-bottom opacity-0 transition-opacity duration-150 group-hover/failure:opacity-100'
+                        'ml-1 align-text-bottom opacity-0 group-hover/failure:opacity-100'
                     )}
                     onClick={() => dismissRow(responseId)}
                     title="Dismiss"
@@ -933,18 +1037,6 @@ function getLastMessage(items: TranscriptItem[]) {
     }
 
     return null;
-}
-
-function isMessageItem(
-    item: TranscriptItem,
-    message: Extract<TranscriptRow, { kind: 'message' }>['message'] | null
-) {
-    return (
-        message !== null &&
-        item.kind === 'row' &&
-        item.row.kind === 'message' &&
-        item.row.message.id === message.id
-    );
 }
 
 function isActiveTurn(

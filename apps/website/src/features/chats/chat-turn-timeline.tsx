@@ -84,7 +84,9 @@ export function ChatTurnTimelineRail({
         <nav
             aria-label="Chat turn timeline"
             className={cn(
-                'pointer-events-none z-20 hidden w-12 md:block',
+                // Hidden until lg, where the transcript opens up a side gutter
+                // wide enough for the rail to sit beside the messages.
+                'pointer-events-none z-20 hidden w-12 lg:block',
                 anchorStyle ? 'fixed' : 'absolute top-0 bottom-0 -left-2'
             )}
             data-slot="chat-turn-timeline"

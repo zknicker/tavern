@@ -89,7 +89,10 @@ export function ChatDetailFrame({
                         </div>
                         <MessageScroller>
                             <MessageScrollerViewport
-                                className="px-6 py-4"
+                                // Widen the side gutters at lg+ so the turn
+                                // timeline rail has room beside the messages;
+                                // the rail itself hides below lg.
+                                className="px-6 py-4 lg:px-16"
                                 onScroll={handleScroll}
                                 ref={viewportRef}
                             >

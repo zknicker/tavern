@@ -473,7 +473,9 @@ export function ChatMessageComposer({
             className={cn(
                 isCompact
                     ? 'border-t border-r-[3px] border-r-border/70 bg-chrome/40 px-3 py-3'
-                    : null
+                    : // Match the transcript's lg gutter so the composer stays
+                      // aligned with the messages.
+                      'lg:px-16'
             )}
             contentClassName={isCompact ? 'max-w-none' : undefined}
             error={attachmentError ?? steerTurn.error?.message ?? sendMessage.error?.message}

@@ -6,28 +6,24 @@ import { springs } from '../../lib/springs.ts';
 import { cn } from '../../lib/utils.ts';
 import { AttachmentGroup } from '../ui/attachment.tsx';
 import { Bubble, BubbleContent } from '../ui/bubble.tsx';
-import { Message, MessageContent, MessageFooter } from '../ui/message.tsx';
+import { Message, MessageContent } from '../ui/message.tsx';
 
 export interface ChatMessageProps extends Omit<HTMLMotionProps<'div'>, 'children'> {
-    actions?: ReactNode;
     animateEnter?: boolean;
     attachments?: ReactNode;
     children?: ReactNode;
     from: 'user' | 'assistant';
-    time?: ReactNode;
 }
 
 const ChatMessage = forwardRef<HTMLDivElement, ChatMessageProps>(
     (
         {
-            actions,
             animateEnter = true,
             attachments,
             children,
             className,
             from,
             style,
-            time,
             transition,
             ...props
         },
@@ -35,9 +31,9 @@ const ChatMessage = forwardRef<HTMLDivElement, ChatMessageProps>(
     ) => {
         const hasBody = children !== null && children !== undefined && children !== '';
         const hasAttachments = attachments !== null && attachments !== undefined;
-        const showTime = time !== null && time !== undefined;
-        const showActions = actions !== null && actions !== undefined;
-        const showMeta = showTime || showActions;
+        // The app owner's own messages anchor right in a secondary bubble
+        // (`from="user"`); everyone else — agents and other participants —
+        // reads as left-aligned plain ghost text in the roster.
         const align = from === 'user' ? 'end' : 'start';
         const bubbleVariant = from === 'user' ? 'secondary' : 'ghost';
 
@@ -60,16 +56,12 @@ const ChatMessage = forwardRef<HTMLDivElement, ChatMessageProps>(
                         {hasAttachments ? <AttachmentGroup>{attachments}</AttachmentGroup> : null}
                         {hasBody ? (
                             <Bubble align={align} variant={bubbleVariant}>
-                                <BubbleContent>{children}</BubbleContent>
+                                <BubbleContent
+                                    className={from === 'user' ? 'rounded-full px-4' : undefined}
+                                >
+                                    {children}
+                                </BubbleContent>
                             </Bubble>
-                        ) : null}
-                        {showMeta ? (
-                            <MessageFooter className="gap-2">
-                                {showTime ? <span className="tabular-nums">{time}</span> : null}
-                                {showActions ? (
-                                    <span className="flex items-center gap-0.5">{actions}</span>
-                                ) : null}
-                            </MessageFooter>
                         ) : null}
                     </MessageContent>
                 </Message>

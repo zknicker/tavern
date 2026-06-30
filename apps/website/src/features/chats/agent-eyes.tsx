@@ -17,6 +17,7 @@ export type { AgentEyeEmotion } from './agent-eyes-config.ts';
 export { agentEyeEmotions } from './agent-eyes-config.ts';
 
 export interface AgentEyesProps extends Omit<SVGProps<SVGSVGElement>, 'color'> {
+    animated?: boolean;
     blinking?: boolean;
     color?: string;
     emotion?: AgentEyeEmotion;
@@ -26,6 +27,7 @@ export interface AgentEyesProps extends Omit<SVGProps<SVGSVGElement>, 'color'> {
 }
 
 export function AgentEyes({
+    animated = true,
     blinking = true,
     color = 'currentColor',
     emotion = 'default',
@@ -41,12 +43,19 @@ export function AgentEyes({
     propRef.current = { blinking, emotion, intensity, speed };
     const initialPathsRef = useRef<{ left: string; right: string } | null>(null);
 
+    // The animated loop drives emotion at runtime, so the rendered initial paths
+    // stay the neutral default; the static (animated={false}) avatar shows these
+    // resting eyes directly.
     initialPathsRef.current ??= {
         left: buildEyePath(resolveStaticEye(emotionConfig.default.L, 1), leftEyeX),
         right: buildEyePath(resolveStaticEye(emotionConfig.default.R, 1), rightEyeX),
     };
 
     useEffect(() => {
+        if (!animated) {
+            return;
+        }
+
         const current = { L: defaultEyeParams.slice(), R: defaultEyeParams.slice() };
         const velocity = { L: new Array(14).fill(0), R: new Array(14).fill(0) };
         const target = new Array<number>(14);
@@ -143,7 +152,7 @@ export function AgentEyes({
         frameId = requestAnimationFrame(loop);
 
         return () => cancelAnimationFrame(frameId);
-    }, []);
+    }, [animated]);
 
     return (
         <svg

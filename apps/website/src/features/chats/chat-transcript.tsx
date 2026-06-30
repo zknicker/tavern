@@ -137,10 +137,14 @@ export function ChatTranscript({
     const transcript = (
         <TranscriptRenderProvider value={renderContext}>
             <div className="relative mx-auto min-h-full w-full max-w-[60rem]">
-                <MessageScrollerContent className="w-full" ref={scrollContentRef}>
+                <MessageScrollerContent className="w-full gap-1.5" ref={scrollContentRef}>
                     {transcriptRows.map((row) =>
                         row.kind === 'hiddenCount' && hiddenCount === 0 ? null : (
                             <MessageScrollerItem
+                                // Drop paint containment so a message's hover
+                                // action island can sit on top of the row
+                                // without being clipped, keeping rows tight.
+                                className="![content-visibility:visible]"
                                 key={row.id}
                                 messageId={row.id}
                                 scrollAnchor={isTranscriptRenderRowScrollAnchor(row)}

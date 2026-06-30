@@ -87,17 +87,12 @@ test('streaming word lift changes paint position without changing line layout', 
 
 test('active and durable assistant reply wrappers keep the same text geometry', async () => {
     const liveMarkup = renderToStaticMarkup(
-        <ChatMessage
-            actions={<button type="button">Copy</button>}
-            animateEnter={false}
-            from="assistant"
-        >
+        <ChatMessage animateEnter={false} from="assistant">
             <ChatMarkdownText content={appointmentText} />
         </ChatMessage>
     );
     const durableMarkup = renderToStaticMarkup(
         <ChatMessage
-            actions={<button type="button">Copy</button>}
             animateEnter={false}
             attachments={renderTranscriptMessageAttachments(
                 assistantMessage(appointmentText).attachments

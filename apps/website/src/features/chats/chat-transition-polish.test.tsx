@@ -107,13 +107,15 @@ test('chat message prose uses the shadcn bubble content styling', () => {
 
     for (const markup of [assistant, user]) {
         expect(markup).toContain('data-slot="bubble-content"');
-        expect(markup).toContain('rounded-xl');
-        expect(markup).toContain('px-3');
         expect(markup).toContain('py-2');
         expect(markup).toContain('leading-relaxed');
     }
 
+    // The agent reply keeps the default bubble radius and reads as left-aligned
+    // ghost text; the owner's own message is a right-anchored secondary pill.
+    expect(assistant).toContain('rounded-xl');
     expect(assistant).toContain('data-variant="ghost"');
+    expect(user).toContain('rounded-full');
     expect(user).toContain('data-variant="secondary"');
 });
 
@@ -129,39 +131,6 @@ test('chat message wraps long pasted tokens inside the bubble', () => {
         expect(markup).toContain('max-w-full');
         expect(markup).toContain('wrap-break-word');
     }
-});
-
-test('chat message meta row uses the shadcn footer in normal flow', () => {
-    const markup = renderToStaticMarkup(
-        <ChatMessage actions={<button type="button">Copy</button>} from="user" time="12:00">
-            Done
-        </ChatMessage>
-    );
-
-    expect(markup).toContain('data-slot="message-footer"');
-    expect(markup).toContain('px-3');
-    expect(markup).not.toContain('opacity-0');
-    expect(markup).not.toContain('absolute');
-    expect(markup).not.toContain('top-full');
-});
-
-test('chat message disabled copy action stays in the shadcn footer', () => {
-    const markup = renderToStaticMarkup(
-        <ChatMessage
-            actions={
-                <button disabled type="button">
-                    Copy
-                </button>
-            }
-            from="assistant"
-        >
-            Streaming
-        </ChatMessage>
-    );
-
-    expect(markup).toContain('data-slot="message-footer"');
-    expect(markup).toContain('disabled=""');
-    expect(markup).not.toContain('absolute');
 });
 
 test('draft handoff waits while the accepted turn is still blank thinking', () => {

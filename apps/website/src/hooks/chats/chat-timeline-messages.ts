@@ -108,16 +108,21 @@ function buildUserMessageRow(input: {
     timestamp: string;
 }): ChatMessageRow {
     const sourceSessionKey = input.sessionKey?.trim() ?? '';
+    // Optimistic rows are the owner's own send, so stamp the local human
+    // participant actor (the server's `usr_tavern`, see use-actor's
+    // `localHumanParticipantId`) to match the durable row and render
+    // right-anchored immediately — no left→right flip when the server row lands.
+    const ownerActor = { id: 'usr_tavern', kind: 'participant' as const };
 
     return {
-        actor: null,
+        actor: ownerActor,
         connectsToNext: false,
         connectsToPrevious: false,
         id: input.id,
         isFirstInGroup: true,
         kind: 'message',
         message: {
-            actor: null,
+            actor: ownerActor,
             attachments: input.attachments,
             content: input.content,
             id: input.id,

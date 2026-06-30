@@ -83,6 +83,7 @@ test('ChatTranscript animates only local optimistic user messages', () => {
 
     assert.match(markup, /Can you check this\?/);
     assert.match(markup, /data-slot="message"/);
+    // The owner's own optimistic message anchors right (secondary bubble).
     assert.match(markup, /style="transform-origin:bottom right;opacity:0;transform/);
 });
 

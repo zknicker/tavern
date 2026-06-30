@@ -165,6 +165,15 @@ transcript only grows:
   controller or virtualized transcript over the shadcn scroller. Reopening a
   chat restores the remembered visible message through shadcn's scroller hooks;
   chats without remembered position open at the bottom.
+* Agents and other people share one left-aligned roster layout: an avatar
+  gutter, a bold name, a timestamp, then plain message text. The agent identity
+  avatar is the Tavern eyes; a participant's avatar falls back to initials. The
+  roster eyes avatar is static; the live working presence row below the latest
+  agent turn keeps the animated eyes. The app owner's own messages (the local
+  `usr_tavern` participant / `profile:self` actor) are the exception: they
+  anchor to the right in an avatar-less secondary bubble. The owner's locally
+  set name and avatar (Settings → Profile) apply where the owner is shown with
+  identity.
 * The left turn timeline rail summarizes loaded user-to-agent turns and marks
   the visible turn with shadcn visibility state. Selecting a rail mark jumps to
   that turn through shadcn `scrollToMessage`.

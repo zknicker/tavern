@@ -666,7 +666,10 @@
         --clarification-row-hover: --alpha(var(--color-white) / 7%);
         --clarification-action: var(--foreground);
         --clarification-action-foreground: var(--background);
-        --chat-log-row-hover: --alpha(var(--color-white) / 7%);
+        /* Hovered chat message row. Dark lifts one step up the surface ladder;
+           light uses a subtle neutral grey since light surfaces flatten to
+           white. See components/chats/chat-message.tsx. */
+        --chat-log-row-hover: var(--surface-3);
         --chat-log-session-badge-bg: --alpha(var(--color-blue-500) / 14%);
 
         --nav-hover: --alpha(var(--color-white) / 6%);
@@ -808,7 +811,7 @@
         --clarification-row-hover: --alpha(var(--color-black) / 5%);
         --clarification-action: var(--foreground);
         --clarification-action-foreground: var(--background);
-        --chat-log-row-hover: --alpha(var(--color-black) / 5%);
+        --chat-log-row-hover: --alpha(var(--color-black) / 4%);
         --chat-log-session-badge-bg: var(--color-blue-50);
 
         --content-card: var(--card);
