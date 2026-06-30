@@ -20,8 +20,9 @@ Tavern has two memory surfaces:
 
 ## In The App
 
-Memory is configured through Settings. The top-level Workspace page browses the
-managed agent workspace, and the Vault page browses durable wiki knowledge.
+Memory is configured through Settings -> Agents -> Memory. The top-level
+Workspace page browses the managed agent workspace, and the Vault page browses
+durable wiki knowledge.
 
 Users can inspect Vault knowledge through Vault:
 

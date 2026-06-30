@@ -26,7 +26,7 @@ describe('Runtime agent and agent engine reads', () => {
         await expect(response.json()).resolves.toEqual({
             agents: [
                 {
-                    enabledSkillIds: [],
+                    enabledSkillIds: ['tavern-agent'],
                     modelName: {
                         model: 'gpt-4.1-mini',
                         provider: 'openai',
@@ -239,10 +239,18 @@ describe('Runtime agent and agent engine reads', () => {
         const listResponse = await handleTavernRuntimeRequest(
             new Request('http://runtime.test/skills')
         );
+        const detailResponse = await handleTavernRuntimeRequest(
+            new Request('http://runtime.test/skills/tavern-agent')
+        );
 
         expect(listResponse.status).toBe(200);
         await expect(listResponse.json()).resolves.toMatchObject({
             skills: expect.arrayContaining([expect.objectContaining({ id: 'tavern-agent' })]),
+        });
+        expect(detailResponse.status).toBe(200);
+        await expect(detailResponse.json()).resolves.toMatchObject({
+            contentMarkdown: expect.stringContaining('# Tavern Agent'),
+            id: 'tavern-agent',
         });
     });
 

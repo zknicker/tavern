@@ -35,6 +35,13 @@ const capabilityLabels = {
 export const settingsCapabilityRequirements = {
     'agent-runtime': [],
     agent: ['apiServer', 'models'],
+    'agent-channels': ['apiServer'],
+    'agent-general': ['apiServer', 'models'],
+    'agent-mcp': ['apiServer'],
+    'agent-memory': ['vault'],
+    'agent-plugins': ['apiServer'],
+    'agent-skills': ['apiServer', 'skills'],
+    'agent-tools': ['apiServer', 'skills'],
     'notes-md': [],
     appearance: [],
     channels: ['apiServer'],

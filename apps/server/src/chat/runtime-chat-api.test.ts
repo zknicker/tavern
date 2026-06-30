@@ -12,14 +12,14 @@ test('command activity with a typed slash command maps to a command run', () => 
     assert.deepEqual(
         commandRunFromActivity(
             commandActivity({
-                detail: 'Model set to tavern-e2e-tools',
+                detail: 'Model set to tavern-e2e-fake',
                 metadata: { command: { status: 'completed', text: '/model sonnet' } },
                 status: 'completed',
             })
         ),
         {
             command: '/model sonnet',
-            output: 'Model set to tavern-e2e-tools',
+            output: 'Model set to tavern-e2e-fake',
             responseId: 'rsp_cmd_1',
             status: 'completed',
         }

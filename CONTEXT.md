@@ -84,6 +84,14 @@ A Tavern capability that can be attached to an agent definition, such as a Tool,
 Memory namespace, or Channel membership.
 _Avoid_: Runtime plugin, harness setting, bundled feature
 
+**Installed skill**:
+A reusable instruction package available in Tavern for assignment to agents.
+_Avoid_: Assigned skill, enabled tool, marketplace item
+
+**Skill assignment**:
+An agent setting that references installed skills the agent should receive during turns.
+_Avoid_: Skill install, skill discovery, global enablement
+
 **Rich Response**:
 One assistant-authored, app-rendered UI island attached to an assistant response.
 _Avoid_: Widget, UI block, widget kit, AG-UI component, ChatKit widget

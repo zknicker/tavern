@@ -134,7 +134,7 @@ describe('Agent engine model catalog', () => {
         const openai = result.models.find((model) => model.id === 'openai/gpt-4.1-mini');
 
         expect(openai).toMatchObject({
-            executionKind: 'language-model',
+            executionKind: 'harness',
             metadata: {
                 authType: 'api_key',
                 keyEnv: 'OPENAI_API_KEY',

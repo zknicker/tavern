@@ -2,8 +2,8 @@ import { fileURLToPath } from 'node:url';
 import { defineConfig } from '@playwright/test';
 
 const runId = process.env.TAVERN_E2E_RUN_ID ?? 'default';
-const agentModel = process.env.TAVERN_AGENT_MODEL ?? 'tavern-e2e-tools';
-const agentProvider = process.env.TAVERN_AGENT_PROVIDER ?? 'e2e';
+const agentModel = process.env.TAVERN_AGENT_MODEL ?? 'tavern-e2e-fake';
+const agentProvider = process.env.TAVERN_AGENT_PROVIDER ?? 'openai-compatible';
 const runtimePort = Number.parseInt(process.env.TAVERN_RUNTIME_PORT ?? '18790', 10);
 const serverPort = Number.parseInt(process.env.TAVERN_SERVER_PORT ?? '8081', 10);
 const websitePort = Number.parseInt(process.env.TAVERN_WEBSITE_PORT ?? '3101', 10);
@@ -34,6 +34,7 @@ function buildWebServers() {
                 `TAVERN_RUNTIME_PORT=${runtimePort}`,
                 `TAVERN_AGENT_MODEL=${agentModel}`,
                 `TAVERN_AGENT_PROVIDER=${agentProvider}`,
+                'TAVERN_AGENT_BASE_URL=http://127.0.0.1:1/v1',
                 'bun e2e/start-tavern-runtime.ts',
             ].join(' '),
             reuseExistingServer: false,

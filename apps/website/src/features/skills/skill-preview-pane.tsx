@@ -27,20 +27,50 @@ import {
 } from './skill-preview-metadata.ts';
 import type { SkillTreeSubject } from './skill-tree-model.ts';
 
-export function SkillPreviewPane({ subject }: { subject: null | SkillTreeSubject }) {
+export interface SkillEnablementController {
+    error: null | { message: string };
+    isPending: boolean;
+    mutate: (input: { enabled: boolean; skillId: string }) => void;
+}
+
+export function SkillPreviewPane({
+    skillEnablement,
+    subject,
+}: {
+    skillEnablement?: SkillEnablementController;
+    subject: null | SkillTreeSubject;
+}) {
     if (!subject) {
         return <SkillPreviewEmpty detail="Select a SKILL.md file from the skills tree." />;
     }
 
-    return <SelectedSkillPreview key={subject.treePath} subject={subject} />;
+    return (
+        <SelectedSkillPreview
+            key={subject.treePath}
+            skillEnablement={skillEnablement}
+            subject={subject}
+        />
+    );
 }
 
-function SelectedSkillPreview({ subject }: { subject: SkillTreeSubject }) {
-    const setEnabled = useSkillEnabledSet();
+function SelectedSkillPreview({
+    skillEnablement,
+    subject,
+}: {
+    skillEnablement?: SkillEnablementController;
+    subject: SkillTreeSubject;
+}) {
+    const defaultSkillEnablement = useSkillEnabledSet();
+    const setEnabled: SkillEnablementController = skillEnablement ?? {
+        error: defaultSkillEnablement.error,
+        isPending: defaultSkillEnablement.isPending,
+        mutate: defaultSkillEnablement.mutate,
+    };
     const install = useSkillHubInstall();
     const uninstall = useSkillHubUninstall();
+    const hasInstalledSourcePreview = Boolean(subject.installed && subject.skillId);
     const installedPreview = useSkillPreview({
-        skillId: subject.installed ? subject.skillId : null,
+        skillId: hasInstalledSourcePreview ? subject.skillId : null,
     });
     const hubPreview = useSkillHubPreview({
         identifier: subject.installed ? null : subject.identifier,
@@ -55,7 +85,7 @@ function SelectedSkillPreview({ subject }: { subject: SkillTreeSubject }) {
     const markdown = stripFrontmatter(rawMarkdown);
     const keywords = mergeKeywords(markdownMetadata.keywords, hubPreview.data?.tags ?? []);
     const isLoading =
-        (installedPreview.isPending && subject.installed && subject.skillId) ||
+        (installedPreview.isPending && hasInstalledSourcePreview && subject.skillId) ||
         (hubPreview.isPending && !subject.installed && subject.identifier);
     const previewError = installedPreview.error ?? hubPreview.error;
 
@@ -151,7 +181,7 @@ function SkillPreviewActions({
 }: {
     install: ReturnType<typeof useSkillHubInstall>;
     scanBlocked: boolean;
-    setEnabled: ReturnType<typeof useSkillEnabledSet>;
+    setEnabled: SkillEnablementController;
     subject: SkillTreeSubject;
     uninstall: ReturnType<typeof useSkillHubUninstall>;
 }) {

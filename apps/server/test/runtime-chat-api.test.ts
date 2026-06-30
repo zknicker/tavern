@@ -198,9 +198,9 @@ test('listRuntimeChatTimeline accepts custom provider message metadata', async (
                         content: 'QA_CUSTOM_PROVIDER_OK',
                         id: 'msg_final',
                         metadata: {
-                            agentModel: 'tavern-e2e-tools',
+                            agentModel: 'tavern-e2e-fake',
                             agentProvider: 'custom',
-                            model: 'tavern-e2e-tools',
+                            model: 'tavern-e2e-fake',
                             provider: 'custom',
                             runtime: {
                                 agentId: 'main',

@@ -15,12 +15,12 @@ Plugin is usable.
 
 ## In the box
 
-* **Settings -> Plugins.** Users enable or disable Plugins and edit non-secret
-  settings plus write-only secrets.
+* **Settings -> Agents -> Plugins.** Users enable or disable Runtime-owned
+  Plugins and edit non-secret settings plus write-only secrets.
 * **Plugin health.** Runtime capability checks report whether a Plugin is ready
   for agent-visible reads.
-* **Plugin skills and tools.** Settings -> Skills -> Plugins and Settings ->
-  Tools -> Plugins show read-only rows contributed by enabled Plugins.
+* **Plugin skills and tools.** Settings -> Agents -> Skills and Settings ->
+  Agents -> Tools show read-only rows contributed by enabled Plugins.
 * **MerchBase.** The first Plugin provides read-only sales, product, catalog,
   and design tools plus the `MerchBaseSalesChart` Rich Response.
 

@@ -9,14 +9,9 @@ import {
     getAgentWorkspaceSource,
     registerAgentWorkspace,
 } from '../workspace/instructions.ts';
+import { seedTavernAgentSkill } from './skill-library.ts';
 
 export const agentEngineAgentId = 'main';
-export const agentEngineTavernSkillPath = path.join(
-    AGENT_HOME,
-    'skills',
-    'tavern-agent',
-    'SKILL.md'
-);
 
 const soulFileName = 'SOUL.md';
 const defaultSoul = `# SOUL.md
@@ -24,10 +19,6 @@ const defaultSoul = `# SOUL.md
 You are the resident Tavern agent.
 
 Be direct, pragmatic, and useful. Keep the user's momentum. Prefer concrete action over vague narration.
-`;
-const defaultTavernSkill = `# Tavern Agent
-
-Use Tavern chat context, memory, files, and local tools. Keep replies direct and action-oriented.
 `;
 
 export async function prepareAgentEngineInstructions(
@@ -51,24 +42,13 @@ export async function prepareAgentEngineInstructions(
         soul,
     });
 
-    await seedTavernSkill();
+    await seedTavernAgentSkill();
 
     return {
         content: instructions,
         path: path.join(source.workspaceDir, generatedInstructionFileName),
         source,
     };
-}
-
-async function seedTavernSkill() {
-    const existing = await fs.readFile(agentEngineTavernSkillPath, 'utf8').catch(() => null);
-
-    if (existing !== null) {
-        return;
-    }
-
-    await fs.mkdir(path.dirname(agentEngineTavernSkillPath), { recursive: true });
-    await fs.writeFile(agentEngineTavernSkillPath, defaultTavernSkill, { mode: 0o600 });
 }
 
 async function readOrSeedSoul() {

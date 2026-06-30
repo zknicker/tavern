@@ -5,7 +5,8 @@ This folder holds Playwright coverage for user-facing app behavior.
 ## Lane
 
 - The default lane runs the website, server, Tavern Runtime, and the local agent engine.
-- Runtime's deterministic e2e language model drives inference for browser tests.
+- Runtime's deterministic e2e executor writes normal Tavern response state for
+  browser tests.
 - Tests stay user-shaped: drive setup through the UI or real runtime contracts, then assert visible behavior over time.
 
 ## Chat Timing

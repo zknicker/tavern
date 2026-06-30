@@ -78,19 +78,18 @@ implementations may consume or produce AI SDK UI message streams internally when
 that reduces adapter work, but Tavern does not store Chat history as AI SDK
 `UIMessage[]` and does not expose AI SDK stream parts as its durable product API.
 
-Model records describe concrete runnable model routes. Claude Code and Codex
-model records execute through AI SDK HarnessAgent. OpenAI and
-OpenAI-compatible records execute through AI SDK LanguageModel routes.
-Agent runtime profiles select a default model record and assign tool, memory,
-and execution policies; they do not duplicate model execution kind.
+Model records describe concrete runnable model routes. Claude Code, Codex,
+OpenAI, and OpenAI-compatible records execute through AI SDK HarnessAgent
+adapters. Agent runtime profiles select a default model record and assign tool,
+memory, and execution policies; they do not duplicate model execution kind.
 
 Agent runtime profiles supply the default model for new sessions. Each Agent
 session stores its effective model. Settings changes update the profile
 default. Chat-scoped model switches mutate that Agent seat's current session,
 not every Chat using the same Agent definition. If the current executor can
-switch models in-session, the switch applies on the next clean turn. If
-switching crosses incompatible execution kinds or cannot resume the current
-executor state, Runtime rotates to a new Agent session for the same Agent seat.
+switch models in-session, the switch applies on the next clean turn. Runtime
+rotates to a new Agent session only when the user starts fresh context for that
+Agent seat.
 
 Tavern does not expose interactive tool approval prompts. Enabled tools are
 auto-approved. Safety is expressed through static Tool grants and Sandbox mode.

@@ -7,7 +7,6 @@ import {
 import { getDb } from '../db/connection';
 import type { Database } from '../db/sqlite';
 import { namedParams } from '../db/sqlite';
-import { executionKindForProvider } from '../models/provider-sources/shared';
 import { resolveAgentModelSelection } from '../models/selection-service';
 import type { ParticipantRow } from './chat-api/types';
 
@@ -246,22 +245,6 @@ export function updateCurrentAgentSessionModel(input: {
         db,
         now: input.now,
     });
-    const currentKind = executionKindForProvider(current.effectiveModel.provider);
-    const nextKind = executionKindForProvider(nextModel.provider);
-
-    if (currentKind !== nextKind) {
-        return {
-            rotated: true,
-            session: startNewAgentSession({
-                agentParticipantId: current.agentParticipantId,
-                chatId: input.chatId,
-                db,
-                effectiveModel: nextModel,
-                now: input.now,
-            }),
-        };
-    }
-
     const now = input.now ?? new Date().toISOString();
     db.prepare(
         `UPDATE agent_sessions

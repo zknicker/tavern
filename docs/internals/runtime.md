@@ -39,8 +39,9 @@ Runtime executes turns through the agent-engine path described in
 [Agent Engine Runtime](agent-engine-runtime.md).
 
 - Claude Code and Codex use AI SDK HarnessAgent.
-- OpenAI, OpenAI-compatible, and deterministic e2e records use AI SDK
-  LanguageModel routes.
+- OpenAI and OpenAI-compatible records use the Pi HarnessAgent adapter.
+- Browser e2e uses a deterministic fake executor installed by the e2e runtime
+  bootstrap, not a model provider route.
 - Sandbox mode `none` uses `.tavern/agents/<agent-id>/workspace` as a trusted
   working directory.
 - Tool calls are auto-approved. There is no interactive approval prompt.

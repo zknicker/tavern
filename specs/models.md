@@ -46,10 +46,9 @@ Models are Tavern's product surface for understanding Runtime model configuratio
   providers. They should not be treated as a provider-agnostic source of product model truth.
 - Claude Code and Codex use curated Runtime catalogs for picker rows. Local OAuth-backed CLI
   providers determine availability for execution.
-- OpenAI uses the API-key `language-model` route and can use a curated agent-model catalog when
+- OpenAI uses the Pi harness API-key route and can use a curated agent-model catalog when
   API-key execution is enabled.
-- A model row's `executionKind` determines executor routing. Claude Code and Codex rows are
-  `harness`; OpenAI rows are `language-model`.
+- A model row's `executionKind` is `harness` for every supported agent model.
 - Aggregator providers such as OpenRouter may use live or remote model catalogs with Runtime-owned
   caching because their model inventory changes frequently by design.
 - The agent model picker shows Runtime models that are valid for agent execution.

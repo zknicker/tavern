@@ -4,13 +4,19 @@ import {
     HarnessAgent,
     type HarnessAgentResumeSessionState,
     type HarnessAgentSession,
+    type HarnessAgentSkill,
 } from '@ai-sdk/harness/agent';
 import { type ClaudeCodeAuthOptions, createClaudeCode } from '@ai-sdk/harness-claude-code';
 import { createCodex } from '@ai-sdk/harness-codex';
+import { createPi, type PiAuthOptions } from '@ai-sdk/harness-pi';
 import type { Context, ToolSet } from '@ai-sdk/provider-utils';
-import type { AgentRuntimeThinkingLevel } from '@tavern/api';
+import type { AgentRuntimeModelName, AgentRuntimeThinkingLevel } from '@tavern/api';
 import type { GenerateTextResult } from 'ai';
 import { createLocalTrustedSandboxProvider } from '../agent-engine/local-trusted-sandbox.ts';
+import {
+    type AssignedSkillBundle,
+    readAssignedSkillBundles,
+} from '../agent-engine/skill-library.ts';
 import { readConfigValue } from '../config.ts';
 import {
     hasRenderableRichResponse,
@@ -18,6 +24,7 @@ import {
     richResponseActivity,
 } from '../rich-responses/render.ts';
 import type { AgentExecutor, AgentExecutorInput } from './agent-executor.ts';
+import { buildAgentInstructions } from './agent-instructions.ts';
 import { updateAgentSessionRuntimeState } from './agent-session-store.ts';
 import {
     createDelivery,
@@ -68,7 +75,12 @@ async function executeHarnessTurn(
     const startedAt = new Date().toISOString();
     const runtime = runtimeMetadata(input);
 
-    const agent = createHarnessAgent(input, createLocalTrustedSandboxProvider);
+    const instructions = buildAgentInstructions(input);
+    const skills = await readHarnessAgentSkills(input);
+    const agent = createHarnessAgent(input, createLocalTrustedSandboxProvider, {
+        instructions,
+        skills,
+    });
     let session: HarnessAgentSession | undefined;
     let result: GenerateTextResult<ToolSet, Context, never>;
     try {
@@ -182,16 +194,35 @@ async function executeHarnessTurn(
 
 function createHarnessAgent(
     input: AgentExecutorInput,
-    sandboxFactory: typeof createLocalTrustedSandboxProvider
+    sandboxFactory: typeof createLocalTrustedSandboxProvider,
+    options: {
+        instructions: string;
+        skills: HarnessAgentSkill[];
+    }
 ) {
     const harness = createHarness(input);
     return new HarnessAgent({
         harness,
         id: input.agent.id,
-        instructions: systemPrompt(input),
+        instructions: options.instructions,
         permissionMode: 'allow-all',
         sandbox: sandboxFactory(localTrustedSandboxOptions(input)),
+        skills: options.skills,
     });
+}
+
+async function readHarnessAgentSkills(input: AgentExecutorInput): Promise<HarnessAgentSkill[]> {
+    const skills = await readAssignedSkillBundles(input.agent);
+    return skills.map(toHarnessAgentSkill);
+}
+
+function toHarnessAgentSkill(skill: AssignedSkillBundle): HarnessAgentSkill {
+    return {
+        content: skill.content,
+        description: skill.description,
+        ...(skill.files.length > 0 ? { files: skill.files } : {}),
+        name: skill.id,
+    };
 }
 
 function localTrustedSandboxOptions(input: AgentExecutorInput) {
@@ -210,24 +241,33 @@ function localTrustedSandboxOptions(input: AgentExecutorInput) {
 }
 
 function createHarness(input: AgentExecutorInput): HarnessV1<ToolSet> {
-    const model = input.agentSession.effectiveModel.model;
-    if (input.agentSession.effectiveModel.provider === 'claude') {
-        return createClaudeCode({
-            auth: claudeCodeAuthOptions(),
-            maxTurns: 8,
-            model,
-            thinking: claudeThinking(input.agent.thinkingDefault),
-        }) as HarnessV1<ToolSet>;
+    const modelName = input.agentSession.effectiveModel;
+    switch (modelName.provider) {
+        case 'claude':
+            return createClaudeCode({
+                auth: claudeCodeAuthOptions(),
+                maxTurns: 8,
+                model: modelName.model,
+                thinking: claudeThinking(input.agent.thinkingDefault),
+            }) as HarnessV1<ToolSet>;
+        case 'codex':
+            return createCodex({
+                model: modelName.model,
+                reasoningEffort: codexReasoningEffort(input.agent.thinkingDefault),
+            }) as HarnessV1<ToolSet>;
+        case 'openai':
+        case 'openai-compatible': {
+            const auth = piAuthOptions(modelName.provider);
+            const thinkingLevel = piThinkingLevel(input.agent.thinkingDefault);
+            return createPi({
+                ...(auth ? { auth } : {}),
+                model: piModelId(modelName, auth),
+                ...(thinkingLevel ? { thinkingLevel } : {}),
+            }) as HarnessV1<ToolSet>;
+        }
+        default:
+            throw new Error(`Unsupported harness model provider "${modelName.provider}".`);
     }
-    if (input.agentSession.effectiveModel.provider === 'codex') {
-        return createCodex({
-            model,
-            reasoningEffort: codexReasoningEffort(input.agent.thinkingDefault),
-        }) as HarnessV1<ToolSet>;
-    }
-    throw new Error(
-        `Model provider "${input.agentSession.effectiveModel.provider}" is not a harness executor route.`
-    );
 }
 
 export function claudeCodeAuthOptions(): ClaudeCodeAuthOptions | undefined {
@@ -248,6 +288,39 @@ export function claudeCodeAuthOptions(): ClaudeCodeAuthOptions | undefined {
     };
 }
 
+export function piAuthOptions(
+    provider: AgentRuntimeModelName['provider']
+): PiAuthOptions | undefined {
+    if (provider === 'openai') {
+        const apiKey = readConfigValue('TAVERN_AGENT_API_KEY') ?? readConfigValue('OPENAI_API_KEY');
+        return apiKey ? { customEnv: { OPENAI_API_KEY: apiKey } } : undefined;
+    }
+    if (provider === 'openai-compatible') {
+        const baseUrl = readConfigValue('TAVERN_AGENT_BASE_URL');
+        if (!baseUrl) {
+            return undefined;
+        }
+        return {
+            customEnv: {
+                OPENAI_API_KEY: readConfigValue('TAVERN_AGENT_API_KEY') ?? 'tavern-local',
+                OPENAI_BASE_URL: baseUrl,
+            },
+        };
+    }
+    return undefined;
+}
+
+function piModelId(model: AgentRuntimeModelName, auth: PiAuthOptions | undefined) {
+    if (model.provider === 'openai' && !auth?.customEnv && hasAiGatewayAuth()) {
+        return `openai/${model.model}`;
+    }
+    return model.model;
+}
+
+function hasAiGatewayAuth() {
+    return Boolean(readConfigValue('AI_GATEWAY_API_KEY') ?? readConfigValue('VERCEL_OIDC_TOKEN'));
+}
+
 export function formatHarnessExecutionError(input: AgentExecutorInput, error: unknown): Error {
     const message = errorMessage(error);
     if (
@@ -258,6 +331,19 @@ export function formatHarnessExecutionError(input: AgentExecutorInput, error: un
             [
                 'Claude Code failed to authenticate for Tavern agent execution.',
                 'Verify `claude -p "hello"` works in this shell, or run `claude setup-token` and set TAVERN_AGENT_CLAUDE_CODE_AUTH_TOKEN for the Runtime.',
+                `Original error: ${message}`,
+            ].join(' ')
+        );
+    }
+    if (
+        (input.agentSession.effectiveModel.provider === 'openai' ||
+            input.agentSession.effectiveModel.provider === 'openai-compatible') &&
+        /401|authenticat|credential|api key/iu.test(message)
+    ) {
+        return new Error(
+            [
+                'Pi failed to authenticate for Tavern agent execution.',
+                'Verify AI Gateway, OPENAI_API_KEY, or TAVERN_AGENT_API_KEY/TAVERN_AGENT_BASE_URL is configured for the selected model.',
                 `Original error: ${message}`,
             ].join(' ')
         );
@@ -293,15 +379,6 @@ function harnessPrompt(input: AgentExecutorInput) {
         '',
         `Current message for ${input.agent.name}:`,
         input.content,
-    ].join('\n');
-}
-
-function systemPrompt(input: AgentExecutorInput) {
-    return [
-        `You are ${input.agent.name}, a Tavern agent participating in a shared chat.`,
-        'Answer as yourself in the current conversation.',
-        'Use your built-in tools when they help. Tool use is approved by this trusted local runtime.',
-        'Keep replies concise and useful.',
     ].join('\n');
 }
 
@@ -367,6 +444,19 @@ function codexReasoningEffort(value: AgentRuntimeThinkingLevel | null | undefine
     }
     if (value && value !== 'off') {
         return 'high';
+    }
+    return undefined;
+}
+
+function piThinkingLevel(value: AgentRuntimeThinkingLevel | null | undefined) {
+    if (
+        value === 'off' ||
+        value === 'minimal' ||
+        value === 'low' ||
+        value === 'medium' ||
+        value === 'high'
+    ) {
+        return value;
     }
     return undefined;
 }

@@ -11,8 +11,9 @@ state through Tavern primitives.
   Runtime-specific metadata.
 - Tavern Runtime owns provider availability, model catalog, selected model,
   executable settings, sessions, turns, tool calls, and response activity.
-- AI SDK providers own model calls. Codex and Claude use local OAuth-backed CLI
-  providers; OpenAI uses API-key-backed local `LanguageModel` instances.
+- AI SDK harness adapters own model calls. Codex and Claude use local
+  OAuth-backed CLI providers; OpenAI and OpenAI-compatible models use the Pi
+  harness with API-key credentials.
 - Tavern App owns client cache, presentation state, and app-shell preferences.
 - Tavern does not require users to configure the internal engine dependency
   through native files or CLIs.

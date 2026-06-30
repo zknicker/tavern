@@ -5,7 +5,6 @@ import {
     type AgentModelProvider,
     defaultClaudeModel,
     defaultCodexModel,
-    defaultE2eModel,
     defaultOpenAiModel,
     isAgentModelProvider,
 } from './contracts.ts';
@@ -59,12 +58,7 @@ export function resolveConfiguredProvider(): AgentModelProvider {
     const configured =
         readConfigValue('TAVERN_AGENT_PROVIDER') ?? readConfigValue('TAVERN_AGENT_MODEL_PROVIDER');
 
-    if (
-        configured === 'codex' ||
-        configured === 'claude' ||
-        configured === 'e2e' ||
-        configured === 'openai'
-    ) {
+    if (configured === 'codex' || configured === 'claude' || configured === 'openai') {
         return configured;
     }
     if (configured === 'custom' || configured === 'openai-compatible') {
@@ -92,8 +86,6 @@ function defaultModelForProvider(provider: AgentModelProvider) {
             return defaultClaudeModel;
         case 'codex':
             return defaultCodexModel;
-        case 'e2e':
-            return defaultE2eModel;
         case 'openai':
         case 'openai-compatible':
             return defaultOpenAiModel;

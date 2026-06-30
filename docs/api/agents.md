@@ -23,19 +23,24 @@ with instruction files, model, execution, tool, memory, and skill policy.
   discover agents.
 * Agent records expose display name, model policy, tool policy, memory policy,
   skill selections, workspace folder, and availability.
+* Skill selections are ids of installed Runtime skills. Runtime resolves those
+  ids during execution and passes the matching skill bundles through the AI SDK
+  skill surface for executors that support it. Skill content is not appended to
+  the agent instruction text.
 * Model availability comes from model options exposed through Runtime.
   Clients read the stored snapshot and capability state instead of maintaining a
   Tavern-maintained list.
-* Model records include the Runtime execution kind. Claude Code and Codex model
-  rows execute through the harness route; OpenAI API-key rows execute through
-  the LanguageModel route.
+* Model records include the Runtime execution kind. All supported agent model
+  rows execute through the harness route; OpenAI API-key rows use the Pi
+  harness adapter.
 * Tool and skill controls are inspectable before a run starts.
 * Instruction settings use markdown source files. `AGENTS.md` is a generated
-  read-only artifact composed by Runtime; it is not editable. The editable
-  files are its sources: `NOTES.md` (durable notes and instructions) and
-  `SOUL.md` (identity). Clients save the sources through the Runtime-hosted
-  agent file API; saving `NOTES.md` regenerates `AGENTS.md`, and the generated
-  file is readable for preview through the instructions read surface.
+  read-only artifact composed by Runtime; it is not editable. Settings exposes
+  `SOUL.md` on each agent's General page. `NOTES.md` is edited from Workspace
+  with other managed agent files. Clients save sources through the
+  Runtime-hosted agent file API; saving `NOTES.md` regenerates `AGENTS.md`, and
+  the generated file is readable for preview through the instructions read
+  surface.
 * Tavern policy includes Memory-first lookup guidance. Managed agents
   check Memory before external lookup when durable user, project, or prior
   decision context may already exist.
@@ -60,6 +65,7 @@ The API covers:
 * get an agent
 * list an agent's Tavern and external runtime chat references
 * create agents
+* delete agents
 * update agent settings
 * read and update supported agent markdown files
 * read model choices and availability

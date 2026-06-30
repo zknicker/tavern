@@ -1,5 +1,6 @@
-import { AgentWorkspaceFileSettingsPage } from '../../features/settings/agents/workspace-file-page.tsx';
+import { Navigate } from 'react-router-dom';
+import { appRoutes } from '../../lib/app-routes.ts';
 
 export function SettingsNotesMdPage() {
-    return <AgentWorkspaceFileSettingsPage path="NOTES.md" />;
+    return <Navigate replace to={appRoutes.workspace} />;
 }

@@ -62,6 +62,12 @@ describe('Runtime capability gates', () => {
         expect(settingsCapabilityRequirements['soul-md']).toEqual([]);
     });
 
+    test('gates agent settings subpages on their Runtime capabilities', () => {
+        expect(settingsCapabilityRequirements['agent-general']).toEqual(['apiServer', 'models']);
+        expect(settingsCapabilityRequirements['agent-skills']).toEqual(['apiServer', 'skills']);
+        expect(settingsCapabilityRequirements['agent-memory']).toEqual(['vault']);
+    });
+
     test('gates Tasks on agent runtime capabilities', () => {
         expect(routeTabCapabilityRequirements.tasks).toEqual(agentCapabilityRequirements);
     });

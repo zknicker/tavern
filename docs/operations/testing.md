@@ -38,7 +38,7 @@ commands you ran and anything you did not verify.
 | Runtime handler tests | Boot, process wiring, HTTP payload shape, event delivery, or route-owned error/auth/transport behavior. | Use the real Bun handler or a started local service only when the handler owns meaningful behavior. |
 | Contract/API/SDK gates | `packages/tavern-api`, OpenAPI, SDK client shape, generated types, or cross-boundary request/response contracts. | Run `@tavern/api check`, SDK tests/typecheck, and update docs with the product contract. |
 | App component/hook tests | React state rules, cache invalidation, optimistic UI, row models, filters, keyboard behavior, or rendering transforms. | Prefer hook/model/component tests before e2e. Use the `react-best-practices` skill for nontrivial React architecture. |
-| App e2e | Browser-level app contracts: navigation, reload recovery, websocket reconnect, full chat identity, user flows, or layout-critical behavior. | Use deterministic Playwright against isolated ports, isolated DBs/runtime dirs, managed Runtime, and a mock model provider. |
+| App e2e | Browser-level app contracts: navigation, reload recovery, websocket reconnect, full chat identity, user flows, or layout-critical behavior. | Use deterministic Playwright against isolated ports, isolated DBs/runtime dirs, managed Runtime, and a fake executor. |
 | Runtime executor tests | AI SDK executor mapping, event projection, delivery semantics, local sandbox behavior, or capability degradation. | Verify with Runtime fixtures, deterministic fake executors, or opt-in harness smoke tests. |
 | Live/manual smoke | Real provider behavior, local environment diagnosis, or release confidence that deterministic lanes cannot cover. | Keep opt-in. Record temporary chat ids/titles and clean up only those records. |
 
@@ -79,7 +79,7 @@ Choose the smallest lane that proves the changed behavior.
 Use Playwright against the real app frontend and app backend for end-to-end contracts.
 The deterministic lane must not point at developer model-provider credentials.
 It should use isolated ports, isolated databases, isolated runtime dirs,
-managed Tavern Runtime, and the deterministic e2e model provider mock.
+managed Tavern Runtime, and the deterministic e2e fake executor.
 
 Chat e2e should prove identity and recovery, not styling details:
 
@@ -127,15 +127,17 @@ Live provider tests are opt-in. They are not part of normal CI or default local
 test lanes because they spend provider credits and depend on local tools,
 network, and account state.
 
-For OpenAI API-key agent execution, use the gated Runtime smoke:
+For OpenAI API-key agent execution, use a manual Runtime smoke against the Pi
+harness path:
 
 ```sh
-TAVERN_OPENAI_LIVE_SMOKE=1 bun test apps/runtime/src/tavern/language-model-agent-executor.test.ts
+bun run --filter @tavern/runtime dev
 ```
 
-That lane requires `OPENAI_API_KEY` or `TAVERN_AGENT_API_KEY` and uses the
-current cheap OpenAI agent model path. It proves an AI SDK language-model turn
-can complete and persist Tavern-native response state.
+Set `OPENAI_API_KEY`, `TAVERN_AGENT_API_KEY`, or AI Gateway credentials before
+starting Runtime, then send a temporary chat message and verify the turn
+persists Tavern-native response state. Automated tests should fake the executor
+boundary instead of spending provider credits.
 
 Memory has no provider-backed live smoke lane. Runtime tests should cover path
 resolution, Markdown reads, search, and backlinks with temporary Memory

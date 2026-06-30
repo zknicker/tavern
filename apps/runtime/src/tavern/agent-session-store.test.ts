@@ -208,7 +208,7 @@ describe('Tavern Runtime agent sessions', () => {
         ]);
     });
 
-    it('rotates the current session when switching execution kind', () => {
+    it('changes the effective model across providers without rotating the session', () => {
         seedAgentChat({ chatId: 'cht_one', model: 'gpt-4.1-mini' });
         const original = ensureCurrentAgentSession({
             agentParticipantId: 'agt_primary',
@@ -224,11 +224,11 @@ describe('Tavern Runtime agent sessions', () => {
         });
 
         expect(result).toMatchObject({
-            rotated: true,
+            rotated: false,
             session: {
                 effectiveModel: { model: 'claude-opus-4-8', provider: 'claude' },
-                generation: 2,
-                id: 'ags_cht_one_agt_primary_2',
+                generation: 1,
+                id: original.id,
                 status: 'active',
             },
         });
@@ -236,10 +236,7 @@ describe('Tavern Runtime agent sessions', () => {
             listAgentSessionsForSeat({ agentParticipantId: 'agt_primary', chatId: 'cht_one' }).map(
                 (session) => [session.id, session.status]
             )
-        ).toEqual([
-            [original.id, 'archived'],
-            [result.session.id, 'active'],
-        ]);
+        ).toEqual([[original.id, 'active']]);
     });
 
     it('reads and changes a chat agent session model through Runtime HTTP routes', async () => {

@@ -1,5 +1,6 @@
 import type { AgentRuntimeAgent } from '@tavern/api';
 import { defaultAgentEngineAgentId } from '../agent-engine/constants.ts';
+import { tavernAgentSkillId } from '../agent-engine/skill-library.ts';
 import { AGENT_WORKSPACE } from '../config.ts';
 import { getDb } from '../db/connection.ts';
 import type { Database } from '../db/sqlite.ts';
@@ -8,7 +9,7 @@ import { getStoredAgent, upsertStoredAgent } from './agents-store.ts';
 
 export function primaryManagedAgent(): AgentRuntimeAgent {
     return {
-        enabledSkillIds: [],
+        enabledSkillIds: [tavernAgentSkillId],
         id: defaultAgentEngineAgentId,
         isAdmin: true,
         name: 'Tavern',

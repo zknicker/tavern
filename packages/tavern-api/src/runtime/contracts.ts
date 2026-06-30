@@ -1179,7 +1179,7 @@ export const agentRuntimeArchiveBindingSchema = z.object({
     id: z.string().trim().min(1),
 });
 
-export const agentRuntimeModelExecutionKindSchema = z.enum(['harness', 'language-model']);
+export const agentRuntimeModelExecutionKindSchema = z.literal('harness');
 
 export const agentRuntimeModelAvailabilitySchema = z.enum(['available', 'degraded', 'unavailable']);
 
@@ -1193,7 +1193,7 @@ export const agentRuntimeModelRouteSchema = z.object({
 
 export const agentRuntimeModelCatalogEntrySchema = z.object({
     availability: agentRuntimeModelAvailabilitySchema.default('available'),
-    executionKind: agentRuntimeModelExecutionKindSchema.default('language-model'),
+    executionKind: agentRuntimeModelExecutionKindSchema.default('harness'),
     id: z.string().trim().min(1),
     label: z.string().trim().min(1).nullable(),
     metadata: agentRuntimeJsonRecordSchema.default({}),

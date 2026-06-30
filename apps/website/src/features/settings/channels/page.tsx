@@ -1,22 +1,31 @@
 import { Fragment } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import { BadgeDivider } from '../../../components/ui/badge-divider.tsx';
 import { Card, CardFrame } from '../../../components/ui/card.tsx';
 import { Button } from '../../../components/ui/primitives/button.tsx';
 import { Separator } from '../../../components/ui/separator.tsx';
 import { SettingsRow } from '../../../components/ui/settings-row.tsx';
-import { usePrimaryAgentSuspense } from '../../../hooks/agents/use-agent-list.ts';
+import { useAgentListSuspense } from '../../../hooks/agents/use-agent-list.ts';
 import { useMessagingPlatformList } from '../../../hooks/connections/use-messaging-platform-list.ts';
 import { appRoutes } from '../../../lib/app-routes.ts';
 import type { MessagingPlatformListOutput } from '../../../lib/trpc.tsx';
+import { MissingAgentState } from '../../agents/missing-agent-state.tsx';
 import { formatDiscordBindingInboundMode } from '../connections/messaging-platform-shared.ts';
 
 export function ChannelsSettingsPage() {
-    const [primaryAgent] = usePrimaryAgentSuspense();
+    const { agentId } = useParams();
+    const [agentList] = useAgentListSuspense();
     const bindingsQuery = useMessagingPlatformList();
-    const agent = primaryAgent.agent;
+    const agent = agentId
+        ? (agentList.agents.find((candidate) => candidate.id === agentId) ?? null)
+        : (agentList.agents[0] ?? null);
+
+    if (!agent) {
+        return <MissingAgentState agentId={agentId ?? 'primary'} />;
+    }
+
     const bindings =
-        bindingsQuery.data?.bindings.filter((binding) => binding.agentId === agent?.id) ?? [];
+        bindingsQuery.data?.bindings.filter((binding) => binding.agentId === agent.id) ?? [];
 
     return (
         <section>

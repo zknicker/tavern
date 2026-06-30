@@ -13,7 +13,7 @@ test('listModelInventory lists agent providers and keeps curated models for disc
         models: [
             {
                 availability: 'available',
-                executionKind: 'language-model',
+                executionKind: 'harness',
                 id: 'codex/gpt-5.5',
                 label: 'GPT-5.5',
                 metadata: {},
@@ -23,7 +23,7 @@ test('listModelInventory lists agent providers and keeps curated models for disc
             },
             {
                 availability: 'available',
-                executionKind: 'language-model',
+                executionKind: 'harness',
                 id: 'codex/gpt-5.4',
                 label: 'GPT-5.4',
                 metadata: {},
@@ -33,7 +33,7 @@ test('listModelInventory lists agent providers and keeps curated models for disc
             },
             {
                 availability: 'available',
-                executionKind: 'language-model',
+                executionKind: 'harness',
                 id: 'claude/claude-sonnet-4-6',
                 label: 'Claude Sonnet 4.6',
                 metadata: {},

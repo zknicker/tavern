@@ -24,9 +24,10 @@ Skills and Tools answer different questions.
 
 ## In the Box
 
-* **Skills page.** Browse installed and available skills. Selecting a skill
-  opens the rendered `SKILL.md`, enablement, source, setup status, and install
-  or uninstall actions where supported.
+* **Skills page.** Settings -> Agents -> Skills enables or disables
+  Runtime-visible skills for one agent. The skill inventory browser still reads
+  installed and available skills, renders `SKILL.md`, and shows source, setup
+  status, and install or uninstall actions where supported.
 * **Tools page.** Browse Runtime-reported tools the agent can use. Plugin tools
   are shown separately and remain controlled by Plugin enablement. Built-in
   local tools are shown as enabled read-only tools until per-agent tool grants
@@ -43,6 +44,18 @@ configures tools through authored files, default-tool overrides, dynamic tool
 resolvers, connection records, and Plugins. Tavern can group tools for display,
 but the Runtime contract should stay concrete: skills, tools, MCP servers,
 channels, and Plugins.
+
+Skill install and skill assignment are separate operations. Installing a skill
+copies or imports a skill package into Runtime's installed skill library. The
+installed skill then appears in inventory, can be previewed through `skill.get`,
+and can be assigned to one or more agents. Assigning a skill stores that
+agent's enabled skill ids; it does not copy the skill package.
+
+At execution time, Runtime resolves the agent's enabled skill ids against the
+installed skill library. Agents receive matching skill bundles through the AI
+SDK `HarnessAgent` `skills` setting. Missing assigned skills are stale settings
+and are ignored instead of failing unrelated chat work. Runtime does not copy
+assigned skill content into `system` instructions.
 
 Skill content updates are agent work. Outside Runtime-owned read-only skills,
 the agent edits the skill source in place and Runtime refreshes inventory
@@ -68,8 +81,8 @@ provider transport name (`mcp__tavern__bash`).
 
 | Source | Shows as | Notes |
 | --- | --- | --- |
-| Agent skill files | Skill | Runtime-reported skills. Includes managed, project, workspace, and installed skill packages. |
-| Built-in skill library | Available skill | Optional skills vendored with the runtime and installed through Runtime. |
+| Installed skill library | Skill | Runtime-reported skill packages under Runtime's installed skill library. |
+| Built-in skill library | Available skill | Optional skills vendored with Runtime. Installing one copies it into the installed skill library. |
 | Skill taps | Available skill | User-added GitHub repos with skill packages. Runtime lists, previews, scans, installs, and uninstalls them. |
 | Authored tools and defaults | Tool | Executable actions available to the agent. Risk is controlled by static grants and sandbox mode. |
 | Dynamic tools | Tool | Runtime- or session-resolved tools. |

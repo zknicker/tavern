@@ -6,12 +6,9 @@ import type {
     AgentRuntimeCapabilityHealthId,
     AgentRuntimeCapabilityHealthState,
 } from '@tavern/api';
-import {
-    hasConfiguredAgentModelAccess,
-    resolveAgentModelSummary,
-} from '../agent-engine/model-config.ts';
 import { AGENT_WORKSPACE } from '../config.ts';
 import { loadVaultBackedCodexCredentials } from '../model-access/codex-settings.ts';
+import { hasConfiguredAgentModelAccess, resolveAgentModelSummary } from '../models/model-access.ts';
 import { checkMerchbaseCapability } from '../plugins/merchbase.ts';
 import { resolveVaultConfig } from '../vault/store.ts';
 

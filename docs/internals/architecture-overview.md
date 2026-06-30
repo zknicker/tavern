@@ -17,7 +17,7 @@ flowchart LR
     sdk["@tavern/api + SDK<br/>typed contracts"]
     runtime["Tavern Runtime<br/>canonical chat + agent state"]
     db["Runtime SQLite"]
-    engine["Agent engine<br/>AI SDK HarnessAgent + LanguageModel"]
+    engine["Agent engine<br/>AI SDK HarnessAgent"]
 
     app <--> server
     server <--> sdk
@@ -34,7 +34,7 @@ flowchart LR
 | Tavern Server | Thin tRPC facade, app cache, connection setup, and UI-friendly projections. |
 | Tavern API / SDK | Stable contracts for chats, realtime, agents, models, tools, memory, jobs, and Runtime admin. |
 | Tavern Runtime | Canonical Chats, messages, participants, Agent sessions, Agent turns, model catalog, tools, Memory reads, and execution. |
-| Agent engine | Runtime-internal execution through AI SDK HarnessAgent and LanguageModel routes. |
+| Agent engine | Runtime-internal execution through AI SDK HarnessAgent adapters. |
 
 ## Product Model
 
@@ -67,11 +67,10 @@ can perform the same actions through Runtime API.
 
 ## Execution Boundary
 
-Runtime chooses the executor by model record `executionKind`.
+Runtime executes every Agent turn through model record `executionKind: harness`.
 
-- `harness`: Claude Code and Codex through AI SDK HarnessAgent.
-- `language-model`: OpenAI, OpenAI-compatible, and deterministic e2e through AI
-  SDK LanguageModel routes.
+- Claude Code and Codex use their native AI SDK harness adapters.
+- OpenAI and OpenAI-compatible API-key models use the Pi harness adapter.
 
 Executors write Tavern-native messages and activity through Runtime stores.
 Provider-specific details remain metadata.

@@ -8,11 +8,17 @@ import { useAgentDelete } from './use-agent-delete.ts';
 
 interface DeleteAgentDialogProps {
     agent: AgentListOutput['agents'][number];
+    onDeleted?: (agentId: string) => void;
     onOpenChange: (open: boolean) => void;
     open: boolean;
 }
 
-export function DeleteAgentDialog({ agent, onOpenChange, open }: DeleteAgentDialogProps) {
+export function DeleteAgentDialog({
+    agent,
+    onDeleted,
+    onOpenChange,
+    open,
+}: DeleteAgentDialogProps) {
     const deleteMutation = useAgentDelete();
 
     return (
@@ -53,8 +59,11 @@ export function DeleteAgentDialog({ agent, onOpenChange, open }: DeleteAgentDial
                         <Button
                             loading={deleteMutation.isPending}
                             onClick={async () => {
-                                await deleteMutation.mutateAsync({ agentId: agent.id });
+                                const result = await deleteMutation.mutateAsync({
+                                    agentId: agent.id,
+                                });
                                 onOpenChange(false);
+                                onDeleted?.(result.agentId);
                             }}
                             size="sm"
                             type="button"

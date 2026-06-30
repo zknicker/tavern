@@ -1,6 +1,7 @@
 import { Outlet, useLocation } from 'react-router-dom';
 import { useAppLayoutPreference } from '../../../hooks/shell/use-app-layout-preference.ts';
 import { appRoutes } from '../../../lib/app-routes.ts';
+import { getActiveAgentPage } from '../../agents/agent-path.ts';
 import { useLayoutContext } from '../../shell/use-layout-context.ts';
 import { SettingsSidebarNav } from './sidebar-nav.tsx';
 
@@ -28,7 +29,9 @@ function SettingsContent({
     layoutContext: ReturnType<typeof useLayoutContext>;
 }) {
     const location = useLocation();
-    const isFullContentRoute = location.pathname === appRoutes.settingsSkills;
+    const activeAgentPage = getActiveAgentPage(location.pathname);
+    const isFullContentRoute =
+        location.pathname === appRoutes.settingsSkills || activeAgentPage?.tab === 'skills';
 
     return (
         <section

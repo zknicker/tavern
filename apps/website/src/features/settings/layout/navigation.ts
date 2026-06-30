@@ -15,8 +15,9 @@ import {
     ZapIcon,
 } from '@hugeicons-pro/core-stroke-rounded';
 import { appRoutes } from '../../../lib/app-routes.ts';
+import type { AgentSettingsTab } from '../../agents/agent-path.ts';
 
-export const settingsNavItems = [
+export const staticSettingsNavItems = [
     {
         icon: ComputerTerminal01Icon,
         id: 'agent-runtime',
@@ -48,64 +49,10 @@ export const settingsNavItems = [
         to: appRoutes.settingsSessions,
     },
     {
-        icon: FileEditIcon,
-        id: 'agent',
-        label: 'Agent',
-        to: appRoutes.settingsAgent,
-    },
-    {
-        icon: FileEditIcon,
-        id: 'notes-md',
-        label: 'NOTES.md',
-        to: appRoutes.settingsNotesMd,
-    },
-    {
-        icon: FileEditIcon,
-        id: 'soul-md',
-        label: 'SOUL.md',
-        to: appRoutes.settingsSoulMd,
-    },
-    {
-        icon: ZapIcon,
-        id: 'skills',
-        label: 'Skills',
-        to: appRoutes.settingsSkills,
-    },
-    {
-        icon: ToolsIcon,
-        id: 'tools',
-        label: 'Tools',
-        to: appRoutes.settingsTools,
-    },
-    {
-        icon: PuzzleIcon,
-        id: 'plugins',
-        label: 'Plugins',
-        to: appRoutes.settingsPlugins,
-    },
-    {
-        icon: ChatIcon,
-        id: 'channels',
-        label: 'Channels',
-        to: appRoutes.settingsChannels,
-    },
-    {
-        icon: PlugSocketIcon,
-        id: 'mcp',
-        label: 'MCP',
-        to: appRoutes.settingsMcp,
-    },
-    {
         icon: AiBrain01Icon,
         id: 'models',
         label: 'Models',
         to: appRoutes.settingsModels,
-    },
-    {
-        icon: Database02Icon,
-        id: 'memories',
-        label: 'Memory',
-        to: appRoutes.settingsMemories,
     },
     {
         icon: HourglassIcon,
@@ -120,26 +67,63 @@ export const settingsNavItems = [
     to: string;
 }>;
 
+export const agentSettingsNavItems = [
+    {
+        icon: FileEditIcon,
+        id: 'agent-general',
+        label: 'General',
+        tab: 'general',
+    },
+    {
+        icon: ZapIcon,
+        id: 'agent-skills',
+        label: 'Skills',
+        tab: 'skills',
+    },
+    {
+        icon: ToolsIcon,
+        id: 'agent-tools',
+        label: 'Tools',
+        tab: 'tools',
+    },
+    {
+        icon: PuzzleIcon,
+        id: 'agent-plugins',
+        label: 'Plugins',
+        tab: 'plugins',
+    },
+    {
+        icon: ChatIcon,
+        id: 'agent-channels',
+        label: 'Channels',
+        tab: 'channels',
+    },
+    {
+        icon: PlugSocketIcon,
+        id: 'agent-mcp',
+        label: 'MCP',
+        tab: 'mcp',
+    },
+    {
+        icon: Database02Icon,
+        id: 'agent-memory',
+        label: 'Memory',
+        tab: 'memory',
+    },
+] as const satisfies ReadonlyArray<{
+    icon: IconSvgElement;
+    id: string;
+    label: string;
+    tab: AgentSettingsTab;
+}>;
+
+export const settingsNavItems = [...staticSettingsNavItems, ...agentSettingsNavItems] as const;
+
 export const settingsNavSections = [
     {
         id: 'general',
         itemIds: ['agent-runtime', 'appearance', 'updates', 'models'],
         label: 'General',
-    },
-    {
-        id: 'agent',
-        itemIds: [
-            'agent',
-            'notes-md',
-            'soul-md',
-            'skills',
-            'tools',
-            'plugins',
-            'channels',
-            'mcp',
-            'memories',
-        ],
-        label: 'Agent',
     },
     {
         id: 'activity',

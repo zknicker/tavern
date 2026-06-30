@@ -290,6 +290,65 @@ export function createAppRouter() {
                                             ),
                                         },
                                         {
+                                            path: 'agents/:agentId/general',
+                                            lazy: lazyRoute(
+                                                () =>
+                                                    import('./routes/app/settings-agent-page.tsx'),
+                                                'SettingsAgentPage'
+                                            ),
+                                        },
+                                        {
+                                            path: 'agents/:agentId/skills',
+                                            lazy: lazyRoute(
+                                                () =>
+                                                    import(
+                                                        './routes/app/settings-agent-skills-page.tsx'
+                                                    ),
+                                                'SettingsAgentSkillsPage'
+                                            ),
+                                        },
+                                        {
+                                            path: 'agents/:agentId/tools',
+                                            lazy: lazyRoute(
+                                                () => import('./routes/app/tools-page.tsx'),
+                                                'ToolsPage'
+                                            ),
+                                        },
+                                        {
+                                            path: 'agents/:agentId/plugins',
+                                            lazy: lazyRoute(
+                                                () =>
+                                                    import(
+                                                        './routes/app/settings-plugins-page.tsx'
+                                                    ),
+                                                'SettingsPluginsPage'
+                                            ),
+                                        },
+                                        {
+                                            path: 'agents/:agentId/channels',
+                                            lazy: lazyRoute(
+                                                () => import('./routes/app/channels-page.tsx'),
+                                                'ChannelsPage'
+                                            ),
+                                        },
+                                        {
+                                            path: 'agents/:agentId/mcp',
+                                            lazy: lazyRoute(
+                                                () => import('./routes/app/mcp-page.tsx'),
+                                                'McpPage'
+                                            ),
+                                        },
+                                        {
+                                            path: 'agents/:agentId/memory',
+                                            lazy: lazyRoute(
+                                                () =>
+                                                    import(
+                                                        './routes/app/settings-memories-page.tsx'
+                                                    ),
+                                                'SettingsMemoriesPage'
+                                            ),
+                                        },
+                                        {
                                             path: 'agent',
                                             lazy: lazyRoute(
                                                 () =>

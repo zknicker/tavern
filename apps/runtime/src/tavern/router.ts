@@ -294,6 +294,16 @@ export async function handleTavernRuntimeRequest(request: Request): Promise<Resp
         return response ?? notFound();
     }
 
+    if (
+        request.method === 'PUT' &&
+        segments[0] === 'skills' &&
+        segments[1] &&
+        segments[2] === 'enabled'
+    ) {
+        const response = await handleAgentProxyRequest(request);
+        return response ?? notFound();
+    }
+
     if (request.method === 'GET' && url.pathname === agentRuntimeRoutes.sessions) {
         const response = await handleAgentProxyRequest(request);
         return response ?? notFound();

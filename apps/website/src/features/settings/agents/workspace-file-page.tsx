@@ -6,6 +6,7 @@ import { Button } from '../../../components/ui/primitives/button.tsx';
 import { usePrimaryAgent } from '../../../hooks/agents/use-agent-list.ts';
 import { withSavingToast } from '../../../lib/saving-toast.ts';
 import { trpc } from '../../../lib/trpc.tsx';
+import { cn } from '../../../lib/utils.ts';
 import { MissingAgentState } from '../../agents/missing-agent-state.tsx';
 import { AgentInstructionsPreviewDrawer } from './agent-instructions-preview-drawer.tsx';
 
@@ -44,13 +45,15 @@ export function AgentWorkspaceFileSettingsPage({ path }: { path: EditableAgentWo
     return <AgentWorkspaceFileEditor agentId={agent.id} agentName={agent.name} path={path} />;
 }
 
-function AgentWorkspaceFileEditor({
+export function AgentWorkspaceFileEditor({
     agentId,
     agentName,
+    editorClassName,
     path,
 }: {
     agentId: string;
     agentName: string;
+    editorClassName?: string;
     path: EditableAgentWorkspaceFile;
 }) {
     const utils = trpc.useUtils();
@@ -115,7 +118,12 @@ function AgentWorkspaceFileEditor({
                 </div>
             </div>
             <CardFrame>
-                <Card className="relative h-[calc(100vh-15rem)] min-h-[32rem] overflow-hidden p-0">
+                <Card
+                    className={cn(
+                        'relative h-[calc(100vh-15rem)] min-h-[28rem] overflow-hidden p-0',
+                        editorClassName
+                    )}
+                >
                     <SimpleCodeEditor
                         disabled={query.isPending || isSaving}
                         filePath={path}

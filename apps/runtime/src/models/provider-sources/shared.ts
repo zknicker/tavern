@@ -1,13 +1,9 @@
-import type {
-    AgentRuntimeModelCatalogEntry,
-    AgentRuntimeModelExecutionKind,
-    AgentRuntimeModels,
-} from '@tavern/api';
+import type { AgentRuntimeModelCatalogEntry, AgentRuntimeModels } from '@tavern/api';
 import { missingCliCommandMessage, resolveCliCommand } from '../../agent-engine/cli-command.ts';
 import { readConfigValue } from '../../config.ts';
-import { type AgentModelProvider, defaultE2eModel } from '../contracts.ts';
+import type { AgentModelProvider } from '../contracts.ts';
 
-export type ModelCatalogProviderId = Exclude<AgentModelProvider, 'e2e' | 'openai-compatible'>;
+export type ModelCatalogProviderId = Exclude<AgentModelProvider, 'openai-compatible'>;
 export type AgentRuntimeModelProviderEntry = AgentRuntimeModels['providers'][number];
 
 export interface ModelCatalogProvider {
@@ -107,7 +103,7 @@ export function modelEntry(input: {
 }): AgentRuntimeModelCatalogEntry {
     return {
         availability: input.availability ?? 'available',
-        executionKind: executionKindForProvider(input.provider),
+        executionKind: 'harness',
         id: `${input.provider}/${input.modelId}`,
         label: input.label,
         metadata: {},
@@ -121,14 +117,7 @@ export function modelEntry(input: {
     };
 }
 
-export function executionKindForProvider(provider: string): AgentRuntimeModelExecutionKind {
-    return provider === 'claude' || provider === 'codex' ? 'harness' : 'language-model';
-}
-
 export function formatModelLabel(modelId: string) {
-    if (modelId === defaultE2eModel) {
-        return 'Tavern E2E';
-    }
     const parts = modelId
         .split(/[-_]/gu)
         .filter(Boolean)

@@ -17,9 +17,8 @@ sessions, model catalog, tools, Memory, jobs, and execution.
   system actors, and external actors.
 - **Agents.** Agents are chat participants. Each Agent seat in a Chat owns one
   current Agent session.
-- **Agent execution.** Claude Code and Codex run through AI SDK HarnessAgent.
-  OpenAI/API-key and deterministic e2e routes run through AI SDK LanguageModel
-  execution.
+- **Agent execution.** Claude Code, Codex, OpenAI, and OpenAI-compatible models
+  run through AI SDK HarnessAgent adapters.
 - **Models.** Runtime owns a curated model catalog and Agent default model
   settings. Settings changes affect new sessions; Chat-scoped model changes
   affect that Agent seat's current session.

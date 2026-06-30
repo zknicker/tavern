@@ -7,15 +7,22 @@ import {
     agentRuntimeArchiveAgentSchema,
     agentRuntimeCreateAgentSchema,
     agentRuntimeRoutes,
+    agentRuntimeSkillListSchema,
+    agentRuntimeSkillSchema,
     agentRuntimeUpdateAgentModelSchema,
     agentRuntimeUpdateAgentNameSchema,
     agentRuntimeUpdateAgentThinkingDefaultSchema,
     agentRuntimeUpdateAgentToolsSchema,
+    agentRuntimeUpdateSkillEnabledSchema,
     agentRuntimeUpdateToolEnabledSchema,
 } from '@tavern/api';
 import { defaultAgentEngineAgentId } from '../agent-engine/constants.ts';
 import { unsupportedAgentEngineSurface } from '../agent-engine/errors.ts';
-import { agentEngineTavernSkillPath } from '../agent-engine/instructions.ts';
+import {
+    getRuntimeSkill,
+    listRuntimeSkills,
+    tavernAgentSkillId,
+} from '../agent-engine/skill-library.ts';
 import { AGENT_HOME, AGENT_WORKSPACE } from '../config.ts';
 import { getDb } from '../db/connection.ts';
 import { listAgentModels } from '../models/catalog-service.ts';
@@ -62,7 +69,7 @@ async function dispatchAgentEngineStatic({ request, url }: { request: Request; u
         const input = agentRuntimeCreateAgentSchema.parse(await readJson(request));
         const agent = upsertStoredAgent({
             agent: {
-                enabledSkillIds: input.enabledSkillIds ?? [],
+                enabledSkillIds: input.enabledSkillIds ?? [tavernAgentSkillId],
                 id: input.id,
                 isAdmin: input.isAdmin ?? false,
                 name: input.name,
@@ -157,7 +164,18 @@ async function dispatchAgentEngineStatic({ request, url }: { request: Request; u
         return await listAgentModels();
     }
     if (method === 'GET' && url.pathname === agentRuntimeRoutes.skills) {
-        return { skills: [agentEngineTavernSkill()] };
+        return agentRuntimeSkillListSchema.parse({
+            skills: await listRuntimeSkills(),
+        });
+    }
+    if (method === 'GET' && segments[0] === 'skills' && segments[1] && !segments[2]) {
+        const skill = await getRuntimeSkill(segments[1]);
+        return skill ? agentRuntimeSkillSchema.parse(skill) : undefined;
+    }
+    if (method === 'PUT' && segments[0] === 'skills' && segments[1] && segments[2] === 'enabled') {
+        agentRuntimeUpdateSkillEnabledSchema.parse(await readJson(request));
+        const skill = await getRuntimeSkill(segments[1]);
+        return skill ? agentRuntimeSkillSchema.parse(skill) : undefined;
     }
     if (method === 'GET' && url.pathname === agentRuntimeRoutes.tools) {
         return listRuntimeTools();
@@ -249,9 +267,14 @@ function savePatchedModel(agentId: string, input: unknown) {
 }
 
 function ensurePrimaryAgent() {
+    const existing = getStoredAgent(defaultAgentEngineAgentId);
+    if (existing) {
+        return existing;
+    }
+
     return upsertStoredAgent({
         agent: {
-            enabledSkillIds: [],
+            enabledSkillIds: [tavernAgentSkillId],
             id: defaultAgentEngineAgentId,
             isAdmin: true,
             name: 'Tavern',
@@ -317,44 +340,6 @@ function agentEngineAgentConfigSnapshot() {
         issues: [],
         raw: null,
         valid: true,
-    };
-}
-
-function agentEngineTavernSkill() {
-    const skillDir = path.dirname(agentEngineTavernSkillPath);
-
-    return {
-        allowedTools: null,
-        baseDir: skillDir,
-        bundled: true,
-        commandVisible: true,
-        configChecks: [],
-        description: 'Use Tavern chat context, memory, files, and local tools.',
-        disabled: false,
-        eligible: true,
-        filePath: agentEngineTavernSkillPath,
-        id: 'tavern-agent',
-        install: [],
-        missing: emptySkillRequirements(),
-        modelVisible: true,
-        name: 'tavern-agent',
-        primaryEnv: null,
-        requirements: emptySkillRequirements(),
-        runtimeSource: 'Agent engine',
-        skillKey: 'tavern-agent',
-        source: 'builtin',
-        updatedAt: null,
-        userInvocable: true,
-    };
-}
-
-function emptySkillRequirements() {
-    return {
-        anyBins: [],
-        bins: [],
-        config: [],
-        env: [],
-        os: [],
     };
 }
 

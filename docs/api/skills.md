@@ -16,6 +16,12 @@ MCP servers are agent-engine connection records that may expose external tools.
 ## Contract
 
 * Skill ids are stable within the Runtime source.
+* Installed skills are Runtime-owned packages. Inventory and detail reads come
+  from the installed skill library.
+* Installing a skill imports or copies it into the installed skill library; it
+  does not assign it to an agent.
+* Skill assignment is per-agent policy exposed through the Agents API as
+  `enabledSkillIds`.
 * Setup requirements and source state are visible.
 * A skill can be visible while Runtime reports setup blockers.
 * Tool ids are Runtime-native tool names.
@@ -48,6 +54,11 @@ The API covers:
 Runtime owns skill discovery, tool discovery, tool eligibility, MCP server
 records, dependency checks, prompt loading, static tool grants, sandboxing, and
 execution.
+
+Runtime resolves an agent's `enabledSkillIds` during turn startup and passes
+resolved skill bundles through `HarnessAgent`'s `skills` setting so the harness
+adapter surfaces them as runtime skills. Runtime keeps broad Tavern behavior in
+the instruction text and does not append `SKILL.md` bodies there.
 
 The first agent-engine pass exposes the built-in local tools as enabled,
 configured, read-only Runtime tools. Later per-agent customization can add

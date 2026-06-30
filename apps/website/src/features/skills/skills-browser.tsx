@@ -18,7 +18,7 @@ import {
 } from '../../components/ui/sidebar.tsx';
 import { Spinner } from '../../components/ui/spinner.tsx';
 import type { SkillHubAvailableOutput, SkillListOutput } from '../../lib/trpc.tsx';
-import { SkillPreviewPane } from './skill-preview-pane.tsx';
+import { type SkillEnablementController, SkillPreviewPane } from './skill-preview-pane.tsx';
 import { buildSkillTreePaths, buildSkillTreeSubjects } from './skill-tree-model.ts';
 import { SkillsFileTree } from './skills-file-tree.tsx';
 
@@ -31,6 +31,7 @@ export function SkillsBrowser({
     availablePending,
     hubByName,
     onManageSources,
+    skillEnablement,
     skills,
 }: {
     available?: SkillHubAvailableOutput;
@@ -38,6 +39,7 @@ export function SkillsBrowser({
     availablePending: boolean;
     hubByName: HubByName;
     onManageSources: () => void;
+    skillEnablement?: SkillEnablementController;
     skills: SkillSummary[];
 }) {
     const [selectedPath, setSelectedPath] = React.useState<null | string>(null);
@@ -131,7 +133,7 @@ export function SkillsBrowser({
                 />
             </aside>
             <main className="flex min-h-0 min-w-0 flex-col">
-                <SkillPreviewPane subject={selectedSubject} />
+                <SkillPreviewPane skillEnablement={skillEnablement} subject={selectedSubject} />
             </main>
         </div>
     );
