@@ -8,7 +8,7 @@ test('collapsed sidebar preview opens from the left edge immediately after colla
         window.localStorage.setItem('tavern.sidebar.pinnedOpen.v1', 'true');
     });
 
-    await page.goto('/dashboard/overview');
+    await page.goto('/overview');
     const sidebar = page.locator('[data-slot="sidebar"]');
     await expect(sidebar).toHaveAttribute('data-state', 'expanded');
 
@@ -40,7 +40,7 @@ test('collapsed sidebar preview stays open over the top-left chrome', async ({ p
         window.localStorage.setItem('tavern.sidebar.pinnedOpen.v1', 'false');
     });
 
-    await page.goto('/dashboard/overview');
+    await page.goto('/overview');
     const wrapper = page.locator('[data-slot="sidebar-wrapper"]');
 
     await page.mouse.move(4, 220);
@@ -65,7 +65,7 @@ test('collapsed sidebar preview stays open throughout the revealed sidebar recta
         window.localStorage.setItem('tavern.sidebar.pinnedOpen.v1', 'false');
     });
 
-    await page.goto('/dashboard/overview');
+    await page.goto('/overview');
     const sidebar = page.locator('[data-slot="sidebar"]');
     const wrapper = page.locator('[data-slot="sidebar-wrapper"]');
 

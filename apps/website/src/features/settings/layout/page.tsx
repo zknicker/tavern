@@ -1,5 +1,6 @@
 import { Outlet, useLocation } from 'react-router-dom';
-import { useAppLayoutPreference } from '../../../hooks/dashboard/use-app-layout-preference.ts';
+import { useAppLayoutPreference } from '../../../hooks/shell/use-app-layout-preference.ts';
+import { appRoutes } from '../../../lib/app-routes.ts';
 import { useLayoutContext } from '../../shell/use-layout-context.ts';
 import { SettingsSidebarNav } from './sidebar-nav.tsx';
 
@@ -27,7 +28,7 @@ function SettingsContent({
     layoutContext: ReturnType<typeof useLayoutContext>;
 }) {
     const location = useLocation();
-    const isFullContentRoute = location.pathname === '/dashboard/settings/skills';
+    const isFullContentRoute = location.pathname === appRoutes.settingsSkills;
 
     return (
         <section

@@ -1,21 +1,15 @@
 import { Card, CardContent } from '../../components/ui/card.tsx';
 import { Skeleton } from '../../components/ui/skeleton.tsx';
 
-const dashboardGridSkeletonIds = Array.from(
-    { length: 6 },
-    (_, index) => `dashboard-grid-skeleton-${index}`
-);
-const dashboardListSkeletonIds = Array.from(
-    { length: 5 },
-    (_, index) => `dashboard-list-skeleton-${index}`
-);
-const dashboardSplitViewSkeletonIds = Array.from(
+const appGridSkeletonIds = Array.from({ length: 6 }, (_, index) => `app-grid-skeleton-${index}`);
+const appListSkeletonIds = Array.from({ length: 5 }, (_, index) => `app-list-skeleton-${index}`);
+const appSplitViewSkeletonIds = Array.from(
     { length: 8 },
-    (_, index) => `dashboard-split-view-skeleton-${index}`
+    (_, index) => `app-split-view-skeleton-${index}`
 );
-const dashboardDetailBlockSkeletonIds = Array.from(
+const appDetailBlockSkeletonIds = Array.from(
     { length: 3 },
-    (_, index) => `dashboard-detail-block-skeleton-${index}`
+    (_, index) => `app-detail-block-skeleton-${index}`
 );
 
 export function GridPageSkeleton() {
@@ -24,7 +18,7 @@ export function GridPageSkeleton() {
             <Skeleton className="h-10 w-full" />
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {dashboardGridSkeletonIds.map((id) => (
+                {appGridSkeletonIds.map((id) => (
                     <Card key={id}>
                         <CardContent className="space-y-4 p-4">
                             <div className="space-y-2">
@@ -57,7 +51,7 @@ export function ListPageSkeleton() {
             </div>
 
             <div className="flex flex-col gap-2 p-4">
-                {dashboardListSkeletonIds.map((id) => (
+                {appListSkeletonIds.map((id) => (
                     <Card key={id}>
                         <CardContent className="space-y-4 p-4">
                             <div className="flex items-start justify-between gap-4">
@@ -95,7 +89,7 @@ export function SplitViewSkeleton() {
                 </div>
 
                 <div className="flex flex-col">
-                    {dashboardSplitViewSkeletonIds.map((id) => (
+                    {appSplitViewSkeletonIds.map((id) => (
                         <div className="space-y-2 border-border border-b px-3 py-3" key={id}>
                             <Skeleton className="h-4 w-40" />
                             <Skeleton className="h-3 w-28" />
@@ -116,7 +110,7 @@ export function SplitViewSkeleton() {
                 </div>
 
                 <div className="mt-6 space-y-4">
-                    {dashboardDetailBlockSkeletonIds.map((id) => (
+                    {appDetailBlockSkeletonIds.map((id) => (
                         <Card key={id}>
                             <CardContent className="space-y-3 p-4">
                                 <Skeleton className="h-4 w-36" />

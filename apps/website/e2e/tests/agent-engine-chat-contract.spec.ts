@@ -10,7 +10,7 @@ test('preserves Tavern chat session routing and renders one final reply', async 
 
     const expectedReply = `QA-TAVERN-CONTRACT-${Date.now()}`;
 
-    await page.goto('/dashboard/overview');
+    await page.goto('/overview');
 
     await fillComposer(
         page,
@@ -34,7 +34,7 @@ test('keeps channel messages human-only until an agent is addressed', async ({ p
 
     const humanOnlyMarker = `QA-HUMAN-ONLY-${Date.now()}`;
 
-    await page.goto('/dashboard/chats/cht_general');
+    await page.goto('/chats/cht_general');
     await fillChatComposer(page, `Human only channel smoke ${humanOnlyMarker}`);
     await page.getByRole('textbox', { name: 'Chat message' }).press('Enter');
 
@@ -50,7 +50,7 @@ test('routes a channel mention to the Tavern agent', async ({ page }) => {
 
     const expectedReply = `QA-CHANNEL-MENTION-${Date.now()}`;
 
-    await page.goto('/dashboard/chats/cht_general');
+    await page.goto('/chats/cht_general');
     await mentionTavernAgent(page, `Reply exactly \`${expectedReply}\`.`);
 
     await expect(transcriptParagraph(page, expectedReply)).toBeVisible({ timeout: 60_000 });
@@ -62,7 +62,7 @@ test('routes the Tavern agent DM through its current session', async ({ page }) 
 
     const expectedReply = `QA-AGENT-DM-${Date.now()}`;
 
-    await page.goto('/dashboard/chats/cht_tavern_agent_dm');
+    await page.goto('/chats/cht_tavern_agent_dm');
     await fillChatComposer(page, `DM smoke. Reply exactly \`${expectedReply}\`.`);
     await page.getByRole('textbox', { name: 'Chat message' }).press('Enter');
 
@@ -73,7 +73,7 @@ test('routes the Tavern agent DM through its current session', async ({ page }) 
 test('starts a new Tavern agent session from the DM UI', async ({ page }) => {
     test.setTimeout(120_000);
 
-    await page.goto('/dashboard/chats/cht_tavern_agent_dm');
+    await page.goto('/chats/cht_tavern_agent_dm');
 
     const newSessionButton = page.getByRole('button', { name: 'New session' });
     await expect(newSessionButton).toBeVisible({ timeout: 30_000 });
@@ -110,12 +110,12 @@ test('stores Tavern generated AGENTS.md without runtime bootstrap companion file
 });
 
 async function waitForRealChatRoute(page: Page) {
-    await page.waitForURL((url) => /^\/dashboard\/chats\/(?!new$)[^/]+$/.test(url.pathname), {
+    await page.waitForURL((url) => /^\/chats\/(?!new$)[^/]+$/.test(url.pathname), {
         timeout: 30_000,
     });
 
     const pathname = new URL(page.url()).pathname;
-    const chatId = pathname.split('/dashboard/chats/')[1] ?? null;
+    const chatId = pathname.split('/chats/')[1] ?? null;
 
     if (!chatId || chatId === 'new') {
         throw new Error(`Expected a real chat route, received "${pathname}".`);

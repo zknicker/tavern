@@ -10,6 +10,7 @@ import { Button } from '../../components/ui/primitives/button.tsx';
 import { Separator } from '../../components/ui/separator.tsx';
 import { SettingsRow, SettingsValue } from '../../components/ui/settings-row.tsx';
 import { Switch } from '../../components/ui/switch.tsx';
+import { appRoutes } from '../../lib/app-routes.ts';
 import {
     formatVaultAccess,
     formatVaultConfigSource,
@@ -61,7 +62,7 @@ export function MemoryOverview({ status }: { status: VaultHubStatus | null }) {
                         trailingWidth="intrinsic"
                     >
                         <Button
-                            render={<NavLink to="/dashboard/cron" />}
+                            render={<NavLink to={appRoutes.tasks} />}
                             size="sm"
                             variant="outline"
                         >
@@ -76,7 +77,7 @@ export function MemoryOverview({ status }: { status: VaultHubStatus | null }) {
                         trailingWidth="intrinsic"
                     >
                         <Button
-                            render={<NavLink to="/dashboard/memory" />}
+                            render={<NavLink to={appRoutes.memory} />}
                             size="sm"
                             variant="outline"
                         >
@@ -124,7 +125,7 @@ export function MemoryOverview({ status }: { status: VaultHubStatus | null }) {
                         title="Recent runs"
                         trailingWidth="intrinsic"
                     >
-                        <Button render={<NavLink to="/dashboard/cron" />} size="sm" variant="ghost">
+                        <Button render={<NavLink to={appRoutes.tasks} />} size="sm" variant="ghost">
                             <span>View Tasks</span>
                             <Icon icon={ArrowRight01Icon} />
                         </Button>
@@ -136,7 +137,7 @@ export function MemoryOverview({ status }: { status: VaultHubStatus | null }) {
                         trailingWidth="intrinsic"
                     >
                         <Button
-                            render={<NavLink to="/dashboard/memory" />}
+                            render={<NavLink to={appRoutes.memory} />}
                             size="sm"
                             variant="ghost"
                         >

@@ -28,7 +28,7 @@ test('keeps loaded history and an open old work drawer stable through a live tur
 }) => {
     test.setTimeout(180_000);
 
-    await page.goto('/dashboard/overview');
+    await page.goto('/overview');
     await fillComposer(
         page,
         '#home-prompt',
@@ -258,12 +258,12 @@ const workGroupHeaderName =
     /^(?:Using|Used|Reading|Read|Running|Ran|Editing|Edited|Searching|Searched|Rendering|Rendered|Thinking|Worked)\b(?! for)/i;
 
 async function waitForRealChatRoute(page: Page) {
-    await page.waitForURL((url) => /^\/dashboard\/chats\/(?!new$)[^/]+$/.test(url.pathname), {
+    await page.waitForURL((url) => /^\/chats\/(?!new$)[^/]+$/.test(url.pathname), {
         timeout: 30_000,
     });
 
     const pathname = new URL(page.url()).pathname;
-    const chatId = pathname.split('/dashboard/chats/')[1];
+    const chatId = pathname.split('/chats/')[1];
 
     if (!chatId || chatId === 'new') {
         throw new Error(`Expected a real chat route, received "${pathname}".`);

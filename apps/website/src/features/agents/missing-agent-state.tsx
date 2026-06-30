@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom';
+import { appRoutes } from '../../lib/app-routes.ts';
 import { EmptyState } from '../shell/empty-state.tsx';
 
 export function MissingAgentState({ agentId }: { agentId: string }) {
@@ -8,7 +9,7 @@ export function MissingAgentState({ agentId }: { agentId: string }) {
         <EmptyState
             actionLabel="Back to overview"
             description={`No agent named "${agentId}" was found.`}
-            onAction={() => navigate('/dashboard/overview')}
+            onAction={() => navigate(appRoutes.overview)}
             title="Agent not found"
         />
     );

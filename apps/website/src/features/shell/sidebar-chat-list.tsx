@@ -26,6 +26,7 @@ import {
     newChatCapabilityRequirements,
     useCapability,
 } from '../../hooks/connections/use-capability.ts';
+import { appRoutes } from '../../lib/app-routes.ts';
 import { markChatTiming } from '../../lib/chat-timing.ts';
 import { cn } from '../../lib/utils.ts';
 import { buildChatList, type ChatListItem } from '../chats/chat-list-data.ts';
@@ -103,7 +104,7 @@ export function AppSidebarChatList() {
                 await archiveChat.mutateAsync({ chatId: chat.id });
 
                 if (location.pathname === buildChatPath(chat.id)) {
-                    await navigate('/dashboard/overview');
+                    await navigate(appRoutes.overview);
                 }
             } catch (error) {
                 // biome-ignore lint/suspicious/noAlert: Keep sidebar failures visible without adding a global toast dependency.
@@ -194,7 +195,7 @@ export function AppSidebarChatList() {
                             disabled={!newChatGate.healthy}
                             render={
                                 newChatGate.healthy ? (
-                                    <NavLink to="/dashboard/overview" />
+                                    <NavLink to={appRoutes.overview} />
                                 ) : undefined
                             }
                             size="icon-xs"

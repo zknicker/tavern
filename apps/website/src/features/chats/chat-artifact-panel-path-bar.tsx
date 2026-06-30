@@ -21,6 +21,7 @@ import {
     MenuSeparator,
     MenuTrigger,
 } from '../../components/ui/menu.tsx';
+import { appRoutes } from '../../lib/app-routes.ts';
 import { cn } from '../../lib/utils.ts';
 import { formatTavernResourceLink, type TavernResourceTarget } from './tavern-resource-link.ts';
 
@@ -221,7 +222,7 @@ function getArtifactPanelDirectoryTarget(target: TavernResourceTarget, path: str
 
 function getArtifactPanelOpenHref(target: TavernResourceTarget) {
     if (target.kind === 'vaultPage' || target.kind === 'vaultDirectory') {
-        return `/dashboard/vault?path=${encodeURIComponent(target.path)}`;
+        return `${appRoutes.memory}?path=${encodeURIComponent(target.path)}`;
     }
 
     return null;

@@ -1089,7 +1089,7 @@
 }
 
 @layer base {
-    .dashboard-reference-theme {
+    .app-reference-theme {
         --content-card: var(--card);
     }
 

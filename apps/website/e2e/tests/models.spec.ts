@@ -3,7 +3,7 @@ import { expect, test } from '../support/test.ts';
 test('models settings surfaces Runtime model entries instead of OAuth provider placeholders', async ({
     page,
 }) => {
-    await page.goto('/dashboard/settings/models');
+    await page.goto('/settings/models');
 
     const availableModels = page.locator('section').filter({ hasText: 'Available Models' });
     await expect(availableModels.getByText('Claude Opus 4.8', { exact: true })).toBeVisible();

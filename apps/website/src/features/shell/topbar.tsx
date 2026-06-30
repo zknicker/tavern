@@ -5,7 +5,7 @@ import { AppShellTopbar, AppShellTopbarSidebarSlot } from '../../components/ui/a
 import { Icon } from '../../components/ui/icon.tsx';
 import { Button } from '../../components/ui/primitives/button.tsx';
 import { SidebarTrigger } from '../../components/ui/sidebar.tsx';
-import type { RouteTab } from '../../hooks/dashboard/use-route-tab.ts';
+import type { RouteTab } from '../../hooks/shell/use-route-tab.ts';
 import { TopbarAllChatsMenuButton, TopbarChatTabs } from './topbar-chat-tabs.tsx';
 
 interface AppTopbarProps {

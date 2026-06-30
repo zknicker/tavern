@@ -72,7 +72,7 @@ export function groupSessionCards(cards: SessionCardData[]) {
     return groupSessionCardsWithOptions(cards, {});
 }
 
-function limitDashboardPane(input: {
+function limitSessionPane(input: {
     cards: SessionCardData[];
     focusedSessionKey?: string | null;
     limit: number;
@@ -116,12 +116,12 @@ export function groupSessionCardsWithOptions(
     const limit = options.limitPerPane ?? sessionPaneLimit;
 
     return {
-        conversations: limitDashboardPane({
+        conversations: limitSessionPane({
             cards: groups.conversations,
             focusedSessionKey: options.focusedSessionKey,
             limit,
         }),
-        cron: limitDashboardPane({
+        cron: limitSessionPane({
             cards: groups.cron,
             focusedSessionKey: options.focusedSessionKey,
             limit,

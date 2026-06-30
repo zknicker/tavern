@@ -21,7 +21,7 @@ rendering, and composer code paths without asking an agent to generate data.
 * Demo response activity is replaced from the current demo definition on each
   seed, so changed demo activity sequences do not leave stale rows behind.
 * The demo channel is a normal Tavern chat. It appears in the sidebar `Chats` list and
-  open through `/dashboard/chats/:id`.
+  opens through `/chats/:id`.
 * Do not add a separate Demos tab, lab route, or preview-only page for them.
 * The demo channel is single-user, single-agent unless the product explicitly brings back
   multi-user or multi-agent chat support.

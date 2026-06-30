@@ -1,7 +1,7 @@
 import { expect, test } from '../support/test.ts';
 
 test('lists installed skills with available and sources management', async ({ page }) => {
-    await page.goto('/dashboard/settings/skills');
+    await page.goto('/settings/skills');
 
     await expect(page.getByRole('heading', { name: 'Skills' })).toBeVisible();
     await expect(page.getByText('Browse skills')).toBeVisible();
@@ -21,19 +21,19 @@ test('lists installed skills with available and sources management', async ({ pa
 });
 
 test('lists tools on their own settings page', async ({ page }) => {
-    await page.goto('/dashboard/settings/tools');
+    await page.goto('/settings/tools');
 
     await expect(page.getByPlaceholder('Search tools...')).toBeVisible();
     await expect(page.getByRole('heading', { name: 'Tools' })).toBeVisible();
 });
 
 test('splits channels and MCP into separate settings pages', async ({ page }) => {
-    await page.goto('/dashboard/settings/channels');
+    await page.goto('/settings/channels');
 
     await expect(page.getByRole('main').getByText('Channels', { exact: true })).toBeVisible();
     await expect(page.getByRole('main').getByText('Tavern', { exact: true })).toBeVisible();
 
-    await page.goto('/dashboard/settings/mcp');
+    await page.goto('/settings/mcp');
 
     await expect(page.getByRole('main').getByText('MCP', { exact: true })).toBeVisible();
     await expect(page.getByRole('main').getByText(/MCP servers/)).toBeVisible();

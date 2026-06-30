@@ -7,7 +7,7 @@ import { Icon } from '../../../components/ui/icon.tsx';
 import { SettingsRow } from '../../../components/ui/settings-row.tsx';
 import { Switch } from '../../../components/ui/switch.tsx';
 import { useChatThinkingDisplayPreference } from '../../../hooks/chats/use-chat-thinking-display-preference.ts';
-import { useAppLayoutPreference } from '../../../hooks/dashboard/use-app-layout-preference.ts';
+import { useAppLayoutPreference } from '../../../hooks/shell/use-app-layout-preference.ts';
 import { cn } from '../../../lib/utils.ts';
 
 const themeOptions: Array<{

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { appRoutes } from '../../lib/app-routes.ts';
 import { type TavernUpdateStatus, useTavernUpdate } from './use-tavern-update.ts';
 
 export function useTavernUpdateIndicator() {
@@ -25,7 +26,7 @@ export function useTavernUpdateIndicator() {
 
     const activate = useCallback(() => {
         if (status.phase === 'runtime-disconnected') {
-            navigate('/dashboard/settings/agent-runtime');
+            navigate(appRoutes.settingsAgentRuntime);
             return;
         }
 

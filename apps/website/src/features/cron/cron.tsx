@@ -9,7 +9,8 @@ import { useCronList } from '../../hooks/cron/use-cron-list.ts';
 import { useCronRun } from '../../hooks/cron/use-cron-run.ts';
 import { useCronRuns } from '../../hooks/cron/use-cron-runs.ts';
 import { useCronToggle } from '../../hooks/cron/use-cron-toggle.ts';
-import { useSearch } from '../../hooks/dashboard/use-search.ts';
+import { useSearch } from '../../hooks/shell/use-search.ts';
+import { appRoutes } from '../../lib/app-routes.ts';
 import { useLayoutContext } from '../shell/use-layout-context.ts';
 import { CronDeleteDialog } from './cron-delete-dialog.tsx';
 import { buildCronList, type CronListItem } from './cron-list-data.ts';
@@ -67,12 +68,12 @@ export function Cron() {
     const isMutating =
         deleteMutation.isPending || toggleMutation.isPending || runMutation.isPending;
     const openCreatePage = React.useCallback(() => {
-        navigate('/dashboard/cron/new');
+        navigate(appRoutes.newTask);
     }, [navigate]);
 
     const editJob = React.useCallback(
         (job: CronListItem) => {
-            navigate(`/dashboard/cron/edit/${encodeURIComponent(job.id)}`);
+            navigate(appRoutes.editTask(job.id));
         },
         [navigate]
     );

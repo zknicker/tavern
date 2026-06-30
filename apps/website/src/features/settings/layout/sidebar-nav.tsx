@@ -25,7 +25,7 @@ export function SettingsSidebarNav({ onBackToApp }: { onBackToApp?: () => void }
     const capability = useCapability();
     const utils = trpc.useUtils();
     const prefetchModelsSettings = React.useCallback(() => {
-        void import('../../../routes/dashboard/settings-models-page.tsx');
+        void import('../../../routes/app/settings-models-page.tsx');
         void utils.model.inventory.prefetch(undefined, queryPolicy.runtimeModelSnapshot);
     }, [utils]);
 

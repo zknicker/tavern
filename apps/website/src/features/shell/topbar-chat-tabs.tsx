@@ -33,8 +33,9 @@ import {
     routeTabCapabilityRequirements,
     useCapability,
 } from '../../hooks/connections/use-capability.ts';
-import type { RouteTab } from '../../hooks/dashboard/use-route-tab.ts';
-import { routeTabs } from '../../hooks/dashboard/use-route-tab.ts';
+import type { RouteTab } from '../../hooks/shell/use-route-tab.ts';
+import { routeTabs } from '../../hooks/shell/use-route-tab.ts';
+import { appRoutes } from '../../lib/app-routes.ts';
 import { markChatTiming } from '../../lib/chat-timing.ts';
 import { formatTimestamp } from '../../lib/format.ts';
 import { cn } from '../../lib/utils.ts';
@@ -155,7 +156,7 @@ export function TopbarChatTabs({
                 return;
             }
 
-            await navigate('/dashboard/overview');
+            await navigate(appRoutes.overview);
         },
         [location.pathname, navigate, openChatIds, setOpenChatIds]
     );
@@ -168,7 +169,7 @@ export function TopbarChatTabs({
 
             if (event.key.toLowerCase() === 't') {
                 event.preventDefault();
-                void navigate('/dashboard/overview');
+                void navigate(appRoutes.overview);
                 return;
             }
 
@@ -190,7 +191,7 @@ export function TopbarChatTabs({
                 setOpenChatIds(openChatIds.filter((chatId) => chatId !== chat.id));
 
                 if (location.pathname === buildChatPath(chat.id)) {
-                    await navigate('/dashboard/overview');
+                    await navigate(appRoutes.overview);
                 }
             } catch (error) {
                 // biome-ignore lint/suspicious/noAlert: Keep topbar failures visible without adding a global toast dependency.
@@ -491,7 +492,7 @@ export function TopbarNewChatButton() {
             aria-label="New chat"
             className="no-drag text-muted-foreground/70 hover:text-foreground data-pressed:text-foreground [&_svg]:opacity-70 hover:[&_svg]:opacity-90"
             disabled={!gate.healthy}
-            render={gate.healthy ? <NavLink to="/dashboard/overview" /> : undefined}
+            render={gate.healthy ? <NavLink to={appRoutes.overview} /> : undefined}
             size="icon-sm"
             title={disabledReason ?? 'New chat'}
             variant="ghost"
@@ -839,7 +840,7 @@ function writeOpenChatTabIds(chatIds: string[]) {
 }
 
 function getRouteChatId(pathname: string) {
-    const match = pathname.match(/^\/dashboard\/chats\/([^/]+)$/u);
+    const match = pathname.match(/^\/chats\/([^/]+)$/u);
     const chatId = match?.[1] ?? null;
 
     return chatId && chatId !== 'new' ? chatId : null;

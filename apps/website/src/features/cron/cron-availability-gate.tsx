@@ -9,7 +9,7 @@ import { useLayoutContext } from '../shell/use-layout-context.ts';
 
 export function CronAvailabilityGate({ children }: { children: ReactNode }) {
     const capability = useCapability();
-    const gate = capability(routeTabCapabilityRequirements.cron);
+    const gate = capability(routeTabCapabilityRequirements.tasks);
     const { navigateToSettings } = useLayoutContext();
 
     if (gate.healthy) {

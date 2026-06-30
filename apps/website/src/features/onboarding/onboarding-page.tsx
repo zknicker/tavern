@@ -12,6 +12,7 @@ import { Field, FieldDescription, FieldLabel } from '../../components/ui/primiti
 import { Input } from '../../components/ui/primitives/input.tsx';
 import { useConnectAgentRuntime } from '../../hooks/connections/use-connect-agent-runtime.ts';
 import { useRuntimeConnection } from '../../hooks/connections/use-runtime-connection.ts';
+import { appRoutes } from '../../lib/app-routes.ts';
 
 const tavernRuntimeUrlPlaceholder = 'http://127.0.0.1:18790';
 
@@ -27,11 +28,11 @@ export function OnboardingPage() {
     }
 
     if (connection?.enabled || !['error', 'unconfigured'].includes(runtimeConnection.status)) {
-        return <Navigate replace to="/dashboard" />;
+        return <Navigate replace to={appRoutes.overview} />;
     }
 
     return (
-        <AppShell className="dashboard-reference-theme select-none overflow-hidden bg-background text-foreground">
+        <AppShell className="app-reference-theme select-none overflow-hidden bg-background text-foreground">
             <AppShellDragRegion />
             <DesktopUpdateIndicator placement="floating" />
             <OnboardingBackground />
@@ -45,7 +46,7 @@ export function OnboardingPage() {
                     <RuntimeConnectionCard
                         connection={connection}
                         onConnect={() => {
-                            navigate('/dashboard/overview');
+                            navigate(appRoutes.overview);
                         }}
                     />
                 </div>

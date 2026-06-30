@@ -153,10 +153,8 @@ describe('sidebar chat list', () => {
     });
 
     test('links pending drafts to the draft route and reconciled drafts to the real chat', () => {
-        expect(getSidebarDraftPath(createDraft())).toBe('/dashboard/chats/new');
-        expect(getSidebarDraftPath(createDraft({ realChatId: 'chat-1' }))).toBe(
-            '/dashboard/chats/chat-1'
-        );
+        expect(getSidebarDraftPath(createDraft())).toBe('/chats/new');
+        expect(getSidebarDraftPath(createDraft({ realChatId: 'chat-1' }))).toBe('/chats/chat-1');
     });
 
     test('labels draft chat activity by local state', () => {

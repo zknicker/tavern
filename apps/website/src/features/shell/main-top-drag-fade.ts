@@ -1,3 +1,5 @@
+import { appRoutes } from '../../lib/app-routes.ts';
+
 export function shouldShowMainTopDragFade(pathname: string) {
-    return pathname.startsWith('/dashboard/chats/');
+    return pathname.startsWith(`${appRoutes.chats}/`);
 }

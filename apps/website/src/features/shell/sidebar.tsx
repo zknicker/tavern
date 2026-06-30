@@ -9,7 +9,7 @@ import {
     SidebarMenuItem,
     SidebarRail,
 } from '../../components/ui/sidebar.tsx';
-import type { RouteTab } from '../../hooks/dashboard/use-route-tab.ts';
+import type { RouteTab } from '../../hooks/shell/use-route-tab.ts';
 import { SettingsSidebarNav } from '../settings/layout/sidebar-nav.tsx';
 import { AppSidebarChatList } from './sidebar-chat-list.tsx';
 import { AppSidebarNav } from './sidebar-nav.tsx';

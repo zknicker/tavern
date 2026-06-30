@@ -1,10 +1,11 @@
 import type { ComponentType } from 'react';
-import { createBrowserRouter, createHashRouter, Navigate } from 'react-router-dom';
+import { createBrowserRouter, createHashRouter, Navigate, useLocation } from 'react-router-dom';
 import { AppFrame } from './components/app-frame.tsx';
 import { buildDefaultWorkspaceChatPath } from './features/chats/chat-path.ts';
-import { DashboardSetupGate } from './features/onboarding/dashboard-setup-gate.tsx';
+import { RuntimeSetupGate } from './features/onboarding/runtime-setup-gate.tsx';
 import { Layout } from './layout.tsx';
 import { isPackagedDesktopApp } from './lib/agent-runtime.ts';
+import { appRoutes } from './lib/app-routes.ts';
 
 function lazyRoute<TModule extends Record<string, unknown>>(
     load: () => Promise<TModule>,
@@ -36,12 +37,19 @@ export function createAppRouter() {
                     lazy: lazyRoute(() => import('./routes/onboarding-page.tsx'), 'OnboardingPage'),
                 },
                 {
+                    path: 'dashboard',
+                    element: <LegacyDashboardRedirect />,
+                },
+                {
+                    path: 'dashboard/*',
+                    element: <LegacyDashboardRedirect />,
+                },
+                {
                     index: true,
                     element: <Navigate replace to={buildDefaultWorkspaceChatPath()} />,
                 },
                 {
-                    path: 'dashboard',
-                    element: <DashboardSetupGate />,
+                    element: <RuntimeSetupGate />,
                     children: [
                         {
                             element: <Layout />,
@@ -55,22 +63,22 @@ export function createAppRouter() {
                                 {
                                     path: 'overview',
                                     lazy: lazyRoute(
-                                        () => import('./routes/dashboard/overview-page.tsx'),
+                                        () => import('./routes/app/overview-page.tsx'),
                                         'OverviewPage'
                                     ),
                                 },
                                 {
                                     path: 'stats',
-                                    element: <Navigate replace to="/dashboard/settings/stats" />,
+                                    element: <Navigate replace to={appRoutes.settingsStats} />,
                                 },
                                 {
                                     path: 'agent',
-                                    element: <Navigate replace to="/dashboard/settings/sessions" />,
+                                    element: <Navigate replace to={appRoutes.settingsSessions} />,
                                 },
                                 {
                                     path: 'chats/:chatId',
                                     lazy: lazyRoute(
-                                        () => import('./routes/dashboard/agent-chat-page.tsx'),
+                                        () => import('./routes/app/agent-chat-page.tsx'),
                                         'ChatPage'
                                     ),
                                 },
@@ -82,82 +90,82 @@ export function createAppRouter() {
                                 },
                                 {
                                     path: 'workers',
-                                    element: <Navigate replace to="/dashboard/memory" />,
+                                    element: <Navigate replace to={appRoutes.memory} />,
                                 },
                                 {
-                                    path: 'cron',
+                                    path: 'tasks',
                                     lazy: lazyRoute(
-                                        () => import('./routes/dashboard/cron-page.tsx'),
+                                        () => import('./routes/app/cron-page.tsx'),
                                         'CronPage'
                                     ),
                                 },
                                 {
-                                    path: 'cron/new',
+                                    path: 'tasks/new',
                                     lazy: lazyRoute(
-                                        () => import('./routes/dashboard/cron-editor-page.tsx'),
+                                        () => import('./routes/app/cron-editor-page.tsx'),
                                         'CronEditorPage'
                                     ),
                                 },
                                 {
-                                    path: 'cron/edit/:jobId',
+                                    path: 'tasks/edit/:jobId',
                                     lazy: lazyRoute(
-                                        () => import('./routes/dashboard/cron-editor-page.tsx'),
+                                        () => import('./routes/app/cron-editor-page.tsx'),
                                         'CronEditorPage'
                                     ),
                                 },
                                 {
                                     path: 'models',
                                     lazy: lazyRoute(
-                                        () => import('./routes/dashboard/models-page.tsx'),
+                                        () => import('./routes/app/models-page.tsx'),
                                         'ModelsPage'
                                     ),
                                 },
                                 {
                                     path: 'skills',
-                                    element: <Navigate replace to="/dashboard/settings/skills" />,
+                                    element: <Navigate replace to={appRoutes.settingsSkills} />,
                                 },
                                 {
                                     path: 'events',
-                                    element: <Navigate replace to="/dashboard/memory" />,
+                                    element: <Navigate replace to={appRoutes.memory} />,
                                 },
                                 {
                                     path: 'logs',
-                                    element: <Navigate replace to="/dashboard/memory" />,
+                                    element: <Navigate replace to={appRoutes.memory} />,
                                 },
                                 {
                                     path: 'workspace',
                                     lazy: lazyRoute(
-                                        () => import('./routes/dashboard/workspace-page.tsx'),
+                                        () => import('./routes/app/workspace-page.tsx'),
                                         'WorkspacePage'
                                     ),
                                 },
                                 {
                                     path: 'memory',
                                     lazy: lazyRoute(
-                                        () => import('./routes/dashboard/vault-page.tsx'),
+                                        () => import('./routes/app/vault-page.tsx'),
                                         'VaultPage'
                                     ),
                                 },
                                 {
                                     path: 'pulse',
-                                    element: <Navigate replace to="/dashboard/memory" />,
+                                    element: <Navigate replace to={appRoutes.memory} />,
                                 },
                                 {
                                     path: 'memories',
-                                    element: <Navigate replace to="/dashboard/memory" />,
+                                    element: <Navigate replace to={appRoutes.memory} />,
                                 },
                                 {
                                     path: 'vault',
-                                    element: <Navigate replace to="/dashboard/memory" />,
+                                    element: <Navigate replace to={appRoutes.memory} />,
                                 },
                                 {
                                     path: 'jobs',
-                                    element: <Navigate replace to="/dashboard/overview" />,
+                                    element: <Navigate replace to={appRoutes.overview} />,
                                 },
                                 {
                                     path: 'settings',
                                     lazy: lazyRoute(
-                                        () => import('./routes/dashboard/settings-page.tsx'),
+                                        () => import('./routes/app/settings-page.tsx'),
                                         'SettingsPage'
                                     ),
                                     children: [
@@ -170,7 +178,7 @@ export function createAppRouter() {
                                             lazy: lazyRoute(
                                                 () =>
                                                     import(
-                                                        './routes/dashboard/settings-agent-runtime-page.tsx'
+                                                        './routes/app/settings-agent-runtime-page.tsx'
                                                     ),
                                                 'SettingsAgentRuntimePage'
                                             ),
@@ -180,7 +188,7 @@ export function createAppRouter() {
                                             lazy: lazyRoute(
                                                 () =>
                                                     import(
-                                                        './routes/dashboard/settings-appearance-page.tsx'
+                                                        './routes/app/settings-appearance-page.tsx'
                                                     ),
                                                 'SettingsAppearancePage'
                                             ),
@@ -190,7 +198,7 @@ export function createAppRouter() {
                                             lazy: lazyRoute(
                                                 () =>
                                                     import(
-                                                        './routes/dashboard/settings-updates-page.tsx'
+                                                        './routes/app/settings-updates-page.tsx'
                                                     ),
                                                 'SettingsUpdatesPage'
                                             ),
@@ -198,7 +206,7 @@ export function createAppRouter() {
                                         {
                                             path: 'stats',
                                             lazy: lazyRoute(
-                                                () => import('./routes/dashboard/stats-page.tsx'),
+                                                () => import('./routes/app/stats-page.tsx'),
                                                 'StatsPage'
                                             ),
                                         },
@@ -207,7 +215,7 @@ export function createAppRouter() {
                                             element: (
                                                 <Navigate
                                                     replace
-                                                    to="/dashboard/settings/agent-runtime"
+                                                    to={appRoutes.settingsAgentRuntime}
                                                 />
                                             ),
                                         },
@@ -215,9 +223,7 @@ export function createAppRouter() {
                                             path: 'models',
                                             lazy: lazyRoute(
                                                 () =>
-                                                    import(
-                                                        './routes/dashboard/settings-models-page.tsx'
-                                                    ),
+                                                    import('./routes/app/settings-models-page.tsx'),
                                                 'SettingsModelsPage'
                                             ),
                                         },
@@ -226,7 +232,7 @@ export function createAppRouter() {
                                             lazy: lazyRoute(
                                                 () =>
                                                     import(
-                                                        './routes/dashboard/settings-sessions-page.tsx'
+                                                        './routes/app/settings-sessions-page.tsx'
                                                     ),
                                                 'SettingsSessionsPage'
                                             ),
@@ -234,14 +240,14 @@ export function createAppRouter() {
                                         {
                                             path: 'skills',
                                             lazy: lazyRoute(
-                                                () => import('./routes/dashboard/skills-page.tsx'),
+                                                () => import('./routes/app/skills-page.tsx'),
                                                 'SkillsPage'
                                             ),
                                         },
                                         {
                                             path: 'tools',
                                             lazy: lazyRoute(
-                                                () => import('./routes/dashboard/tools-page.tsx'),
+                                                () => import('./routes/app/tools-page.tsx'),
                                                 'ToolsPage'
                                             ),
                                         },
@@ -250,7 +256,7 @@ export function createAppRouter() {
                                             lazy: lazyRoute(
                                                 () =>
                                                     import(
-                                                        './routes/dashboard/settings-plugins-page.tsx'
+                                                        './routes/app/settings-plugins-page.tsx'
                                                     ),
                                                 'SettingsPluginsPage'
                                             ),
@@ -258,25 +264,21 @@ export function createAppRouter() {
                                         {
                                             path: 'channels',
                                             lazy: lazyRoute(
-                                                () =>
-                                                    import('./routes/dashboard/channels-page.tsx'),
+                                                () => import('./routes/app/channels-page.tsx'),
                                                 'ChannelsPage'
                                             ),
                                         },
                                         {
                                             path: 'mcp',
                                             lazy: lazyRoute(
-                                                () => import('./routes/dashboard/mcp-page.tsx'),
+                                                () => import('./routes/app/mcp-page.tsx'),
                                                 'McpPage'
                                             ),
                                         },
                                         {
                                             path: 'jobs',
                                             lazy: lazyRoute(
-                                                () =>
-                                                    import(
-                                                        './routes/dashboard/settings-jobs-page.tsx'
-                                                    ),
+                                                () => import('./routes/app/settings-jobs-page.tsx'),
                                                 'SettingsJobsPage'
                                             ),
                                         },
@@ -284,9 +286,7 @@ export function createAppRouter() {
                                             path: 'agent',
                                             lazy: lazyRoute(
                                                 () =>
-                                                    import(
-                                                        './routes/dashboard/settings-agent-page.tsx'
-                                                    ),
+                                                    import('./routes/app/settings-agent-page.tsx'),
                                                 'SettingsAgentPage'
                                             ),
                                         },
@@ -295,7 +295,7 @@ export function createAppRouter() {
                                             lazy: lazyRoute(
                                                 () =>
                                                     import(
-                                                        './routes/dashboard/settings-notes-md-page.tsx'
+                                                        './routes/app/settings-notes-md-page.tsx'
                                                     ),
                                                 'SettingsNotesMdPage'
                                             ),
@@ -305,7 +305,7 @@ export function createAppRouter() {
                                             lazy: lazyRoute(
                                                 () =>
                                                     import(
-                                                        './routes/dashboard/settings-soul-md-page.tsx'
+                                                        './routes/app/settings-soul-md-page.tsx'
                                                     ),
                                                 'SettingsSoulMdPage'
                                             ),
@@ -315,7 +315,7 @@ export function createAppRouter() {
                                             lazy: lazyRoute(
                                                 () =>
                                                     import(
-                                                        './routes/dashboard/settings-memories-page.tsx'
+                                                        './routes/app/settings-memories-page.tsx'
                                                     ),
                                                 'SettingsMemoriesPage'
                                             ),
@@ -325,7 +325,7 @@ export function createAppRouter() {
                                             lazy: lazyRoute(
                                                 () =>
                                                     import(
-                                                        './routes/dashboard/settings-tracking-page.tsx'
+                                                        './routes/app/settings-tracking-page.tsx'
                                                     ),
                                                 'SettingsTrackingPage'
                                             ),
@@ -338,7 +338,7 @@ export function createAppRouter() {
                                 },
                                 {
                                     path: '*',
-                                    element: <Navigate replace to="/dashboard/overview" />,
+                                    element: <Navigate replace to={appRoutes.overview} />,
                                 },
                             ],
                         },
@@ -346,9 +346,84 @@ export function createAppRouter() {
                 },
                 {
                     path: '*',
-                    element: <Navigate replace to="/dashboard/overview" />,
+                    element: <Navigate replace to={appRoutes.overview} />,
                 },
             ],
         },
     ]);
+}
+
+function LegacyDashboardRedirect() {
+    const location = useLocation();
+    const targetPath = resolveLegacyDashboardPath(location.pathname);
+
+    return <Navigate replace to={`${targetPath}${location.search}${location.hash}`} />;
+}
+
+function resolveLegacyDashboardPath(pathname: string) {
+    const suffix = pathname.replace(/^\/dashboard\/?/u, '');
+
+    if (suffix.length === 0) {
+        return buildDefaultWorkspaceChatPath();
+    }
+
+    const [section, ...segments] = suffix.split('/');
+
+    switch (section) {
+        case 'agent':
+            return appRoutes.settingsSessions;
+        case 'chats':
+            return segments.length === 0 ? buildDefaultWorkspaceChatPath() : `/${suffix}`;
+        case 'cron':
+            return resolveLegacyTaskPath(segments);
+        case 'events':
+        case 'logs':
+        case 'memories':
+        case 'pulse':
+        case 'vault':
+        case 'workers':
+            return appRoutes.memory;
+        case 'jobs':
+        case 'models':
+            return appRoutes.overview;
+        case 'overview':
+            return appRoutes.overview;
+        case 'settings':
+            return resolveLegacySettingsPath(segments);
+        case 'skills':
+            return appRoutes.settingsSkills;
+        case 'stats':
+            return appRoutes.settingsStats;
+        case 'memory':
+        case 'workspace':
+            return `/${suffix}`;
+        default:
+            return appRoutes.overview;
+    }
+}
+
+function resolveLegacyTaskPath(segments: string[]) {
+    if (segments[0] === 'new') {
+        return appRoutes.newTask;
+    }
+
+    if (segments[0] === 'edit' && segments[1]) {
+        return `/tasks/edit/${segments.slice(1).join('/')}`;
+    }
+
+    return appRoutes.tasks;
+}
+
+function resolveLegacySettingsPath(segments: string[]) {
+    const [section] = segments;
+
+    if (!section) {
+        return appRoutes.settings;
+    }
+
+    if (section === 'connections' || section === 'tracking') {
+        return appRoutes.settingsAgentRuntime;
+    }
+
+    return `/settings/${segments.join('/')}`;
 }
