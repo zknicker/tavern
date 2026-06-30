@@ -31,7 +31,6 @@ test('startTavernChatAgentSession rotates the only agent seat through Runtime', 
             trigger: null,
         },
         createdAt: '2026-06-29T12:00:00.000Z',
-        isPinned: false,
         runtimeId: 'runtime-local',
         updatedAt: '2026-06-29T12:00:00.000Z',
     });
@@ -96,7 +95,6 @@ test('startTavernChatAgentSession rejects ambiguous agent seats', async () => {
             trigger: null,
         },
         createdAt: '2026-06-29T12:00:00.000Z',
-        isPinned: false,
         runtimeId: 'runtime-local',
         updatedAt: '2026-06-29T12:00:00.000Z',
     });

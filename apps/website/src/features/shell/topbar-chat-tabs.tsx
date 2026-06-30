@@ -1,7 +1,6 @@
 import { Archive02Icon } from '@hugeicons/core-free-icons';
 import { HashtagIcon } from '@hugeicons-pro/core-solid-rounded';
 import {
-    BubbleChatIcon,
     BubbleChatTemporaryIcon,
     MoreHorizontalIcon,
     PlusSignIcon,
@@ -20,7 +19,6 @@ import type { ChatTimelineState } from '../../hooks/chats/chat-timeline-state.ts
 import { useChatArchive } from '../../hooks/chats/use-chat-archive.ts';
 import { getChatDraftRouteState } from '../../hooks/chats/use-chat-draft-launch.ts';
 import { useChatList } from '../../hooks/chats/use-chat-list.ts';
-import { useChatPin } from '../../hooks/chats/use-chat-pin.ts';
 import type { ChatStartDraft } from '../../hooks/chats/use-chat-start-drafts.tsx';
 import { useChatStartDrafts } from '../../hooks/chats/use-chat-start-drafts.tsx';
 import { useChatSystemPrompt } from '../../hooks/chats/use-chat-system-prompt.ts';
@@ -41,7 +39,7 @@ import { formatTimestamp } from '../../lib/format.ts';
 import { cn } from '../../lib/utils.ts';
 import { buildChatList, type ChatListItem } from '../chats/chat-list-data.ts';
 import { buildChatPath, buildNewChatDraftPath } from '../chats/chat-path.ts';
-import { getPinnedTabColorStyle } from './pinned-tab-options.ts';
+import { getChannelColorStyle } from './channel-color-options.ts';
 import { getRouteTabIcon, getRouteTabIconNode } from './route-tab-presentation.tsx';
 import {
     canRenameSidebarChat,
@@ -73,7 +71,6 @@ export function TopbarChatTabs({
     const drafts = useChatStartDrafts();
     const updateChat = useChatUpdate();
     const archiveChat = useChatArchive();
-    const pinChat = useChatPin();
     const systemPrompt = useChatSystemPrompt();
     const tabAppearance = useChatTabAppearance();
     const [renamingChat, setRenamingChat] = React.useState<ChatListItem | null>(null);
@@ -89,12 +86,8 @@ export function TopbarChatTabs({
         [topbarChats.allChats]
     );
     const openChatIdSet = React.useMemo(() => new Set(openChatIds), [openChatIds]);
-    const pinnedChats = React.useMemo(
-        () => sortedChats.filter((chat) => chat.isPinned),
-        [sortedChats]
-    );
     const visibleRecentChats = React.useMemo(
-        () => sortedChats.filter((chat) => !chat.isPinned && openChatIdSet.has(chat.id)),
+        () => sortedChats.filter((chat) => openChatIdSet.has(chat.id)),
         [openChatIdSet, sortedChats]
     );
     const draftChats = React.useMemo(
@@ -132,7 +125,7 @@ export function TopbarChatTabs({
     }, [draftChats]);
 
     React.useEffect(() => {
-        if (!(activeChat && !activeChat.isPinned)) {
+        if (!activeChat) {
             return;
         }
 
@@ -145,10 +138,6 @@ export function TopbarChatTabs({
 
     const closeChatTab = React.useCallback(
         async (chat: ChatListItem) => {
-            if (chat.isPinned) {
-                return;
-            }
-
             const nextOpenIds = openChatIds.filter((chatId) => chatId !== chat.id);
             setOpenChatIds(nextOpenIds);
 
@@ -173,7 +162,7 @@ export function TopbarChatTabs({
                 return;
             }
 
-            if (event.key.toLowerCase() === 'w' && activeChat && !activeChat.isPinned) {
+            if (event.key.toLowerCase() === 'w' && activeChat) {
                 event.preventDefault();
                 void closeChatTab(activeChat);
             }
@@ -201,23 +190,7 @@ export function TopbarChatTabs({
         [archiveChat, location.pathname, navigate, openChatIds, setOpenChatIds]
     );
 
-    const pinTopbarChat = React.useCallback(
-        async (chat: ChatListItem, pinned: boolean) => {
-            try {
-                await pinChat.mutateAsync({ chatId: chat.id, pinned });
-
-                if (!pinned) {
-                    setOpenChatIds([...openChatIds, chat.id]);
-                }
-            } catch (error) {
-                // biome-ignore lint/suspicious/noAlert: Keep topbar failures visible without adding a global toast dependency.
-                window.alert(getErrorMessage(error));
-            }
-        },
-        [openChatIds, pinChat, setOpenChatIds]
-    );
-
-    const setPinnedTabColor = React.useCallback(
+    const setChannelColor = React.useCallback(
         async (chat: ChatListItem, color: string | null) => {
             try {
                 await tabAppearance.mutateAsync({
@@ -282,38 +255,6 @@ export function TopbarChatTabs({
                             aria-hidden="true"
                             className="mx-1 h-6 shrink-0 border-border/60 border-r"
                         />
-                        {pinnedChats.map((chat) => (
-                            <TopbarRecentChatTab
-                                chat={chat}
-                                isActive={location.pathname === buildChatPath(chat.id)}
-                                isArchivePending={
-                                    archiveChat.isPending &&
-                                    archiveChat.variables?.chatId === chat.id
-                                }
-                                key={chat.id}
-                                onArchive={(selectedChat) => {
-                                    void archiveTopbarChat(selectedChat);
-                                }}
-                                onCloseTab={(selectedChat) => {
-                                    void closeChatTab(selectedChat);
-                                }}
-                                onCustomizeColor={(selectedChat, color) => {
-                                    tabAppearance.reset();
-                                    void setPinnedTabColor(selectedChat, color);
-                                }}
-                                onEditSystemPrompt={(selectedChat) => {
-                                    systemPrompt.reset();
-                                    setEditingSystemPromptChat(selectedChat);
-                                }}
-                                onPinChange={(selectedChat, pinned) => {
-                                    void pinTopbarChat(selectedChat, pinned);
-                                }}
-                                onRename={(selectedChat) => {
-                                    updateChat.reset();
-                                    setRenamingChat(selectedChat);
-                                }}
-                            />
-                        ))}
                         {draftChats.map((draft) => {
                             const isActive =
                                 activeDraftRoute?.draftChatId === draft.id ||
@@ -345,14 +286,11 @@ export function TopbarChatTabs({
                                 }}
                                 onCustomizeColor={(selectedChat, color) => {
                                     tabAppearance.reset();
-                                    void setPinnedTabColor(selectedChat, color);
+                                    void setChannelColor(selectedChat, color);
                                 }}
                                 onEditSystemPrompt={(selectedChat) => {
                                     systemPrompt.reset();
                                     setEditingSystemPromptChat(selectedChat);
-                                }}
-                                onPinChange={(selectedChat, pinned) => {
-                                    void pinTopbarChat(selectedChat, pinned);
                                 }}
                                 onRename={(selectedChat) => {
                                     updateChat.reset();
@@ -426,7 +364,7 @@ export function TopbarAllChatsMenuButton() {
 
     const openChat = React.useCallback(
         async (chat: ChatListItem) => {
-            if (!(chat.isPinned || openChatIds.includes(chat.id))) {
+            if (!openChatIds.includes(chat.id)) {
                 setOpenChatIds([...openChatIds, chat.id]);
             }
 
@@ -461,7 +399,11 @@ export function TopbarAllChatsMenuButton() {
                         >
                             <Icon
                                 className="size-4 shrink-0"
-                                icon={chat.isPinned ? BubbleChatIcon : BubbleChatTemporaryIcon}
+                                icon={
+                                    chat.conversationKind === 'channel'
+                                        ? HashtagIcon
+                                        : BubbleChatTemporaryIcon
+                                }
                             />
                             <span className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap leading-none">
                                 {resolveTavernChatName(chat)}
@@ -566,7 +508,6 @@ function TopbarRecentChatTab({
     onCloseTab,
     onCustomizeColor,
     onEditSystemPrompt,
-    onPinChange,
     onRename,
 }: {
     chat: ChatListItem;
@@ -576,15 +517,14 @@ function TopbarRecentChatTab({
     onCloseTab: (chat: ChatListItem) => void;
     onCustomizeColor: (chat: ChatListItem, color: string | null) => void;
     onEditSystemPrompt: (chat: ChatListItem) => void;
-    onPinChange: (chat: ChatListItem, pinned: boolean) => void;
     onRename: (chat: ChatListItem) => void;
 }) {
     const title = resolveTavernChatName(chat);
     const timelineState = useChatRuntimeTimelineState(chat.id);
     const hasActiveTurn = chat.hasActiveTurn || hasLocalActiveTurn(timelineState);
-    const tabColor = chat.isPinned ? chat.tabAppearance.color : null;
-    const pinnedTabColorStyle = getPinnedTabColorStyle(tabColor);
-    const canClose = !(chat.isPinned || hasActiveTurn);
+    const tabColor = chat.tabAppearance.color;
+    const channelColorStyle = getChannelColorStyle(tabColor);
+    const canClose = !hasActiveTurn;
 
     return (
         <SidebarChatContextMenu
@@ -593,7 +533,6 @@ function TopbarRecentChatTab({
             onCloseTab={onCloseTab}
             onCustomizeColor={onCustomizeColor}
             onEditSystemPrompt={onEditSystemPrompt}
-            onPinChange={onPinChange}
             onRename={onRename}
             triggerClassName="no-drag h-7 shrink-0 overflow-hidden"
         >
@@ -607,19 +546,19 @@ function TopbarRecentChatTab({
                 <TabsSubtleItem
                     aria-current={isActive ? 'page' : undefined}
                     className={topbarChatTabButtonClassName({
-                        hasPinnedColor: Boolean(pinnedTabColorStyle),
+                        hasChannelColor: Boolean(channelColorStyle),
                         isActive,
                     })}
                     iconNode={
                         <TopbarChatTabIcon
+                            chat={chat}
                             className={canClose ? 'group-hover/tab:opacity-0' : null}
                             color={tabColor}
                             isActiveTurn={hasActiveTurn}
-                            isPinned={chat.isPinned}
                         />
                     }
                     label={title}
-                    style={pinnedTabColorStyle}
+                    style={channelColorStyle}
                     title={title}
                     value={chat.id}
                 >
@@ -638,63 +577,59 @@ function TopbarRecentChatTab({
 }
 
 function TopbarChatTabIcon({
+    chat,
     className,
     color,
     isActiveTurn,
-    isPinned = false,
 }: {
+    chat?: ChatListItem;
     className?: string | null;
     color?: string | null;
     isActiveTurn: boolean;
-    isPinned?: boolean;
 }) {
     if (isActiveTurn) {
         return <Spinner className={cn('size-4 shrink-0', className)} />;
     }
+
+    const isChannel = chat?.conversationKind === 'channel';
 
     return (
         <Icon
             aria-hidden="true"
             className={cn(
                 'size-4 shrink-0',
-                isPinned ? '-mr-0.5' : null,
-                isPinned && color
-                    ? 'text-[var(--pinned-tab-color-light)] dark:text-[var(--pinned-tab-color-dark)]'
+                isChannel ? '-mr-0.5' : null,
+                isChannel && color
+                    ? 'text-[var(--channel-color-light)] dark:text-[var(--channel-color-dark)]'
                     : null,
                 className
             )}
-            icon={isPinned ? HashtagIcon : BubbleChatTemporaryIcon}
+            icon={isChannel ? HashtagIcon : BubbleChatTemporaryIcon}
             size={16}
-            style={getTopbarChatTabIconStyle({ isPinned })}
+            style={isChannel ? topbarChannelIconStyle : undefined}
         />
     );
 }
 
-function getTopbarChatTabIconStyle({ isPinned }: { isPinned: boolean }) {
-    if (!isPinned) {
-        return undefined;
-    }
-
-    return {
-        stroke: 'currentColor',
-        strokeWidth: 0.6,
-    } as React.CSSProperties;
-}
+const topbarChannelIconStyle = {
+    stroke: 'currentColor',
+    strokeWidth: 0.6,
+} as React.CSSProperties;
 
 function topbarChatTabButtonClassName({
-    hasPinnedColor = false,
+    hasChannelColor = false,
     isActive,
     tone = 'default',
 }: {
-    hasPinnedColor?: boolean;
+    hasChannelColor?: boolean;
     isActive: boolean;
     tone?: 'default' | 'error';
 }) {
     return cn(
         'no-drag h-7 w-fit max-w-[180px] justify-start overflow-hidden rounded-full px-2 [&_svg]:opacity-70',
         getTopbarChatTabTextClassName({ isActive }),
-        hasPinnedColor
-            ? 'before:bg-[var(--pinned-tab-bg-light)] before:opacity-100 hover:before:bg-[var(--pinned-tab-bg-hover-light)] data-active:before:bg-[var(--pinned-tab-bg-active-light)] dark:before:bg-[var(--pinned-tab-bg-dark)] dark:data-active:before:bg-[var(--pinned-tab-bg-active-dark)] dark:hover:before:bg-[var(--pinned-tab-bg-hover-dark)]'
+        hasChannelColor
+            ? 'before:bg-[var(--channel-color-bg-light)] before:opacity-100 hover:before:bg-[var(--channel-color-bg-hover-light)] data-active:before:bg-[var(--channel-color-bg-active-light)] dark:before:bg-[var(--channel-color-bg-dark)] dark:data-active:before:bg-[var(--channel-color-bg-active-dark)] dark:hover:before:bg-[var(--channel-color-bg-hover-dark)]'
             : null,
         tone === 'error' ? 'text-error-foreground hover:text-error-foreground' : null
     );

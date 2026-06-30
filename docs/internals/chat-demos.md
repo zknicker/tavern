@@ -20,8 +20,8 @@ rendering, and composer code paths without asking an agent to generate data.
   idempotent across restarts.
 * Demo response activity is replaced from the current demo definition on each
   seed, so changed demo activity sequences do not leave stale rows behind.
-* The demo channel is a normal Tavern chat. It appears in the sidebar `Chats` list and
-  opens through `/chats/:id`.
+* The demo channel is a normal Tavern chat. It appears in the sidebar channel list
+  with seeded channel color and opens through `/chats/:id`.
 * Do not add a separate Demos tab, lab route, or preview-only page for them.
 * The demo channel is single-user, single-agent unless the product explicitly brings back
   multi-user or multi-agent chat support.
@@ -39,4 +39,4 @@ app-local UI state, not durable Runtime chat rows.
 
 | Chat | Demonstrates |
 | --- | --- |
-| `cht_demo` | A representative channel named `demo` covering chart Rich Responses, MerchBase chart rendering, Rich Response primitives, calendar displays, artifact links, long-token wrapping, attachments, completed progress/tool work, stable tool drawer headers, sampled multi-turn history, and one final running turn with thinking/progress/tool rows. |
+| `cht_demo` | A representative colored channel named `demo` covering chart Rich Responses, MerchBase chart rendering, Rich Response primitives, calendar displays, artifact links, long-token wrapping, attachments, completed progress/tool work, stable tool drawer headers, sampled multi-turn history, and one final running turn with thinking/progress/tool rows. |

@@ -5,6 +5,7 @@ import { createChat, getChat } from './chat-api';
 export const defaultWorkspaceChannelId = 'cht_general';
 export const defaultAgentDmChatId = 'cht_tavern_agent_dm';
 export const localHumanParticipantId = 'usr_tavern';
+export const defaultWorkspaceChannelColor = '#f97316';
 
 export function seedWorkspaceChats(input: { agentId?: string; agentName?: string; db: Database }) {
     const agentId = input.agentId ?? defaultAgentEngineAgentId;
@@ -20,7 +21,8 @@ export function seedWorkspaceChats(input: { agentId?: string; agentName?: string
             kind: 'channel',
             metadata: runtimeTavernChatMetadata({
                 agentIds: [agentId],
-                displayName: '#general',
+                color: defaultWorkspaceChannelColor,
+                displayName: 'general',
                 kind: 'channel',
             }),
             participants: [
@@ -37,7 +39,7 @@ export function seedWorkspaceChats(input: { agentId?: string; agentName?: string
                     metadata: { agentId, source: 'tavern' },
                 },
             ],
-            title: '#general',
+            title: 'general',
         },
         input.db
     );
@@ -78,6 +80,7 @@ export function seedWorkspaceChats(input: { agentId?: string; agentName?: string
 
 function runtimeTavernChatMetadata(input: {
     agentIds: string[];
+    color?: string | null;
     displayName: string;
     kind: 'channel' | 'dm';
 }) {
@@ -89,7 +92,7 @@ function runtimeTavernChatMetadata(input: {
             displayName: input.displayName,
             displayNameSource: 'explicit',
             kind: input.kind,
-            tabAppearance: { color: null },
+            tabAppearance: { color: input.color ?? null },
         },
     };
 }

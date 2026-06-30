@@ -5,7 +5,12 @@ import { SidebarProvider } from '../../components/ui/sidebar.tsx';
 
 mock.module('./sidebar-chat-list.tsx', () => ({
     AppSidebarChatList: () => React.createElement('div', { 'data-testid': 'sidebar-chat-list' }),
-    buildSidebarChatGroups: () => ({ allChats: [], pinnedChats: [], recentChats: [] }),
+    buildSidebarChatGroups: () => ({
+        allChats: [],
+        channels: [],
+        directMessages: [],
+        recentChats: [],
+    }),
     buildSidebarDraftChatList: () => [],
     formatSidebarActivityLabel: (label: string) => label,
     getSidebarDraftActivityLabel: () => 'Draft',

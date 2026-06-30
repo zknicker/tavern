@@ -38,6 +38,7 @@ export const developmentChatDemos: DevelopmentChatDemo[] = [
 function demoChannel(demos: DevelopmentChatDemo[]): DevelopmentChatDemo {
     return {
         chatId: developmentChatDemoId,
+        color: '#0ea5e9',
         messages: demos.flatMap((demo) => demo.messages).map(sequenceDemoMessage),
         responses: demos.flatMap((demo) => demo.responses),
         title: 'demo',

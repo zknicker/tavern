@@ -21,12 +21,9 @@ export function buildSidebarChatGroups(chats: ChatListItem[]) {
 
     return {
         allChats,
-        channels: allChats.filter((chat) => !chat.isPinned && chat.conversationKind === 'channel'),
-        directMessages: allChats.filter(
-            (chat) => !chat.isPinned && chat.conversationKind === 'direct'
-        ),
-        pinnedChats: allChats.filter((chat) => chat.isPinned),
-        recentChats: allChats.filter((chat) => !chat.isPinned),
+        channels: allChats.filter((chat) => chat.conversationKind === 'channel'),
+        directMessages: allChats.filter((chat) => chat.conversationKind === 'direct'),
+        recentChats: allChats,
     };
 }
 

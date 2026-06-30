@@ -29,7 +29,6 @@ function createChat(overrides: Partial<ChatListItem> = {}): ChatListItem {
         id: 'chat-1',
         isDisabled: false,
         isEnabled: true,
-        isPinned: false,
         lastActivityAt: '2026-05-06T12:00:00.000Z',
         lastActivityLabel: 'now',
         latestSession: {
@@ -88,16 +87,15 @@ describe('sidebar chat list', () => {
         expect(buildSidebarChatList(chats)).toEqual([chats[1]]);
     });
 
-    test('groups pinned chats separately from recent chats', () => {
-        const pinned = createChat({ id: 'pinned', isPinned: true });
-        const recent = createChat({ conversationKind: 'channel', id: 'recent' });
-        const groups = buildSidebarChatGroups([pinned, recent]);
+    test('groups channel chats as durable channels', () => {
+        const general = createChat({ conversationKind: 'channel', id: 'general' });
+        const planning = createChat({ conversationKind: 'channel', id: 'planning' });
+        const groups = buildSidebarChatGroups([general, planning]);
 
-        expect(groups.pinnedChats).toEqual([pinned]);
-        expect(groups.channels).toEqual([recent]);
+        expect(groups.channels).toEqual([general, planning]);
         expect(groups.directMessages).toEqual([]);
-        expect(groups.recentChats).toEqual([recent]);
-        expect(groups.allChats).toEqual([pinned, recent]);
+        expect(groups.recentChats).toEqual([general, planning]);
+        expect(groups.allChats).toEqual([general, planning]);
     });
 
     test('splits workspace chats into channels and direct messages', () => {

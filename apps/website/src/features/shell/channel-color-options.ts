@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
 
-export const pinnedTabColorOptions = [
+export const channelColorOptions = [
     { darkValue: '#94a3b8', id: 'slate', label: 'Slate', lightValue: '#475569', value: '#64748b' },
     { darkValue: '#f87171', id: 'red', label: 'Red', lightValue: '#dc2626', value: '#ef4444' },
     {
@@ -63,37 +63,37 @@ export const pinnedTabColorOptions = [
     { darkValue: '#fb7185', id: 'rose', label: 'Rose', lightValue: '#e11d48', value: '#f43f5e' },
 ] as const;
 
-export interface PinnedTabColorTheme {
+export interface ChannelColorTheme {
     darkValue: string;
     lightValue: string;
 }
 
-type PinnedTabColorStyle = CSSProperties & Record<`--${string}`, string>;
+type ChannelColorStyle = CSSProperties & Record<`--${string}`, string>;
 
-export function getPinnedTabColorStyle(
+export function getChannelColorStyle(
     color: string | null | undefined
-): PinnedTabColorStyle | undefined {
+): ChannelColorStyle | undefined {
     if (!color) {
         return undefined;
     }
 
-    const theme = getPinnedTabColorTheme(color);
+    const theme = getChannelColorTheme(color);
 
     return {
-        '--pinned-tab-bg-active-dark': colorMix(theme.darkValue, 24),
-        '--pinned-tab-bg-active-light': colorMix(theme.lightValue, 20),
-        '--pinned-tab-bg-dark': colorMix(theme.darkValue, 13),
-        '--pinned-tab-bg-hover-dark': colorMix(theme.darkValue, 20),
-        '--pinned-tab-bg-hover-light': colorMix(theme.lightValue, 16),
-        '--pinned-tab-bg-light': colorMix(theme.lightValue, 11),
-        '--pinned-tab-color-dark': theme.darkValue,
-        '--pinned-tab-color-light': theme.lightValue,
+        '--channel-color-bg-active-dark': colorMix(theme.darkValue, 24),
+        '--channel-color-bg-active-light': colorMix(theme.lightValue, 20),
+        '--channel-color-bg-dark': colorMix(theme.darkValue, 13),
+        '--channel-color-bg-hover-dark': colorMix(theme.darkValue, 20),
+        '--channel-color-bg-hover-light': colorMix(theme.lightValue, 16),
+        '--channel-color-bg-light': colorMix(theme.lightValue, 11),
+        '--channel-color-dark': theme.darkValue,
+        '--channel-color-light': theme.lightValue,
     };
 }
 
-export function getPinnedTabColorTheme(color: string): PinnedTabColorTheme {
+export function getChannelColorTheme(color: string): ChannelColorTheme {
     const normalized = color.toLowerCase();
-    const option = pinnedTabColorOptions.find((entry) => entry.value === normalized);
+    const option = channelColorOptions.find((entry) => entry.value === normalized);
 
     return option
         ? { darkValue: option.darkValue, lightValue: option.lightValue }

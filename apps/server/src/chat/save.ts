@@ -6,9 +6,6 @@ import {
     type CreateChatInput,
     createChatInputSchema,
     createChatResultSchema,
-    type SetChatPinnedInput,
-    setChatPinnedInputSchema,
-    setChatPinnedResultSchema,
     type UpdateChatInput,
     type UpdateChatSystemPromptInput,
     type UpdateChatTabAppearanceInput,
@@ -22,7 +19,6 @@ import {
     archiveRuntimeTavernChat,
     createRuntimeTavernChat,
     getRuntimeChatRecord,
-    setRuntimeTavernChatPinned,
     type TavernChatDisplayNameSource,
     updateRuntimeTavernChat,
     updateRuntimeTavernChatSystemPrompt,
@@ -131,23 +127,6 @@ export async function archiveTavernChat(chatId: string) {
     });
 }
 
-export async function setTavernChatPinned(input: SetChatPinnedInput) {
-    const parsed = setChatPinnedInputSchema.parse(input);
-    const chat = await getRuntimeChatRecord(parsed.chatId);
-
-    if (!chat) {
-        throw new Error(`No Tavern chat named "${parsed.chatId}" exists.`);
-    }
-
-    if (chat.chat.platform !== 'tavern') {
-        throw new Error('Only Tavern chats can be pinned.');
-    }
-
-    await setRuntimeTavernChatPinned(parsed);
-
-    return setChatPinnedResultSchema.parse(parsed);
-}
-
 export async function updateTavernChatTabAppearance(input: UpdateChatTabAppearanceInput) {
     const parsed = updateChatTabAppearanceInputSchema.parse(input);
     const chat = await getRuntimeChatRecord(parsed.chatId);
@@ -156,12 +135,8 @@ export async function updateTavernChatTabAppearance(input: UpdateChatTabAppearan
         throw new Error(`No Tavern chat named "${parsed.chatId}" exists.`);
     }
 
-    if (chat.chat.platform !== 'tavern') {
-        throw new Error('Only Tavern chats can customize pinned tab appearance.');
-    }
-
-    if (!chat.isPinned) {
-        throw new Error('Only pinned chats can customize tab appearance.');
+    if (chat.chat.platform !== 'tavern' || chat.chat.scope !== 'channel') {
+        throw new Error('Only Tavern channels can customize channel color.');
     }
 
     await updateRuntimeTavernChatTabAppearance({
@@ -189,10 +164,6 @@ export async function updateTavernChatSystemPrompt(input: UpdateChatSystemPrompt
 
     if (chat.chat.platform !== 'tavern') {
         throw new Error('Only Tavern chats can customize system prompts.');
-    }
-
-    if (!chat.isPinned) {
-        throw new Error('Only pinned chats can customize system prompts.');
     }
 
     await updateRuntimeTavernChatSystemPrompt({

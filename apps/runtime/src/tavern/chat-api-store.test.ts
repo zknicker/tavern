@@ -6,6 +6,7 @@ import { ensureRuntimeSchema } from '../db/schema';
 import { namedParams } from '../db/sqlite';
 import {
     defaultAgentDmChatId,
+    defaultWorkspaceChannelColor,
     defaultWorkspaceChannelId,
     localHumanParticipantId,
     seedWorkspaceChats,
@@ -80,6 +81,12 @@ describe('Tavern Runtime Chat API store', () => {
         ).toEqual([developmentChatDemoIds.demo]);
         expect(getChat(developmentChatDemoIds.demo)).toMatchObject({
             id: developmentChatDemoIds.demo,
+            metadata: {
+                tavern: {
+                    displayName: 'demo',
+                    tabAppearance: { color: '#0ea5e9' },
+                },
+            },
             title: 'demo',
         });
 
@@ -475,11 +482,17 @@ describe('Tavern Runtime Chat API store', () => {
         expect(getChat(defaultWorkspaceChannelId)).toMatchObject({
             id: defaultWorkspaceChannelId,
             kind: 'channel',
+            metadata: {
+                tavern: {
+                    displayName: 'general',
+                    tabAppearance: { color: defaultWorkspaceChannelColor },
+                },
+            },
             participants: [
                 { id: 'agt_primary', kind: 'agent', label: 'Tavern' },
                 { id: localHumanParticipantId, kind: 'user', label: 'You' },
             ],
-            title: '#general',
+            title: 'general',
         });
         expect(getChat(defaultAgentDmChatId)).toMatchObject({
             id: defaultAgentDmChatId,
@@ -489,24 +502,6 @@ describe('Tavern Runtime Chat API store', () => {
                 { id: localHumanParticipantId, kind: 'user', label: 'You' },
             ],
             title: 'Tavern',
-        });
-    });
-
-    it('stores pinned chat state as a durable chat field', () => {
-        createChat({ id: 'cht_1', pinned: true, title: 'Pinned' });
-        createChat({ id: 'cht_1', title: 'Renamed' });
-
-        expect(getChat('cht_1')?.pinned).toBe(true);
-        expect(listChats().chats[0]?.pinned).toBe(true);
-
-        getDb()
-            .prepare("UPDATE chats SET updated_at = '2026-05-28T22:55:00.000Z' WHERE id = 'cht_1'")
-            .run();
-        createChat({ id: 'cht_1', pinned: false });
-
-        expect(getChat('cht_1')).toMatchObject({
-            pinned: false,
-            updated_at: '2026-05-28T22:55:00.000Z',
         });
     });
 

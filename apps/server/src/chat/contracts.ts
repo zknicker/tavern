@@ -84,7 +84,6 @@ export const chatSchema = z.object({
     hasActiveTurn: z.boolean(),
     id: z.string(),
     isEnabled: z.boolean(),
-    isPinned: z.boolean(),
     lastActivityAt: z.string().nullable(),
     latestSession: chatLatestSessionSchema.nullable(),
     participants: z.array(chatParticipantSchema),
@@ -112,7 +111,6 @@ export const chatListItemSchema = chatSchema.pick({
     hasActiveTurn: true,
     id: true,
     isEnabled: true,
-    isPinned: true,
     lastActivityAt: true,
     latestSession: true,
     participants: true,
@@ -174,11 +172,6 @@ export const archiveChatInputSchema = z.object({
     chatId: z.string().trim().min(1),
 });
 
-export const setChatPinnedInputSchema = z.object({
-    chatId: z.string().trim().min(1),
-    pinned: z.boolean(),
-});
-
 export const updateChatTabAppearanceInputSchema = z.object({
     chatId: z.string().trim().min(1),
     color: chatTabAppearanceSchema.shape.color,
@@ -192,11 +185,6 @@ export const updateChatSystemPromptInputSchema = z.object({
 export const archiveChatResultSchema = z.object({
     archived: z.literal(true),
     chatId: z.string().trim().min(1),
-});
-
-export const setChatPinnedResultSchema = z.object({
-    chatId: z.string().trim().min(1),
-    pinned: z.boolean(),
 });
 
 export const updateChatTabAppearanceResultSchema = z.object({
@@ -327,8 +315,6 @@ export type StartChatInput = z.infer<typeof startChatInputSchema>;
 export type UpdateChatInput = z.infer<typeof updateChatInputSchema>;
 export type ArchiveChatInput = z.infer<typeof archiveChatInputSchema>;
 export type ArchiveChatResult = z.infer<typeof archiveChatResultSchema>;
-export type SetChatPinnedInput = z.infer<typeof setChatPinnedInputSchema>;
-export type SetChatPinnedResult = z.infer<typeof setChatPinnedResultSchema>;
 export type UpdateChatTabAppearanceInput = z.infer<typeof updateChatTabAppearanceInputSchema>;
 export type UpdateChatTabAppearanceResult = z.infer<typeof updateChatTabAppearanceResultSchema>;
 export type UpdateChatSystemPromptInput = z.infer<typeof updateChatSystemPromptInputSchema>;

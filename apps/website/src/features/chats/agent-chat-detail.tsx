@@ -24,6 +24,7 @@ import { buildChatListItem, type ChatListItem } from './chat-list-data.ts';
 import { ChatMessageComposer } from './chat-message-composer.tsx';
 import { getChatMessageLayout } from './chat-message-layout.ts';
 import { buildChatPath } from './chat-path.ts';
+import { ChatRoomTopbar } from './chat-room-topbar.tsx';
 import { getSteerableRunId } from './chat-steering.ts';
 
 export const chatDetailLogLimit = 24;
@@ -235,6 +236,7 @@ function SyncedAgentChatDetail({ chat, chatId }: { chat: ChatListItem; chatId: s
                     </>
                 }
                 hasPreviousPage={timeline.hasPreviousPage}
+                header={<ChatRoomTopbar chat={chat} />}
                 historyLoaded={timeline.historyLoaded}
                 isFetchingPreviousPage={timeline.isFetchingPreviousPage}
                 isPending={timeline.isPending}

@@ -15,7 +15,6 @@ import { onChatTurnStarted } from './on-turn-started.ts';
 import { onChatTurnStatusUpdated } from './on-turn-status-updated.ts';
 import { onChatUpdate } from './on-update.ts';
 import { sendChatMessageRoute } from './send.ts';
-import { setChatPinnedRoute } from './set-pinned.ts';
 import { startChatRoute } from './start.ts';
 import { startChatAgentSessionRoute } from './start-agent-session.ts';
 import { steerChatTurnRoute } from './steer.ts';
@@ -47,7 +46,6 @@ export const chatRouter = createRouter({
     onTurnStarted: onChatTurnStarted,
     onTurnStatusUpdated: onChatTurnStatusUpdated,
     send: sendChatMessageRoute,
-    setPinned: setChatPinnedRoute,
     startAgentSession: startChatAgentSessionRoute,
     start: startChatRoute,
     steer: steerChatTurnRoute,

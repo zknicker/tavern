@@ -4,7 +4,7 @@ import type { AgentRuntimeChat, TavernChat } from '@tavern/api';
 import { listAgentChats } from '../src/agents/chats.ts';
 import type { ChatList } from '../src/chat/contracts.ts';
 import { getChat, listChats } from '../src/chat/list.ts';
-import { archiveTavernChat, setTavernChatPinned } from '../src/chat/save.ts';
+import { archiveTavernChat } from '../src/chat/save.ts';
 import { ensureDatabaseSchema } from '../src/db/bootstrap.ts';
 import { databaseClient } from '../src/db/index.ts';
 import { syncChatParticipantsForRuntime } from '../src/participants/chat-participants.ts';
@@ -93,7 +93,6 @@ test('listChats includes Tavern chats before any synced activity exists', async 
         ['You', 'Planner']
     );
     assert.equal(listedChats(result)[0]?.sessionCount, 0);
-    assert.equal(listedChats(result)[0]?.isPinned, false);
     assert.equal(listedChats(result)[0]?.lastActivityAt, '2026-04-06T12:01:00.000Z');
 });
 
@@ -105,7 +104,7 @@ test('listChats projects Runtime-owned Tavern channels and DMs', async () => {
     tavernChats.push(
         runtimeTavernChat({
             agentIds: ['agt_primary'],
-            displayName: '#general',
+            displayName: 'general',
             id: 'cht_general',
             kind: 'channel',
             updatedAt: '2026-04-06T12:01:00.000Z',
@@ -144,24 +143,6 @@ test('listChats projects Runtime-owned Tavern channels and DMs', async () => {
             { actorId: 'agt_primary', actorType: 'agent', name: 'Tavern' },
         ]
     );
-});
-
-test('listChats exposes pinned Tavern chat state', async () => {
-    await seedPlanningChat({ includeSession: false, pinned: true });
-
-    const result = await listChats();
-
-    assert.equal(listedChats(result)[0]?.id, planningChatId);
-    assert.equal(listedChats(result)[0]?.isPinned, true);
-});
-
-test('setTavernChatPinned persists pinned state in Runtime chat storage', async () => {
-    await seedPlanningChat({ includeSession: false });
-
-    await setTavernChatPinned({ chatId: planningChatId, pinned: true });
-
-    assert.equal(tavernChats[0]?.pinned, true);
-    assert.equal(listedChats(await listChats())[0]?.isPinned, true);
 });
 
 test('new Runtime-owned Tavern chats sort by chat update time before runtime activity syncs', async () => {
@@ -637,16 +618,13 @@ async function mockRuntimeFetch(input: RequestInfo | URL, init?: RequestInit) {
         const body = (await request.json()) as {
             id: string;
             metadata?: Record<string, unknown>;
-            pinned?: boolean;
             title?: string | null;
         };
-        const existing = tavernChats.find((entry) => entry.id === body.id);
         const chat = runtimeTavernChat({
             agentIds: readAgentIds(body.metadata),
             archived: readArchived(body.metadata),
             displayName: readDisplayName(body.metadata) ?? body.title ?? body.id,
             id: body.id,
-            pinned: body.pinned ?? existing?.pinned ?? false,
             updatedAt: '2026-04-06T12:30:00.000Z',
         });
         const existingIndex = tavernChats.findIndex((entry) => entry.id === body.id);
@@ -680,7 +658,6 @@ function runtimeTavernChat(input: {
     displayName: string;
     id: string;
     kind?: 'channel' | 'dm';
-    pinned?: boolean;
     updatedAt: string;
 }): TavernChat {
     const kind = input.kind ?? 'channel';
@@ -711,7 +688,6 @@ function runtimeTavernChat(input: {
                 metadata: {},
             })),
         ],
-        pinned: input.pinned ?? false,
         title: input.displayName,
         updated_at: input.updatedAt,
     };
@@ -741,7 +717,7 @@ function readDisplayName(metadata: Record<string, unknown> | undefined) {
     return typeof displayName === 'string' ? displayName : null;
 }
 
-async function seedPlanningChat(input: { includeSession: boolean; pinned?: boolean }) {
+async function seedPlanningChat(input: { includeSession: boolean }) {
     await syncAgentsForRuntime({
         agents: [
             {
@@ -760,7 +736,6 @@ async function seedPlanningChat(input: { includeSession: boolean; pinned?: boole
             agentIds: ['agent:planner'],
             displayName: 'Planning',
             id: planningChatId,
-            pinned: input.pinned,
             updatedAt: '2026-04-06T12:01:00.000Z',
         })
     );

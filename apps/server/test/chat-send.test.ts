@@ -48,7 +48,6 @@ test('sendTavernChatMessage writes human-only channel messages without invoking 
                 last_message_sequence: 0,
                 metadata: body.metadata,
                 participants: body.participants ?? [],
-                pinned: body.pinned ?? false,
                 title: body.title,
                 updated_at: '2026-04-06T12:10:00.000Z',
             });
@@ -531,7 +530,6 @@ function runtimeTavernChat(input?: {
                 metadata: { agentId: agent.id },
             })),
         ],
-        pinned: false,
         title: 'Planning',
         updated_at: '2026-04-06T12:01:00.000Z',
     };

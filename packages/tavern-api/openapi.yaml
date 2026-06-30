@@ -578,7 +578,6 @@ components:
         - created_at
         - updated_at
         - last_message_sequence
-        - pinned
         - participants
         - metadata
       properties:
@@ -596,8 +595,6 @@ components:
         last_message_sequence:
           type: integer
           minimum: 0
-        pinned:
-          type: boolean
         participants:
           type: array
           items:
@@ -617,8 +614,6 @@ components:
           enum: [channel, dm]
         title:
           type: [string, 'null']
-        pinned:
-          type: boolean
         participants:
           type: array
           items:
