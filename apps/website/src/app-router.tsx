@@ -78,7 +78,7 @@ export function createAppRouter() {
                                 {
                                     path: 'new/:tabKey',
                                     lazy: lazyRoute(
-                                        () => import('./routes/dashboard/overview-page.tsx'),
+                                        () => import('./routes/app/overview-page.tsx'),
                                         'OverviewPage'
                                     ),
                                 },

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import type { ChatListItem } from '../../chats/chat-list-data.ts';
-import { getPinnedTabColorStyle } from '../pinned-tab-options.ts';
+import { getChannelColorStyle } from '../channel-color-options.ts';
 import { SidebarChatContextMenu } from '../sidebar-chat-actions.tsx';
 import { describeRoute, renderRouteFavicon } from './describe-route.tsx';
 import type { TabItem, TabsMeta } from './types.ts';
@@ -11,7 +11,6 @@ interface TabRendererHandlers {
     onCustomizeColor: (chat: ChatListItem, color: string | null) => void;
     onEditSystemPrompt: (chat: ChatListItem) => void;
     onOpenInNewWindow?: (chat: ChatListItem) => void;
-    onPinChange: (chat: ChatListItem, pinned: boolean) => void;
     onRename: (chat: ChatListItem) => void;
 }
 
@@ -34,7 +33,7 @@ export function buildTavernTabRenderers(
         tabStyle: (tab: TabItem) => {
             const chat = chatForTab(tab, chatById);
 
-            return chat?.isPinned ? getPinnedTabColorStyle(chat.tabAppearance.color) : undefined;
+            return getChannelColorStyle(chat?.tabAppearance.color ?? null);
         },
         renderTabWrapper: (tab: TabItem, node: ReactNode) => {
             const chat = chatForTab(tab, chatById);
@@ -51,7 +50,6 @@ export function buildTavernTabRenderers(
                     onCustomizeColor={handlers.onCustomizeColor}
                     onEditSystemPrompt={handlers.onEditSystemPrompt}
                     onOpenInNewWindow={handlers.onOpenInNewWindow}
-                    onPinChange={handlers.onPinChange}
                     onRename={handlers.onRename}
                     triggerClassName="flex items-end"
                 >

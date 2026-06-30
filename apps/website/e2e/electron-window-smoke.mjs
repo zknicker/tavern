@@ -10,7 +10,7 @@ import { _electron } from '@playwright/test';
 import electronPath from 'electron';
 
 const websiteRoot = fileURLToPath(new URL('../', import.meta.url));
-const seededRoute = '/dashboard/new/electron-smoke-key';
+const seededRoute = '/new/electron-smoke-key';
 
 function getFreePort() {
     return new Promise((resolve, reject) => {

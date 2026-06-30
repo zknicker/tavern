@@ -14,16 +14,16 @@ test.beforeEach(async ({ page }) => {
 });
 
 test('a fresh window opens with exactly one blank tab', async ({ page }) => {
-    await page.goto('/dashboard/overview');
+    await page.goto('/overview');
 
-    await expect(page).toHaveURL(/\/dashboard\/new\//u);
+    await expect(page).toHaveURL(/\/new\//u);
     await expect(page.locator(blankTabSelector)).toHaveCount(1);
     await expect(page.locator('#home-prompt')).toBeVisible();
 });
 
 test('the + button opens additional blank tabs that coexist', async ({ page }) => {
-    await page.goto('/dashboard/overview');
-    await expect(page).toHaveURL(/\/dashboard\/new\//u);
+    await page.goto('/overview');
+    await expect(page).toHaveURL(/\/new\//u);
 
     const newTabButton = page.locator(newTabButtonSelector);
     await newTabButton.click();
@@ -34,24 +34,24 @@ test('the + button opens additional blank tabs that coexist', async ({ page }) =
 });
 
 test('the toolbar section nav navigates between dashboard sections', async ({ page }) => {
-    await page.goto('/dashboard/overview');
-    await expect(page).toHaveURL(/\/dashboard\/new\//u);
+    await page.goto('/overview');
+    await expect(page).toHaveURL(/\/new\//u);
 
     await page.getByRole('button', { name: 'Tasks' }).click();
-    await expect(page).toHaveURL(/\/dashboard\/cron/u);
+    await expect(page).toHaveURL(/\/tasks/u);
 
     await page.getByRole('button', { name: 'Tavern' }).click();
-    await expect(page).toHaveURL(/\/dashboard\/overview/u);
+    await expect(page).toHaveURL(/\/overview/u);
 });
 
 test('navigating a section turns the active tab into that section (no extra tab)', async ({
     page,
 }) => {
-    await page.goto('/dashboard/overview');
-    await expect(page).toHaveURL(/\/dashboard\/new\//u);
+    await page.goto('/overview');
+    await expect(page).toHaveURL(/\/new\//u);
 
     await page.getByRole('button', { name: 'Workspace' }).click();
-    await expect(page).toHaveURL(/\/dashboard\/workspace/u);
+    await expect(page).toHaveURL(/\/workspace/u);
 
     // The single tab became the Workspace page — generic browser-page behavior.
     await expect(page.locator('.chrome-tab--active')).toContainText('Workspace');
@@ -83,21 +83,21 @@ test('starting a chat from the blank tab consumes it in place', async ({ page })
 test('closing the last tab keeps the window non-empty (opens a fresh blank tab)', async ({
     page,
 }) => {
-    await page.goto('/dashboard/overview');
-    await expect(page).toHaveURL(/\/dashboard\/new\//u);
+    await page.goto('/overview');
+    await expect(page).toHaveURL(/\/new\//u);
 
     const activeTab = page.locator('.chrome-tab--active');
     await activeTab.hover();
     await activeTab.getByRole('button', { name: /^Close/u }).click();
 
     // Never tab-less: a fresh blank tab replaces the closed one.
-    await expect(page).toHaveURL(/\/dashboard\/new\//u);
+    await expect(page).toHaveURL(/\/new\//u);
     await expect(page.locator(blankTabSelector)).toHaveCount(1);
 });
 
 test('keyboard: Cmd+T opens a tab and Cmd+W closes it', async ({ page }) => {
-    await page.goto('/dashboard/overview');
-    await expect(page).toHaveURL(/\/dashboard\/new\//u);
+    await page.goto('/overview');
+    await expect(page).toHaveURL(/\/new\//u);
 
     // Give the page keyboard focus before sending window-level shortcuts.
     await page.locator('.chrome-tab--active').click();
@@ -110,38 +110,38 @@ test('keyboard: Cmd+T opens a tab and Cmd+W closes it', async ({ page }) => {
 });
 
 test('keyboard: Cmd+Shift+T reopens the most recently closed tab', async ({ page }) => {
-    await page.goto('/dashboard/overview');
-    await expect(page).toHaveURL(/\/dashboard\/new\//u);
+    await page.goto('/overview');
+    await expect(page).toHaveURL(/\/new\//u);
 
     await page.keyboard.press('ControlOrMeta+KeyT');
     await page.getByRole('button', { name: 'Workspace' }).click();
-    await expect(page).toHaveURL(/\/dashboard\/workspace/u);
+    await expect(page).toHaveURL(/\/workspace/u);
 
     await page.keyboard.press('ControlOrMeta+KeyW');
-    await expect(page).toHaveURL(/\/dashboard\/new\//u);
+    await expect(page).toHaveURL(/\/new\//u);
 
     await page.keyboard.press('ControlOrMeta+Shift+KeyT');
-    await expect(page).toHaveURL(/\/dashboard\/workspace/u);
+    await expect(page).toHaveURL(/\/workspace/u);
 });
 
 test('keyboard: Cmd+1/Cmd+9 jump to a tab by position', async ({ page }) => {
-    await page.goto('/dashboard/overview');
+    await page.goto('/overview');
     await page.getByRole('button', { name: 'Workspace' }).click();
-    await expect(page).toHaveURL(/\/dashboard\/workspace/u);
+    await expect(page).toHaveURL(/\/workspace/u);
 
     await page.keyboard.press('ControlOrMeta+KeyT');
     await page.getByRole('button', { name: 'Tasks' }).click();
-    await expect(page).toHaveURL(/\/dashboard\/cron/u);
+    await expect(page).toHaveURL(/\/tasks/u);
 
     await page.keyboard.press('ControlOrMeta+Digit1');
-    await expect(page).toHaveURL(/\/dashboard\/workspace/u);
+    await expect(page).toHaveURL(/\/workspace/u);
 
     await page.keyboard.press('ControlOrMeta+Digit9');
-    await expect(page).toHaveURL(/\/dashboard\/cron/u);
+    await expect(page).toHaveURL(/\/tasks/u);
 });
 
 test('middle-clicking a tab closes it', async ({ page }) => {
-    await page.goto('/dashboard/overview');
+    await page.goto('/overview');
     await page.locator(newTabButtonSelector).click();
     await expect(page.locator(blankTabSelector)).toHaveCount(2);
 
@@ -150,9 +150,9 @@ test('middle-clicking a tab closes it', async ({ page }) => {
 });
 
 async function startChat(page: Page, prompt: string, expectedReply: string) {
-    await page.goto('/dashboard/overview');
+    await page.goto('/overview');
     // A fresh window opens a blank tab on the Tavern home; start the chat from it.
-    await page.waitForURL(/\/dashboard\/new\//u);
+    await page.waitForURL(/\/new\//u);
     await fillComposer(page, '#home-prompt', prompt);
     await page.getByRole('button', { name: 'Start chat' }).click();
     await expect(page.locator(`text=${expectedReply}`).first()).toBeVisible({ timeout: 45_000 });

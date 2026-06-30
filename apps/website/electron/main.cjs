@@ -68,7 +68,7 @@ const tearOffCursorOffset = { x: 194, y: 18 };
 let tearOff = null;
 let tearOffTimer = null;
 
-const defaultRoute = '/dashboard/overview';
+const defaultRoute = '/overview';
 // Each chrome window owns a content WebContentsView showing the active tab's page (a separate
 // renderer, so live page state survives tab switches and window moves). Phase 0 keeps one view
 // per window; later phases hold a tab list and toggle which view is attached.

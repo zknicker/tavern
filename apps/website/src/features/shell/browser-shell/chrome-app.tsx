@@ -1,6 +1,7 @@
 import * as React from 'react';
 import { MemoryRouter, useLocation, useNavigate } from 'react-router-dom';
-import { getRouteTab, routeTabs } from '../../../hooks/dashboard/use-route-tab.ts';
+import { getRouteTab, routeTabs } from '../../../hooks/shell/use-route-tab.ts';
+import { appRoutes } from '../../../lib/app-routes.ts';
 import { getDesktopBridge } from '../../../lib/desktop-bridge.ts';
 import { ChromeTabsProvider } from './chrome-tabs-provider.tsx';
 import { useShell } from './shell-context.tsx';
@@ -28,7 +29,7 @@ function ChromeShellFrame() {
     const bridge = getDesktopBridge();
     const navigate = useNavigate();
     const activeRoute =
-        state.tabs.find((tab) => tab.id === state.activeId)?.route ?? '/dashboard/overview';
+        state.tabs.find((tab) => tab.id === state.activeId)?.route ?? appRoutes.overview;
     const pathname = activeRoute.split('?')[0];
 
     // Mirror the active tab's route into the scratch router so the static channel rail (which
@@ -49,8 +50,8 @@ function ChromeShellFrame() {
     return (
         <TavernBrowserShellFrame
             activeRouteTab={getRouteTab(pathname)}
-            isSettingsRoute={pathname.startsWith('/dashboard/settings')}
-            onNavigateToSettings={() => void bridge?.navigateActiveView('/dashboard/settings')}
+            isSettingsRoute={pathname.startsWith(appRoutes.settings)}
+            onNavigateToSettings={() => void bridge?.navigateActiveView(appRoutes.settings)}
             onSelectRouteTab={(tab) => {
                 const path = routeTabs.find((entry) => entry.id === tab)?.path;
 

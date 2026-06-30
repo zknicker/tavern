@@ -56,7 +56,11 @@ export function BrowserAllChatsMenu() {
                         >
                             <Icon
                                 className="size-4 shrink-0"
-                                icon={chat.isPinned ? BubbleChatIcon : BubbleChatTemporaryIcon}
+                                icon={
+                                    chat.conversationKind === 'channel'
+                                        ? BubbleChatIcon
+                                        : BubbleChatTemporaryIcon
+                                }
                             />
                             <span className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap leading-none">
                                 {resolveTavernChatName(chat)}

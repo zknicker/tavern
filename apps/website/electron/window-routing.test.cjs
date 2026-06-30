@@ -10,10 +10,11 @@ const {
     pointOverWindowStrip,
 } = require('./window-routing.cjs');
 
-test('isSafeWindowRoute only accepts in-app dashboard routes', () => {
-    assert.equal(isSafeWindowRoute('/dashboard/chats/abc'), true);
-    assert.equal(isSafeWindowRoute('/dashboard/new/key'), true);
-    assert.equal(isSafeWindowRoute('/settings'), false);
+test('isSafeWindowRoute only accepts in-app routes', () => {
+    assert.equal(isSafeWindowRoute('/chats/abc'), true);
+    assert.equal(isSafeWindowRoute('/new/key'), true);
+    assert.equal(isSafeWindowRoute('/settings'), true);
+    assert.equal(isSafeWindowRoute('/dashboard/chats/abc'), false);
     assert.equal(isSafeWindowRoute('https://evil.example'), false);
     assert.equal(isSafeWindowRoute(undefined), false);
     assert.equal(isSafeWindowRoute(42), false);
@@ -40,8 +41,8 @@ test('nextWindowBounds centers the first window and offsets the rest', () => {
 
 test('buildDevWindowUrl seeds the dev server path route', () => {
     assert.equal(
-        buildDevWindowUrl('http://localhost:3100', '/dashboard/chats/abc'),
-        'http://localhost:3100/dashboard/chats/abc'
+        buildDevWindowUrl('http://localhost:3100', '/chats/abc'),
+        'http://localhost:3100/chats/abc'
     );
     assert.equal(buildDevWindowUrl('http://localhost:3100', undefined), 'http://localhost:3100');
 });

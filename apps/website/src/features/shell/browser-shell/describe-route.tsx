@@ -3,8 +3,9 @@ import type { ReactNode } from 'react';
 import { resolveTavernChatName } from '../../../components/chats/chat-display.ts';
 import { TavernLogo } from '../../../components/tavern-logo.tsx';
 import { Icon } from '../../../components/ui/icon.tsx';
-import type { RouteTab } from '../../../hooks/dashboard/use-route-tab.ts';
-import { getRouteTab, routeTabs } from '../../../hooks/dashboard/use-route-tab.ts';
+import type { RouteTab } from '../../../hooks/shell/use-route-tab.ts';
+import { getRouteTab, routeTabs } from '../../../hooks/shell/use-route-tab.ts';
+import { appRoutes } from '../../../lib/app-routes.ts';
 import type { ChatListItem } from '../../chats/chat-list-data.ts';
 import { getRouteTabIcon, getRouteTabIconNode } from '../route-tab-presentation.tsx';
 import { getRouteChatId, getRouteNewTabKey } from './chat-tabs-model.ts';
@@ -29,7 +30,7 @@ export function describeRoute(route: string, chatById: Map<string, ChatListItem>
         return { kind: 'chat', chatId, title: chat ? resolveTavernChatName(chat) : 'Chat' };
     }
 
-    if (path === '/dashboard/chats/new') {
+    if (path === appRoutes.newChatDraft) {
         return { kind: 'draft', title: 'New chat' };
     }
 
@@ -37,7 +38,7 @@ export function describeRoute(route: string, chatById: Map<string, ChatListItem>
         return { kind: 'home', title: 'New tab' };
     }
 
-    if (path.startsWith('/dashboard/settings')) {
+    if (path.startsWith(appRoutes.settings)) {
         return { kind: 'section', section: 'settings', title: 'Settings' };
     }
 
@@ -65,14 +66,14 @@ export function renderRouteFavicon(
         return (
             <TavernTabFavicon
                 busy={busy}
-                color={chat?.isPinned ? chat.tabAppearance.color : null}
-                pinned={chat?.isPinned ?? false}
+                color={chat?.tabAppearance.color ?? null}
+                isChannel={chat?.conversationKind === 'channel'}
             />
         );
     }
 
     if (descriptor.kind === 'draft') {
-        return <TavernTabFavicon busy={busy} color={null} pinned={false} />;
+        return <TavernTabFavicon busy={busy} />;
     }
 
     if (descriptor.section === 'settings') {

@@ -1,44 +1,41 @@
 import { HashtagIcon } from '@hugeicons-pro/core-solid-rounded';
 import { BubbleChatTemporaryIcon } from '@hugeicons-pro/core-stroke-rounded';
-import type * as React from 'react';
 import { Icon } from '../../../components/ui/icon.tsx';
 import { Spinner } from '../../../components/ui/spinner.tsx';
 import { cn } from '../../../lib/utils.ts';
+import { getChannelColorStyle } from '../channel-color-options.ts';
 
 /**
- * Favicon slot for a Tavern chat tab: a spinner while a turn runs, a colored hashtag
- * for pinned chats, otherwise the temporary-chat bubble.
+ * Favicon slot for a Tavern chat tab: a spinner while a turn runs, a (optionally colored)
+ * hashtag for channels, otherwise the temporary-chat bubble.
  */
 export function TavernTabFavicon({
     busy,
-    color,
-    pinned = false,
+    isChannel = false,
+    color = null,
 }: {
     busy: boolean;
+    isChannel?: boolean;
     color?: string | null;
-    pinned?: boolean;
 }) {
     if (busy) {
         return <Spinner className="size-4 shrink-0" />;
     }
+
+    const colorStyle = isChannel ? getChannelColorStyle(color) : undefined;
 
     return (
         <Icon
             aria-hidden="true"
             className={cn(
                 'size-4 shrink-0 opacity-70',
-                pinned && color
-                    ? 'text-[var(--pinned-tab-color-light)] dark:text-[var(--pinned-tab-color-dark)]'
+                colorStyle
+                    ? 'text-[var(--channel-color-light)] dark:text-[var(--channel-color-dark)]'
                     : null
             )}
-            icon={pinned ? HashtagIcon : BubbleChatTemporaryIcon}
+            icon={isChannel ? HashtagIcon : BubbleChatTemporaryIcon}
             size={16}
-            style={pinned ? pinnedIconStyle : undefined}
+            style={colorStyle}
         />
     );
 }
-
-const pinnedIconStyle: React.CSSProperties = {
-    stroke: 'currentColor',
-    strokeWidth: 0.6,
-};

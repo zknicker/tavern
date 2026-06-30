@@ -5,7 +5,8 @@ import { DesktopUpdateIndicator } from '../../../components/desktop-update-indic
 import { AppShell, AppShellDragRegion } from '../../../components/ui/app-shell.tsx';
 import { Icon } from '../../../components/ui/icon.tsx';
 import { Button } from '../../../components/ui/primitives/button.tsx';
-import type { RouteTab } from '../../../hooks/dashboard/use-route-tab.ts';
+import type { RouteTab } from '../../../hooks/shell/use-route-tab.ts';
+import { appRoutes } from '../../../lib/app-routes.ts';
 import { BrowserAllChatsMenu } from './browser-all-chats-menu.tsx';
 import { BrowserShellSidebar } from './browser-shell-sidebar.tsx';
 import { BrowserToolbarNav } from './browser-toolbar-nav.tsx';
@@ -48,8 +49,8 @@ export function TavernBrowserShellFrame({
     // pages (settings, workspace, memory…) keep their own full-width layouts, so the rail does
     // not fight their navigation.
     const showChannelRail =
-        location.pathname.startsWith('/dashboard/chats') ||
-        location.pathname.startsWith('/dashboard/overview');
+        location.pathname.startsWith(appRoutes.chats) ||
+        location.pathname.startsWith(appRoutes.overview);
 
     return (
         <AppShell className="w-full bg-[var(--browser-strip-overlay)]" ref={meta.frameRef}>

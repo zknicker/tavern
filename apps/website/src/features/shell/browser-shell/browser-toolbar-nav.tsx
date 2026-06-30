@@ -5,8 +5,8 @@ import {
     routeTabCapabilityRequirements,
     useCapability,
 } from '../../../hooks/connections/use-capability.ts';
-import type { RouteTab } from '../../../hooks/dashboard/use-route-tab.ts';
-import { routeTabs } from '../../../hooks/dashboard/use-route-tab.ts';
+import type { RouteTab } from '../../../hooks/shell/use-route-tab.ts';
+import { routeTabs } from '../../../hooks/shell/use-route-tab.ts';
 import { RouteTabIcon } from '../route-tab-presentation.tsx';
 
 /**

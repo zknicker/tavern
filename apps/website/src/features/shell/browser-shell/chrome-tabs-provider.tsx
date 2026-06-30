@@ -3,7 +3,6 @@ import type { ReactNode } from 'react';
 import * as React from 'react';
 import { useChatArchive } from '../../../hooks/chats/use-chat-archive.ts';
 import { useChatList } from '../../../hooks/chats/use-chat-list.ts';
-import { useChatPin } from '../../../hooks/chats/use-chat-pin.ts';
 import { useChatSystemPrompt } from '../../../hooks/chats/use-chat-system-prompt.ts';
 import { useChatTabAppearance } from '../../../hooks/chats/use-chat-tab-appearance.ts';
 import { useChatUpdate } from '../../../hooks/chats/use-chat-update.ts';
@@ -37,7 +36,6 @@ export function ChromeTabsProvider({ children }: { children: ReactNode }) {
     const chatQuery = useChatList();
     const updateChat = useChatUpdate();
     const archiveChat = useChatArchive();
-    const pinChat = useChatPin();
     const systemPrompt = useChatSystemPrompt();
     const tabAppearance = useChatTabAppearance();
     const [tabState, setTabState] = React.useState<DesktopTabsState>(emptyTabs);
@@ -172,9 +170,6 @@ export function ChromeTabsProvider({ children }: { children: ReactNode }) {
     const archiveTopbarChat = useTabActionHandler(async (chat: ChatListItem) => {
         await archiveChat.mutateAsync({ chatId: chat.id });
     });
-    const pinTopbarChat = useTabActionHandler(async (chat: ChatListItem, pinned: boolean) => {
-        await pinChat.mutateAsync({ chatId: chat.id, pinned });
-    });
     const setPinnedTabColor = useTabActionHandler(
         async (chat: ChatListItem, color: string | null) => {
             await tabAppearance.mutateAsync({ chatId: chat.id, color });
@@ -268,7 +263,6 @@ export function ChromeTabsProvider({ children }: { children: ReactNode }) {
                     systemPrompt.reset();
                     setEditingSystemPromptChat(selected);
                 },
-                onPinChange: (selected, pinned) => void pinTopbarChat(selected, pinned),
                 onRename: (selected) => {
                     updateChat.reset();
                     setRenamingChat(selected);

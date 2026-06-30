@@ -3,7 +3,18 @@
 // Pure helpers for multi-window routing/placement. Kept free of electron imports so
 // they can be unit-tested without launching the app.
 
-const dashboardRoutePrefix = '/dashboard/';
+// Top-level in-app route prefixes (mirrors lib/app-routes.ts; this file is plain CJS and
+// cannot import the TS source). Only routes under one of these may seed a new window.
+const appRoutePrefixes = [
+    '/overview',
+    '/chats',
+    '/tasks',
+    '/workspace',
+    '/memory',
+    '/settings',
+    '/new/',
+    '/onboarding',
+];
 const defaultWindowWidth = 1440;
 const defaultWindowHeight = 960;
 const defaultWindowOffsetPx = 36;
@@ -12,7 +23,7 @@ const windowStripHeightPx = 46;
 
 /** Only same-origin app routes may seed a new window. */
 function isSafeWindowRoute(route) {
-    return typeof route === 'string' && route.startsWith(dashboardRoutePrefix);
+    return typeof route === 'string' && appRoutePrefixes.some((prefix) => route.startsWith(prefix));
 }
 
 /** Offsets each new window from its opener (or screen-centered default) so they don't stack. */

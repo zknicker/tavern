@@ -4,12 +4,12 @@ import * as React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useChatArchive } from '../../../hooks/chats/use-chat-archive.ts';
 import { useChatList } from '../../../hooks/chats/use-chat-list.ts';
-import { useChatPin } from '../../../hooks/chats/use-chat-pin.ts';
 import { useChatStartDrafts } from '../../../hooks/chats/use-chat-start-drafts.tsx';
 import { useChatSystemPrompt } from '../../../hooks/chats/use-chat-system-prompt.ts';
 import { useChatTabAppearance } from '../../../hooks/chats/use-chat-tab-appearance.ts';
 import { useChatUpdate } from '../../../hooks/chats/use-chat-update.ts';
 import { useChatRuntimeTimelineStates } from '../../../hooks/chats/use-timeline-context.tsx';
+import { appRoutes } from '../../../lib/app-routes.ts';
 import { getDesktopBridge, isElectronDesktopApp } from '../../../lib/desktop-bridge.ts';
 import type { ChatListItem } from '../../chats/chat-list-data.ts';
 import { buildChatList } from '../../chats/chat-list-data.ts';
@@ -26,7 +26,7 @@ import { buildTavernTabRenderers } from './tavern-tab-renderers.tsx';
 import type { DockPreview, TabItem, TabsContextValue } from './types.ts';
 import { useShellGeometry } from './use-shell-geometry.ts';
 
-const homeLandingRoutes = new Set(['/', '/dashboard', '/dashboard/overview']);
+const homeLandingRoutes = new Set(['/', appRoutes.overview]);
 
 /**
  * Tavern provider for the browser shell. Tabs are generic browser pages: each tab carries
@@ -41,7 +41,6 @@ export function TavernBrowserTabsProvider({ children }: { children: ReactNode })
     const drafts = useChatStartDrafts();
     const updateChat = useChatUpdate();
     const archiveChat = useChatArchive();
-    const pinChat = useChatPin();
     const systemPrompt = useChatSystemPrompt();
     const tabAppearance = useChatTabAppearance();
     const timelineStates = useChatRuntimeTimelineStates();
@@ -379,10 +378,6 @@ export function TavernBrowserTabsProvider({ children }: { children: ReactNode })
         await archiveChat.mutateAsync({ chatId: chat.id });
     });
 
-    const pinTopbarChat = useTabActionHandler(async (chat: ChatListItem, pinned: boolean) => {
-        await pinChat.mutateAsync({ chatId: chat.id, pinned });
-    });
-
     const setPinnedTabColor = useTabActionHandler(
         async (chat: ChatListItem, color: string | null) => {
             await tabAppearance.mutateAsync({ chatId: chat.id, color });
@@ -528,7 +523,6 @@ export function TavernBrowserTabsProvider({ children }: { children: ReactNode })
                           }
                       }
                     : undefined,
-                onPinChange: (selected, pinned) => void pinTopbarChat(selected, pinned),
                 onRename: (selected) => {
                     updateChat.reset();
                     setRenamingChat(selected);

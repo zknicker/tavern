@@ -99,11 +99,11 @@ export function consumeNewTabForRoute(pathname: string) {
 /* ----------------------------------------------------------------- routing */
 
 export function buildNewTabPath(key: string) {
-    return `/dashboard/new/${key}`;
+    return `/new/${key}`;
 }
 
 export function getRouteNewTabKey(pathname: string) {
-    return pathname.match(/^\/dashboard\/new\/([^/]+)$/u)?.[1] ?? null;
+    return pathname.match(/^\/new\/([^/]+)$/u)?.[1] ?? null;
 }
 
 export function getNewTabValue(key: string) {
@@ -115,7 +115,7 @@ export function parseNewTabValue(value: string) {
 }
 
 export function getRouteChatId(pathname: string) {
-    const match = pathname.match(/^\/dashboard\/chats\/([^/]+)$/u);
+    const match = pathname.match(/^\/chats\/([^/]+)$/u);
     const chatId = match?.[1] ?? null;
 
     return chatId && chatId !== 'new' ? chatId : null;
