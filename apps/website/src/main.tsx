@@ -4,7 +4,8 @@ import App from './app.tsx';
 import { ThemeProvider } from './components/theme-provider.tsx';
 import { DesktopEditContextMenuProvider } from './components/ui/edit-context-menu.tsx';
 import { ToastProvider } from './components/ui/toast.tsx';
-import { isElectronDesktopApp } from './lib/desktop-bridge.ts';
+import { ChromeApp } from './features/shell/browser-shell/chrome-app.tsx';
+import { getDesktopSurface, isElectronDesktopApp } from './lib/desktop-bridge.ts';
 import { TavernProviders } from './lib/trpc.tsx';
 import './styles/global.css';
 
@@ -18,13 +19,17 @@ if (isElectronDesktopApp() && navigator.userAgent.includes('Mac')) {
     document.documentElement.classList.add('macos-electron');
 }
 
+// 'chrome' renders just the tab strip + toolbar; each tab's page is a separate content view.
+// 'content'/web render the normal routed app (Layout drops the shell on content views).
+const isChromeSurface = getDesktopSurface() === 'chrome';
+
 createRoot(rootElement).render(
     <StrictMode>
         <ThemeProvider>
             <ToastProvider>
                 <TavernProviders>
                     <DesktopEditContextMenuProvider>
-                        <App />
+                        {isChromeSurface ? <ChromeApp /> : <App />}
                     </DesktopEditContextMenuProvider>
                 </TavernProviders>
             </ToastProvider>

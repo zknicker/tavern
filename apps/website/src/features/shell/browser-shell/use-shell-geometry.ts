@@ -22,7 +22,11 @@ export function useShellGeometry(
             return;
         }
 
-        const active = frame.querySelector<HTMLElement>('.chrome-tab--active');
+        // Prefer the drag overlay's tab while it exists (during the drag and its drop
+        // animation) so the hairline tracks the lifted/settling tab, not the placeholder.
+        const active =
+            frame.querySelector<HTMLElement>('[data-tab-overlay] .chrome-tab--active') ??
+            frame.querySelector<HTMLElement>('.chrome-tab--active');
         const toolbar = frame.querySelector<HTMLElement>('[data-toolbar]');
 
         if (!(active && toolbar)) {

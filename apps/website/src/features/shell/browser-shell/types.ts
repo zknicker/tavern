@@ -60,8 +60,12 @@ export interface TabsActions {
     reorder: (activeId: TabId, overId: TabId) => void;
     setActive: (id: TabId) => void;
     setDragging: (dragging: boolean) => void;
-    /** Begin tearing a tab out: remove it here and spawn a window that follows the cursor. */
-    startTearOff?: (id: TabId) => void;
+    /**
+     * Begin tearing a tab out: remove it here and spawn a window that follows the cursor.
+     * `cursorOffset` is the cursor's px offset from the new window's top-left, so the torn
+     * tab stays under the cursor exactly where it was grabbed (Chrome-style).
+     */
+    startTearOff?: (id: TabId, cursorOffset?: { x: number; y: number }) => void;
     /** Begin moving this window by its only tab (and merge it onto another window's strip). */
     startWindowMove?: (id: TabId) => void;
 }

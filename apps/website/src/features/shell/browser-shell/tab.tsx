@@ -4,8 +4,10 @@ import { CancelCircleIcon } from '@hugeicons-pro/core-stroke-rounded';
 import * as React from 'react';
 import { Icon } from '../../../components/ui/icon.tsx';
 import { cn } from '../../../lib/utils.ts';
+import { DockEntryContext, dockGlideMs } from './dock-entry-context.ts';
 import { buildTabOutlinePath, FOOT, TAB_H, TAB_W } from './geometry.ts';
 import { useShell } from './shell-context.tsx';
+import { TabDragContext } from './tab-drag-context.ts';
 import type { TabItem } from './types.ts';
 import { useWindowMoveHandle } from './use-window-move-handle.ts';
 
@@ -132,6 +134,8 @@ export function SortableTab({
     const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
         id: tab.id,
         disabled: dndDisabled,
+        // A pronounced, strong ease-out so the drop settles with a visible glide (not a snap).
+        transition: { duration: 260, easing: 'cubic-bezier(0.23, 1, 0.32, 1)' },
     });
     // Skip the drag-handle props when dnd is off — otherwise dnd-kit marks the node
     // aria-disabled, which would disable the tab's buttons (e.g. close).
@@ -142,7 +146,44 @@ export function SortableTab({
         React.useCallback(() => actions.startWindowMove?.(tab.id), [actions, tab.id]),
         React.useCallback(() => actions.finishWindowMove?.(), [actions])
     );
-    const tabNode = <TabButton active={active} tab={tab} />;
+    // Lifted = being dragged, or settling through the drop animation. The overlay clone owns
+    // the visible tab + the active styling (the shell-hairline anchor) for that whole window,
+    // so this placeholder stays hidden and inactive and the hairline tracks the overlay.
+    const draggingId = React.useContext(TabDragContext);
+    const isLifted = isDragging || draggingId === tab.id;
+
+    // A tab merged in from another window glides in from the release cursor (FLIP) rather
+    // than popping — measure its settled slot, then animate from the cursor offset to zero.
+    const dockEntry = React.useContext(DockEntryContext);
+    const isDockEntering = dockEntry?.id === tab.id;
+    const nodeRef = React.useRef<HTMLDivElement | null>(null);
+    const setRefs = React.useCallback(
+        (node: HTMLDivElement | null) => {
+            setNodeRef(node);
+            nodeRef.current = node;
+        },
+        [setNodeRef]
+    );
+
+    React.useLayoutEffect(() => {
+        if (!(isDockEntering && dockEntry && nodeRef.current)) {
+            return;
+        }
+
+        const rect = nodeRef.current.getBoundingClientRect();
+        const offset = dockEntry.fromX - (rect.left + rect.right) / 2;
+
+        if (Math.abs(offset) < 1) {
+            return;
+        }
+
+        nodeRef.current.animate(
+            [{ transform: `translateX(${offset}px)` }, { transform: 'translateX(0px)' }],
+            { duration: dockGlideMs, easing: 'cubic-bezier(0.23, 1, 0.32, 1)' }
+        );
+    }, [isDockEntering, dockEntry]);
+
+    const tabNode = <TabButton active={active && !isLifted} tab={tab} />;
     // While docking, slide to open the gap (transitioned); otherwise dnd-kit owns the transform.
     const style =
         dockShift === undefined
@@ -156,11 +197,13 @@ export function SortableTab({
         <div
             className={cn(
                 'flex touch-none items-end',
-                isDragging ? 'z-30' : active ? 'z-10' : 'z-0'
+                // While lifted, the clone lives in the DragOverlay; the original stays as an
+                // invisible placeholder so neighbours shift and the drop glides.
+                isLifted ? 'opacity-0' : active ? 'z-10' : 'z-0'
             )}
             data-shell-tab=""
             onPointerDown={isOnlyTab ? onWindowMovePointerDown : undefined}
-            ref={setNodeRef}
+            ref={setRefs}
             style={style}
             {...dragHandleProps}
         >
@@ -170,7 +213,7 @@ export function SortableTab({
                     showSep && !state.dragging ? 'opacity-100' : 'opacity-0'
                 )}
             />
-            <div className="chrome-tab-enter flex items-end">
+            <div className={cn('flex items-end', isDockEntering ? null : 'chrome-tab-enter')}>
                 {meta.renderTabWrapper ? meta.renderTabWrapper(tab, tabNode) : tabNode}
             </div>
         </div>

@@ -685,6 +685,8 @@
            connected active-tab/card fill, the inset hover pill, and the continuous
            shell hairline. */
         --browser-strip: color-mix(in srgb, var(--background) 88%, var(--color-black));
+        /* Translucent tint laid over the window vibrancy in the topbar strip. */
+        --browser-strip-overlay: color-mix(in srgb, var(--browser-strip) 55%, transparent);
         --browser-card: var(--content-card);
         --browser-tab-hover: color-mix(in srgb, var(--content-card) 70%, transparent);
         --browser-hairline: --alpha(var(--color-white) / 14%);
@@ -813,6 +815,8 @@
         --content-card-border: var(--color-neutral-300);
 
         --browser-strip: color-mix(in srgb, var(--background) 93%, var(--foreground));
+        /* Translucent tint laid over the window vibrancy in the topbar strip. */
+        --browser-strip-overlay: color-mix(in srgb, var(--browser-strip) 55%, transparent);
         --browser-card: var(--content-card);
         --browser-tab-hover: color-mix(in srgb, var(--content-card) 62%, transparent);
         --browser-hairline: --alpha(var(--color-black) / 13%);
@@ -845,7 +849,7 @@
     }
 
     :root {
-        --desktop-window-radius: 12px;
+        --desktop-window-radius: 16px;
     }
 
     html,

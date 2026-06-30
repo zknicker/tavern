@@ -8,7 +8,7 @@
 export const TAB_H = 34; // tab height
 export const FOOT = 16; // outward concave "foot" radius that flares into the toolbar
 export const TOP_R = 9; // tab top-corner radius
-export const CARD_R = 9; // shell content-card top-corner radius
+export const CARD_R = 16; // shell content-card top-corner radius (matches the tab FOOT)
 
 /** Default tab body width. Provider may feed a per-tab width instead. */
 export const TAB_W = 200;

@@ -10,8 +10,9 @@ export interface Point {
     y: number;
 }
 
-/** Distance past the strip edge a drag must travel before a release detaches the tab. */
-export const TEAR_OFF_THRESHOLD_PX = 48;
+/** Distance past the strip edge a drag must travel before the tab tears out (Chrome tears
+ * as soon as the tab clears the strip, so keep this small). */
+export const TEAR_OFF_THRESHOLD_PX = 12;
 
 /**
  * True when the pointer has left the tab strip far enough that releasing should tear the

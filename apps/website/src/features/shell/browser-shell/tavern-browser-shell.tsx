@@ -33,7 +33,7 @@ export function TavernBrowserShell(props: TavernBrowserShellProps) {
     );
 }
 
-function TavernBrowserShellFrame({
+export function TavernBrowserShellFrame({
     activeRouteTab,
     children,
     isSettingsRoute,
@@ -43,7 +43,7 @@ function TavernBrowserShellFrame({
     const { meta } = useShell();
 
     return (
-        <AppShell className="w-full bg-[var(--browser-strip)]" ref={meta.frameRef}>
+        <AppShell className="w-full bg-[var(--browser-strip-overlay)]" ref={meta.frameRef}>
             <AppShellDragRegion />
             <TabStrip className="z-0 min-h-[37px] shrink-0 pr-2 pl-[var(--traffic-light-inset)]">
                 <TabList />
@@ -69,7 +69,7 @@ function TavernBrowserShellFrame({
                     <DesktopUpdateIndicator />
                 </div>
             </TabStrip>
-            <div className="relative z-0 flex min-h-0 flex-1 flex-col overflow-hidden rounded-t-[9px] bg-[var(--browser-card)]">
+            <div className="relative z-0 flex min-h-0 flex-1 flex-col overflow-hidden rounded-t-[16px] bg-[var(--browser-card)]">
                 <BrowserToolbarNav
                     activeRouteTab={activeRouteTab}
                     isSettingsRoute={isSettingsRoute}

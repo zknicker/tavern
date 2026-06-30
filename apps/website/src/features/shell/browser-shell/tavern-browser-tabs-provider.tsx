@@ -291,7 +291,7 @@ export function TavernBrowserTabsProvider({ children }: { children: ReactNode })
 
     // Live tab tear-off: remove the tab here and spawn a cursor-following window.
     const startTearOff = React.useCallback(
-        (id: string) => {
+        (id: string, cursorOffset?: { x: number; y: number }) => {
             const bridge = getDesktopBridge();
             const route = routeForId(id);
 
@@ -299,7 +299,7 @@ export function TavernBrowserTabsProvider({ children }: { children: ReactNode })
                 return;
             }
 
-            void bridge.tearOffStart(route);
+            void bridge.tearOffStart(route, cursorOffset);
             detachTabLocally(id);
         },
         [routeForId, detachTabLocally]

@@ -17,6 +17,7 @@ import {
     useAppLayoutSearchParam,
 } from './hooks/dashboard/use-app-layout-preference.ts';
 import { useRouteTab } from './hooks/dashboard/use-route-tab.ts';
+import { getDesktopBridge, getDesktopSurface } from './lib/desktop-bridge.ts';
 
 export interface DashboardLayoutContextValue {
     navigateToSettings: () => void;
@@ -76,6 +77,19 @@ export function Layout() {
             }}
         />
     );
+
+    // A per-tab content view (desktop WebContentsView): render only the page, no chrome —
+    // the window's chrome web contents draws the tab strip and toolbar.
+    if (getDesktopSurface() === 'content') {
+        return (
+            <div className="dashboard-reference-theme flex h-dvh min-h-0 w-full flex-col overflow-hidden bg-[var(--browser-card)]">
+                <ContentViewNavigation />
+                <div className="relative min-h-0 flex-1 overflow-hidden" data-slot="app-shell-main">
+                    {outlet}
+                </div>
+            </div>
+        );
+    }
 
     if (appLayout.mode === 'sidebar') {
         return (
@@ -139,6 +153,21 @@ export function Layout() {
             </TavernBrowserShell>
         </div>
     );
+}
+
+/** Applies chrome-initiated navigation (toolbar nav, tab activate) to this content view. */
+function ContentViewNavigation() {
+    const navigate = useNavigate();
+
+    React.useEffect(() => {
+        const bridge = getDesktopBridge();
+
+        return bridge?.onNavigateTo?.((route) => {
+            void navigate(route);
+        });
+    }, [navigate]);
+
+    return null;
 }
 
 function SidebarHoverTarget({
