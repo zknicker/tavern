@@ -129,7 +129,7 @@ test('collapsed chat topbar clears traffic lights and restore trigger stays clic
         document.documentElement?.classList.add('macos-electron');
     });
 
-    await page.goto('/chats/cht_general');
+    await page.goto('/chats/cht_tavern_agent_dm');
 
     const chatTopbar = page.locator('[data-slot="chat-room-topbar"]');
     await expect(chatTopbar).toBeVisible();
