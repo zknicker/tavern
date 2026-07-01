@@ -28,7 +28,8 @@ Model provider credentials belong to their provider integration:
   Claude Code Runtime turns may also use `TAVERN_AGENT_CLAUDE_CODE_AUTH_TOKEN`
   from `claude setup-token` when non-interactive `claude -p` cannot use the
   local Claude.ai login.
-- OpenAI/API-key routes read `OPENAI_API_KEY` or `TAVERN_AGENT_API_KEY`.
+- OpenAI/API-key routes use Runtime-stored provider secrets or explicit
+  environment overrides such as `OPENAI_API_KEY` or `TAVERN_AGENT_API_KEY`.
 - Plugin credentials live in Plugin-specific secret storage.
 
 Do not put secrets in:

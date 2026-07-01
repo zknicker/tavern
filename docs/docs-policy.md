@@ -56,8 +56,9 @@ When behavior changes:
 
 ## Boundaries
 
-Tavern Runtime owns values that affect execution: model catalog, Agent default
-model, current Agent sessions, tool inventory, sandbox mode, turns, and
-activity. Tavern App and Server are clients and presentation layers.
+Tavern Runtime owns values that affect execution: model provider setup,
+executable model inventory, Agent default model, current Agent sessions, tool
+inventory, sandbox mode, turns, and activity. Tavern App and Server are clients
+and presentation layers.
 
 Docs should keep that ownership clear.

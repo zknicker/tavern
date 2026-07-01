@@ -34,10 +34,11 @@ participation, but it should read as one coherent relationship.
 
 Runtime owns the canonical model routing config used for execution.
 
-Tavern shows Runtime model options as a usable model inventory without storing a
-parallel editable catalog.
+Tavern shows Runtime executable model inventory without storing a parallel
+editable model list.
 
 ## Runtime Observation
 
-The inventory should render from Runtime's model catalog. Tavern should still
-present those resources in Tavern product language.
+The inventory should render from Runtime executable models. Add-provider UI
+renders from the Runtime provider catalog and provider access state. Tavern
+should still present those resources in Tavern product language.

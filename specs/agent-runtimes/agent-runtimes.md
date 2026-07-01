@@ -9,8 +9,9 @@ state through Tavern primitives.
 - Tavern Runtime owns canonical chats, messages, events, reads, automations,
   deliveries, Memory, generated instruction inputs, sync status, and
   Runtime-specific metadata.
-- Tavern Runtime owns provider availability, model catalog, selected model,
-  executable settings, sessions, turns, tool calls, and response activity.
+- Tavern Runtime owns provider catalog entries, enabled providers, provider
+  access, executable model inventory, selected model, executable settings,
+  sessions, turns, tool calls, and response activity.
 - AI SDK harness adapters own model calls. Codex and Claude use local
   OAuth-backed CLI providers; OpenAI and OpenAI-compatible models use the Pi
   harness with API-key credentials.

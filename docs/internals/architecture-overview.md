@@ -33,7 +33,7 @@ flowchart LR
 | Tavern App | Electron shell, React routes, local presentation, optimistic UI, and app-local cache. |
 | Tavern Server | Thin tRPC facade, app cache, connection setup, and UI-friendly projections. |
 | Tavern API / SDK | Stable contracts for chats, realtime, agents, models, tools, memory, jobs, and Runtime admin. |
-| Tavern Runtime | Canonical Chats, messages, participants, Agent sessions, Agent turns, model catalog, tools, Memory reads, and execution. |
+| Tavern Runtime | Canonical Chats, messages, participants, Agent sessions, Agent turns, model provider setup, executable model inventory, tools, Memory reads, and execution. |
 | Agent engine | Runtime-internal execution through AI SDK HarnessAgent adapters. |
 
 ## Product Model
@@ -52,7 +52,8 @@ evidence, not the product timeline.
 
 Runtime is the source of truth for values that affect execution:
 
-- model catalog
+- model provider setup
+- executable model inventory
 - Agent default model
 - current Agent session
 - Agent session effective model

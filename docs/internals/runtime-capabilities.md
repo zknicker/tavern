@@ -164,8 +164,16 @@ the route button is disabled and explains the missing capabilities. App-local
 surfaces such as profile, appearance, updates, and Runtime connection settings
 do not require Runtime capabilities.
 
+Setup and repair surfaces require only the capability needed to reach their
+configuration API. For example, Settings -> Models requires Runtime API access
+so users can add provider credentials even when no provider is executable.
+
 Feature gating does not make the app the source of truth. Runtime capability
 health comes from Runtime.
+
+Runtime Doctor is the normal writer for derived readiness such as
+`modelExecution`. Runtime startup and setup mutations run the relevant Doctor
+modules before the app relies on capability gates.
 
 ## App Startup
 
@@ -212,7 +220,7 @@ and external dependencies.
 | `apiServer` | Runtime can make an authenticated agent-engine API call. |
 | `gateway` | Runtime can open the agent-engine event stream. |
 | `vault` | The configured Vault root can be read and the managed `vault` skill has been prepared. Runtime reports write access in capability metadata because agent wiki maintenance needs it, but read-only roots remain browseable. |
-| `models` | Runtime can reach model inventory. |
+| `modelExecution` | Runtime has at least one usable agent execution model for the relevant agent or action. |
 | `skills` | Runtime can reach skill inventory. App-side capability methods under `skills` also track the skill hub (`skill-hub.*`), tool setup, and advanced MCP management (`mcp.*`) surfaces. |
 | `plugin.merchbase` | Runtime has an enabled MerchBase Plugin, an API key, and can read the configured MerchBase account. |
 

@@ -156,7 +156,7 @@ Current related tables:
 - `agent_runtime_connections` stores the Tavern Runtime endpoint plus coarse health fields such as
   `last_checked_at`, `last_error`, and `last_synced_at`.
 - `sync_state` stores primitive sync freshness keyed by `kind` and `id`. It answers questions such
-  as "did agent sync for this runtime succeed?" not "is the models capability available?"
+  as "did agent sync for this runtime succeed?" not "is model execution ready?"
 - Runtime-backed tables such as `agents`, `chats`, `session_runs`, `session_messages`, `cron_jobs`, and
   `cron_runs` store runtime-owned records and row-level sync timestamps.
 
@@ -269,7 +269,7 @@ The first-slice test set is smaller:
 
 First-slice acceptance is narrower:
 
-- `dashboardServer`, `apiServer`, `gateway`, `models`, and `skills` expose capability state.
+- `dashboardServer`, `apiServer`, `gateway`, `modelExecution`, and `skills` expose capability state.
 - Unsupported, unauthorized, malformed, and timeout-like failures classify deterministically.
 - The server can return a reachable runtime with a degraded or unavailable first-slice capability.
 - Existing records are not deleted because a first-slice capability check fails.

@@ -43,7 +43,7 @@ It is not a second product API.
 | Skill hub                       | `/skills/hub/available`, `/skills/hub/preview`, `/skills/hub/scan`, `/skills/hub/install`, `/skills/hub/uninstall`, `/skills/hub/taps`, `/skills/hub/taps/{repo}`                                                                                                                                                                          |
 | Tools                           | `/tools`, `/tools/{id}/enabled`, `/tools/{id}/config`, `/tools/{id}/provider`, `/tools/{id}/env`, `/tools/{id}/post-setup`                                                                                                                                                                                                                 |
 | Advanced MCP servers            | `/mcp/servers`, `/mcp/servers/{name}`, `/mcp/servers/{name}/test`, `/mcp/servers/{name}/enabled`, `/mcp/catalog`, `/mcp/catalog/install`                                                                                                                                                                                                   |
-| Memory, models, and access      | `/vault/status`, `/vault/settings`, `/vault/pages`, `/vault/search`, `/models`, `/model-access`, `/model-access/api-key`, `/model-access/oauth/{providerId}/start`, `/model-access/oauth/{providerId}/poll/{sessionId}`, `/model-access/oauth/{providerId}/submit`, `/model-access/oauth/sessions/{sessionId}`, `/model-access/openrouter` |
+| Memory, models, and access      | `/vault/status`, `/vault/settings`, `/vault/pages`, `/vault/search`, `/models`, `/model-providers/catalog`, `/model-providers/enabled`, `/model-providers/{providerId}`, `/model-access`, `/model-access/api-key`, `/model-access/oauth/{providerId}/start`, `/model-access/oauth/{providerId}/poll/{sessionId}`, `/model-access/oauth/{providerId}/submit`, `/model-access/oauth/sessions/{sessionId}`, `/model-access/openrouter` |
 | Platform bindings               | `/bindings`, `/bindings/{id}`                                                                                                                                                                                                                                                                                                              |
 | Runtime chat projections        | `/agent/chats`, `/agent/chats/{chatId}/messages`, `/agent/chats/{chatId}/agent-sessions/current`, `/agent/chats/{chatId}/agent-sessions/model`                                                                                                                                                |
 | Runtime chat relay              | websocket `/chat`                                                                                                                                                                                                                                                                                                                          |
@@ -81,10 +81,17 @@ capabilities, and read-oriented domain actions such as
 `/plugins/merchbase/action` and `/plugins/merchbase/sales/series`
 use the Plugin client.
 
+`/model-providers/catalog` lists addable providers. `/model-providers/enabled`
+lists the providers this Runtime has enabled. `/model-providers/{providerId}`
+adds or removes one provider from the enabled set. `/models` returns executable
+model inventory for model selection and agent execution.
+
 `/model-access/api-key` writes provider API keys through the Runtime model
 access API. `/model-access/oauth/{providerId}/start` starts the provider OAuth
-flow and returns either an auth URL or device-code instructions. Provider model
-credentials are Runtime-owned.
+flow and returns either an auth URL or device-code instructions when Runtime
+manages that provider's OAuth flow. External OAuth CLI providers return setup
+instructions users can run on the Runtime host. Provider model credentials are
+Runtime-owned.
 Telemetry-only credentials, such as the OpenRouter management key used by
 Stats, live with the feature that reads that telemetry.
 
@@ -116,11 +123,11 @@ Stats, live with the feature that reads that telemetry.
   execution-owned records from specific engine events. Session update events
   only record the session row they carry; they do not fetch the full transcript
   or graph. Session preview reads are bounded Runtime API calls for index views.
-- **Models come from Runtime.** `/models` exposes the Runtime model catalog as
-  read-only inventory. Runtime owns provider-specific catalog policy, including
-  curated rows, live enrichment, and cache behavior. Agent model selection uses
-  narrow agent mutations that update Runtime-owned per-agent execution
-  settings, not an app-maintained list.
+- **Models come from Runtime.** `/models` exposes executable model inventory.
+  Runtime owns the provider catalog, enabled providers, provider access,
+  provider-specific catalog policy, curated rows, live enrichment, and cache
+  behavior. Agent model selection uses narrow agent mutations that update
+  Runtime-owned per-agent execution settings, not an app-maintained list.
 - **Chat stays canonical.** Runtime chat control routes do not replace the
   durable Chat API timeline.
 - **Session facts stay execution-owned.** Session messages, graphs, prompts, and

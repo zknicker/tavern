@@ -52,14 +52,46 @@ _Avoid_: Agent engine, provider adapter, harness wrapper
 The rule that decides which agent participants should create Agent turns for a Chat message.
 _Avoid_: Session routing, runtime routing, trigger parsing
 
+**Model provider**:
+A Runtime integration that can expose agent-executable models after the user enables it and completes
+its access setup.
+_Avoid_: Model family, provider option, model row
+
+**Provider catalog**:
+The maintained list of Model providers Tavern can add to a Runtime.
+_Avoid_: Executable model list, enabled providers, provider credentials
+
+**Enabled model provider**:
+A Model provider the user has added to the Runtime. It may still need credentials, OAuth, CLI setup,
+or host dependencies before it can execute turns.
+_Avoid_: Connected provider, catalog provider, installed provider
+
+**Provider access**:
+The credential and host setup state for an Enabled model provider.
+_Avoid_: Model capability, provider config, agent model
+
+**Executable provider**:
+An Enabled model provider whose Provider access is ready for Agent turns on the Runtime host.
+_Avoid_: Catalog provider, connected provider, authenticated provider
+
 **Model record**:
-A concrete runnable model route, including its model ref, display metadata, capabilities, auth
-surface, and execution kind.
+A catalog row for a concrete model route, including its model ref, display metadata, capabilities,
+provider, and execution kind. A Model record is executable only when it belongs to an Executable
+provider.
 _Avoid_: Model alias, provider option, model family
+
+**Executable model**:
+A Model record that belongs to an Executable provider and can be used for Agent turns now.
+_Avoid_: Available model, configured model, default model
 
 **Agent runtime profile**:
 An agent's selected Model record plus execution policies for tools, memory, and sandboxing.
 _Avoid_: Provider config, harness config, model config
+
+**Agent default model**:
+The Model record stored on an Agent runtime profile and used when Runtime creates a new Agent
+session.
+_Avoid_: Global model, provider default, app default
 
 **Effective model**:
 The Model record an Agent session currently uses. Agent runtime profiles provide defaults, but

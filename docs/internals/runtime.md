@@ -10,8 +10,8 @@ read_when:
 
 Tavern Runtime is the always-on local service behind Tavern. It owns canonical
 Chat records, participants, deliveries, reads, responses, activity, Agent
-sessions, Agent turns, Memory reads, tool inventory, model catalog, and agent
-execution.
+sessions, Agent turns, Memory reads, tool inventory, model provider setup,
+executable model inventory, and agent execution.
 
 Tavern App is one frontend. Discord, Telegram, webhooks, SDK clients, and
 future surfaces are also frontends. They all talk to Runtime through Tavern Chat
@@ -59,7 +59,7 @@ Durable Runtime state includes:
 - `agent_sessions`
 - `agent_turns`
 - `agent_runtime_profiles`
-- model catalog and model selection tables
+- model provider, access, inventory, and selection tables
 
 Active stream handles, process handles, cancellation controllers, and executor
 promises are transient Runtime memory. Reconnect recovery reads durable Chat

@@ -9,7 +9,8 @@ read_when:
 
 Tavern is a Discord-style chat app where humans and agents participate in
 channels and DMs. Runtime is the always-on backend that owns chat state, Agent
-sessions, model catalog, tools, Memory, jobs, and execution.
+sessions, model provider setup, executable model inventory, tools, Memory, jobs,
+and execution.
 
 ## Product Shape
 
@@ -19,9 +20,9 @@ sessions, model catalog, tools, Memory, jobs, and execution.
   current Agent session.
 - **Agent execution.** Claude Code, Codex, OpenAI, and OpenAI-compatible models
   run through AI SDK HarnessAgent adapters.
-- **Models.** Runtime owns a curated model catalog and Agent default model
-  settings. Settings changes affect new sessions; Chat-scoped model changes
-  affect that Agent seat's current session.
+- **Models.** Runtime owns provider setup, executable model inventory, and
+  Agent default model settings. Settings changes affect new sessions;
+  Chat-scoped model changes affect that Agent seat's current session.
 - **Tools, skills, and Plugins.** Runtime owns the tool/skill inventory and
   built-in Plugin integrations. Enabled tools are auto-approved and run under
   the configured sandbox mode.
@@ -37,6 +38,7 @@ sessions, model catalog, tools, Memory, jobs, and execution.
 | --- | --- |
 | App/runtime boundary | [Architecture Overview](internals/architecture-overview.md) |
 | Agent execution | [Agent Engine Runtime](internals/agent-engine-runtime.md) |
+| Runtime startup and repair checks | [Runtime Doctor](internals/runtime-doctor.md) |
 | Chat/session decision | [ADR 0007](adr/0007-chat-participants-own-agent-sessions.md) |
 | Runtime data model | [Data Model](internals/data-model.md) |
 | Chat API | [Chat API](api/chat.md) |

@@ -15,6 +15,7 @@ Internals docs explain how Tavern is built. Product-facing behavior belongs in
 | Architecture overview | [Architecture Overview](architecture-overview.md) |
 | Tavern App | [Tavern App](app.md) |
 | Runtime boundary | [Tavern Runtime](runtime.md) |
+| Runtime Doctor | [Runtime Doctor](runtime-doctor.md) |
 | Data model | [Data Model](data-model.md) |
 | Frontend structure | [Frontend Structure](frontend.md) |
 | React conventions | [React Conventions](react.md) |

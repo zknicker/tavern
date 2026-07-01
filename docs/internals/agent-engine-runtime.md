@@ -1,25 +1,25 @@
 ---
-summary: Tavern Runtime's agent-engine contract for chats, Agent sessions, AI SDK HarnessAgent execution, model catalog, tools, and deterministic tests.
+summary: Tavern Runtime's agent-engine contract for chats, Agent sessions, AI SDK HarnessAgent execution, model provider setup, executable model inventory, tools, and deterministic tests.
 read_when:
   - changing Tavern Runtime agent execution
   - changing AI SDK HarnessAgent execution
   - changing agent instructions, SOUL, runtime skills, tools, steering, or turn activity
-  - changing model catalog, model defaults, or Agent session model selection
+  - changing model provider setup, model defaults, or Agent session model selection
   - changing deterministic e2e executor behavior
 ---
 
 # Agent Engine Runtime
 
 Tavern Runtime is the agent engine boundary. It owns canonical chats, chat
-participants, Agent seats, Agent sessions, Agent turns, model catalog,
-Runtime profiles, instruction composition, tool exposure, Memory reads, and
-turn routing.
+participants, Agent seats, Agent sessions, Agent turns, model provider setup,
+executable model inventory, Runtime profiles, instruction composition, tool
+exposure, Memory reads, and turn routing.
 
 Tavern App and Tavern Server are clients. They may proxy Runtime data and shape
 it for the UI, but they must not own executable agent state. A direct Runtime
-API client should be able to list models, update an Agent default model, send a
-chat message, inspect activity, start a new Agent session, stop a turn, and
-steer a turn without the Tavern App process.
+API client should be able to list executable models, update an Agent default
+model, send a chat message, inspect activity, start a new Agent session, stop a
+turn, and steer a turn without the Tavern App process.
 
 Runtime does not depend on Vercel managed infrastructure for local execution.
 
@@ -100,22 +100,22 @@ operators can create a subscription-backed long-lived token with
 Executor failures settle the Agent turn and linked response as failed Tavern
 state. They must not crash the Runtime process.
 
-## Model Catalog
+## Model Providers And Inventory
 
-Runtime owns the model catalog served by `/models`.
+Runtime owns model provider setup, executable model inventory, and agent model selection.
 
 `apps/runtime/src/models/catalog-service.ts` is the single Runtime model
-catalog entrypoint. Provider registry, auth state, model count, warnings,
-availability, and sorted model rows are assembled there.
+inventory entrypoint. Provider registry, access state, model count, warnings,
+availability, and sorted executable model rows are assembled there.
 
 Curated model lists live in `apps/runtime/src/models/curated/`. Provider
 behavior lives in `apps/runtime/src/models/provider-sources/`.
 
 - Claude Code and Codex use curated HarnessAgent model lists.
-- Missing local OAuth CLI setup marks those provider rows `unavailable`; it does
-  not remove their curated model rows from the catalog.
+- Missing local OAuth CLI setup marks enabled provider access as not ready; it does not make the
+  provider disappear from Settings.
 - OpenAI uses the Pi harness API-key route. It keeps a curated allowlist and may
-  enrich it with cached live discovery from the OpenAI models endpoint.
+  enrich executable rows with cached live discovery from the OpenAI models endpoint.
 
 Model records include Runtime execution facts needed by headless clients:
 stable `id`, display `label`, `provider`, `route`, `executionKind`,
@@ -123,11 +123,25 @@ stable `id`, display `label`, `provider`, `route`, `executionKind`,
 icons, colors, and layout. It must not reconstruct model routes or provider
 availability from display strings.
 
+The provider catalog is separate from executable inventory. The provider
+catalog lists addable providers; Runtime-enabled providers store the user's
+provider choices; executable model inventory contains only model records whose
+provider access is ready for Agent turns.
+
 ## Model Selection
 
 Agent runtime profiles store the Agent default model for new sessions in
 `agent_runtime_profiles.default_model_json`. Agent rows do not own model
 choices.
+
+When an Agent has no saved model profile, Runtime sets the Agent default to the
+highest-ranked executable model. If no executable model exists, Runtime leaves
+the Agent without an executable default and surfaces provider setup instead of
+falling back to a non-executable provider.
+
+When a saved default model is invalid or unavailable, Runtime Doctor repairs the
+Agent default to the highest-ranked executable model. If no executable model
+exists, Runtime leaves the Agent unresolved and surfaces provider setup.
 
 Each Agent session stores its own `effectiveModel`; that is the model actually
 used by turns in that Chat.

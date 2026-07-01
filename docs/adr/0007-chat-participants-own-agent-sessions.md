@@ -102,9 +102,9 @@ data root, such as `.tavern/agents/<agent-id>/workspace`. This is organization
 and working-directory scoping only; it is not a security sandbox. Future
 Sandbox modes can include Docker and Podman.
 
-The Runtime model catalog is curated. Claude Code and Codex rows stay visible
-when local OAuth CLI setup is missing, but Runtime marks those rows unavailable
-and surfaces a provider warning.
+The Runtime provider catalog is curated. Claude Code and Codex can appear in
+add-provider UI before local OAuth CLI setup exists. Runtime exposes them as
+executable models only after provider access is ready.
 
 ## Consequences
 
