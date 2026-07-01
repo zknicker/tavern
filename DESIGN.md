@@ -25,28 +25,28 @@ colors:
   info: "#3b82f6"
 typography:
   body:
-    fontFamily: "-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica Neue, Arial, sans-serif"
+    fontFamily: "Geist, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica Neue, Arial, sans-serif"
     fontSize: 0.875rem
     fontWeight: 400
     lineHeight: 1.5
   body-compact:
-    fontFamily: "-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica Neue, Arial, sans-serif"
+    fontFamily: "Geist, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica Neue, Arial, sans-serif"
     fontSize: 0.8125rem
     fontWeight: 400
     lineHeight: 1.45
   label:
-    fontFamily: "-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica Neue, Arial, sans-serif"
+    fontFamily: "Geist, -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica Neue, Arial, sans-serif"
     fontSize: 0.875rem
     fontWeight: 500
     lineHeight: 1.4
   badge:
-    fontFamily: "IBM Plex Mono, SFMono-Regular, SF Mono, Consolas, Liberation Mono, monospace"
+    fontFamily: "Geist Mono, SFMono-Regular, SF Mono, Consolas, Liberation Mono, monospace"
     fontSize: 0.75rem
     fontWeight: 500
     lineHeight: 1
     letterSpacing: 0.025em
   mono-meta:
-    fontFamily: "IBM Plex Mono, SFMono-Regular, SF Mono, Consolas, Liberation Mono, monospace"
+    fontFamily: "Geist Mono, SFMono-Regular, SF Mono, Consolas, Liberation Mono, monospace"
     fontSize: 0.8125rem
     fontWeight: 400
     lineHeight: 1.4
@@ -152,7 +152,7 @@ level; light mode flattens to white after level 2 and lets the shadow recipes ca
 
 ## Typography
 
-The app uses system sans for UI and IBM Plex Mono for compact metadata. The typography scale is
+The app uses Geist for UI and Geist Mono for compact metadata. The typography scale is
 defined in `global.css`; `--app-ui-font-size` owns UI text and `--app-code-font-size` owns code
 surfaces. Tavern's default UI text is 14px through `--app-ui-font-size`; do not assume browser
 defaults, Tailwind defaults, or upstream COSS defaults define Tavern's body size.
