@@ -10,7 +10,6 @@ export type TranscriptRenderRow =
           followsRuntimeNotice: boolean;
           id: string;
           kind: 'entry';
-          showPresence: boolean;
           turnStartedAt: string | null;
       };
 
@@ -23,7 +22,6 @@ export const transcriptRenderRowGap = 12;
 
 export function buildTranscriptRenderRows(entries: TranscriptEntry[], hiddenCount: number) {
     const rows: TranscriptRenderRow[] = [];
-    const latestAgentEntryId = getLatestAgentEntryId(entries);
 
     if (hiddenCount > 0) {
         rows.push({ id: 'hidden-count', kind: 'hiddenCount' });
@@ -46,18 +44,12 @@ export function buildTranscriptRenderRows(entries: TranscriptEntry[], hiddenCoun
             });
         }
 
-        const showPresence =
-            entry.kind === 'turn' &&
-            entry.participant === 'agent' &&
-            entry.id === latestAgentEntryId;
-
-        if (shouldRenderTranscriptEntry(entry) || showPresence) {
+        if (shouldRenderTranscriptEntry(entry)) {
             rows.push({
                 entry,
                 followsRuntimeNotice: isRuntimeNoticeEntry(previousEntry),
                 id: entry.id,
                 kind: 'entry',
-                showPresence,
                 turnStartedAt,
             });
         }
@@ -93,18 +85,6 @@ export function computeStableTranscriptRenderRows(
     return anyChanged ? { byId: next, result } : previous;
 }
 
-function getLatestAgentEntryId(entries: TranscriptEntry[]) {
-    for (let index = entries.length - 1; index >= 0; index -= 1) {
-        const entry = entries[index];
-
-        if (entry?.kind === 'turn' && entry.participant === 'agent') {
-            return entry.id;
-        }
-    }
-
-    return null;
-}
-
 function isTranscriptRenderRowUnchanged(a: TranscriptRenderRow, b: TranscriptRenderRow) {
     if (a.kind !== b.kind || a.id !== b.id) {
         return false;
@@ -123,7 +103,6 @@ function isTranscriptRenderRowUnchanged(a: TranscriptRenderRow, b: TranscriptRen
     return (
         a.entry === next.entry &&
         a.followsRuntimeNotice === next.followsRuntimeNotice &&
-        a.showPresence === next.showPresence &&
         a.turnStartedAt === next.turnStartedAt
     );
 }

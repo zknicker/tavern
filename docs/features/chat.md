@@ -141,18 +141,15 @@ transcript only grows:
 * Agent turns render visible work and reply content in timeline order; there is
   no outer turn-level work disclosure. Per-tool work groups still own their
   existing drawers so detailed tool output stays available on demand.
-* The presence row stays below the latest agent turn at rest and while live.
-  It keeps a fixed 32px icon box, uses the agent's configured color, and follows
-  transcript reflow instantly as the turn grows.
+* Active agent status renders as a compact stack at the bottom of the chat
+  window, above the composer. Each row uses the agent's configured color and
+  current expression, and stays out of the durable transcript.
 * Normal transcript loads mount durable history without entrance motion. Local
   optimistic user messages keep the chat bubble entrance animation; live tool
   step inserts keep their insertion-only step motion.
-* While live, an activity verb and timer sit next to the presence eyes. The live
-  presence block slides and fades in when an idle chat starts a turn; completion
-  keeps the eyes mounted and lets their normal idle transition run without an
-  exit animation. Engine thinking status can rotate the themed verb during the
-  turn; the engine's status text is ignored. Completed turns keep the eyes
-  visible without timing text.
+* While live, active status text sits next to the presence eyes in the bottom
+  stack. The engine's status text is ignored. Completed turns remove the bottom
+  status row.
 * Stored model thinking renders as normal transcript activity when the
   Appearance setting shows thinking text. Hidden thinking does not render as a
   separate presence bubble.
@@ -170,8 +167,7 @@ transcript only grows:
 * Agents and other people share one left-aligned roster layout: an avatar
   gutter, a bold name, a timestamp, then plain message text. The agent identity
   avatar is the Tavern eyes; a participant's avatar falls back to initials. The
-  roster eyes avatar is static; the live working presence row below the latest
-  agent turn keeps the animated eyes. The app owner's own messages (the local
+  roster eyes avatar is static. The app owner's own messages (the local
   `usr_tavern` participant / `profile:self` actor) are the exception: they
   anchor to the right in an avatar-less secondary bubble. The owner's locally
   set name and avatar (Settings → Profile) apply where the owner is shown with

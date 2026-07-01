@@ -12,15 +12,15 @@ export function ChatRoomTopbar({ chat }: { chat: ChatListItem }) {
 
     return (
         <header
-            className="relative z-40 grid h-[var(--topbar-height)] shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center border-border/70 border-b bg-background"
+            className="relative z-40 grid h-[var(--topbar-height)] shrink-0 grid-cols-[minmax(0,1fr)_auto] items-start bg-background pt-[8px]"
             data-slot="chat-room-topbar"
             data-window-drag-region=""
         >
-            <div className="flex min-w-0 items-center gap-2.5 px-4">
+            <div className="flex min-w-0 items-center gap-2.5 pr-2 pl-[10px]">
                 <ChannelIconBox size="topbar" style={channelStyle} />
                 <h1 className="min-w-0 truncate font-semibold text-foreground text-sm">{title}</h1>
             </div>
-            <div className="no-drag flex min-w-0 items-center justify-end px-3">
+            <div className="no-drag flex min-w-0 items-center justify-end px-2">
                 <ul
                     aria-label={`Participants: ${participants.map((participant) => participant.name).join(', ')}`}
                     className="flex items-center -space-x-1.5"

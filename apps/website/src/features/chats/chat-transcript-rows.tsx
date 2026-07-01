@@ -1,13 +1,8 @@
 import * as React from 'react';
 import { DayDivider } from '../../components/ui/day-divider.tsx';
-import type { ChatActiveReply, ChatTurnFailure } from '../../hooks/chats/chat-timeline-state.ts';
+import type { ChatActiveReply } from '../../hooks/chats/chat-timeline-state.ts';
 import { SessionLogHiddenCount } from '../sessions/session-log-hidden-count.tsx';
-import type {
-    TranscriptActor,
-    TranscriptEntry,
-    TranscriptItem,
-    TranscriptRow,
-} from './chat-transcript-model.ts';
+import type { TranscriptActor, TranscriptEntry, TranscriptItem } from './chat-transcript-model.ts';
 import { useTranscriptRenderContext } from './chat-transcript-render-context.tsx';
 import {
     type TranscriptRenderRow,
@@ -16,34 +11,20 @@ import {
 import { TranscriptEntryView } from './chat-transcript-turn.tsx';
 
 interface TranscriptRenderRowProps {
-    activePresenceVerb?: string | null;
     activeReply: ChatActiveReply | null;
     agentStatusColor?: string | null;
-    failedTurn?: ChatTurnFailure | null;
-    presenceRows: TranscriptRow[];
     row: TranscriptRenderRow;
 }
 
 interface TranscriptRenderRowViewProps {
-    activePresenceVerb?: string | null;
     activeReply: ChatActiveReply | null;
     agentStatusColor?: string | null;
-    failedTurn?: ChatTurnFailure | null;
-    presenceRows: TranscriptRow[];
     row: TranscriptRenderRow;
 }
 
-export function TranscriptRenderRowItem({
-    activePresenceVerb = null,
-    activeReply,
-    row,
-    ...props
-}: TranscriptRenderRowProps) {
+export function TranscriptRenderRowItem({ activeReply, row, ...props }: TranscriptRenderRowProps) {
     return (
         <TranscriptRenderRowView
-            activePresenceVerb={
-                row.kind === 'entry' && row.showPresence ? activePresenceVerb : null
-            }
             activeReply={transcriptRenderRowUsesActiveReply(row, activeReply) ? activeReply : null}
             row={row}
             {...props}
@@ -55,14 +36,7 @@ export function TranscriptRenderRowItem({
 // underlying row objects keep their identity. Comparing structurally lets
 // historical rows skip re-rendering while text streams into the live turn.
 const TranscriptRenderRowView = React.memo(
-    ({
-        activeReply,
-        activePresenceVerb = null,
-        agentStatusColor = null,
-        failedTurn = null,
-        presenceRows,
-        row,
-    }: TranscriptRenderRowViewProps) => {
+    ({ activeReply, agentStatusColor = null, row }: TranscriptRenderRowViewProps) => {
         const {
             chatId,
             conversationLayout,
@@ -81,7 +55,6 @@ const TranscriptRenderRowView = React.memo(
 
         return (
             <TranscriptEntryView
-                activePresenceVerb={row.showPresence ? activePresenceVerb : null}
                 activeReply={activeReply}
                 agentStatusColor={agentStatusColor}
                 chatId={chatId}
@@ -89,10 +62,7 @@ const TranscriptRenderRowView = React.memo(
                 currentSessionKey={currentSessionKey}
                 defaultOpenWorkGroups={defaultOpenWorkGroups}
                 entry={row.entry}
-                failedTurn={failedTurn}
                 followsRuntimeNotice={row.followsRuntimeNotice}
-                presenceRows={presenceRows}
-                showPresence={row.showPresence}
                 turnStartedAt={row.turnStartedAt}
             />
         );
@@ -108,24 +78,8 @@ function areTranscriptRenderRowViewPropsEqual(
 ) {
     return (
         previous.activeReply === next.activeReply &&
-        previous.activePresenceVerb === next.activePresenceVerb &&
-        arePresencePropsEqual(previous, next) &&
-        areRenderRowsEqual(previous.row, next.row)
-    );
-}
-
-function arePresencePropsEqual(
-    previous: TranscriptRenderRowViewProps,
-    next: TranscriptRenderRowViewProps
-) {
-    if (!(rowShowsPresence(previous.row) || rowShowsPresence(next.row))) {
-        return true;
-    }
-
-    return (
         previous.agentStatusColor === next.agentStatusColor &&
-        previous.failedTurn === next.failedTurn &&
-        previous.presenceRows === next.presenceRows
+        areRenderRowsEqual(previous.row, next.row)
     );
 }
 
@@ -151,14 +105,9 @@ function areRenderRowsEqual(
 
     return (
         previous.followsRuntimeNotice === next.followsRuntimeNotice &&
-        previous.showPresence === next.showPresence &&
         previous.turnStartedAt === next.turnStartedAt &&
         areEntriesEqual(previous.entry, next.entry)
     );
-}
-
-function rowShowsPresence(row: TranscriptRenderRow) {
-    return row.kind === 'entry' && row.showPresence;
 }
 
 function areEntriesEqual(previous: TranscriptEntry, next: TranscriptEntry) {

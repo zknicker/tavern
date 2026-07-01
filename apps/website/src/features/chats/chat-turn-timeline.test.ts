@@ -222,7 +222,6 @@ function messageTurnRow(input: {
         followsRuntimeNotice: false,
         id: input.id,
         kind: 'entry',
-        showPresence: false,
         turnStartedAt: null,
     };
 }
@@ -255,7 +254,6 @@ function activeAgentTurnRow(id: string, sessionKey: string): TranscriptRenderRow
         followsRuntimeNotice: false,
         id,
         kind: 'entry',
-        showPresence: true,
         turnStartedAt: '2026-06-26T15:00:00.000Z',
     };
 }

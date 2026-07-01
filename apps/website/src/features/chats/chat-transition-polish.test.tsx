@@ -10,7 +10,6 @@ import {
     shouldReleaseDraftHandoff,
 } from './agent-chat-detail.tsx';
 import { AgentStatusIndicator } from './agent-status-indicator.tsx';
-import { resolveActivePresenceVerb } from './chat-active-presence-verb.ts';
 import { resolveDraftHandoffFrame } from './chat-draft-detail.tsx';
 import { getSteerableRunId } from './chat-steering.ts';
 
@@ -50,35 +49,6 @@ test('agent status indicator leaves emotion changes to the eye spring', () => {
 
     expect(getFirstPathData(thinkingMarkup)).toBe(getFirstPathData(idleMarkup));
     expect(thinkingMarkup).toContain('Agent is thinking');
-});
-
-test('active presence verb stays stable across draft run reconciliation', () => {
-    const draftVerb = resolveActivePresenceVerb({
-        activeReply: {
-            agentId: 'agent-1',
-            isThinking: true,
-            runId: 'draft-message-1',
-            sessionKey: 'draft-chat-1',
-            startedAt: '2026-05-13T12:00:00.000Z',
-            text: '',
-        },
-        currentVerb: null,
-    });
-
-    expect(
-        resolveActivePresenceVerb({
-            activeReply: {
-                agentId: 'agent-1',
-                isThinking: true,
-                runId: 'run-1',
-                sessionKey: 'session-1',
-                startedAt: '2026-05-13T12:00:01.000Z',
-                text: '',
-            },
-            currentVerb: draftVerb,
-        })
-    ).toBe(draftVerb);
-    expect(resolveActivePresenceVerb({ activeReply: null, currentVerb: draftVerb })).toBeNull();
 });
 
 test('chat message entrance animation can be disabled for handoffs', () => {

@@ -14,6 +14,7 @@ import { MissingAgentState } from '../agents/missing-agent-state.tsx';
 import { ArtifactPanelOpenProvider } from './artifact-panel-context.tsx';
 import { ChatArtifactPanel, useChatArtifactPanelState } from './chat-artifact-panel.tsx';
 import { getChatContextFullness } from './chat-context-fullness.ts';
+import { ChatDetailFooter } from './chat-detail-footer.tsx';
 import { ChatDetailFrame } from './chat-detail-frame.tsx';
 import { ChatDraftDetail } from './chat-draft-detail.tsx';
 import { buildChatListItem, type ChatListItem } from './chat-list-data.ts';
@@ -191,25 +192,31 @@ function SyncedAgentChatDetail({ chat, chatId }: { chat: ChatListItem; chatId: s
                 failedTurn={timeline.failedTurn}
                 fetchPreviousPage={timeline.fetchPreviousPage}
                 footer={
-                    <ChatMessageComposer
-                        activeRunId={
-                            timeline.activeTurn?.runId ?? timeline.activeReply?.runId ?? null
-                        }
-                        agentRuntimeSyncLabel={chat.agentRuntimeSyncLabel}
+                    <ChatDetailFooter
+                        activeReply={timeline.activeReply}
                         agents={agents}
-                        boundAgentIds={chat.boundAgentIds}
-                        canSend={chat.canSend}
-                        chatId={chat.id}
-                        contextFullness={contextFullness}
-                        conversationKind={chat.conversationKind}
-                        isDisabled={chat.isDisabled}
-                        isReplyActive={isTurnBlocking}
-                        steerRunId={getSteerableRunId({
-                            activeReply: timeline.activeReply,
-                            activeTurn: timeline.activeTurn,
-                            rows,
-                        })}
-                    />
+                        rows={rows}
+                    >
+                        <ChatMessageComposer
+                            activeRunId={
+                                timeline.activeTurn?.runId ?? timeline.activeReply?.runId ?? null
+                            }
+                            agentRuntimeSyncLabel={chat.agentRuntimeSyncLabel}
+                            agents={agents}
+                            boundAgentIds={chat.boundAgentIds}
+                            canSend={chat.canSend}
+                            chatId={chat.id}
+                            contextFullness={contextFullness}
+                            conversationKind={chat.conversationKind}
+                            isDisabled={chat.isDisabled}
+                            isReplyActive={isTurnBlocking}
+                            steerRunId={getSteerableRunId({
+                                activeReply: timeline.activeReply,
+                                activeTurn: timeline.activeTurn,
+                                rows,
+                            })}
+                        />
+                    </ChatDetailFooter>
                 }
                 hasPreviousPage={timeline.hasPreviousPage}
                 header={<ChatRoomTopbar chat={chat} />}

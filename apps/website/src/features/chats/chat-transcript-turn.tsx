@@ -1,14 +1,6 @@
 import { Cancel01Icon } from '@hugeicons/core-free-icons';
-import {
-    AnimatePresence,
-    motion,
-    type Transition,
-    useAnimationControls,
-    useReducedMotion,
-} from 'framer-motion';
-import * as React from 'react';
-import { chromatic } from 'slot-text';
-import { SlotText } from 'slot-text/react';
+import { useReducedMotion } from 'framer-motion';
+import type * as React from 'react';
 import { ChatMessage } from '../../components/chats/chat-message.tsx';
 import { CopyButton } from '../../components/ui/copy-button.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
@@ -20,15 +12,12 @@ import {
 } from '../../components/ui/message.tsx';
 import { useActorProfile } from '../../hooks/actors/use-actor.ts';
 import { isLocalTimelineMessageMetadata } from '../../hooks/chats/chat-timeline-messages.ts';
-import type { ChatActiveReply, ChatTurnFailure } from '../../hooks/chats/chat-timeline-state.ts';
+import type { ChatActiveReply } from '../../hooks/chats/chat-timeline-state.ts';
 import { useChatDismiss } from '../../hooks/chats/use-chat-dismiss.ts';
 import { formatShortTime } from '../../lib/format.ts';
-import { springs } from '../../lib/springs.ts';
 import { cn } from '../../lib/utils.ts';
 import { AgentRichResponse } from '../../rich-responses/render-rich-response.tsx';
 import { AgentEyes } from './agent-eyes.tsx';
-import { AgentStatusIndicator } from './agent-status-indicator.tsx';
-import { getActivePresenceVerb } from './chat-active-presence-verb.ts';
 import { CommandRunEntry } from './chat-command-card.tsx';
 import { ChatMarkdownText } from './chat-markdown-text.tsx';
 import { useStreamingTextRanges } from './chat-streaming-text-ranges.ts';
@@ -37,10 +26,7 @@ import {
     ChatTranscriptActivityGroup,
 } from './chat-transcript-activity.tsx';
 import {
-    formatActiveActivitySeconds,
-    getActivityStart,
     getAssistantNarrationText,
-    isActivityItem,
     isAssistantNarrationItem,
 } from './chat-transcript-activity-utils.ts';
 import {
@@ -69,7 +55,7 @@ import { useRevealedText } from './use-revealed-text.ts';
 // bubble). Spacing is intentionally tight — the row's own `py` padding carries
 // most of the room between messages, with only a small gap between scroller
 // items (see chat-transcript.tsx).
-const rowClassName = 'group/turn w-full px-3 py-1.5';
+const rowClassName = 'group/turn w-full py-1.5';
 // Message actions stay hidden until the row is hovered or focused. No
 // transition — the affordance tracks the pointer instantly.
 const hoverActionsClassName =
@@ -81,44 +67,26 @@ const newTurnGapClassName = '';
 const turnAvatarBaseClassName =
     'size-8 min-w-8 self-start ring-1 ring-border/50 group-has-data-[slot=message-footer]/message:translate-y-0';
 const hoverGroupClassName = 'group';
-const agentStatusSize = 32;
-const presenceLabelExitTransition = {
-    duration: 0.12,
-    ease: [0.4, 0, 0.2, 1],
-} satisfies Transition;
-const presenceBlockEnterTransition = {
-    duration: 0.68,
-    ease: [0.16, 1, 0.3, 1],
-} satisfies Transition;
-const reducedPresenceLabelTransition = { duration: 0.08 } satisfies Transition;
 
 export function TranscriptEntryView({
     activeReply,
-    activePresenceVerb = null,
     agentStatusColor = null,
     chatId,
     conversationLayout,
     currentSessionKey,
     defaultOpenWorkGroups = false,
     entry,
-    failedTurn = null,
     followsRuntimeNotice,
-    presenceRows = [],
-    showPresence = false,
     turnStartedAt,
 }: {
     activeReply: ChatActiveReply | null;
-    activePresenceVerb?: string | null;
     agentStatusColor?: string | null;
     chatId?: string;
     conversationLayout: ConversationMessageLayout;
     currentSessionKey?: string | null;
     defaultOpenWorkGroups?: boolean;
     entry: TranscriptEntry;
-    failedTurn?: ChatTurnFailure | null;
     followsRuntimeNotice?: boolean;
-    presenceRows?: TranscriptRow[];
-    showPresence?: boolean;
     turnStartedAt?: string | null;
 }) {
     if (entry.kind === 'system') {
@@ -155,74 +123,15 @@ export function TranscriptEntryView({
 
     return (
         <AgentTurn
-            activePresenceVerb={activePresenceVerb}
             activeReply={activeReply}
             agentStatusColor={agentStatusColor}
             chatId={chatId}
             currentSessionKey={currentSessionKey}
             defaultOpenWorkGroups={defaultOpenWorkGroups}
             entry={entry}
-            failedTurn={failedTurn}
             followsRuntimeNotice={Boolean(followsRuntimeNotice)}
             layout={conversationLayout}
-            presenceRows={presenceRows}
-            showPresence={showPresence}
             turnStartedAt={turnStartedAt}
-        />
-    );
-}
-
-function AgentStatusBlock({
-    activeReply,
-    activePresenceVerb,
-    agentStatusColor,
-    entry,
-    failedTurn,
-    presenceRows,
-    turnStartedAt,
-}: {
-    activeReply: ChatActiveReply | null;
-    activePresenceVerb?: string | null;
-    agentStatusColor: string | null;
-    entry: Extract<TranscriptEntry, { kind: 'turn' }>;
-    failedTurn: ChatTurnFailure | null;
-    presenceRows: TranscriptRow[];
-    turnStartedAt?: string | null;
-}) {
-    const actorProfile = useActorProfile(entry.actor);
-    const items = entry.items;
-    const lastMessage = getLastMessage(items);
-    const activeRunStopped = hasStoppedTurn(items, activeReply?.runId);
-    const presenceActiveReply = activeRunStopped ? null : activeReply;
-    const turnActive = isActiveTurn(items, activeReply, lastMessage);
-    const activityItems = items.filter(isActivityItem);
-    // While live, anchor the active timer to the turn start so it does
-    // not reset when the first tool activity lands. Completed turns keep the
-    // eyes but no timing text.
-    const workStart = turnActive
-        ? (turnStartedAt ?? getActivityStart(activityItems) ?? entry.timestamp)
-        : (getActivityStart(activityItems) ?? turnStartedAt ?? entry.timestamp);
-    const presenceNow = usePresenceNow(turnActive, workStart);
-    const presenceTimingLabel = turnActive
-        ? getAgentStatusTimingLabel({
-              now: presenceNow,
-              start: workStart,
-              verb: activePresenceVerb ?? getActivePresenceVerb(activeReply?.runId ?? entry.id),
-          })
-        : null;
-    return (
-        <AgentStatusRow
-            label={presenceTimingLabel}
-            presence={
-                <AgentStatusIndicator
-                    activeReply={presenceActiveReply}
-                    className="translate-y-px"
-                    color={actorProfile?.primaryColor ?? agentStatusColor}
-                    failedTurn={failedTurn}
-                    rows={presenceRows}
-                    size={agentStatusSize}
-                />
-            }
         />
     );
 }
@@ -277,7 +186,7 @@ function UserTurn({
                 color={actorProfile?.primaryColor}
                 name={displayName}
             />
-            <MessageContent className="gap-1.5 pt-0.5">
+            <MessageContent className="gap-0.5 pt-0.5">
                 {layout.showHumanIdentity ? (
                     <TurnHeader
                         actions={
@@ -435,31 +344,23 @@ function getActorInitials(name: string) {
 
 function AgentTurn({
     activeReply,
-    activePresenceVerb,
     agentStatusColor,
     chatId,
     currentSessionKey,
     defaultOpenWorkGroups,
     entry,
-    failedTurn,
     followsRuntimeNotice,
     layout,
-    presenceRows,
-    showPresence,
     turnStartedAt,
 }: {
     activeReply: ChatActiveReply | null;
-    activePresenceVerb: string | null;
     agentStatusColor: string | null;
     chatId?: string;
     currentSessionKey?: string | null;
     defaultOpenWorkGroups: boolean;
     entry: Extract<TranscriptEntry, { kind: 'turn' }>;
-    failedTurn: ChatTurnFailure | null;
     followsRuntimeNotice: boolean;
     layout: ConversationMessageLayout;
-    presenceRows: TranscriptRow[];
-    showPresence: boolean;
     turnStartedAt?: string | null;
 }) {
     const actorProfile = useActorProfile(entry.actor);
@@ -492,7 +393,7 @@ function AgentTurn({
                 color={actorProfile?.primaryColor ?? agentStatusColor}
                 name={displayName}
             />
-            <MessageContent className="gap-1.5 pt-0.5">
+            <MessageContent className="gap-0.5 pt-0.5">
                 {showIdentity ? (
                     <TurnHeader
                         actions={headerActions}
@@ -515,201 +416,11 @@ function AgentTurn({
                                 turnStopped={turnStopped}
                             />
                         ))}
-                        {showPresence ? (
-                            <AgentStatusBlock
-                                activePresenceVerb={activePresenceVerb}
-                                activeReply={activeReply}
-                                agentStatusColor={agentStatusColor}
-                                entry={entry}
-                                failedTurn={failedTurn}
-                                presenceRows={presenceRows}
-                                turnStartedAt={turnStartedAt}
-                            />
-                        ) : null}
                     </div>
                 </div>
             </MessageContent>
         </Message>
     );
-}
-
-function AgentStatusRow({
-    label,
-    presence,
-}: {
-    label: PresenceTimingLabel | null;
-    presence: React.ReactNode;
-}) {
-    const shouldReduceMotion = useReducedMotion();
-    const active = label !== null;
-    const blockControls = useAnimationControls();
-    const blockMountedRef = React.useRef(false);
-    const previousActiveRef = React.useRef(false);
-    const blockInitial = active && shouldReduceMotion !== true ? { opacity: 0, y: 22 } : false;
-    const labelInitial = shouldReduceMotion ? { opacity: 0 } : { opacity: 0, width: 0, x: -4 };
-    const labelAnimate = shouldReduceMotion ? { opacity: 1 } : { opacity: 1, width: 'auto', x: 0 };
-    const labelExit = shouldReduceMotion
-        ? { opacity: 0, transition: reducedPresenceLabelTransition }
-        : {
-              opacity: 0,
-              transition: presenceLabelExitTransition,
-              width: 0,
-              x: -4,
-          };
-    const labelTransition = shouldReduceMotion ? reducedPresenceLabelTransition : springs.moderate;
-    const labelText = label ? formatPresenceTimingLabel(label) : null;
-
-    React.useLayoutEffect(() => {
-        const wasActive = blockMountedRef.current ? previousActiveRef.current : false;
-        blockMountedRef.current = true;
-        previousActiveRef.current = active;
-
-        if (shouldReduceMotion) {
-            blockControls.set({ opacity: 1, y: 0 });
-            return;
-        }
-
-        if (active && !wasActive) {
-            blockControls.set({ opacity: 0, y: 22 });
-
-            const frame = window.requestAnimationFrame(() => {
-                void blockControls.start({
-                    opacity: 1,
-                    transition: presenceBlockEnterTransition,
-                    y: 0,
-                });
-            });
-
-            return () => window.cancelAnimationFrame(frame);
-        }
-
-        blockControls.set({ opacity: 1, y: 0 });
-    }, [active, blockControls, shouldReduceMotion]);
-
-    return (
-        <motion.div
-            animate={blockControls}
-            className="flex h-8 min-w-0 items-center gap-2 overflow-visible text-muted-foreground/65 text-sm leading-5"
-            initial={blockInitial}
-        >
-            {presence}
-            <AnimatePresence>
-                {label ? (
-                    <motion.span
-                        animate={labelAnimate}
-                        aria-label={labelText ?? undefined}
-                        className="thinking-indicator-text flex min-h-8 items-center overflow-hidden whitespace-nowrap tabular-nums"
-                        exit={labelExit}
-                        initial={labelInitial}
-                        key="presence-label"
-                        transition={labelTransition}
-                    >
-                        <PresenceTimingText label={label} reduceMotion={shouldReduceMotion} />
-                    </motion.span>
-                ) : null}
-            </AnimatePresence>
-        </motion.div>
-    );
-}
-
-interface PresenceTimingLabel {
-    seconds: string | null;
-    verb: string;
-}
-
-function PresenceTimingText({
-    label,
-    reduceMotion,
-}: {
-    label: PresenceTimingLabel;
-    reduceMotion: boolean | null;
-}) {
-    const [slotReady, setSlotReady] = React.useState(false);
-    const [slotText, setSlotText] = React.useState('');
-    const entryAnimatedRef = React.useRef(false);
-
-    React.useEffect(() => {
-        if (reduceMotion !== false) {
-            entryAnimatedRef.current = false;
-            setSlotReady(false);
-            setSlotText('');
-            return;
-        }
-
-        setSlotReady(true);
-
-        if (entryAnimatedRef.current) {
-            setSlotText(label.verb);
-            return;
-        }
-
-        setSlotText('');
-
-        let cancelled = false;
-        const revealText = () => {
-            if (cancelled) {
-                return;
-            }
-
-            entryAnimatedRef.current = true;
-            setSlotText(label.verb);
-        };
-
-        if (typeof window.requestAnimationFrame === 'function') {
-            const frame = window.requestAnimationFrame(revealText);
-
-            return () => {
-                cancelled = true;
-                window.cancelAnimationFrame(frame);
-            };
-        }
-
-        const timeout = window.setTimeout(revealText, 16);
-
-        return () => {
-            cancelled = true;
-            window.clearTimeout(timeout);
-        };
-    }, [label.verb, reduceMotion]);
-
-    const primingSlot = slotReady && slotText.length === 0;
-
-    const verb = slotReady ? (
-        <SlotText
-            aria-hidden={true}
-            className="presence-verb-slot inline-flex font-medium text-muted-foreground/75"
-            options={{
-                bounce: 0.35,
-                color: chromatic({ from: 210, lightness: 60, saturation: 80, spread: 130 }),
-                colorFade: 360,
-                direction: 'up',
-                duration: 260,
-                interrupt: true,
-                skipUnchanged: false,
-                stagger: 18,
-            }}
-            text={slotText}
-        />
-    ) : (
-        <span aria-hidden={true} className="inline-flex font-medium text-muted-foreground/75">
-            {label.verb}
-        </span>
-    );
-
-    return (
-        <>
-            {verb}
-            {label.seconds && !primingSlot ? (
-                <span aria-hidden={true} className="ml-1 tabular-nums">
-                    for {label.seconds}
-                </span>
-            ) : null}
-        </>
-    );
-}
-
-function formatPresenceTimingLabel(label: PresenceTimingLabel) {
-    return label.seconds ? `${label.verb} for ${label.seconds}` : label.verb;
 }
 
 function AgentTurnSegment({
@@ -754,57 +465,6 @@ function AgentTurnSegment({
 
 function isActiveStatusSegment(segment: AgentItemSegment) {
     return segment.kind === 'item' && segment.item.kind === 'activeStatus';
-}
-
-function getAgentStatusTimingLabel({
-    now,
-    start,
-    verb,
-}: {
-    now: number;
-    start: string | null;
-    verb: string;
-}) {
-    return {
-        seconds: formatActiveActivitySeconds({ now, start }),
-        verb,
-    };
-}
-
-function usePresenceNow(enabled: boolean, start: string | null) {
-    const [now, setNow] = React.useState(() => Date.now());
-
-    React.useEffect(() => {
-        if (!enabled) {
-            return;
-        }
-
-        const updateNow = () => setNow(Date.now());
-        const startMs = start ? Date.parse(start) : Number.NaN;
-        const elapsedMs = Number.isNaN(startMs) ? 0 : Math.max(0, Date.now() - startMs);
-        const delayMs = Number.isNaN(startMs) ? 1000 : 1000 - (elapsedMs % 1000);
-        let interval: number | undefined;
-
-        updateNow();
-
-        const timeout = window.setTimeout(
-            () => {
-                updateNow();
-                interval = window.setInterval(updateNow, 1000);
-            },
-            Math.max(100, delayMs)
-        );
-
-        return () => {
-            window.clearTimeout(timeout);
-
-            if (interval !== undefined) {
-                window.clearInterval(interval);
-            }
-        };
-    }, [enabled, start]);
-
-    return now;
 }
 
 function UserTurnItem({ from, item }: { from: 'assistant' | 'user'; item: TranscriptItem }) {

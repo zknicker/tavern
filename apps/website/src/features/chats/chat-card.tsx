@@ -7,6 +7,7 @@ import {
 import { useChatTimeline } from '../../hooks/chats/use-chat-timeline.ts';
 import type { AgentListOutput } from '../../lib/trpc.tsx';
 import { cn } from '../../lib/utils.ts';
+import { ChatActiveStatusStack } from './chat-active-status-stack.tsx';
 import { getChatCardDomId } from './chat-card-dom-id.ts';
 import { ChatCardHeader } from './chat-card-header.tsx';
 import type { ChatListItem } from './chat-list-data.ts';
@@ -110,6 +111,7 @@ export function ChatCard({
                 </MessageScroller>
             </MessageScrollerProvider>
 
+            <ChatActiveStatusStack activeReply={timeline.activeReply} agents={agents} rows={rows} />
             <ChatMessageComposer
                 activeRunId={timeline.activeTurn?.runId ?? timeline.activeReply?.runId ?? null}
                 agentRuntimeSyncLabel={chat.agentRuntimeSyncLabel}

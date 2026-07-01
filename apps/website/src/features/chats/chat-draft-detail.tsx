@@ -22,6 +22,7 @@ import {
     useMentionComposer,
 } from '../mentions/use-mention-composer.tsx';
 import { ChatComposerAgentSelector } from './chat-composer-tools.tsx';
+import { ChatDetailFooter } from './chat-detail-footer.tsx';
 import { ChatDetailFrame } from './chat-detail-frame.tsx';
 import { ChatMessageComposer } from './chat-message-composer.tsx';
 import { getSteerableRunId } from './chat-steering.ts';
@@ -125,61 +126,67 @@ export function ChatDraftDetail({
             emptyLabel=""
             failedTurn={handoffFrame.failedTurn}
             footer={
-                composerChatId ? (
-                    <ChatMessageComposer
-                        activeRunId={activeRunId}
-                        agents={agentsQuery.data?.agents ?? []}
-                        boundAgentIds={boundAgentIds}
-                        canSend
-                        chatId={composerChatId}
-                        conversationKind="direct"
-                        isDisabled={false}
-                        isReplyActive={isDraftReplyActive({
-                            activeReply: handoffFrame.activeReply,
-                            activeTurn: handoffState?.activeTurn,
-                            agentsPending: agentsQuery.isPending,
-                            draft,
-                        })}
-                        steerRunId={steerRunId}
-                    />
-                ) : (
-                    <PromptInput
-                        error={draft?.errorMessage}
-                        onSubmit={(event) => event?.preventDefault()}
-                        onTextEditorFocus={mentionComposer.focusTextEditor}
-                    >
-                        <PromptInputBody>
-                            <MentionComposerEditor
-                                ariaLabel="Chat message"
-                                composer={mentionComposer}
-                                name="draft-chat-message"
-                                placeholder="Let's go on an adventure..."
-                            />
-                        </PromptInputBody>
-                        <MentionComposerPicker composer={mentionComposer} />
-                        <PromptInputFooter>
-                            <PromptInputTools>
-                                <ChatComposerAgentSelector
-                                    agentId={agentId}
-                                    agents={agentsQuery.data?.agents ?? []}
-                                    boundAgentIds={boundAgentIds}
-                                    onAgentChange={setAgentId}
+                <ChatDetailFooter
+                    activeReply={handoffFrame.activeReply}
+                    agents={agentsQuery.data?.agents ?? []}
+                    rows={visibleTimeline?.rows ?? []}
+                >
+                    {composerChatId ? (
+                        <ChatMessageComposer
+                            activeRunId={activeRunId}
+                            agents={agentsQuery.data?.agents ?? []}
+                            boundAgentIds={boundAgentIds}
+                            canSend
+                            chatId={composerChatId}
+                            conversationKind="direct"
+                            isDisabled={false}
+                            isReplyActive={isDraftReplyActive({
+                                activeReply: handoffFrame.activeReply,
+                                activeTurn: handoffState?.activeTurn,
+                                agentsPending: agentsQuery.isPending,
+                                draft,
+                            })}
+                            steerRunId={steerRunId}
+                        />
+                    ) : (
+                        <PromptInput
+                            error={draft?.errorMessage}
+                            onSubmit={(event) => event?.preventDefault()}
+                            onTextEditorFocus={mentionComposer.focusTextEditor}
+                        >
+                            <PromptInputBody>
+                                <MentionComposerEditor
+                                    ariaLabel="Chat message"
+                                    composer={mentionComposer}
+                                    name="draft-chat-message"
+                                    placeholder="Let's go on an adventure..."
                                 />
-                            </PromptInputTools>
-                            <PromptInputActions>
-                                <PromptInputSubmit
-                                    canSubmit={false}
-                                    label="Send message"
-                                    tooltip={
-                                        draft && draft.status !== 'error'
-                                            ? 'Chat is still being created.'
-                                            : undefined
-                                    }
-                                />
-                            </PromptInputActions>
-                        </PromptInputFooter>
-                    </PromptInput>
-                )
+                            </PromptInputBody>
+                            <MentionComposerPicker composer={mentionComposer} />
+                            <PromptInputFooter>
+                                <PromptInputTools>
+                                    <ChatComposerAgentSelector
+                                        agentId={agentId}
+                                        agents={agentsQuery.data?.agents ?? []}
+                                        boundAgentIds={boundAgentIds}
+                                        onAgentChange={setAgentId}
+                                    />
+                                </PromptInputTools>
+                                <PromptInputActions>
+                                    <PromptInputSubmit
+                                        canSubmit={false}
+                                        label="Send message"
+                                        tooltip={
+                                            draft && draft.status !== 'error'
+                                                ? 'Chat is still being created.'
+                                                : undefined
+                                        }
+                                    />
+                                </PromptInputActions>
+                            </PromptInputFooter>
+                        </PromptInput>
+                    )}
+                </ChatDetailFooter>
             }
             historyLoaded
             isPending={false}

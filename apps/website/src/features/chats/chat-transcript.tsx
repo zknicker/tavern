@@ -9,7 +9,6 @@ import {
 import type { ChatActiveReply, ChatTurnFailure } from '../../hooks/chats/chat-timeline-state.ts';
 import { useChatThinkingDisplayPreference } from '../../hooks/chats/use-chat-thinking-display-preference.ts';
 import { markChatTiming } from '../../lib/chat-timing.ts';
-import { resolveActivePresenceVerb } from './chat-active-presence-verb.ts';
 import {
     buildTranscriptEntries,
     type ConversationMessageLayout,
@@ -84,7 +83,6 @@ export function ChatTranscript({
         [transcriptRows]
     );
     const latestAgentMessage = React.useMemo(() => getLatestAgentMessage(rows), [rows]);
-    const activePresenceVerb = useActivePresenceVerb(activeReply);
     const renderContext = React.useMemo(
         () =>
             ({
@@ -150,11 +148,8 @@ export function ChatTranscript({
                                 scrollAnchor={isTranscriptRenderRowScrollAnchor(row)}
                             >
                                 <TranscriptRenderRowItem
-                                    activePresenceVerb={activePresenceVerb}
                                     activeReply={activeReply}
                                     agentStatusColor={agentStatusColor}
-                                    failedTurn={failedTurn}
-                                    presenceRows={rows}
                                     row={row}
                                 />
                             </MessageScrollerItem>
@@ -195,18 +190,6 @@ function useStableTranscriptRenderRows(rows: ReturnType<typeof buildTranscriptRe
         stateRef.current = nextState;
         return nextState.result;
     }, [rows]);
-}
-
-function useActivePresenceVerb(activeReply: ChatActiveReply | null) {
-    const verbRef = React.useRef<string | null>(null);
-    const verb = resolveActivePresenceVerb({
-        activeReply,
-        currentVerb: verbRef.current,
-    });
-
-    verbRef.current = verb;
-
-    return verb;
 }
 
 function getLatestAgentMessage(rows: TranscriptRow[]) {
