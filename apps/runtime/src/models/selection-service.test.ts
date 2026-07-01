@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { defaultAgentEngineAgentId } from '../agent-engine/constants.ts';
 import { AGENT_WORKSPACE } from '../config.ts';
 import { closeDb, initTestDb } from '../db/connection.ts';
@@ -11,6 +11,10 @@ import { resolveAgentModelSelection, saveAgentModelSelectionIntent } from './sel
 import { readAgentModelSelection } from './selection-store.ts';
 
 describe('Runtime agent model selection', () => {
+    const originalClaudeCommand = process.env.TAVERN_AGENT_CLAUDE_CODE_COMMAND;
+    const originalOpenAiApiKey = process.env.OPENAI_API_KEY;
+    const originalTavernAgentApiKey = process.env.TAVERN_AGENT_API_KEY;
+
     beforeEach(() => {
         ensureRuntimeSchema(initTestDb());
         upsertStoredAgent({
@@ -26,7 +30,9 @@ describe('Runtime agent model selection', () => {
     });
 
     afterEach(() => {
-        vi.unstubAllEnvs();
+        restoreEnv('TAVERN_AGENT_CLAUDE_CODE_COMMAND', originalClaudeCommand);
+        restoreEnv('OPENAI_API_KEY', originalOpenAiApiKey);
+        restoreEnv('TAVERN_AGENT_API_KEY', originalTavernAgentApiKey);
         closeDb();
     });
 
@@ -57,9 +63,9 @@ describe('Runtime agent model selection', () => {
     });
 
     it('Doctor sets an Agent default from executable provider inventory', async () => {
-        vi.stubEnv('TAVERN_AGENT_CLAUDE_CODE_COMMAND', process.execPath);
-        vi.stubEnv('OPENAI_API_KEY', '');
-        vi.stubEnv('TAVERN_AGENT_API_KEY', '');
+        process.env.TAVERN_AGENT_CLAUDE_CODE_COMMAND = process.execPath;
+        process.env.OPENAI_API_KEY = '';
+        process.env.TAVERN_AGENT_API_KEY = '';
         await setModelProviderEnabled({ enabled: true, providerId: 'claude' });
         const result = await runRuntimeDoctor({
             modules: ['agents'],
@@ -73,3 +79,12 @@ describe('Runtime agent model selection', () => {
         });
     });
 });
+
+function restoreEnv(key: string, value: string | undefined) {
+    if (value === undefined) {
+        delete process.env[key];
+        return;
+    }
+
+    process.env[key] = value;
+}

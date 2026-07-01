@@ -2470,9 +2470,7 @@ export type AgentRuntimeModelProviderEnabled = z.infer<
 export type AgentRuntimeModelProviderSetupAction = z.infer<
     typeof agentRuntimeModelProviderSetupActionSchema
 >;
-export type AgentRuntimeUpdateModelProvider = z.infer<
-    typeof agentRuntimeUpdateModelProviderSchema
->;
+export type AgentRuntimeUpdateModelProvider = z.infer<typeof agentRuntimeUpdateModelProviderSchema>;
 export type AgentRuntimeStartModelProviderOAuth = z.infer<
     typeof agentRuntimeStartModelProviderOAuthSchema
 >;
