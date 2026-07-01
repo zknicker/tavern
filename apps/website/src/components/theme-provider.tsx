@@ -101,3 +101,9 @@ export function useTheme() {
 
     return context;
 }
+
+// Non-throwing read for components that may render outside the provider (e.g.
+// static markup in tests). Falls back to the app's default dark theme.
+export function useResolvedThemeOptional(): ResolvedTheme {
+    return useContext(ThemeContext)?.resolvedTheme ?? 'dark';
+}

@@ -1,4 +1,5 @@
 import { type SVGProps, useEffect, useRef } from 'react';
+import { useResolvedThemeOptional } from '../../components/theme-provider.tsx';
 import {
     type AgentEyeEmotion,
     defaultEyeParams,
@@ -38,7 +39,7 @@ export interface AgentFaceProps extends Omit<SVGProps<SVGSVGElement>, 'color'> {
 export function AgentFace({
     animated = true,
     blinking = true,
-    dark = false,
+    dark,
     emotion = 'default',
     head = 'none',
     intensity = 1,
@@ -46,6 +47,9 @@ export function AgentFace({
     speed = 1,
     ...props
 }: AgentFaceProps) {
+    // Follow the app theme unless a caller pins the mode explicitly.
+    const themeDark = useResolvedThemeOptional() === 'dark';
+    const resolvedDark = dark ?? themeDark;
     const faceRef = useRef<SVGGElement | null>(null);
     const leftRef = useRef<SVGPathElement | null>(null);
     const rightRef = useRef<SVGPathElement | null>(null);
@@ -74,7 +78,7 @@ export function AgentFace({
         });
     }, [animated]);
 
-    const layers = resolveHead(head, dark);
+    const layers = resolveHead(head, resolvedDark);
     const slot = layers.slot;
     const slotTransform = `translate(${slot.dx} ${slot.dy}) translate(${eyeCenterY} ${eyeCenterY}) scale(${slot.s}) translate(${-eyeCenterY} ${-eyeCenterY})`;
 
