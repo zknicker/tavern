@@ -1,6 +1,13 @@
 import type { ComponentType } from 'react';
-import { createBrowserRouter, createHashRouter, Navigate, useLocation } from 'react-router-dom';
+import {
+    createBrowserRouter,
+    createHashRouter,
+    Navigate,
+    useLocation,
+    useParams,
+} from 'react-router-dom';
 import { AppFrame } from './components/app-frame.tsx';
+import { buildAgentSettingsPath } from './features/agents/agent-path.ts';
 import { buildDefaultWorkspaceChatPath } from './features/chats/chat-path.ts';
 import { RuntimeSetupGate } from './features/onboarding/runtime-setup-gate.tsx';
 import { Layout } from './layout.tsx';
@@ -263,9 +270,8 @@ export function createAppRouter() {
                                         },
                                         {
                                             path: 'tools',
-                                            lazy: lazyRoute(
-                                                () => import('./routes/app/tools-page.tsx'),
-                                                'ToolsPage'
+                                            element: (
+                                                <Navigate replace to={appRoutes.settingsPlugins} />
                                             ),
                                         },
                                         {
@@ -319,10 +325,7 @@ export function createAppRouter() {
                                         },
                                         {
                                             path: 'agents/:agentId/tools',
-                                            lazy: lazyRoute(
-                                                () => import('./routes/app/tools-page.tsx'),
-                                                'ToolsPage'
-                                            ),
+                                            element: <AgentPluginsRedirect />,
                                         },
                                         {
                                             path: 'agents/:agentId/plugins',
@@ -343,10 +346,7 @@ export function createAppRouter() {
                                         },
                                         {
                                             path: 'agents/:agentId/mcp',
-                                            lazy: lazyRoute(
-                                                () => import('./routes/app/mcp-page.tsx'),
-                                                'McpPage'
-                                            ),
+                                            element: <AgentPluginsRedirect />,
                                         },
                                         {
                                             path: 'agents/:agentId/memory',
@@ -427,6 +427,11 @@ export function createAppRouter() {
             ],
         },
     ]);
+}
+
+function AgentPluginsRedirect() {
+    const { agentId } = useParams();
+    return <Navigate replace to={buildAgentSettingsPath(agentId, 'plugins')} />;
 }
 
 function LegacyDashboardRedirect() {

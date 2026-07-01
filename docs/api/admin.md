@@ -42,7 +42,7 @@ It is not a second product API.
 | Skills                          | `/skills`, `/skills/{id}`, `/skills/{id}/config`                                                                                                                                                                                                                                                                                           |
 | Skill hub                       | `/skills/hub/available`, `/skills/hub/preview`, `/skills/hub/scan`, `/skills/hub/install`, `/skills/hub/uninstall`, `/skills/hub/taps`, `/skills/hub/taps/{repo}`                                                                                                                                                                          |
 | Tools                           | `/tools`, `/tools/{id}/enabled`, `/tools/{id}/config`, `/tools/{id}/provider`, `/tools/{id}/env`, `/tools/{id}/post-setup`                                                                                                                                                                                                                 |
-| MCP servers                     | `/mcp/servers`, `/mcp/servers/{name}`, `/mcp/servers/{name}/test`, `/mcp/servers/{name}/enabled`, `/mcp/catalog`, `/mcp/catalog/install`                                                                                                                                                                                                   |
+| Advanced MCP servers            | `/mcp/servers`, `/mcp/servers/{name}`, `/mcp/servers/{name}/test`, `/mcp/servers/{name}/enabled`, `/mcp/catalog`, `/mcp/catalog/install`                                                                                                                                                                                                   |
 | Memory, models, and access      | `/vault/status`, `/vault/settings`, `/vault/pages`, `/vault/search`, `/models`, `/model-access`, `/model-access/api-key`, `/model-access/oauth/{providerId}/start`, `/model-access/oauth/{providerId}/poll/{sessionId}`, `/model-access/oauth/{providerId}/submit`, `/model-access/oauth/sessions/{sessionId}`, `/model-access/openrouter` |
 | Platform bindings               | `/bindings`, `/bindings/{id}`                                                                                                                                                                                                                                                                                                              |
 | Runtime chat projections        | `/agent/chats`, `/agent/chats/{chatId}/messages`, `/agent/chats/{chatId}/agent-sessions/current`, `/agent/chats/{chatId}/agent-sessions/model`                                                                                                                                                |
@@ -68,9 +68,10 @@ that workspace, traversal is rejected, hidden and generated dependency folders
 are omitted from listings, and sensitive files such as `.env` and key material
 are blocked. Tavern App uses these routes to preview linked workspace artifacts.
 
-`/mcp/servers` owns Tavern-stored MCP server records. Secret env values live in
-Tavern-managed secret storage and are materialized for the agent engine as
-environment variables. Reads return server configuration without secret values.
+`/mcp/servers` owns Tavern-stored MCP server records for advanced Runtime
+plumbing and Plugin-backed experiments. Secret env values live in Tavern-managed
+secret storage and are materialized for the agent engine as environment
+variables. Reads return server configuration without secret values.
 `POST /mcp/servers/{name}/test` checks command resolution or URL reachability
 without touching active turns.
 

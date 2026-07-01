@@ -93,16 +93,6 @@ export async function updateAgentThinkingDefault(input: {
     }
 }
 
-export async function updateAgentTools(input: { agentId: string; tools: string[] }) {
-    const { client } = await createClientForAgent(input.agentId);
-
-    try {
-        return await client.updateAgentTools(input.agentId, { tools: input.tools });
-    } finally {
-        client.close();
-    }
-}
-
 export async function saveDiscordBinding(input: AgentRuntimeSaveDiscordBinding) {
     const { client } = await createClientForAgent(input.agentId);
 

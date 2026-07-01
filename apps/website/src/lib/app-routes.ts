@@ -23,7 +23,6 @@ export const appRoutes = {
     settingsNotesMd: '/settings/notes-md',
     settingsSoulMd: '/settings/soul-md',
     settingsSkills: '/settings/skills',
-    settingsTools: '/settings/tools',
     settingsPlugins: '/settings/plugins',
     settingsChannels: '/settings/channels',
     settingsMcp: '/settings/mcp',

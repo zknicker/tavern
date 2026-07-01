@@ -4,10 +4,7 @@ import { Icon } from '../../components/ui/icon.tsx';
 import type { AgentListOutput, SkillListOutput } from '../../lib/trpc.tsx';
 import { cn } from '../../lib/utils.ts';
 import { SkillBadge } from '../skills/skill-badge.tsx';
-import { ToolBadge } from '../skills/tool-badge.tsx';
 import { AgentSkillDialog } from './agent-skill-dialog.tsx';
-import type { AgentToolPolicyView } from './agent-tool-policy.ts';
-import { AgentToolsDialog } from './agent-tools-dialog.tsx';
 
 const visibleCapabilityLimit = 6;
 
@@ -17,47 +14,19 @@ export function AgentCapabilities({
     skills,
     skillsError,
     skillsPending,
-    toolPolicy,
 }: {
     agent: AgentListOutput['agents'][number];
     enabledSkills: SkillListOutput['skills'];
     skills: SkillListOutput['skills'];
     skillsError: string | null;
     skillsPending: boolean;
-    toolPolicy: AgentToolPolicyView;
 }) {
-    const [toolDialogOpen, setToolDialogOpen] = React.useState(false);
     const [skillDialogOpen, setSkillDialogOpen] = React.useState(false);
-    const visibleTools = toolPolicy.tools.slice(0, visibleCapabilityLimit);
-    const toolOverflow = toolPolicy.tools.length - visibleTools.length;
     const visibleSkills = enabledSkills.slice(0, visibleCapabilityLimit);
     const skillOverflow = enabledSkills.length - visibleSkills.length;
 
     return (
         <section className="flex flex-col gap-2">
-            <CapabilityRow
-                addLabel="Add tool"
-                isEmpty={visibleTools.length === 0}
-                onAdd={() => setToolDialogOpen(true)}
-                overflowCount={toolOverflow}
-                title="Tools"
-            >
-                {visibleTools.map((tool) =>
-                    tool === '*' ? (
-                        <span
-                            className="inline-flex max-w-full items-center gap-1.5 rounded-md border border-border bg-card py-1 pr-2.5 pl-2 font-medium text-foreground text-sm shadow-xs"
-                            key={tool}
-                        >
-                            All tools
-                        </span>
-                    ) : (
-                        <ToolBadge key={tool} name={tool} />
-                    )
-                )}
-                {toolPolicy.note ? (
-                    <span className="text-muted-foreground text-xs">{toolPolicy.note}</span>
-                ) : null}
-            </CapabilityRow>
             <CapabilityRow
                 addLabel="Add skill"
                 isEmpty={visibleSkills.length === 0}
@@ -77,12 +46,6 @@ export function AgentCapabilities({
                     Skills are unavailable: {skillsError}
                 </p>
             ) : null}
-            <AgentToolsDialog
-                agent={agent}
-                onOpenChange={setToolDialogOpen}
-                open={toolDialogOpen}
-                toolPolicy={toolPolicy}
-            />
             <AgentSkillDialog
                 agent={agent}
                 onOpenChange={setSkillDialogOpen}

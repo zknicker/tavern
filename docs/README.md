@@ -22,8 +22,9 @@ sessions, model catalog, tools, Memory, jobs, and execution.
 - **Models.** Runtime owns a curated model catalog and Agent default model
   settings. Settings changes affect new sessions; Chat-scoped model changes
   affect that Agent seat's current session.
-- **Tools and skills.** Runtime owns the tool/skill inventory. Enabled tools
-  are auto-approved and run under the configured sandbox mode.
+- **Tools, skills, and Plugins.** Runtime owns the tool/skill inventory and
+  built-in Plugin integrations. Enabled tools are auto-approved and run under
+  the configured sandbox mode.
 - **Memory.** Tavern Memory is durable knowledge the user can inspect; Runtime
   can inject relevant Memory into turns.
 - **Automations.** Runtime owns scheduled work and records run history.

@@ -1,12 +1,14 @@
-# MCP Servers
+# Advanced MCP Servers
 
-MCP servers are user-configured agent-engine connection records that extend
-what the agent can do by exposing external tools.
+MCP servers are advanced agent-engine connection records that can expose
+external tools. Tavern's normal user-facing integration surface is built-in
+Plugins; direct MCP server setup is retained for Runtime development and
+Plugin-backed experiments.
 
 ## Product Expectations
 
-- A person can add, edit, test, enable, disable, and remove MCP servers in
-  Settings without editing generated agent project files.
+- A developer or advanced user can add, edit, test, enable, disable, and remove
+  MCP servers in Settings without editing generated agent project files.
 - An MCP server has a stable user-facing name, a transport (`command` or
   `url`), and optional env/header secrets.
 - Each MCP server shows health: configured, connected, or failing with a
@@ -27,10 +29,10 @@ what the agent can do by exposing external tools.
 
 ## UI Model
 
-- `Settings -> MCP` lists MCP servers as rows with health, transport, and
-  actions.
+- `Settings -> MCP` is an advanced page that lists MCP servers as rows with
+  health, transport, and actions.
 - The page may include a curated MCP catalog, but custom command/URL servers
-  remain first-class.
+  are not the default product extension path.
 - MCP servers do not appear in `Settings -> Channels`.
-- MCP servers do not appear in `Settings -> Tools` unless Runtime reports the
-  concrete tools they expose.
+- MCP servers do not create a user-facing Tools page. Runtime may still report
+  concrete MCP-backed tools as diagnostics.

@@ -66,9 +66,37 @@ The Model record an Agent session currently uses. Agent runtime profiles provide
 current model selection is session-scoped.
 _Avoid_: Global agent model, provider setting
 
-**Tool grant**:
-A static decision that lets an agent use a tool without per-call approval.
-_Avoid_: Approval request, permission prompt, per-call confirmation
+**Tool**:
+A Runtime-visible executable action an agent may invoke during an Agent turn.
+_Avoid_: Skill, MCP server, channel, Plugin
+
+**Harness-native tool**:
+A Tool supplied by the selected Agent executor's harness, such as local file, shell, search, or
+provider-native subagent actions. Tavern may display these as provider facts, but does not own their
+individual lifecycle.
+_Avoid_: Tavern tool, Plugin action, MCP server
+
+**Tavern host tool**:
+A Tool implemented by Tavern Runtime and passed to the Agent executor, such as Memory reads, Plugin
+actions, Rich Response creation, or other Tavern-owned product actions.
+_Avoid_: Harness-native tool, raw Runtime route, Plugin setting
+
+**MCP server**:
+A Runtime-owned connection record for an external Model Context Protocol server, including
+transport, secrets, enablement, health, and the tools or resources it exposes to eligible agents.
+MCP servers are advanced Runtime plumbing in v1; Tavern's normal user-facing integration surface is
+Plugins.
+_Avoid_: Tool, Plugin, Channel
+
+**MCP grant**:
+An internal or advanced agent-level policy that allows an agent to use one Runtime-enabled MCP
+server during Agent turns. V1 product surfaces should prefer Plugin grants.
+_Avoid_: MCP server enablement, per-chat MCP setting, Plugin grant
+
+**Plugin grant**:
+An agent-level policy that allows an agent to use one enabled built-in Tavern Plugin's agent-facing
+tools.
+_Avoid_: Plugin enablement, Plugin setting, Plugin health, user-installed tool package
 
 **Sandbox mode**:
 The execution environment for an agent's tools and harness processes: none, Docker, or Podman.
@@ -80,8 +108,8 @@ root and runs child processes directly from that workspace.
 _Avoid_: Secure sandbox, container, VM
 
 **Assignable primitive**:
-A Tavern capability that can be attached to an agent definition, such as a Tool, Skill, MCP server,
-Memory namespace, or Channel membership.
+A Tavern capability that can be attached to an agent definition, such as a Skill, Plugin, Memory
+namespace, or Channel membership.
 _Avoid_: Runtime plugin, harness setting, bundled feature
 
 **Installed skill**:
@@ -114,9 +142,11 @@ A single allowed component in the Rich Response Catalog, rendered by Tavern from
 _Avoid_: React component, model component, widget tool
 
 **Plugin**:
-A first-party Tavern product capability for an external system, owning its configuration, status,
-runtime actions, normalized view models, and any related Rich Response Components.
-_Avoid_: Skill, connector, CLI dependency
+A built-in Tavern product capability for an external system, owning its configuration, status,
+runtime actions, normalized view models, and any related Rich Response Components. In v1, Tavern
+does not support user-installed Plugins; user-provided executable integrations belong behind MCP
+servers.
+_Avoid_: Skill, connector, CLI dependency, user-installed package
 
 **Plugin health**:
 Runtime-owned readiness for a Plugin, including whether its required configuration and upstream

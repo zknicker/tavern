@@ -1,17 +1,19 @@
 ---
-summary: Skills and Tools API for skill catalog reads, skill enablement, Runtime tool inventory, MCP server management, and setup blocker metadata.
+summary: Skills and Tools API for skill catalog reads, skill enablement, Runtime tool inventory, Plugin reflections, advanced MCP records, and setup blocker metadata.
 read_when:
-  - changing skill catalog, setup blocker, Runtime tool inventory, MCP management, or agent access APIs
+  - changing skill catalog, setup blocker, Runtime tool inventory, Plugin reflections, advanced MCP records, or agent access APIs
   - changing how clients list reusable runtime abilities and runtime tool access
 ---
 
 # Skills and Tools API
 
-The Skills and Tools API backs Settings -> Skills, Settings -> Tools, and the
-MCP capability records used by Settings -> MCP.
+The Skills and Tools API backs Settings -> Skills, Plugin capability
+reflections, Runtime tool diagnostics, and advanced MCP capability records.
 
 Skills are reusable instruction packages. Tools are executable agent actions.
-MCP servers are agent-engine connection records that may expose external tools.
+Plugins are Tavern's normal user-facing integration surface. MCP servers are
+advanced agent-engine connection records that may expose external tools behind a
+Plugin or runtime experiment.
 
 ## Contract
 
@@ -28,8 +30,9 @@ MCP servers are agent-engine connection records that may expose external tools.
 * Tool enablement separates the user's choice from whether Runtime reports the
   tool as usable.
 * Runtime may mark built-in tools as `readOnly`. Read-only tools are inventory
-  facts, not user-toggleable settings.
-* MCP server records are separate from tool records.
+  facts, not user-toggleable settings or a standalone Tools page.
+* MCP server records are separate from tool records and are not the default
+  user-facing integration primitive.
 * Runtime tool details are diagnostics, not copied Tavern skill instructions.
 * Plugin-owned skills and tools are read-only reflections of Plugin state.
 
@@ -41,19 +44,19 @@ The API covers:
 * enable or disable Runtime skills
 * read setup requirements
 * list Runtime-visible tools
-* enable or disable Runtime tools where Runtime allows it
+* read Runtime tool diagnostics where exposed
 * read Runtime-provided usability and diagnostic text
 * list available skills from chosen sources
 * preview, scan, install, and uninstall available skills
 * manage custom skill sources
-* manage MCP servers and the MCP catalog
+* manage advanced MCP servers and the MCP catalog where exposed
 * identify Plugin-owned skills and tools with Plugin metadata
 
 ## Runtime Boundary
 
-Runtime owns skill discovery, tool discovery, tool eligibility, MCP server
-records, dependency checks, prompt loading, static tool grants, sandboxing, and
-execution.
+Runtime owns skill discovery, tool discovery, tool eligibility, Plugin
+reflections, MCP server records, dependency checks, prompt loading, sandboxing,
+approval policy, and execution.
 
 Runtime resolves an agent's `enabledSkillIds` during turn startup and passes
 resolved skill bundles through `HarnessAgent`'s `skills` setting so the harness
@@ -61,8 +64,9 @@ adapter surfaces them as runtime skills. Runtime keeps broad Tavern behavior in
 the instruction text and does not append `SKILL.md` bodies there.
 
 The first agent-engine pass exposes the built-in local tools as enabled,
-configured, read-only Runtime tools. Later per-agent customization can add
-mutable grants without changing the inventory ownership boundary.
+configured, read-only Runtime tool diagnostics. Agent-specific access comes
+from skill assignments, Plugin grants, sandbox mode, and approval policy rather
+than mutable tool grants.
 
 The app reads Runtime inventory and sends supported mutations back to Runtime.
 It does not write discovered skill directories, authored tool files, MCP server

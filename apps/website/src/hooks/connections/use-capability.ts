@@ -37,11 +37,9 @@ export const settingsCapabilityRequirements = {
     agent: ['apiServer', 'models'],
     'agent-channels': ['apiServer'],
     'agent-general': ['apiServer', 'models'],
-    'agent-mcp': ['apiServer'],
     'agent-memory': ['vault'],
     'agent-plugins': ['apiServer'],
     'agent-skills': ['apiServer', 'skills'],
-    'agent-tools': ['apiServer', 'skills'],
     'notes-md': [],
     appearance: [],
     profile: [],
@@ -55,7 +53,6 @@ export const settingsCapabilityRequirements = {
     skills: ['apiServer', 'skills'],
     'soul-md': [],
     stats: ['models'],
-    tools: ['apiServer', 'skills'],
     updates: [],
 } as const satisfies Record<string, readonly RuntimeCapabilityId[]>;
 

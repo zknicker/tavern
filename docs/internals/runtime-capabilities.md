@@ -213,7 +213,7 @@ and external dependencies.
 | `gateway` | Runtime can open the agent-engine event stream. |
 | `vault` | The configured Vault root can be read and the managed `vault` skill has been prepared. Runtime reports write access in capability metadata because agent wiki maintenance needs it, but read-only roots remain browseable. |
 | `models` | Runtime can reach model inventory. |
-| `skills` | Runtime can reach skill inventory. App-side capability methods under `skills` also track the skill hub (`skill-hub.*`), tool setup, and MCP management (`mcp.*`) surfaces. |
+| `skills` | Runtime can reach skill inventory. App-side capability methods under `skills` also track the skill hub (`skill-hub.*`), tool setup, and advanced MCP management (`mcp.*`) surfaces. |
 | `plugin.merchbase` | Runtime has an enabled MerchBase Plugin, an API key, and can read the configured MerchBase account. |
 
 Plain Tavern CRUD, timeline, mentions, cron, and logging surfaces are not

@@ -4,6 +4,8 @@ import {
     type AgentRuntimeAgentEnv,
     type AgentRuntimeAgentFileContent,
     type AgentRuntimeAgentFileList,
+    type AgentRuntimeAgentPluginGrant,
+    type AgentRuntimeAgentPluginGrantList,
     type AgentRuntimeApplyAgentEngineConfig,
     type AgentRuntimeArchiveAgent,
     type AgentRuntimeArchiveBinding,
@@ -102,10 +104,10 @@ import {
     type AgentRuntimeUpdate,
     type AgentRuntimeUpdateAgentModel,
     type AgentRuntimeUpdateAgentName,
+    type AgentRuntimeUpdateAgentPluginGrant,
     type AgentRuntimeUpdateAgentSessionModel,
     type AgentRuntimeUpdateAgentSessionModelResult,
     type AgentRuntimeUpdateAgentThinkingDefault,
-    type AgentRuntimeUpdateAgentTools,
     type AgentRuntimeUpdateCron,
     type AgentRuntimeUpdateSkillEnabled,
     type AgentRuntimeUpdateToolEnabled,
@@ -120,6 +122,8 @@ import {
     agentRuntimeAgentFileContentSchema,
     agentRuntimeAgentFileListSchema,
     agentRuntimeAgentListSchema,
+    agentRuntimeAgentPluginGrantListSchema,
+    agentRuntimeAgentPluginGrantSchema,
     agentRuntimeAgentSchema,
     agentRuntimeApplyAgentEngineConfigSchema,
     agentRuntimeArchiveAgentSchema,
@@ -227,10 +231,10 @@ import {
     agentRuntimeToolSchema,
     agentRuntimeUpdateAgentModelSchema,
     agentRuntimeUpdateAgentNameSchema,
+    agentRuntimeUpdateAgentPluginGrantSchema,
     agentRuntimeUpdateAgentSessionModelResultSchema,
     agentRuntimeUpdateAgentSessionModelSchema,
     agentRuntimeUpdateAgentThinkingDefaultSchema,
-    agentRuntimeUpdateAgentToolsSchema,
     agentRuntimeUpdateCronSchema,
     agentRuntimeUpdateSchema,
     agentRuntimeUpdateSkillEnabledSchema,
@@ -345,6 +349,7 @@ export interface TavernAgentRuntimeClient {
         input: AgentRuntimeSkillHubInstallInput
     ): Promise<AgentRuntimeSkillHubActionResult>;
     listAgentFiles(agentId: string): Promise<AgentRuntimeAgentFileList>;
+    listAgentPluginGrants(agentId: string): Promise<AgentRuntimeAgentPluginGrantList>;
     listAgents(): Promise<{ agents: AgentRuntimeAgent[] }>;
     listBindings(): Promise<{ bindings: AgentRuntimeBinding[] }>;
     listCapabilities(): Promise<AgentRuntimeCapabilityHealthList>;
@@ -443,6 +448,11 @@ export interface TavernAgentRuntimeClient {
         toolId: string,
         input: AgentRuntimeToolProviderSelect
     ): Promise<AgentRuntimeToolProviderSelectResult>;
+    setAgentPluginGrant(
+        agentId: string,
+        pluginId: AgentRuntimePluginId,
+        input: AgentRuntimeUpdateAgentPluginGrant
+    ): Promise<AgentRuntimeAgentPluginGrant>;
     setMcpServerEnabled(name: string, enabled: boolean): Promise<{ ok: boolean }>;
     startModelProviderOAuth(input: AgentRuntimeStartModelProviderOAuth): Promise<unknown>;
     startUpdate(input?: { targetVersion?: null | string }): Promise<AgentRuntimeUpdate>;
@@ -471,10 +481,6 @@ export interface TavernAgentRuntimeClient {
     updateAgentThinkingDefault(
         agentId: string,
         input: AgentRuntimeUpdateAgentThinkingDefault
-    ): Promise<AgentRuntimeAgentEngineConfigSnapshot>;
-    updateAgentTools(
-        agentId: string,
-        input: AgentRuntimeUpdateAgentTools
     ): Promise<AgentRuntimeAgentEngineConfigSnapshot>;
     updateCronJob(jobId: string, input: AgentRuntimeUpdateCron): Promise<AgentRuntimeCron>;
     updateSkillEnabled(
@@ -1362,25 +1368,6 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         return agentRuntimeAgentEngineConfigSnapshotSchema.parse(await response.json());
     }
 
-    async updateAgentTools(agentId: string, input: AgentRuntimeUpdateAgentTools) {
-        const payload = agentRuntimeUpdateAgentToolsSchema.parse(input);
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.agentTools(agentId)}`, {
-            body: JSON.stringify(payload),
-            headers: {
-                ...this.#authHeaders,
-                'content-type': 'application/json',
-                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
-            },
-            method: 'PATCH',
-        });
-
-        if (!response.ok) {
-            await readErrorResponse(response);
-        }
-
-        return agentRuntimeAgentEngineConfigSnapshotSchema.parse(await response.json());
-    }
-
     async getModelAccess() {
         const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.modelAccess}`, {
             headers: this.#authHeaders,
@@ -1670,6 +1657,45 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         }
 
         return agentRuntimePluginListSchema.parse(await response.json());
+    }
+
+    async listAgentPluginGrants(agentId: string) {
+        const response = await fetch(
+            `${this.#baseUrl}${agentRuntimeRoutes.agentPluginGrants(agentId)}`,
+            { headers: this.#authHeaders }
+        );
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeAgentPluginGrantListSchema.parse(await response.json());
+    }
+
+    async setAgentPluginGrant(
+        agentId: string,
+        pluginId: AgentRuntimePluginId,
+        input: AgentRuntimeUpdateAgentPluginGrant
+    ) {
+        const payload = agentRuntimeUpdateAgentPluginGrantSchema.parse(input);
+        const response = await fetch(
+            `${this.#baseUrl}${agentRuntimeRoutes.agentPluginGrant(agentId, pluginId)}`,
+            {
+                body: JSON.stringify(payload),
+                headers: {
+                    ...this.#authHeaders,
+                    'content-type': 'application/json',
+                    [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+                },
+                method: 'PUT',
+            }
+        );
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeAgentPluginGrantSchema.parse(await response.json());
     }
 
     async getPlugin(id: AgentRuntimePluginId) {

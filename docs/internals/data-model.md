@@ -98,6 +98,54 @@ not chat history.
 Agent turns also live in Runtime SQLite. They are durable execution state linked
 to messages and responses, while active stream state remains in Runtime memory.
 
+Agent configuration rows also live in Runtime SQLite. They are agent-level
+product settings, not chat/session state.
+
+```text
+agents
+  id                     TEXT PRIMARY KEY
+  name                   TEXT NOT NULL
+  primary_color          TEXT
+  workspace_folder       TEXT NOT NULL
+  enabled_skill_ids_json TEXT NOT NULL DEFAULT '[]' -- compatibility snapshot
+  is_admin               INTEGER NOT NULL DEFAULT 0
+  raw_json               TEXT NOT NULL
+  last_synced_at         TEXT NOT NULL
+  created_at             TEXT NOT NULL
+  updated_at             TEXT NOT NULL
+
+agent_skill_assignments
+  agent_id               TEXT NOT NULL
+  skill_id               TEXT NOT NULL
+  enabled                INTEGER NOT NULL DEFAULT 1
+  created_at             TEXT NOT NULL
+  updated_at             TEXT NOT NULL
+
+agent_plugin_grants
+  agent_id               TEXT NOT NULL
+  plugin_id              TEXT NOT NULL
+  enabled                INTEGER NOT NULL DEFAULT 1
+  created_at             TEXT NOT NULL
+  updated_at             TEXT NOT NULL
+
+agent_mcp_grants
+  agent_id               TEXT NOT NULL
+  mcp_server_name        TEXT NOT NULL
+  enabled                INTEGER NOT NULL DEFAULT 1
+  created_at             TEXT NOT NULL
+  updated_at             TEXT NOT NULL
+```
+
+Rules:
+
+- `agent_skill_assignments` is the canonical per-agent skill assignment table.
+- `agent_plugin_grants` is the canonical per-agent Plugin access table.
+- `agent_mcp_grants` is reserved for advanced Runtime MCP plumbing. Normal user
+  setup uses built-in Plugins instead.
+- `agents.enabled_skill_ids_json` remains only as a compatibility snapshot for
+  existing records and sync payloads.
+- Harness tools are executor facts and do not have agent grant rows.
+
 Agent runtime profiles also live in Runtime SQLite. They are per-agent
 execution defaults for new Agent sessions, not agent identity fields.
 

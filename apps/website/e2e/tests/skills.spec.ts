@@ -7,9 +7,8 @@ test('lists installed skills with available and sources management', async ({ pa
     await expect(page.getByText('Browse skills')).toBeVisible();
     await expect(page.getByRole('treeitem', { name: 'Installed skills' })).toBeVisible();
     await expect(page.getByRole('treeitem', { name: 'Available skills' })).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Tools' })).toBeVisible();
-    await expect(page.getByRole('link', { name: 'Channels' })).toBeVisible();
-    await expect(page.getByRole('link', { name: 'MCP' })).toBeVisible();
+    await expect(page.getByRole('link', { name: 'Tools' })).toHaveCount(0);
+    await expect(page.getByRole('link', { name: 'MCP' })).toHaveCount(0);
 
     await page.getByRole('button', { name: 'Manage skill sources' }).click();
     await expect(page.getByRole('heading', { name: 'Skill sources' })).toBeVisible();
@@ -20,11 +19,11 @@ test('lists installed skills with available and sources management', async ({ pa
     await expect(page.getByRole('treeitem', { name: 'tavern-workflow' })).toBeVisible();
 });
 
-test('lists tools on their own settings page', async ({ page }) => {
+test('redirects the retired tools settings page to Plugins', async ({ page }) => {
     await page.goto('/settings/tools');
 
-    await expect(page.getByPlaceholder('Search tools...')).toBeVisible();
-    await expect(page.getByRole('heading', { name: 'Tools' })).toBeVisible();
+    await expect(page).toHaveURL(/\/settings\/plugins$/);
+    await expect(page.getByRole('heading', { name: 'Plugins' })).toBeVisible();
 });
 
 test('splits channels and MCP into separate settings pages', async ({ page }) => {
@@ -35,6 +34,6 @@ test('splits channels and MCP into separate settings pages', async ({ page }) =>
 
     await page.goto('/settings/mcp');
 
-    await expect(page.getByRole('main').getByText('MCP', { exact: true })).toBeVisible();
+    await expect(page.getByRole('main').getByText('Advanced MCP', { exact: true })).toBeVisible();
     await expect(page.getByRole('main').getByText(/MCP servers/)).toBeVisible();
 });

@@ -26,6 +26,7 @@ describe('Runtime agent and agent engine reads', () => {
         await expect(response.json()).resolves.toEqual({
             agents: [
                 {
+                    enabledPluginIds: [],
                     enabledSkillIds: ['tavern-agent'],
                     modelName: {
                         model: 'gpt-4.1-mini',
@@ -59,6 +60,7 @@ describe('Runtime agent and agent engine reads', () => {
 
         expect(createResponse.status).toBe(200);
         await expect(createResponse.json()).resolves.toMatchObject({
+            enabledPluginIds: [],
             enabledSkillIds: ['research'],
             id: 'agt_research',
             isAdmin: false,
@@ -107,24 +109,79 @@ describe('Runtime agent and agent engine reads', () => {
                 method: 'PATCH',
             })
         );
-        const toolsResponse = await handleTavernRuntimeRequest(
-            new Request('http://runtime.test/agents/agt_research/tools', {
-                body: JSON.stringify({ tools: ['research', 'charts'] }),
+        const skillsResponse = await handleTavernRuntimeRequest(
+            new Request('http://runtime.test/agents', {
+                body: JSON.stringify({
+                    enabledSkillIds: ['research', 'charts'],
+                    id: 'agt_research',
+                    name: 'Research',
+                    workspaceFolder: '/tmp/tavern-research-workspace',
+                }),
                 headers: { 'content-type': 'application/json' },
-                method: 'PATCH',
+                method: 'POST',
             })
         );
 
         expect(modelResponse.status).toBe(200);
-        expect(toolsResponse.status).toBe(200);
+        expect(skillsResponse.status).toBe(200);
 
         const configResponse = await handleTavernRuntimeRequest(
             new Request('http://runtime.test/agents/agt_research/config')
         );
-        await expect(configResponse.json()).resolves.toMatchObject({
-            enabledSkillIds: ['research', 'charts'],
+        const config = (await configResponse.json()) as { enabledSkillIds: string[] };
+        expect(config).toMatchObject({
             id: 'agt_research',
             modelName: { model: 'gpt-4.1-mini', provider: 'openai' },
+        });
+        expect(config.enabledSkillIds).toEqual(expect.arrayContaining(['research', 'charts']));
+    });
+
+    it('stores Plugin grants as agent-level capability access', async () => {
+        await handleTavernRuntimeRequest(
+            new Request('http://runtime.test/agents', {
+                body: JSON.stringify({
+                    id: 'agt_research',
+                    name: 'Research',
+                    workspaceFolder: '/tmp/tavern-research-workspace',
+                }),
+                headers: { 'content-type': 'application/json' },
+                method: 'POST',
+            })
+        );
+
+        const grantResponse = await handleTavernRuntimeRequest(
+            new Request('http://runtime.test/agents/agt_research/plugins/merchbase/enabled', {
+                body: JSON.stringify({ enabled: true }),
+                headers: { 'content-type': 'application/json' },
+                method: 'PUT',
+            })
+        );
+        const listResponse = await handleTavernRuntimeRequest(
+            new Request('http://runtime.test/agents/agt_research/plugins')
+        );
+        const configResponse = await handleTavernRuntimeRequest(
+            new Request('http://runtime.test/agents/agt_research/config')
+        );
+
+        expect(grantResponse.status).toBe(200);
+        await expect(grantResponse.json()).resolves.toMatchObject({
+            agentId: 'agt_research',
+            enabled: true,
+            pluginId: 'merchbase',
+        });
+        expect(listResponse.status).toBe(200);
+        await expect(listResponse.json()).resolves.toMatchObject({
+            grants: [
+                expect.objectContaining({
+                    agentId: 'agt_research',
+                    enabled: true,
+                    pluginId: 'merchbase',
+                }),
+            ],
+        });
+        await expect(configResponse.json()).resolves.toMatchObject({
+            enabledPluginIds: ['merchbase'],
+            id: 'agt_research',
         });
     });
 

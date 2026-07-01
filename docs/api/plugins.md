@@ -8,12 +8,17 @@ read_when:
 
 # Plugins
 
-Plugins are first-party Tavern Runtime capabilities for external systems.
-Runtime owns their durable settings, write-only secrets, health checks, and
-read-oriented domain actions.
+Plugins are built-in Tavern Runtime capabilities for external systems. Runtime
+owns their durable settings, write-only secrets, health checks, and read-oriented
+domain actions.
 
 Plugin package docs refer to Tavern-managed packages that bundle tool code,
 agent guidance, and product-owned read actions.
+
+Plugins are the user-facing integration unit. A Plugin may call an upstream API
+directly, wrap a local CLI, or materialize an MCP server internally, but the
+stable Tavern surface is the Plugin's settings, health, tools, skills, and Rich
+Responses.
 
 ## Storage
 
@@ -92,14 +97,14 @@ tools for status, sales summary, sales records, sales series, sales breakdown,
 products, product catalog, designs, and design facets. Agents should use those
 tools rather than raw Runtime HTTP routes.
 
-Settings -> Plugins owns MerchBase enablement. The `merchbase` tool row in
-Settings -> Tools -> Plugins is a read-only reflection of that setting. When
-Runtime owns the flat `skills/merchbase` copy, Settings -> Skills -> Plugins
-also shows that read-only skill row. The collision-safe plugin skill remains
-available as `merchbase:merchbase` through `skill_view`; it is not projected as
-an editable user skill. Direct skill or tool enablement changes are rejected
-for Plugin-owned capabilities. Once the Plugin is enabled, the flat `merchbase`
-name is reserved for Tavern's managed guide.
+Settings -> Plugins owns MerchBase enablement. Agent Plugin grants decide which
+agents receive the `merchbase` tools and Plugin-owned guidance. When Runtime
+owns the flat `skills/merchbase` copy, Settings -> Skills may show that
+read-only skill row as Plugin-owned evidence. The collision-safe plugin skill
+remains available as `merchbase:merchbase` through `skill_view`; it is not
+projected as an editable user skill. Direct skill or tool enablement changes
+are rejected for Plugin-owned capabilities. Once the Plugin is enabled, the flat
+`merchbase` name is reserved for Tavern's managed guide.
 
 The generic read action endpoint accepts `{ "action": string, "input": object }`
 for a strict allowlist. It is internal plumbing for Runtime-owned tools,
@@ -148,3 +153,7 @@ agent-side setup:
    through Runtime while rendering.
 10. Document the agent boundary: which reads are available, which operations stay
     user-managed, and which widget is preferred for common displays.
+
+Do not add user-installed Plugin packages in v1. For a new external
+integration, either add a built-in Tavern Plugin or keep the work behind
+advanced Runtime MCP plumbing until it is productized.

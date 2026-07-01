@@ -71,6 +71,46 @@ CREATE TABLE IF NOT EXISTS agents (
 CREATE INDEX IF NOT EXISTS idx_agents_name
   ON agents(name, id);
 
+CREATE TABLE IF NOT EXISTS agent_skill_assignments (
+  agent_id   TEXT NOT NULL,
+  skill_id   TEXT NOT NULL,
+  enabled    INTEGER NOT NULL DEFAULT 1 CHECK (enabled IN (0, 1)),
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  PRIMARY KEY(agent_id, skill_id),
+  FOREIGN KEY(agent_id) REFERENCES agents(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_agent_skill_assignments_enabled
+  ON agent_skill_assignments(agent_id, enabled, skill_id);
+
+CREATE TABLE IF NOT EXISTS agent_plugin_grants (
+  agent_id   TEXT NOT NULL,
+  plugin_id  TEXT NOT NULL,
+  enabled    INTEGER NOT NULL DEFAULT 1 CHECK (enabled IN (0, 1)),
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  PRIMARY KEY(agent_id, plugin_id),
+  FOREIGN KEY(agent_id) REFERENCES agents(id) ON DELETE CASCADE,
+  FOREIGN KEY(plugin_id) REFERENCES runtime_plugins(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_agent_plugin_grants_enabled
+  ON agent_plugin_grants(agent_id, enabled, plugin_id);
+
+CREATE TABLE IF NOT EXISTS agent_mcp_grants (
+  agent_id        TEXT NOT NULL,
+  mcp_server_name TEXT NOT NULL,
+  enabled         INTEGER NOT NULL DEFAULT 1 CHECK (enabled IN (0, 1)),
+  created_at      TEXT NOT NULL,
+  updated_at      TEXT NOT NULL,
+  PRIMARY KEY(agent_id, mcp_server_name),
+  FOREIGN KEY(agent_id) REFERENCES agents(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_agent_mcp_grants_enabled
+  ON agent_mcp_grants(agent_id, enabled, mcp_server_name);
+
 CREATE TABLE IF NOT EXISTS agent_runtime_profiles (
   agent_id           TEXT PRIMARY KEY,
   default_model_json TEXT NOT NULL,

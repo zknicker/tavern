@@ -79,8 +79,9 @@ text and tool activity into Tavern chat state, stores the opaque harness resume
 state on the Agent session, and stops the session handle after the turn settles.
 
 Tool calls are auto-approved. Tavern does not expose an interactive tool
-approval prompt. Safety is controlled through static tool grants and sandbox
-mode. The current sandbox mode is `none`: a trusted local workspace rooted at
+approval prompt. Harness tools come from the selected executor, Plugin tools
+come from Plugin grants, and safety is controlled through sandbox mode plus any
+Runtime approval policy. The current sandbox mode is `none`: a trusted local workspace rooted at
 `.tavern/agents/<agent-id>/workspace`. It scopes working directory and files; it
 is not a security sandbox.
 
@@ -156,11 +157,11 @@ bundles through the AI SDK `HarnessAgent` `skills` setting so adapters can
 surface them as runtime skills. Runtime does not inline `SKILL.md` content into
 `system`.
 
-The first product pass gives the bootstrapped Tavern Agent broad local tools so
-it behaves like a useful local agent. Runtime exposes those built-ins through
-`GET /tools` as enabled, configured, read-only inventory rows. Per-Agent
-skill/tool customization can layer on top of the same Runtime-owned inventory
-later.
+Harness tools come from the selected executor. Runtime exposes built-ins through
+`GET /tools` as enabled, configured, read-only diagnostics, but Tavern does not
+surface a user-facing Tools page or per-agent tool grant editor. Agent-specific
+access is expressed through skill assignments, Plugin grants, sandbox mode, and
+approval policy.
 
 Runtime writes product facts through Tavern stores:
 

@@ -33,6 +33,7 @@ function createAgent(input: { id: string; name: string }): AgentListOutput['agen
     return {
         defaultPrimaryColor: '#6f7f9b',
         effectivePrimaryColor: '#6f7f9b',
+        enabledPluginIds: [],
         enabledSkillIds: [],
         id: input.id,
         name: input.name,

@@ -4,7 +4,7 @@ read_when:
   - changing Tavern chat, channel, or DM architecture
   - changing agent session routing or model switching
   - changing AI SDK, harness, or local workspace execution
-  - changing tool grants or sandbox policy
+  - changing tool source exposure or sandbox policy
 ---
 
 # ADR 0007: Chat Participants Own Agent Sessions
@@ -92,10 +92,10 @@ rotates to a new Agent session only when the user starts fresh context for that
 Agent seat.
 
 Tavern does not expose interactive tool approval prompts. Enabled tools are
-auto-approved. Safety is expressed through static Tool grants and Sandbox mode.
-The bootstrapped Tavern Agent can receive broad local tool grants so it behaves
-like a useful local agent; under Sandbox mode `none`, those grants imply full
-host trust.
+auto-approved unless Runtime adds a narrower approval policy. Harness tools
+come from the selected executor, Plugin tools come from Plugin grants, and
+safety is expressed through Sandbox mode. Under Sandbox mode `none`, enabled
+local tools imply full host trust.
 
 The first Sandbox mode is `none`: a trusted local workspace under the Runtime
 data root, such as `.tavern/agents/<agent-id>/workspace`. This is organization

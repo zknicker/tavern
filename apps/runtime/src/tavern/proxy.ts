@@ -4,15 +4,18 @@ import {
     type AgentRuntimeAgent,
     type AgentRuntimeCreateMessage,
     type AgentRuntimeSteerTurn,
+    agentRuntimeAgentPluginGrantListSchema,
+    agentRuntimeAgentPluginGrantSchema,
     agentRuntimeArchiveAgentSchema,
     agentRuntimeCreateAgentSchema,
+    agentRuntimePluginIdSchema,
     agentRuntimeRoutes,
     agentRuntimeSkillListSchema,
     agentRuntimeSkillSchema,
     agentRuntimeUpdateAgentModelSchema,
     agentRuntimeUpdateAgentNameSchema,
+    agentRuntimeUpdateAgentPluginGrantSchema,
     agentRuntimeUpdateAgentThinkingDefaultSchema,
-    agentRuntimeUpdateAgentToolsSchema,
     agentRuntimeUpdateSkillEnabledSchema,
     agentRuntimeUpdateToolEnabledSchema,
 } from '@tavern/api';
@@ -38,7 +41,9 @@ import { agentNotesFileName } from '../workspace/managed-instructions.ts';
 import {
     deleteStoredAgent,
     getStoredAgent,
+    listAgentPluginGrants,
     listStoredAgents,
+    setAgentPluginGrant,
     updateStoredAgent,
     upsertStoredAgent,
 } from './agents-store.ts';
@@ -70,6 +75,7 @@ async function dispatchAgentEngineStatic({ request, url }: { request: Request; u
         const agent = upsertStoredAgent({
             agent: {
                 enabledSkillIds: input.enabledSkillIds ?? [tavernAgentSkillId],
+                enabledPluginIds: input.enabledPluginIds ?? [],
                 id: input.id,
                 isAdmin: input.isAdmin ?? false,
                 name: input.name,
@@ -101,7 +107,7 @@ async function dispatchAgentEngineStatic({ request, url }: { request: Request; u
         method === 'PATCH' &&
         segments[0] === 'agents' &&
         segments[1] &&
-        ['model', 'name', 'thinking-default', 'tools'].includes(segments[2] ?? '')
+        ['model', 'name', 'thinking-default'].includes(segments[2] ?? '')
     ) {
         const input = await readJson(request);
         const agentId = segments[1];
@@ -120,17 +126,51 @@ async function dispatchAgentEngineStatic({ request, url }: { request: Request; u
                 agentId,
                 thinkingDefault: payload.thinkingDefault,
             });
-        } else if (segments[2] === 'tools') {
-            const payload = agentRuntimeUpdateAgentToolsSchema.parse(input);
-            updatedAgent = updateStoredAgent({
-                agentId,
-                enabledSkillIds: payload.tools,
-            });
         }
         if (!updatedAgent) {
             return undefined;
         }
         return agentEngineAgentConfigSnapshot();
+    }
+    if (method === 'GET' && segments[0] === 'agents' && segments[1] && segments[2] === 'plugins') {
+        const agentId = segments[1];
+        if (agentId === defaultAgentEngineAgentId) {
+            ensurePrimaryAgent();
+        }
+        const agent = getStoredAgent(agentId);
+        if (!agent) {
+            return undefined;
+        }
+        return agentRuntimeAgentPluginGrantListSchema.parse({
+            grants: listAgentPluginGrants(agentId).map((grant) => ({
+                agentId,
+                enabled: grant.enabled === 1,
+                pluginId: grant.plugin_id,
+                updatedAt: grant.updated_at,
+            })),
+        });
+    }
+    if (
+        method === 'PUT' &&
+        segments[0] === 'agents' &&
+        segments[1] &&
+        segments[2] === 'plugins' &&
+        segments[3] &&
+        segments[4] === 'enabled'
+    ) {
+        const payload = agentRuntimeUpdateAgentPluginGrantSchema.parse(await readJson(request));
+        const pluginId = agentRuntimePluginIdSchema.parse(segments[3]);
+        const agent = setAgentPluginGrant({
+            agentId: segments[1],
+            enabled: payload.enabled,
+            pluginId,
+        });
+        return agentRuntimeAgentPluginGrantSchema.parse({
+            agentId: agent.id,
+            enabled: (agent.enabledPluginIds ?? []).includes(pluginId),
+            pluginId,
+            updatedAt: new Date().toISOString(),
+        });
     }
     if (method === 'GET' && segments[0] === 'agents' && segments[1] && segments[2] === 'files') {
         const agentId = segments[1];
@@ -275,6 +315,7 @@ function ensurePrimaryAgent() {
     return upsertStoredAgent({
         agent: {
             enabledSkillIds: [tavernAgentSkillId],
+            enabledPluginIds: [],
             id: defaultAgentEngineAgentId,
             isAdmin: true,
             name: 'Tavern',
@@ -316,7 +357,6 @@ function agentConfigEntry(agent: ReturnType<typeof agentEngineAgent>) {
         model: agent.modelName,
         name: agent.name,
         thinkingDefault: agent.thinkingDefault,
-        tools: { allow: agent.enabledSkillIds },
     };
 }
 

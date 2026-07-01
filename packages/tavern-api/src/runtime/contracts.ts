@@ -335,6 +335,27 @@ export const agentRuntimePluginListSchema = z
     })
     .strict();
 
+export const agentRuntimeAgentPluginGrantSchema = z
+    .object({
+        agentId: z.string().trim().min(1),
+        enabled: z.boolean(),
+        pluginId: agentRuntimePluginIdSchema,
+        updatedAt: z.string().datetime().nullable(),
+    })
+    .strict();
+
+export const agentRuntimeAgentPluginGrantListSchema = z
+    .object({
+        grants: z.array(agentRuntimeAgentPluginGrantSchema),
+    })
+    .strict();
+
+export const agentRuntimeUpdateAgentPluginGrantSchema = z
+    .object({
+        enabled: z.boolean(),
+    })
+    .strict();
+
 export const agentRuntimeMerchbaseSettingsSchema = z
     .object({
         apiKeyConfigured: z.boolean(),
@@ -686,11 +707,6 @@ export const agentRuntimeUpdateAgentThinkingDefaultSchema =
         thinkingDefault: agentRuntimeThinkingLevelSchema.nullable(),
     });
 
-export const agentRuntimeUpdateAgentToolsSchema =
-    agentRuntimeAgentEngineConfigMutationSchema.extend({
-        tools: z.array(z.string().trim().min(1)),
-    });
-
 export const agentRuntimeDiscordAllowBotsSchema = z.union([z.boolean(), z.literal('mentions')]);
 
 export const agentRuntimeDiscordGroupPolicySchema = z.enum(['open', 'allowlist', 'disabled']);
@@ -773,6 +789,7 @@ export const agentRuntimeDiscordBindingListSchema = z.object({
 });
 
 export const agentRuntimeAgentSchema = z.object({
+    enabledPluginIds: z.array(agentRuntimePluginIdSchema).optional(),
     enabledSkillIds: z.array(z.string().trim().min(1)),
     id: z.string().trim().min(1),
     isAdmin: z.boolean(),
@@ -793,6 +810,7 @@ export const agentRuntimeArchiveAgentSchema = z.object({
 });
 
 export const agentRuntimeCreateAgentSchema = z.object({
+    enabledPluginIds: z.array(agentRuntimePluginIdSchema).optional(),
     enabledSkillIds: z.array(z.string().trim().min(1)).optional(),
     id: z.string().trim().min(1),
     isAdmin: z.boolean().optional(),
@@ -802,6 +820,7 @@ export const agentRuntimeCreateAgentSchema = z.object({
 });
 
 export const agentRuntimeUpdateAgentSchema = z.object({
+    enabledPluginIds: z.array(agentRuntimePluginIdSchema).optional(),
     enabledSkillIds: z.array(z.string().trim().min(1)).optional(),
     isAdmin: z.boolean().optional(),
     name: z.string().trim().min(1).optional(),
@@ -2335,8 +2354,15 @@ export type AgentRuntimeRefreshCapabilities = z.infer<typeof agentRuntimeRefresh
 export type PlatformInboundMode = z.infer<typeof agentRuntimeInboundModeSchema>;
 export type AgentRuntimeInfo = z.infer<typeof agentRuntimeInfoSchema>;
 export type AgentRuntimePlugin = z.infer<typeof agentRuntimePluginSchema>;
+export type AgentRuntimeAgentPluginGrant = z.infer<typeof agentRuntimeAgentPluginGrantSchema>;
+export type AgentRuntimeAgentPluginGrantList = z.infer<
+    typeof agentRuntimeAgentPluginGrantListSchema
+>;
 export type AgentRuntimePluginId = z.infer<typeof agentRuntimePluginIdSchema>;
 export type AgentRuntimePluginList = z.infer<typeof agentRuntimePluginListSchema>;
+export type AgentRuntimeUpdateAgentPluginGrant = z.infer<
+    typeof agentRuntimeUpdateAgentPluginGrantSchema
+>;
 export type AgentRuntimeMerchbaseSalesSeries = z.infer<
     typeof agentRuntimeMerchbaseSalesSeriesSchema
 >;
@@ -2442,7 +2468,6 @@ export type AgentRuntimeUpdateAgentModel = z.infer<typeof agentRuntimeUpdateAgen
 export type AgentRuntimeUpdateAgentThinkingDefault = z.infer<
     typeof agentRuntimeUpdateAgentThinkingDefaultSchema
 >;
-export type AgentRuntimeUpdateAgentTools = z.infer<typeof agentRuntimeUpdateAgentToolsSchema>;
 export type AgentRuntimeSaveDiscordBinding = z.infer<typeof agentRuntimeSaveDiscordBindingSchema>;
 export type AgentRuntimeDeleteDiscordBinding = z.infer<
     typeof agentRuntimeDeleteDiscordBindingSchema

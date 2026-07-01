@@ -50,6 +50,7 @@ export type ModelListOutput = RouterOutput['model']['list'];
 export type ModelInventoryOutput = RouterOutput['model']['inventory'];
 export type MerchbaseSettingsOutput = RouterOutput['plugin']['merchbaseSettings'];
 export type MerchbaseSalesSeriesOutput = RouterOutput['plugin']['merchbaseSalesSeries'];
+export type PluginListOutput = RouterOutput['plugin']['list'];
 export type CronDeliveryTargetsOutput = RouterOutput['cron']['deliveryTargets'];
 export type CronGetOutput = RouterOutput['cron']['get'];
 export type CronListOutput = RouterOutput['cron']['list'];

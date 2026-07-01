@@ -1,7 +1,9 @@
 import {
     type AgentRuntimeAgent,
+    type AgentRuntimePluginId,
     agentRuntimeAgentListSchema,
     agentRuntimeAgentSchema,
+    agentRuntimePluginIdSchema,
 } from '@tavern/api';
 import { getDb } from '../db/connection';
 import type { Database } from '../db/sqlite';
@@ -24,7 +26,7 @@ export function listStoredAgents(db: Database = getDb()) {
     const rows = db.prepare('SELECT * FROM agents ORDER BY name ASC, id ASC').all() as AgentRow[];
 
     return agentRuntimeAgentListSchema.parse({
-        agents: rows.map(rowToAgent),
+        agents: rows.map((row) => rowToAgent(row, db)),
     });
 }
 
@@ -33,7 +35,7 @@ export function getStoredAgent(agentId: string, db: Database = getDb()) {
         .prepare('SELECT * FROM agents WHERE id = $id LIMIT 1')
         .get(namedParams({ id: agentId })) as AgentRow | null;
 
-    return row ? rowToAgent(row) : null;
+    return row ? rowToAgent(row, db) : null;
 }
 
 export function upsertStoredAgent(input: {
@@ -70,6 +72,7 @@ export function deleteStoredAgent(agentId: string, db: Database = getDb()) {
 export function updateStoredAgent(input: {
     agentId: string;
     db?: Database;
+    enabledPluginIds?: AgentRuntimePluginId[];
     enabledSkillIds?: string[];
     name?: string;
     thinkingDefault?: AgentRuntimeAgent['thinkingDefault'];
@@ -86,6 +89,9 @@ export function updateStoredAgent(input: {
             ...(input.enabledSkillIds === undefined
                 ? {}
                 : { enabledSkillIds: input.enabledSkillIds }),
+            ...(input.enabledPluginIds === undefined
+                ? {}
+                : { enabledPluginIds: input.enabledPluginIds }),
             ...(input.name === undefined ? {} : { name: input.name }),
             ...(input.thinkingDefault === undefined
                 ? {}
@@ -144,11 +150,12 @@ export function replaceStoredAgents(input: {
     };
 }
 
-function rowToAgent(row: AgentRow): AgentRuntimeAgent {
+function rowToAgent(row: AgentRow, db: Database): AgentRuntimeAgent {
     const raw = parseRawAgent(row.raw_json);
 
     return agentRuntimeAgentSchema.parse({
-        enabledSkillIds: parseEnabledSkillIds(row.enabled_skill_ids_json),
+        enabledPluginIds: listAgentPluginGrantIds(row.id, db),
+        enabledSkillIds: listAssignedSkillIds(row.id, row.enabled_skill_ids_json, db),
         id: row.id,
         isAdmin: row.is_admin === 1,
         name: row.name,
@@ -156,6 +163,60 @@ function rowToAgent(row: AgentRow): AgentRuntimeAgent {
         ...(raw?.thinkingDefault === undefined ? {} : { thinkingDefault: raw.thinkingDefault }),
         workspaceFolder: row.workspace_folder,
     });
+}
+
+export function listAgentPluginGrants(agentId: string, db: Database = getDb()) {
+    return db
+        .prepare(
+            `SELECT plugin_id, enabled, updated_at
+             FROM agent_plugin_grants
+             WHERE agent_id = $agentId
+             ORDER BY plugin_id ASC`
+        )
+        .all(namedParams({ agentId })) as Array<{
+        enabled: 0 | 1;
+        plugin_id: string;
+        updated_at: string;
+    }>;
+}
+
+export function setAgentPluginGrant(input: {
+    agentId: string;
+    db?: Database;
+    enabled: boolean;
+    pluginId: AgentRuntimePluginId;
+}) {
+    const db = input.db ?? getDb();
+    const now = new Date().toISOString();
+    const pluginId = agentRuntimePluginIdSchema.parse(input.pluginId);
+    const existingAgent = getStoredAgent(input.agentId, db);
+    if (!existingAgent) {
+        throw new Error(`Agent "${input.agentId}" does not exist.`);
+    }
+
+    db.prepare(
+        `INSERT OR IGNORE INTO runtime_plugins (id, enabled, config_json, created_at, updated_at)
+         VALUES ($pluginId, 0, '{}', $now, $now)`
+    ).run(namedParams({ now, pluginId }));
+
+    db.prepare(
+        `INSERT INTO agent_plugin_grants
+         (agent_id, plugin_id, enabled, created_at, updated_at)
+         VALUES ($agentId, $pluginId, $enabled, $now, $now)
+         ON CONFLICT(agent_id, plugin_id) DO UPDATE SET
+           enabled = excluded.enabled,
+           updated_at = excluded.updated_at`
+    ).run(
+        namedParams({
+            agentId: input.agentId,
+            enabled: input.enabled ? 1 : 0,
+            now,
+            pluginId,
+        })
+    );
+
+    const agent = getStoredAgent(input.agentId, db);
+    return agent ?? existingAgent;
 }
 
 function parseEnabledSkillIds(value: string) {
@@ -171,8 +232,35 @@ function parseEnabledSkillIds(value: string) {
     return [];
 }
 
+function listAssignedSkillIds(agentId: string, fallbackJson: string, db: Database = getDb()) {
+    const rows = db
+        .prepare(
+            `SELECT skill_id
+             FROM agent_skill_assignments
+             WHERE agent_id = $agentId AND enabled = 1
+             ORDER BY created_at ASC, skill_id ASC`
+        )
+        .all(namedParams({ agentId })) as Array<{ skill_id: string }>;
+
+    return rows.length > 0 ? rows.map((row) => row.skill_id) : parseEnabledSkillIds(fallbackJson);
+}
+
+function listAgentPluginGrantIds(agentId: string, db: Database = getDb()) {
+    const rows = db
+        .prepare(
+            `SELECT plugin_id
+             FROM agent_plugin_grants
+             WHERE agent_id = $agentId AND enabled = 1
+             ORDER BY created_at ASC, plugin_id ASC`
+        )
+        .all(namedParams({ agentId })) as Array<{ plugin_id: string }>;
+
+    return rows.map((row) => agentRuntimePluginIdSchema.parse(row.plugin_id));
+}
+
 function stableAgentJson(agent: AgentRuntimeAgent) {
     return JSON.stringify({
+        enabledPluginIds: agent.enabledPluginIds ?? [],
         enabledSkillIds: agent.enabledSkillIds,
         id: agent.id,
         isAdmin: agent.isAdmin,
@@ -199,6 +287,9 @@ function writeStoredAgent(input: {
     db: Database;
     syncedAt: string;
 }) {
+    const enabledSkillIds = [...new Set(input.agent.enabledSkillIds)];
+    const enabledPluginIds = [...new Set(input.agent.enabledPluginIds ?? [])];
+
     input.db
         .prepare(
             `INSERT INTO agents (
@@ -238,7 +329,7 @@ function writeStoredAgent(input: {
         .run(
             namedParams({
                 createdAt: input.createdAt ?? input.syncedAt,
-                enabledSkillIdsJson: JSON.stringify(input.agent.enabledSkillIds),
+                enabledSkillIdsJson: JSON.stringify(enabledSkillIds),
                 id: input.agent.id,
                 isAdmin: input.agent.isAdmin ? 1 : 0,
                 lastSyncedAt: input.syncedAt,
@@ -249,4 +340,76 @@ function writeStoredAgent(input: {
                 workspaceFolder: input.agent.workspaceFolder,
             })
         );
+
+    replaceAgentSkillAssignments({
+        agentId: input.agent.id,
+        db: input.db,
+        skillIds: enabledSkillIds,
+        timestamp: input.syncedAt,
+    });
+    replaceAgentPluginGrants({
+        agentId: input.agent.id,
+        db: input.db,
+        pluginIds: enabledPluginIds,
+        timestamp: input.syncedAt,
+    });
+}
+
+function replaceAgentSkillAssignments(input: {
+    agentId: string;
+    db: Database;
+    skillIds: string[];
+    timestamp: string;
+}) {
+    input.db
+        .prepare('DELETE FROM agent_skill_assignments WHERE agent_id = $agentId')
+        .run(namedParams({ agentId: input.agentId }));
+
+    const insert = input.db.prepare(
+        `INSERT INTO agent_skill_assignments
+         (agent_id, skill_id, enabled, created_at, updated_at)
+         VALUES ($agentId, $skillId, 1, $timestamp, $timestamp)`
+    );
+
+    for (const skillId of input.skillIds) {
+        insert.run(
+            namedParams({
+                agentId: input.agentId,
+                skillId,
+                timestamp: input.timestamp,
+            })
+        );
+    }
+}
+
+function replaceAgentPluginGrants(input: {
+    agentId: string;
+    db: Database;
+    pluginIds: AgentRuntimePluginId[];
+    timestamp: string;
+}) {
+    input.db
+        .prepare('DELETE FROM agent_plugin_grants WHERE agent_id = $agentId')
+        .run(namedParams({ agentId: input.agentId }));
+
+    const insertPlugin = input.db.prepare(
+        `INSERT OR IGNORE INTO runtime_plugins (id, enabled, config_json, created_at, updated_at)
+         VALUES ($pluginId, 0, '{}', $timestamp, $timestamp)`
+    );
+    const insertGrant = input.db.prepare(
+        `INSERT INTO agent_plugin_grants
+         (agent_id, plugin_id, enabled, created_at, updated_at)
+         VALUES ($agentId, $pluginId, 1, $timestamp, $timestamp)`
+    );
+
+    for (const pluginId of input.pluginIds) {
+        insertPlugin.run(namedParams({ pluginId, timestamp: input.timestamp }));
+        insertGrant.run(
+            namedParams({
+                agentId: input.agentId,
+                pluginId,
+                timestamp: input.timestamp,
+            })
+        );
+    }
 }

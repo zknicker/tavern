@@ -8,10 +8,8 @@ import {
     FileEditIcon,
     HourglassIcon,
     PaintBrush03Icon,
-    PlugSocketIcon,
     PuzzleIcon,
     SystemUpdate01Icon,
-    ToolsIcon,
     UserCircleIcon,
     ZapIcon,
 } from '@hugeicons-pro/core-stroke-rounded';
@@ -88,12 +86,6 @@ export const agentSettingsNavItems = [
         tab: 'skills',
     },
     {
-        icon: ToolsIcon,
-        id: 'agent-tools',
-        label: 'Tools',
-        tab: 'tools',
-    },
-    {
         icon: PuzzleIcon,
         id: 'agent-plugins',
         label: 'Plugins',
@@ -104,12 +96,6 @@ export const agentSettingsNavItems = [
         id: 'agent-channels',
         label: 'Channels',
         tab: 'channels',
-    },
-    {
-        icon: PlugSocketIcon,
-        id: 'agent-mcp',
-        label: 'MCP',
-        tab: 'mcp',
     },
     {
         icon: Database02Icon,

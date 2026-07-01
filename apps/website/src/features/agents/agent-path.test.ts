@@ -27,6 +27,8 @@ describe('agent page paths', () => {
     test('rejects unsupported agent pages', () => {
         expect(getActiveAgentPage('/agents/atlas')).toBeNull();
         expect(getActiveAgentPage('/agent/memory')).toBeNull();
+        expect(getActiveAgentPage('/settings/agents/atlas/tools')).toBeNull();
+        expect(getActiveAgentPage('/settings/agents/atlas/mcp')).toBeNull();
         expect(getActiveAgentPage('/overview')).toBeNull();
     });
 });

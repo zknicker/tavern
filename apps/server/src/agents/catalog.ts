@@ -21,6 +21,7 @@ import {
     deleteAgent as deleteAgentRecord,
     getAgent as getAgentRecord,
     listAgents as listAgentRecords,
+    parseAgentRawJson,
     syncAgentsForRuntime,
     updateAgentEnabledSkillIds,
 } from '../storage/agents.ts';
@@ -39,6 +40,7 @@ const hexColorPattern = /^#[0-9a-f]{6}$/i;
 const fallbackAgentUpdatedAt = new Date(0).toISOString();
 
 export interface Agent {
+    enabledPluginIds: NonNullable<AgentRuntimeAgent['enabledPluginIds']>;
     enabledSkillIds: string[] | null;
     id: string;
     name: string;
@@ -74,6 +76,7 @@ export const agentUserInstructionsSchema = z.string().max(20_000).nullable();
 export interface AgentCatalogItem {
     defaultPrimaryColor: string;
     effectivePrimaryColor: string;
+    enabledPluginIds: NonNullable<AgentRuntimeAgent['enabledPluginIds']>;
     enabledSkillIds: string[];
     id: string;
     name: string;
@@ -101,6 +104,7 @@ function toAgent(
     profile: { primaryColor: string | null; updatedAt: string; userInstructions: string } | null
 ): Agent {
     return {
+        enabledPluginIds: parseAgentRawJson(agent).enabledPluginIds ?? [],
         enabledSkillIds: parseEnabledSkillIds(agent),
         id: agent.id,
         name: agent.name,
@@ -154,6 +158,7 @@ export function toAgentCatalogItem(
     return {
         defaultPrimaryColor: resolveAgentDefaultPrimaryColor(agent.id),
         effectivePrimaryColor: buildAgentPalette(agent).accentFrom,
+        enabledPluginIds: [...new Set(agent.enabledPluginIds ?? [])],
         enabledSkillIds,
         id: agent.id,
         name: resolveAgentName(agent),
@@ -519,6 +524,7 @@ function toAgentFromAgentRuntimeAgent(input: {
     runtimeId: string;
 }): Agent {
     return {
+        enabledPluginIds: input.agent.enabledPluginIds ?? [],
         enabledSkillIds: input.agent.enabledSkillIds,
         id: input.id,
         name: input.agent.name,

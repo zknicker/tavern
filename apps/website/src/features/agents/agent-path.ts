@@ -1,14 +1,6 @@
 import { appRoutes } from '../../lib/app-routes.ts';
 
-export const agentSettingsTabs = [
-    'general',
-    'skills',
-    'tools',
-    'plugins',
-    'channels',
-    'mcp',
-    'memory',
-] as const;
+export const agentSettingsTabs = ['general', 'skills', 'plugins', 'channels', 'memory'] as const;
 
 export type AgentSettingsTab = (typeof agentSettingsTabs)[number];
 

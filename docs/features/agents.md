@@ -18,7 +18,7 @@ can continue to feel primary-agent-first.
 * **Runtime-managed agent records.** Runtime can store multiple agents with
   independent names, enabled skill ids, model choices, and workspace folders.
   Settings -> Agents lists those agents, creates new agents, and routes each
-  agent to General, Skills, Tools, Plugins, Channels, MCP, and Memory pages.
+  agent to General, Skills, Plugins, Channels, and Memory pages.
   General edits the selected agent's display name, color, model, thinking
   default, timezone, environment variables, `SOUL.md`, and destructive agent
   deletion.
@@ -28,10 +28,12 @@ can continue to feel primary-agent-first.
   `NOTES.md` is edited from Workspace with the rest of the managed agent files.
 * **New chats.** Starting a direct chat belongs to the normal New Chat flow, not
   an agent landing page.
-* **Agent tools and skills.** Runtime stores per-agent enabled skill ids.
+* **Agent skills and Plugins.** Runtime stores per-agent enabled skill ids.
   Assigned skills are resolved from Runtime's installed skill library and added
-  to the agent's AI SDK instructions at turn startup. Built-in tools are
-  currently all enabled and read-only; per-agent tool grants can layer on later.
+  to the agent's AI SDK instructions at turn startup. Plugin grants decide which
+  built-in Plugin tools and Plugin-owned guidance the agent receives. Harness
+  tools come from the selected executor and are governed by sandbox and approval
+  policy.
 * **Sessions.** Synced Tavern, system, and external chats are visible from
   Settings -> Sessions with source filters.
 
@@ -39,7 +41,7 @@ can continue to feel primary-agent-first.
 
 The primary app sidebar lists product areas and chats. It does not list agents.
 Agent configuration lives in Settings -> Agents. Each agent has its own sidebar
-section with General, Skills, Tools, Plugins, Channels, MCP, and Memory pages.
+section with General, Skills, Plugins, Channels, and Memory pages.
 Model fallbacks, web page summarizer model, context compression, permission
 prompts, and subagent model defaults are not settings surfaces until the local
 agent engine supports them.

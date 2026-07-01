@@ -37,14 +37,18 @@ export function McpSettingsPage() {
 
     return (
         <section>
-            <BadgeDivider className="pb-4">MCP</BadgeDivider>
+            <BadgeDivider className="pb-4">Advanced MCP</BadgeDivider>
+            <p className="pb-4 text-muted-foreground text-sm">
+                Plugins are Tavern's normal integration surface. MCP server records are advanced
+                runtime plumbing for development and plugin-backed tool experiments.
+            </p>
             <CardFrame>
                 <Card className="overflow-hidden p-0">
                     {servers.mcpServers.length === 0 ? (
                         <p className="px-5 py-4 text-muted-foreground text-sm">
                             {servers.isLoading
                                 ? 'Loading MCP servers...'
-                                : 'No MCP servers yet. Add one to expose external tools to the agent.'}
+                                : 'No MCP servers configured. Add one only when a Plugin or runtime experiment needs an MCP-backed tool source.'}
                         </p>
                     ) : null}
 

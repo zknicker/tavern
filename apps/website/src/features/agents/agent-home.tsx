@@ -13,7 +13,6 @@ import { formatDiscordBindingInboundMode } from '../settings/connections/messagi
 import { AgentCapabilities } from './agent-capabilities.tsx';
 import { buildAgentPath, buildAgentSettingsPath } from './agent-path.ts';
 import { AgentRecentChats } from './agent-recent-chats.tsx';
-import { readAgentToolPolicyView } from './agent-tool-policy.ts';
 import { MissingAgentState } from './missing-agent-state.tsx';
 
 export function AgentHome() {
@@ -31,9 +30,6 @@ export function AgentHome() {
     );
     const skills = skillQuery.data?.skills ?? [];
     const enabledSkills = skills.filter((skill) => agent.enabledSkillIds.includes(skill.id));
-    const toolPolicy = readAgentToolPolicyView({
-        tools: agent.enabledSkillIds,
-    });
 
     return (
         <div className="min-h-0 flex-1 overflow-y-auto">
@@ -47,7 +43,6 @@ export function AgentHome() {
                     skills={skills}
                     skillsError={skillQuery.error?.message ?? null}
                     skillsPending={skillQuery.isPending}
-                    toolPolicy={toolPolicy}
                 />
                 <AgentRecentChats agent={agent} />
             </div>

@@ -175,8 +175,10 @@ Messages have one text body and durable attachments. Agent work such
 as thinking summaries, tool calls, tool results, assistant progress, and status
 updates belongs to `response` and `activity` records, not message body fields.
 
-Tool access is configured through static Tool grants and sandbox mode. Enabled
-tools are auto-approved. Tavern does not expose an approval response endpoint.
+Harness tools come from the selected executor. Plugin tools come from built-in
+Plugin enablement plus agent Plugin grants. Enabled tools are auto-approved
+unless Runtime adds a narrower approval policy. Tavern does not expose an
+approval response endpoint.
 
 Request:
 

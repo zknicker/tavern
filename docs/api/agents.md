@@ -1,7 +1,7 @@
 ---
-summary: Agent records and configuration API for model choices, tool policy, memory policy, skill assignment, and runtime metadata boundaries.
+summary: Agent records and configuration API for model choices, memory policy, skill assignment, Plugin grants, and runtime metadata boundaries.
 read_when:
-  - changing agent records, instructions, personality, model settings, tool policy, or per-agent skill and memory controls
+  - changing agent records, instructions, personality, model settings, Plugin grants, or per-agent skill and memory controls
   - changing how clients list, configure, or address agents
 ---
 
@@ -11,7 +11,8 @@ The Agents API is for the workers users configure and talk to in Tavern.
 
 Agents are client-facing records. Runtime sessions and execution details
 can be attached as metadata, but the API exposes agents as named Tavern workers
-with instruction files, model, execution, tool, memory, and skill policy.
+with instruction files, model, execution, memory, skill assignment, and Plugin
+grant policy.
 
 ## Contract
 
@@ -21,8 +22,8 @@ with instruction files, model, execution, tool, memory, and skill policy.
 * Agent list and detail reads use synced Runtime records. Mounting an app screen
   must not contact the agent runtime or enqueue a background sync job just to
   discover agents.
-* Agent records expose display name, model policy, tool policy, memory policy,
-  skill selections, workspace folder, and availability.
+* Agent records expose display name, model policy, memory policy, skill
+  selections, Plugin grants, workspace folder, and availability.
 * Skill selections are ids of installed Runtime skills. Runtime resolves those
   ids during execution and passes the matching skill bundles through the AI SDK
   skill surface for executors that support it. Skill content is not appended to
@@ -33,7 +34,9 @@ with instruction files, model, execution, tool, memory, and skill policy.
 * Model records include the Runtime execution kind. All supported agent model
   rows execute through the harness route; OpenAI API-key rows use the Pi
   harness adapter.
-* Tool and skill controls are inspectable before a run starts.
+* Skill assignments and Plugin grants are inspectable before a run starts.
+  Harness tools are executor facts governed by sandbox and approval policy, not
+  per-agent grants.
 * Instruction settings use markdown source files. `AGENTS.md` is a generated
   read-only artifact composed by Runtime; it is not editable. Settings exposes
   `SOUL.md` on each agent's General page. `NOTES.md` is edited from Workspace
@@ -71,9 +74,9 @@ The API covers:
 * read model choices and availability
 * read and update execution settings (timezone)
 * read and update agent environment variables
-* read and update tool policy
 * read and update memory policy
 * read and update skill assignment
+* read and update agent Plugin grants
 * read generated instruction status when exposed for diagnostics
 
 ## Runtime Boundary

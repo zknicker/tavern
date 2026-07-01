@@ -6,18 +6,10 @@ test('settings navigation uses current agent configuration vocabulary', () => {
     const labels: string[] = settingsNavItems.map((item) => item.label);
     const agentLabels: string[] = agentSettingsNavItems.map((item) => item.label);
 
-    assert.deepEqual(agentLabels, [
-        'General',
-        'Skills',
-        'Tools',
-        'Plugins',
-        'Channels',
-        'MCP',
-        'Memory',
-    ]);
-    assert.ok(labels.includes('Tools'));
+    assert.deepEqual(agentLabels, ['General', 'Skills', 'Plugins', 'Channels', 'Memory']);
+    assert.ok(!labels.includes('Tools'));
     assert.ok(labels.includes('Channels'));
-    assert.ok(labels.includes('MCP'));
+    assert.ok(!labels.includes('MCP'));
     assert.ok(!labels.includes('Agent'));
     assert.ok(!labels.includes('NOTES.md'));
     assert.ok(!labels.includes('SOUL.md'));

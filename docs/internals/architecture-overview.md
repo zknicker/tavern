@@ -56,7 +56,8 @@ Runtime is the source of truth for values that affect execution:
 - Agent default model
 - current Agent session
 - Agent session effective model
-- tool inventory and grants
+- tool inventory diagnostics
+- Plugin grants
 - sandbox mode
 - turn queue and turn status
 - response activity and assistant messages

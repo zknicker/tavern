@@ -15,8 +15,10 @@ export const agentRuntimeRoutes = {
     agentFiles: (agentId: string) => `/agents/${agentId}/files`,
     agentModel: (id: string) => `/agents/${id}/model`,
     agentName: (id: string) => `/agents/${id}/name`,
+    agentPluginGrant: (agentId: string, pluginId: string) =>
+        `/agents/${encodeURIComponent(agentId)}/plugins/${encodeURIComponent(pluginId)}/enabled`,
+    agentPluginGrants: (id: string) => `/agents/${encodeURIComponent(id)}/plugins`,
     agentThinkingDefault: (id: string) => `/agents/${id}/thinking-default`,
-    agentTools: (id: string) => `/agents/${id}/tools`,
     agents: '/agents',
     capabilities: '/capabilities',
     capability: (id: string) => `/capabilities/${encodeURIComponent(id)}`,

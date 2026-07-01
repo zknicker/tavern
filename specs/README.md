@@ -38,8 +38,10 @@ agent-engine implementation choices directly.
   focused product surfaces.
 - `clarifications.md`: mid-turn questions, skip/timeout answers, and runtime
   response wiring.
-- `mcp.md`: user-configured MCP servers as a settings surface.
-- `permissions.md`: static tool grants, sandbox mode, and command allowlist.
+- `mcp.md`: advanced MCP server records for Runtime and Plugin-backed
+  integration plumbing.
+- `permissions.md`: tool sources, sandbox mode, approval policy, and command
+  allowlist.
 - `workspace.md`: the generated `AGENTS.md` artifact and its editable
   sources (`NOTES.md`, `SOUL.md`).
 - `tavern-skill.md`: the agent's product knowledge of and operational access

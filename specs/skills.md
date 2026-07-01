@@ -1,7 +1,8 @@
 # Skills and Tools
 
 Skills are reusable instruction packages. Tools are executable agent actions.
-MCP servers are agent-engine connection records. Channels are chat frontends.
+Plugins are built-in Tavern integrations. MCP servers are advanced agent-engine
+connection records. Channels are chat frontends.
 
 ## Product Expectations
 
@@ -15,21 +16,22 @@ MCP servers are agent-engine connection records. Channels are chat frontends.
 - Selecting a skill affects only the agent's skill access.
 - Enabling a tool affects only Runtime's agent tool materialization.
 - Plugins may provide tools, workflows, providers, channels, hooks, or skills.
-  Tavern presents only the concrete Plugin-owned surfaces.
-- MCP servers are not tools. They are connection records that may expose tools.
+  Tavern presents the built-in Plugin as the user-facing integration surface.
+- MCP servers are not tools. They are advanced connection records that may
+  expose tools behind a Plugin or runtime experiment.
 - Channels are not MCP servers. They are places where humans can talk with
   Tavern agents.
 
 ## Ownership
 
-- Tavern Runtime is canonical for the managed agent's skill, tool, MCP,
-  channel, and Plugin state.
+- Tavern Runtime is canonical for the managed agent's skill, tool, channel,
+  Plugin, and advanced MCP state.
 - Runtime remains canonical for execution behavior: prompt loading, tool
   calling, connection tools, sandboxing, durable turns, and replay.
 - Runtime-discovered skills remain owned by their source location.
 - Runtime-discovered tools remain owned by Runtime materialization.
-- Runtime owns MCP server records and secrets, then materializes enabled MCP
-  servers for the agent engine.
+- Runtime owns MCP server records and secrets when MCP is used as advanced
+  integration plumbing.
 - Plugins own their contributed skills and tools. Direct enablement changes
   from Skills or Tools are rejected when Plugin enablement owns the row.
 
@@ -49,17 +51,18 @@ Runtime reports tools from the active agent project:
 2. agent-engine default tools that remain enabled
 3. dynamic tools resolved by Runtime
 4. subagent tools
-5. connection tools surfaced from MCP servers
-6. Plugin-provided tools compiled into the agent project
+5. Plugin-provided tools compiled into the agent project
+6. advanced connection tools surfaced from MCP servers
 
 Tavern may group tools visually, but it should not name that grouping as an
 agent-engine primitive.
 
 ### MCP Sources
 
-Settings -> MCP manages MCP server records. A server may use command or URL
-transport, optional env/header secrets, enablement, and health checks. Runtime
-stores secrets redacted and materializes enabled records for the agent engine.
+Advanced MCP settings manage MCP server records when Runtime or Plugin
+development needs them. A server may use command or URL transport, optional
+env/header secrets, enablement, and health checks. Runtime stores secrets
+redacted and materializes enabled records for the agent engine.
 
 ### Channel Sources
 
@@ -69,17 +72,17 @@ channels with their own session bindings.
 
 ## UI Model
 
-- Skills and Tools are separate settings pages.
+- Skills and Plugins are separate settings pages.
 - The Skills page has Installed and Available views.
-- The Tools page lists Runtime-visible tools, including Plugin tools in a
-  distinct view.
-- The MCP page lists MCP servers and MCP catalog entries.
+- The Plugins page is the normal external integration setup surface.
+- The Advanced MCP page lists MCP servers and MCP catalog entries only when
+  direct MCP plumbing is exposed for development.
 - The Channels page lists Tavern and external frontend bindings.
 - Skill rows open the skill detail surface.
-- Tool rows expose enablement, usability, setup diagnostics, and any Runtime
-  supported setup action.
-- MCP rows expose server transport, health, test, edit, enable, and delete
-  actions.
+- Runtime tool inventory remains diagnostic Runtime data, not a standalone
+  settings page.
+- Advanced MCP rows expose server transport, health, test, edit, enable, and
+  delete actions.
 - Plugin-owned rows are visibly Plugin-owned and locked to Plugin enablement.
 
 ## Usability State
@@ -103,5 +106,5 @@ without inventing a second taxonomy.
 - Missing dependencies do not remove an item.
 - Unsupported tool mutations fail through Runtime and leave the visible record
   intact.
-- MCP test failures are shown on the MCP row or dialog and do not remove the
-  server record.
+- MCP test failures are shown on the advanced MCP row or dialog and do not
+  remove the server record.

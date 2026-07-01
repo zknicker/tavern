@@ -6,24 +6,28 @@ read_when:
 
 # Plugins are settings-managed Runtime capabilities
 
-Tavern Plugins are configured and repaired through Tavern settings. Agents may
-read Plugin health and use read-oriented Plugin actions through named Runtime
-tools only when Runtime reports the capability usable. Sync, repair,
-ingestion control, ripcord, account selection, secrets, and enablement stay
-user-managed settings or app controls rather than agent tools. Future
-agent-assisted setup must run through a Tavern-wide settings flow, not a
+Tavern Plugins are built-in capabilities configured and repaired through Tavern
+settings. Agents may read Plugin health and use read-oriented Plugin actions
+through named Runtime tools only when Runtime reports the capability usable.
+Sync, repair, ingestion control, ripcord, account selection, secrets, and
+enablement stay user-managed settings or app controls rather than agent tools.
+Future agent-assisted setup must run through a Tavern-wide settings flow, not a
 Plugin-specific shortcut.
+
+Plugins are the normal product direction for integrations. Raw MCP servers may
+exist as Runtime plumbing or an advanced development surface, but v1 does not
+ask users to install arbitrary tool packages or configure raw MCP servers as the
+primary way to extend agents.
 
 Plugin settings and secrets use dedicated Runtime Plugin tables. They do not
 live in generic runtime metadata, skill files, CLI config, or
 environment variables. Runtime capabilities store current Plugin health
 separately from the durable settings and secrets.
 
-Plugin enablement is the source of truth for Plugin-provided agent
-capabilities. Settings -> Skills and Settings -> Tools show Plugin-provided
-skills and tools in their own Plugins tabs, and their row toggles are locked.
-Users enable or disable the Plugin itself from Settings -> Plugins; Tavern then
-reflects that state into Runtime-owned skills and tools when possible.
+Plugin enablement and agent-level Plugin grants are the source of truth for
+Plugin-provided agent capabilities. Users enable or disable the Plugin itself
+from Settings -> Plugins, then grant it to agents from agent capability
+settings. Tavern does not expose individual Plugin tool toggles.
 
 The storage shape is Plugin-owned:
 
