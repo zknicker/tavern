@@ -1,4 +1,9 @@
-import type { AgentRuntimeAgent } from '@tavern/api';
+import {
+    type AgentCharacter,
+    type AgentRuntimeAgent,
+    agentCharacterSchema,
+    resolveAgentDefaultCharacter,
+} from '@tavern/api';
 import { z } from 'zod';
 import {
     deleteAgentRuntimeAgent,
@@ -40,12 +45,20 @@ const hexColorPattern = /^#[0-9a-f]{6}$/i;
 const fallbackAgentUpdatedAt = new Date(0).toISOString();
 
 export interface Agent {
+    character: AgentCharacter | null;
     enabledPluginIds: NonNullable<AgentRuntimeAgent['enabledPluginIds']>;
     enabledSkillIds: string[] | null;
     id: string;
     name: string;
     primaryColor: string | null;
     runtimeId: string;
+    updatedAt: string;
+    userInstructions: string;
+}
+
+interface AgentProfileLike {
+    character: string | null;
+    primaryColor: string | null;
     updatedAt: string;
     userInstructions: string;
 }
@@ -72,9 +85,13 @@ export const agentPrimaryColorSchema = z
 
 export const agentEnabledSkillIdsSchema = z.array(skillIdSchema).nullable();
 export const agentUserInstructionsSchema = z.string().max(20_000).nullable();
+export const agentCharacterProfileSchema = agentCharacterSchema.nullable();
 
 export interface AgentCatalogItem {
+    character: AgentCharacter | null;
+    defaultCharacter: AgentCharacter;
     defaultPrimaryColor: string;
+    effectiveCharacter: AgentCharacter;
     effectivePrimaryColor: string;
     enabledPluginIds: NonNullable<AgentRuntimeAgent['enabledPluginIds']>;
     enabledSkillIds: string[];
@@ -99,11 +116,14 @@ function parseEnabledSkillIds(agent: AgentRecord) {
     return parsed.success ? parsed.data : [];
 }
 
-function toAgent(
-    agent: AgentRecord,
-    profile: { primaryColor: string | null; updatedAt: string; userInstructions: string } | null
-): Agent {
+function parseCharacter(value: string | null | undefined): AgentCharacter | null {
+    const parsed = agentCharacterSchema.safeParse(value);
+    return parsed.success ? parsed.data : null;
+}
+
+function toAgent(agent: AgentRecord, profile: AgentProfileLike | null): Agent {
     return {
+        character: parseCharacter(profile?.character),
         enabledPluginIds: parseAgentRawJson(agent).enabledPluginIds ?? [],
         enabledSkillIds: parseEnabledSkillIds(agent),
         id: agent.id,
@@ -155,8 +175,13 @@ export function toAgentCatalogItem(
             ? [...new Set(agent.enabledSkillIds ?? [])]
             : resolveEnabledSkillIds(agent.enabledSkillIds, availableSkillIds);
 
+    const defaultCharacter = resolveAgentDefaultCharacter(agent.id);
+
     return {
+        character: agent.character,
+        defaultCharacter,
         defaultPrimaryColor: resolveAgentDefaultPrimaryColor(agent.id),
+        effectiveCharacter: agent.character ?? defaultCharacter,
         effectivePrimaryColor: buildAgentPalette(agent).accentFrom,
         enabledPluginIds: [...new Set(agent.enabledPluginIds ?? [])],
         enabledSkillIds,
@@ -372,6 +397,7 @@ export async function saveCatalogAgentSettings(
 
 export async function saveCatalogAgentProfile(input: {
     agentId: string;
+    character?: AgentCharacter | null;
     primaryColor?: string | null;
     userInstructions?: string | null;
 }) {
@@ -387,6 +413,7 @@ export async function saveCatalogAgentProfile(input: {
     const profileInput = {
         agentId: input.agentId,
         runtimeId,
+        ...(input.character !== undefined ? { character: input.character } : {}),
         ...(input.primaryColor !== undefined ? { primaryColor: input.primaryColor } : {}),
         ...(input.userInstructions !== undefined
             ? { userInstructions: input.userInstructions }
@@ -520,10 +547,11 @@ async function getActiveRuntimeAgent(
 function toAgentFromAgentRuntimeAgent(input: {
     agent: AgentRuntimeAgent;
     id: string;
-    profile: { primaryColor: string | null; updatedAt: string; userInstructions: string } | null;
+    profile: AgentProfileLike | null;
     runtimeId: string;
 }): Agent {
     return {
+        character: parseCharacter(input.profile?.character),
         enabledPluginIds: input.agent.enabledPluginIds ?? [],
         enabledSkillIds: input.agent.enabledSkillIds,
         id: input.id,

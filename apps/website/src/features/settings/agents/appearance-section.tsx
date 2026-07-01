@@ -1,3 +1,8 @@
+import {
+    type AgentCharacter,
+    agentCharacterLabels,
+    agentCharacters,
+} from '@tavern/api/agent-appearance';
 import { useEffect, useState } from 'react';
 import { Input } from '../../../components/ui/primitives/input.tsx';
 import {
@@ -17,6 +22,7 @@ import { withSavingToast } from '../../../lib/saving-toast.ts';
 import { type AgentListOutput, trpc } from '../../../lib/trpc.tsx';
 import { agentColorPresets } from '../../agents/agent-color-presets.ts';
 import { useAgentProfileUpdate } from '../../agents/use-agent-profile-update.ts';
+import { AgentFace } from '../../chats/agent-face.tsx';
 
 export function AgentAppearanceSection({
     agent,
@@ -116,8 +122,58 @@ export function AgentAppearanceSection({
                         </SelectContent>
                     </Select>
                 </SettingsRow>
+
+                <Separator />
+
+                <SettingsRow title="Character">
+                    <Select
+                        disabled={saveAgentProfile.isPending}
+                        onValueChange={(character) => {
+                            if (!character) {
+                                return;
+                            }
+
+                            saveAgentProfile.mutate({
+                                agentId: agent.id,
+                                character:
+                                    character === agent.defaultCharacter
+                                        ? null
+                                        : (character as AgentCharacter),
+                            });
+                        }}
+                        value={agent.effectiveCharacter}
+                    >
+                        <SelectTrigger>
+                            <SelectValue placeholder="Choose character">
+                                <AgentCharacterOption character={agent.effectiveCharacter} />
+                            </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                            {agentCharacters.map((character) => (
+                                <SelectItem key={character} value={character}>
+                                    <AgentCharacterOption character={character} />
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </SettingsRow>
             </SettingsGroup>
         </SettingsSection>
+    );
+}
+
+function AgentCharacterOption({ character }: { character: AgentCharacter }) {
+    return (
+        <span className="flex min-w-0 items-center gap-2">
+            <AgentFace
+                animated={false}
+                aria-hidden
+                className="shrink-0 overflow-visible"
+                head={character}
+                size={18}
+            />
+            <span className="truncate">{agentCharacterLabels[character]}</span>
+        </span>
     );
 }
 

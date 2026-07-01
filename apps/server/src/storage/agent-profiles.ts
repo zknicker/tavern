@@ -5,6 +5,7 @@ import { getActiveRuntimeId } from './agent-runtime-connections.ts';
 
 export interface AgentProfile {
     agentId: string;
+    character: string | null;
     createdAt: string;
     primaryColor: string | null;
     runtimeId: string;
@@ -15,6 +16,7 @@ export interface AgentProfile {
 function selection() {
     return {
         agentId: agentProfilesTable.agentId,
+        character: agentProfilesTable.character,
         createdAt: agentProfilesTable.createdAt,
         primaryColor: agentProfilesTable.primaryColor,
         runtimeId: agentProfilesTable.runtimeId,
@@ -58,14 +60,17 @@ export async function getAgentProfile(input: { agentId: string; runtimeId: strin
 
 export async function saveAgentProfile(input: {
     agentId: string;
+    character?: string | null;
     primaryColor?: string | null;
     runtimeId: string;
     userInstructions?: string | null;
 }) {
     const timestamp = new Date().toISOString();
+    const hasCharacter = Object.hasOwn(input, 'character');
     const hasPrimaryColor = Object.hasOwn(input, 'primaryColor');
     const hasUserInstructions = Object.hasOwn(input, 'userInstructions');
     const updateSet = {
+        ...(hasCharacter ? { character: input.character ?? null } : {}),
         ...(hasPrimaryColor ? { primaryColor: input.primaryColor ?? null } : {}),
         ...(hasUserInstructions
             ? { userInstructions: normalizeUserInstructions(input.userInstructions) }
@@ -77,6 +82,7 @@ export async function saveAgentProfile(input: {
         .insert(agentProfilesTable)
         .values({
             agentId: input.agentId,
+            character: hasCharacter ? (input.character ?? null) : null,
             createdAt: timestamp,
             primaryColor: hasPrimaryColor ? (input.primaryColor ?? null) : null,
             runtimeId: input.runtimeId,

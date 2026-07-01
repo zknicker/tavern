@@ -183,7 +183,7 @@ function SyncedAgentChatDetail({ chat, chatId }: { chat: ChatListItem; chatId: s
         <ArtifactPanelOpenProvider onOpen={artifactPanel.open}>
             <ChatDetailFrame
                 activeReply={timeline.activeReply}
-                agentStatusColor={agent?.effectivePrimaryColor ?? null}
+                agentStatusCharacter={agent?.effectiveCharacter ?? null}
                 artifactPanel={<ChatArtifactPanel agentId={agentId} state={artifactPanel} />}
                 chatId={chat.id}
                 conversationLayout={conversationLayout}

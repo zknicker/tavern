@@ -1,3 +1,4 @@
+import type { AgentCharacter } from '@tavern/api/agent-appearance';
 import * as React from 'react';
 import type { ChatActiveReply } from '../../hooks/chats/chat-timeline-state.ts';
 import type { AgentListOutput } from '../../lib/trpc.tsx';
@@ -57,7 +58,7 @@ export function ChatActiveStatusStack({
                 {activeItems.map((item) => (
                     <ChatActiveStatusItem
                         activeReply={item.activeReply}
-                        agentColor={item.agent?.effectivePrimaryColor ?? null}
+                        agentCharacter={item.agent?.effectiveCharacter ?? null}
                         agentName={item.agent?.name ?? 'Agent'}
                         key={item.activeReply.runId}
                         rows={rows}
@@ -70,12 +71,12 @@ export function ChatActiveStatusStack({
 
 function ChatActiveStatusItem({
     activeReply,
-    agentColor,
+    agentCharacter,
     agentName,
     rows,
 }: {
     activeReply: ChatActiveReply;
-    agentColor: string | null;
+    agentCharacter: AgentCharacter | null;
     agentName: string;
     rows: TranscriptRow[];
 }) {
@@ -83,8 +84,8 @@ function ChatActiveStatusItem({
         <div className="flex h-8 min-w-0 items-center gap-2 text-muted-foreground/75 text-sm leading-5">
             <AgentStatusIndicator
                 activeReply={activeReply}
+                character={agentCharacter ?? 'none'}
                 className="-ms-1"
-                color={agentColor}
                 rows={rows}
                 size={28}
             />

@@ -121,7 +121,7 @@ export function ChatDraftDetail({
     return (
         <ChatDetailFrame
             activeReply={handoffFrame.activeReply}
-            agentStatusColor={selectedAgent?.effectivePrimaryColor ?? null}
+            agentStatusCharacter={selectedAgent?.effectiveCharacter ?? null}
             chatId={timelineChatId}
             emptyLabel=""
             failedTurn={handoffFrame.failedTurn}

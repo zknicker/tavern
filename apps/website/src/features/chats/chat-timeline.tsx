@@ -1,3 +1,4 @@
+import type { AgentCharacter } from '@tavern/api/agent-appearance';
 import type * as React from 'react';
 import type { ChatActiveReply, ChatTurnFailure } from '../../hooks/chats/chat-timeline-state.ts';
 import type { ChatLogOutput } from '../../lib/trpc.tsx';
@@ -7,7 +8,7 @@ import type { ChatTurnTimelineMarker } from './chat-turn-timeline.tsx';
 
 export function ChatTimeline({
     activeReply,
-    agentStatusColor = null,
+    agentStatusCharacter = null,
     chatId,
     conversationLayout,
     defaultOpenWorkGroups = false,
@@ -19,7 +20,7 @@ export function ChatTimeline({
     totalMessages,
 }: {
     activeReply: ChatActiveReply | null;
-    agentStatusColor?: string | null;
+    agentStatusCharacter?: AgentCharacter | null;
     chatId?: string;
     conversationLayout?: ConversationMessageLayout;
     defaultOpenWorkGroups?: boolean;
@@ -35,7 +36,7 @@ export function ChatTimeline({
     return (
         <ChatTranscript
             activeReply={activeReply}
-            agentStatusColor={agentStatusColor}
+            agentStatusCharacter={agentStatusCharacter}
             chatId={chatId}
             conversationLayout={conversationLayout}
             defaultOpenWorkGroups={defaultOpenWorkGroups}

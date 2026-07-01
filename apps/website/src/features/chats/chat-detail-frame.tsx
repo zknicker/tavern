@@ -1,3 +1,4 @@
+import type { AgentCharacter } from '@tavern/api/agent-appearance';
 import * as React from 'react';
 import {
     MessageScroller,
@@ -16,7 +17,7 @@ import { ChatTurnTimeline, type ChatTurnTimelineMarker } from './chat-turn-timel
 
 export function ChatDetailFrame({
     activeReply,
-    agentStatusColor = null,
+    agentStatusCharacter = null,
     chatId,
     conversationLayout,
     defaultOpenWorkGroups = false,
@@ -35,7 +36,7 @@ export function ChatDetailFrame({
     totalMessages,
 }: {
     activeReply: ChatActiveReply | null;
-    agentStatusColor?: string | null;
+    agentStatusCharacter?: AgentCharacter | null;
     chatId: string;
     conversationLayout?: ConversationMessageLayout;
     defaultOpenWorkGroups?: boolean;
@@ -105,7 +106,7 @@ export function ChatDetailFrame({
                                 ) : hasTimelineContent ? (
                                     <ChatTimeline
                                         activeReply={activeReply}
-                                        agentStatusColor={agentStatusColor}
+                                        agentStatusCharacter={agentStatusCharacter}
                                         chatId={chatId}
                                         conversationLayout={conversationLayout}
                                         defaultOpenWorkGroups={defaultOpenWorkGroups}

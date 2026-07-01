@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import {
+    agentCharacterProfileSchema,
     agentPrimaryColorSchema,
     agentUserInstructionsSchema,
     saveCatalogAgentProfile,
@@ -10,12 +11,19 @@ import { publicProcedure } from '../trpc.ts';
 const saveAgentProfileInputSchema = z
     .object({
         agentId: z.string().trim().min(1),
+        character: agentCharacterProfileSchema.optional(),
         primaryColor: agentPrimaryColorSchema.optional(),
         userInstructions: agentUserInstructionsSchema.optional(),
     })
-    .refine((input) => input.primaryColor !== undefined || input.userInstructions !== undefined, {
-        message: 'Choose a profile field to update.',
-    });
+    .refine(
+        (input) =>
+            input.character !== undefined ||
+            input.primaryColor !== undefined ||
+            input.userInstructions !== undefined,
+        {
+            message: 'Choose a profile field to update.',
+        }
+    );
 
 export const saveAgentProfile = publicProcedure
     .input(saveAgentProfileInputSchema)

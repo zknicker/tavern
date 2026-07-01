@@ -1,4 +1,5 @@
 import { Cancel01Icon } from '@hugeicons/core-free-icons';
+import type { AgentCharacter } from '@tavern/api/agent-appearance';
 import { useReducedMotion } from 'framer-motion';
 import type * as React from 'react';
 import { ChatMessage } from '../../components/chats/chat-message.tsx';
@@ -17,7 +18,7 @@ import { useChatDismiss } from '../../hooks/chats/use-chat-dismiss.ts';
 import { formatShortTime } from '../../lib/format.ts';
 import { cn } from '../../lib/utils.ts';
 import { AgentRichResponse } from '../../rich-responses/render-rich-response.tsx';
-import { AgentEyes } from './agent-eyes.tsx';
+import { AgentFace, type HeadKind } from './agent-face.tsx';
 import { CommandRunEntry } from './chat-command-card.tsx';
 import { ChatMarkdownText } from './chat-markdown-text.tsx';
 import { useStreamingTextRanges } from './chat-streaming-text-ranges.ts';
@@ -70,7 +71,7 @@ const hoverGroupClassName = 'group';
 
 export function TranscriptEntryView({
     activeReply,
-    agentStatusColor = null,
+    agentStatusCharacter = null,
     chatId,
     conversationLayout,
     currentSessionKey,
@@ -80,7 +81,7 @@ export function TranscriptEntryView({
     turnStartedAt,
 }: {
     activeReply: ChatActiveReply | null;
-    agentStatusColor?: string | null;
+    agentStatusCharacter?: AgentCharacter | null;
     chatId?: string;
     conversationLayout: ConversationMessageLayout;
     currentSessionKey?: string | null;
@@ -124,7 +125,7 @@ export function TranscriptEntryView({
     return (
         <AgentTurn
             activeReply={activeReply}
-            agentStatusColor={agentStatusColor}
+            agentStatusCharacter={agentStatusCharacter}
             chatId={chatId}
             currentSessionKey={currentSessionKey}
             defaultOpenWorkGroups={defaultOpenWorkGroups}
@@ -225,26 +226,28 @@ function getActiveReplyText(items: TranscriptItem[]) {
 function TurnAvatar({
     actorKind,
     avatarUrl,
+    character = 'none',
     color,
     name,
 }: {
     actorKind: 'agent' | 'participant' | 'profile';
     avatarUrl?: string | null;
+    character?: HeadKind;
     color?: string | null;
     name: string;
 }) {
-    // Agents wear the Tavern eyes as their identity avatar; people use an
+    // Agents wear their character face as their identity avatar; people use an
     // uploaded image, falling back to initials.
     const variant = resolveTurnAvatarVariant(actorKind, avatarUrl);
 
     if (variant === 'eyes') {
         return (
             <MessageAvatar className={cn(turnAvatarBaseClassName, 'bg-muted')}>
-                <AgentEyes
+                <AgentFace
                     animated={false}
                     aria-hidden
                     className="overflow-visible"
-                    color={color ?? 'var(--muted-foreground)'}
+                    head={character}
                     size={20}
                 />
             </MessageAvatar>
@@ -344,7 +347,7 @@ function getActorInitials(name: string) {
 
 function AgentTurn({
     activeReply,
-    agentStatusColor,
+    agentStatusCharacter,
     chatId,
     currentSessionKey,
     defaultOpenWorkGroups,
@@ -354,7 +357,7 @@ function AgentTurn({
     turnStartedAt,
 }: {
     activeReply: ChatActiveReply | null;
-    agentStatusColor: string | null;
+    agentStatusCharacter: AgentCharacter | null;
     chatId?: string;
     currentSessionKey?: string | null;
     defaultOpenWorkGroups: boolean;
@@ -390,7 +393,7 @@ function AgentTurn({
         >
             <TurnAvatar
                 actorKind="agent"
-                color={actorProfile?.primaryColor ?? agentStatusColor}
+                character={actorProfile?.character ?? agentStatusCharacter ?? 'none'}
                 name={displayName}
             />
             <MessageContent className="gap-0.5 pt-0.5">

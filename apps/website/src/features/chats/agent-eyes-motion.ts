@@ -2,7 +2,6 @@ import type { EmotionConfig, EyeParams, EyeSide } from './agent-eyes-config.ts';
 
 export function resolveAnimatedEye(input: {
     blink: number;
-    boing: number;
     current: EyeParams;
     emotion: EmotionConfig;
     side: EyeSide;
@@ -10,7 +9,8 @@ export function resolveAnimatedEye(input: {
 }) {
     const params = input.current.slice();
 
-    applyBoing(params, input.boing);
+    // Squash/stretch ("boing") lives on the whole face group so the head and
+    // eyes deform as one unit; eye geometry here stays boing-free.
     applyBreath(params, input.emotion, input.time);
     applyLaugh(params, input.emotion, input.time);
     applySway(params, input.emotion, input.side, input.time);
@@ -59,19 +59,6 @@ export const easeInQuad = (progress: number) => progress * progress;
 export function easeOutBack(progress: number) {
     const c = 1.2;
     return 1 + (c + 1) * (progress - 1) ** 3 + c * (progress - 1) ** 2;
-}
-
-function applyBoing(params: EyeParams, boing: number) {
-    if (boing === 0) {
-        return;
-    }
-
-    const scale = 1 + Math.max(-0.35, Math.min(0.35, boing));
-
-    for (const index of [2, 3, 4, 5, 6, 7]) {
-        params[index] *= scale;
-    }
-    params[1] -= boing * 10;
 }
 
 function applyBreath(params: EyeParams, emotion: EmotionConfig, time: number) {

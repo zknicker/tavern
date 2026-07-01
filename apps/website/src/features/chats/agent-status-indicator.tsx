@@ -1,7 +1,7 @@
 import { useReducedMotion } from 'framer-motion';
 import type { ChatActiveReply, ChatTurnFailure } from '../../hooks/chats/chat-timeline-state.ts';
 import { cn } from '../../lib/utils.ts';
-import { AgentEyes } from './agent-eyes.tsx';
+import { AgentFace, type HeadKind } from './agent-face.tsx';
 import {
     type AgentStatusChatRow,
     getAgentStatusLabel,
@@ -10,8 +10,8 @@ import {
 
 interface AgentStatusIndicatorProps {
     activeReply: ChatActiveReply | null;
+    character: HeadKind;
     className?: string;
-    color?: string | null;
     failedTurn?: ChatTurnFailure | null;
     rows: AgentStatusChatRow[];
     size?: number;
@@ -19,8 +19,8 @@ interface AgentStatusIndicatorProps {
 
 export function AgentStatusIndicator({
     activeReply,
+    character,
     className,
-    color,
     failedTurn = null,
     rows,
     size = 32,
@@ -32,23 +32,19 @@ export function AgentStatusIndicator({
     return (
         <div
             className={cn('flex shrink-0 items-center justify-center overflow-visible', className)}
-            style={{
-                color: color ?? 'var(--foreground)',
-                height: size,
-                width: size,
-            }}
+            style={{ height: size, width: size }}
         >
             <output
                 aria-label={getAgentStatusLabel(emotion)}
                 aria-live={active ? 'polite' : 'off'}
-                className="flex h-full w-full shrink-0 items-center justify-center overflow-visible transition-colors duration-200 motion-reduce:transition-none"
+                className="flex h-full w-full shrink-0 items-center justify-center overflow-visible"
             >
-                <AgentEyes
+                <AgentFace
                     aria-hidden={true}
                     blinking={!shouldReduceMotion}
                     className="overflow-visible"
-                    color="currentColor"
                     emotion={emotion}
+                    head={character}
                     intensity={active ? 1 : 0.92}
                     size={size}
                     speed={shouldReduceMotion ? 0.35 : active ? 1.05 : 0.78}

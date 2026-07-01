@@ -1,3 +1,4 @@
+import type { AgentCharacter } from '@tavern/api/agent-appearance';
 import * as React from 'react';
 import {
     MessageScroller,
@@ -36,7 +37,7 @@ const directConversationMessageLayout: ConversationMessageLayout = {
 
 export function ChatTranscript({
     activeReply,
-    agentStatusColor = null,
+    agentStatusCharacter = null,
     chatId,
     conversationLayout = directConversationMessageLayout,
     currentSessionKey,
@@ -49,7 +50,7 @@ export function ChatTranscript({
     showThinkingText,
 }: {
     activeReply: ChatActiveReply | null;
-    agentStatusColor?: string | null;
+    agentStatusCharacter?: AgentCharacter | null;
     chatId?: string;
     conversationLayout?: ConversationMessageLayout;
     currentSessionKey?: string | null;
@@ -149,7 +150,7 @@ export function ChatTranscript({
                             >
                                 <TranscriptRenderRowItem
                                     activeReply={activeReply}
-                                    agentStatusColor={agentStatusColor}
+                                    agentStatusCharacter={agentStatusCharacter}
                                     row={row}
                                 />
                             </MessageScrollerItem>

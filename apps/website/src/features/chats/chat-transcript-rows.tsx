@@ -1,3 +1,4 @@
+import type { AgentCharacter } from '@tavern/api/agent-appearance';
 import * as React from 'react';
 import { DayDivider } from '../../components/ui/day-divider.tsx';
 import type { ChatActiveReply } from '../../hooks/chats/chat-timeline-state.ts';
@@ -12,13 +13,13 @@ import { TranscriptEntryView } from './chat-transcript-turn.tsx';
 
 interface TranscriptRenderRowProps {
     activeReply: ChatActiveReply | null;
-    agentStatusColor?: string | null;
+    agentStatusCharacter?: AgentCharacter | null;
     row: TranscriptRenderRow;
 }
 
 interface TranscriptRenderRowViewProps {
     activeReply: ChatActiveReply | null;
-    agentStatusColor?: string | null;
+    agentStatusCharacter?: AgentCharacter | null;
     row: TranscriptRenderRow;
 }
 
@@ -36,7 +37,7 @@ export function TranscriptRenderRowItem({ activeReply, row, ...props }: Transcri
 // underlying row objects keep their identity. Comparing structurally lets
 // historical rows skip re-rendering while text streams into the live turn.
 const TranscriptRenderRowView = React.memo(
-    ({ activeReply, agentStatusColor = null, row }: TranscriptRenderRowViewProps) => {
+    ({ activeReply, agentStatusCharacter = null, row }: TranscriptRenderRowViewProps) => {
         const {
             chatId,
             conversationLayout,
@@ -56,7 +57,7 @@ const TranscriptRenderRowView = React.memo(
         return (
             <TranscriptEntryView
                 activeReply={activeReply}
-                agentStatusColor={agentStatusColor}
+                agentStatusCharacter={agentStatusCharacter}
                 chatId={chatId}
                 conversationLayout={conversationLayout}
                 currentSessionKey={currentSessionKey}
@@ -78,7 +79,7 @@ function areTranscriptRenderRowViewPropsEqual(
 ) {
     return (
         previous.activeReply === next.activeReply &&
-        previous.agentStatusColor === next.agentStatusColor &&
+        previous.agentStatusCharacter === next.agentStatusCharacter &&
         areRenderRowsEqual(previous.row, next.row)
     );
 }

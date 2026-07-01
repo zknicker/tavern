@@ -1,5 +1,5 @@
 import type { ChatActiveReply, ChatTurnFailure } from '../../hooks/chats/chat-timeline-state.ts';
-import type { AgentEyeEmotion } from './agent-eyes.tsx';
+import type { AgentEyeEmotion } from './agent-eyes-config.ts';
 import type { TranscriptRow } from './chat-transcript-model.ts';
 
 export type AgentStatusChatRow = TranscriptRow;

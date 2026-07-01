@@ -1,3 +1,4 @@
+import type { AgentCharacter } from '@tavern/api/agent-appearance';
 import { useMemo } from 'react';
 import type { HistoryActorOutput } from '../../lib/trpc.tsx';
 import { useAgentList } from '../agents/use-agent-list.ts';
@@ -6,6 +7,7 @@ import { useUserProfilePreference } from '../shell/use-user-profile-preference.t
 
 interface ActorProfile {
     avatarUrl: string | null;
+    character: AgentCharacter | null;
     id: string;
     isSelf: boolean;
     kind: HistoryActorOutput['kind'];
@@ -48,6 +50,7 @@ export function useActorProfile(actor: HistoryActorOutput | null) {
             return agent
                 ? ({
                       avatarUrl: null,
+                      character: agent.effectiveCharacter,
                       id: agent.id,
                       isSelf: false,
                       kind: 'agent',
@@ -62,6 +65,7 @@ export function useActorProfile(actor: HistoryActorOutput | null) {
         if (isLocalOwnerActor(actor)) {
             return {
                 avatarUrl: userProfile.avatarUrl,
+                character: null,
                 id: actor.id,
                 isSelf: true,
                 kind: actor.kind,
@@ -81,6 +85,7 @@ export function useActorProfile(actor: HistoryActorOutput | null) {
         return participant
             ? ({
                   avatarUrl: null,
+                  character: null,
                   id: participant.id,
                   isSelf: false,
                   kind: 'participant',
