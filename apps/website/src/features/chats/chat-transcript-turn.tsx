@@ -3,6 +3,7 @@ import type { AgentCharacter } from '@tavern/api/agent-appearance';
 import { useReducedMotion } from 'framer-motion';
 import type * as React from 'react';
 import { ChatMessage } from '../../components/chats/chat-message.tsx';
+import { useResolvedThemeOptional } from '../../components/theme-provider.tsx';
 import { CopyButton } from '../../components/ui/copy-button.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import {
@@ -18,7 +19,7 @@ import { useChatDismiss } from '../../hooks/chats/use-chat-dismiss.ts';
 import { formatShortTime } from '../../lib/format.ts';
 import { cn } from '../../lib/utils.ts';
 import { AgentRichResponse } from '../../rich-responses/render-rich-response.tsx';
-import { AgentFace, type HeadKind } from './agent-face.tsx';
+import { AgentFace, type HeadName } from './agent-face.tsx';
 import { CommandRunEntry } from './chat-command-card.tsx';
 import { ChatMarkdownText } from './chat-markdown-text.tsx';
 import { useStreamingTextRanges } from './chat-streaming-text-ranges.ts';
@@ -67,6 +68,7 @@ const newTurnGapClassName = '';
 // footer; our roster layout keeps it aligned with the name header instead.
 const turnAvatarBaseClassName =
     'size-8 min-w-8 self-start ring-1 ring-border/50 group-has-data-[slot=message-footer]/message:translate-y-0';
+const faceStyle = { flexShrink: 0, overflow: 'visible' } as const;
 const hoverGroupClassName = 'group';
 
 export function TranscriptEntryView({
@@ -232,12 +234,13 @@ function TurnAvatar({
 }: {
     actorKind: 'agent' | 'participant' | 'profile';
     avatarUrl?: string | null;
-    character?: HeadKind;
+    character?: HeadName;
     color?: string | null;
     name: string;
 }) {
     // Agents wear their character face as their identity avatar; people use an
     // uploaded image, falling back to initials.
+    const dark = useResolvedThemeOptional() === 'dark';
     const variant = resolveTurnAvatarVariant(actorKind, avatarUrl);
 
     if (variant === 'eyes') {
@@ -250,11 +253,11 @@ function TurnAvatar({
                 )}
             >
                 <AgentFace
-                    animated={false}
-                    aria-hidden
-                    className="overflow-visible"
+                    animate={false}
+                    dark={dark}
                     head={character}
                     size={32}
+                    style={faceStyle}
                 />
             </MessageAvatar>
         );

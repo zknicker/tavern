@@ -1,11 +1,14 @@
 import type * as React from 'react';
 import { ChannelIconBox } from '../../components/chats/channel-icon-box.tsx';
 import { resolveTavernChatName } from '../../components/chats/chat-display.ts';
+import { useResolvedThemeOptional } from '../../components/theme-provider.tsx';
 import { useAgentCharacterLookup } from '../../hooks/agents/use-agent-character.ts';
 import { cn } from '../../lib/utils.ts';
 import { getChannelColorStyle } from '../shell/channel-color-options.ts';
-import { AgentFace, type HeadKind } from './agent-face.tsx';
+import { AgentFace, type HeadName } from './agent-face.tsx';
 import type { ChatListItem } from './chat-list-data.ts';
+
+const faceStyle = { flexShrink: 0, overflow: 'visible' } as const;
 
 export function ChatRoomTopbar({ chat }: { chat: ChatListItem }) {
     const title = formatRoomTitle(chat);
@@ -54,9 +57,11 @@ function ParticipantAvatar({
     character,
     participant,
 }: {
-    character: HeadKind;
+    character: HeadName;
     participant: ChatListItem['participants'][number];
 }) {
+    const dark = useResolvedThemeOptional() === 'dark';
+
     if (character !== 'none') {
         return (
             <li
@@ -64,11 +69,11 @@ function ParticipantAvatar({
                 title={participant.name}
             >
                 <AgentFace
-                    animated={false}
-                    aria-hidden
-                    className="size-6 overflow-visible"
+                    animate={false}
+                    dark={dark}
                     head={character}
                     size={24}
+                    style={faceStyle}
                 />
             </li>
         );

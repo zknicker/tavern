@@ -4,6 +4,7 @@ import {
     agentCharacters,
 } from '@tavern/api/agent-appearance';
 import { useEffect, useState } from 'react';
+import { useResolvedThemeOptional } from '../../../components/theme-provider.tsx';
 import {
     Popover,
     PopoverClose,
@@ -32,6 +33,8 @@ import { cn } from '../../../lib/utils.ts';
 import { agentColorPresets } from '../../agents/agent-color-presets.ts';
 import { useAgentProfileUpdate } from '../../agents/use-agent-profile-update.ts';
 import { AgentFace } from '../../chats/agent-face.tsx';
+
+const faceStyle = { flexShrink: 0, overflow: 'visible' } as const;
 
 export function AgentAppearanceSection({
     agent,
@@ -160,11 +163,13 @@ function AgentCharacterPicker({
     onSelect: (character: AgentCharacter) => void;
     selected: AgentCharacter;
 }) {
+    const dark = useResolvedThemeOptional() === 'dark';
+
     return (
         <Popover>
             <PopoverTrigger className={selectTriggerVariants()} disabled={disabled}>
                 <span className="flex min-w-0 flex-1 items-center truncate">
-                    <AgentCharacterOption character={selected} />
+                    <AgentCharacterOption character={selected} dark={dark} />
                 </span>
                 <SelectTriggerIcon />
             </PopoverTrigger>
@@ -188,11 +193,11 @@ function AgentCharacterPicker({
                                 title={agentCharacterLabels[character]}
                             >
                                 <AgentFace
-                                    animated={false}
-                                    aria-hidden
-                                    className="overflow-visible"
+                                    animate={false}
+                                    dark={dark}
                                     head={character}
                                     size={44}
+                                    style={faceStyle}
                                 />
                             </PopoverClose>
                         );
@@ -203,16 +208,10 @@ function AgentCharacterPicker({
     );
 }
 
-function AgentCharacterOption({ character }: { character: AgentCharacter }) {
+function AgentCharacterOption({ character, dark }: { character: AgentCharacter; dark: boolean }) {
     return (
         <span className="flex min-w-0 items-center gap-2">
-            <AgentFace
-                animated={false}
-                aria-hidden
-                className="shrink-0 overflow-visible"
-                head={character}
-                size={18}
-            />
+            <AgentFace animate={false} dark={dark} head={character} size={18} style={faceStyle} />
             <span className="truncate">{agentCharacterLabels[character]}</span>
         </span>
     );

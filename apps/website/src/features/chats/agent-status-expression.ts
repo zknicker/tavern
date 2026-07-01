@@ -1,5 +1,5 @@
 import type { ChatActiveReply, ChatTurnFailure } from '../../hooks/chats/chat-timeline-state.ts';
-import type { AgentEyeEmotion } from './agent-eyes-config.ts';
+import type { Emotion } from './agent-face.tsx';
 import type { TranscriptRow } from './chat-transcript-model.ts';
 
 export type AgentStatusChatRow = TranscriptRow;
@@ -8,7 +8,7 @@ export function resolveAgentStatusExpression(input: {
     activeReply: ChatActiveReply | null;
     failedTurn?: ChatTurnFailure | null;
     rows: AgentStatusChatRow[];
-}): AgentEyeEmotion {
+}): Emotion {
     if (input.failedTurn) {
         return 'sweat';
     }
@@ -29,7 +29,7 @@ export function resolveAgentStatusExpression(input: {
         : 'thinking';
 }
 
-export function getAgentStatusLabel(emotion: AgentEyeEmotion) {
+export function getAgentStatusLabel(emotion: Emotion) {
     switch (emotion) {
         case 'confused':
             return 'Agent needs input';
@@ -64,7 +64,7 @@ function findLatestTurnProgressRow(rows: AgentStatusChatRow[], activeReply: Chat
     return null;
 }
 
-function expressionForRow(row: AgentStatusChatRow): AgentEyeEmotion {
+function expressionForRow(row: AgentStatusChatRow): Emotion {
     if (isFailedProgressRow(row)) {
         return 'sweat';
     }

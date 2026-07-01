@@ -2,6 +2,7 @@ import { Archive02Icon, Plus } from '@hugeicons/core-free-icons';
 import * as React from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { ChannelIconBox } from '../../components/chats/channel-icon-box.tsx';
+import { useResolvedThemeOptional } from '../../components/theme-provider.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import { Button } from '../../components/ui/primitives/button.tsx';
 import {
@@ -49,6 +50,8 @@ import {
     getSidebarDraftPath,
     hasLocalActiveTurn,
 } from './sidebar-chat-list-model.ts';
+
+const faceStyle = { flexShrink: 0, overflow: 'visible' } as const;
 
 export function AppSidebarChatList() {
     const location = useLocation();
@@ -394,6 +397,7 @@ function SidebarChatIcon({
     style: React.CSSProperties | undefined;
 }) {
     const lookupCharacter = useAgentCharacterLookup();
+    const dark = useResolvedThemeOptional() === 'dark';
 
     if (chat.conversationKind === 'channel') {
         return <ChannelIconBox size="sidebar" style={style} />;
@@ -403,13 +407,7 @@ function SidebarChatIcon({
 
     if (character !== 'none') {
         return (
-            <AgentFace
-                animated={false}
-                aria-hidden
-                className="size-[1.125rem] shrink-0 overflow-visible"
-                head={character}
-                size={18}
-            />
+            <AgentFace animate={false} dark={dark} head={character} size={18} style={faceStyle} />
         );
     }
 

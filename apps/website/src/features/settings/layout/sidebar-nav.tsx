@@ -2,6 +2,7 @@ import { Plus } from '@hugeicons/core-free-icons';
 import { ArrowLeft02Icon, ArrowRight01Icon } from '@hugeicons-pro/core-stroke-rounded';
 import * as React from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { useResolvedThemeOptional } from '../../../components/theme-provider.tsx';
 import {
     Collapsible,
     CollapsiblePanel,
@@ -41,6 +42,8 @@ import {
     settingsNavSections,
     staticSettingsNavItems,
 } from './navigation.ts';
+
+const faceStyle = { flexShrink: 0, overflow: 'visible' } as const;
 
 type ResolveCapability = (requirement: CapabilityRequirement) => CapabilityView;
 type StaticSettingsNavItem = (typeof staticSettingsNavItems)[number];
@@ -340,13 +343,15 @@ function AgentSettingsNavGroup({
 }
 
 function AgentAvatar({ agent }: { agent: AgentListOutput['agents'][number] }) {
+    const dark = useResolvedThemeOptional() === 'dark';
+
     return (
         <AgentFace
-            animated={false}
-            aria-hidden
-            className="size-5 shrink-0 overflow-visible"
+            animate={false}
+            dark={dark}
             head={agent.effectiveCharacter}
             size={20}
+            style={faceStyle}
         />
     );
 }

@@ -19,7 +19,7 @@ describe('turn avatar variant', () => {
 
 describe('static agent face', () => {
     test('renders a character head with both eyes and no color tint', () => {
-        const markup = renderToStaticMarkup(<AgentFace animated={false} head="knight" size={20} />);
+        const markup = renderToStaticMarkup(<AgentFace animate={false} head="knight" size={20} />);
         const paths = markup.match(/<path /g) ?? [];
 
         // Two eyes plus the head silhouette layers.

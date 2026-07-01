@@ -1,16 +1,19 @@
 import { useReducedMotion } from 'framer-motion';
+import { useResolvedThemeOptional } from '../../components/theme-provider.tsx';
 import type { ChatActiveReply, ChatTurnFailure } from '../../hooks/chats/chat-timeline-state.ts';
 import { cn } from '../../lib/utils.ts';
-import { AgentFace, type HeadKind } from './agent-face.tsx';
+import { AgentFace, type HeadName } from './agent-face.tsx';
 import {
     type AgentStatusChatRow,
     getAgentStatusLabel,
     resolveAgentStatusExpression,
 } from './agent-status-expression.ts';
 
+const faceStyle = { flexShrink: 0, overflow: 'visible' } as const;
+
 interface AgentStatusIndicatorProps {
     activeReply: ChatActiveReply | null;
-    character: HeadKind;
+    character: HeadName;
     className?: string;
     failedTurn?: ChatTurnFailure | null;
     rows: AgentStatusChatRow[];
@@ -26,6 +29,7 @@ export function AgentStatusIndicator({
     size = 32,
 }: AgentStatusIndicatorProps) {
     const shouldReduceMotion = useReducedMotion();
+    const dark = useResolvedThemeOptional() === 'dark';
     const emotion = resolveAgentStatusExpression({ activeReply, failedTurn, rows });
     const active = activeReply !== null || failedTurn !== null;
 
@@ -40,14 +44,14 @@ export function AgentStatusIndicator({
                 className="flex h-full w-full shrink-0 items-center justify-center overflow-visible"
             >
                 <AgentFace
-                    aria-hidden={true}
                     blinking={!shouldReduceMotion}
-                    className="overflow-visible"
+                    dark={dark}
                     emotion={emotion}
                     head={character}
                     intensity={active ? 1 : 0.92}
                     size={size}
                     speed={shouldReduceMotion ? 0.35 : active ? 1.05 : 0.78}
+                    style={faceStyle}
                 />
             </output>
         </div>
