@@ -30,8 +30,8 @@ const capabilityCategories: Partial<Record<CapabilityId, CapabilityCategoryId>> 
     codexOAuth: 'runtimeCore',
     dashboardServer: 'runtimeCore',
     gateway: 'runtimeCore',
+    modelExecution: 'extensions',
     'plugin.merchbase': 'plugins',
-    models: 'extensions',
     skills: 'extensions',
     vault: 'knowledge',
 };
@@ -42,7 +42,7 @@ const capabilityDisplayOrder: CapabilityId[] = [
     'dashboardServer',
     'gateway',
     'vault',
-    'models',
+    'modelExecution',
     'skills',
     'plugin.merchbase',
 ];
@@ -55,7 +55,7 @@ const requiredCapabilities = new Set<CapabilityId>([
     'apiServer',
     'dashboardServer',
     'gateway',
-    'models',
+    'modelExecution',
     'skills',
 ]);
 

@@ -2,6 +2,7 @@ import type { AgentRuntimeCreateMessage } from '@tavern/api';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { closeDb, initTestDb } from '../db/connection.ts';
 import { ensureRuntimeSchema } from '../db/schema.ts';
+import { setModelProviderEnabled } from '../models/provider-store.ts';
 import type { AgentExecutor, AgentExecutorInput, AgentExecutorResult } from './agent-executor';
 import { resetAgentExecutorForTesting, setAgentExecutorForTesting } from './agent-turn-runner.ts';
 import { listAgentTurnsForSession } from './agent-turn-store.ts';
@@ -19,12 +20,17 @@ import {
 } from './chat-api/index.ts';
 
 describe('Tavern channel relay', () => {
-    beforeEach(() => {
+    const originalClaudeCommand = process.env.TAVERN_AGENT_CLAUDE_CODE_COMMAND;
+
+    beforeEach(async () => {
         ensureRuntimeSchema(initTestDb());
+        process.env.TAVERN_AGENT_CLAUDE_CODE_COMMAND = process.execPath;
+        await setModelProviderEnabled({ enabled: true, providerId: 'claude' });
         resetAgentExecutorForTesting();
     });
 
     afterEach(() => {
+        restoreEnv('TAVERN_AGENT_CLAUDE_CODE_COMMAND', originalClaudeCommand);
         resetAgentExecutorForTesting();
         closeDb();
     });
@@ -236,6 +242,14 @@ function createAgentChat(...agentIds: string[]) {
         ],
         title: 'General',
     });
+}
+
+function restoreEnv(name: string, value: string | undefined) {
+    if (value === undefined) {
+        delete process.env[name];
+        return;
+    }
+    process.env[name] = value;
 }
 
 function messageInput(input?: {

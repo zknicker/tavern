@@ -19,7 +19,6 @@ import type { ModelInventoryOutput } from '../../../lib/trpc.tsx';
 type ModelInventoryProvider = ModelInventoryOutput['providers'][number];
 
 interface ProviderApiKeyDialogProps {
-    description?: string | null;
     keyEnv: string;
     label: string;
     onOpenChange: (open: boolean) => void;
@@ -30,7 +29,6 @@ interface ProviderApiKeyDialogProps {
 }
 
 export function ProviderApiKeyDialog({
-    description,
     keyEnv,
     label,
     onOpenChange,
@@ -40,6 +38,7 @@ export function ProviderApiKeyDialog({
     savePending,
 }: ProviderApiKeyDialogProps) {
     const [apiKey, setApiKey] = React.useState('');
+    const placeholder = apiKeyPlaceholder(label);
 
     React.useEffect(() => {
         if (open) {
@@ -51,10 +50,9 @@ export function ProviderApiKeyDialog({
         <Dialog onOpenChange={onOpenChange} open={open}>
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Add API Key</DialogTitle>
+                    <DialogTitle>API Key</DialogTitle>
                     <DialogDescription>
-                        {description ??
-                            `${label} credentials are saved for your agent as ${keyEnv}.`}
+                        Enter your {label} API key to enable {label} models.
                     </DialogDescription>
                 </DialogHeader>
 
@@ -77,7 +75,7 @@ export function ProviderApiKeyDialog({
                                 id={`provider-api-key-${keyEnv}`}
                                 name="provider-api-key"
                                 onChange={(event) => setApiKey(event.target.value)}
-                                placeholder={keyEnv}
+                                placeholder={placeholder}
                                 spellCheck={false}
                                 type="password"
                                 value={apiKey}
@@ -86,7 +84,7 @@ export function ProviderApiKeyDialog({
                         </Field>
                     </DialogPanel>
 
-                    <DialogFooter>
+                    <DialogFooter variant="bare">
                         <DialogClose
                             disabled={savePending}
                             render={<Button size="sm" type="button" variant="secondary" />}
@@ -105,6 +103,17 @@ export function ProviderApiKeyDialog({
             </DialogContent>
         </Dialog>
     );
+}
+
+function apiKeyPlaceholder(label: string) {
+    const normalizedLabel = label.trim().toLowerCase();
+    if (normalizedLabel.includes('openai')) {
+        return 'sk-proj-...';
+    }
+    if (normalizedLabel.includes('openrouter')) {
+        return 'sk-or-...';
+    }
+    return 'key-...';
 }
 
 export function ProviderInstructionsDialog({

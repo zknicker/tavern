@@ -10,7 +10,7 @@ export const agentRuntimeCapabilitySchema = z.enum([
     'dashboardServer',
     'apiServer',
     'gateway',
-    'models',
+    'modelExecution',
     'skills',
     'plugin.merchbase',
 ]);
@@ -1248,6 +1248,48 @@ export const agentRuntimeModelProviderEntrySchema = z.object({
     warning: z.string().trim().min(1).nullable(),
 });
 
+export const agentRuntimeModelProviderAccessStateSchema = z.enum([
+    'error',
+    'live',
+    'needs-auth',
+    'unavailable',
+]);
+
+export const agentRuntimeModelProviderSetupActionSchema = z.enum([
+    'api-key',
+    'external',
+    'manual',
+    'oauth',
+    'system',
+]);
+
+export const agentRuntimeModelProviderCatalogEntrySchema = z.object({
+    accessDescription: z.string().trim().min(1),
+    accessState: agentRuntimeModelProviderAccessStateSchema,
+    authType: agentRuntimeModelProviderAuthTypeSchema.nullable(),
+    enabled: z.boolean(),
+    id: z.string().trim().min(1),
+    keyEnv: z.string().trim().min(1).nullable(),
+    label: z.string().trim().min(1),
+    oauthFlow: agentRuntimeModelProviderOAuthFlowSchema.nullable().default(null),
+    setupAction: agentRuntimeModelProviderSetupActionSchema,
+    setupCommand: z.string().trim().min(1).nullable(),
+});
+
+export const agentRuntimeModelProviderCatalogSchema = z.object({
+    providers: z.array(agentRuntimeModelProviderCatalogEntrySchema),
+    updatedAt: z.string().datetime(),
+});
+
+export const agentRuntimeModelProviderEnabledSchema = z.object({
+    providers: z.array(agentRuntimeModelProviderCatalogEntrySchema),
+    updatedAt: z.string().datetime(),
+});
+
+export const agentRuntimeUpdateModelProviderSchema = z.object({
+    enabled: z.boolean().default(true),
+});
+
 export const agentRuntimeModelProviderApiKeyOptionSchema = z.object({
     description: z.string().trim().min(1).nullable(),
     docsUrl: z.string().url().nullable(),
@@ -2412,6 +2454,24 @@ export type AgentRuntimeModelAccessState = z.infer<typeof agentRuntimeModelAcces
 export type AgentRuntimeModelAccessStatus = z.infer<typeof agentRuntimeModelAccessStatusSchema>;
 export type AgentRuntimeSaveModelProviderApiKey = z.infer<
     typeof agentRuntimeSaveModelProviderApiKeySchema
+>;
+export type AgentRuntimeModelProviderAccessState = z.infer<
+    typeof agentRuntimeModelProviderAccessStateSchema
+>;
+export type AgentRuntimeModelProviderCatalog = z.infer<
+    typeof agentRuntimeModelProviderCatalogSchema
+>;
+export type AgentRuntimeModelProviderCatalogEntry = z.infer<
+    typeof agentRuntimeModelProviderCatalogEntrySchema
+>;
+export type AgentRuntimeModelProviderEnabled = z.infer<
+    typeof agentRuntimeModelProviderEnabledSchema
+>;
+export type AgentRuntimeModelProviderSetupAction = z.infer<
+    typeof agentRuntimeModelProviderSetupActionSchema
+>;
+export type AgentRuntimeUpdateModelProvider = z.infer<
+    typeof agentRuntimeUpdateModelProviderSchema
 >;
 export type AgentRuntimeStartModelProviderOAuth = z.infer<
     typeof agentRuntimeStartModelProviderOAuthSchema

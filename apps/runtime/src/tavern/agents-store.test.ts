@@ -2,10 +2,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AGENT_WORKSPACE } from '../config.ts';
 import { closeDb, initTestDb } from '../db/connection.ts';
 import { ensureRuntimeSchema } from '../db/schema.ts';
+import { setModelProviderEnabled } from '../models/provider-store.ts';
 import { handleTavernRuntimeRequest } from './router.ts';
 
 describe('Runtime agent and agent engine reads', () => {
     const originalFetch = globalThis.fetch;
+    const originalClaudeCommand = process.env.TAVERN_AGENT_CLAUDE_CODE_COMMAND;
 
     beforeEach(() => {
         ensureRuntimeSchema(initTestDb());
@@ -14,6 +16,7 @@ describe('Runtime agent and agent engine reads', () => {
 
     afterEach(() => {
         globalThis.fetch = originalFetch;
+        restoreEnv('TAVERN_AGENT_CLAUDE_CODE_COMMAND', originalClaudeCommand);
         closeDb();
     });
 
@@ -88,6 +91,7 @@ describe('Runtime agent and agent engine reads', () => {
     });
 
     it('applies model and skill updates to the addressed agent', async () => {
+        await enableClaudeModels();
         await handleTavernRuntimeRequest(
             new Request('http://runtime.test/agents', {
                 body: JSON.stringify({
@@ -103,7 +107,7 @@ describe('Runtime agent and agent engine reads', () => {
         const modelResponse = await handleTavernRuntimeRequest(
             new Request('http://runtime.test/agents/agt_research/model', {
                 body: JSON.stringify({
-                    model: { model: 'gpt-4.1-mini', provider: 'openai' },
+                    model: { model: 'claude-sonnet-4-6', provider: 'claude' },
                 }),
                 headers: { 'content-type': 'application/json' },
                 method: 'PATCH',
@@ -131,7 +135,7 @@ describe('Runtime agent and agent engine reads', () => {
         const config = (await configResponse.json()) as { enabledSkillIds: string[] };
         expect(config).toMatchObject({
             id: 'agt_research',
-            modelName: { model: 'gpt-4.1-mini', provider: 'openai' },
+            modelName: { model: 'claude-sonnet-4-6', provider: 'claude' },
         });
         expect(config.enabledSkillIds).toEqual(expect.arrayContaining(['research', 'charts']));
     });
@@ -210,36 +214,30 @@ describe('Runtime agent and agent engine reads', () => {
         expect(resyncResponse.status).toBe(404);
     });
 
-    it('serves agent model reads through the runtime adapter', async () => {
+    it('keeps disconnected catalog providers out of executable model reads', async () => {
         const previousCodexCommand = process.env.TAVERN_AGENT_CODEX_CLI_COMMAND;
         const previousClaudeCommand = process.env.TAVERN_AGENT_CLAUDE_CODE_COMMAND;
         process.env.TAVERN_AGENT_CODEX_CLI_COMMAND = 'tavern-missing-codex';
         process.env.TAVERN_AGENT_CLAUDE_CODE_COMMAND = 'tavern-missing-claude';
 
-        const response = await handleTavernRuntimeRequest(
+        const modelsResponse = await handleTavernRuntimeRequest(
             new Request('http://runtime.test/models')
+        );
+        const catalogResponse = await handleTavernRuntimeRequest(
+            new Request('http://runtime.test/model-providers/catalog')
         );
 
         try {
-            expect(response.status).toBe(200);
-            await expect(response.json()).resolves.toMatchObject({
-                models: expect.arrayContaining([
-                    expect.objectContaining({
-                        availability: 'unavailable',
-                        provider: 'codex',
-                    }),
-                    expect.objectContaining({
-                        availability: 'unavailable',
-                        provider: 'claude',
-                    }),
-                ]),
+            expect(modelsResponse.status).toBe(200);
+            await expect(modelsResponse.json()).resolves.toMatchObject({
+                models: [],
+                providers: [],
+            });
+            expect(catalogResponse.status).toBe(200);
+            await expect(catalogResponse.json()).resolves.toMatchObject({
                 providers: expect.arrayContaining([
-                    expect.objectContaining({ authenticated: false, id: 'codex', modelCount: 5 }),
-                    expect.objectContaining({
-                        authenticated: false,
-                        id: 'claude',
-                        modelCount: 6,
-                    }),
+                    expect.objectContaining({ accessState: 'unavailable', id: 'codex' }),
+                    expect.objectContaining({ accessState: 'unavailable', id: 'claude' }),
                 ]),
             });
         } finally {
@@ -249,10 +247,11 @@ describe('Runtime agent and agent engine reads', () => {
     });
 
     it('applies agent model updates through the dashboard model API', async () => {
+        await enableClaudeModels();
         const response = await handleTavernRuntimeRequest(
             new Request('http://runtime.test/agents/agt_primary/model', {
                 body: JSON.stringify({
-                    model: { model: 'gpt-5.5', provider: 'codex' },
+                    model: { model: 'claude-sonnet-4-6', provider: 'claude' },
                 }),
                 headers: { 'content-type': 'application/json' },
                 method: 'PATCH',
@@ -267,8 +266,8 @@ describe('Runtime agent and agent engine reads', () => {
                         {
                             id: 'agt_primary',
                             model: {
-                                model: 'gpt-5.5',
-                                provider: 'codex',
+                                model: 'claude-sonnet-4-6',
+                                provider: 'claude',
                             },
                         },
                     ],
@@ -284,8 +283,8 @@ describe('Runtime agent and agent engine reads', () => {
             agents: [
                 expect.objectContaining({
                     modelName: {
-                        model: 'gpt-5.5',
-                        provider: 'codex',
+                        model: 'claude-sonnet-4-6',
+                        provider: 'claude',
                     },
                 }),
             ],
@@ -358,6 +357,11 @@ describe('Runtime agent and agent engine reads', () => {
         });
     });
 });
+
+async function enableClaudeModels() {
+    process.env.TAVERN_AGENT_CLAUDE_CODE_COMMAND = process.execPath;
+    await setModelProviderEnabled({ enabled: true, providerId: 'claude' });
+}
 
 function handleAgentEngineFetch(input: string | URL | Request) {
     const url = new URL(typeof input === 'string' || input instanceof URL ? input : input.url);

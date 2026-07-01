@@ -168,6 +168,12 @@ function performProviderSetupAction(
         onStartOAuth: (provider: ModelInventoryProvider, close: () => void) => void;
     }
 ) {
+    if (item.provider?.isConnected) {
+        handlers.close();
+        handlers.onShowInstructions(item.provider);
+        return;
+    }
+
     switch (item.kind) {
         case 'api-key':
             handlers.close();

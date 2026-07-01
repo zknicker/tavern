@@ -141,6 +141,13 @@ CREATE TABLE IF NOT EXISTS model_catalog_cache (
   fingerprint TEXT
 );
 
+CREATE TABLE IF NOT EXISTS runtime_model_providers (
+  provider_id TEXT PRIMARY KEY,
+  enabled     INTEGER NOT NULL DEFAULT 1 CHECK (enabled IN (0, 1)),
+  created_at  TEXT NOT NULL,
+  updated_at  TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS chats (
   id                    TEXT PRIMARY KEY,
   kind                  TEXT NOT NULL DEFAULT 'channel' CHECK (kind IN ('channel', 'dm')),

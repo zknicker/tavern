@@ -4,6 +4,7 @@ import { dispatch } from './cli/main';
 import { DATA_DIR } from './config';
 import { initDb } from './db/connection';
 import { ensureRuntimeSchema } from './db/schema';
+import { runRuntimeDoctor } from './doctor/runtime-doctor';
 import { type RuntimeJobsManager, startRuntimeJobsManager } from './jobs/manager';
 import { ensureRuntimeJobsSchema } from './jobs/schema';
 import { log } from './log';
@@ -32,6 +33,9 @@ async function main(): Promise<void> {
     ensureRuntimeSchema(db);
     ensureRuntimeJobsSchema(db);
     const managedAgent = ensurePrimaryManagedAgent(db);
+    await runRuntimeDoctor({ db, reason: 'runtime_start' }).catch((err) => {
+        log.warn('Runtime Doctor failed during startup', { err });
+    });
     const workspaceChatsSeed = seedWorkspaceChats({
         agentId: managedAgent.id,
         agentName: managedAgent.name,
@@ -74,7 +78,7 @@ async function main(): Promise<void> {
         });
     });
     await refreshRuntimeCapabilities({
-        ids: ['vault', 'gateway', 'apiServer', 'models', 'skills'],
+        ids: ['vault', 'gateway', 'apiServer', 'modelExecution', 'skills'],
         publishUpdated: true,
     }).catch((err) => {
         log.warn('Capability refresh failed after agent startup', {

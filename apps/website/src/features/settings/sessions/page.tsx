@@ -27,10 +27,7 @@ function SessionsSettingsContent() {
     return (
         <SettingsPage>
             <SettingsPageHeader title="Sessions" />
-            <SettingsSection
-                description="Synced Tavern, system, and external chats."
-                title="Sessions"
-            >
+            <SettingsSection title="Sessions">
                 <AgentRecentChats agent={agent} />
             </SettingsSection>
         </SettingsPage>

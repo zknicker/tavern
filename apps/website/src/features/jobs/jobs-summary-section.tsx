@@ -16,7 +16,7 @@ interface JobsSummarySectionProps {
 
 export function JobsSummarySection({ jobs, onSelectJob }: JobsSummarySectionProps) {
     return (
-        <SettingsSection description="Provider imports and maintenance." title="Operational Jobs">
+        <SettingsSection title="Operational Jobs">
             <SettingsGroup>
                 {jobs.map((job, index) => (
                     <React.Fragment key={job.slug}>

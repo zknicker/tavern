@@ -33,11 +33,13 @@ export async function handleOpenAiSettingsRequest(request: Request): Promise<Res
     if (request.method === 'PUT') {
         const input = agentRuntimeSaveOpenAiSettingsSchema.parse(await readJson(request));
         const settings = saveOpenAiSettings(input);
+        await repairOpenAiProviderState({ enable: true });
         await refreshOpenAiDependentSchedules();
         return json(agentRuntimeOpenAiSettingsSchema.parse(settings));
     }
     if (request.method === 'DELETE') {
         const settings = deleteOpenAiSettings();
+        await repairOpenAiProviderState({ enable: false });
         await refreshOpenAiDependentSchedules();
         return json(agentRuntimeOpenAiSettingsSchema.parse(settings));
     }
@@ -136,4 +138,19 @@ async function refreshOpenAiDependentSchedules(): Promise<void> {
     } catch (error) {
         log.warn('OpenAI model access changed, but capability refresh failed', { err: error });
     }
+}
+
+async function repairOpenAiProviderState(input: { enable: boolean }): Promise<void> {
+    const [{ runRuntimeDoctor }, { setModelProviderEnabled }] = await Promise.all([
+        import('../doctor/runtime-doctor'),
+        import('../models/provider-store'),
+    ]);
+    if (input.enable) {
+        await setModelProviderEnabled({ enabled: true, providerId: 'openai' });
+    }
+    await runRuntimeDoctor({
+        modules: ['models', 'agents'],
+        reason: 'provider_changed',
+        scope: { kind: 'provider', providerId: 'openai' },
+    });
 }

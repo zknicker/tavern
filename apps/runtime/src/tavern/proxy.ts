@@ -28,6 +28,7 @@ import {
 } from '../agent-engine/skill-library.ts';
 import { AGENT_HOME, AGENT_WORKSPACE } from '../config.ts';
 import { getDb } from '../db/connection.ts';
+import { runRuntimeDoctor } from '../doctor/runtime-doctor.ts';
 import { listAgentModels } from '../models/catalog-service.ts';
 import {
     resolveAgentModelSelection,
@@ -89,6 +90,11 @@ async function dispatchAgentEngineStatic({ request, url }: { request: Request; u
             agentName: agent.name,
             workspaceDir: agent.workspaceFolder,
         });
+        await runRuntimeDoctor({
+            modules: ['agents'],
+            reason: 'agent_changed',
+            scope: { kind: 'agent', agentId: agent.id },
+        });
         return withResolvedModelName(agent);
     }
     if (method === 'DELETE' && segments[0] === 'agents' && segments[1] && !segments[2]) {
@@ -116,7 +122,7 @@ async function dispatchAgentEngineStatic({ request, url }: { request: Request; u
         }
         let updatedAgent: AgentRuntimeAgent | null = null;
         if (segments[2] === 'model') {
-            updatedAgent = savePatchedModel(agentId, input);
+            updatedAgent = await savePatchedModel(agentId, input);
         } else if (segments[2] === 'name') {
             const payload = agentRuntimeUpdateAgentNameSchema.parse(input);
             updatedAgent = updateStoredAgent({ agentId, name: payload.name });
@@ -290,17 +296,34 @@ function unsupportedPayload(message: string) {
     return unsupportedAgentEngineSurface(message);
 }
 
-function savePatchedModel(agentId: string, input: unknown) {
+async function savePatchedModel(agentId: string, input: unknown) {
     const payload = agentRuntimeUpdateAgentModelSchema.parse(input);
     const agent = getStoredAgent(agentId);
 
     if (!agent) {
         return null;
     }
+    const inventory = await listAgentModels();
+    const executable = inventory.models.some(
+        (model) =>
+            model.provider === payload.model.provider &&
+            model.route.model === payload.model.model &&
+            model.availability === 'available'
+    );
+    if (!executable) {
+        throw new Error(
+            `Model "${payload.model.provider}/${payload.model.model}" is not executable.`
+        );
+    }
 
     saveAgentModelSelectionIntent({
         agentId,
         modelName: payload.model,
+    });
+    await runRuntimeDoctor({
+        modules: ['agents'],
+        reason: 'agent_changed',
+        scope: { kind: 'agent', agentId },
     });
 
     return agent;

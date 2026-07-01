@@ -4,7 +4,7 @@ import { EmptyState } from '../shell/empty-state.tsx';
 import { useLayoutContext } from '../shell/use-layout-context.ts';
 
 export function StatsAvailabilityGate({ children }: { children: ReactNode }) {
-    const gate = useCapability('models');
+    const gate = useCapability('modelExecution');
     const { navigateToSettings } = useLayoutContext();
 
     if (gate.healthy) {

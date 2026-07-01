@@ -58,6 +58,7 @@ export const modelInventoryApiKeyOptionSchema = z.object({
 
 export const modelInventorySchema = z.object({
     apiKeyOptions: z.array(modelInventoryApiKeyOptionSchema).default([]),
+    catalogProviders: z.array(modelInventoryProviderSchema).default([]),
     providers: z.array(modelInventoryProviderSchema),
 });
 

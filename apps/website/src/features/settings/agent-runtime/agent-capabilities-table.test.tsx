@@ -4,7 +4,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { AgentCapabilitiesSummary } from './agent-capabilities-table.tsx';
 
 function capability(input: {
-    capability: 'apiServer' | 'dashboardServer' | 'gateway' | 'models' | 'skills' | 'vault';
+    capability: 'apiServer' | 'dashboardServer' | 'gateway' | 'modelExecution' | 'skills' | 'vault';
     displayName?: string;
     state?: 'degraded' | 'healthy' | 'unknown' | 'unavailable';
 }) {
@@ -56,7 +56,7 @@ test('AgentCapabilitiesSummary groups by category', () => {
         <AgentCapabilitiesSummary
             capabilities={[
                 capability({ capability: 'dashboardServer' }),
-                capability({ capability: 'models', state: 'unknown' }),
+                capability({ capability: 'modelExecution', state: 'unknown' }),
                 capability({ capability: 'apiServer' }),
                 capability({ capability: 'gateway' }),
                 capability({ capability: 'skills' }),

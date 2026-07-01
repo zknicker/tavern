@@ -9,7 +9,7 @@ export function Stats() {
     return (
         <SettingsPage>
             <SettingsPageHeader title="Stats" />
-            <SettingsSection description="Model usage, spend, and provider activity." title="Usage">
+            <SettingsSection title="Usage">
                 <UsageModules />
             </SettingsSection>
         </SettingsPage>

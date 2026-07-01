@@ -9,6 +9,7 @@ import {
     agentRuntimeStopTurnResultSchema,
     agentRuntimeStopTurnSchema,
 } from '@tavern/api';
+import { listAgentModels } from '../models/catalog-service.ts';
 import { resolveAgentModelSelection } from '../models/selection-service.ts';
 import { ensureCurrentAgentSession } from './agent-session-store.ts';
 import { enqueueAgentTurn, stopAgentTurn } from './agent-turn-runner.ts';
@@ -35,6 +36,10 @@ export async function sendTavernChannelMessage(
     }
 
     const acceptedAt = new Date().toISOString();
+    const modelInventory = await listAgentModels();
+    if (!modelInventory.models.some((model) => model.availability === 'available')) {
+        throw new Error('No executable model is configured. Add or repair a model provider.');
+    }
     const runId = createRunId(payload.message.id);
     const responseId = createResponseId(runId);
     const storedAgent = requireStoredAgent(payload.agent.agentId);

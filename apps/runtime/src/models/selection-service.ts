@@ -1,4 +1,5 @@
 import type { AgentRuntimeModelName } from '@tavern/api';
+import { isCliCommandAvailable } from '../agent-engine/cli-command.ts';
 import { readConfigValue } from '../config.ts';
 import type { Database } from '../db/sqlite.ts';
 import {
@@ -67,7 +68,25 @@ export function resolveConfiguredProvider(): AgentModelProvider {
     if (readConfigValue('TAVERN_AGENT_BASE_URL')) {
         return 'openai-compatible';
     }
+    if (hasOpenAiAccessConfig()) {
+        return 'openai';
+    }
+    if (isCliCommandAvailable(readConfigValue('TAVERN_AGENT_CODEX_CLI_COMMAND') ?? 'codex')) {
+        return 'codex';
+    }
+    if (isCliCommandAvailable(readConfigValue('TAVERN_AGENT_CLAUDE_CODE_COMMAND') ?? 'claude')) {
+        return 'claude';
+    }
     return 'openai';
+}
+
+function hasOpenAiAccessConfig() {
+    return Boolean(
+        readConfigValue('OPENAI_API_KEY') ??
+            readConfigValue('TAVERN_AGENT_API_KEY') ??
+            readConfigValue('AI_GATEWAY_API_KEY') ??
+            readConfigValue('VERCEL_OIDC_TOKEN')
+    );
 }
 
 function modelForProvider(provider: AgentModelProvider) {

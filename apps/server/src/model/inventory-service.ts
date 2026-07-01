@@ -1,24 +1,39 @@
-import { getAgentRuntimeModels } from '../agent-runtime/models.ts';
+import {
+    getAgentRuntimeEnabledModelProviders,
+    getAgentRuntimeModelProviderCatalog,
+    getAgentRuntimeModels,
+} from '../agent-runtime/models.ts';
 import type { ModelInventory, ModelInventoryProvider } from './inventory-contracts.ts';
 import { modelInventorySchema } from './inventory-contracts.ts';
 
 export async function listModelInventory(): Promise<ModelInventory> {
-    const response = await getAgentRuntimeModels();
+    const [response, catalog, enabled] = await Promise.all([
+        getAgentRuntimeModels(),
+        getAgentRuntimeModelProviderCatalog(),
+        getAgentRuntimeEnabledModelProviders(),
+    ]);
     const models = response?.models ?? [];
-    const runtimeProviders = response?.providers ?? [];
+    const enabledProviderEntries = enabled?.providers ?? response?.providers ?? [];
+    const catalogProviderEntries = catalog?.providers ?? [];
     const providersById = new Map<string, ModelInventoryProvider>();
 
-    for (const provider of runtimeProviders) {
+    for (const provider of enabledProviderEntries) {
         providersById.set(
             provider.id,
             createInventoryProvider({
                 authType: provider.authType,
-                isConnected: provider.authenticated,
+                connectionDetail:
+                    'accessDescription' in provider ? provider.accessDescription : provider.warning,
+                isConnected:
+                    'accessState' in provider
+                        ? provider.accessState === 'live'
+                        : provider.authenticated,
                 keyEnv: provider.keyEnv,
                 label: provider.label,
                 oauthFlow: provider.oauthFlow,
                 provider: provider.id,
-                warning: provider.warning,
+                setupAction: 'setupAction' in provider ? provider.setupAction : null,
+                warning: 'warning' in provider ? provider.warning : null,
             })
         );
     }
@@ -57,6 +72,22 @@ export async function listModelInventory(): Promise<ModelInventory> {
 
     return modelInventorySchema.parse({
         apiKeyOptions: response?.apiKeyOptions ?? [],
+        catalogProviders: catalogProviderEntries
+            .filter((provider) => !provider.enabled)
+            .map((provider) =>
+                createInventoryProvider({
+                    authType: provider.authType,
+                    connectionDetail: provider.accessDescription,
+                    isConnected: provider.accessState === 'live',
+                    keyEnv: provider.keyEnv,
+                    label: provider.label,
+                    oauthFlow: provider.oauthFlow,
+                    provider: provider.id,
+                    setupAction: provider.setupAction,
+                    warning: null,
+                })
+            )
+            .sort(compareProviders),
         providers: [...providersById.values()]
             .map((provider) => ({
                 ...provider,
@@ -66,11 +97,7 @@ export async function listModelInventory(): Promise<ModelInventory> {
                         left.ref.localeCompare(right.ref)
                 ),
             }))
-            .sort(
-                (left, right) =>
-                    left.displayName.localeCompare(right.displayName) ||
-                    left.provider.localeCompare(right.provider)
-            ),
+            .sort(compareProviders),
     });
 }
 
@@ -91,19 +118,24 @@ function parseRuntimeModel(input: { id: string; provider: string | null }) {
 
 function createInventoryProvider(input: {
     authType: string | null;
+    connectionDetail?: string | null;
     isConnected: boolean;
     keyEnv: string | null;
     label: string | null;
     oauthFlow: string | null;
     provider: string;
+    setupAction?: string | null;
     warning: string | null;
 }): ModelInventoryProvider {
     const keyEnv = input.keyEnv ?? extractProviderKeyEnv(input.warning);
-    const authAction = getAuthAction(input.authType, input.oauthFlow, keyEnv);
+    const authAction =
+        input.setupAction && input.setupAction !== 'manual'
+            ? (input.setupAction as ReturnType<typeof getAuthAction>)
+            : getAuthAction(input.authType, input.oauthFlow, keyEnv);
     return {
         authAction,
         authType: input.authType,
-        connectionDetail: input.isConnected ? null : input.warning,
+        connectionDetail: input.isConnected ? null : (input.connectionDetail ?? input.warning),
         displayName: input.label?.trim() || formatProviderName(input.provider),
         isConnected: input.isConnected,
         keyEnv,
@@ -159,4 +191,11 @@ function formatProviderName(provider: string) {
         .filter(Boolean)
         .map((segment) => segment[0]?.toUpperCase() + segment.slice(1))
         .join(' ');
+}
+
+function compareProviders(left: ModelInventoryProvider, right: ModelInventoryProvider) {
+    return (
+        left.displayName.localeCompare(right.displayName) ||
+        left.provider.localeCompare(right.provider)
+    );
 }

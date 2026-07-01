@@ -1,5 +1,6 @@
 import { isCliCommandAvailable } from '../agent-engine/cli-command.ts';
 import { readConfigValue } from '../config.ts';
+import { getOpenAiApiKey } from '../model-access/openai-settings.ts';
 import { resolveClaudeModelCatalog } from './provider-sources/claude.ts';
 import { resolveCodexModelCatalog } from './provider-sources/codex.ts';
 import { resolveOpenAiModelCatalog } from './provider-sources/openai.ts';
@@ -39,19 +40,14 @@ export function modelCatalogProviderSpecs(): ModelCatalogProviderSpec[] {
 
     return [
         {
-            authenticated: () =>
-                Boolean(
-                    readConfigValue('OPENAI_API_KEY') ?? readConfigValue('TAVERN_AGENT_API_KEY')
-                ),
+            authenticated: () => Boolean(readOpenAiApiKey()),
             authType: 'api_key',
             keyEnv: 'OPENAI_API_KEY',
             oauthFlow: null,
             provider: openAiProvider,
             resolveCatalog: () =>
                 resolveOpenAiModelCatalog({
-                    apiKey:
-                        readConfigValue('OPENAI_API_KEY') ??
-                        readConfigValue('TAVERN_AGENT_API_KEY'),
+                    apiKey: readOpenAiApiKey(),
                     provider: openAiProvider,
                 }),
         },
@@ -80,4 +76,12 @@ export function modelCatalogProviderSpecs(): ModelCatalogProviderSpec[] {
                 }),
         },
     ];
+}
+
+function readOpenAiApiKey() {
+    return (
+        readConfigValue('OPENAI_API_KEY') ??
+        readConfigValue('TAVERN_AGENT_API_KEY') ??
+        getOpenAiApiKey()
+    );
 }

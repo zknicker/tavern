@@ -25,6 +25,7 @@ import { listMacApps } from '../mac-apps/inventory';
 import { handleModelAccessRequest } from '../model-access/model-access';
 import { handleOpenAiSettingsRequest } from '../model-access/openai-settings';
 import { handleOpenRouterSettingsRequest } from '../model-access/openrouter-settings';
+import { handleModelProviderRequest } from '../models/provider-routes';
 import { handlePluginsRequest } from '../plugins/routes';
 import { handleVaultRequest } from '../vault/routes';
 import { handleWorkspaceRequest } from '../workspace/routes';
@@ -77,6 +78,11 @@ export async function handleTavernRuntimeRequest(request: Request): Promise<Resp
     const jobsResponse = await handleRuntimeJobsRequest(request);
     if (jobsResponse) {
         return jobsResponse;
+    }
+
+    const modelProviderResponse = await handleModelProviderRequest(request);
+    if (modelProviderResponse) {
+        return modelProviderResponse;
     }
 
     const modelAccessResponse = await handleModelAccessRequest(request);

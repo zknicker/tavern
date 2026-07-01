@@ -16,7 +16,6 @@ type SettingsPageHeaderProps = Omit<React.ComponentProps<'header'>, 'title'> & {
 type SettingsPageProps = React.ComponentProps<'div'>;
 type SettingsSectionProps = Omit<React.ComponentProps<'section'>, 'title'> & {
     action?: React.ReactNode;
-    description?: React.ReactNode;
     title: React.ReactNode;
 };
 
@@ -80,19 +79,13 @@ export function SettingsSection({
     action,
     children,
     className,
-    description,
     title,
     ...props
 }: SettingsSectionProps) {
     return (
         <section className={cn('space-y-2', className)} {...props}>
-            <div className="flex min-w-0 items-end justify-between gap-4 px-3">
-                <div className="min-w-0 space-y-0.5">
-                    <h2 className="font-medium text-base text-muted-foreground">{title}</h2>
-                    {description ? (
-                        <p className="text-muted-foreground text-sm">{description}</p>
-                    ) : null}
-                </div>
+            <div className="flex min-w-0 items-center justify-between gap-4 px-3">
+                <h2 className="min-w-0 font-medium text-base text-muted-foreground">{title}</h2>
                 {action ? <div className="shrink-0">{action}</div> : null}
             </div>
             {children}

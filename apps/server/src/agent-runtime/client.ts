@@ -45,6 +45,9 @@ import {
     type AgentRuntimeMerchbaseSettings,
     type AgentRuntimeMessageAccepted,
     type AgentRuntimeModelAccess,
+    type AgentRuntimeModelProviderCatalog,
+    type AgentRuntimeModelProviderCatalogEntry,
+    type AgentRuntimeModelProviderEnabled,
     type AgentRuntimeModels,
     type AgentRuntimeOpenAiSettings,
     type AgentRuntimeOpenRouterSettings,
@@ -109,6 +112,7 @@ import {
     type AgentRuntimeUpdateAgentSessionModelResult,
     type AgentRuntimeUpdateAgentThinkingDefault,
     type AgentRuntimeUpdateCron,
+    type AgentRuntimeUpdateModelProvider,
     type AgentRuntimeUpdateSkillEnabled,
     type AgentRuntimeUpdateToolEnabled,
     type AgentRuntimeUpsertBinding,
@@ -166,6 +170,9 @@ import {
     agentRuntimeMerchbaseSettingsSchema,
     agentRuntimeMessageAcceptedSchema,
     agentRuntimeModelAccessSchema,
+    agentRuntimeModelProviderCatalogEntrySchema,
+    agentRuntimeModelProviderCatalogSchema,
+    agentRuntimeModelProviderEnabledSchema,
     agentRuntimeModelProviderOAuthCancelSchema,
     agentRuntimeModelProviderOAuthPollSchema,
     agentRuntimeModelProviderOAuthStartSchema,
@@ -236,6 +243,7 @@ import {
     agentRuntimeUpdateAgentSessionModelSchema,
     agentRuntimeUpdateAgentThinkingDefaultSchema,
     agentRuntimeUpdateCronSchema,
+    agentRuntimeUpdateModelProviderSchema,
     agentRuntimeUpdateSchema,
     agentRuntimeUpdateSkillEnabledSchema,
     agentRuntimeUpdateToolEnabledSchema,
@@ -326,6 +334,8 @@ export interface TavernAgentRuntimeClient {
     getMcpCatalog(): Promise<AgentRuntimeMcpCatalog>;
     getMerchbaseSettings(): Promise<AgentRuntimeMerchbaseSettings>;
     getModelAccess(): Promise<AgentRuntimeModelAccess>;
+    getModelProviderCatalog(): Promise<AgentRuntimeModelProviderCatalog>;
+    getModelProvidersEnabled(): Promise<AgentRuntimeModelProviderEnabled>;
     getModels(): Promise<AgentRuntimeModels>;
     getOpenAiSettings(): Promise<AgentRuntimeOpenAiSettings>;
     getOpenRouterSettings(): Promise<AgentRuntimeOpenRouterSettings>;
@@ -454,6 +464,10 @@ export interface TavernAgentRuntimeClient {
         input: AgentRuntimeUpdateAgentPluginGrant
     ): Promise<AgentRuntimeAgentPluginGrant>;
     setMcpServerEnabled(name: string, enabled: boolean): Promise<{ ok: boolean }>;
+    setModelProviderEnabled(
+        providerId: string,
+        input: AgentRuntimeUpdateModelProvider
+    ): Promise<AgentRuntimeModelProviderCatalogEntry>;
     startModelProviderOAuth(input: AgentRuntimeStartModelProviderOAuth): Promise<unknown>;
     startUpdate(input?: { targetVersion?: null | string }): Promise<AgentRuntimeUpdate>;
     steerChatTurn(
@@ -1378,6 +1392,58 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         }
 
         return agentRuntimeModelAccessSchema.parse(await response.json());
+    }
+
+    async getModelProviderCatalog() {
+        const response = await fetch(
+            `${this.#baseUrl}${agentRuntimeRoutes.modelProvidersCatalog}`,
+            {
+                headers: this.#authHeaders,
+            }
+        );
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeModelProviderCatalogSchema.parse(await response.json());
+    }
+
+    async getModelProvidersEnabled() {
+        const response = await fetch(
+            `${this.#baseUrl}${agentRuntimeRoutes.modelProvidersEnabled}`,
+            {
+                headers: this.#authHeaders,
+            }
+        );
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeModelProviderEnabledSchema.parse(await response.json());
+    }
+
+    async setModelProviderEnabled(providerId: string, input: AgentRuntimeUpdateModelProvider) {
+        const payload = agentRuntimeUpdateModelProviderSchema.parse(input);
+        const response = await fetch(
+            `${this.#baseUrl}${agentRuntimeRoutes.modelProvider(providerId)}`,
+            {
+                body: JSON.stringify(payload),
+                headers: {
+                    ...this.#authHeaders,
+                    'content-type': 'application/json',
+                    [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+                },
+                method: payload.enabled ? 'PUT' : 'DELETE',
+            }
+        );
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeModelProviderCatalogEntrySchema.parse(await response.json());
     }
 
     async saveModelProviderApiKey(input: AgentRuntimeSaveModelProviderApiKey) {

@@ -8,7 +8,8 @@ import type {
 } from '@tavern/api';
 import { AGENT_WORKSPACE } from '../config.ts';
 import { loadVaultBackedCodexCredentials } from '../model-access/codex-settings.ts';
-import { hasConfiguredAgentModelAccess, resolveAgentModelSummary } from '../models/model-access.ts';
+import { listAgentModels } from '../models/catalog-service.ts';
+import { resolveAgentModelSummary } from '../models/model-access.ts';
 import { checkMerchbaseCapability } from '../plugins/merchbase.ts';
 import { resolveVaultConfig } from '../vault/store.ts';
 
@@ -89,10 +90,10 @@ export const runtimeCapabilityDefinitions: RuntimeCapabilityDefinition[] = [
     },
     {
         async check() {
-            return checkAgentEngineCapability({ capability: 'models' });
+            return checkModelExecutionCapability();
         },
-        displayName: 'Models',
-        id: 'models',
+        displayName: 'Model execution',
+        id: 'modelExecution',
         refresh: {
             intervalMs: 5 * minuteMs,
             runOnStart: true,
@@ -168,7 +169,7 @@ function canAccess(targetPath: string, mode: number): boolean {
 }
 
 function checkAgentEngineCapability(input: {
-    capability: 'api' | 'engine' | 'gateway' | 'models' | 'skills';
+    capability: 'api' | 'engine' | 'gateway' | 'skills';
 }): RuntimeCapabilityCheckResult {
     const model = resolveAgentModelSummary();
     const metadata = {
@@ -178,11 +179,23 @@ function checkAgentEngineCapability(input: {
         workspace: AGENT_WORKSPACE,
     };
 
-    if (input.capability === 'models' && !hasConfiguredAgentModelAccess()) {
+    return { metadata, state: 'healthy' };
+}
+
+async function checkModelExecutionCapability(): Promise<RuntimeCapabilityCheckResult> {
+    const models = await listAgentModels();
+    const available = models.models.filter((model) => model.availability === 'available');
+    const metadata = {
+        modelCount: models.models.length,
+        providerCount: models.providers.length,
+        providers: models.providers.map((provider) => provider.id),
+    };
+
+    if (available.length === 0) {
         return {
             metadata,
-            reason: "The assistant's model credentials are not configured.",
-            state: 'unauthorized',
+            reason: 'No executable agent model is configured.',
+            state: 'unavailable',
         };
     }
 

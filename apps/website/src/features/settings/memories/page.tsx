@@ -32,7 +32,7 @@ export function MemoriesSettings() {
     return (
         <SettingsPage>
             <SettingsPageHeader title="Memory" />
-            <SettingsSection description="Memory root and taxonomy status." title="Memory">
+            <SettingsSection title="Memory">
                 <VaultSettingsCard
                     error={
                         settingsQuery.error?.message ??

@@ -2,11 +2,19 @@ import type { AgentRuntimeModels } from '@tavern/api';
 import { readConfigValue } from '../config.ts';
 import { type ModelCatalogProviderSpec, modelCatalogProviderSpecs } from './provider-registry.ts';
 import { providerEntry, sortModels } from './provider-sources/shared.ts';
+import { listEnabledModelProviders } from './provider-store.ts';
 
 export async function listAgentModels(): Promise<AgentRuntimeModels> {
-    const resolvedProviders = await Promise.all(
-        modelCatalogProviderSpecs().map(resolveProviderCatalog)
+    const enabled = await listEnabledModelProviders();
+    const executableProviderIds = new Set(
+        enabled.providers
+            .filter((provider) => provider.accessState === 'live')
+            .map((provider) => provider.id)
     );
+    const specs = modelCatalogProviderSpecs().filter((spec) =>
+        executableProviderIds.has(spec.provider.id)
+    );
+    const resolvedProviders = await Promise.all(specs.map(resolveProviderCatalog));
 
     return {
         apiKeyOptions: [

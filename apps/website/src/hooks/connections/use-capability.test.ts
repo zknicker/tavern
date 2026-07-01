@@ -53,8 +53,12 @@ describe('Runtime capability gates', () => {
         expect(routeTabCapabilityRequirements.memory).toEqual(['vault']);
     });
 
-    test('gates Stats settings on model inventory', () => {
-        expect(settingsCapabilityRequirements.stats).toEqual(['models']);
+    test('gates Stats settings on model execution', () => {
+        expect(settingsCapabilityRequirements.stats).toEqual(['modelExecution']);
+    });
+
+    test('keeps Models settings reachable when model credentials need setup', () => {
+        expect(settingsCapabilityRequirements.models).toEqual(['apiServer']);
     });
 
     test('keeps workspace instruction files editable without agent runtime capabilities', () => {
@@ -63,7 +67,10 @@ describe('Runtime capability gates', () => {
     });
 
     test('gates agent settings subpages on their Runtime capabilities', () => {
-        expect(settingsCapabilityRequirements['agent-general']).toEqual(['apiServer', 'models']);
+        expect(settingsCapabilityRequirements['agent-general']).toEqual([
+            'apiServer',
+            'modelExecution',
+        ]);
         expect(settingsCapabilityRequirements['agent-skills']).toEqual(['apiServer', 'skills']);
         expect(settingsCapabilityRequirements['agent-memory']).toEqual(['vault']);
     });

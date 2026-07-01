@@ -45,7 +45,7 @@ describe('Runtime capabilities store', () => {
             'codexOAuth',
             'dashboardServer',
             'gateway',
-            'models',
+            'modelExecution',
             'plugin.merchbase',
             'skills',
             'vault',

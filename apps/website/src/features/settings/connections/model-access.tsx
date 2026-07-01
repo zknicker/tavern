@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { Button } from '../../../components/ui/primitives/button.tsx';
 import { Separator } from '../../../components/ui/separator.tsx';
 import {
     SettingsGroup,
@@ -13,6 +14,7 @@ import { useStartModelProviderOAuth } from '../../../hooks/connections/use-start
 import { useSubmitModelProviderOAuth } from '../../../hooks/connections/use-submit-model-provider-oauth.ts';
 import { invalidateModelList } from '../../../hooks/models/invalidate-model-list.ts';
 import { useModelInventory } from '../../../hooks/models/use-model-inventory.ts';
+import { useSetModelProviderEnabled } from '../../../hooks/models/use-set-model-provider-enabled.ts';
 import { getModelProviderConfig } from '../../../lib/model-provider-config.ts';
 import { type ModelInventoryOutput, trpc } from '../../../lib/trpc.tsx';
 import { ModelAccessProviderRow } from './model-access-provider-row.tsx';
@@ -25,7 +27,6 @@ import {
 
 type ModelInventoryProvider = ModelInventoryOutput['providers'][number];
 type ModelProviderApiKeyOption = ModelInventoryOutput['apiKeyOptions'][number];
-
 export function ModelAccessSettings() {
     const utils = trpc.useUtils();
     const inventoryQuery = useModelInventory();
@@ -33,10 +34,13 @@ export function ModelAccessSettings() {
     const cancelOAuthMutation = useCancelModelProviderOAuth();
     const startOAuthMutation = useStartModelProviderOAuth();
     const submitOAuthMutation = useSubmitModelProviderOAuth();
+    const setProviderEnabledMutation = useSetModelProviderEnabled();
     const approvedOAuthSessionIdsRef = React.useRef(new Set<string>());
     const [apiKeyOption, setApiKeyOption] = React.useState<ModelProviderApiKeyOption | null>(null);
     const [instructionsProvider, setInstructionsProvider] =
         React.useState<ModelInventoryProvider | null>(null);
+    const [removeErrorProviderId, setRemoveErrorProviderId] = React.useState<string | null>(null);
+    const [removingProviderId, setRemovingProviderId] = React.useState<string | null>(null);
     const [oauthStart, setOAuthStart] = React.useState<NonNullable<
         typeof startOAuthMutation.data
     > | null>(null);
@@ -73,7 +77,7 @@ export function ModelAccessSettings() {
 
     if (inventoryQuery.isLoading) {
         return (
-            <SettingsSection description="API keys and credentials." title="Model Providers">
+            <SettingsSection title="Model Providers">
                 <SettingsGroup>
                     <Skeleton className="h-[4.25rem] rounded-none" />
                     <Separator />
@@ -86,21 +90,37 @@ export function ModelAccessSettings() {
     }
 
     const providerRows = inventoryQuery.data?.providers ?? [];
+    const catalogProviders = inventoryQuery.data?.catalogProviders ?? [];
     const apiKeyOptions = inventoryQuery.data?.apiKeyOptions ?? [];
-    const connectedProviders = providerRows.filter((provider) => provider.isConnected);
-    const setupProviders = providerRows.filter((provider) => !provider.isConnected);
+    const enabledProviders = providerRows;
     const setupApiKeyOptions = apiKeyOptions.filter(
         (option) =>
-            !connectedProviders.some((provider) => isApiKeyOptionForProvider(option, provider))
+            !enabledProviders.some((provider) => isApiKeyOptionForProvider(option, provider))
     );
     const hasUnsetApiKeyOption = setupApiKeyOptions.some((option) => !option.isSet);
     const providerCatalog = (
         <ProviderCatalogPopover
             apiKeyOptions={setupApiKeyOptions}
-            disabled={setupProviders.length === 0 && !hasUnsetApiKeyOption}
-            error={startOAuthMutation.error?.message ?? null}
+            disabled={catalogProviders.length === 0 && !hasUnsetApiKeyOption}
+            error={
+                startOAuthMutation.error?.message ??
+                setProviderEnabledMutation.error?.message ??
+                null
+            }
             onAddKey={setApiKeyOption}
-            onShowInstructions={setInstructionsProvider}
+            onShowInstructions={(provider) => {
+                setProviderEnabledMutation.reset();
+                setProviderEnabledMutation.mutate(
+                    { enabled: true, providerId: provider.provider },
+                    {
+                        onSuccess: () => {
+                            if (!provider.isConnected) {
+                                setInstructionsProvider(provider);
+                            }
+                        },
+                    }
+                );
+            }}
             onStartOAuth={(provider, closeCatalog) =>
                 handleStartProviderOAuth({
                     mutate: startOAuthMutation.mutate,
@@ -123,23 +143,46 @@ export function ModelAccessSettings() {
                 })
             }
             pendingProviderId={pendingOAuthProviderId}
-            providers={setupProviders}
-            showIcon={connectedProviders.length > 0}
+            providers={catalogProviders}
+            showIcon={enabledProviders.length > 0}
         />
     );
 
     return (
-        <SettingsSection
-            action={providerCatalog}
-            description="API keys and credentials."
-            title="Model Providers"
-        >
+        <SettingsSection action={providerCatalog} title="Model Providers">
             <SettingsGroup>
-                {connectedProviders.length > 0 ? (
-                    connectedProviders.map((provider, index) => (
+                {enabledProviders.length > 0 ? (
+                    enabledProviders.map((provider, index) => (
                         <div key={provider.provider}>
                             {index > 0 ? <Separator /> : null}
-                            <ConnectedAgentProviderRow provider={provider} />
+                            <EnabledAgentProviderRow
+                                error={
+                                    removeErrorProviderId === provider.provider
+                                        ? setProviderEnabledMutation.error?.message
+                                        : null
+                                }
+                                onConfigure={
+                                    isApiKeyProvider(provider)
+                                        ? () => setApiKeyOption(toProviderApiKeyOption(provider))
+                                        : null
+                                }
+                                onRemove={() => {
+                                    setProviderEnabledMutation.reset();
+                                    setRemoveErrorProviderId(null);
+                                    setRemovingProviderId(provider.provider);
+                                    setProviderEnabledMutation.mutate(
+                                        { enabled: false, providerId: provider.provider },
+                                        {
+                                            onError: () =>
+                                                setRemoveErrorProviderId(provider.provider),
+                                            onSettled: () => setRemovingProviderId(null),
+                                            onSuccess: () => setRemoveErrorProviderId(null),
+                                        }
+                                    );
+                                }}
+                                pending={removingProviderId === provider.provider}
+                                provider={provider}
+                            />
                         </div>
                     ))
                 ) : (
@@ -149,7 +192,6 @@ export function ModelAccessSettings() {
 
             {apiKeyOption ? (
                 <ProviderApiKeyDialog
-                    description={apiKeyOption.description}
                     keyEnv={apiKeyOption.envKey}
                     label={apiKeyOption.label}
                     onOpenChange={(open) => {
@@ -266,18 +308,40 @@ function handleStartProviderOAuth({
     );
 }
 
-function ConnectedAgentProviderRow({ provider }: { provider: ModelInventoryProvider }) {
+function EnabledAgentProviderRow({
+    error,
+    onConfigure,
+    onRemove,
+    pending,
+    provider,
+}: {
+    error?: string | null;
+    onConfigure: (() => void) | null;
+    onRemove: () => void;
+    pending: boolean;
+    provider: ModelInventoryProvider;
+}) {
     const providerConfig = getModelProviderConfig(provider.provider);
 
     return (
         <ModelAccessProviderRow
             color={providerConfig.color}
             description={provider.connectionDetail ?? ''}
+            error={error}
             icon={providerConfig.icon}
             label={provider.displayName}
             logo={providerConfig.logo}
-            state="live"
-        />
+            state={provider.isConnected ? 'live' : 'needs-auth'}
+        >
+            {onConfigure ? (
+                <Button onClick={onConfigure} size="sm" type="button" variant="ghost">
+                    {provider.isConnected ? 'Edit key' : 'Configure'}
+                </Button>
+            ) : null}
+            <Button loading={pending} onClick={onRemove} size="sm" type="button" variant="ghost">
+                Remove
+            </Button>
+        </ModelAccessProviderRow>
     );
 }
 
@@ -307,6 +371,21 @@ function isApiKeyOptionForProvider(
         const providerHint = normalizeProviderHint(value);
         return providerHint === optionHint || providerHint === `${optionHint}-api`;
     });
+}
+
+function isApiKeyProvider(provider: ModelInventoryProvider) {
+    return provider.authAction === 'api-key' && Boolean(provider.keyEnv);
+}
+
+function toProviderApiKeyOption(provider: ModelInventoryProvider): ModelProviderApiKeyOption {
+    return {
+        description: provider.connectionDetail,
+        docsUrl: null,
+        envKey: provider.keyEnv ?? '',
+        isSet: provider.isConnected,
+        label: provider.displayName,
+        providerHint: provider.provider,
+    };
 }
 
 function normalizeProviderHint(value: string | null | undefined) {

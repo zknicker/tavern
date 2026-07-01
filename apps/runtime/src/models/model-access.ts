@@ -1,14 +1,15 @@
 import { resolveCliCommand } from '../agent-engine/cli-command.ts';
 import { defaultAgentEngineAgentId } from '../agent-engine/constants.ts';
 import { readConfigValue } from '../config.ts';
-import { resolveAgentModelSelection, resolveConfiguredProvider } from './selection-service.ts';
+import { loadVaultBackedCodexCredentials } from '../model-access/codex-settings.ts';
+import { resolveAgentModelSelection } from './selection-service.ts';
 
 export function resolveAgentModelSummary() {
     return resolveAgentModelSelection({ agentId: defaultAgentEngineAgentId });
 }
 
-export function hasConfiguredAgentModelAccess() {
-    const provider = resolveConfiguredProvider();
+export async function hasConfiguredAgentModelAccess() {
+    const provider = resolveAgentModelSummary().provider;
 
     if (provider === 'openai') {
         return Boolean(
@@ -28,7 +29,8 @@ export function hasConfiguredAgentModelAccess() {
     }
     if (provider === 'codex') {
         return Boolean(
-            resolveCliCommand(readConfigValue('TAVERN_AGENT_CODEX_CLI_COMMAND') ?? 'codex')
+            resolveCliCommand(readConfigValue('TAVERN_AGENT_CODEX_CLI_COMMAND') ?? 'codex') &&
+                (await loadVaultBackedCodexCredentials())
         );
     }
     return false;

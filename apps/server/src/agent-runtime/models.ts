@@ -1,30 +1,33 @@
-import { withCapabilityStatus } from './capability-status.ts';
 import type { TavernAgentRuntimeClient } from './client.ts';
-import {
-    createConfiguredAgentRuntimeClient,
-    getCurrentConfiguredAgentRuntimeConnection,
-} from './configured-client.ts';
+import { createConfiguredAgentRuntimeClient } from './configured-client.ts';
 
 export async function getAgentRuntimeModels(
     client: TavernAgentRuntimeClient | null = createConfiguredAgentRuntimeClient(),
-    runtimeId?: string | null
+    _runtimeId?: string | null
 ) {
     if (!client) {
         return null;
     }
 
-    const capabilityRuntimeId = runtimeId ?? getCurrentConfiguredAgentRuntimeConnection()?.id;
+    return await client.getModels();
+}
 
-    if (!capabilityRuntimeId) {
-        return await client.getModels();
+export async function getAgentRuntimeModelProviderCatalog(
+    client: TavernAgentRuntimeClient | null = createConfiguredAgentRuntimeClient()
+) {
+    if (!client) {
+        return null;
     }
 
-    return await withCapabilityStatus(
-        {
-            capability: 'models',
-            method: 'models.list',
-            runtimeId: capabilityRuntimeId,
-        },
-        async () => await client.getModels()
-    );
+    return await client.getModelProviderCatalog();
+}
+
+export async function getAgentRuntimeEnabledModelProviders(
+    client: TavernAgentRuntimeClient | null = createConfiguredAgentRuntimeClient()
+) {
+    if (!client) {
+        return null;
+    }
+
+    return await client.getModelProvidersEnabled();
 }

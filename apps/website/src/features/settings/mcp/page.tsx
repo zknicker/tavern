@@ -43,10 +43,7 @@ export function McpSettingsPage() {
     return (
         <SettingsPage>
             <SettingsPageHeader title="MCP" />
-            <SettingsSection
-                description="Plugins are Tavern's normal integration surface. MCP server records are advanced runtime plumbing for development and plugin-backed tool experiments."
-                title="Advanced MCP"
-            >
+            <SettingsSection title="Advanced MCP">
                 <SettingsGroup>
                     {servers.mcpServers.length === 0 ? (
                         <p className="px-5 py-4 text-muted-foreground text-sm">

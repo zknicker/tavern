@@ -26,17 +26,17 @@ const capabilityLabels = {
     codexOAuth: 'Codex OAuth',
     dashboardServer: 'Agent engine',
     gateway: 'Agent connection',
+    modelExecution: 'Model execution',
     'plugin.merchbase': 'MerchBase',
-    models: 'Models',
     skills: 'Skills',
     vault: 'Memory',
 } satisfies Record<RuntimeCapabilityId, string>;
 
 export const settingsCapabilityRequirements = {
     'agent-runtime': [],
-    agent: ['apiServer', 'models'],
+    agent: ['apiServer', 'modelExecution'],
     'agent-channels': ['apiServer'],
-    'agent-general': ['apiServer', 'models'],
+    'agent-general': ['apiServer', 'modelExecution'],
     'agent-memory': ['vault'],
     'agent-plugins': ['apiServer'],
     'agent-skills': ['apiServer', 'skills'],
@@ -48,11 +48,11 @@ export const settingsCapabilityRequirements = {
     plugins: ['apiServer'],
     jobs: [],
     memories: ['vault'],
-    models: ['apiServer', 'models'],
+    models: ['apiServer'],
     sessions: ['apiServer'],
     skills: ['apiServer', 'skills'],
     'soul-md': [],
-    stats: ['models'],
+    stats: ['modelExecution'],
     updates: [],
 } as const satisfies Record<string, readonly RuntimeCapabilityId[]>;
 
@@ -60,7 +60,7 @@ export const agentCapabilityRequirements = [
     'apiServer',
     'dashboardServer',
     'gateway',
-    'models',
+    'modelExecution',
     'skills',
 ] as const satisfies readonly RuntimeCapabilityId[];
 

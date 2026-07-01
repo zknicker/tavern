@@ -115,7 +115,6 @@ export function AgentWorkspaceFileEditor({
                     </Button>
                 </div>
             }
-            description={file?.description}
             title={file?.label ?? path}
         >
             <CardFrame>
