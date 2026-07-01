@@ -241,14 +241,20 @@ function TurnAvatar({
     const variant = resolveTurnAvatarVariant(actorKind, avatarUrl);
 
     if (variant === 'eyes') {
+        // The character face is its own shape — no avatar chrome behind it.
         return (
-            <MessageAvatar className={cn(turnAvatarBaseClassName, 'bg-muted')}>
+            <MessageAvatar
+                className={cn(
+                    turnAvatarBaseClassName,
+                    'overflow-visible rounded-none bg-transparent ring-0'
+                )}
+            >
                 <AgentFace
                     animated={false}
                     aria-hidden
                     className="overflow-visible"
                     head={character}
-                    size={20}
+                    size={32}
                 />
             </MessageAvatar>
         );
