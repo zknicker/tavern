@@ -7,6 +7,7 @@ import { seedDetectedModelProviders } from '../models/provider-store.ts';
 import { readAgentRuntimeProfile } from '../models/runtime-profile-store.ts';
 import { saveAgentModelSelectionIntent } from '../models/selection-service.ts';
 import { listStoredAgents } from '../tavern/agents-store.ts';
+import { ensureAgentDmChat } from '../tavern/bootstrap-chats.ts';
 
 export type RuntimeDoctorModuleId = 'agents' | 'models';
 export type RuntimeDoctorRunReason =
@@ -102,6 +103,19 @@ async function runAgentsDoctor(input: {
     const blockers: RuntimeDoctorResult['blockers'] = [];
 
     for (const agent of agents) {
+        const dm = ensureAgentDmChat({
+            agentId: agent.id,
+            agentName: agent.name,
+            db: input.db,
+        });
+        if (dm.seeded > 0) {
+            repaired.push({
+                id: dm.chatId,
+                kind: 'chat',
+                summary: `Created built-in DM for ${agent.name}.`,
+            });
+        }
+
         const profile = readAgentRuntimeProfile(agent.id, input.db);
         if (profile && isExecutableModel(profile.defaultModel, inventory.models)) {
             continue;

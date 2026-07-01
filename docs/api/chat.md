@@ -36,9 +36,9 @@ execution evidence linked to Tavern messages.
 
 A `chat` is a Runtime-owned conversation container. Tavern-owned chats use
 `kind: "channel"` for shared room-style conversations and `kind: "dm"` for
-one-to-one direct messages. Runtime bootstraps the local workspace with
-`general`, the local human participant, the primary Tavern agent participant,
-and the primary agent DM.
+one-to-one direct messages. Runtime does not bootstrap channels in a normal
+workspace. Each Runtime-managed agent has one built-in DM with the local human
+operator. Development mode additionally seeds the `demo` channel.
 
 `chat.participants` is the membership contract for the chat shell. Participant
 rows use Tavern product ids such as `usr_...`, `agt_...`, and `sys_...`, plus

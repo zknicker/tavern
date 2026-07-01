@@ -8,6 +8,7 @@ import {
 import { getDb } from '../db/connection';
 import type { Database } from '../db/sqlite';
 import { namedParams } from '../db/sqlite';
+import { ensureAgentDmChat } from './bootstrap-chats';
 
 interface AgentRow {
     created_at: string;
@@ -57,6 +58,7 @@ export function upsertStoredAgent(input: {
         db,
         syncedAt,
     });
+    ensureAgentDmChat({ agentId: agent.id, agentName: agent.name, db });
 
     const saved = getStoredAgent(agent.id, db);
     if (!saved) {
@@ -142,6 +144,10 @@ export function replaceStoredAgents(input: {
     } catch (error) {
         db.exec('ROLLBACK');
         throw error;
+    }
+
+    for (const agent of input.agents) {
+        ensureAgentDmChat({ agentId: agent.id, agentName: agent.name, db });
     }
 
     return {

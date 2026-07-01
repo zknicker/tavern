@@ -3,6 +3,7 @@ import { AGENT_WORKSPACE } from '../config.ts';
 import { closeDb, initTestDb } from '../db/connection.ts';
 import { ensureRuntimeSchema } from '../db/schema.ts';
 import { setModelProviderEnabled } from '../models/provider-store.ts';
+import { getChat } from './chat-api/index.ts';
 import { handleTavernRuntimeRequest } from './router.ts';
 
 describe('Runtime agent and agent engine reads', () => {
@@ -87,6 +88,15 @@ describe('Runtime agent and agent engine reads', () => {
                     workspaceFolder: '/tmp/tavern-research-workspace',
                 }),
             ]),
+        });
+        expect(getChat('cht_agt_research_dm')).toMatchObject({
+            id: 'cht_agt_research_dm',
+            kind: 'dm',
+            participants: [
+                { id: 'agt_research', kind: 'agent', label: 'Research' },
+                { id: 'usr_tavern', kind: 'user', label: 'You' },
+            ],
+            title: 'Research',
         });
     });
 

@@ -6,8 +6,6 @@ import { ensureRuntimeSchema } from '../db/schema';
 import { namedParams } from '../db/sqlite';
 import {
     defaultAgentDmChatId,
-    defaultWorkspaceChannelColor,
-    defaultWorkspaceChannelId,
     localHumanParticipantId,
     seedWorkspaceChats,
 } from './bootstrap-chats';
@@ -465,7 +463,7 @@ describe('Tavern Runtime Chat API store', () => {
         ).toThrow('A DM chat must have exactly two participants.');
     });
 
-    it('bootstraps the default workspace channel and agent DM', () => {
+    it('bootstraps the default agent DM without a default channel', () => {
         const first = seedWorkspaceChats({
             agentId: 'agt_primary',
             agentName: 'Tavern',
@@ -477,23 +475,9 @@ describe('Tavern Runtime Chat API store', () => {
             db: getDb(),
         });
 
-        expect(first.seeded).toBe(2);
+        expect(first.seeded).toBe(1);
         expect(second.seeded).toBe(0);
-        expect(getChat(defaultWorkspaceChannelId)).toMatchObject({
-            id: defaultWorkspaceChannelId,
-            kind: 'channel',
-            metadata: {
-                tavern: {
-                    displayName: 'general',
-                    tabAppearance: { color: defaultWorkspaceChannelColor },
-                },
-            },
-            participants: [
-                { id: 'agt_primary', kind: 'agent', label: 'Tavern' },
-                { id: localHumanParticipantId, kind: 'user', label: 'You' },
-            ],
-            title: 'general',
-        });
+        expect(getChat('cht_general')).toBeNull();
         expect(getChat(defaultAgentDmChatId)).toMatchObject({
             id: defaultAgentDmChatId,
             kind: 'dm',
@@ -503,6 +487,34 @@ describe('Tavern Runtime Chat API store', () => {
             ],
             title: 'Tavern',
         });
+    });
+
+    it('bootstraps one agent DM for each managed agent', () => {
+        const first = seedWorkspaceChats({
+            agents: [
+                { id: 'agt_primary', name: 'Tavern' },
+                { id: 'agt_research', name: 'Research' },
+            ],
+            db: getDb(),
+        });
+        const second = seedWorkspaceChats({
+            agents: [
+                { id: 'agt_primary', name: 'Tavern' },
+                { id: 'agt_research', name: 'Research' },
+            ],
+            db: getDb(),
+        });
+
+        expect(first.seeded).toBe(2);
+        expect(second.seeded).toBe(0);
+        expect(
+            listChats()
+                .chats.map((chat) => ({ id: chat.id, kind: chat.kind, title: chat.title }))
+                .sort((left, right) => left.id.localeCompare(right.id))
+        ).toEqual([
+            { id: 'cht_agt_research_dm', kind: 'dm', title: 'Research' },
+            { id: defaultAgentDmChatId, kind: 'dm', title: 'Tavern' },
+        ]);
     });
 
     it('writes delivery, assistant message, and delivered event in one receipt', () => {

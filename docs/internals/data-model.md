@@ -204,10 +204,11 @@ PRIMARY KEY(id)
 
 Rules:
 
-- Runtime bootstraps the fresh Tavern workspace with `cht_general` as
-  `kind: channel`, display name `general`, seeded channel color, and a primary
-  agent DM as `kind: dm`.
-- A DM has exactly two participants.
+- Runtime does not bootstrap user channels for a normal workspace.
+- Development mode seeds `cht_demo` as `kind: channel`, display name `demo`,
+  and a seeded channel color.
+- Each Runtime-managed agent has one built-in DM with the local human operator.
+- A DM has exactly two participants: the local human operator and one agent.
 - Chat archival and presentation state currently live in `metadata_json`.
 
 ## `chat_participants`

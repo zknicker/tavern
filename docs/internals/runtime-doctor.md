@@ -35,7 +35,7 @@ Doctor modules stay narrow and composable.
 | Module | Owns | Common triggers |
 | --- | --- | --- |
 | `models` | Provider access checks, executable model inventory, and `modelExecution` capability. | Runtime start, provider add/remove, credential save, OAuth change, manual check, scheduled check. |
-| `agents` | Agent default model repair from executable model inventory. | Runtime start after `models`, provider/access change after `models`, Agent settings mutation, manual check. |
+| `agents` | Built-in Agent DM repair and Agent default model repair from executable model inventory. | Runtime start after `models`, provider/access change after `models`, Agent settings mutation, manual check. |
 | `memory` | Memory root access, generated Memory skill readiness, and memory capability metadata. | Runtime start, Memory settings change, manual check. |
 | `skills` | Skill inventory and tool setup readiness. | Runtime start, skill install/remove, tool setup mutation, manual check. |
 | `plugins` | Plugin configuration, credential checks, and Plugin capability health. | Runtime start, Plugin settings mutation, manual check, scheduled check. |
@@ -66,7 +66,8 @@ against executable model inventory and then repair only that Agent if needed.
 The `models` module computes executable model inventory and writes
 `modelExecution` healthy when at least one executable model exists.
 
-The `agents` module applies the model defaulting policy:
+The `agents` module first ensures each Runtime-managed agent has one built-in
+DM with the local human operator, then applies the model defaulting policy:
 
 1. Saved default executable: keep it.
 2. Saved default invalid or unavailable: repair to the highest-ranked

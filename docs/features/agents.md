@@ -15,6 +15,9 @@ can continue to feel primary-agent-first.
 
 * **Bootstrapped agent.** Tavern bootstraps `agt_primary` so a fresh Runtime is
   immediately useful.
+* **Agent DMs.** Each Runtime-managed agent has one built-in DM with the local
+  human operator. Tavern does not create duplicate direct chats for the same
+  agent.
 * **Runtime-managed agent records.** Runtime can store multiple agents with
   independent names, enabled skill ids, model choices, and workspace folders.
   Settings -> Agents lists those agents, creates new agents, and routes each

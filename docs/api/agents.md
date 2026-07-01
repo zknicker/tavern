@@ -19,6 +19,9 @@ grant policy.
 * Agent ids are durable Tavern ids hosted by Tavern Runtime.
 * Runtime bootstraps `agt_primary`, and clients can create, list, configure,
   and address additional agents.
+* Each Runtime-managed agent owns one built-in Tavern DM with the local human
+  operator. Clients reuse that DM instead of creating additional direct chats
+  for the same agent.
 * Agent list and detail reads use synced Runtime records. Mounting an app screen
   must not contact the agent runtime or enqueue a background sync job just to
   discover agents.

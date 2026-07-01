@@ -8,7 +8,6 @@ import { runRuntimeDoctor } from './doctor/runtime-doctor';
 import { type RuntimeJobsManager, startRuntimeJobsManager } from './jobs/manager';
 import { ensureRuntimeJobsSchema } from './jobs/schema';
 import { log } from './log';
-import { seedWorkspaceChats } from './tavern/bootstrap-chats';
 import { demoAgentId } from './tavern/development-chat-demo-types';
 import { seedDevelopmentChatDemos } from './tavern/development-chat-demos';
 import { seedDevelopmentVaultDemos } from './tavern/development-vault-demos';
@@ -32,18 +31,10 @@ async function main(): Promise<void> {
     const db = initDb(dbPath);
     ensureRuntimeSchema(db);
     ensureRuntimeJobsSchema(db);
-    const managedAgent = ensurePrimaryManagedAgent(db);
+    ensurePrimaryManagedAgent(db);
     await runRuntimeDoctor({ db, reason: 'runtime_start' }).catch((err) => {
         log.warn('Runtime Doctor failed during startup', { err });
     });
-    const workspaceChatsSeed = seedWorkspaceChats({
-        agentId: managedAgent.id,
-        agentName: managedAgent.name,
-        db,
-    });
-    if (workspaceChatsSeed.seeded > 0) {
-        log.info('Workspace chats ready', { count: workspaceChatsSeed.seeded });
-    }
     log.info('Runtime DB ready', { path: dbPath });
     const recoveredTurns = recoverInterruptedChatResponses(db);
     if (recoveredTurns > 0) {

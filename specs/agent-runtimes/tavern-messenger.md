@@ -91,7 +91,7 @@ Runtime stores agent execution facts under `metadata.runtime`:
   "runtime": {
     "source": "agent-engine",
     "agentId": "agt_primary",
-    "agentSessionId": "ags_cht_general_agt_primary_1",
+    "agentSessionId": "ags_cht_tavern_agent_dm_agt_primary_1",
     "runId": "run_msg_123",
     "engineSessionId": "ses_..."
   }

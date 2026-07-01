@@ -39,7 +39,9 @@ happen, and keep the durable timeline as context.
 * **Channels and DMs.** Channels and direct messages are durable chat rooms in
   the sidebar. Channels render with a hash icon and optional channel color.
   Opening a chat shows a room topbar with the chat name and current
-  participants. There is no separate pinned-chat state.
+  participants. New workspaces start with no user channels. Each agent has one
+  built-in DM with the local human operator. There is no separate pinned-chat
+  state.
 * **Chat appearance and instructions.** Tavern chats can carry durable channel
   color and trusted chat-specific agent instructions.
 * **Offline catch-up.** Tavern Runtime keeps chat history while the app is

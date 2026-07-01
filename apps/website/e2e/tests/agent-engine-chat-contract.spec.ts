@@ -34,7 +34,7 @@ test('keeps channel messages human-only until an agent is addressed', async ({ p
 
     const humanOnlyMarker = `QA-HUMAN-ONLY-${Date.now()}`;
 
-    await page.goto('/chats/cht_general');
+    await page.goto('/chats/cht_demo');
     await fillChatComposer(page, `Human only channel smoke ${humanOnlyMarker}`);
     await page.getByRole('textbox', { name: 'Chat message' }).press('Enter');
 
@@ -50,7 +50,7 @@ test('routes a channel mention to the Tavern agent', async ({ page }) => {
 
     const expectedReply = `QA-CHANNEL-MENTION-${Date.now()}`;
 
-    await page.goto('/chats/cht_general');
+    await page.goto('/chats/cht_demo');
     await mentionTavernAgent(page, `Reply exactly \`${expectedReply}\`.`);
 
     await expect(transcriptParagraph(page, expectedReply)).toBeVisible({ timeout: 60_000 });
