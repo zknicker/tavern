@@ -4,7 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 export type AppLayoutMode = 'tabs' | 'sidebar';
 
 const storageKey = 'tavern.app.layout.mode.v2';
-const defaultMode: AppLayoutMode = 'sidebar';
+const defaultMode: AppLayoutMode = 'tabs';
 const listeners = new Set<() => void>();
 
 export function useAppLayoutPreference() {
@@ -49,6 +49,10 @@ function subscribe(listener: () => void) {
 }
 
 function getSnapshot() {
+    return getAppLayoutModeSnapshot();
+}
+
+export function getAppLayoutModeSnapshot() {
     if (typeof window === 'undefined') {
         return defaultMode;
     }
