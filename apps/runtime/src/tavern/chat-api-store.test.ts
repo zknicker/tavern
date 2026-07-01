@@ -199,7 +199,7 @@ describe('Tavern Runtime Chat API store', () => {
         expect(demoResponseIds).not.toContain('rsp_demo_turn_timeline_09');
         expect(listResponses(developmentChatDemoIds.demo).responses).toEqual(
             expect.arrayContaining([
-                expect.objectContaining({ id: 'rsp_demo_streaming_stack', status: 'running' }),
+                expect.objectContaining({ id: 'rsp_demo_streaming_stack', status: 'cancelled' }),
             ])
         );
         expect(getResponseActivity('act_demo_tool_headers_read_sales')).toMatchObject({

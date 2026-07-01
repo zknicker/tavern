@@ -39,4 +39,4 @@ app-local UI state, not durable Runtime chat rows.
 
 | Chat | Demonstrates |
 | --- | --- |
-| `cht_demo` | A representative colored channel named `demo` covering chart Rich Responses, MerchBase chart rendering, Rich Response primitives, calendar displays, artifact links, long-token wrapping, attachments, completed progress/tool work, stable tool drawer headers, sampled multi-turn history, and one final running turn with thinking/progress/tool rows. |
+| `cht_demo` | A representative colored channel named `demo` covering chart Rich Responses, MerchBase chart rendering, Rich Response primitives, calendar displays, artifact links, long-token wrapping, attachments, completed progress/tool work, stable tool drawer headers, sampled multi-turn history, and one stopped turn with thinking/progress/tool rows. |

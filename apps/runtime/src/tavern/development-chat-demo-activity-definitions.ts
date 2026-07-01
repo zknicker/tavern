@@ -136,8 +136,8 @@ export function streamingStackDemo(): DevelopmentChatDemo {
                 participant_id: demoAgentId,
                 request_message_id: requestMessageId,
                 response_message_id: null,
-                status: 'running',
-                summary: '',
+                status: 'cancelled',
+                summary: 'Agent response stopped.',
                 activities: [
                     reasoningActivity({
                         chatId,
