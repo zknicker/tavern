@@ -4,13 +4,21 @@ import {
     agentCharacters,
 } from '@tavern/api/agent-appearance';
 import { useEffect, useState } from 'react';
+import {
+    Popover,
+    PopoverClose,
+    PopoverContent,
+    PopoverTrigger,
+} from '../../../components/ui/popover.tsx';
 import { Input } from '../../../components/ui/primitives/input.tsx';
 import {
     Select,
     SelectContent,
     SelectItem,
     SelectTrigger,
+    SelectTriggerIcon,
     SelectValue,
+    selectTriggerVariants,
 } from '../../../components/ui/select.tsx';
 import { Separator } from '../../../components/ui/separator.tsx';
 import {
@@ -20,6 +28,7 @@ import {
 } from '../../../components/ui/settings-row.tsx';
 import { withSavingToast } from '../../../lib/saving-toast.ts';
 import { type AgentListOutput, trpc } from '../../../lib/trpc.tsx';
+import { cn } from '../../../lib/utils.ts';
 import { agentColorPresets } from '../../agents/agent-color-presets.ts';
 import { useAgentProfileUpdate } from '../../agents/use-agent-profile-update.ts';
 import { AgentFace } from '../../chats/agent-face.tsx';
@@ -126,39 +135,71 @@ export function AgentAppearanceSection({
                 <Separator />
 
                 <SettingsRow title="Character">
-                    <Select
+                    <AgentCharacterPicker
                         disabled={saveAgentProfile.isPending}
-                        onValueChange={(character) => {
-                            if (!character) {
-                                return;
-                            }
-
+                        onSelect={(character) =>
                             saveAgentProfile.mutate({
                                 agentId: agent.id,
-                                character:
-                                    character === agent.defaultCharacter
-                                        ? null
-                                        : (character as AgentCharacter),
-                            });
-                        }}
-                        value={agent.effectiveCharacter}
-                    >
-                        <SelectTrigger>
-                            <SelectValue placeholder="Choose character">
-                                <AgentCharacterOption character={agent.effectiveCharacter} />
-                            </SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                            {agentCharacters.map((character) => (
-                                <SelectItem key={character} value={character}>
-                                    <AgentCharacterOption character={character} />
-                                </SelectItem>
-                            ))}
-                        </SelectContent>
-                    </Select>
+                                character: character === agent.defaultCharacter ? null : character,
+                            })
+                        }
+                        selected={agent.effectiveCharacter}
+                    />
                 </SettingsRow>
             </SettingsGroup>
         </SettingsSection>
+    );
+}
+
+function AgentCharacterPicker({
+    disabled,
+    onSelect,
+    selected,
+}: {
+    disabled: boolean;
+    onSelect: (character: AgentCharacter) => void;
+    selected: AgentCharacter;
+}) {
+    return (
+        <Popover>
+            <PopoverTrigger className={selectTriggerVariants()} disabled={disabled}>
+                <span className="flex min-w-0 flex-1 items-center truncate">
+                    <AgentCharacterOption character={selected} />
+                </span>
+                <SelectTriggerIcon />
+            </PopoverTrigger>
+            <PopoverContent align="start" className="w-72">
+                <div className="grid grid-cols-4 gap-2">
+                    {agentCharacters.map((character) => {
+                        const isSelected = character === selected;
+
+                        return (
+                            <PopoverClose
+                                aria-label={agentCharacterLabels[character]}
+                                aria-pressed={isSelected}
+                                className={cn(
+                                    'flex aspect-square items-center justify-center rounded-xl border outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring',
+                                    isSelected
+                                        ? 'border-brand bg-input/40'
+                                        : 'border-transparent bg-input/24 hover:bg-input/48'
+                                )}
+                                key={character}
+                                onClick={() => onSelect(character)}
+                                title={agentCharacterLabels[character]}
+                            >
+                                <AgentFace
+                                    animated={false}
+                                    aria-hidden
+                                    className="overflow-visible"
+                                    head={character}
+                                    size={44}
+                                />
+                            </PopoverClose>
+                        );
+                    })}
+                </div>
+            </PopoverContent>
+        </Popover>
     );
 }
 
