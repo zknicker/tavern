@@ -1,14 +1,17 @@
 import type * as React from 'react';
 import { ChannelIconBox } from '../../components/chats/channel-icon-box.tsx';
 import { resolveTavernChatName } from '../../components/chats/chat-display.ts';
+import { useAgentCharacterLookup } from '../../hooks/agents/use-agent-character.ts';
 import { cn } from '../../lib/utils.ts';
 import { getChannelColorStyle } from '../shell/channel-color-options.ts';
+import { AgentFace, type HeadKind } from './agent-face.tsx';
 import type { ChatListItem } from './chat-list-data.ts';
 
 export function ChatRoomTopbar({ chat }: { chat: ChatListItem }) {
     const title = formatRoomTitle(chat);
     const participants = getVisibleParticipants(chat);
     const channelStyle = getChannelColorStyle(chat.tabAppearance.color);
+    const lookupCharacter = useAgentCharacterLookup();
 
     return (
         <header
@@ -26,7 +29,15 @@ export function ChatRoomTopbar({ chat }: { chat: ChatListItem }) {
                     className="flex items-center -space-x-1.5"
                 >
                     {participants.slice(0, 5).map((participant) => (
-                        <ParticipantAvatar key={participant.actorId} participant={participant} />
+                        <ParticipantAvatar
+                            character={
+                                participant.actorType === 'agent'
+                                    ? lookupCharacter(participant.actorId)
+                                    : 'none'
+                            }
+                            key={participant.actorId}
+                            participant={participant}
+                        />
                     ))}
                 </ul>
                 {participants.length > 5 ? (
@@ -39,7 +50,30 @@ export function ChatRoomTopbar({ chat }: { chat: ChatListItem }) {
     );
 }
 
-function ParticipantAvatar({ participant }: { participant: ChatListItem['participants'][number] }) {
+function ParticipantAvatar({
+    character,
+    participant,
+}: {
+    character: HeadKind;
+    participant: ChatListItem['participants'][number];
+}) {
+    if (character !== 'none') {
+        return (
+            <li
+                className="relative flex size-6 shrink-0 items-center justify-center"
+                title={participant.name}
+            >
+                <AgentFace
+                    animated={false}
+                    aria-hidden
+                    className="size-6 overflow-visible"
+                    head={character}
+                    size={24}
+                />
+            </li>
+        );
+    }
+
     const style = getParticipantAvatarStyle(participant);
 
     return (

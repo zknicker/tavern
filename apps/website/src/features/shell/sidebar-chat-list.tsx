@@ -12,6 +12,7 @@ import {
     SidebarMenuItem,
 } from '../../components/ui/sidebar.tsx';
 import { Spinner } from '../../components/ui/spinner.tsx';
+import { useAgentCharacterLookup } from '../../hooks/agents/use-agent-character.ts';
 import { useChatArchive } from '../../hooks/chats/use-chat-archive.ts';
 import { getChatDraftRouteState } from '../../hooks/chats/use-chat-draft-launch.ts';
 import { useChatList } from '../../hooks/chats/use-chat-list.ts';
@@ -28,6 +29,7 @@ import {
 } from '../../hooks/connections/use-capability.ts';
 import { appRoutes } from '../../lib/app-routes.ts';
 import { markChatTiming } from '../../lib/chat-timing.ts';
+import { AgentFace } from '../chats/agent-face.tsx';
 import { buildChatList, type ChatListItem } from '../chats/chat-list-data.ts';
 import { buildChatPath } from '../chats/chat-path.ts';
 import { getChannelColorStyle } from './channel-color-options.ts';
@@ -391,8 +393,24 @@ function SidebarChatIcon({
     chat: ChatListItem;
     style: React.CSSProperties | undefined;
 }) {
+    const lookupCharacter = useAgentCharacterLookup();
+
     if (chat.conversationKind === 'channel') {
         return <ChannelIconBox size="sidebar" style={style} />;
+    }
+
+    const character = lookupCharacter(getSidebarChatAgentId(chat));
+
+    if (character !== 'none') {
+        return (
+            <AgentFace
+                animated={false}
+                aria-hidden
+                className="size-[1.125rem] shrink-0 overflow-visible"
+                head={character}
+                size={18}
+            />
+        );
     }
 
     return (
@@ -402,6 +420,14 @@ function SidebarChatIcon({
         >
             {getSidebarParticipantInitial(chat)}
         </span>
+    );
+}
+
+function getSidebarChatAgentId(chat: ChatListItem) {
+    return (
+        chat.participants.find((participant) => participant.actorType === 'agent')?.actorId ??
+        chat.boundAgentIds[0] ??
+        null
     );
 }
 

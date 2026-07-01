@@ -33,6 +33,7 @@ import { withSavingToast } from '../../../lib/saving-toast.ts';
 import { type AgentListOutput, trpc } from '../../../lib/trpc.tsx';
 import { cn } from '../../../lib/utils.ts';
 import { buildAgentSettingsPath, getActiveAgentPage } from '../../agents/agent-path.ts';
+import { AgentFace } from '../../chats/agent-face.tsx';
 import { createNewAgentName } from '../agents/agent-settings-model.ts';
 import {
     agentSettingsNavItems,
@@ -340,12 +341,12 @@ function AgentSettingsNavGroup({
 
 function AgentAvatar({ agent }: { agent: AgentListOutput['agents'][number] }) {
     return (
-        <span
-            aria-hidden="true"
-            className="flex size-5 shrink-0 items-center justify-center rounded-md font-semibold text-[10px] text-brand-foreground uppercase"
-            style={{ backgroundColor: agent.effectivePrimaryColor }}
-        >
-            {agent.name.trim().slice(0, 1) || 'A'}
-        </span>
+        <AgentFace
+            animated={false}
+            aria-hidden
+            className="size-5 shrink-0 overflow-visible"
+            head={agent.effectiveCharacter}
+            size={20}
+        />
     );
 }
