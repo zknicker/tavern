@@ -1,5 +1,6 @@
 import { PlugIcon } from '@hugeicons-pro/core-stroke-rounded';
 import type { AgentRuntimeSaveMerchbaseSettings } from '@tavern/api';
+import { merchbasePluginManifest } from '@tavern/api/plugins/merchbase';
 import * as React from 'react';
 import { Badge } from '../../../components/ui/badge.tsx';
 import {
@@ -29,6 +30,10 @@ import {
 } from './merchbase-settings-model.ts';
 
 type MerchbaseSettings = NonNullable<MerchbaseSettingsOutput>;
+type MerchbaseSettingsControlRender = (control: {
+    openSettingsDialog: (nextDraft?: Partial<MerchbaseSettingsDraft>) => void;
+    requestSave: (input: AgentRuntimeSaveMerchbaseSettings) => void;
+}) => React.ReactNode;
 
 export function MerchbaseSettingsCard({
     error,
@@ -43,19 +48,6 @@ export function MerchbaseSettingsCard({
     onSave: (input: AgentRuntimeSaveMerchbaseSettings) => Promise<unknown> | undefined;
     settings: MerchbaseSettings | null;
 }) {
-    const [draft, setDraft] = React.useState<MerchbaseSettingsDraft>(() => createDraft(settings));
-    const [settingsDialogOpen, setSettingsDialogOpen] = React.useState(false);
-    const [replaceDialogOpen, setReplaceDialogOpen] = React.useState(false);
-    const [pendingSave, setPendingSave] = React.useState<AgentRuntimeSaveMerchbaseSettings | null>(
-        null
-    );
-
-    React.useEffect(() => {
-        setDraft(createDraft(settings));
-        setPendingSave(null);
-        setReplaceDialogOpen(false);
-    }, [settings]);
-
     if (isLoading) {
         return <MerchbasePluginSkeleton />;
     }
@@ -74,20 +66,82 @@ export function MerchbaseSettingsCard({
         );
     }
 
-    const normalized = normalizeDraft(draft);
-    const hasChanges = hasDraftChanges(settings, normalized);
-    const needsReplaceConfirmation = Boolean(settings.skillConflict && normalized.enabled);
-    const canSave = hasChanges || needsReplaceConfirmation;
+    const currentSettings = settings;
 
-    function openSettingsDialog() {
+    return (
+        <MerchbaseSettingsControl
+            error={error}
+            isSaving={isSaving}
+            onSave={onSave}
+            settings={currentSettings}
+        >
+            {({ openSettingsDialog, requestSave }) => {
+                function handleEnabledChange(enabled: boolean) {
+                    if (enabled && !currentSettings.apiKeyConfigured) {
+                        openSettingsDialog({ enabled: true });
+                        return;
+                    }
+
+                    requestSave({ enabled });
+                }
+
+                return (
+                    <MerchbasePluginRow
+                        isSaving={isSaving}
+                        onEnabledChange={handleEnabledChange}
+                        onSelect={openSettingsDialog}
+                        settings={currentSettings}
+                    />
+                );
+            }}
+        </MerchbaseSettingsControl>
+    );
+}
+
+export function MerchbaseSettingsControl({
+    children,
+    error,
+    isSaving,
+    onSave,
+    settings,
+}: {
+    children: MerchbaseSettingsControlRender;
+    error?: string | null;
+    isSaving: boolean;
+    onSave: (input: AgentRuntimeSaveMerchbaseSettings) => Promise<unknown> | undefined;
+    settings: MerchbaseSettings;
+}) {
+    const [draft, setDraft] = React.useState<MerchbaseSettingsDraft>(() => createDraft(settings));
+    const [settingsDialogOpen, setSettingsDialogOpen] = React.useState(false);
+    const [replaceDialogOpen, setReplaceDialogOpen] = React.useState(false);
+    const [pendingSave, setPendingSave] = React.useState<AgentRuntimeSaveMerchbaseSettings | null>(
+        null
+    );
+
+    React.useEffect(() => {
         setDraft(createDraft(settings));
+        setPendingSave(null);
+        setReplaceDialogOpen(false);
+    }, [settings]);
+
+    const currentSettings = settings;
+    const normalized = normalizeDraft(draft);
+    const hasChanges = hasDraftChanges(currentSettings, normalized);
+    const needsReplaceConfirmation = Boolean(currentSettings.skillConflict && normalized.enabled);
+    const missingEnabledSetup =
+        normalized.enabled && !(currentSettings.apiKeyConfigured || Boolean(normalized.apiKey));
+    const canSave = !missingEnabledSetup && (hasChanges || needsReplaceConfirmation);
+    const setupError = missingEnabledSetup ? 'Add a MerchBase API key before enabling.' : null;
+
+    function openSettingsDialog(nextDraft?: Partial<MerchbaseSettingsDraft>) {
+        setDraft({ ...createDraft(currentSettings), ...nextDraft });
         setPendingSave(null);
         setReplaceDialogOpen(false);
         setSettingsDialogOpen(true);
     }
 
     function requestSave(input: AgentRuntimeSaveMerchbaseSettings) {
-        if (settings?.skillConflict && input.enabled === true) {
+        if (currentSettings.skillConflict && input.enabled === true) {
             setPendingSave(input);
             setReplaceDialogOpen(true);
             return;
@@ -97,12 +151,7 @@ export function MerchbaseSettingsCard({
 
     return (
         <>
-            <MerchbasePluginRow
-                isSaving={isSaving}
-                onEnabledChange={(enabled) => requestSave({ enabled })}
-                onSelect={openSettingsDialog}
-                settings={settings}
-            />
+            {children({ openSettingsDialog, requestSave })}
 
             <MerchbaseSettingsDialog
                 canSave={canSave}
@@ -113,7 +162,8 @@ export function MerchbaseSettingsCard({
                 onOpenChange={setSettingsDialogOpen}
                 onSave={() => requestSave(toSaveInput(normalized))}
                 open={settingsDialogOpen}
-                settings={settings}
+                settings={currentSettings}
+                setupError={setupError}
             />
 
             <Dialog onOpenChange={setReplaceDialogOpen} open={replaceDialogOpen}>
@@ -151,7 +201,7 @@ function MerchbasePluginRow({
 
     return (
         <SettingsRow
-            description="Live sales data for Rich Responses and agent reads."
+            description={merchbasePluginManifest.description}
             title={
                 <span
                     className={cn(
@@ -176,8 +226,8 @@ function MerchbasePluginRow({
             trailingWidth="intrinsic"
         >
             <div className="flex items-center gap-2">
-                <Button disabled={isSaving} onClick={onSelect} variant="ghost">
-                    Configure
+                <Button disabled={isSaving} onClick={() => onSelect()} variant="ghost">
+                    {settings.apiKeyConfigured ? 'Configure' : 'Set up'}
                 </Button>
                 <MerchbaseEnablementSwitch
                     aria-label={

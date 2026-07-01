@@ -1,9 +1,19 @@
 import { AmazonIcon } from '@hugeicons-pro/core-solid-rounded';
+import { PlugIcon } from '@hugeicons-pro/core-stroke-rounded';
 import { keepPreviousData } from '@tanstack/react-query';
 import type { RichResponseMerchBaseSalesChartProps } from '@tavern/api/rich-responses/merchbase';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { RichResponseFrame } from '../components/rich-responses/rich-response-frame.tsx';
+import {
+    Empty,
+    EmptyDescription,
+    EmptyHeader,
+    EmptyMedia,
+    EmptyTitle,
+} from '../components/ui/empty.tsx';
 import { Icon } from '../components/ui/icon.tsx';
+import { useMerchbaseSettings } from '../hooks/plugins/use-merchbase-settings.ts';
+import { usePluginList } from '../hooks/plugins/use-plugin-list.ts';
 import { queryPolicy } from '../lib/query-policy.ts';
 import { type MerchbaseSalesSeriesOutput, trpc } from '../lib/trpc.tsx';
 import { cn } from '../lib/utils.ts';
@@ -28,6 +38,12 @@ export function RichResponseMerchBaseSalesChart({
         setStartDate(nextStartDate);
         setEndDate(nextEndDate);
     }, []);
+    const settingsQuery = useMerchbaseSettings();
+    const pluginsQuery = usePluginList();
+    const merchbasePlugin = pluginsQuery.data?.plugins.find((plugin) => plugin.id === 'merchbase');
+    const pluginStateLoading = settingsQuery.isLoading || pluginsQuery.isLoading;
+    const pluginEnabled = settingsQuery.data?.enabled === true && merchbasePlugin?.enabled === true;
+    const pluginDisabled = !(pluginStateLoading || pluginEnabled);
     const query = trpc.plugin.merchbaseSalesSeries.useQuery(
         {
             asin: props.asin,
@@ -42,12 +58,14 @@ export function RichResponseMerchBaseSalesChart({
         },
         {
             ...queryPolicy.agentRuntimeSnapshot,
+            enabled: pluginEnabled,
             placeholderData: keepPreviousData,
         }
     );
 
     const rangeControl = (
         <DateRangeSelector
+            disabled={!pluginEnabled}
             endDate={endDate}
             onRangeChange={handleRangeChange}
             startDate={startDate}
@@ -63,11 +81,12 @@ export function RichResponseMerchBaseSalesChart({
         >
             <div className="min-w-0" style={chartStyleVars}>
                 <MerchBaseSalesChartBody
-                    data={query.data}
+                    data={pluginEnabled ? query.data : undefined}
+                    disabled={pluginDisabled}
                     endDate={endDate}
-                    error={query.error}
+                    error={settingsQuery.error ?? pluginsQuery.error ?? query.error}
                     key={range}
-                    loading={query.isLoading}
+                    loading={pluginStateLoading || (pluginEnabled && query.isLoading)}
                     selectedDate={endDate}
                     startDate={startDate}
                     title={props.title}
@@ -79,6 +98,7 @@ export function RichResponseMerchBaseSalesChart({
 
 function MerchBaseSalesChartBody({
     data,
+    disabled,
     endDate,
     error,
     loading,
@@ -87,6 +107,7 @@ function MerchBaseSalesChartBody({
     title,
 }: {
     data: MerchbaseSalesSeriesOutput | undefined;
+    disabled: boolean;
     endDate: string;
     error: { message: string } | null;
     loading: boolean;
@@ -102,6 +123,10 @@ function MerchBaseSalesChartBody({
     const handleActiveIndexChange = useCallback((nextIndex: null | number) => {
         setActiveIndex((currentIndex) => (currentIndex === nextIndex ? currentIndex : nextIndex));
     }, []);
+
+    if (disabled) {
+        return <DisabledPluginState />;
+    }
 
     if (loading) {
         return <ChartState text="Loading MerchBase sales..." />;
@@ -150,11 +175,44 @@ function MerchBaseTitle() {
     );
 }
 
-function ChartState({ text, tone = 'muted' }: { text: string; tone?: 'error' | 'muted' }) {
+function DisabledPluginState() {
+    return (
+        <div className="relative min-w-0">
+            <div aria-hidden="true" className="mb-3 h-14" />
+            <div aria-hidden="true" className="aspect-[21/9] min-h-64" />
+            <div className="pointer-events-none absolute inset-0 grid place-items-center">
+                <Empty className="min-h-0 flex-none gap-0 px-4 py-0 opacity-50 md:py-0">
+                    <EmptyHeader className="max-w-xs">
+                        <EmptyMedia className="mb-4 text-muted-foreground" variant="icon">
+                            <Icon className="size-4.5" icon={PlugIcon} />
+                        </EmptyMedia>
+                        <EmptyTitle className="font-medium text-sm">
+                            MerchBase is disabled
+                        </EmptyTitle>
+                        <EmptyDescription className="text-sm">
+                            Enable MerchBase to refresh live sales data.
+                        </EmptyDescription>
+                    </EmptyHeader>
+                </Empty>
+            </div>
+        </div>
+    );
+}
+
+function ChartState({
+    framed = true,
+    text,
+    tone = 'muted',
+}: {
+    framed?: boolean;
+    text: string;
+    tone?: 'error' | 'muted';
+}) {
     return (
         <div
             className={cn(
-                'flex min-h-36 items-center justify-center rounded-lg border border-border/70 px-3 text-center text-sm',
+                'flex min-h-36 items-center justify-center px-3 text-center text-sm',
+                framed && 'rounded-lg border border-border/70',
                 tone === 'error' ? 'text-destructive-foreground' : 'text-muted-foreground'
             )}
         >

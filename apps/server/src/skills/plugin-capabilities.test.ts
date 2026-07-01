@@ -11,6 +11,7 @@ describe('Plugin capability ownership', () => {
     const plugins = [
         {
             config: {},
+            description: 'Analyze Amazon Merch sales and product data from MerchBase.',
             displayName: 'MerchBase',
             enabled: true,
             id: 'merchbase' as const,
@@ -39,6 +40,13 @@ describe('Plugin capability ownership', () => {
             enabled: true,
             id: 'merchbase',
         });
+        expect(
+            resolveToolPlugin({ id: 'merchbase_sales_series', name: 'Sales series' }, plugins)
+        ).toEqual({
+            displayName: 'MerchBase',
+            enabled: true,
+            id: 'merchbase',
+        });
     });
 
     test('does not treat user-owned merchbase skills as Plugin-owned', () => {
@@ -50,6 +58,9 @@ describe('Plugin capability ownership', () => {
             /managed from Settings -> Plugins/
         );
         expect(() => rejectPluginToolEnablement('merchbase')).toThrow(
+            /managed from Settings -> Plugins/
+        );
+        expect(() => rejectPluginToolEnablement('merchbase_sales_series')).toThrow(
             /managed from Settings -> Plugins/
         );
     });

@@ -1,4 +1,5 @@
 import { developmentChatDemoId } from '@tavern/api/development-chat-demos';
+import { merchbaseSalesChartDemo } from '../plugins/merchbase/dev/merchbase-sales-chart.demo';
 import { activityTurnDemo, streamingStackDemo } from './development-chat-demo-activity-definitions';
 import {
     artifactLinksDemo,
@@ -9,7 +10,6 @@ import {
     selfMessagesDemo,
 } from './development-chat-demo-basic-definitions';
 import { chartDemo } from './development-chat-demo-composed-chart-definition';
-import { merchbaseSalesChartDemo } from './development-chat-demo-merchbase-sales-chart-definition';
 import { richResponseCatalogDemo } from './development-chat-demo-rich-response-catalog-definition';
 import { toolHeadersDemo } from './development-chat-demo-tool-header-definitions';
 import { turnTimelineDemo } from './development-chat-demo-turn-timeline-definition';

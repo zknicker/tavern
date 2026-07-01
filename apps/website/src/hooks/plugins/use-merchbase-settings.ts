@@ -11,6 +11,8 @@ export function useSaveMerchbaseSettings() {
         async onSuccess() {
             await Promise.all([
                 utils.plugin.merchbaseSettings.invalidate(),
+                utils.plugin.list.invalidate(),
+                utils.plugin.merchbaseSalesSeries.invalidate(),
                 utils.agentRuntime.get.invalidate(),
                 utils.skill.list.invalidate(),
             ]);

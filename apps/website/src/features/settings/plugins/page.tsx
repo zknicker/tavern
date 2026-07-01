@@ -1,6 +1,8 @@
+import { merchbasePluginManifest } from '@tavern/api/plugins/merchbase';
 import * as React from 'react';
 import { useParams } from 'react-router-dom';
 import { Badge } from '../../../components/ui/badge.tsx';
+import { Button } from '../../../components/ui/primitives/button.tsx';
 import { SearchInput } from '../../../components/ui/primitives/search-input.tsx';
 import { Separator } from '../../../components/ui/separator.tsx';
 import {
@@ -21,7 +23,7 @@ import { usePluginList, useSetAgentPluginGrant } from '../../../hooks/plugins/us
 import { withSavingToast } from '../../../lib/saving-toast.ts';
 import type { AgentListOutput, PluginListOutput } from '../../../lib/trpc.tsx';
 import { EmptyState } from '../../shell/empty-state.tsx';
-import { MerchbaseSettingsCard } from './merchbase-settings-card.tsx';
+import { MerchbaseSettingsCard, MerchbaseSettingsControl } from './merchbase-settings-card.tsx';
 
 export { MerchbaseSettingsCard } from './merchbase-settings-card.tsx';
 
@@ -43,44 +45,40 @@ function GlobalPluginsSettingsPage() {
         <SettingsPage>
             <SettingsPageHeader title="Plugins" />
 
-            <div className="grid gap-4">
+            <SettingsSection title="Installed Plugins">
                 <SearchInput
                     aria-label="Search plugins"
-                    className="w-full px-3 [&_[data-slot=input-control]]:h-9"
+                    className="w-full [&_[data-slot=input-control]]:h-9"
                     name="plugin-search"
                     onChange={(event) => setSearch(event.target.value)}
                     placeholder="Search plugins..."
                     value={search}
                 />
 
-                <SettingsSection title="Installed Plugins">
-                    <SettingsGroup>
-                        {showMerchbasePlugin ? (
-                            <MerchbaseSettingsCard
-                                error={
-                                    settingsQuery.error?.message ??
-                                    saveSettings.error?.message ??
-                                    null
-                                }
-                                isLoading={settingsQuery.isPending}
-                                isSaving={saveSettings.isPending}
-                                onSave={(input) =>
-                                    withSavingToast(() => saveSettings.mutateAsync(input)).catch(
-                                        () => undefined
-                                    )
-                                }
-                                settings={settingsQuery.data ?? null}
-                            />
-                        ) : (
-                            <EmptyState
-                                className="py-8"
-                                description="Try a different name or description."
-                                title="No matches"
-                            />
-                        )}
-                    </SettingsGroup>
-                </SettingsSection>
-            </div>
+                <SettingsGroup>
+                    {showMerchbasePlugin ? (
+                        <MerchbaseSettingsCard
+                            error={
+                                settingsQuery.error?.message ?? saveSettings.error?.message ?? null
+                            }
+                            isLoading={settingsQuery.isPending}
+                            isSaving={saveSettings.isPending}
+                            onSave={(input) =>
+                                withSavingToast(() => saveSettings.mutateAsync(input)).catch(
+                                    () => undefined
+                                )
+                            }
+                            settings={settingsQuery.data ?? null}
+                        />
+                    ) : (
+                        <EmptyState
+                            className="py-8"
+                            description="Try a different name or description."
+                            title="No matches"
+                        />
+                    )}
+                </SettingsGroup>
+            </SettingsSection>
         </SettingsPage>
     );
 }
@@ -89,6 +87,8 @@ function AgentPluginsSettingsPage({ agentId }: { agentId: string }) {
     const [search, setSearch] = React.useState('');
     const deferredSearch = React.useDeferredValue(search);
     const agentsQuery = useAgentList();
+    const merchbaseSettingsQuery = useMerchbaseSettings();
+    const saveMerchbaseSettings = useSaveMerchbaseSettings();
     const pluginsQuery = usePluginList();
     const setGrant = useSetAgentPluginGrant();
     const agent = agentsQuery.data?.agents.find((candidate) => candidate.id === agentId) ?? null;
@@ -118,62 +118,96 @@ function AgentPluginsSettingsPage({ agentId }: { agentId: string }) {
         <SettingsPage>
             <SettingsPageHeader title="Plugins" />
 
-            <div className="grid gap-4">
+            <div className="grid gap-3">
                 <SearchInput
                     aria-label="Search plugin grants"
-                    className="w-full px-3 [&_[data-slot=input-control]]:h-9"
+                    className="w-full [&_[data-slot=input-control]]:h-9"
                     name="agent-plugin-search"
                     onChange={(event) => setSearch(event.target.value)}
                     placeholder="Search plugins..."
                     value={search}
                 />
 
-                <SettingsSection title="Agent Plugins">
-                    <SettingsGroup>
-                        {plugins && plugins.length > 0 ? (
-                            plugins.map((plugin, index) => (
+                <SettingsGroup>
+                    {plugins && plugins.length > 0 ? (
+                        plugins.map((plugin, index) => {
+                            const row = (
+                                <AgentPluginGrantRow
+                                    agent={agent}
+                                    configureAction={
+                                        plugin.id === 'merchbase' && merchbaseSettingsQuery.data ? (
+                                            <MerchbaseSettingsControl
+                                                error={
+                                                    merchbaseSettingsQuery.error?.message ??
+                                                    saveMerchbaseSettings.error?.message ??
+                                                    null
+                                                }
+                                                isSaving={saveMerchbaseSettings.isPending}
+                                                onSave={(input) =>
+                                                    withSavingToast(() =>
+                                                        saveMerchbaseSettings.mutateAsync(input)
+                                                    ).catch(() => undefined)
+                                                }
+                                                settings={merchbaseSettingsQuery.data}
+                                            >
+                                                {({ openSettingsDialog }) => (
+                                                    <Button
+                                                        disabled={saveMerchbaseSettings.isPending}
+                                                        onClick={() => openSettingsDialog()}
+                                                        variant="ghost"
+                                                    >
+                                                        Configure
+                                                    </Button>
+                                                )}
+                                            </MerchbaseSettingsControl>
+                                        ) : null
+                                    }
+                                    isSaving={
+                                        setGrant.isPending &&
+                                        setGrant.variables?.pluginId === plugin.id
+                                    }
+                                    onEnabledChange={(enabled) =>
+                                        void withSavingToast(() =>
+                                            setGrant.mutateAsync({
+                                                agentId: agent.id,
+                                                enabled,
+                                                pluginId: plugin.id,
+                                            })
+                                        ).catch(() => undefined)
+                                    }
+                                    plugin={plugin}
+                                />
+                            );
+
+                            return (
                                 <React.Fragment key={plugin.id}>
                                     {index > 0 ? <Separator /> : null}
-                                    <AgentPluginGrantRow
-                                        agent={agent}
-                                        isSaving={
-                                            setGrant.isPending &&
-                                            setGrant.variables?.pluginId === plugin.id
-                                        }
-                                        onEnabledChange={(enabled) =>
-                                            void withSavingToast(() =>
-                                                setGrant.mutateAsync({
-                                                    agentId: agent.id,
-                                                    enabled,
-                                                    pluginId: plugin.id,
-                                                })
-                                            ).catch(() => undefined)
-                                        }
-                                        plugin={plugin}
-                                    />
+                                    {row}
                                 </React.Fragment>
-                            ))
-                        ) : (
-                            <EmptyState
-                                className="py-8"
-                                description="Try a different name or description."
-                                title="No matches"
-                            />
-                        )}
-                    </SettingsGroup>
-                </SettingsSection>
+                            );
+                        })
+                    ) : (
+                        <EmptyState
+                            className="py-8"
+                            description="Try a different name or description."
+                            title="No matches"
+                        />
+                    )}
+                </SettingsGroup>
             </div>
         </SettingsPage>
     );
 }
 
-function AgentPluginGrantRow({
+export function AgentPluginGrantRow({
     agent,
+    configureAction = null,
     isSaving,
     onEnabledChange,
     plugin,
 }: {
     agent: AgentListOutput['agents'][number];
+    configureAction?: React.ReactNode;
     isSaving: boolean;
     onEnabledChange: (enabled: boolean) => void;
     plugin: PluginListOutput['plugins'][number];
@@ -183,7 +217,7 @@ function AgentPluginGrantRow({
         <SettingsRow
             description={
                 plugin.enabled
-                    ? 'Agent-facing tools and guidance are available when granted.'
+                    ? plugin.description
                     : 'Grant is saved, but this Plugin must be enabled before the agent can use it.'
             }
             title={
@@ -198,12 +232,15 @@ function AgentPluginGrantRow({
             }
             trailingWidth="intrinsic"
         >
-            <Switch
-                aria-label={`${granted ? 'Revoke' : 'Grant'} ${plugin.displayName} for ${agent.name}`}
-                checked={granted}
-                disabled={isSaving}
-                onCheckedChange={onEnabledChange}
-            />
+            <div className="flex items-center gap-2">
+                {configureAction}
+                <Switch
+                    aria-label={`${granted ? 'Revoke' : 'Grant'} ${plugin.displayName} for ${agent.name}`}
+                    checked={granted}
+                    disabled={isSaving}
+                    onCheckedChange={onEnabledChange}
+                />
+            </div>
         </SettingsRow>
     );
 }
@@ -214,9 +251,14 @@ function matchesMerchbasePlugin(search: string) {
         return true;
     }
 
-    return ['merchbase', 'live sales data', 'rich responses', 'agent reads'].some((value) =>
-        value.includes(normalized)
-    );
+    return [
+        'merchbase',
+        merchbasePluginManifest.description,
+        'sales',
+        'product',
+        'catalog',
+        'design',
+    ].some((value) => value.toLowerCase().includes(normalized));
 }
 
 function matchesAgentPlugin(plugin: PluginListOutput['plugins'][number], search: string) {
@@ -225,7 +267,7 @@ function matchesAgentPlugin(plugin: PluginListOutput['plugins'][number], search:
         return true;
     }
 
-    return [plugin.id, plugin.displayName].some((value) =>
+    return [plugin.id, plugin.displayName, plugin.description].some((value) =>
         value.toLowerCase().includes(normalized)
     );
 }

@@ -12,6 +12,18 @@ Chat demos are dev-only Tavern chats seeded into Runtime SQLite. They let the ap
 exercise the normal chat list, chat detail, timeline, activity projection, Rich Response
 rendering, and composer code paths without asking an agent to generate data.
 
+Plugin-owned Rich Response Components use one dev demo module per component:
+
+```txt
+apps/runtime/src/plugins/<plugin>/dev/<component>.demo.ts
+```
+
+The `.demo.ts` file owns the seeded chat rows, Rich Response spec, and any
+inline fake data needed for that component's dev-only behavior. Do not add a
+separate `.fixture.ts` file unless duplication becomes real and painful. The
+demo always renders the real Rich Response Component; it must not provide a
+dev-only renderer.
+
 ## Contract
 
 * The dev stack sets `TAVERN_DEV_STACK=1`.
@@ -31,6 +43,10 @@ rendering, and composer code paths without asking an agent to generate data.
 
 Do not add route-local transcript fixtures for demo coverage. If a demo needs to
 show a chat behavior, seed the Runtime rows that live chat would read.
+
+Core Tavern only aggregates Plugin dev demos. Plugin-specific operation names,
+read cases, chart data, and disabled-state examples stay in the Plugin dev demo
+module.
 
 Composer queue demos are not seeded yet because queued draft messages are
 app-local UI state, not durable Runtime chat rows.

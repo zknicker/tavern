@@ -6,6 +6,10 @@ import type {
     AgentRuntimeCapabilityHealthId,
     AgentRuntimeCapabilityHealthState,
 } from '@tavern/api';
+import {
+    merchbasePluginHealthCapabilityId,
+    merchbasePluginManifest,
+} from '@tavern/api/plugins/merchbase';
 import { AGENT_WORKSPACE } from '../config.ts';
 import { loadVaultBackedCodexCredentials } from '../model-access/codex-settings.ts';
 import { listAgentModels } from '../models/catalog-service.ts';
@@ -114,8 +118,8 @@ export const runtimeCapabilityDefinitions: RuntimeCapabilityDefinition[] = [
         async check() {
             return await checkMerchbaseCapability();
         },
-        displayName: 'MerchBase',
-        id: 'plugin.merchbase',
+        displayName: merchbasePluginManifest.displayName,
+        id: merchbasePluginHealthCapabilityId,
         refresh: {
             intervalMs: 5 * minuteMs,
             runOnStart: true,

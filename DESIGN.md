@@ -154,12 +154,16 @@ level; light mode flattens to white after level 2 and lets the shadow recipes ca
 
 The app uses system sans for UI and IBM Plex Mono for compact metadata. The typography scale is
 defined in `global.css`; `--app-ui-font-size` owns UI text and `--app-code-font-size` owns code
-surfaces.
+surfaces. Tavern's default UI text is 14px through `--app-ui-font-size`; do not assume browser
+defaults, Tailwind defaults, or upstream COSS defaults define Tavern's body size.
 
-Use `text-sm` for normal app UI, labels, rows, buttons, and body text. Use `text-meta` for compact
-metadata such as timestamps, durations, short row details, and secondary table cells. Use
-`text-caption` or `text-micro` only for badges, ticks, and tiny labels. Avoid `text-xs` for ordinary
-content; it usually makes dense settings screens feel inconsistent.
+Use `text-sm` for normal app UI, labels, rows, buttons, empty states, and body text. In Tavern,
+`text-sm` is the standard body scale because it maps to `--app-ui-font-size`. `text-base` is larger
+than normal app body text and should be reserved for card titles, section headers, and intentionally
+larger emphasis. Use `text-meta` for compact metadata such as timestamps, durations, short row
+details, and secondary table cells. Use `text-caption` or `text-micro` only for badges, ticks, and
+tiny labels. Avoid `text-xs` for ordinary content; it usually makes dense settings screens feel
+inconsistent.
 
 Badges use mono, uppercase, and slight positive tracking. This is a primitive-level decision in
 `components/ui/badge.tsx`; do not recreate it with local classes.
@@ -316,6 +320,7 @@ Do:
 - Change shared primitives when multiple screens need the same visual correction.
 - Keep settings row descriptions to one short line; rewrite the copy rather than letting it wrap.
 - Prefer `text-sm` and `text-meta` over a mix of `text-xs` and `text-sm`.
+- Treat `text-sm`, not `text-base`, as Tavern's normal body text.
 - Use subtle filled controls inside cards to avoid border-in-border UI.
 - Keep icons large enough to read and consistent with text color.
 - Verify visual changes in both light and dark mode when they touch primitives or tokens.
@@ -330,5 +335,6 @@ Don't:
 - Use outline buttons as the default secondary action style.
 - Add long explanatory copy inside dense settings rows.
 - Use uppercase table headings.
+- Use `text-base` as default body text just because browser or library defaults are 16px.
 - Use `text-xs` for normal row content, settings copy, or table metadata.
 - Add arbitrary font-size classes when a scale token would work.

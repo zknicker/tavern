@@ -171,13 +171,15 @@ _Avoid_: Plugin registry, arbitrary component set, model component library
 
 **Rich Response Component**:
 A single allowed component in the Rich Response Catalog, rendered by Tavern from validated props.
+Components may be owned by Tavern core or by a first-party Plugin folder, but they are registered
+through Tavern's typed catalog and renderer.
 _Avoid_: React component, model component, widget tool
 
 **Plugin**:
-A built-in Tavern product capability for an external system, owning its configuration, status,
-runtime actions, normalized view models, and any related Rich Response Components. In v1, Tavern
-does not support user-installed Plugins; user-provided executable integrations belong behind MCP
-servers.
+A Tavern-managed, manifest-declared capability bundle for an external system. A Plugin owns its
+configuration, status, runtime actions, agent-facing skills and tools, normalized view models, and
+any related Rich Response Components. In v1, Plugins are first-party and compiled into Tavern rather
+than user-installed packages; user-provided executable integrations belong behind MCP servers.
 _Avoid_: Skill, connector, CLI dependency, user-installed package
 
 **Plugin health**:

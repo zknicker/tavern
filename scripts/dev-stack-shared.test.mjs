@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -8,6 +9,7 @@ import {
     cleanupStaleProcesses,
     createDevStackEnvironment,
     formatPortBlockers,
+    seedDevPreseedMerchbasePluginConfig,
     waitForRuntimeReady,
 } from './dev-stack-shared.mjs';
 
@@ -195,6 +197,68 @@ test('createDevStackEnvironment preserves unknown tavern.json keys when generati
     assert.equal(environment.TAVERN_RUNTIME_TOKEN, persisted.token);
 });
 
+test('seedDevPreseedMerchbasePluginConfig copies local preseed values once', () => {
+    const repositoryRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'tavern-dev-preseed-repo-'));
+    const runtimeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'tavern-dev-preseed-runtime-'));
+    fs.writeFileSync(
+        path.join(repositoryRoot, '.env'),
+        [
+            'DEV_PRESEED_MERCHBASE_ENABLED=true',
+            'DEV_PRESEED_MERCHBASE_API_KEY=env-key',
+            'DEV_PRESEED_MERCHBASE_BASE_URL=https://env.merchbase.test',
+            'DEV_PRESEED_MERCHBASE_DEFAULT_ACCOUNT=acct_env',
+            'DEV_PRESEED_MERCHBASE_DEFAULT_MARKETPLACE=UK',
+            '',
+        ].join('\n')
+    );
+
+    assert.deepEqual(
+        seedDevPreseedMerchbasePluginConfig({
+            baseEnvironment: {},
+            repositoryRoot,
+            runtimeRoot,
+        }),
+        { seededConfig: true, seededSecret: true }
+    );
+    assert.deepEqual(readMerchbasePluginRows(runtimeRoot), {
+        config: {
+            baseUrl: 'https://env.merchbase.test',
+            defaultAccount: 'acct_env',
+            defaultMarketplace: 'UK',
+        },
+        enabled: 1,
+        secret: { apiKey: 'env-key' },
+    });
+
+    fs.writeFileSync(
+        path.join(repositoryRoot, '.env'),
+        [
+            'DEV_PRESEED_MERCHBASE_ENABLED=false',
+            'DEV_PRESEED_MERCHBASE_API_KEY=changed-key',
+            'DEV_PRESEED_MERCHBASE_BASE_URL=https://changed.merchbase.test',
+            '',
+        ].join('\n')
+    );
+
+    assert.deepEqual(
+        seedDevPreseedMerchbasePluginConfig({
+            baseEnvironment: {},
+            repositoryRoot,
+            runtimeRoot,
+        }),
+        { seededConfig: false, seededSecret: false }
+    );
+    assert.deepEqual(readMerchbasePluginRows(runtimeRoot), {
+        config: {
+            baseUrl: 'https://env.merchbase.test',
+            defaultAccount: 'acct_env',
+            defaultMarketplace: 'UK',
+        },
+        enabled: 1,
+        secret: { apiKey: 'env-key' },
+    });
+});
+
 test('cleanupStaleProcesses closes the old Tauri desktop app in desktop mode', () => {
     const killedProcesses = [];
     const cleanupCount = cleanupStaleProcesses({
@@ -225,3 +289,31 @@ test('cleanupStaleProcesses closes the old Tauri desktop app in desktop mode', (
         [111, 'SIGTERM'],
     ]);
 });
+
+function readMerchbasePluginRows(runtimeRoot) {
+    const databasePath = path.join(runtimeRoot, 'data', 'runtime.db');
+    const [pluginJson] = JSON.parse(
+        spawnSqlite(databasePath, [
+            "SELECT enabled, config_json FROM runtime_plugins WHERE id = 'merchbase';",
+        ])
+    );
+    const [secretJson] = JSON.parse(
+        spawnSqlite(databasePath, [
+            "SELECT secret_json FROM runtime_plugin_secrets WHERE plugin_id = 'merchbase';",
+        ])
+    );
+    return {
+        config: JSON.parse(pluginJson.config_json),
+        enabled: pluginJson.enabled,
+        secret: JSON.parse(secretJson.secret_json),
+    };
+}
+
+function spawnSqlite(databasePath, statements) {
+    const result = spawnSync('sqlite3', ['-json', databasePath], {
+        encoding: 'utf8',
+        input: statements.join('\n'),
+    });
+    assert.equal(result.status, 0, result.stderr);
+    return result.stdout;
+}

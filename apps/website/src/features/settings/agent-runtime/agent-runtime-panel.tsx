@@ -252,7 +252,7 @@ function RuntimeUrlForm({ connection }: { connection: RuntimeConnection }) {
                 }
             >
                 <SecretInput
-                    aria-label="Runtime token"
+                    ariaLabel="Runtime token"
                     disabled={connectMutation.isPending || isEnvironment}
                     name="runtime-token"
                     onChange={setToken}

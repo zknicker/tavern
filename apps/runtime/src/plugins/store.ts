@@ -4,21 +4,12 @@ import {
     agentRuntimePluginIdSchema,
     agentRuntimePluginSchema,
 } from '@tavern/api';
+import { type TavernPluginManifest, tavernPluginManifests } from '@tavern/api/plugins';
 import type * as z from 'zod';
 import { getDb } from '../db/connection';
 import { namedParams } from '../db/sqlite';
 
-export interface PluginDefinition {
-    displayName: string;
-    id: AgentRuntimePluginId;
-}
-
-export const pluginDefinitions = [
-    {
-        displayName: 'MerchBase',
-        id: 'merchbase',
-    },
-] satisfies PluginDefinition[];
+export const pluginDefinitions = tavernPluginManifests;
 
 export function listPlugins(): AgentRuntimePlugin[] {
     return pluginDefinitions.map((definition) => getPlugin(definition.id));
@@ -31,6 +22,7 @@ export function getPlugin(id: AgentRuntimePluginId): AgentRuntimePlugin {
 
     return agentRuntimePluginSchema.parse({
         config: row?.config ?? {},
+        description: definition.description,
         displayName: definition.displayName,
         enabled: row?.enabled ?? false,
         id,
@@ -109,8 +101,12 @@ function ensurePluginRow(id: AgentRuntimePluginId) {
     writePluginConfig({ config: {}, enabled: false, id });
 }
 
-function getPluginDefinition(id: AgentRuntimePluginId) {
-    return pluginDefinitions.find((definition) => definition.id === id)!;
+function getPluginDefinition(id: AgentRuntimePluginId): TavernPluginManifest {
+    const definition = pluginDefinitions.find((candidate) => candidate.id === id);
+    if (!definition) {
+        throw new Error(`Unknown Plugin: ${id}`);
+    }
+    return definition;
 }
 
 function readPluginRow(id: AgentRuntimePluginId) {

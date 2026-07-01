@@ -98,6 +98,19 @@ The initial catalog is intentionally small:
 Rich Responses do not accept model-authored HTML, JSX, CSS, `className`, event
 handlers, or arbitrary component imports.
 
+Plugin-owned Rich Response Component source may live under the owning Plugin's
+folder. The component still enters Tavern through build-time registration in the
+typed Rich Response Catalog and Website renderer. Enabling a Plugin, and granting
+it to an agent, controls whether the agent may author that Plugin's components;
+the App does not dynamically load component code from enabled Plugin records.
+
+Historical chat rows keep rendering Plugin-owned Rich Response Components while
+the component remains compiled into Tavern. Removing an agent's Plugin grant only
+prevents that agent from authoring new Plugin-owned components. If the Plugin is
+globally disabled, Plugin-backed interaction controls inside historical renders
+are disabled; Tavern does not use fallback data sources or attempt graceful live
+re-query without the enabled Plugin.
+
 ## Storage
 
 Runtime stores a valid Rich Response as response activity:
@@ -133,8 +146,11 @@ Detailed component schemas live in `packages/tavern-api/src/rich-responses`.
 ## Ownership
 
 Canonical schemas and the json-render catalog live in
-`packages/tavern-api/src/rich-responses`.
+`packages/tavern-api/src/rich-responses`. Plugin-owned component schemas may be
+defined beside Plugin code and re-exported into the catalog through first-party
+imports.
 
 Runtime owns parsing final assistant content and writing `rich_response`
 activity. Server owns row projection. Website owns the renderer and visual
-components under `apps/website/src/rich-responses`.
+components, including Plugin-owned renderers imported from first-party Plugin
+folders.

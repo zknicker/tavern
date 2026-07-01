@@ -1,4 +1,5 @@
 import { PlugIcon } from '@hugeicons-pro/core-stroke-rounded';
+import { merchbasePluginManifest } from '@tavern/api/plugins/merchbase';
 import { type Dispatch, type SetStateAction, useState } from 'react';
 import { Button } from '../../../components/ui/primitives/button.tsx';
 import { FieldError } from '../../../components/ui/primitives/field.tsx';
@@ -26,6 +27,7 @@ export function MerchbaseSettingsDialog({
     onOpenChange,
     onSave,
     open,
+    setupError,
     settings,
 }: {
     canSave: boolean;
@@ -36,6 +38,7 @@ export function MerchbaseSettingsDialog({
     onOpenChange: (open: boolean) => void;
     onSave: () => void;
     open: boolean;
+    setupError?: string | null;
     settings: MerchbaseSettings;
 }) {
     const environmentControlled = settings.enablementSource === 'environment';
@@ -43,7 +46,7 @@ export function MerchbaseSettingsDialog({
 
     return (
         <PluginDialog
-            description="Powers MerchBase agent tools and sales widgets."
+            description={merchbasePluginManifest.description}
             footer={
                 <Button
                     className="ml-auto"
@@ -128,7 +131,14 @@ export function MerchbaseSettingsDialog({
                 </PluginField>
             </PluginFieldRow>
 
-            <PluginField label="API key">
+            <PluginField
+                description={
+                    settings.apiKeyConfigured
+                        ? 'Leave blank to keep the current key.'
+                        : 'Required before enabling MerchBase.'
+                }
+                label="API key"
+            >
                 <SecretInput
                     ariaLabel="MerchBase API key"
                     disabled={isSaving}
@@ -141,6 +151,7 @@ export function MerchbaseSettingsDialog({
                     revealed={apiKeyRevealed}
                     value={draft.apiKey}
                 />
+                {setupError ? <FieldError>{setupError}</FieldError> : null}
             </PluginField>
 
             {settings.skillConflict ? (

@@ -1,5 +1,6 @@
 import { type RichResponseRenderInput, richResponseComponentId } from '@tavern/api';
 import { developmentChatDemoIds } from '@tavern/api/development-chat-demos';
+import { richResponseMerchBaseSalesChartComponentType } from '@tavern/api/rich-responses/merchbase';
 import {
     activityRuntimeMetadata,
     assistantMessage,
@@ -7,7 +8,7 @@ import {
     type DevelopmentChatDemo,
     demoTime,
     userMessage,
-} from './development-chat-demo-types';
+} from '../../../tavern/development-chat-demo-types';
 
 export function merchbaseSalesChartDemo(): DevelopmentChatDemo {
     const chatId = developmentChatDemoIds.merchbaseSalesChart;
@@ -87,7 +88,7 @@ function merchbaseSalesChartRenderInput(): RichResponseRenderInput {
                             rangeDays: 10,
                             title: 'MerchBase sales',
                         },
-                        type: 'MerchBaseSalesChart',
+                        type: richResponseMerchBaseSalesChartComponentType,
                     },
                 },
                 root: 'chart',

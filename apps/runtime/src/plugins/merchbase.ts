@@ -15,9 +15,9 @@ import {
     agentRuntimePluginSchema,
     agentRuntimeSaveMerchbaseSettingsSchema,
 } from '@tavern/api';
+import { merchbasePluginId } from '@tavern/api/plugins/merchbase';
 import * as z from 'zod';
 import type { RuntimeCapabilityCheckResult } from '../capabilities/definitions';
-import { readConfigValue } from '../config';
 import {
     getPlugin,
     readPluginConfig,
@@ -26,7 +26,6 @@ import {
     writePluginSecret,
 } from './store';
 
-const pluginId = 'merchbase' as const;
 const merchbaseProductionBaseUrl = 'https://app.merchbase.co';
 
 const storedMerchbaseConfigSchema = z.object({
@@ -54,7 +53,7 @@ export function listRuntimePlugins(): AgentRuntimePlugin[] {
 }
 
 export function getMerchbasePlugin(): AgentRuntimePlugin {
-    const stored = getPlugin(pluginId);
+    const stored = getPlugin(merchbasePluginId);
     const effective = resolveMerchbaseSettings();
 
     return agentRuntimePluginSchema.parse({
@@ -101,11 +100,11 @@ export function saveMerchbaseSettings(
                 : parsed.defaultMarketplace,
     };
     const enabled = parsed.enabled ?? current.enabled;
-    writePluginConfig({ config, enabled, id: pluginId });
+    writePluginConfig({ config, enabled, id: merchbasePluginId });
 
     if (parsed.apiKey !== undefined) {
         writePluginSecret({
-            id: pluginId,
+            id: merchbasePluginId,
             secret: parsed.apiKey ? { apiKey: parsed.apiKey } : {},
         });
     }
@@ -295,42 +294,23 @@ function withRequiredMarketplace<TInput extends { marketplace?: string }>(
 
 function resolveMerchbaseSettings(): EffectiveMerchbaseSettings {
     const stored = resolveStoredMerchbaseSettings();
-    const envApiKey = readConfigValue('TAVERN_MERCHBASE_API_KEY');
-    const envEnabled = parseBoolean(readConfigValue('TAVERN_MERCHBASE_ENABLED'));
-    const environmentControlsEnablement = envEnabled !== null || Boolean(envApiKey);
     return {
-        apiKey: envApiKey ?? stored.secret.apiKey ?? null,
-        baseUrl: readConfigValue('TAVERN_MERCHBASE_BASE_URL') ?? stored.config.baseUrl,
-        defaultAccount:
-            readConfigValue('TAVERN_MERCHBASE_DEFAULT_ACCOUNT') ?? stored.config.defaultAccount,
-        defaultMarketplace:
-            readConfigValue('TAVERN_MERCHBASE_DEFAULT_MARKETPLACE') ??
-            stored.config.defaultMarketplace,
-        enabled: envEnabled ?? (stored.enabled || Boolean(envApiKey)),
-        enablementSource: environmentControlsEnablement ? 'environment' : 'settings',
+        apiKey: stored.secret.apiKey ?? null,
+        baseUrl: stored.config.baseUrl,
+        defaultAccount: stored.config.defaultAccount,
+        defaultMarketplace: stored.config.defaultMarketplace,
+        enabled: stored.enabled,
+        enablementSource: 'settings',
         updatedAt: stored.updatedAt,
     };
 }
 
 function resolveStoredMerchbaseSettings() {
-    const plugin = getPlugin(pluginId);
+    const plugin = getPlugin(merchbasePluginId);
     return {
-        config: readPluginConfig(pluginId, storedMerchbaseConfigSchema),
+        config: readPluginConfig(merchbasePluginId, storedMerchbaseConfigSchema),
         enabled: plugin.enabled,
-        secret: readPluginSecret(pluginId, storedMerchbaseSecretSchema) ?? {},
+        secret: readPluginSecret(merchbasePluginId, storedMerchbaseSecretSchema) ?? {},
         updatedAt: plugin.updatedAt,
     };
-}
-
-function parseBoolean(value: string | null): boolean | null {
-    if (!value) {
-        return null;
-    }
-    if (['1', 'true', 'yes', 'on'].includes(value.toLowerCase())) {
-        return true;
-    }
-    if (['0', 'false', 'no', 'off'].includes(value.toLowerCase())) {
-        return false;
-    }
-    return null;
 }

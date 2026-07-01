@@ -12,6 +12,7 @@ import {
     agentRuntimeRoutes,
     agentRuntimeSaveMerchbaseSettingsSchema,
 } from '@tavern/api';
+import { merchbasePluginHealthCapabilityId } from '@tavern/api/plugins/merchbase';
 import { refreshRuntimeCapabilities } from '../capabilities/store';
 import { badRequest, forbidden, json, notFound } from '../tavern/http';
 import {
@@ -67,7 +68,7 @@ export async function handlePluginsRequest(request: Request): Promise<Response |
             await applyMerchbaseAgentCapabilityEnablement(settings.enabled).catch(() => undefined);
         }
         await refreshRuntimeCapabilities({
-            ids: ['plugin.merchbase'],
+            ids: [merchbasePluginHealthCapabilityId],
             publishUpdated: true,
         });
         return json(agentRuntimeMerchbaseSettingsSchema.parse(settings));

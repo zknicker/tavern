@@ -10,6 +10,7 @@ import {
     isDesktopMode,
     isRuntimeMode,
     isSuppressedStartupLine,
+    seedDevPreseedMerchbasePluginConfig,
     startupEventPrefix,
     stripAnsi,
     waitForPort,
@@ -331,6 +332,17 @@ export class DevStackController extends EventEmitter {
         };
 
         if (hasRuntime) {
+            const merchbasePreseed = seedDevPreseedMerchbasePluginConfig({
+                repositoryRoot: this.repositoryRoot,
+                runtimeRoot: devStackEnvironment.TAVERN_RUNTIME_ROOT,
+            });
+            if (merchbasePreseed.seededConfig || merchbasePreseed.seededSecret) {
+                const parts = [
+                    merchbasePreseed.seededConfig ? 'config' : null,
+                    merchbasePreseed.seededSecret ? 'secret' : null,
+                ].filter(Boolean);
+                this.addLog('tavern', `MerchBase Plugin preseeded ${parts.join(' and ')}`);
+            }
             this.spawnProcess(
                 'runtime',
                 'cd apps/runtime && bun --watch src/index.ts serve',

@@ -4,12 +4,7 @@ import { getRuntimeCapability, refreshRuntimeCapabilities } from '../capabilitie
 import { closeDb, getDb, initTestDb } from '../db/connection';
 import { ensureRuntimeSchema } from '../db/schema';
 import { subscribeToRuntimeEvents } from '../tavern/runtime-events';
-import {
-    getMerchbasePlugin,
-    getMerchbaseSettings,
-    queryMerchbaseAction,
-    saveMerchbaseSettings,
-} from './merchbase';
+import { getMerchbaseSettings, queryMerchbaseAction, saveMerchbaseSettings } from './merchbase';
 import { handlePluginsRequest } from './routes';
 import { getPlugin } from './store';
 
@@ -23,13 +18,7 @@ vi.mock('@merchbase/http-client', () => ({
     createMerchbaseClient: merchbaseClientMock.createClient,
 }));
 
-const envKeys = [
-    'TAVERN_MERCHBASE_API_KEY',
-    'TAVERN_MERCHBASE_BASE_URL',
-    'TAVERN_MERCHBASE_DEFAULT_ACCOUNT',
-    'TAVERN_MERCHBASE_DEFAULT_MARKETPLACE',
-    'TAVERN_MERCHBASE_ENABLED',
-] as const;
+const envKeys = [] as const;
 
 describe('MerchBase Plugin settings', () => {
     beforeEach(async () => {
@@ -103,32 +92,6 @@ describe('MerchBase Plugin settings', () => {
                 .prepare('SELECT secret_json FROM runtime_plugin_secrets WHERE plugin_id = $id')
                 .get({ $id: 'merchbase' })
         ).toMatchObject({ secret_json: JSON.stringify({ apiKey: 'secret-key' }) });
-    });
-
-    test('uses environment overrides as effective settings', () => {
-        process.env.TAVERN_MERCHBASE_ENABLED = 'true';
-        process.env.TAVERN_MERCHBASE_API_KEY = 'env-key';
-        process.env.TAVERN_MERCHBASE_BASE_URL = 'https://env.merchbase.test';
-        process.env.TAVERN_MERCHBASE_DEFAULT_ACCOUNT = 'acct_env';
-        process.env.TAVERN_MERCHBASE_DEFAULT_MARKETPLACE = 'UK';
-
-        expect(getMerchbaseSettings()).toMatchObject({
-            apiKeyConfigured: true,
-            baseUrl: 'https://env.merchbase.test',
-            defaultAccount: 'acct_env',
-            defaultMarketplace: 'UK',
-            enabled: true,
-            enablementSource: 'environment',
-        });
-        expect(getMerchbasePlugin()).toMatchObject({
-            config: {
-                baseUrl: 'https://env.merchbase.test',
-                defaultAccount: 'acct_env',
-                defaultMarketplace: 'UK',
-            },
-            enabled: true,
-            secrets: [{ hasValue: true, name: 'apiKey' }],
-        });
     });
 
     test('runs read actions through the configured Plugin client', async () => {

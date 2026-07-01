@@ -1,10 +1,11 @@
 import * as z from 'zod';
 
+import { tavernPluginCapabilityIds, tavernPluginIds } from '../plugins/ids.ts';
 import { agentRuntimeModelProviderIdSchema } from './model-providers.ts';
 
 export const agentRuntimeProtocolVersion = 1 as const;
 
-export const agentRuntimeCapabilitySchema = z.enum([
+const agentRuntimeCoreCapabilityIds = [
     'codexOAuth',
     'vault',
     'dashboardServer',
@@ -12,7 +13,11 @@ export const agentRuntimeCapabilitySchema = z.enum([
     'gateway',
     'modelExecution',
     'skills',
-    'plugin.merchbase',
+] as const;
+
+export const agentRuntimeCapabilitySchema = z.enum([
+    ...agentRuntimeCoreCapabilityIds,
+    ...tavernPluginCapabilityIds,
 ]);
 
 export const agentRuntimeCapabilityHealthIdSchema = agentRuntimeCapabilitySchema;
@@ -309,7 +314,7 @@ export const agentRuntimeThinkingLevelSchema = z.enum([
 
 const agentRuntimeJsonRecordSchema = z.record(z.string(), z.unknown());
 
-export const agentRuntimePluginIdSchema = z.enum(['merchbase']);
+export const agentRuntimePluginIdSchema = z.enum(tavernPluginIds);
 
 const agentRuntimePluginSecretFieldSchema = z
     .object({
@@ -321,6 +326,7 @@ const agentRuntimePluginSecretFieldSchema = z
 export const agentRuntimePluginSchema = z
     .object({
         config: agentRuntimeJsonRecordSchema,
+        description: z.string().trim().min(1),
         displayName: z.string().trim().min(1),
         enabled: z.boolean(),
         id: agentRuntimePluginIdSchema,

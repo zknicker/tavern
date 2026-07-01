@@ -7,6 +7,8 @@
     ".": "./src/index.ts",
     "./config": "./src/runtime/config.ts",
     "./development-chat-demos": "./src/development-chat-demos.ts",
+    "./plugins": "./src/plugins/index.ts",
+    "./plugins/merchbase": "./src/plugins/merchbase/manifest.ts",
     "./rich-responses/catalog": "./src/rich-responses/catalog.ts",
     "./rich-responses": "./src/rich-responses/contracts.ts",
     "./rich-responses/calendar": "./src/rich-responses/calendar/contracts.ts",

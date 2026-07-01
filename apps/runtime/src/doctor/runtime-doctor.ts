@@ -1,5 +1,6 @@
 import type { AgentRuntimeModelCatalogEntry, AgentRuntimeModelName } from '@tavern/api';
 import { refreshRuntimeCapabilities } from '../capabilities/store.ts';
+import { getDb } from '../db/connection.ts';
 import type { Database } from '../db/sqlite.ts';
 import { listAgentModels } from '../models/catalog-service.ts';
 import { defaultClaudeModel, defaultCodexModel, defaultOpenAiModel } from '../models/contracts.ts';
@@ -96,9 +97,10 @@ async function runAgentsDoctor(input: {
     reason: RuntimeDoctorRunReason;
     scope: RuntimeDoctorScope;
 }): Promise<RuntimeDoctorResult> {
+    const db = input.db ?? getDb();
     const inventory = await listAgentModels();
     const fallback = highestRankedExecutableModel(inventory.models);
-    const agents = listScopedAgents(input.scope, input.db);
+    const agents = listScopedAgents(input.scope, db);
     const repaired: RuntimeDoctorResult['repaired'] = [];
     const blockers: RuntimeDoctorResult['blockers'] = [];
 
@@ -106,7 +108,7 @@ async function runAgentsDoctor(input: {
         const dm = ensureAgentDmChat({
             agentId: agent.id,
             agentName: agent.name,
-            db: input.db,
+            db,
         });
         if (dm.seeded > 0) {
             repaired.push({
@@ -116,7 +118,7 @@ async function runAgentsDoctor(input: {
             });
         }
 
-        const profile = readAgentRuntimeProfile(agent.id, input.db);
+        const profile = readAgentRuntimeProfile(agent.id, db);
         if (profile && isExecutableModel(profile.defaultModel, inventory.models)) {
             continue;
         }
@@ -130,7 +132,7 @@ async function runAgentsDoctor(input: {
         }
         saveAgentModelSelectionIntent({
             agentId: agent.id,
-            db: input.db,
+            db,
             modelName: fallback,
         });
         repaired.push({

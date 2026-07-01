@@ -16,10 +16,12 @@ import {
 } from './merchbase-date.ts';
 
 export function DateRangeSelector({
+    disabled = false,
     endDate,
     onRangeChange,
     startDate,
 }: {
+    disabled?: boolean;
     endDate: string;
     onRangeChange(startDate: string, endDate: string): void;
     startDate: string;
@@ -40,6 +42,12 @@ export function DateRangeSelector({
         setDraftRange(committedRange);
         setVisibleMonth(startOfMonth(committedRange.from));
     }, [committedRange]);
+
+    useEffect(() => {
+        if (disabled) {
+            setOpen(false);
+        }
+    }, [disabled]);
 
     const handleSelect = (range: DateRange | undefined) => {
         setDraftRange(range);
@@ -63,6 +71,11 @@ export function DateRangeSelector({
     };
 
     const handleOpenChange = (nextOpen: boolean) => {
+        if (disabled) {
+            setOpen(false);
+            return;
+        }
+
         setOpen(nextOpen);
 
         if (nextOpen) {
@@ -86,6 +99,7 @@ export function DateRangeSelector({
                 render={
                     <Button
                         className="h-8 max-w-72 justify-start rounded-md px-2 text-left font-normal text-sm shadow-none hover:bg-accent/50 data-pressed:bg-accent/50"
+                        disabled={disabled}
                         variant="ghost"
                     />
                 }

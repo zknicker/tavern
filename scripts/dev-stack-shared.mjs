@@ -76,6 +76,98 @@ export function createDevStackConfig({
     };
 }
 
+export function seedDevPreseedMerchbasePluginConfig({
+    baseEnvironment = process.env,
+    repositoryRoot = process.cwd(),
+    runtimeRoot,
+} = {}) {
+    const envFile = readEnvFile(repositoryRoot, [
+        'DEV_PRESEED_MERCHBASE_ENABLED',
+        'DEV_PRESEED_MERCHBASE_API_KEY',
+        'DEV_PRESEED_MERCHBASE_BASE_URL',
+        'DEV_PRESEED_MERCHBASE_DEFAULT_ACCOUNT',
+        'DEV_PRESEED_MERCHBASE_DEFAULT_MARKETPLACE',
+    ]);
+    const preseed = {
+        apiKey: readPreseedValue('DEV_PRESEED_MERCHBASE_API_KEY', baseEnvironment, envFile),
+        baseUrl: readPreseedValue('DEV_PRESEED_MERCHBASE_BASE_URL', baseEnvironment, envFile),
+        defaultAccount: readPreseedValue(
+            'DEV_PRESEED_MERCHBASE_DEFAULT_ACCOUNT',
+            baseEnvironment,
+            envFile
+        ),
+        defaultMarketplace: readPreseedValue(
+            'DEV_PRESEED_MERCHBASE_DEFAULT_MARKETPLACE',
+            baseEnvironment,
+            envFile
+        ),
+        enabled: parseBooleanPreseed(
+            readPreseedValue('DEV_PRESEED_MERCHBASE_ENABLED', baseEnvironment, envFile)
+        ),
+    };
+    const hasPreseed =
+        preseed.apiKey ||
+        preseed.baseUrl ||
+        preseed.defaultAccount ||
+        preseed.defaultMarketplace ||
+        preseed.enabled !== null;
+    if (!hasPreseed) {
+        return { seededConfig: false, seededSecret: false };
+    }
+
+    const resolvedRuntimeRoot = resolveHomePath(runtimeRoot);
+    const databasePath = path.join(resolvedRuntimeRoot, 'data', 'runtime.db');
+    fs.mkdirSync(path.dirname(databasePath), { recursive: true });
+    const seededConfig = !hasSqliteRow(
+        databasePath,
+        "SELECT 1 FROM runtime_plugins WHERE id = 'merchbase' LIMIT 1"
+    );
+    const seededSecret =
+        Boolean(preseed.apiKey) &&
+        !hasSqliteRow(
+            databasePath,
+            "SELECT 1 FROM runtime_plugin_secrets WHERE plugin_id = 'merchbase' LIMIT 1"
+        );
+
+    const config = {
+        baseUrl: preseed.baseUrl ?? 'https://app.merchbase.co',
+        defaultAccount: preseed.defaultAccount ?? null,
+        defaultMarketplace: preseed.defaultMarketplace ?? null,
+    };
+    const now = new Date().toISOString();
+    const statements = [
+        `CREATE TABLE IF NOT EXISTS runtime_plugins (
+            id TEXT PRIMARY KEY,
+            enabled INTEGER NOT NULL CHECK (enabled IN (0, 1)),
+            config_json TEXT NOT NULL DEFAULT '{}',
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        );`,
+        `CREATE TABLE IF NOT EXISTS runtime_plugin_secrets (
+            plugin_id TEXT PRIMARY KEY,
+            secret_json TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            FOREIGN KEY(plugin_id) REFERENCES runtime_plugins(id) ON DELETE CASCADE
+        );`,
+        `INSERT INTO runtime_plugins (id, enabled, config_json, created_at, updated_at)
+         SELECT 'merchbase', ${preseed.enabled ? 1 : 0}, ${sqlString(JSON.stringify(config))}, ${sqlString(now)}, ${sqlString(now)}
+         WHERE NOT EXISTS (SELECT 1 FROM runtime_plugins WHERE id = 'merchbase');`,
+    ];
+
+    if (preseed.apiKey) {
+        statements.push(
+            `INSERT INTO runtime_plugin_secrets (plugin_id, secret_json, created_at, updated_at)
+             SELECT 'merchbase', ${sqlString(JSON.stringify({ apiKey: preseed.apiKey }))}, ${sqlString(now)}, ${sqlString(now)}
+             WHERE NOT EXISTS (SELECT 1 FROM runtime_plugin_secrets WHERE plugin_id = 'merchbase');`
+        );
+    }
+
+    runSqlite(databasePath, statements.join('\n'));
+
+    return { seededConfig, seededSecret };
+}
+
 export function shortenHomePath(value) {
     const homeDirectory = process.env.HOME ?? os.homedir();
     const compactPath =
@@ -346,6 +438,88 @@ function resolveRuntimeApiTokenFile(runtimeRoot) {
         mode: 0o600,
     });
     return token;
+}
+
+function readEnvFile(repositoryRoot, keys) {
+    const envPath = path.join(repositoryRoot, '.env');
+    if (!fs.existsSync(envPath)) {
+        return {};
+    }
+
+    const wanted = new Set(keys);
+    const values = {};
+    const content = fs.readFileSync(envPath, 'utf8');
+    for (const line of content.split('\n')) {
+        const trimmed = line.trim();
+        if (!(trimmed && !trimmed.startsWith('#'))) {
+            continue;
+        }
+        const separatorIndex = trimmed.indexOf('=');
+        if (separatorIndex === -1) {
+            continue;
+        }
+        const key = trimmed.slice(0, separatorIndex).trim();
+        if (!wanted.has(key)) {
+            continue;
+        }
+        const value = unquoteEnvValue(trimmed.slice(separatorIndex + 1).trim());
+        if (value) {
+            values[key] = value;
+        }
+    }
+    return values;
+}
+
+function readPreseedValue(key, environment, envFile) {
+    return environment[key]?.trim() || envFile[key]?.trim() || null;
+}
+
+function unquoteEnvValue(value) {
+    if (
+        value.length >= 2 &&
+        ((value.startsWith('"') && value.endsWith('"')) ||
+            (value.startsWith("'") && value.endsWith("'")))
+    ) {
+        return value.slice(1, -1);
+    }
+    return value;
+}
+
+function parseBooleanPreseed(value) {
+    if (!value) {
+        return null;
+    }
+    if (['1', 'true', 'yes', 'on'].includes(value.toLowerCase())) {
+        return true;
+    }
+    if (['0', 'false', 'no', 'off'].includes(value.toLowerCase())) {
+        return false;
+    }
+    return null;
+}
+
+function hasSqliteRow(databasePath, sql) {
+    const result = spawnSync('sqlite3', [databasePath, sql], {
+        encoding: 'utf8',
+    });
+    if (result.status !== 0) {
+        return false;
+    }
+    return result.stdout.trim().length > 0;
+}
+
+function runSqlite(databasePath, sql) {
+    const result = spawnSync('sqlite3', [databasePath], {
+        encoding: 'utf8',
+        input: sql,
+    });
+    if (result.status !== 0) {
+        throw new Error(result.stderr.trim() || 'sqlite3 failed');
+    }
+}
+
+function sqlString(value) {
+    return `'${value.replaceAll("'", "''")}'`;
 }
 
 function resolveHomePath(value) {

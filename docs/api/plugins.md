@@ -12,13 +12,66 @@ Plugins are built-in Tavern Runtime capabilities for external systems. Runtime
 owns their durable settings, write-only secrets, health checks, and read-oriented
 domain actions.
 
-Plugin package docs refer to Tavern-managed packages that bundle tool code,
-agent guidance, and product-owned read actions.
+Plugin package docs refer to Tavern-managed, manifest-declared bundles that
+collect tool code, agent guidance, and product-owned read actions under one
+Plugin id.
 
 Plugins are the user-facing integration unit. A Plugin may call an upstream API
 directly, wrap a local CLI, or materialize an MCP server internally, but the
 stable Tavern surface is the Plugin's settings, health, tools, skills, and Rich
 Responses.
+
+Plugin enablement controls live Plugin-backed behavior. Agent Plugin grants
+control which agents may use Plugin-owned skills, tools, and Rich Response
+Components during new turns. Historical chat rows with compiled Plugin-owned
+Rich Response Components still render after a grant is removed, but Plugin-backed
+interaction controls are disabled when the Plugin is globally disabled.
+
+Runtime materializes Plugin-owned skills, tools, and Rich Response authoring
+guidance for an agent turn only when the Plugin is globally enabled, healthy for
+the required reads, and granted to that agent. Disabled, unhealthy, or ungranted
+Plugin abilities are omitted from the agent-visible tool and guidance inventory.
+Runtime routes still reject unavailable Plugin actions defensively.
+
+## Manifest
+
+A Plugin manifest declares inventory and ownership metadata:
+
+* Plugin id, name, and version.
+* Settings and write-only secrets.
+* Runtime health capability ids.
+* Agent-facing skills and tools.
+* Rich Response Components owned by the Plugin.
+
+First-party manifests live under `@tavern/api/plugins`. Runtime, Server, and
+Website registrations consume those manifests instead of duplicating Plugin
+inventory in each layer.
+
+In v1, Plugin manifests do not declare arbitrary executable wiring or enumerate
+Plugin-internal read operations. Runtime and App import first-party Plugin
+modules directly rather than dynamically loading JavaScript, React components,
+or external package code from a manifest. Rich Response Component source may
+live inside the Plugin folder, but build-time imports register its schema and
+renderer with Tavern's typed catalog.
+
+Core Tavern owns the Plugin host boundary: lifecycle, enablement, grants,
+health registration, capability projection, and first-party registration. The
+Plugin folder owns its domain-specific runtime reads, tool implementations,
+component rendering behavior, and any helper APIs used by its own components.
+Those internals should not leak into the Plugin manifest or generic Tavern
+product docs.
+
+Settings uses the same host split. Core Tavern provides the Plugins settings
+frame, enablement controls, health presentation, secret redaction behavior, and
+save/test affordances. The Plugin folder owns domain-specific settings panel
+content, field validation copy, conflict warnings, and repair guidance.
+
+Dev-mode demos use the same Plugin ownership boundary. Each Plugin-owned Rich
+Response Component should have one matching `dev/<component>.demo.ts` module
+inside the Plugin folder. That module owns seeded chat rows, the Rich Response
+spec, and any inline fake data needed by the dev app. Core Tavern only
+aggregates those demos; it does not know Plugin-specific demo data or operation
+names.
 
 ## Storage
 
@@ -55,28 +108,31 @@ MerchBase settings are:
 * `defaultMarketplace`
 * `apiKey` as a write-only secret
 
-Local dev may override effective settings with:
+Local dev may pre-seed Plugin settings with:
 
 ```txt
-TAVERN_MERCHBASE_ENABLED
-TAVERN_MERCHBASE_API_KEY
-TAVERN_MERCHBASE_BASE_URL
-TAVERN_MERCHBASE_DEFAULT_ACCOUNT
-TAVERN_MERCHBASE_DEFAULT_MARKETPLACE
+DEV_PRESEED_MERCHBASE_ENABLED
+DEV_PRESEED_MERCHBASE_API_KEY
+DEV_PRESEED_MERCHBASE_BASE_URL
+DEV_PRESEED_MERCHBASE_DEFAULT_ACCOUNT
+DEV_PRESEED_MERCHBASE_DEFAULT_MARKETPLACE
 ```
 
-When `TAVERN_MERCHBASE_ENABLED` or `TAVERN_MERCHBASE_API_KEY` is present,
-Runtime reports MerchBase enablement as environment-controlled and the app
-disables the enablement switch. Set `TAVERN_MERCHBASE_ENABLED=false` to keep an
-env-provided API key configured while turning the Plugin off.
+These are dev orchestration inputs, not Runtime config. On dev-stack startup,
+the dev script copies those values into the Plugin tables only when the
+corresponding Plugin config or secret row does not already exist. After that
+seed, `runtime_plugins.enabled`, `runtime_plugins.config_json`, and
+`runtime_plugin_secrets.secret_json` are the source of truth. Settings can still
+enable, disable, or reconfigure the Plugin without `.env` winning on every read.
 
 For a dev checkout that already has the MerchBase CLI configured, mirror the
 CLI account into the checkout `.env`: `~/.merchbase/config.json` `baseUrl`,
-`account`, and `marketplace` map to `TAVERN_MERCHBASE_BASE_URL`,
-`TAVERN_MERCHBASE_DEFAULT_ACCOUNT`, and
-`TAVERN_MERCHBASE_DEFAULT_MARKETPLACE`; the shell `MERCHBASE_API_KEY` maps to
-`TAVERN_MERCHBASE_API_KEY`; set `TAVERN_MERCHBASE_ENABLED=true`. Restart the dev
-stack after changing `.env`.
+`account`, and `marketplace` map to `DEV_PRESEED_MERCHBASE_BASE_URL`,
+`DEV_PRESEED_MERCHBASE_DEFAULT_ACCOUNT`, and
+`DEV_PRESEED_MERCHBASE_DEFAULT_MARKETPLACE`; the shell `MERCHBASE_API_KEY` maps
+to `DEV_PRESEED_MERCHBASE_API_KEY`; set `DEV_PRESEED_MERCHBASE_ENABLED=true`
+only when a new dev database should start with the Plugin enabled. Existing dev
+databases keep their stored Plugin settings.
 
 MerchBase actions exposed through Tavern stay read-oriented. Sync, ripcord,
 ingestion control, setup repair, account switching, and secret changes remain
@@ -107,8 +163,8 @@ are rejected for Plugin-owned capabilities. Once the Plugin is enabled, the flat
 `merchbase` name is reserved for Tavern's managed guide.
 
 The generic read action endpoint accepts `{ "action": string, "input": object }`
-for a strict allowlist. It is internal plumbing for Runtime-owned tools,
-server bridges, and Runtime-owned widgets, not an agent prompting contract. It
+for a strict allowlist. It is internal plumbing for Runtime-owned tools, server
+bridges, and Plugin-backed Rich Responses, not an agent prompting contract. It
 does not expose sync, ripcord, ingestion, setup mutation, account switching, or
 secret changes.
 
@@ -127,31 +183,42 @@ Add a new Plugin as a Runtime-owned capability, not as loose skill docs or
 agent-side setup:
 
 1. Add the Plugin id to `@tavern/api` Runtime contracts and expose narrow typed
-   settings, health, and action schemas.
+   settings and health schemas.
 2. Add a dedicated Runtime Plugin module backed by `runtime_plugins` and
    `runtime_plugin_secrets`. Keep secrets write-only and masked on reads.
 3. Add Runtime routes for settings and read actions. Settings writes must
    require a Tavern caller and immediately refresh the Plugin capability.
 4. Add a Runtime capability named `plugin.<id>` whose check proves the
    configured service can answer the agent-visible reads.
-5. If agents should reason over the service, install a managed Plugin package
+5. Add a Plugin manifest that declares the Plugin id, settings, secrets,
+   capability ids, skills, tools, and Rich Response Components. Plugin-owned
+   component source may live under the Plugin folder, but keep executable wiring
+   in first-party Runtime and App imports.
+6. Keep domain-specific read APIs, upstream calls, and component interaction
+   logic inside the Plugin folder. Core Tavern should host registration and
+   lifecycle, not know Plugin-domain operation names.
+7. If agents should reason over the service, install a managed Plugin package
    whose package name and public tool names use the Plugin id.
-6. If agents need usage guidance, bundle a plugin skill with the same Plugin
+8. If agents need usage guidance, bundle a plugin skill with the same Plugin
    name and have the tools point agents at the package-qualified skill name,
    such as `merchbase:merchbase`. A flat starter skill may also be installed for
    auto-visible prompt behavior. If the Plugin needs to reserve that flat name,
    expose a settings conflict so the UI can warn before enabling. Enabling the
    Plugin replaces that flat skill with the managed starter skill.
-7. Register Plugin-owned flat skills and tools in the server skill projection
+9. Register Plugin-owned flat skills and tools in the server skill projection
    so Settings shows them in the Plugins tabs and rejects direct enablement
    writes. Treat plugin skills as collision-safe guidance unless the Settings
    product explicitly projects plugin skills.
-8. Add Settings -> Plugins UI for enablement, health, non-secret settings, and
+10. Add Settings -> Plugins UI for enablement, health, non-secret settings, and
    write-only secret updates.
-9. Add a Rich Response component only when the display is a product concept, not
-   a generic chart/table assembly problem. Store query intent and fetch live data
-   through Runtime while rendering.
-10. Document the agent boundary: which reads are available, which operations stay
+11. Add a Rich Response Component only when the display is a product concept, not
+    a generic chart/table assembly problem. Store query intent and fetch live data
+    through Runtime while rendering.
+12. Add a matching Plugin-local `dev/<component>.demo.ts` module for every
+    Plugin-owned Rich Response Component so dev mode can exercise it through
+    normal seeded chat rows. Keep demo data in that one file unless duplication
+    becomes painful.
+13. Document the agent boundary: which reads are available, which operations stay
     user-managed, and which widget is preferred for common displays.
 
 Do not add user-installed Plugin packages in v1. For a new external
