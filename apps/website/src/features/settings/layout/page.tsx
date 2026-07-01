@@ -10,7 +10,7 @@ export function SettingsLayout() {
     const layoutContext = useLayoutContext();
 
     if (appLayout.mode === 'sidebar') {
-        return <SettingsContent layoutContext={layoutContext} />;
+        return <SettingsContent appLayoutMode={appLayout.mode} layoutContext={layoutContext} />;
     }
 
     return (
@@ -18,14 +18,16 @@ export function SettingsLayout() {
             <aside className="flex min-h-0 w-[220px] shrink-0 flex-col border-sidebar-border border-r bg-[var(--sidebar)]">
                 <SettingsSidebarNav />
             </aside>
-            <SettingsContent layoutContext={layoutContext} />
+            <SettingsContent appLayoutMode={appLayout.mode} layoutContext={layoutContext} />
         </div>
     );
 }
 
 function SettingsContent({
+    appLayoutMode,
     layoutContext,
 }: {
+    appLayoutMode: ReturnType<typeof useAppLayoutPreference>['mode'];
     layoutContext: ReturnType<typeof useLayoutContext>;
 }) {
     const location = useLocation();
@@ -45,7 +47,9 @@ function SettingsContent({
                 className={
                     isFullContentRoute
                         ? 'h-full min-h-0 w-full flex-1'
-                        : 'mx-auto w-full max-w-5xl px-12 pt-6 pb-16'
+                        : appLayoutMode === 'sidebar'
+                          ? 'mx-auto w-full max-w-5xl px-12 pt-12 pb-16'
+                          : 'mx-auto w-full max-w-5xl px-12 pt-6 pb-16'
                 }
             >
                 <Outlet context={layoutContext} />

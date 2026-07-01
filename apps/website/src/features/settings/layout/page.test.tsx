@@ -20,6 +20,22 @@ describe('SettingsLayout', () => {
 
         expect(markup).toContain('settings context available');
     });
+
+    test('adds extra top space in sidebar app layout', () => {
+        const markup = renderToStaticMarkup(
+            <MemoryRouter initialEntries={['/settings/probe']}>
+                <Routes>
+                    <Route element={<AppLayoutProbe />} path="/settings">
+                        <Route element={<SettingsLayout />}>
+                            <Route element={<SettingsChildProbe />} path="probe" />
+                        </Route>
+                    </Route>
+                </Routes>
+            </MemoryRouter>
+        );
+
+        expect(markup).toContain('pt-12');
+    });
 });
 
 function AppLayoutProbe() {

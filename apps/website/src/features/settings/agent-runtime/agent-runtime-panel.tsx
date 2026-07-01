@@ -7,6 +7,7 @@ import { Alert, AlertAction, AlertDescription, AlertTitle } from '../../../compo
 import { Icon } from '../../../components/ui/icon.tsx';
 import { Button } from '../../../components/ui/primitives/button.tsx';
 import { Input } from '../../../components/ui/primitives/input.tsx';
+import { SecretInput } from '../../../components/ui/secret-input.tsx';
 import { Separator } from '../../../components/ui/separator.tsx';
 import {
     SettingsGroup,
@@ -155,9 +156,9 @@ function RuntimeCompatibilityAlert({ connection }: { connection: RuntimeConnecti
 
 function RuntimeUrlForm({ connection }: { connection: RuntimeConnection }) {
     const urlInputId = React.useId();
-    const tokenInputId = React.useId();
     const [baseUrl, setBaseUrl] = React.useState(connection.baseUrl);
     const [token, setToken] = React.useState('');
+    const [tokenRevealed, setTokenRevealed] = React.useState(false);
     const connectMutation = useConnectAgentRuntime();
     const trimmedBaseUrl = baseUrl.trim();
     const trimmedToken = token.trim();
@@ -250,18 +251,18 @@ function RuntimeUrlForm({ connection }: { connection: RuntimeConnection }) {
                     </span>
                 }
             >
-                <Input
+                <SecretInput
                     aria-label="Runtime token"
                     disabled={connectMutation.isPending || isEnvironment}
-                    id={tokenInputId}
                     name="runtime-token"
-                    onChange={(event) => setToken(event.currentTarget.value)}
+                    onChange={setToken}
+                    onRevealToggle={() => setTokenRevealed((revealed) => !revealed)}
                     placeholder={
                         connection.authConfigured && !trimmedToken
-                            ? 'Configured'
+                            ? '••••••••••••••••'
                             : 'Run `tavern token` on the runtime host'
                     }
-                    type="password"
+                    revealed={tokenRevealed}
                     value={token}
                 />
             </SettingsRow>
