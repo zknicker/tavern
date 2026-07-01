@@ -179,6 +179,7 @@ CREATE TABLE IF NOT EXISTS agent_sessions (
   effective_model_json   TEXT NOT NULL,
   runtime_session_id     TEXT,
   resume_state_json      TEXT,
+  prompt_context_sequence INTEGER NOT NULL DEFAULT 0 CHECK (prompt_context_sequence >= 0),
   status                 TEXT NOT NULL CHECK (status IN ('active', 'archived', 'stopped')),
   created_at             TEXT NOT NULL,
   updated_at             TEXT NOT NULL,
@@ -396,6 +397,11 @@ export function ensureRuntimeSchema(db: Database): void {
         column: 'current_agent_session_id',
         definition: 'TEXT',
         table: 'chat_participants',
+    });
+    ensureColumn(db, {
+        column: 'prompt_context_sequence',
+        definition: 'INTEGER NOT NULL DEFAULT 0 CHECK (prompt_context_sequence >= 0)',
+        table: 'agent_sessions',
     });
 }
 

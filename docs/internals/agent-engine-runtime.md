@@ -43,6 +43,7 @@ AgentSession
   chatId
   agentParticipantId
   effectiveModel
+  promptContextSequence
   runtimeSessionId
   resumeState
   generation
@@ -77,6 +78,11 @@ Provider adapters are internal implementation choices:
 The harness executor creates a session, sends the prompt, persists assistant
 text and tool activity into Tavern chat state, stores the opaque harness resume
 state on the Agent session, and stops the session handle after the turn settles.
+The prompt contains the current Tavern message plus bounded ambient channel
+context since the Agent session's `promptContextSequence`; it does not replay
+the prior user-agent transcript because the harness session owns that history.
+After a turn settles, Runtime advances `promptContextSequence` to the
+triggering message sequence.
 
 Tool calls are auto-approved. Tavern does not expose an interactive tool
 approval prompt. Harness tools come from the selected executor, Plugin tools
@@ -176,6 +182,15 @@ Harness tools come from the selected executor. Runtime exposes built-ins through
 surface a user-facing Tools page or per-agent tool grant editor. Agent-specific
 access is expressed through skill assignments, Plugin grants, sandbox mode, and
 approval policy.
+
+Runtime also exposes read-only Tavern chat tools to harness turns:
+
+- `chat_messages_list` lists current-chat messages by sequence cursor.
+- `chat_messages_search` searches current-chat message content.
+- `chat_message_get` reads one current-chat message by id.
+
+These tools are same-chat only. They are the escape hatch for older Tavern
+history that should not be automatically injected into every prompt.
 
 Runtime writes product facts through Tavern stores:
 

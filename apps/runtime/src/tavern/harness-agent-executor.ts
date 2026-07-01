@@ -10,7 +10,11 @@ import { type ClaudeCodeAuthOptions, createClaudeCode } from '@ai-sdk/harness-cl
 import { createCodex } from '@ai-sdk/harness-codex';
 import { createPi, type PiAuthOptions } from '@ai-sdk/harness-pi';
 import type { Context, ToolSet } from '@ai-sdk/provider-utils';
-import type { AgentRuntimeModelName, AgentRuntimeThinkingLevel } from '@tavern/api';
+import type {
+    AgentRuntimeModelName,
+    AgentRuntimeThinkingLevel,
+    TavernChatMessage,
+} from '@tavern/api';
 import type { GenerateTextResult } from 'ai';
 import { createLocalTrustedSandboxProvider } from '../agent-engine/local-trusted-sandbox.ts';
 import {
@@ -28,13 +32,16 @@ import { buildAgentInstructions } from './agent-instructions.ts';
 import { updateAgentSessionRuntimeState } from './agent-session-store.ts';
 import {
     createDelivery,
+    getChat,
     getMessage,
-    listRecentMessagesBefore,
+    listRecentMessagesBetween,
     upsertResponse,
     upsertResponseActivity,
 } from './chat-api/index.ts';
+import { createTavernChatTools } from './chat-context-tools.ts';
 
 const emptyAssistantMessageDiagnostic = 'No reply: the harness returned empty content.';
+const maxAmbientContextMessages = 20;
 
 interface ActiveHarnessTurn {
     controller: AbortController;
@@ -100,8 +107,10 @@ async function executeHarnessTurn(
         });
         const resumeState = await session.stop();
         activeTurn.session = undefined;
+        const promptContextSequence = promptCursorSequence(input);
         updateAgentSessionRuntimeState({
             id: input.agentSession.id,
+            promptContextSequence,
             resumeState: resumeState as Record<string, unknown>,
             runtimeSessionId: session.sessionId,
         });
@@ -208,6 +217,9 @@ function createHarnessAgent(
         permissionMode: 'allow-all',
         sandbox: sandboxFactory(localTrustedSandboxOptions(input)),
         skills: options.skills,
+        tools: createTavernChatTools({
+            chatId: input.chatId,
+        }),
     });
 }
 
@@ -354,32 +366,125 @@ export function formatHarnessExecutionError(input: AgentExecutorInput, error: un
     return new Error(message);
 }
 
-function harnessPrompt(input: AgentExecutorInput) {
-    const request = getMessage(input.requestMessageId);
-    const previousMessages = request
-        ? listRecentMessagesBefore(input.chatId, {
-              beforeSequence: request.sequence,
-              limit: 24,
-          })
-        : [];
-    const messages = [...previousMessages, ...(request ? [request] : [])].filter(
-        (message) =>
-            !message.deleted_at && (message.role === 'assistant' || message.role === 'user')
-    );
-    const transcript = messages
-        .map((message) => {
-            const label = message.author.label ?? message.author.id;
-            return `${label}: ${message.content}`;
-        })
-        .join('\n');
+export function harnessPrompt(input: AgentExecutorInput) {
+    const context = buildHarnessPromptContext(input);
+    const sections = [
+        'Current Tavern chat:',
+        `- chatId: ${input.chatId}`,
+        `- triggering messageId: ${input.requestMessageId}`,
+        context.currentMessage ? `- triggering sequence: ${context.currentMessage.sequence}` : null,
+        '',
+        'Available Tavern chat tools:',
+        '- chat_messages_list: list current-chat messages by sequence cursor',
+        '- chat_messages_search: search current-chat messages',
+        '- chat_message_get: read one current-chat message by id',
+    ].filter((line): line is string => line !== null);
 
-    return [
-        'Recent Tavern chat context:',
-        transcript || '(no previous messages)',
+    if (context.ambientMessages.length > 0) {
+        sections.push(
+            '',
+            'Ambient Tavern channel context since you were last invoked:',
+            ...context.ambientMessages.map(formatPromptMessage)
+        );
+        if (context.ambientMessagesOmitted) {
+            sections.push(
+                `${context.ambientMessages.length} most recent ambient messages shown; earlier messages were omitted. Use chat_messages_list or chat_messages_search if needed.`
+            );
+        }
+    }
+
+    if (context.replyContext) {
+        sections.push('', 'Reply context:', formatPromptMessage(context.replyContext));
+    }
+
+    sections.push(
         '',
         `Current message for ${input.agent.name}:`,
-        input.content,
-    ].join('\n');
+        formatPromptMessageContent(input)
+    );
+
+    return sections.join('\n');
+}
+
+function buildHarnessPromptContext(input: AgentExecutorInput) {
+    const request = getMessage(input.requestMessageId);
+    const chat = getChat(input.chatId);
+    const ambientCandidates =
+        request && chat?.kind === 'channel'
+            ? listRecentMessagesBetween(input.chatId, {
+                  afterSequence: input.agentSession.promptContextSequence,
+                  beforeSequence: request.sequence,
+                  limit: maxAmbientContextMessages + 1,
+              })
+            : [];
+    const filteredAmbientMessages = ambientCandidates.filter((message) =>
+        isAmbientPromptMessage(input, message)
+    );
+    const ambientMessages = filteredAmbientMessages.slice(-maxAmbientContextMessages);
+    const replyContext = request?.parent_message_id
+        ? getReplyContext({
+              ambientMessages,
+              currentMessageId: request.id,
+              parentMessageId: request.parent_message_id,
+          })
+        : null;
+
+    return {
+        ambientMessages,
+        ambientMessagesOmitted: filteredAmbientMessages.length > maxAmbientContextMessages,
+        currentMessage: request,
+        replyContext,
+    };
+}
+
+function promptCursorSequence(input: AgentExecutorInput) {
+    const request = getMessage(input.requestMessageId);
+    return request?.sequence ?? input.agentSession.promptContextSequence;
+}
+
+function getReplyContext(input: {
+    ambientMessages: TavernChatMessage[];
+    currentMessageId: string;
+    parentMessageId: string;
+}) {
+    if (
+        input.parentMessageId === input.currentMessageId ||
+        input.ambientMessages.some((message) => message.id === input.parentMessageId)
+    ) {
+        return null;
+    }
+    const message = getMessage(input.parentMessageId);
+    if (
+        message &&
+        !message.deleted_at &&
+        (message.role === 'assistant' || message.role === 'user')
+    ) {
+        return message;
+    }
+    return null;
+}
+
+function isAmbientPromptMessage(input: AgentExecutorInput, message: TavernChatMessage) {
+    if (message.deleted_at) {
+        return false;
+    }
+    if (message.role !== 'assistant' && message.role !== 'user') {
+        return false;
+    }
+    return message.author.id !== input.agentSession.agentParticipantId;
+}
+
+function formatPromptMessage(message: TavernChatMessage) {
+    const label = message.author.label ?? message.author.id;
+    return `[seq:${message.sequence} id:${message.id}] ${label}: ${message.content}`;
+}
+
+function formatPromptMessageContent(input: AgentExecutorInput) {
+    const request = getMessage(input.requestMessageId);
+    if (request) {
+        return formatPromptMessage(request);
+    }
+    return input.content;
 }
 
 function persistHarnessToolActivities(

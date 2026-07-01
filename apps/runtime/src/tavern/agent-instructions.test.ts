@@ -39,6 +39,7 @@ function executorInput(agentOverrides: Partial<AgentRuntimeAgent> = {}): AgentEx
             effectiveModel: { model: 'gpt-4.1-mini', provider: 'openai' },
             generation: 1,
             id: 'ags_cht_general_agt_primary_1',
+            promptContextSequence: 0,
             resumeState: null,
             runtimeSessionId: null,
             status: 'active',

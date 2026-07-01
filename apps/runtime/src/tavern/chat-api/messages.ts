@@ -92,6 +92,38 @@ export function listRecentMessagesBefore(
     return rows.reverse().map((row) => rowToMessage(row, db));
 }
 
+export function listRecentMessagesBetween(
+    chatId: string,
+    input: {
+        afterSequence: number;
+        beforeSequence: number;
+        limit?: number;
+    },
+    db: Database = getDb()
+): TavernChatMessage[] {
+    const limit = clampLimit(input.limit);
+    const rows = db
+        .prepare(
+            `SELECT *
+             FROM chat_messages
+             WHERE chat_id = $chatId
+               AND sequence > $afterSequence
+               AND sequence < $beforeSequence
+             ORDER BY sequence DESC
+             LIMIT $limit`
+        )
+        .all(
+            namedParams({
+                afterSequence: input.afterSequence,
+                beforeSequence: input.beforeSequence,
+                chatId,
+                limit,
+            })
+        ) as MessageRow[];
+
+    return rows.reverse().map((row) => rowToMessage(row, db));
+}
+
 export function searchMessages(
     chatId: string,
     input: { limit?: number; query: string },

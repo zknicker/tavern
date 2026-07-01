@@ -8,6 +8,7 @@ import {
     ensureCurrentAgentSession,
     listAgentSessionsForSeat,
     startNewAgentSession,
+    updateAgentSessionRuntimeState,
     updateCurrentAgentSessionModel,
 } from './agent-session-store';
 import { upsertStoredAgent } from './agents-store';
@@ -39,12 +40,38 @@ describe('Tavern Runtime agent sessions', () => {
             effectiveModel: { model: 'gpt-4.1-mini', provider: 'openai' },
             generation: 1,
             id: 'ags_cht_one_agt_primary_1',
+            promptContextSequence: 0,
             status: 'active',
         });
         expect(readCurrentSessionId('cht_one', 'agt_primary')).toBe(session.id);
         expect(
             listAgentSessionsForSeat({ agentParticipantId: 'agt_primary', chatId: 'cht_one' })
         ).toHaveLength(1);
+    });
+
+    it('advances the prompt context cursor without moving it backwards', () => {
+        seedAgentChat({ chatId: 'cht_one', model: 'gpt-4.1-mini' });
+        const session = ensureCurrentAgentSession({
+            agentParticipantId: 'agt_primary',
+            chatId: 'cht_one',
+            now: '2026-06-29T12:00:00.000Z',
+        });
+
+        updateAgentSessionRuntimeState({
+            id: session.id,
+            promptContextSequence: 12,
+        });
+        updateAgentSessionRuntimeState({
+            id: session.id,
+            promptContextSequence: 4,
+        });
+
+        expect(
+            listAgentSessionsForSeat({ agentParticipantId: 'agt_primary', chatId: 'cht_one' })[0]
+        ).toMatchObject({
+            id: session.id,
+            promptContextSequence: 12,
+        });
     });
 
     it('rotates the current session for one chat without changing another chat', () => {

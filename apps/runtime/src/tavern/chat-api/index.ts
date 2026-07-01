@@ -8,6 +8,7 @@ export {
     getMessage,
     listMessages,
     listRecentMessagesBefore,
+    listRecentMessagesBetween,
     searchMessages,
 } from './messages';
 export { markRead } from './reads';

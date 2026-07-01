@@ -63,6 +63,7 @@ function executorInput(model: AgentRuntimeModelName) {
             effectiveModel: model,
             generation: 1,
             id: 'ags_cht_general_agt_primary_1',
+            promptContextSequence: 0,
             resumeState: null,
             runtimeSessionId: null,
             status: 'active',

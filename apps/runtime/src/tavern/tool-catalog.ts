@@ -21,6 +21,16 @@ const builtInTools = [
         readOnly: true,
         tools: ['read_file'],
     },
+    {
+        configured: true,
+        description: 'Read current Tavern chat messages by sequence, search text, or message id.',
+        enabled: true,
+        id: 'chat_messages',
+        label: 'Chat messages',
+        name: 'chat_messages',
+        readOnly: true,
+        tools: ['chat_messages_list', 'chat_messages_search', 'chat_message_get'],
+    },
 ] satisfies AgentRuntimeTool[];
 
 export function listRuntimeTools() {

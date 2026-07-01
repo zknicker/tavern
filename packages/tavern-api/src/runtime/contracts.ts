@@ -1617,6 +1617,7 @@ export const agentRuntimeAgentSessionSchema = z.object({
     effectiveModel: agentRuntimeModelNameSchema,
     generation: z.number().int().positive(),
     id: z.string().trim().min(1),
+    promptContextSequence: z.number().int().nonnegative().default(0),
     resumeState: agentRuntimeJsonRecordSchema.nullable(),
     runtimeSessionId: z.string().trim().min(1).nullable(),
     status: agentRuntimeAgentSessionStatusSchema,

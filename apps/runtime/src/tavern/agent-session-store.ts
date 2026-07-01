@@ -19,6 +19,7 @@ interface AgentSessionRow {
     effective_model_json: string;
     generation: number;
     id: string;
+    prompt_context_sequence: number;
     resume_state_json: null | string;
     runtime_session_id: null | string;
     status: AgentRuntimeAgentSession['status'];
@@ -128,6 +129,7 @@ export function startNewAgentSession(input: {
                 effective_model_json,
                 runtime_session_id,
                 resume_state_json,
+                prompt_context_sequence,
                 status,
                 created_at,
                 updated_at,
@@ -142,6 +144,7 @@ export function startNewAgentSession(input: {
                 $effectiveModelJson,
                 $runtimeSessionId,
                 $resumeStateJson,
+                0,
                 'active',
                 $now,
                 $now,
@@ -273,6 +276,7 @@ export function updateAgentSessionRuntimeState(input: {
     db?: Database;
     id: string;
     now?: string;
+    promptContextSequence?: number | null;
     resumeState?: Record<string, unknown> | null;
     runtimeSessionId?: string | null;
 }) {
@@ -282,12 +286,18 @@ export function updateAgentSessionRuntimeState(input: {
         `UPDATE agent_sessions
          SET runtime_session_id = $runtimeSessionId,
              resume_state_json = $resumeStateJson,
+             prompt_context_sequence = CASE
+                 WHEN $promptContextSequence IS NULL THEN prompt_context_sequence
+                 WHEN $promptContextSequence > prompt_context_sequence THEN $promptContextSequence
+                 ELSE prompt_context_sequence
+             END,
              updated_at = $now
          WHERE id = $id`
     ).run(
         namedParams({
             id: input.id,
             now,
+            promptContextSequence: input.promptContextSequence ?? null,
             resumeStateJson:
                 input.resumeState === undefined || input.resumeState === null
                     ? null
@@ -434,6 +444,7 @@ function rowToAgentSession(row: AgentSessionRow): AgentRuntimeAgentSession {
         effectiveModel: JSON.parse(row.effective_model_json) as unknown,
         generation: row.generation,
         id: row.id,
+        promptContextSequence: row.prompt_context_sequence,
         resumeState: row.resume_state_json
             ? (JSON.parse(row.resume_state_json) as Record<string, unknown>)
             : null,
