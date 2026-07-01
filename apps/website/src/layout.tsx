@@ -6,7 +6,7 @@ import {
     AppShellDragRegion,
     AppShellMain,
 } from './components/ui/app-shell.tsx';
-import { SidebarProvider } from './components/ui/sidebar.tsx';
+import { SidebarProvider, SidebarTrigger } from './components/ui/sidebar.tsx';
 import { TavernBrowserShell } from './features/shell/browser-shell/tavern-browser-shell.tsx';
 import { shouldShowMainTopDragFade } from './features/shell/main-top-drag-fade.ts';
 import { AppSidebar } from './features/shell/sidebar.tsx';
@@ -112,12 +112,8 @@ export function Layout() {
             >
                 <AppShell className="w-full" data-app-layout="sidebar">
                     <AppShellDragRegion />
-                    <AppSidebarTopbar
-                        isExpanded={isSidebarPinnedOpen || showSidebarPreview}
-                        isPreview={showSidebarPreview}
-                        onMouseEnter={showSidebarPreview ? openSidebarPreview : undefined}
-                        onMouseLeave={showSidebarPreview ? scheduleSidebarPreviewClose : undefined}
-                    />
+                    {isSidebarPinnedOpen ? null : <CollapsedSidebarRestoreButton />}
+                    <AppSidebarTopbar isExpanded={isSidebarPinnedOpen} />
                     <AppShellBody className="pt-0 md:flex-row">
                         <AppSidebar
                             activeTab={activeTab}
@@ -174,6 +170,22 @@ function ContentViewNavigation() {
     return null;
 }
 
+function CollapsedSidebarRestoreButton() {
+    return (
+        <div
+            className="no-drag fixed top-0 left-[var(--traffic-light-inset)] z-80 flex h-[var(--topbar-height)] items-center"
+            data-sidebar-collapsed-restore="true"
+            data-window-drag-disabled=""
+        >
+            <SidebarTrigger
+                activateOnPointerDown
+                data-slot="sidebar-collapsed-restore-trigger"
+                size="icon-sm"
+            />
+        </div>
+    );
+}
+
 function SidebarHoverTarget({
     onPointerEnter,
     onPointerLeave,
@@ -186,8 +198,9 @@ function SidebarHoverTarget({
     return (
         <div
             aria-hidden="true"
-            className="fixed inset-y-0 left-0 z-30 hidden w-8 md:block"
+            className="no-drag fixed inset-y-0 left-0 z-70 hidden w-8 md:block"
             data-sidebar-hover-target="true"
+            data-window-drag-disabled=""
             onPointerEnter={onPointerEnter}
             onPointerLeave={onPointerLeave}
             onPointerMove={onPointerMove}

@@ -1053,12 +1053,35 @@
     }
 
     .app-shell-main:has([data-slot='chat-room-topbar']) .app-shell-main-top-drag-fade {
-        top: 3rem;
+        top: var(--topbar-height);
+    }
+
+    [data-slot='sidebar-wrapper']:has([data-slot='app-shell-topbar'])
+        [data-slot='app-shell-drag-region'] {
+        left: var(--sidebar-width) !important;
+        width: calc(100% - var(--sidebar-width)) !important;
+    }
+
+    [data-slot='sidebar-wrapper']:has([data-sidebar-collapsed-restore='true'])
+        [data-slot='app-shell-drag-region'] {
+        left: calc(var(--traffic-light-inset) + 3rem) !important;
+        width: calc(100% - var(--traffic-light-inset) - 3rem) !important;
+    }
+
+    [data-slot='sidebar-wrapper'][data-sidebar-preview-open='true'] .app-shell-main-top-drag-fade {
+        left: var(--sidebar-width) !important;
     }
 
     .app-shell:has([data-slot='sidebar'][data-state='collapsed'][data-collapsible='offcanvas'])
         .app-shell-main-top-drag-fade {
         left: calc(var(--traffic-light-inset) + 2.75rem);
+    }
+
+    .app-shell:has([data-slot='sidebar'][data-state='collapsed'][data-collapsible='offcanvas'])
+        [data-slot='chat-room-topbar'] {
+        app-region: no-drag;
+        -webkit-app-region: no-drag;
+        padding-left: calc(var(--traffic-light-inset) + 2rem);
     }
 
     [data-slot='sidebar-wrapper'][data-sidebar-preview-open='true']
@@ -1091,6 +1114,12 @@
         backdrop-filter: var(--app-chrome-backdrop);
         -webkit-backdrop-filter: var(--app-chrome-backdrop);
         border-right: 1px solid var(--sidebar-border) !important;
+    }
+
+    [data-slot='sidebar-wrapper'][data-sidebar-preview-open='true']
+        [data-slot='sidebar'][data-collapsible='offcanvas']
+        [data-slot='sidebar-container'].app-shell-sidebar {
+        z-index: 50 !important;
     }
 
     [data-slot='sidebar'][data-state='expanded'][data-collapsible='offcanvas']

@@ -126,6 +126,7 @@ export function SidebarTrigger({
             )}
             data-sidebar="trigger"
             data-slot="sidebar-trigger"
+            data-window-drag-disabled=""
             onClick={(event) => {
                 onClick?.(event);
                 if (pointerActivatedRef.current) {

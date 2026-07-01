@@ -12,7 +12,7 @@ export function ChatRoomTopbar({ chat }: { chat: ChatListItem }) {
 
     return (
         <header
-            className="relative z-40 grid h-12 shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center border-border/70 border-b bg-background"
+            className="relative z-40 grid h-[var(--topbar-height)] shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center border-border/70 border-b bg-background"
             data-slot="chat-room-topbar"
             data-window-drag-region=""
         >
