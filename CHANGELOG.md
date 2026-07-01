@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## v1.4.32 - 2026-07-01
 
 - Rebuilt Tavern around chat-native Agent seats, Agent sessions, and Agent
   turns.
