@@ -1,8 +1,10 @@
 import * as React from 'react';
-import { BadgeDivider } from '../../../components/ui/badge-divider.tsx';
-import { Card, CardFrame } from '../../../components/ui/card.tsx';
 import { Separator } from '../../../components/ui/separator.tsx';
-import { SettingsItem } from '../../../components/ui/settings-row.tsx';
+import {
+    SettingsGroup,
+    SettingsItem,
+    SettingsSection,
+} from '../../../components/ui/settings-row.tsx';
 import { Skeleton } from '../../../components/ui/skeleton.tsx';
 import { useCancelModelProviderOAuth } from '../../../hooks/connections/use-cancel-model-provider-oauth.ts';
 import { usePollModelProviderOAuth } from '../../../hooks/connections/use-poll-model-provider-oauth.ts';
@@ -71,18 +73,15 @@ export function ModelAccessSettings() {
 
     if (inventoryQuery.isLoading) {
         return (
-            <section>
-                <ModelProvidersHeader />
-                <CardFrame>
-                    <Card className="overflow-hidden p-0">
-                        <Skeleton className="h-[4.25rem] rounded-none" />
-                        <Separator />
-                        <Skeleton className="h-[4.25rem] rounded-none" />
-                        <Separator />
-                        <Skeleton className="h-[4.25rem] rounded-none" />
-                    </Card>
-                </CardFrame>
-            </section>
+            <SettingsSection description="API keys and credentials." title="Model Providers">
+                <SettingsGroup>
+                    <Skeleton className="h-[4.25rem] rounded-none" />
+                    <Separator />
+                    <Skeleton className="h-[4.25rem] rounded-none" />
+                    <Separator />
+                    <Skeleton className="h-[4.25rem] rounded-none" />
+                </SettingsGroup>
+            </SettingsSection>
         );
     }
 
@@ -130,23 +129,23 @@ export function ModelAccessSettings() {
     );
 
     return (
-        <section>
-            <ModelProvidersHeader action={providerCatalog} />
-
-            <CardFrame>
-                <Card className="overflow-hidden p-0">
-                    {connectedProviders.length > 0 ? (
-                        connectedProviders.map((provider, index) => (
-                            <div key={provider.provider}>
-                                {index > 0 ? <Separator /> : null}
-                                <ConnectedAgentProviderRow provider={provider} />
-                            </div>
-                        ))
-                    ) : (
-                        <NoConnectedProviders />
-                    )}
-                </Card>
-            </CardFrame>
+        <SettingsSection
+            action={providerCatalog}
+            description="API keys and credentials."
+            title="Model Providers"
+        >
+            <SettingsGroup>
+                {connectedProviders.length > 0 ? (
+                    connectedProviders.map((provider, index) => (
+                        <div key={provider.provider}>
+                            {index > 0 ? <Separator /> : null}
+                            <ConnectedAgentProviderRow provider={provider} />
+                        </div>
+                    ))
+                ) : (
+                    <NoConnectedProviders />
+                )}
+            </SettingsGroup>
 
             {apiKeyOption ? (
                 <ProviderApiKeyDialog
@@ -240,15 +239,7 @@ export function ModelAccessSettings() {
                 submitError={submitOAuthMutation.error?.message ?? oauthSubmitMessage}
                 submitPending={submitOAuthMutation.isPending}
             />
-        </section>
-    );
-}
-
-function ModelProvidersHeader({ action }: { action?: React.ReactNode }) {
-    return (
-        <BadgeDivider action={action} className="pb-4" subtext="API keys and credentials.">
-            Model Providers
-        </BadgeDivider>
+        </SettingsSection>
     );
 }
 

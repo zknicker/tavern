@@ -2,9 +2,14 @@ import type { IconSvgElement } from '@hugeicons/react';
 import { ComputerIcon, Moon02Icon, Sun01Icon } from '@hugeicons-pro/core-duotone-rounded';
 import { Tick02Icon } from '@hugeicons-pro/core-stroke-rounded';
 import { type ThemePreference, useTheme } from '../../../components/theme-provider.tsx';
-import { BadgeDivider } from '../../../components/ui/badge-divider.tsx';
 import { Icon } from '../../../components/ui/icon.tsx';
-import { SettingsRow } from '../../../components/ui/settings-row.tsx';
+import {
+    SettingsGroup,
+    SettingsPage,
+    SettingsPageHeader,
+    SettingsRow,
+    SettingsSection,
+} from '../../../components/ui/settings-row.tsx';
 import { Switch } from '../../../components/ui/switch.tsx';
 import { useChatThinkingDisplayPreference } from '../../../hooks/chats/use-chat-thinking-display-preference.ts';
 import { useAppLayoutPreference } from '../../../hooks/shell/use-app-layout-preference.ts';
@@ -27,9 +32,9 @@ export function AppearanceSettings() {
     const chatThinkingDisplay = useChatThinkingDisplayPreference();
 
     return (
-        <div className="space-y-8">
-            <div>
-                <BadgeDivider className="pb-5">Theme Mode</BadgeDivider>
+        <SettingsPage>
+            <SettingsPageHeader title="Appearance" />
+            <SettingsSection title="Theme Mode">
                 <div className="grid gap-4 sm:grid-cols-3">
                     {themeOptions.map((option) => {
                         const isActive = option.id === theme;
@@ -99,11 +104,10 @@ export function AppearanceSettings() {
                         );
                     })}
                 </div>
-            </div>
+            </SettingsSection>
 
-            <div>
-                <BadgeDivider className="pb-3">App Layout</BadgeDivider>
-                <div className="overflow-hidden rounded-lg border border-border bg-card">
+            <SettingsSection title="App Layout">
+                <SettingsGroup>
                     <SettingsRow
                         description="Use a sidebar for app navigation."
                         title="Side navigation"
@@ -118,12 +122,11 @@ export function AppearanceSettings() {
                             />
                         </div>
                     </SettingsRow>
-                </div>
-            </div>
+                </SettingsGroup>
+            </SettingsSection>
 
-            <div>
-                <BadgeDivider className="pb-3">Chat Display</BadgeDivider>
-                <div className="overflow-hidden rounded-lg border border-border bg-card">
+            <SettingsSection title="Chat Display">
+                <SettingsGroup>
                     <SettingsRow
                         description="Show the model's reasoning in chats."
                         title="Show thinking text"
@@ -136,9 +139,9 @@ export function AppearanceSettings() {
                             />
                         </div>
                     </SettingsRow>
-                </div>
-            </div>
-        </div>
+                </SettingsGroup>
+            </SettingsSection>
+        </SettingsPage>
     );
 }
 

@@ -4,12 +4,18 @@ import { useQueryClient } from '@tanstack/react-query';
 import * as React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { Alert, AlertAction, AlertDescription, AlertTitle } from '../../../components/ui/alert.tsx';
-import { BadgeDivider } from '../../../components/ui/badge-divider.tsx';
-import { Card, CardFrame } from '../../../components/ui/card.tsx';
 import { Icon } from '../../../components/ui/icon.tsx';
 import { Button } from '../../../components/ui/primitives/button.tsx';
 import { Input } from '../../../components/ui/primitives/input.tsx';
-import { SettingsItem, SettingsRow } from '../../../components/ui/settings-row.tsx';
+import { Separator } from '../../../components/ui/separator.tsx';
+import {
+    SettingsGroup,
+    SettingsItem,
+    SettingsPage,
+    SettingsPageHeader,
+    SettingsRow,
+    SettingsSection,
+} from '../../../components/ui/settings-row.tsx';
 import { Tooltip, TooltipProvider } from '../../../components/ui/tooltip.tsx';
 import {
     getRuntimeVersionMismatchDescription,
@@ -53,7 +59,7 @@ function CapabilitySection({
     );
 }
 
-function RuntimeConnectionRow({ connection }: { connection: RuntimeConnection }) {
+function RuntimeCapabilitiesGroup({ connection }: { connection: RuntimeConnection }) {
     const location = useLocation();
     const queryClient = useQueryClient();
     const capabilityMutation = trpc.agentRuntime.refreshCapability.useMutation({
@@ -67,26 +73,29 @@ function RuntimeConnectionRow({ connection }: { connection: RuntimeConnection })
         connection.versionStatus === 'mismatched' || previewConnection !== null;
 
     return (
-        <SettingsItem className="p-0">
-            <RuntimeUrlForm connection={connection} />
-            {connection.lastError ? null : (
-                <div className="border-border/60 border-t p-3.5">
-                    {showCompatibilityAlert ? (
-                        <RuntimeCompatibilityAlert connection={compatibilityConnection} />
-                    ) : null}
-                    <CapabilitySection
-                        capabilities={connection.runtimeCapabilities}
-                        emptyLabel="No Tavern Runtime capability checks recorded."
-                        onCapabilityRefresh={(capability) =>
-                            capabilityMutation.mutate(capability.capability)
-                        }
-                        refreshingCapability={
-                            capabilityMutation.isPending ? capabilityMutation.variables : null
-                        }
-                    />
-                </div>
-            )}
-        </SettingsItem>
+        <SettingsGroup contentClassName="p-3.5">
+            {showCompatibilityAlert ? (
+                <RuntimeCompatibilityAlert connection={compatibilityConnection} />
+            ) : null}
+            <CapabilitySection
+                capabilities={connection.runtimeCapabilities}
+                emptyLabel="No Tavern Runtime capability checks recorded."
+                onCapabilityRefresh={(capability) =>
+                    capabilityMutation.mutate(capability.capability)
+                }
+                refreshingCapability={
+                    capabilityMutation.isPending ? capabilityMutation.variables : null
+                }
+            />
+        </SettingsGroup>
+    );
+}
+
+function RuntimeConnectionContent({ connection }: { connection: RuntimeConnection | null }) {
+    return (
+        <SettingsGroup>
+            {connection ? <RuntimeUrlForm connection={connection} /> : <MissingRuntimeRow />}
+        </SettingsGroup>
     );
 }
 
@@ -135,7 +144,6 @@ function RuntimeCompatibilityAlert({ connection }: { connection: RuntimeConnecti
             <AlertAction>
                 <Button
                     render={<NavLink to={appRoutes.settingsUpdates} />}
-                    size="sm"
                     variant="destructive-soft"
                 >
                     Open Updates
@@ -205,6 +213,7 @@ function RuntimeUrlForm({ connection }: { connection: RuntimeConnection }) {
                     </Button>
                 </div>
             </SettingsRow>
+            <Separator />
             <SettingsRow
                 description="Pairs this app with your runtime."
                 error={
@@ -284,9 +293,9 @@ export function AgentRuntimeSettingsPanel({
     });
 
     return (
-        <div className="grid gap-8">
-            <section>
-                <BadgeDivider className="pb-4">Tavern Runtime</BadgeDivider>
+        <SettingsPage>
+            <SettingsPageHeader title="Tavern Runtime" />
+            <SettingsSection title="Connection">
                 {runtime?.lastError ? (
                     <Alert className="mb-4" variant="error">
                         <Icon icon={AlertCircleIcon} />
@@ -299,7 +308,6 @@ export function AgentRuntimeSettingsPanel({
                             <Button
                                 loading={healthMutation.isPending}
                                 onClick={() => healthMutation.mutate()}
-                                size="sm"
                                 variant="destructive-soft"
                             >
                                 <Icon icon={Refresh04Icon} />
@@ -318,16 +326,13 @@ export function AgentRuntimeSettingsPanel({
                         </AlertDescription>
                     </Alert>
                 ) : null}
-                <CardFrame>
-                    <Card className="overflow-hidden p-0">
-                        {runtime ? (
-                            <RuntimeConnectionRow connection={runtime} />
-                        ) : (
-                            <MissingRuntimeRow />
-                        )}
-                    </Card>
-                </CardFrame>
-            </section>
-        </div>
+                <RuntimeConnectionContent connection={runtime} />
+            </SettingsSection>
+            {runtime && !runtime.lastError ? (
+                <SettingsSection title="Status">
+                    <RuntimeCapabilitiesGroup connection={runtime} />
+                </SettingsSection>
+            ) : null}
+        </SettingsPage>
     );
 }

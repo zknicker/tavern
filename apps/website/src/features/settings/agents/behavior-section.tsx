@@ -1,5 +1,3 @@
-import { BadgeDivider } from '../../../components/ui/badge-divider.tsx';
-import { Card, CardFrame } from '../../../components/ui/card.tsx';
 import {
     Select,
     SelectContent,
@@ -7,7 +5,11 @@ import {
     SelectTrigger,
     SelectValue,
 } from '../../../components/ui/select.tsx';
-import { SettingsRow } from '../../../components/ui/settings-row.tsx';
+import {
+    SettingsGroup,
+    SettingsRow,
+    SettingsSection,
+} from '../../../components/ui/settings-row.tsx';
 
 const systemTimezoneValue = '__system__';
 
@@ -23,41 +25,35 @@ export function AgentBehaviorSection({
     const timezones = Intl.supportedValuesOf('timeZone');
 
     return (
-        <section>
-            <BadgeDivider className="pb-4">Behavior</BadgeDivider>
-            <CardFrame>
-                <Card className="overflow-hidden p-0">
-                    <SettingsRow
-                        description="Used for schedules and time-aware answers."
-                        title="Timezone"
+        <SettingsSection title="Behavior">
+            <SettingsGroup>
+                <SettingsRow description="Schedules and time-aware answers." title="Timezone">
+                    <Select
+                        disabled={disabled}
+                        onValueChange={(value) => {
+                            if (value) {
+                                onTimezoneChange(resolveTimezoneSelection(value));
+                            }
+                        }}
+                        value={timezone ?? systemTimezoneValue}
                     >
-                        <Select
-                            disabled={disabled}
-                            onValueChange={(value) => {
-                                if (value) {
-                                    onTimezoneChange(resolveTimezoneSelection(value));
-                                }
-                            }}
-                            value={timezone ?? systemTimezoneValue}
-                        >
-                            <SelectTrigger>
-                                <SelectValue placeholder="Choose timezone">
-                                    {timezone ?? 'System default'}
-                                </SelectValue>
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value={systemTimezoneValue}>System default</SelectItem>
-                                {timezones.map((zone) => (
-                                    <SelectItem key={zone} value={zone}>
-                                        {zone}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </SettingsRow>
-                </Card>
-            </CardFrame>
-        </section>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Choose timezone">
+                                {timezone ?? 'System default'}
+                            </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value={systemTimezoneValue}>System default</SelectItem>
+                            {timezones.map((zone) => (
+                                <SelectItem key={zone} value={zone}>
+                                    {zone}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </SettingsRow>
+            </SettingsGroup>
+        </SettingsSection>
     );
 }
 

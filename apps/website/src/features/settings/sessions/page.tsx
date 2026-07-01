@@ -1,5 +1,9 @@
 import * as React from 'react';
-import { BadgeDivider } from '../../../components/ui/badge-divider.tsx';
+import {
+    SettingsPage,
+    SettingsPageHeader,
+    SettingsSection,
+} from '../../../components/ui/settings-row.tsx';
 import { usePrimaryAgentSuspense } from '../../../hooks/agents/use-agent-list.ts';
 import { AgentRecentChats } from '../../agents/agent-recent-chats.tsx';
 import { MissingAgentState } from '../../agents/missing-agent-state.tsx';
@@ -21,13 +25,14 @@ function SessionsSettingsContent() {
     }
 
     return (
-        <div className="grid gap-10">
-            <section>
-                <BadgeDivider className="pb-4" subtext="Synced Tavern, system, and external chats.">
-                    Sessions
-                </BadgeDivider>
+        <SettingsPage>
+            <SettingsPageHeader title="Sessions" />
+            <SettingsSection
+                description="Synced Tavern, system, and external chats."
+                title="Sessions"
+            >
                 <AgentRecentChats agent={agent} />
-            </section>
-        </div>
+            </SettingsSection>
+        </SettingsPage>
     );
 }

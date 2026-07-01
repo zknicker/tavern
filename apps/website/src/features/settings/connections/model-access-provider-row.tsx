@@ -42,7 +42,7 @@ export function ModelAccessProviderRow({
     const hasSideContent = hasDetail || Boolean(children) || Boolean(error);
 
     return (
-        <SettingsItem className="grid gap-3 md:grid-cols-[minmax(10rem,1fr)_minmax(18rem,32rem)] md:items-center md:gap-6">
+        <SettingsItem className="grid gap-3 md:grid-cols-[minmax(10rem,1fr)_minmax(16rem,17rem)] md:items-center md:gap-6">
             <div className="flex min-w-0 items-center gap-3">
                 <ModelProviderLogo
                     className="size-10 rounded-xl"

@@ -1,7 +1,5 @@
 import { AlertCircleIcon } from '@hugeicons/core-free-icons';
 import { Alert, AlertDescription } from '../../../components/ui/alert.tsx';
-import { BadgeDivider } from '../../../components/ui/badge-divider.tsx';
-import { Card, CardFrame } from '../../../components/ui/card.tsx';
 import { Icon } from '../../../components/ui/icon.tsx';
 import {
     Select,
@@ -11,7 +9,11 @@ import {
     SelectValue,
 } from '../../../components/ui/select.tsx';
 import { Separator } from '../../../components/ui/separator.tsx';
-import { SettingsRow } from '../../../components/ui/settings-row.tsx';
+import {
+    SettingsGroup,
+    SettingsRow,
+    SettingsSection,
+} from '../../../components/ui/settings-row.tsx';
 import {
     getThinkingOption,
     type ThinkingOption,
@@ -44,100 +46,97 @@ export function AgentModelSection({
     const isDisabled = disabled;
 
     return (
-        <section>
-            <BadgeDivider className="pb-4">Model</BadgeDivider>
-            <CardFrame>
-                <Card className="overflow-hidden p-0">
-                    <SettingsRow title="Model">
-                        <Select
-                            disabled={isDisabled}
-                            onValueChange={(modelRef) => {
-                                const nextChoice = choices.find(
-                                    (choice) => choice.model.ref === modelRef
-                                );
+        <SettingsSection title="Model">
+            <SettingsGroup>
+                <SettingsRow title="Model">
+                    <Select
+                        disabled={isDisabled}
+                        onValueChange={(modelRef) => {
+                            const nextChoice = choices.find(
+                                (choice) => choice.model.ref === modelRef
+                            );
 
-                                onChange(
-                                    nextChoice
-                                        ? {
-                                              modelRef: nextChoice.model.ref,
-                                              thinkingDefault: value?.thinkingDefault ?? null,
-                                          }
-                                        : null
-                                );
-                            }}
-                            value={value?.modelRef ?? undefined}
-                        >
-                            <SelectTrigger aria-label="Agent model">
-                                <SelectValue placeholder="Choose model">
-                                    {selectedChoice ? selectedChoice.model.name : undefined}
-                                </SelectValue>
-                            </SelectTrigger>
-                            <SelectContent>
-                                {choices.map((choice) => (
-                                    <SelectItem key={choice.model.ref} value={choice.model.ref}>
-                                        <ModelChoiceLabel choice={choice} />
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
+                            onChange(
+                                nextChoice
+                                    ? {
+                                          modelRef: nextChoice.model.ref,
+                                          thinkingDefault: value?.thinkingDefault ?? null,
+                                      }
+                                    : null
+                            );
+                        }}
+                        value={value?.modelRef ?? undefined}
+                    >
+                        <SelectTrigger aria-label="Agent model">
+                            <SelectValue placeholder="Choose model">
+                                {selectedChoice ? selectedChoice.model.name : undefined}
+                            </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                            {choices.map((choice) => (
+                                <SelectItem key={choice.model.ref} value={choice.model.ref}>
+                                    <ModelChoiceLabel choice={choice} />
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
 
-                        {syncError ? (
-                            <Alert variant="error">
-                                <Icon icon={AlertCircleIcon} />
-                                <AlertDescription>{syncError}</AlertDescription>
-                            </Alert>
-                        ) : null}
-                    </SettingsRow>
+                    {syncError ? (
+                        <Alert variant="error">
+                            <Icon icon={AlertCircleIcon} />
+                            <AlertDescription>{syncError}</AlertDescription>
+                        </Alert>
+                    ) : null}
+                </SettingsRow>
 
-                    <Separator />
+                <Separator />
 
-                    <SettingsRow title="Thinking">
-                        <Select
-                            disabled={isDisabled || !selectedChoice}
-                            onValueChange={(nextValue) =>
-                                onChange(
-                                    selectedChoice
-                                        ? {
-                                              ...(value ?? {
-                                                  modelRef: selectedChoice.model.ref,
-                                              }),
-                                              thinkingDefault:
-                                                  nextValue === inheritThinkingValue
-                                                      ? null
-                                                      : (nextValue as ThinkingLevelValue),
-                                          }
-                                        : null
-                                )
-                            }
-                            value={value?.thinkingDefault ?? inheritThinkingValue}
-                        >
-                            <SelectTrigger>
-                                <SelectValue placeholder="Choose thinking">
-                                    {getThinkingOption(value?.thinkingDefault ?? null)?.label ??
-                                        'Inherit'}
-                                </SelectValue>
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value={inheritThinkingValue}>
+                <SettingsRow title="Thinking">
+                    <Select
+                        disabled={isDisabled || !selectedChoice}
+                        onValueChange={(nextValue) =>
+                            onChange(
+                                selectedChoice
+                                    ? {
+                                          ...(value ?? {
+                                              modelRef: selectedChoice.model.ref,
+                                          }),
+                                          thinkingDefault:
+                                              nextValue === inheritThinkingValue
+                                                  ? null
+                                                  : (nextValue as ThinkingLevelValue),
+                                      }
+                                    : null
+                            )
+                        }
+                        value={value?.thinkingDefault ?? inheritThinkingValue}
+                    >
+                        <SelectTrigger>
+                            <SelectValue placeholder="Choose thinking">
+                                {getThinkingOption(value?.thinkingDefault ?? null)?.label ??
+                                    'Inherit'}
+                            </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value={inheritThinkingValue}>
+                                <ThinkingSelectLabel
+                                    description="Use the selected model's default."
+                                    label="Inherit"
+                                />
+                            </SelectItem>
+                            {selectedThinkingOptions.map((option) => (
+                                <SelectItem key={option.value} value={option.value}>
                                     <ThinkingSelectLabel
-                                        description="Use the selected model's default."
-                                        label="Inherit"
+                                        description={option.description}
+                                        label={option.label}
                                     />
                                 </SelectItem>
-                                {selectedThinkingOptions.map((option) => (
-                                    <SelectItem key={option.value} value={option.value}>
-                                        <ThinkingSelectLabel
-                                            description={option.description}
-                                            label={option.label}
-                                        />
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </SettingsRow>
-                </Card>
-            </CardFrame>
-        </section>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </SettingsRow>
+            </SettingsGroup>
+        </SettingsSection>
     );
 }
 
@@ -145,7 +144,7 @@ function ModelChoiceLabel({ choice }: { choice: ModelChoice }) {
     return (
         <span className="block min-w-0">
             <span className="block truncate">{choice.model.name}</span>
-            <span className="block truncate text-muted-foreground text-xs">
+            <span className="block truncate text-meta text-muted-foreground">
                 {choice.model.provider}
             </span>
         </span>
@@ -156,7 +155,7 @@ function ThinkingSelectLabel({ description, label }: { description: string; labe
     return (
         <span className="block min-w-0">
             <span className="block truncate">{label}</span>
-            <span className="block truncate text-muted-foreground text-xs">{description}</span>
+            <span className="block truncate text-meta text-muted-foreground">{description}</span>
         </span>
     );
 }

@@ -15,7 +15,7 @@ export function Card({
 }: useRender.ComponentProps<'div'>): React.ReactElement {
     const defaultProps = {
         className: cn(
-            'relative flex flex-col rounded-xl border bg-card not-dark:bg-clip-padding text-card-foreground dark:shadow-xs/5 dark:before:pointer-events-none dark:before:absolute dark:before:inset-0 dark:before:rounded-[calc(var(--radius-xl,0.75rem)-1px)] dark:before:shadow-[0_-1px_--theme(--color-white/6%)]',
+            'relative flex flex-col rounded-xl border border-border-strong bg-card not-dark:bg-clip-padding text-card-foreground dark:border-border dark:shadow-xs/5 dark:before:pointer-events-none dark:before:absolute dark:before:inset-0 dark:before:rounded-[calc(var(--radius-xl,0.75rem)-1px)] dark:before:shadow-[0_-1px_--theme(--color-white/6%)]',
             className
         ),
         'data-slot': 'card',
@@ -149,7 +149,7 @@ export function CardFrame({
 }: useRender.ComponentProps<'div'>): React.ReactElement {
     const defaultProps = {
         className: cn(
-            'relative flex flex-col overflow-hidden rounded-xl border bg-card not-dark:bg-clip-padding text-card-foreground *:data-[slot=card]:-m-px *:data-[slot=card]:rounded-none *:data-[slot=card]:border-x-0 *:data-[slot=card]:bg-clip-padding *:data-[slot=card]:shadow-none *:last:data-[slot=card]:border-b-0 *:first:data-[slot=card]:border-t-0 *:data-[slot=card]:before:hidden dark:shadow-xs/5 dark:before:pointer-events-none dark:before:absolute dark:before:inset-0 dark:before:rounded-[calc(var(--radius-xl,0.75rem)-1px)] dark:before:shadow-[0_-1px_--theme(--color-white/6%)]',
+            'relative flex flex-col overflow-hidden rounded-xl border border-border-strong bg-card not-dark:bg-clip-padding text-card-foreground *:data-[slot=card]:-m-px *:data-[slot=card]:rounded-none *:data-[slot=card]:border-x-0 *:data-[slot=card]:bg-clip-padding *:data-[slot=card]:shadow-none *:last:data-[slot=card]:border-b-0 *:first:data-[slot=card]:border-t-0 *:data-[slot=card]:before:hidden dark:border-border dark:shadow-xs/5 dark:before:pointer-events-none dark:before:absolute dark:before:inset-0 dark:before:rounded-[calc(var(--radius-xl,0.75rem)-1px)] dark:before:shadow-[0_-1px_--theme(--color-white/6%)]',
             className
         ),
         'data-slot': 'card-frame',

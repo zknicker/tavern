@@ -56,7 +56,7 @@ export function ProviderCatalogPopover({
     return (
         <Popover onOpenChange={setOpen} open={open}>
             <PopoverTrigger
-                render={<Button disabled={disabled} size="sm" type="button" variant="secondary" />}
+                render={<Button disabled={disabled} type="button" variant="secondary" />}
             >
                 {showIcon ? <Icon aria-hidden="true" icon={Plus} /> : null}
                 Add provider

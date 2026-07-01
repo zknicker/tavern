@@ -1,13 +1,17 @@
-import { BadgeDivider } from '../../components/ui/badge-divider.tsx';
+import {
+    SettingsPage,
+    SettingsPageHeader,
+    SettingsSection,
+} from '../../components/ui/settings-row.tsx';
 import { UsageModules } from '../overview/usage-modules.tsx';
 
 export function Stats() {
     return (
-        <div className="grid gap-10">
-            <section>
-                <BadgeDivider className="pb-4">Stats</BadgeDivider>
+        <SettingsPage>
+            <SettingsPageHeader title="Stats" />
+            <SettingsSection description="Model usage, spend, and provider activity." title="Usage">
                 <UsageModules />
-            </section>
-        </div>
+            </SettingsSection>
+        </SettingsPage>
     );
 }

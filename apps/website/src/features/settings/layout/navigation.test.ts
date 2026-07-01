@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { agentSettingsNavItems, settingsNavItems } from './navigation.ts';
+import {
+    agentSettingsNavItems,
+    resolveAgentSettingsNavOpen,
+    settingsNavItems,
+} from './navigation.ts';
 
 test('settings navigation uses current agent configuration vocabulary', () => {
     const labels: string[] = settingsNavItems.map((item) => item.label);
@@ -16,4 +20,28 @@ test('settings navigation uses current agent configuration vocabulary', () => {
     assert.ok(!labels.includes('Toolsets'));
     assert.ok(!labels.includes('Connectors'));
     assert.ok(!labels.includes('McpServers'));
+});
+
+test('agent settings nav can be manually collapsed while the agent route is active', () => {
+    assert.equal(
+        resolveAgentSettingsNavOpen({
+            isAgentActive: true,
+            manualOpen: null,
+        }),
+        true
+    );
+    assert.equal(
+        resolveAgentSettingsNavOpen({
+            isAgentActive: true,
+            manualOpen: false,
+        }),
+        false
+    );
+    assert.equal(
+        resolveAgentSettingsNavOpen({
+            isAgentActive: false,
+            manualOpen: true,
+        }),
+        true
+    );
 });

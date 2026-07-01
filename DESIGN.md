@@ -54,7 +54,7 @@ rounded:
   sm: 0.3125rem
   md: 0.4375rem
   lg: 0.5625rem
-  xl: 0.6875rem
+  xl: 1.12rem
   2xl: 0.9375rem
 spacing:
   xs: 0.25rem
@@ -209,7 +209,8 @@ Default interactive controls use modest radii:
 
 - Buttons, inputs, selects, menus, and popovers use `rounded-lg`.
 - Badges use `rounded-sm`.
-- Cards use `rounded-xl` at most, with 8-12px radii depending on primitive defaults.
+- Cards use `rounded-xl` at most. Large framed cards should feel softly rounded, around 22px in
+  browsers that support the app's corner-shape scale.
 - Avoid pill shapes unless the primitive intentionally owns that style, such as a section badge.
 
 Do not use decorative gradient orbs, bokeh blobs, or ornamental SVG backgrounds in app surfaces.

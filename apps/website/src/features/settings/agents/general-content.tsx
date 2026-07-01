@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { BadgeDivider } from '../../../components/ui/badge-divider.tsx';
-import { Card, CardFrame } from '../../../components/ui/card.tsx';
 import { Button } from '../../../components/ui/primitives/button.tsx';
-import { SettingsRow } from '../../../components/ui/settings-row.tsx';
+import {
+    SettingsGroup,
+    SettingsPage,
+    SettingsPageHeader,
+    SettingsRow,
+    SettingsSection,
+} from '../../../components/ui/settings-row.tsx';
 import { withSaveErrorToast, withSavingToast } from '../../../lib/saving-toast.ts';
 import { type AgentListOutput, type ModelListOutput, trpc } from '../../../lib/trpc.tsx';
 import { DeleteAgentDialog } from '../../agents/delete-agent-dialog.tsx';
@@ -65,7 +69,9 @@ export function AgentGeneralSettingsContent({
     }, [baselineModelRef, baselineThinkingDefault, isSavingAgentConfig]);
 
     return (
-        <div className="grid gap-8">
+        <SettingsPage>
+            <SettingsPageHeader title="General" />
+
             <AgentAppearanceSection agent={agent} disabled={isSavingAgentConfig} />
 
             <AgentModelSection
@@ -122,7 +128,7 @@ export function AgentGeneralSettingsContent({
             />
 
             <AgentDeleteSection agent={agent} deleteRedirectTo={deleteRedirectTo} />
-        </div>
+        </SettingsPage>
     );
 }
 
@@ -137,25 +143,18 @@ function AgentDeleteSection({
     const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 
     return (
-        <section>
-            <BadgeDivider className="pb-4">Delete Agent</BadgeDivider>
-            <CardFrame>
-                <Card className="overflow-hidden p-0">
-                    <SettingsRow
-                        description={`Remove ${agent.name} from Tavern Runtime. This cannot be undone.`}
-                        title="Delete this agent"
-                        trailingWidth="intrinsic"
-                    >
-                        <Button
-                            onClick={() => setIsDeleteOpen(true)}
-                            size="sm"
-                            variant="destructive-outline"
-                        >
-                            Delete Agent
-                        </Button>
-                    </SettingsRow>
-                </Card>
-            </CardFrame>
+        <SettingsSection title="Delete Agent">
+            <SettingsGroup>
+                <SettingsRow
+                    description={`Remove ${agent.name}. This cannot be undone.`}
+                    title="Delete this agent"
+                    trailingWidth="intrinsic"
+                >
+                    <Button onClick={() => setIsDeleteOpen(true)} variant="destructive-outline">
+                        Delete Agent
+                    </Button>
+                </SettingsRow>
+            </SettingsGroup>
 
             <DeleteAgentDialog
                 agent={agent}
@@ -163,7 +162,7 @@ function AgentDeleteSection({
                 onOpenChange={setIsDeleteOpen}
                 open={isDeleteOpen}
             />
-        </section>
+        </SettingsSection>
     );
 }
 

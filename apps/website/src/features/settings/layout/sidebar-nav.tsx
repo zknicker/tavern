@@ -36,6 +36,7 @@ import { buildAgentSettingsPath, getActiveAgentPage } from '../../agents/agent-p
 import { createNewAgentName } from '../agents/agent-settings-model.ts';
 import {
     agentSettingsNavItems,
+    resolveAgentSettingsNavOpen,
     settingsNavSections,
     staticSettingsNavItems,
 } from './navigation.ts';
@@ -264,8 +265,8 @@ function AgentSettingsNavGroup({
     const location = useLocation();
     const activeAgentPage = getActiveAgentPage(location.pathname);
     const isAgentActive = activeAgentPage?.agentId === agent.id;
-    const [manuallyOpen, setManuallyOpen] = React.useState(false);
-    const isOpen = isAgentActive || manuallyOpen;
+    const [manuallyOpen, setManuallyOpen] = React.useState<boolean | null>(null);
+    const isOpen = resolveAgentSettingsNavOpen({ isAgentActive, manualOpen: manuallyOpen });
 
     return (
         <SidebarMenuItem>

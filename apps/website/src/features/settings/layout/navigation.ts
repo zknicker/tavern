@@ -127,3 +127,13 @@ export const settingsNavSections = [
 
 export type SettingsNavItem = (typeof settingsNavItems)[number];
 export type SettingsRouteTab = SettingsNavItem['id'];
+
+export function resolveAgentSettingsNavOpen({
+    isAgentActive,
+    manualOpen,
+}: {
+    isAgentActive: boolean;
+    manualOpen: boolean | null;
+}) {
+    return manualOpen ?? isAgentActive;
+}

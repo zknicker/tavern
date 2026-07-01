@@ -1,9 +1,14 @@
 import { Fragment, useState } from 'react';
-import { BadgeDivider } from '../../../components/ui/badge-divider.tsx';
-import { Card, CardFrame } from '../../../components/ui/card.tsx';
 import { Button } from '../../../components/ui/primitives/button.tsx';
 import { Separator } from '../../../components/ui/separator.tsx';
-import { SettingsActionRow, SettingsRow } from '../../../components/ui/settings-row.tsx';
+import {
+    SettingsActionRow,
+    SettingsGroup,
+    SettingsPage,
+    SettingsPageHeader,
+    SettingsRow,
+    SettingsSection,
+} from '../../../components/ui/settings-row.tsx';
 import { Switch } from '../../../components/ui/switch.tsx';
 import { toastManager } from '../../../components/ui/toast.tsx';
 import { withSavingToast } from '../../../lib/saving-toast.ts';
@@ -36,14 +41,13 @@ export function McpSettingsPage() {
     };
 
     return (
-        <section>
-            <BadgeDivider className="pb-4">Advanced MCP</BadgeDivider>
-            <p className="pb-4 text-muted-foreground text-sm">
-                Plugins are Tavern's normal integration surface. MCP server records are advanced
-                runtime plumbing for development and plugin-backed tool experiments.
-            </p>
-            <CardFrame>
-                <Card className="overflow-hidden p-0">
+        <SettingsPage>
+            <SettingsPageHeader title="MCP" />
+            <SettingsSection
+                description="Plugins are Tavern's normal integration surface. MCP server records are advanced runtime plumbing for development and plugin-backed tool experiments."
+                title="Advanced MCP"
+            >
+                <SettingsGroup>
                     {servers.mcpServers.length === 0 ? (
                         <p className="px-5 py-4 text-muted-foreground text-sm">
                             {servers.isLoading
@@ -81,7 +85,6 @@ export function McpSettingsPage() {
                                         disabled={servers.isSaving}
                                         loading={servers.testingName === server.name}
                                         onClick={() => runTest(server)}
-                                        size="sm"
                                         variant="outline"
                                     >
                                         Test
@@ -103,8 +106,8 @@ export function McpSettingsPage() {
                     <SettingsActionRow onClick={() => setIsAddOpen(true)}>
                         Add MCP server
                     </SettingsActionRow>
-                </Card>
-            </CardFrame>
+                </SettingsGroup>
+            </SettingsSection>
 
             {isAddOpen ? (
                 <McpServerFormDrawer
@@ -119,7 +122,7 @@ export function McpSettingsPage() {
                     server={null}
                 />
             ) : null}
-        </section>
+        </SettingsPage>
     );
 }
 
@@ -138,7 +141,6 @@ function DeleteMcpServerButton({
                 disabled={disabled}
                 onBlur={() => setConfirming(false)}
                 onClick={onDelete}
-                size="sm"
                 variant="destructive"
             >
                 Confirm
@@ -147,7 +149,7 @@ function DeleteMcpServerButton({
     }
 
     return (
-        <Button disabled={disabled} onClick={() => setConfirming(true)} size="sm" variant="ghost">
+        <Button disabled={disabled} onClick={() => setConfirming(true)} variant="ghost">
             Delete
         </Button>
     );

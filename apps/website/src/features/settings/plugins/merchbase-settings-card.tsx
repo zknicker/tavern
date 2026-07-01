@@ -10,9 +10,9 @@ import {
     DialogHeader,
     DialogTitle,
 } from '../../../components/ui/dialog.tsx';
-import { FluidList, FluidListItem } from '../../../components/ui/fluid-list.tsx';
 import { Icon } from '../../../components/ui/icon.tsx';
 import { Button } from '../../../components/ui/primitives/button.tsx';
+import { SettingsRow } from '../../../components/ui/settings-row.tsx';
 import { Skeleton } from '../../../components/ui/skeleton.tsx';
 import { Switch } from '../../../components/ui/switch.tsx';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../../../components/ui/tooltip.tsx';
@@ -62,9 +62,15 @@ export function MerchbaseSettingsCard({
 
     if (!settings) {
         return (
-            <div className="-mx-3 rounded-xl px-3 py-2.5 text-muted-foreground text-sm">
-                {error ?? 'Tavern Runtime unavailable.'}
-            </div>
+            <SettingsRow
+                description={error ?? 'Tavern Runtime unavailable.'}
+                title="MerchBase"
+                trailingWidth="intrinsic"
+            >
+                <Button disabled variant="ghost">
+                    Configure
+                </Button>
+            </SettingsRow>
         );
     }
 
@@ -91,16 +97,12 @@ export function MerchbaseSettingsCard({
 
     return (
         <>
-            <FluidList className="grid">
-                <FluidListItem className="-mx-3" index={0}>
-                    <MerchbasePluginRow
-                        isSaving={isSaving}
-                        onEnabledChange={(enabled) => requestSave({ enabled })}
-                        onSelect={openSettingsDialog}
-                        settings={settings}
-                    />
-                </FluidListItem>
-            </FluidList>
+            <MerchbasePluginRow
+                isSaving={isSaving}
+                onEnabledChange={(enabled) => requestSave({ enabled })}
+                onSelect={openSettingsDialog}
+                settings={settings}
+            />
 
             <MerchbaseSettingsDialog
                 canSave={canSave}
@@ -148,53 +150,48 @@ function MerchbasePluginRow({
     const environmentControlled = settings.enablementSource === 'environment';
 
     return (
-        <div className="flex select-none items-center gap-4 rounded-xl px-3 py-2.5">
-            <button
-                className="flex min-w-0 flex-1 items-center gap-4 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                onClick={onSelect}
-                type="button"
-            >
+        <SettingsRow
+            description="Live sales data for Rich Responses and agent reads."
+            title={
                 <span
                     className={cn(
-                        'flex size-10 shrink-0 items-center justify-center rounded-[10px] border border-border/50 bg-muted/40 text-muted-foreground',
+                        'flex min-w-0 items-center gap-2',
                         !settings.enabled && 'opacity-45'
                     )}
                 >
                     <Icon className="size-5" icon={PlugIcon} />
+                    <span className="truncate">MerchBase</span>
+                    {settings.skillConflict ? (
+                        <Badge size="sm" variant="warning">
+                            Skill conflict
+                        </Badge>
+                    ) : null}
+                    {settings.apiKeyConfigured ? null : (
+                        <Badge size="sm" variant="error">
+                            Needs setup
+                        </Badge>
+                    )}
                 </span>
-                <span className={cn('min-w-0 flex-1', !settings.enabled && 'opacity-45')}>
-                    <span className="flex min-w-0 items-center gap-2">
-                        <span className="truncate font-medium text-[15px] text-foreground">
-                            MerchBase
-                        </span>
-                        {settings.skillConflict ? (
-                            <Badge size="sm" variant="warning">
-                                Skill conflict
-                            </Badge>
-                        ) : null}
-                        {settings.apiKeyConfigured ? null : (
-                            <Badge size="sm" variant="error">
-                                Needs setup
-                            </Badge>
-                        )}
-                    </span>
-                    <span className="mt-0.5 line-clamp-1 text-muted-foreground text-sm">
-                        Live sales data for Rich Responses and agent reads.
-                    </span>
-                </span>
-            </button>
-            <MerchbaseEnablementSwitch
-                aria-label={
-                    environmentControlled
-                        ? 'MerchBase enablement is managed by local Tavern configuration'
-                        : `${settings.enabled ? 'Disable' : 'Enable'} MerchBase`
-                }
-                checked={settings.enabled}
-                disabled={isSaving || environmentControlled}
-                environmentControlled={environmentControlled}
-                onCheckedChange={onEnabledChange}
-            />
-        </div>
+            }
+            trailingWidth="intrinsic"
+        >
+            <div className="flex items-center gap-2">
+                <Button disabled={isSaving} onClick={onSelect} variant="ghost">
+                    Configure
+                </Button>
+                <MerchbaseEnablementSwitch
+                    aria-label={
+                        environmentControlled
+                            ? 'MerchBase enablement is managed by local Tavern configuration'
+                            : `${settings.enabled ? 'Disable' : 'Enable'} MerchBase`
+                    }
+                    checked={settings.enabled}
+                    disabled={isSaving || environmentControlled}
+                    environmentControlled={environmentControlled}
+                    onCheckedChange={onEnabledChange}
+                />
+            </div>
+        </SettingsRow>
     );
 }
 
@@ -224,13 +221,13 @@ function MerchbaseEnablementSwitch({
 
 function MerchbasePluginSkeleton() {
     return (
-        <div className="-mx-3 flex items-center gap-4 rounded-xl px-3 py-2.5">
-            <Skeleton className="size-10 rounded-[10px]" />
-            <div className="min-w-0 flex-1 space-y-2">
-                <Skeleton className="h-4 w-32" />
-                <Skeleton className="h-3 w-72 max-w-full" />
-            </div>
-        </div>
+        <SettingsRow
+            description={<Skeleton className="h-3 w-72 max-w-full" />}
+            title={<Skeleton className="h-4 w-32" />}
+            trailingWidth="intrinsic"
+        >
+            <Skeleton className="h-8 w-28" />
+        </SettingsRow>
     );
 }
 

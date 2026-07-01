@@ -1,10 +1,14 @@
 import { Fragment } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { BadgeDivider } from '../../../components/ui/badge-divider.tsx';
-import { Card, CardFrame } from '../../../components/ui/card.tsx';
 import { Button } from '../../../components/ui/primitives/button.tsx';
 import { Separator } from '../../../components/ui/separator.tsx';
-import { SettingsRow } from '../../../components/ui/settings-row.tsx';
+import {
+    SettingsGroup,
+    SettingsPage,
+    SettingsPageHeader,
+    SettingsRow,
+    SettingsSection,
+} from '../../../components/ui/settings-row.tsx';
 import { useAgentListSuspense } from '../../../hooks/agents/use-agent-list.ts';
 import { useMessagingPlatformList } from '../../../hooks/connections/use-messaging-platform-list.ts';
 import { appRoutes } from '../../../lib/app-routes.ts';
@@ -28,16 +32,16 @@ export function ChannelsSettingsPage() {
         bindingsQuery.data?.bindings.filter((binding) => binding.agentId === agent.id) ?? [];
 
     return (
-        <section>
-            <BadgeDivider className="pb-4">Channels</BadgeDivider>
-            <CardFrame>
-                <Card className="overflow-hidden p-0">
+        <SettingsPage>
+            <SettingsPageHeader title="Channels" />
+            <SettingsSection title="Channels">
+                <SettingsGroup>
                     <SettingsRow
                         description="Built-in Tavern chat frontend"
                         title="Tavern"
                         trailingWidth="intrinsic"
                     >
-                        <Button render={<Link to={appRoutes.chats} />} size="sm" variant="outline">
+                        <Button render={<Link to={appRoutes.chats} />} variant="outline">
                             Open chats
                         </Button>
                     </SettingsRow>
@@ -65,9 +69,9 @@ export function ChannelsSettingsPage() {
                             <Separator />
                         </Fragment>
                     ))}
-                </Card>
-            </CardFrame>
-        </section>
+                </SettingsGroup>
+            </SettingsSection>
+        </SettingsPage>
     );
 }
 

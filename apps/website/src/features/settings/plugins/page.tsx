@@ -1,8 +1,15 @@
 import * as React from 'react';
 import { useParams } from 'react-router-dom';
 import { Badge } from '../../../components/ui/badge.tsx';
-import { FluidList, FluidListItem } from '../../../components/ui/fluid-list.tsx';
 import { SearchInput } from '../../../components/ui/primitives/search-input.tsx';
+import { Separator } from '../../../components/ui/separator.tsx';
+import {
+    SettingsGroup,
+    SettingsPage,
+    SettingsPageHeader,
+    SettingsRow,
+    SettingsSection,
+} from '../../../components/ui/settings-row.tsx';
 import { Switch } from '../../../components/ui/switch.tsx';
 import { useAgentList } from '../../../hooks/agents/use-agent-list.ts';
 import { useRuntimeCapabilityEvents } from '../../../hooks/connections/use-runtime-events.ts';
@@ -33,46 +40,48 @@ function GlobalPluginsSettingsPage() {
     const showMerchbasePlugin = matchesMerchbasePlugin(deferredSearch);
 
     return (
-        <div className="mx-auto w-full max-w-3xl">
-            <header className="pb-6">
-                <h1 className="font-semibold text-2xl text-foreground">Plugins</h1>
-                <p className="mt-1 text-muted-foreground text-sm">
-                    Built-in Tavern integrations with settings, health, agent tools, and rich
-                    responses
-                </p>
-            </header>
+        <SettingsPage>
+            <SettingsPageHeader title="Plugins" />
 
-            <section className="grid gap-4">
+            <div className="grid gap-4">
                 <SearchInput
                     aria-label="Search plugins"
-                    className="w-full [&_[data-slot=input-control]]:h-11 [&_[data-slot=input-control]]:rounded-full"
+                    className="w-full px-3 [&_[data-slot=input-control]]:h-9"
                     name="plugin-search"
                     onChange={(event) => setSearch(event.target.value)}
                     placeholder="Search plugins..."
                     value={search}
                 />
 
-                {showMerchbasePlugin ? (
-                    <MerchbaseSettingsCard
-                        error={settingsQuery.error?.message ?? saveSettings.error?.message ?? null}
-                        isLoading={settingsQuery.isPending}
-                        isSaving={saveSettings.isPending}
-                        onSave={(input) =>
-                            withSavingToast(() => saveSettings.mutateAsync(input)).catch(
-                                () => undefined
-                            )
-                        }
-                        settings={settingsQuery.data ?? null}
-                    />
-                ) : (
-                    <EmptyState
-                        className="py-16"
-                        description="Try a different name or description."
-                        title="No matches"
-                    />
-                )}
-            </section>
-        </div>
+                <SettingsSection title="Installed Plugins">
+                    <SettingsGroup>
+                        {showMerchbasePlugin ? (
+                            <MerchbaseSettingsCard
+                                error={
+                                    settingsQuery.error?.message ??
+                                    saveSettings.error?.message ??
+                                    null
+                                }
+                                isLoading={settingsQuery.isPending}
+                                isSaving={saveSettings.isPending}
+                                onSave={(input) =>
+                                    withSavingToast(() => saveSettings.mutateAsync(input)).catch(
+                                        () => undefined
+                                    )
+                                }
+                                settings={settingsQuery.data ?? null}
+                            />
+                        ) : (
+                            <EmptyState
+                                className="py-8"
+                                description="Try a different name or description."
+                                title="No matches"
+                            />
+                        )}
+                    </SettingsGroup>
+                </SettingsSection>
+            </div>
+        </SettingsPage>
     );
 }
 
@@ -88,65 +97,73 @@ function AgentPluginsSettingsPage({ agentId }: { agentId: string }) {
     );
 
     if ((agentsQuery.isPending || pluginsQuery.isPending) && !(agentsQuery.data && plugins)) {
-        return <p className="text-muted-foreground text-sm">Loading Plugin grants...</p>;
+        return (
+            <SettingsPage>
+                <SettingsPageHeader title="Plugins" />
+                <p className="px-3 text-muted-foreground text-sm">Loading Plugin grants...</p>
+            </SettingsPage>
+        );
     }
 
     if (!agent) {
-        return <p className="text-muted-foreground text-sm">Agent not found.</p>;
+        return (
+            <SettingsPage>
+                <SettingsPageHeader title="Plugins" />
+                <p className="px-3 text-muted-foreground text-sm">Agent not found.</p>
+            </SettingsPage>
+        );
     }
 
     return (
-        <div className="mx-auto w-full max-w-3xl">
-            <header className="pb-6">
-                <h1 className="font-semibold text-2xl text-foreground">Plugins</h1>
-                <p className="mt-1 text-muted-foreground text-sm">
-                    Choose which built-in integrations {agent.name} can use
-                </p>
-            </header>
+        <SettingsPage>
+            <SettingsPageHeader title="Plugins" />
 
-            <section className="grid gap-4">
+            <div className="grid gap-4">
                 <SearchInput
                     aria-label="Search plugin grants"
-                    className="w-full [&_[data-slot=input-control]]:h-11 [&_[data-slot=input-control]]:rounded-full"
+                    className="w-full px-3 [&_[data-slot=input-control]]:h-9"
                     name="agent-plugin-search"
                     onChange={(event) => setSearch(event.target.value)}
                     placeholder="Search plugins..."
                     value={search}
                 />
 
-                {plugins && plugins.length > 0 ? (
-                    <FluidList className="grid">
-                        {plugins.map((plugin, index) => (
-                            <FluidListItem className="-mx-3" index={index} key={plugin.id}>
-                                <AgentPluginGrantRow
-                                    agent={agent}
-                                    isSaving={
-                                        setGrant.isPending &&
-                                        setGrant.variables?.pluginId === plugin.id
-                                    }
-                                    onEnabledChange={(enabled) =>
-                                        void withSavingToast(() =>
-                                            setGrant.mutateAsync({
-                                                agentId: agent.id,
-                                                enabled,
-                                                pluginId: plugin.id,
-                                            })
-                                        ).catch(() => undefined)
-                                    }
-                                    plugin={plugin}
-                                />
-                            </FluidListItem>
-                        ))}
-                    </FluidList>
-                ) : (
-                    <EmptyState
-                        className="py-16"
-                        description="Try a different name or description."
-                        title="No matches"
-                    />
-                )}
-            </section>
-        </div>
+                <SettingsSection title="Agent Plugins">
+                    <SettingsGroup>
+                        {plugins && plugins.length > 0 ? (
+                            plugins.map((plugin, index) => (
+                                <React.Fragment key={plugin.id}>
+                                    {index > 0 ? <Separator /> : null}
+                                    <AgentPluginGrantRow
+                                        agent={agent}
+                                        isSaving={
+                                            setGrant.isPending &&
+                                            setGrant.variables?.pluginId === plugin.id
+                                        }
+                                        onEnabledChange={(enabled) =>
+                                            void withSavingToast(() =>
+                                                setGrant.mutateAsync({
+                                                    agentId: agent.id,
+                                                    enabled,
+                                                    pluginId: plugin.id,
+                                                })
+                                            ).catch(() => undefined)
+                                        }
+                                        plugin={plugin}
+                                    />
+                                </React.Fragment>
+                            ))
+                        ) : (
+                            <EmptyState
+                                className="py-8"
+                                description="Try a different name or description."
+                                title="No matches"
+                            />
+                        )}
+                    </SettingsGroup>
+                </SettingsSection>
+            </div>
+        </SettingsPage>
     );
 }
 
@@ -163,31 +180,31 @@ function AgentPluginGrantRow({
 }) {
     const granted = agent.enabledPluginIds.includes(plugin.id);
     return (
-        <div className="flex select-none items-center gap-4 rounded-xl px-3 py-2.5">
-            <span className="min-w-0 flex-1">
+        <SettingsRow
+            description={
+                plugin.enabled
+                    ? 'Agent-facing tools and guidance are available when granted.'
+                    : 'Grant is saved, but this Plugin must be enabled before the agent can use it.'
+            }
+            title={
                 <span className="flex min-w-0 items-center gap-2">
-                    <span className="truncate font-medium text-[15px] text-foreground">
-                        {plugin.displayName}
-                    </span>
+                    <span className="truncate">{plugin.displayName}</span>
                     {plugin.enabled ? null : (
                         <Badge size="sm" variant="warning">
                             Disabled
                         </Badge>
                     )}
                 </span>
-                <span className="mt-0.5 line-clamp-1 text-muted-foreground text-sm">
-                    {plugin.enabled
-                        ? 'Agent-facing tools and guidance are available when granted.'
-                        : 'Grant is saved, but this Plugin must be enabled before the agent can use it.'}
-                </span>
-            </span>
+            }
+            trailingWidth="intrinsic"
+        >
             <Switch
                 aria-label={`${granted ? 'Revoke' : 'Grant'} ${plugin.displayName} for ${agent.name}`}
                 checked={granted}
                 disabled={isSaving}
                 onCheckedChange={onEnabledChange}
             />
-        </div>
+        </SettingsRow>
     );
 }
 

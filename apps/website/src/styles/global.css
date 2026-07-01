@@ -138,7 +138,7 @@
     --radius-sm-base: 0.3125rem;
     --radius-md-base: 0.4375rem;
     --radius-lg-base: 0.5625rem;
-    --radius-xl-base: 0.6875rem;
+    --radius-xl-base: 1.12rem;
     --radius-2xl-base: 0.9375rem;
     --radius-3xl-base: 1.375rem;
     --radius-4xl-base: 1.875rem;
@@ -712,7 +712,7 @@
     :root[data-theme='light'] {
         color-scheme: light;
 
-        --background: var(--color-white);
+        --background: #fcfcfc;
         --chrome: var(--sidebar);
         --foreground: var(--color-neutral-800);
         --brand: #7658b8;
@@ -771,11 +771,11 @@
         --destructive-foreground: var(--color-red-700);
 
         --border: --alpha(var(--color-black) / 8%);
-        --border-strong: --alpha(var(--color-black) / 12%);
+        --border-strong: oklch(0.145 0 0 / 0.1);
         --input: --alpha(var(--color-black) / 10%);
         --ring: var(--color-neutral-400);
 
-        --sidebar: var(--color-neutral-50);
+        --sidebar: #fcfcfc;
         --sidebar-foreground: var(--color-neutral-800);
         --sidebar-muted: var(--muted-foreground);
         --sidebar-icon-muted: var(--color-neutral-800);
@@ -814,7 +814,7 @@
         --chat-log-row-hover: --alpha(var(--color-black) / 4%);
         --chat-log-session-badge-bg: var(--color-blue-50);
 
-        --content-card: var(--card);
+        --content-card: var(--background);
         --content-card-border: var(--color-neutral-300);
 
         --browser-strip: color-mix(in srgb, var(--background) 93%, var(--foreground));
@@ -833,7 +833,7 @@
         --subnav-hover: var(--nav-hover);
         --subnav-active: var(--nav-active);
 
-        --app-chrome-fill: --alpha(var(--color-neutral-50) / 18%);
+        --app-chrome-fill: #fcfcfc;
         --app-chrome-native-fill: --alpha(var(--color-white) / 55%);
         --app-chrome-backdrop: blur(28px) saturate(1.6);
 
@@ -1195,6 +1195,10 @@
 @layer base {
     .app-reference-theme {
         --content-card: var(--card);
+    }
+
+    :root[data-theme='light'] .app-reference-theme {
+        --content-card: var(--background);
     }
 
     /* App-wide keyboard focus ring. One consistent treatment so every

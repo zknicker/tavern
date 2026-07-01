@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { SimpleCodeEditor } from '../../../components/code-editor/simple-code-editor.tsx';
-import { BadgeDivider } from '../../../components/ui/badge-divider.tsx';
 import { Card, CardFrame } from '../../../components/ui/card.tsx';
 import { Button } from '../../../components/ui/primitives/button.tsx';
+import { SettingsSection } from '../../../components/ui/settings-row.tsx';
 import { usePrimaryAgent } from '../../../hooks/agents/use-agent-list.ts';
 import { withSavingToast } from '../../../lib/saving-toast.ts';
 import { trpc } from '../../../lib/trpc.tsx';
@@ -86,10 +86,8 @@ export function AgentWorkspaceFileEditor({
     }, [query.data?.content]);
 
     return (
-        <section>
-            <BadgeDivider className="pb-4">{file?.label ?? path}</BadgeDivider>
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-                <p className="text-muted-foreground text-sm">{file?.description}</p>
+        <SettingsSection
+            action={
                 <div className="flex items-center gap-2">
                     {path === 'NOTES.md' ? (
                         <AgentInstructionsPreviewDrawer
@@ -116,7 +114,10 @@ export function AgentWorkspaceFileEditor({
                         Save
                     </Button>
                 </div>
-            </div>
+            }
+            description={file?.description}
+            title={file?.label ?? path}
+        >
             <CardFrame>
                 <Card
                     className={cn(
@@ -133,6 +134,6 @@ export function AgentWorkspaceFileEditor({
                     />
                 </Card>
             </CardFrame>
-        </section>
+        </SettingsSection>
     );
 }

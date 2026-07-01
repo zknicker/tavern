@@ -1,17 +1,11 @@
 .tavern-simple-code-editor {
     background-color: var(--card);
-    background-image: radial-gradient(
-        color-mix(in srgb, var(--border) 70%, transparent) 1px,
-        transparent 1px
-    );
-    background-size: 20px 20px;
     color: var(--foreground);
     font-family: var(--font-mono);
 }
 
 .tavern-simple-code-editor.tavern-simple-code-editor--plain {
     background-color: var(--popover);
-    background-image: none;
 }
 
 .tavern-simple-code-editor textarea,

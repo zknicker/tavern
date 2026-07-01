@@ -61,7 +61,6 @@ export function SecretFieldsEditor({
             <Button
                 className="justify-self-start"
                 onClick={() => onChange([...entries, createSecretDraftEntry()])}
-                size="sm"
                 type="button"
                 variant="outline"
             >

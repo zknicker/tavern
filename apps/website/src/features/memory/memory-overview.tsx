@@ -114,7 +114,7 @@ export function MemoryOverview({ status }: { status: VaultHubStatus | null }) {
                         <SettingsValue>{formatVaultAccess(status)}</SettingsValue>
                     </SettingsRow>
                     <Separator />
-                    <SettingsRow title="Memory path">
+                    <SettingsRow title="Memory path" trailingWidth="wide">
                         <CodeSnippet lines={status?.vaultPath ?? unavailable} />
                     </SettingsRow>
                 </MemorySection>

@@ -1,12 +1,17 @@
 import { SystemUpdate01Icon } from '@hugeicons/core-free-icons';
 import * as React from 'react';
-import { BadgeDivider } from '../../../components/ui/badge-divider.tsx';
-import { Card, CardFrame } from '../../../components/ui/card.tsx';
 import { Icon } from '../../../components/ui/icon.tsx';
 import { Button } from '../../../components/ui/primitives/button.tsx';
 import { Progress } from '../../../components/ui/progress.tsx';
 import { Separator } from '../../../components/ui/separator.tsx';
-import { SettingsRow, SettingsValue } from '../../../components/ui/settings-row.tsx';
+import {
+    SettingsGroup,
+    SettingsPage,
+    SettingsPageHeader,
+    SettingsRow,
+    SettingsSection,
+    SettingsValue,
+} from '../../../components/ui/settings-row.tsx';
 import { useRuntimeConnection } from '../../../hooks/connections/use-runtime-connection.ts';
 import {
     type TavernUpdateStatus,
@@ -31,10 +36,10 @@ export function UpdatesSettings() {
     }, [checkForUpdate]);
 
     return (
-        <div>
-            <BadgeDivider className="pb-5">Tavern Updates</BadgeDivider>
-            <CardFrame>
-                <Card className="overflow-hidden p-0">
+        <SettingsPage>
+            <SettingsPageHeader title="Updates" />
+            <SettingsSection title="Tavern Updates">
+                <SettingsGroup>
                     <SettingsRow
                         className="md:items-start"
                         description="The app and runtime update automatically."
@@ -47,7 +52,6 @@ export function UpdatesSettings() {
                                     disabled={!canCheck}
                                     loading={status.phase === 'checking'}
                                     onClick={handleCheckForUpdate}
-                                    size="sm"
                                     variant="secondary"
                                 >
                                     Check
@@ -61,7 +65,6 @@ export function UpdatesSettings() {
                                         status.phase === 'restarting-app'
                                     }
                                     onClick={updateAndRestart}
-                                    size="sm"
                                 >
                                     <Icon icon={SystemUpdate01Icon} />
                                     {status.phase === 'ready' ? 'Restart' : 'Update'}
@@ -87,12 +90,9 @@ export function UpdatesSettings() {
                                 : 'No Runtime Connected'}
                         </VersionValue>
                     </SettingsRow>
-                </Card>
-            </CardFrame>
-            <p className="px-3.5 pt-3 text-muted-foreground text-xs">
-                Agent execution powered by Tavern Runtime.
-            </p>
-        </div>
+                </SettingsGroup>
+            </SettingsSection>
+        </SettingsPage>
     );
 }
 

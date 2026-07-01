@@ -1,6 +1,4 @@
 import { useEffect, useState } from 'react';
-import { BadgeDivider } from '../../../components/ui/badge-divider.tsx';
-import { Card, CardFrame } from '../../../components/ui/card.tsx';
 import { Input } from '../../../components/ui/primitives/input.tsx';
 import {
     Select,
@@ -10,7 +8,11 @@ import {
     SelectValue,
 } from '../../../components/ui/select.tsx';
 import { Separator } from '../../../components/ui/separator.tsx';
-import { SettingsRow } from '../../../components/ui/settings-row.tsx';
+import {
+    SettingsGroup,
+    SettingsRow,
+    SettingsSection,
+} from '../../../components/ui/settings-row.tsx';
 import { withSavingToast } from '../../../lib/saving-toast.ts';
 import { type AgentListOutput, trpc } from '../../../lib/trpc.tsx';
 import { agentColorPresets } from '../../agents/agent-color-presets.ts';
@@ -43,86 +45,79 @@ export function AgentAppearanceSection({
         ) ?? null;
 
     return (
-        <section>
-            <BadgeDivider className="pb-4">Appearance</BadgeDivider>
-            <CardFrame>
-                <Card className="overflow-hidden p-0">
-                    <SettingsRow title="Display name">
-                        <Input
-                            disabled={isSaving}
-                            id="agent-display-name"
-                            name="agent-display-name"
-                            onBlur={() => {
-                                const nextName = displayName.trim() || agent.id;
+        <SettingsSection title="Appearance">
+            <SettingsGroup>
+                <SettingsRow title="Display name">
+                    <Input
+                        disabled={isSaving}
+                        id="agent-display-name"
+                        name="agent-display-name"
+                        onBlur={() => {
+                            const nextName = displayName.trim() || agent.id;
 
-                                if (nextName === agent.name) {
-                                    return;
-                                }
+                            if (nextName === agent.name) {
+                                return;
+                            }
 
-                                void withSavingToast(() =>
-                                    updateName.mutateAsync({
-                                        agentId: agent.id,
-                                        name: nextName,
-                                    })
-                                ).catch(() => undefined);
-                            }}
-                            onChange={(event) => {
-                                setDisplayName(event.target.value);
-                            }}
-                            onKeyDown={(event) => {
-                                if (event.key === 'Enter') {
-                                    event.currentTarget.blur();
-                                }
-                            }}
-                            placeholder={agent.id}
-                            value={displayName}
-                        />
-                    </SettingsRow>
-
-                    <Separator />
-
-                    <SettingsRow title="Color">
-                        <Select
-                            disabled={saveAgentProfile.isPending}
-                            onValueChange={(color) => {
-                                if (!color) {
-                                    return;
-                                }
-
-                                saveAgentProfile.mutate({
+                            void withSavingToast(() =>
+                                updateName.mutateAsync({
                                     agentId: agent.id,
-                                    primaryColor:
-                                        color.toLowerCase() ===
-                                        agent.defaultPrimaryColor.toLowerCase()
-                                            ? null
-                                            : color,
-                                });
-                            }}
-                            value={selectedColor.toLowerCase()}
-                        >
-                            <SelectTrigger>
-                                <SelectValue placeholder="Choose color">
-                                    <AgentColorOption
-                                        color={selectedColor}
-                                        label={selectedColorPreset?.label ?? selectedColor}
-                                    />
-                                </SelectValue>
-                            </SelectTrigger>
-                            <SelectContent>
-                                {agentColorPresets.map((preset) => (
-                                    <SelectItem key={preset.color} value={preset.color}>
-                                        <AgentColorOption
-                                            color={preset.color}
-                                            label={preset.label}
-                                        />
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </SettingsRow>
-                </Card>
-            </CardFrame>
-        </section>
+                                    name: nextName,
+                                })
+                            ).catch(() => undefined);
+                        }}
+                        onChange={(event) => {
+                            setDisplayName(event.target.value);
+                        }}
+                        onKeyDown={(event) => {
+                            if (event.key === 'Enter') {
+                                event.currentTarget.blur();
+                            }
+                        }}
+                        placeholder={agent.id}
+                        value={displayName}
+                    />
+                </SettingsRow>
+
+                <Separator />
+
+                <SettingsRow title="Color">
+                    <Select
+                        disabled={saveAgentProfile.isPending}
+                        onValueChange={(color) => {
+                            if (!color) {
+                                return;
+                            }
+
+                            saveAgentProfile.mutate({
+                                agentId: agent.id,
+                                primaryColor:
+                                    color.toLowerCase() === agent.defaultPrimaryColor.toLowerCase()
+                                        ? null
+                                        : color,
+                            });
+                        }}
+                        value={selectedColor.toLowerCase()}
+                    >
+                        <SelectTrigger>
+                            <SelectValue placeholder="Choose color">
+                                <AgentColorOption
+                                    color={selectedColor}
+                                    label={selectedColorPreset?.label ?? selectedColor}
+                                />
+                            </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                            {agentColorPresets.map((preset) => (
+                                <SelectItem key={preset.color} value={preset.color}>
+                                    <AgentColorOption color={preset.color} label={preset.label} />
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </SettingsRow>
+            </SettingsGroup>
+        </SettingsSection>
     );
 }
 

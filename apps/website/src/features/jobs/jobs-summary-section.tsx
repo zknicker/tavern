@@ -1,7 +1,6 @@
 import * as React from 'react';
-import { BadgeDivider } from '../../components/ui/badge-divider.tsx';
-import { Card } from '../../components/ui/card.tsx';
 import { Separator } from '../../components/ui/separator.tsx';
+import { SettingsGroup, SettingsSection } from '../../components/ui/settings-row.tsx';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../../components/ui/tooltip.tsx';
 import { formatRelativeTime, formatTimestamp } from '../../lib/format.ts';
 import type { JobsListOutput } from '../../lib/trpc.tsx';
@@ -17,20 +16,16 @@ interface JobsSummarySectionProps {
 
 export function JobsSummarySection({ jobs, onSelectJob }: JobsSummarySectionProps) {
     return (
-        <section className="flex flex-col">
-            <BadgeDivider className="pb-4" subtext="Provider imports and maintenance.">
-                Operational Jobs
-            </BadgeDivider>
-
-            <Card className="overflow-hidden p-0">
+        <SettingsSection description="Provider imports and maintenance." title="Operational Jobs">
+            <SettingsGroup>
                 {jobs.map((job, index) => (
                     <React.Fragment key={job.slug}>
                         {index > 0 ? <Separator /> : null}
                         <JobSummaryRow job={job} onSelectJob={onSelectJob} />
                     </React.Fragment>
                 ))}
-            </Card>
-        </section>
+            </SettingsGroup>
+        </SettingsSection>
     );
 }
 
