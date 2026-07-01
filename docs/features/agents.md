@@ -22,9 +22,14 @@ can continue to feel primary-agent-first.
   independent names, enabled skill ids, model choices, and workspace folders.
   Settings -> Agents lists those agents, creates new agents, and routes each
   agent to General, Skills, Plugins, Channels, and Memory pages.
-  General edits the selected agent's display name, color, model, thinking
-  default, timezone, environment variables, `SOUL.md`, and destructive agent
-  deletion.
+  General edits the selected agent's display name, color, character, model,
+  thinking default, timezone, environment variables, `SOUL.md`, and destructive
+  agent deletion.
+* **Agent avatar.** Every agent wears a character face (knight, penguin, cat,
+  dog, robot, ghost, or cloud) as its avatar; the animated eyes always sit
+  inside a character and are never shown alone. Agents with no chosen character
+  get a stable default derived from their id. Agent color labels the agent's
+  name; it does not tint the avatar.
 * **Instruction files.** `AGENTS.md` is a generated, read-only artifact that
   Runtime composes from its sources; nobody edits it. Settings exposes
   `SOUL.md` from the agent's General page for identity and personality.

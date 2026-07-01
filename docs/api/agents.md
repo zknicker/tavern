@@ -27,6 +27,12 @@ grant policy.
   discover agents.
 * Agent records expose display name, model policy, memory policy, skill
   selections, Plugin grants, workspace folder, and availability.
+* Agent appearance is app-owned presentation stored in the agent profile:
+  a primary color and a character (`knight`, `penguin`, `cat`, `dog`, `robot`,
+  `ghost`, or `cloud`). The catalog returns `character`, `effectiveCharacter`,
+  and `defaultCharacter` alongside the color fields; a null character resolves
+  to a stable default derived from the agent id. Color is a name label only and
+  does not tint the avatar.
 * Skill selections are ids of installed Runtime skills. Runtime resolves those
   ids during execution and passes the matching skill bundles through the AI SDK
   skill surface for executors that support it. Skill content is not appended to
