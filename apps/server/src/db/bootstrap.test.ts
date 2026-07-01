@@ -105,6 +105,7 @@ test('ensureDatabaseSchema creates the current Tavern schema without obsolete ta
             listSortedColumnNames(db, 'agent_profiles'),
             [
                 'agent_id',
+                'avatar_character',
                 'created_at',
                 'primary_color',
                 'runtime_id',

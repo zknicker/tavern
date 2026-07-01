@@ -24,7 +24,9 @@ test('demo channel loads enough messages to show representative coverage', () =>
 });
 
 test('agent status indicator keeps a fixed icon box for layout motion', () => {
-    const markup = renderToStaticMarkup(<AgentStatusIndicator activeReply={null} rows={[]} />);
+    const markup = renderToStaticMarkup(
+        <AgentStatusIndicator activeReply={null} character="robot" rows={[]} />
+    );
 
     expect(markup).toContain('height:32px');
     expect(markup).toContain('width:32px');
@@ -32,7 +34,9 @@ test('agent status indicator keeps a fixed icon box for layout motion', () => {
 });
 
 test('agent status indicator leaves emotion changes to the eye spring', () => {
-    const idleMarkup = renderToStaticMarkup(<AgentStatusIndicator activeReply={null} rows={[]} />);
+    const idleMarkup = renderToStaticMarkup(
+        <AgentStatusIndicator activeReply={null} character="robot" rows={[]} />
+    );
     const thinkingMarkup = renderToStaticMarkup(
         <AgentStatusIndicator
             activeReply={{
@@ -43,6 +47,7 @@ test('agent status indicator leaves emotion changes to the eye spring', () => {
                 startedAt: '2026-05-13T12:00:00.000Z',
                 text: '',
             }}
+            character="robot"
             rows={[]}
         />
     );

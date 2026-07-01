@@ -1,11 +1,11 @@
 import { describe, expect, test } from 'bun:test';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { parseUserProfile } from '../../hooks/shell/use-user-profile-preference.ts';
-import { AgentEyes } from './agent-eyes.tsx';
+import { AgentFace } from './agent-face.tsx';
 import { resolveTurnAvatarVariant } from './chat-transcript-turn.tsx';
 
 describe('turn avatar variant', () => {
-    test('agents always render the Tavern eyes', () => {
+    test('agents always render the Tavern character face', () => {
         expect(resolveTurnAvatarVariant('agent', null)).toBe('eyes');
         expect(resolveTurnAvatarVariant('agent', 'data:image/png;base64,AAAA')).toBe('eyes');
     });
@@ -17,15 +17,15 @@ describe('turn avatar variant', () => {
     });
 });
 
-describe('static agent eyes', () => {
-    test('renders both eye paths without animation in the configured color', () => {
-        const markup = renderToStaticMarkup(
-            <AgentEyes animated={false} color="#7658b8" size={20} />
-        );
+describe('static agent face', () => {
+    test('renders a character head with both eyes and no color tint', () => {
+        const markup = renderToStaticMarkup(<AgentFace animated={false} head="knight" size={20} />);
         const paths = markup.match(/<path /g) ?? [];
 
-        expect(paths.length).toBeGreaterThanOrEqual(2);
-        expect(markup).toContain('fill="#7658b8"');
+        // Two eyes plus the head silhouette layers.
+        expect(paths.length).toBeGreaterThanOrEqual(3);
+        // Agent color must not tint the avatar; eyes use the head's ink/paper.
+        expect(markup).toContain('fill="#1b1b1b"');
     });
 });
 
