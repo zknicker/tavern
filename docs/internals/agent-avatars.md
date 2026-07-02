@@ -1,5 +1,5 @@
 ---
-summary: How to add or update an agent character avatar (AgentFace) — the two files to touch, the 480x480 frame contract, and light/dark art variants.
+summary: How to add or update an agent character avatar (AgentFace) — the two files to touch, the 480x480 frame contract, and theme/agent-color ink recoloring.
 read_when:
   - adding a new agent character/avatar or updating an existing one's face art
   - changing AgentFace, head art, eye placement, or the agentCharacters contract
@@ -27,23 +27,30 @@ there is no per-head fitting or transform math.
   (`{ dx: 0, dy: 24, s: 0.5 }`). Draw the head around that eye position; do not
   add per-head slots or transforms. `<AgentFace guide />` overlays the frame and
   resting eyes to check alignment while authoring.
-- Each head ships two variants: the **standard** art (light mode) and a **halo**
-  variant (dark mode — a paper ring so a light body separates from a near-black
-  background). Provide both as 480x480 SVGs; the caller passes `dark` and
-  `AgentFace` picks the variant.
+- Each head ships **one art set** authored in the light scheme: white (`PAPER`)
+  plus ink marks. Ink paths use `currentColor`, and `AgentFace` recolors them
+  through its `ink` prop — light mode keeps the authored ink; dark mode passes
+  the agent's configured color dropped to a low-contrast dark tone (see
+  `resolveAgentInk` in `features/agents/agent-color-presets.ts`). White stays
+  white in both themes. No separate dark art, no halo outlines.
+- Exports may include **reference eyes** at the resting `EYE_FRAME` pose (the
+  penguin exports do). Drop those paths when pasting — the animated eyes render
+  at exactly that spot.
 
 ## Add a character
 
-1. In `agent-face.tsx`, add two art groups from the SVGs — paste the `<path>`
+1. In `agent-face.tsx`, add one art group from the SVG — paste the `<path>`
    elements verbatim into `<g key="art">…</g>` (template-native art needs no
-   transform). Name them `XYZ_ART` (light) and `XYZ_ART_HALO` (dark), and use
-   `PAPER` / `INK` for fills so they stay tokenized.
+   transform; drop any `clipPath` wrapper and reference-eye paths). Name it
+   `XYZ_ART`, fill whites with `PAPER`, and fill ink marks with `currentColor`.
 2. Register in `HEADS`:
    ```tsx
-   xyz: (dark: boolean) => ({
-     back: [dark ? XYZ_ART_HALO : XYZ_ART],
+   xyz: (_dark: boolean) => ({
+     back: [XYZ_ART],
      front: [],
-     eyeColor: DARKEYE, // white/paper face → DARKEYE; solid-dark face (cat) → PAPER
+     // white/paper face → 'currentColor' eyes (follow the ink);
+     // solid-ink face (cat) → PAPER eyes
+     eyeColor: 'currentColor',
    }),
    ```
 3. In `agent-appearance.ts`, add the id to `agentCharacters` and a label to
@@ -52,18 +59,29 @@ there is no per-head fitting or transform math.
    every `agentCharacters` id has a matching `HEADS` entry — this is the sync
    safety net), then `bun run lint`.
 
+## Rendering a face
+
+Call sites resolve the agent's appearance (character + configured color) via
+`useAgentAppearanceLookup` (or the agent record's `effectiveCharacter` /
+`effectivePrimaryColor`) and pass both theme and ink:
+
+```tsx
+<AgentFace dark={dark} head={character} ink={resolveAgentInk(dark, primaryColor)} … />
+```
+
 ## Update an existing avatar
 
-Replace that head's two art constants in `agent-face.tsx`. No contract change.
+Replace that head's art constant in `agent-face.tsx`. No contract change.
 
 ## Notes
 
 - Adding is additive — `character` is a stored string enum, so there is no
   migration. Renaming or removing a character orphans agents already set to it;
   prefer adding.
-- Agent color is a name label only; it never tints the avatar. Eye color is
-  chosen per head (`eyeColor`), not from agent color.
+- Agent color names the agent everywhere **and** tints the face ink in dark
+  mode. Light mode never tints.
 - Two authoring styles live in `agent-face.tsx`: template-native (Figma 480
   export, pasted verbatim — penguin, robot) and Fable exports via `fableArt(...)`
-  (a matrix transform with an auto-generated halo — cat, dog, ghost, cloud,
-  knight). New clean 480x480 SVGs use the template-native style.
+  (a matrix transform — cat, dog, ghost, cloud, knight). Both share the same
+  `currentColor` ink recoloring; new clean 480x480 SVGs use the template-native
+  style.
