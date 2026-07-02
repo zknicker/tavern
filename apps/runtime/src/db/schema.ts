@@ -310,6 +310,9 @@ CREATE INDEX IF NOT EXISTS idx_chat_responses_chat_updated
 CREATE INDEX IF NOT EXISTS idx_chat_responses_chat_created
   ON chat_responses(chat_id, created_at, id);
 
+CREATE INDEX IF NOT EXISTS idx_chat_responses_chat_active
+  ON chat_responses(chat_id, status, response_message_id, deleted_at);
+
 CREATE TABLE IF NOT EXISTS chat_response_activity (
   id             TEXT PRIMARY KEY,
   response_id    TEXT NOT NULL,

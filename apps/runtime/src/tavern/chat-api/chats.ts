@@ -85,7 +85,15 @@ export function listChats(
     const limit = clampLimit(input.limit);
     const rows = db
         .prepare(
-            `SELECT *
+            `SELECT chats.*,
+                    EXISTS (
+                        SELECT 1
+                        FROM chat_responses
+                        WHERE chat_responses.chat_id = chats.id
+                          AND chat_responses.deleted_at IS NULL
+                          AND chat_responses.status IN ('queued', 'running')
+                          AND chat_responses.response_message_id IS NULL
+                    ) AS has_active_turn
              FROM chats
              WHERE id > $cursor
              ORDER BY id ASC
@@ -105,7 +113,21 @@ export function listChats(
 
 export function getChat(id: string, db: Database = getDb()): TavernChat | null {
     const row = optionalRow(
-        db.prepare('SELECT * FROM chats WHERE id = $id').get(namedParams({ id })) as ChatRow | null
+        db
+            .prepare(
+                `SELECT chats.*,
+                    EXISTS (
+                        SELECT 1
+                        FROM chat_responses
+                        WHERE chat_responses.chat_id = chats.id
+                          AND chat_responses.deleted_at IS NULL
+                          AND chat_responses.status IN ('queued', 'running')
+                          AND chat_responses.response_message_id IS NULL
+                    ) AS has_active_turn
+             FROM chats
+             WHERE id = $id`
+            )
+            .get(namedParams({ id })) as ChatRow | null
     );
     return row ? rowToChat(row, db) : null;
 }
@@ -127,6 +149,7 @@ export function getChatOrThrow(id: string, db: Database): TavernChat {
 function rowToChat(row: ChatRow, db: Database): TavernChat {
     return {
         created_at: row.created_at,
+        has_active_turn: Boolean(row.has_active_turn),
         id: row.id,
         kind: row.kind,
         last_message_sequence: row.last_message_sequence,

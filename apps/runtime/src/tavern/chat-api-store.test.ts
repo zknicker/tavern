@@ -463,6 +463,62 @@ describe('Tavern Runtime Chat API store', () => {
         ).toThrow('A DM chat must have exactly two participants.');
     });
 
+    it('projects active chat state from durable queued and running responses', () => {
+        createChat({ id: 'cht_1', title: 'Test' });
+
+        expect(getChat('cht_1')).toMatchObject({ has_active_turn: false });
+        expect(listChats().chats).toEqual([
+            expect.objectContaining({ has_active_turn: false, id: 'cht_1' }),
+        ]);
+
+        upsertResponse('cht_1', {
+            id: 'rsp_1',
+            participant_id: 'agt_1',
+            status: 'queued',
+        });
+
+        expect(getChat('cht_1')).toMatchObject({ has_active_turn: true });
+        expect(listChats().chats).toEqual([
+            expect.objectContaining({ has_active_turn: true, id: 'cht_1' }),
+        ]);
+
+        upsertResponse('cht_1', {
+            completed_at: '2026-07-02T19:12:37.495Z',
+            id: 'rsp_1',
+            participant_id: 'agt_1',
+            status: 'completed',
+        });
+
+        expect(getChat('cht_1')).toMatchObject({ has_active_turn: false });
+    });
+
+    it('does not treat deleted or delivered responses as active chat state', () => {
+        createChat({ id: 'cht_1', title: 'Test' });
+        createMessage('cht_1', {
+            author_id: 'agt_1',
+            content: 'Done',
+            id: 'msg_1',
+            role: 'assistant',
+        });
+        upsertResponse('cht_1', {
+            id: 'rsp_delivered',
+            participant_id: 'agt_1',
+            response_message_id: 'msg_1',
+            status: 'running',
+        });
+        upsertResponse('cht_1', {
+            id: 'rsp_deleted',
+            participant_id: 'agt_1',
+            status: 'running',
+        });
+        deleteResponse('rsp_deleted');
+
+        expect(getChat('cht_1')).toMatchObject({ has_active_turn: false });
+        expect(listChats().chats).toEqual([
+            expect.objectContaining({ has_active_turn: false, id: 'cht_1' }),
+        ]);
+    });
+
     it('bootstraps the default agent DM without a default channel', () => {
         const first = seedWorkspaceChats({
             agentId: 'agt_primary',

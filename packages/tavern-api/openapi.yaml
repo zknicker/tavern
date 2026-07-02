@@ -578,6 +578,7 @@ components:
         - created_at
         - updated_at
         - last_message_sequence
+        - has_active_turn
         - participants
         - metadata
       properties:
@@ -595,6 +596,8 @@ components:
         last_message_sequence:
           type: integer
           minimum: 0
+        has_active_turn:
+          type: boolean
         participants:
           type: array
           items:

@@ -320,6 +320,7 @@ function tavernChatToRuntimeChat(chat: TavernChat): AgentRuntimeChat {
     return {
         bindingId: null,
         bindings: agentIds.map((agentId) => ({ agentId })),
+        hasActiveTurn: chat.has_active_turn,
         id: chat.id,
         inboundMode: 'active',
         metadata: {

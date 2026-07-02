@@ -1,5 +1,4 @@
 import type { AgentRuntimeChatParticipant, AgentRuntimeChatPlatformMetadata } from '@tavern/api';
-import { hasActiveTurnSession } from '../agent-runtime/active-turn-sessions.ts';
 import { listAgents } from '../agents/catalog.ts';
 import { buildAgentPalette, resolveAgentName } from '../agents/palette.ts';
 import {
@@ -393,7 +392,7 @@ export async function listChatDetails(options?: { chatId?: string; includeExtern
                 displayName,
                 externalId: identity.externalId,
                 framework: identity.type === 'tavern' ? 'tavern' : 'agentRuntime',
-                hasActiveTurn: chatSessions.some((session) => hasActiveTurnSession(session.key)),
+                hasActiveTurn: agentRuntimeChat?.hasActiveTurn ?? false,
                 id: chatId,
                 isEnabled: canSend,
                 lastActivityAt,

@@ -324,6 +324,7 @@ export interface components {
             created_at: components["schemas"]["Timestamp"];
             updated_at: components["schemas"]["Timestamp"];
             last_message_sequence: number;
+            has_active_turn: boolean;
             participants: components["schemas"]["Participant"][];
             metadata: components["schemas"]["JsonObject"];
         };

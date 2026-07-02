@@ -34,6 +34,7 @@ export interface DeleteReceipt {
 
 export interface ChatRow {
     created_at: string;
+    has_active_turn: number;
     id: string;
     kind: 'channel' | 'dm';
     last_message_sequence: number;
