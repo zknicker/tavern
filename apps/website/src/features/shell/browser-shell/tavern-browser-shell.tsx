@@ -6,11 +6,11 @@ import { AppShell, AppShellDragRegion } from '../../../components/ui/app-shell.t
 import { Icon } from '../../../components/ui/icon.tsx';
 import { Button } from '../../../components/ui/primitives/button.tsx';
 import type { RouteTab } from '../../../hooks/shell/use-route-tab.ts';
-import { appRoutes } from '../../../lib/app-routes.ts';
 import { BrowserAllChatsMenu } from './browser-all-chats-menu.tsx';
 import { BrowserShellSidebar } from './browser-shell-sidebar.tsx';
 import { BrowserToolbarNav } from './browser-toolbar-nav.tsx';
 import { useShell } from './shell-context.tsx';
+import { shouldShowBrowserShellSidebar } from './sidebar-visibility.ts';
 import { TabOutline } from './tab-outline.tsx';
 import { TabList, TabStrip } from './tab-strip.tsx';
 import { TavernBrowserTabsProvider } from './tavern-browser-tabs-provider.tsx';
@@ -48,9 +48,7 @@ export function TavernBrowserShellFrame({
     // The channels/DMs rail belongs to the chat surface — the home hub and any chat. Utility
     // pages (settings, workspace, memory…) keep their own full-width layouts, so the rail does
     // not fight their navigation.
-    const showChannelRail =
-        location.pathname.startsWith(appRoutes.chats) ||
-        location.pathname.startsWith(appRoutes.overview);
+    const showChannelRail = shouldShowBrowserShellSidebar(location.pathname);
 
     return (
         <AppShell className="w-full bg-[var(--browser-strip-overlay)]" ref={meta.frameRef}>
