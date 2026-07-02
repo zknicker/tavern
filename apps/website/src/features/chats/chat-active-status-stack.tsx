@@ -60,6 +60,7 @@ export function ChatActiveStatusStack({
                         activeReply={item.activeReply}
                         agentCharacter={item.agent?.effectiveCharacter ?? null}
                         agentName={item.agent?.name ?? 'Agent'}
+                        agentPrimaryColor={item.agent?.effectivePrimaryColor ?? null}
                         key={item.activeReply.runId}
                         rows={rows}
                     />
@@ -73,11 +74,13 @@ function ChatActiveStatusItem({
     activeReply,
     agentCharacter,
     agentName,
+    agentPrimaryColor,
     rows,
 }: {
     activeReply: ChatActiveReply;
     agentCharacter: AgentCharacter | null;
     agentName: string;
+    agentPrimaryColor: string | null;
     rows: TranscriptRow[];
 }) {
     return (
@@ -86,8 +89,9 @@ function ChatActiveStatusItem({
                 activeReply={activeReply}
                 character={agentCharacter ?? 'none'}
                 className="-ms-1"
+                primaryColor={agentPrimaryColor}
                 rows={rows}
-                size={28}
+                size={24}
             />
             <span className="thinking-indicator-text min-w-0 truncate">
                 {formatActiveStatusText({ activeReply, agentName, rows })}

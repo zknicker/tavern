@@ -19,6 +19,7 @@ import { useChatDismiss } from '../../hooks/chats/use-chat-dismiss.ts';
 import { formatShortTime } from '../../lib/format.ts';
 import { cn } from '../../lib/utils.ts';
 import { AgentRichResponse } from '../../rich-responses/render-rich-response.tsx';
+import { resolveAgentInk } from '../agents/agent-color-presets.ts';
 import { AgentFace, type HeadName } from './agent-face.tsx';
 import { CommandRunEntry } from './chat-command-card.tsx';
 import { ChatMarkdownText } from './chat-markdown-text.tsx';
@@ -68,7 +69,9 @@ const newTurnGapClassName = '';
 // footer; our roster layout keeps it aligned with the name header instead.
 const turnAvatarBaseClassName =
     'size-8 min-w-8 self-start ring-1 ring-border/50 group-has-data-[slot=message-footer]/message:translate-y-0';
-const faceStyle = { flexShrink: 0, overflow: 'visible' } as const;
+// Agent faces render at natural divisors of the 480px art frame (480/32 = 15)
+// so paths scale at an integer factor; 32 also matches the people avatars.
+const faceStyle = { flexShrink: 0, height: 32, overflow: 'visible', width: 32 } as const;
 const hoverGroupClassName = 'group';
 
 export function TranscriptEntryView({
@@ -256,6 +259,7 @@ function TurnAvatar({
                     animate={false}
                     dark={dark}
                     head={character}
+                    ink={resolveAgentInk(dark, color)}
                     size={32}
                     style={faceStyle}
                 />
@@ -403,6 +407,7 @@ function AgentTurn({
             <TurnAvatar
                 actorKind="agent"
                 character={actorProfile?.character ?? agentStatusCharacter ?? 'none'}
+                color={actorProfile?.primaryColor}
                 name={displayName}
             />
             <MessageContent className="gap-0.5 pt-0.5">

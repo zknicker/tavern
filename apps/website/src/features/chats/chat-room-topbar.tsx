@@ -1,20 +1,28 @@
+import { UserIcon } from '@hugeicons-pro/core-solid-rounded';
 import type * as React from 'react';
 import { ChannelIconBox } from '../../components/chats/channel-icon-box.tsx';
 import { resolveTavernChatName } from '../../components/chats/chat-display.ts';
 import { useResolvedThemeOptional } from '../../components/theme-provider.tsx';
-import { useAgentCharacterLookup } from '../../hooks/agents/use-agent-character.ts';
+import { Icon } from '../../components/ui/icon.tsx';
+import { localHumanParticipantId } from '../../hooks/actors/use-actor.ts';
+import type { AgentFaceAppearance } from '../../hooks/agents/use-agent-appearance.ts';
+import { useAgentAppearanceLookup } from '../../hooks/agents/use-agent-appearance.ts';
+import { useUserProfilePreference } from '../../hooks/shell/use-user-profile-preference.ts';
 import { cn } from '../../lib/utils.ts';
+import { resolveAgentInk } from '../agents/agent-color-presets.ts';
 import { getChannelColorStyle } from '../shell/channel-color-options.ts';
-import { AgentFace, type HeadName } from './agent-face.tsx';
+import { AgentFace } from './agent-face.tsx';
 import type { ChatListItem } from './chat-list-data.ts';
 
-const faceStyle = { flexShrink: 0, overflow: 'visible' } as const;
+// Inline width/height keep container svg rules from resizing the face.
+// 24 is a natural divisor of the 480px art frame and matches the boxed avatars.
+const faceStyle = { flexShrink: 0, height: 24, overflow: 'visible', width: 24 } as const;
 
 export function ChatRoomTopbar({ chat }: { chat: ChatListItem }) {
     const title = formatRoomTitle(chat);
     const participants = getVisibleParticipants(chat);
     const channelStyle = getChannelColorStyle(chat.tabAppearance.color);
-    const lookupCharacter = useAgentCharacterLookup();
+    const lookupAppearance = useAgentAppearanceLookup();
 
     return (
         <header
@@ -33,10 +41,10 @@ export function ChatRoomTopbar({ chat }: { chat: ChatListItem }) {
                 >
                     {participants.slice(0, 5).map((participant) => (
                         <ParticipantAvatar
-                            character={
+                            appearance={
                                 participant.actorType === 'agent'
-                                    ? lookupCharacter(participant.actorId)
-                                    : 'none'
+                                    ? lookupAppearance(participant.actorId)
+                                    : null
                             }
                             key={participant.actorId}
                             participant={participant}
@@ -54,15 +62,15 @@ export function ChatRoomTopbar({ chat }: { chat: ChatListItem }) {
 }
 
 function ParticipantAvatar({
-    character,
+    appearance,
     participant,
 }: {
-    character: HeadName;
+    appearance: AgentFaceAppearance | null;
     participant: ChatListItem['participants'][number];
 }) {
     const dark = useResolvedThemeOptional() === 'dark';
 
-    if (character !== 'none') {
+    if (appearance && appearance.character !== 'none') {
         return (
             <li
                 className="relative flex size-6 shrink-0 items-center justify-center"
@@ -71,12 +79,20 @@ function ParticipantAvatar({
                 <AgentFace
                     animate={false}
                     dark={dark}
-                    head={character}
+                    head={appearance.character}
+                    ink={resolveAgentInk(dark, appearance.primaryColor)}
                     size={24}
                     style={faceStyle}
                 />
             </li>
         );
+    }
+
+    if (
+        participant.actorType === 'participant' &&
+        participant.actorId === localHumanParticipantId
+    ) {
+        return <LocalUserAvatar participant={participant} />;
     }
 
     const style = getParticipantAvatarStyle(participant);
@@ -100,6 +116,30 @@ function ParticipantAvatar({
                 />
             ) : (
                 getParticipantInitials(participant)
+            )}
+        </li>
+    );
+}
+
+function LocalUserAvatar({ participant }: { participant: ChatListItem['participants'][number] }) {
+    const profile = useUserProfilePreference();
+    const title = profile.displayName ?? participant.name;
+
+    return (
+        <li
+            className="relative flex size-6 shrink-0 items-center justify-center overflow-hidden rounded-[0.5rem] border border-background bg-muted text-muted-foreground shadow-[0_0_0_1px_var(--border)]"
+            title={title}
+        >
+            {profile.avatarUrl ? (
+                <img
+                    alt=""
+                    className="size-full object-cover"
+                    height={24}
+                    src={profile.avatarUrl}
+                    width={24}
+                />
+            ) : (
+                <Icon aria-hidden="true" className="size-3.5" icon={UserIcon} size={14} />
             )}
         </li>
     );

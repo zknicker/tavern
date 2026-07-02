@@ -33,6 +33,7 @@ import { queryPolicy } from '../../../lib/query-policy.ts';
 import { withSavingToast } from '../../../lib/saving-toast.ts';
 import { type AgentListOutput, trpc } from '../../../lib/trpc.tsx';
 import { cn } from '../../../lib/utils.ts';
+import { resolveAgentInk } from '../../agents/agent-color-presets.ts';
 import { buildAgentSettingsPath, getActiveAgentPage } from '../../agents/agent-path.ts';
 import { AgentFace } from '../../chats/agent-face.tsx';
 import { createNewAgentName } from '../agents/agent-settings-model.ts';
@@ -43,7 +44,10 @@ import {
     staticSettingsNavItems,
 } from './navigation.ts';
 
-const faceStyle = { flexShrink: 0, overflow: 'visible' } as const;
+// Matches the chat sidebar avatar treatment: a 20px slot with a 24px face
+// (natural 480 divisor, slight overhang), inline width/height so the menu
+// button's `[&_svg]:size-4.5` rule cannot resize it.
+const faceStyle = { flexShrink: 0, height: 24, overflow: 'visible', width: 24 } as const;
 
 type ResolveCapability = (requirement: CapabilityRequirement) => CapabilityView;
 type StaticSettingsNavItem = (typeof staticSettingsNavItems)[number];
@@ -346,12 +350,15 @@ function AgentAvatar({ agent }: { agent: AgentListOutput['agents'][number] }) {
     const dark = useResolvedThemeOptional() === 'dark';
 
     return (
-        <AgentFace
-            animate={false}
-            dark={dark}
-            head={agent.effectiveCharacter}
-            size={20}
-            style={faceStyle}
-        />
+        <span aria-hidden="true" className="flex size-5 shrink-0 items-center justify-center">
+            <AgentFace
+                animate={false}
+                dark={dark}
+                head={agent.effectiveCharacter}
+                ink={resolveAgentInk(dark, agent.effectivePrimaryColor)}
+                size={24}
+                style={faceStyle}
+            />
+        </span>
     );
 }

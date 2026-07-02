@@ -13,7 +13,7 @@ import {
     SidebarMenuItem,
 } from '../../components/ui/sidebar.tsx';
 import { Spinner } from '../../components/ui/spinner.tsx';
-import { useAgentCharacterLookup } from '../../hooks/agents/use-agent-character.ts';
+import { useAgentAppearanceLookup } from '../../hooks/agents/use-agent-appearance.ts';
 import { useChatArchive } from '../../hooks/chats/use-chat-archive.ts';
 import { getChatDraftRouteState } from '../../hooks/chats/use-chat-draft-launch.ts';
 import { useChatList } from '../../hooks/chats/use-chat-list.ts';
@@ -30,6 +30,7 @@ import {
 } from '../../hooks/connections/use-capability.ts';
 import { appRoutes } from '../../lib/app-routes.ts';
 import { markChatTiming } from '../../lib/chat-timing.ts';
+import { resolveAgentInk } from '../agents/agent-color-presets.ts';
 import { AgentFace } from '../chats/agent-face.tsx';
 import { buildChatList, type ChatListItem } from '../chats/chat-list-data.ts';
 import { buildChatPath } from '../chats/chat-path.ts';
@@ -51,7 +52,11 @@ import {
     hasLocalActiveTurn,
 } from './sidebar-chat-list-model.ts';
 
-const faceStyle = { flexShrink: 0, overflow: 'visible' } as const;
+// Inline width/height so the sidebar menu button's `[&_svg]:size-4.5` rule
+// cannot shrink the face back down. 24 is a natural divisor of the 480px art
+// frame (480/24 = 20) and slightly overhangs the 20px slot so the face sits
+// optically level with the hash boxes.
+const faceStyle = { flexShrink: 0, height: 24, overflow: 'visible', width: 24 } as const;
 
 export function AppSidebarChatList() {
     const location = useLocation();
@@ -396,25 +401,34 @@ function SidebarChatIcon({
     chat: ChatListItem;
     style: React.CSSProperties | undefined;
 }) {
-    const lookupCharacter = useAgentCharacterLookup();
+    const lookupAppearance = useAgentAppearanceLookup();
     const dark = useResolvedThemeOptional() === 'dark';
 
     if (chat.conversationKind === 'channel') {
         return <ChannelIconBox size="sidebar" style={style} />;
     }
 
-    const character = lookupCharacter(getSidebarChatAgentId(chat));
+    const appearance = lookupAppearance(getSidebarChatAgentId(chat));
 
-    if (character !== 'none') {
+    if (appearance.character !== 'none') {
         return (
-            <AgentFace animate={false} dark={dark} head={character} size={18} style={faceStyle} />
+            <span aria-hidden="true" className="flex size-5 shrink-0 items-center justify-center">
+                <AgentFace
+                    animate={false}
+                    dark={dark}
+                    head={appearance.character}
+                    ink={resolveAgentInk(dark, appearance.primaryColor)}
+                    size={24}
+                    style={faceStyle}
+                />
+            </span>
         );
     }
 
     return (
         <span
             aria-hidden="true"
-            className="flex size-[1.125rem] shrink-0 items-center justify-center rounded-[0.375rem] bg-sidebar-accent font-medium text-[0.625rem] text-sidebar-muted"
+            className="flex size-5 shrink-0 items-center justify-center rounded-[0.4375rem] bg-sidebar-accent font-medium text-[0.625rem] text-sidebar-muted"
         >
             {getSidebarParticipantInitial(chat)}
         </span>

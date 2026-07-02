@@ -30,7 +30,7 @@ import {
 import { withSavingToast } from '../../../lib/saving-toast.ts';
 import { type AgentListOutput, trpc } from '../../../lib/trpc.tsx';
 import { cn } from '../../../lib/utils.ts';
-import { agentColorPresets } from '../../agents/agent-color-presets.ts';
+import { agentColorPresets, resolveAgentInk } from '../../agents/agent-color-presets.ts';
 import { useAgentProfileUpdate } from '../../agents/use-agent-profile-update.ts';
 import { AgentFace } from '../../chats/agent-face.tsx';
 
@@ -146,6 +146,7 @@ export function AgentAppearanceSection({
                                 character: character === agent.defaultCharacter ? null : character,
                             })
                         }
+                        primaryColor={agent.effectivePrimaryColor}
                         selected={agent.effectiveCharacter}
                     />
                 </SettingsRow>
@@ -157,19 +158,22 @@ export function AgentAppearanceSection({
 function AgentCharacterPicker({
     disabled,
     onSelect,
+    primaryColor,
     selected,
 }: {
     disabled: boolean;
     onSelect: (character: AgentCharacter) => void;
+    primaryColor: string;
     selected: AgentCharacter;
 }) {
     const dark = useResolvedThemeOptional() === 'dark';
+    const ink = resolveAgentInk(dark, primaryColor);
 
     return (
         <Popover>
             <PopoverTrigger className={selectTriggerVariants()} disabled={disabled}>
                 <span className="flex min-w-0 flex-1 items-center truncate">
-                    <AgentCharacterOption character={selected} dark={dark} />
+                    <AgentCharacterOption character={selected} dark={dark} ink={ink} />
                 </span>
                 <SelectTriggerIcon />
             </PopoverTrigger>
@@ -196,7 +200,8 @@ function AgentCharacterPicker({
                                     animate={false}
                                     dark={dark}
                                     head={character}
-                                    size={44}
+                                    ink={ink}
+                                    size={40}
                                     style={faceStyle}
                                 />
                             </PopoverClose>
@@ -208,10 +213,25 @@ function AgentCharacterPicker({
     );
 }
 
-function AgentCharacterOption({ character, dark }: { character: AgentCharacter; dark: boolean }) {
+function AgentCharacterOption({
+    character,
+    dark,
+    ink,
+}: {
+    character: AgentCharacter;
+    dark: boolean;
+    ink: string | undefined;
+}) {
     return (
         <span className="flex min-w-0 items-center gap-2">
-            <AgentFace animate={false} dark={dark} head={character} size={18} style={faceStyle} />
+            <AgentFace
+                animate={false}
+                dark={dark}
+                head={character}
+                ink={ink}
+                size={20}
+                style={faceStyle}
+            />
             <span className="truncate">{agentCharacterLabels[character]}</span>
         </span>
     );
