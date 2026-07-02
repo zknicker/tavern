@@ -1,4 +1,5 @@
 import type { AgentRuntimeTool } from '@tavern/api';
+import { listPluginToolGroups } from '../plugins/agent-capabilities.ts';
 
 const builtInTools = [
     {
@@ -34,10 +35,12 @@ const builtInTools = [
 ] satisfies AgentRuntimeTool[];
 
 export function listRuntimeTools() {
-    return { tools: builtInTools.map((tool) => ({ ...tool })) };
+    return { tools: [...builtInTools.map((tool) => ({ ...tool })), ...listPluginToolGroups()] };
 }
 
 export function getRuntimeTool(toolId: string) {
-    const tool = builtInTools.find((candidate) => candidate.id === toolId);
+    const tool = [...builtInTools, ...listPluginToolGroups()].find(
+        (candidate) => candidate.id === toolId
+    );
     return tool ? { ...tool } : null;
 }

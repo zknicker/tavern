@@ -210,8 +210,14 @@ async function dispatchAgentEngineStatic({ request, url }: { request: Request; u
         return await listAgentModels();
     }
     if (method === 'GET' && url.pathname === agentRuntimeRoutes.skills) {
+        const agentId = url.searchParams.get('agentId');
+        const agent = agentId
+            ? agentId === defaultAgentEngineAgentId
+                ? ensurePrimaryAgent()
+                : getStoredAgent(agentId)
+            : null;
         return agentRuntimeSkillListSchema.parse({
-            skills: await listRuntimeSkills(),
+            skills: await listRuntimeSkills({ agent }),
         });
     }
     if (method === 'GET' && segments[0] === 'skills' && segments[1] && !segments[2]) {

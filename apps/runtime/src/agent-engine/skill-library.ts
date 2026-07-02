@@ -12,6 +12,11 @@ import {
     normalizeAgentRuntimeSkillFiles,
 } from '@tavern/api';
 import { AGENT_HOME } from '../config.ts';
+import {
+    listPluginSkillSummaries,
+    readPluginSkillBundlesForAgent,
+    readPluginSkillContent,
+} from '../plugins/agent-capabilities.ts';
 
 export const agentEngineSkillsDir = path.join(AGENT_HOME, 'skills');
 export const tavernAgentSkillId = 'tavern-agent';
@@ -43,6 +48,12 @@ export interface AssignedSkillFile {
     path: string;
 }
 
+interface RuntimeSkillOptions {
+    agent?: AgentRuntimeAgent | null;
+    includePluginSkills?: boolean;
+    skillsDir?: string;
+}
+
 export async function seedTavernAgentSkill(options: { skillsDir?: string } = {}) {
     const skillPath = path.join(
         options.skillsDir ?? agentEngineSkillsDir,
@@ -58,11 +69,15 @@ export async function seedTavernAgentSkill(options: { skillsDir?: string } = {})
     await fs.writeFile(skillPath, defaultTavernSkill, { mode: 0o600 });
 }
 
-export async function listRuntimeSkills(options: { skillsDir?: string } = {}) {
+export async function listRuntimeSkills(options: RuntimeSkillOptions = {}) {
     const skillsDir = options.skillsDir ?? agentEngineSkillsDir;
     const scanned = await scanInstalledSkillSummaries(skillsDir);
     const hasTavernAgent = scanned.some((skill) => skill.id === tavernAgentSkillId);
-    const skills = hasTavernAgent ? scanned : [tavernAgentSummary(skillsDir), ...scanned];
+    const installedSkills = hasTavernAgent ? scanned : [tavernAgentSummary(skillsDir), ...scanned];
+    const skills =
+        options.includePluginSkills === false
+            ? installedSkills
+            : [...installedSkills, ...listPluginSkillSummaries({ agent: options.agent })];
 
     return agentRuntimeSkillListSchema.parse({
         skills: skills.sort((left, right) => left.name.localeCompare(right.name)),
@@ -71,7 +86,7 @@ export async function listRuntimeSkills(options: { skillsDir?: string } = {}) {
 
 export async function getRuntimeSkill(
     skillId: string,
-    options: { skillsDir?: string } = {}
+    options: RuntimeSkillOptions = {}
 ): Promise<AgentRuntimeSkill | null> {
     const normalized = normalizeRuntimeSkillId(skillId);
     if (!normalized) {
@@ -84,9 +99,10 @@ export async function getRuntimeSkill(
     }
 
     const contentMarkdown =
-        summary.id === tavernAgentSkillId
+        readPluginSkillContent({ agent: options.agent, skillId: summary.id }) ??
+        (summary.id === tavernAgentSkillId
             ? await fs.readFile(summary.filePath ?? '', 'utf8').catch(() => defaultTavernSkill)
-            : await readSkillMarkdown(summary);
+            : await readSkillMarkdown(summary));
     if (contentMarkdown === null) {
         return null;
     }
@@ -112,7 +128,7 @@ export async function readAssignedSkillBundles(
         }
         seen.add(skillId);
 
-        const skill = await getRuntimeSkill(skillId, options);
+        const skill = await getRuntimeSkill(skillId, { ...options, includePluginSkills: false });
         if (!skill || skill.disabled === true) {
             continue;
         }
@@ -127,7 +143,12 @@ export async function readAssignedSkillBundles(
         });
     }
 
-    return bundles;
+    const pluginBundles =
+        'enabledPluginIds' in agent
+            ? readPluginSkillBundlesForAgent(agent as AgentRuntimeAgent)
+            : [];
+
+    return [...bundles, ...pluginBundles];
 }
 
 async function scanInstalledSkillSummaries(skillsDir: string) {

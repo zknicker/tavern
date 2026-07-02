@@ -22,6 +22,7 @@ import {
     readAssignedSkillBundles,
 } from '../agent-engine/skill-library.ts';
 import { readConfigValue } from '../config.ts';
+import { createMerchbaseToolsForAgent } from '../plugins/merchbase-tools.ts';
 import {
     hasRenderableRichResponse,
     parseRichResponseFromAssistantContent,
@@ -218,9 +219,12 @@ function createHarnessAgent(
         permissionMode: 'allow-all',
         sandbox: sandboxFactory(localTrustedSandboxOptions(input)),
         skills: options.skills,
-        tools: createTavernChatTools({
-            chatId: input.chatId,
-        }),
+        tools: {
+            ...createTavernChatTools({
+                chatId: input.chatId,
+            }),
+            ...createMerchbaseToolsForAgent(input.agent),
+        },
     });
 }
 

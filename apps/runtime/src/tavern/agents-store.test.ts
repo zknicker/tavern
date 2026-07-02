@@ -3,6 +3,7 @@ import { AGENT_WORKSPACE } from '../config.ts';
 import { closeDb, initTestDb } from '../db/connection.ts';
 import { ensureRuntimeSchema } from '../db/schema.ts';
 import { setModelProviderEnabled } from '../models/provider-store.ts';
+import { saveMerchbaseSettings } from '../plugins/merchbase.ts';
 import { getChat } from './chat-api/index.ts';
 import { handleTavernRuntimeRequest } from './router.ts';
 
@@ -199,6 +200,80 @@ describe('Runtime agent and agent engine reads', () => {
         });
     });
 
+    it('lists granted Plugin skills for the target agent', async () => {
+        saveMerchbaseSettings({
+            apiKey: 'secret-key',
+            baseUrl: 'https://app.merchbase.co',
+            enabled: true,
+        });
+        await handleTavernRuntimeRequest(
+            new Request('http://runtime.test/agents', {
+                body: JSON.stringify({
+                    id: 'agt_research',
+                    name: 'Research',
+                    workspaceFolder: '/tmp/tavern-research-workspace',
+                }),
+                headers: { 'content-type': 'application/json' },
+                method: 'POST',
+            })
+        );
+        await handleTavernRuntimeRequest(
+            new Request('http://runtime.test/agents/agt_research/plugins/merchbase/enabled', {
+                body: JSON.stringify({ enabled: true }),
+                headers: { 'content-type': 'application/json' },
+                method: 'PUT',
+            })
+        );
+
+        const grantedResponse = await handleTavernRuntimeRequest(
+            new Request('http://runtime.test/skills?agentId=agt_research')
+        );
+        const detailResponse = await handleTavernRuntimeRequest(
+            new Request('http://runtime.test/skills/merchbase')
+        );
+        const ungrantedResponse = await handleTavernRuntimeRequest(
+            new Request('http://runtime.test/skills?agentId=agt_primary')
+        );
+
+        expect(grantedResponse.status).toBe(200);
+        const granted = (await grantedResponse.json()) as { skills: Array<{ id: string }> };
+        const ungranted = (await ungrantedResponse.json()) as { skills: Array<{ id: string }> };
+
+        expect(granted.skills).toEqual(
+            expect.arrayContaining([
+                expect.objectContaining({
+                    id: 'merchbase',
+                    runtimeSource: 'tavern-plugin:merchbase',
+                }),
+            ])
+        );
+        expect(ungranted.skills).not.toEqual(
+            expect.arrayContaining([expect.objectContaining({ id: 'merchbase' })])
+        );
+        expect(detailResponse.status).toBe(200);
+        await expect(detailResponse.json()).resolves.toMatchObject({
+            contentMarkdown: expect.stringContaining('merchbase_sales_series'),
+            id: 'merchbase',
+            runtimeSource: 'tavern-plugin:merchbase',
+        });
+    });
+
+    it('serves Plugin tool groups through the runtime adapter', async () => {
+        const response = await handleTavernRuntimeRequest(new Request('http://runtime.test/tools'));
+
+        expect(response.status).toBe(200);
+        await expect(response.json()).resolves.toMatchObject({
+            tools: expect.arrayContaining([
+                expect.objectContaining({
+                    enabled: false,
+                    id: 'merchbase',
+                    readOnly: true,
+                    tools: expect.arrayContaining(['merchbase_sales_series']),
+                }),
+            ]),
+        });
+    });
+
     it('serves agent engine sessions and evidence through the runtime adapter', async () => {
         const sessionKey = 'session_1';
 
@@ -324,9 +399,9 @@ describe('Runtime agent and agent engine reads', () => {
         const response = await handleTavernRuntimeRequest(new Request('http://runtime.test/tools'));
 
         expect(response.status).toBe(200);
-        await expect(response.json()).resolves.toEqual({
-            tools: [
-                {
+        await expect(response.json()).resolves.toMatchObject({
+            tools: expect.arrayContaining([
+                expect.objectContaining({
                     configured: true,
                     description: 'Run shell commands inside the agent workspace.',
                     enabled: true,
@@ -335,8 +410,8 @@ describe('Runtime agent and agent engine reads', () => {
                     name: 'bash',
                     readOnly: true,
                     tools: ['bash'],
-                },
-                {
+                }),
+                expect.objectContaining({
                     configured: true,
                     description: 'Read UTF-8 files from the agent workspace.',
                     enabled: true,
@@ -345,8 +420,8 @@ describe('Runtime agent and agent engine reads', () => {
                     name: 'read_file',
                     readOnly: true,
                     tools: ['read_file'],
-                },
-                {
+                }),
+                expect.objectContaining({
                     configured: true,
                     description:
                         'Read current Tavern chat messages by sequence, search text, or message id.',
@@ -356,8 +431,8 @@ describe('Runtime agent and agent engine reads', () => {
                     name: 'chat_messages',
                     readOnly: true,
                     tools: ['chat_messages_list', 'chat_messages_search', 'chat_message_get'],
-                },
-            ],
+                }),
+            ]),
         });
     });
 

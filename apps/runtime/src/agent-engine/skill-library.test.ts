@@ -28,9 +28,12 @@ describe('Runtime skill library', () => {
         );
         await fs.writeFile(path.join(skillsDir, 'research', 'README.md'), 'extra', 'utf8');
 
-        const skills = await listRuntimeSkills({ skillsDir });
-        const skill = await getRuntimeSkill('research', { skillsDir });
-        const coreSkill = await getRuntimeSkill(tavernAgentSkillId, { skillsDir });
+        const skills = await listRuntimeSkills({ includePluginSkills: false, skillsDir });
+        const skill = await getRuntimeSkill('research', { includePluginSkills: false, skillsDir });
+        const coreSkill = await getRuntimeSkill(tavernAgentSkillId, {
+            includePluginSkills: false,
+            skillsDir,
+        });
 
         expect(skills).toEqual(
             expect.arrayContaining([
@@ -76,7 +79,7 @@ describe('Runtime skill library', () => {
                 },
             },
         });
-        await expect(listRuntimeSkills({ skillsDir })).resolves.toEqual(
+        await expect(listRuntimeSkills({ includePluginSkills: false, skillsDir })).resolves.toEqual(
             expect.arrayContaining([expect.objectContaining({ id: 'tavern-workflow' })])
         );
     });

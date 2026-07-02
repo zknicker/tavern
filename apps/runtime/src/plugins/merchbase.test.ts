@@ -5,6 +5,7 @@ import { closeDb, getDb, initTestDb } from '../db/connection';
 import { ensureRuntimeSchema } from '../db/schema';
 import { subscribeToRuntimeEvents } from '../tavern/runtime-events';
 import { getMerchbaseSettings, queryMerchbaseAction, saveMerchbaseSettings } from './merchbase';
+import { createMerchbaseToolsForAgent } from './merchbase-tools';
 import { handlePluginsRequest } from './routes';
 import { getPlugin } from './store';
 
@@ -125,6 +126,39 @@ describe('MerchBase Plugin settings', () => {
             action: 'sales.summary',
             result: { unitsSold: 42 },
         });
+    });
+
+    test('exposes MerchBase tools only to agents with the Plugin grant', () => {
+        saveMerchbaseSettings({
+            apiKey: 'secret-key',
+            baseUrl: 'https://app.merchbase.co',
+            enabled: true,
+        });
+
+        expect(
+            Object.keys(
+                createMerchbaseToolsForAgent({
+                    enabledPluginIds: ['merchbase'],
+                    enabledSkillIds: [],
+                    id: 'agt_primary',
+                    isAdmin: true,
+                    name: 'Tavern',
+                    primaryColor: null,
+                    workspaceFolder: '/tmp/tavern-agent',
+                })
+            )
+        ).toEqual(expect.arrayContaining(['merchbase_sales_series', 'merchbase_products_get']));
+        expect(
+            createMerchbaseToolsForAgent({
+                enabledPluginIds: [],
+                enabledSkillIds: [],
+                id: 'agt_primary',
+                isAdmin: true,
+                name: 'Tavern',
+                primaryColor: null,
+                workspaceFolder: '/tmp/tavern-agent',
+            })
+        ).toEqual({});
     });
 
     test('refreshes and publishes MerchBase capability after settings saves', async () => {

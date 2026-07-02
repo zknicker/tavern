@@ -45,7 +45,7 @@ const builtInHubSkills = [
 export async function getSkillHubAvailable(
     options: { skillsDir?: string } = {}
 ): Promise<AgentRuntimeSkillHubAvailable> {
-    const installedSkills = await listRuntimeSkills(options);
+    const installedSkills = await listRuntimeSkills({ ...options, includePluginSkills: false });
     const installedNames = new Set(installedSkills.map((skill) => skill.name));
 
     return agentRuntimeSkillHubAvailableSchema.parse({
