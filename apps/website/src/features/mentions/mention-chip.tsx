@@ -2,9 +2,8 @@ import type * as React from 'react';
 import { cn } from '../../lib/utils.ts';
 import {
     getMentionAppearance,
+    getMentionChipColor,
     getMentionDisplayLabel,
-    getMentionIconToneClassName,
-    getMentionTextToneClassName,
     MentionAppearanceIcon,
 } from './mention-appearance.tsx';
 import type { MentionKind } from './mention-types.ts';
@@ -24,34 +23,37 @@ export function MentionChip({
 }) {
     const appearance = getMentionAppearance({ id, kind, label, metadata });
     const displayLabel = getMentionDisplayLabel({ id, kind, label, metadata });
-    const style = getMentionStyle(appearance);
 
     return (
         <span
             className={cn(
-                'inline-flex max-w-full items-center gap-0.5 whitespace-nowrap align-[-0.06em] font-semibold leading-[inherit]',
-                getMentionTextToneClassName(appearance.tone),
+                // Fixed leading keeps the chip the same height in every
+                // context (transcript, composer, drafts) instead of tracking
+                // the surrounding line-height.
+                'inline-flex max-w-full -translate-y-[0.05em] items-center gap-[0.22em] whitespace-nowrap rounded-md py-[0.06em] align-middle font-medium leading-[1.5]',
+                appearance.agentFace ? 'pr-[0.5em] pl-[0.3em]' : 'px-[0.45em]',
+                'bg-[color-mix(in_srgb,var(--mention-chip-color)_12%,transparent)] dark:bg-[color-mix(in_srgb,var(--mention-chip-color)_22%,transparent)]',
+                'text-[color:color-mix(in_srgb,var(--mention-chip-color)_50%,var(--foreground)_50%)]',
                 className
             )}
             contentEditable={false}
-            style={style}
+            style={
+                {
+                    '--mention-chip-color': getMentionChipColor(appearance),
+                } as React.CSSProperties
+            }
             title={displayLabel}
         >
             <MentionAppearanceIcon
+                agentFace={appearance.agentFace}
                 className={cn(
-                    'size-[1.02em] shrink-0 object-contain opacity-90',
-                    getMentionIconToneClassName(appearance.tone)
+                    'shrink-0 object-contain',
+                    appearance.agentFace ? 'size-[1.15em]' : 'size-[1.02em] opacity-90'
                 )}
                 icon={appearance.icon}
                 iconDataUrl={appearance.iconDataUrl}
             />
-            <span>{displayLabel}</span>
+            <span className="truncate">{displayLabel}</span>
         </span>
     );
-}
-
-function getMentionStyle(appearance: { brandColor?: string }) {
-    return appearance.brandColor
-        ? ({ '--mention-brand-color': appearance.brandColor } as React.CSSProperties)
-        : undefined;
 }

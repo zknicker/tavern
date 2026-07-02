@@ -87,6 +87,15 @@ export function selectMentionOptionsForQuery({
                 insertText: label.startsWith('@') ? label : `@${label}`,
                 kind: 'agent' as const,
                 label,
+                // Appearance rides in metadata so mention chips can render the
+                // agent's face without a live agent-list lookup (the composer
+                // chip mounts in its own React root, outside app providers).
+                metadata: agent?.effectiveCharacter
+                    ? {
+                          agentCharacter: agent.effectiveCharacter,
+                          agentColor: agent.effectivePrimaryColor ?? null,
+                      }
+                    : undefined,
                 projection: 'agent-reference' as const,
                 sourceLabel: 'Agents',
             };

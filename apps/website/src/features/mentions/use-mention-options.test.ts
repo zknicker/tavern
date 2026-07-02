@@ -85,6 +85,28 @@ describe('selectMentionOptionsForQuery', () => {
         ]);
     });
 
+    it('carries agent appearance into agent mention metadata', () => {
+        const options = selectMentionOptionsForQuery({
+            agents: [
+                {
+                    effectiveCharacter: 'penguin',
+                    effectivePrimaryColor: '#2563eb',
+                    id: 'agent:planner',
+                    name: 'Planner',
+                },
+            ] as never,
+            inventoryData: undefined,
+            mentionableAgentIds: ['agent:planner'],
+            pathData: undefined,
+            query: '',
+        });
+
+        expect(options[0]?.metadata).toEqual({
+            agentCharacter: 'penguin',
+            agentColor: '#2563eb',
+        });
+    });
+
     it('filters warmed inventory options locally', () => {
         const helium = createOption({ label: 'Helium' });
         const chrome = createOption({ label: 'Chrome' });

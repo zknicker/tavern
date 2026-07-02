@@ -12,6 +12,8 @@ import {
 } from '@hugeicons-pro/core-solid-rounded';
 import { Icon } from '../../components/ui/icon.tsx';
 import { cn } from '../../lib/utils.ts';
+import { agentColorPresets, resolveAgentInk } from '../agents/agent-color-presets.ts';
+import { AgentFace, HEAD_KINDS, type HeadName } from '../chats/agent-face.tsx';
 import type { MentionOptionKind } from './mention-types.ts';
 
 const mentionIconKeys = [
@@ -27,17 +29,14 @@ const mentionIconKeys = [
     'unknown',
 ] as const;
 
-const mentionToneKeys = ['brand', 'mention', 'path'] as const;
-
 export type MentionIconKey = (typeof mentionIconKeys)[number];
-export type MentionTone = (typeof mentionToneKeys)[number];
 
 export interface MentionAppearance {
+    agentFace?: { character: HeadName; color: string | null };
     brandColor?: string;
     icon: MentionIconKey;
     iconDataUrl?: string;
     label?: string;
-    tone: MentionTone;
 }
 
 interface MentionAppearanceInput {
@@ -50,14 +49,14 @@ interface MentionAppearanceInput {
 type MentionAppearanceOverride = Partial<MentionAppearance>;
 
 const defaultMentionAppearance = {
-    agent: { icon: 'agent', tone: 'mention' },
-    app: { icon: 'plugin', tone: 'mention' },
-    command: { icon: 'command', tone: 'mention' },
-    directory: { icon: 'folder', tone: 'path' },
-    file: { icon: 'file', tone: 'path' },
-    image: { icon: 'image', tone: 'path' },
-    plugin: { icon: 'plugin', tone: 'mention' },
-    skill: { icon: 'skill', tone: 'mention' },
+    agent: { icon: 'agent' },
+    app: { icon: 'plugin' },
+    command: { icon: 'command' },
+    directory: { icon: 'folder' },
+    file: { icon: 'file' },
+    image: { icon: 'image' },
+    plugin: { icon: 'plugin' },
+    skill: { icon: 'skill' },
 } satisfies Record<MentionOptionKind, MentionAppearance>;
 
 const skillAppearanceOverrides = {
@@ -65,34 +64,29 @@ const skillAppearanceOverrides = {
         brandColor: 'var(--foreground)',
         icon: 'github',
         label: 'GitHub Issues',
-        tone: 'brand',
     },
-    github: { brandColor: 'var(--foreground)', icon: 'github', label: 'GitHub', tone: 'brand' },
+    github: { brandColor: 'var(--foreground)', icon: 'github', label: 'GitHub' },
 } satisfies Record<string, MentionAppearanceOverride>;
 
 const capabilityAppearanceOverrides = {
     'computer-use@openai-bundled': {
         icon: 'plugin',
         label: 'Computer Use',
-        tone: 'mention',
     },
     'computer-use/google-chrome': {
         brandColor: 'var(--success-foreground)',
         icon: 'chrome',
         label: 'Chrome',
-        tone: 'brand',
     },
     'chrome@openai-bundled': {
         brandColor: 'var(--success-foreground)',
         icon: 'chrome',
         label: 'Chrome',
-        tone: 'brand',
     },
     chrome: {
         brandColor: 'var(--success-foreground)',
         icon: 'chrome',
         label: 'Chrome',
-        tone: 'brand',
     },
 } satisfies Record<string, MentionAppearanceOverride>;
 
@@ -120,14 +114,39 @@ export function getMentionAppearance(input: MentionAppearanceInput): MentionAppe
 }
 
 export function MentionAppearanceIcon({
+    agentFace,
     className,
     iconDataUrl,
     icon,
 }: {
+    agentFace?: MentionAppearance['agentFace'];
     className?: string;
     iconDataUrl?: string;
     icon: MentionIconKey;
 }) {
+    if (agentFace) {
+        // Chips can mount outside app providers (composer editor roots), so
+        // theme comes from the document class instead of the theme context.
+        const dark = isDocumentDark();
+
+        return (
+            <span
+                aria-hidden="true"
+                // -3% optical lift: the face reads centered against the label
+                // cap height (picked from a magnified variant comparison).
+                className={cn('flex -translate-y-[3%] items-center justify-center', className)}
+            >
+                <AgentFace
+                    animate={false}
+                    dark={dark}
+                    head={agentFace.character}
+                    ink={resolveAgentInk(dark, agentFace.color)}
+                    style={agentFaceIconStyle}
+                />
+            </span>
+        );
+    }
+
     if (iconDataUrl) {
         return (
             <img
@@ -148,28 +167,22 @@ export function getMentionDisplayLabel(input: MentionAppearanceInput) {
     return getMentionAppearance(input).label ?? input.label;
 }
 
-export function getMentionTextToneClassName(tone: MentionTone) {
-    return cn(
-        tone === 'brand' && 'text-[color:var(--mention-brand-color)]',
-        tone === 'mention' &&
-            'text-[color:color-mix(in_srgb,var(--info-foreground)_80%,var(--foreground)_20%)]',
-        tone === 'path' &&
-            'text-[color:color-mix(in_srgb,var(--info-foreground)_80%,var(--foreground)_20%)]'
-    );
-}
+// The accent driving a mention chip's tinted badge: the agent's configured
+// color, a brand override, or the shared mention accent.
+export function getMentionChipColor(appearance: MentionAppearance) {
+    if (appearance.agentFace) {
+        return appearance.agentFace.color ?? agentColorPresets[0].color;
+    }
 
-export function getMentionIconToneClassName(tone: MentionTone) {
-    return cn(
-        tone === 'brand' && 'text-[color:var(--mention-brand-color)]',
-        tone === 'mention' &&
-            'text-[color:color-mix(in_srgb,var(--info-foreground)_80%,var(--foreground)_20%)]',
-        tone === 'path' &&
-            'text-[color:color-mix(in_srgb,var(--info-foreground)_80%,var(--foreground)_20%)]'
-    );
+    return appearance.brandColor ?? 'var(--info-foreground)';
 }
 
 function getMentionAppearanceOverride(input: MentionAppearanceInput) {
     const metadataIconDataUrl = readString(input.metadata?.iconDataUrl);
+
+    if (input.kind === 'agent') {
+        return getAgentFaceOverride(input);
+    }
 
     if (input.kind === 'app' && metadataIconDataUrl) {
         return {
@@ -186,6 +199,36 @@ function getMentionAppearanceOverride(input: MentionAppearanceInput) {
     }
 
     return undefined;
+}
+
+// Agent mentions render the agent's character face tinted with its configured
+// color. Both ride in mention metadata (written at option-build time) so no
+// live agent lookup is needed where chips render.
+function getAgentFaceOverride(input: MentionAppearanceInput) {
+    const character = readString(input.metadata?.agentCharacter);
+
+    if (!(character && isHeadName(character)) || character === 'none') {
+        return undefined;
+    }
+
+    return {
+        agentFace: { character, color: readString(input.metadata?.agentColor) },
+    } satisfies MentionAppearanceOverride;
+}
+
+function isHeadName(value: string): value is HeadName {
+    return (HEAD_KINDS as readonly string[]).includes(value);
+}
+
+const agentFaceIconStyle = {
+    display: 'block',
+    height: '100%',
+    overflow: 'visible',
+    width: '100%',
+} as const;
+
+function isDocumentDark() {
+    return typeof document !== 'undefined' && document.documentElement.classList.contains('dark');
 }
 
 function getKeyedOverride(

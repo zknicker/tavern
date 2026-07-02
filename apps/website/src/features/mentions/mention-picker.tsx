@@ -116,6 +116,7 @@ export function MentionPicker({
                                     >
                                         <span className="flex w-full min-w-0 items-center gap-1 leading-normal">
                                             <MentionAppearanceIcon
+                                                agentFace={appearance.agentFace}
                                                 className="size-[15px] shrink-0 rounded-[3px] object-contain text-foreground"
                                                 icon={appearance.icon}
                                                 iconDataUrl={appearance.iconDataUrl}

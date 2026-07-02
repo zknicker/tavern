@@ -11,7 +11,6 @@ describe('mention appearance', () => {
             })
         ).toEqual({
             icon: 'skill',
-            tone: 'mention',
         });
     });
 
@@ -26,7 +25,6 @@ describe('mention appearance', () => {
             brandColor: 'var(--foreground)',
             icon: 'github',
             label: 'GitHub',
-            tone: 'brand',
         });
         expect(getMentionDisplayLabel(input)).toBe('GitHub');
     });
@@ -42,7 +40,6 @@ describe('mention appearance', () => {
             brandColor: 'var(--foreground)',
             icon: 'github',
             label: 'GitHub Issues',
-            tone: 'brand',
         });
     });
 
@@ -56,7 +53,6 @@ describe('mention appearance', () => {
         ).toEqual({
             icon: 'plugin',
             label: 'Computer Use',
-            tone: 'mention',
         });
         expect(
             getMentionAppearance({
@@ -68,7 +64,6 @@ describe('mention appearance', () => {
             brandColor: 'var(--success-foreground)',
             icon: 'chrome',
             label: 'Chrome',
-            tone: 'brand',
         });
         expect(
             getMentionDisplayLabel({
@@ -92,7 +87,6 @@ describe('mention appearance', () => {
         ).toEqual({
             icon: 'plugin',
             iconDataUrl: 'data:image/png;base64,abc',
-            tone: 'mention',
         });
     });
 
@@ -105,7 +99,6 @@ describe('mention appearance', () => {
             })
         ).toEqual({
             icon: 'file',
-            tone: 'path',
         });
     });
 });
