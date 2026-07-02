@@ -76,6 +76,38 @@ async function stageRuntimeAssets(stageRoot) {
     await fs.cp(path.join(repoRoot, 'apps', 'runtime', 'assets'), runtimeAssetsRoot, {
         recursive: true,
     });
+    await stageHarnessBridgeAssets(runtimeAssetsRoot);
+}
+
+async function stageHarnessBridgeAssets(runtimeAssetsRoot) {
+    const bridgeAssetsRoot = path.join(runtimeAssetsRoot, 'harness-bridges');
+    const bridgePackages = [
+        {
+            packageName: '@ai-sdk/harness-codex',
+            targetName: 'codex',
+        },
+        {
+            packageName: '@ai-sdk/harness-claude-code',
+            targetName: 'claude-code',
+        },
+    ];
+
+    await Promise.all(
+        bridgePackages.map(async (bridgePackage) => {
+            const sourcePath = path.join(
+                repoRoot,
+                'apps',
+                'runtime',
+                'node_modules',
+                ...bridgePackage.packageName.split('/'),
+                'dist',
+                'bridge'
+            );
+            await fs.cp(sourcePath, path.join(bridgeAssetsRoot, bridgePackage.targetName), {
+                recursive: true,
+            });
+        })
+    );
 }
 
 async function copyPackage(sourcePath, targetPath) {

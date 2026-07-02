@@ -39,6 +39,7 @@ import {
     upsertResponseActivity,
 } from './chat-api/index.ts';
 import { createTavernChatTools } from './chat-context-tools.ts';
+import { withRuntimeBridgeBootstrap } from './harness-bridge-bootstrap.ts';
 
 const emptyAssistantMessageDiagnostic = 'No reply: the harness returned empty content.';
 const maxAmbientContextMessages = 20;
@@ -256,14 +257,14 @@ function createHarness(input: AgentExecutorInput): HarnessV1<ToolSet> {
     const modelName = input.agentSession.effectiveModel;
     switch (modelName.provider) {
         case 'claude':
-            return createClaudeCode({
+            return createClaudeCodeHarnessForRuntime({
                 auth: claudeCodeAuthOptions(),
                 maxTurns: 8,
                 model: modelName.model,
                 thinking: claudeThinking(input.agent.thinkingDefault),
             }) as HarnessV1<ToolSet>;
         case 'codex':
-            return createCodex({
+            return createCodexHarnessForRuntime({
                 model: modelName.model,
                 reasoningEffort: codexReasoningEffort(input.agent.thinkingDefault),
             }) as HarnessV1<ToolSet>;
@@ -280,6 +281,16 @@ function createHarness(input: AgentExecutorInput): HarnessV1<ToolSet> {
         default:
             throw new Error(`Unsupported harness model provider "${modelName.provider}".`);
     }
+}
+
+export function createClaudeCodeHarnessForRuntime(
+    settings: Parameters<typeof createClaudeCode>[0] = {}
+) {
+    return withRuntimeBridgeBootstrap(createClaudeCode(settings), 'claude-code');
+}
+
+export function createCodexHarnessForRuntime(settings: Parameters<typeof createCodex>[0] = {}) {
+    return withRuntimeBridgeBootstrap(createCodex(settings), 'codex');
 }
 
 export function claudeCodeAuthOptions(): ClaudeCodeAuthOptions | undefined {
