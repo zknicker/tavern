@@ -26,7 +26,7 @@ export function BadgeDivider({
     const label = (
         <span
             className={cn(
-                'inline-flex shrink-0 items-center gap-2 rounded-full bg-brand-muted px-3 py-0.5 font-medium text-brand text-sm',
+                'inline-flex shrink-0 items-center gap-2 rounded-full bg-brand-muted px-3 py-0.5 font-medium text-brand-muted-foreground text-sm',
                 labelClassName
             )}
         >
@@ -40,7 +40,9 @@ export function BadgeDivider({
             {subtext}
         </span>
     ) : null;
-    const separator = <Separator className={cn('min-w-6 flex-1', separatorClassName)} />;
+    const separator = (
+        <Separator className={cn('min-w-6 flex-1 bg-border-strong', separatorClassName)} />
+    );
 
     return (
         <div className={cn('flex min-w-0 items-center gap-3', className)} {...props}>
