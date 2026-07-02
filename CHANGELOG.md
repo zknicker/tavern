@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.4.34 - 2026-07-02
+
+- Runtime: stages Codex and Claude Code harness bridge assets in packaged
+  Runtime artifacts so agent execution can bootstrap reliably after install.
+- App: keeps the chat rail visible on new-tab chat surfaces.
+
 ## v1.4.33 - 2026-07-02
 
 - Runtime: added executable model provider management with curated provider
