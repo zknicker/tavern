@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.4.37 - 2026-07-02
+
+- Runtime: runs the Codex bridge bootstrap install from the bridge directory in
+  non-interactive mode so Codex agent turns can recover cleanly after a failed
+  or stale sandbox install.
+- Runtime/App: separates assistant commentary from the final assistant reply and
+  preserves message phase metadata for chat rendering.
+- App: improves active-turn recovery, MerchBase Plugin chat capability
+  projection, Agent avatar rendering, and channel hash icon geometry.
+
 ## v1.4.36 - 2026-07-02
 
 - Runtime: recovers interrupted Agent turn rows on startup so a stale running
