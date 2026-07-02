@@ -1,3 +1,5 @@
+import { ArrowLeft01Icon, ArrowRight01Icon } from '@hugeicons-pro/core-stroke-rounded';
+import { Icon } from '../../../components/ui/icon.tsx';
 import { Button } from '../../../components/ui/primitives/button.tsx';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../../../components/ui/tooltip.tsx';
 import {
@@ -5,14 +7,21 @@ import {
     routeTabCapabilityRequirements,
     useCapability,
 } from '../../../hooks/connections/use-capability.ts';
+import { useHistoryNav } from '../../../hooks/shell/use-history-nav.ts';
 import type { RouteTab } from '../../../hooks/shell/use-route-tab.ts';
 import { routeTabs } from '../../../hooks/shell/use-route-tab.ts';
+import { cn } from '../../../lib/utils.ts';
+import { ChatParticipantFacepile } from '../../chats/chat-participant-facepile.tsx';
 import { RouteTabIcon } from '../route-tab-presentation.tsx';
+import { ToolbarBreadcrumb } from './toolbar-breadcrumb.tsx';
+import { useActiveChat } from './use-active-chat.ts';
 
 /**
- * The borderless toolbar row at the top of the content card — the section nav as icon
- * buttons (Aside-style), plus the active section label. `data-toolbar` marks the
- * strip/card boundary the shell hairline is measured against.
+ * The borderless toolbar row at the top of the content card — history controls,
+ * then the section nav as icon buttons (Aside-style), plus the active section
+ * label. Buttons keep the bar's soft-rectangle radius; no circular hovers.
+ * `data-toolbar` marks the strip/card boundary the shell hairline is measured
+ * against.
  */
 export function BrowserToolbarNav({
     activeRouteTab,
@@ -23,15 +32,13 @@ export function BrowserToolbarNav({
     isSettingsRoute: boolean;
     onSelectRouteTab: (tab: RouteTab) => void;
 }) {
-    const activeLabel = isSettingsRoute
-        ? 'Settings'
-        : (routeTabs.find((tab) => tab.id === activeRouteTab)?.label ?? null);
-
     return (
         <div
-            className="no-drag relative z-0 flex h-[38px] shrink-0 items-center gap-1 border-border/60 border-b px-2"
+            className="no-drag relative z-0 flex h-[38px] shrink-0 items-center gap-0.5 border-border/60 border-b px-2"
             data-toolbar
         >
+            <HistoryNavButtons />
+            <ToolbarDivider />
             {routeTabs.map((tab) => (
                 <BrowserNavButton
                     active={!isSettingsRoute && tab.id === activeRouteTab}
@@ -40,12 +47,59 @@ export function BrowserToolbarNav({
                     tab={tab.id}
                 />
             ))}
-            <div aria-hidden="true" className="mx-2 h-5 w-px bg-border/60" />
-            {activeLabel ? (
-                <span className="truncate text-[13px] text-muted-foreground">{activeLabel}</span>
-            ) : null}
+            <ToolbarDivider />
+            <ToolbarBreadcrumb />
+            <div className="flex-1" />
+            <ToolbarParticipants />
         </div>
     );
+}
+
+// Right-aligned participants slot: the active chat's facepile lives in the
+// shell toolbar now that chat views render no topbar of their own.
+function ToolbarParticipants() {
+    const { chat } = useActiveChat();
+
+    if (!chat) {
+        return null;
+    }
+
+    return <ChatParticipantFacepile chat={chat} />;
+}
+
+function HistoryNavButtons() {
+    const nav = useHistoryNav();
+
+    return (
+        <>
+            <Button
+                aria-label="Back"
+                className="text-muted-foreground hover:text-foreground"
+                disabled={!nav.canGoBack}
+                onClick={nav.back}
+                size="icon-sm"
+                title="Back"
+                variant="ghost"
+            >
+                <Icon className="size-[18px]" icon={ArrowLeft01Icon} strokeWidth={1.8} />
+            </Button>
+            <Button
+                aria-label="Forward"
+                className="text-muted-foreground hover:text-foreground"
+                disabled={!nav.canGoForward}
+                onClick={nav.forward}
+                size="icon-sm"
+                title="Forward"
+                variant="ghost"
+            >
+                <Icon className="size-[18px]" icon={ArrowRight01Icon} strokeWidth={1.8} />
+            </Button>
+        </>
+    );
+}
+
+function ToolbarDivider() {
+    return <div aria-hidden="true" className="mx-1.5 h-4 w-px bg-border/60" />;
 }
 
 function BrowserNavButton({
@@ -66,7 +120,9 @@ function BrowserNavButton({
         <Button
             aria-current={active ? 'page' : undefined}
             aria-label={label}
-            className="size-8 rounded-full"
+            className={cn(
+                active ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
+            )}
             disabled={!gate.healthy}
             onClick={() => onSelect(tab)}
             size="icon-sm"

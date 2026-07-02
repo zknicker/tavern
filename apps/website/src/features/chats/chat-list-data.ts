@@ -49,3 +49,13 @@ export function buildChatListItem(chat: ChatListRecord) {
 }
 
 export type ChatListItem = ReturnType<typeof buildChatList>[number];
+
+// The agent whose avatar represents this chat (DM rows, tab favicons, room
+// topbars). Prefers the agent participant, falling back to the bound agent.
+export function getChatAgentId(chat: ChatListItem) {
+    return (
+        chat.participants.find((participant) => participant.actorType === 'agent')?.actorId ??
+        chat.boundAgentIds[0] ??
+        null
+    );
+}

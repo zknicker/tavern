@@ -9,6 +9,7 @@ import { useChatGet } from '../../hooks/chats/use-chat-list.ts';
 import { useChatStartDrafts } from '../../hooks/chats/use-chat-start-drafts.tsx';
 import { useChatTimeline } from '../../hooks/chats/use-chat-timeline.ts';
 import { useModelList } from '../../hooks/models/use-model-list.ts';
+import { useAppLayoutPreference } from '../../hooks/shell/use-app-layout-preference.ts';
 import { appRoutes } from '../../lib/app-routes.ts';
 import { MissingAgentState } from '../agents/missing-agent-state.tsx';
 import { ArtifactPanelOpenProvider } from './artifact-panel-context.tsx';
@@ -150,6 +151,7 @@ export function isBlockingActiveTurn(input: {
 }
 
 function SyncedAgentChatDetail({ chat, chatId }: { chat: ChatListItem; chatId: string }) {
+    const { mode: layoutMode } = useAppLayoutPreference();
     const agentsQuery = useAgentList();
     const modelsQuery = useModelList();
     const agentId = resolveChatAgentId(chat);
@@ -219,7 +221,10 @@ function SyncedAgentChatDetail({ chat, chatId }: { chat: ChatListItem; chatId: s
                     </ChatDetailFooter>
                 }
                 hasPreviousPage={timeline.hasPreviousPage}
-                header={<ChatRoomTopbar chat={chat} />}
+                // Sidebar layout keeps the chat topbar (room identity, traffic
+                // light clearance); tabs layout renders the breadcrumb and
+                // participants in the shell toolbar instead.
+                header={layoutMode === 'sidebar' ? <ChatRoomTopbar chat={chat} /> : null}
                 historyLoaded={timeline.historyLoaded}
                 isFetchingPreviousPage={timeline.isFetchingPreviousPage}
                 isPending={timeline.isPending}

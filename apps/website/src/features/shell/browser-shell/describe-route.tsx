@@ -6,7 +6,7 @@ import { Icon } from '../../../components/ui/icon.tsx';
 import type { RouteTab } from '../../../hooks/shell/use-route-tab.ts';
 import { getRouteTab, routeTabs } from '../../../hooks/shell/use-route-tab.ts';
 import { appRoutes } from '../../../lib/app-routes.ts';
-import type { ChatListItem } from '../../chats/chat-list-data.ts';
+import { type ChatListItem, getChatAgentId } from '../../chats/chat-list-data.ts';
 import { getRouteTabIcon, getRouteTabIconNode } from '../route-tab-presentation.tsx';
 import { getRouteChatId, getRouteNewTabKey } from './chat-tabs-model.ts';
 import { TavernTabFavicon } from './tavern-tab-favicon.tsx';
@@ -65,6 +65,7 @@ export function renderRouteFavicon(
         const chat = descriptor.chatId ? chatById.get(descriptor.chatId) : undefined;
         return (
             <TavernTabFavicon
+                agentId={chat ? getChatAgentId(chat) : null}
                 busy={busy}
                 color={chat?.tabAppearance.color ?? null}
                 isChannel={chat?.conversationKind === 'channel'}

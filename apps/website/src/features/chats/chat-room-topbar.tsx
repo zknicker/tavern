@@ -1,28 +1,21 @@
-import { UserIcon } from '@hugeicons-pro/core-solid-rounded';
-import type * as React from 'react';
 import { ChannelIconBox } from '../../components/chats/channel-icon-box.tsx';
 import { resolveTavernChatName } from '../../components/chats/chat-display.ts';
 import { useResolvedThemeOptional } from '../../components/theme-provider.tsx';
-import { Icon } from '../../components/ui/icon.tsx';
-import { localHumanParticipantId } from '../../hooks/actors/use-actor.ts';
-import type { AgentFaceAppearance } from '../../hooks/agents/use-agent-appearance.ts';
 import { useAgentAppearanceLookup } from '../../hooks/agents/use-agent-appearance.ts';
-import { useUserProfilePreference } from '../../hooks/shell/use-user-profile-preference.ts';
-import { cn } from '../../lib/utils.ts';
 import { resolveAgentInk } from '../agents/agent-color-presets.ts';
 import { getChannelColorStyle } from '../shell/channel-color-options.ts';
 import { AgentFace } from './agent-face.tsx';
-import type { ChatListItem } from './chat-list-data.ts';
+import { type ChatListItem, getChatAgentId } from './chat-list-data.ts';
+import { ChatParticipantFacepile } from './chat-participant-facepile.tsx';
 
-// Inline width/height keep container svg rules from resizing the face.
-// 24 is a natural divisor of the 480px art frame and matches the boxed avatars.
-const faceStyle = { flexShrink: 0, height: 24, overflow: 'visible', width: 24 } as const;
-
+/**
+ * Chat header for the sidebar layout: room identity on the left, participants
+ * on the right, and the macOS traffic-light clearance the layout's CSS keys
+ * off `data-slot="chat-room-topbar"`. The tabs layout renders no chat topbar —
+ * its shell toolbar carries the breadcrumb and participants instead.
+ */
 export function ChatRoomTopbar({ chat }: { chat: ChatListItem }) {
     const title = formatRoomTitle(chat);
-    const participants = getVisibleParticipants(chat);
-    const channelStyle = getChannelColorStyle(chat.tabAppearance.color);
-    const lookupAppearance = useAgentAppearanceLookup();
 
     return (
         <header
@@ -31,117 +24,46 @@ export function ChatRoomTopbar({ chat }: { chat: ChatListItem }) {
             data-window-drag-region=""
         >
             <div className="flex min-w-0 items-center gap-2.5 pr-2 pl-[10px]">
-                <ChannelIconBox size="topbar" style={channelStyle} />
+                <RoomIcon chat={chat} />
                 <h1 className="min-w-0 truncate font-semibold text-foreground text-sm">{title}</h1>
             </div>
             <div className="no-drag flex min-w-0 items-center justify-end px-2">
-                <ul
-                    aria-label={`Participants: ${participants.map((participant) => participant.name).join(', ')}`}
-                    className="flex items-center -space-x-1.5"
-                >
-                    {participants.slice(0, 5).map((participant) => (
-                        <ParticipantAvatar
-                            appearance={
-                                participant.actorType === 'agent'
-                                    ? lookupAppearance(participant.actorId)
-                                    : null
-                            }
-                            key={participant.actorId}
-                            participant={participant}
-                        />
-                    ))}
-                </ul>
-                {participants.length > 5 ? (
-                    <span className="ml-2 font-medium text-muted-foreground text-xs tabular-nums">
-                        +{participants.length - 5}
-                    </span>
-                ) : null}
+                <ChatParticipantFacepile chat={chat} />
             </div>
         </header>
     );
 }
 
-function ParticipantAvatar({
-    appearance,
-    participant,
-}: {
-    appearance: AgentFaceAppearance | null;
-    participant: ChatListItem['participants'][number];
-}) {
+// Channels keep the colored hash box; DMs are represented by their agent's
+// face, matching the sidebar row (24px art in a 20px slot for optical parity).
+const topbarFaceStyle = { flexShrink: 0, height: 24, overflow: 'visible', width: 24 } as const;
+
+function RoomIcon({ chat }: { chat: ChatListItem }) {
+    const lookupAppearance = useAgentAppearanceLookup();
     const dark = useResolvedThemeOptional() === 'dark';
+    const channelStyle = getChannelColorStyle(chat.tabAppearance.color);
 
-    if (appearance && appearance.character !== 'none') {
-        return (
-            <li
-                className="relative flex size-6 shrink-0 items-center justify-center"
-                title={participant.name}
-            >
-                <AgentFace
-                    animate={false}
-                    dark={dark}
-                    head={appearance.character}
-                    ink={resolveAgentInk(dark, appearance.primaryColor)}
-                    size={24}
-                    style={faceStyle}
-                />
-            </li>
-        );
+    if (chat.conversationKind === 'channel') {
+        return <ChannelIconBox size="topbar" style={channelStyle} />;
     }
 
-    if (
-        participant.actorType === 'participant' &&
-        participant.actorId === localHumanParticipantId
-    ) {
-        return <LocalUserAvatar participant={participant} />;
+    const appearance = lookupAppearance(getChatAgentId(chat));
+
+    if (appearance.character === 'none') {
+        return <ChannelIconBox size="topbar" style={channelStyle} />;
     }
 
-    const style = getParticipantAvatarStyle(participant);
-
     return (
-        <li
-            className={cn(
-                'relative flex size-6 shrink-0 items-center justify-center overflow-hidden rounded-[0.5rem] border border-background bg-muted font-medium text-[0.625rem] text-muted-foreground shadow-[0_0_0_1px_var(--border)]',
-                participant.primaryColor ? 'text-white' : null
-            )}
-            style={style}
-            title={participant.name}
-        >
-            {isAvatarImage(participant.avatar) ? (
-                <img
-                    alt=""
-                    className="size-full object-cover"
-                    height={24}
-                    src={participant.avatar}
-                    width={24}
-                />
-            ) : (
-                getParticipantInitials(participant)
-            )}
-        </li>
-    );
-}
-
-function LocalUserAvatar({ participant }: { participant: ChatListItem['participants'][number] }) {
-    const profile = useUserProfilePreference();
-    const title = profile.displayName ?? participant.name;
-
-    return (
-        <li
-            className="relative flex size-6 shrink-0 items-center justify-center overflow-hidden rounded-[0.5rem] border border-background bg-muted text-muted-foreground shadow-[0_0_0_1px_var(--border)]"
-            title={title}
-        >
-            {profile.avatarUrl ? (
-                <img
-                    alt=""
-                    className="size-full object-cover"
-                    height={24}
-                    src={profile.avatarUrl}
-                    width={24}
-                />
-            ) : (
-                <Icon aria-hidden="true" className="size-3.5" icon={UserIcon} size={14} />
-            )}
-        </li>
+        <span aria-hidden="true" className="flex size-5 shrink-0 items-center justify-center">
+            <AgentFace
+                animate={false}
+                dark={dark}
+                head={appearance.character}
+                ink={resolveAgentInk(dark, appearance.primaryColor)}
+                size={24}
+                style={topbarFaceStyle}
+            />
+        </span>
     );
 }
 
@@ -149,52 +71,4 @@ function formatRoomTitle(chat: ChatListItem) {
     const title = resolveTavernChatName(chat).trim();
 
     return chat.conversationKind === 'channel' ? title.replace(/^#+/u, '') || title : title;
-}
-
-function getVisibleParticipants(chat: ChatListItem) {
-    if (chat.participants.length > 0) {
-        return chat.participants;
-    }
-
-    if (!chat.targetParticipant) {
-        return [];
-    }
-
-    return [
-        {
-            actorId: chat.targetParticipant.id,
-            actorType: 'participant' as const,
-            avatar: chat.targetParticipant.avatar,
-            name: chat.targetParticipant.name,
-            primaryColor: chat.targetParticipant.primaryColor,
-        },
-    ];
-}
-
-function getParticipantAvatarStyle(participant: ChatListItem['participants'][number]) {
-    return participant.primaryColor
-        ? ({ backgroundColor: participant.primaryColor } as React.CSSProperties)
-        : undefined;
-}
-
-function getParticipantInitials(participant: ChatListItem['participants'][number]) {
-    if (participant.avatar && !avatarLooksLikeImage(participant.avatar)) {
-        return participant.avatar.slice(0, 2).toUpperCase();
-    }
-
-    const words = participant.name.trim().split(/\s+/u).filter(Boolean);
-    const initials = words
-        .slice(0, 2)
-        .map((word) => word[0])
-        .join('');
-
-    return (initials || '?').toUpperCase();
-}
-
-function isAvatarImage(avatar: string | null): avatar is string {
-    return Boolean(avatar && avatarLooksLikeImage(avatar));
-}
-
-function avatarLooksLikeImage(avatar: string) {
-    return /^(data:image\/|https?:\/\/|blob:)/u.test(avatar);
 }

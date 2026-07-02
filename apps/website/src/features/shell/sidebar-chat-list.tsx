@@ -32,7 +32,7 @@ import { appRoutes } from '../../lib/app-routes.ts';
 import { markChatTiming } from '../../lib/chat-timing.ts';
 import { resolveAgentInk } from '../agents/agent-color-presets.ts';
 import { AgentFace } from '../chats/agent-face.tsx';
-import { buildChatList, type ChatListItem } from '../chats/chat-list-data.ts';
+import { buildChatList, type ChatListItem, getChatAgentId } from '../chats/chat-list-data.ts';
 import { buildChatPath } from '../chats/chat-path.ts';
 import { getChannelColorStyle } from './channel-color-options.ts';
 import {
@@ -408,7 +408,7 @@ function SidebarChatIcon({
         return <ChannelIconBox size="sidebar" style={style} />;
     }
 
-    const appearance = lookupAppearance(getSidebarChatAgentId(chat));
+    const appearance = lookupAppearance(getChatAgentId(chat));
 
     if (appearance.character !== 'none') {
         return (
@@ -432,14 +432,6 @@ function SidebarChatIcon({
         >
             {getSidebarParticipantInitial(chat)}
         </span>
-    );
-}
-
-function getSidebarChatAgentId(chat: ChatListItem) {
-    return (
-        chat.participants.find((participant) => participant.actorType === 'agent')?.actorId ??
-        chat.boundAgentIds[0] ??
-        null
     );
 }
 
