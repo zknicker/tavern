@@ -1,7 +1,10 @@
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { closeDb, getDb, initTestDb } from '../db/connection';
 import { ensureRuntimeSchema } from '../db/schema';
-import { createChat, getResponse, upsertResponse } from './chat-api';
+import { ensureCurrentAgentSession } from './agent-session-store';
+import { createAgentTurn, getAgentTurn } from './agent-turn-store';
+import { createChat, createMessage, getResponse, upsertResponse } from './chat-api';
+import { ensurePrimaryManagedAgent } from './managed-agent';
 import { recoverInterruptedChatResponses } from './turn-recovery';
 
 describe('turn recovery', () => {
@@ -45,6 +48,51 @@ describe('turn recovery', () => {
             },
         });
         expect(getResponse('rsp_done')?.status).toBe('completed');
+    });
+
+    test('finalizes orphaned non-terminal agent turns', () => {
+        const agent = ensurePrimaryManagedAgent();
+        createChat({ id: 'cht_1', title: 'Recovery' });
+        createMessage('cht_1', {
+            author_id: 'usr_demo',
+            content: 'hello',
+            id: 'msg_demo',
+            role: 'user',
+        });
+        createMessage('cht_1', {
+            author_id: agent.id,
+            content: 'hello',
+            id: 'msg_agent_seed',
+            role: 'assistant',
+        });
+        upsertResponse('cht_1', {
+            id: 'rsp_stuck',
+            participant_id: agent.id,
+            status: 'failed',
+            summary: 'Interrupted by an agent runtime restart.',
+        });
+        const session = ensureCurrentAgentSession({
+            agentParticipantId: agent.id,
+            chatId: 'cht_1',
+        });
+        createAgentTurn({
+            agentId: agent.id,
+            agentParticipantId: agent.id,
+            agentSessionId: session.id,
+            chatId: 'cht_1',
+            id: 'run_stuck',
+            responseId: 'rsp_stuck',
+            triggerMessageId: 'msg_demo',
+        });
+
+        const recovered = recoverInterruptedChatResponses();
+
+        expect(recovered).toBe(1);
+        expect(getAgentTurn('run_stuck')).toMatchObject({
+            completedAt: expect.any(String),
+            metadata: { error: 'Interrupted by an agent runtime restart.' },
+            status: 'failed',
+        });
     });
 
     test('is a no-op when every response is terminal', () => {

@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.4.36 - 2026-07-02
+
+- Runtime: recovers interrupted Agent turn rows on startup so a stale running
+  turn cannot block future Codex replies after restart.
+
 ## v1.4.35 - 2026-07-02
 
 - Runtime: pins the packaged Codex bridge to Codex 0.142.5 so installed

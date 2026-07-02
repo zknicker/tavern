@@ -1,5 +1,6 @@
 import { getDb } from '../db/connection';
 import type { Database } from '../db/sqlite';
+import { failAgentTurn } from './agent-turn-store';
 import { upsertResponse } from './chat-api';
 
 const interruptedSummary = 'Interrupted by an agent runtime restart.';
@@ -12,6 +13,10 @@ interface InterruptedResponseRow {
     request_message_id: null | string;
 }
 
+interface InterruptedTurnRow {
+    id: string;
+}
+
 /**
  * Finalizes chat responses orphaned in a non-terminal state by a Runtime
  * restart. The agent stream consumer lives in process memory, so a restart
@@ -19,6 +24,18 @@ interface InterruptedResponseRow {
  * finishes (or finished) on its own. Runs once at startup, before new turns.
  */
 export function recoverInterruptedChatResponses(db: Database = getDb()): number {
+    const turnRows = db
+        .prepare(
+            `SELECT id
+             FROM agent_turns
+             WHERE status IN ('queued', 'running')`
+        )
+        .all() as InterruptedTurnRow[];
+
+    for (const row of turnRows) {
+        failAgentTurn({ error: interruptedSummary, id: row.id }, db);
+    }
+
     const rows = db
         .prepare(
             `SELECT id, chat_id, participant_id, request_message_id, metadata_json
@@ -52,7 +69,7 @@ export function recoverInterruptedChatResponses(db: Database = getDb()): number 
         );
     }
 
-    return rows.length;
+    return rows.length + turnRows.length;
 }
 
 function readMetadata(value: null | string): Record<string, unknown> {

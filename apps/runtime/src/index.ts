@@ -36,9 +36,9 @@ async function main(): Promise<void> {
         log.warn('Runtime Doctor failed during startup', { err });
     });
     log.info('Runtime DB ready', { path: dbPath });
-    const recoveredTurns = recoverInterruptedChatResponses(db);
-    if (recoveredTurns > 0) {
-        log.info('Recovered interrupted chat responses', { count: recoveredTurns });
+    const recoveredRecords = recoverInterruptedChatResponses(db);
+    if (recoveredRecords > 0) {
+        log.info('Recovered interrupted agent records', { count: recoveredRecords });
     }
     const demoSeed = seedDevelopmentChatDemos({ db });
     if (demoSeed.seeded > 0) {
