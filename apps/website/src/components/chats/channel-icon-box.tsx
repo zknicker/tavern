@@ -3,18 +3,21 @@ import type * as React from 'react';
 import { cn } from '../../lib/utils.ts';
 import { Icon } from '../ui/icon.tsx';
 
+// One geometry everywhere; variants only swap the surface color tokens.
+const channelIconBoxGeometry = 'size-5 rounded-[0.4375rem]';
+const channelIconSize = 14;
+// Inline size so container rules like the sidebar menu button's
+// `[&_svg]:size-4.5` cannot inflate the glyph.
+const channelIconStyle = { height: channelIconSize, width: channelIconSize } as const;
+
 const channelIconBoxVariants = {
     sidebar: {
         boxClassName:
-            'size-[1.125rem] rounded-[0.375rem] bg-[var(--channel-color-bg-light,var(--sidebar-accent))] text-[var(--channel-color-light,var(--sidebar-muted))] dark:bg-[var(--channel-color-bg-dark,var(--sidebar-accent))] dark:text-[var(--channel-color-dark,var(--sidebar-muted))]',
-        iconClassName: 'size-[0.8125rem]',
-        iconSize: 13,
+            'bg-[var(--channel-color-bg-light,var(--sidebar-accent))] text-[var(--channel-color-light,var(--sidebar-muted))] dark:bg-[var(--channel-color-bg-dark,var(--sidebar-accent))] dark:text-[var(--channel-color-dark,var(--sidebar-muted))]',
     },
     topbar: {
         boxClassName:
-            'size-6 rounded-[0.5rem] bg-[var(--channel-color-bg-light,var(--muted))] text-[var(--channel-color-light,var(--muted-foreground))] dark:bg-[var(--channel-color-bg-dark,var(--muted))] dark:text-[var(--channel-color-dark,var(--muted-foreground))]',
-        iconClassName: 'size-[0.9375rem]',
-        iconSize: 15,
+            'bg-[var(--channel-color-bg-light,var(--muted))] text-[var(--channel-color-light,var(--muted-foreground))] dark:bg-[var(--channel-color-bg-dark,var(--muted))] dark:text-[var(--channel-color-dark,var(--muted-foreground))]',
     },
 } as const;
 
@@ -36,15 +39,17 @@ export function ChannelIconBox({
             aria-hidden="true"
             className={cn(
                 'flex shrink-0 items-center justify-center',
+                channelIconBoxGeometry,
                 variant.boxClassName,
                 className
             )}
             style={style}
         >
             <Icon
-                className={cn(variant.iconClassName, iconClassName)}
+                className={cn('shrink-0', iconClassName)}
                 icon={HashtagIcon}
-                size={variant.iconSize}
+                size={channelIconSize}
+                style={channelIconStyle}
             />
         </span>
     );
