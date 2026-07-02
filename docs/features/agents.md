@@ -29,7 +29,8 @@ can continue to feel primary-agent-first.
   dog, robot, ghost, or cloud) as its avatar; the animated eyes always sit
   inside a character and are never shown alone. Agents with no chosen character
   get a stable default derived from their id. Agent color labels the agent's
-  name; it does not tint the avatar.
+  name; it does not tint the avatar. To add or change a character, see
+  [Agent avatars](../internals/agent-avatars.md).
 * **Instruction files.** `AGENTS.md` is a generated, read-only artifact that
   Runtime composes from its sources; nobody edits it. Settings exposes
   `SOUL.md` from the agent's General page for identity and personality.

@@ -3,6 +3,8 @@ import * as z from 'zod';
 // Characters are the agent's visible avatar. Every agent wears one; the eyes
 // alone are never shown. Art for each kind lives in the app, but this list is
 // the single source of truth both the app UI and Runtime validation share.
+// Adding a character means adding its art to HEADS in the app's agent-face.tsx
+// too — full recipe: docs/internals/agent-avatars.md
 export const agentCharacters = [
     'knight',
     'penguin',

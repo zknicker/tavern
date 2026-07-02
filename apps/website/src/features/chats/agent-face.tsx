@@ -414,6 +414,9 @@ const ROBOT_ART_HALO = (
 );
 
 /* ───────────────────────────────────────────────────────────
+   Adding or updating a character avatar? Full recipe (art here + the
+   agentCharacters contract in @tavern/api): docs/internals/agent-avatars.md
+
    THE FRAME CONTRACT — one standard, zero per-head tuning.
    Canvas: 480×480. Eyes ALWAYS render at EYE_FRAME below; every head's
    art is pre-fit to it. To author a new head:
