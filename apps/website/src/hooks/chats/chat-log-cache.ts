@@ -296,6 +296,7 @@ function progressStepToMessageRow(input: {
             id,
             metadata: {
                 runtime: {
+                    ...(input.step.messagePhase ? { messagePhase: input.step.messagePhase } : {}),
                     runId: input.turn.runId,
                     sessionKey: input.turn.sessionKey,
                     source: 'agent-engine',

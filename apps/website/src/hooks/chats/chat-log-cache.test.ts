@@ -27,6 +27,7 @@ test('progress patch inserts assistant progress as a prose message row', () => {
             id: 'preamble-1',
             kind: 'message',
             label: 'Assistant reply',
+            messagePhase: 'commentary',
             status: 'active',
         },
         timestamp: '2026-05-22T19:00:01.000Z',
@@ -39,6 +40,11 @@ test('progress patch inserts assistant progress as a prose message row', () => {
         kind: 'message',
         message: {
             content: 'I will run a timed shell check before the final reply.',
+            metadata: {
+                runtime: {
+                    messagePhase: 'commentary',
+                },
+            },
             senderType: 'agent',
             sourceSessionKey: turn.sessionKey,
             timestamp: '2026-05-22T19:00:01.000Z',

@@ -225,6 +225,7 @@ function activityEventToRuntimeEvents(
             id: event.activity.id,
             kind: activityKind(event.activity),
             label: event.activity.title,
+            messagePhase: activityMessagePhase(event.activity) ?? undefined,
             richResponse,
             status: activityStatus(event.activity.status, event.type),
             toolCallId: metadataRuntimeString(event.activity.metadata, 'toolCallId'),
@@ -313,6 +314,14 @@ function activityKind(activity: TavernResponseActivity) {
         return 'rich_response' as const;
     }
     return 'tool' as const;
+}
+
+function activityMessagePhase(activity: TavernResponseActivity) {
+    const phase = metadataRuntimeString(activity.metadata, 'messagePhase');
+    if (phase === 'commentary' || phase === 'final_answer') {
+        return phase;
+    }
+    return null;
 }
 
 function clarificationFromActivity(activity: TavernResponseActivity) {

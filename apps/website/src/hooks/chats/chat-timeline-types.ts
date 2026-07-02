@@ -35,6 +35,7 @@ export interface ChatTurnProgressStep {
         | 'tool'
         | 'worker';
     label: string;
+    messagePhase?: 'commentary' | 'final_answer';
     richResponse?: {
         component: string | null;
         fallbackText: string;

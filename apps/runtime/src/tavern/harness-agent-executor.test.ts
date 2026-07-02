@@ -10,6 +10,8 @@ import { createChat, createMessage } from './chat-api/index.ts';
 import {
     claudeCodeAuthOptions,
     formatHarnessExecutionError,
+    harnessAssistantTextParts,
+    harnessFinalAssistantText,
     harnessPrompt,
     piAuthOptions,
 } from './harness-agent-executor.ts';
@@ -105,6 +107,52 @@ describe('harness agent executor', () => {
                 original
             )
         ).toBe(original);
+    });
+
+    it('keeps harness commentary separate from the final assistant answer', () => {
+        const result = harnessTextResult({
+            content: [
+                { text: 'I will check the tool.', type: 'text' },
+                { toolCallId: 'tool_1', toolName: 'chat_messages_list', type: 'tool-call' },
+                {
+                    text: 'It worked. `chat_messages_list` returned the first 3 messages.',
+                    type: 'text',
+                },
+            ],
+            text: 'I will check the tool.It worked. `chat_messages_list` returned the first 3 messages.',
+        });
+
+        expect(harnessAssistantTextParts(result)).toEqual([
+            {
+                content: 'I will check the tool.',
+                contentIndex: 0,
+                phase: 'commentary',
+            },
+            {
+                content: 'It worked. `chat_messages_list` returned the first 3 messages.',
+                contentIndex: 2,
+                phase: 'final_answer',
+            },
+        ]);
+        expect(harnessFinalAssistantText(result)).toBe(
+            'It worked. `chat_messages_list` returned the first 3 messages.'
+        );
+    });
+
+    it('treats a single harness text part as the final assistant answer', () => {
+        const result = harnessTextResult({
+            content: [{ text: 'Done.', type: 'text' }],
+            text: 'Done.',
+        });
+
+        expect(harnessAssistantTextParts(result)).toEqual([
+            {
+                content: 'Done.',
+                contentIndex: 0,
+                phase: 'final_answer',
+            },
+        ]);
+        expect(harnessFinalAssistantText(result)).toBe('Done.');
     });
 
     it('does not replay prior DM transcript messages into the harness prompt', () => {
@@ -323,6 +371,13 @@ function createPromptMessage(
         ...(input.parentMessageId ? { parent_message_id: input.parentMessageId } : {}),
         role: input.role,
     });
+}
+
+function harnessTextResult(input: {
+    content: Record<string, unknown>[];
+    text: string;
+}): Parameters<typeof harnessFinalAssistantText>[0] {
+    return input as unknown as Parameters<typeof harnessFinalAssistantText>[0];
 }
 
 function restoreEnv(key: string, value: string | undefined) {

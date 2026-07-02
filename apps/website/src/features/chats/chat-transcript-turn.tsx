@@ -574,6 +574,8 @@ function AssistantReplyText({
     revealText?: boolean;
 }) {
     const fullContent = content ?? (message ? getTranscriptMessageContent(message) : '');
+    const messagePhase = message ? getAssistantMessagePhase(message) : null;
+    const isCommentary = messagePhase === 'commentary';
     const revealedText = useRevealedText(fullContent, {
         enabled: revealText,
         revealKey: revealKey ?? (message ? getAssistantMessageRevealKey(message) : 'assistant'),
@@ -586,18 +588,36 @@ function AssistantReplyText({
     const attachments = message ? renderTranscriptMessageAttachments(message.attachments) : null;
 
     return (
-        <ChatMessage animateEnter={false} attachments={attachments} from="assistant">
+        <ChatMessage
+            animateEnter={false}
+            attachments={attachments}
+            className={isCommentary ? 'opacity-85' : undefined}
+            data-message-phase={messagePhase ?? undefined}
+            from="assistant"
+        >
             {message ? (
                 <ChatTranscriptMessageContent
                     animatedRanges={animatedRanges}
                     contentOverride={revealedText}
                     message={message}
+                    textClassName={isCommentary ? 'text-muted-foreground' : undefined}
                 />
             ) : (
                 <ChatMarkdownText animatedRanges={animatedRanges} content={revealedText} />
             )}
         </ChatMessage>
     );
+}
+
+function getAssistantMessagePhase(message: TranscriptMessage) {
+    const runtime = message.metadata?.runtime;
+
+    if (!(runtime && typeof runtime === 'object' && !Array.isArray(runtime))) {
+        return null;
+    }
+
+    const phase = (runtime as Record<string, unknown>).messagePhase;
+    return phase === 'commentary' || phase === 'final_answer' ? phase : null;
 }
 
 function getAssistantMessageRevealKey(message: TranscriptMessage) {

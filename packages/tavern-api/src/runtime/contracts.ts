@@ -2038,6 +2038,7 @@ export const agentRuntimeTurnSchema = z.object({
 });
 
 export const agentRuntimeTurnProgressStatusSchema = z.enum(['active', 'completed', 'failed']);
+export const agentRuntimeMessagePhaseSchema = z.enum(['commentary', 'final_answer']);
 
 export const agentRuntimeRichResponseProgressSchema = z.object({
     component: z.string().trim().min(1).nullable(),
@@ -2063,6 +2064,7 @@ export const agentRuntimeTurnProgressStepSchema = z.object({
         'worker',
     ]),
     label: z.string().trim().min(1),
+    messagePhase: agentRuntimeMessagePhaseSchema.optional(),
     status: agentRuntimeTurnProgressStatusSchema,
     clarification: agentRuntimeClarificationPromptSchema.optional(),
     toolCallId: z.string().trim().min(1).nullable().optional(),
