@@ -116,8 +116,8 @@ function bridgeAssetRoots(spec: BridgeBootstrapSpec) {
         [
             runtimeAssetsBridgeRoot(spec),
             homebrewRuntimeAssetsBridgeRoot(spec),
-            packageBridgeRoot(spec),
             sourceAssetsBridgeRoot(spec),
+            packageBridgeRoot(spec),
         ].filter((candidate): candidate is string => Boolean(candidate))
     );
 }

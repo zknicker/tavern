@@ -38,6 +38,23 @@ describe('harness bridge bootstrap', () => {
             path: '/tmp/harness/codex/host-tool-mcp.mjs',
         });
     });
+
+    it('prefers Tavern source assets over package bridge metadata', async () => {
+        const bootstrap = await withRuntimeBridgeBootstrap(fakeHarness(), 'codex').getBootstrap!();
+
+        expect(bootstrap.files).toContainEqual({
+            content: expect.stringContaining('"@openai/codex-sdk": "0.142.5"'),
+            path: '/tmp/harness/codex/package.json',
+        });
+        expect(bootstrap.files).toContainEqual({
+            content: expect.stringContaining('@openai/codex@0.142.5'),
+            path: '/tmp/harness/codex/pnpm-lock.yaml',
+        });
+        expect(bootstrap.files).toContainEqual({
+            content: expect.stringContaining('startToolRelay'),
+            path: '/tmp/harness/codex/bridge.mjs',
+        });
+    });
 });
 
 function fakeHarness() {

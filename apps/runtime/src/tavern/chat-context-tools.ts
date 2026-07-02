@@ -1,7 +1,7 @@
 import type { ToolSet } from '@ai-sdk/provider-utils';
 import type { TavernChatMessage } from '@tavern/api';
 import { tool } from 'ai';
-import { z } from 'zod';
+import * as z from 'zod';
 import { getMessage, listMessages, searchMessages } from './chat-api/index.ts';
 
 const toolLimit = z.number().int().positive().max(50).optional();

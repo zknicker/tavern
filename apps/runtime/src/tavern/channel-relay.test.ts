@@ -21,6 +21,7 @@ import {
 
 describe('Tavern channel relay', () => {
     const originalClaudeCommand = process.env.TAVERN_AGENT_CLAUDE_CODE_COMMAND;
+    const originalAgentTurnTimeout = process.env.TAVERN_AGENT_TURN_TIMEOUT_MS;
 
     beforeEach(async () => {
         ensureRuntimeSchema(initTestDb());
@@ -31,6 +32,7 @@ describe('Tavern channel relay', () => {
 
     afterEach(() => {
         restoreEnv('TAVERN_AGENT_CLAUDE_CODE_COMMAND', originalClaudeCommand);
+        restoreEnv('TAVERN_AGENT_TURN_TIMEOUT_MS', originalAgentTurnTimeout);
         resetAgentExecutorForTesting();
         closeDb();
     });
@@ -46,9 +48,13 @@ describe('Tavern channel relay', () => {
             status: 'accepted',
         });
 
-        await waitFor(() => getResponse('rsp_run_1')?.status === 'completed');
-
         const sessionId = 'ags_cht_general_agt_primary_1';
+        await waitFor(
+            () =>
+                getResponse('rsp_run_1')?.status === 'completed' &&
+                listAgentTurnsForSession(sessionId)[0]?.status === 'completed'
+        );
+
         expect(listAgentTurnsForSession(sessionId)).toMatchObject([
             {
                 activityIds: ['act_run_1_fake_executor'],
@@ -205,6 +211,32 @@ describe('Tavern channel relay', () => {
         expect(getResponse('rsp_run_1')).toMatchObject({
             status: 'failed',
             summary: '{"code":"auth_failed","message":"Provider auth failed"}',
+        });
+    });
+
+    it('settles turns that outlive the Runtime turn timeout', async () => {
+        process.env.TAVERN_AGENT_TURN_TIMEOUT_MS = '25';
+        createAgentChat('agt_primary');
+        const executor = createControlledExecutor();
+        setAgentExecutorForTesting(executor);
+
+        await sendTavernChannelMessage('cht_general', messageInput());
+        await waitFor(() => executor.startedRunIds().includes('run_1'));
+
+        await waitFor(() => getResponse('rsp_run_1')?.status === 'failed');
+
+        expect(executor.stoppedRunIds()).toEqual(['run_1']);
+        expect(listAgentTurnsForSession('ags_cht_general_agt_primary_1')).toMatchObject([
+            {
+                id: 'run_1',
+                metadata: { error: 'Agent turn timed out after 25ms.' },
+                status: 'failed',
+            },
+        ]);
+        expect(getResponse('rsp_run_1')).toMatchObject({
+            request_message_id: 'msg_1',
+            status: 'failed',
+            summary: 'Agent turn timed out after 25ms.',
         });
     });
 });

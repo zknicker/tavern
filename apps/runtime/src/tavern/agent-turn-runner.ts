@@ -1,3 +1,4 @@
+import { readConfigValue } from '../config.ts';
 import { createAgentEngineExecutor } from './agent-engine-executor.ts';
 import type { AgentExecutor, AgentExecutorInput } from './agent-executor';
 import {
@@ -15,6 +16,7 @@ interface ActiveTurn {
     seatKey: string;
 }
 
+const defaultAgentTurnTimeoutMs = 5 * 60 * 1000;
 const activeTurns = new Map<string, ActiveTurn>();
 const activeSeatRuns = new Map<string, string>();
 const queuedTurnInputs = new Map<string, AgentExecutorInput>();
@@ -120,7 +122,7 @@ async function drainAgentSeat(input: AgentExecutorInput) {
     activeTurns.set(turn.id, { input: turnInput, seatKey });
 
     try {
-        const result = await executor.execute(turnInput);
+        const result = await executeAgentTurnWithTimeout(turnInput);
         const current = getAgentTurn(turn.id);
         if (current?.status === 'running') {
             completeAgentTurn({
@@ -171,6 +173,39 @@ function clearActiveTurn(runId: string, seatKey: string) {
 
 function agentSeatKey(input: { agentSession: { id: string } }) {
     return input.agentSession.id;
+}
+
+function executeAgentTurnWithTimeout(input: AgentExecutorInput) {
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timeoutMs = resolveAgentTurnTimeoutMs();
+    const timeout = new Promise<never>((_, reject) => {
+        timer = setTimeout(() => {
+            void Promise.resolve(executor.stop?.(input.runId)).catch(() => {});
+            reject(new Error(`Agent turn timed out after ${formatDuration(timeoutMs)}.`));
+        }, timeoutMs);
+        timer.unref?.();
+    });
+
+    return Promise.race([executor.execute(input), timeout]).finally(() => {
+        if (timer) {
+            clearTimeout(timer);
+        }
+    });
+}
+
+function resolveAgentTurnTimeoutMs() {
+    const configured = Number(readConfigValue('TAVERN_AGENT_TURN_TIMEOUT_MS'));
+    return Number.isFinite(configured) && configured > 0 ? configured : defaultAgentTurnTimeoutMs;
+}
+
+function formatDuration(ms: number) {
+    if (ms % 60_000 === 0) {
+        return `${ms / 60_000}m`;
+    }
+    if (ms % 1000 === 0) {
+        return `${ms / 1000}s`;
+    }
+    return `${ms}ms`;
 }
 
 function formatTurnError(error: unknown) {

@@ -105,6 +105,9 @@ operators can create a subscription-backed long-lived token with
 
 Executor failures settle the Agent turn and linked response as failed Tavern
 state. They must not crash the Runtime process.
+Agent turns also have a Runtime watchdog (`TAVERN_AGENT_TURN_TIMEOUT_MS`,
+default 5 minutes) so a hung provider settles as failed instead of keeping the
+chat active forever.
 
 ## Model Providers And Inventory
 

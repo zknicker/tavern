@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.4.35 - 2026-07-02
+
+- Runtime: pins the packaged Codex bridge to Codex 0.142.5 so installed
+  Runtime turns do not hang on the older vendored Codex binary.
+- Runtime: fails stalled Agent turns after a configurable watchdog timeout
+  instead of leaving chat responses running forever.
+
 ## v1.4.34 - 2026-07-02
 
 - Runtime: stages Codex and Claude Code harness bridge assets in packaged

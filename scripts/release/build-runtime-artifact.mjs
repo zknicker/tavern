@@ -106,8 +106,29 @@ async function stageHarnessBridgeAssets(runtimeAssetsRoot) {
             await fs.cp(sourcePath, path.join(bridgeAssetsRoot, bridgePackage.targetName), {
                 recursive: true,
             });
+            await overlaySourceBridgeAssets(bridgeAssetsRoot, bridgePackage.targetName);
         })
     );
+}
+
+async function overlaySourceBridgeAssets(bridgeAssetsRoot, targetName) {
+    const sourcePath = path.join(
+        repoRoot,
+        'apps',
+        'runtime',
+        'assets',
+        'harness-bridges',
+        targetName
+    );
+    try {
+        await fs.cp(sourcePath, path.join(bridgeAssetsRoot, targetName), {
+            recursive: true,
+        });
+    } catch (error) {
+        if (error.code !== 'ENOENT') {
+            throw error;
+        }
+    }
 }
 
 async function copyPackage(sourcePath, targetPath) {
