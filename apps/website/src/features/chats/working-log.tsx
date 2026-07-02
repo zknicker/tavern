@@ -141,7 +141,7 @@ export function WorkingLog({
                     )}
                 </ThinkingStepsHeader>
                 <ThinkingStepsContent
-                    className={showDurationHeader ? undefined : 'relative z-10 min-h-28 pt-1'}
+                    className={showDurationHeader ? undefined : 'relative z-10 pt-1'}
                     id={panelId}
                 >
                     {items.map((item, index) => (

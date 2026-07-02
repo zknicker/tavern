@@ -1340,7 +1340,7 @@ test('ChatTranscript renders stopped turns as a muted system row', () => {
     ]);
 
     assert.match(markup, /Agent response stopped\./);
-    assert.match(markup, /rounded-full bg-error/);
+    assert.match(markup, /text-error-foreground/);
     assert.doesNotMatch(markup, /data-slot="drawer-trigger"/);
     assert.doesNotMatch(markup, /Working/);
     assert.doesNotMatch(markup, /Worked/);

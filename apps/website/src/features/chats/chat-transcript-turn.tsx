@@ -1,4 +1,4 @@
-import { Cancel01Icon } from '@hugeicons/core-free-icons';
+import { AlertCircleIcon, Cancel01Icon } from '@hugeicons/core-free-icons';
 import type { AgentCharacter } from '@tavern/api/agent-appearance';
 import { useReducedMotion } from 'framer-motion';
 import type * as React from 'react';
@@ -652,8 +652,13 @@ function AgentTurnFailure({
 
     return (
         <p className="group/failure max-w-[34rem] pl-0.5 text-sm leading-5" role="alert">
-            <span aria-hidden className="mr-2 inline-block size-2 rounded-full bg-error" />
-            <span className="font-medium text-error-foreground">Response failed</span>
+            <Icon
+                aria-hidden
+                className="mr-1.5 inline-block size-3.5 shrink-0 align-[-0.2em] text-error-foreground"
+                icon={AlertCircleIcon}
+                strokeWidth={2}
+            />
+            <span className="font-medium text-foreground/90">Response failed</span>
             <span className="text-muted-foreground"> · {item.failure.error}</span>
             {chatId && responseId ? (
                 <button
@@ -682,7 +687,12 @@ function AgentTurnStatus({
 }) {
     return (
         <p className="max-w-[34rem] pl-0.5 text-sm leading-5">
-            <span aria-hidden className="mr-2 inline-block size-2 rounded-full bg-error" />
+            <Icon
+                aria-hidden
+                className="mr-1.5 inline-block size-3.5 shrink-0 align-[-0.2em] text-error-foreground"
+                icon={AlertCircleIcon}
+                strokeWidth={2}
+            />
             <span className="font-medium text-muted-foreground">{item.row.turnStatus.text}</span>
         </p>
     );
