@@ -83,7 +83,8 @@ async function readBridgeBootstrap(spec: BridgeBootstrapSpec): Promise<HarnessV1
         commands: [
             { command: `mkdir -p ${spec.bootstrapDir}` },
             {
-                command: `pnpm --dir ${spec.bootstrapDir} install --frozen-lockfile --store-dir ${spec.bootstrapDir}/.pnpm-store`,
+                command: `CI=true pnpm install --frozen-lockfile --store-dir ${spec.bootstrapDir}/.pnpm-store`,
+                workingDirectory: spec.bootstrapDir,
             },
             ...(spec.postInstallCommands ?? []).map((command) => ({ command })),
         ],

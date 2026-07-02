@@ -55,6 +55,16 @@ describe('harness bridge bootstrap', () => {
             path: '/tmp/harness/codex/bridge.mjs',
         });
     });
+
+    it('runs bridge package install from the bootstrap directory', async () => {
+        const bootstrap = await withRuntimeBridgeBootstrap(fakeHarness(), 'codex').getBootstrap!();
+
+        expect(bootstrap.commands).toContainEqual({
+            command:
+                'CI=true pnpm install --frozen-lockfile --store-dir /tmp/harness/codex/.pnpm-store',
+            workingDirectory: '/tmp/harness/codex',
+        });
+    });
 });
 
 function fakeHarness() {
