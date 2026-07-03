@@ -1,5 +1,5 @@
 import { agentRuntimeMutationHeaders, agentRuntimeMutationOrigins } from '@tavern/api';
-import { afterEach, beforeEach, describe, expect, test } from 'vitest';
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { closeDb, initTestDb } from '../db/connection.ts';
 import { ensureRuntimeSchema } from '../db/schema.ts';
 import {
@@ -7,7 +7,7 @@ import {
     handleModelCategorySettingsRequest,
     resolveModelCategorySelection,
 } from './category-settings.ts';
-import { defaultAgentModelSelection } from './selection-service.ts';
+import { defaultWorkerModelSelection } from './selection-service.ts';
 
 describe('model category settings', () => {
     beforeEach(() => {
@@ -15,6 +15,7 @@ describe('model category settings', () => {
     });
 
     afterEach(() => {
+        vi.unstubAllEnvs();
         closeDb();
     });
 
@@ -29,7 +30,33 @@ describe('model category settings', () => {
             updatedAt: null,
         });
 
-        expect(resolveModelCategorySelection('fast')).toEqual(defaultAgentModelSelection());
+        expect(resolveModelCategorySelection('fast')).toEqual(defaultWorkerModelSelection());
+    });
+
+    test('automatic worker models fall back to a direct provider around a harness default', () => {
+        vi.stubEnv('TAVERN_AGENT_PROVIDER', 'claude');
+        vi.stubEnv('TAVERN_AGENT_MODEL', '');
+        vi.stubEnv('TAVERN_AGENT_OPENAI_MODEL', '');
+        vi.stubEnv('OPENAI_API_KEY', '');
+        vi.stubEnv('TAVERN_AGENT_API_KEY', '');
+        vi.stubEnv('AI_GATEWAY_API_KEY', '');
+        vi.stubEnv('VERCEL_OIDC_TOKEN', '');
+        vi.stubEnv('OPENROUTER_API_KEY', '');
+
+        // Nothing direct configured: keep the harness default so the
+        // memoryWorkers capability reports what is missing.
+        expect(resolveModelCategorySelection('fast').provider).toBe('claude');
+
+        // An OpenRouter key alone makes Automatic worker-runnable.
+        vi.stubEnv('OPENROUTER_API_KEY', 'or-test-key');
+        expect(resolveModelCategorySelection('fast')).toEqual({
+            model: 'openai/gpt-4.1-mini',
+            provider: 'openrouter',
+        });
+
+        // An OpenAI key wins over OpenRouter for the worker fallback.
+        vi.stubEnv('OPENAI_API_KEY', 'sk-test-key');
+        expect(resolveModelCategorySelection('fast').provider).toBe('openai');
     });
 
     test('saves partial category overrides', async () => {

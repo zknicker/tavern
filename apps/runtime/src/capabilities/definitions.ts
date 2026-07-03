@@ -14,6 +14,8 @@ import { AGENT_WORKSPACE } from '../config.ts';
 import { resolveSemanticMemoryConfig } from '../memory/semantic/store.ts';
 import { loadVaultBackedCodexCredentials } from '../model-access/codex-settings.ts';
 import { listAgentModels } from '../models/catalog-service.ts';
+import { resolveModelCategorySelection } from '../models/category-settings.ts';
+import { createLanguageModelForRuntime } from '../models/language-model.ts';
 import { resolveAgentModelSummary } from '../models/model-access.ts';
 import { checkMerchbaseCapability } from '../plugins/merchbase.ts';
 import { isDevToolkitEnabled } from '../tavern/development-turn-simulator.ts';
@@ -55,6 +57,17 @@ export const runtimeCapabilityDefinitions: RuntimeCapabilityDefinition[] = [
         },
         displayName: 'Memory',
         id: 'semanticMemory',
+        refresh: {
+            intervalMs: 5 * minuteMs,
+            runOnStart: true,
+        },
+    },
+    {
+        async check() {
+            return await checkMemoryWorkersCapability();
+        },
+        displayName: 'Memory updates',
+        id: 'memoryWorkers',
         refresh: {
             intervalMs: 5 * minuteMs,
             runOnStart: true,
@@ -138,6 +151,39 @@ export const runtimeCapabilityDefinitions: RuntimeCapabilityDefinition[] = [
         },
     },
 ];
+
+/**
+ * Extraction and dreaming run as headless model calls, so they need at least
+ * one direct model connection (OpenAI, OpenRouter, or an OpenAI-compatible
+ * endpoint). Harness-only setups can chat but cannot run Memory updates.
+ */
+async function checkMemoryWorkersCapability(): Promise<RuntimeCapabilityCheckResult> {
+    const categories = [
+        { category: 'fast', model: resolveModelCategorySelection('fast') },
+        { category: 'standard', model: resolveModelCategorySelection('standard') },
+    ] as const;
+    const metadata = Object.fromEntries(
+        categories.map((entry) => [entry.category, `${entry.model.provider}/${entry.model.model}`])
+    );
+
+    for (const entry of categories) {
+        try {
+            await createLanguageModelForRuntime(entry.model);
+        } catch (error) {
+            return {
+                metadata,
+                reason: 'Memory updates need a direct model connection. Add an OpenAI or OpenRouter key, or choose background models in Settings → Models.',
+                state: 'unavailable',
+                technicalMessage:
+                    error instanceof Error
+                        ? `${entry.category}: ${error.message}`
+                        : `${entry.category}: model unavailable`,
+            };
+        }
+    }
+
+    return { metadata, state: 'healthy' };
+}
 
 async function checkSemanticMemoryCapability(): Promise<RuntimeCapabilityCheckResult> {
     const config = await resolveSemanticMemoryConfig();

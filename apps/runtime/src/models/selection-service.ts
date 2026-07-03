@@ -2,6 +2,8 @@ import type { AgentRuntimeModelName } from '@tavern/api';
 import { isCliCommandAvailable } from '../agent-engine/cli-command.ts';
 import { readConfigValue } from '../config.ts';
 import type { Database } from '../db/sqlite.ts';
+import { getOpenAiApiKey } from '../model-access/openai-settings.ts';
+import { getOpenRouterApiKey } from '../model-access/openrouter-settings.ts';
 import {
     type AgentModelProvider,
     defaultClaudeModel,
@@ -53,6 +55,33 @@ export function defaultAgentModelSelection(): AgentRuntimeModelName {
             defaultModelForProvider(provider),
         provider,
     };
+}
+
+const directWorkerProviders = new Set(['openai', 'openai-compatible', 'openrouter', 'custom']);
+const defaultOpenRouterWorkerModel = 'openai/gpt-4.1-mini';
+
+/**
+ * Background Memory workers run as direct model calls, so their Automatic
+ * cannot follow a harness provider. Use the agent default when it is already
+ * direct; otherwise fall back to whichever direct connection is configured.
+ */
+export function defaultWorkerModelSelection(): AgentRuntimeModelName {
+    const agentDefault = defaultAgentModelSelection();
+    if (directWorkerProviders.has(agentDefault.provider)) {
+        return agentDefault;
+    }
+    if (hasOpenAiAccessConfig() || getOpenAiApiKey()) {
+        return {
+            model: readConfigValue('TAVERN_AGENT_OPENAI_MODEL') ?? defaultOpenAiModel,
+            provider: 'openai',
+        };
+    }
+    if (readConfigValue('OPENROUTER_API_KEY') ?? getOpenRouterApiKey()) {
+        return { model: defaultOpenRouterWorkerModel, provider: 'openrouter' };
+    }
+    // Nothing direct is configured; report the agent default so the
+    // memoryWorkers capability explains what is missing.
+    return agentDefault;
 }
 
 export function resolveConfiguredProvider(): AgentModelProvider {

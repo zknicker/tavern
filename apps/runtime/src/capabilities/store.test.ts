@@ -46,6 +46,7 @@ describe('Runtime capabilities store', () => {
             'dashboardServer',
             'devToolkit',
             'gateway',
+            'memoryWorkers',
             'modelExecution',
             'plugin.merchbase',
             'semanticMemory',

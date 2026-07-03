@@ -35,6 +35,12 @@ export async function handleModelAccessRequest(request: Request): Promise<Respon
             reason: 'provider_changed',
             scope: { kind: 'provider', providerId },
         });
+        // Lazy import: capability checks read model settings from this module tree.
+        void import('../capabilities/store.ts')
+            .then((store) =>
+                store.refreshRuntimeCapabilities({ ids: ['memoryWorkers'], publishUpdated: true })
+            )
+            .catch(() => {});
         return json(agentRuntimeModelProviderApiKeyResultSchema.parse({ ok: true }));
     }
 

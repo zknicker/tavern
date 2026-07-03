@@ -13,7 +13,7 @@ import {
 import { getDb } from '../db/connection.ts';
 import { namedParams } from '../db/sqlite.ts';
 import { forbidden, json } from '../tavern/http.ts';
-import { defaultAgentModelSelection } from './selection-service.ts';
+import { defaultWorkerModelSelection } from './selection-service.ts';
 
 const modelCategorySettingsMetadataKey = 'models:category-settings';
 
@@ -44,6 +44,12 @@ export async function handleModelCategorySettingsRequest(
             await request.json().catch(() => ({}))
         );
         const settings = saveModelCategorySettings(input);
+        // Lazy import: capabilities/definitions imports this module.
+        void import('../capabilities/store.ts')
+            .then((store) =>
+                store.refreshRuntimeCapabilities({ ids: ['memoryWorkers'], publishUpdated: true })
+            )
+            .catch(() => {});
 
         return json(
             agentRuntimeSaveModelCategorySettingsResultSchema.parse({
@@ -85,7 +91,7 @@ export function getModelCategorySettings(): AgentRuntimeModelCategorySettings {
 }
 
 export function resolveModelCategorySelection(category: AgentRuntimeModelCategory) {
-    return getModelCategorySettings().categories[category] ?? defaultAgentModelSelection();
+    return getModelCategorySettings().categories[category] ?? defaultWorkerModelSelection();
 }
 
 function saveModelCategorySettings(
