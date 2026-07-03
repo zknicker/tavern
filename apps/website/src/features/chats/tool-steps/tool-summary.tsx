@@ -43,6 +43,10 @@ export function ToolTimelineStep({
                 animateEnter && 'chat-step-enter'
             )}
             data-tool-row-hover-index={hoverItem.dataIndex}
+            // The proximity rail measures offsets against the rows container,
+            // so the registered element must be this outer row (its inner
+            // button's offsetParent is the row itself).
+            ref={hoverItem.ref}
         >
             {isLast ? null : <div className="absolute top-7 bottom-0 left-4 w-px bg-border/60" />}
             <Drawer onOpenChange={setIsOpen} open={isOpen} position="right">
@@ -51,10 +55,9 @@ export function ToolTimelineStep({
                         <button
                             aria-label={inspectLabel}
                             className={cn(
-                                'flex w-full min-w-0 cursor-default items-center gap-2 rounded-md py-1.5 pr-2 pl-3 text-left text-muted-foreground outline-none transition-none focus-visible:bg-surface-1 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
-                                !hoverItem.hasSharedHover && 'hover:bg-surface-1'
+                                'flex min-h-[var(--tool-row-min-h,1.75rem)] w-full min-w-0 cursor-default items-center gap-2 rounded-[var(--tool-row-hover-radius,var(--radius-md))] py-1.5 pr-2 pl-[var(--tool-row-inset,0.75rem)] text-left text-muted-foreground outline-none transition-none focus-visible:bg-hover focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
+                                !hoverItem.hasSharedHover && 'hover:bg-hover'
                             )}
-                            ref={hoverItem.ref}
                             title={inspectLabel}
                             type="button"
                         />

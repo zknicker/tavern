@@ -197,6 +197,7 @@ function SyncedAgentChatDetail({ chat, chatId }: { chat: ChatListItem; chatId: s
                     <ChatDetailFooter
                         activeReply={timeline.activeReply}
                         agents={agents}
+                        chatId={chat.id}
                         rows={rows}
                     >
                         <ChatMessageComposer

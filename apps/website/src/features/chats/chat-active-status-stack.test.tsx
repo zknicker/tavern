@@ -68,6 +68,48 @@ test('ChatActiveStatusStack follows current work state from active progress rows
     assert.match(markup, /aria-label="Agent is working"/);
 });
 
+test('ChatActiveStatusStack streams a cumulative work summary and offers turn details', () => {
+    const toolRow = (id: string, name: string, summary: string) =>
+        ({
+            actor: { id: 'agent-1', kind: 'agent' },
+            completedAt: '2026-07-01T17:00:02.000Z',
+            connectsToNext: false,
+            connectsToPrevious: false,
+            id,
+            isFirstInGroup: true,
+            kind: 'tool',
+            sessionKey: 'agent:agent-1:session-1',
+            spawnedRelationships: [],
+            startedAt: '2026-07-01T17:00:01.000Z',
+            toolCall: {
+                callId: id,
+                facts: [],
+                label: summary,
+                name,
+                status: 'ok',
+                summaryParts: [summary],
+            },
+        }) satisfies TranscriptRow;
+    const markup = renderToStaticMarkup(
+        <ChatActiveStatusStack
+            activeReply={activeReply}
+            agents={agents}
+            chatId="cht_test"
+            rows={[
+                toolRow('act_run-1_tool_1', 'exec', 'ls -la'),
+                toolRow('act_run-1_tool_2', 'exec', 'bun run lint'),
+                toolRow('act_run-1_tool_3', 'read_file', 'docs/README.md'),
+            ]}
+        />
+    );
+
+    assert.match(markup, /title="View turn details"/);
+    // Cumulative intent summary rides next to the thinking label, led by the
+    // work-group icon.
+    assert.match(markup, /Listed files, read a file/);
+    assert.match(markup, /size-3\.5 shrink-0/);
+});
+
 test('ChatActiveStatusStack does not render without an active reply', () => {
     const markup = renderToStaticMarkup(
         <ChatActiveStatusStack activeReply={null} agents={agents} rows={[]} />

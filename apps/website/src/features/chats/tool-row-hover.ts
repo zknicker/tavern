@@ -1,14 +1,13 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import * as React from 'react';
+import { type ItemRect, useProximityHover } from '../../hooks/use-proximity-hover.ts';
 import { springs } from '../../lib/springs.ts';
 
 interface ToolRowHoverContextValue {
-    activateItem: (index: number) => void;
     registerItem: (index: number, element: HTMLElement | null) => void;
 }
 
 const ToolRowHoverContext = React.createContext<ToolRowHoverContextValue | null>(null);
-const toolRowHoverIndexAttribute = 'data-tool-row-hover-index';
 
 export function ToolRowHoverRoot({
     children,
@@ -20,6 +19,12 @@ export function ToolRowHoverRoot({
     return React.createElement(ToolRowHoverContext.Provider, { value }, children);
 }
 
+/**
+ * Fluid-functionalism moving hover for a work group's tool rows: one shared
+ * rect glides to the row nearest the pointer (proximity tracking, the same
+ * helper the Table primitive uses) instead of blinking per row. Scoped to the
+ * rows content element so the group header keeps its own hover.
+ */
 export function useToolRowHoverGroup({
     enabled,
     headerRef,
@@ -29,110 +34,48 @@ export function useToolRowHoverGroup({
     headerRef: React.RefObject<HTMLButtonElement | null>;
     measureKey: string;
 }) {
-    const containerRef = React.useRef<HTMLDivElement>(null);
-    const itemsRef = React.useRef(new Map<number, HTMLElement>());
-    const activeIndexRef = React.useRef<number | null>(null);
-    const sessionRef = React.useRef(0);
-    const [activeRect, setActiveRect] = React.useState<ToolRowRect | null>(null);
-    const measureItem = React.useCallback((index: number) => {
-        const container = containerRef.current;
-        const item = itemsRef.current.get(index);
-
-        if (!(container && item)) {
-            return null;
-        }
-
-        const containerRect = container.getBoundingClientRect();
-        const itemRect = item.getBoundingClientRect();
-
-        return {
-            height: itemRect.height,
-            left: itemRect.left - containerRect.left + container.scrollLeft,
-            top: itemRect.top - containerRect.top + container.scrollTop,
-            width: itemRect.width,
-        };
-    }, []);
-
-    const activateItem = React.useCallback(
-        (index: number) => {
-            const nextRect = measureItem(index);
-
-            if (!nextRect) {
-                return;
-            }
-
-            if (activeIndexRef.current === null) {
-                sessionRef.current += 1;
-            }
-
-            activeIndexRef.current = index;
-            setActiveRect(nextRect);
-        },
-        [measureItem]
-    );
-
-    const clearActiveItem = React.useCallback(() => {
-        activeIndexRef.current = null;
-        setActiveRect(null);
-    }, []);
-
-    const registerItem = React.useCallback(
-        (index: number, element: HTMLElement | null) => {
-            if (element) {
-                itemsRef.current.set(index, element);
-            } else {
-                itemsRef.current.delete(index);
-            }
-
-            if (activeIndexRef.current === index) {
-                setActiveRect(element ? measureItem(index) : null);
-            }
-        },
-        [measureItem]
-    );
-
-    const contextValue = React.useMemo(
-        () => ({ activateItem, registerItem }),
-        [activateItem, registerItem]
-    );
+    const contentRef = React.useRef<HTMLDivElement | null>(null);
+    const {
+        activeIndex,
+        handlers,
+        itemRects,
+        measureItems,
+        registerItem,
+        sessionRef,
+        setActiveIndex,
+    } = useProximityHover(contentRef);
 
     React.useEffect(() => {
         if (!enabled) {
             return;
         }
 
-        const container = containerRef.current;
+        const content = contentRef.current;
 
-        if (!container) {
+        if (!content) {
             return;
         }
 
-        const activateFromTarget = (target: EventTarget | null) => {
-            const element =
-                target instanceof Element
-                    ? target.closest(`[${toolRowHoverIndexAttribute}]`)
-                    : null;
-            const value = element?.getAttribute(toolRowHoverIndexAttribute);
-            const index = value ? Number.parseInt(value, 10) : Number.NaN;
-
-            if (Number.isFinite(index)) {
-                activateItem(index);
-            }
-        };
-
-        const handleMouseOver = (event: MouseEvent) => activateFromTarget(event.target);
-        const handleFocusIn = (event: FocusEvent) => activateFromTarget(event.target);
-
-        container.addEventListener('mouseover', handleMouseOver);
-        container.addEventListener('focusin', handleFocusIn);
-        container.addEventListener('mouseleave', clearActiveItem);
+        content.addEventListener('mouseenter', handlers.onMouseEnter);
+        content.addEventListener('mousemove', handlers.onMouseMove);
+        content.addEventListener('mouseleave', handlers.onMouseLeave);
 
         return () => {
-            container.removeEventListener('mouseover', handleMouseOver);
-            container.removeEventListener('focusin', handleFocusIn);
-            container.removeEventListener('mouseleave', clearActiveItem);
+            content.removeEventListener('mouseenter', handlers.onMouseEnter);
+            content.removeEventListener('mousemove', handlers.onMouseMove);
+            content.removeEventListener('mouseleave', handlers.onMouseLeave);
         };
-    }, [activateItem, clearActiveItem, enabled]);
+    }, [enabled, handlers.onMouseEnter, handlers.onMouseMove, handlers.onMouseLeave]);
+
+    React.useEffect(() => {
+        if (enabled && measureKey.length > 0) {
+            measureItems();
+        }
+    }, [enabled, measureItems, measureKey]);
+
+    const clearActiveItem = React.useCallback(() => {
+        setActiveIndex(null);
+    }, [setActiveIndex]);
 
     const registerHeader = React.useCallback(
         (element: HTMLButtonElement | null) => {
@@ -141,15 +84,12 @@ export function useToolRowHoverGroup({
         [headerRef]
     );
 
-    React.useEffect(() => {
-        if (enabled && measureKey.length > 0 && activeIndexRef.current !== null) {
-            setActiveRect(measureItem(activeIndexRef.current));
-        }
-    }, [enabled, measureItem, measureKey]);
+    const contextValue = React.useMemo(() => ({ registerItem }), [registerItem]);
+    const activeRect = activeIndex === null ? null : (itemRects[activeIndex] ?? null);
 
     return {
         clearActiveItem,
-        containerRef,
+        contentRef,
         contextValue: enabled ? contextValue : null,
         hoverLayer: enabled
             ? React.createElement(ToolRowHoverHighlight, {
@@ -178,18 +118,11 @@ export function useToolRowHoverItem(index: number) {
     };
 }
 
-interface ToolRowRect {
-    height: number;
-    left: number;
-    top: number;
-    width: number;
-}
-
 function ToolRowHoverHighlight({
     activeRect,
     sessionKey,
 }: {
-    activeRect: ToolRowRect | null;
+    activeRect: ItemRect | null;
     sessionKey: number;
 }) {
     if (!activeRect) {
@@ -215,7 +148,8 @@ function ToolRowHoverHighlight({
                     width: activeRect.width,
                     height: activeRect.height,
                 },
-                className: 'absolute rounded-md bg-surface-1',
+                className:
+                    'absolute rounded-[var(--tool-row-hover-radius,var(--radius-md))] bg-hover',
                 initial: {
                     opacity: 0,
                     top: activeRect.top,

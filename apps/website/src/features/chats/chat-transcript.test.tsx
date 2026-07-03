@@ -9,9 +9,11 @@ import type { ChatActiveReply } from '../../hooks/chats/chat-timeline-state.ts';
 import { type ChatLogOutput, trpc } from '../../lib/trpc.tsx';
 import { ArtifactLogEntry } from '../sessions/log/event-entry/artifact-entry.tsx';
 import { ToolDrawerBody } from '../sessions/tools/tool-drawer-body.tsx';
+import { findLastAgentTurnEntry } from './chat-active-turn.ts';
 import { ChatTranscript } from './chat-transcript.tsx';
 import { SystemStep } from './chat-transcript-system-step.tsx';
 import { getActiveReplyDisplayText } from './chat-transcript-turn.tsx';
+import { ChatTurnBody } from './chat-turn-drawer.tsx';
 import { ToolStep } from './tool-steps/registry.tsx';
 
 test('ChatTranscript renders hover time and copy action without session or usage badges', () => {
@@ -257,8 +259,8 @@ test('active reply display text ignores invisible streaming edge whitespace', ()
     assert.equal(getActiveReplyDisplayText('\n\nDone.\n\n'), 'Done.');
 });
 
-test('ChatTranscript renders tool calls and agent responses through one surface', () => {
-    const markup = renderTranscript([
+test('ChatTranscript keeps tool calls out of the pane and in the turn body', () => {
+    const rows: ChatRow[] = [
         {
             actor: { id: 'tiny', kind: 'agent' },
             completedAt: '2026-03-31T15:00:01.000Z',
@@ -297,18 +299,25 @@ test('ChatTranscript renders tool calls and agent responses through one surface'
                 timestamp: '2026-03-31T15:00:01.000Z',
             },
         },
-    ]);
+    ];
+    const markup = renderTranscript(rows);
 
     assert.match(markup, /Done\./);
     assert.doesNotMatch(markup, /Worked/);
     assert.doesNotMatch(markup, /Agent idle/);
-    // Completed work starts collapsed; users expand it on demand.
-    assert.match(markup, /aria-expanded="false"/);
-    assert.doesNotMatch(markup, /aria-expanded="true"/);
+    // The pane is prose-only; tool work renders in the turn drawer instead.
+    assert.doesNotMatch(markup, /aria-expanded/);
+    assert.doesNotMatch(markup, /command -v gog/);
+
+    const turnBody = renderTurnBody(rows);
+
+    assert.match(turnBody, /command -v gog/);
+    // The drawer opens work groups by default.
+    assert.match(turnBody, /aria-expanded="true"/);
 });
 
 test('ChatTranscript labels recovered tool failures without making the final reply look failed', () => {
-    const markup = renderTranscript([
+    const rows: ChatRow[] = [
         {
             actor: { id: 'tiny', kind: 'agent' },
             completedAt: '2026-03-31T15:00:01.000Z',
@@ -367,11 +376,16 @@ test('ChatTranscript labels recovered tool failures without making the final rep
                 timestamp: '2026-03-31T15:00:03.000Z',
             },
         },
-    ]);
+    ];
+    const markup = renderTranscript(rows);
 
-    assert.match(markup, /Recovered after failed file read: bad-upload\.png/);
     assert.match(markup, /Done\./);
     assert.doesNotMatch(markup, /Final reply failed/);
+    assert.doesNotMatch(markup, /Recovered after failed file read/);
+
+    const turnBody = renderTurnBody(rows);
+
+    assert.match(turnBody, /Recovered after failed file read: bad-upload\.png/);
 });
 
 test('ChatTranscript renders chart Rich Responses inline', () => {
@@ -814,7 +828,7 @@ test('SystemStep uses leading bold thinking text as the thinking step title', ()
 });
 
 test('ChatTranscript keeps hidden thinking out of tool work headers', () => {
-    const markup = renderTranscript([
+    const markup = renderTurnBody([
         {
             id: 'thinking-1',
             kind: 'system',
@@ -1396,7 +1410,7 @@ test('ChatTranscript does not keep timing a stopped active turn', () => {
 
     assert.match(markup, /Agent response stopped\./);
     assert.doesNotMatch(markup, /Agent idle/);
-    assert.match(markup, /Ran a command/);
+    assert.doesNotMatch(markup, /Ran a command/);
     assert.doesNotMatch(markup, /Working for/);
 });
 
@@ -1548,7 +1562,7 @@ test('ChatTranscript omits empty non-thinking replies from transcript status', (
 
 test('ChatTranscript shows active progress through the same thinking steps surface', () => {
     const now = Date.now();
-    const markup = renderActiveTranscript(
+    const markup = renderActiveTurnBody(
         {
             agentId: 'tiny',
             isThinking: true,
@@ -1641,7 +1655,7 @@ test('ChatTranscript shows active progress through the same thinking steps surfa
 });
 
 test('ChatTranscript renders active tool progress as one-line status rows', () => {
-    const markup = renderActiveTranscript(
+    const markup = renderActiveTurnBody(
         {
             agentId: 'tiny',
             isThinking: true,
@@ -1785,7 +1799,7 @@ test('ChatTranscript renders free-text clarifications as read-only question rows
 });
 
 test('ChatTranscript wires active progress tool ids to the tool drawer trigger', () => {
-    const markup = renderActiveTranscript(
+    const markup = renderActiveTurnBody(
         {
             agentId: 'tiny',
             isThinking: true,
@@ -1860,7 +1874,7 @@ test('ChatTranscript keeps live progress in working state when current steps are
 });
 
 test('ChatTranscript keeps active work headers stable between fast completed tools', () => {
-    const markup = renderActiveTranscript(
+    const markup = renderActiveTurnBody(
         {
             agentId: 'tiny',
             isThinking: true,
@@ -1919,7 +1933,7 @@ test('ChatTranscript keeps active work headers stable between fast completed too
 
 test('ChatTranscript keeps narration messages in the work log above later tools', () => {
     const now = Date.now();
-    const markup = renderActiveTranscript(
+    const markup = renderActiveTurnBody(
         {
             agentId: 'tiny',
             isThinking: true,
@@ -2054,6 +2068,52 @@ function renderTranscript(
             </QueryClientProvider>
         </trpc.Provider>
     );
+}
+
+// Renders the turn-drawer body for the last agent turn — the surface tool
+// work moved to now that the chat pane is prose-only.
+function renderTurnBody(
+    rows: ChatRow[],
+    activeReply: ChatActiveReply | null = null,
+    options: { showThinkingText?: boolean } = {}
+) {
+    const entry = findLastAgentTurnEntry({
+        activeReply,
+        rows,
+        showThinkingText: options.showThinkingText,
+    });
+    const queryClient = new QueryClient({
+        defaultOptions: {
+            queries: {
+                retry: false,
+            },
+        },
+    });
+    const client = trpc.createClient({
+        links: [
+            httpLink({
+                url: 'http://127.0.0.1:1/trpc',
+            }),
+        ],
+    });
+
+    return renderToStaticMarkup(
+        <trpc.Provider client={client} queryClient={queryClient}>
+            <QueryClientProvider client={queryClient}>
+                <MemoryRouter>
+                    <ChatTurnBody
+                        chatId="cht_test"
+                        entry={entry}
+                        turnActive={Boolean(activeReply)}
+                    />
+                </MemoryRouter>
+            </QueryClientProvider>
+        </trpc.Provider>
+    );
+}
+
+function renderActiveTurnBody(activeReply: ChatActiveReply, rows: ChatRow[] = []) {
+    return renderTurnBody(rows, activeReply);
 }
 
 function renderActiveTranscript(

@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { Icon } from '../../components/ui/icon.tsx';
+import { Elevated } from '../../components/ui/surface.tsx';
 import { cn } from '../../lib/utils.ts';
 import { hasErrorStatus } from '../sessions/tools/tool-ui.ts';
 import { ActivityStep } from './chat-transcript-activity-step.tsx';
@@ -18,6 +19,7 @@ import { useStableWorkGroupLabel, WorkGroupHeaderText } from './work-group-heade
 
 export function WorkingLog({
     animateEnter = false,
+    appearance = 'transcript',
     chatId,
     currentSessionKey,
     defaultOpen: defaultOpenOverride,
@@ -28,6 +30,9 @@ export function WorkingLog({
     status,
 }: {
     animateEnter?: boolean;
+    // 'card' fills a bordered container (the turn drawer): full-bleed header
+    // strip, no transcript alignment offsets.
+    appearance?: 'card' | 'transcript';
     chatId?: string;
     currentSessionKey?: string | null;
     defaultOpen?: boolean;
@@ -93,20 +98,29 @@ export function WorkingLog({
                 // Group mode keeps the horizontal hover affordance without
                 // compressing the surrounding turn rhythm.
                 className={cn(
-                    'w-full max-w-[34rem]',
-                    groupMode && 'relative -ml-2 w-[calc(100%+0.5rem)]',
+                    'w-full',
+                    appearance === 'transcript' && 'max-w-[34rem]',
+                    // The hover rail positions against this container.
+                    groupMode && 'relative',
+                    groupMode && appearance === 'transcript' && '-ml-2 w-[calc(100%+0.5rem)]',
                     groupMode && animateEnter && 'chat-step-enter'
                 )}
                 onOpenChange={setOpen}
                 open={open}
-                ref={groupMode ? rowHover.containerRef : undefined}
             >
-                {rowHover.hoverLayer}
                 <ThinkingStepsHeader
                     aria-controls={panelId}
                     className={
                         groupMode
-                            ? 'relative z-10 w-full py-1.5 pr-2 pl-3 font-normal text-muted-foreground/85 text-sm outline-none transition-none hover:bg-surface-1 hover:text-muted-foreground/85 focus-visible:bg-surface-1 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset'
+                            ? cn(
+                                  'relative z-10 w-full py-1.5 pr-2 pl-3 font-normal text-muted-foreground/85 text-sm outline-none transition-none hover:bg-chat-log-row-hover hover:text-muted-foreground/85 focus-visible:bg-chat-log-row-hover focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset',
+                                  // Card appearance: a true header above the
+                                  // rows card, hugging its own label. Hover
+                                  // lightens the text and icons instead of
+                                  // painting a bg behind the tight label.
+                                  appearance === 'card' &&
+                                      'h-7 w-auto items-center rounded-md py-0 pr-2 pl-1.5 font-medium text-muted-foreground hover:bg-transparent hover:text-foreground/75 focus-visible:bg-transparent hover:[&_svg]:text-foreground/75'
+                              )
                             : undefined
                     }
                     onFocus={groupMode ? rowHover.clearActiveItem : undefined}
@@ -114,7 +128,11 @@ export function WorkingLog({
                     onMouseEnter={groupMode ? rowHover.clearActiveItem : undefined}
                     onPointerDown={disclosureAnchor.capture}
                     ref={groupMode ? rowHover.registerHeader : disclosureAnchor.triggerRef}
-                    wrapperClassName={groupMode ? 'relative z-10 w-full' : undefined}
+                    wrapperClassName={
+                        groupMode
+                            ? cn('relative z-10 w-full', appearance === 'card' && 'w-fit')
+                            : undefined
+                    }
                 >
                     {groupMode ? (
                         <span className="flex min-w-0 items-center gap-2">
@@ -141,24 +159,67 @@ export function WorkingLog({
                     )}
                 </ThinkingStepsHeader>
                 <ThinkingStepsContent
-                    className={showDurationHeader ? undefined : 'relative z-10 pt-1'}
+                    className={showDurationHeader ? undefined : cn('relative z-10 pt-1')}
                     id={panelId}
+                    ref={groupMode && appearance !== 'card' ? rowHover.contentRef : undefined}
                 >
-                    {items.map((item, index) => (
-                        <ActivityStep
-                            animateEnter={isActive}
-                            chatId={chatId}
-                            currentSessionKey={currentSessionKey}
-                            index={index}
-                            isLast={index === items.length - 1}
-                            item={item}
-                            key={getActivityItemKey(item)}
-                        />
-                    ))}
+                    {groupMode && appearance === 'card' ? (
+                        // The rows sit on their own card surface below the
+                        // header; it owns the hover rail so the moving bg
+                        // clips to the card's rounded corners.
+                        <Elevated
+                            className="relative overflow-hidden rounded-2xl border border-border/45 p-1 [--tool-row-min-h:2.25rem]"
+                            offset={1}
+                            ref={rowHover.contentRef}
+                            shadowLevel={1}
+                        >
+                            {rowHover.hoverLayer}
+                            <WorkingLogSteps
+                                chatId={chatId}
+                                currentSessionKey={currentSessionKey}
+                                isActive={isActive}
+                                items={items}
+                            />
+                        </Elevated>
+                    ) : (
+                        <>
+                            {rowHover.hoverLayer}
+                            <WorkingLogSteps
+                                chatId={chatId}
+                                currentSessionKey={currentSessionKey}
+                                isActive={isActive}
+                                items={items}
+                            />
+                        </>
+                    )}
                 </ThinkingStepsContent>
             </ThinkingSteps>
         </ToolRowHoverRoot>
     );
+}
+
+function WorkingLogSteps({
+    chatId,
+    currentSessionKey,
+    isActive,
+    items,
+}: {
+    chatId?: string;
+    currentSessionKey?: string | null;
+    isActive: boolean;
+    items: ActivityItem[];
+}) {
+    return items.map((item, index) => (
+        <ActivityStep
+            animateEnter={isActive}
+            chatId={chatId}
+            currentSessionKey={currentSessionKey}
+            index={index}
+            isLast={index === items.length - 1}
+            item={item}
+            key={getActivityItemKey(item)}
+        />
+    ));
 }
 
 function findFirstPendingClarificationId(items: ActivityItem[]) {

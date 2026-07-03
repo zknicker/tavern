@@ -6,10 +6,12 @@ import {
     MessageScrollerItem,
     MessageScrollerProvider,
     MessageScrollerViewport,
+    useMessageScroller,
 } from '../../components/ui/message-scroller.tsx';
 import type { ChatActiveReply, ChatTurnFailure } from '../../hooks/chats/chat-timeline-state.ts';
 import { useChatThinkingDisplayPreference } from '../../hooks/chats/use-chat-thinking-display-preference.ts';
 import { markChatTiming } from '../../lib/chat-timing.ts';
+import { getTranscriptItemKey } from './chat-transcript-item-utils.ts';
 import {
     buildTranscriptEntries,
     type ConversationMessageLayout,
@@ -83,6 +85,25 @@ export function ChatTranscript({
         () => buildChatTurnTimelineMarkers(transcriptRows),
         [transcriptRows]
     );
+    const lastUserTurnAnchor = React.useMemo(() => {
+        for (let index = transcriptRows.length - 1; index >= 0; index -= 1) {
+            const row = transcriptRows[index];
+
+            if (row && isTranscriptRenderRowScrollAnchor(row) && row.kind === 'entry') {
+                const lastItem = row.entry.kind === 'turn' ? row.entry.items.at(-1) : null;
+
+                return {
+                    // Consecutive sends group into one turn entry, so the
+                    // change signal must include the newest item, not just
+                    // the entry id.
+                    changeKey: `${row.id}:${lastItem ? getTranscriptItemKey(lastItem) : ''}`,
+                    rowId: row.id,
+                };
+            }
+        }
+
+        return null;
+    }, [transcriptRows]);
     const latestAgentMessage = React.useMemo(() => getLatestAgentMessage(rows), [rows]);
     const renderContext = React.useMemo(
         () =>
@@ -157,6 +178,7 @@ export function ChatTranscript({
                         )
                     )}
                 </MessageScrollerContent>
+                <UserTurnAnchorEffect anchor={lastUserTurnAnchor} chatId={chatId} />
             </div>
         </TranscriptRenderProvider>
     );
@@ -178,6 +200,50 @@ function isTranscriptRenderRowScrollAnchor(
     row: ReturnType<typeof buildTranscriptRenderRows>[number]
 ) {
     return row.kind === 'entry' && row.entry.kind === 'turn' && row.entry.participant === 'user';
+}
+
+// Anchors a freshly sent user message to the top of the viewport (spacer
+// below, Claude-style). The scroller primitive only does this on its own when
+// the item count grows; in windowed chats a new message trims older rows at
+// the same time, so the count stays flat and the anchor must be explicit.
+function UserTurnAnchorEffect({
+    anchor,
+    chatId,
+}: {
+    anchor: { changeKey: string; rowId: string } | null;
+    chatId?: string;
+}) {
+    const { scrollToMessage } = useMessageScroller();
+    const changeKey = anchor?.changeKey ?? null;
+    const rowId = anchor?.rowId ?? null;
+    const stateRef = React.useRef({ changeKey, chatId });
+    // Latest-callback ref: the scroller context rebuilds its callbacks across
+    // renders, and a callback dep would re-run this effect (cancelling the
+    // scheduled frame) before it fires.
+    const scrollToMessageRef = React.useRef(scrollToMessage);
+    scrollToMessageRef.current = scrollToMessage;
+
+    React.useEffect(() => {
+        const previous = stateRef.current;
+        stateRef.current = { changeKey, chatId };
+
+        // Never anchor on mount or when switching chats — only when a new
+        // user message lands in the same chat.
+        if (
+            !(changeKey && rowId) ||
+            previous.chatId !== chatId ||
+            previous.changeKey === changeKey
+        ) {
+            return;
+        }
+
+        // Synchronous on purpose: requestAnimationFrame never fires in
+        // hidden windows, and the target item is already mounted when the
+        // effect runs.
+        scrollToMessageRef.current(rowId, { align: 'start' });
+    }, [changeKey, chatId, rowId]);
+
+    return null;
 }
 
 function useStableTranscriptRenderRows(rows: ReturnType<typeof buildTranscriptRenderRows>) {

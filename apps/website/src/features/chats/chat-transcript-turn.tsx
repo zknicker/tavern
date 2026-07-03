@@ -1,7 +1,7 @@
-import { AlertCircleIcon, Cancel01Icon } from '@hugeicons/core-free-icons';
+import { AlertCircleIcon, Cancel01Icon, ListViewIcon } from '@hugeicons/core-free-icons';
 import type { AgentCharacter } from '@tavern/api/agent-appearance';
 import { useReducedMotion } from 'framer-motion';
-import type * as React from 'react';
+import * as React from 'react';
 import { ChatMessage } from '../../components/chats/chat-message.tsx';
 import { useResolvedThemeOptional } from '../../components/theme-provider.tsx';
 import { CopyButton } from '../../components/ui/copy-button.tsx';
@@ -51,6 +51,7 @@ import type {
 } from './chat-transcript-model.ts';
 import { getItemSessionKey, isActivityBackedMessageRow } from './chat-transcript-model.ts';
 import { RuntimeNoticeEntry } from './chat-transcript-system-step.tsx';
+import { ChatTurnDrawer } from './chat-turn-drawer.tsx';
 import { useRevealedText } from './use-revealed-text.ts';
 
 // `group/turn` is the hover unit for a whole message: hovering the row reveals
@@ -386,16 +387,39 @@ function AgentTurn({
     const lastMessage = getLastMessage(items);
     const turnCompletedAt = lastMessage?.timestamp ?? null;
     const segments = groupAgentItems(items);
-    const visibleSegments = segments.filter((segment) => !isActiveStatusSegment(segment));
+    const visibleSegments = filterPaneSegments(segments);
     const turnStopped =
         hasStoppedTurn(items, activeReply?.runId) || (!activeReply && hasAnyStoppedTurn(items));
     const turnActive = isActiveTurn(items, activeReply, lastMessage);
     const copyValue = lastMessage?.content ?? getActiveReplyText(items);
-    const headerActions = lastMessage ? (
-        <TranscriptMessageActions value={lastMessage.content} />
-    ) : copyValue ? (
-        <TranscriptMessageActions disabled value={copyValue} />
-    ) : null;
+    const [inspectOpen, setInspectOpen] = React.useState(false);
+    const [inspectMounted, setInspectMounted] = React.useState(false);
+    const headerActions = (
+        <>
+            {lastMessage ? (
+                <TranscriptMessageActions value={lastMessage.content} />
+            ) : copyValue ? (
+                <TranscriptMessageActions disabled value={copyValue} />
+            ) : null}
+            <button
+                aria-label="View turn details"
+                className={messageActionButtonClassName}
+                onClick={() => {
+                    setInspectMounted(true);
+                    setInspectOpen(true);
+                }}
+                title="View turn details"
+                type="button"
+            >
+                <Icon className="size-3.5" icon={ListViewIcon} strokeWidth={2} />
+            </button>
+        </>
+    );
+
+    if (visibleSegments.length === 0) {
+        return null;
+    }
+
     return (
         <Message
             align="start"
@@ -436,11 +460,27 @@ function AgentTurn({
                     </div>
                 </div>
             </MessageContent>
+            {/* Mounted on first use so long transcripts don't pay a drawer per turn. */}
+            {inspectMounted ? (
+                <ChatTurnDrawer
+                    agentCharacter={actorProfile?.character ?? agentStatusCharacter ?? null}
+                    agentColor={actorProfile?.primaryColor ?? null}
+                    agentName={displayName}
+                    chatId={chatId}
+                    entry={entry}
+                    onOpenChange={setInspectOpen}
+                    open={inspectOpen}
+                    turnActive={turnActive}
+                />
+            ) : null}
         </Message>
     );
 }
 
-function AgentTurnSegment({
+// Exported for the turn drawer, which renders a turn's full segment list —
+// activity groups included — outside the transcript pane.
+export function AgentTurnSegment({
+    activityAppearance,
     chatId,
     currentSessionKey,
     defaultOpenWorkGroups,
@@ -450,6 +490,7 @@ function AgentTurnSegment({
     turnStopped,
     turnStartedAt,
 }: {
+    activityAppearance?: 'card' | 'transcript';
     chatId?: string;
     currentSessionKey?: string | null;
     defaultOpenWorkGroups: boolean;
@@ -462,6 +503,7 @@ function AgentTurnSegment({
     if (segment.kind === 'activity') {
         return (
             <ChatTranscriptActivityGroup
+                appearance={activityAppearance}
                 chatId={chatId}
                 currentSessionKey={currentSessionKey}
                 defaultOpen={defaultOpenWorkGroups}
@@ -482,6 +524,37 @@ function AgentTurnSegment({
 
 function isActiveStatusSegment(segment: AgentItemSegment) {
     return segment.kind === 'item' && segment.item.kind === 'activeStatus';
+}
+
+// The chat pane shows only narration, intra-turn messages, and the final
+// response. Tool/work activity lives in the turn drawer (opened from the
+// active status row) — except clarifications, which are conversational and
+// must stay visible, and thinking groups, which are already gated behind the
+// show-thinking preference.
+function filterPaneSegments(segments: AgentItemSegment[]): AgentItemSegment[] {
+    return segments.flatMap((segment): AgentItemSegment[] => {
+        if (segment.kind !== 'activity') {
+            return isActiveStatusSegment(segment) ? [] : [segment];
+        }
+
+        if (segment.items.some(isThinkingItem)) {
+            return [segment];
+        }
+
+        const clarifications = segment.items.filter(isClarificationItem);
+
+        return clarifications.length > 0
+            ? [{ ...segment, items: clarifications, key: `${segment.key}:clarify` }]
+            : [];
+    });
+}
+
+function isThinkingItem(item: TranscriptItem) {
+    return item.kind === 'row' && item.row.kind === 'system' && item.row.systemKind === 'thinking';
+}
+
+function isClarificationItem(item: TranscriptItem) {
+    return item.kind === 'row' && item.row.kind === 'tool' && Boolean(item.row.clarification);
 }
 
 function UserTurnItem({ from, item }: { from: 'assistant' | 'user'; item: TranscriptItem }) {
@@ -727,8 +800,10 @@ function TranscriptMessageActions({
     );
 }
 
+// cursor-default overrides the button primitive's cursor-pointer: clickable
+// app chrome keeps the regular arrow cursor.
 const messageActionButtonClassName =
-    'inline-flex size-5 items-center justify-center rounded-md border-0 bg-transparent p-0 text-muted-foreground/75 shadow-none hover:bg-transparent hover:text-foreground';
+    'inline-flex size-5 cursor-default items-center justify-center rounded-md border-0 bg-transparent p-0 text-muted-foreground/75 shadow-none hover:bg-transparent hover:text-foreground';
 
 function getLastMessage(items: TranscriptItem[]) {
     for (let index = items.length - 1; index >= 0; index -= 1) {

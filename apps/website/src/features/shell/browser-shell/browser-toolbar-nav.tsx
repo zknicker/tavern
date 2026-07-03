@@ -14,6 +14,7 @@ import { cn } from '../../../lib/utils.ts';
 import { ChatParticipantFacepile } from '../../chats/chat-participant-facepile.tsx';
 import { RouteTabIcon } from '../route-tab-presentation.tsx';
 import { ToolbarBreadcrumb } from './toolbar-breadcrumb.tsx';
+import { ToolbarDevMenu } from './toolbar-dev-menu.tsx';
 import { useActiveChat } from './use-active-chat.ts';
 
 /**
@@ -50,6 +51,7 @@ export function BrowserToolbarNav({
             <ToolbarDivider />
             <ToolbarBreadcrumb />
             <div className="flex-1" />
+            <ToolbarDevMenu />
             <ToolbarParticipants />
         </div>
     );

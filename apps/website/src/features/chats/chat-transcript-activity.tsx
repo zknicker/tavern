@@ -26,6 +26,7 @@ export function ChatTranscriptActivity({
 }
 
 export function ChatTranscriptActivityGroup({
+    appearance,
     chatId,
     currentSessionKey,
     defaultOpen,
@@ -36,6 +37,7 @@ export function ChatTranscriptActivityGroup({
     turnStopped = false,
     turnStartedAt,
 }: {
+    appearance?: 'card' | 'transcript';
     chatId?: string;
     currentSessionKey?: string | null;
     defaultOpen?: boolean;
@@ -63,6 +65,7 @@ export function ChatTranscriptActivityGroup({
     return (
         <WorkingLog
             animateEnter={isActive}
+            appearance={appearance}
             chatId={chatId}
             currentSessionKey={currentSessionKey}
             defaultOpen={defaultOpen}

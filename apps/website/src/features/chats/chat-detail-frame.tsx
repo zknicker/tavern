@@ -6,6 +6,7 @@ import {
     MessageScrollerContent,
     MessageScrollerProvider,
     MessageScrollerViewport,
+    useMessageScroller,
 } from '../../components/ui/message-scroller.tsx';
 import type { ChatActiveReply, ChatTurnFailure } from '../../hooks/chats/chat-timeline-state.ts';
 import type { ChatLogOutput } from '../../lib/trpc.tsx';
@@ -92,8 +93,11 @@ export function ChatDetailFrame({
                             <MessageScrollerViewport
                                 // Widen the side gutters at lg+ so the turn
                                 // timeline rail has room beside the messages;
-                                // the rail itself hides below lg.
-                                className="px-6 py-4 lg:px-16"
+                                // the rail itself hides below lg. The deep
+                                // bottom padding (272px) reserves breathing
+                                // room under the last message so the
+                                // transcript never crowds the composer.
+                                className="px-6 pt-4 pb-68 lg:px-16"
                                 onScroll={handleScroll}
                                 ref={viewportRef}
                             >
@@ -138,6 +142,10 @@ export function ChatDetailFrame({
                                 key={chatId}
                                 viewportRef={viewportRef}
                             />
+                            <TurnStartAutoScroll
+                                activeRunId={activeReply?.runId ?? null}
+                                viewportRef={viewportRef}
+                            />
                             {hasTimelineContent ? (
                                 <MessageScrollerButton
                                     aria-label="Jump to latest message"
@@ -156,4 +164,54 @@ export function ChatDetailFrame({
             </div>
         </MessageScrollerProvider>
     );
+}
+
+// Reveal a turn the moment it starts. Turns kicked off by a composer send are
+// already anchored by the new user-message item (scrolled to the top with the
+// spacer filling the viewport below) — scrolling then would collapse that
+// anchor, so the visible spacer opts out. This covers turns that start without
+// a new user message: simulated turns, cron deliveries, and channel triggers
+// from other participants.
+function TurnStartAutoScroll({
+    activeRunId,
+    viewportRef,
+}: {
+    activeRunId: string | null;
+    viewportRef: React.RefObject<HTMLDivElement | null>;
+}) {
+    const { scrollToEnd } = useMessageScroller();
+    const lastRunIdRef = React.useRef<string | null>(activeRunId);
+    // Latest-callback ref: keeps the effect off the scroller context's
+    // per-render callback identity so the scheduled frame survives re-renders.
+    const scrollToEndRef = React.useRef(scrollToEnd);
+    scrollToEndRef.current = scrollToEnd;
+
+    React.useEffect(() => {
+        if (!activeRunId || lastRunIdRef.current === activeRunId) {
+            lastRunIdRef.current = activeRunId;
+            return;
+        }
+
+        lastRunIdRef.current = activeRunId;
+        // Synchronous on purpose: requestAnimationFrame never fires in
+        // hidden windows.
+        const viewport = viewportRef.current;
+        const distanceFromEnd = viewport
+            ? viewport.scrollHeight - viewport.clientHeight - viewport.scrollTop
+            : 0;
+
+        // Already at the end (including the send-anchored position, where the
+        // spacer keeps the anchored message "at end"): scrolling would only
+        // disturb the anchored mode.
+        if (distanceFromEnd <= 4) {
+            return;
+        }
+
+        scrollToEndRef.current({
+            // Hidden windows never animate smooth scrolls; jump instead.
+            behavior: document.visibilityState === 'hidden' ? 'auto' : 'smooth',
+        });
+    }, [activeRunId, viewportRef]);
+
+    return null;
 }

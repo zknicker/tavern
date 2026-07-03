@@ -25,6 +25,7 @@ const capabilityLabels = {
     apiServer: 'Agent engine API',
     codexOAuth: 'Codex OAuth',
     dashboardServer: 'Agent engine',
+    devToolkit: 'Dev toolkit',
     gateway: 'Agent connection',
     modelExecution: 'Model execution',
     'plugin.merchbase': 'MerchBase',
