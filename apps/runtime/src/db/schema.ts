@@ -248,6 +248,7 @@ CREATE TABLE IF NOT EXISTS memory_extraction_debounces (
   last_activity_at         TEXT NOT NULL,
   scheduled_for            TEXT NOT NULL,
   target_sequence          INTEGER NOT NULL CHECK (target_sequence >= 0),
+  attempts                 INTEGER NOT NULL DEFAULT 0 CHECK (attempts >= 0),
   updated_at               TEXT NOT NULL,
   PRIMARY KEY(chat_id, agent_participant_id),
   FOREIGN KEY(chat_id) REFERENCES chats(id) ON DELETE CASCADE
@@ -483,6 +484,11 @@ export function ensureRuntimeSchema(db: Database): void {
         column: 'transcript_json',
         definition: "TEXT NOT NULL DEFAULT '[]'",
         table: 'memory_jobs',
+    });
+    ensureColumn(db, {
+        column: 'attempts',
+        definition: 'INTEGER NOT NULL DEFAULT 0 CHECK (attempts >= 0)',
+        table: 'memory_extraction_debounces',
     });
 }
 

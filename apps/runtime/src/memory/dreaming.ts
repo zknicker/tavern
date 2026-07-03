@@ -19,7 +19,9 @@ import {
 const dreamExtractionThreshold = 5;
 const dreamAgeThresholdMs = 24 * 60 * 60 * 1000;
 const dreamFailureBackoffMs = 60 * 60 * 1000;
+const dreamFailureBackoffMaxMs = 24 * 60 * 60 * 1000;
 const memoryDreamSweepIntervalMs = 60 * 1000;
+const memoryJobRetentionMs = 30 * 24 * 60 * 60 * 1000;
 
 interface DreamJobRow {
     agent_id: string;
@@ -166,6 +168,7 @@ async function processQueuedMemoryDreamsOnce(input: { now?: Date; worker?: Memor
         return { completed: 0, failed: 0, skipped: 0 };
     }
     const db = getDb();
+    pruneFinishedMemoryJobs({ db, now: input.now });
     queueEligibleMemoryDreams(input.now ?? new Date(), db);
     const rows = db
         .prepare(
@@ -178,12 +181,7 @@ async function processQueuedMemoryDreamsOnce(input: { now?: Date; worker?: Memor
     const counts = { completed: 0, failed: 0, skipped: 0 };
     for (const row of rows) {
         try {
-            await runDreamJob(
-                row,
-                input.worker ?? runAiSdkMemoryDream,
-                input.now ?? new Date(),
-                db
-            );
+            await runDreamJob(row, input.worker ?? runAiSdkMemoryDream, input.now, db);
             counts.completed += 1;
         } catch (error) {
             const fileChanges = error instanceof MemoryDreamWorkerError ? error.fileChanges : [];
@@ -194,16 +192,22 @@ async function processQueuedMemoryDreamsOnce(input: { now?: Date; worker?: Memor
     return counts;
 }
 
-async function runDreamJob(row: DreamJobRow, worker: MemoryDreamWorker, now: Date, db: Database) {
+async function runDreamJob(
+    row: DreamJobRow,
+    worker: MemoryDreamWorker,
+    nowOverride: Date | undefined,
+    db: Database
+) {
+    const startedAt = nowOverride ?? new Date();
     db.prepare(
         `UPDATE memory_jobs
          SET status = 'running',
              started_at = $now,
              updated_at = $now
          WHERE id = $jobId AND status = 'queued'`
-    ).run(namedParams({ jobId: row.id, now: now.toISOString() }));
+    ).run(namedParams({ jobId: row.id, now: startedAt.toISOString() }));
     const outcome = await worker({ agentId: row.agent_id, jobId: row.id });
-    completeDreamJob(row.id, outcome, new Date(), db);
+    completeDreamJob(row.id, outcome, nowOverride ?? new Date(), db);
 }
 
 function completeDreamJob(jobId: string, outcome: MemoryDreamOutcome, now: Date, db: Database) {
@@ -276,11 +280,7 @@ function isDreamEligible(agentId: string, now: Date, db: Database) {
     if (hasActiveDream(agentId, db)) {
         return false;
     }
-    const newestFailedDream = latestFailedDream(agentId, db);
-    if (
-        newestFailedDream &&
-        now.getTime() - Date.parse(newestFailedDream.created_at) < dreamFailureBackoffMs
-    ) {
+    if (isInDreamFailureBackoff(agentId, now, db)) {
         return false;
     }
     const newestExtraction = latestCompletedJob(agentId, 'extraction', db);
@@ -296,6 +296,9 @@ function isDreamEligible(agentId: string, now: Date, db: Database) {
         newestDream.created_at,
         db
     );
+    if (extractionsSinceDream === 0) {
+        return false;
+    }
     if (extractionsSinceDream >= dreamExtractionThreshold) {
         return true;
     }
@@ -328,16 +331,48 @@ function latestCompletedJob(agentId: string, kind: 'dream' | 'extraction', db: D
         .get(namedParams({ agentId, kind })) as { created_at: string; id: string } | undefined;
 }
 
-function latestFailedDream(agentId: string, db: Database) {
-    return db
+/**
+ * Consecutive dream failures back off exponentially (1h, 2h, 4h, ... capped at
+ * 24h) so a persistently broken model config cannot fail hourly forever. A
+ * completed dream resets the streak.
+ */
+function isInDreamFailureBackoff(agentId: string, now: Date, db: Database) {
+    const lastCompleted = latestCompletedJob(agentId, 'dream', db);
+    const failures = db
         .prepare(
-            `SELECT id, created_at
+            `SELECT created_at
              FROM memory_jobs
-             WHERE agent_id = $agentId AND kind = 'dream' AND status = 'failed'
-             ORDER BY created_at DESC
-             LIMIT 1`
+             WHERE agent_id = $agentId
+               AND kind = 'dream'
+               AND status = 'failed'
+               AND created_at > $since
+             ORDER BY created_at DESC`
         )
-        .get(namedParams({ agentId })) as { created_at: string; id: string } | undefined;
+        .all(namedParams({ agentId, since: lastCompleted?.created_at ?? '' })) as Array<{
+        created_at: string;
+    }>;
+    if (failures.length === 0) {
+        return false;
+    }
+    const backoffMs = Math.min(
+        dreamFailureBackoffMs * 2 ** (failures.length - 1),
+        dreamFailureBackoffMaxMs
+    );
+    return now.getTime() - Date.parse(failures[0].created_at) < backoffMs;
+}
+
+export function pruneFinishedMemoryJobs(input: { db?: Database; now?: Date } = {}) {
+    const db = input.db ?? getDb();
+    const now = input.now ?? new Date();
+    const cutoff = new Date(now.getTime() - memoryJobRetentionMs).toISOString();
+    const result = db
+        .prepare(
+            `DELETE FROM memory_jobs
+             WHERE status IN ('completed', 'failed', 'skipped')
+               AND created_at < $cutoff`
+        )
+        .run(namedParams({ cutoff }));
+    return result.changes;
 }
 
 function countCompletedExtractionsSince(agentId: string, createdAt: string, db: Database) {

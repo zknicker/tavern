@@ -10,12 +10,27 @@ import { completeAgentTurn, createAgentTurn } from '../tavern/agent-turn-store.t
 import { upsertStoredAgent } from '../tavern/agents-store.ts';
 import { createChat, createMessage, upsertResponse } from '../tavern/chat-api/index.ts';
 import {
+    memoryExtractionMaxAttempts,
     processDueMemoryExtractions,
     resetMemoryExtractionSchedulerForTesting,
     scheduleMemoryExtractionForTurn,
+    setMemoryExtractionWorkerForTesting,
     startMemoryExtractionScheduler,
 } from './extraction.ts';
+import {
+    type MemoryExtractionWorker,
+    memoryExtractionChunkChars,
+    memoryExtractionChunkMessageLimit,
+} from './extraction-worker.ts';
 import { handleMemorySettingsRequest } from './settings.ts';
+
+const echoWorker: MemoryExtractionWorker = async ({ messages }) => ({
+    model: { model: 'fast-mini', provider: 'openai' },
+    observations: messages
+        .map((message) => `- [${message.sequence}] ${message.content}`)
+        .join('\n'),
+    usage: { totalTokens: messages.length },
+});
 
 describe('Memory extraction', () => {
     let workspace: string;
@@ -24,10 +39,12 @@ describe('Memory extraction', () => {
         workspace = await fs.mkdtemp(path.join(os.tmpdir(), 'tavern-memory-extraction-'));
         ensureRuntimeSchema(initTestDb());
         seedAgentChat(workspace);
+        setMemoryExtractionWorkerForTesting(echoWorker);
     });
 
     afterEach(async () => {
         resetMemoryExtractionSchedulerForTesting();
+        setMemoryExtractionWorkerForTesting(null);
         vi.restoreAllMocks();
         closeDb();
         await fs.rm(workspace, { force: true, recursive: true });
@@ -81,8 +98,7 @@ describe('Memory extraction', () => {
             {
                 agent_id: 'agt_primary',
                 kind: 'extraction',
-                metadata_json: '{"extractionMode":"transcript-excerpt"}',
-                model_category: null,
+                model_category: 'fast',
                 output_path: '.memory/episodic/2026-07-02.md',
                 source_end_sequence: 2,
                 source_start_sequence: 1,
@@ -95,6 +111,11 @@ describe('Memory extraction', () => {
                 status: 'queued',
             },
         ]);
+        const completedJob = readJobs()[0] as { metadata_json: string };
+        expect(JSON.parse(completedJob.metadata_json)).toMatchObject({
+            extractionMode: 'observations',
+            observations: expect.stringContaining('deployment preference'),
+        });
     });
 
     test('resets the idle debounce and extracts through the newest target sequence', async () => {
@@ -275,6 +296,232 @@ describe('Memory extraction', () => {
         ).resolves.toEqual({ completed: 1, failed: 0, skipped: 0 });
         expect(readCursor()?.last_extracted_sequence).toBe(2);
         expect(readDebounce()).toBeNull();
+    });
+
+    test('paginates a large backlog into chunked jobs that cover every message', async () => {
+        const messageCount = memoryExtractionChunkMessageLimit + 5;
+        for (let index = 1; index <= messageCount; index += 1) {
+            createMessage('cht_memory', {
+                author_id: 'usr_tavern',
+                content: `Backlog message ${index}.`,
+                id: `msg_backlog_${index}`,
+                role: 'user',
+            });
+        }
+        const batches: number[][] = [];
+        setMemoryExtractionWorkerForTesting(async (input) => {
+            batches.push(input.messages.map((message) => message.sequence));
+            return await echoWorker(input);
+        });
+        const turn = createCompletedTurn({
+            now: '2026-07-02T20:00:00.000Z',
+            responseId: 'rsp_1',
+            runId: 'run_1',
+            triggerMessageId: `msg_backlog_${messageCount}`,
+        });
+        scheduleMemoryExtractionForTurn(turn, {
+            debounceMs: 0,
+            now: new Date('2026-07-02T20:00:00.000Z'),
+        });
+
+        await expect(
+            processDueMemoryExtractions({ now: new Date('2026-07-02T20:00:00.000Z') })
+        ).resolves.toEqual({ completed: 1, failed: 0, skipped: 0 });
+
+        expect(batches).toHaveLength(2);
+        expect(batches.flat()).toEqual(
+            Array.from({ length: messageCount }, (_, index) => index + 1)
+        );
+        expect(readCursor()?.last_extracted_sequence).toBe(messageCount);
+        expect(readDebounce()).toBeNull();
+        expect(
+            readJobs().filter((job) => (job as { kind: string }).kind === 'extraction')
+        ).toMatchObject([
+            {
+                source_end_sequence: memoryExtractionChunkMessageLimit,
+                source_start_sequence: 1,
+                status: 'completed',
+            },
+            {
+                source_end_sequence: messageCount,
+                source_start_sequence: memoryExtractionChunkMessageLimit + 1,
+                status: 'completed',
+            },
+        ]);
+    });
+
+    test('chunks a backlog by character budget without dropping content', async () => {
+        const bigMessageChars = Math.ceil(memoryExtractionChunkChars * 0.4);
+        for (let index = 1; index <= 4; index += 1) {
+            createMessage('cht_memory', {
+                author_id: 'usr_tavern',
+                content: `Message ${index}: ${'x'.repeat(bigMessageChars)}`,
+                id: `msg_big_${index}`,
+                role: 'user',
+            });
+        }
+        const batches: number[][] = [];
+        setMemoryExtractionWorkerForTesting(async (input) => {
+            batches.push(input.messages.map((message) => message.sequence));
+            return {
+                model: { model: 'fast-mini', provider: 'openai' },
+                observations: `- [${input.messages[0].sequence}] Observed.`,
+                usage: {},
+            };
+        });
+        const turn = createCompletedTurn({
+            now: '2026-07-02T20:00:00.000Z',
+            responseId: 'rsp_1',
+            runId: 'run_1',
+            triggerMessageId: 'msg_big_4',
+        });
+        scheduleMemoryExtractionForTurn(turn, {
+            debounceMs: 0,
+            now: new Date('2026-07-02T20:00:00.000Z'),
+        });
+
+        await expect(
+            processDueMemoryExtractions({ now: new Date('2026-07-02T20:00:00.000Z') })
+        ).resolves.toEqual({ completed: 1, failed: 0, skipped: 0 });
+
+        expect(batches).toEqual([
+            [1, 2],
+            [3, 4],
+        ]);
+        expect(readCursor()?.last_extracted_sequence).toBe(4);
+    });
+
+    test('a mid-backlog failure keeps completed chunks and resumes from the cursor', async () => {
+        const messageCount = memoryExtractionChunkMessageLimit + 5;
+        for (let index = 1; index <= messageCount; index += 1) {
+            createMessage('cht_memory', {
+                author_id: 'usr_tavern',
+                content: `Backlog message ${index}.`,
+                id: `msg_backlog_${index}`,
+                role: 'user',
+            });
+        }
+        let calls = 0;
+        setMemoryExtractionWorkerForTesting(async (input) => {
+            calls += 1;
+            if (calls === 2) {
+                throw new Error('model unavailable');
+            }
+            return await echoWorker(input);
+        });
+        const turn = createCompletedTurn({
+            now: '2026-07-02T20:00:00.000Z',
+            responseId: 'rsp_1',
+            runId: 'run_1',
+            triggerMessageId: `msg_backlog_${messageCount}`,
+        });
+        scheduleMemoryExtractionForTurn(turn, {
+            debounceMs: 0,
+            now: new Date('2026-07-02T20:00:00.000Z'),
+        });
+
+        await expect(
+            processDueMemoryExtractions({ now: new Date('2026-07-02T20:00:00.000Z') })
+        ).resolves.toEqual({ completed: 0, failed: 1, skipped: 0 });
+        expect(readCursor()?.last_extracted_sequence).toBe(memoryExtractionChunkMessageLimit);
+        expect(readDebounce()).not.toBeNull();
+
+        await expect(
+            processDueMemoryExtractions({ now: new Date('2026-07-02T20:15:00.000Z') })
+        ).resolves.toEqual({ completed: 1, failed: 0, skipped: 0 });
+        expect(readCursor()?.last_extracted_sequence).toBe(messageCount);
+        expect(readDebounce()).toBeNull();
+        expect(
+            readJobs()
+                .filter((job) => (job as { kind: string }).kind === 'extraction')
+                .map((job) => (job as { status: string }).status)
+                .sort()
+        ).toEqual(['completed', 'completed', 'failed']);
+    });
+
+    test('skips the job and advances the cursor when nothing durable was observed', async () => {
+        setMemoryExtractionWorkerForTesting(async () => ({
+            model: { model: 'fast-mini', provider: 'openai' },
+            observations: '',
+            usage: {},
+        }));
+        createMessage('cht_memory', {
+            author_id: 'usr_tavern',
+            content: 'Nothing worth keeping here.',
+            id: 'msg_user_1',
+            role: 'user',
+        });
+        const turn = createCompletedTurn({
+            now: '2026-07-02T20:00:00.000Z',
+            responseId: 'rsp_1',
+            runId: 'run_1',
+            triggerMessageId: 'msg_user_1',
+        });
+        scheduleMemoryExtractionForTurn(turn, {
+            debounceMs: 0,
+            now: new Date('2026-07-02T20:00:00.000Z'),
+        });
+
+        await expect(
+            processDueMemoryExtractions({ now: new Date('2026-07-02T20:00:00.000Z') })
+        ).resolves.toEqual({ completed: 0, failed: 0, skipped: 1 });
+
+        expect(readCursor()?.last_extracted_sequence).toBe(1);
+        expect(readDebounce()).toBeNull();
+        expect(readJobs()).toMatchObject([
+            {
+                kind: 'extraction',
+                metadata_json: JSON.stringify({
+                    extractionMode: 'observations',
+                    reason: 'no_durable_observations',
+                }),
+                status: 'skipped',
+            },
+        ]);
+        await expect(fs.readdir(path.join(workspace, '.memory', 'episodic'))).rejects.toThrow();
+    });
+
+    test('drops the debounce after the extraction retry cap instead of retrying forever', async () => {
+        setMemoryExtractionWorkerForTesting(async () => {
+            throw new Error('model unavailable');
+        });
+        createMessage('cht_memory', {
+            author_id: 'usr_tavern',
+            content: 'This extraction will fail.',
+            id: 'msg_user_1',
+            role: 'user',
+        });
+        const turn = createCompletedTurn({
+            now: '2026-07-02T20:00:00.000Z',
+            responseId: 'rsp_1',
+            runId: 'run_1',
+            triggerMessageId: 'msg_user_1',
+        });
+        scheduleMemoryExtractionForTurn(turn, {
+            debounceMs: 0,
+            now: new Date('2026-07-02T20:00:00.000Z'),
+        });
+
+        let now = new Date('2026-07-02T20:00:00.000Z');
+        for (let attempt = 1; attempt <= memoryExtractionMaxAttempts; attempt += 1) {
+            await expect(processDueMemoryExtractions({ now })).resolves.toEqual({
+                completed: 0,
+                failed: 1,
+                skipped: 0,
+            });
+            now = new Date(now.getTime() + 15 * 60 * 1000);
+        }
+
+        expect(readDebounce()).toBeNull();
+        expect(
+            readJobs().filter((job) => (job as { status: string }).status === 'failed')
+        ).toHaveLength(memoryExtractionMaxAttempts);
+        await expect(processDueMemoryExtractions({ now })).resolves.toEqual({
+            completed: 0,
+            failed: 0,
+            skipped: 0,
+        });
+        expect(readCursor()).toBeNull();
     });
 });
 

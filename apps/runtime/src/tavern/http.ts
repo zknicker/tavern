@@ -38,6 +38,16 @@ export const forbidden = (message: string) =>
         403
     );
 
+export const conflict = (message: string) =>
+    json(
+        {
+            code: 'conflict',
+            message,
+            retryable: false,
+        },
+        409
+    );
+
 export const notFound = () =>
     json(
         {

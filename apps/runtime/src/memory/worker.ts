@@ -7,6 +7,13 @@ import { resolveModelCategorySelection } from '../models/category-settings.ts';
 import { createLanguageModelForRuntime } from '../models/language-model.ts';
 import { getStoredAgent } from '../tavern/agents-store.ts';
 import {
+    type AgentCoreMemoryFileChange,
+    agentCoreMemoryFileNames,
+    readAgentCoreMemoryFile,
+    writeAgentCoreMemoryFile,
+} from './core-memory.ts';
+import {
+    type EpisodicMemoryFile,
     listAgentEpisodicMemoryFiles,
     listSemanticMemoryPages,
     readSemanticMemoryFile,
@@ -19,8 +26,10 @@ export interface MemoryDreamInput {
     jobId: string;
 }
 
+export type MemoryDreamFileChange = AgentCoreMemoryFileChange | SemanticMemoryFileChange;
+
 export interface MemoryDreamOutcome {
-    fileChanges: SemanticMemoryFileChange[];
+    fileChanges: MemoryDreamFileChange[];
     model: AgentRuntimeModelName;
     text: string;
     transcript: unknown;
@@ -30,9 +39,9 @@ export interface MemoryDreamOutcome {
 export type MemoryDreamWorker = (input: MemoryDreamInput) => Promise<MemoryDreamOutcome>;
 
 export class MemoryDreamWorkerError extends Error {
-    readonly fileChanges: SemanticMemoryFileChange[];
+    readonly fileChanges: MemoryDreamFileChange[];
 
-    constructor(error: unknown, fileChanges: SemanticMemoryFileChange[]) {
+    constructor(error: unknown, fileChanges: MemoryDreamFileChange[]) {
         super(error instanceof Error ? error.message : String(error));
         this.name = 'MemoryDreamWorkerError';
         this.cause = error;
@@ -46,12 +55,12 @@ export async function runAiSdkMemoryDream(input: MemoryDreamInput): Promise<Memo
         throw new Error(`Agent "${input.agentId}" does not exist.`);
     }
     const model = resolveModelCategorySelection('standard');
-    const fileChanges: SemanticMemoryFileChange[] = [];
+    const fileChanges: MemoryDreamFileChange[] = [];
     try {
         const result = await generateText({
             model: await createLanguageModelForRuntime(model),
-            prompt: memoryDreamPrompt(input),
-            stopWhen: stepCountIs(8),
+            prompt: memoryDreamPrompt(),
+            stopWhen: stepCountIs(16),
             system: memoryDreamInstructions(agentRecord.name),
             tools: createMemoryDreamTools(input, fileChanges),
         });
@@ -67,17 +76,20 @@ export async function runAiSdkMemoryDream(input: MemoryDreamInput): Promise<Memo
     }
 }
 
-function createMemoryDreamTools(input: MemoryDreamInput, fileChanges: SemanticMemoryFileChange[]) {
+const episodicDreamInputMaxChars = 200_000;
+
+function createMemoryDreamTools(input: MemoryDreamInput, fileChanges: MemoryDreamFileChange[]) {
     return {
         memory_list_episodic: tool({
             description: 'List this agent’s hidden episodic Memory files.',
             inputSchema: z.object({}),
-            execute: async () => ({
-                files: await listAgentEpisodicMemoryFiles({
-                    agentId: input.agentId,
-                    since: getLatestCompletedDreamDate(input.agentId),
-                }),
-            }),
+            execute: async () =>
+                capEpisodicFiles(
+                    await listAgentEpisodicMemoryFiles({
+                        agentId: input.agentId,
+                        since: getLatestCompletedDreamDate(input.agentId),
+                    })
+                ),
         }),
         memory_list_pages: tool({
             description: 'List shared Semantic Memory pages and folders.',
@@ -105,6 +117,58 @@ function createMemoryDreamTools(input: MemoryDreamInput, fileChanges: SemanticMe
                 return change;
             },
         }),
+        memory_read_core: tool({
+            description:
+                'Read this agent’s own USER.md or MEMORY.md core memory file with its current hash.',
+            inputSchema: z.object({
+                name: z.enum(agentCoreMemoryFileNames),
+            }),
+            execute: async ({ name }) =>
+                await readAgentCoreMemoryFile({ agentId: input.agentId, name }),
+        }),
+        memory_write_core: tool({
+            description:
+                'Write this agent’s own USER.md or MEMORY.md core memory file using the hash returned by memory_read_core.',
+            inputSchema: z.object({
+                content: z.string(),
+                expectedHash: z.string(),
+                name: z.enum(agentCoreMemoryFileNames),
+            }),
+            execute: async ({ content, expectedHash, name }) => {
+                const change = await writeAgentCoreMemoryFile({
+                    agentId: input.agentId,
+                    content,
+                    expectedHash,
+                    name,
+                });
+                fileChanges.push(change);
+                return change;
+            },
+        }),
+    };
+}
+
+/**
+ * Bound the episodic evidence fed to one dream. Newest files win; older files
+ * beyond the budget are dropped with an explicit note so the worker knows the
+ * window was truncated.
+ */
+function capEpisodicFiles(files: EpisodicMemoryFile[]) {
+    const newestFirst = [...files].sort((left, right) => right.path.localeCompare(left.path));
+    const kept: EpisodicMemoryFile[] = [];
+    let total = 0;
+    for (const file of newestFirst) {
+        if (kept.length > 0 && total + file.content.length > episodicDreamInputMaxChars) {
+            break;
+        }
+        kept.push(file);
+        total += file.content.length;
+    }
+    kept.sort((left, right) => left.path.localeCompare(right.path));
+    return {
+        files: kept,
+        omittedFileCount: files.length - kept.length,
+        truncated: kept.length < files.length,
     };
 }
 
@@ -129,7 +193,11 @@ function memoryDreamInstructions(agentName: string) {
         `You maintain durable Memory for ${agentName}.`,
         'Do not answer the user. Do not use personality, SOUL, chat tools, shell, or workspace file tools.',
         'Use only the provided Memory tools.',
-        'Read episodic Memory, then update shared Semantic Memory only when evidence is stable and useful.',
+        'Read episodic Memory, then promote only stable, useful, non-secret evidence. Route by TAXONOMY.md:',
+        '- Durable shared knowledge goes to Semantic Memory pages via memory_write_page, routed to whatever folder TAXONOMY.md assigns the subject.',
+        '- Stable user profile facts and preferences for this agent go to its USER.md via memory_write_core.',
+        '- Durable operating rules that change this agent’s default behavior go to its MEMORY.md via memory_write_core.',
+        'Core memory is loaded into every session start, so keep it compact: promote only high-value entries, merge duplicates, and prune stale lines while preserving user-authored content.',
         'Do not create or edit USER.md or MEMORY.md in shared Semantic Memory.',
         'For semantic writes, preserve frontmatter and user-authored content where possible.',
         'Add evidence-backed History entries before changing Current.',
@@ -137,11 +205,11 @@ function memoryDreamInstructions(agentName: string) {
     ].join('\n');
 }
 
-function memoryDreamPrompt(input: MemoryDreamInput) {
+function memoryDreamPrompt() {
     return [
-        `Dream job: ${input.jobId}`,
-        'Review this agent’s episodic Memory and shared Semantic Memory.',
-        'Promote only durable, non-secret knowledge. Use memory_write_page only with the latest expectedHash from memory_read_page.',
+        'Review this agent’s episodic Memory, its core memory files, and shared Semantic Memory.',
+        'Promote only durable, non-secret knowledge. Use write tools only with the latest expectedHash from the matching read tool.',
+        'Your final text is shown to the user as this run’s summary. Keep it to one or two plain sentences about what changed; never mention job ids or internal identifiers.',
     ].join('\n');
 }
 

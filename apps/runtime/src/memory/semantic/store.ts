@@ -41,7 +41,7 @@ Last updated: 2026-07-03T00:00:00Z
 
 - Shared Semantic Memory lives under \`memory/\`.
 - Semantic Memory is the shared wiki-style knowledge system exposed in Tavern's Memory page.
-- Per-agent briefing files (\`USER.md\`, \`MEMORY.md\`) live in each agent workspace, not in shared Semantic Memory.
+- Per-agent core memory files (\`USER.md\`, \`MEMORY.md\`) live in each agent workspace, not in shared Semantic Memory.
 - Episodic memory is worker-owned evidence under the agent's hidden workspace memory, not in shared Semantic Memory.
 - Each agent owns its own episodic memory and dreaming pass.
 - Semantic pages use frontmatter plus \`## Current\` and \`## History\`.
@@ -92,7 +92,7 @@ What goes here:
 
 What does not go here:
 
-- agent-local user briefing facts that belong in that agent's \`USER.md\`
+- agent-local user facts that belong in that agent's \`USER.md\`
 - company-level knowledge
 - browser interaction procedures
 
@@ -208,7 +208,7 @@ If the category is not yet stable, keep the observation in the owning agent's hi
 - Promote to an agent's \`USER.md\` only when the change is stable, high-value, and broadly useful for that agent at session start.
 - Promote to an agent's \`MEMORY.md\` only when the change affects that agent's default behavior across many tasks.
 - Promote from episodic into Semantic Memory when repeated observations or strong evidence establish durable shared understanding.
-- Do not promote one-off incidents, narrow quirks, or uncertain facts into agent briefing files.
+- Do not promote one-off incidents, narrow quirks, or uncertain facts into agent core memory files.
 - Do not force every episodic observation into Semantic Memory.
 
 ## Page Shape
@@ -463,6 +463,7 @@ export async function writeSemanticMemoryFile(input: {
 }): Promise<SemanticMemoryFileChange> {
     const config = await resolveSemanticMemoryConfig();
     const relativePath = normalizeWritableMarkdownPath(input.path);
+    assertNotCoreMemoryBasename(relativePath);
     if (isSemanticMemoryTombstoned(relativePath)) {
         throw new Error('Memory file was deleted by the user and cannot be recreated by dreaming.');
     }
@@ -588,11 +589,33 @@ export async function moveSemanticMemoryPath(
     await fs.rename(fromAbsolutePath, toAbsolutePath);
 
     if (input.kind === 'page') {
+        recordMovedPageTombstones(fromPath, toPath);
         const file = await toMarkdownFile(config.memoryPath, toAbsolutePath);
         return { kind: 'page', page: toPage(file), path: toPath };
     }
 
+    for (const file of await walkMarkdown(toAbsolutePath)) {
+        const suffix = path.relative(toAbsolutePath, file).split(path.sep).join(path.posix.sep);
+        recordMovedPageTombstones(
+            path.posix.join(fromPath, suffix),
+            path.posix.join(toPath, suffix)
+        );
+    }
     return { kind: 'folder', page: null, path: toPath };
+}
+
+/**
+ * A moved page is gone from its old path (tombstone it so dreaming does not
+ * recreate it from stale evidence) and present at its new path (clear any
+ * stale tombstone so dreaming can keep updating it).
+ */
+function recordMovedPageTombstones(fromPath: string, toPath: string) {
+    writeSemanticMemoryTombstone(fromPath, {
+        actor: 'user',
+        deletedAt: new Date().toISOString(),
+        reason: 'manual_move',
+    });
+    clearSemanticMemoryTombstone(toPath);
 }
 
 export async function searchSemanticMemory(
@@ -976,6 +999,16 @@ function resolveSemanticMemoryChildPath(memoryPath: string, relativePath: string
 
 function isPathInside(filePath: string, root: string) {
     return filePath === root || filePath.startsWith(`${root}${path.sep}`);
+}
+
+/** Core memory files are per-agent workspace files; there is no shared USER.md or MEMORY.md. */
+function assertNotCoreMemoryBasename(relativePath: string) {
+    const basename = relativePath.split('/').at(-1)?.toUpperCase() ?? '';
+    if (basename === 'USER.MD' || basename === 'MEMORY.MD') {
+        throw new Error(
+            'Core memory files do not live in shared Semantic Memory. Write the agent’s own USER.md or MEMORY.md instead.'
+        );
+    }
 }
 
 function normalizePageTarget(value: string) {

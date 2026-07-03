@@ -4,29 +4,32 @@ import path from 'node:path';
 import { getDb } from '../db/connection.ts';
 import type { Database } from '../db/sqlite.ts';
 import { namedParams } from '../db/sqlite.ts';
+import { resolveModelCategorySelection } from '../models/category-settings.ts';
+import { supportsLanguageModelForRuntime } from '../models/language-model.ts';
 import type { AgentTurn } from '../tavern/agent-turn-store.ts';
 import type { MessageRow } from '../tavern/chat-api/types.ts';
 import { maybeQueueMemoryDreamForAgent } from './dreaming.ts';
+import {
+    type MemoryExtractionMessage,
+    type MemoryExtractionOutcome,
+    type MemoryExtractionWorker,
+    memoryExtractionChunkChars,
+    memoryExtractionChunkMessageLimit,
+    runAiSdkMemoryExtraction,
+} from './extraction-worker.ts';
 import { isMemoryEnabled } from './settings.ts';
 
 export const memoryExtractionIdleDebounceMs = 5 * 60 * 1000;
 export const memoryExtractionRetryDelayMs = 15 * 60 * 1000;
 export const memoryExtractionSweepIntervalMs = 60 * 1000;
+export const memoryExtractionMaxAttempts = 3;
 
 interface DebounceRow {
     agent_id: string;
     agent_participant_id: string;
+    attempts: number;
     chat_id: string;
     target_sequence: number;
-}
-
-interface ExtractionMessage {
-    author_id: string;
-    content: string;
-    created_at: string;
-    id: string;
-    role: 'assistant' | 'user';
-    sequence: number;
 }
 
 interface ProcessResult {
@@ -38,12 +41,18 @@ const scheduledTimers = new Map<string, ReturnType<typeof setTimeout>>();
 let sweepInterval: ReturnType<typeof setInterval> | null = null;
 let processingPromise: Promise<{ completed: number; failed: number; skipped: number }> | null =
     null;
+let extractionWorker: MemoryExtractionWorker = runAiSdkMemoryExtraction;
 
 export function scheduleMemoryExtractionForTurn(
     turn: AgentTurn,
     input: { debounceMs?: number; now?: Date } = {}
 ) {
     if (turn.status !== 'completed' || !isMemoryEnabled()) {
+        return false;
+    }
+    // Don't queue work the workers cannot run; the memoryWorkers capability
+    // surfaces the fix instead of filling history with doomed retries.
+    if (!supportsLanguageModelForRuntime(resolveModelCategorySelection('fast'))) {
         return false;
     }
 
@@ -68,6 +77,7 @@ export function scheduleMemoryExtractionForTurn(
             last_activity_at,
             scheduled_for,
             target_sequence,
+            attempts,
             updated_at
          )
          VALUES (
@@ -78,6 +88,7 @@ export function scheduleMemoryExtractionForTurn(
             $now,
             $scheduledFor,
             $targetSequence,
+            0,
             $now
          )
          ON CONFLICT(chat_id, agent_participant_id) DO UPDATE SET
@@ -85,6 +96,7 @@ export function scheduleMemoryExtractionForTurn(
             last_activity_at = excluded.last_activity_at,
             scheduled_for = excluded.scheduled_for,
             target_sequence = MAX(memory_extraction_debounces.target_sequence, excluded.target_sequence),
+            attempts = 0,
             updated_at = excluded.updated_at`
     ).run(
         namedParams({
@@ -135,6 +147,15 @@ export function stopMemoryExtractionScheduler() {
     scheduledTimers.clear();
 }
 
+export function setMemoryExtractionWorkerForTesting(worker: MemoryExtractionWorker | null) {
+    extractionWorker = worker ?? runAiSdkMemoryExtraction;
+}
+
+export function resetMemoryExtractionSchedulerForTesting() {
+    stopMemoryExtractionScheduler();
+    processingPromise = null;
+}
+
 async function processDueMemoryExtractionsOnce(input: { now?: Date } = {}) {
     if (!isMemoryEnabled()) {
         return { completed: 0, failed: 0, skipped: 0 };
@@ -144,7 +165,7 @@ async function processDueMemoryExtractionsOnce(input: { now?: Date } = {}) {
     const now = input.now ?? new Date();
     const rows = db
         .prepare(
-            `SELECT chat_id, agent_participant_id, agent_id, target_sequence
+            `SELECT chat_id, agent_participant_id, agent_id, target_sequence, attempts
              FROM memory_extraction_debounces
              WHERE scheduled_for <= $now
              ORDER BY scheduled_for ASC, chat_id ASC, agent_participant_id ASC`
@@ -159,93 +180,179 @@ async function processDueMemoryExtractionsOnce(input: { now?: Date } = {}) {
             counts[result.status] += 1;
         } catch {
             counts.failed += 1;
-            rescheduleDebounce(row, addMs(now, memoryExtractionRetryDelayMs), db);
+            retryOrDropDebounce(row, now, db);
         }
     }
 
     return counts;
 }
 
-export function resetMemoryExtractionSchedulerForTesting() {
-    stopMemoryExtractionScheduler();
-    processingPromise = null;
-}
-
+/**
+ * Backlogs paginate: one worker call per chunk, cursor advance per chunk, loop
+ * until the settled target sequence is covered. No message is skipped — a
+ * mid-backlog failure resumes from the last completed chunk on retry.
+ */
 async function processMemoryExtraction(row: DebounceRow, now: Date, db: Database) {
-    const cursor = getExtractionCursor(row, db);
-    const startSequence = cursor + 1;
+    const cursor = getExtractionCursor(row, db) ?? 0;
     const endSequence = row.target_sequence;
 
     if (endSequence <= cursor) {
-        await finishSkippedExtraction(row, startSequence, endSequence, now, db);
-        return deleteDebounce(row, { jobId: null, status: 'skipped' }, db, endSequence);
-    }
-
-    const messages = listExtractableMessages(row.chat_id, cursor, endSequence, db);
-    if (messages.length === 0) {
-        await finishSkippedExtraction(row, startSequence, endSequence, now, db);
-        updateExtractionCursor(row, endSequence, now, db);
-        return deleteDebounce(row, { jobId: null, status: 'skipped' }, db, endSequence);
-    }
-
-    const jobId = createMemoryJob(row, {
-        endSequence,
-        now,
-        startSequence,
-        status: 'running',
-    });
-
-    try {
-        const output = await appendEpisodicMemory(row, messages, { jobId, now });
-        completeMemoryJob(jobId, {
+        finishSkippedExtraction(row, {
             endSequence,
-            fileChanges: [output.fileChange],
             now,
-            outputPath: output.relativePath,
-            startSequence,
+            reason: 'no_extractable_messages',
+            startSequence: cursor + 1,
         });
-        updateExtractionCursor(row, endSequence, now, db);
-        maybeQueueMemoryDreamForAgent({ agentId: row.agent_id, db, now });
-        return deleteDebounce(row, { jobId, status: 'completed' }, db, endSequence);
-    } catch (error) {
-        failMemoryJob(jobId, formatError(error), now);
-        rescheduleDebounce(row, addMs(now, memoryExtractionRetryDelayMs), db);
-        return { jobId, status: 'failed' } satisfies ProcessResult;
+        return deleteDebounce(row, { jobId: null, status: 'skipped' }, db, endSequence);
     }
+
+    let chunkCursor = cursor;
+    let completedChunks = 0;
+    let lastJobId: string | null = null;
+
+    while (chunkCursor < endSequence) {
+        const chunk = nextExtractionChunk(row.chat_id, chunkCursor, endSequence, db);
+        if (chunk.messages.length === 0) {
+            if (chunkCursor === cursor) {
+                finishSkippedExtraction(row, {
+                    endSequence,
+                    now,
+                    reason: 'no_extractable_messages',
+                    startSequence: cursor + 1,
+                });
+            }
+            updateExtractionCursor(row, endSequence, now, db);
+            break;
+        }
+
+        const startSequence = chunkCursor + 1;
+        const jobId = createMemoryJob(row, {
+            endSequence: chunk.coveredEnd,
+            modelCategory: 'fast',
+            now,
+            startSequence,
+            status: 'running',
+        });
+        lastJobId = jobId;
+
+        try {
+            const outcome = await extractionWorker({
+                agentId: row.agent_id,
+                chatId: row.chat_id,
+                jobId,
+                messages: chunk.messages,
+            });
+
+            if (outcome.observations) {
+                const output = await appendEpisodicMemory(row, outcome.observations, {
+                    endSequence: chunk.coveredEnd,
+                    jobId,
+                    now,
+                    startSequence,
+                });
+                completeMemoryJob(jobId, {
+                    endSequence: chunk.coveredEnd,
+                    fileChanges: [output.fileChange],
+                    now,
+                    outcome,
+                    outputPath: output.relativePath,
+                    startSequence,
+                });
+                completedChunks += 1;
+            } else {
+                skipMemoryJobAfterRun(jobId, outcome, now);
+            }
+            updateExtractionCursor(row, chunk.coveredEnd, now, db);
+            chunkCursor = chunk.coveredEnd;
+        } catch (error) {
+            failMemoryJob(jobId, formatError(error), now);
+            retryOrDropDebounce(row, now, db);
+            return { jobId, status: 'failed' } satisfies ProcessResult;
+        }
+    }
+
+    if (completedChunks > 0) {
+        maybeQueueMemoryDreamForAgent({ agentId: row.agent_id, db, now });
+    }
+    return deleteDebounce(
+        row,
+        { jobId: lastJobId, status: completedChunks > 0 ? 'completed' : 'skipped' },
+        db,
+        endSequence
+    );
 }
 
-async function finishSkippedExtraction(
+/**
+ * A chunk closes at the message limit or character budget, whichever comes
+ * first, and always contains at least one message. When nothing bounded the
+ * chunk, it covers through the settled target so trailing non-extractable
+ * sequences advance the cursor too.
+ */
+function nextExtractionChunk(chatId: string, cursor: number, endSequence: number, db: Database) {
+    const fetched = listExtractableMessages(
+        chatId,
+        cursor,
+        endSequence,
+        db,
+        memoryExtractionChunkMessageLimit + 1
+    );
+    const boundedByCount = fetched.length > memoryExtractionChunkMessageLimit;
+    const candidates = boundedByCount
+        ? fetched.slice(0, memoryExtractionChunkMessageLimit)
+        : fetched;
+
+    const messages: MemoryExtractionMessage[] = [];
+    let chars = 0;
+    for (const message of candidates) {
+        if (messages.length > 0 && chars + message.content.length > memoryExtractionChunkChars) {
+            break;
+        }
+        messages.push(message);
+        chars += message.content.length;
+    }
+
+    const bounded = boundedByCount || messages.length < candidates.length;
+    return {
+        coveredEnd: bounded ? (messages.at(-1)?.sequence ?? endSequence) : endSequence,
+        messages,
+    };
+}
+
+function finishSkippedExtraction(
     row: DebounceRow,
-    startSequence: number,
-    endSequence: number,
-    now: Date,
-    db: Database
+    input: { endSequence: number; now: Date; reason: string; startSequence: number }
 ) {
     const jobId = createMemoryJob(row, {
-        endSequence,
-        now,
-        startSequence,
+        endSequence: input.endSequence,
+        modelCategory: null,
+        now: input.now,
+        startSequence: input.startSequence,
         status: 'skipped',
     });
-    db.prepare(
-        `UPDATE memory_jobs
-         SET completed_at = $now,
-             updated_at = $now,
-             metadata_json = $metadataJson
-         WHERE id = $jobId`
-    ).run(
-        namedParams({
-            jobId,
-            metadataJson: JSON.stringify({ reason: 'no_extractable_messages' }),
-            now: now.toISOString(),
-        })
-    );
+    getDb()
+        .prepare(
+            `UPDATE memory_jobs
+             SET completed_at = $now,
+                 updated_at = $now,
+                 metadata_json = $metadataJson
+             WHERE id = $jobId`
+        )
+        .run(
+            namedParams({
+                jobId,
+                metadataJson: JSON.stringify({
+                    extractionMode: 'observations',
+                    reason: input.reason,
+                }),
+                now: input.now.toISOString(),
+            })
+        );
 }
 
 async function appendEpisodicMemory(
     row: DebounceRow,
-    messages: ExtractionMessage[],
-    input: { jobId: string; now: Date }
+    observations: string,
+    input: { endSequence: number; jobId: string; now: Date; startSequence: number }
 ) {
     const workspaceFolder = getAgentWorkspaceFolder(row.agent_id);
     const dateSlug = input.now.toISOString().slice(0, 10);
@@ -254,7 +361,7 @@ async function appendEpisodicMemory(
     await fs.mkdir(path.dirname(filePath), { recursive: true });
 
     const previous = await fs.readFile(filePath, 'utf8').catch(() => '');
-    const entry = renderEpisodicEntry(row, messages, input);
+    const entry = renderEpisodicEntry(row, observations, input);
     const next = previous ? `${previous.replace(/\s*$/u, '\n\n')}${entry}` : entry;
     await fs.writeFile(filePath, next);
 
@@ -270,33 +377,25 @@ async function appendEpisodicMemory(
 
 function renderEpisodicEntry(
     row: DebounceRow,
-    messages: ExtractionMessage[],
-    input: { jobId: string; now: Date }
+    observations: string,
+    input: { endSequence: number; jobId: string; now: Date; startSequence: number }
 ) {
-    const first = messages[0];
-    const last = messages.at(-1);
-    const lines = [
+    return [
         `## ${input.now.toISOString()} - ${row.chat_id}`,
         '',
-        `Source: chat \`${row.chat_id}\`, agent seat \`${row.agent_participant_id}\`, sequences ${first.sequence}-${last?.sequence ?? first.sequence}, extraction job \`${input.jobId}\`.`,
+        `Source: chat \`${row.chat_id}\`, agent seat \`${row.agent_participant_id}\`, sequences ${input.startSequence}-${input.endSequence}, extraction job \`${input.jobId}\`.`,
         '',
-    ];
-
-    for (const message of messages) {
-        lines.push(
-            `- [${message.sequence}] ${message.role} (${message.author_id}, ${message.created_at}): ${formatExcerpt(message.content)}`
-        );
-    }
-
-    lines.push('');
-    return lines.join('\n');
+        observations.trim(),
+        '',
+    ].join('\n');
 }
 
 function listExtractableMessages(
     chatId: string,
     cursor: number,
     targetSequence: number,
-    db: Database
+    db: Database,
+    limit: number
 ) {
     const rows = db
         .prepare(
@@ -308,12 +407,14 @@ function listExtractableMessages(
                AND deleted_at IS NULL
                AND role IN ('user', 'assistant')
                AND trim(content) != ''
-             ORDER BY sequence ASC`
+             ORDER BY sequence ASC
+             LIMIT $limit`
         )
         .all(
             namedParams({
                 chatId,
                 cursor,
+                limit,
                 targetSequence,
             })
         ) as Pick<
@@ -321,13 +422,14 @@ function listExtractableMessages(
         'author_id' | 'content' | 'created_at' | 'id' | 'role' | 'sequence'
     >[];
 
-    return rows as ExtractionMessage[];
+    return rows as MemoryExtractionMessage[];
 }
 
 function createMemoryJob(
     row: DebounceRow,
     input: {
         endSequence: number;
+        modelCategory: 'fast' | null;
         now: Date;
         startSequence: number;
         status: 'running' | 'skipped';
@@ -335,29 +437,6 @@ function createMemoryJob(
 ) {
     const now = input.now.toISOString();
     const jobId = `memjob_${crypto.randomUUID().replaceAll('-', '')}`;
-    dbInsertMemoryJob({
-        agentId: row.agent_id,
-        agentParticipantId: row.agent_participant_id,
-        chatId: row.chat_id,
-        endSequence: input.endSequence,
-        jobId,
-        now,
-        startSequence: input.startSequence,
-        status: input.status,
-    });
-    return jobId;
-}
-
-function dbInsertMemoryJob(input: {
-    agentId: string;
-    agentParticipantId: string;
-    chatId: string;
-    endSequence: number;
-    jobId: string;
-    now: string;
-    startSequence: number;
-    status: 'running' | 'skipped';
-}) {
     getDb()
         .prepare(
             `INSERT INTO memory_jobs (
@@ -385,7 +464,7 @@ function dbInsertMemoryJob(input: {
                 $chatId,
                 $agentId,
                 $agentParticipantId,
-                NULL,
+                $modelCategory,
                 NULL,
                 $startSequence,
                 $endSequence,
@@ -399,18 +478,20 @@ function dbInsertMemoryJob(input: {
         )
         .run(
             namedParams({
-                agentId: input.agentId,
-                agentParticipantId: input.agentParticipantId,
-                chatId: input.chatId,
-                completedAt: input.status === 'skipped' ? input.now : null,
+                agentId: row.agent_id,
+                agentParticipantId: row.agent_participant_id,
+                chatId: row.chat_id,
+                completedAt: input.status === 'skipped' ? now : null,
                 endSequence: input.endSequence,
-                jobId: input.jobId,
-                metadataJson: JSON.stringify({ extractionMode: 'transcript-excerpt' }),
-                now: input.now,
+                jobId,
+                metadataJson: JSON.stringify({ extractionMode: 'observations' }),
+                modelCategory: input.modelCategory,
+                now,
                 startSequence: input.startSequence,
                 status: input.status,
             })
         );
+    return jobId;
 }
 
 function completeMemoryJob(
@@ -419,6 +500,7 @@ function completeMemoryJob(
         endSequence: number;
         fileChanges: unknown[];
         now: Date;
+        outcome: MemoryExtractionOutcome;
         outputPath: string;
         startSequence: number;
     }
@@ -428,6 +510,9 @@ function completeMemoryJob(
         .prepare(
             `UPDATE memory_jobs
              SET status = 'completed',
+                 model_json = $modelJson,
+                 usage_json = $usageJson,
+                 metadata_json = $metadataJson,
                  source_start_sequence = $startSequence,
                  source_end_sequence = $endSequence,
                  output_path = $outputPath,
@@ -441,9 +526,41 @@ function completeMemoryJob(
                 endSequence: input.endSequence,
                 fileChangesJson: JSON.stringify(input.fileChanges),
                 jobId,
+                metadataJson: JSON.stringify({
+                    extractionMode: 'observations',
+                    observations: input.outcome.observations,
+                }),
+                modelJson: JSON.stringify(input.outcome.model),
                 now,
                 outputPath: input.outputPath,
                 startSequence: input.startSequence,
+                usageJson: JSON.stringify(input.outcome.usage ?? {}),
+            })
+        );
+}
+
+function skipMemoryJobAfterRun(jobId: string, outcome: MemoryExtractionOutcome, now: Date) {
+    getDb()
+        .prepare(
+            `UPDATE memory_jobs
+             SET status = 'skipped',
+                 model_json = $modelJson,
+                 usage_json = $usageJson,
+                 metadata_json = $metadataJson,
+                 completed_at = $now,
+                 updated_at = $now
+             WHERE id = $jobId`
+        )
+        .run(
+            namedParams({
+                jobId,
+                metadataJson: JSON.stringify({
+                    extractionMode: 'observations',
+                    reason: 'no_durable_observations',
+                }),
+                modelJson: JSON.stringify(outcome.model),
+                now: now.toISOString(),
+                usageJson: JSON.stringify(outcome.usage ?? {}),
             })
         );
 }
@@ -468,7 +585,7 @@ function getChatLastMessageSequence(chatId: string, db: Database) {
     return row?.last_message_sequence ?? 0;
 }
 
-function getExtractionCursor(row: DebounceRow, db: Database) {
+function getExtractionCursor(row: DebounceRow, db: Database): number | null {
     const cursor = db
         .prepare(
             `SELECT last_extracted_sequence
@@ -482,7 +599,7 @@ function getExtractionCursor(row: DebounceRow, db: Database) {
             })
         ) as { last_extracted_sequence: number } | null;
 
-    return cursor?.last_extracted_sequence ?? 0;
+    return cursor?.last_extracted_sequence ?? null;
 }
 
 function updateExtractionCursor(row: DebounceRow, sequence: number, now: Date, db: Database) {
@@ -543,16 +660,29 @@ function deleteDebounce(
     return result;
 }
 
-function rescheduleDebounce(row: DebounceRow, nextScheduledFor: Date, db: Database) {
-    const scheduledFor = nextScheduledFor.toISOString();
+/**
+ * Failed attempts retry on a delay until the cap, then the debounce is dropped.
+ * The next completed turn re-schedules the seat and resets the attempt count,
+ * so a persistent failure cannot accumulate unbounded failed jobs.
+ */
+function retryOrDropDebounce(row: DebounceRow, now: Date, db: Database) {
+    const attempts = row.attempts + 1;
+    if (attempts >= memoryExtractionMaxAttempts) {
+        deleteDebounce(row, { jobId: null, status: 'failed' }, db, row.target_sequence);
+        return;
+    }
+
+    const scheduledFor = addMs(now, memoryExtractionRetryDelayMs).toISOString();
     db.prepare(
         `UPDATE memory_extraction_debounces
          SET scheduled_for = $scheduledFor,
+             attempts = $attempts,
              updated_at = $scheduledFor
          WHERE chat_id = $chatId AND agent_participant_id = $agentParticipantId`
     ).run(
         namedParams({
             agentParticipantId: row.agent_participant_id,
+            attempts,
             chatId: row.chat_id,
             scheduledFor,
         })
@@ -599,16 +729,6 @@ function clearScheduledTimer(chatId: string, agentParticipantId: string) {
 
 function debounceKey(chatId: string, agentParticipantId: string) {
     return `${chatId}:${agentParticipantId}`;
-}
-
-function formatExcerpt(content: string) {
-    const normalized = content.replace(/\s+/gu, ' ').trim();
-    const maxLength = 800;
-    const value =
-        normalized.length > maxLength
-            ? `${normalized.slice(0, maxLength - 1).trimEnd()}...`
-            : normalized;
-    return JSON.stringify(value);
 }
 
 function sha256(value: string) {

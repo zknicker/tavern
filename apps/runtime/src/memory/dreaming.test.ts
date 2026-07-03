@@ -1,3 +1,4 @@
+import { agentRuntimeMutationHeaders, agentRuntimeMutationOrigins } from '@tavern/api';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { closeDb, getDb, initTestDb } from '../db/connection.ts';
 import { ensureRuntimeSchema } from '../db/schema.ts';
@@ -5,11 +6,13 @@ import { namedParams } from '../db/sqlite.ts';
 import {
     maybeQueueMemoryDreamForAgent,
     processQueuedMemoryDreams,
+    pruneFinishedMemoryJobs,
     queueMemoryDream,
     recoverInterruptedMemoryJobs,
     resetMemoryDreamSchedulerForTesting,
 } from './dreaming.ts';
 import { handleMemoryRequest } from './routes.ts';
+import { handleMemorySettingsRequest } from './settings.ts';
 import { MemoryDreamWorkerError } from './worker.ts';
 
 describe('Memory dreaming', () => {
@@ -197,6 +200,96 @@ describe('Memory dreaming', () => {
         ).resolves.toEqual({ completed: 0, failed: 0, skipped: 0 });
 
         expect(readJobs().filter((job) => job.kind === 'dream')).toHaveLength(1);
+    });
+
+    test('does not requeue an idle agent on age alone without new extractions', () => {
+        insertCompletedExtraction('memjob_extract_old', '2026-07-01T19:00:00.000Z');
+        insertCompletedDream('memdream_previous', '2026-07-01T20:00:00.000Z');
+
+        expect(
+            maybeQueueMemoryDreamForAgent({
+                agentId: 'agt_primary',
+                now: new Date('2026-07-03T20:00:00.000Z'),
+            })
+        ).toBeNull();
+        expect(readJobs().filter((job) => job.kind === 'dream')).toHaveLength(1);
+    });
+
+    test('consecutive dream failures back off exponentially', () => {
+        insertCompletedExtraction('memjob_extract_1', '2026-07-02T10:00:00.000Z');
+        insertMemoryJob({
+            createdAt: '2026-07-02T11:00:00.000Z',
+            id: 'memdream_failed_1',
+            kind: 'dream',
+            metadataJson: '{}',
+            modelCategory: 'standard',
+            status: 'failed',
+        });
+        insertMemoryJob({
+            createdAt: '2026-07-02T12:30:00.000Z',
+            id: 'memdream_failed_2',
+            kind: 'dream',
+            metadataJson: '{}',
+            modelCategory: 'standard',
+            status: 'failed',
+        });
+
+        // Two consecutive failures => 2h backoff from the latest failure.
+        expect(
+            maybeQueueMemoryDreamForAgent({
+                agentId: 'agt_primary',
+                now: new Date('2026-07-02T14:00:00.000Z'),
+            })
+        ).toBeNull();
+        expect(
+            maybeQueueMemoryDreamForAgent({
+                agentId: 'agt_primary',
+                now: new Date('2026-07-02T14:31:00.000Z'),
+            })
+        ).toMatch(/^memdream_/u);
+    });
+
+    test('prunes finished Memory jobs past retention and keeps active ones', () => {
+        insertCompletedExtraction('memjob_extract_old', '2026-05-01T10:00:00.000Z');
+        insertCompletedDream('memdream_old', '2026-05-01T11:00:00.000Z');
+        insertMemoryJob({
+            createdAt: '2026-05-01T12:00:00.000Z',
+            id: 'memdream_still_queued',
+            kind: 'dream',
+            metadataJson: '{}',
+            modelCategory: 'standard',
+            status: 'queued',
+        });
+        insertCompletedExtraction('memjob_extract_recent', '2026-07-01T10:00:00.000Z');
+
+        expect(pruneFinishedMemoryJobs({ now: new Date('2026-07-02T10:00:00.000Z') })).toBe(2);
+        expect(readJobs().map((job) => job.id)).toEqual([
+            'memdream_still_queued',
+            'memjob_extract_recent',
+        ]);
+    });
+
+    test('dream route returns a clean conflict while Memory is off', async () => {
+        await handleMemorySettingsRequest(
+            new Request('http://runtime.test/memory/settings', {
+                body: JSON.stringify({ enabled: false }),
+                headers: {
+                    'content-type': 'application/json',
+                    [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+                },
+                method: 'PUT',
+            })
+        );
+
+        const response = await handleMemoryRequest(
+            new Request('http://runtime.test/memory/agents/agt_primary/dream', {
+                headers: {
+                    [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+                },
+                method: 'POST',
+            })
+        );
+        expect(response?.status).toBe(409);
     });
 
     test('lists and reads Memory jobs through the Runtime route', async () => {

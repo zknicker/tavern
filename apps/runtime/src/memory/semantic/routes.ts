@@ -18,7 +18,8 @@ import {
     semanticMemoryStatusSchema,
 } from '@tavern/api';
 import { signalAgentSettingsApplied } from '../../agent-engine/settings-apply';
-import { forbidden, json, notFound } from '../../tavern/http';
+import { conflict, forbidden, json, notFound } from '../../tavern/http';
+import { isMemoryEnabled } from '../settings';
 import {
     createSemanticMemoryFolder,
     createSemanticMemoryPage,
@@ -72,27 +73,27 @@ export async function handleSemanticMemoryRequest(request: Request): Promise<Res
     }
 
     if (request.method === 'POST' && url.pathname === agentRuntimeRoutes.semanticMemoryPages) {
-        const forbiddenResponse = requireTavernMutation(request, 'Memory file creation');
-        if (forbiddenResponse) {
-            return forbiddenResponse;
+        const blockedResponse = requireMemoryWrite(request, 'Memory file creation');
+        if (blockedResponse) {
+            return blockedResponse;
         }
         const input = semanticMemoryCreatePageSchema.parse(await readJson(request));
         return json(memoryPathMutationResultSchema.parse(await createSemanticMemoryPage(input)));
     }
 
     if (request.method === 'POST' && url.pathname === agentRuntimeRoutes.semanticMemoryFolders) {
-        const forbiddenResponse = requireTavernMutation(request, 'Memory folder creation');
-        if (forbiddenResponse) {
-            return forbiddenResponse;
+        const blockedResponse = requireMemoryWrite(request, 'Memory folder creation');
+        if (blockedResponse) {
+            return blockedResponse;
         }
         const input = memoryPathInputSchema.parse(await readJson(request));
         return json(memoryPathMutationResultSchema.parse(await createSemanticMemoryFolder(input)));
     }
 
     if (request.method === 'POST' && url.pathname === agentRuntimeRoutes.semanticMemoryMovePath) {
-        const forbiddenResponse = requireTavernMutation(request, 'Memory path moves');
-        if (forbiddenResponse) {
-            return forbiddenResponse;
+        const blockedResponse = requireMemoryWrite(request, 'Memory path moves');
+        if (blockedResponse) {
+            return blockedResponse;
         }
         const input = semanticMemoryMovePathSchema.parse(await readJson(request));
         return json(memoryPathMutationResultSchema.parse(await moveSemanticMemoryPath(input)));
@@ -123,9 +124,9 @@ export async function handleSemanticMemoryRequest(request: Request): Promise<Res
     }
 
     if (request.method === 'PUT' && pageMatch?.[1]) {
-        const forbiddenResponse = requireTavernMutation(request, 'Memory file saves');
-        if (forbiddenResponse) {
-            return forbiddenResponse;
+        const blockedResponse = requireMemoryWrite(request, 'Memory file saves');
+        if (blockedResponse) {
+            return blockedResponse;
         }
         const body = readJsonRecord(await readJson(request));
         const input = semanticMemorySavePageSchema.parse({
@@ -136,9 +137,9 @@ export async function handleSemanticMemoryRequest(request: Request): Promise<Res
     }
 
     if (request.method === 'DELETE' && pageMatch?.[1]) {
-        const forbiddenResponse = requireTavernMutation(request, 'Memory file deletion');
-        if (forbiddenResponse) {
-            return forbiddenResponse;
+        const blockedResponse = requireMemoryWrite(request, 'Memory file deletion');
+        if (blockedResponse) {
+            return blockedResponse;
         }
         return json(
             memoryPathMutationResultSchema.parse(
@@ -149,9 +150,9 @@ export async function handleSemanticMemoryRequest(request: Request): Promise<Res
 
     const folderMatch = url.pathname.match(/^\/memory\/folders\/(.+)$/u);
     if (request.method === 'DELETE' && folderMatch?.[1]) {
-        const forbiddenResponse = requireTavernMutation(request, 'Memory folder deletion');
-        if (forbiddenResponse) {
-            return forbiddenResponse;
+        const blockedResponse = requireMemoryWrite(request, 'Memory folder deletion');
+        if (blockedResponse) {
+            return blockedResponse;
         }
         return json(
             memoryPathMutationResultSchema.parse(
@@ -171,6 +172,18 @@ function requireTavernMutation(request: Request, label: string) {
         return null;
     }
     return forbidden(`${label} requires a Tavern caller.`);
+}
+
+/** Memory content writes need a Tavern caller and global Memory enabled. Settings stay editable. */
+function requireMemoryWrite(request: Request, label: string) {
+    const forbiddenResponse = requireTavernMutation(request, label);
+    if (forbiddenResponse) {
+        return forbiddenResponse;
+    }
+    if (!isMemoryEnabled()) {
+        return conflict(`${label} unavailable while Memory is off.`);
+    }
+    return null;
 }
 
 async function readJson(request: Request): Promise<unknown> {

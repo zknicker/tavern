@@ -180,6 +180,49 @@ describe('Memory store', () => {
         });
     });
 
+    test('page moves tombstone the old path and clear the new path', async () => {
+        await deleteSemanticMemoryPage({ path: 'Concepts/Lattice.md' });
+
+        await moveSemanticMemoryPath({
+            fromPath: 'Projects/Alpha.md',
+            kind: 'page',
+            toPath: 'Concepts/Lattice.md',
+        });
+
+        await expect(
+            writeSemanticMemoryFile({
+                content: '# Alpha Project\n\nRecreated by stale evidence.\n',
+                expectedHash: null,
+                path: 'Projects/Alpha.md',
+            })
+        ).rejects.toThrow('cannot be recreated by dreaming');
+
+        const moved = await readSemanticMemoryFile({ path: 'Concepts/Lattice.md' });
+        await expect(
+            writeSemanticMemoryFile({
+                content: '# Alpha Project\n\nDreamed update at the new home.\n',
+                expectedHash: moved?.hash ?? null,
+                path: 'Concepts/Lattice.md',
+            })
+        ).resolves.toMatchObject({ path: 'Concepts/Lattice.md' });
+    });
+
+    test('folder moves tombstone contained pages at their old paths', async () => {
+        await moveSemanticMemoryPath({
+            fromPath: 'Projects',
+            kind: 'folder',
+            toPath: 'Archive/Projects',
+        });
+
+        await expect(
+            writeSemanticMemoryFile({
+                content: '# Alpha Project\n\nRecreated by stale evidence.\n',
+                expectedHash: null,
+                path: 'Projects/Alpha.md',
+            })
+        ).rejects.toThrow('cannot be recreated by dreaming');
+    });
+
     test('deletes pages and folders inside the Memory root', async () => {
         await expect(
             deleteSemanticMemoryPage({ path: 'Concepts/Lattice.md' })
@@ -264,6 +307,23 @@ describe('Memory store', () => {
         ).rejects.toThrow(/changed since it was read/);
     });
 
+    test('rejects worker writes of core memory file names into shared Semantic Memory', async () => {
+        await expect(
+            writeSemanticMemoryFile({
+                content: '# Shared user profile\n',
+                expectedHash: null,
+                path: 'USER.md',
+            })
+        ).rejects.toThrow('Core memory files do not live in shared Semantic Memory');
+        await expect(
+            writeSemanticMemoryFile({
+                content: '# Shared memory\n',
+                expectedHash: null,
+                path: 'Projects/MEMORY.md',
+            })
+        ).rejects.toThrow('Core memory files do not live in shared Semantic Memory');
+    });
+
     test('prevents dreaming from recreating user-deleted semantic pages', async () => {
         const snapshot = await readSemanticMemoryFile({ path: 'Projects/Alpha.md' });
         await deleteSemanticMemoryPage({ path: 'Projects/Alpha.md' });
@@ -341,7 +401,7 @@ describe('Memory store', () => {
         await expect(fs.stat(path.join(nextRoot, 'MEMORY.md'))).rejects.toThrow();
         await expect(fs.stat(path.join(nextRoot, 'USER.md'))).rejects.toThrow();
         await expect(fs.readFile(path.join(nextRoot, 'TAXONOMY.md'), 'utf8')).resolves.toContain(
-            'Per-agent briefing files (`USER.md`, `MEMORY.md`) live in each agent workspace'
+            'Per-agent core memory files (`USER.md`, `MEMORY.md`) live in each agent workspace'
         );
         await expect(fs.stat(path.join(nextRoot, 'episodic'))).rejects.toThrow();
         expect((await fs.stat(path.join(nextRoot, 'companies'))).isDirectory()).toBe(true);

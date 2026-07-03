@@ -9,8 +9,9 @@ import {
 } from '@tavern/api';
 import { getDb } from '../db/connection.ts';
 import { namedParams } from '../db/sqlite.ts';
-import { forbidden, json, notFound } from '../tavern/http.ts';
+import { conflict, forbidden, json, notFound } from '../tavern/http.ts';
 import { processQueuedMemoryDreams, queueMemoryDream } from './dreaming.ts';
+import { isMemoryEnabled } from './settings.ts';
 
 interface MemoryJobRow {
     agent_id: string;
@@ -55,6 +56,9 @@ export async function handleMemoryRequest(request: Request): Promise<Response | 
         const forbiddenResponse = requireTavernMutation(request, 'Memory dreaming');
         if (forbiddenResponse) {
             return forbiddenResponse;
+        }
+        if (!isMemoryEnabled()) {
+            return conflict('Memory dreaming unavailable while Memory is off.');
         }
         const input = memoryDreamRequestSchema.parse({
             agentId: decodeURIComponent(dreamMatch[1]),
