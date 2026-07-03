@@ -1,7 +1,7 @@
 ---
-summary: Memory API boundary for global Memory settings, per-agent briefing injection, hidden episodic evidence, and shared Semantic Memory.
+summary: Memory API boundary for global Memory settings, per-agent core memory injection, hidden episodic evidence, and shared Semantic Memory.
 read_when:
-  - changing Memory settings, prompt-time briefing injection, extraction, dreaming, or Memory visibility
+  - changing Memory settings, prompt-time core memory injection, extraction, dreaming, or Memory visibility
   - changing the boundary between agent workspace memory and shared Semantic Memory
   - changing how agents or users inspect durable Memory knowledge
 ---
@@ -11,7 +11,7 @@ read_when:
 Memory is Tavern's durable knowledge contract. It has three layers:
 
 * Layer 1: each agent workspace owns `USER.md` and `MEMORY.md`. Runtime injects
-  those briefing files into that agent's system prompt only when Memory is on.
+  those core memory files into that agent's system prompt only when Memory is on.
 * Layer 2: hidden per-agent Episodic Memory stores extraction evidence from
   chat activity. Normal agents do not edit it.
 * Layer 3: shared Semantic Memory is the browsable Markdown knowledge surface
@@ -27,7 +27,7 @@ Runtime exposes global Memory enablement through:
 * `GET /memory/settings`
 * `PUT /memory/settings`
 
-When Memory is off, Runtime does not inject briefing files, run extraction, run
+When Memory is off, Runtime does not inject core memory files, run extraction, run
 dreaming, expose Memory tools, or allow Memory writes. Existing files remain on
 disk but are inert until Memory is re-enabled.
 
@@ -48,19 +48,25 @@ Runtime exposes Semantic Memory through Memory APIs for:
 * lightweight lexical search
 * backlinks derived from `[[wikilinks]]`
 
-The shared root seeds `TAXONOMY.md` and semantic folders, not agent briefing
+The shared root seeds `TAXONOMY.md` and semantic folders, not agent core memory
 files and not episodic files.
 
 ## Workers
 
-Extraction and dreaming are Runtime background workers. Extraction is a
-deterministic worker over settled user-facing chat messages. Dreaming uses the
-Standard model category with a restricted Semantic Memory tool set; it does not
-run the normal chat agent prompt, chat tools, or skill set.
+Extraction and dreaming are Runtime background workers. Extraction distills a
+deterministic window of settled user-facing chat messages into episodic
+observations with the Fast model category, paginating large backlogs into
+bounded chunks so no message is skipped. Dreaming uses the Standard model
+category with a restricted tool set covering shared Semantic Memory pages and
+the owning agent's own core memory files; it does not run the normal chat agent
+prompt, chat tools, or skill set.
+
+Content mutation routes return a conflict while Memory is off; Memory and
+model-category settings stay editable.
 
 Worker job history, cursors, debounce state, usage, errors, and touched-file
-records are Runtime database state. The durable knowledge itself remains
-Markdown on disk.
+records are Runtime database state; finished job records are pruned after
+thirty days. The durable knowledge itself remains Markdown on disk.
 
 ## Related Docs
 

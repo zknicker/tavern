@@ -46,7 +46,7 @@ requests a backfill or repair run.
 ## Outputs
 
 A successful persistence pass may produce new or updated episodic entries,
-semantic pages, L1 briefings, links, tags, citations, or source metadata.
+semantic pages, L1 core memory, links, tags, citations, or source metadata.
 
 ## Constraints
 

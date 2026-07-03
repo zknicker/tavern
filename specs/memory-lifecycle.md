@@ -2,7 +2,7 @@
 
 Tavern Memory has three layers:
 
-* agent-local briefing files: `USER.md` and `MEMORY.md`
+* agent-local core memory files: `USER.md` and `MEMORY.md`
 * hidden per-agent Episodic Memory extracted from chats
 * shared Semantic Memory Markdown pages inspected in the app
 
@@ -28,9 +28,12 @@ research/example/...
 ```
 
 Agents may write Semantic Memory when explicitly asked to remember or organize
-shared knowledge. Extraction workers append hidden per-agent episodic evidence
-after completed turns and an idle debounce. Dreaming workers promote stable
-evidence into agent briefing files or Semantic Memory.
+shared knowledge, using the agent Memory tools. Extraction workers distill the
+settled message window with the Fast model category and append the resulting
+observations to hidden per-agent episodic evidence after completed turns and an
+idle debounce. Dreaming workers promote stable evidence into the owning agent's
+core memory files or shared Semantic Memory, and run only when that agent has new
+evidence since its last dream.
 
 ## Correction And Forgetting
 

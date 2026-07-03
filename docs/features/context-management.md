@@ -15,7 +15,7 @@ Managed Tavern context does not use Lossless Claw. Runtime strips stale
 ## Contract
 
 * Runtime injects generated agent instructions and, when Memory is enabled, the
-  agent workspace `USER.md` and `MEMORY.md` briefing files.
+  agent workspace `USER.md` and `MEMORY.md` core memory files.
 * Runtime may retrieve relevant shared Semantic Memory material for bounded
   prompt context.
 * The harness session owns prior user-agent turn history. Runtime does not
@@ -57,7 +57,7 @@ Memory owns durable knowledge. Context management chooses what Memory and chat
 material belongs in the active prompt.
 
 When an active turn needs continuity, Runtime manages bounded prompt context
-from chat history, participant context, briefing files, and relevant Semantic
+from chat history, participant context, core memory files, and relevant Semantic
 Memory. Background extraction and dreaming maintain Memory separately from the
 active turn path.
 
