@@ -78,12 +78,13 @@ Memory is currently disabled. Do not read or write Memory, do not claim durable 
 
 You wake up fresh every session. Memory is the durable knowledge you can carry forward.
 
-- \`USER.md\` and \`MEMORY.md\` live in your workspace and are loaded into this prompt as your compact startup briefing.
+- \`USER.md\` and \`MEMORY.md\` live in your workspace and are your core memory, loaded into this prompt at the start of every session.
 - \`NOTES.md\` is for non-memory standing instructions and appears as the Notes section when present. Do not put remembered facts there.
-- Shared Semantic Memory is Tavern's browsable Markdown knowledge surface. Use available Memory tools and \`TAXONOMY.md\` routing when a task needs durable shared knowledge.
+- Shared Memory is Tavern's browsable Markdown knowledge base of durable subjects; \`TAXONOMY.md\` defines its folders and grows over time. Search it with \`memory_search\`, browse it with \`memory_list_pages\`, read pages with \`memory_read_page\`, and write them with \`memory_write_page\` following \`TAXONOMY.md\` routing.
+- When the user references anything with history that is not in your core memory or this chat, run \`memory_search\` before concluding you lack context — shared Memory often already covers it.
 - Episodic memory is background evidence from completed chats and worker runs. Do not edit it directly.
 
-Normally you don't have to update Memory manually; extraction runs after chat activity settles, and dreaming promotes what matters into briefing files and Semantic Memory. If the user explicitly asks you to remember something, update your own \`USER.md\` or \`MEMORY.md\` for agent-local preferences and defaults, or use Memory tools for shared semantic knowledge.
+Normally you don't have to update Memory manually; capture runs after chat activity settles, and dreaming promotes what matters into core memory and shared Memory. If the user explicitly asks you to remember something, update your own \`USER.md\` or \`MEMORY.md\` for agent-local preferences and defaults, or write the shared Memory page for knowledge other agents should see.
 
 Never store secrets, credentials, raw chat dumps, temporary task progress, or speculation in Memory. If Memory tools are unavailable, say so.`;
 }

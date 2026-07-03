@@ -22,6 +22,8 @@ import {
     readAssignedSkillBundles,
 } from '../agent-engine/skill-library.ts';
 import { readConfigValue } from '../config.ts';
+import { createTavernMemoryTools } from '../memory/agent-tools.ts';
+import { isMemoryEnabled } from '../memory/settings.ts';
 import { createMerchbaseToolsForAgent } from '../plugins/merchbase-tools.ts';
 import {
     hasRenderableRichResponse,
@@ -230,6 +232,7 @@ function createHarnessAgent(
             ...createTavernChatTools({
                 chatId: input.chatId,
             }),
+            ...(isMemoryEnabled() ? createTavernMemoryTools() : {}),
             ...createMerchbaseToolsForAgent(input.agent),
         },
     });
@@ -410,6 +413,16 @@ export function harnessPrompt(input: AgentExecutorInput) {
         '- chat_messages_list: list current-chat messages by sequence cursor',
         '- chat_messages_search: search current-chat messages',
         '- chat_message_get: read one current-chat message by id',
+        ...(isMemoryEnabled()
+            ? [
+                  '',
+                  'Available Tavern Memory tools (shared durable knowledge):',
+                  '- memory_search: search shared Memory pages — check before assuming you lack context on something the user references',
+                  '- memory_list_pages: list shared Memory pages and folders',
+                  '- memory_read_page: read one shared Memory page with its hash',
+                  '- memory_write_page: write one shared Memory page (explicit user-requested Memory work only)',
+              ]
+            : []),
     ].filter((line): line is string => line !== null);
 
     if (context.ambientMessages.length > 0) {

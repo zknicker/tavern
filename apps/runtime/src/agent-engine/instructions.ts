@@ -44,13 +44,13 @@ export async function prepareAgentEngineInstructions(
             workspaceDir,
         });
     const generated = await generateAgentInstructions(db, source.agentId);
-    const briefing = isMemoryEnabled()
-        ? await readOrSeedBriefingFiles({ workspaceDir: source.workspaceDir })
+    const coreMemory = isMemoryEnabled()
+        ? await readOrSeedCoreMemoryFiles({ workspaceDir: source.workspaceDir })
         : null;
     const soul = await readOrSeedSoul({ workspaceDir: source.workspaceDir });
     const instructions = composeAgentEngineInstructions({
         agentInstructions: generated.content,
-        briefing,
+        coreMemory,
         soul,
     });
 
@@ -64,7 +64,7 @@ export async function prepareAgentEngineInstructions(
     };
 }
 
-async function readOrSeedBriefingFiles(input: { workspaceDir: string }) {
+async function readOrSeedCoreMemoryFiles(input: { workspaceDir: string }) {
     const [user, memory] = await Promise.all([
         readOrSeedWorkspaceFile({
             defaultContent: defaultUser,
@@ -113,19 +113,19 @@ async function readOrSeedWorkspaceFile(input: {
 
 function composeAgentEngineInstructions(input: {
     agentInstructions: string;
-    briefing: { memory: string; user: string } | null;
+    coreMemory: { memory: string; user: string } | null;
     soul: string;
 }) {
     const sections = [
         input.agentInstructions.trim(),
-        input.briefing
+        input.coreMemory
             ? [
                   '## USER',
                   'The following content comes from `USER.md` in your workspace. Edit this file directly for agent-local stable facts about the user.',
-                  input.briefing.user.trim(),
+                  input.coreMemory.user.trim(),
                   '## MEMORY',
                   'The following content comes from `MEMORY.md` in your workspace. Edit this file directly for agent-local durable working memory.',
-                  input.briefing.memory.trim(),
+                  input.coreMemory.memory.trim(),
               ].join('\n\n')
             : null,
         '## SOUL',

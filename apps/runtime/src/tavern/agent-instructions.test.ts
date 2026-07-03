@@ -89,7 +89,7 @@ describe('agent instructions', () => {
         expect(instructions).not.toContain('SKILL.md');
     });
 
-    it('keeps briefing files out of the system prompt when Memory is disabled', async () => {
+    it('keeps core memory files out of the system prompt when Memory is disabled', async () => {
         await writeFile(path.join(workspaceDir, 'USER.md'), '# USER.md\n\nHidden while off.\n');
         await writeFile(path.join(workspaceDir, 'MEMORY.md'), '# MEMORY.md\n\nHidden while off.\n');
         await handleMemorySettingsRequest(

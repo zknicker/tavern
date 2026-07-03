@@ -27,9 +27,9 @@ sibling memory roots.
 
 ## L1 Root Files
 
-`MEMORY.md` is the compact operating briefing.
+`MEMORY.md` is core memory for operating rules.
 
-`USER.md` is the compact user briefing.
+`USER.md` is core memory about the user.
 
 `TAXONOMY.md` is the routing contract. Read it before changing Memory
 structure.

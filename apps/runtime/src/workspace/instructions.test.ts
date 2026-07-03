@@ -79,7 +79,8 @@ describe('generated agent instructions', () => {
         expect(content).toContain('`USER.md` and `MEMORY.md` live in your workspace');
         expect(content).toContain('`NOTES.md` is for non-memory standing instructions');
         expect(content).toContain('`TAXONOMY.md` routing');
-        expect(content).toContain('extraction runs after chat activity settles');
+        expect(content).toContain('capture runs after chat activity settles');
+        expect(content).toContain('run `memory_search` before concluding you lack context');
         expect(content).toContain('dreaming promotes what matters');
         expect(content).toContain('## Skills');
         expect(content).toContain('Your assigned skills are listed with names and descriptions');
@@ -190,8 +191,8 @@ describe('generated agent instructions', () => {
 
     test('generation never rewrites SOUL.md, USER.md, or MEMORY.md', async () => {
         await writeFile(path.join(workspaceDir, 'SOUL.md'), 'identity');
-        await writeFile(path.join(workspaceDir, 'USER.md'), 'user briefing');
-        await writeFile(path.join(workspaceDir, 'MEMORY.md'), 'memory briefing');
+        await writeFile(path.join(workspaceDir, 'USER.md'), 'user core memory');
+        await writeFile(path.join(workspaceDir, 'MEMORY.md'), 'memory core memory');
         registerPlanner();
 
         await generateAgentInstructions(getDb(), 'planner');
@@ -200,10 +201,10 @@ describe('generated agent instructions', () => {
             'identity'
         );
         await expect(readFile(path.join(workspaceDir, 'USER.md'), 'utf8')).resolves.toBe(
-            'user briefing'
+            'user core memory'
         );
         await expect(readFile(path.join(workspaceDir, 'MEMORY.md'), 'utf8')).resolves.toBe(
-            'memory briefing'
+            'memory core memory'
         );
     });
 

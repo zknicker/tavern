@@ -32,6 +32,16 @@ const builtInTools = [
         readOnly: true,
         tools: ['chat_messages_list', 'chat_messages_search', 'chat_message_get'],
     },
+    {
+        configured: true,
+        description: 'Browse, search, and update shared Semantic Memory pages.',
+        enabled: true,
+        id: 'memory',
+        label: 'Memory',
+        name: 'memory',
+        readOnly: false,
+        tools: ['memory_list_pages', 'memory_search', 'memory_read_page', 'memory_write_page'],
+    },
 ] satisfies AgentRuntimeTool[];
 
 export function listRuntimeTools() {
