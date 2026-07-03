@@ -346,12 +346,8 @@ export function createAppRouter() {
                                         },
                                         {
                                             path: 'agents/:agentId/memory',
-                                            lazy: lazyRoute(
-                                                () =>
-                                                    import(
-                                                        './routes/app/settings-memories-page.tsx'
-                                                    ),
-                                                'SettingsMemoriesPage'
+                                            element: (
+                                                <Navigate replace to={appRoutes.settingsMemories} />
                                             ),
                                         },
                                         {

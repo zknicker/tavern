@@ -8,7 +8,7 @@ test('buildSemanticMemoryPageTree groups pages by path directories', () => {
         page({ path: 'Projects/Alpha.md', title: 'Alpha' }),
         page({ path: 'Projects/Beta.md', title: 'Beta' }),
         page({ path: 'Concepts/Lattice.md', title: 'Lattice' }),
-        page({ path: 'MEMORY.md', title: 'Memory Briefing' }),
+        page({ path: 'MEMORY.md', title: 'Memory Overview' }),
     ];
 
     assert.deepEqual(summarizeTree(buildSemanticMemoryPageTree(pages)), [
@@ -70,7 +70,7 @@ test('resolveSemanticMemoryLinkTarget resolves relative markdown paths', () => {
 function page(input: Partial<SemanticMemoryPageNode>): SemanticMemoryPageNode {
     return {
         path: 'MEMORY.md',
-        title: 'Memory Briefing',
+        title: 'Memory Overview',
         updatedAt: '2026-06-09T00:00:00.000Z',
         ...input,
     };

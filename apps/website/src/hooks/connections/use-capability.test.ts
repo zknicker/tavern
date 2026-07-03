@@ -72,7 +72,7 @@ describe('Runtime capability gates', () => {
             'modelExecution',
         ]);
         expect(settingsCapabilityRequirements['agent-skills']).toEqual(['apiServer', 'skills']);
-        expect(settingsCapabilityRequirements['agent-memory']).toEqual(['semanticMemory']);
+        expect(settingsCapabilityRequirements.memories).toEqual(['semanticMemory']);
     });
 
     test('gates Tasks on agent runtime capabilities', () => {

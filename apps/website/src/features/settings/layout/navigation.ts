@@ -60,6 +60,12 @@ export const staticSettingsNavItems = [
         to: appRoutes.settingsModels,
     },
     {
+        icon: Database02Icon,
+        id: 'memories',
+        label: 'Memory',
+        to: appRoutes.settingsMemories,
+    },
+    {
         icon: HourglassIcon,
         id: 'jobs',
         label: 'Jobs',
@@ -97,12 +103,6 @@ export const agentSettingsNavItems = [
         label: 'Channels',
         tab: 'channels',
     },
-    {
-        icon: Database02Icon,
-        id: 'agent-memory',
-        label: 'Memory',
-        tab: 'memory',
-    },
 ] as const satisfies ReadonlyArray<{
     icon: IconSvgElement;
     id: string;
@@ -115,7 +115,7 @@ export const settingsNavItems = [...staticSettingsNavItems, ...agentSettingsNavI
 export const settingsNavSections = [
     {
         id: 'general',
-        itemIds: ['agent-runtime', 'appearance', 'profile', 'updates', 'models'],
+        itemIds: ['agent-runtime', 'appearance', 'profile', 'updates', 'models', 'memories'],
         label: 'General',
     },
     {

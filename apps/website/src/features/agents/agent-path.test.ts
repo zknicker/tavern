@@ -8,7 +8,7 @@ describe('agent page paths', () => {
 
     test('builds agent settings paths', () => {
         expect(buildAgentSettingsPath('atlas')).toBe('/settings/agents/atlas/general');
-        expect(buildAgentSettingsPath('atlas', 'memory')).toBe('/settings/agents/atlas/memory');
+        expect(buildAgentSettingsPath('atlas', 'skills')).toBe('/settings/agents/atlas/skills');
         expect(buildAgentSettingsPath()).toBe('/settings/agent');
     });
 
