@@ -6,6 +6,7 @@ import type {
     TavernResponseActivity,
 } from '@tavern/api';
 import type { Database } from '../db/sqlite';
+import { log } from '../log';
 import { richResponseProgressFromActivity } from '../rich-responses/render';
 import { listEvents } from './chat-api';
 import { createRunId } from './chat-api/ids';
@@ -194,6 +195,17 @@ function messageDeliveredToRuntimeEvents(
     event: Extract<TavernChatEvent, { type: 'message.delivered' }>
 ): AgentRuntimeEvent[] {
     const turn = messageToTurn(event.delivery.message);
+
+    // A delivered message without turn metadata cannot be projected, but it
+    // must not brick the whole event feed (server catch-up reads every
+    // event); skip it loudly instead.
+    if (!turn) {
+        log.warn('Delivered Tavern message is missing runtime turn metadata', {
+            messageId: event.delivery.message.id,
+        });
+        return [];
+    }
+
     return [
         {
             timestamp: event.created_at,
@@ -245,12 +257,12 @@ function activityStepDetail(activity: TavernResponseActivity) {
 
 function messageToTurn(
     message: TavernChatMessage
-): Extract<AgentRuntimeEvent, { type: 'turn.started' }>['turn'] {
+): Extract<AgentRuntimeEvent, { type: 'turn.started' }>['turn'] | null {
     const runId = metadataRuntimeString(message.metadata, 'runId');
     const sessionKey = runtimeTurnReference(message.metadata);
 
     if (!(runId && sessionKey)) {
-        throw new Error(`Delivered Tavern message ${message.id} is missing runtime turn metadata.`);
+        return null;
     }
 
     return {
