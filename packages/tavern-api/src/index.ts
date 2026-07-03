@@ -39,6 +39,7 @@ export * from './rich-responses/charts/contracts.js';
 export * from './rich-responses/contracts.js';
 export * from './rich-responses/merchbase/contracts.js';
 export * from './runtime/contracts.js';
+export * from './runtime/dev-toolkit.js';
 export * from './runtime/mcp.js';
 export * from './runtime/model-identity.js';
 export * from './runtime/model-providers.js';

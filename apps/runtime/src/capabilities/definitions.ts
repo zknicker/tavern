@@ -16,6 +16,7 @@ import { loadVaultBackedCodexCredentials } from '../model-access/codex-settings.
 import { listAgentModels } from '../models/catalog-service.ts';
 import { resolveAgentModelSummary } from '../models/model-access.ts';
 import { checkMerchbaseCapability } from '../plugins/merchbase.ts';
+import { isDevToolkitEnabled } from '../tavern/development-turn-simulator.ts';
 
 export interface RuntimeCapabilityCheckResult {
     metadata?: Record<string, unknown>;
@@ -115,6 +116,17 @@ export const runtimeCapabilityDefinitions: RuntimeCapabilityDefinition[] = [
         },
     },
     {
+        check() {
+            return checkDevToolkitCapability();
+        },
+        displayName: 'Dev toolkit',
+        id: 'devToolkit',
+        refresh: {
+            intervalMs: 60 * minuteMs,
+            runOnStart: true,
+        },
+    },
+    {
         async check() {
             return await checkMerchbaseCapability();
         },
@@ -170,6 +182,19 @@ function canAccess(targetPath: string, mode: number): boolean {
     } catch {
         return false;
     }
+}
+
+// Dev-stack-only helpers (simulated turns). Healthy only when the runtime
+// was started by the development stack.
+function checkDevToolkitCapability(): RuntimeCapabilityCheckResult {
+    if (isDevToolkitEnabled()) {
+        return { state: 'healthy' };
+    }
+
+    return {
+        reason: 'The dev toolkit is only available on the development stack.',
+        state: 'unavailable',
+    };
 }
 
 function checkAgentEngineCapability(input: {

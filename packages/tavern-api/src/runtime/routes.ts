@@ -26,6 +26,7 @@ export const agentRuntimeRoutes = {
     capabilitiesRefresh: '/capabilities/refresh',
     commands: '/commands',
     commandsRun: '/commands/run',
+    devSimulateTurn: '/dev/simulate-turn',
     update: '/update',
     updateRestart: '/update/restart',
     updateStatus: '/update/status',

@@ -44,11 +44,12 @@ describe('Runtime capabilities store', () => {
             'apiServer',
             'codexOAuth',
             'dashboardServer',
+            'devToolkit',
             'gateway',
             'modelExecution',
             'plugin.merchbase',
-            'skills',
             'semanticMemory',
+            'skills',
         ]);
         expect(getRuntimeCapability('semanticMemory')).toMatchObject({
             checkedAt: null,

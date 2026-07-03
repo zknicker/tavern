@@ -9,6 +9,7 @@ export const agentRuntimeCapabilitySchema = z.enum([
     'gateway',
     'modelExecution',
     'skills',
+    'devToolkit',
     'plugin.merchbase',
 ]);
 

@@ -13,6 +13,7 @@ const agentRuntimeCoreCapabilityIds = [
     'gateway',
     'modelExecution',
     'skills',
+    'devToolkit',
 ] as const;
 
 export const agentRuntimeCapabilitySchema = z.enum([

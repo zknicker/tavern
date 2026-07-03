@@ -35,6 +35,7 @@ import { handleWorkspaceRequest } from '../workspace/routes.ts';
 import { readCurrentAgentSession, updateCurrentAgentSessionModel } from './agent-session-store.ts';
 import { handleTavernApiRequest } from './chat-api-router.ts';
 import { deliverAgentCronToTavernChat } from './cron-delivery.ts';
+import { handleDevToolkitRequest } from './development-turn-simulator.ts';
 import { forbidden, json, notFound, readJson } from './http.ts';
 import { handleAgentProxyRequest } from './proxy.ts';
 import { listProjectedTavernRuntimeEvents } from './runtime-event-projection.ts';
@@ -141,6 +142,11 @@ export async function handleTavernRuntimeRequest(request: Request): Promise<Resp
     const commandsResponse = await handleCommandsRequest(request);
     if (commandsResponse) {
         return commandsResponse;
+    }
+
+    const devToolkitResponse = await handleDevToolkitRequest(request);
+    if (devToolkitResponse) {
+        return devToolkitResponse;
     }
 
     const skillHubResponse = await handleSkillHubRequest(request);

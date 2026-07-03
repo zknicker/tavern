@@ -76,6 +76,23 @@ TAVERN_RUNTIME_PORT=<runtime port> bun apps/runtime/src/index.ts status
 
 `TAVERN_RUNTIME_TOKEN` overrides the file for CI or reproducible setups.
 
+## Dev Toolkit
+
+The development stack (`TAVERN_DEV_STACK=1`, set by `bun run dev*`) enables the
+dev toolkit: Runtime helpers for exercising live chat surfaces without a model.
+The `devToolkit` Runtime capability gates every surface.
+
+- The shell toolbar shows a wrench menu on chat routes with **Simulate agent
+  turn** (streamed preamble, tool activity, and reply text over ~15s) and
+  **Simulate failed turn**. Simulated turns write through the normal chat API,
+  so the status row, turn drawer, transcript streaming, and turn recovery
+  behave exactly as they do for real model turns.
+- Programmatic access: `POST /dev/simulate-turn` on the Runtime
+  (`client.dev.simulateTurn` in `@tavern/sdk`, `dev.simulateTurn` in the app's
+  tRPC API). The route 404s outside the dev stack.
+- The simulator lives in `apps/runtime/src/tavern/development-turn-simulator.ts`;
+  add scenarios there.
+
 ## Claude Code Previews
 
 `.claude/launch.json` tells Claude Code's browser preview which port to attach
