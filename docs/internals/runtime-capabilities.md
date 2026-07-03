@@ -19,8 +19,8 @@ pages can use capability health to decide whether a feature is available,
 degraded, or blocked.
 
 Capabilities are not quality scores. Domain freshness, content quality, missing
-wiki topics, and broken wiki links belong to domain status APIs or future Tasks
-workflows, not Runtime capability health.
+Memory topics, and broken Memory links belong to domain status APIs or future
+Tasks workflows, not Runtime capability health.
 
 The app only renders capability state. It does not decide whether a Runtime
 capability is healthy.
@@ -49,7 +49,7 @@ Each capability has a stable id and one current health record.
 
 | Field | Meaning |
 | --- | --- |
-| `id` | Stable capability id such as `apiServer`, `gateway`, or `vault`. |
+| `id` | Stable capability id such as `apiServer`, `gateway`, or `memory`. |
 | `displayName` | Human-readable name for settings and logs. |
 | `healthy` | `true` only when Runtime can use the capability now. |
 | `state` | `healthy`, `degraded`, `unavailable`, `unauthorized`, or `unknown`. |
@@ -219,7 +219,7 @@ and external dependencies.
 | `dashboardServer` | Runtime can reach agent-engine dashboard status. |
 | `apiServer` | Runtime can make an authenticated agent-engine API call. |
 | `gateway` | Runtime can open the agent-engine event stream. |
-| `vault` | The configured Vault root can be read and the managed `vault` skill has been prepared. Runtime reports write access in capability metadata because agent wiki maintenance needs it, but read-only roots remain browseable. |
+| `memory` | The configured Memory root can be read and Memory tools are available. Runtime reports write access in capability metadata because Semantic Memory maintenance needs it, but read-only roots remain browseable. |
 | `modelExecution` | Runtime has at least one usable agent execution model for the relevant agent or action. |
 | `skills` | Runtime can reach skill inventory. App-side capability methods under `skills` also track the skill hub (`skill-hub.*`), tool setup, and advanced MCP management (`mcp.*`) surfaces. |
 | `plugin.merchbase` | Runtime has an enabled MerchBase Plugin, an API key, and can read the configured MerchBase account. |

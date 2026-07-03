@@ -14,7 +14,7 @@ export type EditableAgentWorkspaceFile = 'NOTES.md' | 'SOUL.md';
 
 export const editableAgentWorkspaceFiles = [
     {
-        description: 'Notes and conventions, woven into AGENTS.md.',
+        description: 'Notes and conventions woven into the system prompt.',
         label: 'NOTES.md',
         path: 'NOTES.md',
     },

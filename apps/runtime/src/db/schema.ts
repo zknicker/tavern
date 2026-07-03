@@ -225,6 +225,74 @@ CREATE INDEX IF NOT EXISTS idx_agent_turns_session_status
 CREATE INDEX IF NOT EXISTS idx_agent_turns_chat_updated
   ON agent_turns(chat_id, updated_at);
 
+CREATE TABLE IF NOT EXISTS memory_extraction_cursors (
+  chat_id                  TEXT NOT NULL,
+  agent_participant_id     TEXT NOT NULL,
+  agent_id                 TEXT NOT NULL,
+  last_extracted_sequence  INTEGER NOT NULL DEFAULT 0 CHECK (last_extracted_sequence >= 0),
+  last_extracted_at        TEXT,
+  created_at               TEXT NOT NULL,
+  updated_at               TEXT NOT NULL,
+  PRIMARY KEY(chat_id, agent_participant_id),
+  FOREIGN KEY(chat_id) REFERENCES chats(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_memory_extraction_cursors_agent
+  ON memory_extraction_cursors(agent_id, updated_at);
+
+CREATE TABLE IF NOT EXISTS memory_extraction_debounces (
+  chat_id                  TEXT NOT NULL,
+  agent_participant_id     TEXT NOT NULL,
+  agent_id                 TEXT NOT NULL,
+  pending_since            TEXT NOT NULL,
+  last_activity_at         TEXT NOT NULL,
+  scheduled_for            TEXT NOT NULL,
+  target_sequence          INTEGER NOT NULL CHECK (target_sequence >= 0),
+  updated_at               TEXT NOT NULL,
+  PRIMARY KEY(chat_id, agent_participant_id),
+  FOREIGN KEY(chat_id) REFERENCES chats(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_memory_extraction_debounces_due
+  ON memory_extraction_debounces(scheduled_for);
+
+CREATE TABLE IF NOT EXISTS memory_jobs (
+  id                     TEXT PRIMARY KEY,
+  kind                   TEXT NOT NULL CHECK (kind IN ('extraction', 'dream')),
+  status                 TEXT NOT NULL CHECK (status IN ('queued', 'running', 'completed', 'failed', 'skipped')),
+  chat_id                TEXT,
+  agent_id               TEXT NOT NULL,
+  agent_participant_id   TEXT,
+  model_category         TEXT CHECK (model_category IN ('fast', 'standard', 'deep', 'visual')),
+  model_json             TEXT,
+  source_start_sequence  INTEGER,
+  source_end_sequence    INTEGER,
+  output_path            TEXT,
+  file_changes_json      TEXT NOT NULL DEFAULT '[]',
+  usage_json             TEXT NOT NULL DEFAULT '{}',
+  transcript_json        TEXT NOT NULL DEFAULT '[]',
+  metadata_json          TEXT NOT NULL DEFAULT '{}',
+  error                  TEXT,
+  created_at             TEXT NOT NULL,
+  updated_at             TEXT NOT NULL,
+  started_at             TEXT,
+  completed_at           TEXT,
+  FOREIGN KEY(chat_id) REFERENCES chats(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_memory_jobs_agent_created
+  ON memory_jobs(agent_id, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_memory_jobs_status_due
+  ON memory_jobs(status, created_at);
+
+CREATE TABLE IF NOT EXISTS memory_page_tombstones (
+  path        TEXT PRIMARY KEY,
+  deleted_at  TEXT NOT NULL,
+  actor       TEXT NOT NULL DEFAULT 'user',
+  reason      TEXT
+);
+
 CREATE TABLE IF NOT EXISTS chat_messages (
   id                TEXT PRIMARY KEY,
   chat_id           TEXT NOT NULL,
@@ -405,6 +473,16 @@ export function ensureRuntimeSchema(db: Database): void {
         column: 'prompt_context_sequence',
         definition: 'INTEGER NOT NULL DEFAULT 0 CHECK (prompt_context_sequence >= 0)',
         table: 'agent_sessions',
+    });
+    ensureColumn(db, {
+        column: 'usage_json',
+        definition: "TEXT NOT NULL DEFAULT '{}'",
+        table: 'memory_jobs',
+    });
+    ensureColumn(db, {
+        column: 'transcript_json',
+        definition: "TEXT NOT NULL DEFAULT '[]'",
+        table: 'memory_jobs',
     });
 }
 

@@ -8,8 +8,8 @@ read_when:
 
 The Artifact Panel opens beside Tavern chat and shows panes for the active
 chat's Artifact Panel targets. Targets include chat Artifacts and linked
-inspectable outputs such as Vault pages or workspace files. The panel can also
-open chat-scoped source browsers for Vault and the agent workspace without
+inspectable outputs such as Memory pages or workspace files. The panel can also
+open chat-scoped source browsers for Memory and the agent workspace without
 navigating away from the chat.
 
 We chose a chat-scoped panel instead of a global artifact workspace because the

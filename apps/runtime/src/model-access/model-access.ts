@@ -70,10 +70,10 @@ function readOpenAiStatus() {
     const settings = getOpenAiSettings();
     return {
         description: settings.hasApiKey
-            ? 'OpenAI API key is saved in Tavern Secret Storage.'
+            ? 'OpenAI API key is saved in secure storage.'
             : 'Add an OpenAI API key.',
         id: 'openai',
-        source: settings.hasApiKey ? 'tavern-vault' : null,
+        source: settings.hasApiKey ? 'secure-storage' : null,
         state: settings.hasApiKey ? 'live' : 'needs-auth',
     };
 }
@@ -82,10 +82,10 @@ function readOpenRouterStatus() {
     const settings = getOpenRouterSettings();
     return {
         description: settings.hasApiKey
-            ? 'OpenRouter API key is saved in Tavern Secret Storage.'
+            ? 'OpenRouter API key is saved in secure storage.'
             : 'Add an OpenRouter API key.',
         id: 'openrouter',
-        source: settings.hasApiKey ? 'tavern-vault' : null,
+        source: settings.hasApiKey ? 'secure-storage' : null,
         state: settings.hasApiKey ? 'live' : 'needs-auth',
     };
 }

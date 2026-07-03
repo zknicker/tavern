@@ -12,31 +12,34 @@ import {
     runtimeHealthSchema,
     runtimeRoutes,
 } from '@tavern/api';
-import { handleAgentEnvRequest } from '../agent-engine/agent-env-routes';
-import { handleCommandsRequest } from '../agent-engine/command-routes';
-import { handleExecutionSettingsRequest } from '../agent-engine/execution-settings';
-import { handleMcpRequest } from '../agent-engine/mcp-routes';
-import { handleMcpServersRequest } from '../agent-engine/mcp-server-routes';
-import { handleSkillHubRequest } from '../agent-engine/skill-hub-routes';
-import { handleToolSetupRequest } from '../agent-engine/tool-setup-routes';
-import { handleRuntimeCapabilitiesRequest } from '../capabilities/routes';
-import { handleRuntimeJobsRequest } from '../jobs/routes';
-import { listMacApps } from '../mac-apps/inventory';
-import { handleModelAccessRequest } from '../model-access/model-access';
-import { handleOpenAiSettingsRequest } from '../model-access/openai-settings';
-import { handleOpenRouterSettingsRequest } from '../model-access/openrouter-settings';
-import { handleModelProviderRequest } from '../models/provider-routes';
-import { handlePluginsRequest } from '../plugins/routes';
-import { handleVaultRequest } from '../vault/routes';
-import { handleWorkspaceRequest } from '../workspace/routes';
-import { readCurrentAgentSession, updateCurrentAgentSessionModel } from './agent-session-store';
-import { handleTavernApiRequest } from './chat-api-router';
-import { deliverAgentCronToTavernChat } from './cron-delivery';
-import { forbidden, json, notFound, readJson } from './http';
-import { handleAgentProxyRequest } from './proxy';
-import { listProjectedTavernRuntimeEvents } from './runtime-event-projection';
-import { getRuntimeHealth } from './status';
-import { getRuntimeUpdateStatus, restartRuntimeForUpdate, startRuntimeUpdate } from './update';
+import { handleAgentEnvRequest } from '../agent-engine/agent-env-routes.ts';
+import { handleCommandsRequest } from '../agent-engine/command-routes.ts';
+import { handleExecutionSettingsRequest } from '../agent-engine/execution-settings.ts';
+import { handleMcpRequest } from '../agent-engine/mcp-routes.ts';
+import { handleMcpServersRequest } from '../agent-engine/mcp-server-routes.ts';
+import { handleSkillHubRequest } from '../agent-engine/skill-hub-routes.ts';
+import { handleToolSetupRequest } from '../agent-engine/tool-setup-routes.ts';
+import { handleRuntimeCapabilitiesRequest } from '../capabilities/routes.ts';
+import { handleRuntimeJobsRequest } from '../jobs/routes.ts';
+import { listMacApps } from '../mac-apps/inventory.ts';
+import { handleMemoryRequest } from '../memory/routes.ts';
+import { handleSemanticMemoryRequest } from '../memory/semantic/routes.ts';
+import { handleMemorySettingsRequest } from '../memory/settings.ts';
+import { handleModelAccessRequest } from '../model-access/model-access.ts';
+import { handleOpenAiSettingsRequest } from '../model-access/openai-settings.ts';
+import { handleOpenRouterSettingsRequest } from '../model-access/openrouter-settings.ts';
+import { handleModelCategorySettingsRequest } from '../models/category-settings.ts';
+import { handleModelProviderRequest } from '../models/provider-routes.ts';
+import { handlePluginsRequest } from '../plugins/routes.ts';
+import { handleWorkspaceRequest } from '../workspace/routes.ts';
+import { readCurrentAgentSession, updateCurrentAgentSessionModel } from './agent-session-store.ts';
+import { handleTavernApiRequest } from './chat-api-router.ts';
+import { deliverAgentCronToTavernChat } from './cron-delivery.ts';
+import { forbidden, json, notFound, readJson } from './http.ts';
+import { handleAgentProxyRequest } from './proxy.ts';
+import { listProjectedTavernRuntimeEvents } from './runtime-event-projection.ts';
+import { getRuntimeHealth } from './status.ts';
+import { getRuntimeUpdateStatus, restartRuntimeForUpdate, startRuntimeUpdate } from './update.ts';
 
 export async function handleTavernRuntimeRequest(request: Request): Promise<Response> {
     const url = new URL(request.url);
@@ -70,9 +73,14 @@ export async function handleTavernRuntimeRequest(request: Request): Promise<Resp
         );
     }
 
-    const vaultResponse = await handleVaultRequest(request);
-    if (vaultResponse) {
-        return vaultResponse;
+    const semanticMemoryResponse = await handleSemanticMemoryRequest(request);
+    if (semanticMemoryResponse) {
+        return semanticMemoryResponse;
+    }
+
+    const memoryResponse = await handleMemoryRequest(request);
+    if (memoryResponse) {
+        return memoryResponse;
     }
 
     const jobsResponse = await handleRuntimeJobsRequest(request);
@@ -88,6 +96,16 @@ export async function handleTavernRuntimeRequest(request: Request): Promise<Resp
     const modelAccessResponse = await handleModelAccessRequest(request);
     if (modelAccessResponse) {
         return modelAccessResponse;
+    }
+
+    const memorySettingsResponse = await handleMemorySettingsRequest(request);
+    if (memorySettingsResponse) {
+        return memorySettingsResponse;
+    }
+
+    const modelCategorySettingsResponse = await handleModelCategorySettingsRequest(request);
+    if (modelCategorySettingsResponse) {
+        return modelCategorySettingsResponse;
     }
 
     const openAiSettingsResponse = await handleOpenAiSettingsRequest(request);

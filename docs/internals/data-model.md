@@ -25,7 +25,7 @@ the product timeline.
 | Runtime channel relay    | `apps/runtime/src/tavern/channel-relay.ts`          | Durable message acceptance and agent turn startup                                           |
 | Runtime agent sessions   | `apps/runtime/src/tavern/agent-session-store.ts`    | Agent seat current session state, rotation, and repair                                      |
 | Runtime model profiles   | `apps/runtime/src/models/runtime-profile-store.ts`  | Per-agent default execution model for new Agent sessions                                     |
-| Vault store              | `apps/runtime/src/vault/`                           | Runtime read API over the user's Markdown wiki                                              |
+| Semantic Memory store    | `apps/runtime/src/memory/semantic/`                 | Runtime read API over the user's Semantic Memory Markdown files                              |
 | Runtime chat tests       | `apps/runtime/src/tavern/chat-api-store.test.ts`    | Contract, identity, sequence, event, read, and route behavior                               |
 | Runtime timeline tests   | `apps/runtime/src/tavern/chat-api-timeline.test.ts` | Turn-aligned history pages, cursor stability, and window alignment                          |
 | App schema               | `apps/server/src/db/bootstrap.ts`                   | App SQLite fresh setup                                                                      |
@@ -39,7 +39,7 @@ the product timeline.
 | ------------------------ | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------- |
 | Runtime SQLite           | Tavern Runtime                             | Canonical chat model, automation delivery, agent seats, Agent sessions, cursor-backed events, read markers, runtime metadata |
 | App SQLite               | Tavern App                                 | Client cache, app-shell preferences, and presentation state                                                                       |
-| Vault wiki               | Managed `vault` skill and agent file tools | Markdown pages under the configured wiki root                                                                                     |
+| Semantic Memory          | Memory tools and agent file tools          | Markdown pages under the configured Memory root                                                                                   |
 | Agent execution evidence | Tavern Runtime                             | Sessions, turns, tools, model calls, transcripts, and files                                                                       |
 
 Runtime SQLite is the product source of truth for chat. App SQLite can cache for
@@ -74,7 +74,7 @@ Read markers are scoped records, not standalone product ids.
 Engine ids and runtime agent ids remain source ids. Store them in runtime
 metadata or source fields, not as Tavern product ids unless Tavern minted them.
 
-Vault page identity is the Markdown path relative to the configured wiki root.
+Memory page identity is the Markdown path relative to the configured Memory root.
 
 ## Runtime Chat Tables
 
@@ -622,10 +622,10 @@ evidence. Sync paths map user-visible work into responses, response activity,
 and artifacts by stable ids. They enrich the UI, but they do not replace
 canonical chat history.
 
-## Vault Files
+## Memory Files
 
-Tavern Runtime does not store Vault page tables. It resolves the Vault root and
-reads Markdown files directly.
+Tavern Runtime does not store Semantic Memory page tables. It resolves the
+Memory root and reads Markdown files directly.
 
 ```text
 INDEX.md
@@ -635,8 +635,8 @@ research/example/...
 
 Rules:
 
-- Runtime never creates a second canonical copy of wiki pages.
-- Page identity is the Markdown path relative to the Vault root.
+- Runtime never creates a second canonical copy of Memory pages.
+- Page identity is the Markdown path relative to the Memory root.
 - Frontmatter parsing is light and display-oriented.
 - Wikilinks and backlinks are derived from Markdown bodies.
 - Imports, research, and maintenance are agent workflows, not Runtime jobs.
@@ -698,7 +698,7 @@ App tables are cache, presentation, or execution evidence:
 Search has first-class indexing for:
 
 - chat messages
-- Vault pages and files
+- Memory pages and files
 
 SQLite FTS mirrors durable text fields through triggers or explicit
 transactional writes. Search indexes are derived state, not the source of truth.
@@ -719,7 +719,7 @@ transactional writes. Search indexes are derived state, not the source of truth.
 - Events notify; runtime durable reads recover.
 - Response activity is durable and statusful.
 - App-local progress hints never become a second chat history.
-- Vault reads fail visibly when the configured root is missing or unreadable.
+- Memory reads fail visibly when the configured root is missing or unreadable.
 
 ## Related Docs
 
@@ -730,4 +730,3 @@ transactional writes. Search indexes are derived state, not the source of truth.
 - [Architecture overview](architecture-overview.md)
 - [Tavern Runtime Chat Server](../../specs/runtime-chat-server.md)
 - [Memories](../../specs/memories.md)
-- [Vault](../../specs/vault.md)

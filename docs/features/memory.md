@@ -1,51 +1,60 @@
 ---
-summary: Memory feature for assistant memory, Vault knowledge, and the context-management boundary.
+summary: Memory feature for per-agent briefing files, hidden episodic evidence, shared Semantic Memory, and Memory worker history.
 read_when:
-  - changing assistant memory, memory visibility, Vault status, or Vault-backed knowledge expectations
-  - changing the boundary between prompt-time context and durable wiki knowledge
+  - changing Memory settings, Memory visibility, briefing files, extraction, dreaming, or Semantic Memory expectations
+  - changing the boundary between prompt-time context and durable Memory knowledge
 ---
 
 # Memory
 
-Tavern has two memory surfaces:
+Memory is one Tavern feature with layered storage:
 
-* **Assistant memory.** Runtime enables the engine's built-in prompt-time
-  memory files: `MEMORY.md` for compact assistant operating notes and
-  `USER.md` for stable user profile facts. Agents write them through the
-  native `memory` tool. The files are not Vault pages and are not skill
-  packages.
-* **Vault knowledge.** Vault is the browsable wiki. Durable knowledge that
-  users inspect lives in Markdown files. Agents use the managed Vault skill to
-  route normal wiki work to Obsidian and bounded research folders to llm-wiki.
+* **Agent briefing files.** Each agent workspace owns `USER.md` and `MEMORY.md`.
+  These compact files are loaded into that agent's prompt when Memory is on.
+* **Episodic Memory.** Background extraction writes per-agent evidence after
+  chat activity settles. It is hidden worker state, not a normal editing
+  surface.
+* **Semantic Memory.** Shared durable knowledge lives in Markdown pages users
+  can inspect and edit through the Memory page. `TAXONOMY.md` routes where
+  shared knowledge belongs.
+
+There is no shared `USER.md` or shared `MEMORY.md`. Agents only update their
+own briefing files. Shared project, person, company, domain, and concept
+knowledge belongs in Semantic Memory.
 
 ## In The App
 
-Memory is configured through Settings -> Agents -> Memory. The top-level
-Workspace page browses the managed agent workspace, and the Vault page browses
-durable wiki knowledge.
+The primary Memory page shows shared Semantic Memory: pages, folders, links,
+backlinks, search, and the effective Memory root.
 
-Users can inspect Vault knowledge through Vault:
+Agent Memory settings show agent-specific controls and history:
 
-* the resolved Vault path
-* Markdown page counts
-* filesystem read/write health
-* pages, links, backlinks, and search results
+* global Memory on/off
+* model category settings for Fast, Standard, Deep, and Visual work
+* extraction and dreaming history
+* worker status, model, token usage, costs, file changes, and source links
+* explicit Dream now action
+* worker transcript/tool details for debugging
 
 ## Contract
 
-User-facing durable knowledge visibility is file-backed. Vault reads wiki
-Markdown. Workspace reads managed agent workspace files. Neither surface exposes
-model settings, hidden queues, generated schemas, or internal repair controls.
+When Memory is off, Runtime does not inject briefing files, run extraction, run
+dreaming, expose Memory tools, or allow Memory writes. Existing files remain on
+disk but do not affect agent turns.
 
-Assistant memory is engine execution state. It can affect what the agent
-recalls during work, but it is not the Vault wiki and is not edited through the
-wiki browser. Durable, inspectable knowledge belongs in Vault; generated files
-and assets belong in Workspace.
+Explicit user requests to remember something are handled by the active agent:
+agent-local preferences and defaults go to that agent's `USER.md` or
+`MEMORY.md`; shared durable knowledge goes to Semantic Memory according to
+`TAXONOMY.md`.
 
-## Boundary
+Background capture is separate. Extraction writes hidden per-agent episodic
+evidence after a five-minute idle debounce. Dreaming is agent-specific and
+promotes stable evidence into shared Semantic Memory. Explicit user requests to
+remember agent-local preferences can update that agent's briefing files
+directly.
 
-Vault is the browsable wiki. Agents maintain it through the managed `vault`
-skill.
+## Related Docs
 
-See [Vault](../../specs/vault.md) and
-[Context management](context-management.md).
+* [Memory API](../api/memory.md)
+* [Context management](context-management.md)
+* [Memory ADR](../adr/0009-memory-is-one-markdown-knowledge-system.md)

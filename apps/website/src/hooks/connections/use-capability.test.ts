@@ -38,7 +38,7 @@ describe('Runtime capability gates', () => {
     });
 
     test('gates Memories settings on Memory', () => {
-        expect(settingsCapabilityRequirements.memories).toEqual(['vault']);
+        expect(settingsCapabilityRequirements.memories).toEqual(['semanticMemory']);
     });
 
     test('gates Plugins settings on Runtime API access', () => {
@@ -50,7 +50,7 @@ describe('Runtime capability gates', () => {
     });
 
     test('gates the Memory app tab on Memory', () => {
-        expect(routeTabCapabilityRequirements.memory).toEqual(['vault']);
+        expect(routeTabCapabilityRequirements.memory).toEqual(['semanticMemory']);
     });
 
     test('gates Stats settings on model execution', () => {
@@ -72,7 +72,7 @@ describe('Runtime capability gates', () => {
             'modelExecution',
         ]);
         expect(settingsCapabilityRequirements['agent-skills']).toEqual(['apiServer', 'skills']);
-        expect(settingsCapabilityRequirements['agent-memory']).toEqual(['vault']);
+        expect(settingsCapabilityRequirements['agent-memory']).toEqual(['semanticMemory']);
     });
 
     test('gates Tasks on agent runtime capabilities', () => {

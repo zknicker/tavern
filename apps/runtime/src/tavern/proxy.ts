@@ -427,7 +427,7 @@ function agentEngineAgentFiles(agentId: string) {
         {
             mediaType: 'text/markdown',
             path: 'SOUL.md',
-            storagePath: path.join(AGENT_HOME, 'SOUL.md'),
+            storagePath: path.join(agent.workspaceFolder, 'SOUL.md'),
         },
     ];
 }

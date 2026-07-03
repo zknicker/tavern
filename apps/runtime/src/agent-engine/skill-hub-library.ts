@@ -26,7 +26,7 @@ summary: Tavern workflow
 
 # Tavern Workflow
 
-Use Tavern workspace context, keep durable knowledge in Vault, and keep execution focused on the active chat goal.
+Use Tavern workspace context, keep durable knowledge in Memory, and keep execution focused on the active chat goal.
 `;
 
 const builtInHubSkills = [

@@ -6,10 +6,10 @@ function sub(over: Partial<SubCommand> = {}): SubCommand {
     return {
         name: 'get',
         summary: 'Get a thing',
-        usage: 'tavern vault get <path>',
+        usage: 'tavern memory get <path>',
         flags: [{ name: '--json', description: 'Emit JSON' }],
         positionals: ['<path>'],
-        examples: ['tavern vault get Projects/Alpha.md'],
+        examples: ['tavern memory get Projects/Alpha.md'],
         run: () => Promise.resolve(0),
         ...over,
     };
@@ -28,7 +28,7 @@ describe('dispatchSubcommand', () => {
     test('routes to the matching subcommand with parsed args', async () => {
         let received: ParsedArgs | null = null;
         const code = await dispatchSubcommand(
-            'vault',
+            'memory',
             [
                 sub({
                     run: (a) => {
@@ -46,24 +46,24 @@ describe('dispatchSubcommand', () => {
 
     test('unknown subcommand suggests a near match, exit 2', async () => {
         const out = stderr();
-        const code = await dispatchSubcommand('vault', [sub({ name: 'status' })], ['statuss']);
+        const code = await dispatchSubcommand('memory', [sub({ name: 'status' })], ['statuss']);
         expect(code).toBe(2);
-        expect(out.mock.calls.join('')).toContain("Did you mean 'vault status'?");
+        expect(out.mock.calls.join('')).toContain("Did you mean 'memory status'?");
     });
 
     test('wrong positional arity prints help to stderr, exit 2', async () => {
         const out = stderr();
-        const code = await dispatchSubcommand('vault', [sub()], ['get']);
+        const code = await dispatchSubcommand('memory', [sub()], ['get']);
         expect(code).toBe(2);
         const written = out.mock.calls.join('');
         expect(written).toContain('Expected 1 argument');
-        expect(written).toContain('tavern vault get <path>');
+        expect(written).toContain('tavern memory get <path>');
     });
 
     test('unknown flag prints help to stderr, exit 2', async () => {
         const out = stderr();
         const code = await dispatchSubcommand(
-            'vault',
+            'memory',
             [sub({ name: 'status', positionals: [] })],
             ['status', '--nope']
         );
@@ -75,7 +75,7 @@ describe('dispatchSubcommand', () => {
         const out = stdout();
         let ran = false;
         const code = await dispatchSubcommand(
-            'vault',
+            'memory',
             [
                 sub({
                     run: () => {
@@ -88,6 +88,6 @@ describe('dispatchSubcommand', () => {
         );
         expect(code).toBe(0);
         expect(ran).toBe(false);
-        expect(out.mock.calls.join('')).toContain('tavern vault get <path>');
+        expect(out.mock.calls.join('')).toContain('tavern memory get <path>');
     });
 });

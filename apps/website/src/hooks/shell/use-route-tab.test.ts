@@ -19,15 +19,13 @@ describe('app route tab', () => {
         expect(getRouteTab('/tasks')).toBe('tasks');
         expect(getRouteTab('/workspace')).toBe('workspace');
         expect(getRouteTab('/memory')).toBe('memory');
-        expect(getRouteTab('/vault')).toBe('memory');
     });
 
-    test('keeps legacy dashboard tab detection during redirects', () => {
+    test('keeps dashboard tab detection during redirects', () => {
         expect(getRouteTab('/dashboard/overview')).toBe('overview');
         expect(getRouteTab('/dashboard/cron')).toBe('tasks');
         expect(getRouteTab('/dashboard/workspace')).toBe('workspace');
         expect(getRouteTab('/dashboard/memory')).toBe('memory');
-        expect(getRouteTab('/dashboard/vault')).toBe('memory');
     });
 
     test('returns null when no app tab is active', () => {

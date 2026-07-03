@@ -16,8 +16,8 @@ import {
     emitCronUpdated,
     emitEngineRestartUpdated,
     emitModelUpdated,
+    emitSemanticMemoryUpdated,
     emitSessionUpdated,
-    emitVaultUpdated,
     emitWorkersUpdated,
 } from '../api/invalidation-events.ts';
 import { enqueueRuntimeSkillInventoryRefresh } from '../skills/inventory-job.ts';
@@ -122,9 +122,9 @@ export async function applyObservedAgentRuntimeEvent(
             emitCronUpdated();
             return;
         }
-        case 'vault.changed': {
+        case 'semanticMemory.changed': {
             emitObservedAgentRuntimeEvent(event);
-            emitVaultUpdated({
+            emitSemanticMemoryUpdated({
                 paths: event.paths,
                 reason: event.reason,
                 scope: event.scope,

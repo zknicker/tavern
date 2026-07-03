@@ -33,7 +33,7 @@ const capabilityCategories: Partial<Record<CapabilityId, CapabilityCategoryId>> 
     modelExecution: 'extensions',
     'plugin.merchbase': 'plugins',
     skills: 'extensions',
-    vault: 'knowledge',
+    semanticMemory: 'knowledge',
 };
 
 const capabilityDisplayOrder: CapabilityId[] = [
@@ -41,7 +41,7 @@ const capabilityDisplayOrder: CapabilityId[] = [
     'apiServer',
     'dashboardServer',
     'gateway',
-    'vault',
+    'semanticMemory',
     'modelExecution',
     'skills',
     'plugin.merchbase',

@@ -12,14 +12,14 @@ import { SettingsRow, SettingsValue } from '../../components/ui/settings-row.tsx
 import { Switch } from '../../components/ui/switch.tsx';
 import { appRoutes } from '../../lib/app-routes.ts';
 import {
-    formatVaultAccess,
-    formatVaultConfigSource,
-    getVaultHealth,
-    type VaultHubStatus,
+    formatSemanticMemoryAccess,
+    formatSemanticMemoryConfigSource,
+    getSemanticMemoryHealth,
+    type SemanticMemoryHubStatus,
 } from './memory-status-format.ts';
 
-export function MemoryOverview({ status }: { status: VaultHubStatus | null }) {
-    const health = getVaultHealth(status);
+export function MemoryOverview({ status }: { status: SemanticMemoryHubStatus | null }) {
+    const health = getSemanticMemoryHealth(status);
     const unavailable = 'Tavern Runtime unavailable';
 
     return (
@@ -98,7 +98,9 @@ export function MemoryOverview({ status }: { status: VaultHubStatus | null }) {
                     <Separator />
                     <SettingsRow title="Config source">
                         <SettingsValue>
-                            {status ? formatVaultConfigSource(status.configSource) : unavailable}
+                            {status
+                                ? formatSemanticMemoryConfigSource(status.configSource)
+                                : unavailable}
                         </SettingsValue>
                     </SettingsRow>
                     <Separator />
@@ -111,11 +113,11 @@ export function MemoryOverview({ status }: { status: VaultHubStatus | null }) {
                     </SettingsRow>
                     <Separator />
                     <SettingsRow title="Access">
-                        <SettingsValue>{formatVaultAccess(status)}</SettingsValue>
+                        <SettingsValue>{formatSemanticMemoryAccess(status)}</SettingsValue>
                     </SettingsRow>
                     <Separator />
                     <SettingsRow title="Memory path" trailingWidth="wide">
-                        <CodeSnippet lines={status?.vaultPath ?? unavailable} />
+                        <CodeSnippet lines={status?.memoryPath ?? unavailable} />
                     </SettingsRow>
                 </MemorySection>
 

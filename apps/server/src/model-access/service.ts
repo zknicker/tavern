@@ -27,7 +27,7 @@ function toStatus(input: {
     return {
         description: input.description,
         id: input.id,
-        source: input.isConfigured ? (input.source ?? 'tavern-vault') : null,
+        source: input.isConfigured ? (input.source ?? 'secure-storage') : null,
         state: input.isConfigured ? 'live' : 'needs-auth',
     };
 }

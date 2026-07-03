@@ -22,7 +22,7 @@ describe('Runtime capabilities store', () => {
         });
         process.env.CODEX_HOME = path.join(runtimeRoot, 'empty-codex-home');
         process.env.PATH = binPath;
-        process.env.TAVERN_VAULT_PATH = path.join(runtimeRoot, 'wiki');
+        process.env.TAVERN_MEMORY_PATH = path.join(runtimeRoot, 'memory');
         const db = initTestDb();
         ensureRuntimeSchema(db);
         ensureRuntimeJobsSchema(db);
@@ -33,7 +33,7 @@ describe('Runtime capabilities store', () => {
         closeDb();
         process.env.CODEX_HOME = undefined;
         process.env.PATH = originalPath;
-        process.env.TAVERN_VAULT_PATH = undefined;
+        process.env.TAVERN_MEMORY_PATH = undefined;
         await rm(runtimeRoot, { force: true, recursive: true });
     });
 
@@ -48,9 +48,9 @@ describe('Runtime capabilities store', () => {
             'modelExecution',
             'plugin.merchbase',
             'skills',
-            'vault',
+            'semanticMemory',
         ]);
-        expect(getRuntimeCapability('vault')).toMatchObject({
+        expect(getRuntimeCapability('semanticMemory')).toMatchObject({
             checkedAt: null,
             healthy: false,
             reason: 'Capability has not been checked yet.',
@@ -81,33 +81,33 @@ describe('Runtime capabilities store', () => {
         expect(events).toContain('dashboardServer');
     });
 
-    test('records a missing creatable Vault root as healthy', async () => {
-        const [capability] = await refreshRuntimeCapabilities({ ids: ['vault'] });
+    test('records a missing creatable Memory root as healthy', async () => {
+        const [capability] = await refreshRuntimeCapabilities({ ids: ['semanticMemory'] });
 
         expect(capability).toMatchObject({
             healthy: true,
-            id: 'vault',
+            id: 'semanticMemory',
             metadata: expect.objectContaining({
                 configSource: 'environment',
                 missing: true,
-                vaultPath: path.join(runtimeRoot, 'wiki'),
+                memoryPath: path.join(runtimeRoot, 'memory'),
             }),
             reason: null,
             state: 'healthy',
         });
     });
 
-    test('keeps a readable read-only Vault root browseable', async () => {
-        const hubPath = path.join(runtimeRoot, 'wiki');
+    test('keeps a readable read-only Memory root browseable', async () => {
+        const hubPath = path.join(runtimeRoot, 'memory');
         await mkdir(hubPath, { recursive: true });
         await chmod(hubPath, 0o555);
 
         try {
-            const [capability] = await refreshRuntimeCapabilities({ ids: ['vault'] });
+            const [capability] = await refreshRuntimeCapabilities({ ids: ['semanticMemory'] });
 
             expect(capability).toMatchObject({
                 healthy: true,
-                id: 'vault',
+                id: 'semanticMemory',
                 metadata: expect.objectContaining({
                     writable: false,
                 }),

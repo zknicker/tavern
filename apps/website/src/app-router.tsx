@@ -156,8 +156,8 @@ export function createAppRouter() {
                                 {
                                     path: 'memory',
                                     lazy: lazyRoute(
-                                        () => import('./routes/app/vault-page.tsx'),
-                                        'VaultPage'
+                                        () => import('./routes/app/memory-page.tsx'),
+                                        'MemoryPage'
                                     ),
                                 },
                                 {
@@ -166,10 +166,6 @@ export function createAppRouter() {
                                 },
                                 {
                                     path: 'memories',
-                                    element: <Navigate replace to={appRoutes.memory} />,
-                                },
-                                {
-                                    path: 'vault',
                                     element: <Navigate replace to={appRoutes.memory} />,
                                 },
                                 {
@@ -461,7 +457,6 @@ function resolveLegacyDashboardPath(pathname: string) {
         case 'logs':
         case 'memories':
         case 'pulse':
-        case 'vault':
         case 'workers':
             return appRoutes.memory;
         case 'jobs':

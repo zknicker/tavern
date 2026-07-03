@@ -7,7 +7,7 @@ export const agentRuntimeProtocolVersion = 1 as const;
 
 const agentRuntimeCoreCapabilityIds = [
     'codexOAuth',
-    'vault',
+    'semanticMemory',
     'dashboardServer',
     'apiServer',
     'gateway',
@@ -219,6 +219,29 @@ export const agentRuntimeModelNameSchema = z.object({
     provider: z.string().trim().min(1),
 });
 
+export const agentRuntimeModelCategorySchema = z.enum(['fast', 'standard', 'deep', 'visual']);
+
+export const agentRuntimeModelCategorySelectionSchema = z.object({
+    fast: agentRuntimeModelNameSchema.nullable(),
+    standard: agentRuntimeModelNameSchema.nullable(),
+    deep: agentRuntimeModelNameSchema.nullable(),
+    visual: agentRuntimeModelNameSchema.nullable(),
+});
+
+export const agentRuntimeModelCategorySettingsSchema = z.object({
+    categories: agentRuntimeModelCategorySelectionSchema,
+    updatedAt: z.string().datetime().nullable(),
+});
+
+export const agentRuntimeSaveModelCategorySettingsSchema = z.object({
+    categories: agentRuntimeModelCategorySelectionSchema.partial(),
+});
+
+export const agentRuntimeSaveModelCategorySettingsResultSchema =
+    agentRuntimeModelCategorySettingsSchema.extend({
+        restartScheduled: z.boolean(),
+    });
+
 export const agentRuntimeExecutionSettingsSchema = z.object({
     timezone: z.string().nullable(),
     updatedAt: z.string().datetime().nullable(),
@@ -232,6 +255,72 @@ export const agentRuntimeSaveExecutionSettingsResultSchema =
     agentRuntimeExecutionSettingsSchema.extend({
         restartScheduled: z.boolean(),
     });
+
+export const agentRuntimeMemorySettingsSchema = z.object({
+    enabled: z.boolean(),
+    updatedAt: z.string().datetime().nullable(),
+});
+
+export const agentRuntimeSaveMemorySettingsSchema = z.object({
+    enabled: z.boolean().optional(),
+});
+
+export const agentRuntimeSaveMemorySettingsResultSchema = agentRuntimeMemorySettingsSchema.extend({
+    restartScheduled: z.boolean(),
+});
+
+export const memoryJobKindSchema = z.enum(['dream', 'extraction']);
+export const memoryJobStatusSchema = z.enum([
+    'completed',
+    'failed',
+    'queued',
+    'running',
+    'skipped',
+]);
+
+export const memoryJobFileChangeSchema = z.object({
+    afterHash: z.string().trim().min(1).nullable(),
+    beforeHash: z.string().trim().min(1).nullable(),
+    path: z.string().trim().min(1),
+});
+
+export const memoryJobSummarySchema = z.object({
+    agentId: z.string().trim().min(1),
+    agentParticipantId: z.string().trim().min(1).nullable(),
+    chatId: z.string().trim().min(1).nullable(),
+    completedAt: z.string().datetime().nullable(),
+    createdAt: z.string().datetime(),
+    error: z.string().trim().min(1).nullable(),
+    fileChangeCount: z.number().int().nonnegative(),
+    id: z.string().trim().min(1),
+    kind: memoryJobKindSchema,
+    modelCategory: agentRuntimeModelCategorySchema.nullable(),
+    outputPath: z.string().trim().min(1).nullable(),
+    sourceEndSequence: z.number().int().nonnegative().nullable(),
+    sourceStartSequence: z.number().int().nonnegative().nullable(),
+    status: memoryJobStatusSchema,
+    updatedAt: z.string().datetime(),
+});
+
+export const memoryJobDetailSchema = memoryJobSummarySchema.extend({
+    fileChanges: z.array(memoryJobFileChangeSchema),
+    metadata: z.record(z.string(), z.unknown()),
+    model: agentRuntimeModelNameSchema.nullable(),
+    transcript: z.unknown(),
+    usage: z.unknown(),
+});
+
+export const memoryJobListSchema = z.object({
+    jobs: z.array(memoryJobSummarySchema),
+});
+
+export const memoryDreamRequestSchema = z.object({
+    agentId: z.string().trim().min(1),
+});
+
+export const memoryDreamResultSchema = z.object({
+    job: memoryJobDetailSchema,
+});
 
 const agentRuntimeReservedEnvPrefixes = ['TAVERN_'] as const;
 const agentRuntimeReservedEnvNames = new Set(['OPENAI_API_KEY', 'OPENROUTER_API_KEY']);
@@ -869,7 +958,6 @@ export const agentRuntimeWorkspaceInstructionsSchema = z.object({
 export const agentRuntimeRenderedWorkspaceInstructionsSchema = z.object({
     agentId: z.string().trim().min(1),
     content: z.string(),
-    path: z.string().trim().min(1),
     renderedAt: z.string().datetime().nullable(),
     sha256: z.string().trim().min(1).nullable(),
     updatedAt: z.string().datetime().nullable(),
@@ -1313,103 +1401,103 @@ export const agentRuntimeModelsSchema = z.object({
     updatedAt: z.string().datetime().nullable(),
 });
 
-export const vaultConfigSourceSchema = z.enum(['default', 'environment', 'settings']);
+export const semanticMemoryConfigSourceSchema = z.enum(['default', 'environment', 'settings']);
 
-export const vaultPageLinkSchema = z.object({
+export const semanticMemoryPageLinkSchema = z.object({
     label: z.string().trim().min(1).nullable(),
     target: z.string().trim().min(1),
 });
 
-export const vaultPageSummarySchema = z.object({
+export const semanticMemoryPageSummarySchema = z.object({
     path: z.string().trim().min(1),
     title: z.string().trim().min(1),
     updatedAt: z.string().datetime(),
 });
 
-export const vaultPageSchema = vaultPageSummarySchema.extend({
+export const semanticMemoryPageSchema = semanticMemoryPageSummarySchema.extend({
     body: z.string(),
     frontmatter: z.record(z.string(), z.unknown()).default({}),
-    links: z.array(vaultPageLinkSchema).default([]),
+    links: z.array(semanticMemoryPageLinkSchema).default([]),
     size: z.number().int().nonnegative(),
-    vaultPath: z.string().trim().min(1),
+    memoryPath: z.string().trim().min(1),
 });
 
-export const vaultPageListSchema = z.object({
+export const semanticMemoryPageListSchema = z.object({
     folders: z.array(z.string().trim().min(1)).default([]),
-    pages: z.array(vaultPageSummarySchema),
+    pages: z.array(semanticMemoryPageSummarySchema),
 });
 
-export const vaultPathKindSchema = z.enum(['folder', 'page']);
+export const memoryPathKindSchema = z.enum(['folder', 'page']);
 
-export const vaultCreatePageSchema = z.object({
+export const semanticMemoryCreatePageSchema = z.object({
     body: z.string().optional(),
     path: z.string().trim().min(1, 'Enter a page path.'),
 });
 
-export const vaultSavePageSchema = z.object({
+export const semanticMemorySavePageSchema = z.object({
     body: z.string(),
     path: z.string().trim().min(1, 'Enter a page path.'),
 });
 
-export const vaultPathInputSchema = z.object({
+export const memoryPathInputSchema = z.object({
     path: z.string().trim().min(1, 'Enter a Memory path.'),
 });
 
-export const vaultMovePathSchema = z.object({
+export const semanticMemoryMovePathSchema = z.object({
     fromPath: z.string().trim().min(1, 'Enter the current path.'),
-    kind: vaultPathKindSchema,
+    kind: memoryPathKindSchema,
     toPath: z.string().trim().min(1, 'Enter the new path.'),
 });
 
-export const vaultPathMutationResultSchema = z.object({
-    kind: vaultPathKindSchema,
-    page: vaultPageSchema.nullable().default(null),
+export const memoryPathMutationResultSchema = z.object({
+    kind: memoryPathKindSchema,
+    page: semanticMemoryPageSchema.nullable().default(null),
     path: z.string().trim().min(1),
 });
 
-export const vaultSearchInputSchema = z.object({
+export const semanticMemorySearchInputSchema = z.object({
     limit: z.number().int().positive().max(100).default(20),
     offset: z.number().int().nonnegative().default(0),
     query: z.string().trim().min(1),
 });
 
-export const vaultSearchHitSchema = z.object({
-    page: vaultPageSummarySchema,
+export const semanticMemorySearchHitSchema = z.object({
+    page: semanticMemoryPageSummarySchema,
     score: z.number().nonnegative(),
     snippet: z.string().default(''),
 });
 
-export const vaultSearchResultSchema = z.object({
-    hits: z.array(vaultSearchHitSchema),
+export const semanticMemorySearchResultSchema = z.object({
+    hits: z.array(semanticMemorySearchHitSchema),
     limit: z.number().int().positive().default(20),
     offset: z.number().int().nonnegative().default(0),
     query: z.string().trim().min(1),
     totalHitCount: z.number().int().nonnegative(),
 });
 
-export const vaultBacklinkSchema = z.object({
+export const semanticMemoryBacklinkSchema = z.object({
     fromPath: z.string().trim().min(1),
     fromTitle: z.string().trim().min(1),
     label: z.string().trim().min(1).nullable(),
     targetPath: z.string().trim().min(1),
 });
 
-export const vaultBacklinkListSchema = z.object({
-    links: z.array(vaultBacklinkSchema),
+export const semanticMemoryBacklinkListSchema = z.object({
+    links: z.array(semanticMemoryBacklinkSchema),
     targetPath: z.string().trim().min(1),
 });
 
-export const vaultFreshnessStateSchema = z.enum(['idle', 'watching', 'degraded']);
+export const semanticMemoryFreshnessStateSchema = z.enum(['idle', 'watching', 'degraded']);
 
-export const vaultFreshnessSchema = z.object({
+export const semanticMemoryFreshnessSchema = z.object({
     live: z.boolean(),
     reason: z.string().trim().min(1).nullable(),
-    state: vaultFreshnessStateSchema,
+    state: semanticMemoryFreshnessStateSchema,
 });
 
-export const vaultStatusSchema = z.object({
-    configSource: vaultConfigSourceSchema,
-    freshness: vaultFreshnessSchema.default({
+export const semanticMemoryStatusSchema = z.object({
+    configSource: semanticMemoryConfigSourceSchema,
+    freshness: semanticMemoryFreshnessSchema.default({
         live: false,
         reason: 'Memory live updates have not started.',
         state: 'idle',
@@ -1417,25 +1505,26 @@ export const vaultStatusSchema = z.object({
     indexExists: z.boolean(),
     pageCount: z.number().int().nonnegative(),
     readable: z.boolean(),
-    vaultPath: z.string().trim().min(1),
+    memoryPath: z.string().trim().min(1),
     writable: z.boolean(),
 });
 
-export const agentRuntimeVaultSettingsSchema = z.object({
-    configSource: vaultConfigSourceSchema,
+export const agentRuntimeSemanticMemorySettingsSchema = z.object({
+    configSource: semanticMemoryConfigSourceSchema,
     configuredPath: z.string().trim().min(1).nullable(),
     environmentPath: z.string().trim().min(1).nullable(),
     effectivePath: z.string().trim().min(1),
     updatedAt: z.string().datetime().nullable(),
 });
 
-export const agentRuntimeSaveVaultSettingsSchema = z.object({
-    vaultPath: z.string().trim().min(1, 'Enter a Memory path.'),
+export const agentRuntimeSaveSemanticMemorySettingsSchema = z.object({
+    memoryPath: z.string().trim().min(1, 'Enter a Memory path.'),
 });
 
-export const agentRuntimeSaveVaultSettingsResultSchema = agentRuntimeVaultSettingsSchema.extend({
-    restartScheduled: z.boolean(),
-});
+export const agentRuntimeSaveSemanticMemorySettingsResultSchema =
+    agentRuntimeSemanticMemorySettingsSchema.extend({
+        restartScheduled: z.boolean(),
+    });
 
 export const agentRuntimeCronDeliverySchema = z.object({
     chatId: z.string().trim().min(1),
@@ -2085,7 +2174,7 @@ export const agentRuntimeEventTypeSchema = z.enum([
     'cron.deleted',
     'cron.runStarted',
     'cron.runFinished',
-    'vault.changed',
+    'semanticMemory.changed',
     'turn.started',
     'turn.progress',
     'turn.replyUpdated',
@@ -2150,7 +2239,6 @@ export const agentRuntimeModelUpdatedEventSchema = z.object({
 
 export const agentRuntimeWorkspaceInstructionsUpdatedEventSchema = z.object({
     agentId: z.string().trim().min(1),
-    path: z.literal('AGENTS.md'),
     renderedAt: z.string().datetime(),
     sha256: z.string().trim().min(1),
     timestamp: z.string().datetime(),
@@ -2195,15 +2283,15 @@ export const agentRuntimeCronRunFinishedEventSchema = z.object({
     type: z.literal('cron.runFinished'),
 });
 
-export const agentRuntimeVaultChangedScopeSchema = z.enum(['content', 'root']);
-export const agentRuntimeVaultChangedReasonSchema = z.enum(['watch', 'bulk', 'settings']);
+export const agentRuntimeSemanticMemoryChangedScopeSchema = z.enum(['content', 'root']);
+export const agentRuntimeSemanticMemoryChangedReasonSchema = z.enum(['watch', 'bulk', 'settings']);
 
-export const agentRuntimeVaultChangedEventSchema = z.object({
+export const agentRuntimeSemanticMemoryChangedEventSchema = z.object({
     paths: z.array(z.string().trim().min(1)).default([]),
-    reason: agentRuntimeVaultChangedReasonSchema.optional(),
-    scope: agentRuntimeVaultChangedScopeSchema,
+    reason: agentRuntimeSemanticMemoryChangedReasonSchema.optional(),
+    scope: agentRuntimeSemanticMemoryChangedScopeSchema,
     timestamp: z.string().datetime(),
-    type: z.literal('vault.changed'),
+    type: z.literal('semanticMemory.changed'),
 });
 
 export const agentRuntimeCapabilityUpdatedEventSchema = z.object({
@@ -2307,7 +2395,7 @@ export const agentRuntimeEventSchema = z.discriminatedUnion('type', [
     agentRuntimeCronDeletedEventSchema,
     agentRuntimeCronRunStartedEventSchema,
     agentRuntimeCronRunFinishedEventSchema,
-    agentRuntimeVaultChangedEventSchema,
+    agentRuntimeSemanticMemoryChangedEventSchema,
     agentRuntimeCapabilityUpdatedEventSchema,
     agentRuntimeTurnStartedEventSchema,
     agentRuntimeTurnProgressEventSchema,
@@ -2435,28 +2523,32 @@ export type AgentRuntimeBinding = z.infer<typeof agentRuntimeBindingSchema>;
 export type AgentRuntimeBindingList = z.infer<typeof agentRuntimeBindingListSchema>;
 export type AgentRuntimeBindingMatch = z.infer<typeof agentRuntimeBindingMatchSchema>;
 export type PlatformBindingStatus = z.infer<typeof agentRuntimeBindingStatusSchema>;
-export type VaultBacklink = z.infer<typeof vaultBacklinkSchema>;
-export type VaultBacklinkList = z.infer<typeof vaultBacklinkListSchema>;
-export type VaultConfigSource = z.infer<typeof vaultConfigSourceSchema>;
-export type VaultCreatePage = z.infer<typeof vaultCreatePageSchema>;
-export type VaultFreshness = z.infer<typeof vaultFreshnessSchema>;
-export type VaultFreshnessState = z.infer<typeof vaultFreshnessStateSchema>;
-export type VaultMovePath = z.infer<typeof vaultMovePathSchema>;
-export type VaultPage = z.infer<typeof vaultPageSchema>;
-export type VaultPageList = z.infer<typeof vaultPageListSchema>;
-export type VaultPageSummary = z.infer<typeof vaultPageSummarySchema>;
-export type VaultPathInput = z.infer<typeof vaultPathInputSchema>;
-export type VaultPathKind = z.infer<typeof vaultPathKindSchema>;
-export type VaultPathMutationResult = z.infer<typeof vaultPathMutationResultSchema>;
-export type VaultSavePage = z.infer<typeof vaultSavePageSchema>;
-export type VaultSearchInput = z.input<typeof vaultSearchInputSchema>;
-export type VaultSearchResult = z.infer<typeof vaultSearchResultSchema>;
-export type VaultStatus = z.infer<typeof vaultStatusSchema>;
-export type VaultPageLink = z.infer<typeof vaultPageLinkSchema>;
-export type AgentRuntimeVaultSettings = z.infer<typeof agentRuntimeVaultSettingsSchema>;
-export type AgentRuntimeSaveVaultSettings = z.infer<typeof agentRuntimeSaveVaultSettingsSchema>;
-export type AgentRuntimeSaveVaultSettingsResult = z.infer<
-    typeof agentRuntimeSaveVaultSettingsResultSchema
+export type SemanticMemoryBacklink = z.infer<typeof semanticMemoryBacklinkSchema>;
+export type SemanticMemoryBacklinkList = z.infer<typeof semanticMemoryBacklinkListSchema>;
+export type SemanticMemoryConfigSource = z.infer<typeof semanticMemoryConfigSourceSchema>;
+export type SemanticMemoryCreatePage = z.infer<typeof semanticMemoryCreatePageSchema>;
+export type SemanticMemoryFreshness = z.infer<typeof semanticMemoryFreshnessSchema>;
+export type SemanticMemoryFreshnessState = z.infer<typeof semanticMemoryFreshnessStateSchema>;
+export type SemanticMemoryMovePath = z.infer<typeof semanticMemoryMovePathSchema>;
+export type SemanticMemoryPage = z.infer<typeof semanticMemoryPageSchema>;
+export type SemanticMemoryPageList = z.infer<typeof semanticMemoryPageListSchema>;
+export type SemanticMemoryPageSummary = z.infer<typeof semanticMemoryPageSummarySchema>;
+export type SemanticMemoryPathInput = z.infer<typeof memoryPathInputSchema>;
+export type SemanticMemoryPathKind = z.infer<typeof memoryPathKindSchema>;
+export type SemanticMemoryPathMutationResult = z.infer<typeof memoryPathMutationResultSchema>;
+export type SemanticMemorySavePage = z.infer<typeof semanticMemorySavePageSchema>;
+export type SemanticMemorySearchInput = z.input<typeof semanticMemorySearchInputSchema>;
+export type SemanticMemorySearchResult = z.infer<typeof semanticMemorySearchResultSchema>;
+export type SemanticMemoryStatus = z.infer<typeof semanticMemoryStatusSchema>;
+export type SemanticMemoryPageLink = z.infer<typeof semanticMemoryPageLinkSchema>;
+export type AgentRuntimeSemanticMemorySettings = z.infer<
+    typeof agentRuntimeSemanticMemorySettingsSchema
+>;
+export type AgentRuntimeSaveSemanticMemorySettings = z.infer<
+    typeof agentRuntimeSaveSemanticMemorySettingsSchema
+>;
+export type AgentRuntimeSaveSemanticMemorySettingsResult = z.infer<
+    typeof agentRuntimeSaveSemanticMemorySettingsResultSchema
 >;
 export type AgentRuntimeModelAccess = z.infer<typeof agentRuntimeModelAccessSchema>;
 export type AgentRuntimeModelAccessId = z.infer<typeof agentRuntimeModelAccessIdSchema>;
@@ -2509,6 +2601,19 @@ export type AgentRuntimeOpenAiSettings = z.infer<typeof agentRuntimeOpenAiSettin
 export type AgentRuntimeSaveOpenAiSettings = z.infer<typeof agentRuntimeSaveOpenAiSettingsSchema>;
 export type AgentRuntimeOpenRouterSettings = z.infer<typeof agentRuntimeOpenRouterSettingsSchema>;
 export type AgentRuntimeModelName = z.infer<typeof agentRuntimeModelNameSchema>;
+export type AgentRuntimeModelCategory = z.infer<typeof agentRuntimeModelCategorySchema>;
+export type AgentRuntimeModelCategorySelection = z.infer<
+    typeof agentRuntimeModelCategorySelectionSchema
+>;
+export type AgentRuntimeModelCategorySettings = z.infer<
+    typeof agentRuntimeModelCategorySettingsSchema
+>;
+export type AgentRuntimeSaveModelCategorySettings = z.infer<
+    typeof agentRuntimeSaveModelCategorySettingsSchema
+>;
+export type AgentRuntimeSaveModelCategorySettingsResult = z.infer<
+    typeof agentRuntimeSaveModelCategorySettingsResultSchema
+>;
 export type AgentRuntimeExecutionSettings = z.infer<typeof agentRuntimeExecutionSettingsSchema>;
 export type AgentRuntimeSaveExecutionSettings = z.infer<
     typeof agentRuntimeSaveExecutionSettingsSchema
@@ -2516,6 +2621,19 @@ export type AgentRuntimeSaveExecutionSettings = z.infer<
 export type AgentRuntimeSaveExecutionSettingsResult = z.infer<
     typeof agentRuntimeSaveExecutionSettingsResultSchema
 >;
+export type AgentRuntimeMemorySettings = z.infer<typeof agentRuntimeMemorySettingsSchema>;
+export type AgentRuntimeSaveMemorySettings = z.infer<typeof agentRuntimeSaveMemorySettingsSchema>;
+export type AgentRuntimeSaveMemorySettingsResult = z.infer<
+    typeof agentRuntimeSaveMemorySettingsResultSchema
+>;
+export type MemoryDreamRequest = z.infer<typeof memoryDreamRequestSchema>;
+export type MemoryDreamResult = z.infer<typeof memoryDreamResultSchema>;
+export type MemoryJobDetail = z.infer<typeof memoryJobDetailSchema>;
+export type MemoryJobFileChange = z.infer<typeof memoryJobFileChangeSchema>;
+export type MemoryJobKind = z.infer<typeof memoryJobKindSchema>;
+export type MemoryJobList = z.infer<typeof memoryJobListSchema>;
+export type MemoryJobStatus = z.infer<typeof memoryJobStatusSchema>;
+export type MemoryJobSummary = z.infer<typeof memoryJobSummarySchema>;
 export type AgentRuntimeAgentEnv = z.infer<typeof agentRuntimeAgentEnvSchema>;
 export type AgentRuntimeAgentEnvVariable = z.infer<typeof agentRuntimeAgentEnvVariableSchema>;
 export type AgentRuntimeSaveAgentEnv = z.infer<typeof agentRuntimeSaveAgentEnvSchema>;

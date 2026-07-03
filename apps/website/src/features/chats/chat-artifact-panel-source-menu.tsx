@@ -32,10 +32,10 @@ export function ArtifactPanelSourceMenu({
                     <MenuGroupLabel>Open from</MenuGroupLabel>
                     <MenuItem
                         className="items-start gap-2 py-2"
-                        onClick={() => onOpenTarget({ kind: 'vaultDirectory', path: '' })}
+                        onClick={() => onOpenTarget({ kind: 'memoryDirectory', path: '' })}
                     >
                         <Icon className="mt-0.5" icon={Folder01Icon} />
-                        <SourceMenuText description="Browse durable wiki pages" title="Vault" />
+                        <SourceMenuText description="Browse durable Memory pages" title="Memory" />
                     </MenuItem>
                     <MenuItem
                         className="items-start gap-2 py-2"

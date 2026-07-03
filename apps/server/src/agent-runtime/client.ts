@@ -38,6 +38,7 @@ import {
     type AgentRuntimeMcpServerCreate,
     type AgentRuntimeMcpServerList,
     type AgentRuntimeMcpServerTestResult,
+    type AgentRuntimeMemorySettings,
     type AgentRuntimeMerchbaseActionInput,
     type AgentRuntimeMerchbaseActionResult,
     type AgentRuntimeMerchbaseSalesSeries,
@@ -45,6 +46,7 @@ import {
     type AgentRuntimeMerchbaseSettings,
     type AgentRuntimeMessageAccepted,
     type AgentRuntimeModelAccess,
+    type AgentRuntimeModelCategorySettings,
     type AgentRuntimeModelProviderCatalog,
     type AgentRuntimeModelProviderCatalogEntry,
     type AgentRuntimeModelProviderEnabled,
@@ -67,13 +69,18 @@ import {
     type AgentRuntimeSaveDiscordBinding,
     type AgentRuntimeSaveExecutionSettings,
     type AgentRuntimeSaveExecutionSettingsResult,
+    type AgentRuntimeSaveMemorySettings,
+    type AgentRuntimeSaveMemorySettingsResult,
     type AgentRuntimeSaveMerchbaseSettings,
+    type AgentRuntimeSaveModelCategorySettings,
+    type AgentRuntimeSaveModelCategorySettingsResult,
     type AgentRuntimeSaveModelProviderApiKey,
     type AgentRuntimeSaveOpenAiSettings,
     type AgentRuntimeSaveOpenRouterSettings,
-    type AgentRuntimeSaveVaultSettings,
-    type AgentRuntimeSaveVaultSettingsResult,
+    type AgentRuntimeSaveSemanticMemorySettings,
+    type AgentRuntimeSaveSemanticMemorySettingsResult,
     type AgentRuntimeSaveWorkspaceInstructions,
+    type AgentRuntimeSemanticMemorySettings,
     type AgentRuntimeSessionGraph,
     type AgentRuntimeSessionList,
     type AgentRuntimeSessionMessageList,
@@ -116,7 +123,6 @@ import {
     type AgentRuntimeUpdateSkillEnabled,
     type AgentRuntimeUpdateToolEnabled,
     type AgentRuntimeUpsertBinding,
-    type AgentRuntimeVaultSettings,
     type AgentRuntimeWorkspaceFileContent,
     type AgentRuntimeWorkspaceFileList,
     type AgentRuntimeWorkspaceFileListInput,
@@ -163,6 +169,7 @@ import {
     agentRuntimeMcpServerListSchema,
     agentRuntimeMcpServerSchema,
     agentRuntimeMcpServerTestResultSchema,
+    agentRuntimeMemorySettingsSchema,
     agentRuntimeMerchbaseActionInputSchema,
     agentRuntimeMerchbaseActionResultSchema,
     agentRuntimeMerchbaseSalesSeriesInputSchema,
@@ -170,6 +177,7 @@ import {
     agentRuntimeMerchbaseSettingsSchema,
     agentRuntimeMessageAcceptedSchema,
     agentRuntimeModelAccessSchema,
+    agentRuntimeModelCategorySettingsSchema,
     agentRuntimeModelProviderCatalogEntrySchema,
     agentRuntimeModelProviderCatalogSchema,
     agentRuntimeModelProviderEnabledSchema,
@@ -199,13 +207,18 @@ import {
     agentRuntimeSaveDiscordBindingSchema,
     agentRuntimeSaveExecutionSettingsResultSchema,
     agentRuntimeSaveExecutionSettingsSchema,
+    agentRuntimeSaveMemorySettingsResultSchema,
+    agentRuntimeSaveMemorySettingsSchema,
     agentRuntimeSaveMerchbaseSettingsSchema,
+    agentRuntimeSaveModelCategorySettingsResultSchema,
+    agentRuntimeSaveModelCategorySettingsSchema,
     agentRuntimeSaveModelProviderApiKeySchema,
     agentRuntimeSaveOpenAiSettingsSchema,
     agentRuntimeSaveOpenRouterSettingsSchema,
-    agentRuntimeSaveVaultSettingsResultSchema,
-    agentRuntimeSaveVaultSettingsSchema,
+    agentRuntimeSaveSemanticMemorySettingsResultSchema,
+    agentRuntimeSaveSemanticMemorySettingsSchema,
     agentRuntimeSaveWorkspaceInstructionsSchema,
+    agentRuntimeSemanticMemorySettingsSchema,
     agentRuntimeSessionGraphSchema,
     agentRuntimeSessionListSchema,
     agentRuntimeSessionMessageListSchema,
@@ -248,34 +261,39 @@ import {
     agentRuntimeUpdateSkillEnabledSchema,
     agentRuntimeUpdateToolEnabledSchema,
     agentRuntimeUpsertBindingSchema,
-    agentRuntimeVaultSettingsSchema,
     agentRuntimeWorkspaceFileContentSchema,
     agentRuntimeWorkspaceFileListInputSchema,
     agentRuntimeWorkspaceFileListSchema,
     agentRuntimeWorkspaceInstructionsSchema,
+    type MemoryDreamResult,
+    type MemoryJobDetail,
+    type MemoryJobList,
+    memoryDreamResultSchema,
+    memoryJobDetailSchema,
+    memoryJobListSchema,
+    memoryPathInputSchema,
+    memoryPathMutationResultSchema,
     runtimeEventListSchema,
-    type VaultBacklinkList,
-    type VaultCreatePage,
-    type VaultMovePath,
-    type VaultPage,
-    type VaultPageList,
-    type VaultPathInput,
-    type VaultPathMutationResult,
-    type VaultSavePage,
-    type VaultSearchInput,
-    type VaultSearchResult,
-    type VaultStatus,
-    vaultBacklinkListSchema,
-    vaultCreatePageSchema,
-    vaultMovePathSchema,
-    vaultPageListSchema,
-    vaultPageSchema,
-    vaultPathInputSchema,
-    vaultPathMutationResultSchema,
-    vaultSavePageSchema,
-    vaultSearchInputSchema,
-    vaultSearchResultSchema,
-    vaultStatusSchema,
+    type SemanticMemoryBacklinkList,
+    type SemanticMemoryCreatePage,
+    type SemanticMemoryMovePath,
+    type SemanticMemoryPage,
+    type SemanticMemoryPageList,
+    type SemanticMemoryPathInput,
+    type SemanticMemoryPathMutationResult,
+    type SemanticMemorySavePage,
+    type SemanticMemorySearchInput,
+    type SemanticMemorySearchResult,
+    type SemanticMemoryStatus,
+    semanticMemoryBacklinkListSchema,
+    semanticMemoryCreatePageSchema,
+    semanticMemoryMovePathSchema,
+    semanticMemoryPageListSchema,
+    semanticMemoryPageSchema,
+    semanticMemorySavePageSchema,
+    semanticMemorySearchInputSchema,
+    semanticMemorySearchResultSchema,
+    semanticMemoryStatusSchema,
 } from '@tavern/api';
 import { z } from 'zod';
 
@@ -307,8 +325,12 @@ export interface TavernAgentRuntimeClient {
     cancelModelProviderOAuth(input: AgentRuntimeCancelModelProviderOAuth): Promise<unknown>;
     close(): void;
     createCronJob(input: AgentRuntimeCreateCron): Promise<AgentRuntimeCron>;
-    createVaultFolder(input: VaultPathInput): Promise<VaultPathMutationResult>;
-    createVaultPage(input: VaultCreatePage): Promise<VaultPathMutationResult>;
+    createSemanticMemoryFolder(
+        input: SemanticMemoryPathInput
+    ): Promise<SemanticMemoryPathMutationResult>;
+    createSemanticMemoryPage(
+        input: SemanticMemoryCreatePage
+    ): Promise<SemanticMemoryPathMutationResult>;
     deleteAgent(agentId: string): Promise<AgentRuntimeArchiveAgent>;
     deleteBinding(bindingId: string): Promise<AgentRuntimeArchiveBinding>;
     deleteCronJob(jobId: string): Promise<AgentRuntimeArchiveCron>;
@@ -318,8 +340,12 @@ export interface TavernAgentRuntimeClient {
     ): Promise<AgentRuntimeAgentEngineConfigSnapshot>;
     deleteOpenAiSettings(): Promise<AgentRuntimeOpenAiSettings>;
     deleteOpenRouterSettings(): Promise<AgentRuntimeOpenRouterSettings>;
-    deleteVaultFolder(input: VaultPathInput): Promise<VaultPathMutationResult>;
-    deleteVaultPage(input: VaultPathInput): Promise<VaultPathMutationResult>;
+    deleteSemanticMemoryFolder(
+        input: SemanticMemoryPathInput
+    ): Promise<SemanticMemoryPathMutationResult>;
+    deleteSemanticMemoryPage(
+        input: SemanticMemoryPathInput
+    ): Promise<SemanticMemoryPathMutationResult>;
     getAgentConfig(agentId: string): Promise<AgentRuntimeAgent>;
     getAgentEngineConfig(): Promise<AgentRuntimeAgentEngineConfigSnapshot>;
     getAgentEnv(): Promise<AgentRuntimeAgentEnv>;
@@ -332,8 +358,11 @@ export interface TavernAgentRuntimeClient {
     }): Promise<AgentRuntimeCurrentAgentSessionResult>;
     getExecutionSettings(): Promise<AgentRuntimeExecutionSettings>;
     getMcpCatalog(): Promise<AgentRuntimeMcpCatalog>;
+    getMemoryJob(jobId: string): Promise<MemoryJobDetail | null>;
+    getMemorySettings(): Promise<AgentRuntimeMemorySettings>;
     getMerchbaseSettings(): Promise<AgentRuntimeMerchbaseSettings>;
     getModelAccess(): Promise<AgentRuntimeModelAccess>;
+    getModelCategorySettings(): Promise<AgentRuntimeModelCategorySettings>;
     getModelProviderCatalog(): Promise<AgentRuntimeModelProviderCatalog>;
     getModelProvidersEnabled(): Promise<AgentRuntimeModelProviderEnabled>;
     getModels(): Promise<AgentRuntimeModels>;
@@ -341,15 +370,15 @@ export interface TavernAgentRuntimeClient {
     getOpenRouterSettings(): Promise<AgentRuntimeOpenRouterSettings>;
     getPlugin(id: AgentRuntimePluginId): Promise<AgentRuntimePlugin>;
     getRuntimeJob(slug: AgentRuntimeJobSlug): Promise<AgentRuntimeJobDetail | null>;
+    getSemanticMemoryPage(input: { path: string }): Promise<SemanticMemoryPage | null>;
+    getSemanticMemorySettings(): Promise<AgentRuntimeSemanticMemorySettings>;
+    getSemanticMemoryStatus(): Promise<SemanticMemoryStatus>;
     getSessionGraph(sessionKey: string): Promise<AgentRuntimeSessionGraph>;
     getSessionPrompt(sessionKey: string): Promise<AgentRuntimeSessionPrompt | null>;
     getSkill(skillId: string): Promise<AgentRuntimeSkill>;
     getSkillHubAvailable(): Promise<AgentRuntimeSkillHubAvailable>;
     getToolConfig(toolId: string): Promise<AgentRuntimeToolConfig>;
     getUpdateStatus(): Promise<AgentRuntimeUpdate>;
-    getVaultPage(input: { path: string }): Promise<VaultPage | null>;
-    getVaultSettings(): Promise<AgentRuntimeVaultSettings>;
-    getVaultStatus(): Promise<VaultStatus>;
     getWorkspaceFile(agentId: string, path: string): Promise<AgentRuntimeWorkspaceFileContent>;
     getWorkspaceInstructions(agentId: string): Promise<AgentRuntimeRenderedWorkspaceInstructions>;
     installMcpCatalogEntry(
@@ -371,8 +400,11 @@ export interface TavernAgentRuntimeClient {
     listEvents(input?: AgentRuntimeListEventsInput): Promise<AgentRuntimeEventList>;
     listMacApps(options?: { limit?: number; query?: string }): Promise<AgentRuntimeMacAppList>;
     listMcpServers(): Promise<AgentRuntimeMcpServerList>;
+    listMemoryJobs(input?: { agentId?: string; limit?: number }): Promise<MemoryJobList>;
     listPlugins(): Promise<AgentRuntimePluginList>;
     listRuntimeJobs(): Promise<AgentRuntimeJobList>;
+    listSemanticMemoryBacklinks(input: { path: string }): Promise<SemanticMemoryBacklinkList>;
+    listSemanticMemoryPages(): Promise<SemanticMemoryPageList>;
     listSessionMessages(
         sessionKey: string,
         options?: AgentRuntimeListSessionMessagesOptions
@@ -386,13 +418,13 @@ export interface TavernAgentRuntimeClient {
         options?: AgentRuntimeListSkillsOptions
     ): Promise<{ skills: AgentRuntimeSkillSummary[] }>;
     listTools(): Promise<AgentRuntimeToolList>;
-    listVaultBacklinks(input: { path: string }): Promise<VaultBacklinkList>;
-    listVaultPages(): Promise<VaultPageList>;
     listWorkspaceFiles(
         agentId: string,
         input?: AgentRuntimeWorkspaceFileListInput
     ): Promise<AgentRuntimeWorkspaceFileList>;
-    moveVaultPath(input: VaultMovePath): Promise<VaultPathMutationResult>;
+    moveSemanticMemoryPath(
+        input: SemanticMemoryMovePath
+    ): Promise<SemanticMemoryPathMutationResult>;
     pollModelProviderOAuth(input: AgentRuntimePollModelProviderOAuth): Promise<unknown>;
     postMessage(
         chatId: string,
@@ -412,6 +444,7 @@ export interface TavernAgentRuntimeClient {
     resyncSession(sessionKey: string): Promise<AgentRuntimeSessionResync>;
     runCommand(input: AgentRuntimeRunCommand): Promise<AgentRuntimeRunCommandResult>;
     runCronJob(jobId: string, input?: AgentRuntimeRunCron): Promise<AgentRuntimeCronRun>;
+    runMemoryDream(agentId: string): Promise<MemoryDreamResult>;
     runRuntimeJob(
         slug: AgentRuntimeJobSlug,
         input?: AgentRuntimeRunJobInput
@@ -432,28 +465,36 @@ export interface TavernAgentRuntimeClient {
     saveExecutionSettings(
         input: AgentRuntimeSaveExecutionSettings
     ): Promise<AgentRuntimeSaveExecutionSettingsResult>;
+    saveMemorySettings(
+        input: AgentRuntimeSaveMemorySettings
+    ): Promise<AgentRuntimeSaveMemorySettingsResult>;
     saveMerchbaseSettings(
         input: AgentRuntimeSaveMerchbaseSettings
     ): Promise<AgentRuntimeMerchbaseSettings>;
+    saveModelCategorySettings(
+        input: AgentRuntimeSaveModelCategorySettings
+    ): Promise<AgentRuntimeSaveModelCategorySettingsResult>;
     saveModelProviderApiKey(input: AgentRuntimeSaveModelProviderApiKey): Promise<{ ok: boolean }>;
     saveOpenAiSettings(input: AgentRuntimeSaveOpenAiSettings): Promise<AgentRuntimeOpenAiSettings>;
     saveOpenRouterSettings(
         input: AgentRuntimeSaveOpenRouterSettings
     ): Promise<AgentRuntimeOpenRouterSettings>;
+    saveSemanticMemoryPage(
+        input: SemanticMemorySavePage
+    ): Promise<SemanticMemoryPathMutationResult>;
+    saveSemanticMemorySettings(
+        input: AgentRuntimeSaveSemanticMemorySettings
+    ): Promise<AgentRuntimeSaveSemanticMemorySettingsResult>;
     saveToolEnv(
         toolId: string,
         input: AgentRuntimeToolEnvUpdate
     ): Promise<AgentRuntimeToolEnvUpdateResult>;
-    saveVaultPage(input: VaultSavePage): Promise<VaultPathMutationResult>;
-    saveVaultSettings(
-        input: AgentRuntimeSaveVaultSettings
-    ): Promise<AgentRuntimeSaveVaultSettingsResult>;
     saveWorkspaceInstructions(
         agentId: string,
         input: AgentRuntimeSaveWorkspaceInstructions
     ): Promise<AgentRuntimeWorkspaceInstructions>;
     scanSkillHubSkill(identifier: string): Promise<AgentRuntimeSkillHubScan>;
-    searchVault(input: VaultSearchInput): Promise<VaultSearchResult>;
+    searchSemanticMemory(input: SemanticMemorySearchInput): Promise<SemanticMemorySearchResult>;
     selectToolProvider(
         toolId: string,
         input: AgentRuntimeToolProviderSelect
@@ -570,7 +611,11 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
 
     close() {}
 
-    async postVaultQuery<T>(route: string, input: unknown, schema: z.ZodType<T>): Promise<T> {
+    async postSemanticMemoryQuery<T>(
+        route: string,
+        input: unknown,
+        schema: z.ZodType<T>
+    ): Promise<T> {
         const response = await fetch(`${this.#baseUrl}${route}`, {
             body: JSON.stringify(input),
             headers: { ...this.#authHeaders, 'content-type': 'application/json' },
@@ -898,6 +943,26 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         return agentRuntimeJobListSchema.parse(await response.json());
     }
 
+    async listMemoryJobs(input: { agentId?: string; limit?: number } = {}) {
+        const params = new URLSearchParams();
+        if (input.agentId) {
+            params.set('agentId', input.agentId);
+        }
+        if (input.limit) {
+            params.set('limit', String(input.limit));
+        }
+        const suffix = params.size > 0 ? `?${params.toString()}` : '';
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.memoryJobs}${suffix}`, {
+            headers: this.#authHeaders,
+        });
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return memoryJobListSchema.parse(await response.json());
+    }
+
     async listCapabilities() {
         const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.capabilities}`, {
             headers: this.#authHeaders,
@@ -1061,8 +1126,8 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         return agentRuntimeRunJobSchema.parse(await response.json());
     }
 
-    async getVaultStatus() {
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.vaultStatus}`, {
+    async getSemanticMemoryStatus() {
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.semanticMemoryStatus}`, {
             headers: this.#authHeaders,
         });
 
@@ -1070,43 +1135,49 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
             await readErrorResponse(response);
         }
 
-        return vaultStatusSchema.parse(await response.json());
+        return semanticMemoryStatusSchema.parse(await response.json());
     }
 
-    async getVaultSettings() {
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.vaultSettings}`, {
-            headers: this.#authHeaders,
-        });
+    async getSemanticMemorySettings() {
+        const response = await fetch(
+            `${this.#baseUrl}${agentRuntimeRoutes.semanticMemorySettings}`,
+            {
+                headers: this.#authHeaders,
+            }
+        );
 
         if (!response.ok) {
             await readErrorResponse(response);
         }
 
-        return agentRuntimeVaultSettingsSchema.parse(await response.json());
+        return agentRuntimeSemanticMemorySettingsSchema.parse(await response.json());
     }
 
-    async saveVaultSettings(input: AgentRuntimeSaveVaultSettings) {
-        const payload = agentRuntimeSaveVaultSettingsSchema.parse(input);
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.vaultSettings}`, {
-            body: JSON.stringify(payload),
-            headers: {
-                ...this.#authHeaders,
-                'content-type': 'application/json',
-                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
-            },
-            method: 'PUT',
-        });
+    async saveSemanticMemorySettings(input: AgentRuntimeSaveSemanticMemorySettings) {
+        const payload = agentRuntimeSaveSemanticMemorySettingsSchema.parse(input);
+        const response = await fetch(
+            `${this.#baseUrl}${agentRuntimeRoutes.semanticMemorySettings}`,
+            {
+                body: JSON.stringify(payload),
+                headers: {
+                    ...this.#authHeaders,
+                    'content-type': 'application/json',
+                    [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+                },
+                method: 'PUT',
+            }
+        );
 
         if (!response.ok) {
             await readErrorResponse(response);
         }
 
-        return agentRuntimeSaveVaultSettingsResultSchema.parse(await response.json());
+        return agentRuntimeSaveSemanticMemorySettingsResultSchema.parse(await response.json());
     }
 
-    async createVaultPage(input: VaultCreatePage) {
-        const payload = vaultCreatePageSchema.parse(input);
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.vaultPages}`, {
+    async createSemanticMemoryPage(input: SemanticMemoryCreatePage) {
+        const payload = semanticMemoryCreatePageSchema.parse(input);
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.semanticMemoryPages}`, {
             body: JSON.stringify(payload),
             headers: {
                 ...this.#authHeaders,
@@ -1120,13 +1191,13 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
             await readErrorResponse(response);
         }
 
-        return vaultPathMutationResultSchema.parse(await response.json());
+        return memoryPathMutationResultSchema.parse(await response.json());
     }
 
-    async saveVaultPage(input: VaultSavePage) {
-        const payload = vaultSavePageSchema.parse(input);
+    async saveSemanticMemoryPage(input: SemanticMemorySavePage) {
+        const payload = semanticMemorySavePageSchema.parse(input);
         const response = await fetch(
-            `${this.#baseUrl}${agentRuntimeRoutes.vaultPage(payload.path)}`,
+            `${this.#baseUrl}${agentRuntimeRoutes.semanticMemoryPage(payload.path)}`,
             {
                 body: JSON.stringify({ body: payload.body }),
                 headers: {
@@ -1142,30 +1213,33 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
             await readErrorResponse(response);
         }
 
-        return vaultPathMutationResultSchema.parse(await response.json());
+        return memoryPathMutationResultSchema.parse(await response.json());
     }
 
-    async createVaultFolder(input: VaultPathInput) {
-        const payload = vaultPathInputSchema.parse(input);
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.vaultFolders}`, {
-            body: JSON.stringify(payload),
-            headers: {
-                ...this.#authHeaders,
-                'content-type': 'application/json',
-                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
-            },
-            method: 'POST',
-        });
+    async createSemanticMemoryFolder(input: SemanticMemoryPathInput) {
+        const payload = memoryPathInputSchema.parse(input);
+        const response = await fetch(
+            `${this.#baseUrl}${agentRuntimeRoutes.semanticMemoryFolders}`,
+            {
+                body: JSON.stringify(payload),
+                headers: {
+                    ...this.#authHeaders,
+                    'content-type': 'application/json',
+                    [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+                },
+                method: 'POST',
+            }
+        );
 
         if (!response.ok) {
             await readErrorResponse(response);
         }
 
-        return vaultPathMutationResultSchema.parse(await response.json());
+        return memoryPathMutationResultSchema.parse(await response.json());
     }
 
-    async listVaultPages() {
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.vaultPages}`, {
+    async listSemanticMemoryPages() {
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.semanticMemoryPages}`, {
             headers: this.#authHeaders,
         });
 
@@ -1173,12 +1247,12 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
             await readErrorResponse(response);
         }
 
-        return vaultPageListSchema.parse(await response.json());
+        return semanticMemoryPageListSchema.parse(await response.json());
     }
 
-    async getVaultPage(input: { path: string }) {
+    async getSemanticMemoryPage(input: { path: string }) {
         const response = await fetch(
-            `${this.#baseUrl}${agentRuntimeRoutes.vaultPage(input.path)}`,
+            `${this.#baseUrl}${agentRuntimeRoutes.semanticMemoryPage(input.path)}`,
             {
                 headers: this.#authHeaders,
             }
@@ -1191,13 +1265,13 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
             await readErrorResponse(response);
         }
 
-        return vaultPageSchema.parse(await response.json());
+        return semanticMemoryPageSchema.parse(await response.json());
     }
 
-    async deleteVaultPage(input: VaultPathInput) {
-        const payload = vaultPathInputSchema.parse(input);
+    async deleteSemanticMemoryPage(input: SemanticMemoryPathInput) {
+        const payload = memoryPathInputSchema.parse(input);
         const response = await fetch(
-            `${this.#baseUrl}${agentRuntimeRoutes.vaultPage(payload.path)}`,
+            `${this.#baseUrl}${agentRuntimeRoutes.semanticMemoryPage(payload.path)}`,
             {
                 headers: {
                     ...this.#authHeaders,
@@ -1211,13 +1285,13 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
             await readErrorResponse(response);
         }
 
-        return vaultPathMutationResultSchema.parse(await response.json());
+        return memoryPathMutationResultSchema.parse(await response.json());
     }
 
-    async deleteVaultFolder(input: VaultPathInput) {
-        const payload = vaultPathInputSchema.parse(input);
+    async deleteSemanticMemoryFolder(input: SemanticMemoryPathInput) {
+        const payload = memoryPathInputSchema.parse(input);
         const response = await fetch(
-            `${this.#baseUrl}${agentRuntimeRoutes.vaultFolder(payload.path)}`,
+            `${this.#baseUrl}${agentRuntimeRoutes.semanticMemoryFolder(payload.path)}`,
             {
                 headers: {
                     ...this.#authHeaders,
@@ -1231,39 +1305,42 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
             await readErrorResponse(response);
         }
 
-        return vaultPathMutationResultSchema.parse(await response.json());
+        return memoryPathMutationResultSchema.parse(await response.json());
     }
 
-    async moveVaultPath(input: VaultMovePath) {
-        const payload = vaultMovePathSchema.parse(input);
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.vaultMovePath}`, {
-            body: JSON.stringify(payload),
-            headers: {
-                ...this.#authHeaders,
-                'content-type': 'application/json',
-                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
-            },
-            method: 'POST',
-        });
+    async moveSemanticMemoryPath(input: SemanticMemoryMovePath) {
+        const payload = semanticMemoryMovePathSchema.parse(input);
+        const response = await fetch(
+            `${this.#baseUrl}${agentRuntimeRoutes.semanticMemoryMovePath}`,
+            {
+                body: JSON.stringify(payload),
+                headers: {
+                    ...this.#authHeaders,
+                    'content-type': 'application/json',
+                    [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+                },
+                method: 'POST',
+            }
+        );
 
         if (!response.ok) {
             await readErrorResponse(response);
         }
 
-        return vaultPathMutationResultSchema.parse(await response.json());
+        return memoryPathMutationResultSchema.parse(await response.json());
     }
 
-    async searchVault(input: VaultSearchInput) {
-        return await this.postVaultQuery(
-            agentRuntimeRoutes.vaultSearch,
-            vaultSearchInputSchema.parse(input),
-            vaultSearchResultSchema
+    async searchSemanticMemory(input: SemanticMemorySearchInput) {
+        return await this.postSemanticMemoryQuery(
+            agentRuntimeRoutes.semanticMemorySearch,
+            semanticMemorySearchInputSchema.parse(input),
+            semanticMemorySearchResultSchema
         );
     }
 
-    async listVaultBacklinks(input: { path: string }) {
+    async listSemanticMemoryBacklinks(input: { path: string }) {
         const response = await fetch(
-            `${this.#baseUrl}${agentRuntimeRoutes.vaultBacklinks(input.path)}`,
+            `${this.#baseUrl}${agentRuntimeRoutes.semanticMemoryBacklinks(input.path)}`,
             {
                 headers: this.#authHeaders,
             }
@@ -1273,7 +1350,7 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
             await readErrorResponse(response);
         }
 
-        return vaultBacklinkListSchema.parse(await response.json());
+        return semanticMemoryBacklinkListSchema.parse(await response.json());
     }
 
     async getModels() {
@@ -1680,6 +1757,110 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         }
 
         return agentRuntimeSaveExecutionSettingsResultSchema.parse(await response.json());
+    }
+
+    async getMemorySettings() {
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.memorySettings}`, {
+            headers: this.#authHeaders,
+        });
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeMemorySettingsSchema.parse(await response.json());
+    }
+
+    async getMemoryJob(jobId: string) {
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.memoryJob(jobId)}`, {
+            headers: this.#authHeaders,
+        });
+
+        if (response.status === 404) {
+            return null;
+        }
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return memoryJobDetailSchema.parse(await response.json());
+    }
+
+    async runMemoryDream(agentId: string) {
+        const response = await fetch(
+            `${this.#baseUrl}${agentRuntimeRoutes.memoryAgentDream(agentId)}`,
+            {
+                body: JSON.stringify({ agentId }),
+                headers: {
+                    ...this.#authHeaders,
+                    'content-type': 'application/json',
+                    [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+                },
+                method: 'POST',
+            }
+        );
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return memoryDreamResultSchema.parse(await response.json());
+    }
+
+    async saveMemorySettings(input: AgentRuntimeSaveMemorySettings) {
+        const payload = agentRuntimeSaveMemorySettingsSchema.parse(input);
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.memorySettings}`, {
+            body: JSON.stringify(payload),
+            headers: {
+                ...this.#authHeaders,
+                'content-type': 'application/json',
+                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+            },
+            method: 'PUT',
+        });
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeSaveMemorySettingsResultSchema.parse(await response.json());
+    }
+
+    async getModelCategorySettings() {
+        const response = await fetch(
+            `${this.#baseUrl}${agentRuntimeRoutes.modelCategorySettings}`,
+            {
+                headers: this.#authHeaders,
+            }
+        );
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeModelCategorySettingsSchema.parse(await response.json());
+    }
+
+    async saveModelCategorySettings(input: AgentRuntimeSaveModelCategorySettings) {
+        const payload = agentRuntimeSaveModelCategorySettingsSchema.parse(input);
+        const response = await fetch(
+            `${this.#baseUrl}${agentRuntimeRoutes.modelCategorySettings}`,
+            {
+                body: JSON.stringify(payload),
+                headers: {
+                    ...this.#authHeaders,
+                    'content-type': 'application/json',
+                    [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+                },
+                method: 'PUT',
+            }
+        );
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeSaveModelCategorySettingsResultSchema.parse(await response.json());
     }
 
     async getAgentEnv(): Promise<AgentRuntimeAgentEnv> {

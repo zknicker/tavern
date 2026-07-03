@@ -29,7 +29,7 @@ const capabilityLabels = {
     modelExecution: 'Model execution',
     'plugin.merchbase': 'MerchBase',
     skills: 'Skills',
-    vault: 'Memory',
+    semanticMemory: 'Memory',
 } satisfies Record<RuntimeCapabilityId, string>;
 
 export const settingsCapabilityRequirements = {
@@ -37,7 +37,7 @@ export const settingsCapabilityRequirements = {
     agent: ['apiServer', 'modelExecution'],
     'agent-channels': ['apiServer'],
     'agent-general': ['apiServer', 'modelExecution'],
-    'agent-memory': ['vault'],
+    'agent-memory': ['semanticMemory'],
     'agent-plugins': ['apiServer'],
     'agent-skills': ['apiServer', 'skills'],
     'notes-md': [],
@@ -47,7 +47,7 @@ export const settingsCapabilityRequirements = {
     mcp: ['apiServer'],
     plugins: ['apiServer'],
     jobs: [],
-    memories: ['vault'],
+    memories: ['semanticMemory'],
     models: ['apiServer'],
     sessions: ['apiServer'],
     skills: ['apiServer', 'skills'],
@@ -68,7 +68,7 @@ export const routeTabCapabilityRequirements = {
     // Tasks are hidden unless the agent runtime is fully ready because create/run actions execute there.
     tasks: agentCapabilityRequirements,
     overview: [],
-    memory: ['vault'],
+    memory: ['semanticMemory'],
     workspace: ['apiServer'],
 } as const satisfies Record<RouteTab, readonly RuntimeCapabilityId[]>;
 

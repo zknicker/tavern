@@ -5,9 +5,9 @@ bug history or stale plans.
 
 Tavern is an always-on agent chat system backed by Tavern Runtime. Tavern Runtime owns canonical
 chats, messages, responses, activity, artifacts, participants, event cursors, automations,
-deliveries, Vault, generated instruction policy, executable agent settings, native agent
+deliveries, Memory, generated instruction policy, executable agent settings, native agent
 execution, sessions, turns, transcripts, files, tools, model routing, provider state, platform
-bindings, prompt-time memory, and jobs. Tavern App owns the first-party Mac client, cache,
+bindings, prompt-time context, and jobs. Tavern App owns the first-party Mac client, cache,
 presentation metadata, and app-shell preferences.
 
 Tavern currently supports one local agent engine implementation inside Runtime.
@@ -42,27 +42,23 @@ agent-engine implementation choices directly.
   integration plumbing.
 - `permissions.md`: tool sources, sandbox mode, approval policy, and command
   allowlist.
-- `workspace.md`: the generated `AGENTS.md` artifact and its editable
-  sources (`NOTES.md`, `SOUL.md`).
+- `workspace.md`: the rendered system prompt and its editable sources
+  (`NOTES.md`, `SOUL.md`).
 - `tavern-skill.md`: the agent's product knowledge of and operational access
   to Tavern.
 
 ## Memory Specs
 
-- `memories.md`: Vault durable knowledge, person memory, and memory
+- `memories.md`: durable knowledge, person memory, and Memory
   inspection surfaces.
 - `memory-context.md`: bounded prompt-facing context assembled from Runtime
-  context management, chat state, participants, and selected wiki material.
-- `memory-lifecycle.md`: Vault lifecycle, correction, forgetting, and
-  maintenance through Tasks and crons.
+  context management, chat state, participants, and selected Memory material.
+- `memory-lifecycle.md`: Memory lifecycle, correction, forgetting, and
+  maintenance through background workers and agent work.
 - `memory-persistence.md`: historical memory persistence design; do not extend
-  it for new wiki work.
+  it for new Memory work.
 - `participant-knowledge.md`: participant identity resolution and person-level
   knowledge.
-
-## Vault Specs
-
-- `vault.md`: Vault-backed durable knowledge browser and Runtime contract.
 
 ## Runtime Specs
 

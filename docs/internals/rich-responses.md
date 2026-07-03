@@ -20,7 +20,6 @@ The model does not call render tools. Tavern does not register first-party
 render tools in the managed platform plugin.
 
 Tavern uses json-render for the Rich Response spec island: json-render core
-assembles the catalog-backed prompt with its default prompt assembler and
 compiles SpecStream patches. The Website renders the compiled spec with
 `@json-render/react` using Tavern-styled component renderers.
 
@@ -134,14 +133,12 @@ unavailable state.
 
 ## Agent Guidance
 
-Generated `AGENTS.md` gets its Rich Response section from the json-render
-catalog prompt assembler. Tavern defines each component once in the shared
-catalog with a description, child-slot metadata, and Zod props schema; prompt
-text, Runtime compilation, and validation all read from that catalog instead of
-duplicating per-component examples in generated instructions. Tavern appends
-only product-specific rules such as chat compactness, `Stack` child ownership,
-component-choice guidance, and avoiding identical prose inside and outside Rich Responses.
-Detailed component schemas live in `packages/tavern-api/src/rich-responses`.
+The Tavern-managed system prompt carries only compact Rich Response guidance:
+use one `spec` Rich Response when the answer is naturally table-, chart-,
+calendar-, or UI-shaped, otherwise use text, and never author HTML, JSX, CSS,
+imports, class names, or widget/render instructions. Detailed component schemas
+stay out of the always-on prompt and live in
+`packages/tavern-api/src/rich-responses`.
 
 ## Ownership
 

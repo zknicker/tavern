@@ -1,8 +1,8 @@
-import { TavernVaultBadge } from '../../../components/badges/tavern-vault-badge.tsx';
+import { SecureStorageBadge } from '../../../components/badges/secure-storage-badge.tsx';
 import { cn } from '../../../lib/utils.ts';
 
 type ConnectionState = 'error' | 'live' | 'needs-auth';
-export type ConnectionTarget = 'tavern-vault';
+export type ConnectionTarget = 'secure-storage';
 
 interface ProviderConnectionDescriptionProps {
     description: string;
@@ -38,7 +38,7 @@ export function ProviderConnectionDetail({
     target,
 }: ProviderConnectionDescriptionProps) {
     if (state === 'live' && target) {
-        return <TavernVaultBadge />;
+        return <SecureStorageBadge />;
     }
 
     return description ? <span className="text-muted-foreground">{description}</span> : null;

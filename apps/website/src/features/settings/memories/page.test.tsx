@@ -1,11 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { VaultSettingsCard } from './page.tsx';
+import { SemanticMemorySettingsCard } from './page.tsx';
 
-test('VaultSettingsCard renders path setting and Memory status', () => {
+test('SemanticMemorySettingsCard renders path setting and Memory status', () => {
     const markup = renderToStaticMarkup(
-        <VaultSettingsCard
+        <SemanticMemorySettingsCard
             isSaving={false}
             onSave={() => undefined}
             settings={{
@@ -25,7 +25,7 @@ test('VaultSettingsCard renders path setting and Memory status', () => {
                 indexExists: true,
                 pageCount: 42,
                 readable: true,
-                vaultPath: '/Users/zknicker/.tavern/runtime/memory',
+                memoryPath: '/Users/zknicker/.tavern/runtime/memory',
                 writable: true,
             }}
         />

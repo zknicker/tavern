@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import type { Database } from '../db/sqlite.ts';
 import { namedParams } from '../db/sqlite.ts';
+import { isMemoryEnabled } from '../memory/settings.ts';
 import { publishRuntimeEvent } from '../tavern/runtime-events.ts';
 import {
     agentNotesFileName,
@@ -27,30 +28,13 @@ export interface AgentInstructionGenerateResult {
 export interface AgentInstructionReadResult {
     agentId: string;
     content: string;
-    path: string;
     renderedAt: string | null;
     sha256: string | null;
     updatedAt: string | null;
 }
 
-export const generatedInstructionFileName = 'AGENTS.md';
-export const legacyBootstrapFileNamesToClear = [
-    'BOOTSTRAP.md',
-    'HEARTBEAT.md',
-    'IDENTITY.md',
-    'MEMORY.md',
-    'ROLE.md',
-    'TOOLS.md',
-    'USER.md',
-] as const;
-
 const defaultAgentId = 'main';
 const defaultAgentName = 'main';
-// One marker pair per legacy file; used only to migrate pre-generated installs.
-const legacyManagedBlockPattern =
-    /<!-- tavern:managed v=[a-f0-9]{16} -->[\s\S]*?<!-- \/tavern:managed -->/u;
-const legacyUserContentHint =
-    '<!-- Everything below is yours. Add durable instructions and notes here; Tavern only rewrites the managed block above. -->';
 
 export function getAgentWorkspaceSource(
     db: Database,
@@ -117,11 +101,9 @@ export function registerAgentWorkspace(
 }
 
 /**
- * Generate AGENTS.md from its sources. AGENTS.md is a pure artifact with
- * Tavern as its single writer: it is composed deterministically from the
- * managed content, the agent name, and NOTES.md, written read-only, and only
- * rewritten when the composed bytes change. NOTES.md is seeded once (migrating
- * any pre-generated AGENTS.md content) and never written by Tavern again.
+ * Generate the agent system prompt from its editable workspace sources.
+ * Tavern composes this deterministically from managed content, the agent name,
+ * and NOTES.md. NOTES.md is seeded once and never written by Tavern again.
  */
 export async function generateAgentInstructions(db: Database, agentId = defaultAgentId) {
     const source = getAgentWorkspaceSource(db, agentId);
@@ -130,21 +112,17 @@ export async function generateAgentInstructions(db: Database, agentId = defaultA
         throw new Error(`No managed workspace is registered for agent "${agentId}".`);
     }
 
-    const agentsPath = path.join(source.workspaceDir, generatedInstructionFileName);
-    const notes = await ensureAgentNotes(source.workspaceDir, agentsPath);
+    const notes = await ensureAgentNotes(source.workspaceDir);
     await ensureAgentWorkDirectory(source.workspaceDir);
-    const next = renderAgentInstructions(source.agentName, notes);
-    const existing = await fs.readFile(agentsPath, 'utf8').catch(() => null);
-    const written = next !== existing;
-
-    if (written) {
-        await fs.mkdir(source.workspaceDir, { recursive: true });
-        await writeReadOnlyFile(agentsPath, next);
-        await clearLegacyBootstrapFiles(source.workspaceDir);
-    }
-
+    await removeGeneratedInstructionFile(source.workspaceDir);
+    const next = renderAgentInstructions(source.agentName, notes, {
+        memoryEnabled: isMemoryEnabled(),
+    });
+    const previousHash = readRenderedInstructionHash(db, source.agentId);
     const renderedAt = new Date().toISOString();
     const sha256 = await hashText(next);
+    const written = sha256 !== previousHash;
+
     db.prepare(
         `UPDATE workspace_agent_instructions
          SET rendered_at = $renderedAt, rendered_hash = $sha256, updated_at = $renderedAt
@@ -154,7 +132,6 @@ export async function generateAgentInstructions(db: Database, agentId = defaultA
     if (written) {
         publishRuntimeEvent({
             agentId: source.agentId,
-            path: generatedInstructionFileName,
             renderedAt,
             sha256,
             timestamp: renderedAt,
@@ -176,52 +153,18 @@ export async function generateRegisteredAgentInstructions(db: Database, agentId:
 }
 
 export async function readRenderedAgentInstructions(db: Database, agentId = defaultAgentId) {
-    const row = db
-        .prepare(
-            `SELECT agent_id, workspace_dir, rendered_at, rendered_hash, updated_at
-             FROM workspace_agent_instructions
-             WHERE agent_id = ?`
-        )
-        .get(agentId) as
-        | {
-              agent_id: string;
-              rendered_at: string | null;
-              rendered_hash: string | null;
-              updated_at: string | null;
-              workspace_dir: string;
-          }
-        | undefined;
-
-    if (!row) {
-        throw new Error(`No managed workspace is registered for agent "${agentId}".`);
-    }
-
+    const generated = await generateAgentInstructions(db, agentId);
+    const source = getAgentWorkspaceSource(db, agentId);
     return {
-        agentId: row.agent_id,
-        content: await fs.readFile(path.join(row.workspace_dir, generatedInstructionFileName), {
-            encoding: 'utf8',
-        }),
-        path: generatedInstructionFileName,
-        renderedAt: row.rendered_at,
-        sha256: row.rendered_hash,
-        updatedAt: row.updated_at,
+        agentId,
+        content: generated.content,
+        renderedAt: generated.renderedAt,
+        sha256: generated.sha256,
+        updatedAt: source?.updatedAt ?? null,
     } satisfies AgentInstructionReadResult;
 }
 
-export async function clearLegacyBootstrapFiles(workspaceDir: string) {
-    await Promise.all(
-        legacyBootstrapFileNamesToClear.map((fileName) =>
-            fs.writeFile(path.join(workspaceDir, fileName), '', { mode: 0o600 })
-        )
-    );
-}
-
-/**
- * Read NOTES.md, seeding it on first run. Seeding migrates the user/agent
- * content of a pre-generated AGENTS.md (everything outside the legacy managed
- * block) so nothing is lost when an install moves to the generated layout.
- */
-async function ensureAgentNotes(workspaceDir: string, agentsPath: string) {
+async function ensureAgentNotes(workspaceDir: string) {
     const notesPath = path.join(workspaceDir, agentNotesFileName);
     const existing = await fs.readFile(notesPath, 'utf8').catch(() => null);
 
@@ -229,7 +172,7 @@ async function ensureAgentNotes(workspaceDir: string, agentsPath: string) {
         return existing;
     }
 
-    const seed = (await migrateLegacyAgentsContent(agentsPath)) ?? renderSeededNotes();
+    const seed = renderSeededNotes();
     await fs.mkdir(workspaceDir, { recursive: true });
     await fs.writeFile(notesPath, seed, { mode: 0o600 });
     return seed;
@@ -239,29 +182,23 @@ async function ensureAgentWorkDirectory(workspaceDir: string) {
     await fs.mkdir(path.join(workspaceDir, agentWorkDirectoryName), { recursive: true });
 }
 
-async function migrateLegacyAgentsContent(agentsPath: string) {
-    const legacy = await fs.readFile(agentsPath, 'utf8').catch(() => null);
-
-    if (legacy === null || legacy.startsWith('<!-- GENERATED BY TAVERN')) {
-        return null;
-    }
-
-    const remainder = legacy
-        .replace(legacyManagedBlockPattern, '')
-        .replace(legacyUserContentHint, '')
-        .trim();
-
-    return remainder.length > 0 ? `${remainder}\n` : null;
-}
-
-/** AGENTS.md is immutable to everyone but Tavern: written read-only. */
-async function writeReadOnlyFile(filePath: string, content: string) {
-    await fs.rm(filePath, { force: true });
-    await fs.writeFile(filePath, content, { mode: 0o444 });
+async function removeGeneratedInstructionFile(workspaceDir: string) {
+    await fs.rm(path.join(workspaceDir, 'AGENTS.md'), { force: true });
 }
 
 async function hashText(value: string) {
     const data = new TextEncoder().encode(value);
     const digest = await crypto.subtle.digest('SHA-256', data);
     return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
+function readRenderedInstructionHash(db: Database, agentId: string) {
+    const row = db
+        .prepare(
+            `SELECT rendered_hash
+             FROM workspace_agent_instructions
+             WHERE agent_id = ?`
+        )
+        .get(agentId) as { rendered_hash: string | null } | undefined;
+    return row?.rendered_hash ?? null;
 }

@@ -109,9 +109,9 @@ Runtime reports capability state for these surfaces:
 Future `channels` capabilities may be added when Runtime exposes stable
 surfaces that Tavern can consume without local filesystem access.
 
-The Runtime also reports Vault and model-access capabilities that are
+The Runtime also reports Memory and model-access capabilities that are
 independent of agent-engine process reachability: `codexOAuth` and
-`vault`.
+`memory`.
 
 ## Adapter Behavior
 

@@ -1,10 +1,12 @@
 import type { BadgeProps } from '../../components/ui/badge.tsx';
-import type { VaultSettingsOutput, VaultStatusOutput } from '../../lib/trpc.tsx';
+import type { SemanticMemorySettingsOutput, SemanticMemoryStatusOutput } from '../../lib/trpc.tsx';
 
-export type VaultHubStatus = NonNullable<VaultStatusOutput>;
-export type VaultSettings = NonNullable<VaultSettingsOutput>;
+export type SemanticMemoryHubStatus = NonNullable<SemanticMemoryStatusOutput>;
+export type SemanticMemorySettings = NonNullable<SemanticMemorySettingsOutput>;
 
-export function formatVaultAccess(status: Pick<VaultHubStatus, 'readable' | 'writable'> | null) {
+export function formatSemanticMemoryAccess(
+    status: Pick<SemanticMemoryHubStatus, 'readable' | 'writable'> | null
+) {
     if (!status) {
         return 'Unavailable';
     }
@@ -20,7 +22,7 @@ export function formatVaultAccess(status: Pick<VaultHubStatus, 'readable' | 'wri
     return 'Unavailable';
 }
 
-export function formatVaultConfigSource(source: VaultSettings['configSource']) {
+export function formatSemanticMemoryConfigSource(source: SemanticMemorySettings['configSource']) {
     switch (source) {
         case 'default':
             return 'Default';
@@ -31,7 +33,7 @@ export function formatVaultConfigSource(source: VaultSettings['configSource']) {
     }
 }
 
-export function getVaultHealth(status: VaultHubStatus | null): {
+export function getSemanticMemoryHealth(status: SemanticMemoryHubStatus | null): {
     label: string;
     variant: BadgeProps['variant'];
 } {

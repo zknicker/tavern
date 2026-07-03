@@ -38,7 +38,7 @@ export function AgentInstructionsPreviewDrawer({
         <Drawer onOpenChange={handleOpenChange} open={isOpen} position="right">
             <DrawerTrigger render={<Button aria-expanded={isOpen} variant="secondary" />}>
                 <Icon icon={FileViewIcon} />
-                Preview AGENTS.md
+                Preview system prompt
             </DrawerTrigger>
             <DrawerPopup
                 className="w-[min(96vw,60rem)] max-w-[min(96vw,60rem)]"
@@ -46,7 +46,7 @@ export function AgentInstructionsPreviewDrawer({
                 variant="inset"
             >
                 <DrawerHeader>
-                    <DrawerTitle>AGENTS.md Preview</DrawerTitle>
+                    <DrawerTitle>System Prompt Preview</DrawerTitle>
                     <DrawerDescription className="text-sm">
                         See the full instructions your agent will use, including Tavern guidance and
                         your saved custom instructions.
@@ -56,7 +56,7 @@ export function AgentInstructionsPreviewDrawer({
                     {instructions.isPending ? (
                         <div className="flex min-h-[min(68vh,40rem)] items-center justify-center rounded-lg border border-border/50 bg-muted/24 text-muted-foreground text-sm">
                             <Spinner className="mr-2 size-4" />
-                            Loading AGENTS.md...
+                            Loading system prompt...
                         </div>
                     ) : instructions.error ? (
                         <div className="rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-4 text-destructive text-sm">
@@ -65,7 +65,7 @@ export function AgentInstructionsPreviewDrawer({
                     ) : (
                         <SimpleCodeEditor
                             className="min-h-[min(68vh,40rem)] rounded-lg border border-border/50"
-                            filePath="AGENTS.md"
+                            filePath="system-prompt.md"
                             readOnly
                             value={applyAgentDisplayNameToInstructions(
                                 instructions.data?.content ?? '',

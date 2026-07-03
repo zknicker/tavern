@@ -43,7 +43,7 @@ export async function loadVaultBackedCodexCredentials(): Promise<LoadedCodexCred
             refreshToken: secret.refreshToken,
         },
         document: { accountEmail: secret.accountEmail },
-        path: 'tavern-vault',
+        path: 'secure-storage',
         source: 'manual',
     };
 }
@@ -54,7 +54,7 @@ export async function getCodexModelAccessStatus() {
     return {
         description: credentials ? label : 'Sign in with Codex to create ~/.codex/auth.json.',
         id: 'codex',
-        source: credentials ? 'tavern-vault' : null,
+        source: credentials ? 'secure-storage' : null,
         state: credentials ? 'live' : 'needs-auth',
     };
 }

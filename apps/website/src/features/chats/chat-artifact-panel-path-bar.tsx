@@ -170,7 +170,7 @@ const artifactPanelChromeButtonClassName =
     'flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted/45 hover:text-foreground';
 
 function getArtifactPanelBreadcrumbSegments(target: TavernResourceTarget) {
-    const root = isVaultTarget(target) ? 'vault' : 'workspace';
+    const root = isMemoryTarget(target) ? 'memory' : 'workspace';
     const pathSegments = target.path.split('/').filter(Boolean);
     let keyPath = root;
 
@@ -213,28 +213,28 @@ interface ArtifactPanelBreadcrumbSegmentData {
 }
 
 function getArtifactPanelDirectoryTarget(target: TavernResourceTarget, path: string) {
-    if (isVaultTarget(target)) {
-        return { kind: 'vaultDirectory', path } as const;
+    if (isMemoryTarget(target)) {
+        return { kind: 'memoryDirectory', path } as const;
     }
 
     return { kind: 'workspaceDirectory', path } as const;
 }
 
 function getArtifactPanelOpenHref(target: TavernResourceTarget) {
-    if (target.kind === 'vaultPage' || target.kind === 'vaultDirectory') {
+    if (target.kind === 'memoryPage' || target.kind === 'memoryDirectory') {
         return `${appRoutes.memory}?path=${encodeURIComponent(target.path)}`;
     }
 
     return null;
 }
 
-function isVaultTarget(target: TavernResourceTarget) {
-    return target.kind === 'vaultPage' || target.kind === 'vaultDirectory';
+function isMemoryTarget(target: TavernResourceTarget) {
+    return target.kind === 'memoryPage' || target.kind === 'memoryDirectory';
 }
 
 function isDirectoryTarget(target: TavernResourceTarget) {
     return (
-        target.kind === 'vaultDirectory' ||
+        target.kind === 'memoryDirectory' ||
         target.kind === 'workspaceDirectory' ||
         target.kind === 'workspaceRoot'
     );

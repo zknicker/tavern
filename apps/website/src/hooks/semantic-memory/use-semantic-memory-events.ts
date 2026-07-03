@@ -1,0 +1,52 @@
+import { trpc } from '../../lib/trpc.tsx';
+
+export function useSemanticMemoryEvents() {
+    const utils = trpc.useUtils();
+
+    trpc.semanticMemory.onUpdate.useSubscription(undefined, {
+        onData: (event) => {
+            const scope = readScope(event);
+            const paths = readPaths(event);
+
+            void utils.semanticMemory.list.invalidate();
+            void utils.semanticMemory.status.invalidate();
+            void utils.semanticMemory.search.invalidate();
+            void utils.semanticMemory.backlinks.invalidate();
+
+            if (scope === 'root') {
+                void utils.semanticMemory.settings.invalidate();
+                void utils.semanticMemory.get.invalidate();
+                return;
+            }
+
+            if (paths.length === 0) {
+                void utils.semanticMemory.get.invalidate();
+                return;
+            }
+
+            for (const path of paths) {
+                void utils.semanticMemory.get.invalidate({ path });
+            }
+        },
+    });
+}
+
+function readScope(input: unknown) {
+    if (!(input && typeof input === 'object' && 'scope' in input)) {
+        return 'content';
+    }
+
+    return (input as Record<string, unknown>).scope === 'root' ? 'root' : 'content';
+}
+
+function readPaths(input: unknown) {
+    if (!(input && typeof input === 'object' && 'paths' in input)) {
+        return [];
+    }
+
+    const value = (input as Record<string, unknown>).paths;
+
+    return Array.isArray(value)
+        ? value.filter((path): path is string => typeof path === 'string' && path.trim().length > 0)
+        : [];
+}

@@ -90,7 +90,7 @@ async function executeHarnessTurn(
     const startedAt = new Date().toISOString();
     const runtime = runtimeMetadata(input);
 
-    const instructions = buildAgentInstructions(input);
+    const instructions = await buildAgentInstructions(input);
     const skills = await readHarnessAgentSkills(input);
     const agent = createHarnessAgent(input, createLocalTrustedSandboxProvider, {
         instructions,
@@ -265,24 +265,34 @@ function localTrustedSandboxOptions(input: AgentExecutorInput) {
 }
 
 function createHarness(input: AgentExecutorInput): HarnessV1<ToolSet> {
-    const modelName = input.agentSession.effectiveModel;
+    return createHarnessForModel({
+        modelName: input.agentSession.effectiveModel,
+        thinkingDefault: input.agent.thinkingDefault,
+    });
+}
+
+export function createHarnessForModel(input: {
+    modelName: AgentRuntimeModelName;
+    thinkingDefault?: AgentRuntimeThinkingLevel | null;
+}): HarnessV1<ToolSet> {
+    const modelName = input.modelName;
     switch (modelName.provider) {
         case 'claude':
             return createClaudeCodeHarnessForRuntime({
                 auth: claudeCodeAuthOptions(),
                 maxTurns: 8,
                 model: modelName.model,
-                thinking: claudeThinking(input.agent.thinkingDefault),
+                thinking: claudeThinking(input.thinkingDefault),
             }) as HarnessV1<ToolSet>;
         case 'codex':
             return createCodexHarnessForRuntime({
                 model: modelName.model,
-                reasoningEffort: codexReasoningEffort(input.agent.thinkingDefault),
+                reasoningEffort: codexReasoningEffort(input.thinkingDefault),
             }) as HarnessV1<ToolSet>;
         case 'openai':
         case 'openai-compatible': {
             const auth = piAuthOptions(modelName.provider);
-            const thinkingLevel = piThinkingLevel(input.agent.thinkingDefault);
+            const thinkingLevel = piThinkingLevel(input.thinkingDefault);
             return createPi({
                 ...(auth ? { auth } : {}),
                 model: piModelId(modelName, auth),

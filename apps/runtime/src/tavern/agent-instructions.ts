@@ -1,16 +1,21 @@
+import { prepareAgentEngineInstructions } from '../agent-engine/instructions.ts';
+import { getDb } from '../db/connection.ts';
+import type { Database } from '../db/sqlite.ts';
 import type { AgentExecutorInput } from './agent-executor.ts';
 
-export function buildAgentInstructions(input: AgentExecutorInput) {
-    return formatAgentInstructions({
-        agentName: input.agent.name,
-    });
+export interface BuildAgentInstructionOptions {
+    db?: Database;
+    seedSkills?: boolean;
+    skillsDir?: string;
 }
 
-export function formatAgentInstructions(input: { agentName: string }) {
-    return [
-        `You are ${input.agentName}, a Tavern agent participating in a shared chat.`,
-        'Answer as yourself in the current conversation.',
-        'Use the provided tools when they help. The current runtime provides trusted local workspace tools.',
-        'Keep replies concise and useful.',
-    ].join('\n');
+export async function buildAgentInstructions(
+    input: AgentExecutorInput,
+    options: BuildAgentInstructionOptions = {}
+) {
+    const prepared = await prepareAgentEngineInstructions(options.db ?? getDb(), input.agent, {
+        seedSkills: options.seedSkills,
+        skillsDir: options.skillsDir,
+    });
+    return prepared.content;
 }

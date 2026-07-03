@@ -11,11 +11,11 @@ import {
     merchbasePluginManifest,
 } from '@tavern/api/plugins/merchbase';
 import { AGENT_WORKSPACE } from '../config.ts';
+import { resolveSemanticMemoryConfig } from '../memory/semantic/store.ts';
 import { loadVaultBackedCodexCredentials } from '../model-access/codex-settings.ts';
 import { listAgentModels } from '../models/catalog-service.ts';
 import { resolveAgentModelSummary } from '../models/model-access.ts';
 import { checkMerchbaseCapability } from '../plugins/merchbase.ts';
-import { resolveVaultConfig } from '../vault/store.ts';
 
 export interface RuntimeCapabilityCheckResult {
     metadata?: Record<string, unknown>;
@@ -50,10 +50,10 @@ export const runtimeCapabilityDefinitions: RuntimeCapabilityDefinition[] = [
     },
     {
         async check() {
-            return await checkVaultCapability();
+            return await checkSemanticMemoryCapability();
         },
-        displayName: 'Vault',
-        id: 'vault',
+        displayName: 'Memory',
+        id: 'semanticMemory',
         refresh: {
             intervalMs: 5 * minuteMs,
             runOnStart: true,
@@ -127,36 +127,36 @@ export const runtimeCapabilityDefinitions: RuntimeCapabilityDefinition[] = [
     },
 ];
 
-async function checkVaultCapability(): Promise<RuntimeCapabilityCheckResult> {
-    const config = await resolveVaultConfig();
-    const vaultPath = config.vaultPath;
+async function checkSemanticMemoryCapability(): Promise<RuntimeCapabilityCheckResult> {
+    const config = await resolveSemanticMemoryConfig();
+    const memoryPath = config.memoryPath;
     const metadata = {
         configSource: config.source,
-        vaultPath,
+        memoryPath,
     };
     try {
-        if (fs.existsSync(vaultPath)) {
-            const stat = fs.statSync(vaultPath);
+        if (fs.existsSync(memoryPath)) {
+            const stat = fs.statSync(memoryPath);
             if (!stat.isDirectory()) {
                 return {
-                    reason: 'Vault path is not a directory.',
+                    reason: 'Memory path is not a directory.',
                     state: 'unavailable',
-                    technicalMessage: vaultPath,
+                    technicalMessage: memoryPath,
                 };
             }
-            fs.accessSync(vaultPath, fs.constants.R_OK);
-            const writable = canAccess(vaultPath, fs.constants.W_OK);
+            fs.accessSync(memoryPath, fs.constants.R_OK);
+            const writable = canAccess(memoryPath, fs.constants.W_OK);
             return { metadata: { ...metadata, writable }, state: 'healthy' };
         }
 
-        fs.accessSync(path.dirname(vaultPath), fs.constants.R_OK | fs.constants.W_OK);
+        fs.accessSync(path.dirname(memoryPath), fs.constants.R_OK | fs.constants.W_OK);
         return {
             metadata: { ...metadata, missing: true },
             state: 'healthy',
         };
     } catch (error) {
         return {
-            reason: 'Vault path is not readable.',
+            reason: 'Memory path is not readable.',
             state: 'unavailable',
             technicalMessage: error instanceof Error ? error.message : String(error),
         };

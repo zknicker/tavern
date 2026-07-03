@@ -27,11 +27,11 @@ tavern engine               Group help (exit 1)
 tavern engine status [--json]
 tavern engine install
 tavern engine clean [--all]
-tavern vault                Group help (exit 1)
-tavern vault status [--json]
-tavern vault list [--json]
-tavern vault get <path> [--json]
-tavern vault search <query> [--json]
+tavern memory               Group help (exit 1)
+tavern memory status [--json]
+tavern memory list [--json]
+tavern memory get <path> [--json]
+tavern memory search <query> [--json]
 tavern version | -v | --version
 tavern help [command]
 ```
@@ -46,7 +46,7 @@ tavern help [command]
 * Errors render as a message plus an optional hint line.
 * `update` and `restart` operate on the local Homebrew service and probe the
   local Runtime.
-* `status`, `vault`, and other client commands honor `TAVERN_RUNTIME_URL` /
+* `status`, `memory`, and other client commands honor `TAVERN_RUNTIME_URL` /
   `--runtime-url`.
 
 ## Generated Help
@@ -71,7 +71,7 @@ Maintenance
   restart        Restart the service and wait for health
 
 Memory
-  vault          Browse Memory files (status, list, get, search)
+  memory         Browse Memory files (status, list, get, search)
 
 Engine
   engine         Inspect, install, or clean the managed agent engine
@@ -84,12 +84,12 @@ Environment
 ```
 
 `tavern help update` / `tavern update --help` shows summary, usage, flags with
-descriptions, and examples. Bare `tavern engine` / `tavern vault` print group
+descriptions, and examples. Bare `tavern engine` / `tavern memory` print group
 help and exit 1.
 
 ## Memory Commands
 
-`tavern vault` commands are thin Runtime clients.
+`tavern memory` commands are thin Runtime clients.
 
 * `status` reports the resolved Memory path, config source, page count,
   `TAXONOMY.md` presence, and filesystem access.
@@ -138,14 +138,14 @@ Engine
 | `commands/status.ts` | `tavern status` |
 | `commands/update.ts` | `tavern update` |
 | `commands/restart.ts` | `tavern restart` |
-| `commands/vault.ts` | `tavern vault ...` subcommands |
+| `commands/memory.ts` | `tavern memory ...` subcommands |
 | `commands/engine.ts` | `tavern engine ...` subcommands |
 
 ## Acceptance Criteria
 
 * Bare `tavern` shows banner + status line + commands and does not start the
   server.
-* `tavern engine` prints engine group help and exits 1; same for `vault`.
+* `tavern engine` prints engine group help and exits 1; same for `memory`.
 * `tavern updte` suggests `update`, exits 2.
 * `tavern update` detects the staged-but-not-restarted case and says to run
   `tavern restart`.

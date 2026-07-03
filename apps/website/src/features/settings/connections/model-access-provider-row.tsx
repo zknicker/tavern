@@ -23,7 +23,7 @@ interface ModelAccessProviderRowProps {
     label: string;
     logo?: ModelProviderLogoSource | null;
     state: ModelAccessOutput['providers'][number]['state'];
-    target?: 'tavern-vault';
+    target?: 'secure-storage';
 }
 
 export function ModelAccessProviderRow({

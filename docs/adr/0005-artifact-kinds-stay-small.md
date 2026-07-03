@@ -17,5 +17,5 @@ document/image type or fall back to `custom`.
 
 Artifact rendering uses the artifact's `mime_type` and `content_ref` extension
 where format matters. The Artifact Panel may also open non-artifact targets
-such as Vault pages or workspace files; those targets do not expand
+such as Memory pages or workspace files; those targets do not expand
 `ChatArtifact.kind`.

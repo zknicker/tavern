@@ -23,18 +23,19 @@ can continue to feel primary-agent-first.
   Settings -> Agents lists those agents, creates new agents, and routes each
   agent to General, Skills, Plugins, Channels, and Memory pages.
   General edits the selected agent's display name, color, character, model,
-  thinking default, timezone, environment variables, `SOUL.md`, and destructive
-  agent deletion.
+  thinking default, timezone, environment variables, and destructive agent
+  deletion.
 * **Agent avatar.** Every agent wears a character face (knight, penguin, cat,
   dog, robot, ghost, or cloud) as its avatar; the animated eyes always sit
   inside a character and are never shown alone. Agents with no chosen character
   get a stable default derived from their id. Agent color labels the agent's
   name; it does not tint the avatar. To add or change a character, see
   [Agent avatars](../internals/agent-avatars.md).
-* **Instruction files.** `AGENTS.md` is a generated, read-only artifact that
-  Runtime composes from its sources; nobody edits it. Settings exposes
-  `SOUL.md` from the agent's General page for identity and personality.
-  `NOTES.md` is edited from Workspace with the rest of the managed agent files.
+* **Instruction files.** Runtime composes the agent's system prompt from
+  Tavern-managed instruction text, `NOTES.md`, and `SOUL.md`. `SOUL.md` stores
+  identity and personality, and `NOTES.md` stores durable operating notes; both
+  are edited from Workspace with the rest of the managed agent files. Tavern
+  does not write a generated `AGENTS.md` file into the agent workspace.
 * **New chats.** Starting a direct chat belongs to the normal New Chat flow, not
   an agent landing page.
 * **Agent skills and Plugins.** Runtime stores per-agent enabled skill ids.

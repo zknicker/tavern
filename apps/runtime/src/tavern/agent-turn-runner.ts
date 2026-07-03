@@ -1,6 +1,7 @@
 import { readConfigValue } from '../config.ts';
+import { scheduleMemoryExtractionForTurn } from '../memory/extraction.ts';
 import { createAgentEngineExecutor } from './agent-engine-executor.ts';
-import type { AgentExecutor, AgentExecutorInput } from './agent-executor';
+import type { AgentExecutor, AgentExecutorInput } from './agent-executor.ts';
 import {
     cancelAgentTurn,
     claimNextAgentTurnForSeat,
@@ -8,8 +9,8 @@ import {
     createAgentTurn,
     failAgentTurn,
     getAgentTurn,
-} from './agent-turn-store';
-import { upsertResponse } from './chat-api/index';
+} from './agent-turn-store.ts';
+import { upsertResponse } from './chat-api/index.ts';
 
 interface ActiveTurn {
     input: AgentExecutorInput;
@@ -125,11 +126,16 @@ async function drainAgentSeat(input: AgentExecutorInput) {
         const result = await executeAgentTurnWithTimeout(turnInput);
         const current = getAgentTurn(turn.id);
         if (current?.status === 'running') {
-            completeAgentTurn({
+            const completedTurn = completeAgentTurn({
                 activityIds: result.activityIds,
                 id: turn.id,
                 outputMessageIds: result.outputMessageIds,
             });
+            try {
+                scheduleMemoryExtractionForTurn(completedTurn);
+            } catch {
+                // Memory extraction is a best-effort background side effect.
+            }
         }
     } catch (error) {
         const current = getAgentTurn(turn.id);

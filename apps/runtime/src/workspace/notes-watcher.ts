@@ -15,8 +15,8 @@ const debounceTimers = new Map<string, ReturnType<typeof setTimeout>>();
 const debounceMs = 300;
 
 /**
- * Watch the agent's NOTES.md so direct file-tool edits regenerate AGENTS.md
- * without waiting for the next sync. Watching the workspace directory (not
+ * Watch the agent's NOTES.md so direct file-tool edits refresh rendered
+ * system-prompt metadata without waiting for the next sync. Watching the workspace directory (not
  * the file) survives editors that replace the file. Safe to call repeatedly;
  * the watcher is replaced when the workspace moves.
  */
@@ -84,7 +84,7 @@ function scheduleGenerate(db: Database, agentId: string) {
         setTimeout(() => {
             debounceTimers.delete(agentId);
             generateAgentInstructions(db, agentId).catch((err) => {
-                log.error('Regenerating AGENTS.md from NOTES.md failed', { agentId, err });
+                log.error('Refreshing system prompt from NOTES.md failed', { agentId, err });
             });
         }, debounceMs)
     );

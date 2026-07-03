@@ -21,10 +21,6 @@ export function getRouteTab(pathname: string): RouteTab | null {
     const segments = pathname.split('/').filter(Boolean);
     const primaryTab = segments[0] === 'dashboard' ? (segments[1] ?? null) : (segments[0] ?? null);
 
-    if (primaryTab === 'vault') {
-        return 'memory';
-    }
-
     if (primaryTab === 'cron') {
         return 'tasks';
     }

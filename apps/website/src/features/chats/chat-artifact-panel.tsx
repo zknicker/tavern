@@ -8,11 +8,11 @@ import {
 } from '../../components/ui/resizable-pane-rail.tsx';
 import { ScrollArea } from '../../components/ui/scroll-area.tsx';
 import { TabPanel, Tabs } from '../../components/ui/tabs.tsx';
-import { useVaultPage } from '../../hooks/vault/use-vault-page.ts';
+import { useSemanticMemoryPage } from '../../hooks/semantic-memory/use-semantic-memory-page.ts';
 import { cn } from '../../lib/utils.ts';
-import { VaultMarkdownViewer } from '../vault/vault-markdown-viewer.tsx';
+import { SemanticMemoryMarkdownViewer } from '../memory/semantic/semantic-memory-markdown-viewer.tsx';
 import { ArtifactPanelChrome } from './chat-artifact-panel-chrome.tsx';
-import { VaultBrowserContent } from './chat-artifact-vault-content.tsx';
+import { SemanticMemoryBrowserContent } from './chat-artifact-semantic-memory-content.tsx';
 import { WorkspaceBrowserContent } from './chat-artifact-workspace-content.tsx';
 import { WorkspaceArtifactContent } from './chat-artifact-workspace-preview.tsx';
 import { getArtifactPanelTargetKey, type TavernResourceTarget } from './tavern-resource-link.ts';
@@ -200,12 +200,12 @@ function ArtifactPanelContent({
     agentId: string;
     target: TavernResourceTarget;
 }) {
-    if (target.kind === 'vaultPage') {
-        return <VaultArtifactContent target={target} />;
+    if (target.kind === 'memoryPage') {
+        return <SemanticMemoryArtifactContent target={target} />;
     }
 
-    if (target.kind === 'vaultDirectory') {
-        return <VaultBrowserContent initialDirectoryPath={target.path} />;
+    if (target.kind === 'memoryDirectory') {
+        return <SemanticMemoryBrowserContent initialDirectoryPath={target.path} />;
     }
 
     if (target.kind === 'workspaceRoot' || target.kind === 'workspaceDirectory') {
@@ -215,31 +215,31 @@ function ArtifactPanelContent({
     return <WorkspaceArtifactContent agentId={agentId} target={target} />;
 }
 
-function VaultArtifactContent({
+function SemanticMemoryArtifactContent({
     target,
 }: {
-    target: Extract<TavernResourceTarget, { kind: 'vaultPage' }>;
+    target: Extract<TavernResourceTarget, { kind: 'memoryPage' }>;
 }) {
-    const pageQuery = useVaultPage({ path: target.path });
+    const pageQuery = useSemanticMemoryPage({ path: target.path });
 
     if (pageQuery.isPending) {
-        return <ArtifactPanelEmpty detail="Loading Vault page..." title={target.path} />;
+        return <ArtifactPanelEmpty detail="Loading Memory page..." title={target.path} />;
     }
 
     if (pageQuery.error) {
-        return <ArtifactPanelEmpty detail="Unable to load this Vault page." title={target.path} />;
+        return <ArtifactPanelEmpty detail="Unable to load this Memory page." title={target.path} />;
     }
 
     if (!pageQuery.data) {
         return (
-            <ArtifactPanelEmpty detail="No Vault page exists at this path." title={target.path} />
+            <ArtifactPanelEmpty detail="No Memory page exists at this path." title={target.path} />
         );
     }
 
     return (
         <ScrollArea className="h-full min-h-0" scrollFade>
             <article className="mx-auto max-w-[42rem] px-7 pt-7 pb-12">
-                <VaultMarkdownViewer value={pageQuery.data.body} />
+                <SemanticMemoryMarkdownViewer value={pageQuery.data.body} />
             </article>
         </ScrollArea>
     );

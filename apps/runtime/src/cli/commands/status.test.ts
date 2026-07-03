@@ -146,7 +146,7 @@ describe('runStatusCommand', () => {
                                 checkedAt: null,
                                 displayName: 'Memory',
                                 healthy: false,
-                                id: 'vault',
+                                id: 'semanticMemory',
                                 lastHealthyAt: null,
                                 metadata: {},
                                 nextCheckAt: null,

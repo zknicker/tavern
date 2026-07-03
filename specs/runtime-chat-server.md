@@ -61,8 +61,8 @@ automations
 automation_runs
 ```
 
-Vault and search are runtime-owned product surfaces. Memory inspection and the
-Vault page read the configured wiki; context-management status reads Runtime
+Memory and search are runtime-owned product surfaces. The Memory page reads the
+configured Semantic Memory root; context-management status reads Runtime
 prompt-time readiness. Table details live with those feature contracts.
 
 ## App Cache And Evidence

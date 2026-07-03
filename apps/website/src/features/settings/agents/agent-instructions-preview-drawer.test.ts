@@ -24,7 +24,7 @@ test('applyAgentDisplayNameToInstructions reflects the current display name draf
 });
 
 test('applyAgentDisplayNameToInstructions leaves unrelated content alone', () => {
-    const content = '# AGENTS.md\n\nCustom instructions.';
+    const content = '# System Prompt\n\nCustom instructions.';
 
     assert.equal(applyAgentDisplayNameToInstructions(content, 'Blippy'), content);
 });

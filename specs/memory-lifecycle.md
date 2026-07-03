@@ -1,46 +1,47 @@
 # Memory Lifecycle
 
-Tavern memory lifecycle has two layers: compact assistant memory and the Vault
-wiki.
+Tavern Memory has three layers:
 
-There is no Tavern-owned memory pool, promotion queue, capture database, or
-repair ranking system. Durable inspectable knowledge lives as Markdown in the
-Vault wiki.
+* agent-local briefing files: `USER.md` and `MEMORY.md`
+* hidden per-agent Episodic Memory extracted from chats
+* shared Semantic Memory Markdown pages inspected in the app
+
+There is no shared `USER.md` or shared `MEMORY.md`. Shared knowledge lives in
+Semantic Memory.
 
 ## Context Management Boundary
 
 Runtime owns live execution context for turns.
 
 Prompt-time context management helps the agent stay oriented during active
-work, but it is not Tavern memory. Managed Tavern Runtime keeps native
-`MEMORY.md` and `USER.md` memory enabled for compact hot facts and installs
-the managed `vault` skill for durable knowledge work.
+work, but it is not Tavern Memory. Runtime injects the owning agent's
+`MEMORY.md` and `USER.md` only when global Memory is enabled.
 
-## Wiki Lifecycle
+## Memory Lifecycle
 
-Vault workflows own durable knowledge files under the configured root:
+Semantic Memory owns durable knowledge files under the configured root:
 
 ```txt
-INDEX.md
-Daily/
-System/
+TAXONOMY.md
 projects/example.md
 research/example/...
 ```
 
-Agents write and maintain those files through the managed `vault` skill. Tavern Runtime
-does not run a hidden capture, recall, embedding, or repair pipeline.
+Agents may write Semantic Memory when explicitly asked to remember or organize
+shared knowledge. Extraction workers append hidden per-agent episodic evidence
+after completed turns and an idle debounce. Dreaming workers promote stable
+evidence into agent briefing files or Semantic Memory.
 
 ## Correction And Forgetting
 
-Corrections are wiki edits. Forgetting is explicit wiki archive, rewrite, or
-delete work performed by agents through Tasks or operator-directed runs.
+Corrections are direct Memory edits. Forgetting is explicit archive, rewrite, or
+delete work. User edits and deletes are authoritative.
 
-The Vault tab reflects the current wiki state; it does not keep a second copy.
+The Memory page reflects the current Semantic Memory files; it does not keep a
+second copy.
 
 ## Maintenance
 
-Maintenance is scheduled work, not a built-in Runtime subsystem.
-
-Agents can run wiki research, query, and output workflows. Runtime exposes
-Vault readiness and browsing APIs so wiki state can be inspected from Tavern.
+Maintenance runs through extraction, dreaming, and explicit agent Memory work.
+Runtime exposes Memory readiness and browsing APIs so Semantic Memory can be
+inspected from Tavern.

@@ -46,13 +46,12 @@ grant policy.
 * Skill assignments and Plugin grants are inspectable before a run starts.
   Harness tools are executor facts governed by sandbox and approval policy, not
   per-agent grants.
-* Instruction settings use markdown source files. `AGENTS.md` is a generated
-  read-only artifact composed by Runtime; it is not editable. Settings exposes
-  `SOUL.md` on each agent's General page. `NOTES.md` is edited from Workspace
-  with other managed agent files. Clients save sources through the
-  Runtime-hosted agent file API; saving `NOTES.md` regenerates `AGENTS.md`, and
-  the generated file is readable for preview through the instructions read
-  surface.
+* Instruction settings use markdown source files. Runtime composes the system
+  prompt from Tavern-managed instruction text plus workspace-editable
+  `SOUL.md` and `NOTES.md`; it does not materialize a generated `AGENTS.md`
+  file in the workspace. Clients save source files through the Runtime-hosted
+  agent file API. The rendered system prompt is readable for preview through
+  the instructions read surface.
 * Tavern policy includes Memory-first lookup guidance. Managed agents
   check Memory before external lookup when durable user, project, or prior
   decision context may already exist.

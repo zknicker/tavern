@@ -1,24 +1,37 @@
 import path from 'node:path';
-import { refreshRuntimeCapabilities } from './capabilities/store';
-import { dispatch } from './cli/main';
-import { DATA_DIR } from './config';
-import { initDb } from './db/connection';
-import { ensureRuntimeSchema } from './db/schema';
-import { runRuntimeDoctor } from './doctor/runtime-doctor';
-import { type RuntimeJobsManager, startRuntimeJobsManager } from './jobs/manager';
-import { ensureRuntimeJobsSchema } from './jobs/schema';
-import { log } from './log';
-import { demoAgentId } from './tavern/development-chat-demo-types';
-import { seedDevelopmentChatDemos } from './tavern/development-chat-demos';
-import { seedDevelopmentVaultDemos } from './tavern/development-vault-demos';
-import { ensurePrimaryManagedAgent } from './tavern/managed-agent';
-import { startTavernRuntimeServer } from './tavern/server';
-import { recoverInterruptedChatResponses } from './tavern/turn-recovery';
-import { resolveVaultConfig } from './vault/store';
-import { closeVaultWatcher, restartVaultWatcher, startVaultWatcher } from './vault/watcher';
-import { seedDevelopmentWorkspaceDemos } from './workspace/development-demos';
-import { getAgentWorkspaceSource } from './workspace/instructions';
-import { closeAgentNotesWatchers } from './workspace/notes-watcher';
+import { refreshRuntimeCapabilities } from './capabilities/store.ts';
+import { dispatch } from './cli/main.ts';
+import { DATA_DIR } from './config.ts';
+import { initDb } from './db/connection.ts';
+import { ensureRuntimeSchema } from './db/schema.ts';
+import { runRuntimeDoctor } from './doctor/runtime-doctor.ts';
+import { type RuntimeJobsManager, startRuntimeJobsManager } from './jobs/manager.ts';
+import { ensureRuntimeJobsSchema } from './jobs/schema.ts';
+import { log } from './log.ts';
+import {
+    recoverInterruptedMemoryJobs,
+    startMemoryDreamScheduler,
+    stopMemoryDreamScheduler,
+} from './memory/dreaming.ts';
+import {
+    startMemoryExtractionScheduler,
+    stopMemoryExtractionScheduler,
+} from './memory/extraction.ts';
+import { resolveSemanticMemoryConfig } from './memory/semantic/store.ts';
+import {
+    closeSemanticMemoryWatcher,
+    restartSemanticMemoryWatcher,
+    startSemanticMemoryWatcher,
+} from './memory/semantic/watcher.ts';
+import { demoAgentId } from './tavern/development-chat-demo-types.ts';
+import { seedDevelopmentChatDemos } from './tavern/development-chat-demos.ts';
+import { seedDevelopmentSemanticMemoryDemos } from './tavern/development-memory-demos.ts';
+import { ensurePrimaryManagedAgent } from './tavern/managed-agent.ts';
+import { startTavernRuntimeServer } from './tavern/server.ts';
+import { recoverInterruptedChatResponses } from './tavern/turn-recovery.ts';
+import { seedDevelopmentWorkspaceDemos } from './workspace/development-demos.ts';
+import { getAgentWorkspaceSource } from './workspace/instructions.ts';
+import { closeAgentNotesWatchers } from './workspace/notes-watcher.ts';
 
 let runtimeServer: ReturnType<typeof startTavernRuntimeServer> | null = null;
 let runtimeJobs: RuntimeJobsManager | null = null;
@@ -40,6 +53,10 @@ async function main(): Promise<void> {
     if (recoveredRecords > 0) {
         log.info('Recovered interrupted agent records', { count: recoveredRecords });
     }
+    const recoveredMemoryJobs = recoverInterruptedMemoryJobs({ db });
+    if (recoveredMemoryJobs > 0) {
+        log.info('Recovered interrupted Memory jobs', { count: recoveredMemoryJobs });
+    }
     const demoSeed = seedDevelopmentChatDemos({ db });
     if (demoSeed.seeded > 0) {
         log.info('Development chat demos ready', { count: demoSeed.seeded });
@@ -51,25 +68,29 @@ async function main(): Promise<void> {
     if (workspaceDemoSeed.seeded > 0) {
         log.info('Development workspace demos ready', { count: workspaceDemoSeed.seeded });
     }
-    const vaultDemoSeed = await seedDevelopmentVaultDemos();
-    if (vaultDemoSeed.seeded > 0) {
-        log.info('Development Vault demos ready', { count: vaultDemoSeed.seeded });
+    const semanticMemoryDemoSeed = await seedDevelopmentSemanticMemoryDemos();
+    if (semanticMemoryDemoSeed.seeded > 0) {
+        log.info('Development SemanticMemory demos ready', {
+            count: semanticMemoryDemoSeed.seeded,
+        });
     }
-    void startVaultWatcher(resolveVaultConfig).catch((err) => {
-        log.warn('Vault live updates failed to start', { err });
+    void startSemanticMemoryWatcher(resolveSemanticMemoryConfig).catch((err) => {
+        log.warn('SemanticMemory live updates failed to start', { err });
     });
     runtimeJobs = await startRuntimeJobsManager();
+    startMemoryExtractionScheduler();
+    startMemoryDreamScheduler();
 
     runtimeServer = startTavernRuntimeServer();
     log.info('Tavern Runtime running', { url: runtimeServer.url.toString() });
 
-    await restartVaultWatcher({ emitRootChanged: false }).catch((err) => {
-        log.warn('Vault live updates failed to refresh after agent startup', {
+    await restartSemanticMemoryWatcher({ emitRootChanged: false }).catch((err) => {
+        log.warn('SemanticMemory live updates failed to refresh after agent startup', {
             err,
         });
     });
     await refreshRuntimeCapabilities({
-        ids: ['vault', 'gateway', 'apiServer', 'modelExecution', 'skills'],
+        ids: ['semanticMemory', 'gateway', 'apiServer', 'modelExecution', 'skills'],
         publishUpdated: true,
     }).catch((err) => {
         log.warn('Capability refresh failed after agent startup', {
@@ -88,9 +109,15 @@ async function shutdown(signal: string): Promise<void> {
     shuttingDown = true;
     log.info('Shutdown signal received', { signal });
     closeAgentNotesWatchers();
-    log.info('Stopping Vault live updates');
-    await closeVaultWatcher();
-    log.info('Vault live updates stopped');
+    log.info('Stopping Memory extraction scheduler');
+    stopMemoryExtractionScheduler();
+    log.info('Memory extraction scheduler stopped');
+    log.info('Stopping Memory dream scheduler');
+    stopMemoryDreamScheduler();
+    log.info('Memory dream scheduler stopped');
+    log.info('Stopping SemanticMemory live updates');
+    await closeSemanticMemoryWatcher();
+    log.info('SemanticMemory live updates stopped');
     log.info('Stopping Runtime jobs');
     await runtimeJobs?.stop();
     log.info('Runtime jobs stopped');

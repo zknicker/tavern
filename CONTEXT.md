@@ -39,6 +39,11 @@ _Avoid_: Chat, seat, runtime session
 One execution attempt by an Agent seat inside an Agent session.
 _Avoid_: Agent run, Chat, session
 
+**Agent workspace**:
+The per-agent filesystem home that stores that agent's editable identity, instructions, briefing
+files, episodic observations, generated files, and working state.
+_Avoid_: Shared Memory root, Runtime storage root, provider home
+
 **Active turn stream**:
 Transient Runtime state for an in-progress Agent turn, used for live updates before durable Chat
 messages and activity are complete.
@@ -239,14 +244,43 @@ A normal Tavern App React component used to render validated rich-response props
 visual system.
 _Avoid_: Model component, widget primitive
 
+**Memory**:
+Tavern's durable knowledge system: user-inspectable Markdown knowledge, per-agent briefings,
+episodic observations, and long-running context.
+_Avoid_: Vault, wiki, knowledgebase, prompt-time memory
+
 **Memory root**:
-The user-owned Markdown directory that Memory reads and edits.
-_Avoid_: Runtime storage root, managed workspace, workbench
+The shared user-owned Markdown directory that contains durable cross-agent Semantic Memory.
+_Avoid_: Vault root, wiki root, Runtime storage root, managed workspace, workbench
+
+**Agent briefing file**:
+An agent-owned startup briefing file in the Agent workspace, such as `MEMORY.md` or `USER.md`,
+loaded into that agent's prompt and refreshed from Memory by background workers.
+_Avoid_: Shared MEMORY.md, shared USER.md, Vault page
+
+**Agent briefing layer**:
+The Layer 1 Memory layer made from an Agent workspace's `USER.md` and `MEMORY.md` files.
+_Avoid_: Shared Memory root, semantic Memory, episodic Memory
+
+**Episodic Memory**:
+The per-agent Layer 2 Memory layer of background-extracted observations from chats, turns, and
+external events before they are promoted into stable knowledge.
+_Avoid_: Chat transcript, assistant briefing, semantic page
+
+**Semantic Memory**:
+The Layer 3 Memory layer of user-inspectable Markdown knowledge pages that agents may read and edit
+as durable Memory.
+_Avoid_: Wiki, Vault, prompt briefing, episodic log
+
+**Memory dreaming**:
+The background Memory maintenance pass that reviews Episodic Memory and Semantic Memory, promotes
+stable knowledge, and refreshes Agent briefing files.
+_Avoid_: Extraction, summarization, compaction
 
 **Memory surface**:
 The Tavern Runtime-owned access surface for the Memory root: path resolution, safe reads, writes,
 freshness, and status.
-_Avoid_: ingestion system, maintenance job
+_Avoid_: Vault API, wiki browser, ingestion system, maintenance job
 
 **Charts**:
 The Rich Response Component family for agent-authored chart displays.

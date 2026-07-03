@@ -3,7 +3,7 @@ import { connectionStateSchema } from '../contracts/shared.ts';
 
 export const agentRuntimeCapabilitySchema = z.enum([
     'codexOAuth',
-    'vault',
+    'semanticMemory',
     'dashboardServer',
     'apiServer',
     'gateway',

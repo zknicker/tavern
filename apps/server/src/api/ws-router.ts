@@ -16,11 +16,11 @@ import { onCronUpdate } from './cron/on-update.ts';
 import { onJobsUpdate } from './jobs/on-update.ts';
 import { onModelUpdate } from './model/on-update.ts';
 import { onOpenRouterSettingsUpdate } from './openrouter-settings/on-update.ts';
+import { onSemanticMemoryUpdate } from './semantic-memory/on-update.ts';
 import { onSessionUpdate } from './session/on-update.ts';
 import { onSkillUpdate } from './skill/on-update.ts';
 import { createRouter } from './trpc.ts';
 import { onLiveUsageUpdate } from './usage/on-live-update.ts';
-import { onVaultUpdate } from './vault/on-update.ts';
 import { onWorkersUpdate } from './worker/on-update.ts';
 
 export const wsRouter = createRouter({
@@ -67,8 +67,8 @@ export const wsRouter = createRouter({
     usage: createRouter({
         onLiveUpdate: onLiveUsageUpdate,
     }),
-    vault: createRouter({
-        onUpdate: onVaultUpdate,
+    semanticMemory: createRouter({
+        onUpdate: onSemanticMemoryUpdate,
     }),
     worker: createRouter({
         onUpdate: onWorkersUpdate,

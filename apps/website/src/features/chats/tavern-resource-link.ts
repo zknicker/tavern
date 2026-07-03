@@ -1,6 +1,6 @@
 export type TavernResourceTarget =
-    | { kind: 'vaultDirectory'; path: string }
-    | { kind: 'vaultPage'; path: string }
+    | { kind: 'memoryDirectory'; path: string }
+    | { kind: 'memoryPage'; path: string }
     | { kind: 'workspaceDirectory'; path: string }
     | { kind: 'workspaceFile'; path: string }
     | { kind: 'workspaceRoot'; path: '' };
@@ -30,8 +30,8 @@ export function parseTavernResourceLink(href: string): TavernResourceTarget | nu
     }
 
     switch (url.hostname) {
-        case 'vault':
-            return path ? { kind: 'vaultPage', path } : { kind: 'vaultDirectory', path: '' };
+        case 'memory':
+            return path ? { kind: 'memoryPage', path } : { kind: 'memoryDirectory', path: '' };
         case 'workspace':
             return path
                 ? { kind: 'workspaceFile', path }
@@ -46,8 +46,8 @@ export function getArtifactPanelTargetKey(target: TavernResourceTarget) {
 }
 
 export function getArtifactPanelTargetLabel(target: TavernResourceTarget) {
-    if (target.kind === 'vaultDirectory') {
-        return target.path ? (target.path.split('/').filter(Boolean).at(-1) ?? 'Vault') : 'Vault';
+    if (target.kind === 'memoryDirectory') {
+        return target.path ? (target.path.split('/').filter(Boolean).at(-1) ?? 'Memory') : 'Memory';
     }
 
     if (target.kind === 'workspaceDirectory') {
@@ -66,7 +66,7 @@ export function getArtifactPanelTargetLabel(target: TavernResourceTarget) {
 
 export function formatTavernResourceLink(target: TavernResourceTarget) {
     const host =
-        target.kind === 'vaultPage' || target.kind === 'vaultDirectory' ? 'vault' : 'workspace';
+        target.kind === 'memoryPage' || target.kind === 'memoryDirectory' ? 'memory' : 'workspace';
     const path = target.path
         .split('/')
         .filter(Boolean)

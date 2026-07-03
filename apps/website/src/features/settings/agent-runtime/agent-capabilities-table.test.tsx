@@ -4,7 +4,13 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { AgentCapabilitiesSummary } from './agent-capabilities-table.tsx';
 
 function capability(input: {
-    capability: 'apiServer' | 'dashboardServer' | 'gateway' | 'modelExecution' | 'skills' | 'vault';
+    capability:
+        | 'apiServer'
+        | 'dashboardServer'
+        | 'gateway'
+        | 'modelExecution'
+        | 'skills'
+        | 'semanticMemory';
     displayName?: string;
     state?: 'degraded' | 'healthy' | 'unknown' | 'unavailable';
 }) {
@@ -29,14 +35,14 @@ test('AgentCapabilitiesSummary renders per-capability refresh actions', () => {
         <AgentCapabilitiesSummary
             capabilities={[
                 {
-                    capability: 'vault',
+                    capability: 'semanticMemory',
                     checkedAt: '2026-05-28T12:00:00.000Z',
-                    displayName: 'Vault',
+                    displayName: 'Memory',
                     errorCode: null,
                     lastHealthyAt: null,
                     metadataJson: '{}',
                     method: 'runtime.capabilities',
-                    reason: 'Vault path is not readable and writable.',
+                    reason: 'Memory path is not readable and writable.',
                     runtimeId: 'runtime-1',
                     state: 'unavailable',
                     technicalMessage: null,
@@ -47,8 +53,8 @@ test('AgentCapabilitiesSummary renders per-capability refresh actions', () => {
         />
     );
 
-    assert.match(markup, /Refresh Vault/);
-    assert.match(markup, /Vault/);
+    assert.match(markup, /Refresh Memory/);
+    assert.match(markup, /Memory/);
 });
 
 test('AgentCapabilitiesSummary groups by category', () => {

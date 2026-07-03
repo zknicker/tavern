@@ -20,7 +20,7 @@ export interface CliCommand {
     examples: string[];
     flags: CliFlag[];
     /**
-     * True for command groups (vault, engine) whose run() prints group help and
+     * True for command groups (memory, engine) whose run() prints group help and
      * exits 1 when invoked bare. The parse layer skips strict flag validation for
      * groups so subcommands handle their own args.
      */
@@ -115,28 +115,28 @@ const restartCommand: CliCommand = {
     },
 };
 
-const vaultCommand: CliCommand = {
-    name: 'vault',
+const memoryCommand: CliCommand = {
+    name: 'memory',
     section: 'Memory',
     group: true,
     summary: 'Browse Memory files (status, list, get, search)',
-    usage: 'tavern vault <status|list|get|search> [flags]',
+    usage: 'tavern memory <status|list|get|search> [flags]',
     flags: [
         { name: '--json', description: 'Emit one JSON document' },
         { name: '--runtime-url', valueName: '<url>', description: 'Override the Runtime API URL' },
     ],
-    examples: ['tavern vault status', 'tavern vault list', 'tavern vault get MEMORY.md'],
+    examples: ['tavern memory status', 'tavern memory list', 'tavern memory get MEMORY.md'],
     async run(_args, raw) {
         if (raw.length === 0) {
             const { printGroupHelp } = await import('./help');
-            printGroupHelp(vaultCommand, process.stdout);
+            printGroupHelp(memoryCommand, process.stdout);
             return 1;
         }
-        const [{ VAULT_SUBCOMMANDS }, { dispatchSubcommand }] = await Promise.all([
-            import('./commands/vault'),
+        const [{ MEMORY_SUBCOMMANDS }, { dispatchSubcommand }] = await Promise.all([
+            import('./commands/memory'),
             import('./subcommand'),
         ]);
-        return await dispatchSubcommand('vault', VAULT_SUBCOMMANDS, raw);
+        return await dispatchSubcommand('memory', MEMORY_SUBCOMMANDS, raw);
     },
 };
 
@@ -199,7 +199,7 @@ export const COMMANDS: CliCommand[] = [
     tokenCommand,
     updateCommand,
     restartCommand,
-    vaultCommand,
+    memoryCommand,
     engineCommand,
     helpCommand,
 ];

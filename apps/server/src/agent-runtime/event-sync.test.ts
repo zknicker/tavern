@@ -83,15 +83,15 @@ test('capability.updated refreshes the cached runtime capability snapshot', asyn
     assert.equal(capabilityState(refreshed, 'apiServer'), 'healthy');
 });
 
-test('vault.changed emits a Vault invalidation event', async () => {
-    const invalidation = nextVaultInvalidation();
+test('semanticMemory.changed emits a SemanticMemory invalidation event', async () => {
+    const invalidation = nextSemanticMemoryInvalidation();
 
     await applyObservedAgentRuntimeEvent({
         paths: ['Projects/Alpha.md'],
         reason: 'watch',
         scope: 'content',
         timestamp: '2026-06-21T12:00:00.000Z',
-        type: 'vault.changed',
+        type: 'semanticMemory.changed',
     });
 
     await assert.doesNotReject(async () => {
@@ -137,7 +137,7 @@ function buildCapabilitySnapshot(states: Record<string, AgentRuntimeCapabilityHe
     };
 }
 
-async function nextVaultInvalidation() {
+async function nextSemanticMemoryInvalidation() {
     const controller = new AbortController();
     const timeout = setTimeout(() => {
         controller.abort();
@@ -145,7 +145,7 @@ async function nextVaultInvalidation() {
 
     try {
         for await (const event of subscribeToTavernEvent(
-            tavernEventNames.vaultUpdated,
+            tavernEventNames.semanticMemoryUpdated,
             controller.signal
         )) {
             clearTimeout(timeout);
@@ -155,5 +155,5 @@ async function nextVaultInvalidation() {
         clearTimeout(timeout);
     }
 
-    throw new Error('Timed out waiting for Vault invalidation.');
+    throw new Error('Timed out waiting for SemanticMemory invalidation.');
 }

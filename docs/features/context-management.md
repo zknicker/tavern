@@ -1,8 +1,8 @@
 ---
-summary: Context management feature for bounded turn context and the boundary with Vault memory.
+summary: Context management feature for bounded turn context and the boundary with Tavern Memory.
 read_when:
   - changing prompt-time context readiness or context-engine status
-  - changing how active turns receive bounded context from chat, participants, activity, or wiki material
+  - changing how active turns receive bounded context from chat, participants, activity, or Memory material
 ---
 
 # Context Management
@@ -12,15 +12,12 @@ Context management is the prompt-time continuity layer for active turns.
 Managed Tavern context does not use Lossless Claw. Runtime strips stale
 `lossless-claw` config instead of installing or enabling that plugin.
 
-Assistant memory is the engine's prompt-time `MEMORY.md` and `USER.md`
-snapshot. Durable inspectable knowledge lives in the Vault wiki as plain
-Markdown files.
-
 ## Contract
 
-* Vault browses Markdown wiki files.
-* Context management may read wiki material, chat state, activity, and
-  participant context when building bounded prompt context.
+* Runtime injects generated agent instructions and, when Memory is enabled, the
+  agent workspace `USER.md` and `MEMORY.md` briefing files.
+* Runtime may retrieve relevant shared Semantic Memory material for bounded
+  prompt context.
 * The harness session owns prior user-agent turn history. Runtime does not
   replay a rolling Tavern transcript into every turn.
 * Runtime always includes the triggering Tavern message once.
@@ -37,11 +34,11 @@ Markdown files.
   sequence, so messages created while the Agent is working are still eligible
   next time.
 * Agents can read same-chat history through read-only Tavern chat tools when
-  the bounded prompt context is insufficient.
-* Context management does not create a Tavern-owned memory database, memory
-  record, or long-term source of truth.
-* Wiki filesystem failures and context-engine failures are separate readiness
-  signals.
+  bounded prompt context is insufficient.
+* Context management does not create a separate long-term source of truth.
+  Durable knowledge belongs to Memory.
+* Semantic Memory filesystem failures and context-engine failures are separate
+  readiness signals.
 
 ## Runtime Setup
 
@@ -56,17 +53,16 @@ readiness.
 
 ## Relationship To Memory
 
-Context management can place relevant wiki material into a prompt. It does not
-own the remembered fact.
+Memory owns durable knowledge. Context management chooses what Memory and chat
+material belongs in the active prompt.
 
-When an agent needs compact prompt-time memory, it uses built-in assistant
-memory. When it needs durable, inspectable knowledge, it reads or queries the
-Vault wiki. When an active turn needs continuity, Runtime manages bounded
-prompt context without Lossless Claw in the managed Tavern runtime.
+When an active turn needs continuity, Runtime manages bounded prompt context
+from chat history, participant context, briefing files, and relevant Semantic
+Memory. Background extraction and dreaming maintain Memory separately from the
+active turn path.
 
 ## Related Docs
 
 * [Memory](memory.md)
-* [Vault](vault.md)
-* [Memory context spec](../../specs/memory-context.md)
-* [Memories spec](../../specs/memories.md)
+* [Memory API](../api/memory.md)
+* [Memory ADR](../adr/0009-memory-is-one-markdown-knowledge-system.md)
