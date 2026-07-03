@@ -26,6 +26,7 @@ import {
 import { demoAgentId } from './tavern/development-chat-demo-types.ts';
 import { seedDevelopmentChatDemos } from './tavern/development-chat-demos.ts';
 import { seedDevelopmentSemanticMemoryDemos } from './tavern/development-memory-demos.ts';
+import { seedDevelopmentMemoryJobDemos } from './tavern/development-memory-job-demos.ts';
 import { ensurePrimaryManagedAgent } from './tavern/managed-agent.ts';
 import { startTavernRuntimeServer } from './tavern/server.ts';
 import { recoverInterruptedChatResponses } from './tavern/turn-recovery.ts';
@@ -74,6 +75,13 @@ async function main(): Promise<void> {
             count: semanticMemoryDemoSeed.seeded,
         });
     }
+    const memoryJobDemoSeed = await seedDevelopmentMemoryJobDemos({ db }).catch((err) => {
+        log.warn('Development Memory job demos failed to seed', { err });
+        return { seeded: 0 };
+    });
+    if (memoryJobDemoSeed.seeded > 0) {
+        log.info('Development Memory job demos ready', { count: memoryJobDemoSeed.seeded });
+    }
     void startSemanticMemoryWatcher(resolveSemanticMemoryConfig).catch((err) => {
         log.warn('SemanticMemory live updates failed to start', { err });
     });
@@ -90,7 +98,14 @@ async function main(): Promise<void> {
         });
     });
     await refreshRuntimeCapabilities({
-        ids: ['semanticMemory', 'gateway', 'apiServer', 'modelExecution', 'skills'],
+        ids: [
+            'semanticMemory',
+            'memoryWorkers',
+            'gateway',
+            'apiServer',
+            'modelExecution',
+            'skills',
+        ],
         publishUpdated: true,
     }).catch((err) => {
         log.warn('Capability refresh failed after agent startup', {
