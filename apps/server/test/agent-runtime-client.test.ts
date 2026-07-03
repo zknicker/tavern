@@ -78,9 +78,9 @@ test('listCapabilities parses Memory capability rows', async () => {
                     checkedAt: now,
                     displayName: 'Memory',
                     healthy: true,
-                    id: 'vault',
+                    id: 'semanticMemory',
                     lastHealthyAt: now,
-                    metadata: { vaultPath: '/Users/zknicker/.tavern/runtime/memory' },
+                    metadata: { memoryPath: '/Users/zknicker/.tavern/runtime/memory' },
                     nextCheckAt: now,
                     reason: null,
                     state: 'healthy',
@@ -108,7 +108,7 @@ test('listCapabilities parses Memory capability rows', async () => {
 
     assert.deepEqual(
         capabilities.capabilities.map((capability) => capability.id),
-        ['dashboardServer', 'vault']
+        ['dashboardServer', 'semanticMemory']
     );
     assert.equal(capabilities.info.version, '1.2.9');
 });
