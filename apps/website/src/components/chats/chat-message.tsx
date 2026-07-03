@@ -57,7 +57,10 @@ const ChatMessage = forwardRef<HTMLDivElement, ChatMessageProps>(
                         {hasBody ? (
                             <Bubble align={align} variant={bubbleVariant}>
                                 <BubbleContent
-                                    className={from === 'user' ? 'rounded-full px-4' : undefined}
+                                    // Match the prompt input's surface radius
+                                    // so long multi-line sends don't balloon
+                                    // into pill shapes.
+                                    className={from === 'user' ? 'rounded-3xl px-4' : undefined}
                                 >
                                     {children}
                                 </BubbleContent>
