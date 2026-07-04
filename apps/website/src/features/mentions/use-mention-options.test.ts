@@ -89,7 +89,7 @@ describe('selectMentionOptionsForQuery', () => {
         const options = selectMentionOptionsForQuery({
             agents: [
                 {
-                    effectiveCharacter: 'penguin',
+                    effectiveCharacter: 'owl',
                     effectivePrimaryColor: '#2563eb',
                     id: 'agent:planner',
                     name: 'Planner',
@@ -102,7 +102,7 @@ describe('selectMentionOptionsForQuery', () => {
         });
 
         expect(options[0]?.metadata).toEqual({
-            agentCharacter: 'penguin',
+            agentCharacter: 'owl',
             agentColor: '#2563eb',
         });
     });

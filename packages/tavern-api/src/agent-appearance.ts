@@ -5,27 +5,16 @@ import * as z from 'zod';
 // the single source of truth both the app UI and Runtime validation share.
 // Adding a character means adding its art to HEADS in the app's agent-face.tsx
 // too — full recipe: docs/internals/agent-avatars.md
-export const agentCharacters = [
-    'knight',
-    'penguin',
-    'cat',
-    'dog',
-    'robot',
-    'ghost',
-    'cloud',
-] as const;
+export const agentCharacters = ['knight', 'owl', 'bird', 'robot'] as const;
 
 export type AgentCharacter = (typeof agentCharacters)[number];
 
 export const agentCharacterSchema = z.enum(agentCharacters);
 
 export const agentCharacterLabels: Record<AgentCharacter, string> = {
-    cat: 'Cat',
-    cloud: 'Cloud',
-    dog: 'Dog',
-    ghost: 'Ghost',
+    bird: 'Bird',
     knight: 'Knight',
-    penguin: 'Penguin',
+    owl: 'Owl',
     robot: 'Robot',
 };
 

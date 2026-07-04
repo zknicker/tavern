@@ -1,5 +1,5 @@
 ---
-summary: How to add or update an agent character avatar (AgentFace) — the two files to touch, the 480x480 frame contract, and theme/agent-color ink recoloring.
+summary: How to add or update an agent character avatar (AgentFace) — the two files to touch, the 480x480 frame contract, and current character registry.
 read_when:
   - adding a new agent character/avatar or updating an existing one's face art
   - changing AgentFace, head art, eye placement, or the agentCharacters contract
@@ -9,13 +9,13 @@ read_when:
 # Agent Avatars
 
 Agents render as a **character face** via `AgentFace`. Adding or changing a
-character is a two-file change. The animated eyes drop into a fixed slot, so
-there is no per-head fitting or transform math.
+character is a two-file change. The animated eyes render inside a 480x480 face
+frame and can be clipped or warped with the head art.
 
 ## The two files
 
-- **Art** — `apps/website/src/features/chats/agent-face.tsx`: the SVG art
-  constants and the `HEADS` registry.
+- **Art** — `apps/website/src/features/chats/agent-face.tsx`: the SVG path
+  constants, warp layers, and the `HEADS` registry.
 - **Contract** — `packages/tavern-api/src/agent-appearance.ts`: `agentCharacters`
   (the id list) and `agentCharacterLabels`. This list is the single source of
   truth — it drives the Settings picker, persistence, Runtime validation, and
@@ -23,34 +23,28 @@ there is no per-head fitting or transform math.
 
 ## Frame contract
 
-- All art is authored in a **480x480** box. Eyes always render at `EYE_FRAME`
-  (`{ dx: 0, dy: 24, s: 0.5 }`). Draw the head around that eye position; do not
-  add per-head slots or transforms. `<AgentFace guide />` overlays the frame and
-  resting eyes to check alignment while authoring.
-- Each head ships **one art set** authored in the light scheme: white (`PAPER`)
-  plus ink marks. Ink paths use `currentColor`, and `AgentFace` recolors them
-  through its `ink` prop — light mode keeps the authored ink; dark mode passes
-  the agent's configured color dropped to a low-contrast dark tone (see
-  `resolveAgentInk` in `features/agents/agent-color-presets.ts`). White stays
-  white in both themes. No separate dark art, no halo outlines.
-- Exports may include **reference eyes** at the resting `EYE_FRAME` pose (the
-  penguin exports do). Drop those paths when pasting — the animated eyes render
-  at exactly that spot.
+- All art is authored in a **480x480** box. Eyes render at `EYE_FRAME`
+  (`{ dx: -1.5, dy: 39.5, s: 0.7066 }`). `<AgentFace guide />` overlays the frame
+  and resting eyes to check alignment while authoring.
+- Current heads use `buildWarpLayers(...)` with path layers flattened once at
+  module load, then warped each frame with the animated eyes. Use `front` layers
+  for art that should occlude wandering eyes, such as beaks or mouths. Use
+  `clip` to keep eyes inside a face window.
+- `AgentFace` still accepts `ink` for currentColor-backed marks, but current
+  warp-layer characters mostly use authored fill colors.
 
 ## Add a character
 
-1. In `agent-face.tsx`, add one art group from the SVG — paste the `<path>`
-   elements verbatim into `<g key="art">…</g>` (template-native art needs no
-   transform; drop any `clipPath` wrapper and reference-eye paths). Name it
-   `XYZ_ART`, fill whites with `PAPER`, and fill ink marks with `currentColor`.
+1. In `agent-face.tsx`, add the SVG path constants for the head. Drop any
+   reference-eye paths because animated eyes render from `EYE_FRAME`.
 2. Register in `HEADS`:
    ```tsx
    xyz: (_dark: boolean) => ({
-     back: [XYZ_ART],
+     back: [],
      front: [],
-     // white/paper face → 'currentColor' eyes (follow the ink);
-     // solid-ink face (cat) → PAPER eyes
-     eyeColor: 'currentColor',
+     warp: XYZ_WARP,
+     eyeColor: "#070708",
+     hlColor: "#fcfcfd",
    }),
    ```
 3. In `agent-appearance.ts`, add the id to `agentCharacters` and a label to
@@ -61,9 +55,9 @@ there is no per-head fitting or transform math.
 
 ## Rendering a face
 
-Call sites resolve the agent's appearance (character + configured color) via
-`useAgentAppearanceLookup` (or the agent record's `effectiveCharacter` /
-`effectivePrimaryColor`) and pass both theme and ink:
+Call sites resolve the agent's appearance via `useAgentAppearanceLookup` (or the
+agent record's `effectiveCharacter` / `effectivePrimaryColor`) and pass both
+theme and ink:
 
 ```tsx
 <AgentFace dark={dark} head={character} ink={resolveAgentInk(dark, primaryColor)} … />
@@ -78,10 +72,4 @@ Replace that head's art constant in `agent-face.tsx`. No contract change.
 - Adding is additive — `character` is a stored string enum, so there is no
   migration. Renaming or removing a character orphans agents already set to it;
   prefer adding.
-- Agent color names the agent everywhere **and** tints the face ink in dark
-  mode. Light mode never tints.
-- Two authoring styles live in `agent-face.tsx`: template-native (Figma 480
-  export, pasted verbatim — penguin, robot) and Fable exports via `fableArt(...)`
-  (a matrix transform — cat, dog, ghost, cloud, knight). Both share the same
-  `currentColor` ink recoloring; new clean 480x480 SVGs use the template-native
-  style.
+- Current characters are `knight`, `owl`, `bird`, and `robot`.

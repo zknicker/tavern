@@ -53,9 +53,8 @@ import {
 } from './sidebar-chat-list-model.ts';
 
 // Inline width/height so the sidebar menu button's `[&_svg]:size-4.5` rule
-// cannot shrink the face back down. 24 is a natural divisor of the 480px art
-// frame (480/24 = 20) and slightly overhangs the 20px slot so the face sits
-// optically level with the hash boxes.
+// cannot shrink the face back down. The row allows overflow so authored plumes
+// and tufts can bleed outside the nominal 20px sidebar icon slot.
 const faceStyle = { flexShrink: 0, height: 24, overflow: 'visible', width: 24 } as const;
 
 export function AppSidebarChatList() {
@@ -370,19 +369,19 @@ function SidebarRecentChatItem({
                 onRename={onRename}
             >
                 <SidebarMenuButton
-                    className="font-normal group-focus-within/menu-item:bg-sidebar-accent group-focus-within/menu-item:text-sidebar-accent-foreground group-hover/menu-item:bg-sidebar-accent group-hover/menu-item:text-sidebar-accent-foreground"
+                    className="overflow-visible font-normal group-focus-within/menu-item:bg-sidebar-accent group-focus-within/menu-item:text-sidebar-accent-foreground group-hover/menu-item:bg-sidebar-accent group-hover/menu-item:text-sidebar-accent-foreground"
                     isActive={isActive}
                     render={<NavLink to={path} />}
                     tooltip={title}
                 >
-                    <span className="flex min-w-0 flex-1 items-center gap-2.5">
+                    <div className="flex min-w-0 flex-1 items-center gap-2.5 overflow-visible">
                         <SidebarChatIcon chat={chat} style={channelColorStyle} />
                         <span className="min-w-0 flex-1 truncate">{title}</span>
                         <SidebarChatActivity chat={chat} hidden={hasActiveTurn} />
                         {hasActiveTurn && !isArchivePending ? (
                             <span aria-hidden="true" className="w-6 shrink-0" />
                         ) : null}
-                    </span>
+                    </div>
                 </SidebarMenuButton>
                 <SidebarChatActiveTurnIndicator hidden={isArchivePending || !hasActiveTurn} />
                 <SidebarChatArchiveAction
@@ -412,7 +411,10 @@ function SidebarChatIcon({
 
     if (appearance.character !== 'none') {
         return (
-            <span aria-hidden="true" className="flex size-5 shrink-0 items-center justify-center">
+            <span
+                aria-hidden="true"
+                className="flex size-5 shrink-0 items-center justify-center overflow-visible"
+            >
                 <AgentFace
                     animate={false}
                     dark={dark}

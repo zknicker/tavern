@@ -18,18 +18,17 @@ describe('turn avatar variant', () => {
 });
 
 describe('static agent face', () => {
-    test('renders a character head with currentColor marks and authored ink by default', () => {
+    test('renders a character head with authored color layers', () => {
         const markup = renderToStaticMarkup(<AgentFace animate={false} head="knight" size={20} />);
         const paths = markup.match(/<path /g) ?? [];
 
         // Two eyes plus the head silhouette layers.
         expect(paths.length).toBeGreaterThanOrEqual(3);
-        // Marks recolor through the svg color style; light mode keeps the authored ink.
-        expect(markup).toContain('fill="currentColor"');
+        expect(markup).toContain('fill="rgb(');
         expect(markup).toContain('color:#1b1b1b');
     });
 
-    test('the ink prop tints the marks (dark-mode agent color)', () => {
+    test('preserves the ink prop on the face SVG', () => {
         const markup = renderToStaticMarkup(
             <AgentFace animate={false} dark head="knight" ink="#194154" size={20} />
         );
