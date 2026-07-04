@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.4.38 - 2026-07-04
+
+- Runtime/API: adds the Memory stack with shared Memory tools, core memory
+  prompt wiring, model-driven memory workers, worker health, and the
+  `memoryWorkers` Runtime capability.
+- Runtime/App: adds rich references for agents, skills, apps, plugins, and
+  workspace paths, including skill activation hints and agent-scoped skill
+  autocomplete.
+- Runtime/App: adds Runtime-backed Tavern channel creation and participant
+  editing, including multi-agent channels and explicit agent addressing.
+- Runtime/App: reworks streaming turn rendering, tolerates delivered messages
+  missing turn metadata, and keeps channel messages human-only until an agent is
+  explicitly addressed.
+- App: refreshes Agent avatars, global Memory settings, chat/sidebar polish,
+  toolbar history navigation, breadcrumbs, participant slots, and message chip
+  styling.
+
 ## v1.4.37 - 2026-07-02
 
 - Runtime: runs the Codex bridge bootstrap install from the bridge directory in
