@@ -197,11 +197,11 @@ describe('sidebar chat list', () => {
         ).toBeTrue();
     });
 
-    test('renames only chats with one bound agent', () => {
+    test('renames chats with one or more bound agents', () => {
         expect(canRenameSidebarChat(createChat({ boundAgentIds: ['agent-1'] }))).toBeTrue();
         expect(canRenameSidebarChat(createChat({ boundAgentIds: [] }))).toBeFalse();
         expect(
             canRenameSidebarChat(createChat({ boundAgentIds: ['agent-1', 'agent-2'] }))
-        ).toBeFalse();
+        ).toBeTrue();
     });
 });

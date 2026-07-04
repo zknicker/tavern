@@ -1,10 +1,11 @@
 import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
+import { formatAppReferenceTarget } from '@tavern/api/rich-references';
 import { publicProcedure } from '../trpc.ts';
 import {
     type ComputerUseAppInventory,
-    getComputerUsePluginUri,
+    type ComputerUseAppInventoryEntry,
     listComputerUseApps,
 } from './computer-use-apps.ts';
 import {
@@ -51,10 +52,14 @@ export const listMentionInventoryProcedure = publicProcedure
     .query(async ({ input }) => {
         const parsed = listMentionInventoryInputSchema.parse(input);
         const limit = parsed?.limit ?? 120;
+        const agentIds = normalizeMentionAgentIds({
+            agentId: parsed?.agentId,
+            agentIds: parsed?.agentIds,
+        });
 
         const computerUseAppInventory = await listComputerUseApps();
         const options = await buildMentionInventory({
-            agentId: parsed?.agentId,
+            agentIds,
             computerUseAppInventory,
             limit,
         });
@@ -79,6 +84,7 @@ export const listMentionPathOptionsProcedure = publicProcedure
 
 export async function buildMentionOptions({
     agentId,
+    agentIds,
     codexPluginRoot: pluginRoot = readSinglePathOverride(
         process.env.TAVERN_MENTION_CODEX_PLUGIN_ROOT,
         codexBundledPluginRoot
@@ -90,6 +96,7 @@ export async function buildMentionOptions({
     workspaceFolder,
 }: {
     agentId?: string;
+    agentIds?: readonly string[];
     codexPluginRoot?: string;
     computerUseAppInventory?: ComputerUseAppInventory;
     limit: number;
@@ -98,7 +105,10 @@ export async function buildMentionOptions({
     workspaceFolder?: string;
 }) {
     const [skills, plugins, apps, paths] = await Promise.all([
-        listRuntimeSkillMentionOptions({ agentId, runtimeSkills }),
+        listRuntimeSkillMentionOptions({
+            agentIds: normalizeMentionAgentIds({ agentId, agentIds }),
+            runtimeSkills,
+        }),
         listCodexPluginOptions(pluginRoot),
         listComputerUseAppMentionOptions(computerUseAppInventory),
         listWorkspacePathMentionOptions({ agentId, query, workspaceFolder }),
@@ -116,6 +126,7 @@ export async function buildMentionOptions({
 
 export async function buildMentionInventory({
     agentId,
+    agentIds,
     codexPluginRoot: pluginRoot = readSinglePathOverride(
         process.env.TAVERN_MENTION_CODEX_PLUGIN_ROOT,
         codexBundledPluginRoot
@@ -125,13 +136,17 @@ export async function buildMentionInventory({
     runtimeSkills,
 }: {
     agentId?: string;
+    agentIds?: readonly string[];
     codexPluginRoot?: string;
     computerUseAppInventory?: ComputerUseAppInventory;
     limit: number;
     runtimeSkills?: RuntimeSkillList;
 }) {
     const [skills, plugins, apps] = await Promise.all([
-        listRuntimeSkillMentionOptions({ agentId, runtimeSkills }),
+        listRuntimeSkillMentionOptions({
+            agentIds: normalizeMentionAgentIds({ agentId, agentIds }),
+            runtimeSkills,
+        }),
         listCodexPluginOptions(pluginRoot),
         listComputerUseAppMentionOptions(computerUseAppInventory),
     ]);
@@ -140,6 +155,12 @@ export async function buildMentionInventory({
     // skill inventories cannot crowd them out of the limit entirely.
     const reserved = [...apps, ...skills].slice(0, Math.max(0, limit - plugins.length));
     return [...reserved, ...plugins].slice(0, limit);
+}
+
+function normalizeMentionAgentIds(input: { agentId?: string; agentIds?: readonly string[] }) {
+    const ids = input.agentIds ?? (input.agentId ? [input.agentId] : []);
+
+    return [...new Set(ids.map((id) => id.trim()).filter(Boolean))];
 }
 
 function listDefaultMentionOptions({
@@ -273,11 +294,14 @@ async function listComputerUseAppMentionOptions(
     const inventory = inventoryOverride ?? (await listComputerUseApps());
 
     return inventory.entries
+        .filter((entry): entry is ComputerUseAppInventoryEntry & { bundleId: string } =>
+            Boolean(entry.bundleId)
+        )
         .map(
             (entry) =>
                 ({
                     description: 'Computer Use',
-                    id: getComputerUsePluginUri(),
+                    id: formatAppReferenceTarget(entry.bundleId),
                     insertText: entry.label,
                     kind: 'app',
                     label: entry.label,

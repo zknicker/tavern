@@ -180,6 +180,12 @@ bundles through the AI SDK `HarnessAgent` `skills` setting so adapters can
 surface them as runtime skills. Runtime does not inline `SKILL.md` content into
 `system`.
 
+Linked skill references in a message use `skill://<skill-id>` and only nudge the
+current turn. Runtime intersects those references with the addressed Agent's
+`enabledSkillIds` and adds a compact activation hint for matches. A linked skill
+that is not assigned to that Agent produces no hidden prompt context and does
+not grant access.
+
 Harness tools come from the selected executor. Runtime exposes built-ins through
 `GET /tools` as enabled, configured, read-only diagnostics, but Tavern does not
 surface a user-facing Tools page or per-agent tool grant editor. Agent-specific

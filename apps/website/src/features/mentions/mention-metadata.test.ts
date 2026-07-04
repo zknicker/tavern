@@ -1,109 +1,55 @@
 import { describe, expect, it } from 'bun:test';
-import { readMentionsFromMetadata } from './mention-metadata.ts';
+import { readMentionsFromMarkdown } from './mention-metadata.ts';
 
-describe('readMentionsFromMetadata', () => {
-    it('reads stored Tavern mentions', () => {
-        const content = 'Use [$ui](/Users/zknicker/.agents/skills/ui/SKILL.md)';
-
-        expect(
-            readMentionsFromMetadata(content, {
-                tavern: {
-                    mentions: [
-                        {
-                            end: content.length,
-                            id: '/Users/zknicker/.agents/skills/ui/SKILL.md',
-                            kind: 'skill',
-                            label: 'ui',
-                            projection: 'skill-context',
-                            start: 4,
-                            text: '[$ui](/Users/zknicker/.agents/skills/ui/SKILL.md)',
-                        },
-                    ],
-                },
-            })
-        ).toEqual([
-            {
-                end: content.length,
-                id: '/Users/zknicker/.agents/skills/ui/SKILL.md',
-                kind: 'skill',
-                label: 'ui',
-                projection: 'skill-context',
-                start: 4,
-                text: '[$ui](/Users/zknicker/.agents/skills/ui/SKILL.md)',
-            },
-        ]);
-    });
-
-    it('preserves stored mention metadata for app icons', () => {
-        const content = 'Open [@Messages](plugin://computer-use@openai-bundled)';
-
-        expect(
-            readMentionsFromMetadata(content, {
-                tavern: {
-                    mentions: [
-                        {
-                            end: content.length,
-                            id: 'plugin://computer-use@openai-bundled',
-                            kind: 'app',
-                            label: 'Messages',
-                            metadata: {
-                                bundleId: 'com.apple.MobileSMS',
-                                iconDataUrl: 'data:image/png;base64,abc',
-                            },
-                            projection: 'capability-reference',
-                            start: 5,
-                            text: '[@Messages](plugin://computer-use@openai-bundled)',
-                        },
-                    ],
-                },
-            })
-        ).toEqual([
-            {
-                end: content.length,
-                id: 'plugin://computer-use@openai-bundled',
-                kind: 'app',
-                label: 'Messages',
-                metadata: {
-                    bundleId: 'com.apple.MobileSMS',
-                    iconDataUrl: 'data:image/png;base64,abc',
-                },
-                projection: 'capability-reference',
-                start: 5,
-                text: '[@Messages](plugin://computer-use@openai-bundled)',
-            },
-        ]);
-    });
-
-    it('infers markdown mention chips without metadata', () => {
+describe('readMentionsFromMarkdown', () => {
+    it('reads explicit rich reference links from message content', () => {
         const content =
-            'Open [@Computer Use](plugin://computer-use@openai-bundled), [@Chrome](app://computer-use/google-chrome), [mentions.md](/Users/zknicker/.codex/worktrees/1b41/tavern/specs/mentions.md), and [components/ui](/Users/zknicker/.codex/worktrees/1b41/tavern/apps/website/src/components/ui)';
+            'Ask [@Tavern](agent://agt_primary), open [@Computer Use](plugin://computer-use@openai-bundled), [@Chrome](app://computer-use/google-chrome), read [$ui](skill://ui), [mentions.md](/Users/zknicker/.codex/worktrees/1b41/tavern/specs/mentions.md), and [components/ui](/Users/zknicker/.codex/worktrees/1b41/tavern/apps/website/src/components/ui)';
 
-        expect(readMentionsFromMetadata(content, null)).toEqual([
+        expect(readMentionsFromMarkdown(content)).toEqual([
             {
-                end: 58,
+                end: 34,
+                id: 'agent://agt_primary',
+                kind: 'agent',
+                label: 'Tavern',
+                projection: 'agent-reference',
+                start: 4,
+                text: '[@Tavern](agent://agt_primary)',
+            },
+            {
+                end: 94,
                 id: 'plugin://computer-use@openai-bundled',
                 kind: 'plugin',
                 label: 'Computer Use',
                 projection: 'capability-reference',
-                start: 5,
+                start: 41,
                 text: '[@Computer Use](plugin://computer-use@openai-bundled)',
             },
             {
-                end: 103,
+                end: 139,
                 id: 'app://computer-use/google-chrome',
                 kind: 'app',
                 label: 'Chrome',
                 projection: 'capability-reference',
-                start: 60,
+                start: 96,
                 text: '[@Chrome](app://computer-use/google-chrome)',
             },
             {
-                end: 182,
+                end: 163,
+                id: 'skill://ui',
+                kind: 'skill',
+                label: 'ui',
+                projection: 'skill-activation',
+                start: 146,
+                text: '[$ui](skill://ui)',
+            },
+            {
+                end: 242,
                 id: '/Users/zknicker/.codex/worktrees/1b41/tavern/specs/mentions.md',
                 kind: 'file',
                 label: 'mentions.md',
                 projection: 'path-reference',
-                start: 105,
+                start: 165,
                 text: '[mentions.md](/Users/zknicker/.codex/worktrees/1b41/tavern/specs/mentions.md)',
             },
             {
@@ -112,9 +58,13 @@ describe('readMentionsFromMetadata', () => {
                 kind: 'directory',
                 label: 'components/ui',
                 projection: 'path-reference',
-                start: 188,
+                start: 248,
                 text: '[components/ui](/Users/zknicker/.codex/worktrees/1b41/tavern/apps/website/src/components/ui)',
             },
         ]);
+    });
+
+    it('ignores bare mention-looking text', () => {
+        expect(readMentionsFromMarkdown('@Tavern and $ui are plain text')).toEqual([]);
     });
 });

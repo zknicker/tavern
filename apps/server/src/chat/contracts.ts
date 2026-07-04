@@ -1,7 +1,4 @@
-import {
-    agentRuntimeChatPlatformMetadataSchema,
-    agentRuntimeTavernMessageMetadataSchema,
-} from '@tavern/api';
+import { agentRuntimeChatPlatformMetadataSchema } from '@tavern/api';
 import { z } from 'zod';
 import {
     historyRowSchema,
@@ -133,7 +130,7 @@ export const getChatInputSchema = z.object({
 });
 
 export const createChatInputSchema = z.object({
-    agentIds: z.array(z.string().trim().min(1)).length(1).optional(),
+    agentIds: z.array(z.string().trim().min(1)).min(1).optional(),
     displayName: z.string().trim().min(1).max(120),
 });
 
@@ -141,28 +138,22 @@ export const createChatResultSchema = z.object({
     chatId: z.string().trim().min(1),
 });
 
-export const sendChatMessageMetadataSchema = z
-    .object({
-        tavern: agentRuntimeTavernMessageMetadataSchema.optional(),
-    })
-    .strict();
-
 export const startChatInputSchema = z
     .object({
         agentId: z.string().trim().min(1).optional(),
         attachments: z.array(sessionMessageAttachmentSchema).optional(),
         clientMessageId: z.string().trim().min(1).optional(),
         content: z.string().trim(),
-        metadata: sendChatMessageMetadataSchema.optional(),
         modelRef: z.string().trim().min(1).optional(),
     })
+    .strict()
     .refine((input) => input.content.trim().length > 0 || Boolean(input.attachments?.length), {
         message: 'A chat message requires text or attachments.',
         path: ['content'],
     });
 
 export const updateChatInputSchema = z.object({
-    agentIds: z.array(z.string().trim().min(1)).length(1),
+    agentIds: z.array(z.string().trim().min(1)).min(1),
     chatId: z.string().trim().min(1),
     displayName: z.string().trim().min(1).max(120),
 });
@@ -203,9 +194,9 @@ export const sendChatMessageInputSchema = z
         chatId: z.string().trim().min(1),
         clientMessageId: z.string().trim().min(1).optional(),
         content: z.string().trim(),
-        metadata: sendChatMessageMetadataSchema.optional(),
         modelRef: z.string().trim().min(1).optional(),
     })
+    .strict()
     .refine((input) => input.content.trim().length > 0 || Boolean(input.attachments?.length), {
         message: 'A chat message requires text or attachments.',
         path: ['content'],
@@ -234,12 +225,13 @@ export const stopChatTurnResultSchema = z.object({
     stopped: z.boolean(),
 });
 
-export const steerChatTurnInputSchema = z.object({
-    chatId: z.string().trim().min(1),
-    content: z.string().trim().min(1),
-    metadata: sendChatMessageMetadataSchema.optional(),
-    runId: z.string().trim().min(1),
-});
+export const steerChatTurnInputSchema = z
+    .object({
+        chatId: z.string().trim().min(1),
+        content: z.string().trim().min(1),
+        runId: z.string().trim().min(1),
+    })
+    .strict();
 
 export const steerChatTurnResultSchema = z.object({
     runId: z.string().trim().min(1),

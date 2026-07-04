@@ -7,9 +7,10 @@ import {
     listComputerUseApps,
 } from '../src/api/mention/computer-use-apps.ts';
 import { buildMentionInventory, buildMentionOptions } from '../src/api/mention/list.ts';
+import { mergeMentionRuntimeSkillLists } from '../src/api/mention/skill-options.ts';
 
 describe('buildMentionOptions', () => {
-    it('lists runtime skills as skill-context mention options', async () => {
+    it('lists runtime skills as skill activation mention options', async () => {
         expect(
             await buildMentionOptions({
                 codexPluginRoot: await createTempDir(),
@@ -34,15 +35,39 @@ describe('buildMentionOptions', () => {
         ).toEqual([
             {
                 description: 'Browser automation CLI for AI agents.',
-                id: '/Users/zknicker/.agents/skills/agent-browser/SKILL.md',
+                id: 'skill://agent-browser',
                 insertText: 'agent-browser',
                 kind: 'skill',
                 label: 'Agent Browser',
-                metadata: {
-                    skillName: 'agent-browser',
-                    skillPath: '/Users/zknicker/.agents/skills/agent-browser/SKILL.md',
-                },
-                projection: 'skill-context',
+                projection: 'skill-activation',
+                sourceLabel: 'Built-in',
+            },
+        ]);
+    });
+
+    it('exposes pathless runtime skills by stable skill id', async () => {
+        expect(
+            await buildMentionOptions({
+                codexPluginRoot: await createTempDir(),
+                computerUseAppInventory: { entries: [], source: 'local', status: 'unavailable' },
+                limit: 10,
+                query: 'pathless',
+                runtimeSkills: [
+                    createSkill({
+                        id: 'pathless',
+                        name: 'pathless',
+                    }),
+                ],
+                workspaceFolder: await createTempDir(),
+            })
+        ).toEqual([
+            {
+                description: null,
+                id: 'skill://pathless',
+                insertText: 'pathless',
+                kind: 'skill',
+                label: 'Pathless',
+                projection: 'skill-activation',
                 sourceLabel: 'Built-in',
             },
         ]);
@@ -122,6 +147,9 @@ describe('buildMentionOptions', () => {
                             bundleId: 'com.google.Chrome',
                             label: 'Chrome',
                         },
+                        {
+                            label: 'Helium Preview',
+                        },
                     ],
                     source: 'local',
                     status: 'ready',
@@ -134,7 +162,7 @@ describe('buildMentionOptions', () => {
         ).toEqual([
             {
                 description: 'Computer Use',
-                id: 'plugin://computer-use@openai-bundled',
+                id: 'app://computer-use/net.imput.helium',
                 insertText: 'Helium',
                 kind: 'app',
                 label: 'Helium',
@@ -354,7 +382,7 @@ describe('buildMentionOptions', () => {
     });
 
     it('can list files from the server workspace', async () => {
-        const workspace = path.resolve(process.cwd(), '..', '..');
+        const workspace = path.resolve(process.cwd(), '../..');
 
         expect(
             await buildMentionOptions({
@@ -388,7 +416,11 @@ describe('buildMentionInventory', () => {
         });
 
         const skills = Array.from({ length: 12 }, (_, index) =>
-            createSkill({ id: `skill-${index}`, name: `skill-${index}` })
+            createSkill({
+                filePath: `/tmp/skills/skill-${index}/SKILL.md`,
+                id: `skill-${index}`,
+                name: `skill-${index}`,
+            })
         );
         const inventory = await buildMentionInventory({
             codexPluginRoot: root,
@@ -409,6 +441,30 @@ describe('buildMentionInventory', () => {
                 sourceLabel: 'Plugin',
             },
         ]);
+    });
+});
+
+describe('mergeMentionRuntimeSkillLists', () => {
+    it('filters each agent skill list before deduping the union', () => {
+        const hiddenShared = createSkill({
+            eligible: false,
+            id: 'shared',
+            name: 'shared',
+        });
+        const visibleShared = createSkill({
+            id: 'shared',
+            name: 'shared',
+        });
+        const visibleOther = createSkill({
+            id: 'other',
+            name: 'other',
+        });
+
+        expect(
+            mergeMentionRuntimeSkillLists([[hiddenShared], [visibleShared, visibleOther]]).map(
+                (skill) => skill.id
+            )
+        ).toEqual(['shared', 'other']);
     });
 });
 

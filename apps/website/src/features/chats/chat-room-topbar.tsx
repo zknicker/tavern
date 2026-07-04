@@ -7,6 +7,7 @@ import { getChannelColorStyle } from '../shell/channel-color-options.ts';
 import { AgentFace } from './agent-face.tsx';
 import { type ChatListItem, getChatAgentId } from './chat-list-data.ts';
 import { ChatParticipantFacepile } from './chat-participant-facepile.tsx';
+import { ChatParticipantsEditButton } from './chat-participants-edit-button.tsx';
 
 /**
  * Chat header for the sidebar layout: room identity on the left, participants
@@ -27,8 +28,9 @@ export function ChatRoomTopbar({ chat }: { chat: ChatListItem }) {
                 <RoomIcon chat={chat} />
                 <h1 className="min-w-0 truncate font-semibold text-foreground text-sm">{title}</h1>
             </div>
-            <div className="no-drag flex min-w-0 items-center justify-end px-2">
+            <div className="no-drag flex min-w-0 items-center justify-end gap-1 px-2">
                 <ChatParticipantFacepile chat={chat} />
+                <ChatParticipantsEditButton chat={chat} />
             </div>
         </header>
     );

@@ -151,7 +151,7 @@ export async function updateRuntimeTavernChat(input: {
             id: input.id,
             tabAppearance: metadata?.tabAppearance ?? emptyTabAppearance(),
         }),
-        participants: buildRuntimeTavernParticipants(input.agentIds),
+        participants: buildRuntimeTavernParticipants(input.agentIds, current?.participants),
         title: input.displayName,
     });
 }
@@ -315,6 +315,7 @@ async function getTavernChatOrNull(
 function tavernChatToRuntimeChat(chat: TavernChat): AgentRuntimeChat {
     const metadata = readTavernChatMetadata(chat);
     const agentIds = resolveTavernChatAgentIds(chat, metadata);
+    const participants = buildPresentedTavernParticipants(chat, agentIds);
     const target = `${chat.kind}:${chat.id}`;
 
     return {
@@ -334,7 +335,7 @@ function tavernChatToRuntimeChat(chat: TavernChat): AgentRuntimeChat {
             },
         },
         parentTarget: null,
-        participants: chat.participants.flatMap(toRuntimeChatParticipants),
+        participants: participants.flatMap(toRuntimeChatParticipants),
         platform: 'tavern',
         platformMetadata: {
             chatId: chat.id,
@@ -379,7 +380,32 @@ function resolveTavernChatAgentIds(chat: TavernChat, metadata: TavernChatMetadat
         .filter((participant) => participant.kind === 'agent')
         .map((participant) => participant.id);
 
-    return [...new Set([...participantAgentIds, ...metadata.agentIds])];
+    return metadata.agentIds.length > 0
+        ? [...new Set(metadata.agentIds)]
+        : [...new Set(participantAgentIds)];
+}
+
+function buildPresentedTavernParticipants(chat: TavernChat, agentIds: string[]) {
+    const byId = new Map(chat.participants.map((participant) => [participant.id, participant]));
+    const localHuman = byId.get(localHumanParticipantId) ?? {
+        id: localHumanParticipantId,
+        kind: 'user' as const,
+        label: 'You',
+        metadata: { source: 'tavern' },
+    };
+
+    return [
+        localHuman,
+        ...agentIds.map(
+            (agentId) =>
+                byId.get(agentId) ?? {
+                    id: agentId,
+                    kind: 'agent' as const,
+                    label: null,
+                    metadata: { agentId, source: 'tavern' },
+                }
+        ),
+    ];
 }
 
 function readTavernChatMetadata(chat: TavernChat): TavernChatMetadata {
@@ -444,21 +470,35 @@ function readTavernChatTabAppearance(input: unknown): TavernChatTabAppearance {
     return { color };
 }
 
-function buildRuntimeTavernParticipants(agentIds: string[]): TavernApiSchema<'Participant'>[] {
-    return [
-        {
+export function buildRuntimeTavernParticipants(
+    agentIds: string[],
+    existingParticipants: TavernApiSchema<'Participant'>[] = []
+): TavernApiSchema<'Participant'>[] {
+    const participants = new Map<string, TavernApiSchema<'Participant'>>();
+
+    for (const participant of existingParticipants) {
+        participants.set(participant.id, participant);
+    }
+
+    if (!participants.has(localHumanParticipantId)) {
+        participants.set(localHumanParticipantId, {
             id: localHumanParticipantId,
             kind: 'user',
             label: 'You',
             metadata: { source: 'tavern' },
-        },
-        ...agentIds.map((agentId) => ({
+        });
+    }
+
+    for (const agentId of agentIds) {
+        participants.set(agentId, {
             id: agentId,
-            kind: 'agent' as const,
+            kind: 'agent',
             label: null,
             metadata: { agentId, source: 'tavern' },
-        })),
-    ];
+        });
+    }
+
+    return [...participants.values()];
 }
 
 function emptyTabAppearance(): TavernChatTabAppearance {

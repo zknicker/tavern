@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'bun:test';
 import {
-    buildMentionMetadata,
     compileMentionSubmission,
     getActiveMentionQuery,
     normalizeMentions,
@@ -60,7 +59,7 @@ describe('mention text helpers', () => {
                 id: 'hatch-pet',
                 kind: 'skill' as const,
                 label: 'Hatch Pet',
-                projection: 'skill-context' as const,
+                projection: 'skill-activation' as const,
                 start: 4,
                 text: 'Hatch Pet',
             },
@@ -83,7 +82,7 @@ describe('mention text helpers', () => {
                     id: 'hatch-pet',
                     kind: 'skill',
                     label: 'Hatch Pet',
-                    projection: 'skill-context',
+                    projection: 'skill-activation',
                     start: 4,
                     text: 'Hatch Pet',
                 },
@@ -107,26 +106,26 @@ describe('mention text helpers', () => {
                         id: 'hatch-pet',
                         kind: 'skill',
                         label: 'Hatch Pet',
-                        projection: 'skill-context',
+                        projection: 'skill-activation',
                         start: 14,
                         text: 'Hatch Pet',
                     },
                 ],
                 option: {
-                    id: '/Users/zknicker/.codex/skills/skill-installer/SKILL.md',
+                    id: 'skill://skill-installer',
                     insertText: 'Skill Installer',
                     kind: 'skill',
                     label: 'Skill Installer',
-                    projection: 'skill-context',
+                    projection: 'skill-activation',
                 },
             }).nextMentions
         ).toEqual([
             {
                 end: 19,
-                id: '/Users/zknicker/.codex/skills/skill-installer/SKILL.md',
+                id: 'skill://skill-installer',
                 kind: 'skill',
                 label: 'Skill Installer',
-                projection: 'skill-context',
+                projection: 'skill-activation',
                 start: 4,
                 text: 'Skill Installer',
             },
@@ -135,7 +134,7 @@ describe('mention text helpers', () => {
                 id: 'hatch-pet',
                 kind: 'skill',
                 label: 'Hatch Pet',
-                projection: 'skill-context',
+                projection: 'skill-activation',
                 start: 25,
                 text: 'Hatch Pet',
             },
@@ -154,11 +153,11 @@ describe('mention text helpers', () => {
                 content: 'launch @Hat',
                 mentions: [],
                 option: {
-                    id: '/Users/zknicker/.codex/skills/hatch-pet/SKILL.md',
+                    id: 'skill://hatch-pet',
                     insertText: 'Hatch Pet',
                     kind: 'skill',
                     label: 'Hatch Pet',
-                    projection: 'skill-context',
+                    projection: 'skill-activation',
                 },
             })
         ).toMatchObject({
@@ -167,10 +166,10 @@ describe('mention text helpers', () => {
             nextMentions: [
                 {
                     end: 16,
-                    id: '/Users/zknicker/.codex/skills/hatch-pet/SKILL.md',
+                    id: 'skill://hatch-pet',
                     kind: 'skill',
                     label: 'Hatch Pet',
-                    projection: 'skill-context',
+                    projection: 'skill-activation',
                     start: 7,
                     text: 'Hatch Pet',
                 },
@@ -183,25 +182,25 @@ describe('mention text helpers', () => {
             compileMentionSubmission('launch Hatch Pet', [
                 {
                     end: 16,
-                    id: '/Users/zknicker/.codex/skills/hatch-pet/SKILL.md',
+                    id: 'skill://hatch-pet',
                     kind: 'skill',
                     label: 'Hatch Pet',
-                    projection: 'skill-context',
+                    projection: 'skill-activation',
                     start: 7,
                     text: 'Hatch Pet',
                 },
             ])
         ).toEqual({
-            content: 'launch [$Hatch Pet](/Users/zknicker/.codex/skills/hatch-pet/SKILL.md)',
+            content: 'launch [$Hatch Pet](skill://hatch-pet)',
             mentions: [
                 {
-                    end: 69,
-                    id: '/Users/zknicker/.codex/skills/hatch-pet/SKILL.md',
+                    end: 38,
+                    id: 'skill://hatch-pet',
                     kind: 'skill',
                     label: 'Hatch Pet',
-                    projection: 'skill-context',
+                    projection: 'skill-activation',
                     start: 7,
-                    text: '[$Hatch Pet](/Users/zknicker/.codex/skills/hatch-pet/SKILL.md)',
+                    text: '[$Hatch Pet](skill://hatch-pet)',
                 },
             ],
         });
@@ -212,35 +211,35 @@ describe('mention text helpers', () => {
             compileMentionSubmission('use agent-browser', [
                 {
                     end: 17,
-                    id: '/Users/zknicker/.agents/skills/agent-browser/SKILL.md',
+                    id: 'skill://agent-browser',
                     kind: 'skill',
                     label: 'Agent Browser',
-                    projection: 'skill-context',
+                    projection: 'skill-activation',
                     start: 4,
                     text: 'agent-browser',
                 },
             ])
         ).toEqual({
-            content: 'use [$agent-browser](/Users/zknicker/.agents/skills/agent-browser/SKILL.md)',
+            content: 'use [$agent-browser](skill://agent-browser)',
             mentions: [
                 {
-                    end: 75,
-                    id: '/Users/zknicker/.agents/skills/agent-browser/SKILL.md',
+                    end: 43,
+                    id: 'skill://agent-browser',
                     kind: 'skill',
                     label: 'Agent Browser',
-                    projection: 'skill-context',
+                    projection: 'skill-activation',
                     start: 4,
-                    text: '[$agent-browser](/Users/zknicker/.agents/skills/agent-browser/SKILL.md)',
+                    text: '[$agent-browser](skill://agent-browser)',
                 },
             ],
         });
     });
 
-    it('keeps agent mentions as addressable Tavern metadata', () => {
+    it('compiles agent mentions as explicit rich links', () => {
         const compiled = compileMentionSubmission('@Planner please review this', [
             {
                 end: 8,
-                id: 'agent:planner',
+                id: 'agent://agent%3Aplanner',
                 kind: 'agent',
                 label: 'Planner',
                 projection: 'agent-reference',
@@ -250,23 +249,18 @@ describe('mention text helpers', () => {
         ]);
 
         expect(compiled).toEqual({
-            content: '@Planner please review this',
+            content: '[@Planner](agent://agent%3Aplanner) please review this',
             mentions: [
                 {
-                    end: 8,
-                    id: 'agent:planner',
+                    end: 35,
+                    id: 'agent://agent%3Aplanner',
                     kind: 'agent',
                     label: 'Planner',
                     projection: 'agent-reference',
                     start: 0,
-                    text: '@Planner',
+                    text: '[@Planner](agent://agent%3Aplanner)',
                 },
             ],
-        });
-        expect(buildMentionMetadata(compiled.mentions)).toEqual({
-            tavern: {
-                mentions: compiled.mentions,
-            },
         });
     });
 
@@ -284,9 +278,9 @@ describe('mention text helpers', () => {
             },
             {
                 content: 'Open Chrome',
-                expectedContent: 'Open [@Chrome](plugin://computer-use@openai-bundled)',
-                expectedText: '[@Chrome](plugin://computer-use@openai-bundled)',
-                id: 'plugin://computer-use@openai-bundled',
+                expectedContent: 'Open [@Chrome](app://computer-use/com.google.Chrome)',
+                expectedText: '[@Chrome](app://computer-use/com.google.Chrome)',
+                id: 'app://computer-use/com.google.Chrome',
                 kind: 'app' as const,
                 label: 'Chrome',
                 metadata: { bundleId: 'com.google.Chrome' },
@@ -350,14 +344,14 @@ describe('mention text helpers', () => {
         }
     });
 
-    it('stores metadata for every mention kind after compiling a prompt', () => {
+    it('compiles every current mention kind into durable content', () => {
         const content = 'Use agent-browser Computer Use Chrome specs/mentions.md components/ui';
         const inputs = [
             {
-                id: '/Users/zknicker/.agents/skills/agent-browser/SKILL.md',
+                id: 'skill://agent-browser',
                 kind: 'skill' as const,
                 label: 'Agent Browser',
-                projection: 'skill-context' as const,
+                projection: 'skill-activation' as const,
                 text: 'agent-browser',
             },
             {
@@ -368,7 +362,7 @@ describe('mention text helpers', () => {
                 text: 'Computer Use',
             },
             {
-                id: 'plugin://computer-use@openai-bundled',
+                id: 'app://computer-use/com.google.Chrome',
                 kind: 'app' as const,
                 label: 'Chrome',
                 metadata: { bundleId: 'com.google.Chrome' },
@@ -399,59 +393,54 @@ describe('mention text helpers', () => {
         });
         const compiled = compileMentionSubmission(content, inputs);
 
-        expect(buildMentionMetadata(compiled.mentions)).toEqual({
-            tavern: {
-                mentions: compiled.mentions,
-            },
-        });
         expect(compiled).toEqual({
             content:
-                'Use [$agent-browser](/Users/zknicker/.agents/skills/agent-browser/SKILL.md) [@Computer Use](plugin://computer-use@openai-bundled) [@Chrome](plugin://computer-use@openai-bundled) [specs/mentions.md](/repo/specs/mentions.md) [components/ui](/repo/apps/website/src/components/ui)',
+                'Use [$agent-browser](skill://agent-browser) [@Computer Use](plugin://computer-use@openai-bundled) [@Chrome](app://computer-use/com.google.Chrome) [specs/mentions.md](/repo/specs/mentions.md) [components/ui](/repo/apps/website/src/components/ui)',
             mentions: [
                 {
-                    end: 75,
-                    id: '/Users/zknicker/.agents/skills/agent-browser/SKILL.md',
+                    end: 43,
+                    id: 'skill://agent-browser',
                     kind: 'skill',
                     label: 'Agent Browser',
-                    projection: 'skill-context',
+                    projection: 'skill-activation',
                     start: 4,
-                    text: '[$agent-browser](/Users/zknicker/.agents/skills/agent-browser/SKILL.md)',
+                    text: '[$agent-browser](skill://agent-browser)',
                 },
                 {
-                    end: 129,
+                    end: 97,
                     id: 'plugin://computer-use@openai-bundled',
                     kind: 'plugin',
                     label: 'Computer Use',
                     projection: 'capability-reference',
-                    start: 76,
+                    start: 44,
                     text: '[@Computer Use](plugin://computer-use@openai-bundled)',
                 },
                 {
-                    end: 177,
-                    id: 'plugin://computer-use@openai-bundled',
+                    end: 145,
+                    id: 'app://computer-use/com.google.Chrome',
                     kind: 'app',
                     label: 'Chrome',
                     metadata: { bundleId: 'com.google.Chrome' },
                     projection: 'capability-reference',
-                    start: 130,
-                    text: '[@Chrome](plugin://computer-use@openai-bundled)',
+                    start: 98,
+                    text: '[@Chrome](app://computer-use/com.google.Chrome)',
                 },
                 {
-                    end: 222,
+                    end: 190,
                     id: '/repo/specs/mentions.md',
                     kind: 'file',
                     label: 'specs/mentions.md',
                     projection: 'path-reference',
-                    start: 178,
+                    start: 146,
                     text: '[specs/mentions.md](/repo/specs/mentions.md)',
                 },
                 {
-                    end: 276,
+                    end: 244,
                     id: '/repo/apps/website/src/components/ui',
                     kind: 'directory',
                     label: 'components/ui',
                     projection: 'path-reference',
-                    start: 223,
+                    start: 191,
                     text: '[components/ui](/repo/apps/website/src/components/ui)',
                 },
             ],

@@ -103,18 +103,6 @@ export function normalizeMentions(content: string, mentions: readonly Mention[])
     return normalized;
 }
 
-export function buildMentionMetadata(mentions: readonly Mention[]) {
-    const normalized = mentions.filter((mention) => mention.id.trim().length > 0);
-
-    return normalized.length > 0
-        ? {
-              tavern: {
-                  mentions: normalized,
-              },
-          }
-        : undefined;
-}
-
 export function compileMentionSubmission(content: string, mentions: readonly Mention[]) {
     const normalized = normalizeMentions(content, mentions);
 

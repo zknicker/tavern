@@ -2,6 +2,7 @@ import { arrayMove } from '@dnd-kit/sortable';
 import type { ReactNode } from 'react';
 import * as React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useAgentList } from '../../../hooks/agents/use-agent-list.ts';
 import { useChatArchive } from '../../../hooks/chats/use-chat-archive.ts';
 import { useChatList } from '../../../hooks/chats/use-chat-list.ts';
 import { useChatStartDrafts } from '../../../hooks/chats/use-chat-start-drafts.tsx';
@@ -38,6 +39,7 @@ export function TavernBrowserTabsProvider({ children }: { children: ReactNode })
     const location = useLocation();
     const navigate = useNavigate();
     const chatQuery = useChatList();
+    const agentsQuery = useAgentList();
     const drafts = useChatStartDrafts();
     const updateChat = useChatUpdate();
     const archiveChat = useChatArchive();
@@ -49,6 +51,8 @@ export function TavernBrowserTabsProvider({ children }: { children: ReactNode })
     const [dockPreview, setDockPreview] = React.useState<DockPreview | null>(null);
     const isDesktop = isElectronDesktopApp();
     const [renamingChat, setRenamingChat] = React.useState<ChatListItem | null>(null);
+    const [editingParticipantsChat, setEditingParticipantsChat] =
+        React.useState<ChatListItem | null>(null);
     const [editingSystemPromptChat, setEditingSystemPromptChat] =
         React.useState<ChatListItem | null>(null);
 
@@ -512,6 +516,10 @@ export function TavernBrowserTabsProvider({ children }: { children: ReactNode })
                     systemPrompt.reset();
                     setEditingSystemPromptChat(selected);
                 },
+                onEditParticipants: (selected) => {
+                    updateChat.reset();
+                    setEditingParticipantsChat(selected);
+                },
                 onOpenInNewWindow: isDesktop
                     ? (selected) => {
                           const tab = tabState.tabs.find(
@@ -535,8 +543,12 @@ export function TavernBrowserTabsProvider({ children }: { children: ReactNode })
         <ShellContext value={value}>
             {children}
             <TavernChatTabDialogs
+                agents={agentsQuery.data?.agents ?? []}
+                agentsPending={agentsQuery.isPending}
+                editingParticipantsChat={editingParticipantsChat}
                 editingSystemPromptChat={editingSystemPromptChat}
                 renamingChat={renamingChat}
+                setEditingParticipantsChat={setEditingParticipantsChat}
                 setEditingSystemPromptChat={setEditingSystemPromptChat}
                 setRenamingChat={setRenamingChat}
                 systemPrompt={systemPrompt}

@@ -1,6 +1,7 @@
 import { arrayMove } from '@dnd-kit/sortable';
 import type { ReactNode } from 'react';
 import * as React from 'react';
+import { useAgentList } from '../../../hooks/agents/use-agent-list.ts';
 import { useChatArchive } from '../../../hooks/chats/use-chat-archive.ts';
 import { useChatList } from '../../../hooks/chats/use-chat-list.ts';
 import { useChatSystemPrompt } from '../../../hooks/chats/use-chat-system-prompt.ts';
@@ -34,6 +35,7 @@ const emptyTabs: DesktopTabsState = { activeId: null, tabs: [] };
 export function ChromeTabsProvider({ children }: { children: ReactNode }) {
     const bridge = getDesktopBridge();
     const chatQuery = useChatList();
+    const agentsQuery = useAgentList();
     const updateChat = useChatUpdate();
     const archiveChat = useChatArchive();
     const systemPrompt = useChatSystemPrompt();
@@ -43,6 +45,8 @@ export function ChromeTabsProvider({ children }: { children: ReactNode }) {
     const [dockPreview, setDockPreview] = React.useState<DockPreview | null>(null);
     const [dockEntry, setDockEntry] = React.useState<DockEntry | null>(null);
     const [renamingChat, setRenamingChat] = React.useState<ChatListItem | null>(null);
+    const [editingParticipantsChat, setEditingParticipantsChat] =
+        React.useState<ChatListItem | null>(null);
     const [editingSystemPromptChat, setEditingSystemPromptChat] =
         React.useState<ChatListItem | null>(null);
 
@@ -263,6 +267,10 @@ export function ChromeTabsProvider({ children }: { children: ReactNode }) {
                     systemPrompt.reset();
                     setEditingSystemPromptChat(selected);
                 },
+                onEditParticipants: (selected) => {
+                    updateChat.reset();
+                    setEditingParticipantsChat(selected);
+                },
                 onRename: (selected) => {
                     updateChat.reset();
                     setRenamingChat(selected);
@@ -275,8 +283,12 @@ export function ChromeTabsProvider({ children }: { children: ReactNode }) {
         <ShellContext value={value}>
             <DockEntryContext.Provider value={dockEntry}>{children}</DockEntryContext.Provider>
             <TavernChatTabDialogs
+                agents={agentsQuery.data?.agents ?? []}
+                agentsPending={agentsQuery.isPending}
+                editingParticipantsChat={editingParticipantsChat}
                 editingSystemPromptChat={editingSystemPromptChat}
                 renamingChat={renamingChat}
+                setEditingParticipantsChat={setEditingParticipantsChat}
                 setEditingSystemPromptChat={setEditingSystemPromptChat}
                 setRenamingChat={setRenamingChat}
                 systemPrompt={systemPrompt}

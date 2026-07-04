@@ -5,7 +5,6 @@ import {
     PromptInputBody,
     PromptInputFooter,
     PromptInputSubmit,
-    PromptInputTools,
 } from '../../components/ui/prompt-input.tsx';
 import { useAgentList } from '../../hooks/agents/use-agent-list.ts';
 import { createChatRunId } from '../../hooks/chats/chat-run-id.ts';
@@ -21,7 +20,6 @@ import {
     MentionComposerPicker,
     useMentionComposer,
 } from '../mentions/use-mention-composer.tsx';
-import { ChatComposerAgentSelector } from './chat-composer-tools.tsx';
 import { ChatDetailFooter } from './chat-detail-footer.tsx';
 import { ChatDetailFrame } from './chat-detail-frame.tsx';
 import { ChatMessageComposer } from './chat-message-composer.tsx';
@@ -38,7 +36,7 @@ export function ChatDraftDetail({
 }) {
     const agentsQuery = useAgentList();
     const boundAgentIds = React.useMemo(() => (draft ? [draft.agentId] : []), [draft]);
-    const [agentId, setAgentId] = React.useState(draft?.agentId ?? '');
+    const agentId = draft?.agentId ?? '';
     const selectedAgent = agentsQuery.data?.agents.find((agent) => agent.id === agentId) ?? null;
     const [content, setContent] = React.useState('');
     const mentionComposer = useMentionComposer({
@@ -80,7 +78,6 @@ export function ChatDraftDetail({
                   {
                       content: draft.content,
                       id: draft.clientMessageId,
-                      metadata: draft.metadata,
                       timestamp: draft.createdAt,
                   },
               ],
@@ -88,12 +85,6 @@ export function ChatDraftDetail({
         : undefined;
     const visibleTimeline =
         timeline && timeline.rows.length > 0 ? timeline : (fallbackTimeline ?? timeline);
-
-    React.useEffect(() => {
-        if (draft && agentId !== draft.agentId) {
-            setAgentId(draft.agentId);
-        }
-    }, [agentId, draft]);
 
     React.useEffect(() => {
         if (!draft) {
@@ -164,14 +155,6 @@ export function ChatDraftDetail({
                             </PromptInputBody>
                             <MentionComposerPicker composer={mentionComposer} />
                             <PromptInputFooter>
-                                <PromptInputTools>
-                                    <ChatComposerAgentSelector
-                                        agentId={agentId}
-                                        agents={agentsQuery.data?.agents ?? []}
-                                        boundAgentIds={boundAgentIds}
-                                        onAgentChange={setAgentId}
-                                    />
-                                </PromptInputTools>
                                 <PromptInputActions>
                                     <PromptInputSubmit
                                         canSubmit={false}

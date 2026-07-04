@@ -253,21 +253,7 @@ test('useChatSend starts optimistic turns for mentioned channel agents', async (
     await mutation.onMutate({
         chatId: 'chat-1',
         clientMessageId: 'msg_mentions',
-        content: '@Planner @Critic plan',
-        metadata: {
-            tavern: {
-                mentions: [
-                    {
-                        id: 'agent-planner',
-                        kind: 'agent',
-                    },
-                    {
-                        id: 'agent-critic',
-                        kind: 'agent',
-                    },
-                ],
-            },
-        },
+        content: '[@Planner](agent://agent-planner) [@Critic](agent://agent-critic) plan',
     });
 
     expect(startedTurns.map((turn) => turn.agentId)).toEqual(['agent-planner', 'agent-critic']);

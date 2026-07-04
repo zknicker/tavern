@@ -114,14 +114,7 @@ test('sendTavernChatMessage posts one turn for a mentioned channel agent', async
     const result = await sendTavernChatMessage(
         {
             chatId: planningChatId,
-            content: '@Planner Plan the next launch.',
-            metadata: mentionMetadata({
-                end: 8,
-                id: 'agent:planner',
-                label: 'Planner',
-                start: 0,
-                text: '@Planner',
-            }),
+            content: '[@Planner](agent://agent%3Aplanner) Plan the next launch.',
         },
         agentRuntimeClient as never
     );
@@ -140,15 +133,8 @@ test('sendTavernChatMessage posts one turn for a mentioned channel agent', async
                     agentId: 'agent:planner',
                 },
                 message: {
-                    content: '@Planner Plan the next launch.',
+                    content: '[@Planner](agent://agent%3Aplanner) Plan the next launch.',
                     id: result.clientMessageId,
-                    metadata: mentionMetadata({
-                        end: 8,
-                        id: 'agent:planner',
-                        label: 'Planner',
-                        start: 0,
-                        text: '@Planner',
-                    }),
                     nonce: result.clientMessageId,
                 },
                 target: {
@@ -161,54 +147,103 @@ test('sendTavernChatMessage posts one turn for a mentioned channel agent', async
     ]);
 });
 
-test('sendTavernChatMessage posts one turn for an explicitly addressed channel agent', async () => {
+test('sendTavernChatMessage rejects legacy metadata addressing', async () => {
+    await seedPlanningChat();
+    const calls: unknown[] = [];
+    const agentRuntimeClient = runtimeClient({ calls });
+
+    await assert.rejects(
+        sendTavernChatMessage(
+            {
+                chatId: planningChatId,
+                content: 'Plan the next launch.',
+                metadata: {
+                    tavern: {
+                        addressedAgentIds: ['agent:planner'],
+                    },
+                },
+            } as never,
+            agentRuntimeClient as never
+        ),
+        /unrecognized key|metadata/u
+    );
+    assert.deepEqual(calls, []);
+});
+
+test('sendTavernChatMessage keeps bare mention-looking text human-only in channels', async () => {
     await seedPlanningChat();
     const calls: unknown[] = [];
     globalThis.fetch = runtimeTavernApiFetch();
     const agentRuntimeClient = runtimeClient({ calls });
 
-    const metadata = {
-        tavern: {
-            addressedAgentIds: ['agent:planner'],
-        },
-    };
-
     const result = await sendTavernChatMessage(
         {
             chatId: planningChatId,
-            content: 'Plan the next launch.',
-            metadata,
+            content: '@Planner Plan the next launch.',
         },
         agentRuntimeClient as never
     );
 
-    assert.deepEqual(result.turns, [
-        {
-            agentId: 'agent:planner',
-            runId: 'run-agent_planner',
-        },
-    ]);
-    assert.deepEqual(calls, [
+    assert.deepEqual(result.turns, []);
+    assert.deepEqual(calls, []);
+});
+
+test('sendTavernChatMessage rejects channel mentions for agents outside the chat', async () => {
+    await seedPlanningChat();
+    const calls: unknown[] = [];
+    globalThis.fetch = runtimeTavernApiFetch();
+    const agentRuntimeClient = runtimeClient({ calls });
+
+    await assert.rejects(
+        sendTavernChatMessage(
+            {
+                chatId: planningChatId,
+                content: '[@Critic](agent://agent%3Acritic) Plan the next launch.',
+            },
+            agentRuntimeClient as never
+        ),
+        /Agent "agent:critic" is not part of chat/u
+    );
+    assert.deepEqual(calls, []);
+});
+
+test('sendTavernChatMessage posts independent turns for multiple linked agents', async () => {
+    await seedPlanningChat({
+        agents: [
+            { id: 'agent:planner', name: 'Planner' },
+            { id: 'agent:critic', name: 'Critic' },
+        ],
+    });
+    const calls: unknown[] = [];
+    globalThis.fetch = runtimeTavernApiFetch({
+        chat: runtimeTavernChat({
+            agents: [
+                { id: 'agent:planner', name: 'Planner' },
+                { id: 'agent:critic', name: 'Critic' },
+            ],
+        }),
+    });
+    const agentRuntimeClient = runtimeClient({ calls });
+
+    const result = await sendTavernChatMessage(
         {
             chatId: planningChatId,
-            input: {
-                agent: {
-                    agentId: 'agent:planner',
-                },
-                message: {
-                    content: 'Plan the next launch.',
-                    id: result.clientMessageId,
-                    metadata,
-                    nonce: result.clientMessageId,
-                },
-                target: {
-                    externalId: planningChatId,
-                    target: `channel:${planningChatId}`,
-                    type: 'tavern',
-                },
-            },
+            content:
+                '[@Planner](agent://agent%3Aplanner) [@Critic](agent://agent%3Acritic) Plan the next launch.',
         },
-    ]);
+        agentRuntimeClient as never
+    );
+
+    assert.deepEqual(
+        result.turns.map((turn) => turn.agentId),
+        ['agent:planner', 'agent:critic']
+    );
+    assert.deepEqual(
+        calls.map(
+            (call) => (call as { input: { agent: { agentId: string } } }).input.agent.agentId
+        ),
+        ['agent:planner', 'agent:critic']
+    );
 });
 
 test('sendTavernChatMessage implicitly addresses generated one-agent Tavern chats', async () => {
@@ -234,70 +269,6 @@ test('sendTavernChatMessage implicitly addresses generated one-agent Tavern chat
         },
     ]);
     assert.equal(calls.length, 1);
-});
-
-test('sendTavernChatMessage posts independent turns for multiple mentioned agents', async () => {
-    await seedPlanningChat({
-        agents: [
-            { id: 'agent:planner', name: 'Planner' },
-            { id: 'agent:critic', name: 'Critic' },
-        ],
-    });
-    const calls: unknown[] = [];
-    globalThis.fetch = runtimeTavernApiFetch({
-        chat: runtimeTavernChat({
-            agents: [
-                { id: 'agent:planner', name: 'Planner' },
-                { id: 'agent:critic', name: 'Critic' },
-            ],
-        }),
-    });
-    const agentRuntimeClient = runtimeClient({ calls });
-
-    const metadata = {
-        tavern: {
-            mentions: [
-                {
-                    end: 8,
-                    id: 'agent:planner',
-                    kind: 'agent',
-                    label: 'Planner',
-                    projection: 'agent-reference',
-                    start: 0,
-                    text: '@Planner',
-                },
-                {
-                    end: 16,
-                    id: 'agent:critic',
-                    kind: 'agent',
-                    label: 'Critic',
-                    projection: 'agent-reference',
-                    start: 9,
-                    text: '@Critic',
-                },
-            ],
-        },
-    } as const;
-
-    const result = await sendTavernChatMessage(
-        {
-            chatId: planningChatId,
-            content: '@Planner @Critic Plan the next launch.',
-            metadata,
-        },
-        agentRuntimeClient as never
-    );
-
-    assert.deepEqual(
-        result.turns.map((turn) => turn.agentId),
-        ['agent:planner', 'agent:critic']
-    );
-    assert.deepEqual(
-        calls.map(
-            (call) => (call as { input: { agent: { agentId: string } } }).input.agent.agentId
-        ),
-        ['agent:planner', 'agent:critic']
-    );
 });
 
 test('sendTavernChatMessage implicitly addresses one-to-one agent DMs', async () => {
@@ -535,30 +506,6 @@ function runtimeTavernChat(input?: {
     };
 }
 
-function mentionMetadata(input: {
-    end: number;
-    id: string;
-    label: string;
-    start: number;
-    text: string;
-}) {
-    return {
-        tavern: {
-            mentions: [
-                {
-                    end: input.end,
-                    id: input.id,
-                    kind: 'agent' as const,
-                    label: input.label,
-                    projection: 'agent-reference' as const,
-                    start: input.start,
-                    text: input.text,
-                },
-            ],
-        },
-    };
-}
-
 test('sendTavernChatMessage rejects chats that are missing from Runtime', async () => {
     await assert.rejects(
         sendTavernChatMessage(
@@ -602,6 +549,6 @@ test('sendTavernChatMessage rejects non-Tavern runtime metadata on user sends', 
                 },
             } as never
         ),
-        /unrecognized key|toolCallId/u
+        /Unrecognized key|metadata/u
     );
 });

@@ -9,7 +9,7 @@ import {
 } from '../../components/ui/attachment.tsx';
 import type { ChatLogOutput, SessionHistoryOutput } from '../../lib/trpc.tsx';
 import { cn } from '../../lib/utils.ts';
-import { readMentionsFromMetadata } from '../mentions/mention-metadata.ts';
+import { readMentionsFromMarkdown } from '../mentions/mention-metadata.ts';
 import { CollapsibleText } from '../rows/collapsible-text.tsx';
 import { getMessageDisplay } from '../rows/message-display.ts';
 import type { ChatTextAnimationRange } from './chat-inline-text-animation.tsx';
@@ -39,10 +39,7 @@ export function ChatTranscriptMessageContent({
         messageDisplay.content.length === 0 &&
         message.metadata?.stopReason === 'error';
     const content = contentOverride ?? messageDisplay.content;
-    const mentions = readMentionsFromMetadata(
-        content,
-        message.metadata as Record<string, unknown> | null | undefined
-    );
+    const mentions = readMentionsFromMarkdown(content);
 
     if (isErrorEvent) {
         return (

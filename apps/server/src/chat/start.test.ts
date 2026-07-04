@@ -57,11 +57,6 @@ test('startTavernChat stores the deterministic Tavern chat name', async () => {
                 agentId: 'claw',
                 chatId: '220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
                 content: 'Hey!',
-                metadata: {
-                    tavern: {
-                        addressedAgentIds: ['claw'],
-                    },
-                },
             },
         ],
     ]);
@@ -129,21 +124,6 @@ test('startTavernChat preserves the optimistic first message identity', async ()
         agentId: 'claw',
         clientMessageId: 'msg_draft_1',
         content: 'Hey!',
-        metadata: {
-            tavern: {
-                mentions: [
-                    {
-                        end: 5,
-                        id: 'tool-1',
-                        kind: 'plugin',
-                        label: 'Tool 1',
-                        projection: 'capability-reference',
-                        start: 0,
-                        text: '@tool',
-                    },
-                ],
-            },
-        },
     });
 
     assert.deepEqual(sendTavernChatMessage.mock.calls, [
@@ -153,22 +133,6 @@ test('startTavernChat preserves the optimistic first message identity', async ()
                 chatId: '220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
                 clientMessageId: 'msg_draft_1',
                 content: 'Hey!',
-                metadata: {
-                    tavern: {
-                        addressedAgentIds: ['claw'],
-                        mentions: [
-                            {
-                                end: 5,
-                                id: 'tool-1',
-                                kind: 'plugin',
-                                label: 'Tool 1',
-                                projection: 'capability-reference',
-                                start: 0,
-                                text: '@tool',
-                            },
-                        ],
-                    },
-                },
             },
         ],
     ]);

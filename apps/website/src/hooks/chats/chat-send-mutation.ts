@@ -1,3 +1,4 @@
+import { parseAgentReferenceTarget, parseTavernRichReferences } from '@tavern/api/rich-references';
 import type { ChatMessageAttachmentInput } from '../../lib/trpc.tsx';
 import { createChatRunId } from './chat-run-id.ts';
 
@@ -68,7 +69,6 @@ export function createChatSendMutationHandlers(utils: ChatSendMutationUtils) {
             chatId: string;
             clientMessageId?: string;
             content: string;
-            metadata?: Record<string, unknown>;
         }) => {
             const timestamp = new Date().toISOString();
             const timelineMessageId = input.clientMessageId ?? `msg_${crypto.randomUUID()}`;
@@ -78,7 +78,6 @@ export function createChatSendMutationHandlers(utils: ChatSendMutationUtils) {
                 chatId: input.chatId,
                 content: input.content,
                 id: timelineMessageId,
-                metadata: input.metadata,
                 timestamp,
             });
 
@@ -157,23 +156,21 @@ export function createChatSendMutationHandlers(utils: ChatSendMutationUtils) {
     };
 }
 
-function inputAgentIds(input: { agentId?: string; metadata?: Record<string, unknown> }) {
+function inputAgentIds(input: { agentId?: string; content: string }) {
     if (input.agentId) {
         return [input.agentId];
     }
 
-    const tavern = readRecord(input.metadata?.tavern);
-    const mentions = Array.isArray(tavern?.mentions) ? tavern.mentions : [];
-    const agentIds = mentions.flatMap((mention) => {
-        const record = readRecord(mention);
-        return record?.kind === 'agent' && typeof record.id === 'string' ? [record.id] : [];
-    });
+    return [
+        ...new Set(
+            parseTavernRichReferences(input.content).flatMap((reference) => {
+                if (reference.kind !== 'agent') {
+                    return [];
+                }
 
-    return [...new Set(agentIds)];
-}
-
-function readRecord(value: unknown): Record<string, unknown> | null {
-    return typeof value === 'object' && value !== null && !Array.isArray(value)
-        ? (value as Record<string, unknown>)
-        : null;
+                const agentId = parseAgentReferenceTarget(reference.id);
+                return agentId ? [agentId] : [];
+            })
+        ),
+    ];
 }

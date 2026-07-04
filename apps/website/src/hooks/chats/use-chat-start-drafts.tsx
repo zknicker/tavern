@@ -13,7 +13,6 @@ export interface ChatStartDraft {
     createdAt: string;
     errorMessage: string | null;
     id: string;
-    metadata?: Record<string, unknown>;
     realAcceptedAt: string | null;
     realChatId: string | null;
     realRunId: string | null;
@@ -26,7 +25,6 @@ interface CreateChatStartDraftInput {
     agentId: string;
     attachments?: ChatMessageAttachmentInput[];
     content: string;
-    metadata?: Record<string, unknown>;
 }
 
 interface ChatStartDraftContextValue {
@@ -63,7 +61,6 @@ export function ChatStartDraftProvider({ children }: PropsWithChildren) {
             createdAt: new Date().toISOString(),
             errorMessage: null,
             id: `tavern-draft-chat:${crypto.randomUUID()}`,
-            metadata: input.metadata,
             realAcceptedAt: null,
             realChatId: null,
             realRunId: null,

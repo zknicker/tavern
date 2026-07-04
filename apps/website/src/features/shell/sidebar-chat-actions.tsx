@@ -37,6 +37,7 @@ interface SidebarChatContextMenuProps {
     onArchive: (chat: ChatListItem) => void;
     onCloseTab?: (chat: ChatListItem) => void;
     onCustomizeColor?: (chat: ChatListItem, color: string | null) => void;
+    onEditParticipants?: (chat: ChatListItem) => void;
     onEditSystemPrompt?: (chat: ChatListItem) => void;
     onOpenInNewWindow?: (chat: ChatListItem) => void;
     onRename: (chat: ChatListItem) => void;
@@ -49,12 +50,14 @@ export function SidebarChatContextMenu({
     onArchive,
     onCloseTab,
     onCustomizeColor,
+    onEditParticipants,
     onEditSystemPrompt,
     onOpenInNewWindow,
     onRename,
     triggerClassName,
 }: SidebarChatContextMenuProps) {
     const canCustomizeColor = canCustomizeSidebarChatColor(chat) && onCustomizeColor;
+    const canEditParticipants = canEditSidebarChatParticipants(chat) && onEditParticipants;
     const canEditSystemPrompt = canEditSidebarChatSystemPrompt(chat) && onEditSystemPrompt;
     const canCloseTab = Boolean(onCloseTab);
 
@@ -104,6 +107,12 @@ export function SidebarChatContextMenu({
                         Instructions
                     </ContextMenuItem>
                 ) : null}
+                {canEditParticipants ? (
+                    <ContextMenuItem onClick={() => onEditParticipants(chat)}>
+                        <Icon className={contextMenuIconClassName} icon={PencilEdit02Icon} />
+                        Participants
+                    </ContextMenuItem>
+                ) : null}
                 {onOpenInNewWindow ? (
                     <ContextMenuItem onClick={() => onOpenInNewWindow(chat)}>
                         <Icon className={contextMenuIconClassName} icon={ArrowUpRight01Icon} />
@@ -118,7 +127,7 @@ export function SidebarChatContextMenu({
                 ) : null}
                 <ContextMenuItem onClick={() => onArchive(chat)} variant="destructive">
                     <Icon className={contextMenuIconClassName} icon={Trash2} />
-                    Archive chat
+                    Delete chat
                 </ContextMenuItem>
             </ContextMenuPopup>
         </ContextMenu>
@@ -316,7 +325,7 @@ function SidebarChatRenameForm({
 }
 
 export function canRenameSidebarChat(chat: Pick<ChatListItem, 'boundAgentIds'>) {
-    return chat.boundAgentIds.length === 1;
+    return chat.boundAgentIds.length > 0;
 }
 
 export function canCustomizeSidebarChatColor(
@@ -327,6 +336,12 @@ export function canCustomizeSidebarChatColor(
 
 export function canEditSidebarChatSystemPrompt(chat: Pick<ChatListItem, 'type'>) {
     return chat.type === 'tavern';
+}
+
+export function canEditSidebarChatParticipants(
+    chat: Pick<ChatListItem, 'conversationKind' | 'type'>
+) {
+    return chat.type === 'tavern' && chat.conversationKind === 'channel';
 }
 
 export function normalizeSidebarChatSystemPrompt(systemPrompt: string) {

@@ -1,3 +1,4 @@
+import { parseAgentReferenceTarget } from '@tavern/api/rich-references';
 import * as React from 'react';
 import { queryPolicy } from '../../lib/query-policy.ts';
 import { type AgentListOutput, trpc } from '../../lib/trpc.tsx';
@@ -58,8 +59,18 @@ export function useMentionComposer({
     const [mentions, setMentions] = React.useState<Mention[]>([]);
     const [activeQuery, setActiveQuery] = React.useState<ActiveMentionQuery | null>(null);
     const [activeIndex, setActiveIndex] = React.useState(0);
+    const skillScopeAgentIds = React.useMemo(
+        () =>
+            resolveSkillScopeAgentIds({
+                agentId,
+                mentionableAgentIds,
+                mentions,
+            }),
+        [agentId, mentionableAgentIds, mentions]
+    );
     const mentionOptionsState = useMentionOptions({
         agentId,
+        agentIds: skillScopeAgentIds,
         agents,
         mentionableAgentIds,
         query: activeQuery?.query ?? '',
@@ -75,17 +86,17 @@ export function useMentionComposer({
         supportsCommands,
     });
     const prefetchMentionOptions = React.useCallback(() => {
-        if (!agentId) {
+        if (skillScopeAgentIds.length === 0) {
             return;
         }
 
         void utils.mention.inventory.prefetch(
             {
-                agentId,
+                agentIds: [...skillScopeAgentIds],
             },
             queryPolicy.agentRuntimeSnapshot
         );
-    }, [agentId, utils]);
+    }, [skillScopeAgentIds, utils]);
 
     React.useEffect(() => {
         prefetchMentionOptions();
@@ -229,6 +240,38 @@ export function useMentionComposer({
         prefetchMentionOptions,
         value: content,
     } satisfies MentionComposerState;
+}
+
+export function resolveSkillScopeAgentIds({
+    agentId,
+    mentionableAgentIds = [],
+    mentions,
+}: {
+    agentId: string;
+    mentionableAgentIds?: readonly string[];
+    mentions: readonly Mention[];
+}) {
+    const mentionable = new Set(mentionableAgentIds);
+    const taggedAgentIds = mentions.flatMap((mention) => {
+        if (mention.kind !== 'agent' || mention.projection !== 'agent-reference') {
+            return [];
+        }
+
+        const parsed = parseAgentReferenceTarget(mention.id);
+        if (!parsed) {
+            return [];
+        }
+
+        if (mentionable.size > 0 && !mentionable.has(parsed)) {
+            return [];
+        }
+
+        return [parsed];
+    });
+    const fallbackAgentIds = mentionableAgentIds.length > 0 ? mentionableAgentIds : [agentId];
+    const scopedAgentIds = taggedAgentIds.length > 0 ? taggedAgentIds : fallbackAgentIds;
+
+    return [...new Set(scopedAgentIds.map((id) => id.trim()).filter(Boolean))];
 }
 
 function isSameMentionQuery(left: ActiveMentionQuery, right: ActiveMentionQuery | null) {

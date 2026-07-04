@@ -258,7 +258,9 @@ class MentionNodeView implements NodeView {
     }
 
     destroy() {
-        this.#root.unmount();
+        queueMicrotask(() => {
+            this.#root.unmount();
+        });
     }
 
     ignoreMutation() {

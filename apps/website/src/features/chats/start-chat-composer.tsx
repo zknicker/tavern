@@ -12,11 +12,7 @@ import { useChatDraftLaunch } from '../../hooks/chats/use-chat-draft-launch.ts';
 import { runtimeUnhealthyTooltip, useCapability } from '../../hooks/connections/use-capability.ts';
 import type { AgentListOutput } from '../../lib/trpc.tsx';
 import { cn } from '../../lib/utils.ts';
-import {
-    buildMentionMetadata,
-    compileMentionSubmission,
-    normalizeMentions,
-} from '../mentions/mention-text.ts';
+import { compileMentionSubmission, normalizeMentions } from '../mentions/mention-text.ts';
 import type { Mention } from '../mentions/mention-types.ts';
 import {
     MentionComposerEditor,
@@ -84,7 +80,6 @@ export function StartChatComposer({
             }))
         );
         const submission = compileMentionSubmission(submittedPrompt, submittedMentions);
-        const metadata = buildMentionMetadata(submission.mentions);
         const submittedAttachments = attachments;
 
         setPrompt('');
@@ -95,7 +90,6 @@ export function StartChatComposer({
             agentId: agent.id,
             ...(submittedAttachments.length ? { attachments: submittedAttachments } : {}),
             content: submission.content.trim(),
-            metadata,
         });
     });
     const mentionComposer = useMentionComposer({

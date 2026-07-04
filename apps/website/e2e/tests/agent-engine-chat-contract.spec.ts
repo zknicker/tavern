@@ -23,8 +23,7 @@ test('preserves Tavern chat session routing and renders one final reply', async 
     await page.getByRole('button', { name: 'Start chat' }).click();
 
     const chatId = await waitForRealChatRoute(page);
-    const markerParagraphs = transcriptParagraph(page, new RegExp(escapeRegExp(expectedReply)));
-    await expect(markerParagraphs).toHaveCount(2, { timeout: 45_000 });
+    await expect(markerCodeOccurrences(page, expectedReply)).toHaveCount(2, { timeout: 45_000 });
     await expect(page.getByLabel('Agent is thinking')).toHaveCount(0);
     expect(chatId).not.toBe('new');
 });
@@ -34,7 +33,7 @@ test('keeps channel messages human-only until an agent is addressed', async ({ p
 
     const humanOnlyMarker = `QA-HUMAN-ONLY-${Date.now()}`;
 
-    await page.goto('/chats/cht_demo');
+    await createChannel(page, `human-only-${Date.now()}`);
     await fillChatComposer(page, `Human only channel smoke ${humanOnlyMarker}`);
     await page.getByRole('textbox', { name: 'Chat message' }).press('Enter');
 
@@ -50,7 +49,7 @@ test('routes a channel mention to the Tavern agent', async ({ page }) => {
 
     const expectedReply = `QA-CHANNEL-MENTION-${Date.now()}`;
 
-    await page.goto('/chats/cht_demo');
+    await createChannel(page, `mention-route-${Date.now()}`);
     await mentionTavernAgent(page, `Reply exactly \`${expectedReply}\`.`);
 
     await expect(transcriptParagraph(page, expectedReply)).toBeVisible({ timeout: 60_000 });
@@ -70,20 +69,6 @@ test('routes the Tavern agent DM through its current session', async ({ page }) 
     await expect(page.getByLabel('Agent is thinking')).toHaveCount(0);
 });
 
-test('starts a new Tavern agent session from the DM UI', async ({ page }) => {
-    test.setTimeout(120_000);
-
-    await page.goto('/chats/cht_tavern_agent_dm');
-
-    const newSessionButton = page.getByRole('button', { name: 'New session' });
-    await expect(newSessionButton).toBeVisible({ timeout: 30_000 });
-    await newSessionButton.click();
-
-    await expect(page.locator('main').getByText('Started new session')).toBeVisible({
-        timeout: 60_000,
-    });
-});
-
 test('stores Tavern generated AGENTS.md without runtime bootstrap companion files', async () => {
     test.setTimeout(120_000);
 
@@ -98,9 +83,9 @@ test('stores Tavern generated AGENTS.md without runtime bootstrap companion file
     const fullText = await getRuntimeInstructions(runtimeUrl);
 
     expect(fullText).toContain('# Tavern Agent Instructions');
-    expect(fullText).toContain("Vault is the user's central knowledge hub");
-    expect(fullText).toContain('Use the installed `vault` skill');
-    expect(fullText).toContain('The Vault path is `TAVERN_VAULT_PATH`');
+    expect(fullText).toContain('Memory is the durable knowledge you can carry forward.');
+    expect(fullText).toContain("Shared Memory is Tavern's browsable Markdown knowledge base");
+    expect(fullText).toContain('run `memory_search` before concluding you lack context');
     expect(fullText).not.toContain('# SOUL.md - Who You Are');
     expect(fullText).not.toContain('# TOOLS.md - Local Notes');
     expect(fullText).not.toContain('# IDENTITY.md - Who Am I?');
@@ -122,6 +107,20 @@ async function waitForRealChatRoute(page: Page) {
     }
 
     return decodeURIComponent(chatId);
+}
+
+async function createChannel(page: Page, name: string) {
+    await page.goto('/overview');
+
+    await page.getByText('Channels', { exact: true }).hover();
+    await page.getByRole('button', { name: 'New channel' }).click();
+    await page.getByLabel('Channel name').fill(name);
+    await expect(page.getByRole('button', { name: 'Create' })).toBeEnabled({
+        timeout: 30_000,
+    });
+    await page.getByRole('button', { name: 'Create' }).click();
+
+    return await waitForRealChatRoute(page);
 }
 
 async function fillChatComposer(page: Page, text: string) {
@@ -149,14 +148,18 @@ async function mentionTavernAgent(page: Page, text: string) {
     await composer.press('Enter');
 }
 
+function markerCodeOccurrences(page: Page, marker: string) {
+    return page.locator('code').filter({ hasText: exactTextRegex(marker) });
+}
+
 function transcriptParagraph(page: Page, text: string | RegExp) {
-    return page.locator('main p').filter({
+    return page.locator('p').filter({
         hasText: typeof text === 'string' ? exactTextRegex(text) : text,
     });
 }
 
 function userPromptParagraph(page: Page, marker: string) {
-    return page.locator('main p').filter({ hasText: marker });
+    return page.locator('p').filter({ hasText: marker });
 }
 
 function exactTextRegex(text: string) {

@@ -224,6 +224,7 @@ test('agent chat list labels internal runtime sessions by source', async () => {
         {
             bindingId: null,
             bindings: [{ agentId: 'main' }],
+            hasActiveTurn: false,
             id: internalChatId,
             inboundMode: 'active',
             metadata: {
@@ -390,6 +391,7 @@ test('agent chat list titles runtime DMs from participants and platform metadata
         {
             bindingId: null,
             bindings: [{ agentId: 'blippy' }],
+            hasActiveTurn: false,
             id: 'discord:agent:blippy:dm:user:778786269458464829',
             inboundMode: 'active',
             metadata: {},
@@ -480,6 +482,7 @@ test('agent chat list resolves DM targets through participant identities', async
         {
             bindingId: null,
             bindings: [{ agentId: 'blippy' }],
+            hasActiveTurn: false,
             id: 'discord:agent:blippy:dm:user:778786269458464829',
             inboundMode: 'active' as const,
             metadata: {},
@@ -515,6 +518,7 @@ test('agent chat list resolves DM targets through participant identities', async
         {
             bindingId: null,
             bindings: [{ agentId: 'main' }],
+            hasActiveTurn: false,
             id: 'discord:agent:main:dm:user:778786269458464829',
             inboundMode: 'active' as const,
             metadata: {},

@@ -63,6 +63,12 @@ resolved skill bundles through `HarnessAgent`'s `skills` setting so the harness
 adapter surfaces them as runtime skills. Runtime keeps broad Tavern behavior in
 the instruction text and does not append `SKILL.md` bodies there.
 
+Message skill references such as `[$ui](skill://ui)` are turn-scoped nudges.
+They do not change `enabledSkillIds`, install a skill, or make a disabled skill
+available. Runtime only adds an activation hint when the addressed Agent already
+has that skill assigned; skill instructions still flow through the normal
+`HarnessAgent.skills` bundle.
+
 The first agent-engine pass exposes the built-in local tools as enabled,
 configured, read-only Runtime tool diagnostics. Agent-specific access comes
 from skill assignments, Plugin grants, sandbox mode, and approval policy rather

@@ -216,6 +216,9 @@ async function dispatchAgentEngineStatic({ request, url }: { request: Request; u
                 ? ensurePrimaryAgent()
                 : getStoredAgent(agentId)
             : null;
+        if (agentId && !agent) {
+            return agentRuntimeSkillListSchema.parse({ skills: [] });
+        }
         return agentRuntimeSkillListSchema.parse({
             skills: await listRuntimeSkills({ agent }),
         });

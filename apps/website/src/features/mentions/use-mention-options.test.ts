@@ -14,7 +14,7 @@ describe('filterMentionOptionsForQuery', () => {
         const options: MentionOption[] = [
             {
                 description: 'Computer use',
-                id: 'plugin://computer-use@openai-bundled',
+                id: 'app://computer-use/Computer%20Use',
                 insertText: 'Computer Use',
                 kind: 'app',
                 label: 'Computer Use',
@@ -23,7 +23,7 @@ describe('filterMentionOptionsForQuery', () => {
             },
             {
                 description: 'Computer use',
-                id: 'plugin://computer-use@openai-bundled',
+                id: 'app://computer-use/Helium',
                 insertText: 'Helium',
                 kind: 'app',
                 label: 'Helium',
@@ -39,7 +39,7 @@ describe('filterMentionOptionsForQuery', () => {
         const options: MentionOption[] = [
             {
                 description: 'Running in Computer Use',
-                id: 'plugin://computer-use@openai-bundled',
+                id: 'app://computer-use/Helium',
                 insertText: 'Helium',
                 kind: 'app',
                 label: 'Helium',
@@ -75,7 +75,7 @@ describe('selectMentionOptionsForQuery', () => {
         ).toEqual([
             {
                 description: 'Agent in this chat',
-                id: 'agent:planner',
+                id: 'agent://agent%3Aplanner',
                 insertText: '@Planner',
                 kind: 'agent',
                 label: 'Planner',
@@ -85,7 +85,7 @@ describe('selectMentionOptionsForQuery', () => {
         ]);
     });
 
-    it('carries agent appearance into agent mention metadata', () => {
+    it('carries agent appearance into local option metadata', () => {
         const options = selectMentionOptionsForQuery({
             agents: [
                 {
@@ -152,7 +152,7 @@ describe('selectMentionOptionsForQuery', () => {
 function createOption(input: { label: string }): InventoryMentionOption {
     return {
         description: 'Computer Use',
-        id: 'plugin://computer-use@openai-bundled',
+        id: `app://computer-use/${encodeURIComponent(input.label)}`,
         insertText: input.label,
         kind: 'app',
         label: input.label,

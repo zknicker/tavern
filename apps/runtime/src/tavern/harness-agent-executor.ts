@@ -43,6 +43,7 @@ import {
 } from './chat-api/index.ts';
 import { createTavernChatTools } from './chat-context-tools.ts';
 import { withRuntimeBridgeBootstrap } from './harness-bridge-bootstrap.ts';
+import { projectTavernMessageForAgent } from './mention-projection.ts';
 
 const emptyAssistantMessageDiagnostic = 'No reply: the harness returned empty content.';
 const maxAmbientContextMessages = 20;
@@ -527,9 +528,16 @@ function formatPromptMessage(message: TavernChatMessage) {
 function formatPromptMessageContent(input: AgentExecutorInput) {
     const request = getMessage(input.requestMessageId);
     if (request) {
-        return formatPromptMessage(request);
+        const projectedContent = projectTavernMessageForAgent({
+            content: request.content,
+            enabledSkillIds: input.agent.enabledSkillIds,
+        });
+        return formatPromptMessage({ ...request, content: projectedContent });
     }
-    return input.content;
+    return projectTavernMessageForAgent({
+        content: input.content,
+        enabledSkillIds: input.agent.enabledSkillIds,
+    });
 }
 
 function persistHarnessActivities(

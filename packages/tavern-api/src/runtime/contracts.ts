@@ -1876,36 +1876,7 @@ export const agentRuntimeSessionArtifactSchema = z.object({
     toolCallId: z.string().trim().min(1).nullable(),
 });
 
-export const agentRuntimeMentionProjectionSchema = z.enum([
-    'agent-reference',
-    'capability-reference',
-    'image-input',
-    'path-reference',
-    'skill-context',
-]);
-
-export const agentRuntimeMentionSchema = z
-    .object({
-        end: z.number().int().nonnegative(),
-        id: z.string().trim().min(1),
-        kind: z.enum(['agent', 'app', 'directory', 'file', 'image', 'plugin', 'skill']),
-        label: z.string().trim().min(1),
-        metadata: z.record(z.string(), z.unknown()).optional(),
-        projection: agentRuntimeMentionProjectionSchema,
-        start: z.number().int().nonnegative(),
-        text: z.string().min(1),
-    })
-    .refine((value) => value.end > value.start, {
-        message: 'Mention end offset must be greater than start offset.',
-        path: ['end'],
-    });
-
-export const agentRuntimeTavernMessageMetadataSchema = z
-    .object({
-        addressedAgentIds: z.array(z.string().trim().min(1)).optional(),
-        mentions: z.array(agentRuntimeMentionSchema).optional(),
-    })
-    .passthrough();
+export const agentRuntimeTavernMessageMetadataSchema = z.object({}).passthrough();
 
 export const agentRuntimeMessageMetadataSchema = z
     .object({

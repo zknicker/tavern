@@ -15,7 +15,6 @@ export interface ComputerUseAppInventory {
     status: 'ready' | 'unavailable';
 }
 
-const computerUsePluginUri = 'plugin://computer-use@openai-bundled';
 const inventoryTtlMs = 30_000;
 const inventoryFetchTimeoutMs = 2500;
 
@@ -23,10 +22,6 @@ let cachedInventory: {
     expiresAt: number;
     inventory: ComputerUseAppInventory;
 } | null = null;
-
-export function getComputerUsePluginUri() {
-    return computerUsePluginUri;
-}
 
 export function clearComputerUseAppInventoryCache() {
     cachedInventory = null;

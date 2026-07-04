@@ -275,8 +275,8 @@ idx_chat_messages_agent_session(agent_session_id)
 Rules:
 
 - Message creation is durable before model work starts.
-- A channel message starts no agent work unless its Tavern mention metadata
-  addresses one or more agent participants in that chat.
+- A channel message starts no agent work unless its content includes explicit
+  `agent://` rich references for one or more agent participants in that chat.
 - An agent DM addresses its one agent participant implicitly.
 - Sequence is assigned in the message insert transaction.
 - Duplicate `message.id` returns the existing message.

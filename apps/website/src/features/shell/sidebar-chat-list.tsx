@@ -1,4 +1,4 @@
-import { Archive02Icon, Plus } from '@hugeicons/core-free-icons';
+import { Plus } from '@hugeicons/core-free-icons';
 import * as React from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { ChannelIconBox } from '../../components/chats/channel-icon-box.tsx';
@@ -14,7 +14,9 @@ import {
 } from '../../components/ui/sidebar.tsx';
 import { Spinner } from '../../components/ui/spinner.tsx';
 import { useAgentAppearanceLookup } from '../../hooks/agents/use-agent-appearance.ts';
+import { useAgentList } from '../../hooks/agents/use-agent-list.ts';
 import { useChatArchive } from '../../hooks/chats/use-chat-archive.ts';
+import { useChatCreate } from '../../hooks/chats/use-chat-create.ts';
 import { getChatDraftRouteState } from '../../hooks/chats/use-chat-draft-launch.ts';
 import { useChatList } from '../../hooks/chats/use-chat-list.ts';
 import type { ChatStartDraft } from '../../hooks/chats/use-chat-start-drafts.tsx';
@@ -32,6 +34,7 @@ import { appRoutes } from '../../lib/app-routes.ts';
 import { markChatTiming } from '../../lib/chat-timing.ts';
 import { resolveAgentInk } from '../agents/agent-color-presets.ts';
 import { AgentFace } from '../chats/agent-face.tsx';
+import { ChannelDialog } from '../chats/channel-dialog.tsx';
 import { buildChatList, type ChatListItem, getChatAgentId } from '../chats/chat-list-data.ts';
 import { buildChatPath } from '../chats/chat-path.ts';
 import { getChannelColorStyle } from './channel-color-options.ts';
@@ -62,12 +65,17 @@ export function AppSidebarChatList() {
     const navigate = useNavigate();
     const capability = useCapability();
     const chatQuery = useChatList();
+    const agentsQuery = useAgentList();
     const drafts = useChatStartDrafts();
+    const createChat = useChatCreate();
     const updateChat = useChatUpdate();
     const archiveChat = useChatArchive();
     const systemPrompt = useChatSystemPrompt();
     const tabAppearance = useChatTabAppearance();
     const [renamingChat, setRenamingChat] = React.useState<ChatListItem | null>(null);
+    const [creatingChannel, setCreatingChannel] = React.useState(false);
+    const [editingParticipantsChat, setEditingParticipantsChat] =
+        React.useState<ChatListItem | null>(null);
     const [editingSystemPromptChat, setEditingSystemPromptChat] =
         React.useState<ChatListItem | null>(null);
     const sidebarChats = React.useMemo(
@@ -147,11 +155,10 @@ export function AppSidebarChatList() {
                             aria-label="New channel"
                             className="absolute top-1/2 right-[0.0625rem] -translate-y-1/2 opacity-0 group-focus-within/channels:opacity-100 group-hover/channels:opacity-100 [&_svg]:size-[1.0625rem]"
                             disabled={!newChatGate.healthy}
-                            render={
-                                newChatGate.healthy ? (
-                                    <NavLink to={appRoutes.overview} />
-                                ) : undefined
-                            }
+                            onClick={() => {
+                                createChat.reset();
+                                setCreatingChannel(true);
+                            }}
                             size="icon-xs"
                             title={newChatDisabledReason ?? 'New channel'}
                             variant="ghost"
@@ -161,32 +168,29 @@ export function AppSidebarChatList() {
                     </div>
                     <SidebarGroupContent>
                         <SidebarMenu>
-                            {sidebarChats.channels.map((chat) => {
-                                const isArchivePending =
-                                    archiveChat.isPending &&
-                                    archiveChat.variables?.chatId === chat.id;
-
-                                return (
-                                    <SidebarRecentChatItem
-                                        chat={chat}
-                                        isActive={location.pathname === buildChatPath(chat.id)}
-                                        isArchivePending={isArchivePending}
-                                        key={chat.id}
-                                        onArchive={(selectedChat) => {
-                                            void archiveSidebarChat(selectedChat);
-                                        }}
-                                        onCustomizeColor={(selectedChat, color) => {
-                                            tabAppearance.reset();
-                                            void setChannelColor(selectedChat, color);
-                                        }}
-                                        onEditSystemPrompt={(selectedChat) => {
-                                            systemPrompt.reset();
-                                            setEditingSystemPromptChat(selectedChat);
-                                        }}
-                                        onRename={openRename}
-                                    />
-                                );
-                            })}
+                            {sidebarChats.channels.map((chat) => (
+                                <SidebarRecentChatItem
+                                    chat={chat}
+                                    isActive={location.pathname === buildChatPath(chat.id)}
+                                    key={chat.id}
+                                    onArchive={(selectedChat) => {
+                                        void archiveSidebarChat(selectedChat);
+                                    }}
+                                    onCustomizeColor={(selectedChat, color) => {
+                                        tabAppearance.reset();
+                                        void setChannelColor(selectedChat, color);
+                                    }}
+                                    onEditParticipants={(selectedChat) => {
+                                        updateChat.reset();
+                                        setEditingParticipantsChat(selectedChat);
+                                    }}
+                                    onEditSystemPrompt={(selectedChat) => {
+                                        systemPrompt.reset();
+                                        setEditingSystemPromptChat(selectedChat);
+                                    }}
+                                    onRename={openRename}
+                                />
+                            ))}
                         </SidebarMenu>
                     </SidebarGroupContent>
                 </SidebarGroup>
@@ -214,32 +218,29 @@ export function AppSidebarChatList() {
                                     />
                                 );
                             })}
-                            {sidebarChats.directMessages.map((chat) => {
-                                const isArchivePending =
-                                    archiveChat.isPending &&
-                                    archiveChat.variables?.chatId === chat.id;
-
-                                return (
-                                    <SidebarRecentChatItem
-                                        chat={chat}
-                                        isActive={location.pathname === buildChatPath(chat.id)}
-                                        isArchivePending={isArchivePending}
-                                        key={chat.id}
-                                        onArchive={(selectedChat) => {
-                                            void archiveSidebarChat(selectedChat);
-                                        }}
-                                        onCustomizeColor={(selectedChat, color) => {
-                                            tabAppearance.reset();
-                                            void setChannelColor(selectedChat, color);
-                                        }}
-                                        onEditSystemPrompt={(selectedChat) => {
-                                            systemPrompt.reset();
-                                            setEditingSystemPromptChat(selectedChat);
-                                        }}
-                                        onRename={openRename}
-                                    />
-                                );
-                            })}
+                            {sidebarChats.directMessages.map((chat) => (
+                                <SidebarRecentChatItem
+                                    chat={chat}
+                                    isActive={location.pathname === buildChatPath(chat.id)}
+                                    key={chat.id}
+                                    onArchive={(selectedChat) => {
+                                        void archiveSidebarChat(selectedChat);
+                                    }}
+                                    onCustomizeColor={(selectedChat, color) => {
+                                        tabAppearance.reset();
+                                        void setChannelColor(selectedChat, color);
+                                    }}
+                                    onEditParticipants={(selectedChat) => {
+                                        updateChat.reset();
+                                        setEditingParticipantsChat(selectedChat);
+                                    }}
+                                    onEditSystemPrompt={(selectedChat) => {
+                                        systemPrompt.reset();
+                                        setEditingSystemPromptChat(selectedChat);
+                                    }}
+                                    onRename={openRename}
+                                />
+                            ))}
                         </SidebarMenu>
                     </SidebarGroupContent>
                 </SidebarGroup>
@@ -268,6 +269,59 @@ export function AppSidebarChatList() {
 
                     setRenamingChat(null);
                 }}
+            />
+            <ChannelDialog
+                agents={agentsQuery.data?.agents ?? []}
+                agentsPending={agentsQuery.isPending}
+                errorMessage={createChat.error?.message ?? null}
+                initialAgentIds={[]}
+                initialDisplayName=""
+                isPending={createChat.isPending}
+                onClose={() => {
+                    if (!createChat.isPending) {
+                        createChat.reset();
+                        setCreatingChannel(false);
+                    }
+                }}
+                onSubmit={async (input) => {
+                    const created = await createChat.mutateAsync(input);
+                    setCreatingChannel(false);
+                    await navigate(buildChatPath(created.chatId));
+                }}
+                open={creatingChannel}
+                submitLabel="Create"
+                title="New channel"
+            />
+            <ChannelDialog
+                agents={agentsQuery.data?.agents ?? []}
+                agentsPending={agentsQuery.isPending}
+                errorMessage={updateChat.error?.message ?? null}
+                initialAgentIds={editingParticipantsChat?.boundAgentIds ?? []}
+                initialDisplayName={editingParticipantsChat?.displayName ?? ''}
+                isPending={updateChat.isPending}
+                onClose={() => {
+                    if (!updateChat.isPending) {
+                        updateChat.reset();
+                        setEditingParticipantsChat(null);
+                    }
+                }}
+                onSubmit={async (input) => {
+                    if (!editingParticipantsChat) {
+                        return;
+                    }
+
+                    await updateChat.mutateAsync({
+                        agentIds: input.agentIds,
+                        chatId: editingParticipantsChat.id,
+                        displayName: editingParticipantsChat.displayName,
+                    });
+
+                    setEditingParticipantsChat(null);
+                }}
+                open={editingParticipantsChat !== null}
+                showDisplayName={false}
+                submitLabel="Save"
+                title="Channel participants"
             />
             <SidebarChatSystemPromptDialog
                 chat={editingSystemPromptChat}
@@ -339,17 +393,17 @@ function SidebarDraftChatItem({
 function SidebarRecentChatItem({
     chat,
     isActive,
-    isArchivePending,
     onArchive,
     onCustomizeColor,
     onEditSystemPrompt,
+    onEditParticipants,
     onRename,
 }: {
     chat: ChatListItem;
     isActive: boolean;
-    isArchivePending: boolean;
     onArchive: (chat: ChatListItem) => void;
     onCustomizeColor: (chat: ChatListItem, color: string | null) => void;
+    onEditParticipants: (chat: ChatListItem) => void;
     onEditSystemPrompt: (chat: ChatListItem) => void;
     onRename: (chat: ChatListItem) => void;
 }) {
@@ -365,6 +419,7 @@ function SidebarRecentChatItem({
                 chat={chat}
                 onArchive={onArchive}
                 onCustomizeColor={onCustomizeColor}
+                onEditParticipants={onEditParticipants}
                 onEditSystemPrompt={onEditSystemPrompt}
                 onRename={onRename}
             >
@@ -378,16 +433,12 @@ function SidebarRecentChatItem({
                         <SidebarChatIcon chat={chat} style={channelColorStyle} />
                         <span className="min-w-0 flex-1 truncate">{title}</span>
                         <SidebarChatActivity chat={chat} hidden={hasActiveTurn} />
-                        {hasActiveTurn && !isArchivePending ? (
+                        {hasActiveTurn ? (
                             <span aria-hidden="true" className="w-6 shrink-0" />
                         ) : null}
                     </div>
                 </SidebarMenuButton>
-                <SidebarChatActiveTurnIndicator hidden={isArchivePending || !hasActiveTurn} />
-                <SidebarChatArchiveAction
-                    isPending={isArchivePending}
-                    onArchive={() => onArchive(chat)}
-                />
+                <SidebarChatActiveTurnIndicator hidden={!hasActiveTurn} />
             </SidebarChatContextMenu>
         </SidebarMenuItem>
     );
@@ -468,42 +519,5 @@ function SidebarChatActiveTurnIndicator({ hidden }: { hidden: boolean }) {
         >
             <Spinner className="size-4" />
         </span>
-    );
-}
-
-function SidebarChatArchiveAction({
-    isPending,
-    onArchive,
-}: {
-    isPending: boolean;
-    onArchive: () => void;
-}) {
-    const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-        event.preventDefault();
-        event.stopPropagation();
-
-        if (isPending) {
-            return;
-        }
-
-        onArchive();
-    };
-
-    const controlClassName =
-        'absolute top-1/2 right-0.5 z-10 size-6 -translate-y-1/2 border-transparent bg-transparent text-sidebar-muted opacity-0 shadow-none hover:bg-transparent hover:text-sidebar-accent-foreground group-focus-within/menu-item:opacity-100 group-hover/menu-item:opacity-100 data-pressed:bg-transparent sm:size-6 [&_svg]:size-4 [&_svg]:opacity-100';
-
-    return (
-        <Button
-            aria-label="Archive chat"
-            className={controlClassName}
-            disabled={isPending}
-            loading={isPending}
-            onClick={handleClick}
-            size="icon-xs"
-            title="Archive chat"
-            variant="ghost"
-        >
-            <Icon aria-hidden="true" icon={Archive02Icon} />
-        </Button>
     );
 }

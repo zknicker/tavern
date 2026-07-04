@@ -1,3 +1,4 @@
+import { formatAgentReferenceTarget } from '@tavern/api/rich-references';
 import * as React from 'react';
 import { queryPolicy } from '../../lib/query-policy.ts';
 import type {
@@ -10,12 +11,14 @@ import type { MentionOption, MentionTrigger } from './mention-types.ts';
 
 export function useMentionOptions({
     agentId,
+    agentIds = [],
     query,
     agents,
     mentionableAgentIds = [],
     trigger,
 }: {
     agentId: string;
+    agentIds?: readonly string[];
     agents: AgentListOutput['agents'];
     mentionableAgentIds?: readonly string[];
     query: string;
@@ -25,11 +28,11 @@ export function useMentionOptions({
     const shouldQueryInventory = trigger === '$';
     const inventory = trpc.mention.inventory.useQuery(
         {
-            agentId: agentId || undefined,
+            ...(agentIds.length > 0 ? { agentIds: [...agentIds] } : {}),
         },
         {
             ...queryPolicy.agentRuntimeSnapshot,
-            enabled: Boolean(agentId) && shouldQueryInventory,
+            enabled: shouldQueryInventory && agentIds.length > 0,
         }
     );
     const shouldSearchPaths = shouldQueryInventory && shouldSearchPathMentions(debouncedPathQuery);
@@ -83,7 +86,7 @@ export function selectMentionOptionsForQuery({
             const label = agent?.name ?? agentId;
             return {
                 description: 'Agent in this chat',
-                id: agentId,
+                id: formatAgentReferenceTarget(agentId),
                 insertText: label.startsWith('@') ? label : `@${label}`,
                 kind: 'agent' as const,
                 label,

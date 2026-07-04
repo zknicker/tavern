@@ -74,10 +74,17 @@ export async function listRuntimeSkills(options: RuntimeSkillOptions = {}) {
     const scanned = await scanInstalledSkillSummaries(skillsDir);
     const hasTavernAgent = scanned.some((skill) => skill.id === tavernAgentSkillId);
     const installedSkills = hasTavernAgent ? scanned : [tavernAgentSummary(skillsDir), ...scanned];
+    const agent = options.agent;
+    const agentInstalledSkills = agent
+        ? installedSkills.map((skill) => ({
+              ...skill,
+              eligible: agent.enabledSkillIds.includes(skill.id),
+          }))
+        : installedSkills;
     const skills =
         options.includePluginSkills === false
-            ? installedSkills
-            : [...installedSkills, ...listPluginSkillSummaries({ agent: options.agent })];
+            ? agentInstalledSkills
+            : [...agentInstalledSkills, ...listPluginSkillSummaries({ agent })];
 
     return agentRuntimeSkillListSchema.parse({
         skills: skills.sort((left, right) => left.name.localeCompare(right.name)),

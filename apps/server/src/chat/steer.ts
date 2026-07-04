@@ -46,7 +46,6 @@ export async function steerTavernChatTurn(
         async () =>
             await runtimeClient.steerChatTurn(parsed.chatId, {
                 content: parsed.content,
-                ...(parsed.metadata ? { metadata: parsed.metadata } : {}),
                 runId: parsed.runId,
             })
     );

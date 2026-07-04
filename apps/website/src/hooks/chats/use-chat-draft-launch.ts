@@ -11,7 +11,6 @@ interface LaunchChatDraftInput {
     agentId: string;
     attachments?: ChatMessageAttachmentInput[];
     content: string;
-    metadata?: Record<string, unknown>;
 }
 
 interface ChatDraftRouteState {
@@ -37,7 +36,6 @@ export function useChatDraftLaunch() {
                 chatId: draft.id,
                 content: draft.content,
                 id: draft.clientMessageId,
-                metadata: draft.metadata,
                 timestamp: draft.createdAt,
             });
         });

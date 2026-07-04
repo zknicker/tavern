@@ -23,11 +23,7 @@ import { useModelList } from '../../hooks/models/use-model-list.ts';
 import { getModelProviderConfig } from '../../lib/model-provider-config.ts';
 import type { AgentListOutput } from '../../lib/trpc.tsx';
 import { cn } from '../../lib/utils.ts';
-import {
-    buildMentionMetadata,
-    compileMentionSubmission,
-    normalizeMentions,
-} from '../mentions/mention-text.ts';
+import { compileMentionSubmission, normalizeMentions } from '../mentions/mention-text.ts';
 import type { ActiveMentionQuery, Mention, MentionOption } from '../mentions/mention-types.ts';
 import {
     MentionComposerEditor,
@@ -54,7 +50,6 @@ import {
 } from './chat-composer-queue.ts';
 import { ChatComposerQueuePanel } from './chat-composer-queue-panel.tsx';
 import {
-    ChatComposerAgentSelector,
     ChatComposerAttachmentButton,
     ChatComposerContextFullness,
 } from './chat-composer-tools.tsx';
@@ -259,7 +254,6 @@ export function ChatMessageComposer({
                 agentId,
                 ...(submittedAttachments.length ? { attachments: submittedAttachments } : {}),
                 content: submission.content,
-                metadata: submission.metadata,
             });
             setEditingQueuedMessageId(null);
             return;
@@ -271,7 +265,6 @@ export function ChatMessageComposer({
             chatId,
             clientMessageId: `msg_${crypto.randomUUID()}`,
             content: submission.content,
-            metadata: submission.metadata,
         });
     }
 
@@ -322,7 +315,6 @@ export function ChatMessageComposer({
             const result = await steerTurn.mutateAsync({
                 chatId,
                 content: entry.content,
-                metadata: entry.metadata,
                 runId,
             });
 
@@ -354,7 +346,6 @@ export function ChatMessageComposer({
                 chatId,
                 clientMessageId: `msg_${crypto.randomUUID()}`,
                 content: entry.content,
-                metadata: entry.metadata,
             },
             {
                 onError: () => {
@@ -461,10 +452,8 @@ export function ChatMessageComposer({
             }))
         );
         const submission = compileMentionSubmission(submittedContent, submittedMentions);
-        const metadata = buildMentionMetadata(submission.mentions);
         return {
             content: submission.content.trim(),
-            metadata,
         };
     }
 
@@ -540,13 +529,6 @@ export function ChatMessageComposer({
                     <ChatComposerAttachmentButton
                         disabled={isComposerBlocked || !canSendToRuntime}
                         onClick={() => fileInputRef.current?.click()}
-                    />
-                    <ChatComposerAgentSelector
-                        agentId={agentId}
-                        agents={agents}
-                        boundAgentIds={boundAgentIds}
-                        disabled={isComposerBlocked}
-                        onAgentChange={setAgentId}
                     />
                 </PromptInputTools>
                 <PromptInputActions>

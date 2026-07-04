@@ -33,6 +33,7 @@ export type TavernUpsertResponseRequest = TavernApiSchema<'UpsertResponseRequest
 export * from './agent-appearance.js';
 export * from './development-chat-demos.js';
 export * from './plugins/index.js';
+export * from './rich-references.js';
 export * from './rich-responses/calendar/contracts.js';
 export * from './rich-responses/catalog.js';
 export * from './rich-responses/charts/contracts.js';

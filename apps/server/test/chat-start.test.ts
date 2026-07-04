@@ -54,11 +54,6 @@ test('startTavernChat creates a bound chat and sends the first message', async (
         agentId: 'agent:planner',
         chatId: firstChatId,
         content: 'Plan the spring launch and outline the next three moves.',
-        metadata: {
-            tavern: {
-                addressedAgentIds: ['agent:planner'],
-            },
-        },
     });
 });
 

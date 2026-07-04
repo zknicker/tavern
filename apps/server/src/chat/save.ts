@@ -28,7 +28,7 @@ import { createChatTiming } from './timing.ts';
 
 const uniqueAgentIdsSchema = z
     .array(z.string().trim().min(1))
-    .length(1)
+    .min(1)
     .transform((agentIds) => [...new Set(agentIds)]);
 
 function buildChatId() {

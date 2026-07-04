@@ -69,11 +69,10 @@ models.
 Sending a message and invoking an agent are separate operations.
 
 In a `channel`, a normal human message creates only a durable message. It does
-not start agent work. A channel message starts agent work only for agent
-participants explicitly mentioned in `metadata.tavern.mentions` with
-`kind: "agent"` and `projection: "agent-reference"`. Mentioning multiple
-agent participants creates one independent turn request for each mentioned
-Agent seat.
+not start agent work. A channel message starts agent work only for Agent
+participants explicitly linked in message content with `agent://...` rich
+references, such as `[@Tavern](agent://agt_primary)`. Mentioning multiple Agent
+participants creates one independent turn request for each linked Agent seat.
 
 In an agent `dm`, the one agent participant is addressed implicitly. The user
 does not need to mention the agent, and the app must not invent routing ids from

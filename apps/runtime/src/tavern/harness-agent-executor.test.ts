@@ -155,7 +155,7 @@ describe('harness agent executor', () => {
         expect(harnessFinalAssistantText(result)).toBe('Done.');
     });
 
-    it('does not replay prior DM transcript messages into the harness prompt', () => {
+    it('does not replay prior DM transcript messages into the harness prompt', async () => {
         seedPromptChat({ chatId: 'cht_dm', kind: 'dm' });
         createPromptMessage('cht_dm', {
             authorId: 'usr_alice',
@@ -176,7 +176,7 @@ describe('harness agent executor', () => {
             role: 'user',
         });
 
-        const prompt = harnessPrompt(
+        const prompt = await harnessPrompt(
             executorInput(
                 { model: 'gpt-4.1-mini', provider: 'openai' },
                 {
@@ -192,7 +192,7 @@ describe('harness agent executor', () => {
         expect(prompt.match(/current dm question/g)).toHaveLength(1);
     });
 
-    it('includes only channel messages after the session prompt cursor', () => {
+    it('includes only channel messages after the session prompt cursor', async () => {
         seedPromptChat({ chatId: 'cht_channel', kind: 'channel' });
         createPromptMessage('cht_channel', {
             authorId: 'usr_alice',
@@ -219,7 +219,7 @@ describe('harness agent executor', () => {
             role: 'user',
         });
 
-        const prompt = harnessPrompt(
+        const prompt = await harnessPrompt(
             executorInput(
                 { model: 'gpt-4.1-mini', provider: 'openai' },
                 {
@@ -237,7 +237,7 @@ describe('harness agent executor', () => {
         expect(prompt.match(/current channel ask/g)).toHaveLength(1);
     });
 
-    it('adds reply parent context when the cursor delta does not include it', () => {
+    it('adds reply parent context when the cursor delta does not include it', async () => {
         seedPromptChat({ chatId: 'cht_reply', kind: 'channel' });
         createPromptMessage('cht_reply', {
             authorId: 'usr_alice',
@@ -260,7 +260,7 @@ describe('harness agent executor', () => {
             role: 'user',
         });
 
-        const prompt = harnessPrompt(
+        const prompt = await harnessPrompt(
             executorInput(
                 { model: 'gpt-4.1-mini', provider: 'openai' },
                 {
@@ -277,6 +277,60 @@ describe('harness agent executor', () => {
         expect(prompt).not.toContain('root context');
         expect(prompt.match(/current follow-up/g)).toHaveLength(1);
     });
+
+    it('projects linked enabled skill references into the harness prompt as hints', async () => {
+        seedPromptChat({ chatId: 'cht_skill', kind: 'dm' });
+        createPromptMessage('cht_skill', {
+            authorId: 'usr_alice',
+            content: 'Use [$prompt-skill](skill://prompt-skill) for this answer.',
+            id: 'msg_skill_current',
+            role: 'user',
+        });
+
+        const prompt = await harnessPrompt(
+            executorInput(
+                { model: 'gpt-4.1-mini', provider: 'openai' },
+                {
+                    chatId: 'cht_skill',
+                    content: 'Use [$prompt-skill](skill://prompt-skill) for this answer.',
+                    enabledSkillIds: ['prompt-skill'],
+                    requestMessageId: 'msg_skill_current',
+                }
+            )
+        );
+
+        expect(prompt).toContain('<skill_reference_context>');
+        expect(prompt).toContain('- prompt-skill');
+        expect(prompt).not.toContain('<skill name=');
+        expect(prompt).not.toContain('# Prompt Skill');
+        expect(prompt).toContain('Use [$prompt-skill](skill://prompt-skill) for this answer.');
+    });
+
+    it('does not project linked skill references that are not enabled for the agent', async () => {
+        seedPromptChat({ chatId: 'cht_disabled_skill', kind: 'dm' });
+        const content = 'Use [$prompt-skill](skill://prompt-skill) for this answer.';
+        createPromptMessage('cht_disabled_skill', {
+            authorId: 'usr_alice',
+            content,
+            id: 'msg_disabled_skill_current',
+            role: 'user',
+        });
+
+        const prompt = await harnessPrompt(
+            executorInput(
+                { model: 'gpt-4.1-mini', provider: 'openai' },
+                {
+                    chatId: 'cht_disabled_skill',
+                    content,
+                    enabledSkillIds: [],
+                    requestMessageId: 'msg_disabled_skill_current',
+                }
+            )
+        );
+
+        expect(prompt).not.toContain('<skill_reference_context>');
+        expect(prompt).toContain(content);
+    });
 });
 
 function executorInput(
@@ -284,6 +338,7 @@ function executorInput(
     input: {
         chatId?: string;
         content?: string;
+        enabledSkillIds?: string[];
         promptContextSequence?: number;
         requestMessageId?: string;
     } = {}
@@ -291,7 +346,7 @@ function executorInput(
     const chatId = input.chatId ?? 'cht_general';
     return {
         agent: {
-            enabledSkillIds: [],
+            enabledSkillIds: input.enabledSkillIds ?? [],
             id: 'agt_primary',
             isAdmin: true,
             name: 'Tavern',

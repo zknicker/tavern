@@ -70,11 +70,11 @@ test('MentionPicker groups agent mentions separately from skills', () => {
     };
     const skillOption: MentionOption = {
         description: 'Use Tavern chat context, memory, files, and local tools.',
-        id: '/skills/tavern/SKILL.md',
+        id: 'skill://tavern',
         insertText: 'tavern',
         kind: 'skill',
         label: 'Tavern Agent',
-        projection: 'skill-context',
+        projection: 'skill-activation',
     };
     const markup = renderToStaticMarkup(
         <MentionPicker

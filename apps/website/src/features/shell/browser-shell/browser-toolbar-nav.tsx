@@ -12,6 +12,7 @@ import type { RouteTab } from '../../../hooks/shell/use-route-tab.ts';
 import { routeTabs } from '../../../hooks/shell/use-route-tab.ts';
 import { cn } from '../../../lib/utils.ts';
 import { ChatParticipantFacepile } from '../../chats/chat-participant-facepile.tsx';
+import { ChatParticipantsEditButton } from '../../chats/chat-participants-edit-button.tsx';
 import { RouteTabIcon } from '../route-tab-presentation.tsx';
 import { ToolbarBreadcrumb } from './toolbar-breadcrumb.tsx';
 import { ToolbarDevMenu } from './toolbar-dev-menu.tsx';
@@ -66,7 +67,12 @@ function ToolbarParticipants() {
         return null;
     }
 
-    return <ChatParticipantFacepile chat={chat} />;
+    return (
+        <div className="flex items-center gap-1">
+            <ChatParticipantFacepile chat={chat} />
+            <ChatParticipantsEditButton chat={chat} />
+        </div>
+    );
 }
 
 function HistoryNavButtons() {

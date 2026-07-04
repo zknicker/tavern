@@ -1,0 +1,49 @@
+---
+summary: User-facing rich reference behavior for mentions, skills, apps, plugins, files, and future product cards.
+read_when:
+  - changing chat mentions, rich reference rendering, autocomplete references, or explicit typed links in messages
+  - adding a new reference type such as agent, skill, app, plugin, file, directory, product, ASIN, memory, chat, or session
+---
+
+# Rich References
+
+Tavern messages can include explicit rich references. A rich reference is a
+normal markdown link whose target tells Tavern what the link points at.
+
+Examples:
+
+- `[@Tavern](agent://agt_primary)` addresses an Agent in a channel.
+- `[$ui](skill://ui)` references a skill for the turn.
+- `[@Chrome](app://computer-use/com.google.Chrome)` references a Mac app.
+- `[README.md](/repo/README.md)` references a file.
+
+Bare text is not a rich reference. `@Tavern`, `$ui`, and ASIN-looking text stay
+plain text unless the user selects or types explicit link syntax.
+
+## Product Rules
+
+- Markdown content is the source of truth.
+- Saved messages do not need `metadata.tavern.mentions` to render, route, or
+  project references.
+- The composer may keep local metadata for live chip appearance while the user
+  edits a draft.
+- Channel messages start agent work only for linked `agent://...` references.
+- DMs still address their single Agent participant implicitly.
+- Skill references use stable `skill://<skill-id>` targets. They nudge the
+  addressed Agent to use that skill only when the skill is already assigned to
+  that Agent.
+- Skill references do not mutate `enabledSkillIds`, install skills, or inject
+  `SKILL.md` bodies. Runtime loads assigned skills through the normal
+  HarnessAgent skills path.
+- Skill autocomplete is scoped by addressed Agents in the draft. If the draft
+  has linked Agent mentions, `$` shows the union of skills assigned to those
+  Agents. If the draft has no linked Agent mentions, `$` shows the union of
+  skills assigned to the Agents in the current chat or DM.
+- Removing an Agent mention after inserting a skill mention does not delete or
+  invalidate the skill link. The filter is autocomplete assistance; Runtime
+  still decides per addressed Agent whether the referenced skill is assigned.
+- Capability references never install, enable, connect, or authorize a tool by
+  themselves.
+
+See [Rich References](../../specs/mentions.md) for the normative implementation
+contract.

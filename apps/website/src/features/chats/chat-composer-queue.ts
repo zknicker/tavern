@@ -9,7 +9,6 @@ export interface ChatComposerQueuedMessage {
     content: string;
     createdAt: string;
     id: string;
-    metadata?: Record<string, unknown>;
 }
 
 export function useChatComposerQueue(chatId: string) {

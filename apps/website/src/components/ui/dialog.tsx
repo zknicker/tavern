@@ -183,8 +183,8 @@ export function DialogFooter({
 }): React.ReactElement {
     const defaultProps = {
         className: cn(
-            'mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end',
-            variant === 'default' && 'border-border border-t pt-4',
+            'flex flex-col-reverse gap-2 sm:flex-row sm:justify-end',
+            variant === 'default' && 'mt-6',
             variant === 'bare' && 'mt-4',
             className
         ),

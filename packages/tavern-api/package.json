@@ -10,6 +10,7 @@
     "./development-chat-demos": "./src/development-chat-demos.ts",
     "./plugins": "./src/plugins/index.ts",
     "./plugins/merchbase": "./src/plugins/merchbase/manifest.ts",
+    "./rich-references": "./src/rich-references.ts",
     "./rich-responses/catalog": "./src/rich-responses/catalog.ts",
     "./rich-responses": "./src/rich-responses/contracts.ts",
     "./rich-responses/calendar": "./src/rich-responses/calendar/contracts.ts",

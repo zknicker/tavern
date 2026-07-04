@@ -5,7 +5,7 @@ export const mentionProjectionSchema = z.enum([
     'capability-reference',
     'image-input',
     'path-reference',
-    'skill-context',
+    'skill-activation',
 ]);
 
 export const mentionOptionSchema = z.object({
@@ -22,6 +22,7 @@ export const mentionOptionSchema = z.object({
 export const listMentionInventoryInputSchema = z
     .object({
         agentId: z.string().trim().min(1).optional(),
+        agentIds: z.array(z.string().trim().min(1)).min(1).optional(),
         limit: z.number().int().min(1).max(200).default(120),
     })
     .optional();

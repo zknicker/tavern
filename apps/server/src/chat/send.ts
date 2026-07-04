@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { AgentRuntimeCreateMessage } from '@tavern/api';
+import { parseAgentReferenceTarget, parseTavernRichReferences } from '@tavern/api/rich-references';
 import {
     requireRuntimeCapabilityHealthy,
     withCapabilityStatus,
@@ -39,13 +40,13 @@ export async function sendTavernChatMessage(
 
     const chat = chatRecord.chat;
 
-    const addressedAgentIds = resolveAddressedAgentIds({
+    const targetAgentIds = resolveTargetAgentIds({
         chat,
+        content: parsed.content,
         requestedAgentId: parsed.agentId,
-        metadata: parsed.metadata,
     });
     await assertAgentsBelongToRuntime({
-        agentIds: addressedAgentIds,
+        agentIds: targetAgentIds,
         runtimeId: chatRecord.runtimeId,
     });
 
@@ -70,11 +71,10 @@ export async function sendTavernChatMessage(
         author_id: 'usr_tavern',
         id: clientMessageId,
         metadata: {
-            ...(parsed.metadata ?? {}),
             runtime: {
                 ...(parsed.modelRef ? { modelRef: parsed.modelRef } : {}),
                 runtimeId: chatRecord.runtimeId,
-                source: addressedAgentIds.length > 0 ? 'agent-engine' : 'tavern',
+                source: targetAgentIds.length > 0 ? 'agent-engine' : 'tavern',
             },
         },
         ...(parsed.attachments?.length ? { attachments: parsed.attachments } : {}),
@@ -83,7 +83,7 @@ export async function sendTavernChatMessage(
         role: 'user',
     });
 
-    if (addressedAgentIds.length === 0) {
+    if (targetAgentIds.length === 0) {
         return sendChatMessageResultSchema.parse({
             acceptedAt: messageReceipt.message.created_at,
             chatId: parsed.chatId,
@@ -104,7 +104,7 @@ export async function sendTavernChatMessage(
     });
 
     const acceptedTurns = await Promise.all(
-        addressedAgentIds.map((agentId) =>
+        targetAgentIds.map((agentId) =>
             withCapabilityStatus(
                 {
                     capability: 'gateway',
@@ -122,7 +122,6 @@ export async function sendTavernChatMessage(
                                 : {}),
                             content: parsed.content,
                             id: clientMessageId,
-                            ...(parsed.metadata ? { metadata: parsed.metadata } : {}),
                             ...(parsed.modelRef ? { modelRef: parsed.modelRef } : {}),
                             nonce: clientMessageId,
                         },
@@ -144,9 +143,9 @@ export async function sendTavernChatMessage(
     });
 }
 
-function resolveAddressedAgentIds(input: {
+function resolveTargetAgentIds(input: {
     chat: NonNullable<Awaited<ReturnType<typeof getRuntimeChatRecord>>>['chat'];
-    metadata: SendChatMessageInput['metadata'];
+    content: string;
     requestedAgentId?: string;
 }) {
     const chatAgentIds = new Set(input.chat.bindings.map((binding) => binding.agentId));
@@ -170,7 +169,7 @@ function resolveAddressedAgentIds(input: {
         return generatedAgentChatIds;
     }
 
-    const mentionedAgentIds = readMentionedAgentIds(input.metadata);
+    const mentionedAgentIds = readMentionedAgentIds(input.content);
     for (const agentId of mentionedAgentIds) {
         if (!chatAgentIds.has(agentId)) {
             throw new Error(`Agent "${agentId}" is not part of chat "${input.chat.id}".`);
@@ -198,14 +197,19 @@ async function assertAgentsBelongToRuntime(input: { agentIds: string[]; runtimeI
     }
 }
 
-function readMentionedAgentIds(metadata: SendChatMessageInput['metadata']) {
-    const addressedAgentIds = metadata?.tavern?.addressedAgentIds ?? [];
-    const mentions = metadata?.tavern?.mentions ?? [];
-    const mentionedAgentIds = mentions
-        .filter((mention) => mention.kind === 'agent')
-        .map((mention) => mention.id);
+function readMentionedAgentIds(content: string) {
+    return [
+        ...new Set(
+            parseTavernRichReferences(content).flatMap((reference) => {
+                if (reference.kind !== 'agent') {
+                    return [];
+                }
 
-    return [...new Set([...addressedAgentIds, ...mentionedAgentIds])];
+                const agentId = parseAgentReferenceTarget(reference.id);
+                return agentId ? [agentId] : [];
+            })
+        ),
+    ];
 }
 
 async function createTavernApiClient(runtimeId: string) {

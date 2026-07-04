@@ -5,18 +5,19 @@ describe('mention appearance', () => {
     it('keeps generic skills on the default skill appearance', () => {
         expect(
             getMentionAppearance({
-                id: '/Users/zknicker/.agents/skills/ui/SKILL.md',
+                id: 'skill://ui',
                 kind: 'skill',
                 label: 'ui',
             })
         ).toEqual({
+            brandColor: 'var(--brand)',
             icon: 'skill',
         });
     });
 
     it('resolves bundled GitHub skills to branded presentation', () => {
         const input = {
-            id: '/Users/zknicker/.tavern/runtime/agent/skills/github/SKILL.md',
+            id: 'skill://github',
             kind: 'skill' as const,
             label: 'github',
         };
@@ -32,7 +33,7 @@ describe('mention appearance', () => {
     it('resolves specialized GitHub workflow skills without changing their kind', () => {
         expect(
             getMentionAppearance({
-                id: '/Users/zknicker/.tavern/runtime/agent/skills/gh-issues/SKILL.md',
+                id: 'skill://gh-issues',
                 kind: 'skill',
                 label: 'gh-issues',
             })
@@ -56,7 +57,7 @@ describe('mention appearance', () => {
         });
         expect(
             getMentionAppearance({
-                id: 'plugin://computer-use@openai-bundled',
+                id: 'app://computer-use/com.google.Chrome',
                 kind: 'app',
                 label: 'Chrome',
             })
@@ -67,7 +68,7 @@ describe('mention appearance', () => {
         });
         expect(
             getMentionDisplayLabel({
-                id: 'plugin://computer-use@openai-bundled',
+                id: 'app://computer-use/net.imput.helium',
                 kind: 'app',
                 label: 'Helium',
             })
@@ -77,7 +78,7 @@ describe('mention appearance', () => {
     it('uses native app icons when app metadata includes one', () => {
         expect(
             getMentionAppearance({
-                id: 'plugin://computer-use@openai-bundled',
+                id: 'app://computer-use/net.imput.helium',
                 kind: 'app',
                 label: 'Helium',
                 metadata: {

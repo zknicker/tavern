@@ -32,8 +32,15 @@ export function MentionChip({
                 // the surrounding line-height.
                 'inline-flex max-w-full -translate-y-[0.05em] items-center gap-[0.22em] whitespace-nowrap rounded-md py-[0.06em] align-middle font-medium leading-[1.5]',
                 appearance.agentFace ? 'pr-[0.5em] pl-[0.3em]' : 'px-[0.45em]',
-                'bg-[color-mix(in_srgb,var(--mention-chip-color)_12%,transparent)] dark:bg-[color-mix(in_srgb,var(--mention-chip-color)_22%,transparent)]',
-                'text-[color:color-mix(in_srgb,var(--mention-chip-color)_50%,var(--foreground)_50%)]',
+                kind === 'skill'
+                    ? [
+                          'bg-[color-mix(in_srgb,var(--mention-chip-color)_15%,transparent)] dark:bg-[color-mix(in_srgb,var(--mention-chip-color)_26%,transparent)]',
+                          'text-[color:var(--mention-chip-color)]',
+                      ]
+                    : [
+                          'bg-[color-mix(in_srgb,var(--mention-chip-color)_12%,transparent)] dark:bg-[color-mix(in_srgb,var(--mention-chip-color)_22%,transparent)]',
+                          'text-[color:color-mix(in_srgb,var(--mention-chip-color)_50%,var(--foreground)_50%)]',
+                      ],
                 className
             )}
             contentEditable={false}

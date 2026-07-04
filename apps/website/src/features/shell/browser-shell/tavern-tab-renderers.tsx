@@ -9,6 +9,7 @@ interface TabRendererHandlers {
     onArchive: (chat: ChatListItem) => void;
     onCloseTab: (chat: ChatListItem) => void;
     onCustomizeColor: (chat: ChatListItem, color: string | null) => void;
+    onEditParticipants: (chat: ChatListItem) => void;
     onEditSystemPrompt: (chat: ChatListItem) => void;
     onOpenInNewWindow?: (chat: ChatListItem) => void;
     onRename: (chat: ChatListItem) => void;
@@ -48,6 +49,7 @@ export function buildTavernTabRenderers(
                     onArchive={handlers.onArchive}
                     onCloseTab={handlers.onCloseTab}
                     onCustomizeColor={handlers.onCustomizeColor}
+                    onEditParticipants={handlers.onEditParticipants}
                     onEditSystemPrompt={handlers.onEditSystemPrompt}
                     onOpenInNewWindow={handlers.onOpenInNewWindow}
                     onRename={handlers.onRename}

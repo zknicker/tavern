@@ -151,6 +151,55 @@ describe('Runtime agent and agent engine reads', () => {
         expect(config.enabledSkillIds).toEqual(expect.arrayContaining(['research', 'charts']));
     });
 
+    it('marks installed skills ineligible when they are not assigned to the target agent', async () => {
+        await handleTavernRuntimeRequest(
+            new Request('http://runtime.test/agents', {
+                body: JSON.stringify({
+                    enabledSkillIds: [],
+                    id: 'agt_unskilled',
+                    name: 'Unskilled',
+                    workspaceFolder: '/tmp/tavern-unskilled-workspace',
+                }),
+                headers: { 'content-type': 'application/json' },
+                method: 'POST',
+            })
+        );
+
+        const primaryResponse = await handleTavernRuntimeRequest(
+            new Request('http://runtime.test/skills?agentId=agt_primary')
+        );
+        const unskilledResponse = await handleTavernRuntimeRequest(
+            new Request('http://runtime.test/skills?agentId=agt_unskilled')
+        );
+        const unknownResponse = await handleTavernRuntimeRequest(
+            new Request('http://runtime.test/skills?agentId=agt_missing')
+        );
+
+        expect(primaryResponse.status).toBe(200);
+        expect(unskilledResponse.status).toBe(200);
+        expect(unknownResponse.status).toBe(200);
+
+        const primary = (await primaryResponse.json()) as {
+            skills: Array<{ eligible: boolean; id: string }>;
+        };
+        const unskilled = (await unskilledResponse.json()) as {
+            skills: Array<{ eligible: boolean; id: string }>;
+        };
+        const unknown = (await unknownResponse.json()) as { skills: Array<{ id: string }> };
+
+        expect(primary.skills).toEqual(
+            expect.arrayContaining([
+                expect.objectContaining({ eligible: true, id: 'tavern-agent' }),
+            ])
+        );
+        expect(unskilled.skills).toEqual(
+            expect.arrayContaining([
+                expect.objectContaining({ eligible: false, id: 'tavern-agent' }),
+            ])
+        );
+        expect(unknown.skills).toEqual([]);
+    });
+
     it('stores Plugin grants as agent-level capability access', async () => {
         await handleTavernRuntimeRequest(
             new Request('http://runtime.test/agents', {

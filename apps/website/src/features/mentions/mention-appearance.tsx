@@ -56,7 +56,7 @@ const defaultMentionAppearance = {
     file: { icon: 'file' },
     image: { icon: 'image' },
     plugin: { icon: 'plugin' },
-    skill: { icon: 'skill' },
+    skill: { brandColor: 'var(--brand)', icon: 'skill' },
 } satisfies Record<MentionOptionKind, MentionAppearance>;
 
 const skillAppearanceOverrides = {
@@ -201,9 +201,9 @@ function getMentionAppearanceOverride(input: MentionAppearanceInput) {
     return undefined;
 }
 
-// Agent mentions render the agent's character face tinted with its configured
-// color. Both ride in mention metadata (written at option-build time) so no
-// live agent lookup is needed where chips render.
+// Agent composer chips render the agent's character face tinted with its
+// configured color. Both ride in local option metadata so no live agent lookup
+// is needed while editing.
 function getAgentFaceOverride(input: MentionAppearanceInput) {
     const character = readString(input.metadata?.agentCharacter);
 
@@ -254,18 +254,12 @@ function getMentionLookupKeys(input: MentionAppearanceInput) {
     return [
         normalizeLookupKey(input.id),
         normalizeLookupKey(input.label),
-        normalizeLookupKey(getSkillDirectoryName(input.id)),
         normalizeLookupKey(getMentionUriName(input.id)),
     ].filter(isPresent);
 }
 
-function getSkillDirectoryName(id: string) {
-    const match = id.match(/\/skills\/([^/]+)\/SKILL\.md$/u);
-    return match?.[1] ?? null;
-}
-
 function getMentionUriName(id: string) {
-    const match = id.match(/^(?:app|plugin):\/\/(.+)$/u);
+    const match = id.match(/^(?:app|plugin|skill):\/\/(.+)$/u);
     return match?.[1] ?? null;
 }
 

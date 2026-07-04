@@ -1,3 +1,4 @@
+import { formatSkillReferenceTarget } from '@tavern/api/rich-references';
 import { listAgentRuntimeSkills } from '../../agent-runtime/skills.ts';
 import type { MentionOptionResult } from './contracts.ts';
 
@@ -5,36 +6,58 @@ export type RuntimeSkillList = Awaited<ReturnType<typeof listAgentRuntimeSkills>
 
 export async function listRuntimeSkillMentionOptions({
     agentId,
+    agentIds = agentId ? [agentId] : [],
     runtimeSkills,
 }: {
     agentId?: string;
+    agentIds?: readonly string[];
     runtimeSkills?: RuntimeSkillList;
 }) {
-    const skills =
-        runtimeSkills ?? (await listAgentRuntimeSkills(undefined, undefined, { agentId }));
+    const skills = runtimeSkills ?? (await listMentionRuntimeSkills(agentIds));
 
-    return (skills ?? [])
-        .filter((skill) => skill.disabled !== true)
-        .filter((skill) => skill.eligible !== false)
-        .filter((skill) => skill.userInvocable !== false)
-        .map((skill) => {
-            const label = formatSkillDisplayName(skill.name);
+    return (skills ?? []).filter(isMentionableRuntimeSkill).map((skill) => {
+        const label = formatSkillDisplayName(skill.name);
 
-            return {
-                description: skill.description,
-                id: skill.filePath ?? skill.id,
-                insertText: skill.name,
-                kind: 'skill',
-                label,
-                metadata: {
-                    skillName: skill.name,
-                    ...(skill.filePath ? { skillPath: skill.filePath } : {}),
-                },
-                projection: 'skill-context',
-                sourceLabel:
-                    skill.runtimeSource ?? (skill.source === 'builtin' ? 'Built-in' : 'Installed'),
-            } satisfies MentionOptionResult;
-        });
+        return {
+            description: skill.description,
+            id: formatSkillReferenceTarget(skill.id),
+            insertText: skill.name,
+            kind: 'skill',
+            label,
+            projection: 'skill-activation',
+            sourceLabel:
+                skill.runtimeSource ?? (skill.source === 'builtin' ? 'Built-in' : 'Installed'),
+        } satisfies MentionOptionResult;
+    });
+}
+
+async function listMentionRuntimeSkills(agentIds: readonly string[]) {
+    if (agentIds.length === 0) {
+        return await listAgentRuntimeSkills();
+    }
+
+    const skillLists = await Promise.all(
+        agentIds.map((agentId) => listAgentRuntimeSkills(undefined, undefined, { agentId }))
+    );
+    return mergeMentionRuntimeSkillLists(skillLists);
+}
+
+export function mergeMentionRuntimeSkillLists(skillLists: readonly RuntimeSkillList[]) {
+    const skills = new Map<string, NonNullable<RuntimeSkillList>[number]>();
+
+    for (const skill of skillLists.flatMap((list) =>
+        (list ?? []).filter(isMentionableRuntimeSkill)
+    )) {
+        if (!skills.has(skill.id)) {
+            skills.set(skill.id, skill);
+        }
+    }
+
+    return [...skills.values()];
+}
+
+function isMentionableRuntimeSkill(skill: NonNullable<RuntimeSkillList>[number]) {
+    return skill.disabled !== true && skill.eligible !== false && skill.userInvocable !== false;
 }
 
 const acronymWords = new Set([

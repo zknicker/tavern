@@ -168,7 +168,7 @@ test('keeps keyboard selection visible in the skill picker', async ({ page }) =>
         .toBe(true);
 });
 
-test('submits mention markdown plus Tavern metadata without starting a turn', async ({ page }) => {
+test('submits mention markdown without Tavern metadata', async ({ page }) => {
     // The runtime's skill catalog follows the installed engine, so resolve a
     // real skill from the live inventory instead of pinning a name. Skills
     // serialize as a markdown link only when the id is a path or URI.
@@ -176,7 +176,6 @@ test('submits mention markdown plus Tavern metadata without starting a turn', as
     const skillLabel = `$${skill.insertText}`;
     const cases = [
         {
-            kind: 'skill',
             optionName: new RegExp(`^${escapeRegExp(skill.label)}`, 'u'),
             query: `$${skill.insertText}`,
             serialized:
@@ -200,20 +199,14 @@ test('submits mention markdown plus Tavern metadata without starting a turn', as
         const payload = await chatStartRequest;
         const input = readTrpcInput(payload);
         const content = String(input.content);
-        const mentions = readMentions(input.metadata);
 
         if (typeof testCase.serialized === 'string') {
             expect(content).toContain(`Use ${testCase.serialized}`);
-            expect(mentions[0]?.text).toBe(testCase.serialized);
         } else {
             expect(content).toMatch(testCase.serialized);
-            expect(mentions[0]?.text).toMatch(testCase.serialized);
         }
 
-        expect(mentions).toHaveLength(1);
-        expect(mentions[0]?.kind).toBe(testCase.kind);
-        expect(mentions[0]?.start).toBe(4);
-        expect(mentions[0]?.end).toBe(4 + String(mentions[0]?.text).length);
+        expect(input.metadata).toBeUndefined();
     }
 });
 
@@ -285,17 +278,6 @@ function readTrpcInput(payload: unknown) {
     const input = readRecord(json.input) ?? readRecord(json['0']) ?? json;
 
     return input as Record<string, unknown>;
-}
-
-function readMentions(metadata: unknown) {
-    const tavern = readRecord(readRecord(metadata)?.tavern);
-    const mentions = tavern?.mentions;
-
-    if (!Array.isArray(mentions)) {
-        throw new Error('Expected Tavern mention metadata.');
-    }
-
-    return mentions as Record<string, unknown>[];
 }
 
 function readRecord(value: unknown) {

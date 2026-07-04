@@ -44,7 +44,6 @@ export function useChatDraftStart(input: {
                 ...(routeDraft.attachments?.length ? { attachments: routeDraft.attachments } : {}),
                 clientMessageId: routeDraft.clientMessageId,
                 content: routeDraft.content,
-                metadata: routeDraft.metadata,
             })
             .then((started) => {
                 const firstTurn = started.turns[0] ?? null;

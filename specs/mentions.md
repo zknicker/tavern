@@ -1,269 +1,129 @@
 ---
-summary: Mention model for @ references, markdown chip rendering, metadata serialization, and Codex-style runtime projection.
+summary: Rich reference model for explicit markdown mentions, chip rendering, agent addressing, and runtime skill projection.
 read_when:
-  - changing composer @ autocomplete, mention markdown rendering, mention metadata, runtime mention projection, or transcript mention rendering
-  - adding new mention kinds such as skills, plugins, apps, files, directories, agents, chats, sessions, or memories
+  - changing composer @ or $ autocomplete, rich reference rendering, runtime mention projection, transcript mention rendering, or agent addressing
+  - adding new rich reference kinds such as skills, plugins, apps, files, directories, agents, chats, sessions, memories, or product cards
 ---
 
-# Mentions
+# Rich References
 
-Mentions are typed composer references that compile to markdown plus optional
-metadata.
+Rich references are explicit typed links in message text. The visible markdown is
+the durable source of truth:
 
-A mention is just markdown. It is auto-completed into the composer when the
-Tavern user types a supported trigger and chooses an Agent or skill. Metadata
-is stored with the message so Tavern can render chips and project runtime
-context. The message must still make sense if metadata is missing.
+```md
+[@Tavern](agent://agt_primary)
+[$ui](skill://ui)
+[@Computer Use](plugin://computer-use@openai-bundled)
+[@Chrome](app://computer-use/com.google.Chrome)
+[mentions.md](/Users/zknicker/.codex/worktrees/1b41/tavern/specs/mentions.md)
+```
+
+Autocomplete inserts friendly text while editing, then the composer serializes
+the selected reference into markdown. Tavern does not persist a parallel
+`metadata.tavern.mentions` index for user-authored messages. Metadata may carry
+local picker or chip appearance while editing, but saved messages must render
+and route from content alone.
+
+Bare mention-looking text is plain text. `@Tavern`, `$ui`, and an ASIN-looking
+token do nothing unless the user selected or typed explicit link syntax.
 
 ## Triggers
 
-- `@` after start-of-input or whitespace opens agent mentions for Agents in the
-  current chat. `@` is reserved for addressing Agents.
-- `$` after start-of-input or whitespace opens skill mentions, matching the
-  `$skill` serialization sigil. Path search does not run for `$` queries.
-- `/` at the very start of the composer opens the command palette, which is a
-  separate surface — see [composer-commands](./composer-commands.md). Commands
-  are not mentions.
+- `@` after start-of-input or whitespace opens Agent references for agents in
+  the current chat.
+- `$` after start-of-input or whitespace opens skill references. Skill options
+  use stable `skill://<skill-id>` targets and are scoped to the Agents addressed
+  by linked Agent mentions in the current draft. If the draft has no linked
+  Agent mentions, skill options are scoped to the current chat or DM's Agent
+  participants.
+- `/` at the very start of the composer opens commands. Commands are not rich
+  references.
 
-Tavern renders mention-shaped markdown with a richer badge-like chrome in the
-composer, transcript, prompt inspector, and any other agent input/output surface.
+## Reference Kinds
 
-Supported projections:
-
-- Plugins and apps stay in the prompt as markdown URIs, such as
-  `[@Chrome](plugin://chrome@openai-bundled)`.
-- Skills inject `<skill>` context with the skill name and `SKILL.md` path.
-- Files and directories stay as paths or markdown links.
-- Images keep a visible files block and also arrive as image input payloads.
-
-## Contract
-
-- Markdown is the source of truth.
-- Metadata improves rendering, replay, and runtime projection.
-- Missing metadata must not make the prompt unreadable.
-- Mentions never enable, install, connect, or authorize capabilities by
-  themselves.
-
-## Mention Kinds
-
-Tavern supports these mention kinds in stored metadata and rendering:
-
-- `skill`: an agent skill available through the selected runtime or agent.
-- `agent`: an Agent seat participating in the current chat.
-- `plugin`: a plugin-level capability such as Chrome, Computer Use, or a native
-  Codex plugin.
-- `app`: an app-backed connector or native Codex app capability.
-- `file`: a concrete file reference.
-- `directory`: a concrete directory reference.
-
-Tavern should distinguish `file` and `directory` in metadata even though Codex
-projects both as paths. A file points at one object; a directory points at a
-collection the agent must choose to inspect.
-
-## Runtime Projection
-
-Every mention remains markdown first. Runtime projection describes what Tavern
-adds, if anything, when sending the message to the agent:
-
-- Capability references preserve plugin and app markdown URIs without adding
-  hidden prompt text.
-- Agent references address an Agent seat in a channel. They do not select a
-  model, create a session, or route through display names.
-- Skill context loads explicit skill instructions when the runtime exposes the
-  skill.
-- Path references preserve file and directory paths for the agent to inspect
-  through normal file tools.
-- Image input sends actual image bytes or local image references through the
-  runtime image path.
-
-| Kind | Visible text | Projection | Runtime behavior |
+| Kind | Target | Projection | Behavior |
 | --- | --- | --- | --- |
-| `agent` | `@Planner` | `agent-reference` | Address the matching Agent seat in the current chat. Channel sends create one turn per mentioned agent. Agent DMs address their one agent participant without a mention. |
-| `skill` | `[$ui](/Users/zknicker/.agents/skills/ui/SKILL.md)` | `skill-context` | Inject a Codex-style `<skill>` block with the skill name, path, description, and instructions when the runtime exposes the skill. |
-| `plugin` | `[@Computer](plugin://computer-use@openai-bundled)` | `capability-reference` | Preserve the markdown URI. Do not enable the plugin from the mention alone. |
-| `app` | `[@Helium](plugin://computer-use@openai-bundled)` | `capability-reference` | Preserve the Codex plugin URI with the selected app name as the label. Let the Codex Computer Use tools resolve the app. Do not install, connect, or authorize the app from the mention alone. |
-| `file` | `[mentions.md](/Users/zknicker/.codex/worktrees/1b41/tavern/specs/mentions.md)` | `path-reference` | Preserve the path. Do not automatically attach file contents. The agent may read the file through normal file tools if relevant. |
-| `directory` | `[ui](/Users/zknicker/.codex/worktrees/1b41/tavern/apps/website/src/components/ui)` | `path-reference` | Preserve the path. Do not recursively attach directory contents. The agent may list or inspect the directory through normal file tools if relevant. |
-| image file | `## Screenshot.png: /var/folders/.../Screenshot.png` | `image-input` | Preserve the visible files block and pass image bytes or `local_images` through the runtime image input path when supported. |
+| `agent` | `agent://<encoded-agent-id>` | `agent-reference` | Channel sends start one turn per linked agent participant. Agent DMs address their one agent participant without a link. |
+| `skill` | `skill://<encoded-skill-id>` | `skill-activation` | Runtime adds a compact turn hint only if the addressed Agent already has that skill enabled. |
+| `plugin` | `plugin://<name>@<marketplace>` | `capability-reference` | Preserve the link. Do not enable, install, connect, or authorize the plugin from the reference alone. |
+| `app` | `app://computer-use/<encoded-app-id>` | `capability-reference` | Preserve the link with the selected app label. Computer Use resolves the app when tools are invoked. |
+| `file` | absolute file path | `path-reference` | Preserve the path. Do not attach file contents automatically. |
+| `directory` | absolute directory path | `path-reference` | Preserve the path. Do not recursively attach contents automatically. |
 
-Runtime adapters should project mentions from stored metadata plus the visible
-prompt. When metadata is missing, adapters may infer known markdown URI and path
-references from visible text only when inference is conservative.
+Images can still travel through attachment/image-input paths, but image
+attachments are not part of this typed-link contract.
 
-## Markdown Rendering
+## Rendering
 
-Tavern renders mention-shaped markdown as compact chips wherever agent input or
-output is displayed.
+Tavern renders recognized links as compact chips in the composer, transcript,
+prompt inspector, and other message surfaces. Rendering is presentation only:
+the markdown remains readable without Tavern.
 
-![Mention markdown rendering reference](./assets/mentions-markdown-rendering.png)
-
-Examples:
-
-| Markdown | Rendered intent |
-| --- | --- |
-| `[@Chrome](plugin://chrome@openai-bundled)` | Chrome icon plus `Chrome` label. |
-| `@Planner` | Agent icon plus `Planner` label. |
-| `[@Computer](plugin://computer-use@openai-bundled)` | Computer Use icon plus `Computer` label. |
-| `[$ui](/Users/zknicker/.agents/skills/ui/SKILL.md)` | Skill icon plus `ui` label. |
-| `[mentions.md](/Users/zknicker/.codex/worktrees/1b41/tavern/specs/mentions.md)` | File icon plus `mentions.md` label. |
-| `[components/ui](/Users/zknicker/.codex/worktrees/1b41/tavern/apps/website/src/components/ui)` | Folder icon plus `components/ui` label. |
-
-The markdown remains valid without Tavern's renderer. The rich chip is
-presentation only.
-
-## Appearance
-
-Mention kind remains the product contract. Runtime projection uses `kind`,
-`id`, and metadata; UI polish is resolved separately.
-
-Default rendering is kind-based:
-
-| Kind | Default appearance |
-| --- | --- |
-| `agent` | Agent icon and mention tone. |
-| `skill` | Skill icon and skill tone. |
-| `plugin` | Plugin icon and capability tone. |
-| `app` | Plugin icon and capability tone. |
-| `file` | File icon and path tone. |
-| `directory` | Folder icon and path tone. |
-| `image` | Image icon and path tone. |
-
-Known bundled skills and plugins may override only presentation. For example,
-a `github` skill can render as `GitHub` with a GitHub icon while it still
-serializes and projects as a `skill` mention. A `gh-issues` skill can render
-as `GitHub Issues` with the same icon while retaining its exact runtime skill
-id.
-
-Skill options use the runtime skill id as insertion text and derive a display
-label for rendering. For example, `agent-browser` inserts and serializes as
-`agent-browser`, but renders as `Agent Browser`. This follows Codex's pattern:
-use an explicit display name when the runtime provides one, otherwise titleize
-the skill id with common product and acronym exceptions such as `GitHub`,
-`OpenAI`, `API`, and `UI`.
-
-The frontend owns a typed appearance registry under
-`apps/website/src/features/mentions/`. Appearance entries use stable keys such
-as `icon: "github"` and `tone: "brand"` instead of arbitrary component
-trees, so unsupported icons or tones fail at compile time.
-
-## Serialization
-
-Mentions are stored in Tavern message metadata under `metadata.tavern.mentions`.
-
-Each stored mention includes:
-
-- `kind`: the mention kind.
-- `id`: the URI or path used by the visible markdown.
-- `label`: the user-facing label rendered in the composer.
-- `text`: the exact visible message slice.
-- `start` and `end`: offsets in the submitted visible message.
-- `projection`: the selected runtime projection.
-
-The visible message should use natural Codex-compatible text. Files and
-directories should render as path or markdown-link references. Skills, plugins,
-and apps should render as readable names that match the trigger names described
-in the runtime context.
+Known skills, plugins, apps, and agents may receive richer icons or labels from
+their kind and target. Transcript rendering reconstructs chips by parsing the
+message content, not by reading message metadata.
 
 ## Autocomplete Options
 
-Autocomplete options use one common shape across sources:
+Autocomplete options use one common shape:
 
-- `kind`: the mention kind.
-- `label`: the visible label.
-- `id`: the markdown link target or path.
-- `insertText`: the text inserted before markdown serialization.
-- `projection`: the runtime projection.
-- `metadata`: source-specific facts, such as skill path, file path, or app
-  bundle id.
+- `kind`: reference kind.
+- `label`: user-facing chip label.
+- `id`: markdown link target.
+- `insertText`: editable text inserted before serialization.
+- `projection`: runtime projection.
+- `metadata`: optional local presentation facts such as app icon data or agent
+  face data.
 
 Examples:
 
 | Source | Option identity | Serialized markdown |
 | --- | --- | --- |
-| Agent | `kind: "agent"`, `id: "agt_planner"`, `insertText: "@Planner"`, `projection: "agent-reference"` | `@Planner` |
-| Skill | `kind: "skill"`, `id: "/Users/zknicker/.agents/skills/ui/SKILL.md"`, `insertText: "ui"`, `projection: "skill-context"` | `[$ui](/Users/zknicker/.agents/skills/ui/SKILL.md)` |
-| Plugin | `kind: "plugin"`, `id: "plugin://computer-use@openai-bundled"`, `insertText: "Computer Use"`, `projection: "capability-reference"` | `[@Computer Use](plugin://computer-use@openai-bundled)` |
-| App | `kind: "app"`, `id: "plugin://computer-use@openai-bundled"`, `insertText: "Helium"`, `metadata.bundleId: "net.imput.helium"`, `projection: "capability-reference"` | `[@Helium](plugin://computer-use@openai-bundled)` |
-| File | `kind: "file"`, `id: "/Users/zknicker/.codex/worktrees/1b41/tavern/specs/mentions.md"`, `insertText: "mentions.md"`, `projection: "path-reference"` | `[mentions.md](/Users/zknicker/.codex/worktrees/1b41/tavern/specs/mentions.md)` |
-
-## Autocomplete Sources
-
-Mention autocomplete combines concrete source APIs:
-
-- `mention.inventory` returns bounded mention sources that are safe to fetch
-  once and filter locally. The composer uses the bounded inventory for `$`
-  skill lookup; `@` agent lookup comes from the current chat's Agent
-  participants.
-- `mention.paths` searches unbounded workspace paths separately when a
-  composer trigger supports path lookup. Current chat composers do not expose
-  path lookup through `@` or `$`.
-
-Inventory sources:
-
-- Agent options come from the selected chat's agent participants.
-- Skills come from the selected runtime agent's skill list.
-- Plugins may come from enabled Codex plugin manifests, such as
-  `plugin://computer-use@openai-bundled`.
-- Mac apps may come from Tavern Runtime's local macOS app inventory. Runtime uses
-  running app state and recent-use metadata for autocomplete ordering. App
-  options may include a small native app icon data URL for presentation. App
-  mentions keep `kind: "app"` in Tavern metadata and serialize with the Codex
-  Computer Use plugin URI, such as
-  `[@Helium](plugin://computer-use@openai-bundled)`.
-
-Path search sources:
-
-- Files and directories come from the selected agent workspace.
-- Path search runs only for path-like or sufficiently specific queries.
-- Path search must not block or hide inventory results.
-- When path search is running, the picker shows a `Files` loading row. When no
-  source has results, the picker shows `No results`.
-
-The UI may derive richer labels, icons, and tones from the mention kind, URI,
-and metadata, but stored metadata must keep the selected `kind`, `id`,
-`projection`, and markdown text.
+| Agent | `kind: "agent"`, `id: "agent://agt_primary"`, `insertText: "@Tavern"` | `[@Tavern](agent://agt_primary)` |
+| Skill | `kind: "skill"`, `id: "skill://ui"`, `insertText: "ui"` | `[$ui](skill://ui)` |
+| Plugin | `kind: "plugin"`, `id: "plugin://computer-use@openai-bundled"`, `insertText: "Computer Use"` | `[@Computer Use](plugin://computer-use@openai-bundled)` |
+| App | `kind: "app"`, `id: "app://computer-use/net.imput.helium"`, `insertText: "Helium"` | `[@Helium](app://computer-use/net.imput.helium)` |
+| File | `kind: "file"`, `id: "/repo/specs/mentions.md"`, `insertText: "specs/mentions.md"` | `[specs/mentions.md](/repo/specs/mentions.md)` |
 
 ## Runtime Behavior
 
-Skills use `skill-context`. Tavern stores the structured mention and Runtime
-projects selected skills into the agent-facing prompt when the skill is
-enabled for the Agent.
+Runtime projection parses the content with Tavern's shared rich-reference
+parser:
 
-Example:
+- Agent references decode `agent://...` targets and are validated against the
+  current chat's agent participants before turn startup.
+- Skill references decode `skill://...` targets and intersect them with the
+  addressed Agent's `enabledSkillIds`. They do not grant the skill, mutate
+  `enabledSkillIds`, or read linked files from message text.
+- Referenced enabled skills are projected as a compact activation hint:
 
 ```xml
-<skill>
-<name>ui</name>
-<path>/Users/zknicker/.agents/skills/ui/SKILL.md</path>
-...
-</skill>
+<skill_reference_context>
+The user explicitly referenced these enabled skills for this turn. Use the normal runtime skill-loading mechanism for them:
+
+- ui
+</skill_reference_context>
 ```
 
-Plugins and apps use `capability-reference` when they are already available in
-the runtime context. Tavern preserves the markdown and does not add a hidden
-reference block. Native Codex tools follow the Runtime tool availability
-contract, and the model uses those tools from the visible prompt.
+- Runtime still loads assigned skill instructions through HarnessAgent's
+  `skills` setting during turn startup. It does not inline `SKILL.md` content
+  into the user message or system instructions for a skill reference.
+- If the addressed Agent does not have a referenced skill enabled, Runtime adds
+  no hidden warning or prompt context for that reference.
+- Composer skill filtering is advisory. If the user removes a linked Agent
+  mention after inserting a skill reference, the skill reference remains valid
+  markdown and Runtime silently ignores it for addressed Agents that do not have
+  that skill enabled.
+- Capability and path references remain visible markdown in the prompt.
+- Unknown markdown links render as normal markdown, not chips.
 
-Computer Use app autocomplete uses Tavern Runtime's local macOS app inventory.
-The app server reads the inventory from Runtime; it does not enumerate local
-apps itself or ask the model to call Computer Use tools just to populate mention
-options.
+## Future Reference Types
 
-Files and directories use `path-reference`. Tavern should preserve the path in
-the visible message and metadata. It should not attach file contents, directory
-manifests, or recursive directory contents for Codex parity. The agent can read,
-list, or inspect the path through normal file tools when needed.
+New rich references should follow the same rules:
 
-Images and screenshots follow the Codex app pattern: the message includes a
-visible "files mentioned" reference and the runtime receives the actual local
-image attachment when supported.
-
-## App Structure
-
-Frontend mention UI lives in a shared `mentions` feature area. It owns
-autocomplete option shapes, markdown chip renderers, and metadata helpers used
-by the composer, transcript, and prompt inspector.
-
-Runtime projection lives with the runtime adapter that sends the message to the
-agent. Hooks and API procedures should expose concrete operations, such as
-listing available skills, rather than a generic mentions API.
+- Require explicit syntax.
+- Use a durable, typed target.
+- Keep message content readable without Tavern.
+- Do not rely on persisted mention metadata for identity.
+- Add parser, rendering, routing, and projection tests before exposing the
+  reference in autocomplete.
