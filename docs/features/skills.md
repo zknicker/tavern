@@ -58,6 +58,13 @@ settings page, and assigned to other agents through normal skill enablement.
 Runtime-seeded, hub-installed, and operator-placed skills stay read-only to
 agents.
 
+Agent-authored skills have a lifecycle. Runtime marks unused agent-created
+skills stale after 30 days and archives them after 90 days by moving the whole
+package into the library archive and disabling assignments. A weekly idle
+curator uses the Deep model category to consolidate overlapping agent-authored
+skills into class-level skills, archive absorbed or irrelevant packages, and
+record an audited curation report.
+
 At execution time, Runtime resolves the agent's enabled skill ids against the
 installed skill library. Agents receive matching skill bundles through the AI
 SDK `HarnessAgent` `skills` setting. Missing assigned skills are stale settings
