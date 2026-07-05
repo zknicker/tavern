@@ -31,9 +31,10 @@ Agents may write Semantic Memory when explicitly asked to remember or organize
 shared knowledge, using the agent Memory tools. Extraction workers distill the
 settled message window with the Fast model category and append the resulting
 observations to hidden per-agent episodic evidence after completed turns and an
-idle debounce. Dreaming workers promote stable evidence into the owning agent's
-core memory files or shared Semantic Memory, and run only when that agent has new
-evidence since its last dream.
+idle debounce. Extraction observations also carry learning signals that queue
+skill review; see [Skill Learning](skill-learning.md). Dreaming workers promote
+stable evidence into the owning agent's core memory files or shared Semantic
+Memory, and run only when that agent has new evidence since its last dream.
 
 ## Correction And Forgetting
 
@@ -48,3 +49,17 @@ second copy.
 Maintenance runs through extraction, dreaming, and explicit agent Memory work.
 Runtime exposes Memory readiness and browsing APIs so Semantic Memory can be
 inspected from Tavern.
+
+## Observability
+
+The memories settings page shows a background work surface for Runtime
+workers: extraction, dreaming, skill review, and curation.
+
+- One row per worker kind: enabled state, last run outcome and duration, and
+  the next planned run or the condition it is waiting on.
+- A timeline of runs over time by kind, with failures visible.
+- Each run opens its report: extraction observations recorded, dream outcomes,
+  skill review actions, and curator consolidations and prunings.
+
+Cron jobs are not part of this surface. The Cron page owns automation run
+history; see [Cron](cron.md).
