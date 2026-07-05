@@ -27,13 +27,23 @@ const automaticValue = 'automatic';
 const categoryRows = [
     {
         category: 'fast',
-        description: 'Quick background work, like capturing memories from chats.',
+        description: 'Extraction and background distillation.',
         title: 'Fast',
     },
     {
         category: 'standard',
-        description: 'Deeper background work, like organizing memory.',
+        description: 'Skill review.',
         title: 'Standard',
+    },
+    {
+        category: 'deep',
+        description: 'Curation.',
+        title: 'Deep',
+    },
+    {
+        category: 'visual',
+        description: 'Image understanding.',
+        title: 'Visual',
     },
 ] as const satisfies ReadonlyArray<{
     category: AgentRuntimeModelCategory;
@@ -158,8 +168,10 @@ function readResolvedCategories(metadataJson: string | null) {
     try {
         const parsed = JSON.parse(metadataJson) as Record<string, unknown>;
         return {
+            deep: typeof parsed.deep === 'string' ? parsed.deep : undefined,
             fast: typeof parsed.fast === 'string' ? parsed.fast : undefined,
             standard: typeof parsed.standard === 'string' ? parsed.standard : undefined,
+            visual: typeof parsed.visual === 'string' ? parsed.visual : undefined,
         };
     } catch {
         return empty;

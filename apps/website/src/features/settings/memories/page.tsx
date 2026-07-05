@@ -15,6 +15,7 @@ import {
     useSaveMemoryEnabled,
 } from '../../../hooks/memory/use-memory-history.ts';
 import { appRoutes } from '../../../lib/app-routes.ts';
+import { BackgroundWorkSection } from './background-work-section.tsx';
 import { MemoryHistorySection } from './memory-history-section.tsx';
 
 export function MemoriesSettings() {
@@ -25,6 +26,7 @@ export function MemoriesSettings() {
             <SettingsGroup>
                 <MemoryEnabledRow />
             </SettingsGroup>
+            <BackgroundWorkSection />
             <MemoryHistorySection />
         </SettingsPage>
     );
