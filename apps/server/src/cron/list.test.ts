@@ -39,7 +39,7 @@ test('listCronJobs promotes latest failed run state for list badges', async () =
             agentId: 'agent-1',
             createdAt: '2026-06-15T13:00:00.000Z',
             deleteAfterRun: false,
-            delivery: null,
+            delivery: { chatId: 'chat:morning' },
             description: null,
             enabled: true,
             id: 'cron:morning',
@@ -51,29 +51,25 @@ test('listCronJobs promotes latest failed run state for list badges', async () =
             schedule: { expr: '0 9 * * *', kind: 'cron' },
             state: {},
             updatedAt: '2026-06-16T13:00:00.000Z',
-            wakeMode: 'now',
         },
         runtimeId: 'runtime-1',
         syncedAt: '2026-06-16T13:00:00.000Z',
     });
     await upsertCronRuns([
         {
-            agentId: null,
-            deliveryStatus: 'not_applicable',
-            durationMs: 1850,
-            error: 'Provider usage exhausted',
+            chatId: 'chat:morning',
+            executionErrorCode: 'execution_failed',
+            executionErrorMessage: 'Provider usage exhausted',
+            finishedAt: '2026-06-16T13:00:44.000Z',
+            id: 'preview_morning_failed',
             jobId: 'cron:morning',
-            providerJobId: 'preview_morning_failed',
-            runAt: '2026-06-16T13:00:42.000Z',
             runtimeId: 'runtime-1',
-            runtimeRunId: 'preview_morning_failed',
-            runtimeSessionKey: null,
-            sessionId: 'preview_morning_failed',
-            sessionKey: 'preview_morning_failed',
+            scheduledFor: '2026-06-16T13:00:42.000Z',
+            startedAt: '2026-06-16T13:00:42.000Z',
             status: 'error',
-            summary: null,
             syncedAt: '2026-06-16T13:00:44.000Z',
             trigger: 'schedule',
+            turnId: 'turn:morning',
         },
     ]);
 
@@ -82,9 +78,8 @@ test('listCronJobs promotes latest failed run state for list badges', async () =
     expect(result.jobs[0]?.state).toMatchObject({
         lastErrorCode: 'execution_failed',
         lastErrorMessage: 'Provider usage exhausted',
-        lastRunAtMs: Date.parse('2026-06-16T13:00:42.000Z'),
+        lastRunAtMs: Date.parse('2026-06-16T13:00:44.000Z'),
         lastRunStatus: 'error',
-        lastStatus: 'error',
     });
 });
 

@@ -170,28 +170,24 @@ test('ensureDatabaseSchema creates the current Tavern schema without obsolete ta
                 'schedule_json',
                 'state_json',
                 'updated_at',
-                'wake_mode',
             ].sort((left, right) => left.localeCompare(right))
         );
         assert.deepEqual(
             listSortedColumnNames(db, 'cron_runs'),
             [
-                'agent_id',
-                'delivery_status',
-                'duration_ms',
-                'error',
+                'chat_id',
+                'execution_error_code',
+                'execution_error_message',
+                'finished_at',
+                'id',
                 'job_id',
-                'provider_job_id',
-                'run_at',
                 'runtime_id',
-                'runtime_run_id',
-                'runtime_session_key',
-                'session_id',
-                'session_key',
+                'scheduled_for',
+                'started_at',
                 'status',
-                'summary',
                 'synced_at',
                 'trigger',
+                'turn_id',
             ].sort((left, right) => left.localeCompare(right))
         );
     });

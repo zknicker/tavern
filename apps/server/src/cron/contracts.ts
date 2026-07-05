@@ -1,30 +1,17 @@
 import { agentRuntimeExecutionErrorSchema, agentRuntimeExecutionStatusSchema } from '@tavern/api';
-import { z } from 'zod';
+import * as z from 'zod';
 import { cronScheduleConfigSchema } from './schedule-config.ts';
 
 export const cronDeliverySchema = z.object({
     chatId: z.string().trim().min(1),
 });
 
-export const cronDeliveryStatusSchema = z.enum([
-    'pending',
-    'delivered',
-    'session_queued',
-    'failed',
-    'parent_missing',
-    'not_applicable',
-]);
-
 export const cronJobStateSchema = z.object({
-    lastDelivered: z.boolean().optional(),
-    lastDeliveryError: z.string().optional(),
-    lastDeliveryStatus: cronDeliveryStatusSchema.optional(),
     lastDurationMs: z.number().int().nonnegative().optional(),
     lastErrorCode: agentRuntimeExecutionErrorSchema.shape.code.optional(),
     lastErrorMessage: agentRuntimeExecutionErrorSchema.shape.message.optional(),
     lastRunAtMs: z.number().int().nonnegative().optional(),
     lastRunStatus: agentRuntimeExecutionStatusSchema.optional(),
-    lastStatus: agentRuntimeExecutionStatusSchema.optional(),
     nextRunAtMs: z.number().int().nonnegative().optional(),
     runningAtMs: z.number().int().nonnegative().optional(),
 });
@@ -35,13 +22,8 @@ export const cronPayloadSchema = z.union([
         text: z.string().min(1),
     }),
     z.object({
-        fallbacks: z.array(z.string().min(1)).optional(),
         kind: z.literal('agentTurn'),
-        lightContext: z.boolean().optional(),
         message: z.string().min(1),
-        model: z.string().min(1).optional(),
-        thinking: z.string().nullable().optional(),
-        timeoutSeconds: z.number().nonnegative().optional(),
     }),
 ]);
 
@@ -63,39 +45,34 @@ export const cronScheduleSchema = z.union([
     }),
 ]);
 
-export const cronWakeModeSchema = z.enum(['next-heartbeat', 'now']);
-
 export const addCronJobParamsSchema = z.object({
-    agentId: z.string().trim().min(1).optional(),
+    agentId: z.string().trim().min(1),
     deleteAfterRun: z.boolean().optional(),
-    delivery: cronDeliverySchema.nullable().optional(),
+    delivery: cronDeliverySchema,
     description: z.string().trim().min(1).optional(),
     enabled: z.boolean().optional(),
     name: z.string().trim().min(1),
     payload: cronPayloadSchema,
     scheduleConfig: cronScheduleConfigSchema,
-    wakeMode: cronWakeModeSchema,
 });
 
 export const updateCronJobPatchSchema = z.object({
-    agentId: z.string().trim().min(1).nullable().optional(),
+    agentId: z.string().trim().min(1).optional(),
     deleteAfterRun: z.boolean().optional(),
-    delivery: cronDeliverySchema.nullable().optional(),
+    delivery: cronDeliverySchema.optional(),
     description: z.string().trim().min(1).nullable().optional(),
     enabled: z.boolean().optional(),
     name: z.string().trim().min(1).optional(),
     payload: cronPayloadSchema.optional(),
     scheduleConfig: cronScheduleConfigSchema.optional(),
-    state: cronJobStateSchema.partial().optional(),
-    wakeMode: cronWakeModeSchema.optional(),
 });
 
 export const runCronJobParamsSchema = z.object({
-    mode: z.enum(['force', 'enqueue']).default('force'),
+    mode: z.enum(['force', 'enqueue']).default('enqueue'),
 });
 
 export const cronJobSummarySchema = z.object({
-    agentId: z.string().nullable(),
+    agentId: z.string(),
     description: z.string().nullable(),
     enabled: z.boolean(),
     id: z.string().min(1),
@@ -108,10 +85,9 @@ export const cronJobSummarySchema = z.object({
 export const cronJobSchema = cronJobSummarySchema.extend({
     createdAt: z.string().datetime(),
     deleteAfterRun: z.boolean(),
-    delivery: cronDeliverySchema.nullable(),
+    delivery: cronDeliverySchema,
     payload: cronPayloadSchema,
     syncedAt: z.string().datetime(),
-    wakeMode: cronWakeModeSchema,
 });
 
 export const cronSyncStateSchema = z.object({
@@ -142,23 +118,20 @@ export const cronGetSchema = z.object({
 
 export const cronJobRunStatusSchema = agentRuntimeExecutionStatusSchema;
 
-export const cronJobRunTriggerSchema = z.enum(['manual', 'recovery', 'retry', 'schedule']);
+export const cronJobRunTriggerSchema = z.enum(['manual', 'recovery', 'schedule']);
 
 export const cronJobRunSchema = z.object({
-    deliveryError: z.string().nullable(),
-    deliveryStatus: cronDeliveryStatusSchema.nullable(),
+    chatId: z.string().min(1).nullable(),
     executionErrorCode: agentRuntimeExecutionErrorSchema.shape.code.nullable(),
     executionErrorMessage: agentRuntimeExecutionErrorSchema.shape.message.nullable(),
     finishedAt: z.string().datetime().nullable(),
     id: z.string().min(1),
     jobId: z.string().min(1),
     scheduledFor: z.string().datetime(),
-    sessionId: z.string().min(1).nullable(),
-    sessionKey: z.string().min(1).nullable(),
     startedAt: z.string().datetime().nullable(),
     status: cronJobRunStatusSchema,
-    summary: z.string().nullable(),
     trigger: cronJobRunTriggerSchema,
+    turnId: z.string().min(1).nullable(),
 });
 
 export const cronJobRunListSchema = z.object({
@@ -166,20 +139,19 @@ export const cronJobRunListSchema = z.object({
 });
 
 export const cronRunSchema = z.object({
-    agentId: z.string().nullable(),
-    deliveryStatus: cronDeliveryStatusSchema.nullable(),
-    durationMs: z.number().int().min(0).nullable(),
-    error: z.string().nullable(),
+    chatId: z.string().min(1).nullable(),
+    executionErrorCode: agentRuntimeExecutionErrorSchema.shape.code.nullable(),
+    executionErrorMessage: agentRuntimeExecutionErrorSchema.shape.message.nullable(),
+    finishedAt: z.string().datetime().nullable(),
+    id: z.string().min(1),
     jobId: z.string().min(1),
-    providerJobId: z.string().min(1).nullable().default(null),
-    runAt: z.string().datetime(),
-    runtimeSessionKey: z.string().min(1).nullable(),
-    sessionId: z.string().min(1),
-    sessionKey: z.string().min(1),
-    status: cronRunStatusSchema.nullable(),
-    summary: z.string().nullable(),
+    runtimeId: z.string().min(1).nullable(),
+    scheduledFor: z.string().datetime(),
+    startedAt: z.string().datetime().nullable(),
+    status: cronRunStatusSchema,
     syncedAt: z.string().datetime(),
     trigger: cronJobRunTriggerSchema.default('schedule'),
+    turnId: z.string().min(1).nullable(),
 });
 
 export const cronDeliveryTargetSchema = z.object({
@@ -191,6 +163,10 @@ export const cronDeliveryTargetSchema = z.object({
 
 export const cronDeliveryTargetListSchema = z.object({
     targets: z.array(cronDeliveryTargetSchema),
+});
+
+export const listCronDeliveryTargetsInputSchema = z.object({
+    agentId: z.string().trim().min(1),
 });
 
 export const createCronJobInputSchema = addCronJobParamsSchema;
@@ -206,7 +182,7 @@ export const deleteCronJobInputSchema = z.object({
 
 export const runCronJobInputSchema = z.object({
     jobId: z.string().trim().min(1),
-    mode: runCronJobParamsSchema.shape.mode.default('force'),
+    mode: runCronJobParamsSchema.shape.mode.default('enqueue'),
 });
 
 export const toggleCronJobInputSchema = z.object({
@@ -224,6 +200,7 @@ export type CronList = z.infer<typeof cronListSchema>;
 export type CronJobSummary = z.infer<typeof cronJobSummarySchema>;
 export type CronDeliveryTarget = z.infer<typeof cronDeliveryTargetSchema>;
 export type CronDeliveryTargetList = z.infer<typeof cronDeliveryTargetListSchema>;
+export type ListCronDeliveryTargetsInput = z.infer<typeof listCronDeliveryTargetsInputSchema>;
 export type CronJobRun = z.infer<typeof cronJobRunSchema>;
 export type CronRun = z.infer<typeof cronRunSchema>;
 export type CronSyncState = z.infer<typeof cronSyncStateSchema>;

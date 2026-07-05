@@ -118,7 +118,6 @@ export async function deleteAgentProfile(input: { agentId: string; runtimeId: st
 const directAgentReferences = [
     { column: 'tavern_agent_id', table: 'activity_items' },
     { column: 'agent_id', table: 'agent_thought_snapshots' },
-    { column: 'agent_id', table: 'cron_runs' },
     { column: 'agent_id', table: 'memory_peer_mappings' },
     { column: 'agent_id', table: 'messaging_bindings' },
     { column: 'agent_id', table: 'model_selections' },

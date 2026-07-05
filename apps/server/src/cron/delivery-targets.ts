@@ -1,9 +1,25 @@
 import type { AgentRuntimeChat } from '@tavern/api';
 import { listRuntimeChatRecords } from '../chat/runtime-chats.ts';
-import { type CronDeliveryTarget, cronDeliveryTargetListSchema } from './contracts.ts';
+import {
+    type CronDeliveryTarget,
+    cronDeliveryTargetListSchema,
+    listCronDeliveryTargetsInputSchema,
+} from './contracts.ts';
 
 function isDeliverableAgentRuntimeChat(chat: AgentRuntimeChat) {
     return chat.platform === 'tavern' || Boolean(chat.bindingId && chat.target);
+}
+
+function getAgentParticipantIds(agentId: string) {
+    return new Set([agentId, `agt_${agentId}`]);
+}
+
+function hasAgentParticipant(chat: AgentRuntimeChat, agentId: string) {
+    const participantIds = getAgentParticipantIds(agentId);
+
+    return chat.participants.some(
+        (participant) => participant.type === 'agent' && participantIds.has(participant.agentId)
+    );
 }
 
 function presentCronDeliveryTargetLabel(chat: AgentRuntimeChat) {
@@ -42,11 +58,14 @@ function presentCronDeliveryTargetLabel(chat: AgentRuntimeChat) {
     return chat.target ?? chat.id;
 }
 
-export function buildCronDeliveryTargets(chats: AgentRuntimeChat[]) {
+export function buildCronDeliveryTargets(chats: AgentRuntimeChat[], agentId: string) {
     const targets = new Map<string, CronDeliveryTarget>();
 
     for (const chat of chats) {
-        if (!isDeliverableAgentRuntimeChat(chat) || targets.has(chat.id)) {
+        if (
+            !(isDeliverableAgentRuntimeChat(chat) && hasAgentParticipant(chat, agentId)) ||
+            targets.has(chat.id)
+        ) {
             continue;
         }
 
@@ -69,10 +88,11 @@ export function buildCronDeliveryTargets(chats: AgentRuntimeChat[]) {
     });
 }
 
-export async function listCronDeliveryTargets() {
+export async function listCronDeliveryTargets(input: unknown) {
+    const parsed = listCronDeliveryTargetsInputSchema.parse(input);
     const chats = (await listRuntimeChatRecords()).map((record) => record.chat);
 
     return cronDeliveryTargetListSchema.parse({
-        targets: buildCronDeliveryTargets(chats),
+        targets: buildCronDeliveryTargets(chats, parsed.agentId),
     });
 }

@@ -105,7 +105,7 @@ export async function deleteCronJob(
 
 export async function runCronJob(
     jobId: string,
-    input: AgentRuntimeRunCron = { mode: 'force' },
+    input: AgentRuntimeRunCron = { mode: 'enqueue' },
     client: TavernAgentRuntimeClient | null = createConfiguredAgentRuntimeClient()
 ): Promise<AgentRuntimeCronRun> {
     const agentRuntimeClient = requireAgentRuntimeClient(client);

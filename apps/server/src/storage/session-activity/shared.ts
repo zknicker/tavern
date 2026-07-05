@@ -2,7 +2,6 @@ import { asc, inArray } from 'drizzle-orm';
 import { listAgents } from '../../agents/catalog.ts';
 import { db } from '../../db/index.ts';
 import {
-    cronRunsTable,
     sessionMessagePartsTable,
     type sessionMessagesTable,
     type sessionToolCallsTable,
@@ -16,7 +15,6 @@ import {
 } from '../../participants/observed.ts';
 import { sessionMessageSchema } from '../../sessions/contracts.ts';
 import { listRuntimeSessions } from '../../sessions/runtime-sessions.ts';
-import { listCronJobRecords, parseCronJobRawJson } from '../cron-jobs.ts';
 
 export function parseJson(value: string | null) {
     if (!value) {
@@ -194,46 +192,6 @@ export function resolveDeliveryMessageText(payload: unknown) {
     return null;
 }
 
-async function listCronRunSessions(keys: string[]) {
-    if (keys.length === 0) {
-        return new Map<string, { agentId: string | null; channel: string; title: string }>();
-    }
-
-    const [records, cronJobs] = await Promise.all([
-        db
-            .select({
-                agentId: cronRunsTable.agentId,
-                jobId: cronRunsTable.jobId,
-                sessionKey: cronRunsTable.sessionKey,
-            })
-            .from(cronRunsTable)
-            .where(inArray(cronRunsTable.sessionKey, keys)),
-        listCronJobRecords(),
-    ]);
-    const cronJobsById = new Map(
-        cronJobs.map((job) => {
-            const rawJob = parseCronJobRawJson(job);
-            return [job.id, rawJob.name] as const;
-        })
-    );
-
-    return new Map(
-        records.map((record) => {
-            const jobName = cronJobsById.get(record.jobId);
-            const title = jobName ? `Cron: ${jobName}` : `Cron: ${record.jobId}`;
-
-            return [
-                record.sessionKey,
-                {
-                    agentId: record.agentId,
-                    channel: title,
-                    title,
-                },
-            ];
-        })
-    );
-}
-
 export function deriveSessionAgentId(sessionKey: string) {
     const match = /^agent:([^:]+):/.exec(sessionKey);
     return match?.[1] ?? null;
@@ -328,20 +286,16 @@ export async function buildSessionReferenceLookup(sessionKeys: string[]) {
             .filter((session) => uniqueKeys.includes(session.key))
             .map((session) => [session.key, session] as const)
     );
-    const unresolvedSessionKeys = uniqueKeys.filter((key) => !relatedSessionByKey.has(key));
-    const cronRunSessionsByKey = await listCronRunSessions(unresolvedSessionKeys);
-
     return new Map(
         uniqueKeys.map((key) => {
             const cached = relatedSessionByKey.get(key);
-            const cron = cronRunSessionsByKey.get(key);
 
             return [
                 key,
                 {
-                    agentId: cached?.agentId ?? cron?.agentId ?? deriveSessionAgentId(key),
-                    channel: cached?.title ?? cron?.channel ?? null,
-                    title: cached?.title ?? cron?.title ?? key,
+                    agentId: cached?.agentId ?? deriveSessionAgentId(key),
+                    channel: cached?.title ?? null,
+                    title: cached?.title ?? key,
                 },
             ];
         })

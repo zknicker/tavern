@@ -71,7 +71,9 @@ function withLatestRunState(job: AgentRuntimeCron, latestRun?: CronRun): AgentRu
         return job;
     }
 
-    const runAtMs = Date.parse(latestRun.runAt);
+    const runAtMs = Date.parse(
+        latestRun.finishedAt ?? latestRun.startedAt ?? latestRun.scheduledFor
+    );
 
     if (Number.isNaN(runAtMs)) {
         return job;
@@ -87,14 +89,10 @@ function withLatestRunState(job: AgentRuntimeCron, latestRun?: CronRun): AgentRu
         ...job,
         state: {
             ...job.state,
-            lastDeliveryStatus: latestRun.deliveryStatus ?? job.state.lastDeliveryStatus,
-            lastErrorCode:
-                latestRun.status === 'error' && latestRun.error ? 'execution_failed' : undefined,
-            lastErrorMessage:
-                latestRun.status === 'error' ? (latestRun.error ?? undefined) : undefined,
+            lastErrorCode: latestRun.executionErrorCode ?? undefined,
+            lastErrorMessage: latestRun.executionErrorMessage ?? undefined,
             lastRunAtMs: runAtMs,
-            lastRunStatus: latestRun.status ?? job.state.lastRunStatus,
-            lastStatus: latestRun.status ?? job.state.lastStatus,
+            lastRunStatus: latestRun.status,
         },
     };
 }

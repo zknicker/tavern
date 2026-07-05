@@ -106,7 +106,7 @@ function toCronJobRow(input: {
         agentId: input.job.agentId,
         createdAt: input.job.createdAt,
         deleteAfterRun: input.job.deleteAfterRun,
-        deliveryJson: input.job.delivery ? JSON.stringify(input.job.delivery) : null,
+        deliveryJson: JSON.stringify(input.job.delivery),
         description: input.job.description,
         enabled: input.job.enabled,
         id: input.id,
@@ -119,6 +119,5 @@ function toCronJobRow(input: {
         scheduleJson: JSON.stringify(input.job.schedule),
         stateJson: JSON.stringify(input.job.state),
         updatedAt: input.job.updatedAt,
-        wakeMode: input.job.wakeMode,
     };
 }

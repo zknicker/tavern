@@ -24,7 +24,6 @@ test.beforeEach(() => {
         'session_message_parts',
         'session_messages',
         'session_runs',
-        'cron_runs',
         'messaging_bindings',
         'agent_thought_snapshots',
         'agent_profiles',
@@ -101,12 +100,6 @@ test('deleteAgentProfile removes app-side rows owned by the deleted agent', asyn
         .run('delivery-planner', 'session:parent', 'session:planner', now, now);
     databaseClient
         .query(
-            `insert into cron_runs (session_key, job_id, session_id, agent_id, run_at, synced_at)
-             values (?, ?, ?, ?, ?, ?)`
-        )
-        .run('cron-planner', 'job-planner', 'session-cron', agentId, now, now);
-    databaseClient
-        .query(
             `insert into messaging_bindings (
                 id, platform, name, token, enabled, metadata_json, agent_id, inbound_mode,
                 match_json, created_at, updated_at
@@ -144,7 +137,6 @@ test('deleteAgentProfile removes app-side rows owned by the deleted agent', asyn
     for (const table of [
         'agent_profiles',
         'agent_thought_snapshots',
-        'cron_runs',
         'messaging_bindings',
         'session_deliveries',
         'session_links',

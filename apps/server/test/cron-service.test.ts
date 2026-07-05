@@ -2,6 +2,7 @@ import { afterEach, mock, spyOn, test } from 'bun:test';
 import assert from 'node:assert/strict';
 import * as configuredClient from '../src/agent-runtime/configured-client.ts';
 import * as agentRuntimeCron from '../src/agent-runtime/cron.ts';
+import * as runtimeChats from '../src/chat/runtime-chats.ts';
 import { ensureDatabaseSchema } from '../src/db/bootstrap.ts';
 import { databaseClient } from '../src/db/index.ts';
 import { syncAgentsForRuntime } from '../src/storage/agents.ts';
@@ -18,13 +19,11 @@ test('cron list returns summaries while get returns the full editable job', asyn
         agentId: 'agent:planner',
         createdAt: '2026-04-30T12:00:00.000Z',
         deleteAfterRun: false,
-        delivery: null,
+        delivery: { chatId: 'cht_standup' },
         description: 'Keep things moving.',
         enabled: true,
         id: 'tavern:cron:daily-standup',
-        lastRunAt: null,
         name: 'Daily standup',
-        nextRunAt: null,
         payload: {
             kind: 'agentTurn' as const,
             message: 'Post a daily standup update.',
@@ -35,7 +34,6 @@ test('cron list returns summaries while get returns the full editable job', asyn
         },
         state: {},
         updatedAt: '2026-04-30T12:00:00.000Z',
-        wakeMode: 'now' as const,
     };
     spyOn(configuredClient, 'requireConfiguredAgentRuntimeClientForRuntimeId').mockResolvedValue(
         {} as never
@@ -43,6 +41,12 @@ test('cron list returns summaries while get returns the full editable job', asyn
     spyOn(agentRuntimeCron, 'createCronJob').mockResolvedValue(cronJob);
     spyOn(agentRuntimeCron, 'listCronJobs').mockResolvedValue([cronJob]);
     spyOn(agentRuntimeCron, 'getCronJob').mockResolvedValue(cronJob);
+    spyOn(runtimeChats, 'getRuntimeChatRecord').mockResolvedValue({
+        chat: { id: 'cht_standup' },
+        createdAt: null,
+        runtimeId: 'runtime-1',
+        updatedAt: null,
+    } as never);
     await syncAgentsForRuntime({
         agents: [
             {
@@ -62,6 +66,7 @@ test('cron list returns summaries while get returns the full editable job', asyn
 
     await createCronJob({
         agentId: 'agent:planner',
+        delivery: { chatId: 'cht_standup' },
         description: 'Keep things moving.',
         name: 'Daily standup',
         payload: {
@@ -72,7 +77,6 @@ test('cron list returns summaries while get returns the full editable job', asyn
             kind: 'weekdays',
             time: '09:00',
         },
-        wakeMode: 'now',
     });
 
     const listed = await cronService.listCronJobs();

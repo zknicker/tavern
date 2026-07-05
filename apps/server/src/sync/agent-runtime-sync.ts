@@ -23,7 +23,7 @@ import {
 } from '../storage/agent-runtime-connections.ts';
 import { syncAgentsForRuntime } from '../storage/agents.ts';
 import { syncCronJobsForRuntime } from '../storage/cron-jobs.ts';
-import { reconcileSyntheticCronTriggerRuns, upsertCronRuns } from '../storage/cron-runs.ts';
+import { upsertCronRuns } from '../storage/cron-runs.ts';
 import type { SyncPrimitiveKind } from './contracts.ts';
 import { savePrimitiveSyncState } from './primitive-sync-state.ts';
 
@@ -398,17 +398,12 @@ async function syncCronForConnection(input: RuntimeSyncInput) {
             })
         )
     );
-    const reconciliation = await reconcileSyntheticCronTriggerRuns({
-        runtimeId: input.runtime.id,
-        staleBefore: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
-        syncedAt,
-    });
     await input.log?.(
-        `Synced ${jobResult.synced} cron jobs and ${runs.length} cron runs from ${input.runtime.name}; deleted ${jobResult.deleted} missing cron jobs; reconciled ${reconciliation.deleted} trigger acknowledgements.`
+        `Synced ${jobResult.synced} cron jobs and ${runs.length} cron runs from ${input.runtime.name}; deleted ${jobResult.deleted} missing cron jobs.`
     );
 
     return {
-        deleted: jobResult.deleted + reconciliation.deleted,
+        deleted: jobResult.deleted,
         synced: jobResult.synced + runs.length,
     };
 }

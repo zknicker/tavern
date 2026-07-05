@@ -265,7 +265,6 @@ async function ensureActiveAgentRuntimeConnection() {
 const directAgentReferences = [
     { column: 'tavern_agent_id', table: 'activity_items' },
     { column: 'agent_id', table: 'agent_thought_snapshots' },
-    { column: 'agent_id', table: 'cron_runs' },
     { column: 'agent_id', table: 'memory_peer_mappings' },
     { column: 'agent_id', table: 'messaging_bindings' },
     { column: 'agent_id', table: 'model_selections' },
@@ -314,12 +313,8 @@ function listRuntimeAgentIds(runtimeId: string) {
 
 function listRuntimeSessionKeys(runtimeId: string) {
     const records = databaseClient
-        .query(`
-            SELECT session_key AS sessionKey FROM session_runs WHERE runtime = ?
-            UNION
-            SELECT session_key AS sessionKey FROM cron_runs WHERE runtime_id = ?
-        `)
-        .all(runtimeId, runtimeId) as Array<{ sessionKey: string }>;
+        .query('SELECT session_key AS sessionKey FROM session_runs WHERE runtime = ?')
+        .all(runtimeId) as Array<{ sessionKey: string }>;
 
     return records.map((record) => record.sessionKey);
 }

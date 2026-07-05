@@ -25,8 +25,8 @@ function mapAgentCronJobs(agentId: string, records: CronJobSummary[]): AgentDeta
                 name: record.name,
                 schedule: JSON.stringify(record.schedule),
                 state: record.enabled ? 'enabled' : 'paused',
-                successRate: record.state.lastStatus ?? 'unknown',
-                target: record.agentId ?? record.id,
+                successRate: record.state.lastRunStatus ?? 'unknown',
+                target: record.agentId,
             };
         });
 }

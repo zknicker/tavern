@@ -29,16 +29,14 @@ export async function runCronJob(input: unknown) {
         runtimeClient
     );
     const syncedAt = new Date().toISOString();
-    if (!isSyntheticCronTriggerRun(run)) {
-        await upsertCronRuns([
-            toCronRunInsert({
-                job: parseCronJobRawJson(job),
-                run,
-                runtimeId: job.runtimeId,
-                syncedAt,
-            }),
-        ]);
-    }
+    await upsertCronRuns([
+        toCronRunInsert({
+            job: parseCronJobRawJson(job),
+            run,
+            runtimeId: job.runtimeId,
+            syncedAt,
+        }),
+    ]);
     void syncAgentRuntimeCron().catch((error) => {
         console.warn('[tavern] failed to refresh cron records after run', error);
     });
@@ -49,12 +47,4 @@ export async function runCronJob(input: unknown) {
         success: true as const,
         synced: true,
     };
-}
-
-function isSyntheticCronTriggerRun(run: {
-    id: string;
-    sessionId: null | string;
-    sessionKey: null | string;
-}) {
-    return run.id.startsWith('trigger_') && run.sessionId === null && run.sessionKey === null;
 }

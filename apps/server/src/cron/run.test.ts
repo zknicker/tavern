@@ -41,7 +41,7 @@ function createAgentRuntimeCronJob() {
         agentId: 'agent:planner',
         createdAt: '2026-04-16T00:00:00.000Z',
         deleteAfterRun: false,
-        delivery: null,
+        delivery: { chatId: 'chat:standup' },
         description: 'Keep the team aligned.',
         enabled: true,
         id: 'cron:daily-standup',
@@ -56,37 +56,22 @@ function createAgentRuntimeCronJob() {
         },
         state: {},
         updatedAt: '2026-04-16T00:00:00.000Z',
-        wakeMode: 'now' as const,
     };
 }
 
 function createAgentRuntimeCronRun() {
     return {
-        deliveryError: null,
-        deliveryStatus: 'pending' as const,
+        chatId: 'chat:standup',
         executionErrorCode: null,
         executionErrorMessage: null,
         finishedAt: null,
         id: 'run:daily-standup',
         jobId: 'cron:daily-standup',
         scheduledFor: '2026-04-16T09:00:00.000Z',
-        sessionId: null,
-        sessionKey: null,
         startedAt: null,
         status: 'queued' as const,
-        summary: null,
         trigger: 'manual' as const,
-    };
-}
-
-function createSyntheticTriggerRun() {
-    return {
-        ...createAgentRuntimeCronRun(),
-        id: 'trigger_cron_daily-standup_1780000000000',
-        sessionId: null,
-        sessionKey: null,
-        status: 'running' as const,
-        summary: 'Agent engine queued force cron run.',
+        turnId: null,
     };
 }
 
@@ -143,7 +128,7 @@ test('runCronJob forwards the manual run request to the agent runtime', async ()
     });
     assert.equal(runs.runs.length, 1);
     assert.equal(runs.runs[0]?.id, 'run:daily-standup');
-    assert.equal(runs.runs[0]?.sessionKey, null);
+    assert.equal(runs.runs[0]?.chatId, 'chat:standup');
     assert.equal(runs.runs[0]?.trigger, 'manual');
     assert.equal(runs.runs[0]?.status, 'queued');
 
@@ -153,41 +138,6 @@ test('runCronJob forwards the manual run request to the agent runtime', async ()
     assert.equal(loaded.job?.state.lastRunAtMs, Date.parse('2026-04-16T09:00:00.000Z'));
     assert.equal(loaded.job?.state.lastRunStatus, 'queued');
     assert.equal(emitCronUpdatedSpy.mock.calls.length, 1);
-});
-
-test('runCronJob does not persist runtime trigger acknowledgements as run history', async () => {
-    await syncCronJobsForRuntime({
-        jobs: [createAgentRuntimeCronJob()],
-        runtimeId: 'runtime-1',
-    });
-    await saveAgentRuntimeConnection({
-        auth: null,
-        baseUrl: 'http://localhost:1234',
-        id: 'runtime-1',
-        lastCheckedAt: '2026-05-05T19:00:00.000Z',
-        lastError: null,
-        name: 'Runtime 1',
-    });
-    spyOn(agentRuntimeCron, 'runCronJob').mockResolvedValue(createSyntheticTriggerRun());
-    spyOn(invalidationEvents, 'emitCronUpdated').mockImplementation(() => undefined);
-    spyOn(agentRuntimeSync, 'syncAgentRuntimeCron').mockResolvedValue([
-        {
-            deleted: 0,
-            runtimeId: 'runtime-1',
-            runtimeName: 'Runtime 1',
-            synced: 0,
-        },
-    ]);
-
-    await runCronJob({
-        jobId: 'cron:daily-standup',
-        mode: 'force',
-    });
-
-    const runs = await listCronRuns({
-        jobId: 'cron:daily-standup',
-    });
-    assert.equal(runs.runs.length, 0);
 });
 
 test('runCronJob rejects missing cron jobs before calling the runtime', async () => {

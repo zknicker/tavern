@@ -56,8 +56,6 @@ export async function updateCronJob(input: unknown) {
             schedule: parsed.patch.scheduleConfig
                 ? buildAgentCronSchedule(parsed.patch.scheduleConfig)
                 : undefined,
-            state: parsed.patch.state,
-            wakeMode: parsed.patch.wakeMode,
         },
         runtimeClient
     );
