@@ -273,7 +273,7 @@ export const agentRuntimeSaveMemorySettingsResultSchema = agentRuntimeMemorySett
     restartScheduled: z.boolean(),
 });
 
-export const memoryJobKindSchema = z.enum(['dream', 'extraction']);
+export const memoryJobKindSchema = z.enum(['curation', 'dream', 'extraction', 'skill_review']);
 export const memoryJobStatusSchema = z.enum([
     'completed',
     'failed',
