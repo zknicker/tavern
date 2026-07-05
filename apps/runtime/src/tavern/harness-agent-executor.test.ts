@@ -1,3 +1,6 @@
+import { mkdtempSync } from 'node:fs';
+import os from 'node:os';
+import path from 'node:path';
 import type {
     AgentRuntimeAgent,
     AgentRuntimeAgentSession,
@@ -6,24 +9,36 @@ import type {
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { closeDb, initTestDb } from '../db/connection.ts';
 import { ensureRuntimeSchema } from '../db/schema.ts';
-import { createChat, createMessage } from './chat-api/index.ts';
+import {
+    createChat,
+    createMessage,
+    getMessage,
+    getResponse,
+    getResponseActivity,
+    upsertResponse,
+} from './chat-api/index.ts';
 import {
     claudeCodeAuthOptions,
+    createHarnessAgentExecutor,
     formatHarnessExecutionError,
-    harnessAssistantTextParts,
-    harnessFinalAssistantText,
     harnessPrompt,
     piAuthOptions,
+    setHarnessAgentFactoryForTesting,
 } from './harness-agent-executor.ts';
+import { messageActivityIdForRun, toolActivityIdForRun } from './harness-turn-stream.ts';
 
 const now = '2026-06-29T12:00:00.000Z';
 const originalClaudeToken = process.env.TAVERN_AGENT_CLAUDE_CODE_AUTH_TOKEN;
 const originalAnthropicToken = process.env.ANTHROPIC_AUTH_TOKEN;
+const originalClaudeBaseUrl = process.env.TAVERN_AGENT_CLAUDE_CODE_BASE_URL;
+const originalAnthropicBaseUrl = process.env.ANTHROPIC_BASE_URL;
 const originalAgentApiKey = process.env.TAVERN_AGENT_API_KEY;
 const originalOpenAiApiKey = process.env.OPENAI_API_KEY;
 const originalAgentBaseUrl = process.env.TAVERN_AGENT_BASE_URL;
 
 beforeEach(() => {
+    process.env.TAVERN_AGENT_CLAUDE_CODE_BASE_URL = '';
+    process.env.ANTHROPIC_BASE_URL = '';
     ensureRuntimeSchema(initTestDb());
 });
 
@@ -31,6 +46,8 @@ afterEach(() => {
     closeDb();
     restoreEnv('TAVERN_AGENT_CLAUDE_CODE_AUTH_TOKEN', originalClaudeToken);
     restoreEnv('ANTHROPIC_AUTH_TOKEN', originalAnthropicToken);
+    restoreEnv('TAVERN_AGENT_CLAUDE_CODE_BASE_URL', originalClaudeBaseUrl);
+    restoreEnv('ANTHROPIC_BASE_URL', originalAnthropicBaseUrl);
     restoreEnv('TAVERN_AGENT_API_KEY', originalAgentApiKey);
     restoreEnv('OPENAI_API_KEY', originalOpenAiApiKey);
     restoreEnv('TAVERN_AGENT_BASE_URL', originalAgentBaseUrl);
@@ -109,50 +126,90 @@ describe('harness agent executor', () => {
         ).toBe(original);
     });
 
-    it('keeps harness commentary separate from the final assistant answer', () => {
-        const result = harnessTextResult({
-            content: [
-                { text: 'I will check the tool.', type: 'text' },
-                { toolCallId: 'tool_1', toolName: 'chat_messages_list', type: 'tool-call' },
-                {
-                    text: 'It worked. `chat_messages_list` returned the first 3 messages.',
-                    type: 'text',
-                },
-            ],
-            text: 'I will check the tool.It worked. `chat_messages_list` returned the first 3 messages.',
+    it('persists tool and commentary activity while the harness turn is still streaming', async () => {
+        seedPromptChat({ chatId: 'cht_stream_exec', kind: 'dm' });
+        createPromptMessage('cht_stream_exec', {
+            authorId: 'usr_alice',
+            content: 'how are sales today?',
+            id: 'msg_stream_exec',
+            role: 'user',
         });
 
-        expect(harnessAssistantTextParts(result)).toEqual([
-            {
-                content: 'I will check the tool.',
-                contentIndex: 0,
-                phase: 'commentary',
-            },
-            {
-                content: 'It worked. `chat_messages_list` returned the first 3 messages.',
-                contentIndex: 2,
-                phase: 'final_answer',
-            },
-        ]);
-        expect(harnessFinalAssistantText(result)).toBe(
-            'It worked. `chat_messages_list` returned the first 3 messages.'
+        const toolGate = createGate();
+        async function* parts() {
+            yield* fakeTextSegment('txt_1', 'Pulling sales now.');
+            yield {
+                input: { command: 'sales --today' },
+                toolCallId: 'tool_1',
+                toolName: 'bash',
+                type: 'tool-call',
+            };
+            await toolGate.opened;
+            yield {
+                input: { command: 'sales --today' },
+                output: '17 sold',
+                toolCallId: 'tool_1',
+                toolName: 'bash',
+                type: 'tool-result',
+            };
+            yield* fakeTextSegment('txt_2', 'Sales today: 17 units.');
+        }
+        const fakeAgent = {
+            createSession: () =>
+                Promise.resolve({
+                    destroy: () => Promise.resolve(),
+                    sessionId: 'ses_fake',
+                    stop: () => Promise.resolve({}),
+                }),
+            stream: () => Promise.resolve({ fullStream: parts(), text: Promise.resolve('') }),
+        };
+        const restoreFactory = setHarnessAgentFactoryForTesting(
+            (() => fakeAgent) as unknown as Parameters<typeof setHarnessAgentFactoryForTesting>[0]
         );
-    });
 
-    it('treats a single harness text part as the final assistant answer', () => {
-        const result = harnessTextResult({
-            content: [{ text: 'Done.', type: 'text' }],
-            text: 'Done.',
-        });
+        try {
+            const input = executorInput(
+                { model: 'claude-opus-4-8', provider: 'claude' },
+                {
+                    chatId: 'cht_stream_exec',
+                    content: 'how are sales today?',
+                    requestMessageId: 'msg_stream_exec',
+                    workspaceFolder: mkdtempSync(path.join(os.tmpdir(), 'tavern-exec-test-')),
+                }
+            );
+            upsertResponse('cht_stream_exec', {
+                id: input.responseId,
+                participant_id: 'agt_primary',
+                request_message_id: 'msg_stream_exec',
+                status: 'running',
+                summary: 'Working on it.',
+            });
+            const pendingTurn = createHarnessAgentExecutor().execute(input);
+            let turnError: unknown;
+            pendingTurn.catch((error: unknown) => {
+                turnError = error;
+            });
 
-        expect(harnessAssistantTextParts(result)).toEqual([
-            {
-                content: 'Done.',
-                contentIndex: 0,
-                phase: 'final_answer',
-            },
-        ]);
-        expect(harnessFinalAssistantText(result)).toBe('Done.');
+            const toolActivityId = toolActivityIdForRun(input.runId, 'tool_1');
+            await waitForActivity(toolActivityId, () => turnError);
+            expect(getResponseActivity(toolActivityId)?.status).toBe('running');
+            expect(getResponseActivity(messageActivityIdForRun(input.runId, 0))?.summary).toBe(
+                'Pulling sales now.'
+            );
+            expect(getResponse(input.responseId)?.status).not.toBe('completed');
+
+            toolGate.open();
+            const result = await pendingTurn;
+
+            expect(getResponseActivity(toolActivityId)?.status).toBe('completed');
+            expect(result.activityIds).toContain(toolActivityId);
+            expect(result.outputMessageIds).toHaveLength(1);
+            const reply = getMessage(result.outputMessageIds[0] ?? '');
+            expect(reply?.content).toBe('Sales today: 17 units.');
+            expect(getResponse(input.responseId)?.status).toBe('completed');
+        } finally {
+            restoreFactory();
+        }
     });
 
     it('does not replay prior DM transcript messages into the harness prompt', async () => {
@@ -341,6 +398,7 @@ function executorInput(
         enabledSkillIds?: string[];
         promptContextSequence?: number;
         requestMessageId?: string;
+        workspaceFolder?: string;
     } = {}
 ) {
     const chatId = input.chatId ?? 'cht_general';
@@ -351,7 +409,7 @@ function executorInput(
             isAdmin: true,
             name: 'Tavern',
             primaryColor: null,
-            workspaceFolder: '.tavern/agents/agt_primary/workspace',
+            workspaceFolder: input.workspaceFolder ?? '.tavern/agents/agt_primary/workspace',
         } satisfies AgentRuntimeAgent,
         agentSession: {
             agentId: 'agt_primary',
@@ -428,11 +486,34 @@ function createPromptMessage(
     });
 }
 
-function harnessTextResult(input: {
-    content: Record<string, unknown>[];
-    text: string;
-}): Parameters<typeof harnessFinalAssistantText>[0] {
-    return input as unknown as Parameters<typeof harnessFinalAssistantText>[0];
+function* fakeTextSegment(id: string, text: string) {
+    yield { id, type: 'text-start' };
+    yield { id, text, type: 'text-delta' };
+    yield { id, type: 'text-end' };
+}
+
+function createGate() {
+    let open: () => void = () => {};
+    const opened = new Promise<void>((resolve) => {
+        open = resolve;
+    });
+    return { open, opened };
+}
+
+async function waitForActivity(activityId: string, turnError?: () => unknown) {
+    for (let attempt = 0; attempt < 50; attempt += 1) {
+        const error = turnError?.();
+        if (error !== undefined) {
+            throw error;
+        }
+        if (getResponseActivity(activityId)) {
+            return;
+        }
+        await new Promise((resolve) => {
+            setTimeout(resolve, 5);
+        });
+    }
+    throw new Error(`Activity ${activityId} was not persisted while the turn was streaming.`);
 }
 
 function restoreEnv(key: string, value: string | undefined) {

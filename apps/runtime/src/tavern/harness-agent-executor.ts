@@ -9,13 +9,12 @@ import {
 import { type ClaudeCodeAuthOptions, createClaudeCode } from '@ai-sdk/harness-claude-code';
 import { createCodex } from '@ai-sdk/harness-codex';
 import { createPi, type PiAuthOptions } from '@ai-sdk/harness-pi';
-import type { Context, ToolSet } from '@ai-sdk/provider-utils';
+import type { ToolSet } from '@ai-sdk/provider-utils';
 import type {
     AgentRuntimeModelName,
     AgentRuntimeThinkingLevel,
     TavernChatMessage,
 } from '@tavern/api';
-import type { GenerateTextResult } from 'ai';
 import { createLocalTrustedSandboxProvider } from '../agent-engine/local-trusted-sandbox.ts';
 import {
     type AssignedSkillBundle,
@@ -43,16 +42,13 @@ import {
 } from './chat-api/index.ts';
 import { createTavernChatTools } from './chat-context-tools.ts';
 import { withRuntimeBridgeBootstrap } from './harness-bridge-bootstrap.ts';
+import { assistantFinalAnswerPhase, persistHarnessTurnStream } from './harness-turn-stream.ts';
 import { projectTavernMessageForAgent } from './mention-projection.ts';
+
+export type { HarnessAssistantMessagePhase } from './harness-turn-stream.ts';
 
 const emptyAssistantMessageDiagnostic = 'No reply: the harness returned empty content.';
 const maxAmbientContextMessages = 20;
-const assistantCommentaryPhase = 'commentary' as const;
-const assistantFinalAnswerPhase = 'final_answer' as const;
-
-export type HarnessAssistantMessagePhase =
-    | typeof assistantCommentaryPhase
-    | typeof assistantFinalAnswerPhase;
 
 interface ActiveHarnessTurn {
     controller: AbortController;
@@ -95,12 +91,13 @@ async function executeHarnessTurn(
 
     const instructions = await buildAgentInstructions(input);
     const skills = await readHarnessAgentSkills(input);
-    const agent = createHarnessAgent(input, createLocalTrustedSandboxProvider, {
+    const agent = harnessAgentFactory(input, createLocalTrustedSandboxProvider, {
         instructions,
         skills,
     });
     let session: HarnessAgentSession | undefined;
-    let result: GenerateTextResult<ToolSet, Context, never>;
+    let turnStream: Awaited<ReturnType<typeof persistHarnessTurnStream>>;
+    let fallbackText = '';
     try {
         session = await agent.createSession({
             abortSignal,
@@ -111,11 +108,24 @@ async function executeHarnessTurn(
         });
         activeTurn.session = session;
 
-        result = await agent.generate({
+        const turn = await agent.stream({
             abortSignal,
             prompt: harnessPrompt(input),
             session,
         });
+        turnStream = await persistHarnessTurnStream(
+            {
+                chatId: input.chatId,
+                model: input.agentSession.effectiveModel,
+                responseId: input.responseId,
+                runId: input.runId,
+                runtime,
+            },
+            turn.fullStream
+        );
+        if (!turnStream.finalText) {
+            fallbackText = (await turn.text).trim();
+        }
         const resumeState = await session.stop();
         activeTurn.session = undefined;
         const promptContextSequence = promptCursorSequence(input);
@@ -132,12 +142,8 @@ async function executeHarnessTurn(
     }
 
     const completedAt = new Date().toISOString();
-    const activityIds = persistHarnessActivities(input, result, {
-        completedAt,
-        runtime,
-        startedAt,
-    });
-    const responseContent = harnessFinalAssistantText(result) || emptyAssistantMessageDiagnostic;
+    const activityIds = turnStream.activityIds;
+    const responseContent = turnStream.finalText || fallbackText || emptyAssistantMessageDiagnostic;
     const richResponse = parseRichResponseFromAssistantContent(responseContent);
     const messageContent = richResponse?.displayContent ?? responseContent;
     const messageId = assistantMessageId(input.runId);
@@ -210,6 +216,16 @@ async function executeHarnessTurn(
     return {
         activityIds: allActivityIds,
         outputMessageIds: [receipt.message.id],
+    };
+}
+
+let harnessAgentFactory: typeof createHarnessAgent = createHarnessAgent;
+
+export function setHarnessAgentFactoryForTesting(factory: typeof createHarnessAgent) {
+    const previous = harnessAgentFactory;
+    harnessAgentFactory = factory;
+    return () => {
+        harnessAgentFactory = previous;
     };
 }
 
@@ -540,188 +556,6 @@ function formatPromptMessageContent(input: AgentExecutorInput) {
     });
 }
 
-function persistHarnessActivities(
-    input: AgentExecutorInput,
-    result: GenerateTextResult<ToolSet, Context, never>,
-    eventInput: {
-        completedAt: string;
-        runtime: ReturnType<typeof runtimeMetadata>;
-        startedAt: string;
-    }
-) {
-    const toolResults = new Map(
-        result.toolResults.map((toolResult) => [toolResult.toolCallId, toolResult])
-    );
-    const textPartsByContentIndex = new Map(
-        harnessAssistantTextParts(result).map((part) => [part.contentIndex, part])
-    );
-    const activityIds: string[] = [];
-    let persistedToolActivityCount = 0;
-    for (const [contentIndex, part] of result.content.entries()) {
-        if (part.type === 'text') {
-            const textPart = textPartsByContentIndex.get(contentIndex);
-            if (!(textPart && textPart.phase === assistantCommentaryPhase)) {
-                continue;
-            }
-            const activityId = messageActivityIdForRun(input.runId, contentIndex);
-            activityIds.push(activityId);
-            upsertResponseActivity(input.chatId, input.responseId, {
-                completed_at: eventInput.completedAt,
-                detail: textPart.content,
-                id: activityId,
-                kind: 'message',
-                metadata: {
-                    runtime: {
-                        ...eventInput.runtime,
-                        contentIndex,
-                        messagePhase: assistantCommentaryPhase,
-                        model: input.agentSession.effectiveModel,
-                    },
-                },
-                started_at: eventInput.startedAt,
-                status: 'completed',
-                summary: textPart.content,
-                title: 'Agent commentary',
-            });
-            continue;
-        }
-
-        if (part.type !== 'tool-call') {
-            continue;
-        }
-
-        const toolCall = part;
-        const activityId = toolActivityIdForRun(input.runId, toolCall.toolCallId);
-        const toolResult = toolResults.get(toolCall.toolCallId);
-        activityIds.push(activityId);
-        persistedToolActivityCount += 1;
-        upsertResponseActivity(input.chatId, input.responseId, {
-            completed_at: eventInput.completedAt,
-            detail: toolActivityDetail(toolCall.toolName, toolCall.input),
-            id: activityId,
-            kind: 'tool_call',
-            metadata: {
-                runtime: {
-                    ...eventInput.runtime,
-                    model: input.agentSession.effectiveModel,
-                },
-                tool: {
-                    arguments: toolCall.input,
-                    name: toolCall.toolName,
-                    ...(toolResult ? { result: toolResult.output } : {}),
-                },
-                toolCallId: toolCall.toolCallId,
-                toolName: toolCall.toolName,
-            },
-            started_at: eventInput.startedAt,
-            status: 'completed',
-            title: toolActivityTitle(toolCall.toolName, toolCall.input, toolCall.title),
-        });
-    }
-
-    if (persistedToolActivityCount === 0 && result.toolCalls.length > 0) {
-        activityIds.push(...persistLegacyHarnessToolActivities(input, result, eventInput));
-    }
-
-    return activityIds;
-}
-
-function persistLegacyHarnessToolActivities(
-    input: AgentExecutorInput,
-    result: GenerateTextResult<ToolSet, Context, never>,
-    eventInput: {
-        completedAt: string;
-        runtime: ReturnType<typeof runtimeMetadata>;
-        startedAt: string;
-    }
-) {
-    const toolResults = new Map(
-        result.toolResults.map((toolResult) => [toolResult.toolCallId, toolResult])
-    );
-    const activityIds: string[] = [];
-    for (const toolCall of result.toolCalls) {
-        const activityId = toolActivityIdForRun(input.runId, toolCall.toolCallId);
-        const toolResult = toolResults.get(toolCall.toolCallId);
-        activityIds.push(activityId);
-        upsertResponseActivity(input.chatId, input.responseId, {
-            completed_at: eventInput.completedAt,
-            detail: toolActivityDetail(toolCall.toolName, toolCall.input),
-            id: activityId,
-            kind: 'tool_call',
-            metadata: {
-                runtime: {
-                    ...eventInput.runtime,
-                    model: input.agentSession.effectiveModel,
-                },
-                tool: {
-                    arguments: toolCall.input,
-                    name: toolCall.toolName,
-                    ...(toolResult ? { result: toolResult.output } : {}),
-                },
-                toolCallId: toolCall.toolCallId,
-                toolName: toolCall.toolName,
-            },
-            started_at: eventInput.startedAt,
-            status: 'completed',
-            title: toolActivityTitle(toolCall.toolName, toolCall.input, toolCall.title),
-        });
-    }
-    return activityIds;
-}
-
-export function harnessAssistantTextParts(
-    result: Pick<GenerateTextResult<ToolSet, Context, never>, 'content' | 'text'>
-) {
-    const finalIndex = finalAssistantTextPartIndex(result);
-    const textParts = result.content.flatMap((part, contentIndex) => {
-        if (part.type !== 'text') {
-            return [];
-        }
-        const content = part.text.trim();
-        if (!content) {
-            return [];
-        }
-        return [
-            {
-                content,
-                contentIndex,
-                phase:
-                    contentIndex === finalIndex
-                        ? assistantFinalAnswerPhase
-                        : assistantCommentaryPhase,
-            },
-        ];
-    });
-
-    if (textParts.length > 0) {
-        return textParts;
-    }
-
-    const content = result.text.trim();
-    return content ? [{ content, contentIndex: 0, phase: assistantFinalAnswerPhase }] : [];
-}
-
-export function harnessFinalAssistantText(
-    result: Pick<GenerateTextResult<ToolSet, Context, never>, 'content' | 'text'>
-) {
-    return (
-        harnessAssistantTextParts(result).find((part) => part.phase === assistantFinalAnswerPhase)
-            ?.content ?? ''
-    );
-}
-
-function finalAssistantTextPartIndex(
-    result: Pick<GenerateTextResult<ToolSet, Context, never>, 'content'>
-) {
-    for (let index = result.content.length - 1; index >= 0; index -= 1) {
-        const part = result.content[index];
-        if (part?.type === 'text' && part.text.trim()) {
-            return index;
-        }
-    }
-    return null;
-}
-
 function claudeThinking(value: AgentRuntimeThinkingLevel | null | undefined) {
     if (value === 'off') {
         return 'off';
@@ -777,54 +611,12 @@ function deliveryIdForRun(runId: string) {
     return `del_${sanitizeId(runId)}_assistant`;
 }
 
-function toolActivityIdForRun(runId: string, toolCallId: string) {
-    return `act_${sanitizeId(runId)}_tool_${sanitizeId(toolCallId)}`;
-}
-
-function messageActivityIdForRun(runId: string, contentIndex: number) {
-    return `act_${sanitizeId(runId)}_message_${contentIndex}`;
-}
-
 function richResponseActivityIdForRun(runId: string) {
     return `act_${sanitizeId(runId)}_rich_response`;
 }
 
 function sanitizeId(value: string) {
     return value.replace(/[^A-Za-z0-9_-]/g, '_');
-}
-
-function toolActivityTitle(toolName: string, input: unknown, title?: string) {
-    if (title) {
-        return title;
-    }
-    const subject = toolActivitySubject(toolName, input);
-    return subject ?? `Used ${toolName}`;
-}
-
-function toolActivityDetail(toolName: string, input: unknown) {
-    const record = isRecord(input) ? input : {};
-    if (toolName === 'bash' && typeof record.command === 'string') {
-        return record.command;
-    }
-    if ((toolName === 'read' || toolName === 'read_file') && typeof record.file_path === 'string') {
-        return record.file_path;
-    }
-    return undefined;
-}
-
-function toolActivitySubject(toolName: string, input: unknown) {
-    const record = isRecord(input) ? input : {};
-    if (toolName === 'bash' && typeof record.command === 'string') {
-        return 'terminal';
-    }
-    if ((toolName === 'read' || toolName === 'read_file') && typeof record.file_path === 'string') {
-        return record.file_path;
-    }
-    return null;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-    return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function errorMessage(error: unknown) {

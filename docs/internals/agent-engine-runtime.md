@@ -75,9 +75,15 @@ Provider adapters are internal implementation choices:
 - `@ai-sdk/harness-codex`
 - `@ai-sdk/harness-pi` for OpenAI and OpenAI-compatible API-key routes
 
-The harness executor creates a session, sends the prompt, persists assistant
-text and tool activity into Tavern chat state, stores the opaque harness resume
-state on the Agent session, and stops the session handle after the turn settles.
+The harness executor creates a session, sends the prompt, and consumes the
+turn's part stream while it runs: tool calls persist as `running` activity when
+they start and `completed`/`failed` when they resolve, reasoning segments
+persist as `reasoning` activity when they end, and assistant text segments
+persist as commentary activity as soon as a later part proves they are not the
+final answer. The last text segment becomes the assistant reply. After
+the turn settles it stores the opaque harness resume state on the Agent session
+and stops the session handle. The chat response row must already exist when the
+turn starts; mid-turn activity rows reference it.
 The prompt contains the current Tavern message plus bounded ambient channel
 context since the Agent session's `promptContextSequence`; it does not replay
 the prior user-agent transcript because the harness session owns that history.
