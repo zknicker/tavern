@@ -68,7 +68,7 @@ function activityName(activity: TavernResponseActivity) {
     if (activity.kind === 'command') {
         return 'command';
     }
-    if (activity.kind === 'planning' || activity.kind === 'reasoning') {
+    if (activity.kind === 'reasoning') {
         return 'reasoning';
     }
     if (activity.kind === 'message') {

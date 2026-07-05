@@ -313,9 +313,6 @@ function activityKind(activity: TavernResponseActivity) {
     if (kind === 'reasoning') {
         return 'reasoning' as const;
     }
-    if (kind === 'planning') {
-        return 'plan' as const;
-    }
     if (kind === 'command') {
         return 'command' as const;
     }

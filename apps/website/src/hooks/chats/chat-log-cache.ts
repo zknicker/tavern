@@ -252,7 +252,7 @@ function progressStepToChatRows(input: {
         return [progressStepToMessageRow(input)];
     }
 
-    if (input.step.kind === 'reasoning' || input.step.kind === 'plan') {
+    if (input.step.kind === 'reasoning') {
         return [progressStepToThinkingRow(input)];
     }
 
@@ -594,7 +594,7 @@ function toolNameForStep(step: ChatTurnProgressStep) {
     if (step.kind === 'message') {
         return 'message';
     }
-    if (step.kind === 'reasoning' || step.kind === 'plan') {
+    if (step.kind === 'reasoning') {
         return 'reasoning';
     }
     if (step.kind === 'command') {
@@ -610,7 +610,7 @@ function toolTarget(step: ChatTurnProgressStep) {
 
     const detail = step.detail?.trim();
 
-    if (step.kind === 'message' || step.kind === 'reasoning' || step.kind === 'plan') {
+    if (step.kind === 'message' || step.kind === 'reasoning') {
         return detail ?? stripToolVerb(step.label);
     }
 

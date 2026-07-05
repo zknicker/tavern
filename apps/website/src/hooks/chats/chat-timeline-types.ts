@@ -29,7 +29,6 @@ export interface ChatTurnProgressStep {
         | 'command'
         | 'message'
         | 'notice'
-        | 'plan'
         | 'reasoning'
         | 'rich_response'
         | 'tool'

@@ -33,27 +33,12 @@ export function groupAgentItems(items: TranscriptItem[]) {
     return segments;
 }
 
-export function getVisibleAgentItems(input: {
-    items: TranscriptItem[];
-    showThinkingText: boolean;
-}) {
-    if (input.showThinkingText) {
-        return input.items;
-    }
-
-    return input.items.filter((item) => !isThinkingItem(item));
-}
-
 function getActivityGroupKind(item: TranscriptItem) {
     if (item.kind === 'row' && item.row.kind === 'system' && item.row.systemKind === 'thinking') {
         return 'thinking';
     }
 
     return 'work';
-}
-
-function isThinkingItem(item: TranscriptItem) {
-    return item.kind === 'row' && item.row.kind === 'system' && item.row.systemKind === 'thinking';
 }
 
 function flushActivitySegment(segments: AgentItemSegment[], items: TranscriptItem[]) {

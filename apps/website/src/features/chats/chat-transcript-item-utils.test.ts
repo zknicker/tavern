@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { getVisibleAgentItems, groupAgentItems } from './chat-transcript-item-utils.ts';
+import { groupAgentItems } from './chat-transcript-item-utils.ts';
 import type { TranscriptItem } from './chat-transcript-model.ts';
 
 test('groupAgentItems keeps work segment keys stable when activity rows append', () => {
@@ -29,30 +29,6 @@ test('groupAgentItems still separates thinking and work into distinct stable seg
             'activity:thinking:thinking-2',
             'activity:work:tool-2',
         ]
-    );
-});
-
-test('getVisibleAgentItems hides inline thinking text when disabled', () => {
-    const visible = getVisibleAgentItems({
-        items: [thinkingItem('thinking-1'), toolItem('tool-1'), thinkingItem('thinking-2')],
-        showThinkingText: false,
-    });
-
-    assert.deepEqual(
-        visible.map((item) => (item.kind === 'row' ? item.row.id : item.kind)),
-        ['tool-1']
-    );
-});
-
-test('getVisibleAgentItems keeps inline thinking text when enabled', () => {
-    const visible = getVisibleAgentItems({
-        items: [thinkingItem('thinking-1'), toolItem('tool-1')],
-        showThinkingText: true,
-    });
-
-    assert.deepEqual(
-        visible.map((item) => (item.kind === 'row' ? item.row.id : item.kind)),
-        ['thinking-1', 'tool-1']
     );
 });
 

@@ -2120,7 +2120,6 @@ export const agentRuntimeTurnProgressStepSchema = z.object({
         'command',
         'message',
         'notice',
-        'plan',
         'reasoning',
         'tool',
         'rich_response',

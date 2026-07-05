@@ -11,7 +11,6 @@ import {
     SettingsSection,
 } from '../../../components/ui/settings-row.tsx';
 import { Switch } from '../../../components/ui/switch.tsx';
-import { useChatThinkingDisplayPreference } from '../../../hooks/chats/use-chat-thinking-display-preference.ts';
 import { useAppLayoutPreference } from '../../../hooks/shell/use-app-layout-preference.ts';
 import { cn } from '../../../lib/utils.ts';
 
@@ -29,7 +28,6 @@ const themeOptions: Array<{
 export function AppearanceSettings() {
     const { setTheme, theme } = useTheme();
     const appLayout = useAppLayoutPreference();
-    const chatThinkingDisplay = useChatThinkingDisplayPreference();
 
     return (
         <SettingsPage>
@@ -119,23 +117,6 @@ export function AppearanceSettings() {
                                 onCheckedChange={(enabled) =>
                                     appLayout.setMode(enabled ? 'sidebar' : 'tabs')
                                 }
-                            />
-                        </div>
-                    </SettingsRow>
-                </SettingsGroup>
-            </SettingsSection>
-
-            <SettingsSection title="Chat Display">
-                <SettingsGroup>
-                    <SettingsRow
-                        description="Show the model's reasoning in chats."
-                        title="Show thinking text"
-                    >
-                        <div className="flex justify-start md:justify-end">
-                            <Switch
-                                aria-label="Show thinking text"
-                                checked={chatThinkingDisplay.enabled}
-                                onCheckedChange={chatThinkingDisplay.setEnabled}
                             />
                         </div>
                     </SettingsRow>

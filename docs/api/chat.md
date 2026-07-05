@@ -339,7 +339,7 @@ product identity.
 
 Activity can include:
 
-* planning and thinking summaries
+* thinking summaries
 * tool calls and tool results
 * commands
 * code snippets

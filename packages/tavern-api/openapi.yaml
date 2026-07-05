@@ -816,7 +816,7 @@ components:
       enum: [queued, running, completed, failed, cancelled]
     ResponseActivityKind:
       type: string
-      enum: [planning, reasoning, tool_call, tool_result, command, message, artifact, rich_response, custom]
+      enum: [reasoning, tool_call, tool_result, command, message, artifact, rich_response, custom]
     ChatResponse:
       type: object
       additionalProperties: false
