@@ -1,5 +1,6 @@
 import type { AgentRuntimeModelName } from '@tavern/api';
 import { generateText } from 'ai';
+import { listRuntimeSkills } from '../agent-engine/skill-library.ts';
 import {
     modelCategoryModelRef,
     resolveModelCategorySelection,
@@ -8,6 +9,7 @@ import {
     createLanguageModelForRuntime,
     supportsLanguageModelForRuntime,
 } from '../models/language-model.ts';
+import { getStoredAgent } from '../tavern/agents-store.ts';
 
 export interface MemoryExtractionMessage {
     author_id: string;
@@ -25,10 +27,17 @@ export interface MemoryExtractionInput {
     messages: MemoryExtractionMessage[];
 }
 
+export interface LearningSignal {
+    detail: string;
+    kind: 'correction' | 'frustration' | 'skill_misfire' | 'technique';
+    skillId?: string;
+}
+
 export interface MemoryExtractionOutcome {
     model: AgentRuntimeModelName;
     /** Markdown observation bullets; empty when nothing durable was found. */
     observations: string;
+    signals: LearningSignal[];
     usage: unknown;
 }
 
@@ -63,12 +72,14 @@ export async function runAiSdkMemoryExtraction(
     const model = resolveMemoryExtractionModel();
     const result = await generateText({
         model: await createLanguageModelForRuntime(model),
-        prompt: memoryExtractionPrompt(input),
+        prompt: await memoryExtractionPrompt(input),
         system: memoryExtractionInstructions,
     });
+    const parsed = parseMemoryExtractionText(result.text);
     return {
         model,
-        observations: normalizeObservations(result.text),
+        observations: parsed.observations,
+        signals: parsed.signals,
         usage: result.usage ?? {},
     };
 }
@@ -87,10 +98,31 @@ const memoryExtractionInstructions = [
     '- Skip greetings, small talk, transient task mechanics, speculation, and anything already implied by another bullet.',
     '- Never record secrets, credentials, tokens, or private data beyond the user’s clear intent.',
     `- If nothing in the window is durable, output exactly ${noneMarker}.`,
+    '',
+    'After the observations (or NONE), when the window contains lessons a future',
+    'session should act on, add a final section:',
+    'SIGNALS',
+    '- correction: <the user corrected style, format, or workflow — the gist>',
+    '- frustration: <the user pushed back on how the agent worked>',
+    '- technique: <a non-obvious technique, fix, or workaround worth reusing>',
+    '- skill_misfire[<skill-id>]: <an enabled skill was wrong or missing a step>',
+    'Only emit signal lines that clearly match; omit the SIGNALS section',
+    'otherwise. Never emit signals for environment-dependent failures or for',
+    'transient errors that already resolved.',
 ].join('\n');
 
-function memoryExtractionPrompt(input: MemoryExtractionInput) {
-    return ['Transcript window:', '', renderExtractionTranscript(input.messages)].join('\n');
+async function memoryExtractionPrompt(input: MemoryExtractionInput) {
+    const skills = await listEnabledSkills(input.agentId);
+    return [
+        'Enabled skills:',
+        skills.length === 0
+            ? 'NONE'
+            : skills.map((skill) => `- ${skill.id}: ${skill.name}`).join('\n'),
+        '',
+        'Transcript window:',
+        '',
+        renderExtractionTranscript(input.messages),
+    ].join('\n');
 }
 
 export function renderExtractionTranscript(messages: MemoryExtractionMessage[]) {
@@ -117,4 +149,56 @@ function normalizeObservations(text: string) {
         return '';
     }
     return trimmed;
+}
+
+export function parseMemoryExtractionText(text: string): {
+    observations: string;
+    signals: LearningSignal[];
+} {
+    const lines = text.trim().split(/\r?\n/u);
+    const signalIndex = lines.findIndex((line) => line.trim().toUpperCase() === 'SIGNALS');
+    if (signalIndex === -1) {
+        return { observations: normalizeObservations(text), signals: [] };
+    }
+
+    const observationText = lines.slice(0, signalIndex).join('\n').trim();
+    return {
+        observations: normalizeObservations(observationText),
+        signals: parseSignalLines(lines.slice(signalIndex + 1)),
+    };
+}
+
+function parseSignalLines(lines: string[]): LearningSignal[] {
+    const signals: LearningSignal[] = [];
+    for (const line of lines) {
+        const match = line.trim().match(/^-\s*([a-z_]+)(?:\[([^\]]+)\])?\s*:\s*(.+)$/iu);
+        if (!match) {
+            continue;
+        }
+        const kind = match[1]?.toLowerCase();
+        const detail = match[3]?.trim();
+        if (!detail) {
+            continue;
+        }
+        if (kind === 'correction' || kind === 'frustration' || kind === 'technique') {
+            signals.push({ detail, kind });
+        }
+        if (kind === 'skill_misfire') {
+            const skillId = match[2]?.trim();
+            signals.push(skillId ? { detail, kind, skillId } : { detail, kind });
+        }
+    }
+    return signals;
+}
+
+async function listEnabledSkills(agentId: string) {
+    const agent = getStoredAgent(agentId);
+    if (!agent) {
+        return [];
+    }
+    const skills = await listRuntimeSkills({ agent, includePluginSkills: false });
+    const enabled = new Set(agent.enabledSkillIds);
+    return skills
+        .filter((skill) => enabled.has(skill.id))
+        .map((skill) => ({ id: skill.id, name: skill.name }));
 }

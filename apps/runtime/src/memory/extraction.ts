@@ -6,6 +6,7 @@ import type { Database } from '../db/sqlite.ts';
 import { namedParams } from '../db/sqlite.ts';
 import { resolveModelCategorySelection } from '../models/category-settings.ts';
 import { supportsLanguageModelForRuntime } from '../models/language-model.ts';
+import { queueSkillReviewFromSignals } from '../skills/review-queue.ts';
 import type { AgentTurn } from '../tavern/agent-turn-store.ts';
 import type { MessageRow } from '../tavern/chat-api/types.ts';
 import { formatLocalDateSlug, formatLocalIsoWithOffset } from '../timezone.ts';
@@ -264,6 +265,17 @@ async function processMemoryExtraction(row: DebounceRow, clock: () => Date, db: 
                 completedChunks += 1;
             } else {
                 skipMemoryJobAfterRun(jobId, outcome, clock());
+            }
+            if (outcome.signals.length > 0) {
+                queueSkillReviewFromSignals({
+                    agentId: row.agent_id,
+                    chatId: row.chat_id,
+                    db,
+                    endSequence: chunk.coveredEnd,
+                    now: clock(),
+                    signals: outcome.signals,
+                    startSequence,
+                });
             }
             updateExtractionCursor(row, chunk.coveredEnd, clock(), db);
             chunkCursor = chunk.coveredEnd;
@@ -540,6 +552,7 @@ function completeMemoryJob(
                 metadataJson: JSON.stringify({
                     extractionMode: 'observations',
                     observations: input.outcome.observations,
+                    signals: input.outcome.signals,
                 }),
                 modelJson: JSON.stringify(input.outcome.model),
                 now,
@@ -569,6 +582,7 @@ function skipMemoryJobAfterRun(jobId: string, outcome: MemoryExtractionOutcome, 
                 metadataJson: JSON.stringify({
                     extractionMode: 'observations',
                     reason: 'no_durable_observations',
+                    signals: outcome.signals,
                 }),
                 modelJson: JSON.stringify(outcome.model),
                 now: now.toISOString(),

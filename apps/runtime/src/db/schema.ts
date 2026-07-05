@@ -327,7 +327,7 @@ CREATE INDEX IF NOT EXISTS idx_memory_extraction_debounces_due
 
 CREATE TABLE IF NOT EXISTS memory_jobs (
   id                     TEXT PRIMARY KEY,
-  kind                   TEXT NOT NULL CHECK (kind IN ('extraction', 'dream')),
+  kind                   TEXT NOT NULL CHECK (kind IN ('extraction', 'dream', 'skill_review', 'curation')),
   status                 TEXT NOT NULL CHECK (status IN ('queued', 'running', 'completed', 'failed', 'skipped')),
   chat_id                TEXT,
   agent_id               TEXT NOT NULL,
@@ -354,6 +354,22 @@ CREATE INDEX IF NOT EXISTS idx_memory_jobs_agent_created
 
 CREATE INDEX IF NOT EXISTS idx_memory_jobs_status_due
   ON memory_jobs(status, created_at);
+
+CREATE TABLE IF NOT EXISTS skill_review_queue (
+  agent_id              TEXT PRIMARY KEY,
+  chat_id               TEXT NOT NULL,
+  signals_json          TEXT NOT NULL DEFAULT '[]',
+  window_start_sequence INTEGER,
+  window_end_sequence   INTEGER,
+  attempts              INTEGER NOT NULL DEFAULT 0 CHECK (attempts >= 0),
+  scheduled_for         TEXT NOT NULL,
+  created_at            TEXT NOT NULL,
+  updated_at            TEXT NOT NULL,
+  FOREIGN KEY(chat_id) REFERENCES chats(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_skill_review_queue_due
+  ON skill_review_queue(scheduled_for);
 
 CREATE TABLE IF NOT EXISTS memory_page_tombstones (
   path        TEXT PRIMARY KEY,
@@ -564,7 +580,9 @@ function ensureColumn(
     db: Database,
     input: { column: string; definition: string; table: string }
 ): void {
-    const rows = db.prepare(`PRAGMA table_info(${input.table})`).all() as Array<{ name: string }>;
+    const rows = db.prepare(`PRAGMA table_info(${input.table})`).all() as Array<{
+        name: string;
+    }>;
 
     if (rows.some((row) => row.name === input.column)) {
         return;

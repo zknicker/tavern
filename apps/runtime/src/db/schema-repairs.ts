@@ -29,8 +29,42 @@ CREATE INDEX IF NOT EXISTS idx_chat_response_activity_chat_sequence
   ON chat_response_activity(chat_id, sequence);
 `;
 
+const MEMORY_JOBS_TABLE = `
+CREATE TABLE memory_jobs (
+  id                     TEXT PRIMARY KEY,
+  kind                   TEXT NOT NULL CHECK (kind IN ('extraction', 'dream', 'skill_review', 'curation')),
+  status                 TEXT NOT NULL CHECK (status IN ('queued', 'running', 'completed', 'failed', 'skipped')),
+  chat_id                TEXT,
+  agent_id               TEXT NOT NULL,
+  agent_participant_id   TEXT,
+  model_category         TEXT CHECK (model_category IN ('fast', 'standard', 'deep', 'visual')),
+  model_json             TEXT,
+  source_start_sequence  INTEGER,
+  source_end_sequence    INTEGER,
+  output_path            TEXT,
+  file_changes_json      TEXT NOT NULL DEFAULT '[]',
+  usage_json             TEXT NOT NULL DEFAULT '{}',
+  transcript_json        TEXT NOT NULL DEFAULT '[]',
+  metadata_json          TEXT NOT NULL DEFAULT '{}',
+  error                  TEXT,
+  created_at             TEXT NOT NULL,
+  updated_at             TEXT NOT NULL,
+  started_at             TEXT,
+  completed_at           TEXT,
+  FOREIGN KEY(chat_id) REFERENCES chats(id) ON DELETE SET NULL
+)`;
+
+const MEMORY_JOBS_INDEXES = `
+CREATE INDEX IF NOT EXISTS idx_memory_jobs_agent_created
+  ON memory_jobs(agent_id, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_memory_jobs_status_due
+  ON memory_jobs(status, created_at);
+`;
+
 export function repairRuntimeSchema(db: Database): void {
     ensureChatResponseActivityRichResponseKind(db);
+    ensureMemoryJobsSkillReviewKind(db);
     hydrateAgentSkillAssignments(db);
 }
 
@@ -64,6 +98,53 @@ INSERT INTO chat_response_activity
   WHERE kind <> 'widget';
 DROP TABLE temp.chat_response_activity_rebuild;
 ${CHAT_RESPONSE_ACTIVITY_INDEXES}
+`);
+        db.exec('COMMIT');
+        transactionOpen = false;
+    } catch (error) {
+        if (transactionOpen) {
+            db.exec('ROLLBACK');
+        }
+        throw error;
+    } finally {
+        db.exec('PRAGMA foreign_keys = ON');
+    }
+}
+
+function ensureMemoryJobsSkillReviewKind(db: Database): void {
+    const sql = tableSql(db, 'memory_jobs');
+
+    if (!sql || sql.includes("'skill_review'")) {
+        return;
+    }
+
+    let transactionOpen = false;
+    db.exec('PRAGMA foreign_keys = OFF');
+    try {
+        db.exec('BEGIN IMMEDIATE');
+        transactionOpen = true;
+        db.exec(`
+DROP TABLE IF EXISTS temp.memory_jobs_rebuild;
+CREATE TEMP TABLE memory_jobs_rebuild AS
+  SELECT id, kind, status, chat_id, agent_id, agent_participant_id,
+         model_category, model_json, source_start_sequence, source_end_sequence,
+         output_path, file_changes_json, usage_json, transcript_json,
+         metadata_json, error, created_at, updated_at, started_at, completed_at
+  FROM memory_jobs;
+DROP TABLE memory_jobs;
+${MEMORY_JOBS_TABLE};
+INSERT INTO memory_jobs
+  (id, kind, status, chat_id, agent_id, agent_participant_id,
+   model_category, model_json, source_start_sequence, source_end_sequence,
+   output_path, file_changes_json, usage_json, transcript_json,
+   metadata_json, error, created_at, updated_at, started_at, completed_at)
+  SELECT id, kind, status, chat_id, agent_id, agent_participant_id,
+         model_category, model_json, source_start_sequence, source_end_sequence,
+         output_path, file_changes_json, usage_json, transcript_json,
+         metadata_json, error, created_at, updated_at, started_at, completed_at
+  FROM memory_jobs_rebuild;
+DROP TABLE temp.memory_jobs_rebuild;
+${MEMORY_JOBS_INDEXES}
 `);
         db.exec('COMMIT');
         transactionOpen = false;

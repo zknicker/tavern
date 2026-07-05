@@ -24,6 +24,7 @@ import {
     restartSemanticMemoryWatcher,
     startSemanticMemoryWatcher,
 } from './memory/semantic/watcher.ts';
+import { startSkillReviewScheduler, stopSkillReviewScheduler } from './skills/review-queue.ts';
 import { demoAgentId } from './tavern/development-chat-demo-types.ts';
 import { seedDevelopmentChatDemos } from './tavern/development-chat-demos.ts';
 import { seedDevelopmentSemanticMemoryDemos } from './tavern/development-memory-demos.ts';
@@ -54,11 +55,15 @@ async function main(): Promise<void> {
     log.info('Runtime DB ready', { path: dbPath });
     const recoveredRecords = recoverInterruptedChatResponses(db);
     if (recoveredRecords > 0) {
-        log.info('Recovered interrupted agent records', { count: recoveredRecords });
+        log.info('Recovered interrupted agent records', {
+            count: recoveredRecords,
+        });
     }
     const recoveredMemoryJobs = recoverInterruptedMemoryJobs({ db });
     if (recoveredMemoryJobs > 0) {
-        log.info('Recovered interrupted Memory jobs', { count: recoveredMemoryJobs });
+        log.info('Recovered interrupted Memory jobs', {
+            count: recoveredMemoryJobs,
+        });
     }
     const demoSeed = seedDevelopmentChatDemos({ db });
     if (demoSeed.seeded > 0) {
@@ -69,7 +74,9 @@ async function main(): Promise<void> {
         ? await seedDevelopmentWorkspaceDemos({ sources: [demoWorkspaceSource] })
         : { seeded: 0 };
     if (workspaceDemoSeed.seeded > 0) {
-        log.info('Development workspace demos ready', { count: workspaceDemoSeed.seeded });
+        log.info('Development workspace demos ready', {
+            count: workspaceDemoSeed.seeded,
+        });
     }
     const semanticMemoryDemoSeed = await seedDevelopmentSemanticMemoryDemos();
     if (semanticMemoryDemoSeed.seeded > 0) {
@@ -82,7 +89,9 @@ async function main(): Promise<void> {
         return { seeded: 0 };
     });
     if (memoryJobDemoSeed.seeded > 0) {
-        log.info('Development Memory job demos ready', { count: memoryJobDemoSeed.seeded });
+        log.info('Development Memory job demos ready', {
+            count: memoryJobDemoSeed.seeded,
+        });
     }
     await prepareSemanticMemoryRoot((await resolveSemanticMemoryConfig()).memoryPath).catch(
         (err) => {
@@ -97,6 +106,7 @@ async function main(): Promise<void> {
     runtimeCron = await startRuntimeCronManager();
     log.info('Runtime cron ready');
     startMemoryExtractionScheduler();
+    startSkillReviewScheduler();
     startMemoryDreamScheduler();
 
     runtimeServer = startTavernRuntimeServer();
@@ -138,6 +148,9 @@ async function shutdown(signal: string): Promise<void> {
     log.info('Stopping Memory extraction scheduler');
     stopMemoryExtractionScheduler();
     log.info('Memory extraction scheduler stopped');
+    log.info('Stopping skill review scheduler');
+    stopSkillReviewScheduler();
+    log.info('Skill review scheduler stopped');
     log.info('Stopping Memory dream scheduler');
     stopMemoryDreamScheduler();
     log.info('Memory dream scheduler stopped');

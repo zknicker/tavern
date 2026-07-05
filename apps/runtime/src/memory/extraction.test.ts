@@ -31,6 +31,7 @@ const echoWorker: MemoryExtractionWorker = async ({ messages }) => ({
     observations: messages
         .map((message) => `- [${message.sequence}] ${message.content}`)
         .join('\n'),
+    signals: [],
     usage: { totalTokens: messages.length },
 });
 
@@ -80,11 +81,15 @@ describe('Memory extraction', () => {
         expect(readDebounce()?.target_sequence).toBe(2);
 
         await expect(
-            processDueMemoryExtractions({ now: new Date('2026-07-02T20:04:59.000Z') })
+            processDueMemoryExtractions({
+                now: new Date('2026-07-02T20:04:59.000Z'),
+            })
         ).resolves.toEqual({ completed: 0, failed: 0, skipped: 0 });
 
         await expect(
-            processDueMemoryExtractions({ now: new Date('2026-07-02T20:05:00.000Z') })
+            processDueMemoryExtractions({
+                now: new Date('2026-07-02T20:05:00.000Z'),
+            })
         ).resolves.toEqual({ completed: 1, failed: 0, skipped: 0 });
 
         const episodicPath = path.join(workspace, '.memory', 'episodic', '2026-07-02.md');
@@ -118,6 +123,107 @@ describe('Memory extraction', () => {
             extractionMode: 'observations',
             observations: expect.stringContaining('deployment preference'),
         });
+        expect(readSkillReviewQueue()).toBeNull();
+    });
+
+    test('queues skill review when completed extraction emits learning signals', async () => {
+        setMemoryExtractionWorkerForTesting(async ({ messages }) => ({
+            model: { model: 'fast-mini', provider: 'openai' },
+            observations: `- [${messages[0]?.sequence}] Remember signal source.`,
+            signals: [
+                {
+                    detail: 'Use the shorter release checklist.',
+                    kind: 'correction',
+                },
+            ],
+            usage: {},
+        }));
+        createMessage('cht_memory', {
+            author_id: 'usr_tavern',
+            content: 'Shorter checklist please.',
+            id: 'msg_user_1',
+            role: 'user',
+        });
+        let turn = createCompletedTurn({
+            now: '2026-07-02T20:00:00.000Z',
+            responseId: 'rsp_1',
+            runId: 'run_1',
+            triggerMessageId: 'msg_user_1',
+        });
+        scheduleMemoryExtractionForTurn(turn, {
+            debounceMs: 0,
+            now: new Date('2026-07-02T20:00:00.000Z'),
+        });
+
+        await processDueMemoryExtractions({
+            now: new Date('2026-07-02T20:00:00.000Z'),
+        });
+
+        expect(readSkillReviewQueue()).toMatchObject({
+            attempts: 0,
+            chat_id: 'cht_memory',
+            scheduled_for: '2026-07-02T20:01:00.000Z',
+            window_end_sequence: 1,
+            window_start_sequence: 1,
+        });
+
+        getDb()
+            .prepare(
+                `UPDATE skill_review_queue
+                 SET attempts = 2,
+                     scheduled_for = '2026-07-02T21:00:00.000Z'
+                 WHERE agent_id = 'agt_primary'`
+            )
+            .run();
+        setMemoryExtractionWorkerForTesting(async ({ messages }) => ({
+            model: { model: 'fast-mini', provider: 'openai' },
+            observations: `- [${messages[0]?.sequence}] Remember technique.`,
+            signals: [
+                {
+                    detail: 'Run runtime tests before lint.',
+                    kind: 'technique',
+                },
+            ],
+            usage: {},
+        }));
+        createMessage('cht_memory', {
+            author_id: 'usr_tavern',
+            content: 'Runtime tests first.',
+            id: 'msg_user_2',
+            role: 'user',
+        });
+        turn = createCompletedTurn({
+            now: '2026-07-02T20:02:00.000Z',
+            responseId: 'rsp_2',
+            runId: 'run_2',
+            triggerMessageId: 'msg_user_2',
+        });
+        scheduleMemoryExtractionForTurn(turn, {
+            debounceMs: 0,
+            now: new Date('2026-07-02T20:02:00.000Z'),
+        });
+
+        await processDueMemoryExtractions({
+            now: new Date('2026-07-02T20:02:00.000Z'),
+        });
+
+        const row = readSkillReviewQueue();
+        expect(row).toMatchObject({
+            attempts: 0,
+            scheduled_for: '2026-07-02T20:03:00.000Z',
+            window_end_sequence: 2,
+            window_start_sequence: 1,
+        });
+        expect(JSON.parse(row?.signals_json ?? '[]')).toEqual([
+            {
+                detail: 'Use the shorter release checklist.',
+                kind: 'correction',
+            },
+            {
+                detail: 'Run runtime tests before lint.',
+                kind: 'technique',
+            },
+        ]);
     });
 
     test('resets the idle debounce and extracts through the newest target sequence', async () => {
@@ -158,10 +264,14 @@ describe('Memory extraction', () => {
             target_sequence: 2,
         });
         await expect(
-            processDueMemoryExtractions({ now: new Date('2026-07-02T20:05:00.000Z') })
+            processDueMemoryExtractions({
+                now: new Date('2026-07-02T20:05:00.000Z'),
+            })
         ).resolves.toEqual({ completed: 0, failed: 0, skipped: 0 });
         await expect(
-            processDueMemoryExtractions({ now: new Date('2026-07-02T20:08:00.000Z') })
+            processDueMemoryExtractions({
+                now: new Date('2026-07-02T20:08:00.000Z'),
+            })
         ).resolves.toEqual({ completed: 1, failed: 0, skipped: 0 });
 
         const body = await fs.readFile(
@@ -288,13 +398,19 @@ describe('Memory extraction', () => {
         });
 
         releaseWrite();
-        await expect(processing).resolves.toEqual({ completed: 1, failed: 0, skipped: 0 });
+        await expect(processing).resolves.toEqual({
+            completed: 1,
+            failed: 0,
+            skipped: 0,
+        });
         vi.restoreAllMocks();
         expect(readCursor()?.last_extracted_sequence).toBe(1);
         expect(readDebounce()?.target_sequence).toBe(2);
 
         await expect(
-            processDueMemoryExtractions({ now: new Date('2026-07-02T20:01:00.000Z') })
+            processDueMemoryExtractions({
+                now: new Date('2026-07-02T20:01:00.000Z'),
+            })
         ).resolves.toEqual({ completed: 1, failed: 0, skipped: 0 });
         expect(readCursor()?.last_extracted_sequence).toBe(2);
         expect(readDebounce()).toBeNull();
@@ -327,7 +443,9 @@ describe('Memory extraction', () => {
         });
 
         await expect(
-            processDueMemoryExtractions({ now: new Date('2026-07-02T20:00:00.000Z') })
+            processDueMemoryExtractions({
+                now: new Date('2026-07-02T20:00:00.000Z'),
+            })
         ).resolves.toEqual({ completed: 1, failed: 0, skipped: 0 });
 
         expect(batches).toHaveLength(2);
@@ -368,6 +486,7 @@ describe('Memory extraction', () => {
             return {
                 model: { model: 'fast-mini', provider: 'openai' },
                 observations: `- [${input.messages[0].sequence}] Observed.`,
+                signals: [],
                 usage: {},
             };
         });
@@ -383,7 +502,9 @@ describe('Memory extraction', () => {
         });
 
         await expect(
-            processDueMemoryExtractions({ now: new Date('2026-07-02T20:00:00.000Z') })
+            processDueMemoryExtractions({
+                now: new Date('2026-07-02T20:00:00.000Z'),
+            })
         ).resolves.toEqual({ completed: 1, failed: 0, skipped: 0 });
 
         expect(batches).toEqual([
@@ -423,13 +544,17 @@ describe('Memory extraction', () => {
         });
 
         await expect(
-            processDueMemoryExtractions({ now: new Date('2026-07-02T20:00:00.000Z') })
+            processDueMemoryExtractions({
+                now: new Date('2026-07-02T20:00:00.000Z'),
+            })
         ).resolves.toEqual({ completed: 0, failed: 1, skipped: 0 });
         expect(readCursor()?.last_extracted_sequence).toBe(memoryExtractionChunkMessageLimit);
         expect(readDebounce()).not.toBeNull();
 
         await expect(
-            processDueMemoryExtractions({ now: new Date('2026-07-02T20:15:00.000Z') })
+            processDueMemoryExtractions({
+                now: new Date('2026-07-02T20:15:00.000Z'),
+            })
         ).resolves.toEqual({ completed: 1, failed: 0, skipped: 0 });
         expect(readCursor()?.last_extracted_sequence).toBe(messageCount);
         expect(readDebounce()).toBeNull();
@@ -445,6 +570,7 @@ describe('Memory extraction', () => {
         setMemoryExtractionWorkerForTesting(async () => ({
             model: { model: 'fast-mini', provider: 'openai' },
             observations: '',
+            signals: [],
             usage: {},
         }));
         createMessage('cht_memory', {
@@ -465,7 +591,9 @@ describe('Memory extraction', () => {
         });
 
         await expect(
-            processDueMemoryExtractions({ now: new Date('2026-07-02T20:00:00.000Z') })
+            processDueMemoryExtractions({
+                now: new Date('2026-07-02T20:00:00.000Z'),
+            })
         ).resolves.toEqual({ completed: 0, failed: 0, skipped: 1 });
 
         expect(readCursor()?.last_extracted_sequence).toBe(1);
@@ -476,6 +604,7 @@ describe('Memory extraction', () => {
                 metadata_json: JSON.stringify({
                     extractionMode: 'observations',
                     reason: 'no_durable_observations',
+                    signals: [],
                 }),
                 status: 'skipped',
             },
@@ -753,6 +882,17 @@ function readJobsWithTimes() {
              ORDER BY created_at ASC`
         )
         .all();
+}
+
+function readSkillReviewQueue() {
+    return getDb().prepare('SELECT * FROM skill_review_queue LIMIT 1').get() as null | {
+        attempts: number;
+        chat_id: string;
+        scheduled_for: string;
+        signals_json: string;
+        window_end_sequence: number;
+        window_start_sequence: number;
+    };
 }
 
 async function waitFor(assertion: () => boolean, timeoutMs = 1000) {
