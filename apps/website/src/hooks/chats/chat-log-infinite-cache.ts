@@ -11,12 +11,11 @@ export function patchInfiniteChatLogWithProgress(
         return current;
     }
 
-    const lastPageIndex = current.pages.length - 1;
-
+    // Pages are ordered newest-first; live progress patches the newest page.
     return {
         ...current,
         pages: current.pages.map((page, index) => {
-            if (index !== lastPageIndex) {
+            if (index !== 0) {
                 return page;
             }
 

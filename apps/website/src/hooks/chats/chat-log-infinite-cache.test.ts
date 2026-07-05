@@ -15,11 +15,13 @@ const turn = {
 };
 
 test('live progress preserves the loaded newest-page boundary row', () => {
+    // Pages are ordered newest-first; older history chains behind the newest
+    // window.
     const cache: InfiniteData<ChatLogPage> = {
-        pageParams: [{ beforeSequence: 3 }, undefined],
+        pageParams: [undefined, { beforeSequence: 3 }],
         pages: [
-            chatLogPage(null, ['message-1', 'message-2']),
             chatLogPage(3, ['message-3', 'message-4']),
+            chatLogPage(null, ['message-1', 'message-2']),
         ],
     };
 
@@ -36,13 +38,14 @@ test('live progress preserves the loaded newest-page boundary row', () => {
         })
     );
 
-    expect(next?.pages.at(-1)?.rows.map((row) => row.id)).toEqual([
+    expect(next?.pages[0]?.rows.map((row) => row.id)).toEqual([
         'message-3',
         'message-4',
         'act_run-1_tool_web',
     ]);
-    expect(next?.pages.at(-1)?.limit).toBe(2);
-    expect(next?.pages.at(-1)?.totalMessages).toBe(4);
+    expect(next?.pages[0]?.limit).toBe(2);
+    expect(next?.pages[0]?.totalMessages).toBe(4);
+    expect(next?.pages[1]?.rows.map((row) => row.id)).toEqual(['message-1', 'message-2']);
 });
 
 test('single-page live progress keeps loaded history instead of trimming', () => {

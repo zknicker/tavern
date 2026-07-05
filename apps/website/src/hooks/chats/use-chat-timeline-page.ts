@@ -13,10 +13,14 @@ export function useChatTimelinePage(input: { id: string; limit: number }) {
         },
         {
             ...queryPolicy.agentRuntimeSnapshot,
-            // New rows arrive through events and latest-page refetches, never
-            // by paging forward.
-            getNextPageParam: () => undefined,
-            getPreviousPageParam: (firstPage) => getPreviousChatLogCursor(firstPage),
+            // Older history chains FORWARD from the newest page. React Query
+            // refetches an infinite query front-to-back, re-deriving each
+            // next cursor from the freshly fetched page — so page 0 must be
+            // the cursorless newest window. Chaining older pages backwards
+            // poisons the cache on refetch: the stored older-history cursor
+            // in page 0 pins every refetch to a stale window and truncates
+            // the newer pages, freezing the transcript mid-turn.
+            getNextPageParam: (lastPage) => getPreviousChatLogCursor(lastPage),
             // Refetch on mount only when invalidation events marked the log
             // stale; an unconditional refetch duplicates the event-driven
             // refresh model and reflows the timeline on every chat re-entry.
@@ -34,6 +38,11 @@ export function useChatTimelinePage(input: { id: string; limit: number }) {
     return {
         ...query,
         data,
+        // Product-named pagination surface: "older history" loads past the
+        // oldest loaded row.
+        fetchOlderHistory: query.fetchNextPage,
+        hasOlderHistory: Boolean(query.hasNextPage),
+        isFetchingOlderHistory: query.isFetchingNextPage,
         isPending,
     };
 }
@@ -44,7 +53,7 @@ function getPreviousChatLogCursor(page: ChatLogPage) {
         : { beforeSequence: page.nextBeforeSequence };
 }
 
-// Pages are ordered oldest-first; the newest page carries live turn state
+// Pages are ordered newest-first; the newest page carries live turn state
 // and totals, while the oldest page's cursor says whether older history
 // remains beyond the loaded set.
 function mergeChatLogPages(pages: ChatLogPage[] | undefined): ChatLogPage | undefined {
@@ -52,7 +61,7 @@ function mergeChatLogPages(pages: ChatLogPage[] | undefined): ChatLogPage | unde
         return undefined;
     }
 
-    const latestPage = pages.at(-1);
+    const latestPage = pages[0];
 
     if (!latestPage) {
         return undefined;
@@ -60,8 +69,10 @@ function mergeChatLogPages(pages: ChatLogPage[] | undefined): ChatLogPage | unde
 
     const rowsById = new Map<string, ChatLogPage['rows'][number]>();
 
-    for (const page of pages) {
-        for (const row of page.rows) {
+    // Oldest page first so rows stay in timeline order and newer pages win
+    // on id collisions.
+    for (let index = pages.length - 1; index >= 0; index -= 1) {
+        for (const row of pages[index]?.rows ?? []) {
             rowsById.set(row.id, row);
         }
     }
@@ -69,7 +80,7 @@ function mergeChatLogPages(pages: ChatLogPage[] | undefined): ChatLogPage | unde
     return {
         ...latestPage,
         limit: rowsById.size,
-        nextBeforeSequence: pages[0]?.nextBeforeSequence ?? latestPage.nextBeforeSequence,
+        nextBeforeSequence: pages.at(-1)?.nextBeforeSequence ?? latestPage.nextBeforeSequence,
         rows: [...rowsById.values()],
     };
 }

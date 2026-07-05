@@ -192,7 +192,7 @@ function SyncedAgentChatDetail({ chat, chatId }: { chat: ChatListItem; chatId: s
                 emptyLabel="No synced messages for this chat yet."
                 error={timeline.error}
                 failedTurn={timeline.failedTurn}
-                fetchPreviousPage={timeline.fetchPreviousPage}
+                fetchOlderHistory={timeline.fetchOlderHistory}
                 footer={
                     <ChatDetailFooter
                         activeReply={timeline.activeReply}
@@ -221,13 +221,13 @@ function SyncedAgentChatDetail({ chat, chatId }: { chat: ChatListItem; chatId: s
                         />
                     </ChatDetailFooter>
                 }
-                hasPreviousPage={timeline.hasPreviousPage}
+                hasOlderHistory={timeline.hasOlderHistory}
                 // Sidebar layout keeps the chat topbar (room identity, traffic
                 // light clearance); tabs layout renders the breadcrumb and
                 // participants in the shell toolbar instead.
                 header={layoutMode === 'sidebar' ? <ChatRoomTopbar chat={chat} /> : null}
                 historyLoaded={timeline.historyLoaded}
-                isFetchingPreviousPage={timeline.isFetchingPreviousPage}
+                isFetchingOlderHistory={timeline.isFetchingOlderHistory}
                 isPending={timeline.isPending}
                 rows={rows}
                 totalMessages={totalMessages}

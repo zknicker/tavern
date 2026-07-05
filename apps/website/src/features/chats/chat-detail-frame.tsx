@@ -25,13 +25,13 @@ export function ChatDetailFrame({
     emptyLabel,
     error,
     artifactPanel,
-    fetchPreviousPage,
+    fetchOlderHistory,
     failedTurn,
     footer,
-    hasPreviousPage = false,
+    hasOlderHistory = false,
     header,
     historyLoaded,
-    isFetchingPreviousPage = false,
+    isFetchingOlderHistory = false,
     isPending,
     rows,
     totalMessages,
@@ -44,13 +44,13 @@ export function ChatDetailFrame({
     emptyLabel: string;
     error?: unknown;
     artifactPanel?: React.ReactNode;
-    fetchPreviousPage?: () => void;
+    fetchOlderHistory?: () => void;
     failedTurn?: ChatTurnFailure | null;
     footer: React.ReactNode;
-    hasPreviousPage?: boolean;
+    hasOlderHistory?: boolean;
     header?: React.ReactNode;
     historyLoaded: boolean;
-    isFetchingPreviousPage?: boolean;
+    isFetchingOlderHistory?: boolean;
     isPending: boolean;
     rows: NonNullable<ChatLogOutput>['rows'];
     totalMessages: number;
@@ -66,11 +66,11 @@ export function ChatDetailFrame({
     const handleScroll = () => {
         const viewport = viewportRef.current;
 
-        if (!viewport || viewport.scrollTop > 160 || !hasPreviousPage || isFetchingPreviousPage) {
+        if (!viewport || viewport.scrollTop > 160 || !hasOlderHistory || isFetchingOlderHistory) {
             return;
         }
 
-        fetchPreviousPage?.();
+        fetchOlderHistory?.();
     };
 
     return (
