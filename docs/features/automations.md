@@ -20,9 +20,13 @@ Automations let users ask agents to do work later or on a schedule.
 * **Follow-up state.** Users can see what ran, what failed, and the next planned
   run.
 
-Automations are entirely user-authored. Tavern's own background work, such as
-capability refreshes, runs as Runtime jobs. Memory work belongs to agents
-through the managed `memory` skill, not hidden Runtime maintenance.
+Users and agents can author automations. Agent-created automations are ordinary
+jobs: they deliver into chats where the agent participates and stay fully
+visible and editable in the Tasks page.
+
+Tavern's own background work, such as capability refreshes, runs as Runtime
+jobs. Memory work belongs to agents through the managed `memory` skill, not
+hidden Runtime maintenance.
 
 ## Boundary
 
