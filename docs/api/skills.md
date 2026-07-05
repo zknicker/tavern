@@ -43,6 +43,13 @@ The API covers:
 
 * list visible skills
 * enable or disable Runtime skills
+* list skills available to the current agent with source, writability, and
+  enablement state through `skills_list`
+* read a skill body and current hash through `skill_view`
+* create an agent-authored skill through `skill_create`
+* replace an agent-authored `SKILL.md` with hash checking through `skill_patch`
+* write agent-authored support files under `references/`, `templates/`,
+  `scripts/`, or `assets/` through `skill_write_file`
 * read setup requirements
 * list Runtime-visible tools
 * read Runtime tool diagnostics where exposed

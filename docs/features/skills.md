@@ -52,6 +52,12 @@ installed skill then appears in inventory, can be previewed through `skill.get`,
 and can be assigned to one or more agents. Assigning a skill stores that
 agent's enabled skill ids; it does not copy the skill package.
 
+Agents can author skills into the same shared library. Agent-authored skills
+are auto-enabled for the creating agent, visible to other agents on the Skills
+settings page, and assigned to other agents through normal skill enablement.
+Runtime-seeded, hub-installed, and operator-placed skills stay read-only to
+agents.
+
 At execution time, Runtime resolves the agent's enabled skill ids against the
 installed skill library. Agents receive matching skill bundles through the AI
 SDK `HarnessAgent` `skills` setting. Missing assigned skills are stale settings
