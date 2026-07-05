@@ -145,6 +145,21 @@ describe('generated agent instructions', () => {
         await expect(stat(path.join(workspaceDir, 'AGENTS.md'))).rejects.toThrow();
     });
 
+    test('removes empty legacy companion files without deleting authored files', async () => {
+        await writeFile(path.join(workspaceDir, 'BOOTSTRAP.md'), '');
+        await writeFile(path.join(workspaceDir, 'HEARTBEAT.md'), '');
+        await writeFile(path.join(workspaceDir, 'TOOLS.md'), '# Local tools\n');
+        registerPlanner();
+
+        await generateAgentInstructions(getDb(), 'planner');
+
+        await expect(stat(path.join(workspaceDir, 'BOOTSTRAP.md'))).rejects.toThrow();
+        await expect(stat(path.join(workspaceDir, 'HEARTBEAT.md'))).rejects.toThrow();
+        await expect(readFile(path.join(workspaceDir, 'TOOLS.md'), 'utf8')).resolves.toBe(
+            '# Local tools\n'
+        );
+    });
+
     test('composes NOTES.md content into the Notes section', async () => {
         registerPlanner();
         await generateAgentInstructions(getDb(), 'planner');

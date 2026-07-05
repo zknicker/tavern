@@ -35,6 +35,13 @@ export interface AgentInstructionReadResult {
 
 const defaultAgentId = 'main';
 const defaultAgentName = 'main';
+const legacyGeneratedCompanionFiles = [
+    'BOOTSTRAP.md',
+    'HEARTBEAT.md',
+    'IDENTITY.md',
+    'ROLE.md',
+    'TOOLS.md',
+] as const;
 
 export function getAgentWorkspaceSource(
     db: Database,
@@ -114,7 +121,7 @@ export async function generateAgentInstructions(db: Database, agentId = defaultA
 
     const notes = await ensureAgentNotes(source.workspaceDir);
     await ensureAgentWorkDirectory(source.workspaceDir);
-    await removeGeneratedInstructionFile(source.workspaceDir);
+    await removeGeneratedInstructionFiles(source.workspaceDir);
     const next = renderAgentInstructions(source.agentName, notes, {
         memoryEnabled: isMemoryEnabled(),
     });
@@ -182,8 +189,17 @@ async function ensureAgentWorkDirectory(workspaceDir: string) {
     await fs.mkdir(path.join(workspaceDir, agentWorkDirectoryName), { recursive: true });
 }
 
-async function removeGeneratedInstructionFile(workspaceDir: string) {
+async function removeGeneratedInstructionFiles(workspaceDir: string) {
     await fs.rm(path.join(workspaceDir, 'AGENTS.md'), { force: true });
+    await Promise.all(
+        legacyGeneratedCompanionFiles.map(async (fileName) => {
+            const filePath = path.join(workspaceDir, fileName);
+            const stat = await fs.stat(filePath).catch(() => null);
+            if (stat?.isFile() && stat.size === 0) {
+                await fs.rm(filePath, { force: true });
+            }
+        })
+    );
 }
 
 async function hashText(value: string) {

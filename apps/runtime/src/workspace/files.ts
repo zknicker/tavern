@@ -25,6 +25,8 @@ const skippedDirectoryNames = new Set([
     'venv',
 ]);
 
+const skippedDirectoryPatterns = [/^(?:claude-code|codex)-ags_/u];
+
 const imageExtensions = new Set(['.bmp', '.gif', '.jpeg', '.jpg', '.png', '.svg', '.webp']);
 const dataUrlReadMaxBytes = 16 * 1024 * 1024;
 const textSourceMaxBytes = 64 * 1024 * 1024;
@@ -91,6 +93,7 @@ export async function listWorkspaceFiles(
 ): Promise<AgentRuntimeWorkspaceFileList> {
     const root = await resolveWorkspaceRoot(db, input.agentId);
     const relativePath = normalizeWorkspacePath(input.path ?? '', { allowEmpty: true });
+    rejectUnbrowseableWorkspacePath(relativePath);
     const directory = await resolveWorkspaceChild(root, relativePath);
     const stat = await fs.stat(directory).catch(() => null);
     if (!stat?.isDirectory()) {
@@ -117,8 +120,9 @@ export async function readWorkspaceFile(
 ): Promise<AgentRuntimeWorkspaceFileContent> {
     const root = await resolveWorkspaceRoot(db, input.agentId);
     const relativePath = normalizeWorkspacePath(input.path, { allowEmpty: false });
-    const absolutePath = await resolveWorkspaceChild(root, relativePath);
     rejectSensitiveWorkspacePath(relativePath);
+    rejectUnbrowseableWorkspacePath(relativePath);
+    const absolutePath = await resolveWorkspaceChild(root, relativePath);
 
     const stat = await fs.stat(absolutePath).catch(() => null);
     if (!stat?.isFile()) {
@@ -214,10 +218,35 @@ function normalizeWorkspacePath(value: string, { allowEmpty }: { allowEmpty: boo
 }
 
 function isVisibleEntry(entry: Dirent) {
-    if (entry.name.startsWith('.') && entry.name !== '.github') {
+    if (isHiddenWorkspaceName(entry.name)) {
         return false;
     }
-    return !(entry.isDirectory() && skippedDirectoryNames.has(entry.name));
+    if (entry.isDirectory() && isSkippedWorkspaceDirectory(entry.name)) {
+        return false;
+    }
+    return true;
+}
+
+function rejectUnbrowseableWorkspacePath(relativePath: string) {
+    if (!relativePath) {
+        return;
+    }
+    for (const segment of relativePath.split('/')) {
+        if (isHiddenWorkspaceName(segment) || isSkippedWorkspaceDirectory(segment)) {
+            throw new Error('Workspace path is not browseable.');
+        }
+    }
+}
+
+function isHiddenWorkspaceName(name: string) {
+    return name.startsWith('.') && name !== '.github';
+}
+
+function isSkippedWorkspaceDirectory(name: string) {
+    return (
+        skippedDirectoryNames.has(name) ||
+        skippedDirectoryPatterns.some((pattern) => pattern.test(name))
+    );
 }
 
 async function toWorkspaceEntry(

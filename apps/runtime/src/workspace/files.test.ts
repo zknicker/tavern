@@ -31,6 +31,8 @@ describe('workspace files', () => {
     test('lists visible workspace files with directories first', async () => {
         await mkdir(path.join(workspaceDir, 'docs'));
         await mkdir(path.join(workspaceDir, 'node_modules'));
+        await mkdir(path.join(workspaceDir, 'codex-ags_cht_general_agt_primary_1'));
+        await mkdir(path.join(workspaceDir, 'claude-code-ags_cht_general_agt_primary_2'));
         await writeFile(path.join(workspaceDir, 'README.md'), '# Hello');
         await writeFile(path.join(workspaceDir, '.env'), 'SECRET=1');
         await writeFile(path.join(workspaceDir, 'docs', 'plan.html'), '<h1>Plan</h1>');
@@ -82,7 +84,19 @@ describe('workspace files', () => {
     });
 
     test('rejects traversal, symlinks, and sensitive files', async () => {
+        await mkdir(path.join(workspaceDir, '.home', '.codex'), { recursive: true });
+        await mkdir(path.join(workspaceDir, 'codex-ags_cht_general_agt_primary_1'));
+        await mkdir(path.join(workspaceDir, 'node_modules', 'package'), { recursive: true });
         await writeFile(path.join(workspaceDir, '.env'), 'SECRET=1');
+        await writeFile(
+            path.join(workspaceDir, '.home', '.codex', 'auth.json'),
+            '{"token":"secret"}'
+        );
+        await writeFile(
+            path.join(workspaceDir, 'codex-ags_cht_general_agt_primary_1', 'harness-tool.mjs'),
+            'token'
+        );
+        await writeFile(path.join(workspaceDir, 'node_modules', 'package', 'index.js'), 'code');
         await writeFile(path.join(outsideDir, 'secret.md'), '# Secret');
         await symlink(
             path.join(outsideDir, 'secret.md'),
@@ -95,6 +109,27 @@ describe('workspace files', () => {
         await expect(
             readWorkspaceFile(getDb(), { agentId: 'planner', path: '.env' })
         ).rejects.toThrow(/secrets/u);
+        await expect(
+            listWorkspaceFiles(getDb(), { agentId: 'planner', path: '.home/.codex' })
+        ).rejects.toThrow(/not browseable/u);
+        await expect(
+            readWorkspaceFile(getDb(), { agentId: 'planner', path: '.home/.codex/auth.json' })
+        ).rejects.toThrow(/not browseable/u);
+        await expect(
+            listWorkspaceFiles(getDb(), {
+                agentId: 'planner',
+                path: 'codex-ags_cht_general_agt_primary_1',
+            })
+        ).rejects.toThrow(/not browseable/u);
+        await expect(
+            readWorkspaceFile(getDb(), {
+                agentId: 'planner',
+                path: 'codex-ags_cht_general_agt_primary_1/harness-tool.mjs',
+            })
+        ).rejects.toThrow(/not browseable/u);
+        await expect(
+            listWorkspaceFiles(getDb(), { agentId: 'planner', path: 'node_modules/package' })
+        ).rejects.toThrow(/not browseable/u);
         await expect(
             readWorkspaceFile(getDb(), { agentId: 'planner', path: 'secret-link.md' })
         ).rejects.toThrow(/inside the workspace/u);
