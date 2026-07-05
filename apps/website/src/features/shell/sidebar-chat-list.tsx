@@ -501,7 +501,7 @@ function SidebarChatActivity({ chat, hidden }: { chat: ChatListItem; hidden: boo
     }
 
     return (
-        <span className="shrink-0 text-sidebar-muted text-xs group-focus-within/menu-item:opacity-0 group-hover/menu-item:opacity-0">
+        <span className="shrink-0 text-sidebar-muted text-xs group-focus-within/menu-item:text-sidebar-accent-foreground/70 group-hover/menu-item:text-sidebar-accent-foreground/70">
             {formatSidebarActivityLabel(chat.lastActivityLabel)}
         </span>
     );
@@ -514,7 +514,7 @@ function SidebarChatActiveTurnIndicator({ hidden }: { hidden: boolean }) {
 
     return (
         <span
-            className="pointer-events-none absolute top-1/2 right-0.5 z-10 inline-flex size-6 -translate-y-1/2 items-center justify-center text-sidebar-muted group-focus-within/menu-item:opacity-0 group-hover/menu-item:opacity-0"
+            className="pointer-events-none absolute top-1/2 right-0.5 z-10 inline-flex size-6 -translate-y-1/2 items-center justify-center text-sidebar-muted group-focus-within/menu-item:text-sidebar-accent-foreground/70 group-hover/menu-item:text-sidebar-accent-foreground/70"
             title="Agent turn in progress"
         >
             <Spinner className="size-4" />

@@ -1,5 +1,31 @@
 import { expect, test } from '../support/test.ts';
 
+test('keeps chat activity visible while a sidebar row is hovered or focused', async ({ page }) => {
+    await page.addInitScript(() => {
+        window.localStorage.setItem('tavern.app.layout.mode.v2', 'sidebar');
+        window.localStorage.setItem('tavern.sidebar.pinnedOpen.v1', 'true');
+    });
+
+    await page.goto('/overview');
+
+    const row = page.locator('a[href="/chats/cht_tavern_agent_dm"]');
+    await expect(row).toBeVisible();
+
+    const activity = row
+        .locator('span')
+        .filter({ hasText: /^(\d+[mhd]|just now|no activity yet)$/u })
+        .last();
+
+    await expect(activity).toBeVisible();
+    await expect(activity).toHaveCSS('opacity', '1');
+
+    await row.hover();
+    await expect(activity).toHaveCSS('opacity', '1');
+
+    await row.focus();
+    await expect(activity).toHaveCSS('opacity', '1');
+});
+
 test('collapsed sidebar preview opens from the left edge immediately after collapse', async ({
     page,
 }) => {
