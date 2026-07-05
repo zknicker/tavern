@@ -84,6 +84,24 @@ CREATE TABLE IF NOT EXISTS agent_skill_assignments (
 CREATE INDEX IF NOT EXISTS idx_agent_skill_assignments_enabled
   ON agent_skill_assignments(agent_id, enabled, skill_id);
 
+CREATE TABLE IF NOT EXISTS skill_sources (
+  skill_id            TEXT PRIMARY KEY,
+  source              TEXT NOT NULL CHECK (source IN ('seeded', 'hub', 'agent', 'external')),
+  created_by_agent_id TEXT,
+  created_at          TEXT NOT NULL,
+  updated_at          TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS skill_usage (
+  skill_id    TEXT NOT NULL,
+  agent_id    TEXT NOT NULL,
+  kind        TEXT NOT NULL CHECK (kind IN ('injected', 'viewed')),
+  occurred_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_skill_usage_skill_occurred
+  ON skill_usage(skill_id, occurred_at);
+
 CREATE TABLE IF NOT EXISTS agent_plugin_grants (
   agent_id   TEXT NOT NULL,
   plugin_id  TEXT NOT NULL,

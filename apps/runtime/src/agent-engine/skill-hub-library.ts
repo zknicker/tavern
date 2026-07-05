@@ -11,6 +11,7 @@ import {
     agentRuntimeSkillHubPreviewSchema,
     agentRuntimeSkillHubScanSchema,
 } from '@tavern/api';
+import { deleteSkillSource, tryRecordSkillSource } from '../skills/store.ts';
 import {
     agentEngineSkillsDir,
     listRuntimeSkills,
@@ -112,6 +113,7 @@ export async function installSkillHubSkill(
     const skillPath = path.join(options.skillsDir ?? agentEngineSkillsDir, skill.name, 'SKILL.md');
     await fs.mkdir(path.dirname(skillPath), { recursive: true });
     await fs.writeFile(skillPath, skill.skillMd, { mode: 0o600 });
+    tryRecordSkillSource({ skillId: skill.name, source: 'hub' });
 
     return actionResult(true, [`Installed ${skill.name}.`], 0);
 }
@@ -135,6 +137,7 @@ export async function uninstallSkillHubSkill(
     }
 
     await fs.rm(skillDir, { force: true, recursive: true });
+    tryDeleteSkillSource(normalized);
     return actionResult(true, [`Uninstalled ${normalized}.`], 0);
 }
 
@@ -144,4 +147,15 @@ function actionResult(
     exitCode: number | null
 ): AgentRuntimeSkillHubActionResult {
     return agentRuntimeSkillHubActionResultSchema.parse({ exitCode, log, ok });
+}
+
+function tryDeleteSkillSource(skillId: string) {
+    try {
+        deleteSkillSource(skillId);
+    } catch (error) {
+        if (error instanceof Error && error.message.includes('Database not initialized')) {
+            return;
+        }
+        throw error;
+    }
 }

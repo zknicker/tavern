@@ -17,6 +17,7 @@ import {
     readPluginSkillBundlesForAgent,
     readPluginSkillContent,
 } from '../plugins/agent-capabilities.ts';
+import { tryRecordSkillSource } from '../skills/store.ts';
 
 export const agentEngineSkillsDir = path.join(AGENT_HOME, 'skills');
 export const tavernAgentSkillId = 'tavern-agent';
@@ -62,11 +63,13 @@ export async function seedTavernAgentSkill(options: { skillsDir?: string } = {})
     );
     const existing = await fs.readFile(skillPath, 'utf8').catch(() => null);
     if (existing !== null) {
+        tryRecordSkillSource({ skillId: tavernAgentSkillId, source: 'seeded' });
         return;
     }
 
     await fs.mkdir(path.dirname(skillPath), { recursive: true });
     await fs.writeFile(skillPath, defaultTavernSkill, { mode: 0o600 });
+    tryRecordSkillSource({ skillId: tavernAgentSkillId, source: 'seeded' });
 }
 
 export async function listRuntimeSkills(options: RuntimeSkillOptions = {}) {

@@ -105,6 +105,8 @@ const skillsSection = `## Skills
 
 Your assigned skills are listed with names and descriptions. When a task matches a skill, open its instructions and read only what the task needs, then follow them. Prefer updating an existing skill over creating a new one.
 
+You can inspect, create, and improve shared skills with \`skills_list\`, \`skill_view\`, \`skill_create\`, \`skill_patch\`, and \`skill_write_file\`. Prefer patching an existing skill over creating a new one. Use class-level skill names, not one-off task names. Skill changes apply next session.
+
 Do not assume an unlisted skill or tool exists. If useful access is missing, name the missing Tavern capability plainly. Prefer saying that you need an appropriate Tavern skill or Plugin capability over giving provider-specific setup instructions.
 
 Do not tell the user to run provider-specific setup commands or open provider-specific settings such as \`/mcp\`, Claude, Codex, or claude.ai unless an assigned Tavern skill explicitly instructs that exact step.`;

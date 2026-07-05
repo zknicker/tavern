@@ -32,6 +32,8 @@ import {
     parseRichResponseFromAssistantContent,
     richResponseActivity,
 } from '../rich-responses/render.ts';
+import { createTavernSkillTools } from '../skills/agent-tools.ts';
+import { recordInjectedSkillUsage } from '../skills/telemetry.ts';
 import type { AgentExecutor, AgentExecutorInput } from './agent-executor.ts';
 import { buildAgentInstructions } from './agent-instructions.ts';
 import { updateAgentSessionRuntimeState } from './agent-session-store.ts';
@@ -247,6 +249,7 @@ function createHarnessAgent(
         }),
         ...(isMemoryEnabled() ? createTavernMemoryTools() : {}),
         ...(isRuntimeCronReady() ? createTavernCronTools({ agentId: input.agent.id }) : {}),
+        ...createTavernSkillTools({ agentId: input.agent.id }),
         ...createGoogleToolsForAgent(input.agent),
         ...createMerchbaseToolsForAgent(input.agent),
     };
@@ -261,8 +264,15 @@ function createHarnessAgent(
     });
 }
 
-async function readHarnessAgentSkills(input: AgentExecutorInput): Promise<HarnessAgentSkill[]> {
-    const skills = await readAssignedSkillBundles(input.agent);
+export async function readHarnessAgentSkills(
+    input: AgentExecutorInput,
+    options: { skillsDir?: string } = {}
+): Promise<HarnessAgentSkill[]> {
+    const skills = await readAssignedSkillBundles(input.agent, options);
+    recordInjectedSkillUsage({
+        agentId: input.agent.id,
+        skillIds: skills.filter((skill) => skill.path !== null).map((skill) => skill.id),
+    });
     return skills.map(toHarnessAgentSkill);
 }
 
