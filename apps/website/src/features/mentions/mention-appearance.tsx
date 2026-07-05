@@ -201,18 +201,21 @@ function getMentionAppearanceOverride(input: MentionAppearanceInput) {
     return undefined;
 }
 
-// Agent composer chips render the agent's character face tinted with its
-// configured color. Both ride in local option metadata so no live agent lookup
-// is needed while editing.
+// Agent chips render the agent's character face tinted with its configured
+// color. Appearance rides in mention metadata: composer options embed it at
+// pick time (composer chips mount outside app providers) and transcript
+// surfaces resolve it live from the agent record before rendering.
 function getAgentFaceOverride(input: MentionAppearanceInput) {
     const character = readString(input.metadata?.agentCharacter);
+    const color = readString(input.metadata?.agentColor);
 
     if (!(character && isHeadName(character)) || character === 'none') {
-        return undefined;
+        // No face art, but keep the agent's configured color driving the tint.
+        return color ? ({ brandColor: color } satisfies MentionAppearanceOverride) : undefined;
     }
 
     return {
-        agentFace: { character, color: readString(input.metadata?.agentColor) },
+        agentFace: { character, color },
     } satisfies MentionAppearanceOverride;
 }
 

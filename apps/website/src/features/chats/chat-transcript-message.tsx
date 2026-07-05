@@ -1,4 +1,5 @@
 import { FileTextIcon } from 'lucide-react';
+import * as React from 'react';
 import {
     Attachment,
     AttachmentContent,
@@ -7,9 +8,13 @@ import {
     AttachmentTitle,
     AttachmentTrigger,
 } from '../../components/ui/attachment.tsx';
+import { useAgentAppearanceLookup } from '../../hooks/agents/use-agent-appearance.ts';
 import type { ChatLogOutput, SessionHistoryOutput } from '../../lib/trpc.tsx';
 import { cn } from '../../lib/utils.ts';
-import { readMentionsFromMarkdown } from '../mentions/mention-metadata.ts';
+import {
+    applyAgentMentionAppearance,
+    readMentionsFromMarkdown,
+} from '../mentions/mention-metadata.ts';
 import { CollapsibleText } from '../rows/collapsible-text.tsx';
 import { getMessageDisplay } from '../rows/message-display.ts';
 import type { ChatTextAnimationRange } from './chat-inline-text-animation.tsx';
@@ -39,7 +44,11 @@ export function ChatTranscriptMessageContent({
         messageDisplay.content.length === 0 &&
         message.metadata?.stopReason === 'error';
     const content = contentOverride ?? messageDisplay.content;
-    const mentions = readMentionsFromMarkdown(content);
+    const lookupAgentAppearance = useAgentAppearanceLookup();
+    const mentions = React.useMemo(
+        () => applyAgentMentionAppearance(readMentionsFromMarkdown(content), lookupAgentAppearance),
+        [content, lookupAgentAppearance]
+    );
 
     if (isErrorEvent) {
         return (
