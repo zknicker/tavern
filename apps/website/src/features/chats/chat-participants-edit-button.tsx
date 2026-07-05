@@ -1,6 +1,5 @@
-import { PencilEdit02Icon } from '@hugeicons/core-free-icons';
+import { UsersRoundIcon } from 'lucide-react';
 import * as React from 'react';
-import { Icon } from '../../components/ui/icon.tsx';
 import { Button } from '../../components/ui/primitives/button.tsx';
 import { useAgentList } from '../../hooks/agents/use-agent-list.ts';
 import { useChatUpdate } from '../../hooks/chats/use-chat-update.ts';
@@ -29,7 +28,7 @@ export function ChatParticipantsEditButton({ chat }: { chat: ChatListItem }) {
                 title="Edit participants"
                 variant="ghost"
             >
-                <Icon className="size-4" icon={PencilEdit02Icon} />
+                <UsersRoundIcon className="size-4" />
             </Button>
             <ChannelDialog
                 agents={agentsQuery.data?.agents ?? []}

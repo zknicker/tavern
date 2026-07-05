@@ -11,6 +11,7 @@ import { useHistoryNav } from '../../../hooks/shell/use-history-nav.ts';
 import type { RouteTab } from '../../../hooks/shell/use-route-tab.ts';
 import { routeTabs } from '../../../hooks/shell/use-route-tab.ts';
 import { cn } from '../../../lib/utils.ts';
+import type { ChatListItem } from '../../chats/chat-list-data.ts';
 import { ChatParticipantFacepile } from '../../chats/chat-participant-facepile.tsx';
 import { ChatParticipantsEditButton } from '../../chats/chat-participants-edit-button.tsx';
 import { RouteTabIcon } from '../route-tab-presentation.tsx';
@@ -52,21 +53,35 @@ export function BrowserToolbarNav({
             <ToolbarDivider />
             <ToolbarBreadcrumb />
             <div className="flex-1" />
-            <ToolbarDevMenu />
-            <ToolbarParticipants />
+            <ToolbarRightActions />
         </div>
     );
 }
 
 // Right-aligned participants slot: the active chat's facepile lives in the
 // shell toolbar now that chat views render no topbar of their own.
-function ToolbarParticipants() {
+function ToolbarRightActions() {
     const { chat } = useActiveChat();
+    const devToolkit = useCapability('devToolkit');
 
     if (!chat) {
         return null;
     }
 
+    return (
+        <div className="flex items-center gap-0.5">
+            {devToolkit.healthy ? (
+                <>
+                    <ToolbarDevMenu chatId={chat.id} />
+                    <ToolbarDivider />
+                </>
+            ) : null}
+            <ToolbarParticipants chat={chat} />
+        </div>
+    );
+}
+
+function ToolbarParticipants({ chat }: { chat: ChatListItem }) {
     return (
         <div className="flex items-center gap-1">
             <ChatParticipantFacepile chat={chat} />
