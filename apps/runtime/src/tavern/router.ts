@@ -19,6 +19,7 @@ import { handleMcpServersRequest } from '../agent-engine/mcp-server-routes.ts';
 import { handleSkillHubRequest } from '../agent-engine/skill-hub-routes.ts';
 import { handleToolSetupRequest } from '../agent-engine/tool-setup-routes.ts';
 import { handleRuntimeCapabilitiesRequest } from '../capabilities/routes.ts';
+import { handleCronRequest } from '../cron/routes.ts';
 import { handleRuntimeJobsRequest } from '../jobs/routes.ts';
 import { listMacApps } from '../mac-apps/inventory.ts';
 import { handleMemoryRequest } from '../memory/routes.ts';
@@ -34,7 +35,6 @@ import { handleTimezoneSettingsRequest } from '../timezone-settings.ts';
 import { handleWorkspaceRequest } from '../workspace/routes.ts';
 import { readCurrentAgentSession, updateCurrentAgentSessionModel } from './agent-session-store.ts';
 import { handleTavernApiRequest } from './chat-api-router.ts';
-import { deliverAgentCronToTavernChat } from './cron-delivery.ts';
 import { handleDevToolkitRequest } from './development-turn-simulator.ts';
 import { forbidden, json, notFound, readJson } from './http.ts';
 import { handleAgentProxyRequest } from './proxy.ts';
@@ -60,20 +60,6 @@ export async function handleTavernRuntimeRequest(request: Request): Promise<Resp
         );
     }
 
-    if (request.method === 'POST' && url.pathname === '/cron/deliveries') {
-        const receipt = deliverAgentCronToTavernChat(await readJson(request));
-        return json(
-            {
-                chat_id: receipt.message.chat_id,
-                cursor: receipt.cursor,
-                idempotent: receipt.idempotent,
-                message_id: receipt.message.id,
-                success: true,
-            },
-            receipt.idempotent ? 200 : 201
-        );
-    }
-
     const semanticMemoryResponse = await handleSemanticMemoryRequest(request);
     if (semanticMemoryResponse) {
         return semanticMemoryResponse;
@@ -87,6 +73,11 @@ export async function handleTavernRuntimeRequest(request: Request): Promise<Resp
     const jobsResponse = await handleRuntimeJobsRequest(request);
     if (jobsResponse) {
         return jobsResponse;
+    }
+
+    const cronResponse = await handleCronRequest(request);
+    if (cronResponse) {
+        return cronResponse;
     }
 
     const modelProviderResponse = await handleModelProviderRequest(request);

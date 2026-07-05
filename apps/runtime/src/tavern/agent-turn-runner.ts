@@ -17,10 +17,16 @@ interface ActiveTurn {
     seatKey: string;
 }
 
+type SettledTurnStatus = 'cancelled' | 'completed' | 'failed';
+
 const defaultAgentTurnTimeoutMs = 5 * 60 * 1000;
 const activeTurns = new Map<string, ActiveTurn>();
 const activeSeatRuns = new Map<string, string>();
 const queuedTurnInputs = new Map<string, AgentExecutorInput>();
+const turnWaiters = new Map<
+    string,
+    Array<(result: { error?: string; status: SettledTurnStatus }) => void>
+>();
 let executor: AgentExecutor = createAgentEngineExecutor();
 
 export function enqueueAgentTurn(input: AgentExecutorInput) {
@@ -79,10 +85,33 @@ export async function stopAgentTurn(runId: string) {
 
     if (active) {
         clearActiveTurn(runId, active.seatKey);
+        notifyTurnSettled(runId, { status: 'cancelled' });
         void drainAgentSeat(active.input);
+    } else {
+        notifyTurnSettled(runId, { status: 'cancelled' });
     }
 
     return true;
+}
+
+export function waitForAgentTurnSettlement(runId: string): Promise<{
+    error?: string;
+    status: SettledTurnStatus;
+}> {
+    const existing = getAgentTurn(runId);
+    if (existing && isSettledTurnStatus(existing.status)) {
+        return Promise.resolve({
+            error:
+                typeof existing.metadata.error === 'string' ? existing.metadata.error : undefined,
+            status: existing.status,
+        });
+    }
+
+    return new Promise((resolve) => {
+        const waiters = turnWaiters.get(runId) ?? [];
+        waiters.push(resolve);
+        turnWaiters.set(runId, waiters);
+    });
 }
 
 export function resetAgentExecutorForTesting(nextExecutor?: AgentExecutor) {
@@ -131,6 +160,7 @@ async function drainAgentSeat(input: AgentExecutorInput) {
                 id: turn.id,
                 outputMessageIds: result.outputMessageIds,
             });
+            notifyTurnSettled(turn.id, { status: 'completed' });
             try {
                 scheduleMemoryExtractionForTurn(completedTurn);
             } catch {
@@ -145,6 +175,7 @@ async function drainAgentSeat(input: AgentExecutorInput) {
                 error: errorMessage,
                 id: turn.id,
             });
+            notifyTurnSettled(turn.id, { error: errorMessage, status: 'failed' });
             upsertResponse(turnInput.chatId, {
                 id: turnInput.responseId,
                 metadata: {
@@ -168,6 +199,24 @@ async function drainAgentSeat(input: AgentExecutorInput) {
         clearActiveTurn(turn.id, seatKey);
         void drainAgentSeat(turnInput);
     }
+}
+
+function notifyTurnSettled(
+    runId: string,
+    result: { error?: string; status: SettledTurnStatus }
+): void {
+    const waiters = turnWaiters.get(runId);
+    if (!waiters) {
+        return;
+    }
+    turnWaiters.delete(runId);
+    for (const resolve of waiters) {
+        resolve(result);
+    }
+}
+
+function isSettledTurnStatus(status: string): status is SettledTurnStatus {
+    return status === 'cancelled' || status === 'completed' || status === 'failed';
 }
 
 function clearActiveTurn(runId: string, seatKey: string) {

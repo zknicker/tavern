@@ -43,6 +43,7 @@ describe('Runtime capabilities store', () => {
         expect(capabilities.map((capability) => capability.id)).toEqual([
             'apiServer',
             'codexOAuth',
+            'cron',
             'dashboardServer',
             'devToolkit',
             'gateway',

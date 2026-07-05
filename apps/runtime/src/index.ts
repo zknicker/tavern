@@ -2,6 +2,7 @@ import path from 'node:path';
 import { refreshRuntimeCapabilities } from './capabilities/store.ts';
 import { dispatch } from './cli/main.ts';
 import { DATA_DIR } from './config.ts';
+import { type RuntimeCronManager, startRuntimeCronManager } from './cron/scheduler.ts';
 import { initDb } from './db/connection.ts';
 import { ensureRuntimeSchema } from './db/schema.ts';
 import { runRuntimeDoctor } from './doctor/runtime-doctor.ts';
@@ -36,6 +37,7 @@ import { closeAgentNotesWatchers } from './workspace/notes-watcher.ts';
 
 let runtimeServer: ReturnType<typeof startTavernRuntimeServer> | null = null;
 let runtimeJobs: RuntimeJobsManager | null = null;
+let runtimeCron: RuntimeCronManager | null = null;
 let shuttingDown = false;
 
 async function main(): Promise<void> {
@@ -91,6 +93,9 @@ async function main(): Promise<void> {
         log.warn('SemanticMemory live updates failed to start', { err });
     });
     runtimeJobs = await startRuntimeJobsManager();
+    log.info('Runtime jobs ready');
+    runtimeCron = await startRuntimeCronManager();
+    log.info('Runtime cron ready');
     startMemoryExtractionScheduler();
     startMemoryDreamScheduler();
 
@@ -108,6 +113,7 @@ async function main(): Promise<void> {
             'memoryWorkers',
             'gateway',
             'apiServer',
+            'cron',
             'modelExecution',
             'skills',
         ],
@@ -141,6 +147,9 @@ async function shutdown(signal: string): Promise<void> {
     log.info('Stopping Runtime jobs');
     await runtimeJobs?.stop();
     log.info('Runtime jobs stopped');
+    log.info('Stopping Runtime cron');
+    await runtimeCron?.stop();
+    log.info('Runtime cron stopped');
     log.info('Stopping Runtime server');
     runtimeServer?.stop();
     log.info('Runtime server stopped');

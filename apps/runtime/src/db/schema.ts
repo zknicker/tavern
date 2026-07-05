@@ -225,6 +225,56 @@ CREATE INDEX IF NOT EXISTS idx_agent_turns_session_status
 CREATE INDEX IF NOT EXISTS idx_agent_turns_chat_updated
   ON agent_turns(chat_id, updated_at);
 
+CREATE TABLE IF NOT EXISTS cron_jobs (
+  id                   TEXT PRIMARY KEY,
+  agent_id             TEXT NOT NULL,
+  name                 TEXT NOT NULL,
+  description          TEXT,
+  enabled              INTEGER NOT NULL DEFAULT 1 CHECK (enabled IN (0, 1)),
+  schedule_json        TEXT NOT NULL,
+  delivery_json        TEXT NOT NULL,
+  payload_json         TEXT NOT NULL,
+  delete_after_run     INTEGER NOT NULL DEFAULT 0 CHECK (delete_after_run IN (0, 1)),
+  consecutive_errors   INTEGER,
+  last_duration_ms     INTEGER,
+  last_error_code      TEXT CHECK (last_error_code IS NULL OR last_error_code IN ('agent_not_found', 'execution_failed', 'control_plane_restarted')),
+  last_error_message   TEXT,
+  last_run_at_ms       INTEGER,
+  last_run_status      TEXT CHECK (last_run_status IS NULL OR last_run_status IN ('queued', 'running', 'success', 'error', 'skipped')),
+  next_run_at_ms       INTEGER,
+  running_at_ms        INTEGER,
+  created_at           TEXT NOT NULL,
+  updated_at           TEXT NOT NULL,
+  FOREIGN KEY(agent_id) REFERENCES agents(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_cron_jobs_enabled_next_run
+  ON cron_jobs(enabled, next_run_at_ms);
+
+CREATE TABLE IF NOT EXISTS cron_runs (
+  id                      TEXT PRIMARY KEY,
+  job_id                  TEXT NOT NULL,
+  chat_id                 TEXT,
+  turn_id                 TEXT,
+  trigger                 TEXT NOT NULL CHECK (trigger IN ('manual', 'recovery', 'schedule')),
+  status                  TEXT NOT NULL CHECK (status IN ('queued', 'running', 'success', 'error', 'skipped')),
+  scheduled_for           TEXT NOT NULL,
+  started_at              TEXT,
+  finished_at             TEXT,
+  execution_error_code    TEXT CHECK (execution_error_code IS NULL OR execution_error_code IN ('agent_not_found', 'execution_failed', 'control_plane_restarted')),
+  execution_error_message TEXT,
+  created_at              TEXT NOT NULL,
+  updated_at              TEXT NOT NULL,
+  FOREIGN KEY(chat_id) REFERENCES chats(id) ON DELETE SET NULL,
+  FOREIGN KEY(turn_id) REFERENCES agent_turns(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_cron_runs_job_created
+  ON cron_runs(job_id, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_cron_runs_created
+  ON cron_runs(created_at DESC);
+
 CREATE TABLE IF NOT EXISTS memory_extraction_cursors (
   chat_id                  TEXT NOT NULL,
   agent_participant_id     TEXT NOT NULL,

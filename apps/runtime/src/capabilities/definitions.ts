@@ -15,6 +15,8 @@ import {
     merchbasePluginManifest,
 } from '@tavern/api/plugins/merchbase';
 import { AGENT_WORKSPACE } from '../config.ts';
+import { isRuntimeCronReady } from '../cron/scheduler.ts';
+import { getDb, hasTable } from '../db/connection.ts';
 import { resolveSemanticMemoryConfig } from '../memory/semantic/store.ts';
 import { loadVaultBackedCodexCredentials } from '../model-access/codex-settings.ts';
 import { listAgentModels } from '../models/catalog-service.ts';
@@ -135,6 +137,17 @@ export const runtimeCapabilityDefinitions: RuntimeCapabilityDefinition[] = [
     },
     {
         check() {
+            return checkCronCapability();
+        },
+        displayName: 'Cron',
+        id: 'cron',
+        refresh: {
+            intervalMs: 5 * minuteMs,
+            runOnStart: true,
+        },
+    },
+    {
+        check() {
             return checkDevToolkitCapability();
         },
         displayName: 'Dev toolkit',
@@ -167,6 +180,32 @@ export const runtimeCapabilityDefinitions: RuntimeCapabilityDefinition[] = [
         },
     },
 ];
+
+function checkCronCapability(): RuntimeCapabilityCheckResult {
+    try {
+        const db = getDb();
+        const storageReady = hasTable(db, 'cron_jobs') && hasTable(db, 'cron_runs');
+        if (!storageReady) {
+            return {
+                reason: 'Cron storage is not ready.',
+                state: 'unavailable',
+            };
+        }
+        if (!isRuntimeCronReady()) {
+            return {
+                reason: 'Cron scheduler is not running.',
+                state: 'unavailable',
+            };
+        }
+        return { state: 'healthy' };
+    } catch (error) {
+        return {
+            reason: 'Cron is not ready.',
+            state: 'unavailable',
+            technicalMessage: error instanceof Error ? error.message : String(error),
+        };
+    }
+}
 
 /**
  * Extraction and dreaming run as headless model calls, so they need at least

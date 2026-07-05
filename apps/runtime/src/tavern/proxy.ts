@@ -280,12 +280,6 @@ async function dispatchAgentEngineStatic({ request, url }: { request: Request; u
             return await stopTavernChannelTurn({ runId: segments[4] });
         }
     }
-    if (method === 'GET' && url.pathname === agentRuntimeRoutes.cronJobs) {
-        return { jobs: [] };
-    }
-    if (method === 'GET' && url.pathname === agentRuntimeRoutes.cronRuns) {
-        return { runs: [] };
-    }
     return undefined;
 }
 
