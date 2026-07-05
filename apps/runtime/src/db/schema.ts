@@ -87,9 +87,11 @@ CREATE INDEX IF NOT EXISTS idx_agent_skill_assignments_enabled
 CREATE TABLE IF NOT EXISTS skill_sources (
   skill_id            TEXT PRIMARY KEY,
   source              TEXT NOT NULL CHECK (source IN ('seeded', 'hub', 'agent', 'external')),
+  state               TEXT NOT NULL DEFAULT 'active' CHECK (state IN ('active', 'stale', 'archived')),
   created_by_agent_id TEXT,
   created_at          TEXT NOT NULL,
-  updated_at          TEXT NOT NULL
+  updated_at          TEXT NOT NULL,
+  archived_at         TEXT
 );
 
 CREATE TABLE IF NOT EXISTS skill_usage (
@@ -568,6 +570,16 @@ export function ensureRuntimeSchema(db: Database): void {
         column: 'transcript_json',
         definition: "TEXT NOT NULL DEFAULT '[]'",
         table: 'memory_jobs',
+    });
+    ensureColumn(db, {
+        column: 'state',
+        definition: "TEXT NOT NULL DEFAULT 'active'",
+        table: 'skill_sources',
+    });
+    ensureColumn(db, {
+        column: 'archived_at',
+        definition: 'TEXT',
+        table: 'skill_sources',
     });
     ensureColumn(db, {
         column: 'attempts',

@@ -24,6 +24,7 @@ import {
     restartSemanticMemoryWatcher,
     startSemanticMemoryWatcher,
 } from './memory/semantic/watcher.ts';
+import { startSkillCuratorScheduler, stopSkillCuratorScheduler } from './skills/curator.ts';
 import { startSkillReviewScheduler, stopSkillReviewScheduler } from './skills/review-queue.ts';
 import { demoAgentId } from './tavern/development-chat-demo-types.ts';
 import { seedDevelopmentChatDemos } from './tavern/development-chat-demos.ts';
@@ -107,6 +108,7 @@ async function main(): Promise<void> {
     log.info('Runtime cron ready');
     startMemoryExtractionScheduler();
     startSkillReviewScheduler();
+    startSkillCuratorScheduler();
     startMemoryDreamScheduler();
 
     runtimeServer = startTavernRuntimeServer();
@@ -151,6 +153,9 @@ async function shutdown(signal: string): Promise<void> {
     log.info('Stopping skill review scheduler');
     stopSkillReviewScheduler();
     log.info('Skill review scheduler stopped');
+    log.info('Stopping skill curator scheduler');
+    stopSkillCuratorScheduler();
+    log.info('Skill curator scheduler stopped');
     log.info('Stopping Memory dream scheduler');
     stopMemoryDreamScheduler();
     log.info('Memory dream scheduler stopped');

@@ -110,7 +110,7 @@ export async function readSkillMarkdownSnapshot(input: {
 }
 
 export async function createAgentSkill(input: {
-    agentId: string;
+    agentId: string | null;
     content: string;
     description: string;
     name: string;
@@ -129,7 +129,9 @@ export async function createAgentSkill(input: {
         skillId,
         source: writableSource,
     });
-    enableSkillForAgent({ agentId: input.agentId, skillId });
+    if (input.agentId) {
+        enableSkillForAgent({ agentId: input.agentId, skillId });
+    }
 
     return {
         description: input.description,

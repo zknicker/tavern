@@ -169,6 +169,9 @@ async function scanInstalledSkillSummaries(skillsDir: string) {
         if (!entry.isDirectory()) {
             continue;
         }
+        if (entry.name.startsWith('.')) {
+            continue;
+        }
         const skillId = normalizeRuntimeSkillId(entry.name);
         if (!skillId) {
             continue;
@@ -338,5 +341,7 @@ function stripFrontmatter(content: string) {
 
 export function normalizeRuntimeSkillId(value: string) {
     const normalized = value.trim().toLowerCase();
-    return /^[a-z0-9][a-z0-9._-]*$/u.test(normalized) ? normalized : null;
+    return /^[a-z0-9][a-z0-9._-]*$/u.test(normalized) && !normalized.startsWith('.')
+        ? normalized
+        : null;
 }

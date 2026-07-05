@@ -8,6 +8,7 @@ import {
     tavernAgentSkillId,
 } from '../agent-engine/skill-library.ts';
 import { getStoredAgent } from '../tavern/agents-store.ts';
+import { archiveAgentSkill } from './lifecycle.ts';
 import {
     createAgentSkill,
     listSkillSupportFileSnapshots,
@@ -20,7 +21,11 @@ import {
 } from './store.ts';
 import { recordSkillUsage } from './telemetry.ts';
 
-export function createTavernSkillTools(input: { agentId: string; skillsDir?: string }): ToolSet {
+export function createTavernSkillTools(input: {
+    agentId: string;
+    createdByAgentId?: string | null;
+    skillsDir?: string;
+}): ToolSet {
     const skillsDir = input.skillsDir ?? agentEngineSkillsDir;
     return {
         skills_list: tool({
@@ -101,7 +106,10 @@ export function createTavernSkillTools(input: { agentId: string; skillsDir?: str
                     throw new Error(`Skill already exists: ${skillId}`);
                 }
                 const created = await createAgentSkill({
-                    agentId: input.agentId,
+                    agentId:
+                        input.createdByAgentId === undefined
+                            ? input.agentId
+                            : input.createdByAgentId,
                     content: parsed.content,
                     description: parsed.description,
                     name: parsed.name,
@@ -110,7 +118,7 @@ export function createTavernSkillTools(input: { agentId: string; skillsDir?: str
                 return {
                     skill: {
                         ...created,
-                        enabledForYou: true,
+                        enabledForYou: input.createdByAgentId !== null,
                     },
                 };
             },
@@ -149,6 +157,36 @@ export function createTavernSkillTools(input: { agentId: string; skillsDir?: str
     };
 }
 
+export function createCuratorSkillTools(input: { agentId: string; skillsDir?: string }): ToolSet {
+    const skillsDir = input.skillsDir ?? agentEngineSkillsDir;
+    return {
+        ...createTavernSkillTools({
+            agentId: input.agentId,
+            createdByAgentId: null,
+            skillsDir,
+        }),
+        skill_archive: tool({
+            description:
+                'Archive an agent-authored skill package after absorbing it into another skill, or prune it when it is stale and irrelevant. This moves the whole package to .archive and disables assignments.',
+            inputSchema: archiveInputSchema,
+            execute: async (rawInput) => {
+                const parsed = archiveInputSchema.parse(rawInput);
+                const archived = await archiveAgentSkill({
+                    skillId: parsed.skillId,
+                    skillsDir,
+                });
+                return {
+                    archive: {
+                        ...archived,
+                        absorbedInto: parsed.absorbedInto,
+                        reason: parsed.reason,
+                    },
+                };
+            },
+        }),
+    };
+}
+
 const listInputSchema = z.object({}).strict();
 
 const viewInputSchema = z
@@ -178,6 +216,14 @@ const writeFileInputSchema = z
         content: z.string(),
         expectedHash: z.string().nullable(),
         filePath: z.string().trim().min(1),
+        skillId: z.string().trim().min(1),
+    })
+    .strict();
+
+const archiveInputSchema = z
+    .object({
+        absorbedInto: z.string().trim().min(1).nullable(),
+        reason: z.string().trim().min(1),
         skillId: z.string().trim().min(1),
     })
     .strict();

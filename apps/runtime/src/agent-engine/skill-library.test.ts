@@ -117,6 +117,25 @@ describe('Runtime skill library', () => {
         ]);
     });
 
+    it('ignores dot directories such as the skill archive', async () => {
+        await writeSkill('active-skill', '# Active Skill\n\nUse this.');
+        await fs.mkdir(path.join(skillsDir, '.archive', 'old-skill'), { recursive: true });
+        await fs.writeFile(
+            path.join(skillsDir, '.archive', 'old-skill', 'SKILL.md'),
+            '# Old Skill\n\nArchived.',
+            'utf8'
+        );
+
+        await expect(listRuntimeSkills({ includePluginSkills: false, skillsDir })).resolves.toEqual(
+            expect.arrayContaining([expect.objectContaining({ id: 'active-skill' })])
+        );
+        await expect(
+            listRuntimeSkills({ includePluginSkills: false, skillsDir })
+        ).resolves.not.toEqual(
+            expect.arrayContaining([expect.objectContaining({ id: 'old-skill' })])
+        );
+    });
+
     async function writeSkill(name: string, content: string) {
         const skillDir = path.join(skillsDir, name);
         await fs.mkdir(skillDir, { recursive: true });
