@@ -33,6 +33,9 @@ export function ToolbarDevMenu({ chatId }: { chatId: string }) {
                 <MenuItem onClick={() => simulateTurn.mutate({ chatId, scenario: 'tooling' })}>
                     Simulate agent turn
                 </MenuItem>
+                <MenuItem onClick={() => simulateTurn.mutate({ chatId, scenario: 'narration' })}>
+                    Simulate long turn
+                </MenuItem>
                 <MenuItem onClick={() => simulateTurn.mutate({ chatId, scenario: 'failure' })}>
                     Simulate failed turn
                 </MenuItem>

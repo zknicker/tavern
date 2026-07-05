@@ -47,6 +47,41 @@ describe('development turn simulator', () => {
         expect(reply?.content.length).toBeGreaterThan(0);
     });
 
+    it('writes the long narration turn: preamble, reasoning, intra-turn updates, reply', async () => {
+        const simulation = simulateDevelopmentTurn({
+            chatId: 'cht_devsim',
+            paceMs: 0,
+            scenario: 'narration',
+        });
+        await simulation.run;
+
+        const page = getChatTimelinePage('cht_devsim', { limit: 30 });
+        const response = page.responses.find(
+            (entry) => entry.id === simulation.receipt.response_id
+        );
+        expect(response?.status).toBe('completed');
+
+        const activity = page.activity.filter(
+            (entry) => entry.response_id === simulation.receipt.response_id
+        );
+        const kinds = activity.map((entry) => entry.kind).sort();
+        expect(kinds).toEqual([
+            'message',
+            'message',
+            'message',
+            'reasoning',
+            'tool_call',
+            'tool_call',
+            'tool_call',
+        ]);
+
+        const narrationDetails = activity
+            .filter((entry) => entry.kind === 'message')
+            .map((entry) => entry.detail);
+        expect(narrationDetails).toHaveLength(3);
+        expect(new Set(narrationDetails).size).toBe(3);
+    });
+
     it('writes a failed turn for the failure scenario', async () => {
         const simulation = simulateDevelopmentTurn({
             chatId: 'cht_devsim',

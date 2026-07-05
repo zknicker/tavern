@@ -106,7 +106,7 @@ export function simulateDevelopmentTurn(input: {
         },
     };
 
-    const run = scenario === 'failure' ? runFailureScenario(context) : runToolingScenario(context);
+    const run = runScenario(scenario, context);
 
     return { receipt: { response_id: responseId, run_id: runId }, run };
 }
@@ -120,6 +120,17 @@ interface SimulationContext {
     responseId: string;
     runId: string;
     runtime: Record<string, string>;
+}
+
+function runScenario(scenario: DevToolkitScenario, context: SimulationContext) {
+    switch (scenario) {
+        case 'failure':
+            return runFailureScenario(context);
+        case 'narration':
+            return runNarrationScenario(context);
+        default:
+            return runToolingScenario(context);
+    }
 }
 
 async function runToolingScenario(context: SimulationContext) {
@@ -152,6 +163,52 @@ async function runToolingScenario(context: SimulationContext) {
     upsertRun(context, {
         status: 'running',
         summary: simulatedReplyText,
+    });
+    await pause();
+
+    completeRun(context, simulatedReplyText);
+}
+
+// The long-form narration turn: preamble → reasoning → tools with intra-turn
+// updates between them → reply. Exercises every real harness step type and
+// the replace-in-place narration slot across several swaps.
+async function runNarrationScenario(context: SimulationContext) {
+    const pause = () => sleep(context.paceMs);
+
+    upsertRun(context, { status: 'running' });
+    await pause();
+
+    narration(context, 'I will inspect the workspace layout before making any changes.', 1);
+    await pause();
+
+    reasoning(
+        context,
+        'The docs map should match the folder layout; checking the top level first, then the runtime docs.',
+        1
+    );
+    await pause();
+
+    toolActivity(context, 1, 'exec', 'ls -la', { running: true });
+    await pause();
+
+    toolActivity(context, 1, 'exec', 'ls -la', { running: false });
+    narration(context, 'Top-level layout matches the map — reading the runtime docs next.', 2);
+    await pause();
+
+    toolActivity(context, 2, 'read_file', 'docs/internals/runtime.md', { running: true });
+    await pause();
+
+    toolActivity(context, 2, 'read_file', 'docs/internals/runtime.md', { running: false });
+    narration(context, 'Runtime docs are current too — doing a final reference sweep.', 3);
+    await pause();
+
+    toolActivity(context, 3, 'search_files', 'stale references', { running: true });
+    await pause();
+
+    toolActivity(context, 3, 'search_files', 'stale references', { running: false });
+    upsertRun(context, {
+        status: 'running',
+        summary: 'The workspace looks well organized —',
     });
     await pause();
 
@@ -261,7 +318,7 @@ function completeRun(context: SimulationContext, content: string) {
     );
 }
 
-function narration(context: SimulationContext, text: string) {
+function narration(context: SimulationContext, text: string, index = 1) {
     upsertResponseActivity(
         context.chatId,
         context.responseId,
@@ -269,12 +326,32 @@ function narration(context: SimulationContext, text: string) {
             artifact_ids: [],
             completed_at: new Date().toISOString(),
             detail: text,
-            id: `act_${context.runId}_msg_1`,
+            id: `act_${context.runId}_msg_${index}`,
             kind: 'message',
-            metadata: { runtime: context.runtime },
+            metadata: { runtime: { ...context.runtime, messagePhase: 'commentary' } },
             started_at: new Date().toISOString(),
             status: 'completed',
             title: 'Assistant reply',
+        },
+        context.db
+    );
+}
+
+function reasoning(context: SimulationContext, text: string, index = 1) {
+    upsertResponseActivity(
+        context.chatId,
+        context.responseId,
+        {
+            artifact_ids: [],
+            completed_at: new Date().toISOString(),
+            detail: text,
+            id: `act_${context.runId}_reasoning_${index}`,
+            kind: 'reasoning',
+            metadata: { runtime: context.runtime },
+            started_at: new Date().toISOString(),
+            status: 'completed',
+            summary: text,
+            title: 'Reasoning',
         },
         context.db
     );
