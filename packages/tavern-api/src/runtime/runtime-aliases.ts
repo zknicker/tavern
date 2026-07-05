@@ -65,7 +65,6 @@ export const runtimeExecutionErrorSchema = contracts.agentRuntimeExecutionErrorS
 export const runtimeCronStateSchema = contracts.agentRuntimeCronStateSchema;
 export const runtimeCronPayloadSchema = contracts.agentRuntimeCronPayloadSchema;
 export const runtimeCronScheduleSchema = contracts.agentRuntimeCronScheduleSchema;
-export const runtimeCronWakeModeSchema = contracts.agentRuntimeCronWakeModeSchema;
 export const runtimeCronSummarySchema = contracts.agentRuntimeCronSummarySchema;
 export const runtimeCronSchema = contracts.agentRuntimeCronSchema;
 export const runtimeCronListSchema = contracts.agentRuntimeCronListSchema;

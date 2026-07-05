@@ -14,6 +14,7 @@ const agentRuntimeCoreCapabilityIds = [
     'gateway',
     'modelExecution',
     'skills',
+    'cron',
     'devToolkit',
 ] as const;
 
@@ -1657,26 +1658,11 @@ export const agentRuntimeExecutionErrorSchema = z.object({
 
 export const agentRuntimeCronStateSchema = z.object({
     consecutiveErrors: z.number().int().nonnegative().optional(),
-    lastDelivered: z.boolean().optional(),
-    lastClaimedAtMs: z.number().int().nonnegative().optional(),
-    lastDeliveryError: z.string().optional(),
-    lastDeliveryStatus: z
-        .enum([
-            'pending',
-            'delivered',
-            'session_queued',
-            'failed',
-            'parent_missing',
-            'not_applicable',
-        ])
-        .optional(),
     lastDurationMs: z.number().int().nonnegative().optional(),
     lastErrorCode: agentRuntimeExecutionErrorSchema.shape.code.optional(),
     lastErrorMessage: agentRuntimeExecutionErrorSchema.shape.message.optional(),
     lastRunAtMs: z.number().int().nonnegative().optional(),
     lastRunStatus: agentRuntimeExecutionStatusSchema.optional(),
-    lastScheduledAtMs: z.number().int().nonnegative().optional(),
-    lastStatus: agentRuntimeExecutionStatusSchema.optional(),
     nextRunAtMs: z.number().int().nonnegative().optional(),
     runningAtMs: z.number().int().nonnegative().optional(),
 });
@@ -1687,13 +1673,8 @@ export const agentRuntimeCronPayloadSchema = z.union([
         text: z.string().trim().min(1),
     }),
     z.object({
-        fallbacks: z.array(z.string().trim().min(1)).optional(),
         kind: z.literal('agentTurn'),
-        lightContext: z.boolean().optional(),
         message: z.string().trim().min(1),
-        model: z.string().trim().min(1).optional(),
-        thinking: z.string().nullable().optional(),
-        timeoutSeconds: z.number().nonnegative().optional(),
     }),
 ]);
 
@@ -1713,16 +1694,8 @@ export const agentRuntimeCronScheduleSchema = z.union([
     }),
 ]);
 
-export const agentRuntimeCronWakeModeSchema = z.enum(['next-heartbeat', 'now']);
-
-/**
- * Tavern-managed default crons are identified by this reserved name prefix.
- * The name is the only Tavern-authored field that round-trips through the
- * agent engine's cron storage, so it doubles as the managed marker.
- */
-
 export const agentRuntimeCronSummarySchema = z.object({
-    agentId: z.string().trim().min(1).nullable(),
+    agentId: z.string().trim().min(1),
     description: z.string().nullable(),
     enabled: z.boolean(),
     id: z.string().trim().min(1),
@@ -1735,9 +1708,8 @@ export const agentRuntimeCronSummarySchema = z.object({
 export const agentRuntimeCronSchema = agentRuntimeCronSummarySchema.extend({
     createdAt: z.string().datetime(),
     deleteAfterRun: z.boolean(),
-    delivery: agentRuntimeCronDeliverySchema.nullable(),
+    delivery: agentRuntimeCronDeliverySchema,
     payload: agentRuntimeCronPayloadSchema,
-    wakeMode: agentRuntimeCronWakeModeSchema,
 });
 
 export const agentRuntimeCronListSchema = z.object({
@@ -1745,29 +1717,26 @@ export const agentRuntimeCronListSchema = z.object({
 });
 
 export const agentRuntimeCreateCronSchema = z.object({
-    agentId: z.string().trim().min(1).nullable().optional(),
+    agentId: z.string().trim().min(1),
     deleteAfterRun: z.boolean().optional(),
-    delivery: agentRuntimeCronDeliverySchema.nullable().optional(),
+    delivery: agentRuntimeCronDeliverySchema,
     description: z.string().trim().min(1).nullable().optional(),
     enabled: z.boolean().optional(),
     id: z.string().trim().min(1),
     name: z.string().trim().min(1),
     payload: agentRuntimeCronPayloadSchema,
     schedule: agentRuntimeCronScheduleSchema,
-    wakeMode: agentRuntimeCronWakeModeSchema,
 });
 
 export const agentRuntimeUpdateCronSchema = z.object({
-    agentId: z.string().trim().min(1).nullable().optional(),
+    agentId: z.string().trim().min(1).optional(),
     deleteAfterRun: z.boolean().optional(),
-    delivery: agentRuntimeCronDeliverySchema.nullable().optional(),
+    delivery: agentRuntimeCronDeliverySchema.optional(),
     description: z.string().trim().min(1).nullable().optional(),
     enabled: z.boolean().optional(),
     name: z.string().trim().min(1).optional(),
     payload: agentRuntimeCronPayloadSchema.optional(),
     schedule: agentRuntimeCronScheduleSchema.optional(),
-    state: agentRuntimeCronStateSchema.partial().optional(),
-    wakeMode: agentRuntimeCronWakeModeSchema.optional(),
 });
 
 export const agentRuntimeArchiveCronSchema = z.object({
@@ -1777,23 +1746,20 @@ export const agentRuntimeArchiveCronSchema = z.object({
 
 export const agentRuntimeCronRunStatusSchema = agentRuntimeExecutionStatusSchema;
 
-export const agentRuntimeCronRunTriggerSchema = z.enum(['manual', 'recovery', 'retry', 'schedule']);
+export const agentRuntimeCronRunTriggerSchema = z.enum(['manual', 'recovery', 'schedule']);
 
 export const agentRuntimeCronRunSchema = z.object({
-    deliveryError: z.string().nullable(),
-    deliveryStatus: agentRuntimeCronStateSchema.shape.lastDeliveryStatus.nullable(),
+    chatId: z.string().trim().min(1).nullable(),
     executionErrorCode: agentRuntimeExecutionErrorSchema.shape.code.nullable(),
     executionErrorMessage: agentRuntimeExecutionErrorSchema.shape.message.nullable(),
     finishedAt: z.string().datetime().nullable(),
     id: z.string().trim().min(1),
     jobId: z.string().trim().min(1),
     scheduledFor: z.string().datetime(),
-    sessionId: z.string().trim().min(1).nullable(),
-    sessionKey: z.string().trim().min(1).nullable(),
     startedAt: z.string().datetime().nullable(),
     status: agentRuntimeCronRunStatusSchema,
-    summary: z.string().nullable(),
     trigger: agentRuntimeCronRunTriggerSchema,
+    turnId: z.string().trim().min(1).nullable(),
 });
 
 export const agentRuntimeCronRunListSchema = z.object({
@@ -1842,7 +1808,9 @@ export const agentRuntimeUpdateAgentSessionModelResultSchema = z.object({
 });
 
 export const agentRuntimeRunCronSchema = z.object({
-    mode: z.enum(['enqueue', 'force']).default('force'),
+    // 'force' executes inline and holds the request open for the whole agent
+    // turn; manual runs default to the queue so the app gets its run row fast.
+    mode: z.enum(['enqueue', 'force']).default('enqueue'),
 });
 
 export const agentRuntimeJobSlugSchema = z.enum(['refresh-runtime-capabilities']);
