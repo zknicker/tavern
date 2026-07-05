@@ -15,15 +15,17 @@ progress is activity.
 ## Contract
 
 * Automation ids are stable.
+* Every cron automation has an owning `agentId`.
 * Schedules are explicit and inspectable.
-* Delivery targets point to Tavern chats or supported output surfaces.
+* Delivery targets are required and point to a Tavern chat where the owning
+  agent participates.
+* Agent-turn payloads carry only `kind: "agentTurn"` and `message`.
+* Runtime computes `state.nextRunAtMs` for enabled jobs.
 * Run history is ordered and durable.
-* Retry, failure, and cancellation states are visible.
+* Runs expose status, trigger, scheduled/start/finish timestamps,
+  `chatId`, `turnId`, and execution failure detail.
 * Events notify clients that automation records or runs changed; reads recover
   the full state.
-* Automation reads carry `managed: true` for Tavern-managed defaults. Managed
-  automations accept pause/resume and manual runs; create, edit, and delete
-  requests are rejected, and the `Tavern: ` name prefix is reserved.
 
 ## Surface
 
@@ -36,13 +38,13 @@ The API covers:
 * delete an automation
 * list run history
 * get a run
-* read run delivery and failure details
+* read run chat linkage and failure details
 
 ## Runtime Boundary
 
-Tavern Runtime owns automation records, schedules, delivery targets, run
-history, app-visible follow-up state, and the Agent execution that an
-automation triggers.
+Tavern Runtime owns automation records, schedules, delivery target validation,
+run history, app-visible follow-up state, and the Agent turn that an automation
+triggers.
 
 ## Related Docs
 
