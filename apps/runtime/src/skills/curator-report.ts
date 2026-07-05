@@ -50,7 +50,11 @@ export function collectCuratorActions(transcript: ReturnType<typeof serializeCur
         } else if (result.toolName === 'skill_create' && skill?.id) {
             actions.creates.push({ skillId: skill.id });
         } else if (result.toolName === 'skill_archive' && archive?.skillId && archive.reason) {
-            recordArchiveAction(actions, archive);
+            recordArchiveAction(actions, {
+                absorbedInto: archive.absorbedInto ?? null,
+                reason: archive.reason,
+                skillId: archive.skillId,
+            });
         }
     }
     return actions;

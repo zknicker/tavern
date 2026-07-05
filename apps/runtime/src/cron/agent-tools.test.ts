@@ -20,12 +20,16 @@ describe('cron agent tools', () => {
         );
         const tools = createTavernCronTools({ agentId: 'agt_primary' });
 
-        const created = await runTool(tools, 'cron_create', {
-            chatId: 'cht_general',
-            message: 'Prepare the daily brief.',
-            name: 'Daily brief',
-            schedule: { everyMs: 60_000, kind: 'every' },
-        });
+        const created = await runTool<Record<string, unknown>, { job: { id: string } }>(
+            tools,
+            'cron_create',
+            {
+                chatId: 'cht_general',
+                message: 'Prepare the daily brief.',
+                name: 'Daily brief',
+                schedule: { everyMs: 60_000, kind: 'every' },
+            }
+        );
         const createdJobId = created.job.id;
 
         expect(created.job).toMatchObject({
@@ -45,12 +49,16 @@ describe('cron agent tools', () => {
             jobs: [{ id: createdJobId, lastRunStatus: undefined }],
         });
 
-        const updated = await runTool(tools, 'cron_update', {
-            enabled: false,
-            jobId: createdJobId,
-            message: 'Prepare the paused brief.',
-            name: 'Paused brief',
-        });
+        const updated = await runTool<Record<string, unknown>, { job: { id: string } }>(
+            tools,
+            'cron_update',
+            {
+                enabled: false,
+                jobId: createdJobId,
+                message: 'Prepare the paused brief.',
+                name: 'Paused brief',
+            }
+        );
 
         expect(updated.job).toMatchObject({
             enabled: false,

@@ -50,7 +50,7 @@ export async function startRuntimeCronManager(
     const queueName = input.queueName ?? defaultCronQueueName;
     const queue = createQueue(queueName);
     const worker = createWorker(queueName);
-    const manager = {
+    const manager: RuntimeCronManager = {
         async enqueue(payload: CronQueuePayload) {
             const job = await queue.add('Cron run', payload, {
                 attempts: 1,
@@ -73,7 +73,7 @@ export async function startRuntimeCronManager(
             clearRuntimeCronManager(manager);
             clearQueuesOnStop = false;
         },
-    } satisfies RuntimeCronManager;
+    };
 
     setRuntimeCronManager(manager);
     // Runs interrupted by a restart settle as errors before recovery runs are

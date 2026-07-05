@@ -29,11 +29,15 @@ describe('skill agent tools', () => {
     test('creates a skill on disk, records agent source, and enables only the author', async () => {
         const tools = createTavernSkillTools({ agentId: 'agt_author', skillsDir });
 
-        const created = await runTool(tools, 'skill_create', {
-            content: '---\nsummary: Debug flows\n---\n\n# Debug Flow\n\nInspect evidence.',
-            description: 'Debug flows',
-            name: 'Debug Flow',
-        });
+        const created = await runTool<Record<string, unknown>, { skill: Record<string, unknown> }>(
+            tools,
+            'skill_create',
+            {
+                content: '---\nsummary: Debug flows\n---\n\n# Debug Flow\n\nInspect evidence.',
+                description: 'Debug flows',
+                name: 'Debug Flow',
+            }
+        );
 
         await expect(
             fs.readFile(path.join(skillsDir, 'debug-flow', 'SKILL.md'), 'utf8')
@@ -59,7 +63,11 @@ describe('skill agent tools', () => {
             description: 'Release notes',
             name: 'Release Notes',
         });
-        const viewed = await runTool(tools, 'skill_view', { skillId: 'release-notes' });
+        const viewed = await runTool<Record<string, unknown>, { hash: string }>(
+            tools,
+            'skill_view',
+            { skillId: 'release-notes' }
+        );
 
         await expect(
             runTool(tools, 'skill_patch', {
