@@ -118,6 +118,18 @@ test('ChatActiveStatusStack does not render without an active reply', () => {
     assert.equal(markup, '');
 });
 
+test('ChatActiveStatusStack reserves the detail status row while idle', () => {
+    const markup = renderToStaticMarkup(
+        <ChatActiveStatusStack activeReply={null} agents={agents} rows={[]} variant="detail" />
+    );
+
+    // The detail surface keeps the row's space so the transcript never
+    // reflows when a turn starts; the indicator fades in place.
+    assert.match(markup, /aria-label="Active agent status"/);
+    assert.match(markup, /opacity-0/);
+    assert.doesNotMatch(markup, /thinking-indicator-text/);
+});
+
 test('ChatDetailFooter renders active status before the detail composer', () => {
     const markup = renderToStaticMarkup(
         <ChatDetailFooter activeReply={activeReply} agents={agents} rows={[]}>

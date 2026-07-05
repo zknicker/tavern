@@ -80,8 +80,6 @@ test('renders durable artifacts after reload', async ({ page }) => {
 });
 
 test('renders durable response activity kinds after reload', async ({ page }) => {
-    await enableInlineThinking(page);
-
     const chatId = await startChat(page, {
         expectedReply: 'QA_ACTIVITY_KIND_BASELINE_OK',
         prompt: 'Activity kind baseline marker. Reply exactly `QA_ACTIVITY_KIND_BASELINE_OK`.',
@@ -96,12 +94,14 @@ test('renders durable response activity kinds after reload', async ({ page }) =>
 
     await page.reload();
 
+    // Work and thinking activity live in the turn details drawer, not the
+    // chat pane.
+    await openTurnDetails(page);
     await openWorkedActivity(page);
     await openThinkingActivity(page);
-    await expect(page.getByText('Planning diagnostic detail', { exact: true })).toBeVisible({
+    await expect(page.getByText('Thinking diagnostic detail', { exact: true })).toBeVisible({
         timeout: 15_000,
     });
-    await expect(page.getByText('Thinking diagnostic detail', { exact: true })).toBeVisible();
     await expect(
         page.getByText('Assistant preamble diagnostic detail', { exact: true })
     ).toBeVisible();
@@ -186,7 +186,6 @@ async function upsertRuntimeActivityKinds(input: { chatId: string; runtimeUrl: s
     const startedAt = new Date().toISOString();
     const idSuffix = input.chatId.replace(/[^A-Za-z0-9_-]/gu, '_');
     const activity = [
-        { id: `act_e2e_planning_${idSuffix}`, kind: 'planning', title: 'Planning diagnostic' },
         { id: `act_e2e_reasoning_${idSuffix}`, kind: 'reasoning', title: 'Thinking diagnostic' },
         {
             id: `act_e2e_message_${idSuffix}`,
@@ -345,6 +344,13 @@ async function sendFollowUp(
     });
 }
 
+async function openTurnDetails(page: Page) {
+    const details = page.getByRole('button', { name: 'View turn details' }).last();
+    // The affordance is hover-revealed; force past the opacity gate.
+    await details.click({ force: true });
+    await expect(page.getByRole('dialog')).toBeVisible();
+}
+
 async function openWorkedActivity(page: Page) {
     const activity = page.getByRole('button', { name: workGroupHeaderName }).first();
     await expect(activity).toBeVisible();
@@ -417,12 +423,6 @@ async function enableScrollDebug(page: Page) {
                 __TAVERN_SCROLL_DEBUG__?: unknown[];
             }
         ).__TAVERN_SCROLL_DEBUG__ = [];
-    });
-}
-
-async function enableInlineThinking(page: Page) {
-    await page.addInitScript(() => {
-        window.localStorage.setItem('tavern.chat.thinking-display.enabled', '1');
     });
 }
 

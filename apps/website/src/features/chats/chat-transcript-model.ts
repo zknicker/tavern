@@ -50,7 +50,6 @@ export function buildTranscriptEntries(input: {
     activeReply: ChatActiveReply | null;
     failedTurn?: ChatTurnFailure | null;
     rows: TranscriptRow[];
-    showThinkingText?: boolean;
 }) {
     const items = buildTranscriptItems(input);
     const entries: TranscriptEntry[] = [];
@@ -123,7 +122,7 @@ function applyStableTurnEntryIds(entries: TranscriptEntry[]) {
     }
 }
 
-function getItemRunId(item: TranscriptItem) {
+export function getItemRunId(item: TranscriptItem) {
     if (item.kind === 'activeReply' || item.kind === 'activeStatus') {
         return item.reply.runId;
     }
@@ -186,7 +185,6 @@ function buildTranscriptItems(input: {
     activeReply: ChatActiveReply | null;
     failedTurn?: ChatTurnFailure | null;
     rows: TranscriptRow[];
-    showThinkingText?: boolean;
 }) {
     // Once the turn's durable reply is in the rows, the live reply items are
     // redundant: rendering both creates sibling segments with one `reply:`
@@ -201,10 +199,6 @@ function buildTranscriptItems(input: {
             ? input.activeReply
             : null;
     const items: TranscriptItem[] = input.rows.flatMap((row) => {
-        if (input.showThinkingText === false && isThinkingRow(row)) {
-            return [];
-        }
-
         if (isDuplicateReplyThinkingRow(row, input.rows, activeReply)) {
             return [];
         }
@@ -318,6 +312,38 @@ export function isActivityBackedMessageRow(row: TranscriptRow) {
     return row.kind === 'message' && row.id.startsWith('act_');
 }
 
+/**
+ * Runs whose final reply is already in the transcript — from a durable agent
+ * message or the streamed active reply. Narration for these runs has been
+ * superseded and stays out of the chat pane.
+ */
+export function getRepliedRunIds(
+    rows: TranscriptRow[],
+    activeReply: ChatActiveReply | null
+): ReadonlySet<string> {
+    const runIds = new Set<string>();
+
+    for (const row of rows) {
+        if (
+            row.kind === 'message' &&
+            row.message.senderType === 'agent' &&
+            !isActivityBackedMessageRow(row)
+        ) {
+            const runId = getItemRunId({ kind: 'row', row });
+
+            if (runId) {
+                runIds.add(runId);
+            }
+        }
+    }
+
+    if (activeReply?.text?.trim()) {
+        runIds.add(activeReply.runId);
+    }
+
+    return runIds;
+}
+
 function canAppendToTurn(
     entry: TranscriptTurnEntry,
     item: TranscriptItem,
@@ -335,6 +361,18 @@ function canAppendToTurn(
 
     if (participant === 'agent' && entry.responseId && itemResponseId) {
         return entry.responseId === itemResponseId;
+    }
+
+    // Live-projected rows carry no response id, so run identity is the
+    // fallback boundary: items of different runs never share an agent turn,
+    // keeping a new run's narration out of the previous run's entry.
+    if (participant === 'agent') {
+        const itemRunId = getItemRunId(item);
+        const entryRunId = getTurnEntryRunId(entry);
+
+        if (itemRunId && entryRunId && itemRunId !== entryRunId) {
+            return false;
+        }
     }
 
     const previous = entry.items.at(-1);
@@ -355,6 +393,18 @@ function canAppendToTurn(
     const previousTimestamp = parseTimestamp(previous ? getItemTimestamp(previous) : null);
 
     return Math.abs(currentTimestamp - previousTimestamp) <= turnMaxGapMs;
+}
+
+function getTurnEntryRunId(entry: TranscriptTurnEntry) {
+    for (const item of entry.items) {
+        const runId = getItemRunId(item);
+
+        if (runId) {
+            return runId;
+        }
+    }
+
+    return null;
 }
 
 function canAppendAgentActivity(

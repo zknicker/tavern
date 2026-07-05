@@ -9,12 +9,12 @@ import {
     useMessageScroller,
 } from '../../components/ui/message-scroller.tsx';
 import type { ChatActiveReply, ChatTurnFailure } from '../../hooks/chats/chat-timeline-state.ts';
-import { useChatThinkingDisplayPreference } from '../../hooks/chats/use-chat-thinking-display-preference.ts';
 import { markChatTiming } from '../../lib/chat-timing.ts';
 import { getTranscriptItemKey } from './chat-transcript-item-utils.ts';
 import {
     buildTranscriptEntries,
     type ConversationMessageLayout,
+    getRepliedRunIds,
     type TranscriptRow,
 } from './chat-transcript-model.ts';
 import {
@@ -49,7 +49,6 @@ export function ChatTranscript({
     rows,
     onTurnTimelineMarkersChange,
     scrollContentRef,
-    showThinkingText,
 }: {
     activeReply: ChatActiveReply | null;
     agentStatusCharacter?: AgentCharacter | null;
@@ -62,19 +61,15 @@ export function ChatTranscript({
     onTurnTimelineMarkersChange?: (markers: ChatTurnTimelineMarker[]) => void;
     rows: TranscriptRow[];
     scrollContentRef?: React.RefObject<HTMLDivElement | null>;
-    showThinkingText?: boolean;
 }) {
-    const chatThinkingDisplay = useChatThinkingDisplayPreference();
-    const thinkingTextVisible = showThinkingText ?? chatThinkingDisplay.enabled;
     const entries = React.useMemo(
         () =>
             buildTranscriptEntries({
                 activeReply,
                 failedTurn,
                 rows,
-                showThinkingText: thinkingTextVisible,
             }),
-        [activeReply, failedTurn, rows, thinkingTextVisible]
+        [activeReply, failedTurn, rows]
     );
     const rawTranscriptRows = React.useMemo(
         () => buildTranscriptRenderRows(entries, hiddenCount),
@@ -105,6 +100,17 @@ export function ChatTranscript({
         return null;
     }, [transcriptRows]);
     const latestAgentMessage = React.useMemo(() => getLatestAgentMessage(rows), [rows]);
+    // Sticky across renders: the completion handoff can clear the live reply
+    // a beat before the durable reply row lands, and narration must not flash
+    // back into the pane during that gap.
+    const seenRepliedRunsRef = React.useRef(new Set<string>());
+    const repliedRunIds = React.useMemo(() => {
+        for (const runId of getRepliedRunIds(rows, activeReply)) {
+            seenRepliedRunsRef.current.add(runId);
+        }
+
+        return new Set(seenRepliedRunsRef.current);
+    }, [rows, activeReply]);
     const renderContext = React.useMemo(
         () =>
             ({
@@ -113,8 +119,16 @@ export function ChatTranscript({
                 currentSessionKey,
                 defaultOpenWorkGroups,
                 hiddenCount,
+                repliedRunIds,
             }) satisfies TranscriptRenderContextValue,
-        [chatId, conversationLayout, currentSessionKey, defaultOpenWorkGroups, hiddenCount]
+        [
+            chatId,
+            conversationLayout,
+            currentSessionKey,
+            defaultOpenWorkGroups,
+            hiddenCount,
+            repliedRunIds,
+        ]
     );
 
     React.useEffect(() => {

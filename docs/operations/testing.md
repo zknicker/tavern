@@ -85,10 +85,9 @@ Chat e2e should prove identity and recovery, not styling details:
 
 * accepted user message appears once
 * tool/progress activity appears before the final reply and remains after reload
-* assistant progress updates appear before and between tool activity when the
-  executor emits them
-* thinking text is persisted and appears only when the Appearance setting enables
-  inline thinking display
+* the latest assistant progress update is visible while the turn runs and the
+  final reply replaces it; the full update history stays in the turn details
+* thinking text is persisted and renders inside the turn details drawer
 * final assistant message appears once
 * reload and websocket reconnect recover without duplicates, missing rows, or
   ordering bugs

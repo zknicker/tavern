@@ -40,7 +40,6 @@ test('buildTranscriptEntries keeps thinking rows inside the agent turn', () => {
     const entries = buildTranscriptEntries({
         activeReply: null,
         rows,
-        showThinkingText: true,
     });
 
     expect(entries).toHaveLength(1);
@@ -61,27 +60,39 @@ test('buildTranscriptEntries keeps thinking rows inside the agent turn', () => {
     ).toEqual(['tool', 'system:thinking', 'message']);
 });
 
-test('buildTranscriptEntries keeps hidden thinking out of the main transcript', () => {
-    const entries = buildTranscriptEntries({
-        activeReply: {
-            agentId: 'agent-1',
-            isThinking: true,
-            runId: 'run-1',
-            sessionKey: 'session-1',
-            startedAt: '2026-05-11T16:00:00.000Z',
-            text: '',
+test('buildTranscriptEntries keeps a new run out of the previous run turn entry', () => {
+    // Live-projected rows carry no response id, so run identity must split
+    // the turns: the next run's narration never appends to the prior reply.
+    const nextRunNarration: ChatRow = {
+        actor: { id: 'agent-1', kind: 'agent' },
+        connectsToNext: false,
+        connectsToPrevious: false,
+        id: 'act_run_next_message_0',
+        isFirstInGroup: true,
+        kind: 'message',
+        message: {
+            actor: { id: 'agent-1', kind: 'agent' },
+            content: 'I will inspect the workspace layout before making any changes.',
+            id: 'act_run_next_message_0',
+            metadata: { runtime: { runId: 'run_next', sessionKey: handoffSession } },
+            sender: 'Agent',
+            senderType: 'agent',
+            sourceSessionId: null,
+            sourceSessionKey: handoffSession,
+            tavernAgentId: 'agent-1',
+            timestamp: '2026-05-11T16:00:12.000Z',
         },
-        rows: [thinkingRow('thinking-1')],
-        showThinkingText: false,
+    };
+
+    const entries = buildTranscriptEntries({
+        activeReply: null,
+        rows: [durableReplyRow(), nextRunNarration],
     });
 
-    expect(entries).toHaveLength(1);
-
-    if (entries[0]?.kind !== 'turn') {
-        throw new Error('Expected agent turn entry.');
-    }
-
-    expect(entries[0].items.map((item) => item.kind)).toEqual(['activeStatus']);
+    const turnEntries = entries.filter((entry) => entry.kind === 'turn');
+    expect(turnEntries).toHaveLength(2);
+    expect(turnEntries[0]?.items).toHaveLength(1);
+    expect(turnEntries[1]?.items).toHaveLength(1);
 });
 
 test('buildTranscriptEntries keeps runtime notices as standalone system entries', () => {
@@ -687,7 +698,6 @@ test('duplicate thinking text is hidden when it matches the active reply', () =>
     const entries = buildTranscriptEntries({
         activeReply: handoffReply('Done. Clouds check the window,'),
         rows: [runThinkingRow('Done. Clouds')],
-        showThinkingText: true,
     });
     const agentTurn = entries.find(
         (entry) => entry.kind === 'turn' && entry.participant === 'agent'
@@ -710,7 +720,6 @@ test('duplicate thinking text is hidden when it matches the durable reply', () =
     const entries = buildTranscriptEntries({
         activeReply: null,
         rows: [runThinkingRow('Done. Clouds'), durableReplyRow()],
-        showThinkingText: true,
     });
     const agentTurn = entries.find(
         (entry) => entry.kind === 'turn' && entry.participant === 'agent'

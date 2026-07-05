@@ -31,7 +31,7 @@ export function activityTurnDemo(): DevelopmentChatDemo {
             assistantMessage({
                 chatId,
                 content:
-                    'Implemented the transcript layout. Visible progress updates render as assistant text, and work rows stay grouped by phase.',
+                    'Implemented the transcript layout. Progress updates replace each other while a turn runs, the final reply replaces the last one, and the full work log stays in the turn details.',
                 id: responseMessageId,
                 nonce: 'demo-activity-turn-response',
                 requestMessageId,

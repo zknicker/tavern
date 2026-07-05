@@ -31,8 +31,8 @@ happen, and keep the durable timeline as context.
   generic "Working" text. Expanding reveals the tool rows; clicking a row opens
   the tool-aware inspect drawer (see
   [Tool Presentation](../internals/tool-presentation.md)). Model thinking text
-  is hidden from the main chat transcript by default; Appearance settings can
-  show it without changing the underlying runtime evidence.
+  lives in the turn details drawer alongside tool rows — its group header
+  carries an icon like tool groups — and never renders in the chat pane.
 * **Artifacts.** Code, images, files, diffs, documents, and charts render as
   durable outputs attached to messages or response activity.
 * **Receipts.** Message creation and assistant delivery are acknowledged by id.
@@ -141,6 +141,16 @@ transcript only grows:
   visual hierarchy, plus inline emphasis, strong text, code, and safe links.
 * The streamed reply and its durable message share one React key
   (`reply:<runId>`), so the end-of-turn swap does not remount.
+* Assistant progress narration (preamble and intra-turn updates) renders
+  through one replace-in-place slot per run: each new update replaces the
+  previous one with the paced text reveal, and the run's final reply replaces
+  the last update. Completed turns show only the final reply in the chat pane;
+  the full narration history stays in the turn details drawer.
+* The chat pane never reflows for turn lifecycle alone: the detail surface
+  reserves the active-status row's space permanently (the indicator fades in
+  place), and the live narration/reply slot holds the tallest height it has
+  reached for the run so text swaps and the reply handoff never shrink the
+  turn mid-stream.
 * Agent turns render visible work and reply content in timeline order; there is
   no outer turn-level work disclosure. Per-tool work groups still own their
   existing drawers so detailed tool output stays available on demand.
@@ -153,9 +163,8 @@ transcript only grows:
 * While live, active status text sits next to the presence eyes in the bottom
   stack. The engine's status text is ignored. Completed turns remove the bottom
   status row.
-* Stored model thinking renders as normal transcript activity when the
-  Appearance setting shows thinking text. Hidden thinking does not render as a
-  separate presence bubble.
+* Stored model thinking renders inside the turn details drawer only. It does
+  not render in the chat pane or as a separate presence bubble.
 * Step enter animations are tied to DOM insertion during a live turn
   (`@starting-style`), not to step status, so fast tools still animate and
   history never replays.

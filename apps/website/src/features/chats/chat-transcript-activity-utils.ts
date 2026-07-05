@@ -1,3 +1,4 @@
+import { BrainIcon } from '@hugeicons-pro/core-stroke-rounded';
 import type { TranscriptItem, TranscriptRow } from './chat-transcript-model.ts';
 import { resolveToolStepIcon, type ToolStepIcon } from './tool-steps/tool-step-icons.ts';
 
@@ -206,7 +207,9 @@ export function getWorkGroupIcon(items: ActivityItem[]): ToolStepIcon | null {
     );
 
     if (toolNames.length === 0) {
-        return null;
+        // Thinking-only groups carry the same header shape as tool groups:
+        // icon plus label.
+        return items.some(isThinkingActivityItem) ? BrainIcon : null;
     }
 
     for (let index = items.length - 1; index >= 0; index -= 1) {
@@ -225,6 +228,10 @@ export function getWorkGroupIcon(items: ActivityItem[]): ToolStepIcon | null {
 
 function isNarrationToolRow(row: TranscriptRow) {
     return row.kind === 'tool' && row.toolCall.name.trim().toLowerCase() === 'message';
+}
+
+function isThinkingActivityItem(item: ActivityItem) {
+    return item.row.kind === 'system' && item.row.systemKind === 'thinking';
 }
 
 function isNarrationTitle(value: string, label: string) {

@@ -16,7 +16,6 @@ export function ChatTimeline({
     onTurnTimelineMarkersChange,
     rows,
     scrollContentRef,
-    showThinkingText,
     totalMessages,
 }: {
     activeReply: ChatActiveReply | null;
@@ -28,7 +27,6 @@ export function ChatTimeline({
     onTurnTimelineMarkersChange?: (markers: ChatTurnTimelineMarker[]) => void;
     rows: NonNullable<ChatLogOutput>['rows'];
     scrollContentRef?: React.RefObject<HTMLDivElement | null>;
-    showThinkingText?: boolean;
     totalMessages: number;
 }) {
     const hiddenCount = Math.max(totalMessages - countDurableMessageRows(rows), 0);
@@ -45,7 +43,6 @@ export function ChatTimeline({
             onTurnTimelineMarkersChange={onTurnTimelineMarkersChange}
             rows={rows}
             scrollContentRef={scrollContentRef}
-            showThinkingText={showThinkingText}
         />
     );
 }

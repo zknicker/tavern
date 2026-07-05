@@ -49,7 +49,12 @@ import type {
     TranscriptItem,
     TranscriptRow,
 } from './chat-transcript-model.ts';
-import { getItemSessionKey, isActivityBackedMessageRow } from './chat-transcript-model.ts';
+import {
+    getItemRunId,
+    getItemSessionKey,
+    isActivityBackedMessageRow,
+} from './chat-transcript-model.ts';
+import { useTranscriptRenderContext } from './chat-transcript-render-context.tsx';
 import { RuntimeNoticeEntry } from './chat-transcript-system-step.tsx';
 import { ChatTurnDrawer } from './chat-turn-drawer.tsx';
 import { useRevealedText } from './use-revealed-text.ts';
@@ -386,8 +391,9 @@ function AgentTurn({
     const showIdentity = layout.showAgentIdentity;
     const lastMessage = getLastMessage(items);
     const turnCompletedAt = lastMessage?.timestamp ?? null;
+    const { repliedRunIds } = useTranscriptRenderContext();
     const segments = groupAgentItems(items);
-    const visibleSegments = filterPaneSegments(segments);
+    const visibleSegments = filterPaneSegments(segments, repliedRunIds);
     const turnStopped =
         hasStoppedTurn(items, activeReply?.runId) || (!activeReply && hasAnyStoppedTurn(items));
     const turnActive = isActiveTurn(items, activeReply, lastMessage);
@@ -416,7 +422,15 @@ function AgentTurn({
         </>
     );
 
-    if (visibleSegments.length === 0) {
+    // A lifecycle note with nothing above it is noise: a stopped turn that
+    // never produced visible content drops out of the transcript entirely.
+    // When the turn did produce content, the note stays as its footnote.
+    if (
+        visibleSegments.length === 0 ||
+        visibleSegments.every(
+            (segment) => segment.kind === 'item' && isTurnStatusItem(segment.item)
+        )
+    ) {
         return null;
     }
 
@@ -450,6 +464,7 @@ function AgentTurn({
                                 currentSessionKey={currentSessionKey}
                                 defaultOpenWorkGroups={defaultOpenWorkGroups}
                                 key={segment.key}
+                                revealNarration={turnActive}
                                 segment={segment}
                                 turnActive={turnActive && index === visibleSegments.length - 1}
                                 turnCompletedAt={turnCompletedAt}
@@ -484,6 +499,7 @@ export function AgentTurnSegment({
     chatId,
     currentSessionKey,
     defaultOpenWorkGroups,
+    revealNarration = false,
     segment,
     turnActive,
     turnCompletedAt,
@@ -494,6 +510,7 @@ export function AgentTurnSegment({
     chatId?: string;
     currentSessionKey?: string | null;
     defaultOpenWorkGroups: boolean;
+    revealNarration?: boolean;
     segment: AgentItemSegment;
     turnActive: boolean;
     turnCompletedAt: string | null;
@@ -518,7 +535,12 @@ export function AgentTurnSegment({
     }
 
     return (
-        <AgentTurnItem chatId={chatId} currentSessionKey={currentSessionKey} item={segment.item} />
+        <AgentTurnItem
+            chatId={chatId}
+            currentSessionKey={currentSessionKey}
+            item={segment.item}
+            revealNarration={revealNarration}
+        />
     );
 }
 
@@ -526,18 +548,58 @@ function isActiveStatusSegment(segment: AgentItemSegment) {
     return segment.kind === 'item' && segment.item.kind === 'activeStatus';
 }
 
-// The chat pane shows only narration, intra-turn messages, and the final
-// response. Tool/work activity lives in the turn drawer (opened from the
-// active status row) — except clarifications, which are conversational and
-// must stay visible, and thinking groups, which are already gated behind the
-// show-thinking preference.
-function filterPaneSegments(segments: AgentItemSegment[]): AgentItemSegment[] {
+// The chat pane shows only the turn's latest narration and the final
+// response. Narration (preamble and intra-turn updates) renders through one
+// replace-in-place slot while the turn runs and drops once the run's final
+// reply arrives; the full narration history stays in the turn drawer.
+// Tool, thinking, and other work activity lives in the turn drawer too —
+// except clarifications, which are conversational and must stay visible.
+// Exported for tests only.
+export function filterPaneSegments(
+    segments: AgentItemSegment[],
+    repliedRunIds: ReadonlySet<string> = new Set()
+): AgentItemSegment[] {
+    // A run's reply usually sits in this entry, but turn splits (interleaved
+    // rows, runtime notices) can land it in a sibling entry — the transcript
+    // provides those runs via repliedRunIds.
+    const entryRepliedRunIds = new Set(
+        segments.flatMap((segment) =>
+            segment.kind === 'item' && isFinalReplyItem(segment.item)
+                ? [getItemRunId(segment.item)]
+                : []
+        )
+    );
+    const lastNarrationKeyByRun = new Map<string | null, string>();
+
+    for (const segment of segments) {
+        if (segment.kind === 'item' && isNarrationItem(segment.item)) {
+            lastNarrationKeyByRun.set(getItemRunId(segment.item), segment.key);
+        }
+    }
+
     return segments.flatMap((segment): AgentItemSegment[] => {
         if (segment.kind !== 'activity') {
-            return isActiveStatusSegment(segment) ? [] : [segment];
-        }
+            if (isActiveStatusSegment(segment)) {
+                return [];
+            }
 
-        if (segment.items.some(isThinkingItem)) {
+            if (segment.kind === 'item' && isNarrationItem(segment.item)) {
+                const runId = getItemRunId(segment.item);
+
+                if (
+                    entryRepliedRunIds.has(runId) ||
+                    (runId !== null && repliedRunIds.has(runId)) ||
+                    lastNarrationKeyByRun.get(runId) !== segment.key
+                ) {
+                    return [];
+                }
+
+                // One stable key per run: successive narration updates render
+                // through the same slot, so each replaces the previous one in
+                // place instead of appending a new row.
+                return [{ ...segment, key: `narration:${runId ?? segment.key}` }];
+            }
+
             return [segment];
         }
 
@@ -549,8 +611,27 @@ function filterPaneSegments(segments: AgentItemSegment[]): AgentItemSegment[] {
     });
 }
 
-function isThinkingItem(item: TranscriptItem) {
-    return item.kind === 'row' && item.row.kind === 'system' && item.row.systemKind === 'thinking';
+function isNarrationItem(item: TranscriptItem) {
+    return (
+        isAssistantNarrationItem(item) ||
+        (item.kind === 'row' &&
+            item.row.kind === 'message' &&
+            item.row.message.senderType === 'agent' &&
+            isActivityBackedMessageRow(item.row))
+    );
+}
+
+function isFinalReplyItem(item: TranscriptItem) {
+    if (item.kind === 'activeReply') {
+        return true;
+    }
+
+    return (
+        item.kind === 'row' &&
+        item.row.kind === 'message' &&
+        item.row.message.senderType === 'agent' &&
+        !isActivityBackedMessageRow(item.row)
+    );
 }
 
 function isClarificationItem(item: TranscriptItem) {
@@ -581,10 +662,12 @@ function AgentTurnItem({
     chatId,
     currentSessionKey,
     item,
+    revealNarration = false,
 }: {
     chatId?: string;
     currentSessionKey?: string | null;
     item: TranscriptItem;
+    revealNarration?: boolean;
 }) {
     if (item.kind === 'activeReply') {
         return (
@@ -592,6 +675,7 @@ function AgentTurnItem({
                 content={getActiveReplyDisplayText(item.reply.text ?? '')}
                 revealKey={item.reply.runId}
                 revealText={isStreamingActiveReply(item.reply)}
+                slotKey={item.reply.runId}
             />
         );
     }
@@ -605,7 +689,21 @@ function AgentTurnItem({
     }
 
     if (item.kind === 'row' && item.row.kind === 'message') {
-        return <AssistantReplyText message={item.row.message} />;
+        const narration = revealNarration && isActivityBackedMessageRow(item.row);
+
+        return (
+            <AssistantReplyText
+                message={item.row.message}
+                {...(narration
+                    ? {
+                          animateEnter: true,
+                          revealKey: item.row.id,
+                          revealText: true,
+                          slotKey: getItemRunId(item) ?? item.row.id,
+                      }
+                    : {})}
+            />
+        );
     }
 
     if (item.kind === 'row' && item.row.kind === 'rich_response') {
@@ -636,15 +734,19 @@ function AssistantNarrationText({ item }: { item: TranscriptItem }) {
 }
 
 function AssistantReplyText({
+    animateEnter = false,
     content,
     message,
     revealKey,
     revealText = false,
+    slotKey = null,
 }: {
+    animateEnter?: boolean;
     content?: string;
     message?: TranscriptMessage;
     revealKey?: string;
     revealText?: boolean;
+    slotKey?: string | null;
 }) {
     const fullContent = content ?? (message ? getTranscriptMessageContent(message) : '');
     const messagePhase = message ? getAssistantMessagePhase(message) : null;
@@ -659,27 +761,74 @@ function AssistantReplyText({
             shouldReduceMotion !== true && (revealText || revealedText.length < fullContent.length),
     });
     const attachments = message ? renderTranscriptMessageAttachments(message.attachments) : null;
+    const ratchetRef = useRatchetedMinHeight(revealText, slotKey);
+    const body = message ? (
+        <ChatTranscriptMessageContent
+            animatedRanges={animatedRanges}
+            contentOverride={revealedText}
+            message={message}
+            textClassName={isCommentary ? 'text-muted-foreground' : undefined}
+        />
+    ) : (
+        <ChatMarkdownText animatedRanges={animatedRanges} content={revealedText} />
+    );
 
     return (
         <ChatMessage
-            animateEnter={false}
+            animateEnter={animateEnter}
             attachments={attachments}
             className={isCommentary ? 'opacity-85' : undefined}
             data-message-phase={messagePhase ?? undefined}
             from="assistant"
         >
-            {message ? (
-                <ChatTranscriptMessageContent
-                    animatedRanges={animatedRanges}
-                    contentOverride={revealedText}
-                    message={message}
-                    textClassName={isCommentary ? 'text-muted-foreground' : undefined}
-                />
+            {/* The reveal empties and regrows the text when a narration swap
+                restarts it; the ratcheted floor keeps the slot from ever
+                shrinking mid-turn so the bottom-anchored transcript holds
+                still. The floor dies with the slot when the reply lands. */}
+            {revealText ? (
+                <div className="min-h-[1lh]" ref={ratchetRef}>
+                    {body}
+                </div>
             ) : (
-                <ChatMarkdownText animatedRanges={animatedRanges} content={revealedText} />
+                body
             )}
         </ChatMessage>
     );
+}
+
+// Tallest height each live narration slot has reached, keyed by run. Module
+// level on purpose: narration swaps can remount the slot, and the floor must
+// survive the remount or the swap still shrinks the turn. Entries are a few
+// bytes per run; the map is cleared when it grows past a session's worth.
+const narrationSlotHeights = new Map<string, number>();
+const maxTrackedNarrationSlots = 64;
+
+// Latches the tallest height the live narration slot has reached and holds it
+// as min-height, so replace-in-place text swaps never shrink the turn while
+// it is running. The floor dies with the slot when the reply replaces it.
+function useRatchetedMinHeight(enabled: boolean, slotKey: string | null) {
+    const ref = React.useRef<HTMLDivElement | null>(null);
+
+    React.useLayoutEffect(() => {
+        if (!(enabled && slotKey && ref.current)) {
+            return;
+        }
+
+        const floor = narrationSlotHeights.get(slotKey) ?? 0;
+        const height = Math.max(ref.current.offsetHeight, floor);
+
+        if (height > floor) {
+            if (narrationSlotHeights.size >= maxTrackedNarrationSlots) {
+                narrationSlotHeights.clear();
+            }
+
+            narrationSlotHeights.set(slotKey, height);
+        }
+
+        ref.current.style.minHeight = `${height}px`;
+    });
+
+    return ref;
 }
 
 function getAssistantMessagePhase(message: TranscriptMessage) {
@@ -758,15 +907,18 @@ function AgentTurnStatus({
         row: Extract<TranscriptRow, { kind: 'system'; systemKind: 'turnStatus' }>;
     };
 }) {
+    // A stopped turn is a quiet lifecycle note, not an error: the icon shares
+    // the text's muted color so the row reads as a footnote under whatever
+    // the turn already produced.
     return (
-        <p className="max-w-[34rem] pl-0.5 text-sm leading-5">
+        <p className="max-w-[34rem] pl-0.5 text-muted-foreground text-sm leading-5">
             <Icon
                 aria-hidden
-                className="mr-1.5 inline-block size-3.5 shrink-0 align-[-0.2em] text-error-foreground"
+                className="mr-1.5 inline-block size-3.5 shrink-0 align-[-0.2em]"
                 icon={AlertCircleIcon}
                 strokeWidth={2}
             />
-            <span className="font-medium text-muted-foreground">{item.row.turnStatus.text}</span>
+            <span className="font-medium">{item.row.turnStatus.text}</span>
         </p>
     );
 }

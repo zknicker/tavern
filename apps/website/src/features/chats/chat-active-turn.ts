@@ -12,12 +12,10 @@ import {
 export function findActiveTurnEntry(input: {
     activeReply: ChatActiveReply;
     rows: TranscriptRow[];
-    showThinkingText?: boolean;
 }): TranscriptTurnEntry | null {
     const entries = buildTranscriptEntries({
         activeReply: input.activeReply,
         rows: input.rows,
-        showThinkingText: input.showThinkingText ?? false,
     });
 
     for (let index = entries.length - 1; index >= 0; index -= 1) {
@@ -40,12 +38,10 @@ export function findActiveTurnEntry(input: {
 export function findLastAgentTurnEntry(input: {
     activeReply?: ChatActiveReply | null;
     rows: TranscriptRow[];
-    showThinkingText?: boolean;
 }): TranscriptTurnEntry | null {
     const entries = buildTranscriptEntries({
         activeReply: input.activeReply ?? null,
         rows: input.rows,
-        showThinkingText: input.showThinkingText ?? false,
     });
 
     for (let index = entries.length - 1; index >= 0; index -= 1) {

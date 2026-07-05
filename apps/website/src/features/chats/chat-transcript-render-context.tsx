@@ -7,6 +7,8 @@ export interface TranscriptRenderContextValue {
     currentSessionKey?: string | null;
     defaultOpenWorkGroups: boolean;
     hiddenCount: number;
+    /** Runs whose final reply is present anywhere in the transcript. */
+    repliedRunIds: ReadonlySet<string>;
 }
 
 const TranscriptRenderContext = React.createContext<TranscriptRenderContextValue | null>(null);

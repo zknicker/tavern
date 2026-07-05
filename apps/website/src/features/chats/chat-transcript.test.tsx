@@ -11,8 +11,9 @@ import { ArtifactLogEntry } from '../sessions/log/event-entry/artifact-entry.tsx
 import { ToolDrawerBody } from '../sessions/tools/tool-drawer-body.tsx';
 import { findLastAgentTurnEntry } from './chat-active-turn.ts';
 import { ChatTranscript } from './chat-transcript.tsx';
+import { groupAgentItems } from './chat-transcript-item-utils.ts';
 import { SystemStep } from './chat-transcript-system-step.tsx';
-import { getActiveReplyDisplayText } from './chat-transcript-turn.tsx';
+import { filterPaneSegments, getActiveReplyDisplayText } from './chat-transcript-turn.tsx';
 import { ChatTurnBody } from './chat-turn-drawer.tsx';
 import { ToolStep } from './tool-steps/registry.tsx';
 
@@ -726,8 +727,8 @@ test('ChatTranscript renders fallback for unknown Rich Response components', () 
     assert.match(markup, /Rich Response unavailable/);
 });
 
-test('ChatTranscript hides reasoning by default', () => {
-    const markup = renderTranscript([
+test('ChatTranscript keeps reasoning out of the chat pane', () => {
+    const rows: ChatRow[] = [
         {
             id: 'thinking-1',
             kind: 'system',
@@ -741,15 +742,15 @@ test('ChatTranscript hides reasoning by default', () => {
             },
             timestamp: '2026-03-31T15:00:00.000Z',
         },
-    ]);
+    ];
 
-    assert.doesNotMatch(markup, /Thinking/);
-    assert.doesNotMatch(markup, /I should greet the user directly\./);
-    assert.doesNotMatch(markup, /Details/);
-    assert.doesNotMatch(markup, /Inspect/);
+    // Reasoning belongs to the turn details drawer alongside tool work, not
+    // the chat transcript.
+    assert.doesNotMatch(renderTranscript(rows), /I should greet the user directly\./);
+    assert.match(renderTurnBody(rows), /I should greet the user directly\./);
 });
 
-test('ChatTranscript renders active thinking text inline when enabled', () => {
+test('ChatTranscript keeps active thinking out of the pane and in the turn body', () => {
     const rows: ChatRow[] = [
         {
             id: 'thinking-1',
@@ -787,17 +788,16 @@ test('ChatTranscript renders active thinking text inline when enabled', () => {
             startedAt: '2026-03-31T15:00:00.000Z',
             text: '',
         },
-        rows,
-        undefined,
-        { showThinkingText: true }
+        rows
     );
-    const completedMarkup = renderTranscript(rows);
+    const turnBodyMarkup = renderTurnBody(rows);
 
-    assert.match(markup, /Reviewing the request/);
-    assert.match(markup, /I should inspect the workspace before using a command\./);
-    assert.match(markup, /Checking tool output/);
-    assert.match(markup, /I should summarize only the command result\./);
-    assert.doesNotMatch(completedMarkup, /Checking tool output/);
+    assert.doesNotMatch(markup, /Reviewing the request/);
+    assert.doesNotMatch(markup, /Checking tool output/);
+    assert.match(turnBodyMarkup, /Reviewing the request/);
+    assert.match(turnBodyMarkup, /I should inspect the workspace before using a command\./);
+    assert.match(turnBodyMarkup, /Checking tool output/);
+    assert.match(turnBodyMarkup, /I should summarize only the command result\./);
 });
 
 test('SystemStep uses leading bold thinking text as the thinking step title', () => {
@@ -827,7 +827,7 @@ test('SystemStep uses leading bold thinking text as the thinking step title', ()
     assert.doesNotMatch(markup, /<svg/u);
 });
 
-test('ChatTranscript keeps hidden thinking out of tool work headers', () => {
+test('ChatTranscript keeps thinking rows alongside tool work in the turn body', () => {
     const markup = renderTurnBody([
         {
             id: 'thinking-1',
@@ -864,7 +864,7 @@ test('ChatTranscript keeps hidden thinking out of tool work headers', () => {
         },
     ]);
 
-    assert.doesNotMatch(markup, /Thinking/);
+    assert.match(markup, /I should inspect the workspace\./);
     // A lone short command can surface in the group header; the row still
     // owns the inspectable command details.
     assert.match(markup, /Ran command -v node/);
@@ -1335,30 +1335,48 @@ test('ChatTranscript renders runtime notices outside the work disclosure', () =>
     assert.doesNotMatch(markup, /Worked/);
 });
 
-test('ChatTranscript renders stopped turns as a muted system row', () => {
+test('ChatTranscript hides a stopped turn that produced no visible content', () => {
+    const markup = renderTranscript([stoppedTurnRow()]);
+
+    assert.doesNotMatch(markup, /Agent response stopped\./);
+});
+
+test('ChatTranscript keeps the stopped note as a muted footnote under turn content', () => {
     const markup = renderTranscript([
-        {
-            id: 'response-cancelled:cancelled',
-            kind: 'system',
-            responseId: 'response-cancelled',
-            systemKind: 'turnStatus',
-            timestamp: '2026-03-31T15:00:00.000Z',
-            turnStatus: {
-                agentId: 'tiny',
-                runId: 'run-cancelled',
-                sessionKey: 'agent:tiny:session-1',
-                status: 'stopped',
-                text: 'Agent response stopped.',
-            },
-        },
+        narrationMessageRow(
+            'act_run-1_message_0',
+            'I was about to check the docs.',
+            Date.parse('2026-03-31T14:59:30.000Z')
+        ),
+        stoppedTurnRow('run-1'),
     ]);
 
+    assert.match(markup, /I was about to check the docs\./);
     assert.match(markup, /Agent response stopped\./);
-    assert.match(markup, /text-error-foreground/);
+    // A quiet lifecycle note: the icon inherits the muted text color instead
+    // of reading as an error.
+    assert.doesNotMatch(markup, /text-error-foreground/);
     assert.doesNotMatch(markup, /data-slot="drawer-trigger"/);
     assert.doesNotMatch(markup, /Working/);
     assert.doesNotMatch(markup, /Worked/);
 });
+
+function stoppedTurnRow(runId = 'run-cancelled'): ChatRow {
+    return {
+        id: 'response-cancelled:cancelled',
+        kind: 'system',
+        responseId: 'response-cancelled',
+        systemKind: 'turnStatus',
+        timestamp: '2026-03-31T15:00:00.000Z',
+        turnStatus: {
+            agentId: 'tiny',
+            runId,
+            sessionKey: 'agent:tiny:session-1',
+            status: 'stopped',
+            text: 'Agent response stopped.',
+        },
+    };
+}
 
 test('ChatTranscript does not keep timing a stopped active turn', () => {
     const markup = renderActiveTranscript(
@@ -1408,7 +1426,9 @@ test('ChatTranscript does not keep timing a stopped active turn', () => {
         ]
     );
 
-    assert.match(markup, /Agent response stopped\./);
+    // Tool work is drawer-only, so a stopped turn with no pane-visible
+    // content drops out entirely — including its lifecycle note and timer.
+    assert.doesNotMatch(markup, /Agent response stopped\./);
     assert.doesNotMatch(markup, /Agent idle/);
     assert.doesNotMatch(markup, /Ran a command/);
     assert.doesNotMatch(markup, /Working for/);
@@ -1994,7 +2014,120 @@ test('ChatTranscript keeps narration messages in the work log above later tools'
     assert.ok(narrationIndex < toolIndex, 'narration renders above the tool that follows it');
 });
 
-test('ChatTranscript keeps hidden reasoning out of live transcript by default', () => {
+test('the pane narration slot keeps only the latest update while the turn runs', () => {
+    const now = Date.now();
+    const segments = filterPaneSegments(
+        groupAgentItems([
+            {
+                kind: 'row',
+                row: narrationMessageRow(
+                    'act_run-1_message_0',
+                    'I will inspect the workspace first.',
+                    now - 2000
+                ),
+            },
+            {
+                kind: 'row',
+                row: narrationMessageRow(
+                    'act_run-1_message_1',
+                    'The layout matches the map.',
+                    now - 1000
+                ),
+            },
+        ])
+    );
+
+    assert.equal(segments.length, 1);
+    assert.equal(segments[0]?.key, 'narration:run-1');
+
+    const item = segments[0]?.kind === 'item' ? segments[0].item : null;
+    assert.ok(item?.kind === 'row' && item.row.kind === 'message');
+    assert.equal(item.row.message.content, 'The layout matches the map.');
+});
+
+test('the pane drops narration when the run replied in a sibling turn entry', () => {
+    const now = Date.now();
+    const segments = filterPaneSegments(
+        groupAgentItems([
+            {
+                kind: 'row',
+                row: narrationMessageRow(
+                    'act_run-1_message_0',
+                    'I will inspect the workspace first.',
+                    now - 2000
+                ),
+            },
+        ]),
+        new Set(['run-1'])
+    );
+
+    assert.equal(segments.length, 0);
+});
+
+test('ChatTranscript replaces narration with the final reply once it lands', () => {
+    const now = Date.now();
+    const markup = renderTranscript([
+        narrationMessageRow(
+            'act_run-1_message_0',
+            'I will inspect the workspace first.',
+            now - 2000
+        ),
+        narrationMessageRow('act_run-1_message_1', 'The layout matches the map.', now - 1000),
+        {
+            actor: { id: 'tiny', kind: 'agent' },
+            connectsToNext: false,
+            connectsToPrevious: true,
+            id: 'msg_run-1_assistant',
+            isFirstInGroup: false,
+            kind: 'message',
+            message: {
+                tavernAgentId: 'tiny',
+                content: 'The workspace looks well organized.',
+                id: 'msg_run-1_assistant',
+                metadata: { runtime: { runId: 'run-1', sessionKey: 'agent:tiny:session-1' } },
+                sender: 'tiny',
+                senderType: 'agent',
+                sourceSessionId: null,
+                sourceSessionKey: 'agent:tiny:session-1',
+                timestamp: new Date(now - 500).toISOString(),
+            },
+        },
+    ]);
+
+    assert.match(markup, /The workspace looks well organized\./);
+    assert.doesNotMatch(markup, /I will inspect the workspace first\./);
+    assert.doesNotMatch(markup, /The layout matches the map\./);
+});
+
+function narrationMessageRow(id: string, content: string, timestampMs: number): ChatRow {
+    return {
+        actor: { id: 'tiny', kind: 'agent' },
+        connectsToNext: false,
+        connectsToPrevious: false,
+        id,
+        isFirstInGroup: true,
+        kind: 'message',
+        message: {
+            tavernAgentId: 'tiny',
+            content,
+            id,
+            metadata: {
+                runtime: {
+                    messagePhase: 'commentary',
+                    runId: 'run-1',
+                    sessionKey: 'agent:tiny:session-1',
+                },
+            },
+            sender: 'tiny',
+            senderType: 'agent',
+            sourceSessionId: null,
+            sourceSessionKey: 'agent:tiny:session-1',
+            timestamp: new Date(timestampMs).toISOString(),
+        },
+    };
+}
+
+test('ChatTranscript keeps live reasoning out of the transcript pane', () => {
     const now = Date.now();
     const markup = renderActiveTranscript(
         {
@@ -2022,9 +2155,7 @@ test('ChatTranscript keeps hidden reasoning out of live transcript by default', 
         ]
     );
 
-    assert.doesNotMatch(markup, /Agent is thinking/);
     assert.doesNotMatch(markup, /Considering which files matter\./);
-    assert.doesNotMatch(markup, /Details/);
     assert.doesNotMatch(markup, /data-slot="drawer-trigger"/);
 });
 
@@ -2035,7 +2166,6 @@ function renderTranscript(
     options: {
         chatId?: string;
         defaultOpenWorkGroups?: boolean;
-        showThinkingText?: boolean;
     } = {}
 ) {
     const queryClient = new QueryClient({
@@ -2062,7 +2192,6 @@ function renderTranscript(
                         chatId={options.chatId}
                         defaultOpenWorkGroups={options.defaultOpenWorkGroups}
                         rows={rows}
-                        showThinkingText={options.showThinkingText}
                     />
                 </MemoryRouter>
             </QueryClientProvider>
@@ -2072,15 +2201,10 @@ function renderTranscript(
 
 // Renders the turn-drawer body for the last agent turn — the surface tool
 // work moved to now that the chat pane is prose-only.
-function renderTurnBody(
-    rows: ChatRow[],
-    activeReply: ChatActiveReply | null = null,
-    options: { showThinkingText?: boolean } = {}
-) {
+function renderTurnBody(rows: ChatRow[], activeReply: ChatActiveReply | null = null) {
     const entry = findLastAgentTurnEntry({
         activeReply,
         rows,
-        showThinkingText: options.showThinkingText,
     });
     const queryClient = new QueryClient({
         defaultOptions: {
@@ -2119,8 +2243,7 @@ function renderActiveTurnBody(activeReply: ChatActiveReply, rows: ChatRow[] = []
 function renderActiveTranscript(
     activeReply: ChatActiveReply,
     rows: ChatRow[] = [],
-    conversationLayout?: { showAgentIdentity: boolean; showHumanIdentity: boolean },
-    options: { showThinkingText?: boolean } = {}
+    conversationLayout?: { showAgentIdentity: boolean; showHumanIdentity: boolean }
 ) {
     const queryClient = new QueryClient({
         defaultOptions: {
@@ -2146,7 +2269,6 @@ function renderActiveTranscript(
                         chatId="cht_test"
                         conversationLayout={conversationLayout}
                         rows={rows}
-                        showThinkingText={options.showThinkingText}
                     />
                 </MemoryRouter>
             </QueryClientProvider>

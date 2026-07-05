@@ -65,36 +65,50 @@ export function ChatActiveStatusStack({
     const agentCharacter = agent?.effectiveCharacter ?? lastAgentRef.current.character;
     const agentColor = agent?.effectivePrimaryColor ?? lastAgentRef.current.color;
 
+    // The detail surface reserves the status row's space permanently so the
+    // transcript never reflows when a turn starts or ends — the indicator
+    // fades in place instead of pushing the log up.
+    const reserveSpace = variant === 'detail';
+
     return (
         <>
-            {activeReply ? (
+            {activeReply || reserveSpace ? (
                 <section
                     aria-label="Active agent status"
                     className={cn(
                         variant === 'compact'
                             ? 'border-r-[3px] border-r-border/70 bg-card px-5 pt-2 pb-1'
-                            : 'bg-background px-6 pt-2 pb-1 lg:px-16',
+                            : // No background: the row sits inline on the pane
+                              // surface, and painting an opaque layer over the
+                              // shell's translucent backdrop reads as a faint
+                              // seam above the composer.
+                              'px-6 pt-2 pb-1 lg:px-16',
                         className
                     )}
                 >
                     <div
                         className={cn(
                             'mx-auto flex w-full max-w-[60rem] flex-col gap-1',
-                            variant === 'detail' && 'px-0'
+                            variant === 'detail' && 'px-0 transition-opacity duration-200 ease-out',
+                            reserveSpace && !activeReply && 'opacity-0'
                         )}
                     >
-                        <ChatActiveStatusItem
-                            activeReply={activeReply}
-                            agentCharacter={agentCharacter}
-                            agentName={agentName}
-                            agentPrimaryColor={agentColor}
-                            onViewDetails={() => setDrawerOpen(true)}
-                            rows={rows}
-                            workIcon={getWorkGroupIcon(
-                                turnEntry?.items.filter(isActivityItem) ?? []
-                            )}
-                            workSummary={formatTurnWorkSummary(turnEntry)}
-                        />
+                        {activeReply ? (
+                            <ChatActiveStatusItem
+                                activeReply={activeReply}
+                                agentCharacter={agentCharacter}
+                                agentName={agentName}
+                                agentPrimaryColor={agentColor}
+                                onViewDetails={() => setDrawerOpen(true)}
+                                rows={rows}
+                                workIcon={getWorkGroupIcon(
+                                    turnEntry?.items.filter(isActivityItem) ?? []
+                                )}
+                                workSummary={formatTurnWorkSummary(turnEntry)}
+                            />
+                        ) : (
+                            <div aria-hidden className="h-8" />
+                        )}
                     </div>
                 </section>
             ) : null}
