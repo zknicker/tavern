@@ -83,8 +83,19 @@ Memory workers run as direct model calls, so they need at least one direct
 model connection (OpenAI, OpenRouter, or an OpenAI-compatible endpoint) even
 when chats run through an agent harness. The `memoryWorkers` Runtime
 capability reports this; when it is unavailable the Memory page explains the
-fix, no background work is queued, and the Fast/Standard background models can
-be chosen in Models settings.
+fix, no background work is queued, and the background model categories can be
+chosen in Models settings (Fast: extraction, Standard: skill review, Deep:
+curation).
+
+## Background Work
+
+The Memory settings page shows the background work surface: one row per
+worker (extraction, dreaming, skill review, curation) with its last run and
+next planned run or the condition it waits on, a timeline of runs over the
+last two weeks, and a per-run report drawer (extraction observations and
+learning signals, dream outcomes, skill review actions, curator
+consolidations and prunings). Automations are separate; the Tasks page owns
+their run history.
 
 ## Related Docs
 
