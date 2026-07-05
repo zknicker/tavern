@@ -26,8 +26,8 @@ person to choose among internal runtime workers.
 - Tavern does not keep a competing canonical agent config store.
 - Tavern may keep local presentation overlays such as color and local notes.
 - Tavern exposes agent display name and color as editable agent settings on the agent record.
-- Tavern exposes the agent timezone as a Runtime-stored execution setting (system default when
-  unset); it governs schedules and time-aware answers.
+- The home timezone is a runtime-wide Runtime-stored setting (system default when unset); it
+  governs schedules, Memory day bucketing, and time-aware answers.
 - Runtime-native edits made outside Tavern refresh Tavern through sync and events.
 
 ## Relationships

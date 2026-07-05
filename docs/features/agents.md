@@ -23,8 +23,8 @@ can continue to feel primary-agent-first.
   Settings -> Agents lists those agents, creates new agents, and routes each
   agent to General, Skills, Plugins, Channels, and Memory pages.
   General edits the selected agent's display name, color, character, model,
-  thinking default, timezone, environment variables, and destructive agent
-  deletion.
+  thinking default, environment variables, and destructive agent deletion.
+  The home timezone lives on the Tavern Runtime settings page.
 * **Agent avatar.** Every agent wears a character face (knight, penguin, cat,
   dog, robot, ghost, or cloud) as its avatar; the animated eyes always sit
   inside a character and are never shown alone. Agents with no chosen character

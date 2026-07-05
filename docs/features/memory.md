@@ -35,6 +35,13 @@ The global Memory settings page (Settings → Memory) owns everything else:
 * per-run outcomes: what was saved, files updated, or why nothing changed
 * an explicit per-agent Dream now action
 
+History updates live: background capture and dream runs push a runtime event
+that refreshes the list, so new rows appear without reopening the page.
+
+Episodic evidence follows the home timezone (Tavern Runtime settings): day
+files bucket by the user's calendar day and entry headings carry local time
+with offset, so time-of-day patterns survive into dreams.
+
 Memory is not an agent settings tab; per-agent internals (episodic files,
 core memory files, dream scoping) do not need per-agent navigation.
 

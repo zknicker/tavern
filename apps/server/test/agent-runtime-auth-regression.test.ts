@@ -167,7 +167,7 @@ test('settings and mcpServer client requests carry the Authorization header', as
     // Response bodies are junk; schema parse failures are fine — the assertion
     // is that every outbound request carries the bearer token.
     const calls: Array<() => Promise<unknown>> = [
-        () => client.getExecutionSettings(),
+        () => client.getTimezoneSettings(),
         () => client.listMcpServers(),
         () => client.removeMcpServer('mcpServer-1'),
         () => client.testMcpServer('mcpServer-1'),

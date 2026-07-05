@@ -12,12 +12,10 @@ import { withSaveErrorToast, withSavingToast } from '../../../lib/saving-toast.t
 import { type AgentListOutput, type ModelListOutput, trpc } from '../../../lib/trpc.tsx';
 import { DeleteAgentDialog } from '../../agents/delete-agent-dialog.tsx';
 import { AgentAppearanceSection } from './appearance-section.tsx';
-import { AgentBehaviorSection } from './behavior-section.tsx';
 import { AgentEnvSection } from './env-section.tsx';
 import { AgentModelSection } from './model-section.tsx';
 import type { AgentModelDraft } from './types.ts';
 import { useAgentEnvSettings } from './use-env-settings.ts';
-import { useAgentExecutionSettings } from './use-execution-settings.ts';
 import { AgentWorkspaceFileEditor } from './workspace-file-page.tsx';
 
 export function AgentGeneralSettingsContent({
@@ -52,7 +50,6 @@ export function AgentGeneralSettingsContent({
         },
     });
     const envSettings = useAgentEnvSettings();
-    const executionSettings = useAgentExecutionSettings();
     const isSavingAgentConfig = updateModel.isPending || updateThinkingDefault.isPending;
 
     useEffect(() => {
@@ -99,16 +96,6 @@ export function AgentGeneralSettingsContent({
                 }}
                 syncError={modelSetting?.syncError ?? null}
                 value={modelDraft}
-            />
-
-            <AgentBehaviorSection
-                disabled={executionSettings.isLoading}
-                onTimezoneChange={(next) =>
-                    void withSaveErrorToast(() => executionSettings.save({ timezone: next })).catch(
-                        () => undefined
-                    )
-                }
-                timezone={executionSettings.settings.timezone}
             />
 
             <AgentEnvSection

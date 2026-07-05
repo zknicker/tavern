@@ -61,11 +61,11 @@ grant policy.
 * Persisted agent settings mean user intent. Runtime startup can apply Tavern
   defaults to the managed engine, but it must not write those defaults into the
   saved agent settings store.
-* Execution settings currently include the agent timezone. Agent environment
-  variables are Runtime-stored secrets exposed to the local settings UI. Model
-  fallback chains, web page summarizer models, context compression, and subagent
-  defaults are intentionally not exposed until the local agent engine supports
-  them.
+* Agent environment variables are Runtime-stored secrets exposed to the local
+  settings UI. The home timezone is a runtime-wide setting, not an agent
+  setting. Model fallback chains, web page summarizer models, context
+  compression, and subagent defaults are intentionally not exposed until the
+  local agent engine supports them.
 * Runtime execution state is not required just to list agents.
 
 ## Surface
@@ -80,7 +80,6 @@ The API covers:
 * update agent settings
 * read and update supported agent markdown files
 * read model choices and availability
-* read and update execution settings (timezone)
 * read and update agent environment variables
 * read and update memory policy
 * read and update skill assignment

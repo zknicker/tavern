@@ -8,6 +8,8 @@ import { resolveModelCategorySelection } from '../models/category-settings.ts';
 import { supportsLanguageModelForRuntime } from '../models/language-model.ts';
 import type { AgentTurn } from '../tavern/agent-turn-store.ts';
 import type { MessageRow } from '../tavern/chat-api/types.ts';
+import { formatLocalDateSlug, formatLocalIsoWithOffset } from '../timezone.ts';
+import { resolveHomeTimezone } from '../timezone-settings.ts';
 import { maybeQueueMemoryDreamForAgent } from './dreaming.ts';
 import {
     type MemoryExtractionMessage,
@@ -17,6 +19,7 @@ import {
     memoryExtractionChunkMessageLimit,
     runAiSdkMemoryExtraction,
 } from './extraction-worker.ts';
+import { publishMemoryJobUpdated } from './job-events.ts';
 import { isMemoryEnabled } from './settings.ts';
 
 export const memoryExtractionIdleDebounceMs = 5 * 60 * 1000;
@@ -162,7 +165,7 @@ async function processDueMemoryExtractionsOnce(input: { now?: Date } = {}) {
     }
 
     const db = getDb();
-    const now = input.now ?? new Date();
+    const clock = makeClock(input.now);
     const rows = db
         .prepare(
             `SELECT chat_id, agent_participant_id, agent_id, target_sequence, attempts
@@ -170,17 +173,17 @@ async function processDueMemoryExtractionsOnce(input: { now?: Date } = {}) {
              WHERE scheduled_for <= $now
              ORDER BY scheduled_for ASC, chat_id ASC, agent_participant_id ASC`
         )
-        .all(namedParams({ now: now.toISOString() })) as DebounceRow[];
+        .all(namedParams({ now: clock().toISOString() })) as DebounceRow[];
 
     const counts = { completed: 0, failed: 0, skipped: 0 };
     for (const row of rows) {
         try {
             clearScheduledTimer(row.chat_id, row.agent_participant_id);
-            const result = await processMemoryExtraction(row, now, db);
+            const result = await processMemoryExtraction(row, clock, db);
             counts[result.status] += 1;
         } catch {
             counts.failed += 1;
-            retryOrDropDebounce(row, now, db);
+            retryOrDropDebounce(row, clock(), db);
         }
     }
 
@@ -192,14 +195,14 @@ async function processDueMemoryExtractionsOnce(input: { now?: Date } = {}) {
  * until the settled target sequence is covered. No message is skipped — a
  * mid-backlog failure resumes from the last completed chunk on retry.
  */
-async function processMemoryExtraction(row: DebounceRow, now: Date, db: Database) {
+async function processMemoryExtraction(row: DebounceRow, clock: () => Date, db: Database) {
     const cursor = getExtractionCursor(row, db) ?? 0;
     const endSequence = row.target_sequence;
 
     if (endSequence <= cursor) {
         finishSkippedExtraction(row, {
             endSequence,
-            now,
+            now: clock(),
             reason: 'no_extractable_messages',
             startSequence: cursor + 1,
         });
@@ -216,12 +219,12 @@ async function processMemoryExtraction(row: DebounceRow, now: Date, db: Database
             if (chunkCursor === cursor) {
                 finishSkippedExtraction(row, {
                     endSequence,
-                    now,
+                    now: clock(),
                     reason: 'no_extractable_messages',
                     startSequence: cursor + 1,
                 });
             }
-            updateExtractionCursor(row, endSequence, now, db);
+            updateExtractionCursor(row, endSequence, clock(), db);
             break;
         }
 
@@ -229,7 +232,7 @@ async function processMemoryExtraction(row: DebounceRow, now: Date, db: Database
         const jobId = createMemoryJob(row, {
             endSequence: chunk.coveredEnd,
             modelCategory: 'fast',
-            now,
+            now: clock(),
             startSequence,
             status: 'running',
         });
@@ -247,32 +250,32 @@ async function processMemoryExtraction(row: DebounceRow, now: Date, db: Database
                 const output = await appendEpisodicMemory(row, outcome.observations, {
                     endSequence: chunk.coveredEnd,
                     jobId,
-                    now,
+                    now: clock(),
                     startSequence,
                 });
                 completeMemoryJob(jobId, {
                     endSequence: chunk.coveredEnd,
                     fileChanges: [output.fileChange],
-                    now,
+                    now: clock(),
                     outcome,
                     outputPath: output.relativePath,
                     startSequence,
                 });
                 completedChunks += 1;
             } else {
-                skipMemoryJobAfterRun(jobId, outcome, now);
+                skipMemoryJobAfterRun(jobId, outcome, clock());
             }
-            updateExtractionCursor(row, chunk.coveredEnd, now, db);
+            updateExtractionCursor(row, chunk.coveredEnd, clock(), db);
             chunkCursor = chunk.coveredEnd;
         } catch (error) {
-            failMemoryJob(jobId, formatError(error), now);
-            retryOrDropDebounce(row, now, db);
+            failMemoryJob(jobId, formatError(error), clock());
+            retryOrDropDebounce(row, clock(), db);
             return { jobId, status: 'failed' } satisfies ProcessResult;
         }
     }
 
     if (completedChunks > 0) {
-        maybeQueueMemoryDreamForAgent({ agentId: row.agent_id, db, now });
+        maybeQueueMemoryDreamForAgent({ agentId: row.agent_id, db, now: clock() });
     }
     return deleteDebounce(
         row,
@@ -349,19 +352,25 @@ function finishSkippedExtraction(
         );
 }
 
+/**
+ * Episodic evidence is written in the home timezone: day files bucket by the
+ * user's calendar day and entry headings carry local time with offset, so the
+ * dream worker can reason about time-of-day patterns.
+ */
 async function appendEpisodicMemory(
     row: DebounceRow,
     observations: string,
     input: { endSequence: number; jobId: string; now: Date; startSequence: number }
 ) {
     const workspaceFolder = getAgentWorkspaceFolder(row.agent_id);
-    const dateSlug = input.now.toISOString().slice(0, 10);
+    const timezone = resolveHomeTimezone();
+    const dateSlug = formatLocalDateSlug(input.now, timezone);
     const relativePath = path.join('.memory', 'episodic', `${dateSlug}.md`);
     const filePath = path.join(workspaceFolder, relativePath);
     await fs.mkdir(path.dirname(filePath), { recursive: true });
 
     const previous = await fs.readFile(filePath, 'utf8').catch(() => '');
-    const entry = renderEpisodicEntry(row, observations, input);
+    const entry = renderEpisodicEntry(row, observations, input, timezone);
     const next = previous ? `${previous.replace(/\s*$/u, '\n\n')}${entry}` : entry;
     await fs.writeFile(filePath, next);
 
@@ -378,10 +387,11 @@ async function appendEpisodicMemory(
 function renderEpisodicEntry(
     row: DebounceRow,
     observations: string,
-    input: { endSequence: number; jobId: string; now: Date; startSequence: number }
+    input: { endSequence: number; jobId: string; now: Date; startSequence: number },
+    timezone: string
 ) {
     return [
-        `## ${input.now.toISOString()} - ${row.chat_id}`,
+        `## ${formatLocalIsoWithOffset(input.now, timezone)} - ${row.chat_id}`,
         '',
         `Source: chat \`${row.chat_id}\`, agent seat \`${row.agent_participant_id}\`, sequences ${input.startSequence}-${input.endSequence}, extraction job \`${input.jobId}\`.`,
         '',
@@ -491,6 +501,7 @@ function createMemoryJob(
                 status: input.status,
             })
         );
+    publishMemoryJobUpdated(jobId);
     return jobId;
 }
 
@@ -537,6 +548,7 @@ function completeMemoryJob(
                 usageJson: JSON.stringify(input.outcome.usage ?? {}),
             })
         );
+    publishMemoryJobUpdated(jobId);
 }
 
 function skipMemoryJobAfterRun(jobId: string, outcome: MemoryExtractionOutcome, now: Date) {
@@ -563,6 +575,7 @@ function skipMemoryJobAfterRun(jobId: string, outcome: MemoryExtractionOutcome, 
                 usageJson: JSON.stringify(outcome.usage ?? {}),
             })
         );
+    publishMemoryJobUpdated(jobId);
 }
 
 function failMemoryJob(jobId: string, error: string, now: Date) {
@@ -576,6 +589,7 @@ function failMemoryJob(jobId: string, error: string, now: Date) {
              WHERE id = $jobId`
         )
         .run(namedParams({ error, jobId, now: now.toISOString() }));
+    publishMemoryJobUpdated(jobId);
 }
 
 function getChatLastMessageSequence(chatId: string, db: Database) {
@@ -729,6 +743,11 @@ function clearScheduledTimer(chatId: string, agentParticipantId: string) {
 
 function debounceKey(chatId: string, agentParticipantId: string) {
     return `${chatId}:${agentParticipantId}`;
+}
+
+/** Tests inject a fixed now; production stamps each lifecycle step with real time. */
+function makeClock(now?: Date) {
+    return now ? () => now : () => new Date();
 }
 
 function sha256(value: string) {

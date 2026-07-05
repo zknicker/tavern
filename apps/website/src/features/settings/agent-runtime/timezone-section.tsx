@@ -10,40 +10,43 @@ import {
     SettingsRow,
     SettingsSection,
 } from '../../../components/ui/settings-row.tsx';
+import { useTimezoneSettings } from '../../../hooks/timezone/use-timezone-settings.ts';
+import { withSaveErrorToast } from '../../../lib/saving-toast.ts';
 
 const systemTimezoneValue = '__system__';
 
-export function AgentBehaviorSection({
-    disabled,
-    onTimezoneChange,
-    timezone,
-}: {
-    disabled: boolean;
-    onTimezoneChange: (timezone: null | string) => void;
-    timezone: null | string;
-}) {
+export function TimezoneSection() {
+    const { isLoading, save, settings } = useTimezoneSettings();
     const timezones = Intl.supportedValuesOf('timeZone');
+    const systemLabel = settings.resolvedTimezone
+        ? `System default (${settings.resolvedTimezone})`
+        : 'System default';
 
     return (
-        <SettingsSection title="Behavior">
+        <SettingsSection title="Timezone">
             <SettingsGroup>
-                <SettingsRow description="Schedules and time-aware answers." title="Timezone">
+                <SettingsRow
+                    description="Home timezone for schedules, memory, and time-aware answers."
+                    title="Timezone"
+                >
                     <Select
-                        disabled={disabled}
+                        disabled={isLoading}
                         onValueChange={(value) => {
                             if (value) {
-                                onTimezoneChange(resolveTimezoneSelection(value));
+                                void withSaveErrorToast(() =>
+                                    save({ timezone: resolveTimezoneSelection(value) })
+                                ).catch(() => undefined);
                             }
                         }}
-                        value={timezone ?? systemTimezoneValue}
+                        value={settings.timezone ?? systemTimezoneValue}
                     >
                         <SelectTrigger>
                             <SelectValue placeholder="Choose timezone">
-                                {timezone ?? 'System default'}
+                                {settings.timezone ?? systemLabel}
                             </SelectValue>
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value={systemTimezoneValue}>System default</SelectItem>
+                            <SelectItem value={systemTimezoneValue}>{systemLabel}</SelectItem>
                             {timezones.map((zone) => (
                                 <SelectItem key={zone} value={zone}>
                                     {zone}

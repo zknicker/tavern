@@ -19,6 +19,37 @@ export function resolveTimezone(tz: string): string {
 }
 
 /**
+ * Format an instant as a local ISO timestamp with UTC offset, e.g.
+ * `2026-07-05T13:22:42-04:00`. Falls back to UTC if the timezone is invalid.
+ */
+export function formatLocalIsoWithOffset(date: Date, timezone: string): string {
+    const parts = new Intl.DateTimeFormat('en-CA', {
+        day: '2-digit',
+        hour: '2-digit',
+        hourCycle: 'h23',
+        minute: '2-digit',
+        month: '2-digit',
+        second: '2-digit',
+        timeZone: resolveTimezone(timezone),
+        timeZoneName: 'longOffset',
+        year: 'numeric',
+    }).formatToParts(date);
+    const part = (type: Intl.DateTimeFormatPartTypes) =>
+        parts.find((candidate) => candidate.type === type)?.value ?? '';
+    const rawOffset = part('timeZoneName');
+    const offset = rawOffset === 'GMT' ? '+00:00' : rawOffset.replace('GMT', '');
+    return `${part('year')}-${part('month')}-${part('day')}T${part('hour')}:${part('minute')}:${part('second')}${offset}`;
+}
+
+/**
+ * Format an instant as the local calendar date (`YYYY-MM-DD`) in the given
+ * timezone. Falls back to UTC if the timezone is invalid.
+ */
+export function formatLocalDateSlug(date: Date, timezone: string): string {
+    return formatLocalIsoWithOffset(date, timezone).slice(0, 10);
+}
+
+/**
  * Convert a UTC ISO timestamp to a localized display string.
  * Uses the Intl API (no external dependencies).
  * Falls back to UTC if the timezone is invalid.

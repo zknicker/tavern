@@ -15,6 +15,7 @@ import {
     emitChatUpdated,
     emitCronUpdated,
     emitEngineRestartUpdated,
+    emitMemoryJobsUpdated,
     emitModelUpdated,
     emitSemanticMemoryUpdated,
     emitSessionUpdated,
@@ -120,6 +121,11 @@ export async function applyObservedAgentRuntimeEvent(
                 console.warn('[tavern] failed to sync cron run event', error);
             });
             emitCronUpdated();
+            return;
+        }
+        case 'memoryJob.updated': {
+            emitObservedAgentRuntimeEvent(event);
+            emitMemoryJobsUpdated();
             return;
         }
         case 'semanticMemory.changed': {

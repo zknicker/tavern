@@ -1,6 +1,42 @@
 import { describe, expect, it } from 'vitest';
 
-import { formatLocalTime, isValidTimezone, resolveTimezone } from './timezone';
+import {
+    formatLocalDateSlug,
+    formatLocalIsoWithOffset,
+    formatLocalTime,
+    isValidTimezone,
+    resolveTimezone,
+} from './timezone';
+
+describe('formatLocalIsoWithOffset', () => {
+    it('renders local wall-clock time with the UTC offset', () => {
+        const date = new Date('2026-07-05T17:22:42.000Z');
+        expect(formatLocalIsoWithOffset(date, 'America/New_York')).toBe(
+            '2026-07-05T13:22:42-04:00'
+        );
+        expect(formatLocalIsoWithOffset(date, 'Asia/Tokyo')).toBe('2026-07-06T02:22:42+09:00');
+    });
+
+    it('renders UTC with a zero offset', () => {
+        expect(formatLocalIsoWithOffset(new Date('2026-01-01T00:00:00.000Z'), 'UTC')).toBe(
+            '2026-01-01T00:00:00+00:00'
+        );
+    });
+
+    it('falls back to UTC for invalid timezones', () => {
+        expect(formatLocalIsoWithOffset(new Date('2026-01-01T12:00:00.000Z'), 'IST-2')).toBe(
+            '2026-01-01T12:00:00+00:00'
+        );
+    });
+});
+
+describe('formatLocalDateSlug', () => {
+    it('buckets evening UTC instants into the local day', () => {
+        const date = new Date('2026-07-06T01:30:00.000Z');
+        expect(formatLocalDateSlug(date, 'America/New_York')).toBe('2026-07-05');
+        expect(formatLocalDateSlug(date, 'UTC')).toBe('2026-07-06');
+    });
+});
 
 // --- formatLocalTime ---
 

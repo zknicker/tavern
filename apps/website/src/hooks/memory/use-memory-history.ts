@@ -8,6 +8,9 @@ export function useMemoryJobList() {
         { limit: 50 },
         {
             ...queryPolicy.agentRuntimeSnapshot,
+            // Background workers write jobs while settings is closed; refetch
+            // stale data on open instead of trusting the last snapshot.
+            refetchOnMount: true,
             refetchInterval: (query) =>
                 query.state.data?.jobs.some(
                     (job) => job.status === 'queued' || job.status === 'running'

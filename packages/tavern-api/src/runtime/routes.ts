@@ -58,7 +58,7 @@ export const agentRuntimeRoutes = {
     modelProvidersCatalog: '/model-providers/catalog',
     modelProvidersEnabled: '/model-providers/enabled',
     agentEnv: '/agent-env',
-    executionSettings: '/execution-settings',
+    timezoneSettings: '/timezone/settings',
     plugin: (id: string) => `/plugins/${encodeURIComponent(id)}`,
     pluginMerchbaseAction: '/plugins/merchbase/action',
     pluginMerchbaseSalesSeries: '/plugins/merchbase/sales/series',

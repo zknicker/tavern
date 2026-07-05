@@ -27,7 +27,6 @@ import {
     type AgentRuntimeDeleteDiscordBinding,
     type AgentRuntimeDiscordBinding,
     type AgentRuntimeEventList,
-    type AgentRuntimeExecutionSettings,
     type AgentRuntimeJobDetail,
     type AgentRuntimeJobList,
     type AgentRuntimeJobSlug,
@@ -67,8 +66,6 @@ import {
     type AgentRuntimeSaveAgentEnvResult,
     type AgentRuntimeSaveAgentFile,
     type AgentRuntimeSaveDiscordBinding,
-    type AgentRuntimeSaveExecutionSettings,
-    type AgentRuntimeSaveExecutionSettingsResult,
     type AgentRuntimeSaveMemorySettings,
     type AgentRuntimeSaveMemorySettingsResult,
     type AgentRuntimeSaveMerchbaseSettings,
@@ -79,6 +76,8 @@ import {
     type AgentRuntimeSaveOpenRouterSettings,
     type AgentRuntimeSaveSemanticMemorySettings,
     type AgentRuntimeSaveSemanticMemorySettingsResult,
+    type AgentRuntimeSaveTimezoneSettings,
+    type AgentRuntimeSaveTimezoneSettingsResult,
     type AgentRuntimeSaveWorkspaceInstructions,
     type AgentRuntimeSemanticMemorySettings,
     type AgentRuntimeSessionGraph,
@@ -103,6 +102,7 @@ import {
     type AgentRuntimeStopTurn,
     type AgentRuntimeStopTurnResult,
     type AgentRuntimeSubmitModelProviderOAuth,
+    type AgentRuntimeTimezoneSettings,
     type AgentRuntimeTool,
     type AgentRuntimeToolConfig,
     type AgentRuntimeToolEnvUpdate,
@@ -158,7 +158,6 @@ import {
     agentRuntimeDeleteDiscordBindingSchema,
     agentRuntimeDiscordBindingListSchema,
     agentRuntimeErrorSchema,
-    agentRuntimeExecutionSettingsSchema,
     agentRuntimeJobDetailSchema,
     agentRuntimeJobListSchema,
     agentRuntimeJobSlugSchema,
@@ -205,8 +204,6 @@ import {
     agentRuntimeSaveAgentEnvSchema,
     agentRuntimeSaveAgentFileSchema,
     agentRuntimeSaveDiscordBindingSchema,
-    agentRuntimeSaveExecutionSettingsResultSchema,
-    agentRuntimeSaveExecutionSettingsSchema,
     agentRuntimeSaveMemorySettingsResultSchema,
     agentRuntimeSaveMemorySettingsSchema,
     agentRuntimeSaveMerchbaseSettingsSchema,
@@ -217,6 +214,8 @@ import {
     agentRuntimeSaveOpenRouterSettingsSchema,
     agentRuntimeSaveSemanticMemorySettingsResultSchema,
     agentRuntimeSaveSemanticMemorySettingsSchema,
+    agentRuntimeSaveTimezoneSettingsResultSchema,
+    agentRuntimeSaveTimezoneSettingsSchema,
     agentRuntimeSaveWorkspaceInstructionsSchema,
     agentRuntimeSemanticMemorySettingsSchema,
     agentRuntimeSessionGraphSchema,
@@ -241,6 +240,7 @@ import {
     agentRuntimeStopTurnResultSchema,
     agentRuntimeStopTurnSchema,
     agentRuntimeSubmitModelProviderOAuthSchema,
+    agentRuntimeTimezoneSettingsSchema,
     agentRuntimeToolConfigSchema,
     agentRuntimeToolEnvUpdateResultSchema,
     agentRuntimeToolEnvUpdateSchema,
@@ -356,7 +356,6 @@ export interface TavernAgentRuntimeClient {
         agentParticipantId?: string;
         chatId: string;
     }): Promise<AgentRuntimeCurrentAgentSessionResult>;
-    getExecutionSettings(): Promise<AgentRuntimeExecutionSettings>;
     getMcpCatalog(): Promise<AgentRuntimeMcpCatalog>;
     getMemoryJob(jobId: string): Promise<MemoryJobDetail | null>;
     getMemorySettings(): Promise<AgentRuntimeMemorySettings>;
@@ -377,6 +376,7 @@ export interface TavernAgentRuntimeClient {
     getSessionPrompt(sessionKey: string): Promise<AgentRuntimeSessionPrompt | null>;
     getSkill(skillId: string): Promise<AgentRuntimeSkill>;
     getSkillHubAvailable(): Promise<AgentRuntimeSkillHubAvailable>;
+    getTimezoneSettings(): Promise<AgentRuntimeTimezoneSettings>;
     getToolConfig(toolId: string): Promise<AgentRuntimeToolConfig>;
     getUpdateStatus(): Promise<AgentRuntimeUpdate>;
     getWorkspaceFile(agentId: string, path: string): Promise<AgentRuntimeWorkspaceFileContent>;
@@ -462,9 +462,6 @@ export interface TavernAgentRuntimeClient {
     saveDiscordBinding(
         input: AgentRuntimeSaveDiscordBinding
     ): Promise<AgentRuntimeAgentEngineConfigSnapshot>;
-    saveExecutionSettings(
-        input: AgentRuntimeSaveExecutionSettings
-    ): Promise<AgentRuntimeSaveExecutionSettingsResult>;
     saveMemorySettings(
         input: AgentRuntimeSaveMemorySettings
     ): Promise<AgentRuntimeSaveMemorySettingsResult>;
@@ -485,6 +482,9 @@ export interface TavernAgentRuntimeClient {
     saveSemanticMemorySettings(
         input: AgentRuntimeSaveSemanticMemorySettings
     ): Promise<AgentRuntimeSaveSemanticMemorySettingsResult>;
+    saveTimezoneSettings(
+        input: AgentRuntimeSaveTimezoneSettings
+    ): Promise<AgentRuntimeSaveTimezoneSettingsResult>;
     saveToolEnv(
         toolId: string,
         input: AgentRuntimeToolEnvUpdate
@@ -1728,8 +1728,8 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         return agentRuntimeOpenRouterSettingsSchema.parse(await response.json());
     }
 
-    async getExecutionSettings() {
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.executionSettings}`, {
+    async getTimezoneSettings() {
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.timezoneSettings}`, {
             headers: this.#authHeaders,
         });
 
@@ -1737,12 +1737,12 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
             await readErrorResponse(response);
         }
 
-        return agentRuntimeExecutionSettingsSchema.parse(await response.json());
+        return agentRuntimeTimezoneSettingsSchema.parse(await response.json());
     }
 
-    async saveExecutionSettings(input: AgentRuntimeSaveExecutionSettings) {
-        const payload = agentRuntimeSaveExecutionSettingsSchema.parse(input);
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.executionSettings}`, {
+    async saveTimezoneSettings(input: AgentRuntimeSaveTimezoneSettings) {
+        const payload = agentRuntimeSaveTimezoneSettingsSchema.parse(input);
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.timezoneSettings}`, {
             body: JSON.stringify(payload),
             headers: {
                 ...this.#authHeaders,
@@ -1756,7 +1756,7 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
             await readErrorResponse(response);
         }
 
-        return agentRuntimeSaveExecutionSettingsResultSchema.parse(await response.json());
+        return agentRuntimeSaveTimezoneSettingsResultSchema.parse(await response.json());
     }
 
     async getMemorySettings() {

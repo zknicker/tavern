@@ -244,17 +244,18 @@ export const agentRuntimeSaveModelCategorySettingsResultSchema =
         restartScheduled: z.boolean(),
     });
 
-export const agentRuntimeExecutionSettingsSchema = z.object({
+export const agentRuntimeTimezoneSettingsSchema = z.object({
+    resolvedTimezone: z.string().trim().min(1),
     timezone: z.string().nullable(),
     updatedAt: z.string().datetime().nullable(),
 });
 
-export const agentRuntimeSaveExecutionSettingsSchema = z.object({
+export const agentRuntimeSaveTimezoneSettingsSchema = z.object({
     timezone: z.string().trim().min(1).nullable().optional(),
 });
 
-export const agentRuntimeSaveExecutionSettingsResultSchema =
-    agentRuntimeExecutionSettingsSchema.extend({
+export const agentRuntimeSaveTimezoneSettingsResultSchema =
+    agentRuntimeTimezoneSettingsSchema.extend({
         restartScheduled: z.boolean(),
     });
 
@@ -2147,6 +2148,7 @@ export const agentRuntimeEventTypeSchema = z.enum([
     'cron.deleted',
     'cron.runStarted',
     'cron.runFinished',
+    'memoryJob.updated',
     'semanticMemory.changed',
     'turn.started',
     'turn.progress',
@@ -2254,6 +2256,12 @@ export const agentRuntimeCronRunFinishedEventSchema = z.object({
     runId: z.string().trim().min(1),
     timestamp: z.string().datetime(),
     type: z.literal('cron.runFinished'),
+});
+
+export const agentRuntimeMemoryJobUpdatedEventSchema = z.object({
+    jobId: z.string().trim().min(1).optional(),
+    timestamp: z.string().datetime(),
+    type: z.literal('memoryJob.updated'),
 });
 
 export const agentRuntimeSemanticMemoryChangedScopeSchema = z.enum(['content', 'root']);
@@ -2368,6 +2376,7 @@ export const agentRuntimeEventSchema = z.discriminatedUnion('type', [
     agentRuntimeCronDeletedEventSchema,
     agentRuntimeCronRunStartedEventSchema,
     agentRuntimeCronRunFinishedEventSchema,
+    agentRuntimeMemoryJobUpdatedEventSchema,
     agentRuntimeSemanticMemoryChangedEventSchema,
     agentRuntimeCapabilityUpdatedEventSchema,
     agentRuntimeTurnStartedEventSchema,
@@ -2427,6 +2436,9 @@ export type AgentRuntimeCronSchedule = z.infer<typeof agentRuntimeCronScheduleSc
 export type AgentRuntimeCronState = z.infer<typeof agentRuntimeCronStateSchema>;
 export type AgentRuntimeCronSummary = z.infer<typeof agentRuntimeCronSummarySchema>;
 export type AgentRuntimeCronUpdatedEvent = z.infer<typeof agentRuntimeCronUpdatedEventSchema>;
+export type AgentRuntimeMemoryJobUpdatedEvent = z.infer<
+    typeof agentRuntimeMemoryJobUpdatedEventSchema
+>;
 export type AgentRuntimeExecutionError = z.infer<typeof agentRuntimeExecutionErrorSchema>;
 export type AgentRuntimeExecutionErrorCode = z.infer<typeof agentRuntimeExecutionErrorCodeSchema>;
 export type AgentRuntimeExecutionStatus = z.infer<typeof agentRuntimeExecutionStatusSchema>;
@@ -2587,12 +2599,12 @@ export type AgentRuntimeSaveModelCategorySettings = z.infer<
 export type AgentRuntimeSaveModelCategorySettingsResult = z.infer<
     typeof agentRuntimeSaveModelCategorySettingsResultSchema
 >;
-export type AgentRuntimeExecutionSettings = z.infer<typeof agentRuntimeExecutionSettingsSchema>;
-export type AgentRuntimeSaveExecutionSettings = z.infer<
-    typeof agentRuntimeSaveExecutionSettingsSchema
+export type AgentRuntimeTimezoneSettings = z.infer<typeof agentRuntimeTimezoneSettingsSchema>;
+export type AgentRuntimeSaveTimezoneSettings = z.infer<
+    typeof agentRuntimeSaveTimezoneSettingsSchema
 >;
-export type AgentRuntimeSaveExecutionSettingsResult = z.infer<
-    typeof agentRuntimeSaveExecutionSettingsResultSchema
+export type AgentRuntimeSaveTimezoneSettingsResult = z.infer<
+    typeof agentRuntimeSaveTimezoneSettingsResultSchema
 >;
 export type AgentRuntimeMemorySettings = z.infer<typeof agentRuntimeMemorySettingsSchema>;
 export type AgentRuntimeSaveMemorySettings = z.infer<typeof agentRuntimeSaveMemorySettingsSchema>;

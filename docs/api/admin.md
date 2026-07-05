@@ -33,7 +33,8 @@ It is not a second product API.
 | Health and capabilities         | `/health`, `/capabilities`, `/capabilities/{id}`, `/capabilities/{id}/refresh`, `/capabilities/refresh`                                                                                                                                                                                                                                    |
 | Runtime update                  | `/update/status`, `/update`, `/update/restart`                                                                                                                                                                                                                                                                                             |
 | Runtime events                  | `/events`, websocket `/events`                                                                                                                                                                                                                                                                                                             |
-| Agent execution                 | `/agent-engine/config`, `/execution-settings`, `/agent-env`                                                                                                                                                                                                                                                                                |
+| Agent execution                 | `/agent-engine/config`, `/agent-env`                                                                                                                                                                                                                                                                                |
+| Timezone                        | `/timezone/settings` |
 | Plugins                         | `/plugins`, `/plugins/{id}`, `/plugins/merchbase/settings`, `/plugins/merchbase/action`, `/plugins/merchbase/sales/series`                                                                                                                                                                                                                 |
 | Agents and files                | `/agents`, `/agents/{id}`, `/agents/{id}/config`, `/agents/{id}/files`, `/agents/{id}/files/{path}`, `/workspace/agents/{id}/files`, `/workspace/agents/{id}/files/{path}`                                                                                                                                                                 |
 | Sessions and execution evidence | `/agent/sessions`, `/agent/sessions/previews`, `/agent/sessions/{sessionKey}/messages`, `/agent/sessions/{sessionKey}/graph`, `/agent/sessions/{sessionKey}/prompt`, `/agent/sessions/{sessionKey}/resync`                                                                                                                                 |
@@ -53,10 +54,11 @@ definitions own their payload schema and default input. Memory maintenance is
 not a built-in Runtime job; Memory work belongs to agents through the managed
 `memory` skill.
 
-`/execution-settings` (GET/PUT) owns Tavern-stored agent execution settings.
-The current supported setting is agent timezone. Runtime does not expose model
-fallback chains, web page summarizer models, context compression, or subagent
-defaults until the local agent engine supports those features.
+`/timezone/settings` (GET/PUT) owns the runtime-wide home timezone (system
+default when unset). Reads include the resolved effective timezone. Runtime
+does not expose model fallback chains, web page summarizer models, context
+compression, or subagent defaults until the local agent engine supports those
+features.
 
 `/agent-env` (GET/PUT) owns Tavern-stored environment variables for the managed
 agent process. Values live in Tavern-managed secret storage; reads return saved

@@ -1,22 +1,22 @@
-import { agentRuntimeSaveExecutionSettingsSchema } from '@tavern/api';
+import { agentRuntimeSaveTimezoneSettingsSchema } from '@tavern/api';
 import { createConfiguredAgentRuntimeClient } from '../../agent-runtime/configured-client.ts';
 import { publicProcedure } from '../trpc.ts';
 
-export const getAgentExecutionSettingsProcedure = publicProcedure.query(async () => {
+export const getTimezoneSettingsProcedure = publicProcedure.query(async () => {
     const client = createConfiguredAgentRuntimeClient();
     if (!client) {
         throw new Error('Tavern Runtime is not connected.');
     }
 
     try {
-        return await client.getExecutionSettings();
+        return await client.getTimezoneSettings();
     } finally {
         client.close();
     }
 });
 
-export const saveAgentExecutionSettingsProcedure = publicProcedure
-    .input(agentRuntimeSaveExecutionSettingsSchema)
+export const saveTimezoneSettingsProcedure = publicProcedure
+    .input(agentRuntimeSaveTimezoneSettingsSchema)
     .mutation(async ({ input }) => {
         const client = createConfiguredAgentRuntimeClient();
         if (!client) {
@@ -24,7 +24,7 @@ export const saveAgentExecutionSettingsProcedure = publicProcedure
         }
 
         try {
-            return await client.saveExecutionSettings(input);
+            return await client.saveTimezoneSettings(input);
         } finally {
             client.close();
         }

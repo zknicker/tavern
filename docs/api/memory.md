@@ -68,6 +68,14 @@ Worker job history, cursors, debounce state, usage, errors, and touched-file
 records are Runtime database state; finished job records are pruned after
 thirty days. The durable knowledge itself remains Markdown on disk.
 
+Job records store UTC timestamps. Episodic Markdown is written in the home
+timezone from `/timezone/settings`: day files bucket by the local calendar day
+and entry headings use local ISO time with offset.
+
+Every memory job state change publishes a `memoryJob.updated` runtime event.
+The server maps it to the `memoryJobs.updated` invalidation event behind
+`memory.onJobsUpdate`, so clients keep worker history live without polling.
+
 ## Related Docs
 
 * [Memory feature](../features/memory.md)

@@ -15,6 +15,7 @@ const emitChatUpdated = mock(() => undefined);
 const emitCronUpdated = mock(() => undefined);
 const emitEngineRestartUpdated = mock(() => undefined);
 const emitJobsUpdated = mock(() => undefined);
+const emitMemoryJobsUpdated = mock(() => undefined);
 const emitModelUpdated = mock(() => undefined);
 const emitAgentEngineConfigUpdated = mock(() => undefined);
 const emitOpenRouterSettingsInvalidationCascade = mock(() => undefined);
@@ -66,6 +67,7 @@ mock.module('../src/api/invalidation-events.ts', () => ({
     emitCronUpdated,
     emitEngineRestartUpdated,
     emitJobsUpdated,
+    emitMemoryJobsUpdated,
     emitModelUpdated,
     emitAgentEngineConfigUpdated,
     emitOpenRouterSettingsInvalidationCascade,
@@ -332,6 +334,16 @@ test('applyObservedAgentRuntimeEvent queues runtime skill refreshes after skill 
 
     expect(enqueueRuntimeSkillInventoryRefresh).toHaveBeenCalledTimes(1);
     expect(emitSkillInvalidationCascade).toHaveBeenCalledTimes(0);
+});
+
+test('applyObservedAgentRuntimeEvent invalidates memory job history after memory job updates', async () => {
+    await applyObservedAgentRuntimeEvent({
+        jobId: 'memjob_1',
+        timestamp: '2026-05-12T19:00:00.000Z',
+        type: 'memoryJob.updated',
+    });
+
+    expect(emitMemoryJobsUpdated).toHaveBeenCalledTimes(1);
 });
 
 test('applyObservedAgentRuntimeEvent invalidates rendered agent instructions', async () => {

@@ -17,6 +17,7 @@ export const tavernEventNames = {
     cronUpdated: 'cron.updated',
     engineRestartUpdated: 'engine-restart.updated',
     jobsUpdated: 'jobs.updated',
+    memoryJobsUpdated: 'memoryJobs.updated',
     modelUpdated: 'model.updated',
     openRouterSettingsUpdated: 'open-router-settings.updated',
     agentRuntimeCapabilityUpdated: 'agent-runtime-capability.updated',
@@ -151,6 +152,10 @@ export function emitSemanticMemoryUpdated(input: {
         scope: input.scope,
         timestamp: input.timestamp,
     });
+}
+
+export function emitMemoryJobsUpdated() {
+    emitTavernEvent(tavernEventNames.memoryJobsUpdated);
 }
 
 export function emitWorkersUpdated() {

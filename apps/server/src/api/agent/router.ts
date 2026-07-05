@@ -5,10 +5,6 @@ import { listAgentCommandsProcedure, runAgentCommandProcedure } from './commands
 import { createAgentProcedure } from './create.ts';
 import { deleteAgent } from './delete.ts';
 import { getAgentEnvSettingsProcedure, saveAgentEnvSettingsProcedure } from './env-settings.ts';
-import {
-    getAgentExecutionSettingsProcedure,
-    saveAgentExecutionSettingsProcedure,
-} from './execution-settings.ts';
 import { getAgent } from './get.ts';
 import { getAgentInstructions } from './instructions.ts';
 import { listAgents } from './list.ts';
@@ -37,7 +33,6 @@ export const agentRouter = createRouter({
     create: createAgentProcedure,
     delete: deleteAgent,
     envSettings: getAgentEnvSettingsProcedure,
-    executionSettings: getAgentExecutionSettingsProcedure,
     get: getAgent,
     instructions: getAgentInstructions,
     list: listAgents,
@@ -47,7 +42,6 @@ export const agentRouter = createRouter({
     primary: getPrimaryAgentRoute,
     runCommand: runAgentCommandProcedure,
     saveEnvSettings: saveAgentEnvSettingsProcedure,
-    saveExecutionSettings: saveAgentExecutionSettingsProcedure,
     saveProfile: saveAgentProfile,
     saveSkills: saveAgentSkillsProcedure,
     saveWorkspaceFile: saveAgentWorkspaceFile,

@@ -8,6 +8,7 @@ import {
     resolveModelCategorySelection,
 } from '../models/category-settings.ts';
 import { supportsLanguageModelForRuntime } from '../models/language-model.ts';
+import { publishMemoryJobUpdated } from './job-events.ts';
 import { isMemoryEnabled } from './settings.ts';
 import {
     type MemoryDreamOutcome,
@@ -102,6 +103,7 @@ export function queueMemoryDream(input: {
             now: now.toISOString(),
         })
     );
+    publishMemoryJobUpdated(jobId);
     return jobId;
 }
 
@@ -148,6 +150,9 @@ export function recoverInterruptedMemoryJobs(input: { db?: Database; now?: Date 
                 now: now.toISOString(),
             })
         );
+    if (result.changes > 0) {
+        publishMemoryJobUpdated();
+    }
     return result.changes;
 }
 
@@ -206,6 +211,7 @@ async function runDreamJob(
              updated_at = $now
          WHERE id = $jobId AND status = 'queued'`
     ).run(namedParams({ jobId: row.id, now: startedAt.toISOString() }));
+    publishMemoryJobUpdated(row.id);
     const outcome = await worker({ agentId: row.agent_id, jobId: row.id });
     completeDreamJob(row.id, outcome, nowOverride ?? new Date(), db);
 }
@@ -235,6 +241,7 @@ function completeDreamJob(jobId: string, outcome: MemoryDreamOutcome, now: Date,
             usageJson: JSON.stringify(outcome.usage ?? {}),
         })
     );
+    publishMemoryJobUpdated(jobId);
 }
 
 function failDreamJob(
@@ -260,6 +267,7 @@ function failDreamJob(
             now: now.toISOString(),
         })
     );
+    publishMemoryJobUpdated(jobId);
 }
 
 function queueEligibleMemoryDreams(now: Date, db: Database) {
@@ -372,6 +380,9 @@ export function pruneFinishedMemoryJobs(input: { db?: Database; now?: Date } = {
                AND created_at < $cutoff`
         )
         .run(namedParams({ cutoff }));
+    if (result.changes > 0) {
+        publishMemoryJobUpdated();
+    }
     return result.changes;
 }
 

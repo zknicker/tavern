@@ -14,7 +14,6 @@ import {
 } from '@tavern/api';
 import { handleAgentEnvRequest } from '../agent-engine/agent-env-routes.ts';
 import { handleCommandsRequest } from '../agent-engine/command-routes.ts';
-import { handleExecutionSettingsRequest } from '../agent-engine/execution-settings.ts';
 import { handleMcpRequest } from '../agent-engine/mcp-routes.ts';
 import { handleMcpServersRequest } from '../agent-engine/mcp-server-routes.ts';
 import { handleSkillHubRequest } from '../agent-engine/skill-hub-routes.ts';
@@ -31,6 +30,7 @@ import { handleOpenRouterSettingsRequest } from '../model-access/openrouter-sett
 import { handleModelCategorySettingsRequest } from '../models/category-settings.ts';
 import { handleModelProviderRequest } from '../models/provider-routes.ts';
 import { handlePluginsRequest } from '../plugins/routes.ts';
+import { handleTimezoneSettingsRequest } from '../timezone-settings.ts';
 import { handleWorkspaceRequest } from '../workspace/routes.ts';
 import { readCurrentAgentSession, updateCurrentAgentSessionModel } from './agent-session-store.ts';
 import { handleTavernApiRequest } from './chat-api-router.ts';
@@ -119,9 +119,9 @@ export async function handleTavernRuntimeRequest(request: Request): Promise<Resp
         return openRouterSettingsResponse;
     }
 
-    const executionSettingsResponse = await handleExecutionSettingsRequest(request);
-    if (executionSettingsResponse) {
-        return executionSettingsResponse;
+    const timezoneSettingsResponse = await handleTimezoneSettingsRequest(request);
+    if (timezoneSettingsResponse) {
+        return timezoneSettingsResponse;
     }
 
     const agentEnvResponse = await handleAgentEnvRequest(request);

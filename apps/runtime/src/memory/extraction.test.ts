@@ -5,10 +5,12 @@ import { agentRuntimeMutationHeaders, agentRuntimeMutationOrigins } from '@taver
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { closeDb, getDb, initTestDb } from '../db/connection.ts';
 import { ensureRuntimeSchema } from '../db/schema.ts';
+import { namedParams } from '../db/sqlite.ts';
 import { startNewAgentSession } from '../tavern/agent-session-store.ts';
 import { completeAgentTurn, createAgentTurn } from '../tavern/agent-turn-store.ts';
 import { upsertStoredAgent } from '../tavern/agents-store.ts';
 import { createChat, createMessage, upsertResponse } from '../tavern/chat-api/index.ts';
+import { subscribeToRuntimeEvents } from '../tavern/runtime-events.ts';
 import {
     memoryExtractionMaxAttempts,
     processDueMemoryExtractions,
@@ -481,6 +483,110 @@ describe('Memory extraction', () => {
         await expect(fs.readdir(path.join(workspace, '.memory', 'episodic'))).rejects.toThrow();
     });
 
+    test('publishes memoryJob.updated runtime events across the job lifecycle', async () => {
+        const events: Array<{ jobId?: string; type: string }> = [];
+        const unsubscribe = subscribeToRuntimeEvents((event) => {
+            if (event.type === 'memoryJob.updated') {
+                events.push(event);
+            }
+        });
+        createMessage('cht_memory', {
+            author_id: 'usr_tavern',
+            content: 'Remember this preference.',
+            id: 'msg_user_1',
+            role: 'user',
+        });
+        const turn = createCompletedTurn({
+            now: '2026-07-02T20:00:00.000Z',
+            responseId: 'rsp_1',
+            runId: 'run_1',
+            triggerMessageId: 'msg_user_1',
+        });
+        scheduleMemoryExtractionForTurn(turn, {
+            debounceMs: 0,
+            now: new Date('2026-07-02T20:00:00.000Z'),
+        });
+
+        await processDueMemoryExtractions({ now: new Date('2026-07-02T20:00:00.000Z') });
+        unsubscribe();
+
+        const extractionJobId = (
+            readJobsWithTimes().find((job) => (job as { kind: string }).kind === 'extraction') as {
+                id: string;
+            }
+        ).id;
+        // Insert (running), completion, and the queued dream each publish.
+        expect(events.length).toBeGreaterThanOrEqual(3);
+        expect(events.filter((event) => event.jobId === extractionJobId)).toHaveLength(2);
+    });
+
+    test('buckets episodic files and entry headings by the home timezone', async () => {
+        setStoredTimezone('America/New_York');
+        createMessage('cht_memory', {
+            author_id: 'usr_tavern',
+            content: 'Evening chat preference.',
+            id: 'msg_user_1',
+            role: 'user',
+        });
+        const turn = createCompletedTurn({
+            now: '2026-07-03T01:30:00.000Z',
+            responseId: 'rsp_1',
+            runId: 'run_1',
+            triggerMessageId: 'msg_user_1',
+        });
+        scheduleMemoryExtractionForTurn(turn, {
+            debounceMs: 0,
+            now: new Date('2026-07-03T01:30:00.000Z'),
+        });
+
+        await expect(
+            processDueMemoryExtractions({ now: new Date('2026-07-03T01:30:00.000Z') })
+        ).resolves.toEqual({ completed: 1, failed: 0, skipped: 0 });
+
+        // 01:30Z is still the previous evening in New York.
+        const episodicPath = path.join(workspace, '.memory', 'episodic', '2026-07-02.md');
+        const body = await fs.readFile(episodicPath, 'utf8');
+        expect(body).toContain('## 2026-07-02T21:30:00-04:00 - cht_memory');
+        expect(body).toContain('Evening chat preference.');
+    });
+
+    test('stamps extraction job start and completion with real clock times outside tests', async () => {
+        setMemoryExtractionWorkerForTesting(async ({ messages }) => {
+            await new Promise((resolve) => setTimeout(resolve, 15));
+            return {
+                model: { model: 'fast-mini', provider: 'openai' },
+                observations: messages.map((message) => `- [${message.sequence}] noted`).join('\n'),
+                usage: {},
+            };
+        });
+        createMessage('cht_memory', {
+            author_id: 'usr_tavern',
+            content: 'Timing check.',
+            id: 'msg_user_1',
+            role: 'user',
+        });
+        const turn = createCompletedTurn({
+            responseId: 'rsp_1',
+            runId: 'run_1',
+            triggerMessageId: 'msg_user_1',
+        });
+        scheduleMemoryExtractionForTurn(turn, { debounceMs: 0 });
+
+        await processDueMemoryExtractions();
+
+        const job = readJobsWithTimes().find(
+            (row) => (row as { kind: string }).kind === 'extraction'
+        ) as {
+            completed_at: string;
+            created_at: string;
+            started_at: string;
+            status: string;
+        };
+        expect(job.status).toBe('completed');
+        expect(job.started_at).toBe(job.created_at);
+        expect(Date.parse(job.completed_at)).toBeGreaterThan(Date.parse(job.started_at));
+    });
+
     test('drops the debounce after the extraction retry cap instead of retrying forever', async () => {
         setMemoryExtractionWorkerForTesting(async () => {
             throw new Error('model unavailable');
@@ -525,7 +631,18 @@ describe('Memory extraction', () => {
     });
 });
 
+function setStoredTimezone(timezone: string) {
+    getDb()
+        .prepare(
+            `INSERT INTO runtime_metadata (key, value, updated_at)
+             VALUES ('runtime:timezone', $value, '2026-07-02T19:00:00.000Z')
+             ON CONFLICT(key) DO UPDATE SET value = excluded.value`
+        )
+        .run(namedParams({ value: JSON.stringify({ timezone }) }));
+}
+
 function seedAgentChat(workspace: string) {
+    setStoredTimezone('UTC');
     upsertStoredAgent({
         agent: {
             enabledSkillIds: [],
@@ -622,6 +739,16 @@ function readJobs() {
         .prepare(
             `SELECT agent_id, kind, metadata_json, model_category, output_path, source_end_sequence,
                     source_start_sequence, status
+             FROM memory_jobs
+             ORDER BY created_at ASC`
+        )
+        .all();
+}
+
+function readJobsWithTimes() {
+    return getDb()
+        .prepare(
+            `SELECT id, kind, status, created_at, started_at, completed_at
              FROM memory_jobs
              ORDER BY created_at ASC`
         )
