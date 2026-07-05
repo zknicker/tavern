@@ -113,9 +113,10 @@ Work:
 - Extraction output gains learning signals (style/workflow corrections,
   frustration, technique, in-play skill misfire); persist alongside episodic
   observations.
-- Introduce a shared `worker_runs` record (kind, timing, outcome, report) and
-  start recording extraction and dream runs in it — this is the observability
-  backbone slice 6 reads.
+- The shared worker-run record is the existing `memory_jobs` table with its
+  kind set widened to `skill_review` and `curation` (guarded schema-repair
+  rebuild) — extraction and dream runs already live there, and slice 6 reads
+  it as the observability backbone.
 - Skill review worker: queued per agent when signals exist; Standard category;
   toolset = skill tools + read-only chat context; prompt implements the update
   ladder and never-capture rules from the spec; records actions in its
