@@ -91,6 +91,34 @@ describe('mention appearance', () => {
         });
     });
 
+    it('renders agent mentions with face metadata as the agent face', () => {
+        expect(
+            getMentionAppearance({
+                id: 'agent://agt_blippy',
+                kind: 'agent',
+                label: 'Blippy',
+                metadata: { agentCharacter: 'bird', agentColor: '#2563eb' },
+            })
+        ).toEqual({
+            agentFace: { character: 'bird', color: '#2563eb' },
+            icon: 'agent',
+        });
+    });
+
+    it('keeps the agent color as the chip tint when the agent has no face', () => {
+        expect(
+            getMentionAppearance({
+                id: 'agent://agt_plain',
+                kind: 'agent',
+                label: 'Plain',
+                metadata: { agentCharacter: 'none', agentColor: '#f97316' },
+            })
+        ).toEqual({
+            brandColor: '#f97316',
+            icon: 'agent',
+        });
+    });
+
     it('keeps path mentions consistent', () => {
         expect(
             getMentionAppearance({

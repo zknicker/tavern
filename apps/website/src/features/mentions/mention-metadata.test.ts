@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'bun:test';
-import { readMentionsFromMarkdown } from './mention-metadata.ts';
+import type { HeadName } from '../chats/agent-face.tsx';
+import { applyAgentMentionAppearance, readMentionsFromMarkdown } from './mention-metadata.ts';
 
 describe('readMentionsFromMarkdown', () => {
     it('reads explicit rich reference links from message content', () => {
@@ -66,5 +67,45 @@ describe('readMentionsFromMarkdown', () => {
 
     it('ignores bare mention-looking text', () => {
         expect(readMentionsFromMarkdown('@Tavern and $ui are plain text')).toEqual([]);
+    });
+});
+
+describe('applyAgentMentionAppearance', () => {
+    const appearances: Record<string, { character: HeadName; primaryColor: string | null }> = {
+        agt_blippy: { character: 'bird', primaryColor: '#2563eb' },
+        agt_plain: { character: 'none', primaryColor: '#f97316' },
+    };
+    const lookup = (agentId: string | null | undefined) =>
+        (agentId ? appearances[agentId] : undefined) ?? {
+            character: 'none' as HeadName,
+            primaryColor: null,
+        };
+
+    it('adds live agent face and color metadata to agent mentions', () => {
+        const mentions = readMentionsFromMarkdown('Ask [@Blippy](agent://agt_blippy)');
+
+        expect(applyAgentMentionAppearance(mentions, lookup)).toEqual([
+            {
+                ...mentions[0],
+                metadata: { agentCharacter: 'bird', agentColor: '#2563eb' },
+            },
+        ]);
+    });
+
+    it('keeps configured color for agents without a face character', () => {
+        const mentions = readMentionsFromMarkdown('Ask [@Plain](agent://agt_plain)');
+
+        expect(applyAgentMentionAppearance(mentions, lookup)[0]?.metadata).toEqual({
+            agentCharacter: 'none',
+            agentColor: '#f97316',
+        });
+    });
+
+    it('leaves unknown agents and non-agent mentions untouched', () => {
+        const mentions = readMentionsFromMarkdown(
+            'Ask [@Ghost](agent://agt_ghost) about [$ui](skill://ui)'
+        );
+
+        expect(applyAgentMentionAppearance(mentions, lookup)).toEqual(mentions);
     });
 });

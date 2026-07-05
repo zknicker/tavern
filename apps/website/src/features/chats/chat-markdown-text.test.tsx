@@ -1,5 +1,8 @@
 import { expect, test } from 'bun:test';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { httpLink } from '@trpc/client';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { trpc } from '../../lib/trpc.tsx';
 import { ArtifactPanelOpenProvider } from './artifact-panel-context.tsx';
 import { ChatMarkdownText } from './chat-markdown-text.tsx';
 import {
@@ -79,11 +82,31 @@ test('ChatTranscriptMessageContent forwards animated ranges to transcript text',
         timestamp: '2026-06-17T15:00:00.000Z',
     } satisfies TranscriptMessage;
 
+    // Transcript message content resolves agent mention appearance from the
+    // agent list query, so it renders inside app query providers.
+    const queryClient = new QueryClient({
+        defaultOptions: {
+            queries: {
+                retry: false,
+            },
+        },
+    });
+    const client = trpc.createClient({
+        links: [
+            httpLink({
+                url: 'http://127.0.0.1:1/trpc',
+            }),
+        ],
+    });
     const markup = renderToStaticMarkup(
-        <ChatTranscriptMessageContent
-            animatedRanges={[{ end: 11, id: 'range-1', start: 6 }]}
-            message={message}
-        />
+        <trpc.Provider client={client} queryClient={queryClient}>
+            <QueryClientProvider client={queryClient}>
+                <ChatTranscriptMessageContent
+                    animatedRanges={[{ end: 11, id: 'range-1', start: 6 }]}
+                    message={message}
+                />
+            </QueryClientProvider>
+        </trpc.Provider>
     );
 
     expect(markup).toContain('chat-streaming-text-chunk');
