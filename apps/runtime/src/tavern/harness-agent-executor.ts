@@ -21,6 +21,8 @@ import {
     readAssignedSkillBundles,
 } from '../agent-engine/skill-library.ts';
 import { readConfigValue } from '../config.ts';
+import { createTavernCronTools } from '../cron/agent-tools.ts';
+import { isRuntimeCronReady } from '../cron/manager-state.ts';
 import { createTavernMemoryTools } from '../memory/agent-tools.ts';
 import { isMemoryEnabled } from '../memory/settings.ts';
 import { createGoogleToolsForAgent } from '../plugins/google-tools.ts';
@@ -239,6 +241,15 @@ function createHarnessAgent(
     }
 ) {
     const harness = createHarness(input);
+    const tools = {
+        ...createTavernChatTools({
+            chatId: input.chatId,
+        }),
+        ...(isMemoryEnabled() ? createTavernMemoryTools() : {}),
+        ...(isRuntimeCronReady() ? createTavernCronTools({ agentId: input.agent.id }) : {}),
+        ...createGoogleToolsForAgent(input.agent),
+        ...createMerchbaseToolsForAgent(input.agent),
+    };
     return new HarnessAgent({
         harness,
         id: input.agent.id,
@@ -246,14 +257,7 @@ function createHarnessAgent(
         permissionMode: 'allow-all',
         sandbox: sandboxFactory(localTrustedSandboxOptions(input)),
         skills: options.skills,
-        tools: {
-            ...createTavernChatTools({
-                chatId: input.chatId,
-            }),
-            ...(isMemoryEnabled() ? createTavernMemoryTools() : {}),
-            ...createGoogleToolsForAgent(input.agent),
-            ...createMerchbaseToolsForAgent(input.agent),
-        },
+        tools,
     });
 }
 
@@ -440,6 +444,16 @@ export function harnessPrompt(input: AgentExecutorInput) {
                   '- memory_list_pages: list shared Memory pages and folders',
                   '- memory_read_page: read one shared Memory page with its hash',
                   '- memory_write_page: write one shared Memory page (explicit user-requested Memory work only)',
+              ]
+            : []),
+        ...(isRuntimeCronReady()
+            ? [
+                  '',
+                  'Available Tavern automation tools:',
+                  '- cron_list: list your scheduled automations',
+                  '- cron_create: schedule your message into a chat after confirming schedule and chat with the user',
+                  '- cron_update: update one of your scheduled automations',
+                  '- cron_delete: delete one of your scheduled automations',
               ]
             : []),
     ].filter((line): line is string => line !== null);

@@ -10,7 +10,7 @@ import {
     agentRuntimeUpdateCronSchema,
 } from '@tavern/api';
 import { badRequest, json, notFound, readJson } from '../tavern/http.ts';
-import { publishRuntimeEvent } from '../tavern/runtime-events.ts';
+import { publishCronDeleted, publishCronUpdated } from './events.ts';
 import { executeCronJob } from './executor.ts';
 import {
     enqueueCronRun,
@@ -78,11 +78,7 @@ export async function handleCronRequest(request: Request): Promise<Response | nu
                 return notFound();
             }
             await reconcileActiveCronSchedules();
-            publishRuntimeEvent({
-                cronJobId: jobId,
-                timestamp: new Date().toISOString(),
-                type: 'cron.deleted',
-            });
+            publishCronDeleted(jobId);
             return json(agentRuntimeArchiveCronSchema.parse({ archived: true, id: jobId }));
         }
         if (method === 'POST' && segments[2] === 'run' && !segments[3]) {
@@ -122,12 +118,4 @@ export async function handleCronRequest(request: Request): Promise<Response | nu
     }
 
     return null;
-}
-
-function publishCronUpdated(cronJobId: string) {
-    publishRuntimeEvent({
-        cronJobId,
-        timestamp: new Date().toISOString(),
-        type: 'cron.updated',
-    });
 }

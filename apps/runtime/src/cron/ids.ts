@@ -1,3 +1,7 @@
+export function createCronJobId(): string {
+    return `crn_${crypto.randomUUID()}`;
+}
+
 export function createCronRunId(): string {
     return `crr_${crypto.randomUUID()}`;
 }

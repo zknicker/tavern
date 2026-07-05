@@ -1,5 +1,6 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { isRuntimeCronReady } from '../cron/manager-state.ts';
 import type { Database } from '../db/sqlite.ts';
 import { namedParams } from '../db/sqlite.ts';
 import { isMemoryEnabled } from '../memory/settings.ts';
@@ -123,6 +124,7 @@ export async function generateAgentInstructions(db: Database, agentId = defaultA
     await ensureAgentWorkDirectory(source.workspaceDir);
     await removeGeneratedInstructionFiles(source.workspaceDir);
     const next = renderAgentInstructions(source.agentName, notes, {
+        cronEnabled: isRuntimeCronReady(),
         memoryEnabled: isMemoryEnabled(),
     });
     const previousHash = readRenderedInstructionHash(db, source.agentId);

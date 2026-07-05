@@ -82,6 +82,9 @@ describe('generated agent instructions', () => {
         expect(content).toContain('capture runs after chat activity settles');
         expect(content).toContain('run `memory_search` before concluding you lack context');
         expect(content).toContain('dreaming promotes what matters');
+        expect(content).toContain('## Automations');
+        expect(content).toContain('`cron_create`');
+        expect(content).toContain('Confirm the schedule and destination chat');
         expect(content).toContain('## Skills');
         expect(content).toContain('Your assigned skills are listed with names and descriptions');
         expect(content).toContain('Do not assume an unlisted skill or tool exists');

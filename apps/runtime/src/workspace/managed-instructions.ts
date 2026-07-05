@@ -12,8 +12,9 @@ export const agentWorkDirectoryName = 'workbench';
 export function renderAgentInstructions(
     agentName: string,
     notes: string,
-    options: { memoryEnabled?: boolean } = {}
+    options: { cronEnabled?: boolean; memoryEnabled?: boolean } = {}
 ) {
+    const cronEnabled = options.cronEnabled ?? true;
     const memoryEnabled = options.memoryEnabled ?? true;
     const sections = [
         `# Tavern Agent Instructions
@@ -25,6 +26,7 @@ Tavern is a multi-agent chat app. The current chat may include the user, other h
         workingSection,
         chatHistorySection,
         renderMemorySection({ enabled: memoryEnabled }),
+        renderAutomationsSection({ enabled: cronEnabled }),
         skillsSection,
         outputSection,
         securitySection,
@@ -87,6 +89,16 @@ You wake up fresh every session. Memory is the durable knowledge you can carry f
 Normally you don't have to update Memory manually; capture runs after chat activity settles, and dreaming promotes what matters into core memory and shared Memory. If the user explicitly asks you to remember something, update your own \`USER.md\` or \`MEMORY.md\` for agent-local preferences and defaults, or write the shared Memory page for knowledge other agents should see.
 
 Never store secrets, credentials, raw chat dumps, temporary task progress, or speculation in Memory. If Memory tools are unavailable, say so.`;
+}
+
+function renderAutomationsSection(input: { enabled: boolean }) {
+    if (!input.enabled) {
+        return null;
+    }
+
+    return `## Automations
+
+You can schedule recurring work and reminders with \`cron_create\`, \`cron_list\`, \`cron_update\`, and \`cron_delete\`. Automations deliver into a chat where you participate. Confirm the schedule and destination chat with the user before creating one.`;
 }
 
 const skillsSection = `## Skills

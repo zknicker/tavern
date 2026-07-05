@@ -3,8 +3,22 @@ import { Queue, Worker } from 'bunqueue/client';
 import { DATA_DIR } from '../config.ts';
 import { log } from '../log.ts';
 import { executeCronJob } from './executor.ts';
+import {
+    clearRuntimeCronManager,
+    getRuntimeCronManager,
+    type RuntimeCronManager,
+    setRuntimeCronManager,
+} from './manager-state.ts';
 import { nextRunAtFromSchedule, scheduledForFromQueueJob } from './schedule.ts';
 import { listFullCronJobs, setCronJobNextRunAt, settleOrphanedCronRuns } from './store.ts';
+
+export {
+    enqueueCronRun,
+    getRuntimeCronManager,
+    isRuntimeCronReady,
+    type RuntimeCronManager,
+    reconcileActiveCronSchedules,
+} from './manager-state.ts';
 
 interface CronQueuePayload {
     jobId: string;
@@ -13,15 +27,7 @@ interface CronQueuePayload {
     trigger: 'manual' | 'recovery' | 'schedule';
 }
 
-export interface RuntimeCronManager {
-    enqueue(input: CronQueuePayload): Promise<string>;
-    isHealthy(): boolean;
-    reconcile(options?: { recoverMissed?: boolean }): Promise<void>;
-    stop(): Promise<void>;
-}
-
 const defaultCronQueueName = 'tavern-cron';
-let activeManager: RuntimeCronManager | null = null;
 let clearQueuesOnStop = false;
 
 export function configureRuntimeCronDatabasePath(jobsDatabasePath?: string): string {
@@ -34,6 +40,7 @@ export function configureRuntimeCronDatabasePath(jobsDatabasePath?: string): str
 export async function startRuntimeCronManager(
     input: { clearQueuesOnStop?: boolean; jobsDatabasePath?: string; queueName?: string } = {}
 ): Promise<RuntimeCronManager> {
+    const activeManager = getRuntimeCronManager();
     if (activeManager) {
         return activeManager;
     }
@@ -52,7 +59,7 @@ export async function startRuntimeCronManager(
             return job.id;
         },
         isHealthy() {
-            return Boolean(activeManager);
+            return getRuntimeCronManager() === manager;
         },
         async reconcile(options: { recoverMissed?: boolean } = {}) {
             await reconcileCronSchedules(queue, options);
@@ -63,12 +70,12 @@ export async function startRuntimeCronManager(
                 queue.obliterate();
             }
             await closeQueue(queue);
-            activeManager = null;
+            clearRuntimeCronManager(manager);
             clearQueuesOnStop = false;
         },
     } satisfies RuntimeCronManager;
 
-    activeManager = manager;
+    setRuntimeCronManager(manager);
     // Runs interrupted by a restart settle as errors before recovery runs are
     // scheduled; a durable queue job that survives re-runs its settled row.
     const orphaned = settleOrphanedCronRuns();
@@ -77,22 +84,6 @@ export async function startRuntimeCronManager(
     }
     await manager.reconcile({ recoverMissed: true });
     return manager;
-}
-
-export function getRuntimeCronManager(): RuntimeCronManager | null {
-    return activeManager;
-}
-
-export function isRuntimeCronReady(): boolean {
-    return activeManager?.isHealthy() ?? false;
-}
-
-export async function reconcileActiveCronSchedules(): Promise<void> {
-    await activeManager?.reconcile();
-}
-
-export async function enqueueCronRun(input: CronQueuePayload): Promise<string | null> {
-    return (await activeManager?.enqueue(input)) ?? null;
 }
 
 export async function computeCronScheduleNextRunAtMs(input: {
@@ -250,7 +241,7 @@ function createWorker(queueName: string) {
                 }),
                 trigger: job.data.trigger,
             });
-            await activeManager?.reconcile();
+            await getRuntimeCronManager()?.reconcile();
         },
         { concurrency: 1, embedded: true }
     );
