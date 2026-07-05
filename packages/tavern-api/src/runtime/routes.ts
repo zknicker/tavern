@@ -53,6 +53,7 @@ export const agentRuntimeRoutes = {
     memoryAgentDream: (agentId: string) => `/memory/agents/${encodeURIComponent(agentId)}/dream`,
     memoryJob: (jobId: string) => `/memory/jobs/${encodeURIComponent(jobId)}`,
     memoryJobs: '/memory/jobs',
+    memoryWorkers: '/memory/workers',
     modelCategorySettings: '/model-categories/settings',
     modelProvider: (providerId: string) => `/model-providers/${encodeURIComponent(providerId)}`,
     modelProvidersCatalog: '/model-providers/catalog',

@@ -37,7 +37,7 @@ import { readSkillUsageSummary } from './telemetry.ts';
 export { skillCuratorMetadataKey } from './curator-store.ts';
 
 const skillCuratorSweepIntervalMs = 60 * 60 * 1000;
-const skillCuratorCadenceMs = 7 * 24 * 60 * 60 * 1000;
+export const skillCuratorCadenceMs = 7 * 24 * 60 * 60 * 1000;
 
 export interface SkillCuratorOutcome extends CuratorJobOutcome {
     transcript: ReturnType<typeof serializeCuratorTranscript>;

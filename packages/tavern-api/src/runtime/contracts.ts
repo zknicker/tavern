@@ -318,6 +318,31 @@ export const memoryJobListSchema = z.object({
     jobs: z.array(memoryJobSummarySchema),
 });
 
+export const memoryWorkerNextRunSchema = z.union([
+    z.object({ at: z.string().datetime(), kind: z.literal('scheduled') }),
+    z.object({ kind: z.literal('waiting'), waitingOn: z.string().trim().min(1) }),
+]);
+
+export const memoryWorkerStatusSchema = z.object({
+    enabled: z.boolean(),
+    kind: memoryJobKindSchema,
+    lastRun: z
+        .object({
+            completedAt: z.string().datetime().nullable(),
+            durationMs: z.number().int().nonnegative().nullable(),
+            error: z.string().nullable(),
+            id: z.string().trim().min(1),
+            startedAt: z.string().datetime().nullable(),
+            status: memoryJobStatusSchema,
+        })
+        .nullable(),
+    nextRun: memoryWorkerNextRunSchema.nullable(),
+});
+
+export const memoryWorkerStatusListSchema = z.object({
+    workers: z.array(memoryWorkerStatusSchema),
+});
+
 export const memoryDreamRequestSchema = z.object({
     agentId: z.string().trim().min(1),
 });
@@ -2708,6 +2733,9 @@ export type MemoryJobKind = z.infer<typeof memoryJobKindSchema>;
 export type MemoryJobList = z.infer<typeof memoryJobListSchema>;
 export type MemoryJobStatus = z.infer<typeof memoryJobStatusSchema>;
 export type MemoryJobSummary = z.infer<typeof memoryJobSummarySchema>;
+export type MemoryWorkerNextRun = z.infer<typeof memoryWorkerNextRunSchema>;
+export type MemoryWorkerStatus = z.infer<typeof memoryWorkerStatusSchema>;
+export type MemoryWorkerStatusList = z.infer<typeof memoryWorkerStatusListSchema>;
 export type AgentRuntimeAgentEnv = z.infer<typeof agentRuntimeAgentEnvSchema>;
 export type AgentRuntimeAgentEnvVariable = z.infer<typeof agentRuntimeAgentEnvVariableSchema>;
 export type AgentRuntimeSaveAgentEnv = z.infer<typeof agentRuntimeSaveAgentEnvSchema>;

@@ -2,6 +2,8 @@ import {
     agentRuntimeMutationHeaders,
     agentRuntimeMutationOrigins,
     agentRuntimeRoutes,
+    type MemoryJobKind,
+    type MemoryJobStatus,
     memoryDreamRequestSchema,
     memoryDreamResultSchema,
     memoryJobDetailSchema,
@@ -12,6 +14,7 @@ import { namedParams } from '../db/sqlite.ts';
 import { conflict, forbidden, json, notFound } from '../tavern/http.ts';
 import { processQueuedMemoryDreams, queueMemoryDream } from './dreaming.ts';
 import { isMemoryEnabled } from './settings.ts';
+import { listMemoryWorkers } from './worker-status.ts';
 
 interface MemoryJobRow {
     agent_id: string;
@@ -43,6 +46,10 @@ export async function handleMemoryRequest(request: Request): Promise<Response | 
 
     if (request.method === 'GET' && url.pathname === agentRuntimeRoutes.memoryJobs) {
         return json(memoryJobListSchema.parse({ jobs: listMemoryJobs(url) }));
+    }
+
+    if (request.method === 'GET' && url.pathname === agentRuntimeRoutes.memoryWorkers) {
+        return json(listMemoryWorkers());
     }
 
     const jobMatch = url.pathname.match(/^\/memory\/jobs\/([^/]+)$/u);
@@ -79,16 +86,85 @@ export async function handleMemoryRequest(request: Request): Promise<Response | 
 function listMemoryJobs(url: URL) {
     const agentId = url.searchParams.get('agentId')?.trim() || null;
     const limit = Math.max(1, Math.min(Number(url.searchParams.get('limit') ?? 50), 200));
+    const filters = buildMemoryJobFilters(url);
     const rows = getDb()
         .prepare(
             `SELECT *
              FROM memory_jobs
              WHERE ($agentId IS NULL OR agent_id = $agentId)
+               ${filters.sql}
              ORDER BY created_at DESC
              LIMIT $limit`
         )
-        .all(namedParams({ agentId, limit })) as MemoryJobRow[];
+        .all(namedParams({ agentId, limit, ...filters.params })) as MemoryJobRow[];
     return rows.map(toMemoryJobSummary);
+}
+
+function buildMemoryJobFilters(url: URL) {
+    const conditions: string[] = [];
+    const params: Record<string, number | string> = {};
+    addCsvFilter({
+        column: 'kind',
+        conditions,
+        key: 'kind',
+        params,
+        validValues: ['curation', 'dream', 'extraction', 'skill_review'] satisfies MemoryJobKind[],
+        value: url.searchParams.get('kind'),
+    });
+    addCsvFilter({
+        column: 'status',
+        conditions,
+        key: 'status',
+        params,
+        validValues: [
+            'completed',
+            'failed',
+            'queued',
+            'running',
+            'skipped',
+        ] satisfies MemoryJobStatus[],
+        value: url.searchParams.get('status'),
+    });
+
+    const sinceDays = Number(url.searchParams.get('sinceDays'));
+    if (Number.isFinite(sinceDays) && sinceDays > 0) {
+        params.sinceCreatedAt = new Date(
+            Date.now() - sinceDays * 24 * 60 * 60 * 1000
+        ).toISOString();
+        conditions.push('created_at >= $sinceCreatedAt');
+    }
+
+    return {
+        params,
+        sql: conditions.length > 0 ? `AND ${conditions.join(' AND ')}` : '',
+    };
+}
+
+function addCsvFilter<T extends string>(input: {
+    column: string;
+    conditions: string[];
+    key: string;
+    params: Record<string, number | string>;
+    validValues: readonly T[];
+    value: null | string;
+}) {
+    if (input.value === null) {
+        return;
+    }
+    const values = input.value
+        .split(',')
+        .map((value) => value.trim())
+        .filter((value): value is T => (input.validValues as readonly string[]).includes(value));
+    if (values.length === 0) {
+        input.conditions.push('0 = 1');
+        return;
+    }
+    const placeholders = values.map((value, index) => {
+        const paramKey = `${input.key}${index}`;
+        input.params[paramKey] = value;
+        return `$${paramKey}`;
+    });
+    input.conditions.push(`${input.column} IN (${placeholders.join(', ')})`);
 }
 
 function getMemoryJob(id: string) {

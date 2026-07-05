@@ -281,12 +281,16 @@ import {
     agentRuntimeWorkspaceInstructionsSchema,
     type MemoryDreamResult,
     type MemoryJobDetail,
+    type MemoryJobKind,
     type MemoryJobList,
+    type MemoryJobStatus,
+    type MemoryWorkerStatusList,
     memoryDreamResultSchema,
     memoryJobDetailSchema,
     memoryJobListSchema,
     memoryPathInputSchema,
     memoryPathMutationResultSchema,
+    memoryWorkerStatusListSchema,
     runtimeEventListSchema,
     type SemanticMemoryBacklinkList,
     type SemanticMemoryCreatePage,
@@ -416,7 +420,8 @@ export interface TavernAgentRuntimeClient {
     listEvents(input?: AgentRuntimeListEventsInput): Promise<AgentRuntimeEventList>;
     listMacApps(options?: { limit?: number; query?: string }): Promise<AgentRuntimeMacAppList>;
     listMcpServers(): Promise<AgentRuntimeMcpServerList>;
-    listMemoryJobs(input?: { agentId?: string; limit?: number }): Promise<MemoryJobList>;
+    listMemoryJobs(input?: AgentRuntimeListMemoryJobsInput): Promise<MemoryJobList>;
+    listMemoryWorkers(): Promise<MemoryWorkerStatusList>;
     listPlugins(): Promise<AgentRuntimePluginList>;
     listRuntimeJobs(): Promise<AgentRuntimeJobList>;
     listSemanticMemoryBacklinks(input: { path: string }): Promise<SemanticMemoryBacklinkList>;
@@ -589,6 +594,14 @@ export interface AgentRuntimeListSessionPreviewsInput {
 
 export interface AgentRuntimeListSkillsOptions {
     agentId?: string;
+}
+
+export interface AgentRuntimeListMemoryJobsInput {
+    agentId?: string;
+    kind?: MemoryJobKind[];
+    limit?: number;
+    sinceDays?: number;
+    status?: MemoryJobStatus[];
 }
 
 interface AgentRuntimeClientOptions {
@@ -965,13 +978,22 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         return agentRuntimeJobListSchema.parse(await response.json());
     }
 
-    async listMemoryJobs(input: { agentId?: string; limit?: number } = {}) {
+    async listMemoryJobs(input: AgentRuntimeListMemoryJobsInput = {}) {
         const params = new URLSearchParams();
         if (input.agentId) {
             params.set('agentId', input.agentId);
         }
+        if (input.kind && input.kind.length > 0) {
+            params.set('kind', input.kind.join(','));
+        }
         if (input.limit) {
             params.set('limit', String(input.limit));
+        }
+        if (input.sinceDays) {
+            params.set('sinceDays', String(input.sinceDays));
+        }
+        if (input.status && input.status.length > 0) {
+            params.set('status', input.status.join(','));
         }
         const suffix = params.size > 0 ? `?${params.toString()}` : '';
         const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.memoryJobs}${suffix}`, {
@@ -983,6 +1005,18 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         }
 
         return memoryJobListSchema.parse(await response.json());
+    }
+
+    async listMemoryWorkers() {
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.memoryWorkers}`, {
+            headers: this.#authHeaders,
+        });
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return memoryWorkerStatusListSchema.parse(await response.json());
     }
 
     async listCapabilities() {

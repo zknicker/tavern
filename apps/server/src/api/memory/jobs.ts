@@ -7,7 +7,14 @@ export const listMemoryJobsProcedure = publicProcedure
         z
             .object({
                 agentId: z.string().trim().min(1).optional(),
+                kind: z
+                    .array(z.enum(['curation', 'dream', 'extraction', 'skill_review']))
+                    .optional(),
                 limit: z.number().int().positive().max(200).optional(),
+                sinceDays: z.number().positive().optional(),
+                status: z
+                    .array(z.enum(['completed', 'failed', 'queued', 'running', 'skipped']))
+                    .optional(),
             })
             .optional()
     )
