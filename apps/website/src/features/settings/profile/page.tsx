@@ -1,8 +1,16 @@
+import { Camera01Icon } from '@hugeicons-pro/core-stroke-rounded';
 import * as React from 'react';
-import { BadgeDivider } from '../../../components/ui/badge-divider.tsx';
+import { Icon } from '../../../components/ui/icon.tsx';
 import { Button } from '../../../components/ui/primitives/button.tsx';
 import { Input } from '../../../components/ui/primitives/input.tsx';
-import { SettingsRow } from '../../../components/ui/settings-row.tsx';
+import { Separator } from '../../../components/ui/separator.tsx';
+import {
+    SettingsGroup,
+    SettingsPage,
+    SettingsPageHeader,
+    SettingsRow,
+    SettingsSection,
+} from '../../../components/ui/settings-row.tsx';
 import { useUserProfilePreference } from '../../../hooks/shell/use-user-profile-preference.ts';
 import { readAvatarImage } from './resize-image.ts';
 
@@ -30,20 +38,17 @@ export function ProfileSettings() {
     };
 
     return (
-        <div className="space-y-8">
-            <div>
-                <BadgeDivider className="pb-3">Profile</BadgeDivider>
-                <p className="pb-5 text-muted-foreground text-sm">
-                    Your name and avatar as they appear next to your messages in chats.
-                </p>
-                <div className="overflow-hidden rounded-lg border border-border bg-card">
+        <SettingsPage>
+            <SettingsPageHeader title="Profile" />
+            <SettingsSection title="Identity">
+                <SettingsGroup>
                     <SettingsRow
-                        description="Shown next to your messages."
+                        description="Shown beside your messages."
                         error={error}
-                        title="Avatar"
+                        title="Photo"
+                        trailingWidth="intrinsic"
                     >
-                        <div className="flex items-center gap-3 md:justify-end">
-                            <AvatarPreview avatarUrl={profile.avatarUrl} name={displayName} />
+                        <div className="flex items-center md:justify-end">
                             <input
                                 accept="image/*"
                                 className="hidden"
@@ -54,55 +59,58 @@ export function ProfileSettings() {
                                 type="file"
                             />
                             <Button
+                                aria-label={
+                                    profile.avatarUrl
+                                        ? 'Change profile photo'
+                                        : 'Upload profile photo'
+                                }
+                                className="group/avatar size-10 overflow-visible rounded-full p-0 hover:bg-transparent sm:size-10"
                                 onClick={() => fileInputRef.current?.click()}
-                                size="sm"
-                                variant="outline"
+                                size="icon-lg"
+                                variant="ghost"
                             >
-                                {profile.avatarUrl ? 'Change' : 'Upload'}
+                                <AvatarPreview avatarUrl={profile.avatarUrl} name={displayName} />
+                                <span className="absolute -right-1.5 -bottom-1.5 inline-flex size-6 items-center justify-center rounded-full border border-card bg-secondary text-muted-foreground shadow-xs transition-colors group-hover/avatar:bg-input group-hover/avatar:text-foreground">
+                                    <Icon
+                                        className="size-3.5"
+                                        icon={Camera01Icon}
+                                        strokeWidth={2.25}
+                                    />
+                                </span>
                             </Button>
-                            {profile.avatarUrl ? (
-                                <Button
-                                    onClick={() => profile.setAvatar(null)}
-                                    size="sm"
-                                    variant="ghost"
-                                >
-                                    Remove
-                                </Button>
-                            ) : null}
                         </div>
                     </SettingsRow>
-                    <div className="border-border border-t">
-                        <SettingsRow description="Leave blank to show “You”." title="Display name">
-                            <Input
-                                onChange={(event) => profile.setDisplayName(event.target.value)}
-                                placeholder="You"
-                                value={displayName}
-                            />
-                        </SettingsRow>
-                    </div>
-                </div>
-            </div>
-        </div>
+                    <Separator />
+                    <SettingsRow description="Leave blank to show “You”." title="Display name">
+                        <Input
+                            onChange={(event) => profile.setDisplayName(event.target.value)}
+                            placeholder="You"
+                            value={displayName}
+                        />
+                    </SettingsRow>
+                </SettingsGroup>
+            </SettingsSection>
+        </SettingsPage>
     );
 }
 
 function AvatarPreview({ avatarUrl, name }: { avatarUrl: string | null; name: string }) {
     if (avatarUrl) {
         return (
-            <span className="inline-flex size-9 shrink-0 overflow-hidden rounded-full ring-1 ring-border/50">
+            <span className="inline-flex size-10 shrink-0 overflow-hidden rounded-full ring-1 ring-border/60">
                 <img
                     alt="Your avatar"
                     className="size-full object-cover"
-                    height={36}
+                    height={40}
                     src={avatarUrl}
-                    width={36}
+                    width={40}
                 />
             </span>
         );
     }
 
     return (
-        <span className="inline-flex size-9 shrink-0 items-center justify-center rounded-full bg-muted font-semibold text-muted-foreground text-xs ring-1 ring-border/50">
+        <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-full bg-muted font-semibold text-muted-foreground text-xs ring-1 ring-border/60">
             {getInitials(name)}
         </span>
     );
