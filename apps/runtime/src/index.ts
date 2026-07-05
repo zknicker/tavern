@@ -17,7 +17,7 @@ import {
     startMemoryExtractionScheduler,
     stopMemoryExtractionScheduler,
 } from './memory/extraction.ts';
-import { resolveSemanticMemoryConfig } from './memory/semantic/store.ts';
+import { prepareSemanticMemoryRoot, resolveSemanticMemoryConfig } from './memory/semantic/store.ts';
 import {
     closeSemanticMemoryWatcher,
     restartSemanticMemoryWatcher,
@@ -82,6 +82,11 @@ async function main(): Promise<void> {
     if (memoryJobDemoSeed.seeded > 0) {
         log.info('Development Memory job demos ready', { count: memoryJobDemoSeed.seeded });
     }
+    await prepareSemanticMemoryRoot((await resolveSemanticMemoryConfig()).memoryPath).catch(
+        (err) => {
+            log.warn('SemanticMemory root failed to prepare', { err });
+        }
+    );
     void startSemanticMemoryWatcher(resolveSemanticMemoryConfig).catch((err) => {
         log.warn('SemanticMemory live updates failed to start', { err });
     });

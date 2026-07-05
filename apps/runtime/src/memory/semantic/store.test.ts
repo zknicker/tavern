@@ -18,6 +18,7 @@ import {
     listSemanticMemoryBacklinks,
     listSemanticMemoryPages,
     moveSemanticMemoryPath,
+    prepareSemanticMemoryRoot,
     readSemanticMemoryFile,
     saveSemanticMemoryPage,
     saveSemanticMemorySettings,
@@ -410,6 +411,20 @@ describe('Memory store', () => {
         expect((await fs.stat(path.join(nextRoot, 'projects'))).isDirectory()).toBe(true);
         expect((await fs.stat(path.join(nextRoot, 'routines'))).isDirectory()).toBe(true);
         expect((await fs.stat(path.join(nextRoot, 'sites'))).isDirectory()).toBe(true);
+    });
+
+    test('prepares Memory root without replacing existing taxonomy', async () => {
+        await prepareSemanticMemoryRoot(root);
+
+        await expect(fs.readFile(path.join(root, 'TAXONOMY.md'), 'utf8')).resolves.toBe(
+            '# Memory Taxonomy\n'
+        );
+        expect((await fs.stat(path.join(root, 'companies'))).isDirectory()).toBe(true);
+        expect((await fs.stat(path.join(root, 'concepts'))).isDirectory()).toBe(true);
+        expect((await fs.stat(path.join(root, 'people'))).isDirectory()).toBe(true);
+        expect((await fs.stat(path.join(root, 'projects'))).isDirectory()).toBe(true);
+        expect((await fs.stat(path.join(root, 'routines'))).isDirectory()).toBe(true);
+        expect((await fs.stat(path.join(root, 'sites'))).isDirectory()).toBe(true);
     });
 });
 
