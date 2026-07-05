@@ -48,16 +48,7 @@ export async function getRuntimeChatTimelinePage(
         responses: page.responses,
     });
     const responsesById = new Map(responses.map((response) => [response.id, response]));
-    const responseIdByMessageId = new Map<string, string>();
-
-    for (const response of responses) {
-        if (response.request_message_id) {
-            responseIdByMessageId.set(response.request_message_id, response.id);
-        }
-        if (response.response_message_id) {
-            responseIdByMessageId.set(response.response_message_id, response.id);
-        }
-    }
+    const responseIdByMessageId = mapResponseIdsByMessageId(responses);
 
     const finalReplyTextByRunId = new Map(
         messages
@@ -97,6 +88,27 @@ export async function getRuntimeChatTimelinePage(
 // Soft-deleted rows stay durable in Runtime (sequence slots are stable) but
 // never reach the timeline: dismissed cards, dismissed failures, cleared
 // chats. Activity and artifacts follow their response.
+// A message can be one response's reply and the next response's trigger
+// (agent-triggered turns). The producing response owns the row, so reply
+// mappings overwrite request mappings.
+export function mapResponseIdsByMessageId(responses: TavernChatResponse[]) {
+    const responseIdByMessageId = new Map<string, string>();
+
+    for (const response of responses) {
+        if (response.request_message_id) {
+            responseIdByMessageId.set(response.request_message_id, response.id);
+        }
+    }
+
+    for (const response of responses) {
+        if (response.response_message_id) {
+            responseIdByMessageId.set(response.response_message_id, response.id);
+        }
+    }
+
+    return responseIdByMessageId;
+}
+
 export function visibleTimelineSources(input: {
     activity: readonly TavernResponseActivity[];
     artifacts: readonly TavernArtifact[];
@@ -298,7 +310,7 @@ function activityToChatRows(
         return [];
     }
 
-    if (activity.kind === 'planning' || activity.kind === 'reasoning') {
+    if (activity.kind === 'reasoning') {
         return activityToThinkingRows(activity, response, finalReplyTextByRunId);
     }
 
@@ -567,8 +579,7 @@ function isRenderableActivity(
         activity.kind === 'command' ||
         activity.kind === 'artifact' ||
         activity.kind === 'custom' ||
-        activity.kind === 'reasoning' ||
-        activity.kind === 'planning'
+        activity.kind === 'reasoning'
     );
 }
 
@@ -579,7 +590,7 @@ function activityName(activity: TavernResponseActivity) {
     if (activity.kind === 'artifact') {
         return 'artifact';
     }
-    if (activity.kind === 'planning' || activity.kind === 'reasoning') {
+    if (activity.kind === 'reasoning') {
         return 'reasoning';
     }
     if (activity.kind === 'message') {
@@ -595,12 +606,7 @@ function activitySummaryParts(activity: TavernResponseActivity) {
         return [detail];
     }
 
-    if (
-        detail &&
-        (activity.kind === 'message' ||
-            activity.kind === 'reasoning' ||
-            activity.kind === 'planning')
-    ) {
+    if (detail && (activity.kind === 'message' || activity.kind === 'reasoning')) {
         return [detail];
     }
 

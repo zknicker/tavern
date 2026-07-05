@@ -5,8 +5,39 @@ import {
     cancelledResponseToChatRow,
     commandRunFromActivity,
     failedTurnFromResponses,
+    mapResponseIdsByMessageId,
     visibleTimelineSources,
 } from './runtime-chat-api.ts';
+
+test('a reply that triggers the next turn stays attributed to its producing response', () => {
+    const responses = [
+        {
+            ...response({
+                id: 'rsp_first',
+                responseMessageId: 'msg_first_reply',
+                status: 'completed',
+                updatedAt: '2026-06-08T12:00:01.000Z',
+            }),
+            request_message_id: 'message-user',
+        },
+        {
+            ...response({
+                id: 'rsp_second',
+                responseMessageId: 'msg_second_reply',
+                status: 'completed',
+                updatedAt: '2026-06-08T12:00:02.000Z',
+            }),
+            // Agent-triggered turn: the previous reply is this run's request.
+            request_message_id: 'msg_first_reply',
+        },
+    ];
+
+    const mapping = mapResponseIdsByMessageId(responses);
+
+    assert.equal(mapping.get('msg_first_reply'), 'rsp_first');
+    assert.equal(mapping.get('msg_second_reply'), 'rsp_second');
+    assert.equal(mapping.get('message-user'), 'rsp_first');
+});
 
 test('command activity with a typed slash command maps to a command run', () => {
     assert.deepEqual(
