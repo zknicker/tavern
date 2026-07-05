@@ -76,7 +76,10 @@ describe('Runtime capability gates', () => {
     });
 
     test('gates Tasks on agent runtime capabilities', () => {
-        expect(routeTabCapabilityRequirements.tasks).toEqual(agentCapabilityRequirements);
+        expect(routeTabCapabilityRequirements.tasks).toEqual([
+            ...agentCapabilityRequirements,
+            'cron',
+        ]);
     });
 
     test('explains old Runtime version mismatch beside green capability probes', () => {

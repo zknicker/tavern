@@ -11,14 +11,14 @@ function useCronDeliveryTargetInvalidation() {
     });
 }
 
-export function useCronDeliveryTargets() {
+export function useCronDeliveryTargets(agentId: string | null) {
     useCronDeliveryTargetInvalidation();
 
-    return trpc.cron.deliveryTargets.useQuery(undefined, queryPolicy.agentRuntimeSnapshot);
-}
-
-export function useCronDeliveryTargetsSuspense() {
-    useCronDeliveryTargetInvalidation();
-
-    return trpc.cron.deliveryTargets.useSuspenseQuery(undefined, queryPolicy.agentRuntimeSnapshot);
+    return trpc.cron.deliveryTargets.useQuery(
+        { agentId: agentId ?? '' },
+        {
+            ...queryPolicy.agentRuntimeSnapshot,
+            enabled: Boolean(agentId),
+        }
+    );
 }

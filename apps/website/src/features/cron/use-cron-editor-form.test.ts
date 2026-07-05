@@ -10,7 +10,7 @@ function createJob(
     overrides?: Partial<{
         createdAt: string;
         deleteAfterRun: boolean;
-        delivery: { chatId: string } | null;
+        delivery: { chatId: string };
         description: string;
         enabled: boolean;
         name: string;
@@ -40,7 +40,6 @@ function createJob(
         state: {},
         syncedAt: overrides?.updatedAt ?? '2026-04-18T19:00:00.000Z',
         updatedAt: overrides?.updatedAt ?? '2026-04-18T19:00:00.000Z',
-        wakeMode: 'now' as const,
     };
 }
 

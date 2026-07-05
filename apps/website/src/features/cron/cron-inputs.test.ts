@@ -9,7 +9,7 @@ function createBaseState(): CronFormState {
         at: '',
         cronExpr: '0 7 * * *',
         cronTz: 'America/New_York',
-        deliveryChatId: '',
+        deliveryChatId: 'chat:morning',
         description: 'Morning brief',
         enabled: true,
         everyMs: '',
@@ -29,6 +29,9 @@ test('buildCronCreateInput maps agent turns to isolated cron sessions', () => {
     assert.deepEqual(input, {
         agentId: 'flicker',
         deleteAfterRun: false,
+        delivery: {
+            chatId: 'chat:morning',
+        },
         description: 'Morning brief',
         enabled: true,
         name: 'Morning brief',
@@ -41,14 +44,12 @@ test('buildCronCreateInput maps agent turns to isolated cron sessions', () => {
             time: '07:00',
             tz: 'America/New_York',
         },
-        wakeMode: 'now',
     });
 });
 
-test('buildCronCreateInput maps system events to main delivery jobs without an agent', () => {
+test('buildCronCreateInput maps system events to agent-owned delivery jobs', () => {
     const input = buildCronCreateInput({
         ...createBaseState(),
-        agentId: '',
         deliveryChatId: 'discord:channel:123',
         message: '',
         runType: 'systemEvent',
@@ -56,7 +57,7 @@ test('buildCronCreateInput maps system events to main delivery jobs without an a
     });
 
     assert.deepEqual(input, {
-        agentId: undefined,
+        agentId: 'flicker',
         deleteAfterRun: false,
         delivery: {
             chatId: 'discord:channel:123',
@@ -73,14 +74,12 @@ test('buildCronCreateInput maps system events to main delivery jobs without an a
             time: '07:00',
             tz: 'America/New_York',
         },
-        wakeMode: 'now',
     });
 });
 
-test('buildCronUpdateInput clears the agent when switching to a system event', () => {
+test('buildCronUpdateInput keeps agent and delivery required for system events', () => {
     const input = buildCronUpdateInput('job-123', {
         ...createBaseState(),
-        agentId: '',
         runType: 'systemEvent',
         systemEventText: 'No prompt run',
     });
@@ -88,9 +87,11 @@ test('buildCronUpdateInput clears the agent when switching to a system event', (
     assert.deepEqual(input, {
         jobId: 'job-123',
         patch: {
-            agentId: null,
+            agentId: 'flicker',
             deleteAfterRun: false,
-            delivery: null,
+            delivery: {
+                chatId: 'chat:morning',
+            },
             description: 'Morning brief',
             enabled: true,
             name: 'Morning brief',
@@ -103,7 +104,6 @@ test('buildCronUpdateInput clears the agent when switching to a system event', (
                 time: '07:00',
                 tz: 'America/New_York',
             },
-            wakeMode: 'now',
         },
     });
 });

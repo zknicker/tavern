@@ -1,5 +1,6 @@
 import { ArrowDown01Icon } from '@hugeicons-pro/core-solid-rounded';
 import * as React from 'react';
+import { Link } from 'react-router-dom';
 
 import { Badge } from '../../components/ui/badge.tsx';
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '../../components/ui/empty.tsx';
@@ -15,16 +16,15 @@ import {
 import { formatTimestamp, titleCase } from '../../lib/format.ts';
 import type { CronRunsOutput } from '../../lib/trpc.tsx';
 import { cn } from '../../lib/utils.ts';
+import { buildChatPath } from '../chats/chat-path.ts';
 import { CronRunError, CronRunFacts } from './cron-run-detail-sections.tsx';
 import {
-    formatCronRunDeliveryLabel,
     formatCronRunDetail,
+    formatCronRunDuration,
     formatCronRunFinishedLabel,
     formatCronRunStatus,
-    getCronRunDeliveryVariant,
     getCronRunStatusDotClassName,
     getCronRunStatusVariant,
-    resolveCronRunDestinationLabel,
 } from './cron-run-view-data.ts';
 
 interface CronRunsCardProps {
@@ -36,25 +36,22 @@ interface CronRunsCardProps {
 type CronRun = CronRunsOutput['runs'][number];
 
 interface CronRunRow {
-    deliveryLabel: string;
-    deliveryStatus: CronRun['deliveryStatus'];
-    destinationLabel: string;
+    chatId: string | null;
     detail: string | null;
+    durationLabel: string;
     finishedLabel: string;
     id: string;
     run: CronRun;
-    sessionKey: string | null;
+    scheduledLabel: string;
     startedLabel: string;
     status: CronRun['status'];
     triggerLabel: string;
+    turnId: string | null;
 }
 
 export function CronRunsCard({ deliveryDestinationLabel, isPending, runs }: CronRunsCardProps) {
     const [expandedRunId, setExpandedRunId] = React.useState<string | null>(null);
-    const rows = React.useMemo(
-        () => buildRows(runs, deliveryDestinationLabel),
-        [deliveryDestinationLabel, runs]
-    );
+    const rows = React.useMemo(() => buildRows(runs), [runs]);
 
     React.useEffect(() => {
         if (expandedRunId && !rows.some((row) => row.id === expandedRunId)) {
@@ -69,26 +66,23 @@ export function CronRunsCard({ deliveryDestinationLabel, isPending, runs }: Cron
     return (
         <Table className="table-fixed">
             <colgroup>
-                <col className="w-[23%]" />
-                <col className="w-[23%]" />
-                <col className="w-[23%]" />
-                <col className="hidden w-[17%] sm:table-column" />
-                <col className="w-[31%] sm:w-[14%]" />
+                <col className="w-[24%]" />
+                <col className="w-[24%]" />
+                <col className="w-[22%]" />
+                <col className="hidden w-[16%] sm:table-column" />
+                <col className="w-[30%] sm:w-[14%]" />
             </colgroup>
             <TableHeader>
                 <TableRow>
                     <TableHead className="pl-8">Started</TableHead>
                     <TableHead>Completed</TableHead>
-                    <TableHead>Destination</TableHead>
+                    <TableHead>Status</TableHead>
                     <TableHead className="hidden sm:table-cell">Trigger</TableHead>
-                    <TableHead className="pr-8 text-right">
-                        <span className="sr-only">Session</span>
-                    </TableHead>
+                    <TableHead className="pr-8 text-right">Chat</TableHead>
                 </TableRow>
             </TableHeader>
             <TableBody>
                 {rows.flatMap((row, index) => {
-                    const sessionKey = row.sessionKey;
                     const expanded = expandedRunId === row.id;
                     const toggleExpanded = () => {
                         setExpandedRunId(expanded ? null : row.id);
@@ -99,7 +93,7 @@ export function CronRunsCard({ deliveryDestinationLabel, isPending, runs }: Cron
                             aria-expanded={expanded}
                             className={cn(
                                 'cursor-pointer outline-hidden focus-visible:bg-hover',
-                                sessionKey && 'text-foreground'
+                                row.chatId && 'text-foreground'
                             )}
                             index={index}
                             key={row.id}
@@ -137,20 +131,18 @@ export function CronRunsCard({ deliveryDestinationLabel, isPending, runs }: Cron
                             </TableCell>
                             <TableCell>
                                 <div className="relative z-20">
-                                    <DeliveryDestination row={row} />
+                                    <RunStatus row={row} />
                                 </div>
                             </TableCell>
                             <TableCell className="hidden text-muted-foreground sm:table-cell">
                                 <span className="relative z-20">{row.triggerLabel}</span>
                             </TableCell>
                             <TableCell className="pr-8 text-right">
-                                {sessionKey ? (
-                                    <span className="relative z-20 font-mono text-muted-foreground text-xs">
-                                        {sessionKey}
-                                    </span>
-                                ) : (
-                                    <span className="relative z-20 text-muted-foreground">-</span>
-                                )}
+                                <ChatLink
+                                    chatId={row.chatId}
+                                    label={deliveryDestinationLabel}
+                                    turnId={row.turnId}
+                                />
                             </TableCell>
                         </TableRow>,
                         expanded ? (
@@ -179,7 +171,12 @@ export function CronRunsCard({ deliveryDestinationLabel, isPending, runs }: Cron
 
 function RunOutcome({ row }: { row: CronRunRow }) {
     if (row.status === 'success') {
-        return <span className="text-foreground">{row.finishedLabel}</span>;
+        return (
+            <div className="flex min-w-0 flex-col">
+                <span className="text-foreground">{row.finishedLabel}</span>
+                <span className="text-muted-foreground text-xs">{row.durationLabel}</span>
+            </div>
+        );
     }
 
     return (
@@ -199,26 +196,52 @@ function RunOutcome({ row }: { row: CronRunRow }) {
     );
 }
 
-function DeliveryDestination({ row }: { row: CronRunRow }) {
-    if (row.deliveryStatus === 'delivered') {
-        return <span className="text-foreground">{row.destinationLabel}</span>;
-    }
-
+function RunStatus({ row }: { row: CronRunRow }) {
     return (
         <div className="flex min-w-0 flex-col items-start gap-1">
             <div className="flex min-w-0 items-center gap-2">
-                <span className="truncate text-foreground">{row.destinationLabel}</span>
-                <Badge size="sm" variant={getCronRunDeliveryVariant(row.deliveryStatus)}>
-                    {row.deliveryLabel}
+                <Badge size="sm" variant={getCronRunStatusVariant(row.status)}>
+                    {formatCronRunStatus(row.status)}
                 </Badge>
+                <span className="truncate text-muted-foreground text-xs">{row.scheduledLabel}</span>
             </div>
-            {row.detail &&
-            (row.deliveryStatus === 'failed' || row.deliveryStatus === 'parent_missing') ? (
+            {row.detail ? (
                 <span
                     className="max-w-full truncate text-muted-foreground text-xs"
                     title={row.detail}
                 >
                     {row.detail}
+                </span>
+            ) : null}
+        </div>
+    );
+}
+
+function ChatLink({
+    chatId,
+    label,
+    turnId,
+}: {
+    chatId: string | null;
+    label: string | null;
+    turnId: string | null;
+}) {
+    if (!chatId) {
+        return <span className="relative z-20 text-muted-foreground">-</span>;
+    }
+
+    return (
+        <div className="relative z-20 flex min-w-0 flex-col items-end">
+            <Link
+                className="max-w-full truncate text-link text-xs underline-offset-4 hover:underline"
+                onClick={(event) => event.stopPropagation()}
+                to={buildChatPath(chatId)}
+            >
+                {label ?? chatId}
+            </Link>
+            {turnId ? (
+                <span className="max-w-full truncate font-mono text-[11px] text-muted-foreground">
+                    {turnId}
                 </span>
             ) : null}
         </div>
@@ -251,24 +274,18 @@ function StatusDot({ status }: { status: CronRun['status'] }) {
     );
 }
 
-function buildRows(
-    runs: CronRunsOutput['runs'],
-    deliveryDestinationLabel: string | null
-): CronRunRow[] {
+function buildRows(runs: CronRunsOutput['runs']): CronRunRow[] {
     return runs.map((run) => ({
-        deliveryLabel: formatCronRunDeliveryLabel(run.deliveryStatus),
-        deliveryStatus: run.deliveryStatus,
-        destinationLabel: resolveCronRunDestinationLabel(
-            run.deliveryStatus,
-            deliveryDestinationLabel
-        ),
+        chatId: run.chatId,
         detail: formatCronRunDetail(run),
+        durationLabel: formatCronRunDuration(run),
         finishedLabel: formatCronRunFinishedLabel(run),
         id: run.id,
         run,
-        sessionKey: run.sessionKey,
+        scheduledLabel: formatTimestamp(run.scheduledFor),
         startedLabel: formatTimestamp(run.startedAt ?? run.scheduledFor),
         status: run.status,
         triggerLabel: titleCase(run.trigger),
+        turnId: run.turnId,
     }));
 }

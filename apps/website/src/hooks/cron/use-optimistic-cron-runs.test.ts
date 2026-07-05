@@ -12,20 +12,17 @@ const job = {
 
 function realRun(overrides: Partial<CronRun> = {}): CronRun {
     return {
-        deliveryError: null,
-        deliveryStatus: 'delivered',
+        chatId: 'cht_general',
         executionErrorCode: null,
         executionErrorMessage: null,
         finishedAt: '2026-06-09T14:00:05.000Z',
         id: 'cron_joke_20260609_140000',
         jobId: 'cron:joke',
         scheduledFor: '2026-06-09T14:00:00.000Z',
-        sessionId: 'cron_joke_20260609_140000',
-        sessionKey: 'cron_joke_20260609_140000',
         startedAt: '2026-06-09T14:00:00.000Z',
         status: 'success',
-        summary: 'Done.',
         trigger: 'schedule',
+        turnId: 'turn:joke',
         ...overrides,
     };
 }
@@ -34,15 +31,14 @@ test('createOptimisticCronRun builds a local manual pending row', () => {
     const run = createOptimisticCronRun(job, new Date('2026-06-09T14:00:00.000Z'));
 
     expect(run).toMatchObject({
-        deliveryStatus: 'pending',
+        chatId: 'cht_general',
         finishedAt: null,
         id: 'optimistic:cron:joke:1781013600000',
         jobId: 'cron:joke',
         scheduledFor: '2026-06-09T14:00:00.000Z',
-        sessionKey: null,
         status: 'running',
-        summary: 'Manual run requested.',
         trigger: 'manual',
+        turnId: null,
     });
 });
 

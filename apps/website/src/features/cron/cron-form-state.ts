@@ -115,8 +115,7 @@ export function createCronFormState(job: CronJob | null, primaryAgentId = ''): C
     const scheduleState = getScheduleState(job);
 
     return {
-        agentId:
-            job?.payload.kind === 'agentTurn' ? (job.agentId ?? primaryAgentId) : primaryAgentId,
+        agentId: job?.agentId ?? primaryAgentId,
         at: scheduleState.at,
         cronExpr: scheduleState.cronExpr,
         cronTz: scheduleState.cronTz,

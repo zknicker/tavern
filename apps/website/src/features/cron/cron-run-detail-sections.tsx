@@ -1,13 +1,12 @@
-import { Badge } from '../../components/ui/badge.tsx';
+import { Link } from 'react-router-dom';
 import { formatTimestamp, titleCase } from '../../lib/format.ts';
 import type { CronRunsOutput } from '../../lib/trpc.tsx';
 import { cn } from '../../lib/utils.ts';
+import { buildChatPath } from '../chats/chat-path.ts';
 import {
-    formatCronRunDeliveryLabel,
     formatCronRunDetail,
+    formatCronRunDuration,
     formatCronRunFinishedLabel,
-    getCronRunDeliveryVariant,
-    resolveCronRunDestinationLabel,
 } from './cron-run-view-data.ts';
 
 type CronRun = CronRunsOutput['runs'][number];
@@ -53,30 +52,13 @@ export function CronRunFacts({
                 }
             />
             <Fact inset={variant === 'panel'} label="Trigger" value={titleCase(run.trigger)} />
-            <Fact
+            <Fact inset={variant === 'panel'} label="Duration" value={formatCronRunDuration(run)} />
+            <ChatFact
+                chatId={run.chatId}
+                deliveryDestinationLabel={deliveryDestinationLabel}
                 inset={variant === 'panel'}
-                label="Destination"
-                value={resolveCronRunDestinationLabel(run.deliveryStatus, deliveryDestinationLabel)}
             />
-            <div
-                className={cn(
-                    'grid gap-1 py-2.5 sm:grid-cols-[7.5rem_minmax(0,1fr)] sm:items-center sm:gap-3',
-                    variant === 'panel' && 'px-3'
-                )}
-            >
-                <dt className="font-medium text-foreground">Delivery</dt>
-                <dd className="min-w-0 sm:text-right">
-                    <Badge size="sm" variant={getCronRunDeliveryVariant(run.deliveryStatus)}>
-                        {formatCronRunDeliveryLabel(run.deliveryStatus)}
-                    </Badge>
-                </dd>
-            </div>
-            <Fact
-                inset={variant === 'panel'}
-                isCode
-                label="Session"
-                value={run.sessionId ?? 'Not available'}
-            />
+            <Fact inset={variant === 'panel'} isCode label="Turn" value={run.turnId ?? 'None'} />
             <Fact inset={variant === 'panel'} isCode label="Run" value={run.id} />
         </dl>
     );
@@ -93,6 +75,39 @@ export function CronRunError({ run }: { run: CronRun }) {
             <p className="font-medium text-error-foreground text-sm">Error</p>
             <p className="mt-1 text-pretty text-error-foreground/85 text-sm leading-5">{detail}</p>
         </section>
+    );
+}
+
+function ChatFact({
+    chatId,
+    deliveryDestinationLabel,
+    inset,
+}: {
+    chatId: string | null;
+    deliveryDestinationLabel: string | null;
+    inset: boolean;
+}) {
+    return (
+        <div
+            className={cn(
+                'grid gap-1 py-2.5 sm:grid-cols-[7.5rem_minmax(0,1fr)] sm:items-center sm:gap-3',
+                inset && 'px-3'
+            )}
+        >
+            <dt className="font-medium text-foreground">Chat</dt>
+            <dd className="min-w-0 sm:text-right">
+                {chatId ? (
+                    <Link
+                        className="min-w-0 truncate text-link underline-offset-4 hover:underline"
+                        to={buildChatPath(chatId)}
+                    >
+                        {deliveryDestinationLabel ?? chatId}
+                    </Link>
+                ) : (
+                    <span className="text-muted-foreground">None</span>
+                )}
+            </dd>
+        </div>
     );
 }
 

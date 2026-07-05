@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useCronDeliveryTargetsSuspense } from '../../../hooks/cron/use-cron-delivery-targets.ts';
+import { useCronDeliveryTargets } from '../../../hooks/cron/use-cron-delivery-targets.ts';
 
 export interface CronEditorSelectOption {
     label: string;
@@ -60,16 +60,16 @@ export function buildDeliveryChatOptions(
     return disambiguateOptionLabels(options);
 }
 
-export function useCronEditorOptions(input: { currentDeliveryChatId: string }) {
-    const [deliveryTargets] = useCronDeliveryTargetsSuspense();
+export function useCronEditorOptions(input: { agentId: string; currentDeliveryChatId: string }) {
+    const deliveryTargets = useCronDeliveryTargets(input.agentId.trim() || null);
 
     return React.useMemo(
         () => ({
             deliveryChatOptions: buildDeliveryChatOptions(
-                deliveryTargets.targets,
+                deliveryTargets.data?.targets ?? [],
                 input.currentDeliveryChatId
             ),
         }),
-        [deliveryTargets.targets, input.currentDeliveryChatId]
+        [deliveryTargets.data?.targets, input.currentDeliveryChatId]
     );
 }

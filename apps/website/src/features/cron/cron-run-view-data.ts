@@ -44,43 +44,39 @@ export function formatCronRunStatus(status: CronRunRecord['status']): string {
     return titleCase(status);
 }
 
-export function formatCronRunDeliveryLabel(status: CronRunRecord['deliveryStatus']): string {
-    if (!(status && status !== 'not_applicable')) {
-        return 'None';
-    }
-    if (status === 'parent_missing') {
-        return 'Parent missing';
-    }
-    if (status === 'session_queued') {
-        return 'Queued';
-    }
-    return titleCase(status);
-}
-
-export function resolveCronRunDestinationLabel(
-    status: CronRunRecord['deliveryStatus'],
-    deliveryDestinationLabel: string | null
-): string {
-    if (!(status && status !== 'not_applicable')) {
-        return 'No delivery';
-    }
-
-    return deliveryDestinationLabel ?? 'Delivery target';
-}
-
 export function formatCronRunDetail(run: CronRunRecord): string | null {
     if (run.status === 'error') {
-        return (
-            formatCronErrorMessage(run.executionErrorMessage ?? run.deliveryError) ?? 'Run failed.'
-        );
-    }
-    if (run.deliveryStatus === 'failed' || run.deliveryStatus === 'parent_missing') {
-        return (
-            formatCronErrorMessage(run.deliveryError) ??
-            formatCronRunDeliveryLabel(run.deliveryStatus)
-        );
+        return formatCronErrorMessage(run.executionErrorMessage) ?? 'Run failed.';
     }
     return null;
+}
+
+export function formatCronRunDuration(run: CronRunRecord): string {
+    if (!(run.startedAt && run.finishedAt)) {
+        return 'Not available';
+    }
+
+    const startedAt = Date.parse(run.startedAt);
+    const finishedAt = Date.parse(run.finishedAt);
+
+    if (!(Number.isFinite(startedAt) && Number.isFinite(finishedAt))) {
+        return 'Not available';
+    }
+
+    const durationMs = Math.max(0, finishedAt - startedAt);
+
+    if (durationMs < 1000) {
+        return `${durationMs}ms`;
+    }
+
+    const durationSeconds = durationMs / 1000;
+    if (durationSeconds < 60) {
+        return `${durationSeconds.toFixed(durationSeconds >= 10 ? 0 : 1)}s`;
+    }
+
+    const minutes = Math.floor(durationSeconds / 60);
+    const seconds = Math.round(durationSeconds % 60);
+    return seconds > 0 ? `${minutes}m ${seconds}s` : `${minutes}m`;
 }
 
 export function getCronRunStatusVariant(status: CronRunRecord['status']): BadgeProps['variant'] {
@@ -94,23 +90,6 @@ export function getCronRunStatusVariant(status: CronRunRecord['status']): BadgeP
             return 'warning';
         default:
             return 'secondary';
-    }
-}
-
-export function getCronRunDeliveryVariant(
-    status: CronRunRecord['deliveryStatus']
-): BadgeProps['variant'] {
-    switch (status) {
-        case 'delivered':
-            return 'success';
-        case 'failed':
-        case 'parent_missing':
-            return 'destructive';
-        case 'pending':
-        case 'session_queued':
-            return 'warning';
-        default:
-            return 'subtle';
     }
 }
 

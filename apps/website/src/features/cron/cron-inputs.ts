@@ -55,8 +55,9 @@ function buildSchedule(state: CronFormState) {
 }
 
 function buildDelivery(state: CronFormState) {
-    const chatId = state.deliveryChatId.trim();
-    return chatId ? { chatId } : null;
+    return {
+        chatId: requireValue(state.deliveryChatId, 'Delivery chat'),
+    };
 }
 
 function buildPayload(state: CronFormState) {
@@ -73,27 +74,16 @@ function buildPayload(state: CronFormState) {
     };
 }
 
-function resolveAgentId(state: CronFormState) {
-    if (state.runType === 'systemEvent') {
-        return undefined;
-    }
-
-    return requireValue(state.agentId, 'Agent');
-}
-
 export function buildCronCreateInput(state: CronFormState) {
-    const delivery = buildDelivery(state);
-
     return {
-        agentId: resolveAgentId(state),
+        agentId: requireValue(state.agentId, 'Agent'),
         deleteAfterRun: false,
-        ...(delivery ? { delivery } : {}),
+        delivery: buildDelivery(state),
         description: state.description.trim() || undefined,
         enabled: state.enabled,
         name: requireValue(state.name, 'Name'),
         payload: buildPayload(state),
         scheduleConfig: buildSchedule(state),
-        wakeMode: 'now' as const,
     };
 }
 
@@ -101,7 +91,7 @@ export function buildCronUpdateInput(jobId: string, state: CronFormState) {
     return {
         jobId,
         patch: {
-            agentId: state.runType === 'systemEvent' ? null : requireValue(state.agentId, 'Agent'),
+            agentId: requireValue(state.agentId, 'Agent'),
             deleteAfterRun: false,
             delivery: buildDelivery(state),
             description: state.description.trim() || null,
@@ -109,7 +99,6 @@ export function buildCronUpdateInput(jobId: string, state: CronFormState) {
             name: requireValue(state.name, 'Name'),
             payload: buildPayload(state),
             scheduleConfig: buildSchedule(state),
-            wakeMode: 'now' as const,
         },
     };
 }

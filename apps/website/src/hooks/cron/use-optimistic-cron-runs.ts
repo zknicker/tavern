@@ -8,20 +8,17 @@ export function createOptimisticCronRun(job: CronJob, now = new Date()): CronRun
     const timestamp = now.toISOString();
 
     return {
-        deliveryError: null,
-        deliveryStatus: job.delivery ? 'pending' : 'not_applicable',
+        chatId: job.delivery.chatId,
         executionErrorCode: null,
         executionErrorMessage: null,
         finishedAt: null,
         id: `optimistic:${job.id}:${now.getTime()}`,
         jobId: job.id,
         scheduledFor: timestamp,
-        sessionId: null,
-        sessionKey: null,
         startedAt: timestamp,
         status: 'running',
-        summary: 'Manual run requested.',
         trigger: 'manual',
+        turnId: null,
     };
 }
 
@@ -70,12 +67,9 @@ export function useOptimisticCronRuns(job: CronGetOutput['job'], runs: CronRunsO
             run?.id === id
                 ? {
                       ...run,
-                      deliveryStatus:
-                          run.deliveryStatus === 'pending' ? 'failed' : run.deliveryStatus,
                       executionErrorMessage: 'Manual run request failed.',
                       finishedAt: new Date().toISOString(),
                       status: 'error',
-                      summary: 'Manual run request failed.',
                   }
                 : run
         );

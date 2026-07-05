@@ -2,17 +2,16 @@ import { formatRelativeTime, formatTimestamp } from '../../lib/format.ts';
 import type { CronListOutput, CronRunsOutput } from '../../lib/trpc.tsx';
 
 export interface CronExecution {
-    deliveryStatus: CronRunsOutput['runs'][number]['deliveryStatus'];
+    chatId: string | null;
     executionErrorCode: CronRunsOutput['runs'][number]['executionErrorCode'];
     executionErrorMessage: CronRunsOutput['runs'][number]['executionErrorMessage'];
     id: string;
     occurredAt: string;
     occurredAtFormatted: string;
     occurredAtRelative: string;
-    sessionKey: string | null;
     status: CronRunsOutput['runs'][number]['status'];
-    summary: string | null;
     trigger: CronRunsOutput['runs'][number]['trigger'];
+    turnId: string | null;
 }
 
 type CronJobRecord = CronListOutput['jobs'][number];
@@ -47,7 +46,11 @@ function getResultLabel(job: CronJobRecord) {
         return 'running';
     }
 
-    return job.state.lastStatus ?? 'unknown';
+    return job.state.lastRunStatus ?? 'unknown';
+}
+
+function getNextRunAt(job: CronJobRecord) {
+    return job.state.nextRunAtMs ? new Date(job.state.nextRunAtMs).toISOString() : null;
 }
 
 export function formatCronErrorMessage(message: null | string | undefined) {
@@ -85,17 +88,16 @@ function buildExecutions(runs: CronRunRecord[]): CronExecution[] {
             const occurredAt = getRunOccurredAt(run);
 
             return {
-                deliveryStatus: run.deliveryStatus,
+                chatId: run.chatId,
                 executionErrorCode: run.executionErrorCode,
                 executionErrorMessage: run.executionErrorMessage,
                 id: run.id,
                 occurredAt,
                 occurredAtFormatted: formatTimestamp(occurredAt),
                 occurredAtRelative: formatRelativeTime(occurredAt),
-                sessionKey: run.sessionKey,
                 status: run.status,
-                summary: run.summary,
                 trigger: run.trigger,
+                turnId: run.turnId,
             };
         });
 }
@@ -122,6 +124,7 @@ export function buildCronList(cronJobs: CronListOutput['jobs'], runs: CronRunsOu
             lastErrorMessage: formatCronErrorMessage(job.state.lastErrorMessage),
             lastErrorRaw: job.state.lastErrorMessage ?? null,
             lastRun: formatRelativeTime(lastRunAt),
+            nextRun: formatTimestamp(getNextRunAt(job)),
             name: job.name,
             schedule: formatCronSchedule(job.schedule, true),
             successRate: getResultLabel(job),

@@ -74,6 +74,10 @@ function CronJobRow({
                     >
                         {job.lastErrorMessage}
                     </p>
+                ) : job.nextRun !== 'unknown' ? (
+                    <p className="max-w-[36rem] truncate text-muted-foreground text-xs">
+                        Next run {job.nextRun}
+                    </p>
                 ) : null}
             </div>
 

@@ -50,7 +50,7 @@ export function CronEditor() {
     const updateMutation = useCronUpdate();
     const job = isNew ? null : (cronJobQuery.data?.job ?? null);
     const cronRunsQuery = useCronRuns(job ? { jobId: job.id, limit: 10 } : null);
-    const deliveryTargetsQuery = useCronDeliveryTargets();
+    const deliveryTargetsQuery = useCronDeliveryTargets(job?.agentId ?? null);
     const deliveryDestinationLabel = getCronDeliveryDestinationLabel(
         job,
         deliveryTargetsQuery.data?.targets ?? []
@@ -97,7 +97,7 @@ export function CronEditor() {
                     void runMutation
                         .mutateAsync({
                             jobId: job.id,
-                            mode: 'force',
+                            mode: 'enqueue',
                         })
                         .catch(() => {
                             optimisticCronRuns.markManualRunFailed(optimisticRunId);

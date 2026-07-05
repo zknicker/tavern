@@ -108,7 +108,7 @@ export function Cron() {
                 onRun={async (job) => {
                     await runMutation.mutateAsync({
                         jobId: job.id,
-                        mode: 'force',
+                        mode: 'enqueue',
                     });
                 }}
                 onToggle={async (job, enabled) => {

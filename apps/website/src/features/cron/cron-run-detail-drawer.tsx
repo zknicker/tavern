@@ -64,9 +64,9 @@ function RunOutcome({ run }: { run: CronRun }) {
     const output = detail
         ? { body: detail, tone: 'error' as const, title: 'Error' }
         : {
-              body: run.summary ?? getMissingSummaryMessage(run),
-              tone: run.summary ? ('default' as const) : ('muted' as const),
-              title: 'Output preview',
+              body: getRunStatusMessage(run),
+              tone: 'muted' as const,
+              title: 'Run status',
           };
 
     return (
@@ -134,10 +134,10 @@ function RunOutcomeMessage({
     );
 }
 
-function getMissingSummaryMessage(run: CronRun) {
+function getRunStatusMessage(run: CronRun) {
     if (run.status === 'queued' || run.status === 'running') {
-        return 'No output summary recorded yet.';
+        return 'Run output has not finished yet.';
     }
 
-    return `${formatCronRunFinishedLabel(run)}, but no output summary was recorded.`;
+    return formatCronRunFinishedLabel(run);
 }

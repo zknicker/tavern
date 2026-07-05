@@ -1,5 +1,5 @@
 import { useStore } from '@tanstack/react-form';
-import type { ReactNode } from 'react';
+import { type ReactNode, useEffect, useRef } from 'react';
 import { Label } from '../../components/ui/primitives/label.tsx';
 import { ScrollArea } from '../../components/ui/scroll-area.tsx';
 import { Separator } from '../../components/ui/separator.tsx';
@@ -59,8 +59,19 @@ export function CronEditorSidebar({
     onRunSelect,
     runs,
 }: CronEditorSidebarProps) {
+    const agentId = useStore(form.store, (state) => state.values.agentId);
     const currentDeliveryChatId = useStore(form.store, (state) => state.values.deliveryChatId);
-    const { deliveryChatOptions } = useCronEditorOptions({ currentDeliveryChatId });
+    const { deliveryChatOptions } = useCronEditorOptions({ agentId, currentDeliveryChatId });
+    const previousAgentIdRef = useRef(agentId);
+
+    useEffect(() => {
+        if (previousAgentIdRef.current === agentId) {
+            return;
+        }
+
+        previousAgentIdRef.current = agentId;
+        form.setFieldValue('deliveryChatId', '');
+    }, [agentId, form]);
 
     return (
         <aside className="relative w-full border-border/70 border-t lg:w-[22rem] lg:border-t-0 lg:border-l-0 lg:before:absolute lg:before:inset-y-0 lg:before:left-0 lg:before:w-px lg:before:bg-gradient-to-t lg:before:from-border/70 lg:before:via-60% lg:before:via-border/70 lg:before:to-transparent lg:before:content-['']">
@@ -117,7 +128,11 @@ export function CronEditorSidebar({
                                 />
                             )}
                         </form.Field>
-                        <CronDeliveryFields deliveryChatOptions={deliveryChatOptions} form={form} />
+                        <CronDeliveryFields
+                            agentId={agentId}
+                            deliveryChatOptions={deliveryChatOptions}
+                            form={form}
+                        />
                     </SidebarSection>
 
                     {job ? (

@@ -26,7 +26,6 @@ function createJob() {
         state: {},
         syncedAt: '2026-04-18T19:00:00.000Z',
         updatedAt: '2026-04-18T19:00:00.000Z',
-        wakeMode: 'now' as const,
     };
 }
 
