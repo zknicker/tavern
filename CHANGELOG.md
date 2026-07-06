@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.4.41 - 2026-07-06
+
+- App: repairs legacy automation cache tables during desktop backend startup so
+  existing installs can open after the v1.4.40 scheduler schema change.
+
 ## v1.4.40 - 2026-07-06
 
 - Runtime/API/App: replaces rich responses with grant-scoped Tavern Widget
