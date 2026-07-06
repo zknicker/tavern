@@ -95,19 +95,17 @@ export function clearTimelineTurn(
         runId?: string;
     } = {}
 ): ChatTimelineState {
-    if (!state.activeReply) {
-        return state;
-    }
+    const activeReplyMatches = !input.runId || state.activeReply?.runId === input.runId;
+    const activeTurnMatches = !input.runId || state.activeTurn?.runId === input.runId;
 
-    if (input.runId && state.activeReply.runId !== input.runId) {
+    if (!((activeReplyMatches && state.activeReply) || (activeTurnMatches && state.activeTurn))) {
         return state;
     }
 
     return {
         ...state,
-        activeReply: null,
-        activeTurn:
-            input.runId && state.activeTurn?.runId !== input.runId ? state.activeTurn : null,
+        activeReply: activeReplyMatches ? null : state.activeReply,
+        activeTurn: activeTurnMatches ? null : state.activeTurn,
     };
 }
 

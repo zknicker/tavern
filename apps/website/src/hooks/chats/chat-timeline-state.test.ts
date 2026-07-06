@@ -89,6 +89,18 @@ test('applyLogSnapshot clears the active reply when the assistant message lands'
     expect(next.timeline).toHaveLength(1);
 });
 
+test('clearTimelineTurn clears a matching active turn after active reply is gone', () => {
+    const state = {
+        ...emptyTimelineState(),
+        activeTurn: turn,
+    };
+
+    const next = clearTimelineTurn(state, { runId: 'run-1' });
+
+    expect(next.activeReply).toBeNull();
+    expect(next.activeTurn).toBeNull();
+});
+
 test('applyLogSnapshot preserves active reply while durable activity is running', () => {
     const state = startTimelineTurn(emptyTimelineState(), turn);
     const next = applyLogSnapshot(state, {
