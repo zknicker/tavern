@@ -122,16 +122,40 @@ export async function setToolEnabled(input: unknown): Promise<SkillList> {
     return await listSkills();
 }
 
-export async function listSkillIds(input?: {
+export async function listRuntimeSkillSummaries(input?: {
     agentId?: string;
     client?: TavernAgentRuntimeClient | null;
     runtimeId?: string | null;
 }) {
-    const skills =
+    return (
         (await listAgentRuntimeSkills(input?.client, input?.runtimeId, {
             agentId: input?.agentId,
-        })) ?? [];
-    return skills.map((skill) => skill.id);
+        })) ?? []
+    );
+}
+
+export function assertSkillsAssignable(
+    addedSkillIds: string[],
+    skills: AgentRuntimeSkillSummary[]
+) {
+    for (const skillId of addedSkillIds) {
+        const skill = skills.find((candidate) => candidate.id === skillId);
+        if (!skill) {
+            continue;
+        }
+        rejectPluginSkillEnablement(skill);
+        if (!isSkillEnabled(skill)) {
+            throw new Error(
+                `Enable ${skill.name} in Settings -> Skills before assigning it to an agent.`
+            );
+        }
+        if (resolveDependencyState(skill) === 'missing') {
+            const missing = formatMissingRequirements(skill.missing);
+            throw new Error(
+                `${skill.name} needs setup before it can be assigned to an agent${missing ? `: ${missing}` : ''}.`
+            );
+        }
+    }
 }
 
 function getSkillInventoryRuntimeId(

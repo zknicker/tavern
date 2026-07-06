@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { useParams } from 'react-router-dom';
+import { Badge } from '../../../components/ui/badge.tsx';
 import { EmptyState } from '../../../components/ui/empty-state.tsx';
 import { SearchInput } from '../../../components/ui/primitives/search-input.tsx';
 import { Separator } from '../../../components/ui/separator.tsx';
@@ -114,17 +115,29 @@ function AgentSkillRow({
     skill: SkillSummary;
 }) {
     const enabled = agent.enabledSkillIds.includes(skill.id);
+    const assignable = skill.usability === 'enabled';
     const displayName = formatSkillName(skill.name);
     return (
         <SettingsRow
             description={skill.description}
-            title={<span className="truncate">{displayName}</span>}
+            title={
+                <span className="flex min-w-0 items-center gap-2">
+                    <span className="truncate">{displayName}</span>
+                    {assignable ? null : (
+                        <Badge size="sm" variant="error">
+                            {skill.enabled
+                                ? (skill.diagnostic ?? 'Needs setup')
+                                : 'Enable it in Skills first'}
+                        </Badge>
+                    )}
+                </span>
+            }
             trailingWidth="intrinsic"
         >
             <Switch
                 aria-label={`${enabled ? 'Disable' : 'Enable'} ${displayName} for ${agent.name}`}
                 checked={enabled}
-                disabled={isSaving}
+                disabled={isSaving || !(enabled || assignable)}
                 onCheckedChange={onEnabledChange}
             />
         </SettingsRow>

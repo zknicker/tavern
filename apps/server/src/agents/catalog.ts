@@ -15,7 +15,7 @@ import type { TavernAgentRuntimeClient } from '../agent-runtime/client.ts';
 import { createAgentRuntimeClientForConnection } from '../agent-runtime/client-factory.ts';
 import { skillIdSchema } from '../skills/contracts.ts';
 import { findMissingEnabledSkillIds, resolveEnabledSkillIds } from '../skills/enablement.ts';
-import { listSkillIds } from '../skills/service.ts';
+import { assertSkillsAssignable, listRuntimeSkillSummaries } from '../skills/service.ts';
 import * as agentProfileStore from '../storage/agent-profiles.ts';
 import {
     getActiveRuntimeId,
@@ -307,11 +307,12 @@ export async function saveCatalogAgentSettings(
     let nextEnabledSkillIds: string[] | undefined;
 
     if (input.enabledSkillIds !== undefined) {
-        const availableSkillIds = await listSkillIds({
+        const runtimeSkills = await listRuntimeSkillSummaries({
             agentId: input.agentId,
             client: runtimeClient,
             runtimeId,
         });
+        const availableSkillIds = runtimeSkills.map((skill) => skill.id);
         availableSkillIdsForResponse = availableSkillIds;
         const missingSkillIds = findMissingEnabledSkillIds(
             input.enabledSkillIds,
@@ -321,6 +322,16 @@ export async function saveCatalogAgentSettings(
         if (missingSkillIds.length > 0) {
             throw new Error(`Unknown skills: ${missingSkillIds.join(', ')}.`);
         }
+
+        const currentEnabledSkillIds = new Set(
+            agentRecord
+                ? parseEnabledSkillIds(agentRecord)
+                : (runtimeAgentRead?.agent.enabledSkillIds ?? [])
+        );
+        assertSkillsAssignable(
+            (input.enabledSkillIds ?? []).filter((skillId) => !currentEnabledSkillIds.has(skillId)),
+            runtimeSkills
+        );
 
         nextEnabledSkillIds = resolveEnabledSkillIds(input.enabledSkillIds, availableSkillIds);
     }

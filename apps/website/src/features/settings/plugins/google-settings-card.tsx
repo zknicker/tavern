@@ -72,6 +72,10 @@ export function GoogleSettingsCard({
         >
             {({ openSettingsDialog, requestSave }) => {
                 function handleEnabledChange(enabled: boolean) {
+                    if (enabled && !currentSettings.connected) {
+                        openSettingsDialog();
+                        return;
+                    }
                     void requestSave({ enabled }).catch(() => undefined);
                 }
 

@@ -102,6 +102,11 @@ export function saveMerchbaseSettings(
                 : parsed.defaultMarketplace,
     };
     const enabled = parsed.enabled ?? current.enabled;
+    const apiKey =
+        parsed.apiKey === undefined ? (current.secret.apiKey ?? null) : parsed.apiKey || null;
+    if (enabled && !apiKey) {
+        throw new Error('Add a MerchBase API key before enabling MerchBase.');
+    }
     writePluginConfig({ config, enabled, id: merchbasePluginId });
 
     if (parsed.apiKey !== undefined) {

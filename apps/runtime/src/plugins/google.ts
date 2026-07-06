@@ -128,13 +128,22 @@ export function saveGoogleSettings(
             },
         },
     };
+    const enabled = parsed.enabled ?? currentPlugin.enabled;
+    if (enabled && !isGoogleConnected()) {
+        throw new Error('Connect Google before enabling the Google Plugin.');
+    }
     writePluginConfig({
         config,
-        enabled: parsed.enabled ?? currentPlugin.enabled,
+        enabled,
         id: googlePluginId,
     });
 
     return getGoogleSettings();
+}
+
+function isGoogleConnected() {
+    const secret = readGoogleSecret();
+    return Boolean(secret.oauth?.refreshToken || secret.oauth?.accessToken);
 }
 
 export async function startGoogleOAuth(
@@ -282,7 +291,8 @@ export async function completeGoogleOAuth(
 
 export function disconnectGoogleOAuth(): AgentRuntimeGoogleSettings {
     writeGoogleSecret({});
-    return getGoogleSettings();
+    // A disconnected Google Plugin is no longer configured, so it cannot stay enabled.
+    return saveGoogleSettings({ enabled: false });
 }
 
 export async function checkGoogleCalendarCapability(): Promise<RuntimeCapabilityCheckResult> {

@@ -2,6 +2,7 @@ import { googlePluginManifest } from '@tavern/api/plugins/google';
 import { merchbasePluginManifest } from '@tavern/api/plugins/merchbase';
 import * as React from 'react';
 import { useParams } from 'react-router-dom';
+import { Badge } from '../../../components/ui/badge.tsx';
 import { SearchInput } from '../../../components/ui/primitives/search-input.tsx';
 import { Separator } from '../../../components/ui/separator.tsx';
 import {
@@ -13,6 +14,7 @@ import {
 } from '../../../components/ui/settings-row.tsx';
 import { Switch } from '../../../components/ui/switch.tsx';
 import { useAgentList } from '../../../hooks/agents/use-agent-list.ts';
+import { useCapability } from '../../../hooks/connections/use-capability.ts';
 import { useRuntimeCapabilityEvents } from '../../../hooks/connections/use-runtime-events.ts';
 import {
     useDisconnectGoogleOAuth,
@@ -167,7 +169,7 @@ function AgentPluginsSettingsPage({ agentId }: { agentId: string }) {
                         plugins.map((plugin, index) => (
                             <React.Fragment key={plugin.id}>
                                 {index > 0 ? <Separator /> : null}
-                                <AgentPluginGrantRow
+                                <AgentPluginGrantItem
                                     agent={agent}
                                     isSaving={
                                         setGrant.isPending &&
@@ -199,7 +201,7 @@ function AgentPluginsSettingsPage({ agentId }: { agentId: string }) {
     );
 }
 
-export function AgentPluginGrantRow({
+function AgentPluginGrantItem({
     agent,
     isSaving,
     onEnabledChange,
@@ -210,17 +212,59 @@ export function AgentPluginGrantRow({
     onEnabledChange: (enabled: boolean) => void;
     plugin: PluginListOutput['plugins'][number];
 }) {
+    const capability = useCapability(
+        plugin.services
+            .filter((service) => service.enabled)
+            .flatMap((service) => service.healthCapabilities)
+    );
+
+    return (
+        <AgentPluginGrantRow
+            agent={agent}
+            health={{ healthy: capability.healthy, reason: capability.reason }}
+            isSaving={isSaving}
+            onEnabledChange={onEnabledChange}
+            plugin={plugin}
+        />
+    );
+}
+
+export function AgentPluginGrantRow({
+    agent,
+    health,
+    isSaving,
+    onEnabledChange,
+    plugin,
+}: {
+    agent: AgentListOutput['agents'][number];
+    health: { healthy: boolean; reason: string | null };
+    isSaving: boolean;
+    onEnabledChange: (enabled: boolean) => void;
+    plugin: PluginListOutput['plugins'][number];
+}) {
     const granted = agent.enabledPluginIds.includes(plugin.id);
+    const grantable = plugin.enabled && health.healthy;
     return (
         <SettingsRow
             description={plugin.description}
-            title={<span className="truncate">{plugin.displayName}</span>}
+            title={
+                <span className="flex min-w-0 items-center gap-2">
+                    <span className="truncate">{plugin.displayName}</span>
+                    {grantable ? null : (
+                        <Badge size="sm" variant="error">
+                            {plugin.enabled
+                                ? (health.reason ?? 'Not healthy. Check Plugins.')
+                                : 'Enable it in Plugins first'}
+                        </Badge>
+                    )}
+                </span>
+            }
             trailingWidth="intrinsic"
         >
             <Switch
                 aria-label={`${granted ? 'Revoke' : 'Grant'} ${plugin.displayName} for ${agent.name}`}
                 checked={granted}
-                disabled={isSaving}
+                disabled={isSaving || !(granted || grantable)}
                 onCheckedChange={onEnabledChange}
             />
         </SettingsRow>

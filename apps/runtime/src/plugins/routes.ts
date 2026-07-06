@@ -72,7 +72,12 @@ export async function handlePluginsRequest(request: Request): Promise<Response |
             return forbiddenResponse;
         }
         const input = agentRuntimeSaveMerchbaseSettingsSchema.parse(await readJson(request));
-        const settings = saveMerchbaseSettings(input);
+        let settings: ReturnType<typeof saveMerchbaseSettings>;
+        try {
+            settings = saveMerchbaseSettings(input);
+        } catch (error) {
+            return badRequest(error instanceof Error ? error.message : String(error));
+        }
         try {
             await materializePluginSkills();
         } catch (error) {
@@ -95,7 +100,12 @@ export async function handlePluginsRequest(request: Request): Promise<Response |
             return forbiddenResponse;
         }
         const input = agentRuntimeSaveGoogleSettingsSchema.parse(await readJson(request));
-        const settings = saveGoogleSettings(input);
+        let settings: ReturnType<typeof saveGoogleSettings>;
+        try {
+            settings = saveGoogleSettings(input);
+        } catch (error) {
+            return badRequest(error instanceof Error ? error.message : String(error));
+        }
         try {
             await materializePluginSkills();
         } catch (error) {

@@ -5,6 +5,7 @@ import {
     agentRuntimeAgentSchema,
     agentRuntimePluginIdSchema,
 } from '@tavern/api';
+import { tavernPluginManifests } from '@tavern/api/plugins';
 import { getDb } from '../db/connection';
 import type { Database } from '../db/sqlite';
 import { namedParams } from '../db/sqlite';
@@ -198,6 +199,11 @@ export function setAgentPluginGrant(input: {
     const existingAgent = getStoredAgent(input.agentId, db);
     if (!existingAgent) {
         throw new Error(`Agent "${input.agentId}" does not exist.`);
+    }
+    if (input.enabled && !isPluginGloballyEnabled(pluginId, db)) {
+        throw new Error(
+            `Enable ${pluginDisplayName(pluginId)} in Settings -> Plugins before granting it to an agent.`
+        );
     }
 
     db.prepare(
@@ -418,4 +424,17 @@ function replaceAgentPluginGrants(input: {
             })
         );
     }
+}
+
+function isPluginGloballyEnabled(pluginId: AgentRuntimePluginId, db: Database) {
+    const row = db
+        .prepare('SELECT enabled FROM runtime_plugins WHERE id = $pluginId LIMIT 1')
+        .get(namedParams({ pluginId })) as { enabled: 0 | 1 } | null;
+    return Boolean(row?.enabled);
+}
+
+function pluginDisplayName(pluginId: AgentRuntimePluginId) {
+    return (
+        tavernPluginManifests.find((manifest) => manifest.id === pluginId)?.displayName ?? pluginId
+    );
 }
