@@ -37,20 +37,23 @@ export async function scanSkillHubSkill(input: unknown) {
 export async function installSkillHubSkill(input: unknown) {
     const parsed = skillHubInstallInputSchema.parse(input);
     const result = requireHub(await installAgentRuntimeSkillHubSkill(parsed));
-    await applySkillInventoryChange();
     if (!result.ok) {
+        if (result.conflict) {
+            return result;
+        }
         throw new Error(formatActionFailure('Skill install failed', result));
     }
+    await applySkillInventoryChange();
     return result;
 }
 
 export async function uninstallSkillHubSkill(input: unknown) {
     const parsed = skillHubUninstallInputSchema.parse(input);
     const result = requireHub(await uninstallAgentRuntimeSkillHubSkill(parsed));
-    await applySkillInventoryChange();
     if (!result.ok) {
         throw new Error(formatActionFailure('Skill uninstall failed', result));
     }
+    await applySkillInventoryChange();
     return result;
 }
 

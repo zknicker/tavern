@@ -4,6 +4,7 @@ import {
     agentRuntimeMutationHeaders,
     agentRuntimeMutationOrigins,
     agentRuntimeRoutes,
+    agentRuntimeSkillResetResultSchema,
     agentRuntimeUpdateAgentSessionModelResultSchema,
     agentRuntimeUpdateAgentSessionModelSchema,
     agentRuntimeUpdateRequestSchema,
@@ -17,6 +18,7 @@ import { handleCommandsRequest } from '../agent-engine/command-routes.ts';
 import { handleMcpRequest } from '../agent-engine/mcp-routes.ts';
 import { handleMcpServersRequest } from '../agent-engine/mcp-server-routes.ts';
 import { handleSkillHubRequest } from '../agent-engine/skill-hub-routes.ts';
+import { resetRuntimeSkillToDefault, tavernAgentSkillId } from '../agent-engine/skill-library.ts';
 import { handleToolSetupRequest } from '../agent-engine/tool-setup-routes.ts';
 import { handleRuntimeCapabilitiesRequest } from '../capabilities/routes.ts';
 import { handleCronRequest } from '../cron/routes.ts';
@@ -31,12 +33,13 @@ import { handleOpenRouterSettingsRequest } from '../model-access/openrouter-sett
 import { handleModelCategorySettingsRequest } from '../models/category-settings.ts';
 import { handleModelProviderRequest } from '../models/provider-routes.ts';
 import { handlePluginsRequest } from '../plugins/routes.ts';
+import { publishSkillUpdated } from '../skills/events.ts';
 import { handleTimezoneSettingsRequest } from '../timezone-settings.ts';
 import { handleWorkspaceRequest } from '../workspace/routes.ts';
 import { readCurrentAgentSession, updateCurrentAgentSessionModel } from './agent-session-store.ts';
 import { handleTavernApiRequest } from './chat-api-router.ts';
 import { handleDevToolkitRequest } from './development-turn-simulator.ts';
-import { forbidden, json, notFound, readJson } from './http.ts';
+import { badRequest, forbidden, json, notFound, readJson } from './http.ts';
 import { handleAgentProxyRequest } from './proxy.ts';
 import { listProjectedTavernRuntimeEvents } from './runtime-event-projection.ts';
 import { getRuntimeHealth } from './status.ts';
@@ -273,6 +276,20 @@ export async function handleTavernRuntimeRequest(request: Request): Promise<Resp
     if (request.method === 'GET' && segments[0] === 'skills' && segments[1] && !segments[2]) {
         const response = await handleAgentProxyRequest(request);
         return response ?? notFound();
+    }
+
+    if (
+        request.method === 'POST' &&
+        segments[0] === 'skills' &&
+        segments[1] &&
+        segments[2] === 'reset'
+    ) {
+        if (segments[1] !== tavernAgentSkillId) {
+            return badRequest('Only the seeded skill has a Tavern default.');
+        }
+        const result = await resetRuntimeSkillToDefault(segments[1]);
+        publishSkillUpdated(result.skillId);
+        return json(agentRuntimeSkillResetResultSchema.parse(result));
     }
 
     if (

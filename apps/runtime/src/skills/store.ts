@@ -4,6 +4,7 @@ import path from 'node:path';
 import { getDb } from '../db/connection.ts';
 import type { Database } from '../db/sqlite.ts';
 import { namedParams } from '../db/sqlite.ts';
+import { isPluginSkillId } from '../plugins/agent-capabilities.ts';
 
 export type SkillSource = 'agent' | 'external' | 'hub' | 'seeded';
 
@@ -22,17 +23,19 @@ export interface SkillFileChange {
 
 interface SkillSourceRow {
     created_by_agent_id: string | null;
+    installed_hash: string | null;
     source: SkillSource;
     updated_at: string;
 }
 
 const writableSource = 'agent' satisfies SkillSource;
+const pluginSkillEditError = 'Plugin skills are provided by their plugin and cannot be edited.';
 const supportDirectories = ['assets', 'references', 'scripts', 'templates'] as const;
 
 export function readSkillSource(skillId: string, db: Database = getDb()) {
     const row = db
         .prepare(
-            `SELECT source, created_by_agent_id, updated_at
+            `SELECT source, created_by_agent_id, installed_hash, updated_at
              FROM skill_sources
              WHERE skill_id = $skillId`
         )
@@ -41,6 +44,7 @@ export function readSkillSource(skillId: string, db: Database = getDb()) {
     return row
         ? {
               createdByAgentId: row.created_by_agent_id,
+              installedHash: row.installed_hash,
               source: row.source,
               updatedAt: row.updated_at,
           }
@@ -54,11 +58,34 @@ export function resolveSkillSource(skillId: string, db: Database = getDb()): Ski
 export function recordSkillSource(input: {
     createdByAgentId?: string | null;
     db?: Database;
+    installedHash?: string | null;
     skillId: string;
     source: SkillSource;
 }) {
     const db = input.db ?? getDb();
     const now = new Date().toISOString();
+    if ('installedHash' in input) {
+        db.prepare(
+            `INSERT INTO skill_sources
+             (skill_id, source, created_by_agent_id, installed_hash, created_at, updated_at)
+             VALUES ($skillId, $source, $createdByAgentId, $installedHash, $now, $now)
+             ON CONFLICT(skill_id) DO UPDATE SET
+               source = excluded.source,
+               created_by_agent_id = excluded.created_by_agent_id,
+               installed_hash = excluded.installed_hash,
+               updated_at = excluded.updated_at`
+        ).run(
+            namedParams({
+                createdByAgentId: input.createdByAgentId ?? null,
+                installedHash: input.installedHash ?? null,
+                now,
+                skillId: input.skillId,
+                source: input.source,
+            })
+        );
+        return;
+    }
+
     db.prepare(
         `INSERT INTO skill_sources
          (skill_id, source, created_by_agent_id, created_at, updated_at)
@@ -79,6 +106,7 @@ export function recordSkillSource(input: {
 
 export function tryRecordSkillSource(input: {
     createdByAgentId?: string | null;
+    installedHash?: string | null;
     skillId: string;
     source: SkillSource;
 }) {
@@ -148,7 +176,6 @@ export async function patchSkillMarkdown(input: {
     skillId: string;
     skillsDir: string;
 }) {
-    assertWritableSkill(input.skillId);
     const filePath = skillMarkdownPath(input);
     const previous = await fs.readFile(filePath, 'utf8').catch((error) => {
         if (isNotFoundError(error)) {
@@ -157,6 +184,7 @@ export async function patchSkillMarkdown(input: {
         throw error;
     });
     if (previous === null) {
+        throwMissingSkillError(input.skillId);
         throw new Error(`Skill not found: ${input.skillId}`);
     }
     const beforeHash = sha256(previous);
@@ -180,7 +208,10 @@ export async function writeSkillSupportFile(input: {
     skillId: string;
     skillsDir: string;
 }): Promise<SkillFileChange> {
-    assertWritableSkill(input.skillId);
+    if (!(await skillExists(path.join(input.skillsDir, input.skillId)))) {
+        throwMissingSkillError(input.skillId);
+        throw new Error(`Skill not found: ${input.skillId}`);
+    }
     const relativePath = normalizeSupportFilePath(input.filePath);
     const absolutePath = resolveSkillChildPath({
         relativePath,
@@ -233,10 +264,9 @@ export function sha256(content: string) {
     return crypto.createHash('sha256').update(content).digest('hex');
 }
 
-function assertWritableSkill(skillId: string) {
-    const source = resolveSkillSource(skillId);
-    if (source !== writableSource) {
-        throw new Error(`Skill "${skillId}" is read-only because its source is ${source}.`);
+function throwMissingSkillError(skillId: string) {
+    if (isPluginSkillId(skillId)) {
+        throw new Error(pluginSkillEditError);
     }
 }
 

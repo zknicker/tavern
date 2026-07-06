@@ -89,6 +89,7 @@ CREATE TABLE IF NOT EXISTS skill_sources (
   source              TEXT NOT NULL CHECK (source IN ('seeded', 'hub', 'agent', 'external')),
   state               TEXT NOT NULL DEFAULT 'active' CHECK (state IN ('active', 'stale', 'archived')),
   created_by_agent_id TEXT,
+  installed_hash      TEXT,
   created_at          TEXT NOT NULL,
   updated_at          TEXT NOT NULL,
   archived_at         TEXT
@@ -578,6 +579,11 @@ export function ensureRuntimeSchema(db: Database): void {
     });
     ensureColumn(db, {
         column: 'archived_at',
+        definition: 'TEXT',
+        table: 'skill_sources',
+    });
+    ensureColumn(db, {
+        column: 'installed_hash',
         definition: 'TEXT',
         table: 'skill_sources',
     });

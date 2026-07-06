@@ -22,9 +22,13 @@ export const agentRuntimeSkillHubItemSchema = z.object({
 });
 
 export const agentRuntimeSkillHubInstalledEntrySchema = z.object({
+    /** Local skill content differs from what the last install wrote. */
+    edited: z.boolean().default(false),
     name: z.string().trim().min(1).nullable(),
     scanVerdict: z.string().trim().min(1).nullable(),
     trustLevel: z.string().trim().min(1).nullable(),
+    /** The bundled hub content differs from what the last install wrote. */
+    updateAvailable: z.boolean().default(false),
 });
 
 const skillHubTapRepoPatternForListing = /^[\w.-]+\/[\w.-]+$/u;
@@ -72,6 +76,8 @@ export const agentRuntimeSkillHubScanSchema = z.object({
 });
 
 export const agentRuntimeSkillHubInstallInputSchema = z.object({
+    /** Overwrite local edits. Without it, an edited skill returns a conflict. */
+    force: z.boolean().optional(),
     identifier: z.string().trim().min(1).max(400),
 });
 
@@ -80,9 +86,16 @@ export const agentRuntimeSkillHubUninstallInputSchema = z.object({
 });
 
 export const agentRuntimeSkillHubActionResultSchema = z.object({
+    /** Install refused because the local skill was edited; retry with force. */
+    conflict: z.boolean().optional(),
     exitCode: z.number().int().nullable(),
     log: z.array(z.string()),
     ok: z.boolean(),
+});
+
+export const agentRuntimeSkillResetResultSchema = z.object({
+    hash: z.string().trim().min(1),
+    skillId: z.string().trim().min(1),
 });
 
 const skillHubTapRepoPattern = /^[\w.-]+\/[\w.-]+$/u;
@@ -108,6 +121,7 @@ export type AgentRuntimeSkillHubInstalledEntry = z.infer<
 >;
 export type AgentRuntimeSkillHubItem = z.infer<typeof agentRuntimeSkillHubItemSchema>;
 export type AgentRuntimeSkillHubPreview = z.infer<typeof agentRuntimeSkillHubPreviewSchema>;
+export type AgentRuntimeSkillResetResult = z.infer<typeof agentRuntimeSkillResetResultSchema>;
 export type AgentRuntimeSkillHubScan = z.infer<typeof agentRuntimeSkillHubScanSchema>;
 export type AgentRuntimeSkillHubScanFinding = z.infer<typeof agentRuntimeSkillHubScanFindingSchema>;
 export type AgentRuntimeSkillHubTap = z.infer<typeof agentRuntimeSkillHubTapSchema>;

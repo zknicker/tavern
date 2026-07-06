@@ -5,7 +5,6 @@ import {
     agentEngineSkillsDir,
     getRuntimeSkill,
     listRuntimeSkills,
-    tavernAgentSkillId,
 } from '../agent-engine/skill-library.ts';
 import { getStoredAgent } from '../tavern/agents-store.ts';
 import { archiveAgentSkill } from './lifecycle.ts';
@@ -125,7 +124,7 @@ export function createTavernSkillTools(input: {
         }),
         skill_patch: tool({
             description:
-                'Replace SKILL.md for an agent-authored skill using the hash from skill_view. Prefer this over creating a new skill. Changes take effect next session.',
+                'Replace SKILL.md for a disk skill using the hash from skill_view. Prefer this over creating a new skill. Changes take effect next session.',
             inputSchema: patchInputSchema,
             execute: async (rawInput) => {
                 const parsed = patchInputSchema.parse(rawInput);
@@ -140,7 +139,7 @@ export function createTavernSkillTools(input: {
         }),
         skill_write_file: tool({
             description:
-                'Write a references/, templates/, scripts/, or assets/ file for an agent-authored skill using the current file hash, or null when creating it. Changes take effect next session.',
+                'Write a references/, templates/, scripts/, or assets/ file for a disk skill using the current file hash, or null when creating it. Changes take effect next session.',
             inputSchema: writeFileInputSchema,
             execute: async (rawInput) => {
                 const parsed = writeFileInputSchema.parse(rawInput);
@@ -229,7 +228,7 @@ const archiveInputSchema = z
     .strict();
 
 function toToolSummary(input: { agentId: string; description: string; id: string; name: string }) {
-    const source = input.id === tavernAgentSkillId ? 'seeded' : resolveSkillSource(input.id);
+    const source = resolveSkillSource(input.id);
     const enabledForYou =
         getStoredAgent(input.agentId)?.enabledSkillIds.includes(input.id) ?? false;
     return {
@@ -238,6 +237,6 @@ function toToolSummary(input: { agentId: string; description: string; id: string
         id: input.id,
         name: input.name,
         source,
-        writable: source === 'agent',
+        writable: true,
     };
 }

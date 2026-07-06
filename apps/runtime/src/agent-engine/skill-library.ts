@@ -17,7 +17,7 @@ import {
     readPluginSkillBundlesForAgent,
     readPluginSkillContent,
 } from '../plugins/agent-capabilities.ts';
-import { tryRecordSkillSource } from '../skills/store.ts';
+import { sha256, tryRecordSkillSource } from '../skills/store.ts';
 
 export const agentEngineSkillsDir = path.join(AGENT_HOME, 'skills');
 export const tavernAgentSkillId = 'tavern-agent';
@@ -70,6 +70,31 @@ export async function seedTavernAgentSkill(options: { skillsDir?: string } = {})
     await fs.mkdir(path.dirname(skillPath), { recursive: true });
     await fs.writeFile(skillPath, defaultTavernSkill, { mode: 0o600 });
     tryRecordSkillSource({ skillId: tavernAgentSkillId, source: 'seeded' });
+}
+
+export async function resetTavernAgentSkill(options: { skillsDir?: string } = {}) {
+    const skillPath = path.join(
+        options.skillsDir ?? agentEngineSkillsDir,
+        tavernAgentSkillId,
+        'SKILL.md'
+    );
+    await fs.mkdir(path.dirname(skillPath), { recursive: true });
+    await fs.writeFile(skillPath, defaultTavernSkill, { mode: 0o600 });
+    tryRecordSkillSource({ skillId: tavernAgentSkillId, source: 'seeded' });
+    return {
+        hash: sha256(defaultTavernSkill),
+        skillId: tavernAgentSkillId,
+    };
+}
+
+export async function resetRuntimeSkillToDefault(
+    skillId: string,
+    options: { skillsDir?: string } = {}
+) {
+    if (skillId !== tavernAgentSkillId) {
+        throw new Error('Only the seeded skill has a Tavern default.');
+    }
+    return await resetTavernAgentSkill(options);
 }
 
 export async function listRuntimeSkills(options: RuntimeSkillOptions = {}) {

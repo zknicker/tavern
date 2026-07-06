@@ -11,7 +11,12 @@ import {
     agentRuntimeSkillHubPreviewSchema,
     agentRuntimeSkillHubScanSchema,
 } from '@tavern/api';
-import { deleteSkillSource, tryRecordSkillSource } from '../skills/store.ts';
+import {
+    deleteSkillSource,
+    readSkillSource,
+    sha256,
+    tryRecordSkillSource,
+} from '../skills/store.ts';
 import {
     agentEngineSkillsDir,
     listRuntimeSkills,
@@ -47,21 +52,39 @@ export async function getSkillHubAvailable(
     options: { skillsDir?: string } = {}
 ): Promise<AgentRuntimeSkillHubAvailable> {
     const installedSkills = await listRuntimeSkills({ ...options, includePluginSkills: false });
-    const installedNames = new Set(installedSkills.map((skill) => skill.name));
+    const installedByName = new Map(installedSkills.map((skill) => [skill.name, skill]));
 
     return agentRuntimeSkillHubAvailableSchema.parse({
         builtin: builtInHubSkills.map(({ skillMd: _skillMd, ...skill }) => skill),
         installed: Object.fromEntries(
-            builtInHubSkills
-                .filter((skill) => installedNames.has(skill.name))
-                .map((skill) => [
-                    skill.identifier,
-                    {
-                        name: skill.name,
-                        scanVerdict: 'allow',
-                        trustLevel: skill.trustLevel,
-                    },
-                ])
+            await Promise.all(
+                builtInHubSkills
+                    .filter((skill) => installedByName.has(skill.name))
+                    .map(async (skill) => {
+                        const installed = installedByName.get(skill.name);
+                        const source = tryReadSkillSource(skill.name);
+                        const installedHash = source?.installedHash ?? null;
+                        const currentHash =
+                            installed?.filePath && installedHash
+                                ? await hashFileOrNull(installed.filePath)
+                                : null;
+                        return [
+                            skill.identifier,
+                            {
+                                edited:
+                                    installedHash !== null &&
+                                    currentHash !== null &&
+                                    currentHash !== installedHash,
+                                name: skill.name,
+                                scanVerdict: 'allow',
+                                trustLevel: skill.trustLevel,
+                                updateAvailable:
+                                    installedHash !== null &&
+                                    sha256(skill.skillMd) !== installedHash,
+                            },
+                        ];
+                    })
+            )
         ),
         taps: [],
     });
@@ -103,7 +126,7 @@ export function scanSkillHubSkill(identifier: string): AgentRuntimeSkillHubScan 
 
 export async function installSkillHubSkill(
     identifier: string,
-    options: { skillsDir?: string } = {}
+    options: { force?: boolean; skillsDir?: string } = {}
 ): Promise<AgentRuntimeSkillHubActionResult> {
     const skill = builtInHubSkills.find((candidate) => candidate.identifier === identifier);
     if (!skill) {
@@ -111,9 +134,34 @@ export async function installSkillHubSkill(
     }
 
     const skillPath = path.join(options.skillsDir ?? agentEngineSkillsDir, skill.name, 'SKILL.md');
+    const previous = await fs.readFile(skillPath, 'utf8').catch((error) => {
+        if (isNotFoundError(error)) {
+            return null;
+        }
+        throw error;
+    });
+    const installedHash = tryReadSkillSource(skill.name)?.installedHash ?? null;
+    if (
+        previous !== null &&
+        installedHash &&
+        sha256(previous) !== installedHash &&
+        !options.force
+    ) {
+        return actionResult(
+            false,
+            [`${skill.name} was edited since install. Reinstall with force to replace it.`],
+            null,
+            true
+        );
+    }
+
     await fs.mkdir(path.dirname(skillPath), { recursive: true });
     await fs.writeFile(skillPath, skill.skillMd, { mode: 0o600 });
-    tryRecordSkillSource({ skillId: skill.name, source: 'hub' });
+    tryRecordSkillSource({
+        installedHash: sha256(skill.skillMd),
+        skillId: skill.name,
+        source: 'hub',
+    });
 
     return actionResult(true, [`Installed ${skill.name}.`], 0);
 }
@@ -144,9 +192,10 @@ export async function uninstallSkillHubSkill(
 function actionResult(
     ok: boolean,
     log: string[],
-    exitCode: number | null
+    exitCode: number | null,
+    conflict?: boolean
 ): AgentRuntimeSkillHubActionResult {
-    return agentRuntimeSkillHubActionResultSchema.parse({ exitCode, log, ok });
+    return agentRuntimeSkillHubActionResultSchema.parse({ conflict, exitCode, log, ok });
 }
 
 function tryDeleteSkillSource(skillId: string) {
@@ -158,4 +207,31 @@ function tryDeleteSkillSource(skillId: string) {
         }
         throw error;
     }
+}
+
+function hashFileOrNull(filePath: string) {
+    return fs
+        .readFile(filePath, 'utf8')
+        .then((content) => sha256(content))
+        .catch((error) => {
+            if (isNotFoundError(error)) {
+                return null;
+            }
+            throw error;
+        });
+}
+
+function tryReadSkillSource(skillId: string) {
+    try {
+        return readSkillSource(skillId);
+    } catch (error) {
+        if (error instanceof Error && error.message.includes('Database not initialized')) {
+            return null;
+        }
+        throw error;
+    }
+}
+
+function isNotFoundError(error: unknown) {
+    return error instanceof Error && 'code' in error && error.code === 'ENOENT';
 }

@@ -4,6 +4,7 @@ import { listAgentRuntimePlugins } from '../agent-runtime/plugins.ts';
 import {
     getAgentRuntimeSkill,
     listAgentRuntimeSkills,
+    resetAgentRuntimeSkill,
     setAgentRuntimeSkillEnabled,
 } from '../agent-runtime/skills.ts';
 import { listAgentRuntimeTools, setAgentRuntimeToolEnabled } from '../agent-runtime/tools.ts';
@@ -16,6 +17,7 @@ import {
     setToolEnabledInputSchema,
     skillIdSchema,
     skillListSchema,
+    skillResetInputSchema,
     skillSummarySchema,
     type ToolSummary,
 } from './contracts.ts';
@@ -88,6 +90,21 @@ export async function setSkillEnabled(input: unknown): Promise<SkillList> {
     emitSkillInvalidationCascade();
 
     return await listSkills();
+}
+
+export async function resetSkill(input: unknown) {
+    const parsed = skillResetInputSchema.parse(input);
+    const result = await resetAgentRuntimeSkill(parsed.skillId);
+    if (!result) {
+        throw new Error('Runtime skill reset is unavailable.');
+    }
+
+    await refreshRuntimeSkillInventory().catch(async () => {
+        await enqueueRuntimeSkillInventoryRefresh().catch(() => undefined);
+    });
+    emitSkillInvalidationCascade();
+
+    return result;
 }
 
 export async function setToolEnabled(input: unknown): Promise<SkillList> {

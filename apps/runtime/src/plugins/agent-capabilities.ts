@@ -98,6 +98,12 @@ export function readPluginSkillContent(input: {
         : null;
 }
 
+export function isPluginSkillId(skillId: string) {
+    return tavernPluginManifests.some((definition) =>
+        definition.skills.some((skill) => skill.name === skillId)
+    );
+}
+
 export function listPluginToolGroups(): AgentRuntimeTool[] {
     return tavernPluginManifests.flatMap((definition) => {
         const plugin = getPlugin(definition.id);

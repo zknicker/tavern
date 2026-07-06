@@ -126,7 +126,7 @@ describe('skill review worker', () => {
         });
     });
 
-    test('records write-guard errors from seeded skills and still completes', async () => {
+    test('patches seeded disk skills when review signals justify it', async () => {
         await seedTavernAgentSkill({ skillsDir });
         seedReviewAgentChat({ enabledSkillIds: [tavernAgentSkillId], workspace });
         insertReviewWindowMessages();
@@ -157,7 +157,7 @@ describe('skill review worker', () => {
             });
             return modelResult({
                 calls,
-                text: 'Seeded skill is read-only; no durable change.',
+                text: 'Patched seeded skill.',
             });
         });
 
@@ -169,17 +169,19 @@ describe('skill review worker', () => {
 
         await expect(
             fs.readFile(path.join(skillsDir, tavernAgentSkillId, 'SKILL.md'), 'utf8')
-        ).resolves.not.toContain('Patch seeded skill');
+        ).resolves.toContain('Patch seeded skill');
         const [job] = readSkillReviewJobs();
         expect(JSON.parse(job?.metadata_json ?? '{}')).toMatchObject({
-            actions: [],
+            actions: [
+                {
+                    path: 'SKILL.md',
+                    skillId: tavernAgentSkillId,
+                    tool: 'skill_patch',
+                },
+            ],
             report: {
-                toolErrors: [
-                    {
-                        error: expect.stringContaining('read-only'),
-                        tool: 'skill_patch',
-                    },
-                ],
+                text: 'Patched seeded skill.',
+                toolErrors: [],
             },
         });
     });

@@ -196,11 +196,11 @@ async function buildCuratorPromptData(input: { db?: Database; skillsDir: string 
         skillsDir: input.skillsDir,
     });
     const candidates: CuratorCandidate[] = [];
-    const readOnlySkillIds: string[] = [];
+    const managedSkillIds: string[] = [];
     for (const skill of installed) {
-        const source = skill.id === 'tavern-agent' ? 'seeded' : resolveSkillSource(skill.id, db);
+        const source = resolveSkillSource(skill.id, db);
         if (source !== 'agent') {
-            readOnlySkillIds.push(skill.id);
+            managedSkillIds.push(skill.id);
             continue;
         }
         const row = readSkillLifecycleRow(skill.id, db);
@@ -221,7 +221,7 @@ async function buildCuratorPromptData(input: { db?: Database; skillsDir: string 
     return {
         activeAgentSkillCount: candidates.filter((skill) => skill.state === 'active').length,
         candidates: candidates.sort((left, right) => left.id.localeCompare(right.id)),
-        readOnlySkillIds: readOnlySkillIds.sort(),
+        managedSkillIds: managedSkillIds.sort(),
     };
 }
 

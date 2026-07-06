@@ -133,29 +133,58 @@ describe('skill agent tools', () => {
         }
     });
 
-    test('rejects writes to seeded, hub, and external skills', async () => {
+    test('accepts writes to seeded, hub, and external disk skills', async () => {
         const tools = createTavernSkillTools({ agentId: 'agt_author', skillsDir });
         await seedTavernAgentSkill({ skillsDir });
         await installSkillHubSkill('builtin:tavern-workflow', { skillsDir });
         await writeSkill('operator-skill', '# Operator Skill\n');
 
         for (const skillId of [tavernAgentSkillId, 'tavern-workflow', 'operator-skill']) {
+            const viewed = await runTool<Record<string, unknown>, { hash: string }>(
+                tools,
+                'skill_view',
+                { skillId }
+            );
             await expect(
                 runTool(tools, 'skill_patch', {
-                    content: '# Nope\n',
-                    expectedHash: 'hash',
+                    content: `# ${skillId}\n\nUpdated.`,
+                    expectedHash: viewed.hash,
                     skillId,
                 })
-            ).rejects.toThrow('read-only');
+            ).resolves.toMatchObject({
+                change: { path: 'SKILL.md', skillId },
+            });
             await expect(
                 runTool(tools, 'skill_write_file', {
-                    content: 'nope',
+                    content: 'notes',
                     expectedHash: null,
-                    filePath: 'references/nope.md',
+                    filePath: 'references/notes.md',
                     skillId,
                 })
-            ).rejects.toThrow('read-only');
+            ).resolves.toMatchObject({
+                change: { path: 'references/notes.md', skillId },
+            });
         }
+    });
+
+    test('rejects plugin skill writes with the plugin-specific message', async () => {
+        const tools = createTavernSkillTools({ agentId: 'agt_author', skillsDir });
+
+        await expect(
+            runTool(tools, 'skill_patch', {
+                content: '# MerchBase\n\nUpdated.',
+                expectedHash: 'hash',
+                skillId: 'merchbase',
+            })
+        ).rejects.toThrow('Plugin skills are provided by their plugin and cannot be edited.');
+        await expect(
+            runTool(tools, 'skill_write_file', {
+                content: 'notes',
+                expectedHash: null,
+                filePath: 'references/notes.md',
+                skillId: 'merchbase',
+            })
+        ).rejects.toThrow('Plugin skills are provided by their plugin and cannot be edited.');
     });
 
     test('derives ids from names and rejects collisions', async () => {
@@ -230,7 +259,7 @@ describe('skill agent tools', () => {
                     enabledForYou: false,
                     id: 'operator-skill',
                     source: 'external',
-                    writable: false,
+                    writable: true,
                 }),
             ]),
         });
@@ -241,7 +270,7 @@ describe('skill agent tools', () => {
                 expect.objectContaining({
                     enabledForYou: true,
                     id: 'operator-skill',
-                    writable: false,
+                    writable: true,
                 }),
                 expect.objectContaining({
                     enabledForYou: true,

@@ -102,6 +102,7 @@ import {
     type AgentRuntimeSkillHubTap,
     type AgentRuntimeSkillHubTapList,
     type AgentRuntimeSkillHubUninstallInput,
+    type AgentRuntimeSkillResetResult,
     type AgentRuntimeSkillSummary,
     type AgentRuntimeStartModelProviderOAuth,
     type AgentRuntimeSteerTurn,
@@ -247,6 +248,7 @@ import {
     agentRuntimeSkillHubTapSchema,
     agentRuntimeSkillHubUninstallInputSchema,
     agentRuntimeSkillListSchema,
+    agentRuntimeSkillResetResultSchema,
     agentRuntimeSkillSchema,
     agentRuntimeStartModelProviderOAuthSchema,
     agentRuntimeSteerTurnResultSchema,
@@ -465,6 +467,7 @@ export interface TavernAgentRuntimeClient {
     refreshCapability(id: AgentRuntimeCapabilityHealthId): Promise<AgentRuntimeCapabilityHealth>;
     removeMcpServer(name: string): Promise<{ ok: boolean }>;
     removeSkillHubTap(repo: string): Promise<AgentRuntimeSkillHubTapList>;
+    resetSkill(skillId: string): Promise<AgentRuntimeSkillResetResult>;
     restartForUpdate(): Promise<AgentRuntimeUpdate>;
     resyncSession(sessionKey: string): Promise<AgentRuntimeSessionResync>;
     runCommand(input: AgentRuntimeRunCommand): Promise<AgentRuntimeRunCommandResult>;
@@ -2311,6 +2314,12 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         const payload = agentRuntimeSkillHubUninstallInputSchema.parse(input);
         return agentRuntimeSkillHubActionResultSchema.parse(
             await this.#sendSkillHubJson('POST', agentRuntimeRoutes.skillHubUninstall, payload)
+        );
+    }
+
+    async resetSkill(skillId: string) {
+        return agentRuntimeSkillResetResultSchema.parse(
+            await this.#sendSkillHubJson('POST', agentRuntimeRoutes.skillReset(skillId), undefined)
         );
     }
 

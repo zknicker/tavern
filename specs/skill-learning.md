@@ -13,10 +13,18 @@ specified in [Memory Lifecycle](memory-lifecycle.md).
   stores; per-agent access is enablement state, not file copies.
 - A skill is a package: `SKILL.md` plus optional `references/`, `templates/`,
   `scripts/`, and `assets/` files.
-- Mutability by source:
-  - Runtime-seeded skills and hub-installed skills are read-only to agents and
-    workers.
-  - Agent-created skills are writable by agents and workers.
+- Every skill on disk is writable by agents and workers, whatever its source
+  (seeded, hub-installed, agent-created, or operator-placed). Plugin-provided
+  skills are not files — they are served live from the plugin and cannot be
+  edited.
+- Nothing rewrites skill files in the background. Content from Tavern arrives
+  only at explicit moments:
+  - Hub install records the installed content hash. Reinstalling an unedited
+    skill replaces it cleanly; reinstalling an edited skill is a conflict the
+    user resolves explicitly (keep local or take the hub version) — never a
+    silent overwrite. The Skills page shows when a newer hub version exists.
+  - The seeded skill is created once and never refreshed. Its page offers a
+    reset to the current release's default.
 - When an agent or worker creates a skill, it is auto-enabled for the authoring
   agent only. Other agents gain it through normal skill enablement.
 
@@ -26,7 +34,8 @@ specified in [Memory Lifecycle](memory-lifecycle.md).
   `skill_patch`, and `skill_write_file`.
 - Writes are hash-validated against the last read, matching the Memory write
   collision contract.
-- Writes to read-only skills fail with a clear error.
+- Writes to plugin-provided skills fail with a clear error; there is no file
+  to edit.
 - Skill changes take effect at the next session. Sessions do not hot-swap
   skills mid-turn.
 
@@ -71,7 +80,8 @@ specified in [Memory Lifecycle](memory-lifecycle.md).
   the skill stays standalone; instructions never point at files left behind.
 - Archive is the maximum destructive action. Archived skills move to the
   library archive and are recoverable. The curator never deletes.
-- Read-only skills are never modified or archived by the curator.
+- The curator consolidates and archives agent-created skills only; seeded,
+  hub-installed, and operator-placed skills are never archived or absorbed.
 - Runtime tracks per-skill usage: injections into sessions and explicit views.
   Unused skills transition active to stale to archived on inactivity
   thresholds; use reactivates a stale skill.

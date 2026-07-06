@@ -3,7 +3,7 @@ import {
     agentRuntimeSkillHubTapSchema,
     agentRuntimeSkillRequirementsSchema,
 } from '@tavern/api';
-import { z } from 'zod';
+import * as z from 'zod';
 
 export const skillIdSchema = z.string().trim().min(1).max(200);
 
@@ -11,7 +11,13 @@ export const skillHubIdentifierInputSchema = z.object({
     identifier: z.string().trim().min(1).max(400),
 });
 
-export const skillHubInstallInputSchema = skillHubIdentifierInputSchema;
+export const skillHubInstallInputSchema = skillHubIdentifierInputSchema.extend({
+    force: z.boolean().optional(),
+});
+
+export const skillResetInputSchema = z.object({
+    skillId: skillIdSchema,
+});
 
 export const skillHubUninstallInputSchema = z.object({
     name: z.string().trim().min(1).max(200),

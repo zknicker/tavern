@@ -9,8 +9,9 @@ session-specific detail. Many narrow one-session skills is a failure of
 the library, not a feature.
 
 Hard rules:
-1. Never touch read-only skills (seeded or installed). The candidate list
-   only contains agent-created skills; read-only ids appear for context.
+1. Curate only agent-created skills. Seeded, hub-installed, and
+   operator-placed skill ids appear for context, but they are managed outside
+   this curation pass.
 2. Archive is your only destructive action, and it is recoverable. Use
    skill_archive; never try to delete content any other way.
 3. Do not treat low use counts alone as evidence a skill is worthless —

@@ -13,6 +13,7 @@ import { skillHubUninstallProcedure } from './hub-uninstall.ts';
 import { listSkillsProcedure } from './list.ts';
 import { listRuntimeSkillsProcedure } from './list-runtime.ts';
 import { onSkillUpdate } from './on-update.ts';
+import { resetSkillProcedure } from './reset.ts';
 import { setSkillEnabledProcedure } from './set-enabled.ts';
 import { setToolEnabledProcedure } from './set-tool-enabled.ts';
 import {
@@ -27,6 +28,7 @@ export const skillRouter = createRouter({
     get: getSkillProcedure,
     runtimeList: listRuntimeSkillsProcedure,
     onUpdate: onSkillUpdate,
+    reset: resetSkillProcedure,
     setEnabled: setSkillEnabledProcedure,
     setToolEnabled: setToolEnabledProcedure,
     hubAvailable: skillHubAvailableProcedure,

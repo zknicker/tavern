@@ -4,6 +4,7 @@ import {
     agentRuntimeSkillHubTapListSchema,
     agentRuntimeSkillHubUninstallInputSchema,
 } from '@tavern/api';
+import { publishSkillDeleted, publishSkillUpdated } from '../skills/events.ts';
 import { badRequest, json } from '../tavern/http';
 import {
     getSkillHubAvailable,
@@ -50,15 +51,25 @@ export async function handleSkillHubRequest(request: Request): Promise<Response 
 
     if (request.method === 'POST' && segments[2] === 'install') {
         const payload = agentRuntimeSkillHubInstallInputSchema.parse(await request.json());
-        const result = await installSkillHubSkill(payload.identifier);
+        const result = await installSkillHubSkill(payload.identifier, { force: payload.force });
+        if (result.ok) {
+            publishSkillUpdated(skillIdFromIdentifier(payload.identifier));
+        }
         return json(result);
     }
 
     if (request.method === 'POST' && segments[2] === 'uninstall') {
         const payload = agentRuntimeSkillHubUninstallInputSchema.parse(await request.json());
         const result = await uninstallSkillHubSkill(payload.name);
+        if (result.ok) {
+            publishSkillDeleted(payload.name);
+        }
         return json(result);
     }
 
     return null;
+}
+
+function skillIdFromIdentifier(identifier: string) {
+    return identifier.startsWith('builtin:') ? identifier.slice('builtin:'.length) : identifier;
 }

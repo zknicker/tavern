@@ -80,3 +80,25 @@ export async function setAgentRuntimeSkillEnabled(
           )
         : await client.updateSkillEnabled(skillId, input);
 }
+
+export async function resetAgentRuntimeSkill(
+    skillId: string,
+    client: TavernAgentRuntimeClient | null = createConfiguredAgentRuntimeClient(),
+    runtimeId?: string | null
+) {
+    if (!client) {
+        return null;
+    }
+
+    const capabilityRuntimeId = runtimeId ?? getCurrentConfiguredAgentRuntimeConnection()?.id;
+    return capabilityRuntimeId
+        ? await withCapabilityStatus(
+              {
+                  capability: 'skills',
+                  method: 'skills.update',
+                  runtimeId: capabilityRuntimeId,
+              },
+              async () => await client.resetSkill(skillId)
+          )
+        : await client.resetSkill(skillId);
+}
