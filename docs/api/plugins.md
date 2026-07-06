@@ -33,6 +33,12 @@ that agent. Disabled, unavailable, or ungranted Plugin abilities are omitted fro
 the agent-visible tool and guidance inventory. Runtime routes still reject
 unavailable Plugin actions defensively.
 
+Enablement writes are validated in order. Settings saves reject enabling a
+Plugin whose required connection configuration is missing: MerchBase needs an
+API key and Google needs a connected account. Disconnecting Google OAuth also
+disables the Google Plugin. Grant writes reject enabling an agent Plugin grant
+while the Plugin is globally disabled; disabling a grant is always allowed.
+
 ## Manifest
 
 A Plugin manifest declares inventory and ownership metadata:

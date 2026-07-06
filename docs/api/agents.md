@@ -46,6 +46,11 @@ grant policy.
 * Skill assignments and Plugin grants are inspectable before a run starts.
   Harness tools are executor facts governed by sandbox and approval policy, not
   per-agent grants.
+* Assignment requires global availability. Skill saves reject newly assigned
+  skills that are globally disabled, missing setup, or Plugin-owned; Plugin
+  grant writes reject enabling a grant while the Plugin is globally disabled.
+  Removing assignments and grants is always allowed, and existing assignments
+  survive a later global disable.
 * Instruction settings use markdown source files. Runtime composes the system
   prompt from Tavern-managed instruction text plus workspace-editable
   `SOUL.md` and `NOTES.md`; it does not materialize a generated `AGENTS.md`

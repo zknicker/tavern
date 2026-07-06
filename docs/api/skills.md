@@ -23,7 +23,8 @@ Plugin or runtime experiment.
 * Installing a skill imports or copies it into the installed skill library; it
   does not assign it to an agent.
 * Skill assignment is per-agent policy exposed through the Agents API as
-  `enabledSkillIds`.
+  `enabledSkillIds`. Newly assigned skills must be globally enabled and free of
+  setup blockers; saves that add unavailable skills are rejected.
 * Setup requirements and source state are visible.
 * A skill can be visible while Runtime reports setup blockers.
 * Disk-backed skills are writable regardless of source. Plugin-owned skills are

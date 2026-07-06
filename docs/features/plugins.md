@@ -46,6 +46,14 @@ tools, and Widget authoring guidance into an agent turn when the Plugin
 is enabled, the Service is enabled, required connection scopes are granted, and
 the Plugin is granted to that agent.
 
+Enablement is ordered: a Plugin cannot be enabled until its required connection
+configuration exists (a MerchBase API key, a connected Google account), and an
+agent grant cannot be enabled until the Plugin is globally enabled. Runtime
+rejects out-of-order enablement writes, disconnecting Google disables the
+Plugin, and the app only offers grant toggles for Plugins that are enabled and
+healthy. Existing grants survive a global disable; they resume when the Plugin
+is enabled again.
+
 The Plugin manifest declares inventory and ownership metadata: Plugin id, name,
 version, settings, secrets, Plugin-level health capability ids, Services, and
 Widgets. Each Service declares its own health capability ids,
