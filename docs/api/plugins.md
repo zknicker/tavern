@@ -131,10 +131,14 @@ token, expiry, account email, and granted scopes. The Calendar Service requires
 
 Tavern owns the Google OAuth client. Runtime reads the Tavern-owned desktop
 client id and installed-app client secret from `TAVERN_GOOGLE_OAUTH_CLIENT_ID`
-and `TAVERN_GOOGLE_OAUTH_CLIENT_SECRET`. The settings dialog does not ask users
-for Google Cloud credentials. Google Desktop clients may include an installed-app
-client secret; Google does not treat that value as a confidential secret for
-installed apps. The current client lives in the Tavern Google Cloud project
+and `TAVERN_GOOGLE_OAUTH_CLIENT_SECRET` when set, then falls back to the
+packaged Runtime asset `runtime-assets/google/oauth-client.json`. Release
+packaging generates that asset from the release environment and ships it inside
+the Runtime tarball; the values are not committed to the Tavern repo or written
+to the Homebrew tap formula. The settings dialog does not ask users for Google
+Cloud credentials. Google Desktop clients may include an installed-app client
+secret; Google does not treat that value as a confidential secret for installed
+apps. The current client lives in the Tavern Google Cloud project
 `tavern-499717` as the `Tavern` Desktop OAuth client.
 
 Settings starts a PKCE loopback OAuth flow from Runtime. Runtime opens a local

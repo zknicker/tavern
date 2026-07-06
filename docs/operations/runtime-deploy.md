@@ -236,4 +236,10 @@ bin/tavern-runtime
 bin/tavern
 share/tavern/node_modules/@tavern/sdk/
 share/tavern/runtime-assets/
+share/tavern/runtime-assets/google/oauth-client.json
 ```
+
+`runtime-assets/google/oauth-client.json` is generated during Runtime artifact
+builds from `TAVERN_GOOGLE_OAUTH_CLIENT_ID` and
+`TAVERN_GOOGLE_OAUTH_CLIENT_SECRET`. The Homebrew tap formula installs
+`runtime-assets/` from the tarball but does not contain the OAuth values.

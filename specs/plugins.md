@@ -80,8 +80,10 @@ stores tokens in `runtime_plugin_secrets`, refreshes tokens before tool calls, a
 scopes.
 
 Tavern-owned OAuth clients are infrastructure config. For Google, Runtime reads the desktop
-client id and installed-app client secret from Tavern development or release packaging
-environment; users connect their account in Settings but do not configure a Google Cloud OAuth app.
+client id and installed-app client secret from Tavern development environment variables or the
+generated `runtime-assets/google/oauth-client.json` file shipped inside the Runtime release
+tarball. The values stay out of source control and the Homebrew tap. Users connect their account
+in Settings but do not configure a Google Cloud OAuth app.
 
 When the user enables a Service whose scopes are not already granted, Settings reconnects the
 Plugin with the expanded scope set. Agents see only the resulting tools after the operator completes

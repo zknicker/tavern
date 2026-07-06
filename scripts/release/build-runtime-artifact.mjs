@@ -5,10 +5,15 @@ import { createHash } from 'node:crypto';
 import { createReadStream } from 'node:fs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import { fail, readJson, repoRoot } from './release-utils.mjs';
+import { fail, loadEnvFile, readJson, repoRoot } from './release-utils.mjs';
 
 const artifactRoot = path.join(repoRoot, 'apps', 'website', 'electron-dist');
 const runtimeArtifactDir = path.join(artifactRoot, 'runtime');
+const googleOAuthClientIdEnv = 'TAVERN_GOOGLE_OAUTH_CLIENT_ID';
+const googleOAuthClientSecretEnv = 'TAVERN_GOOGLE_OAUTH_CLIENT_SECRET';
+
+loadEnvFile();
+
 const main = async () => {
     const version = await readReleaseVersion();
     const targetTriple = readTargetTriple();
@@ -76,7 +81,26 @@ async function stageRuntimeAssets(stageRoot) {
     await fs.cp(path.join(repoRoot, 'apps', 'runtime', 'assets'), runtimeAssetsRoot, {
         recursive: true,
     });
+    await stageGoogleOAuthAssets(runtimeAssetsRoot);
     await stageHarnessBridgeAssets(runtimeAssetsRoot);
+}
+
+async function stageGoogleOAuthAssets(runtimeAssetsRoot) {
+    const clientId = process.env[googleOAuthClientIdEnv]?.trim();
+    const clientSecret = process.env[googleOAuthClientSecretEnv]?.trim();
+    if (!(clientId && clientSecret)) {
+        fail('Google OAuth credentials are required for the Runtime artifact', {
+            required: [googleOAuthClientIdEnv, googleOAuthClientSecretEnv],
+        });
+    }
+
+    const googleAssetsRoot = path.join(runtimeAssetsRoot, 'google');
+    await fs.mkdir(googleAssetsRoot, { recursive: true });
+    await fs.writeFile(
+        path.join(googleAssetsRoot, 'oauth-client.json'),
+        `${JSON.stringify({ clientId, clientSecret }, null, 2)}\n`,
+        { mode: 0o600 }
+    );
 }
 
 async function stageHarnessBridgeAssets(runtimeAssetsRoot) {

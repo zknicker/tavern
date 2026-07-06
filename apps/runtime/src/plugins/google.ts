@@ -28,6 +28,10 @@ import {
 import * as z from 'zod';
 import type { RuntimeCapabilityCheckResult } from '../capabilities/definitions.ts';
 import {
+    type GoogleOAuthCredentials,
+    getRequiredGoogleOAuthCredentials,
+} from './google-oauth-credentials.ts';
+import {
     getPlugin,
     readPluginConfig,
     readPluginSecret,
@@ -39,8 +43,6 @@ const googleAuthorizeEndpoint = 'https://accounts.google.com/o/oauth2/v2/auth';
 const googleTokenEndpoint = 'https://oauth2.googleapis.com/token';
 const googleUserInfoEndpoint = 'https://openidconnect.googleapis.com/v1/userinfo';
 const googleCalendarEventsEndpoint = 'https://www.googleapis.com/calendar/v3/calendars';
-const googleOAuthClientIdEnv = 'TAVERN_GOOGLE_OAUTH_CLIENT_ID';
-const googleOAuthClientSecretEnv = 'TAVERN_GOOGLE_OAUTH_CLIENT_SECRET';
 const oauthSessionTtlMs = 10 * 60 * 1000;
 const tokenRefreshSkewMs = 60 * 1000;
 
@@ -493,22 +495,6 @@ function requiredGoogleScopes() {
         ...(googlePluginManifest.auth?.baseScopes ?? []),
         ...(resolveGoogleConfig().services.calendar.enabled ? [googleCalendarEventsScope] : []),
     ];
-}
-
-interface GoogleOAuthCredentials {
-    clientId: string;
-    clientSecret: string;
-}
-
-function getRequiredGoogleOAuthCredentials(): GoogleOAuthCredentials {
-    const clientId = process.env[googleOAuthClientIdEnv]?.trim();
-    const clientSecret = process.env[googleOAuthClientSecretEnv]?.trim();
-    if (!(clientId && clientSecret)) {
-        throw new Error(
-            `${googleOAuthClientIdEnv} and ${googleOAuthClientSecretEnv} are required for Google OAuth.`
-        );
-    }
-    return { clientId, clientSecret };
 }
 
 function missingScopes(required: string[], granted: string[]) {

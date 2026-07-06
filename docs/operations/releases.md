@@ -197,6 +197,8 @@ Required release environment:
 
 * `TAVERN_RELEASE_BASE_URL`
 * `TAVERN_RELEASE_S3_URI`
+* `TAVERN_GOOGLE_OAUTH_CLIENT_ID`
+* `TAVERN_GOOGLE_OAUTH_CLIENT_SECRET`
 * `TAVERN_HOMEBREW_TAP_REPO` defaults to `zknicker/homebrew-tavern`
 * `TAVERN_HOMEBREW_TAP_DIR` optionally points to a local tap checkout
 * `CSC_NAME` or `CSC_LINK` + `CSC_KEY_PASSWORD`
