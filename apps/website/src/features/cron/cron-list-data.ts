@@ -120,6 +120,7 @@ export function buildCronList(cronJobs: CronListOutput['jobs'], runs: CronRunsOu
             enabled: job.enabled,
             executions: buildExecutions(runsByJobId.get(job.id) ?? []),
             id: job.id,
+            isRunning: Boolean(job.state.runningAtMs),
             job,
             lastErrorMessage: formatCronErrorMessage(job.state.lastErrorMessage),
             lastErrorRaw: job.state.lastErrorMessage ?? null,

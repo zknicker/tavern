@@ -34,7 +34,8 @@ function CronJobRow({
     onToggle,
 }: CronJobRowProps) {
     const openJob = React.useCallback(() => onEdit(job), [job, onEdit]);
-    const dotState = getCronJobDotState(job);
+    const isRunningNow = activeRunJobId === job.id || job.isRunning;
+    const dotState = getCronJobDotState(job, isRunningNow);
 
     return (
         <div className="group/cron-row relative flex min-h-12 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm">
@@ -50,6 +51,7 @@ function CronJobRow({
                 aria-label={dotState.label}
                 className={cn(
                     'pointer-events-none relative z-10 size-2 shrink-0 rounded-full',
+                    dotState.tone === 'running' && 'animate-pulse bg-info',
                     dotState.tone === 'enabled' && 'bg-success',
                     dotState.tone === 'paused' && 'bg-muted-foreground/35',
                     dotState.tone === 'error' && 'bg-error'
@@ -67,7 +69,11 @@ function CronJobRow({
                         {job.schedule}
                     </span>
                 </div>
-                {job.lastErrorMessage ? (
+                {isRunningNow ? (
+                    <p className="max-w-[36rem] truncate text-info-foreground text-xs">
+                        Running now…
+                    </p>
+                ) : job.lastErrorMessage ? (
                     <p
                         className="max-w-[36rem] truncate text-error-foreground text-xs"
                         title={job.lastErrorRaw ?? job.lastErrorMessage}
@@ -99,7 +105,14 @@ function CronJobRow({
     );
 }
 
-function getCronJobDotState(job: CronListItem) {
+function getCronJobDotState(job: CronListItem, isRunningNow: boolean) {
+    if (isRunningNow) {
+        return {
+            label: 'Running',
+            tone: 'running',
+        } as const;
+    }
+
     if (job.successRate === 'error') {
         return {
             label: 'Error',
