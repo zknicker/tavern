@@ -30,6 +30,9 @@ frame and can be clipped or warped with the head art.
   module load, then warped each frame with the animated eyes. Use `front` layers
   for art that should occlude wandering eyes, such as beaks or mouths. Use
   `clip` to keep eyes inside a face window.
+- `thirdEye: { dx, dy }` adds a live center eye at an eye-canvas offset from
+  `(240, 240)`. Its pose is the L/R average, so it blinks and follows gaze with
+  the pair (the alien's forehead eye).
 - `AgentFace` still accepts `ink` for currentColor-backed marks, but current
   warp-layer characters mostly use authored fill colors.
 
@@ -72,4 +75,4 @@ Replace that head's art constant in `agent-face.tsx`. No contract change.
 - Adding is additive — `character` is a stored string enum, so there is no
   migration. Renaming or removing a character orphans agents already set to it;
   prefer adding.
-- Current characters are `knight`, `owl`, `bird`, and `robot`.
+- Current characters are `knight`, `owl`, `bird`, `robot`, and `alien`.
