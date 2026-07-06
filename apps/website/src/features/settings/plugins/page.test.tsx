@@ -168,7 +168,7 @@ describe('MerchBase Plugin settings', () => {
         expect(markup).toContain('Google connection failed.');
     });
 
-    test('shows a configure action on agent Plugin grant rows', () => {
+    test('renders an agent Plugin grant toggle without configuration', () => {
         const agent = {
             enabledPluginIds: ['merchbase'],
             id: 'agent_123',
@@ -197,15 +197,14 @@ describe('MerchBase Plugin settings', () => {
         const markup = renderToString(
             <AgentPluginGrantRow
                 agent={agent}
-                configureAction={<button type="button">Configure</button>}
                 isSaving={false}
                 onEnabledChange={() => undefined}
                 plugin={plugin}
             />
         );
 
-        expect(markup).toContain('Configure');
         expect(markup).toContain('Revoke MerchBase for Tavern');
+        expect(markup).not.toContain('Configure');
     });
 
     test('does not duplicate plugin disabled state in agent grant rows', () => {

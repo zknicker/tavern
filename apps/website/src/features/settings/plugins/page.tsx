@@ -2,7 +2,6 @@ import { googlePluginManifest } from '@tavern/api/plugins/google';
 import { merchbasePluginManifest } from '@tavern/api/plugins/merchbase';
 import * as React from 'react';
 import { useParams } from 'react-router-dom';
-import { Button } from '../../../components/ui/primitives/button.tsx';
 import { SearchInput } from '../../../components/ui/primitives/search-input.tsx';
 import { Separator } from '../../../components/ui/separator.tsx';
 import {
@@ -30,8 +29,8 @@ import { usePluginList, useSetAgentPluginGrant } from '../../../hooks/plugins/us
 import { withSavingToast } from '../../../lib/saving-toast.ts';
 import type { AgentListOutput, PluginListOutput } from '../../../lib/trpc.tsx';
 import { EmptyState } from '../../shell/empty-state.tsx';
-import { GoogleSettingsCard, GoogleSettingsControl } from './google-settings-card.tsx';
-import { MerchbaseSettingsCard, MerchbaseSettingsControl } from './merchbase-settings-card.tsx';
+import { GoogleSettingsCard } from './google-settings-card.tsx';
+import { MerchbaseSettingsCard } from './merchbase-settings-card.tsx';
 
 export { MerchbaseSettingsCard } from './merchbase-settings-card.tsx';
 
@@ -124,11 +123,6 @@ function AgentPluginsSettingsPage({ agentId }: { agentId: string }) {
     const [search, setSearch] = React.useState('');
     const deferredSearch = React.useDeferredValue(search);
     const agentsQuery = useAgentList();
-    const merchbaseSettingsQuery = useMerchbaseSettings();
-    const saveMerchbaseSettings = useSaveMerchbaseSettings();
-    const googleSettingsQuery = useGoogleSettings();
-    const saveGoogleSettings = useSaveGoogleSettings();
-    const googleOAuth = useGoogleOAuthState();
     const pluginsQuery = usePluginList();
     const setGrant = useSetAgentPluginGrant();
     const agent = agentsQuery.data?.agents.find((candidate) => candidate.id === agentId) ?? null;
@@ -170,72 +164,11 @@ function AgentPluginsSettingsPage({ agentId }: { agentId: string }) {
 
                 <SettingsGroup>
                     {plugins && plugins.length > 0 ? (
-                        plugins.map((plugin, index) => {
-                            const row = (
+                        plugins.map((plugin, index) => (
+                            <React.Fragment key={plugin.id}>
+                                {index > 0 ? <Separator /> : null}
                                 <AgentPluginGrantRow
                                     agent={agent}
-                                    configureAction={
-                                        plugin.id === 'merchbase' && merchbaseSettingsQuery.data ? (
-                                            <MerchbaseSettingsControl
-                                                error={
-                                                    merchbaseSettingsQuery.error?.message ??
-                                                    saveMerchbaseSettings.error?.message ??
-                                                    null
-                                                }
-                                                isSaving={saveMerchbaseSettings.isPending}
-                                                onSave={(input) =>
-                                                    withSavingToast(() =>
-                                                        saveMerchbaseSettings.mutateAsync(input)
-                                                    ).catch(() => undefined)
-                                                }
-                                                settings={merchbaseSettingsQuery.data}
-                                            >
-                                                {({ openSettingsDialog }) => (
-                                                    <Button
-                                                        disabled={saveMerchbaseSettings.isPending}
-                                                        onClick={() => openSettingsDialog()}
-                                                        variant="ghost"
-                                                    >
-                                                        Configure
-                                                    </Button>
-                                                )}
-                                            </MerchbaseSettingsControl>
-                                        ) : plugin.id === 'google' && googleSettingsQuery.data ? (
-                                            <GoogleSettingsControl
-                                                error={
-                                                    googleSettingsQuery.error?.message ??
-                                                    saveGoogleSettings.error?.message ??
-                                                    googleOAuth.error
-                                                }
-                                                isSaving={
-                                                    saveGoogleSettings.isPending ||
-                                                    googleOAuth.isPending
-                                                }
-                                                oauthStatus={googleOAuth.status}
-                                                onConnect={googleOAuth.connect}
-                                                onDisconnect={googleOAuth.disconnect}
-                                                onSave={(input) =>
-                                                    withSavingToast(() =>
-                                                        saveGoogleSettings.mutateAsync(input)
-                                                    )
-                                                }
-                                                settings={googleSettingsQuery.data}
-                                            >
-                                                {({ openSettingsDialog }) => (
-                                                    <Button
-                                                        disabled={
-                                                            saveGoogleSettings.isPending ||
-                                                            googleOAuth.isPending
-                                                        }
-                                                        onClick={() => openSettingsDialog()}
-                                                        variant="ghost"
-                                                    >
-                                                        Configure
-                                                    </Button>
-                                                )}
-                                            </GoogleSettingsControl>
-                                        ) : null
-                                    }
                                     isSaving={
                                         setGrant.isPending &&
                                         setGrant.variables?.pluginId === plugin.id
@@ -251,15 +184,8 @@ function AgentPluginsSettingsPage({ agentId }: { agentId: string }) {
                                     }
                                     plugin={plugin}
                                 />
-                            );
-
-                            return (
-                                <React.Fragment key={plugin.id}>
-                                    {index > 0 ? <Separator /> : null}
-                                    {row}
-                                </React.Fragment>
-                            );
-                        })
+                            </React.Fragment>
+                        ))
                     ) : (
                         <EmptyState
                             className="py-8"
@@ -275,13 +201,11 @@ function AgentPluginsSettingsPage({ agentId }: { agentId: string }) {
 
 export function AgentPluginGrantRow({
     agent,
-    configureAction = null,
     isSaving,
     onEnabledChange,
     plugin,
 }: {
     agent: AgentListOutput['agents'][number];
-    configureAction?: React.ReactNode;
     isSaving: boolean;
     onEnabledChange: (enabled: boolean) => void;
     plugin: PluginListOutput['plugins'][number];
@@ -293,15 +217,12 @@ export function AgentPluginGrantRow({
             title={<span className="truncate">{plugin.displayName}</span>}
             trailingWidth="intrinsic"
         >
-            <div className="flex items-center gap-2">
-                {configureAction}
-                <Switch
-                    aria-label={`${granted ? 'Revoke' : 'Grant'} ${plugin.displayName} for ${agent.name}`}
-                    checked={granted}
-                    disabled={isSaving}
-                    onCheckedChange={onEnabledChange}
-                />
-            </div>
+            <Switch
+                aria-label={`${granted ? 'Revoke' : 'Grant'} ${plugin.displayName} for ${agent.name}`}
+                checked={granted}
+                disabled={isSaving}
+                onCheckedChange={onEnabledChange}
+            />
         </SettingsRow>
     );
 }

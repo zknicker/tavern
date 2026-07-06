@@ -1,21 +1,22 @@
-import { AlertCircleIcon } from '@hugeicons/core-free-icons';
 import * as React from 'react';
 import { useParams } from 'react-router-dom';
-import { Alert, AlertDescription } from '../../../components/ui/alert.tsx';
-import { Icon } from '../../../components/ui/icon.tsx';
+import { EmptyState } from '../../../components/ui/empty-state.tsx';
+import { SearchInput } from '../../../components/ui/primitives/search-input.tsx';
+import { Separator } from '../../../components/ui/separator.tsx';
+import {
+    SettingsGroup,
+    SettingsPage,
+    SettingsPageHeader,
+    SettingsRow,
+} from '../../../components/ui/settings-row.tsx';
+import { Switch } from '../../../components/ui/switch.tsx';
 import { useAgentList } from '../../../hooks/agents/use-agent-list.ts';
-import { useRuntimeManagedFlags } from '../../../hooks/skills/use-runtime-managed-flags.ts';
-import { useSkillHubAvailable } from '../../../hooks/skills/use-skill-hub-available.ts';
 import { useSkillList } from '../../../hooks/skills/use-skill-list.ts';
 import { withSavingToast } from '../../../lib/saving-toast.ts';
 import type { AgentListOutput, SkillListOutput } from '../../../lib/trpc.tsx';
 import { MissingAgentState } from '../../agents/missing-agent-state.tsx';
 import { useAgentSkillsUpdate } from '../../agents/use-agent-skills-update.ts';
-import { AddFromLibraryDialog } from '../../skills/add-from-library-dialog.tsx';
-import type { SkillEnablementController } from '../../skills/skill-preview-pane.tsx';
-import { SkillSourcesDialog } from '../../skills/skill-sources-dialog.tsx';
-import type { HubEntry } from '../../skills/skill-tree-model.ts';
-import { SkillsBrowser } from '../../skills/skills-browser.tsx';
+import { formatSkillName } from '../../skills/skill-name-format.ts';
 import { SkillsPageSkeleton } from '../../skills/skills-page-skeleton.tsx';
 
 type Agent = AgentListOutput['agents'][number];
@@ -23,57 +24,22 @@ type SkillSummary = SkillListOutput['skills'][number];
 
 export function AgentSkillsSettingsPage() {
     const { agentId } = useParams();
-    const [sourcesOpen, setSourcesOpen] = React.useState(false);
-    const [libraryOpen, setLibraryOpen] = React.useState(false);
+    const [search, setSearch] = React.useState('');
+    const deferredSearch = React.useDeferredValue(search);
     const agentsQuery = useAgentList();
     const skillsQuery = useSkillList();
-    const availableQuery = useSkillHubAvailable({ enabled: true });
-    const runtimeByName = useRuntimeManagedFlags({ agentId });
     const saveSkills = useAgentSkillsUpdate();
     const agent = agentsQuery.data?.agents.find((candidate) => candidate.id === agentId) ?? null;
-    const skills = skillsQuery.data?.skills ?? [];
-    const agentSkills = React.useMemo(
-        () => mapAgentSkillEnabledState(skills, agent),
-        [agent, skills]
+
+    // Plugin skills are governed by the plugin grant, not per-skill enablement,
+    // so they never appear here. Enabling the plugin injects its skills.
+    const skills = React.useMemo(
+        () =>
+            (skillsQuery.data?.skills ?? [])
+                .filter((skill) => !skill.plugin)
+                .filter((skill) => matchesSkill(skill, deferredSearch)),
+        [skillsQuery.data?.skills, deferredSearch]
     );
-    const hubByName = React.useMemo(() => {
-        const byName = new Map<string, HubEntry>();
-
-        for (const [identifier, entry] of Object.entries(availableQuery.data?.installed ?? {})) {
-            if (entry.name) {
-                byName.set(entry.name, {
-                    edited: entry.edited,
-                    identifier,
-                    trustLevel: entry.trustLevel,
-                    updateAvailable: entry.updateAvailable,
-                });
-            }
-        }
-
-        return byName;
-    }, [availableQuery.data?.installed]);
-    const skillEnablement = React.useMemo<SkillEnablementController | undefined>(() => {
-        if (!agent) {
-            return undefined;
-        }
-
-        return {
-            error: saveSkills.error,
-            isPending: saveSkills.isPending,
-            mutate: ({ enabled, skillId }) => {
-                const next = enabled
-                    ? [...agent.enabledSkillIds, skillId]
-                    : agent.enabledSkillIds.filter((candidate) => candidate !== skillId);
-
-                void withSavingToast(() =>
-                    saveSkills.mutateAsync({
-                        agentId: agent.id,
-                        enabledSkillIds: [...new Set(next)],
-                    })
-                ).catch(() => undefined);
-            },
-        };
-    }, [agent, saveSkills]);
 
     if (
         (agentsQuery.isPending || skillsQuery.isPending) &&
@@ -87,38 +53,109 @@ export function AgentSkillsSettingsPage() {
     }
 
     return (
-        <div className="flex h-full min-h-0 flex-1 flex-col">
-            <SkillsBrowser
-                hubByName={hubByName}
-                onAddFromLibrary={() => setLibraryOpen(true)}
-                onManageSources={() => setSourcesOpen(true)}
-                runtimeByName={runtimeByName}
-                skillEnablement={skillEnablement}
-                skills={agentSkills}
-            />
-            <SkillSourcesDialog onOpenChange={setSourcesOpen} open={sourcesOpen} />
-            <AddFromLibraryDialog onOpenChange={setLibraryOpen} open={libraryOpen} />
+        <SettingsPage>
+            <SettingsPageHeader title="Skills" />
 
-            {skillsQuery.error ? (
-                <div className="fixed inset-x-4 bottom-4 z-50">
-                    <Alert variant="error">
-                        <Icon icon={AlertCircleIcon} />
-                        <AlertDescription>{skillsQuery.error.message}</AlertDescription>
-                    </Alert>
-                </div>
-            ) : null}
-        </div>
+            <div className="grid gap-3">
+                <SearchInput
+                    aria-label="Search skills"
+                    className="w-full [&_[data-slot=input-control]]:h-9"
+                    name="agent-skill-search"
+                    onChange={(event) => setSearch(event.target.value)}
+                    placeholder="Search skills..."
+                    value={search}
+                />
+
+                {skills.length > 0 ? (
+                    <SettingsGroup>
+                        {skills.map((skill, index) => (
+                            <React.Fragment key={skill.id}>
+                                {index > 0 ? <Separator /> : null}
+                                <AgentSkillRow
+                                    agent={agent}
+                                    isSaving={
+                                        saveSkills.isPending &&
+                                        saveSkills.variables?.agentId === agent.id
+                                    }
+                                    onEnabledChange={(enabled) =>
+                                        toggleSkill({
+                                            agent,
+                                            enabled,
+                                            saveSkills,
+                                            skillId: skill.id,
+                                        })
+                                    }
+                                    skill={skill}
+                                />
+                            </React.Fragment>
+                        ))}
+                    </SettingsGroup>
+                ) : (
+                    <EmptyState
+                        className="py-8"
+                        description="Add skills from the global Skills page to enable them here."
+                        title="No skills"
+                    />
+                )}
+            </div>
+        </SettingsPage>
     );
 }
 
-function mapAgentSkillEnabledState(skills: SkillSummary[], agent: Agent | null) {
-    if (!agent) {
-        return skills;
+function AgentSkillRow({
+    agent,
+    isSaving,
+    onEnabledChange,
+    skill,
+}: {
+    agent: Agent;
+    isSaving: boolean;
+    onEnabledChange: (enabled: boolean) => void;
+    skill: SkillSummary;
+}) {
+    const enabled = agent.enabledSkillIds.includes(skill.id);
+    const displayName = formatSkillName(skill.name);
+    return (
+        <SettingsRow
+            description={skill.description}
+            title={<span className="truncate">{displayName}</span>}
+            trailingWidth="intrinsic"
+        >
+            <Switch
+                aria-label={`${enabled ? 'Disable' : 'Enable'} ${displayName} for ${agent.name}`}
+                checked={enabled}
+                disabled={isSaving}
+                onCheckedChange={onEnabledChange}
+            />
+        </SettingsRow>
+    );
+}
+
+function toggleSkill(input: {
+    agent: Agent;
+    enabled: boolean;
+    saveSkills: ReturnType<typeof useAgentSkillsUpdate>;
+    skillId: string;
+}) {
+    const next = input.enabled
+        ? [...input.agent.enabledSkillIds, input.skillId]
+        : input.agent.enabledSkillIds.filter((candidate) => candidate !== input.skillId);
+
+    void withSavingToast(() =>
+        input.saveSkills.mutateAsync({
+            agentId: input.agent.id,
+            enabledSkillIds: [...new Set(next)],
+        })
+    ).catch(() => undefined);
+}
+
+function matchesSkill(skill: SkillSummary, search: string) {
+    const normalized = search.trim().toLowerCase();
+    if (normalized.length === 0) {
+        return true;
     }
 
-    const enabledSkillIds = new Set(agent.enabledSkillIds);
-    return skills.map((skill) => ({
-        ...skill,
-        enabled: enabledSkillIds.has(skill.id),
-    }));
+    return [skill.name, skill.description ?? ''].some((value) =>
+        value.toLowerCase().includes(normalized)
+    );
 }
