@@ -56,7 +56,7 @@ export function CronEditorHeader({
                                 event.preventDefault();
                                 onBack();
                             }}
-                            render={<Link to={appRoutes.tasks} />}
+                            render={<Link to={appRoutes.automations} />}
                             title="Back to automations"
                         >
                             Automations

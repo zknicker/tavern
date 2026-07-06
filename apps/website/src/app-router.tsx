@@ -107,21 +107,21 @@ export function createAppRouter() {
                                     element: <Navigate replace to={appRoutes.memory} />,
                                 },
                                 {
-                                    path: 'tasks',
+                                    path: 'automations',
                                     lazy: lazyRoute(
                                         () => import('./routes/app/cron-page.tsx'),
                                         'CronPage'
                                     ),
                                 },
                                 {
-                                    path: 'tasks/new',
+                                    path: 'automations/new',
                                     lazy: lazyRoute(
                                         () => import('./routes/app/cron-editor-page.tsx'),
                                         'CronEditorPage'
                                     ),
                                 },
                                 {
-                                    path: 'tasks/edit/:jobId',
+                                    path: 'automations/edit/:jobId',
                                     lazy: lazyRoute(
                                         () => import('./routes/app/cron-editor-page.tsx'),
                                         'CronEditorPage'
@@ -447,7 +447,7 @@ function resolveLegacyDashboardPath(pathname: string) {
         case 'chats':
             return segments.length === 0 ? buildDefaultWorkspaceChatPath() : `/${suffix}`;
         case 'cron':
-            return resolveLegacyTaskPath(segments);
+            return resolveLegacyAutomationPath(segments);
         case 'events':
         case 'logs':
         case 'memories':
@@ -473,16 +473,16 @@ function resolveLegacyDashboardPath(pathname: string) {
     }
 }
 
-function resolveLegacyTaskPath(segments: string[]) {
+function resolveLegacyAutomationPath(segments: string[]) {
     if (segments[0] === 'new') {
-        return appRoutes.newTask;
+        return appRoutes.newAutomation;
     }
 
     if (segments[0] === 'edit' && segments[1]) {
-        return `/tasks/edit/${segments.slice(1).join('/')}`;
+        return `/automations/edit/${segments.slice(1).join('/')}`;
     }
 
-    return appRoutes.tasks;
+    return appRoutes.automations;
 }
 
 function resolveLegacySettingsPath(segments: string[]) {

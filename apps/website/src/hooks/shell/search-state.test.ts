@@ -3,7 +3,7 @@ import { getSearchConfig, setSearchQuery } from './search-state.ts';
 
 describe('shell search state', () => {
     test('returns the expected placeholder for supported routes', () => {
-        expect(getSearchConfig('/tasks')).toEqual({
+        expect(getSearchConfig('/automations')).toEqual({
             placeholder: 'Filter jobs...',
         });
     });

@@ -43,7 +43,7 @@ The API covers:
 Agent turns can use `cron_list`, `cron_create`, `cron_update`, and
 `cron_delete` to manage that agent's own automations. These tools create
 ordinary automation jobs with agent-turn payloads only; the jobs remain fully
-visible and editable in the Tasks page.
+visible and editable in the Automations page.
 
 ## Runtime Boundary
 

@@ -9,7 +9,7 @@ import { useLayoutContext } from '../shell/use-layout-context.ts';
 
 export function CronAvailabilityGate({ children }: { children: ReactNode }) {
     const capability = useCapability();
-    const gate = capability(routeTabCapabilityRequirements.tasks);
+    const gate = capability(routeTabCapabilityRequirements.automations);
     const { navigateToSettings } = useLayoutContext();
 
     if (gate.healthy) {
@@ -20,9 +20,9 @@ export function CronAvailabilityGate({ children }: { children: ReactNode }) {
         <EmptyState
             actionLabel="Open Tavern Runtime settings"
             description={runtimeUnhealthyTooltip}
-            eyebrow="Tasks"
+            eyebrow="Automations"
             onAction={navigateToSettings}
-            title="Tasks are waiting on Tavern Runtime."
+            title="Automations are waiting on Tavern Runtime."
         />
     );
 }

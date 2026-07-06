@@ -94,7 +94,7 @@ worker (extraction, dreaming, skill review, curation) with its last run and
 next planned run or the condition it waits on, a timeline of runs over the
 last two weeks, and a per-run report drawer (extraction observations and
 learning signals, dream outcomes, skill review actions, curator
-consolidations and prunings). Automations are separate; the Tasks page owns
+consolidations and prunings). Automations are separate; the Automations page owns
 their run history.
 
 ## Related Docs

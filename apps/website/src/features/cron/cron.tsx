@@ -68,12 +68,12 @@ export function Cron() {
     const isMutating =
         deleteMutation.isPending || toggleMutation.isPending || runMutation.isPending;
     const openCreatePage = React.useCallback(() => {
-        navigate(appRoutes.newTask);
+        navigate(appRoutes.newAutomation);
     }, [navigate]);
 
     const editJob = React.useCallback(
         (job: CronListItem) => {
-            navigate(appRoutes.editTask(job.id));
+            navigate(appRoutes.editAutomation(job.id));
         },
         [navigate]
     );

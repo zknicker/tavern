@@ -9,7 +9,7 @@ const searchConfigs: Array<{
     match: (pathname: string) => boolean;
 }> = [
     {
-        match: (pathname) => pathname === appRoutes.tasks,
+        match: (pathname) => pathname === appRoutes.automations,
         config: {
             placeholder: 'Filter jobs...',
         },

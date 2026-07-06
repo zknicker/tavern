@@ -6,9 +6,13 @@ export const appRoutes = {
     },
     newChatDraft: '/chats/new',
     tasks: '/tasks',
-    newTask: '/tasks/new',
-    editTask(jobId: string) {
-        return `/tasks/edit/${encodeURIComponent(jobId)}`;
+    task(taskId: string) {
+        return `/tasks/${encodeURIComponent(taskId)}`;
+    },
+    automations: '/automations',
+    newAutomation: '/automations/new',
+    editAutomation(jobId: string) {
+        return `/automations/edit/${encodeURIComponent(jobId)}`;
     },
     workspace: '/workspace',
     memory: '/memory',

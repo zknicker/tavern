@@ -24,7 +24,7 @@ const runtimeDisconnectedReason = 'Tavern Runtime is disconnected.';
 const capabilityLabels = {
     apiServer: 'Agent engine API',
     codexOAuth: 'Codex OAuth',
-    cron: 'Tasks',
+    cron: 'Automations',
     dashboardServer: 'Agent engine',
     devToolkit: 'Dev toolkit',
     gateway: 'Agent connection',
@@ -67,8 +67,10 @@ export const agentCapabilityRequirements = [
 ] as const satisfies readonly RuntimeCapabilityId[];
 
 export const routeTabCapabilityRequirements = {
-    // Tasks are hidden unless the agent runtime is fully ready because create/run actions execute there.
-    tasks: [...agentCapabilityRequirements, 'cron'],
+    // Automations are hidden unless the agent runtime is fully ready because create/run actions execute there.
+    automations: [...agentCapabilityRequirements, 'cron'],
+    // Tasks only need the runtime API for CRUD; dispatch gates on gateway at the button level.
+    tasks: ['apiServer'],
     overview: [],
     memory: ['semanticMemory'],
     workspace: ['apiServer'],

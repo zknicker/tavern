@@ -6,6 +6,10 @@ describe('app route tab', () => {
         expect(routeTabs.find((tab) => tab.id === 'tasks')?.label).toBe('Tasks');
     });
 
+    test('labels the automations tab as Automations', () => {
+        expect(routeTabs.find((tab) => tab.id === 'automations')?.label).toBe('Automations');
+    });
+
     test('exposes Workspace as an app tab', () => {
         expect(routeTabs.find((tab) => tab.id === 'workspace')).toEqual({
             id: 'workspace',
@@ -17,13 +21,14 @@ describe('app route tab', () => {
     test('returns the matching app tab for primary routes', () => {
         expect(getRouteTab('/overview')).toBe('overview');
         expect(getRouteTab('/tasks')).toBe('tasks');
+        expect(getRouteTab('/automations')).toBe('automations');
         expect(getRouteTab('/workspace')).toBe('workspace');
         expect(getRouteTab('/memory')).toBe('memory');
     });
 
     test('keeps dashboard tab detection during redirects', () => {
         expect(getRouteTab('/dashboard/overview')).toBe('overview');
-        expect(getRouteTab('/dashboard/cron')).toBe('tasks');
+        expect(getRouteTab('/dashboard/cron')).toBe('automations');
         expect(getRouteTab('/dashboard/workspace')).toBe('workspace');
         expect(getRouteTab('/dashboard/memory')).toBe('memory');
     });

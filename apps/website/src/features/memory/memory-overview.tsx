@@ -29,7 +29,7 @@ export function MemoryOverview({ status }: { status: SemanticMemoryHubStatus | n
                     <h1 className="font-semibold text-2xl tracking-tight">Memory</h1>
                     <p className="max-w-2xl text-muted-foreground text-sm leading-6">
                         Durable knowledge lives in Memory. The agent reads and maintains those
-                        Markdown files through regular Tasks.
+                        Markdown files through regular Automations.
                     </p>
                 </header>
 
@@ -62,12 +62,12 @@ export function MemoryOverview({ status }: { status: SemanticMemoryHubStatus | n
                         trailingWidth="intrinsic"
                     >
                         <Button
-                            render={<NavLink to={appRoutes.tasks} />}
+                            render={<NavLink to={appRoutes.automations} />}
                             size="sm"
                             variant="outline"
                         >
                             <Icon icon={HourglassIcon} />
-                            <span>Open Tasks</span>
+                            <span>Open Automations</span>
                         </Button>
                     </SettingsRow>
                     <Separator />
@@ -123,12 +123,12 @@ export function MemoryOverview({ status }: { status: SemanticMemoryHubStatus | n
 
                 <MemorySection title="History">
                     <SettingsRow
-                        description="Maintenance runs and source sessions are tracked as Tasks until Tavern has a dedicated memory history log."
+                        description="Maintenance runs and source sessions are tracked as Automations until Tavern has a dedicated memory history log."
                         title="Recent runs"
                         trailingWidth="intrinsic"
                     >
-                        <Button render={<NavLink to={appRoutes.tasks} />} size="sm" variant="ghost">
-                            <span>View Tasks</span>
+                        <Button render={<NavLink to={appRoutes.automations} />} size="sm" variant="ghost">
+                            <span>View Automations</span>
                             <Icon icon={ArrowRight01Icon} />
                         </Button>
                     </SettingsRow>

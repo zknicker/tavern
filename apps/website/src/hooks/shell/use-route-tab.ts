@@ -5,6 +5,7 @@ import { appRoutes } from '../../lib/app-routes.ts';
 export const routeTabs = [
     { id: 'overview', label: 'Tavern', path: appRoutes.overview },
     { id: 'tasks', label: 'Tasks', path: appRoutes.tasks },
+    { id: 'automations', label: 'Automations', path: appRoutes.automations },
     { id: 'workspace', label: 'Workspace', path: appRoutes.workspace },
     { id: 'memory', label: 'Memory', path: appRoutes.memory },
 ] as const;
@@ -22,7 +23,7 @@ export function getRouteTab(pathname: string): RouteTab | null {
     const primaryTab = segments[0] === 'dashboard' ? (segments[1] ?? null) : (segments[0] ?? null);
 
     if (primaryTab === 'cron') {
-        return 'tasks';
+        return 'automations';
     }
 
     if (isRouteTab(primaryTab)) {

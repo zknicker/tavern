@@ -71,7 +71,7 @@ export function CronEditor() {
     const isLoadingEditor = !(shouldRenderForm || isMissingJob);
 
     const handleBack = React.useCallback(() => {
-        navigate(appRoutes.tasks);
+        navigate(appRoutes.automations);
     }, [navigate]);
 
     return (
@@ -132,7 +132,7 @@ export function CronEditor() {
                             await createMutation.mutateAsync(buildCronCreateInput(formState));
                         }
 
-                        navigate(appRoutes.tasks);
+                        navigate(appRoutes.automations);
                     }}
                     runs={optimisticCronRuns.runs}
                 />
@@ -168,7 +168,7 @@ export function CronEditor() {
                     }
 
                     await deleteMutation.mutateAsync({ jobId: job.id });
-                    navigate(appRoutes.tasks);
+                    navigate(appRoutes.automations);
                 }}
             />
         </div>
