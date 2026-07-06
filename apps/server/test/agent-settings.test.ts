@@ -214,6 +214,155 @@ test('saveCatalogAgentSettings persists skill enablement through runtime agent c
     assert.deepEqual(agent.enabledSkillIds, ['browser']);
 });
 
+test('saveCatalogAgentSettings rejects assigning globally disabled skills', async () => {
+    await agentStorage.syncAgentsForRuntime({
+        agents: [
+            {
+                enabledSkillIds: [],
+                id: 'blippy',
+                isAdmin: false,
+                name: 'Blippy',
+                primaryColor: null,
+                workspaceFolder: 'blippy',
+            },
+        ],
+        runtimeId: 'agent-primary',
+    });
+
+    let savedEnabledSkillIds: string[] | null = null;
+    const runtimeClient = {
+        listSkills: async () => ({
+            skills: [runtimeSkillSummary({ disabled: true, id: 'browser', name: 'Browser' })],
+        }),
+        upsertAgent: async (agent: { enabledSkillIds: string[] }) => {
+            savedEnabledSkillIds = agent.enabledSkillIds;
+            return {
+                enabledSkillIds: agent.enabledSkillIds,
+                id: 'blippy',
+                isAdmin: false,
+                name: 'Blippy',
+                primaryColor: null,
+                workspaceFolder: 'blippy',
+            };
+        },
+    };
+
+    await assert.rejects(
+        saveCatalogAgentSettings(
+            {
+                agentId: 'blippy',
+                enabledSkillIds: ['browser'],
+            },
+            runtimeClient as never
+        ),
+        /Enable Browser in Settings -> Skills/
+    );
+    assert.equal(savedEnabledSkillIds, null);
+});
+
+test('saveCatalogAgentSettings keeps already-assigned skills when they become disabled', async () => {
+    await agentStorage.syncAgentsForRuntime({
+        agents: [
+            {
+                enabledSkillIds: ['browser', 'codex'],
+                id: 'blippy',
+                isAdmin: false,
+                name: 'Blippy',
+                primaryColor: null,
+                workspaceFolder: 'blippy',
+            },
+        ],
+        runtimeId: 'agent-primary',
+    });
+
+    let savedEnabledSkillIds: string[] | null = null;
+    const runtimeClient = {
+        getAgentConfig: async () => ({
+            enabledSkillIds: ['browser', 'codex'],
+            id: 'blippy',
+            isAdmin: false,
+            name: 'Blippy',
+            primaryColor: null,
+            workspaceFolder: 'blippy',
+        }),
+        listAgents: async () => ({
+            agents: [
+                {
+                    enabledSkillIds: savedEnabledSkillIds ?? ['browser', 'codex'],
+                    id: 'blippy',
+                    isAdmin: false,
+                    name: 'Blippy',
+                    primaryColor: null,
+                    workspaceFolder: 'blippy',
+                },
+            ],
+        }),
+        listSkills: async () => ({
+            skills: [runtimeSkillSummary({ disabled: true, id: 'browser', name: 'Browser' })],
+        }),
+        upsertAgent: async (agent: { enabledSkillIds: string[] }) => {
+            savedEnabledSkillIds = agent.enabledSkillIds;
+            return {
+                enabledSkillIds: agent.enabledSkillIds,
+                id: 'blippy',
+                isAdmin: false,
+                name: 'Blippy',
+                primaryColor: null,
+                workspaceFolder: 'blippy',
+            };
+        },
+    };
+
+    const agent = await saveCatalogAgentSettings(
+        {
+            agentId: 'blippy',
+            enabledSkillIds: ['browser'],
+        },
+        runtimeClient as never
+    );
+
+    assert.deepEqual(savedEnabledSkillIds, ['browser']);
+    assert.deepEqual(agent.enabledSkillIds, ['browser']);
+});
+
+function runtimeSkillSummary(input: { disabled?: boolean; id: string; name: string }) {
+    return {
+        allowedTools: null,
+        baseDir: null,
+        bundled: null,
+        commandVisible: null,
+        configChecks: [],
+        description: null,
+        disabled: input.disabled ?? null,
+        eligible: true,
+        filePath: null,
+        id: input.id,
+        install: [],
+        missing: {
+            anyBins: [],
+            bins: [],
+            config: [],
+            env: [],
+            os: [],
+        },
+        modelVisible: true,
+        name: input.name,
+        primaryEnv: null,
+        requirements: {
+            anyBins: [],
+            bins: [],
+            config: [],
+            env: [],
+            os: [],
+        },
+        runtimeSource: null,
+        skillKey: null,
+        source: null,
+        updatedAt: null,
+        userInvocable: true,
+    };
+}
+
 test('saveCatalogAgentSettings leaves skills untouched for name-only saves', async () => {
     await agentStorage.syncAgentsForRuntime({
         agents: [

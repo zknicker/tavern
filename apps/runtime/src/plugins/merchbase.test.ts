@@ -97,6 +97,18 @@ describe('MerchBase Plugin settings', () => {
         ).toMatchObject({ secret_json: JSON.stringify({ apiKey: 'secret-key' }) });
     });
 
+    test('rejects enabling MerchBase without an API key', () => {
+        expect(() => saveMerchbaseSettings({ enabled: true })).toThrow(
+            'Add a MerchBase API key before enabling MerchBase.'
+        );
+
+        saveMerchbaseSettings({ apiKey: 'secret-key', enabled: true });
+        expect(() => saveMerchbaseSettings({ apiKey: null })).toThrow(
+            'Add a MerchBase API key before enabling MerchBase.'
+        );
+        expect(getMerchbaseSettings()).toMatchObject({ apiKeyConfigured: true, enabled: true });
+    });
+
     test('runs read actions through the configured Plugin client', async () => {
         saveMerchbaseSettings({
             apiKey: 'secret-key',

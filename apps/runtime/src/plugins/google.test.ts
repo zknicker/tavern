@@ -4,6 +4,7 @@ import { closeDb, getDb, initTestDb } from '../db/connection';
 import { ensureRuntimeSchema } from '../db/schema';
 import {
     completeGoogleOAuth,
+    disconnectGoogleOAuth,
     getGoogleSettings,
     saveGoogleSettings,
     startGoogleOAuth,
@@ -26,7 +27,15 @@ describe('Google Plugin settings', () => {
         vi.restoreAllMocks();
     });
 
+    test('rejects enabling Google before OAuth connects', () => {
+        expect(() => saveGoogleSettings({ enabled: true })).toThrow(
+            'Connect Google before enabling the Google Plugin.'
+        );
+        expect(getGoogleSettings()).toMatchObject({ connected: false, enabled: false });
+    });
+
     test('stores Google config in Plugin tables', () => {
+        connectGoogle();
         const settings = saveGoogleSettings({
             calendarEnabled: true,
             enabled: true,
@@ -34,14 +43,13 @@ describe('Google Plugin settings', () => {
 
         expect(settings).toMatchObject({
             calendarEnabled: true,
-            connected: false,
+            connected: true,
             enabled: true,
         });
         expect(getPlugin('google').services[0]).toMatchObject({
             enabled: true,
             id: 'calendar',
         });
-        expect(getPlugin('google').secrets).toEqual([]);
         expect(
             getDb()
                 .prepare('SELECT config_json FROM runtime_plugins WHERE id = $id')
@@ -53,26 +61,20 @@ describe('Google Plugin settings', () => {
         });
     });
 
+    test('disconnecting Google disables the Plugin', () => {
+        connectGoogle();
+        saveGoogleSettings({ enabled: true });
+
+        const settings = disconnectGoogleOAuth();
+
+        expect(settings).toMatchObject({ connected: false, enabled: false });
+    });
+
     test('exposes Calendar tools only after grant and OAuth connection', () => {
+        connectGoogle();
         saveGoogleSettings({
             calendarEnabled: true,
             enabled: true,
-        });
-        writePluginSecret({
-            id: 'google',
-            secret: {
-                oauth: {
-                    accessToken: 'access-token',
-                    account: {
-                        email: 'zach@example.com',
-                        subject: 'sub_123',
-                    },
-                    expiresAt: new Date(Date.now() + 60_000).toISOString(),
-                    grantedScopes: [googleCalendarEventsScope],
-                    refreshToken: 'refresh-token',
-                    tokenType: 'Bearer',
-                },
-            },
         });
 
         expect(getGoogleSettings()).toMatchObject({
@@ -165,4 +167,23 @@ function restoreEnv(key: string, value: string | undefined) {
     } else {
         process.env[key] = value;
     }
+}
+
+function connectGoogle() {
+    writePluginSecret({
+        id: 'google',
+        secret: {
+            oauth: {
+                accessToken: 'access-token',
+                account: {
+                    email: 'zach@example.com',
+                    subject: 'sub_123',
+                },
+                expiresAt: new Date(Date.now() + 60_000).toISOString(),
+                grantedScopes: [googleCalendarEventsScope],
+                refreshToken: 'refresh-token',
+                tokenType: 'Bearer',
+            },
+        },
+    });
 }

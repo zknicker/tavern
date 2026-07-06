@@ -199,6 +199,7 @@ describe('MerchBase Plugin settings', () => {
         const markup = renderToString(
             <AgentPluginGrantRow
                 agent={agent}
+                health={{ healthy: true, reason: null }}
                 isSaving={false}
                 onEnabledChange={() => undefined}
                 plugin={plugin}
@@ -207,6 +208,47 @@ describe('MerchBase Plugin settings', () => {
 
         expect(markup).toContain('Revoke MerchBase for Tavern');
         expect(markup).not.toContain('Configure');
+        expect(markup).not.toContain('Enable it in Plugins first');
+    });
+
+    test('blocks new grants while the plugin is unhealthy', () => {
+        const agent = {
+            enabledPluginIds: [],
+            id: 'agent_123',
+            name: 'Tavern',
+        } as unknown as AgentListOutput['agents'][number];
+        const plugin = {
+            config: {},
+            description: 'Analyze Amazon Merch sales and product data from MerchBase.',
+            displayName: 'MerchBase',
+            enabled: true,
+            id: 'merchbase',
+            secrets: [{ hasValue: true, name: 'apiKey' }],
+            services: [
+                {
+                    description: 'Read-only MerchBase sales, product, catalog, and design tools.',
+                    displayName: 'MerchBase',
+                    enabled: true,
+                    healthCapabilities: ['plugin.merchbase'],
+                    id: 'merchbase',
+                    scopes: [],
+                },
+            ],
+            updatedAt: '2026-06-23T12:00:00.000Z',
+        } as unknown as PluginListOutput['plugins'][number];
+
+        const markup = renderToString(
+            <AgentPluginGrantRow
+                agent={agent}
+                health={{ healthy: false, reason: 'MerchBase is not reachable.' }}
+                isSaving={false}
+                onEnabledChange={() => undefined}
+                plugin={plugin}
+            />
+        );
+
+        expect(markup).toContain('MerchBase is not reachable.');
+        expect(markup).toContain('disabled');
     });
 
     test('does not duplicate plugin disabled state in agent grant rows', () => {
@@ -238,6 +280,7 @@ describe('MerchBase Plugin settings', () => {
         const markup = renderToString(
             <AgentPluginGrantRow
                 agent={agent}
+                health={{ healthy: false, reason: 'Google is disabled.' }}
                 isSaving={false}
                 onEnabledChange={() => undefined}
                 plugin={plugin}
@@ -245,7 +288,7 @@ describe('MerchBase Plugin settings', () => {
         );
 
         expect(markup).toContain('Read Google Workspace data');
-        expect(markup).not.toContain('Disabled');
+        expect(markup).toContain('Enable it in Plugins first');
         expect(markup).not.toContain('Grant is saved');
     });
 

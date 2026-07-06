@@ -201,7 +201,34 @@ describe('Runtime agent and agent engine reads', () => {
         expect(unknown.skills).toEqual([]);
     });
 
+    it('rejects Plugin grants while the Plugin is globally disabled', async () => {
+        await handleTavernRuntimeRequest(
+            new Request('http://runtime.test/agents', {
+                body: JSON.stringify({
+                    id: 'agt_research',
+                    name: 'Research',
+                    workspaceFolder: '/tmp/tavern-research-workspace',
+                }),
+                headers: { 'content-type': 'application/json' },
+                method: 'POST',
+            })
+        );
+
+        await expect(
+            handleTavernRuntimeRequest(
+                new Request('http://runtime.test/agents/agt_research/plugins/merchbase/enabled', {
+                    body: JSON.stringify({ enabled: true }),
+                    headers: { 'content-type': 'application/json' },
+                    method: 'PUT',
+                })
+            )
+        ).rejects.toThrow(
+            'Enable MerchBase in Settings -> Plugins before granting it to an agent.'
+        );
+    });
+
     it('stores Plugin grants as agent-level capability access', async () => {
+        saveMerchbaseSettings({ apiKey: 'secret-key', enabled: true });
         await handleTavernRuntimeRequest(
             new Request('http://runtime.test/agents', {
                 body: JSON.stringify({
