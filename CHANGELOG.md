@@ -9,6 +9,9 @@ All notable changes to this project will be documented in this file.
   settings.
 - Runtime/App: returns saved Plugin secret presence to settings forms so stored
   MerchBase credentials remain visible and editable.
+- Runtime/App: gates Plugin and Skill enablement on configuration, global
+  feature state, and agent availability so settings only expose usable
+  capabilities.
 - App: clears stale chat turn state after a response completes so completed
   turns do not keep the transcript in a running state.
 
