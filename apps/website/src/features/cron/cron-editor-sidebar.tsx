@@ -1,9 +1,10 @@
 import { useStore } from '@tanstack/react-form';
-import { type ReactNode, useEffect, useRef } from 'react';
+import { type ReactNode, useEffect, useMemo, useRef } from 'react';
 import { Label } from '../../components/ui/primitives/label.tsx';
 import { ScrollArea } from '../../components/ui/scroll-area.tsx';
 import { Separator } from '../../components/ui/separator.tsx';
 import { Switch } from '../../components/ui/switch.tsx';
+import { useAgentList } from '../../hooks/agents/use-agent-list.ts';
 import { formatTimestamp } from '../../lib/format.ts';
 import type { CronGetOutput, CronRunsOutput } from '../../lib/trpc.tsx';
 import { CronEditorScheduleFields } from './cron-editor-schedule-fields.tsx';
@@ -62,6 +63,15 @@ export function CronEditorSidebar({
     const agentId = useStore(form.store, (state) => state.values.agentId);
     const currentDeliveryChatId = useStore(form.store, (state) => state.values.deliveryChatId);
     const { deliveryChatOptions } = useCronEditorOptions({ agentId, currentDeliveryChatId });
+    const agentsQuery = useAgentList();
+    const agentOptions = useMemo(
+        () =>
+            (agentsQuery.data?.agents ?? []).map((agent) => ({
+                label: agent.name,
+                value: agent.id,
+            })),
+        [agentsQuery.data?.agents]
+    );
     const previousAgentIdRef = useRef(agentId);
 
     useEffect(() => {
@@ -116,6 +126,18 @@ export function CronEditorSidebar({
                     <Separator />
 
                     <SidebarSection title="Delivery">
+                        <form.Field name="agentId">
+                            {(field) => (
+                                <CronSelectRow
+                                    emptyText="No agents synced"
+                                    label="Agent"
+                                    onValueChange={field.handleChange}
+                                    options={agentOptions}
+                                    placeholder="Select an agent"
+                                    value={field.state.value}
+                                />
+                            )}
+                        </form.Field>
                         <form.Field name="runType">
                             {(field) => (
                                 <CronSelectRow
