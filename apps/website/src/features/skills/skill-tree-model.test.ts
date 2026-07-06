@@ -17,11 +17,11 @@ test('buildSkillTreeSubjects maps installed and available skills into SKILL.md p
             ],
             installed: {
                 'official/browser': {
-                    edited: false,
+                    edited: true,
                     name: 'browser',
                     scanVerdict: null,
                     trustLevel: 'builtin',
-                    updateAvailable: false,
+                    updateAvailable: true,
                 },
             },
             taps: [
@@ -43,7 +43,15 @@ test('buildSkillTreeSubjects maps installed and available skills into SKILL.md p
             ],
         },
         hubByName: new Map([
-            ['browser', { identifier: 'official/browser', trustLevel: 'builtin' }],
+            [
+                'browser',
+                {
+                    edited: true,
+                    identifier: 'official/browser',
+                    trustLevel: 'builtin',
+                    updateAvailable: true,
+                },
+            ],
         ]),
         skills: [
             {
@@ -71,6 +79,17 @@ test('buildSkillTreeSubjects maps installed and available skills into SKILL.md p
         'Available skills/Built-in library/browser/SKILL.md',
     ]);
     expect(buildSkillTreePaths(subjects)).toContain('Installed skills/browser/');
+
+    const installedBrowser = subjects.find(
+        (subject) => subject.treePath === 'Installed skills/browser/SKILL.md'
+    );
+    expect(installedBrowser?.edited).toBe(true);
+    expect(installedBrowser?.updateAvailable).toBe(true);
+
+    const availableBrowser = subjects.find(
+        (subject) => subject.treePath === 'Available skills/Built-in library/browser/SKILL.md'
+    );
+    expect(availableBrowser?.updateAvailable).toBe(true);
 });
 
 test('buildSkillTreeSubjects groups plugin skills under title-case Plugin Skills', () => {

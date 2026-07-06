@@ -5,12 +5,19 @@ import type {
 } from '../../lib/trpc.tsx';
 
 type SkillSummary = SkillListOutput['skills'][number];
-type HubByName = Map<string, { identifier: string; trustLevel: null | string }>;
+export interface HubEntry {
+    edited: boolean;
+    identifier: string;
+    trustLevel: null | string;
+    updateAvailable: boolean;
+}
+export type HubByName = Map<string, HubEntry>;
 
 export interface SkillTreeSubject {
     dependencyState: SkillSummary['dependencyState'];
     description: null | string;
     diagnostic: null | string;
+    edited: boolean;
     enabled?: boolean;
     identifier: null | string;
     installed: boolean;
@@ -22,6 +29,7 @@ export interface SkillTreeSubject {
     treePath: string;
     trustLevel?: 'builtin' | 'community' | 'trusted';
     uninstallName: null | string;
+    updateAvailable: boolean;
     updatedAt: null | string;
 }
 
@@ -69,6 +77,7 @@ function installedTreeSubject(skill: SkillSummary, hubByName: HubByName): SkillT
         dependencyState: skill.dependencyState,
         description: skill.description,
         diagnostic: skill.diagnostic,
+        edited: hubEntry?.edited ?? false,
         enabled: skill.enabled,
         identifier: hubEntry?.identifier ?? null,
         installed: true,
@@ -80,6 +89,7 @@ function installedTreeSubject(skill: SkillSummary, hubByName: HubByName): SkillT
         treePath: skillFilePath(group, skill.name),
         trustLevel: skill.plugin ? 'builtin' : narrowTrustLevel(hubEntry?.trustLevel),
         uninstallName: hubEntry ? skill.name : null,
+        updateAvailable: hubEntry?.updateAvailable ?? false,
         updatedAt: skill.updatedAt,
     };
 }
@@ -99,6 +109,7 @@ function availableTreeSubject(
         dependencyState: inventorySkill?.dependencyState ?? 'unknown',
         description: item.description || inventorySkill?.description || null,
         diagnostic: inventorySkill?.diagnostic ?? null,
+        edited: installedEntry?.edited ?? false,
         enabled: inventorySkill?.enabled,
         identifier: item.identifier,
         installed: installedEntry !== undefined,
@@ -110,6 +121,7 @@ function availableTreeSubject(
         treePath: skillFilePath(`Available skills/${sourceLabel}`, item.name),
         trustLevel: item.trustLevel,
         uninstallName: installedEntry ? item.name : null,
+        updateAvailable: installedEntry?.updateAvailable ?? false,
         updatedAt: inventorySkill?.updatedAt ?? null,
     };
 }

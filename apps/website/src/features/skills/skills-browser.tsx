@@ -19,11 +19,10 @@ import {
 import { Spinner } from '../../components/ui/spinner.tsx';
 import type { SkillHubAvailableOutput, SkillListOutput } from '../../lib/trpc.tsx';
 import { type SkillEnablementController, SkillPreviewPane } from './skill-preview-pane.tsx';
-import { buildSkillTreePaths, buildSkillTreeSubjects } from './skill-tree-model.ts';
+import { buildSkillTreePaths, buildSkillTreeSubjects, type HubByName } from './skill-tree-model.ts';
 import { SkillsFileTree } from './skills-file-tree.tsx';
 
 type SkillSummary = SkillListOutput['skills'][number];
-type HubByName = Map<string, { identifier: string; trustLevel: null | string }>;
 
 export function SkillsBrowser({
     available,

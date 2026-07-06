@@ -9,6 +9,9 @@ export function useSkillEvents() {
                 utils.agent.list.invalidate(),
                 utils.agent.primary.invalidate(),
                 utils.skill.list.invalidate(),
+                utils.skill.runtimeList.invalidate(),
+                utils.skill.get.invalidate(),
+                utils.skill.hubAvailable.invalidate(),
             ]).catch(() => undefined);
         },
     });

@@ -1,22 +1,14 @@
-import {
-    AddCircleIcon,
-    Delete02Icon,
-    FileEmpty02Icon,
-    MoreHorizontalIcon,
-} from '@hugeicons-pro/core-stroke-rounded';
+import { FileEmpty02Icon } from '@hugeicons-pro/core-stroke-rounded';
 import type * as React from 'react';
+import { Badge } from '../../components/ui/badge.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
-import { Menu, MenuItem, MenuPopup, MenuTrigger } from '../../components/ui/menu.tsx';
-import { Button } from '../../components/ui/primitives/button.tsx';
 import { Spinner } from '../../components/ui/spinner.tsx';
-import { Switch } from '../../components/ui/switch.tsx';
 import { useSkillEnabledSet } from '../../hooks/skills/use-skill-enabled-set.ts';
-import { useSkillHubInstall } from '../../hooks/skills/use-skill-hub-install.ts';
 import { useSkillHubPreview } from '../../hooks/skills/use-skill-hub-preview.ts';
 import { useSkillHubScan } from '../../hooks/skills/use-skill-hub-scan.ts';
-import { useSkillHubUninstall } from '../../hooks/skills/use-skill-hub-uninstall.ts';
 import { useSkillPreview } from '../../hooks/skills/use-skill-preview.ts';
 import { SemanticMemoryMarkdownViewer } from '../memory/semantic/semantic-memory-markdown-viewer.tsx';
+import { SkillDetailActions, type SkillEnablementController } from './skill-detail-actions.tsx';
 import { formatSkillName } from './skill-name-format.ts';
 import {
     formatSkillPreviewDate,
@@ -27,11 +19,7 @@ import {
 } from './skill-preview-metadata.ts';
 import type { SkillTreeSubject } from './skill-tree-model.ts';
 
-export interface SkillEnablementController {
-    error: null | { message: string };
-    isPending: boolean;
-    mutate: (input: { enabled: boolean; skillId: string }) => void;
-}
+export type { SkillEnablementController };
 
 export function SkillPreviewPane({
     skillEnablement,
@@ -66,8 +54,6 @@ function SelectedSkillPreview({
         isPending: defaultSkillEnablement.isPending,
         mutate: defaultSkillEnablement.mutate,
     };
-    const install = useSkillHubInstall();
-    const uninstall = useSkillHubUninstall();
     const hasInstalledSourcePreview = Boolean(subject.installed && subject.skillId);
     const installedPreview = useSkillPreview({
         skillId: hasInstalledSourcePreview ? subject.skillId : null,
@@ -79,7 +65,7 @@ function SelectedSkillPreview({
         identifier: subject.installed ? null : subject.identifier,
     });
     const scanBlocked = scanQuery.data?.policy === 'block';
-    const mutationError = install.error ?? uninstall.error ?? setEnabled.error;
+    const mutationError = setEnabled.error;
     const rawMarkdown = installedPreview.data?.contentMarkdown ?? hubPreview.data?.skillMd ?? '';
     const markdownMetadata = parseSkillMarkdownMetadata(rawMarkdown);
     const markdown = stripFrontmatter(rawMarkdown);
@@ -94,17 +80,25 @@ function SelectedSkillPreview({
             <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-3 pt-4 pb-3">
                 <header className="px-2">
                     <div className="flex items-start gap-3">
-                        <div className="min-w-0 flex-1">
+                        <div className="flex min-w-0 flex-1 items-center gap-2">
                             <h2 className="truncate font-semibold text-foreground text-xl leading-tight">
                                 {formatSkillName(subject.name)}
                             </h2>
+                            {subject.updateAvailable ? (
+                                <Badge size="sm" variant="info">
+                                    Update available
+                                </Badge>
+                            ) : null}
+                            {subject.edited ? (
+                                <Badge size="sm" variant="subtle">
+                                    Edited
+                                </Badge>
+                            ) : null}
                         </div>
-                        <SkillPreviewActions
-                            install={install}
+                        <SkillDetailActions
                             scanBlocked={scanBlocked}
                             setEnabled={setEnabled}
                             subject={subject}
-                            uninstall={uninstall}
                         />
                     </div>
                     <SkillDetailSummary
@@ -168,85 +162,6 @@ function SkillDetailSummary({
                     ))}
                 </div>
             ) : null}
-        </div>
-    );
-}
-
-function SkillPreviewActions({
-    install,
-    scanBlocked,
-    setEnabled,
-    subject,
-    uninstall,
-}: {
-    install: ReturnType<typeof useSkillHubInstall>;
-    scanBlocked: boolean;
-    setEnabled: SkillEnablementController;
-    subject: SkillTreeSubject;
-    uninstall: ReturnType<typeof useSkillHubUninstall>;
-}) {
-    const canUninstall = Boolean(subject.installed && subject.uninstallName);
-
-    return (
-        <div className="flex shrink-0 items-center gap-1.5">
-            {subject.installed && subject.skillId && !subject.readOnly ? (
-                <Switch
-                    aria-label={`${subject.enabled ? 'Disable' : 'Enable'} ${subject.name}`}
-                    checked={subject.enabled === true}
-                    className="data-[checked]:bg-success"
-                    disabled={setEnabled.isPending}
-                    onCheckedChange={(checked) =>
-                        setEnabled.mutate({ enabled: checked, skillId: subject.skillId! })
-                    }
-                />
-            ) : null}
-            {subject.installed || !subject.identifier ? null : (
-                <Button
-                    disabled={install.isPending || scanBlocked}
-                    onClick={() => install.mutate({ identifier: subject.identifier! })}
-                    size="sm"
-                    title={scanBlocked ? 'The security scan blocked this skill.' : undefined}
-                >
-                    {install.isPending ? (
-                        <Spinner className="size-4" />
-                    ) : (
-                        <Icon icon={AddCircleIcon} />
-                    )}
-                    Install
-                </Button>
-            )}
-            <Menu>
-                <MenuTrigger
-                    render={
-                        <Button
-                            aria-label={`${subject.name} actions`}
-                            className="text-foreground"
-                            size="icon-sm"
-                            title="Skill actions"
-                            variant="ghost"
-                        />
-                    }
-                >
-                    <Icon className="size-4" icon={MoreHorizontalIcon} />
-                </MenuTrigger>
-                <MenuPopup align="end">
-                    <MenuItem
-                        disabled={!canUninstall || uninstall.isPending}
-                        onClick={() => {
-                            if (subject.uninstallName) {
-                                uninstall.mutate({ name: subject.uninstallName });
-                            }
-                        }}
-                    >
-                        {uninstall.isPending ? (
-                            <Spinner className="size-4" />
-                        ) : (
-                            <Icon className="size-4" icon={Delete02Icon} />
-                        )}
-                        Uninstall
-                    </MenuItem>
-                </MenuPopup>
-            </Menu>
         </div>
     );
 }

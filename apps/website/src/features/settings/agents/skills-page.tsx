@@ -12,6 +12,7 @@ import { MissingAgentState } from '../../agents/missing-agent-state.tsx';
 import { useAgentSkillsUpdate } from '../../agents/use-agent-skills-update.ts';
 import type { SkillEnablementController } from '../../skills/skill-preview-pane.tsx';
 import { SkillSourcesDialog } from '../../skills/skill-sources-dialog.tsx';
+import type { HubEntry } from '../../skills/skill-tree-model.ts';
 import { SkillsBrowser } from '../../skills/skills-browser.tsx';
 import { SkillsPageSkeleton } from '../../skills/skills-page-skeleton.tsx';
 
@@ -32,11 +33,16 @@ export function AgentSkillsSettingsPage() {
         [agent, skills]
     );
     const hubByName = React.useMemo(() => {
-        const byName = new Map<string, { identifier: string; trustLevel: null | string }>();
+        const byName = new Map<string, HubEntry>();
 
         for (const [identifier, entry] of Object.entries(availableQuery.data?.installed ?? {})) {
             if (entry.name) {
-                byName.set(entry.name, { identifier, trustLevel: entry.trustLevel });
+                byName.set(entry.name, {
+                    edited: entry.edited,
+                    identifier,
+                    trustLevel: entry.trustLevel,
+                    updateAvailable: entry.updateAvailable,
+                });
             }
         }
 

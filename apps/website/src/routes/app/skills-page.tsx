@@ -3,6 +3,7 @@ import * as React from 'react';
 import { Alert, AlertDescription } from '../../components/ui/alert.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import { SkillSourcesDialog } from '../../features/skills/skill-sources-dialog.tsx';
+import type { HubEntry } from '../../features/skills/skill-tree-model.ts';
 import { SkillsBrowser } from '../../features/skills/skills-browser.tsx';
 import { SkillsPageSkeleton } from '../../features/skills/skills-page-skeleton.tsx';
 import { useSkillHubAvailable } from '../../hooks/skills/use-skill-hub-available.ts';
@@ -14,10 +15,15 @@ export function SkillsPage() {
     const availableQuery = useSkillHubAvailable({ enabled: true });
     const skills = skillsQuery.data?.skills ?? [];
     const hubByName = React.useMemo(() => {
-        const byName = new Map<string, { identifier: string; trustLevel: null | string }>();
+        const byName = new Map<string, HubEntry>();
         for (const [identifier, entry] of Object.entries(availableQuery.data?.installed ?? {})) {
             if (entry.name) {
-                byName.set(entry.name, { identifier, trustLevel: entry.trustLevel });
+                byName.set(entry.name, {
+                    edited: entry.edited,
+                    identifier,
+                    trustLevel: entry.trustLevel,
+                    updateAvailable: entry.updateAvailable,
+                });
             }
         }
         return byName;
