@@ -22,16 +22,13 @@ import {
 } from './skill-content-dialogs.tsx';
 import type { ManagedSource, SkillTreeSubject } from './skill-tree-model.ts';
 
-/** Restore action copy per managed source. */
-function resetActionLabel(source: ManagedSource): string {
-    return source === 'seeded' ? 'Reset to default' : 'Restore Tavern version';
-}
+const restoreActionLabel = 'Restore Original Version';
 
 function restoreTargetLabel(source: ManagedSource): string {
     if (source === 'seeded') {
         return 'the Tavern default';
     }
-    return source === 'plugin' ? "the plugin's current version" : 'the current Tavern version';
+    return source === 'plugin' ? "the plugin's original version" : 'the original Tavern version';
 }
 
 export interface SkillEnablementController {
@@ -193,7 +190,7 @@ export function SkillDetailActions({
                         {canReset && managedSource ? (
                             <MenuItem disabled={mutationBusy} onClick={() => setResetOpen(true)}>
                                 <Icon className="size-4" icon={ArrowReloadHorizontalIcon} />
-                                {resetActionLabel(managedSource)}
+                                {restoreActionLabel}
                             </MenuItem>
                         ) : null}
                         {canUninstall ? (
@@ -220,7 +217,7 @@ export function SkillDetailActions({
                 restoreTarget={restoreTargetLabel(managedSource ?? 'hub')}
             />
             <ResetConfirmDialog
-                actionLabel={resetActionLabel(managedSource ?? 'seeded')}
+                actionLabel={restoreActionLabel}
                 name={subject.name}
                 onConfirm={() => runReset()}
                 onOpenChange={setResetOpen}

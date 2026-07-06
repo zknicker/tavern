@@ -89,11 +89,6 @@ function SelectedSkillPreview({
                                     Update available
                                 </Badge>
                             ) : null}
-                            {subject.edited ? (
-                                <Badge size="sm" variant="subtle">
-                                    Edited
-                                </Badge>
-                            ) : null}
                         </div>
                         <SkillDetailActions
                             scanBlocked={scanBlocked}
