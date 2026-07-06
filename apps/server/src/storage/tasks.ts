@@ -80,8 +80,7 @@ export function parseTaskRawJson(task: TaskRecord) {
 
 function toTaskRow(input: { runtimeId: string; task: AgentRuntimeTask; timestamp: string }) {
     return {
-        assigneeAgentId:
-            input.task.assignee?.kind === 'agent' ? input.task.assignee.agentId : null,
+        assigneeAgentId: input.task.assignee?.kind === 'agent' ? input.task.assignee.agentId : null,
         assigneeKind: input.task.assignee?.kind ?? null,
         createdAt: input.task.createdAt,
         epicId: input.task.epicId,

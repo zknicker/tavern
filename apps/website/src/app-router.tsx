@@ -107,6 +107,20 @@ export function createAppRouter() {
                                     element: <Navigate replace to={appRoutes.memory} />,
                                 },
                                 {
+                                    path: 'tasks',
+                                    lazy: lazyRoute(
+                                        () => import('./routes/app/tasks-page.tsx'),
+                                        'TasksPage'
+                                    ),
+                                },
+                                {
+                                    path: 'tasks/:taskId',
+                                    lazy: lazyRoute(
+                                        () => import('./routes/app/task-detail-page.tsx'),
+                                        'TaskDetailPage'
+                                    ),
+                                },
+                                {
                                     path: 'automations',
                                     lazy: lazyRoute(
                                         () => import('./routes/app/cron-page.tsx'),

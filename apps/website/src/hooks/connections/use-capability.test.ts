@@ -75,11 +75,15 @@ describe('Runtime capability gates', () => {
         expect(settingsCapabilityRequirements.memories).toEqual(['semanticMemory']);
     });
 
-    test('gates Tasks on agent runtime capabilities', () => {
-        expect(routeTabCapabilityRequirements.tasks).toEqual([
+    test('gates Automations on agent runtime capabilities', () => {
+        expect(routeTabCapabilityRequirements.automations).toEqual([
             ...agentCapabilityRequirements,
             'cron',
         ]);
+    });
+
+    test('gates Tasks on the runtime API only', () => {
+        expect(routeTabCapabilityRequirements.tasks).toEqual(['apiServer']);
     });
 
     test('explains old Runtime version mismatch beside green capability probes', () => {

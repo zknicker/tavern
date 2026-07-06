@@ -22,7 +22,6 @@ import {
 } from '../agent-engine/skill-library.ts';
 import { readConfigValue } from '../config.ts';
 import { createTavernCronTools } from '../cron/agent-tools.ts';
-import { createTavernTaskTools } from '../tasks/agent-tools.ts';
 import { isRuntimeCronReady } from '../cron/manager-state.ts';
 import { createTavernMemoryTools } from '../memory/agent-tools.ts';
 import { isMemoryEnabled } from '../memory/settings.ts';
@@ -30,6 +29,7 @@ import { createGoogleToolsForAgent } from '../plugins/google-tools.ts';
 import { createMerchbaseToolsForAgent } from '../plugins/merchbase-tools.ts';
 import { createTavernSkillTools } from '../skills/agent-tools.ts';
 import { recordInjectedSkillUsage } from '../skills/telemetry.ts';
+import { createTavernTaskTools } from '../tasks/agent-tools.ts';
 import {
     parseWidgetsFromAssistantContent,
     widgetActivity,

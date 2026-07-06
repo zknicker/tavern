@@ -23,7 +23,6 @@ import { resetRuntimeSkillToDefault } from '../agent-engine/skill-library.ts';
 import { handleToolSetupRequest } from '../agent-engine/tool-setup-routes.ts';
 import { handleRuntimeCapabilitiesRequest } from '../capabilities/routes.ts';
 import { handleCronRequest } from '../cron/routes.ts';
-import { handleTasksRequest } from '../tasks/routes.ts';
 import { handleRuntimeJobsRequest } from '../jobs/routes.ts';
 import { listMacApps } from '../mac-apps/inventory.ts';
 import { handleMemoryRequest } from '../memory/routes.ts';
@@ -35,6 +34,7 @@ import { handleOpenRouterSettingsRequest } from '../model-access/openrouter-sett
 import { handleModelCategorySettingsRequest } from '../models/category-settings.ts';
 import { handleModelProviderRequest } from '../models/provider-routes.ts';
 import { handlePluginsRequest } from '../plugins/routes.ts';
+import { handleTasksRequest } from '../tasks/routes.ts';
 import { handleTimezoneSettingsRequest } from '../timezone-settings.ts';
 import { handleWorkspaceRequest } from '../workspace/routes.ts';
 import { resetAgentSession } from './agent-session-reset.ts';

@@ -8,14 +8,19 @@ const databasePath = join(directory, 'test.sqlite');
 
 process.env.DATABASE_PATH = databasePath;
 
-const [{ ensureDatabaseSchema }, { databaseClient }, { saveTaskRecord }, agentRuntimeSync, { getTask, listTasks }] =
-    await Promise.all([
-        import('../db/bootstrap.ts'),
-        import('../db/index.ts'),
-        import('../storage/tasks.ts'),
-        import('../sync/agent-runtime-sync.ts'),
-        import('./list.ts'),
-    ]);
+const [
+    { ensureDatabaseSchema },
+    { databaseClient },
+    { saveTaskRecord },
+    agentRuntimeSync,
+    { getTask, listTasks },
+] = await Promise.all([
+    import('../db/bootstrap.ts'),
+    import('../db/index.ts'),
+    import('../storage/tasks.ts'),
+    import('../sync/agent-runtime-sync.ts'),
+    import('./list.ts'),
+]);
 
 ensureDatabaseSchema();
 

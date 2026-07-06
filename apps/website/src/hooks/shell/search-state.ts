@@ -14,6 +14,12 @@ const searchConfigs: Array<{
             placeholder: 'Filter jobs...',
         },
     },
+    {
+        match: (pathname) => pathname === appRoutes.tasks,
+        config: {
+            placeholder: 'Search tasks...',
+        },
+    },
 ];
 
 export function getSearchConfig(pathname: string): SearchConfig | null {

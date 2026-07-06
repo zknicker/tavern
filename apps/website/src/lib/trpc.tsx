@@ -116,6 +116,8 @@ export type SkillListOutput = RouterOutput['skill']['list'];
 export type SkillRuntimeListOutput = RouterOutput['skill']['runtimeList'];
 export type ToolConfigOutput = RouterOutput['skill']['toolConfig'];
 export type SubAgentListOutput = RouterOutput['subAgent']['list'];
+export type TaskListOutput = RouterOutput['tasks']['list'];
+export type TaskRecord = TaskListOutput['tasks'][number];
 export type WorkerListOutput = RouterOutput['worker']['list'];
 
 function getTrpcUrl(serverOrigin: string | null) {

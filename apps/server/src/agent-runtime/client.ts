@@ -112,6 +112,8 @@ import {
     type AgentRuntimeStopTurn,
     type AgentRuntimeStopTurnResult,
     type AgentRuntimeSubmitModelProviderOAuth,
+    type AgentRuntimeTask,
+    type AgentRuntimeTaskList,
     type AgentRuntimeTimezoneSettings,
     type AgentRuntimeTool,
     type AgentRuntimeToolConfig,
@@ -128,8 +130,6 @@ import {
     type AgentRuntimeUpdateAgentSessionModel,
     type AgentRuntimeUpdateAgentSessionModelResult,
     type AgentRuntimeUpdateAgentThinkingDefault,
-    type AgentRuntimeTask,
-    type AgentRuntimeTaskList,
     type AgentRuntimeUpdateCron,
     type AgentRuntimeUpdateModelProvider,
     type AgentRuntimeUpdateSkillEnabled,
@@ -162,8 +162,8 @@ import {
     agentRuntimeCompleteGoogleOAuthSchema,
     agentRuntimeCreateAgentSchema,
     agentRuntimeCreateCronSchema,
-    agentRuntimeCreateTaskSchema,
     agentRuntimeCreateMessageSchema,
+    agentRuntimeCreateTaskSchema,
     agentRuntimeCronListSchema,
     agentRuntimeCronRunListSchema,
     agentRuntimeCronRunSchema,
@@ -282,9 +282,9 @@ import {
     agentRuntimeUpdateAgentThinkingDefaultSchema,
     agentRuntimeUpdateCronSchema,
     agentRuntimeUpdateModelProviderSchema,
-    agentRuntimeUpdateTaskSchema,
     agentRuntimeUpdateSchema,
     agentRuntimeUpdateSkillEnabledSchema,
+    agentRuntimeUpdateTaskSchema,
     agentRuntimeUpdateToolEnabledSchema,
     agentRuntimeUpsertBindingSchema,
     agentRuntimeWorkspaceFileContentSchema,
@@ -359,17 +359,16 @@ export interface TavernAgentRuntimeClient {
         input: AgentRuntimeCompleteGoogleOAuth
     ): Promise<AgentRuntimeGoogleOAuthPoll>;
     createCronJob(input: AgentRuntimeCreateCron): Promise<AgentRuntimeCron>;
-    createTask(input: AgentRuntimeCreateTask): Promise<AgentRuntimeTask>;
     createSemanticMemoryFolder(
         input: SemanticMemoryPathInput
     ): Promise<SemanticMemoryPathMutationResult>;
     createSemanticMemoryPage(
         input: SemanticMemoryCreatePage
     ): Promise<SemanticMemoryPathMutationResult>;
+    createTask(input: AgentRuntimeCreateTask): Promise<AgentRuntimeTask>;
     deleteAgent(agentId: string): Promise<AgentRuntimeArchiveAgent>;
     deleteBinding(bindingId: string): Promise<AgentRuntimeArchiveBinding>;
     deleteCronJob(jobId: string): Promise<AgentRuntimeArchiveCron>;
-    deleteTask(taskId: string): Promise<{ deleted: boolean; id: string }>;
     deleteDiscordBinding(
         bindingId: string,
         input: AgentRuntimeDeleteDiscordBinding
@@ -382,6 +381,7 @@ export interface TavernAgentRuntimeClient {
     deleteSemanticMemoryPage(
         input: SemanticMemoryPathInput
     ): Promise<SemanticMemoryPathMutationResult>;
+    deleteTask(taskId: string): Promise<{ deleted: boolean; id: string }>;
     disconnectGoogleOAuth(): Promise<AgentRuntimeGoogleSettings>;
     getAgentConfig(agentId: string): Promise<AgentRuntimeAgent>;
     getAgentEngineConfig(): Promise<AgentRuntimeAgentEngineConfigSnapshot>;
@@ -389,7 +389,6 @@ export interface TavernAgentRuntimeClient {
     getAgentFile(agentId: string, path: string): Promise<AgentRuntimeAgentFileContent>;
     getCapability(id: AgentRuntimeCapabilityHealthId): Promise<AgentRuntimeCapabilityHealth>;
     getCronJob(jobId: string): Promise<AgentRuntimeCron>;
-    getTask(taskId: string): Promise<AgentRuntimeTask>;
     getCurrentAgentSession(input: {
         agentId?: string;
         chatId: string;
@@ -415,6 +414,7 @@ export interface TavernAgentRuntimeClient {
     getSessionPrompt(sessionKey: string): Promise<AgentRuntimeSessionPrompt | null>;
     getSkill(skillId: string): Promise<AgentRuntimeSkill>;
     getSkillHubAvailable(): Promise<AgentRuntimeSkillHubAvailable>;
+    getTask(taskId: string): Promise<AgentRuntimeTask>;
     getTimezoneSettings(): Promise<AgentRuntimeTimezoneSettings>;
     getToolConfig(toolId: string): Promise<AgentRuntimeToolConfig>;
     getUpdateStatus(): Promise<AgentRuntimeUpdate>;
@@ -433,7 +433,6 @@ export interface TavernAgentRuntimeClient {
     listCapabilities(): Promise<AgentRuntimeCapabilityHealthList>;
     listChats(): Promise<{ chats: AgentRuntimeChat[] }>;
     listCronJobs(): Promise<AgentRuntimeCronList>;
-    listTasks(): Promise<AgentRuntimeTaskList>;
     listCronRuns(jobId?: string): Promise<{ runs: AgentRuntimeCronRun[] }>;
     listDiscordBindings(): Promise<{ bindings: AgentRuntimeDiscordBinding[] }>;
     listEvents(input?: AgentRuntimeListEventsInput): Promise<AgentRuntimeEventList>;
@@ -457,6 +456,7 @@ export interface TavernAgentRuntimeClient {
     listSkills(
         options?: AgentRuntimeListSkillsOptions
     ): Promise<{ skills: AgentRuntimeSkillSummary[] }>;
+    listTasks(): Promise<AgentRuntimeTaskList>;
     listTools(): Promise<AgentRuntimeToolList>;
     listWorkspaceFiles(
         agentId: string,
@@ -588,11 +588,11 @@ export interface TavernAgentRuntimeClient {
         input: AgentRuntimeUpdateAgentThinkingDefault
     ): Promise<AgentRuntimeAgentEngineConfigSnapshot>;
     updateCronJob(jobId: string, input: AgentRuntimeUpdateCron): Promise<AgentRuntimeCron>;
-    updateTask(taskId: string, input: AgentRuntimeUpdateTask): Promise<AgentRuntimeTask>;
     updateSkillEnabled(
         skillId: string,
         input: AgentRuntimeUpdateSkillEnabled
     ): Promise<AgentRuntimeSkill>;
+    updateTask(taskId: string, input: AgentRuntimeUpdateTask): Promise<AgentRuntimeTask>;
     updateToolEnabled(
         toolId: string,
         input: AgentRuntimeUpdateToolEnabled

@@ -86,9 +86,9 @@ describe('tasks store', () => {
 
     test('rejects linking to a non-epic parent', () => {
         const plain = createTask({ id: createTaskId(), title: 'Not an epic' });
-        expect(() =>
-            createTask({ epicId: plain.id, id: createTaskId(), title: 'Child' })
-        ).toThrow('is not an epic');
+        expect(() => createTask({ epicId: plain.id, id: createTaskId(), title: 'Child' })).toThrow(
+            'is not an epic'
+        );
     });
 
     test('filters by status and kind', () => {

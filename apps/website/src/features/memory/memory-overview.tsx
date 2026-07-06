@@ -127,7 +127,11 @@ export function MemoryOverview({ status }: { status: SemanticMemoryHubStatus | n
                         title="Recent runs"
                         trailingWidth="intrinsic"
                     >
-                        <Button render={<NavLink to={appRoutes.automations} />} size="sm" variant="ghost">
+                        <Button
+                            render={<NavLink to={appRoutes.automations} />}
+                            size="sm"
+                            variant="ghost"
+                        >
                             <span>View Automations</span>
                             <Icon icon={ArrowRight01Icon} />
                         </Button>
