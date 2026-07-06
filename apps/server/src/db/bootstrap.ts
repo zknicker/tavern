@@ -1,3 +1,4 @@
+import { repairCronCacheTables } from './bootstrap-cron-repair.ts';
 import { databaseClient } from './index.ts';
 
 const schemaStatements = [
@@ -490,6 +491,7 @@ export function ensureDatabaseSchema() {
     runSchemaStatements(
         (statement) => !(statement.startsWith('PRAGMA') || statement.startsWith('CREATE INDEX'))
     );
+    repairCronCacheTables(runSchemaStatements);
     runSchemaStatements((statement) => statement.startsWith('CREATE INDEX'));
     migrateAgentProfilesUserInstructions();
     migrateAgentProfilesCharacter();
