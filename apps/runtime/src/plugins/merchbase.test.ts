@@ -53,6 +53,7 @@ describe('MerchBase Plugin settings', () => {
 
     test('defaults new settings to MerchBase production', () => {
         expect(getMerchbaseSettings()).toMatchObject({
+            apiKey: '',
             apiKeyConfigured: false,
             baseUrl: 'https://app.merchbase.co',
             enabled: false,
@@ -70,6 +71,7 @@ describe('MerchBase Plugin settings', () => {
         });
 
         expect(settings).toMatchObject({
+            apiKey: 'secret-key',
             apiKeyConfigured: true,
             defaultAccount: 'acct_123',
             defaultMarketplace: 'US',

@@ -494,6 +494,7 @@ export const agentRuntimeUpdateAgentPluginGrantSchema = z
 
 export const agentRuntimeMerchbaseSettingsSchema = z
     .object({
+        apiKey: z.string(),
         apiKeyConfigured: z.boolean(),
         baseUrl: z.string().trim().url(),
         defaultAccount: z.string().trim().min(1).max(160).nullable(),

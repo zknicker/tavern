@@ -128,8 +128,7 @@ export function MerchbaseSettingsControl({
     const normalized = normalizeDraft(draft);
     const hasChanges = hasDraftChanges(currentSettings, normalized);
     const needsReplaceConfirmation = Boolean(currentSettings.skillConflict && normalized.enabled);
-    const missingEnabledSetup =
-        normalized.enabled && !(currentSettings.apiKeyConfigured || Boolean(normalized.apiKey));
+    const missingEnabledSetup = normalized.enabled && !normalized.apiKey;
     const canSave = !missingEnabledSetup && (hasChanges || needsReplaceConfirmation);
     const setupError = missingEnabledSetup ? 'Add a MerchBase API key before enabling.' : null;
 
@@ -160,7 +159,7 @@ export function MerchbaseSettingsControl({
                 isSaving={isSaving}
                 onDraftChange={setDraft}
                 onOpenChange={setSettingsDialogOpen}
-                onSave={() => requestSave(toSaveInput(normalized))}
+                onSave={() => requestSave(toSaveInput(currentSettings, normalized))}
                 open={settingsDialogOpen}
                 settings={currentSettings}
                 setupError={setupError}

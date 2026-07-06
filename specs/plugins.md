@@ -65,7 +65,7 @@ APIs so encrypted storage can replace the backing store later without changing P
 
 Every Plugin manifest declares `services[]`.
 
-Plugin-level fields declare container metadata, global settings, write-only secrets, optional
+Plugin-level fields declare container metadata, global settings, stored secrets, optional
 connection auth, Plugin-level health, and Widget ownership. Service-level fields declare
 Service metadata, required OAuth scopes, health capabilities, skills, and tool groups.
 

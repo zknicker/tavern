@@ -75,12 +75,13 @@ runtime_plugin_secrets(
 
 For MerchBase, `runtime_plugins.config_json` stores non-secret settings such as
 base URL, default account, and default marketplace.
-`runtime_plugin_secrets.secret_json` stores the API key. API reads mask secrets;
-Plugin-backed Widgets, the managed `merchbase` Runtime tools, and
-settings routes go through the Runtime Plugin service rather than reading these
-tables directly. The managed `merchbase` skill is instruction-only: it describes
-when to use the tools and Widget, but does not expose raw Runtime API
-calls as the agent contract.
+`runtime_plugin_secrets.secret_json` stores the API key. Plugin list reads mask
+secrets, while settings detail reads can return secrets to the local owner so
+the settings UI can reveal saved values. Plugin-backed Widgets, the managed
+`merchbase` Runtime tools, and settings routes go through the Runtime Plugin
+service rather than reading these tables directly. The managed `merchbase`
+skill is instruction-only: it describes when to use the tools and Widget, but
+does not expose raw Runtime API calls as the agent contract.
 
 For multi-Service Plugins such as Google, `runtime_plugins.config_json` stores
 `services.<serviceId>.enabled`. OAuth tokens, granted scopes, expiry, and

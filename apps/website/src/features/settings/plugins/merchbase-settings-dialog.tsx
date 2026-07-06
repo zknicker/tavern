@@ -158,7 +158,7 @@ function createMerchbaseFields({
         apiKey: {
             ariaLabel: 'MerchBase API key',
             description: settings.apiKeyConfigured
-                ? 'Leave blank to keep the current key.'
+                ? 'Clear to remove the current key.'
                 : 'Required before enabling MerchBase.',
             error: setupError,
             id: 'merchbase-api-key',

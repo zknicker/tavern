@@ -13,7 +13,7 @@ export interface MerchbaseSettingsDraft {
 
 export function createDraft(settings: MerchbaseSettings | null): MerchbaseSettingsDraft {
     return {
-        apiKey: '',
+        apiKey: settings?.apiKey ?? '',
         baseUrl: settings?.baseUrl ?? '',
         defaultAccount: settings?.defaultAccount ?? '',
         defaultMarketplace: settings?.defaultMarketplace ?? '',
@@ -31,9 +31,15 @@ export function normalizeDraft(draft: MerchbaseSettingsDraft): MerchbaseSettings
     };
 }
 
-export function toSaveInput(draft: MerchbaseSettingsDraft): AgentRuntimeSaveMerchbaseSettings {
+export function toSaveInput(
+    settings: MerchbaseSettings,
+    draft: MerchbaseSettingsDraft
+): AgentRuntimeSaveMerchbaseSettings {
+    const currentApiKey = settings.apiKey ?? '';
+    const apiKeyChanged = draft.apiKey !== currentApiKey;
+
     return {
-        apiKey: draft.apiKey || undefined,
+        apiKey: apiKeyChanged ? draft.apiKey || null : undefined,
         baseUrl: draft.baseUrl,
         defaultAccount: nullableString(draft.defaultAccount),
         defaultMarketplace: nullableString(draft.defaultMarketplace),
@@ -47,7 +53,7 @@ export function hasDraftChanges(settings: MerchbaseSettings, draft: MerchbaseSet
         draft.baseUrl !== settings.baseUrl ||
         nullableString(draft.defaultAccount) !== settings.defaultAccount ||
         nullableString(draft.defaultMarketplace) !== settings.defaultMarketplace ||
-        Boolean(draft.apiKey)
+        draft.apiKey !== (settings.apiKey ?? '')
     );
 }
 

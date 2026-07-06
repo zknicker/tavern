@@ -11,6 +11,7 @@ describe('MerchBase Plugin settings', () => {
             <MerchbaseSettingsCard
                 onSave={() => undefined}
                 settings={{
+                    apiKey: 'sk_live_123',
                     apiKeyConfigured: true,
                     baseUrl: 'https://app.merchbase.co',
                     defaultAccount: 'acct_123',
@@ -39,6 +40,7 @@ describe('MerchBase Plugin settings', () => {
             <MerchbaseSettingsCard
                 onSave={() => undefined}
                 settings={{
+                    apiKey: '',
                     apiKeyConfigured: false,
                     baseUrl: 'https://app.merchbase.co',
                     defaultAccount: null,
@@ -252,6 +254,7 @@ describe('MerchBase Plugin settings', () => {
             <MerchbaseSettingsCard
                 onSave={() => undefined}
                 settings={{
+                    apiKey: 'sk_live_123',
                     apiKeyConfigured: true,
                     baseUrl: 'https://app.merchbase.co',
                     defaultAccount: null,
@@ -278,6 +281,7 @@ describe('MerchBase Plugin settings', () => {
             <MerchbaseSettingsCard
                 onSave={() => undefined}
                 settings={{
+                    apiKey: 'sk_live_123',
                     apiKeyConfigured: true,
                     baseUrl: 'https://app.merchbase.co',
                     defaultAccount: 'acct_123',

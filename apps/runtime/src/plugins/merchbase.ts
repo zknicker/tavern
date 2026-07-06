@@ -73,6 +73,7 @@ export function getMerchbasePlugin(): AgentRuntimePlugin {
 export function getMerchbaseSettings(): AgentRuntimeMerchbaseSettings {
     const effective = resolveMerchbaseSettings();
     return agentRuntimeMerchbaseSettingsSchema.parse({
+        apiKey: effective.apiKey ?? '',
         apiKeyConfigured: Boolean(effective.apiKey),
         baseUrl: effective.baseUrl,
         defaultAccount: effective.defaultAccount,

@@ -10,8 +10,7 @@ read_when:
 # Plugins
 
 Plugins are built-in Tavern Runtime capabilities for external systems. Runtime
-owns their durable settings, write-only secrets, health checks, and domain
-actions.
+owns their durable settings, stored secrets, health checks, and domain actions.
 
 Plugin package docs refer to Tavern-managed, manifest-declared bundles that
 collect tool code, agent guidance, product-owned actions, and Service
@@ -39,7 +38,7 @@ unavailable Plugin actions defensively.
 A Plugin manifest declares inventory and ownership metadata:
 
 * Plugin id, name, and version.
-* Settings and write-only secrets.
+* Settings and stored secrets.
 * Plugin-level Runtime health capability ids.
 * Services with their own health capability ids, agent-facing skills, and tools.
 * Widgets owned by the Plugin.
@@ -64,9 +63,10 @@ Those internals should not leak into the Plugin manifest or generic Tavern
 product docs.
 
 Settings uses the same host split. Core Tavern provides the Plugins settings
-frame, enablement controls, health presentation, secret redaction behavior, and
-save/test affordances. The Plugin folder owns domain-specific settings panel
-content, field validation copy, conflict warnings, and repair guidance.
+frame, enablement controls, health presentation, redacted list reads, settings
+detail secret reveal behavior, and save/test affordances. The Plugin folder
+owns domain-specific settings panel content, field validation copy, conflict
+warnings, and repair guidance.
 
 Dev-mode demos use the same Plugin ownership boundary. Each Plugin-owned Widget should have one matching `dev/<widget>.demo.ts` module
 inside the Plugin folder. That module owns seeded chat rows, the Widget
@@ -79,7 +79,7 @@ names.
 Plugin records live in dedicated Runtime SQLite tables:
 
 * `runtime_plugins`: enablement and non-secret `config_json`.
-* `runtime_plugin_secrets`: write-only credential `secret_json`.
+* `runtime_plugin_secrets`: credential `secret_json`.
 * `runtime_capabilities`: current health such as `plugin.merchbase` or
   `plugin.google.calendar`.
 
@@ -153,7 +153,7 @@ MerchBase settings are:
 * `baseUrl`
 * `defaultAccount`
 * `defaultMarketplace`
-* `apiKey` as a write-only secret
+* `apiKey` as a stored secret
 
 Local dev may pre-seed Plugin settings with:
 
@@ -232,7 +232,9 @@ agent-side setup:
 1. Add the Plugin id to `@tavern/api` Runtime contracts and expose narrow typed
    settings and health schemas.
 2. Add a dedicated Runtime Plugin module backed by `runtime_plugins` and
-   `runtime_plugin_secrets`. Keep secrets write-only and masked on reads.
+   `runtime_plugin_secrets`. Keep Plugin list reads masked; settings detail
+   reads may return secrets to the local owner so settings fields can reveal
+   saved values.
 3. Add Runtime routes for settings and read actions. Settings writes must
    require a Tavern caller and immediately refresh the Plugin capability.
 4. Add a Runtime capability named `plugin.<id>` whose check proves the
@@ -257,8 +259,8 @@ agent-side setup:
    so Settings shows them in the Plugins tabs and rejects direct enablement
    writes. Treat plugin skills as collision-safe guidance unless the Settings
    product explicitly projects plugin skills.
-10. Add Settings -> Plugins UI for enablement, health, non-secret settings, and
-   write-only secret updates.
+10. Add Settings -> Plugins UI for enablement, health, settings, and secret
+    reveal/update controls.
 11. Add a Widget only when the display is a product concept, not
     a generic chart/table assembly problem. Store query intent and fetch live data
     through Runtime while rendering.

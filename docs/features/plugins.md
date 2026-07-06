@@ -15,7 +15,7 @@ and repair; agents only get Plugin tools when the Plugin and Service are usable.
 ## In the box
 
 * **Settings -> Agents -> Plugins.** Users enable or disable built-in
-  Tavern Plugins and edit non-secret settings plus write-only secrets.
+  Tavern Plugins and edit Plugin settings and secrets.
 * **Plugin and Service health.** Runtime capability checks report whether a
   Plugin connection or Service is ready for agent-visible reads.
 * **Plugin skills and tools.** Enabled Plugin Services expose their agent-facing
@@ -29,9 +29,10 @@ and repair; agents only get Plugin tools when the Plugin and Service are usable.
 ## Contract
 
 Plugins are Runtime-owned product capabilities and Tavern-managed,
-manifest-declared bundles. Runtime stores their settings, masks secrets on
-reads, checks health, stores Service enablement, and exposes narrow read actions
-for managed tools and Widgets.
+manifest-declared bundles. Runtime stores their settings, keeps list and summary
+reads redacted, returns secrets to the local owner in settings detail views,
+checks health, stores Service enablement, and exposes narrow read actions for
+managed tools and Widgets.
 
 Plugins are Tavern's normal user-facing integration surface. A Plugin may be
 implemented with direct API calls, local commands, or MCP internally, but users
@@ -58,11 +59,11 @@ APIs. MerchBase operation names should stay in the MerchBase Plugin, not in
 generic Tavern docs or manifests.
 
 Settings follows the same split. Core Tavern provides the Plugins settings
-frame, enablement controls, health presentation, secret redaction behavior, and
-save/test affordances. Plugin settings dialogs use Tavern's canonical Plugin
-dialog shell, a Services section for Service enablement, and a Connection
-section for account credentials or OAuth state. Standard text and secret config
-uses field descriptors. OAuth client ids that ship with Tavern are
+frame, enablement controls, health presentation, list redaction, secret reveal
+behavior, and save/test affordances. Plugin settings dialogs use Tavern's
+canonical Plugin dialog shell, a Services section for Service enablement, and a
+Connection section for account credentials or OAuth state. Standard text and
+secret config uses field descriptors. OAuth client ids that ship with Tavern are
 infrastructure config, not user-facing Plugin settings. Service rows use Service
 descriptors so adding another Service does not require new dialog layout code.
 The Plugin folder owns its domain-specific field config, validation copy,
