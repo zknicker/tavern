@@ -5,7 +5,6 @@ import { Alert, AlertDescription } from '../../components/ui/alert.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import { Field, FieldLabel } from '../../components/ui/primitives/field.tsx';
 import { Input } from '../../components/ui/primitives/input.tsx';
-import { ScrollArea } from '../../components/ui/scroll-area.tsx';
 import type { CronEditorFormApi } from './use-cron-editor-form.ts';
 
 interface CronEditorPromptPaneProps {
@@ -17,8 +16,8 @@ export function CronEditorPromptPane({ errorMessage, form }: CronEditorPromptPan
     const isSystemEvent = useStore(form.store, (state) => state.values.runType === 'systemEvent');
 
     return (
-        <ScrollArea className="min-w-0 flex-1" scrollbarGutter>
-            <main className="mx-auto flex h-full min-h-[42rem] w-full max-w-4xl flex-col gap-6 px-6 pt-3 pb-8 lg:px-10">
+        <div className="flex min-h-0 min-w-0 flex-1">
+            <main className="mx-auto flex min-h-0 w-full max-w-4xl flex-1 flex-col gap-6 px-6 pt-3 pb-8 lg:px-10">
                 <div className="flex shrink-0 flex-col gap-1">
                     <form.Field name="name">
                         {(field) => (
@@ -61,7 +60,7 @@ export function CronEditorPromptPane({ errorMessage, form }: CronEditorPromptPan
                             <Field className="min-h-0 flex-1">
                                 <FieldLabel>System event</FieldLabel>
                                 <SimpleCodeEditor
-                                    className="rounded-lg border"
+                                    className="min-h-40 rounded-lg border"
                                     filePath="system-event.md"
                                     onChange={(value) => field.handleChange(value)}
                                     value={field.state.value}
@@ -75,7 +74,7 @@ export function CronEditorPromptPane({ errorMessage, form }: CronEditorPromptPan
                             <Field className="min-h-0 flex-1">
                                 <FieldLabel>Prompt</FieldLabel>
                                 <SimpleCodeEditor
-                                    className="rounded-lg border"
+                                    className="min-h-40 rounded-lg border"
                                     filePath="prompt.md"
                                     onChange={(value) => field.handleChange(value)}
                                     value={field.state.value}
@@ -85,6 +84,6 @@ export function CronEditorPromptPane({ errorMessage, form }: CronEditorPromptPan
                     </form.Field>
                 )}
             </main>
-        </ScrollArea>
+        </div>
     );
 }
