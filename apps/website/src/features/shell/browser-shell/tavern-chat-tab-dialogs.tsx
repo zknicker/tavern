@@ -66,10 +66,8 @@ export function TavernChatTabDialogs({
                 initialDisplayName={editingParticipantsChat?.displayName ?? ''}
                 isPending={updateChat.isPending}
                 onClose={() => {
-                    if (!updateChat.isPending) {
-                        updateChat.reset();
-                        setEditingParticipantsChat(null);
-                    }
+                    updateChat.reset();
+                    setEditingParticipantsChat(null);
                 }}
                 onSubmit={async (input) => {
                     if (!editingParticipantsChat) {

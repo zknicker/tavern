@@ -47,10 +47,8 @@ export function Chats() {
                 isOpen={isEditorOpen}
                 isPending={updateChat.isPending}
                 onClose={() => {
-                    if (!updateChat.isPending) {
-                        updateChat.reset();
-                        setEditingChat(null);
-                    }
+                    updateChat.reset();
+                    setEditingChat(null);
                 }}
                 onSubmit={async (input) => {
                     if (!editingChat) {

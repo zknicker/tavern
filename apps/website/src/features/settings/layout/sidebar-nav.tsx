@@ -210,6 +210,7 @@ function AgentsSettingsSection({ capability }: { capability: ResolveCapability }
             await Promise.all([
                 utils.agent.list.invalidate(),
                 utils.agent.primary.invalidate(),
+                utils.chat.list.invalidate(),
                 utils.model.list.invalidate(),
             ]);
             navigate(buildAgentSettingsPath(agent.id, 'general'));

@@ -41,10 +41,11 @@ happen, and keep the durable timeline as context.
   Opening a chat shows a room topbar with the chat name and current
   participants. Users create channels by naming the channel and choosing its
   agent participants, and can edit channel participants from the open channel.
-  Delete chat is an explicit menu action; Runtime stores it as a recoverable
+  Delete channel is an explicit menu action; Runtime stores it as a recoverable
   archive. New workspaces start with no user channels. Each agent has one
-  built-in DM with the local human operator. There is no separate pinned-chat
-  state.
+  built-in DM with the local human operator. Agent DMs are not user-deleteable;
+  deleting the agent removes its built-in DM from the sidebar. There is no
+  separate pinned-chat state.
 * **Chat appearance and instructions.** Tavern chats can carry durable channel
   color and trusted chat-specific agent instructions.
 * **Offline catch-up.** Tavern Runtime keeps chat history while the app is

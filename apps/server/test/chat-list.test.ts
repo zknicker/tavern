@@ -145,6 +145,22 @@ test('listChats projects Runtime-owned Tavern channels and DMs', async () => {
     );
 });
 
+test('listChats hides stale Runtime-owned Tavern DMs for deleted agents', async () => {
+    tavernChats.push(
+        runtimeTavernChat({
+            agentIds: ['agt_deleted'],
+            displayName: 'Deleted agent',
+            id: 'cht_agt_deleted_dm',
+            kind: 'dm',
+            updatedAt: '2026-04-06T12:02:00.000Z',
+        })
+    );
+
+    const result = await listChats();
+
+    assert.deepEqual(result.ids, []);
+});
+
 test('new Runtime-owned Tavern chats sort by chat update time before runtime activity syncs', async () => {
     await seedPlanningChat({ includeSession: true });
     tavernChats.push(

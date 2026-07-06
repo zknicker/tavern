@@ -38,10 +38,8 @@ export function ChatParticipantsEditButton({ chat }: { chat: ChatListItem }) {
                 initialDisplayName={chat.displayName}
                 isPending={updateChat.isPending}
                 onClose={() => {
-                    if (!updateChat.isPending) {
-                        updateChat.reset();
-                        setOpen(false);
-                    }
+                    updateChat.reset();
+                    setOpen(false);
                 }}
                 onSubmit={async (input) => {
                     await updateChat.mutateAsync({

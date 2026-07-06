@@ -373,6 +373,16 @@ export async function listChatDetails(options?: { chatId?: string; includeExtern
                     target: identity.target,
                     type: identity.type,
                 });
+
+            if (
+                identity.type === 'tavern' &&
+                conversationKind === 'direct' &&
+                boundAgentIds.length > 0 &&
+                !boundAgentIds.some((agentId) => agentById.has(agentId))
+            ) {
+                return null;
+            }
+
             const title = presentChatTitle({
                 conversationKind,
                 displayName,

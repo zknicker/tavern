@@ -38,7 +38,9 @@ A `chat` is a Runtime-owned conversation container. Tavern-owned chats use
 `kind: "channel"` for shared room-style conversations and `kind: "dm"` for
 one-to-one direct messages. Runtime does not bootstrap channels in a normal
 workspace. Each Runtime-managed agent has one built-in DM with the local human
-operator. Development mode additionally seeds the `demo` channel.
+operator. Built-in agent DMs are removed from the app chat list when their agent
+is deleted, and clients must not expose chat deletion controls for them.
+Development mode additionally seeds the `demo` channel.
 
 `chat.participants` is the membership contract for the chat shell. Participant
 rows use Tavern product ids such as `usr_...`, `agt_...`, and `sys_...`, plus

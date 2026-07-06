@@ -65,10 +65,40 @@ export function ensureAgentDmChat(input: { agentId: string; agentName: string; d
     return { chatId, seeded };
 }
 
-function agentDmChatId(agentId: string) {
+export function archiveAgentDmChat(input: { agentId: string; db: Database }) {
+    const chatId = agentDmChatId(input.agentId);
+    const chat = getChat(chatId, input.db);
+
+    if (!chat) {
+        return { archived: false, chatId };
+    }
+
+    createChat(
+        {
+            id: chatId,
+            kind: 'dm',
+            metadata: {
+                ...chat.metadata,
+                tavern: {
+                    ...readRecord(chat.metadata.tavern),
+                    archived: true,
+                },
+            },
+        },
+        input.db
+    );
+
+    return { archived: true, chatId };
+}
+
+export function agentDmChatId(agentId: string) {
     return agentId === defaultAgentEngineAgentId
         ? defaultAgentDmChatId
         : `cht_${agentId.replace(/[^A-Za-z0-9_-]/g, '_')}_dm`;
+}
+
+function readRecord(input: unknown) {
+    return input && typeof input === 'object' ? (input as Record<string, unknown>) : {};
 }
 
 function runtimeTavernChatMetadata(input: { agentIds: string[]; displayName: string; kind: 'dm' }) {

@@ -3,6 +3,7 @@ import type {
     AgentRuntimeChatParticipant,
     TavernApiSchema,
     TavernChat,
+    TavernCreateChatRequest,
 } from '@tavern/api';
 import { TavernApiError } from '@tavern/sdk';
 import {
@@ -34,6 +35,7 @@ export interface TavernChatTabAppearance {
 }
 
 const localHumanParticipantId = 'usr_tavern';
+const runtimeChatRequestTimeoutMs = 15_000;
 
 export async function listRuntimeChatRecords(options?: {
     chatId?: string;
@@ -114,7 +116,7 @@ export async function createRuntimeTavernChat(input: {
     id: string;
 }) {
     const { client } = await requireRuntimeChatClient();
-    await client.chat.create({
+    await saveRuntimeChat(client, {
         id: input.id,
         metadata: buildRuntimeTavernChatMetadata({
             agentIds: input.agentIds,
@@ -140,7 +142,7 @@ export async function updateRuntimeTavernChat(input: {
     const archived = current ? readTavernChatMetadata(current).archived : false;
     const metadata = current ? readTavernChatMetadata(current) : null;
 
-    await client.chat.create({
+    await saveRuntimeChat(client, {
         id: input.id,
         metadata: buildRuntimeTavernChatMetadata({
             agentIds: input.agentIds,
@@ -165,7 +167,7 @@ export async function archiveRuntimeTavernChat(chatId: string) {
     }
 
     const metadata = readTavernChatMetadata(current);
-    await client.chat.create({
+    await saveRuntimeChat(client, {
         id: chatId,
         metadata: buildRuntimeTavernChatMetadata({
             agentIds: metadata.agentIds,
@@ -192,7 +194,7 @@ export async function updateRuntimeTavernChatTabAppearance(input: {
     }
 
     const metadata = readTavernChatMetadata(current);
-    await client.chat.create({
+    await saveRuntimeChat(client, {
         id: input.chatId,
         metadata: buildRuntimeTavernChatMetadata({
             agentIds: metadata.agentIds,
@@ -219,7 +221,7 @@ export async function updateRuntimeTavernChatSystemPrompt(input: {
     }
 
     const metadata = readTavernChatMetadata(current);
-    await client.chat.create({
+    await saveRuntimeChat(client, {
         id: input.chatId,
         metadata: buildRuntimeTavernChatMetadata({
             agentIds: metadata.agentIds,
@@ -303,12 +305,45 @@ async function getTavernChatOrNull(
     chatId: string
 ) {
     try {
-        return await client.chat.get(chatId);
+        return await withRuntimeChatTimeout(
+            client.chat.get(chatId),
+            'reading chat from Tavern Runtime'
+        );
     } catch (error) {
         if (error instanceof TavernApiError && error.status === 404) {
             return null;
         }
         throw error;
+    }
+}
+
+async function saveRuntimeChat(
+    client: ReturnType<typeof createTavernClientForConnection>,
+    input: TavernCreateChatRequest
+) {
+    return await withRuntimeChatTimeout(client.chat.create(input), 'saving chat to Tavern Runtime');
+}
+
+async function withRuntimeChatTimeout<T>(promise: Promise<T>, action: string) {
+    let timeout: ReturnType<typeof setTimeout> | null = null;
+
+    try {
+        return await Promise.race([
+            promise,
+            new Promise<never>((_, reject) => {
+                timeout = setTimeout(() => {
+                    reject(
+                        new Error(
+                            `Timed out ${action}. Check the Tavern Runtime connection and try again.`
+                        )
+                    );
+                }, runtimeChatRequestTimeoutMs);
+            }),
+        ]);
+    } finally {
+        if (timeout) {
+            clearTimeout(timeout);
+        }
     }
 }
 

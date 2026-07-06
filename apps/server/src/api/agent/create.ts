@@ -1,7 +1,11 @@
 import { z } from 'zod';
 import { createAgent } from '../../agent-settings/service.ts';
 import { agentPrimaryColorSchema } from '../../agents/catalog.ts';
-import { emitAgentInvalidationCascade, emitModelUpdated } from '../invalidation-events.ts';
+import {
+    emitAgentInvalidationCascade,
+    emitChatUpdated,
+    emitModelUpdated,
+} from '../invalidation-events.ts';
 import { publicProcedure } from '../trpc.ts';
 
 const createAgentInputSchema = z.object({
@@ -14,6 +18,7 @@ export const createAgentProcedure = publicProcedure
     .mutation(async ({ input }) => {
         const agent = await createAgent(input);
         emitAgentInvalidationCascade();
+        emitChatUpdated();
         emitModelUpdated();
         return { agent };
     });

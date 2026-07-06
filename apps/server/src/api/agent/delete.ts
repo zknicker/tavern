@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { deleteCatalogAgent } from '../../agents/catalog.ts';
-import { emitAgentInvalidationCascade } from '../invalidation-events.ts';
+import { emitAgentInvalidationCascade, emitChatUpdated } from '../invalidation-events.ts';
 import { publicProcedure } from '../trpc.ts';
 
 const deleteAgentInputSchema = z.object({
@@ -12,6 +12,7 @@ export const deleteAgent = publicProcedure
     .mutation(async ({ input }) => {
         await deleteCatalogAgent(input.agentId);
         emitAgentInvalidationCascade();
+        emitChatUpdated();
         return {
             agentId: input.agentId,
         };

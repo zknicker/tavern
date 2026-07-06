@@ -278,10 +278,8 @@ export function AppSidebarChatList() {
                 initialDisplayName=""
                 isPending={createChat.isPending}
                 onClose={() => {
-                    if (!createChat.isPending) {
-                        createChat.reset();
-                        setCreatingChannel(false);
-                    }
+                    createChat.reset();
+                    setCreatingChannel(false);
                 }}
                 onSubmit={async (input) => {
                     const created = await createChat.mutateAsync(input);
@@ -300,10 +298,8 @@ export function AppSidebarChatList() {
                 initialDisplayName={editingParticipantsChat?.displayName ?? ''}
                 isPending={updateChat.isPending}
                 onClose={() => {
-                    if (!updateChat.isPending) {
-                        updateChat.reset();
-                        setEditingParticipantsChat(null);
-                    }
+                    updateChat.reset();
+                    setEditingParticipantsChat(null);
                 }}
                 onSubmit={async (input) => {
                     if (!editingParticipantsChat) {

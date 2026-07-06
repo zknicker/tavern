@@ -9,7 +9,7 @@ import { tavernPluginManifests } from '@tavern/api/plugins';
 import { getDb } from '../db/connection';
 import type { Database } from '../db/sqlite';
 import { namedParams } from '../db/sqlite';
-import { ensureAgentDmChat } from './bootstrap-chats';
+import { archiveAgentDmChat, ensureAgentDmChat } from './bootstrap-chats';
 
 interface AgentRow {
     created_at: string;
@@ -69,7 +69,15 @@ export function upsertStoredAgent(input: {
 }
 
 export function deleteStoredAgent(agentId: string, db: Database = getDb()) {
-    db.prepare('DELETE FROM agents WHERE id = $id').run(namedParams({ id: agentId }));
+    db.exec('BEGIN IMMEDIATE');
+    try {
+        db.prepare('DELETE FROM agents WHERE id = $id').run(namedParams({ id: agentId }));
+        archiveAgentDmChat({ agentId, db });
+        db.exec('COMMIT');
+    } catch (error) {
+        db.exec('ROLLBACK');
+        throw error;
+    }
 }
 
 export function updateStoredAgent(input: {

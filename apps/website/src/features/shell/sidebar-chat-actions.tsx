@@ -60,6 +60,7 @@ export function SidebarChatContextMenu({
     const canEditParticipants = canEditSidebarChatParticipants(chat) && onEditParticipants;
     const canEditSystemPrompt = canEditSidebarChatSystemPrompt(chat) && onEditSystemPrompt;
     const canCloseTab = Boolean(onCloseTab);
+    const canArchive = canArchiveSidebarChat(chat);
 
     return (
         <ContextMenu>
@@ -125,10 +126,12 @@ export function SidebarChatContextMenu({
                         Close tab
                     </ContextMenuItem>
                 ) : null}
-                <ContextMenuItem onClick={() => onArchive(chat)} variant="destructive">
-                    <Icon className={contextMenuIconClassName} icon={Trash2} />
-                    Delete chat
-                </ContextMenuItem>
+                {canArchive ? (
+                    <ContextMenuItem onClick={() => onArchive(chat)} variant="destructive">
+                        <Icon className={contextMenuIconClassName} icon={Trash2} />
+                        Delete chat
+                    </ContextMenuItem>
+                ) : null}
             </ContextMenuPopup>
         </ContextMenu>
     );
@@ -342,6 +345,10 @@ export function canEditSidebarChatParticipants(
     chat: Pick<ChatListItem, 'conversationKind' | 'type'>
 ) {
     return chat.type === 'tavern' && chat.conversationKind === 'channel';
+}
+
+export function canArchiveSidebarChat(chat: Pick<ChatListItem, 'conversationKind' | 'type'>) {
+    return chat.type === 'tavern' && chat.conversationKind !== 'direct';
 }
 
 export function normalizeSidebarChatSystemPrompt(systemPrompt: string) {

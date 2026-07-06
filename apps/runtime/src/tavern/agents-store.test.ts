@@ -102,6 +102,37 @@ describe('Runtime agent and agent engine reads', () => {
         });
     });
 
+    it('archives an agent built-in DM when the agent is deleted', async () => {
+        await handleTavernRuntimeRequest(
+            new Request('http://runtime.test/agents', {
+                body: JSON.stringify({
+                    id: 'agt_research',
+                    name: 'Research',
+                    workspaceFolder: '/tmp/tavern-research-workspace',
+                }),
+                headers: { 'content-type': 'application/json' },
+                method: 'POST',
+            })
+        );
+
+        const deleteResponse = await handleTavernRuntimeRequest(
+            new Request('http://runtime.test/agents/agt_research', {
+                method: 'DELETE',
+            })
+        );
+
+        expect(deleteResponse.status).toBe(200);
+        expect(getChat('cht_agt_research_dm')).toMatchObject({
+            id: 'cht_agt_research_dm',
+            metadata: {
+                tavern: expect.objectContaining({
+                    archived: true,
+                    displayName: 'Research',
+                }),
+            },
+        });
+    });
+
     it('applies model and skill updates to the addressed agent', async () => {
         await enableClaudeModels();
         await handleTavernRuntimeRequest(
