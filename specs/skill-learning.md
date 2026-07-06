@@ -14,17 +14,22 @@ specified in [Memory Lifecycle](memory-lifecycle.md).
 - A skill is a package: `SKILL.md` plus optional `references/`, `templates/`,
   `scripts/`, and `assets/` files.
 - Every skill on disk is writable by agents and workers, whatever its source
-  (seeded, hub-installed, agent-created, or operator-placed). Plugin-provided
-  skills are not files — they are served live from the plugin and cannot be
-  edited.
-- Nothing rewrites skill files in the background. Content from Tavern arrives
-  only at explicit moments:
+  (seeded, hub-installed, agent-created, operator-placed, or plugin). Plugin
+  skills materialize to disk from the plugin's current definition and are
+  editable like any other skill.
+- Nothing rewrites edited skill files in the background. Content from Tavern
+  arrives only at explicit moments:
   - Hub install records the installed content hash. Reinstalling an unedited
     skill replaces it cleanly; reinstalling an edited skill is a conflict the
     user resolves explicitly (keep local or take the hub version) — never a
     silent overwrite. The Skills page shows when a newer hub version exists.
   - The seeded skill is created once and never refreshed. Its page offers a
     reset to the current release's default.
+  - Plugin skills materialize when the plugin is enabled and refresh at startup
+    only while unedited; an edited plugin skill is left alone and flagged with
+    an available update the user resolves the same way as a hub skill. Their
+    pages offer a reset to the plugin's current version. Disabling a plugin
+    stops injecting its skills but keeps the edited files.
 - When an agent or worker creates a skill, it is auto-enabled for the authoring
   agent only. Other agents gain it through normal skill enablement.
 
@@ -34,8 +39,6 @@ specified in [Memory Lifecycle](memory-lifecycle.md).
   `skill_patch`, and `skill_write_file`.
 - Writes are hash-validated against the last read, matching the Memory write
   collision contract.
-- Writes to plugin-provided skills fail with a clear error; there is no file
-  to edit.
 - Skill changes take effect at the next session. Sessions do not hot-swap
   skills mid-turn.
 

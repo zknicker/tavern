@@ -4,9 +4,8 @@ import path from 'node:path';
 import { getDb } from '../db/connection.ts';
 import type { Database } from '../db/sqlite.ts';
 import { namedParams } from '../db/sqlite.ts';
-import { isPluginSkillId } from '../plugins/agent-capabilities.ts';
 
-export type SkillSource = 'agent' | 'external' | 'hub' | 'seeded';
+export type SkillSource = 'agent' | 'external' | 'hub' | 'plugin' | 'seeded';
 
 export interface SkillSnapshot {
     content: string;
@@ -29,7 +28,6 @@ interface SkillSourceRow {
 }
 
 const writableSource = 'agent' satisfies SkillSource;
-const pluginSkillEditError = 'Plugin skills are provided by their plugin and cannot be edited.';
 const supportDirectories = ['assets', 'references', 'scripts', 'templates'] as const;
 
 export function readSkillSource(skillId: string, db: Database = getDb()) {
@@ -151,7 +149,10 @@ export async function createAgentSkill(input: {
     }
 
     await fs.mkdir(skillDir, { recursive: true });
-    await fs.writeFile(path.join(skillDir, 'SKILL.md'), input.content, { flag: 'wx', mode: 0o600 });
+    await fs.writeFile(path.join(skillDir, 'SKILL.md'), input.content, {
+        flag: 'wx',
+        mode: 0o600,
+    });
     recordSkillSource({
         createdByAgentId: input.agentId,
         skillId,
@@ -184,7 +185,6 @@ export async function patchSkillMarkdown(input: {
         throw error;
     });
     if (previous === null) {
-        throwMissingSkillError(input.skillId);
         throw new Error(`Skill not found: ${input.skillId}`);
     }
     const beforeHash = sha256(previous);
@@ -209,7 +209,6 @@ export async function writeSkillSupportFile(input: {
     skillsDir: string;
 }): Promise<SkillFileChange> {
     if (!(await skillExists(path.join(input.skillsDir, input.skillId)))) {
-        throwMissingSkillError(input.skillId);
         throw new Error(`Skill not found: ${input.skillId}`);
     }
     const relativePath = normalizeSupportFilePath(input.filePath);
@@ -262,12 +261,6 @@ export function skillIdFromName(name: string) {
 
 export function sha256(content: string) {
     return crypto.createHash('sha256').update(content).digest('hex');
-}
-
-function throwMissingSkillError(skillId: string) {
-    if (isPluginSkillId(skillId)) {
-        throw new Error(pluginSkillEditError);
-    }
 }
 
 function enableSkillForAgent(input: { agentId: string; skillId: string }) {

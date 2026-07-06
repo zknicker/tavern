@@ -3,6 +3,7 @@ import { AGENT_WORKSPACE } from '../config.ts';
 import { closeDb, initTestDb } from '../db/connection.ts';
 import { ensureRuntimeSchema } from '../db/schema.ts';
 import { setModelProviderEnabled } from '../models/provider-store.ts';
+import { materializePluginSkills } from '../plugins/materialize-skills.ts';
 import { saveMerchbaseSettings } from '../plugins/merchbase.ts';
 import { getChat } from './chat-api/index.ts';
 import { handleTavernRuntimeRequest } from './router.ts';
@@ -249,12 +250,13 @@ describe('Runtime agent and agent engine reads', () => {
         });
     });
 
-    it('lists granted Plugin skills for the target agent', async () => {
+    it('lists materialized Plugin skills from disk', async () => {
         saveMerchbaseSettings({
             apiKey: 'secret-key',
             baseUrl: 'https://app.merchbase.co',
             enabled: true,
         });
+        await materializePluginSkills();
         await handleTavernRuntimeRequest(
             new Request('http://runtime.test/agents', {
                 body: JSON.stringify({
@@ -296,8 +298,13 @@ describe('Runtime agent and agent engine reads', () => {
                 }),
             ])
         );
-        expect(ungranted.skills).not.toEqual(
-            expect.arrayContaining([expect.objectContaining({ id: 'merchbase' })])
+        expect(ungranted.skills).toEqual(
+            expect.arrayContaining([
+                expect.objectContaining({
+                    id: 'merchbase',
+                    runtimeSource: 'tavern-plugin:merchbase',
+                }),
+            ])
         );
         expect(detailResponse.status).toBe(200);
         await expect(detailResponse.json()).resolves.toMatchObject({

@@ -31,9 +31,8 @@ import {
     saveGoogleSettings,
     startGoogleOAuth,
 } from './google';
+import { materializePluginSkills } from './materialize-skills.ts';
 import {
-    applyMerchbaseAgentCapabilityEnablement,
-    ensureMerchbaseSkillForEnablement,
     getMerchbasePlugin,
     getMerchbaseSettings,
     listRuntimePlugins,
@@ -70,18 +69,11 @@ export async function handlePluginsRequest(request: Request): Promise<Response |
             return forbiddenResponse;
         }
         const input = agentRuntimeSaveMerchbaseSettingsSchema.parse(await readJson(request));
-        const previous = getMerchbaseSettings();
-        const requestedEnabled = input.enabled ?? previous.enabled;
-        if (requestedEnabled) {
-            try {
-                await ensureMerchbaseSkillForEnablement();
-            } catch (error) {
-                return badRequest(error instanceof Error ? error.message : String(error));
-            }
-        }
         const settings = saveMerchbaseSettings(input);
-        if (previous.enabled !== settings.enabled) {
-            await applyMerchbaseAgentCapabilityEnablement(settings.enabled).catch(() => undefined);
+        try {
+            await materializePluginSkills();
+        } catch (error) {
+            return badRequest(error instanceof Error ? error.message : String(error));
         }
         await refreshRuntimeCapabilities({
             ids: [merchbasePluginHealthCapabilityId],
@@ -101,6 +93,11 @@ export async function handlePluginsRequest(request: Request): Promise<Response |
         }
         const input = agentRuntimeSaveGoogleSettingsSchema.parse(await readJson(request));
         const settings = saveGoogleSettings(input);
+        try {
+            await materializePluginSkills();
+        } catch (error) {
+            return badRequest(error instanceof Error ? error.message : String(error));
+        }
         await refreshRuntimeCapabilities({
             ids: [googleCalendarPluginHealthCapabilityId],
             publishUpdated: true,

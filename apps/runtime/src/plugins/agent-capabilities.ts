@@ -1,18 +1,14 @@
-import type { AgentRuntimeAgent, AgentRuntimeSkillSummary, AgentRuntimeTool } from '@tavern/api';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import type { AgentRuntimeAgent, AgentRuntimeTool } from '@tavern/api';
 import {
     type TavernPluginManifest,
     type TavernPluginServiceManifest,
     tavernPluginManifests,
 } from '@tavern/api/plugins';
+import { AGENT_HOME } from '../config.ts';
+import { readSkillSource } from '../skills/store.ts';
 import { getPlugin } from './store.ts';
-
-const emptyRequirements = {
-    anyBins: [],
-    bins: [],
-    config: [],
-    env: [],
-    os: [],
-};
 
 export interface PluginSkillBundle {
     content: string;
@@ -23,79 +19,46 @@ export interface PluginSkillBundle {
     path: null;
 }
 
-export function listPluginSkillSummaries(input: { agent?: AgentRuntimeAgent | null } = {}) {
-    return tavernPluginManifests.flatMap((definition) => {
-        if (!isPluginGranted(definition, input.agent)) {
-            return [];
-        }
-        const plugin = getPlugin(definition.id);
-        if (!plugin.enabled) {
-            return [];
-        }
+export async function readPluginSkillBundlesForAgent(
+    agent: AgentRuntimeAgent,
+    input: { skillsDir?: string } = {}
+): Promise<PluginSkillBundle[]> {
+    const bundles: PluginSkillBundle[] = [];
+    const seen = new Set<string>();
+    const skillsDir = input.skillsDir ?? path.join(AGENT_HOME, 'skills');
 
-        return enabledPluginServices(definition, plugin.config).flatMap((service) =>
-            service.skills.map(
-                (skill): AgentRuntimeSkillSummary => ({
-                    allowedTools: serviceToolNames(service).join(', '),
-                    baseDir: null,
-                    bundled: true,
-                    commandVisible: true,
-                    configChecks: [],
-                    description: service.description,
-                    disabled: false,
-                    eligible: true,
-                    filePath: null,
-                    id: skill.name,
-                    install: [],
-                    missing: emptyRequirements,
-                    modelVisible: true,
-                    name: skill.name,
-                    requirements: emptyRequirements,
-                    runtimeSource: skill.runtimeSource,
-                    source: 'builtin',
-                    updatedAt: plugin.updatedAt,
-                    userInvocable: true,
-                })
-            )
-        );
-    });
-}
-
-export function readPluginSkillBundlesForAgent(agent: AgentRuntimeAgent): PluginSkillBundle[] {
-    return tavernPluginManifests.flatMap((definition) => {
+    for (const definition of tavernPluginManifests) {
         if (!isPluginGranted(definition, agent)) {
-            return [];
+            continue;
         }
         const plugin = getPlugin(definition.id);
         if (!plugin.enabled) {
-            return [];
+            continue;
         }
 
-        return enabledPluginServices(definition, plugin.config).flatMap((service) =>
-            service.skills.map((skill) => ({
-                content: pluginSkillContent(service),
-                description: service.description,
-                files: [],
-                id: skill.name,
-                name: skill.name,
-                path: null,
-            }))
-        );
-    });
-}
-
-export function readPluginSkillContent(input: {
-    agent?: AgentRuntimeAgent | null;
-    skillId: string;
-}) {
-    const match = findPluginServiceForSkill(input.skillId);
-    if (!(match && isPluginGranted(match.definition, input.agent))) {
-        return null;
+        for (const service of enabledPluginServices(definition, plugin.config)) {
+            for (const skill of service.skills) {
+                if (seen.has(skill.name)) {
+                    continue;
+                }
+                seen.add(skill.name);
+                bundles.push({
+                    content: await readMaterializedPluginSkillContent({
+                        generatedContent: pluginSkillContent(service),
+                        skillId: skill.name,
+                        skillsDir,
+                    }),
+                    description: service.description,
+                    files: [],
+                    id: skill.name,
+                    name: skill.name,
+                    path: null,
+                });
+            }
+        }
     }
-    const plugin = getPlugin(match.definition.id);
-    return plugin.enabled && isPluginServiceEnabled(match.service, plugin.config)
-        ? pluginSkillContent(match.service)
-        : null;
+
+    return bundles;
 }
 
 export function isPluginSkillId(skillId: string) {
@@ -132,7 +95,7 @@ function enabledPluginServices(definition: TavernPluginManifest, config: Record<
     return definition.services.filter((service) => isPluginServiceEnabled(service, config));
 }
 
-function isPluginServiceEnabled(
+export function isPluginServiceEnabled(
     service: TavernPluginServiceManifest,
     config: Record<string, unknown>
 ) {
@@ -148,7 +111,7 @@ function isPluginServiceEnabled(
     return typeof enabled === 'boolean' ? enabled : service.defaultEnabled;
 }
 
-function findPluginServiceForSkill(skillId: string) {
+export function findPluginServiceForSkill(skillId: string) {
     for (const definition of tavernPluginManifests) {
         for (const service of definition.services) {
             if (service.skills.some((skill) => skill.name === skillId)) {
@@ -163,7 +126,7 @@ function serviceToolNames(service: TavernPluginServiceManifest) {
     return service.toolGroups.flatMap((group) => group.tools);
 }
 
-function pluginSkillContent(service: TavernPluginServiceManifest) {
+export function pluginSkillContent(service: TavernPluginServiceManifest) {
     const tools = serviceToolNames(service)
         .map((toolName) => `- ${toolName}`)
         .join('\n');
@@ -178,4 +141,30 @@ ${tools}
 
 Do not run setup, sync, ingestion, account switching, or secret changes from chat. Those stay in Tavern Plugin settings.
 `;
+}
+
+async function readMaterializedPluginSkillContent(input: {
+    generatedContent: string;
+    skillId: string;
+    skillsDir: string;
+}) {
+    const source = readSkillSource(input.skillId);
+    if (source?.source !== 'plugin') {
+        return input.generatedContent;
+    }
+
+    return (
+        (await fs
+            .readFile(path.join(input.skillsDir, input.skillId, 'SKILL.md'), 'utf8')
+            .catch((error) => {
+                if (isNotFoundError(error)) {
+                    return null;
+                }
+                throw error;
+            })) ?? input.generatedContent
+    );
+}
+
+function isNotFoundError(error: unknown) {
+    return error instanceof Error && 'code' in error && error.code === 'ENOENT';
 }

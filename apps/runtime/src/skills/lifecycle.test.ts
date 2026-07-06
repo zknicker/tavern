@@ -105,8 +105,8 @@ describe('skill lifecycle', () => {
         ).resolves.toBeTruthy();
     });
 
-    test('leaves seeded hub and external skills untouched at any age', async () => {
-        for (const source of ['seeded', 'hub', 'external'] as const) {
+    test('leaves seeded hub external and Plugin skills untouched at any age', async () => {
+        for (const source of ['seeded', 'hub', 'external', 'plugin'] as const) {
             await writeSkillDir(source);
             recordSkillSource({ skillId: source, source });
             setCreatedAt(source, '2026-01-01T00:00:00.000Z');
@@ -120,14 +120,17 @@ describe('skill lifecycle', () => {
         expect(readSource('seeded')).toMatchObject({ state: 'active' });
         expect(readSource('hub')).toMatchObject({ state: 'active' });
         expect(readSource('external')).toMatchObject({ state: 'active' });
+        expect(readSource('plugin')).toMatchObject({ state: 'active' });
     });
 
     test('curator archive tool rejects read-only skills and archives agent skills', async () => {
         await createSkill('Archive Me', '2026-07-01T00:00:00.000Z');
         await writeSkillDir('seeded');
         recordSkillSource({ skillId: 'seeded', source: 'seeded' });
-        const archiveTool = createCuratorSkillTools({ agentId: 'agt_primary', skillsDir })
-            .skill_archive as {
+        const archiveTool = createCuratorSkillTools({
+            agentId: 'agt_primary',
+            skillsDir,
+        }).skill_archive as {
             execute: (input: unknown, options: unknown) => Promise<unknown>;
         };
 
@@ -173,7 +176,10 @@ describe('skill lifecycle', () => {
     function readSource(skillId: string) {
         return getDb()
             .prepare('SELECT * FROM skill_sources WHERE skill_id = $skillId')
-            .get({ $skillId: skillId }) as { archived_at: string | null; state: string };
+            .get({ $skillId: skillId }) as {
+            archived_at: string | null;
+            state: string;
+        };
     }
 
     function readAssignment(skillId: string) {

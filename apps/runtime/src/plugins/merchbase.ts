@@ -113,14 +113,6 @@ export function saveMerchbaseSettings(
     return getMerchbaseSettings();
 }
 
-export async function ensureMerchbaseSkillForEnablement(_input: { agentHome?: string } = {}) {
-    return;
-}
-
-export async function applyMerchbaseAgentCapabilityEnablement(_enabled: boolean) {
-    return;
-}
-
 export async function checkMerchbaseCapability(): Promise<RuntimeCapabilityCheckResult> {
     const settings = resolveMerchbaseSettings();
     if (!settings.enabled) {

@@ -9,6 +9,7 @@ import { ensureRuntimeSchema } from '../db/schema.ts';
 import { getStoredAgent, upsertStoredAgent } from '../tavern/agents-store.ts';
 import { readHarnessAgentSkills } from '../tavern/harness-agent-executor.ts';
 import { createTavernSkillTools } from './agent-tools.ts';
+import { recordSkillSource, sha256 } from './store.ts';
 import { readSkillUsageSummary } from './telemetry.ts';
 
 describe('skill agent tools', () => {
@@ -167,16 +168,30 @@ describe('skill agent tools', () => {
         }
     });
 
-    test('rejects plugin skill writes with the plugin-specific message', async () => {
+    test('edits materialized Plugin skills like other disk skills', async () => {
+        const original = '# MerchBase\n\nOriginal guidance.';
+        await writeSkill('merchbase', original);
+        recordSkillSource({
+            installedHash: sha256(original),
+            skillId: 'merchbase',
+            source: 'plugin',
+        });
         const tools = createTavernSkillTools({ agentId: 'agt_author', skillsDir });
+        const viewed = await runTool<Record<string, unknown>, { hash: string }>(
+            tools,
+            'skill_view',
+            { skillId: 'merchbase' }
+        );
 
         await expect(
             runTool(tools, 'skill_patch', {
                 content: '# MerchBase\n\nUpdated.',
-                expectedHash: 'hash',
+                expectedHash: viewed.hash,
                 skillId: 'merchbase',
             })
-        ).rejects.toThrow('Plugin skills are provided by their plugin and cannot be edited.');
+        ).resolves.toMatchObject({
+            change: { path: 'SKILL.md', skillId: 'merchbase' },
+        });
         await expect(
             runTool(tools, 'skill_write_file', {
                 content: 'notes',
@@ -184,7 +199,9 @@ describe('skill agent tools', () => {
                 filePath: 'references/notes.md',
                 skillId: 'merchbase',
             })
-        ).rejects.toThrow('Plugin skills are provided by their plugin and cannot be edited.');
+        ).resolves.toMatchObject({
+            change: { path: 'references/notes.md', skillId: 'merchbase' },
+        });
     });
 
     test('derives ids from names and rejects collisions', async () => {

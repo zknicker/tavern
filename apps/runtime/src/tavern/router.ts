@@ -18,7 +18,7 @@ import { handleCommandsRequest } from '../agent-engine/command-routes.ts';
 import { handleMcpRequest } from '../agent-engine/mcp-routes.ts';
 import { handleMcpServersRequest } from '../agent-engine/mcp-server-routes.ts';
 import { handleSkillHubRequest } from '../agent-engine/skill-hub-routes.ts';
-import { resetRuntimeSkillToDefault, tavernAgentSkillId } from '../agent-engine/skill-library.ts';
+import { resetRuntimeSkillToDefault } from '../agent-engine/skill-library.ts';
 import { handleToolSetupRequest } from '../agent-engine/tool-setup-routes.ts';
 import { handleRuntimeCapabilitiesRequest } from '../capabilities/routes.ts';
 import { handleCronRequest } from '../cron/routes.ts';
@@ -33,7 +33,6 @@ import { handleOpenRouterSettingsRequest } from '../model-access/openrouter-sett
 import { handleModelCategorySettingsRequest } from '../models/category-settings.ts';
 import { handleModelProviderRequest } from '../models/provider-routes.ts';
 import { handlePluginsRequest } from '../plugins/routes.ts';
-import { publishSkillUpdated } from '../skills/events.ts';
 import { handleTimezoneSettingsRequest } from '../timezone-settings.ts';
 import { handleWorkspaceRequest } from '../workspace/routes.ts';
 import { readCurrentAgentSession, updateCurrentAgentSessionModel } from './agent-session-store.ts';
@@ -284,12 +283,12 @@ export async function handleTavernRuntimeRequest(request: Request): Promise<Resp
         segments[1] &&
         segments[2] === 'reset'
     ) {
-        if (segments[1] !== tavernAgentSkillId) {
-            return badRequest('Only the seeded skill has a Tavern default.');
+        try {
+            const result = await resetRuntimeSkillToDefault(segments[1]);
+            return json(agentRuntimeSkillResetResultSchema.parse(result));
+        } catch (error) {
+            return badRequest(error instanceof Error ? error.message : String(error));
         }
-        const result = await resetRuntimeSkillToDefault(segments[1]);
-        publishSkillUpdated(result.skillId);
-        return json(agentRuntimeSkillResetResultSchema.parse(result));
     }
 
     if (

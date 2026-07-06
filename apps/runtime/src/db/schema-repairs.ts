@@ -62,9 +62,22 @@ CREATE INDEX IF NOT EXISTS idx_memory_jobs_status_due
   ON memory_jobs(status, created_at);
 `;
 
+const SKILL_SOURCES_TABLE = `
+CREATE TABLE skill_sources (
+  skill_id            TEXT PRIMARY KEY,
+  source              TEXT NOT NULL CHECK (source IN ('seeded', 'hub', 'agent', 'external', 'plugin')),
+  state               TEXT NOT NULL DEFAULT 'active' CHECK (state IN ('active', 'stale', 'archived')),
+  created_by_agent_id TEXT,
+  installed_hash      TEXT,
+  created_at          TEXT NOT NULL,
+  updated_at          TEXT NOT NULL,
+  archived_at         TEXT
+)`;
+
 export function repairRuntimeSchema(db: Database): void {
     ensureChatResponseActivityRichResponseKind(db);
     ensureMemoryJobsSkillReviewKind(db);
+    ensureSkillSourcesPluginSource(db);
     hydrateAgentSkillAssignments(db);
 }
 
@@ -158,12 +171,82 @@ ${MEMORY_JOBS_INDEXES}
     }
 }
 
+function ensureSkillSourcesPluginSource(db: Database): void {
+    const sql = tableSql(db, 'skill_sources');
+
+    if (!sql || sql.includes("'plugin'")) {
+        return;
+    }
+    ensureTableColumn(db, {
+        column: 'state',
+        definition: "TEXT NOT NULL DEFAULT 'active'",
+        table: 'skill_sources',
+    });
+    ensureTableColumn(db, {
+        column: 'installed_hash',
+        definition: 'TEXT',
+        table: 'skill_sources',
+    });
+    ensureTableColumn(db, {
+        column: 'archived_at',
+        definition: 'TEXT',
+        table: 'skill_sources',
+    });
+
+    let transactionOpen = false;
+    db.exec('PRAGMA foreign_keys = OFF');
+    try {
+        db.exec('BEGIN IMMEDIATE');
+        transactionOpen = true;
+        db.exec(`
+DROP TABLE IF EXISTS temp.skill_sources_rebuild;
+CREATE TEMP TABLE skill_sources_rebuild AS
+  SELECT skill_id, source, state, created_by_agent_id, installed_hash,
+         created_at, updated_at, archived_at
+  FROM skill_sources;
+DROP TABLE skill_sources;
+${SKILL_SOURCES_TABLE};
+INSERT INTO skill_sources
+  (skill_id, source, state, created_by_agent_id, installed_hash,
+   created_at, updated_at, archived_at)
+  SELECT skill_id, source, state, created_by_agent_id, installed_hash,
+         created_at, updated_at, archived_at
+  FROM skill_sources_rebuild;
+DROP TABLE temp.skill_sources_rebuild;
+`);
+        db.exec('COMMIT');
+        transactionOpen = false;
+    } catch (error) {
+        if (transactionOpen) {
+            db.exec('ROLLBACK');
+        }
+        throw error;
+    } finally {
+        db.exec('PRAGMA foreign_keys = ON');
+    }
+}
+
 function tableSql(db: Database, name: string): string | null {
     const row = db
         .prepare('SELECT sql FROM sqlite_master WHERE type = $type AND name = $name')
         .get({ $name: name, $type: 'table' }) as { sql: string } | null;
 
     return row?.sql ?? null;
+}
+
+function ensureTableColumn(
+    db: Database,
+    input: { column: string; definition: string; table: string }
+): void {
+    const rows = db.prepare(`PRAGMA table_info(${input.table})`).all() as Array<{
+        name: string;
+    }>;
+
+    if (rows.some((row) => row.name === input.column)) {
+        return;
+    }
+
+    db.exec(`ALTER TABLE ${input.table} ADD COLUMN ${input.column} ${input.definition}`);
 }
 
 function hydrateAgentSkillAssignments(db: Database): void {

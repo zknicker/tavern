@@ -86,7 +86,7 @@ CREATE INDEX IF NOT EXISTS idx_agent_skill_assignments_enabled
 
 CREATE TABLE IF NOT EXISTS skill_sources (
   skill_id            TEXT PRIMARY KEY,
-  source              TEXT NOT NULL CHECK (source IN ('seeded', 'hub', 'agent', 'external')),
+  source              TEXT NOT NULL CHECK (source IN ('seeded', 'hub', 'agent', 'external', 'plugin')),
   state               TEXT NOT NULL DEFAULT 'active' CHECK (state IN ('active', 'stale', 'archived')),
   created_by_agent_id TEXT,
   installed_hash      TEXT,
