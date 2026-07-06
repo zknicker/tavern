@@ -9,6 +9,7 @@
     "./config": "./src/runtime/config.ts",
     "./development-chat-demos": "./src/development-chat-demos.ts",
     "./plugins": "./src/plugins/index.ts",
+    "./plugins/google": "./src/plugins/google/manifest.ts",
     "./plugins/merchbase": "./src/plugins/merchbase/manifest.ts",
     "./rich-references": "./src/rich-references.ts",
     "./rich-responses/catalog": "./src/rich-responses/catalog.ts",

@@ -34,7 +34,8 @@ Plugin or runtime experiment.
 * MCP server records are separate from tool records and are not the default
   user-facing integration primitive.
 * Runtime tool details are diagnostics, not copied Tavern skill instructions.
-* Plugin-owned skills and tools are read-only reflections of Plugin state.
+* Plugin-owned skills and tools are read-only reflections of Plugin and Service
+  state.
 
 ## Surface
 

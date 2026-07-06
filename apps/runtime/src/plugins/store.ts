@@ -4,7 +4,11 @@ import {
     agentRuntimePluginIdSchema,
     agentRuntimePluginSchema,
 } from '@tavern/api';
-import { type TavernPluginManifest, tavernPluginManifests } from '@tavern/api/plugins';
+import {
+    type TavernPluginManifest,
+    type TavernPluginServiceManifest,
+    tavernPluginManifests,
+} from '@tavern/api/plugins';
 import type * as z from 'zod';
 import { getDb } from '../db/connection';
 import { namedParams } from '../db/sqlite';
@@ -31,6 +35,14 @@ export function getPlugin(id: AgentRuntimePluginId): AgentRuntimePlugin {
                   .sort()
                   .map((name) => ({ hasValue: true, name }))
             : [],
+        services: definition.services.map((service) => ({
+            description: service.description,
+            displayName: service.displayName,
+            enabled: isPluginServiceEnabled(service, row?.config ?? {}),
+            healthCapabilities: [...service.healthCapabilities],
+            id: service.id,
+            scopes: [...service.scopes],
+        })),
         updatedAt: row?.updatedAt ?? secrets?.updatedAt ?? null,
     });
 }
@@ -156,4 +168,20 @@ function parseJsonRecord(value: string): Record<string, unknown> {
         return parsed as Record<string, unknown>;
     }
     throw new Error('Stored Plugin JSON is invalid; re-save it.');
+}
+
+function isPluginServiceEnabled(
+    service: TavernPluginServiceManifest,
+    config: Record<string, unknown>
+) {
+    const services = config.services;
+    if (!(services && typeof services === 'object' && !Array.isArray(services))) {
+        return service.defaultEnabled;
+    }
+    const serviceConfig = (services as Record<string, unknown>)[service.id];
+    if (!(serviceConfig && typeof serviceConfig === 'object' && !Array.isArray(serviceConfig))) {
+        return service.defaultEnabled;
+    }
+    const enabled = (serviceConfig as Record<string, unknown>).enabled;
+    return typeof enabled === 'boolean' ? enabled : service.defaultEnabled;
 }

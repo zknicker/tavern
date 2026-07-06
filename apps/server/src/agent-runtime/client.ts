@@ -27,6 +27,12 @@ import {
     type AgentRuntimeDeleteDiscordBinding,
     type AgentRuntimeDiscordBinding,
     type AgentRuntimeEventList,
+    type AgentRuntimeGoogleCalendarEventsList,
+    type AgentRuntimeGoogleCalendarEventsListInput,
+    type AgentRuntimeGoogleOAuthPoll,
+    type AgentRuntimeGoogleOAuthPollInput,
+    type AgentRuntimeGoogleOAuthStart,
+    type AgentRuntimeGoogleSettings,
     type AgentRuntimeJobDetail,
     type AgentRuntimeJobList,
     type AgentRuntimeJobSlug,
@@ -66,6 +72,7 @@ import {
     type AgentRuntimeSaveAgentEnvResult,
     type AgentRuntimeSaveAgentFile,
     type AgentRuntimeSaveDiscordBinding,
+    type AgentRuntimeSaveGoogleSettings,
     type AgentRuntimeSaveMemorySettings,
     type AgentRuntimeSaveMemorySettingsResult,
     type AgentRuntimeSaveMerchbaseSettings,
@@ -158,6 +165,12 @@ import {
     agentRuntimeDeleteDiscordBindingSchema,
     agentRuntimeDiscordBindingListSchema,
     agentRuntimeErrorSchema,
+    agentRuntimeGoogleCalendarEventsListInputSchema,
+    agentRuntimeGoogleCalendarEventsListSchema,
+    agentRuntimeGoogleOAuthPollInputSchema,
+    agentRuntimeGoogleOAuthPollSchema,
+    agentRuntimeGoogleOAuthStartSchema,
+    agentRuntimeGoogleSettingsSchema,
     agentRuntimeJobDetailSchema,
     agentRuntimeJobListSchema,
     agentRuntimeJobSlugSchema,
@@ -204,6 +217,7 @@ import {
     agentRuntimeSaveAgentEnvSchema,
     agentRuntimeSaveAgentFileSchema,
     agentRuntimeSaveDiscordBindingSchema,
+    agentRuntimeSaveGoogleSettingsSchema,
     agentRuntimeSaveMemorySettingsResultSchema,
     agentRuntimeSaveMemorySettingsSchema,
     agentRuntimeSaveMerchbaseSettingsSchema,
@@ -346,6 +360,7 @@ export interface TavernAgentRuntimeClient {
     deleteSemanticMemoryPage(
         input: SemanticMemoryPathInput
     ): Promise<SemanticMemoryPathMutationResult>;
+    disconnectGoogleOAuth(): Promise<AgentRuntimeGoogleSettings>;
     getAgentConfig(agentId: string): Promise<AgentRuntimeAgent>;
     getAgentEngineConfig(): Promise<AgentRuntimeAgentEngineConfigSnapshot>;
     getAgentEnv(): Promise<AgentRuntimeAgentEnv>;
@@ -356,6 +371,7 @@ export interface TavernAgentRuntimeClient {
         agentParticipantId?: string;
         chatId: string;
     }): Promise<AgentRuntimeCurrentAgentSessionResult>;
+    getGoogleSettings(): Promise<AgentRuntimeGoogleSettings>;
     getMcpCatalog(): Promise<AgentRuntimeMcpCatalog>;
     getMemoryJob(jobId: string): Promise<MemoryJobDetail | null>;
     getMemorySettings(): Promise<AgentRuntimeMemorySettings>;
@@ -425,12 +441,16 @@ export interface TavernAgentRuntimeClient {
     moveSemanticMemoryPath(
         input: SemanticMemoryMovePath
     ): Promise<SemanticMemoryPathMutationResult>;
+    pollGoogleOAuth(input: AgentRuntimeGoogleOAuthPollInput): Promise<AgentRuntimeGoogleOAuthPoll>;
     pollModelProviderOAuth(input: AgentRuntimePollModelProviderOAuth): Promise<unknown>;
     postMessage(
         chatId: string,
         input: AgentRuntimeCreateMessage
     ): Promise<AgentRuntimeMessageAccepted>;
     previewSkillHubSkill(identifier: string): Promise<AgentRuntimeSkillHubPreview>;
+    queryGoogleCalendarEvents(
+        input: AgentRuntimeGoogleCalendarEventsListInput
+    ): Promise<AgentRuntimeGoogleCalendarEventsList>;
     queryMerchbaseAction(
         input: AgentRuntimeMerchbaseActionInput
     ): Promise<AgentRuntimeMerchbaseActionResult>;
@@ -462,6 +482,7 @@ export interface TavernAgentRuntimeClient {
     saveDiscordBinding(
         input: AgentRuntimeSaveDiscordBinding
     ): Promise<AgentRuntimeAgentEngineConfigSnapshot>;
+    saveGoogleSettings(input: AgentRuntimeSaveGoogleSettings): Promise<AgentRuntimeGoogleSettings>;
     saveMemorySettings(
         input: AgentRuntimeSaveMemorySettings
     ): Promise<AgentRuntimeSaveMemorySettingsResult>;
@@ -509,6 +530,7 @@ export interface TavernAgentRuntimeClient {
         providerId: string,
         input: AgentRuntimeUpdateModelProvider
     ): Promise<AgentRuntimeModelProviderCatalogEntry>;
+    startGoogleOAuth(): Promise<AgentRuntimeGoogleOAuthStart>;
     startModelProviderOAuth(input: AgentRuntimeStartModelProviderOAuth): Promise<unknown>;
     startUpdate(input?: { targetVersion?: null | string }): Promise<AgentRuntimeUpdate>;
     steerChatTurn(
@@ -1971,6 +1993,18 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         return agentRuntimeMerchbaseSettingsSchema.parse(await response.json());
     }
 
+    async getGoogleSettings() {
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.pluginGoogleSettings}`, {
+            headers: this.#authHeaders,
+        });
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeGoogleSettingsSchema.parse(await response.json());
+    }
+
     async saveMerchbaseSettings(input: AgentRuntimeSaveMerchbaseSettings) {
         const payload = agentRuntimeSaveMerchbaseSettingsSchema.parse(input);
         const response = await fetch(
@@ -1993,6 +2027,81 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         return agentRuntimeMerchbaseSettingsSchema.parse(await response.json());
     }
 
+    async saveGoogleSettings(input: AgentRuntimeSaveGoogleSettings) {
+        const payload = agentRuntimeSaveGoogleSettingsSchema.parse(input);
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.pluginGoogleSettings}`, {
+            body: JSON.stringify(payload),
+            headers: {
+                ...this.#authHeaders,
+                'content-type': 'application/json',
+                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+            },
+            method: 'PUT',
+        });
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeGoogleSettingsSchema.parse(await response.json());
+    }
+
+    async startGoogleOAuth() {
+        const response = await fetch(
+            `${this.#baseUrl}${agentRuntimeRoutes.pluginGoogleOAuthStart}`,
+            {
+                body: JSON.stringify({}),
+                headers: {
+                    ...this.#authHeaders,
+                    'content-type': 'application/json',
+                    [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+                },
+                method: 'POST',
+            }
+        );
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeGoogleOAuthStartSchema.parse(await response.json());
+    }
+
+    async pollGoogleOAuth(input: AgentRuntimeGoogleOAuthPollInput) {
+        const payload = agentRuntimeGoogleOAuthPollInputSchema.parse(input);
+        const response = await fetch(
+            `${this.#baseUrl}${agentRuntimeRoutes.pluginGoogleOAuthPoll(payload.sessionId)}`,
+            { headers: this.#authHeaders }
+        );
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeGoogleOAuthPollSchema.parse(await response.json());
+    }
+
+    async disconnectGoogleOAuth() {
+        const response = await fetch(
+            `${this.#baseUrl}${agentRuntimeRoutes.pluginGoogleDisconnect}`,
+            {
+                body: JSON.stringify({}),
+                headers: {
+                    ...this.#authHeaders,
+                    'content-type': 'application/json',
+                    [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+                },
+                method: 'POST',
+            }
+        );
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeGoogleSettingsSchema.parse(await response.json());
+    }
+
     async queryMerchbaseSalesSeries(input: AgentRuntimeMerchbaseSalesSeriesInput) {
         const payload = agentRuntimeMerchbaseSalesSeriesInputSchema.parse(input);
         const response = await fetch(
@@ -2012,6 +2121,27 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         }
 
         return agentRuntimeMerchbaseSalesSeriesSchema.parse(await response.json());
+    }
+
+    async queryGoogleCalendarEvents(input: AgentRuntimeGoogleCalendarEventsListInput) {
+        const payload = agentRuntimeGoogleCalendarEventsListInputSchema.parse(input);
+        const response = await fetch(
+            `${this.#baseUrl}${agentRuntimeRoutes.pluginGoogleCalendarEvents}`,
+            {
+                body: JSON.stringify(payload),
+                headers: {
+                    ...this.#authHeaders,
+                    'content-type': 'application/json',
+                },
+                method: 'POST',
+            }
+        );
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeGoogleCalendarEventsListSchema.parse(await response.json());
     }
 
     async queryMerchbaseAction(input: AgentRuntimeMerchbaseActionInput) {

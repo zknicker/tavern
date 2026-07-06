@@ -1,4 +1,9 @@
 import {
+    agentRuntimeGoogleCalendarEventsListInputSchema,
+    agentRuntimeGoogleCalendarEventsListSchema,
+    agentRuntimeGoogleOAuthPollSchema,
+    agentRuntimeGoogleOAuthStartSchema,
+    agentRuntimeGoogleSettingsSchema,
     agentRuntimeMerchbaseActionInputSchema,
     agentRuntimeMerchbaseActionResultSchema,
     agentRuntimeMerchbaseSalesSeriesInputSchema,
@@ -10,11 +15,22 @@ import {
     agentRuntimePluginListSchema,
     agentRuntimePluginSchema,
     agentRuntimeRoutes,
+    agentRuntimeSaveGoogleSettingsSchema,
     agentRuntimeSaveMerchbaseSettingsSchema,
 } from '@tavern/api';
+import { googleCalendarPluginHealthCapabilityId } from '@tavern/api/plugins/google';
 import { merchbasePluginHealthCapabilityId } from '@tavern/api/plugins/merchbase';
 import { refreshRuntimeCapabilities } from '../capabilities/store';
 import { badRequest, forbidden, json, notFound } from '../tavern/http';
+import {
+    disconnectGoogleOAuth,
+    getGooglePlugin,
+    getGoogleSettings,
+    pollGoogleOAuth,
+    queryGoogleCalendarEvents,
+    saveGoogleSettings,
+    startGoogleOAuth,
+} from './google';
 import {
     applyMerchbaseAgentCapabilityEnablement,
     ensureMerchbaseSkillForEnablement,
@@ -40,7 +56,7 @@ export async function handlePluginsRequest(request: Request): Promise<Response |
     if (request.method === 'GET' && segments[1] && !segments[2]) {
         const parsedId = agentRuntimePluginIdSchema.safeParse(segments[1]);
         return parsedId.success
-            ? json(agentRuntimePluginSchema.parse(getMerchbasePlugin()))
+            ? json(agentRuntimePluginSchema.parse(getRuntimePlugin(parsedId.data)))
             : notFound();
     }
 
@@ -74,6 +90,84 @@ export async function handlePluginsRequest(request: Request): Promise<Response |
         return json(agentRuntimeMerchbaseSettingsSchema.parse(settings));
     }
 
+    if (request.method === 'GET' && url.pathname === agentRuntimeRoutes.pluginGoogleSettings) {
+        return json(agentRuntimeGoogleSettingsSchema.parse(getGoogleSettings()));
+    }
+
+    if (request.method === 'PUT' && url.pathname === agentRuntimeRoutes.pluginGoogleSettings) {
+        const forbiddenResponse = requireTavernMutation(request, 'Google settings');
+        if (forbiddenResponse) {
+            return forbiddenResponse;
+        }
+        const input = agentRuntimeSaveGoogleSettingsSchema.parse(await readJson(request));
+        const settings = saveGoogleSettings(input);
+        await refreshRuntimeCapabilities({
+            ids: [googleCalendarPluginHealthCapabilityId],
+            publishUpdated: true,
+        });
+        return json(agentRuntimeGoogleSettingsSchema.parse(settings));
+    }
+
+    if (request.method === 'POST' && url.pathname === agentRuntimeRoutes.pluginGoogleOAuthStart) {
+        const forbiddenResponse = requireTavernMutation(request, 'Google OAuth');
+        if (forbiddenResponse) {
+            return forbiddenResponse;
+        }
+        try {
+            return json(agentRuntimeGoogleOAuthStartSchema.parse(await startGoogleOAuth()));
+        } catch (error) {
+            return badRequest(error instanceof Error ? error.message : String(error));
+        }
+    }
+
+    if (
+        request.method === 'GET' &&
+        segments.length === 5 &&
+        segments[1] === 'google' &&
+        segments[2] === 'oauth' &&
+        segments[3] === 'sessions'
+    ) {
+        const result = pollGoogleOAuth(segments[4] ?? '');
+        if (result.status !== 'pending') {
+            await refreshRuntimeCapabilities({
+                ids: [googleCalendarPluginHealthCapabilityId],
+                publishUpdated: true,
+            });
+        }
+        return json(agentRuntimeGoogleOAuthPollSchema.parse(result));
+    }
+
+    if (request.method === 'POST' && url.pathname === agentRuntimeRoutes.pluginGoogleDisconnect) {
+        const forbiddenResponse = requireTavernMutation(request, 'Google OAuth');
+        if (forbiddenResponse) {
+            return forbiddenResponse;
+        }
+        const settings = disconnectGoogleOAuth();
+        await refreshRuntimeCapabilities({
+            ids: [googleCalendarPluginHealthCapabilityId],
+            publishUpdated: true,
+        });
+        return json(agentRuntimeGoogleSettingsSchema.parse(settings));
+    }
+
+    if (
+        request.method === 'POST' &&
+        url.pathname === agentRuntimeRoutes.pluginGoogleCalendarEvents
+    ) {
+        try {
+            const input = agentRuntimeGoogleCalendarEventsListInputSchema.parse(
+                await readJson(request)
+            );
+            return json(
+                agentRuntimeGoogleCalendarEventsListSchema.parse(
+                    await queryGoogleCalendarEvents(input)
+                )
+            );
+        } catch (error) {
+            return badRequest(error instanceof Error ? error.message : String(error));
+        }
+    }
+
     if (
         request.method === 'POST' &&
         url.pathname === agentRuntimeRoutes.pluginMerchbaseSalesSeries
@@ -102,6 +196,15 @@ export async function handlePluginsRequest(request: Request): Promise<Response |
     }
 
     return null;
+}
+
+function getRuntimePlugin(id: ReturnType<typeof agentRuntimePluginIdSchema.parse>) {
+    switch (id) {
+        case 'google':
+            return getGooglePlugin();
+        case 'merchbase':
+            return getMerchbasePlugin();
+    }
 }
 
 function requireTavernMutation(request: Request, label: string) {

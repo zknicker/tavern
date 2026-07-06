@@ -31,6 +31,7 @@ const capabilityCategories: Partial<Record<CapabilityId, CapabilityCategoryId>> 
     dashboardServer: 'runtimeCore',
     gateway: 'runtimeCore',
     modelExecution: 'extensions',
+    'plugin.google.calendar': 'plugins',
     'plugin.merchbase': 'plugins',
     skills: 'extensions',
     semanticMemory: 'knowledge',
@@ -45,6 +46,7 @@ const capabilityDisplayOrder: CapabilityId[] = [
     'modelExecution',
     'skills',
     'plugin.merchbase',
+    'plugin.google.calendar',
 ];
 
 const capabilityDisplayRank = new Map(

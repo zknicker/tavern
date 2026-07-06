@@ -15,18 +15,19 @@ rather than agent tools. Future agent-assisted setup must run through a
 Tavern-wide settings flow, not a Plugin-specific shortcut.
 
 The Plugin manifest declares inventory and ownership metadata such as id, name,
-version, settings, secrets, health capabilities, skills, tools, and Rich
-Response Components. In v1, the manifest does not declare dynamic executable
-wiring or enumerate Plugin-internal read operations; Runtime and App import
-first-party Plugin modules directly.
+version, settings, secrets, Plugin-level health capabilities, Services, and Rich
+Response Components. Every Plugin declares at least one Service. Services own
+their health capabilities, skills, and tool groups. In v1, the manifest does not
+declare dynamic executable wiring or enumerate Plugin-internal read operations;
+Runtime and App import first-party Plugin modules directly.
 
-Core Tavern owns the Plugin host boundary: lifecycle, enablement, grants,
-health registration, capability projection, the Plugins settings frame, and
-first-party registration. The Plugin folder owns its domain-specific runtime
-reads, tool implementations, settings panel content, validation copy, component
-rendering behavior, and helper APIs used by its own components. This keeps
-MerchBase-specific concepts inside the MerchBase Plugin instead of spreading
-operation names through generic Tavern docs or manifests.
+Core Tavern owns the Plugin host boundary: lifecycle, enablement, Service
+enablement, grants, health registration, capability projection, the Plugins
+settings frame, and first-party registration. The Plugin folder owns its
+domain-specific runtime reads, tool implementations, settings panel content,
+validation copy, component rendering behavior, and helper APIs used by its own
+components. This keeps MerchBase-specific concepts inside the MerchBase Plugin
+instead of spreading operation names through generic Tavern docs.
 
 Plugins are the normal product direction for integrations. Raw MCP servers may
 exist as Runtime plumbing or an advanced development surface, but v1 does not
@@ -38,14 +39,17 @@ live in generic runtime metadata, skill files, CLI config, or
 environment variables. Runtime capabilities store current Plugin health
 separately from the durable settings and secrets.
 
-Plugin enablement and agent-level Plugin grants are the source of truth for
-Plugin-provided agent capabilities. Users enable or disable the Plugin itself
-from Settings -> Plugins, then grant it to agents from agent capability
-settings. Tavern does not expose individual Plugin tool toggles.
+Plugin enablement, Service enablement, and agent-level Plugin grants are the
+source of truth for Plugin-provided agent capabilities. Users enable or disable
+the Plugin itself from Settings -> Plugins, enable the desired Services inside
+that Plugin, then grant the Plugin to agents from agent capability settings.
+Tavern does not expose individual Plugin tool toggles.
 
 Runtime materializes Plugin-owned skills, tools, and Rich Response authoring
-guidance for an agent turn only when the Plugin is globally enabled, healthy for
-the required reads, and granted to that agent. Historical chat rows with
+guidance for an agent turn only when the Plugin is globally enabled, the Service
+is enabled, required connection scopes are granted, and the Plugin is granted to
+that agent. Health remains diagnostic so transient upstream failures do not make
+agent tools appear and disappear during a turn. Historical chat rows with
 compiled Plugin-owned Rich Response Components continue to render after a grant
 is removed. If the Plugin is globally disabled, Plugin-backed interaction
 controls inside historical renders are disabled; Tavern does not use fallback
@@ -78,3 +82,15 @@ settings routes go through the Runtime Plugin service rather than reading these
 tables directly. The managed `merchbase` skill is instruction-only: it describes
 when to use the tools and Rich Response, but does not expose raw Runtime API
 calls as the agent contract.
+
+For multi-Service Plugins such as Google, `runtime_plugins.config_json` stores
+`services.<serviceId>.enabled`. OAuth tokens, granted scopes, expiry, and
+account identity live in `runtime_plugin_secrets.secret_json`. The initial
+Google Plugin ships Calendar as the first Service; Drive, Gmail, Docs, and other
+Google Services can be added as manifest Services without changing the Plugin
+storage tables.
+
+Google's OAuth client id is Tavern-owned infrastructure config, not a Plugin
+setting. Runtime reads the desktop client id and installed-app client secret from
+environment supplied by Tavern development or release packaging and stores only
+user OAuth tokens in Plugin secrets.

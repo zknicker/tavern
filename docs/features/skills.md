@@ -30,7 +30,8 @@ Skills and Tools answer different questions.
   installed and available skills, renders `SKILL.md`, and shows source, setup
   status, and install or uninstall actions where supported.
 * **Plugins page.** Configure built-in Tavern integrations. Plugin tools and
-  skills become available through Plugin grants and Plugin enablement.
+  skills become available through Plugin enablement, Service enablement, and
+  Plugin grants.
 * **Advanced MCP page.** Direct MCP server records may be inspected or edited
   for internal development and Plugin-backed experiments, but Plugins are the
   normal product surface.
@@ -64,8 +65,8 @@ marketplace.
 
 Tool exposure is Runtime work. Harness tools come from the selected executor and
 are governed by sandbox and approval policy. Plugin tools come from built-in
-Plugin enablement plus the agent's Plugin grant. Tavern does not expose a Tools
-page or user-facing tool-grant editor in v1.
+Plugin enablement, Service enablement, and the agent's Plugin grant. Tavern does
+not expose a Tools page or user-facing tool-grant editor in v1.
 
 Provider-specific transport adapters do not create new user-visible tools. For
 example, Claude Code receives Tavern tools through a generated MCP bridge

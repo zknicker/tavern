@@ -4,7 +4,11 @@ import type {
     AgentRuntimeSkillSummary,
     AgentRuntimeTool,
 } from '@tavern/api';
-import { type TavernPluginManifest, tavernPluginManifests } from '@tavern/api/plugins';
+import {
+    type TavernPluginManifest,
+    type TavernPluginServiceManifest,
+    tavernPluginManifests,
+} from '@tavern/api/plugins';
 
 export interface SkillPluginRef {
     displayName: string;
@@ -29,9 +33,13 @@ export function listMissingPluginTools(
     existingToolIds: Set<string>
 ): PluginToolPlaceholder[] {
     return pluginCapabilityDefinitions
-        .flatMap((definition) =>
-            definition.toolGroups.map((toolGroup) => ({ definition, toolGroup }))
-        )
+        .flatMap((definition) => {
+            const plugin = plugins.find((candidate) => candidate.id === definition.id);
+            const config = plugin?.config ?? {};
+            return enabledPluginServices(definition, config).flatMap((service) =>
+                service.toolGroups.map((toolGroup) => ({ definition, toolGroup }))
+            );
+        })
         .filter(({ toolGroup }) => !existingToolIds.has(toolGroup.id))
         .map(({ definition, toolGroup }) => {
             const plugin = buildPluginRef(definition, plugins);
@@ -54,10 +62,12 @@ export function resolveSkillPlugin(
     const definition = pluginCapabilityDefinitions.find(
         (candidate) =>
             Boolean(skill.runtimeSource) &&
-            candidate.skills.some(
-                (pluginSkill) =>
-                    pluginSkill.runtimeSource === skill.runtimeSource &&
-                    (pluginSkill.name === skill.name || pluginSkill.name === skill.id)
+            candidate.services.some((service) =>
+                service.skills.some(
+                    (pluginSkill) =>
+                        pluginSkill.runtimeSource === skill.runtimeSource &&
+                        (pluginSkill.name === skill.name || pluginSkill.name === skill.id)
+                )
             )
     );
     return definition ? buildPluginRef(definition, plugins) : null;
@@ -68,12 +78,14 @@ export function resolveToolPlugin(
     plugins: AgentRuntimePlugin[]
 ): SkillPluginRef | null {
     const definition = pluginCapabilityDefinitions.find((candidate) =>
-        candidate.toolGroups.some(
-            (toolGroup) =>
-                toolGroup.id === tool.id ||
-                toolGroup.id === tool.name ||
-                toolGroup.tools.includes(tool.id) ||
-                toolGroup.tools.includes(tool.name)
+        candidate.services.some((service) =>
+            service.toolGroups.some(
+                (toolGroup) =>
+                    toolGroup.id === tool.id ||
+                    toolGroup.id === tool.name ||
+                    toolGroup.tools.includes(tool.id) ||
+                    toolGroup.tools.includes(tool.name)
+            )
         )
     );
     return definition ? buildPluginRef(definition, plugins) : null;
@@ -85,15 +97,19 @@ export function rejectPluginSkillEnablement(
     const definition =
         typeof skill === 'string'
             ? pluginCapabilityDefinitions.find((candidate) =>
-                  candidate.skills.some((pluginSkill) => pluginSkill.name === skill)
+                  candidate.services.some((service) =>
+                      service.skills.some((pluginSkill) => pluginSkill.name === skill)
+                  )
               )
             : pluginCapabilityDefinitions.find(
                   (candidate) =>
                       Boolean(skill.runtimeSource) &&
-                      candidate.skills.some(
-                          (pluginSkill) =>
-                              pluginSkill.runtimeSource === skill.runtimeSource &&
-                              (pluginSkill.name === skill.name || pluginSkill.name === skill.id)
+                      candidate.services.some((service) =>
+                          service.skills.some(
+                              (pluginSkill) =>
+                                  pluginSkill.runtimeSource === skill.runtimeSource &&
+                                  (pluginSkill.name === skill.name || pluginSkill.name === skill.id)
+                          )
                       )
               );
     if (definition) {
@@ -105,8 +121,10 @@ export function rejectPluginSkillEnablement(
 
 export function rejectPluginToolEnablement(toolId: string) {
     const definition = pluginCapabilityDefinitions.find((candidate) =>
-        candidate.toolGroups.some(
-            (toolGroup) => toolGroup.id === toolId || toolGroup.tools.includes(toolId)
+        candidate.services.some((service) =>
+            service.toolGroups.some(
+                (toolGroup) => toolGroup.id === toolId || toolGroup.tools.includes(toolId)
+            )
         )
     );
     if (definition) {
@@ -126,4 +144,24 @@ function buildPluginRef(
         enabled: plugin?.enabled ?? false,
         id: definition.id,
     };
+}
+
+function enabledPluginServices(definition: TavernPluginManifest, config: Record<string, unknown>) {
+    return definition.services.filter((service) => isPluginServiceEnabled(service, config));
+}
+
+function isPluginServiceEnabled(
+    service: TavernPluginServiceManifest,
+    config: Record<string, unknown>
+) {
+    const services = config.services;
+    if (!(services && typeof services === 'object' && !Array.isArray(services))) {
+        return service.defaultEnabled;
+    }
+    const serviceConfig = (services as Record<string, unknown>)[service.id];
+    if (!(serviceConfig && typeof serviceConfig === 'object' && !Array.isArray(serviceConfig))) {
+        return service.defaultEnabled;
+    }
+    const enabled = (serviceConfig as Record<string, unknown>).enabled;
+    return typeof enabled === 'boolean' ? enabled : service.defaultEnabled;
 }

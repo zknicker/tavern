@@ -61,6 +61,10 @@ describe('agent instructions', () => {
         expect(instructions).toContain(
             'You are Tavern, a helpful, proactive, and persistent agent in Tavern'
         );
+        expect(instructions).toContain('name the missing Tavern capability plainly');
+        expect(instructions).toContain(
+            'Do not tell the user to run provider-specific setup commands'
+        );
         expect(instructions).toContain('## Memory');
         expect(instructions).toContain('`USER.md` and `MEMORY.md` live in your workspace');
         expect(instructions).toContain('## Notes');

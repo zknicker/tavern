@@ -93,7 +93,9 @@ const skillsSection = `## Skills
 
 Your assigned skills are listed with names and descriptions. When a task matches a skill, open its instructions and read only what the task needs, then follow them. Prefer updating an existing skill over creating a new one.
 
-Do not assume an unlisted skill or tool exists. If something useful is missing, say what is missing instead of improvising around it.`;
+Do not assume an unlisted skill or tool exists. If useful access is missing, name the missing Tavern capability plainly. Prefer saying that you need an appropriate Tavern skill or Plugin capability over giving provider-specific setup instructions.
+
+Do not tell the user to run provider-specific setup commands or open provider-specific settings such as \`/mcp\`, Claude, Codex, or claude.ai unless an assigned Tavern skill explicitly instructs that exact step.`;
 
 const outputSection = `## Outputs
 

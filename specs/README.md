@@ -34,8 +34,8 @@ agent-engine implementation choices directly.
   primitives as Tavern presents them.
 - `participants.md`: observed participants, labels, and self actor presentation.
 - `mentions.md`: `@` references in composers, their metadata, and their runtime effects.
-- `jobs.md`, `workers.md`, `models.md`, `skills.md`, `tools.md`, `catalog.md`, `activity-log.md`:
-  focused product surfaces.
+- `jobs.md`, `workers.md`, `models.md`, `skills.md`, `tools.md`, `plugins.md`, `catalog.md`,
+  `activity-log.md`: focused product surfaces.
 - `clarifications.md`: mid-turn questions, skip/timeout answers, and runtime
   response wiring.
 - `mcp.md`: advanced MCP server records for Runtime and Plugin-backed

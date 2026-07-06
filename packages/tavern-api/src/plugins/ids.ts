@@ -1,3 +1,3 @@
-export const tavernPluginIds = ['merchbase'] as const;
+export const tavernPluginIds = ['merchbase', 'google'] as const;
 
-export const tavernPluginCapabilityIds = ['plugin.merchbase'] as const;
+export const tavernPluginCapabilityIds = ['plugin.merchbase', 'plugin.google.calendar'] as const;

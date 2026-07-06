@@ -85,6 +85,10 @@ describe('generated agent instructions', () => {
         expect(content).toContain('## Skills');
         expect(content).toContain('Your assigned skills are listed with names and descriptions');
         expect(content).toContain('Do not assume an unlisted skill or tool exists');
+        expect(content).toContain('name the missing Tavern capability plainly');
+        expect(content).toContain('you need an appropriate Tavern skill or Plugin capability');
+        expect(content).toContain('Do not tell the user to run provider-specific setup commands');
+        expect(content).toContain('such as `/mcp`, Claude, Codex, or claude.ai');
         expect(content).toContain('## Outputs');
         expect(content).toContain('Link inspectable files');
         expect(content).toContain('[name](tavern://workspace/path)');

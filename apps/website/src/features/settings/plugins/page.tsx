@@ -1,7 +1,7 @@
+import { googlePluginManifest } from '@tavern/api/plugins/google';
 import { merchbasePluginManifest } from '@tavern/api/plugins/merchbase';
 import * as React from 'react';
 import { useParams } from 'react-router-dom';
-import { Badge } from '../../../components/ui/badge.tsx';
 import { Button } from '../../../components/ui/primitives/button.tsx';
 import { SearchInput } from '../../../components/ui/primitives/search-input.tsx';
 import { Separator } from '../../../components/ui/separator.tsx';
@@ -16,6 +16,13 @@ import { Switch } from '../../../components/ui/switch.tsx';
 import { useAgentList } from '../../../hooks/agents/use-agent-list.ts';
 import { useRuntimeCapabilityEvents } from '../../../hooks/connections/use-runtime-events.ts';
 import {
+    useDisconnectGoogleOAuth,
+    useGoogleSettings,
+    usePollGoogleOAuth,
+    useSaveGoogleSettings,
+    useStartGoogleOAuth,
+} from '../../../hooks/plugins/use-google-settings.ts';
+import {
     useMerchbaseSettings,
     useSaveMerchbaseSettings,
 } from '../../../hooks/plugins/use-merchbase-settings.ts';
@@ -23,6 +30,7 @@ import { usePluginList, useSetAgentPluginGrant } from '../../../hooks/plugins/us
 import { withSavingToast } from '../../../lib/saving-toast.ts';
 import type { AgentListOutput, PluginListOutput } from '../../../lib/trpc.tsx';
 import { EmptyState } from '../../shell/empty-state.tsx';
+import { GoogleSettingsCard, GoogleSettingsControl } from './google-settings-card.tsx';
 import { MerchbaseSettingsCard, MerchbaseSettingsControl } from './merchbase-settings-card.tsx';
 
 export { MerchbaseSettingsCard } from './merchbase-settings-card.tsx';
@@ -37,9 +45,13 @@ export function PluginsSettingsPage() {
 function GlobalPluginsSettingsPage() {
     const [search, setSearch] = React.useState('');
     const deferredSearch = React.useDeferredValue(search);
-    const settingsQuery = useMerchbaseSettings();
-    const saveSettings = useSaveMerchbaseSettings();
+    const merchbaseSettingsQuery = useMerchbaseSettings();
+    const saveMerchbaseSettings = useSaveMerchbaseSettings();
+    const googleSettingsQuery = useGoogleSettings();
+    const saveGoogleSettings = useSaveGoogleSettings();
+    const googleOAuth = useGoogleOAuthState();
     const showMerchbasePlugin = matchesMerchbasePlugin(deferredSearch);
+    const showGooglePlugin = matchesGooglePlugin(deferredSearch);
 
     return (
         <SettingsPage>
@@ -56,20 +68,45 @@ function GlobalPluginsSettingsPage() {
                 />
 
                 <SettingsGroup>
-                    {showMerchbasePlugin ? (
-                        <MerchbaseSettingsCard
-                            error={
-                                settingsQuery.error?.message ?? saveSettings.error?.message ?? null
-                            }
-                            isLoading={settingsQuery.isPending}
-                            isSaving={saveSettings.isPending}
-                            onSave={(input) =>
-                                withSavingToast(() => saveSettings.mutateAsync(input)).catch(
-                                    () => undefined
-                                )
-                            }
-                            settings={settingsQuery.data ?? null}
-                        />
+                    {showMerchbasePlugin || showGooglePlugin ? (
+                        <>
+                            {showMerchbasePlugin ? (
+                                <MerchbaseSettingsCard
+                                    error={
+                                        merchbaseSettingsQuery.error?.message ??
+                                        saveMerchbaseSettings.error?.message ??
+                                        null
+                                    }
+                                    isLoading={merchbaseSettingsQuery.isPending}
+                                    isSaving={saveMerchbaseSettings.isPending}
+                                    onSave={(input) =>
+                                        withSavingToast(() =>
+                                            saveMerchbaseSettings.mutateAsync(input)
+                                        ).catch(() => undefined)
+                                    }
+                                    settings={merchbaseSettingsQuery.data ?? null}
+                                />
+                            ) : null}
+                            {showMerchbasePlugin && showGooglePlugin ? <Separator /> : null}
+                            {showGooglePlugin ? (
+                                <GoogleSettingsCard
+                                    error={
+                                        googleSettingsQuery.error?.message ??
+                                        saveGoogleSettings.error?.message ??
+                                        googleOAuth.error
+                                    }
+                                    isLoading={googleSettingsQuery.isPending}
+                                    isSaving={saveGoogleSettings.isPending || googleOAuth.isPending}
+                                    oauthStatus={googleOAuth.status}
+                                    onConnect={googleOAuth.connect}
+                                    onDisconnect={googleOAuth.disconnect}
+                                    onSave={(input) =>
+                                        withSavingToast(() => saveGoogleSettings.mutateAsync(input))
+                                    }
+                                    settings={googleSettingsQuery.data ?? null}
+                                />
+                            ) : null}
+                        </>
                     ) : (
                         <EmptyState
                             className="py-8"
@@ -89,6 +126,9 @@ function AgentPluginsSettingsPage({ agentId }: { agentId: string }) {
     const agentsQuery = useAgentList();
     const merchbaseSettingsQuery = useMerchbaseSettings();
     const saveMerchbaseSettings = useSaveMerchbaseSettings();
+    const googleSettingsQuery = useGoogleSettings();
+    const saveGoogleSettings = useSaveGoogleSettings();
+    const googleOAuth = useGoogleOAuthState();
     const pluginsQuery = usePluginList();
     const setGrant = useSetAgentPluginGrant();
     const agent = agentsQuery.data?.agents.find((candidate) => candidate.id === agentId) ?? null;
@@ -160,6 +200,40 @@ function AgentPluginsSettingsPage({ agentId }: { agentId: string }) {
                                                     </Button>
                                                 )}
                                             </MerchbaseSettingsControl>
+                                        ) : plugin.id === 'google' && googleSettingsQuery.data ? (
+                                            <GoogleSettingsControl
+                                                error={
+                                                    googleSettingsQuery.error?.message ??
+                                                    saveGoogleSettings.error?.message ??
+                                                    googleOAuth.error
+                                                }
+                                                isSaving={
+                                                    saveGoogleSettings.isPending ||
+                                                    googleOAuth.isPending
+                                                }
+                                                oauthStatus={googleOAuth.status}
+                                                onConnect={googleOAuth.connect}
+                                                onDisconnect={googleOAuth.disconnect}
+                                                onSave={(input) =>
+                                                    withSavingToast(() =>
+                                                        saveGoogleSettings.mutateAsync(input)
+                                                    )
+                                                }
+                                                settings={googleSettingsQuery.data}
+                                            >
+                                                {({ openSettingsDialog }) => (
+                                                    <Button
+                                                        disabled={
+                                                            saveGoogleSettings.isPending ||
+                                                            googleOAuth.isPending
+                                                        }
+                                                        onClick={() => openSettingsDialog()}
+                                                        variant="ghost"
+                                                    >
+                                                        Configure
+                                                    </Button>
+                                                )}
+                                            </GoogleSettingsControl>
                                         ) : null
                                     }
                                     isSaving={
@@ -215,21 +289,8 @@ export function AgentPluginGrantRow({
     const granted = agent.enabledPluginIds.includes(plugin.id);
     return (
         <SettingsRow
-            description={
-                plugin.enabled
-                    ? plugin.description
-                    : 'Grant is saved, but this Plugin must be enabled before the agent can use it.'
-            }
-            title={
-                <span className="flex min-w-0 items-center gap-2">
-                    <span className="truncate">{plugin.displayName}</span>
-                    {plugin.enabled ? null : (
-                        <Badge size="sm" variant="warning">
-                            Disabled
-                        </Badge>
-                    )}
-                </span>
-            }
+            description={plugin.description}
+            title={<span className="truncate">{plugin.displayName}</span>}
             trailingWidth="intrinsic"
         >
             <div className="flex items-center gap-2">
@@ -245,6 +306,59 @@ export function AgentPluginGrantRow({
     );
 }
 
+function useGoogleOAuthState() {
+    const [sessionId, setSessionId] = React.useState<string | null>(null);
+    const startOAuth = useStartGoogleOAuth();
+    const disconnectOAuth = useDisconnectGoogleOAuth();
+    const pollOAuth = usePollGoogleOAuth(sessionId);
+
+    React.useEffect(() => {
+        if (pollOAuth.data && pollOAuth.data.status !== 'pending') {
+            setSessionId(null);
+        }
+    }, [pollOAuth.data]);
+
+    async function connect() {
+        const session = await startOAuth.mutateAsync();
+        setSessionId(session.sessionId);
+        window.open(session.authUrl, '_blank', 'noopener,noreferrer');
+    }
+
+    async function disconnect() {
+        await disconnectOAuth.mutateAsync();
+    }
+
+    return {
+        connect,
+        disconnect,
+        error:
+            startOAuth.error?.message ??
+            disconnectOAuth.error?.message ??
+            pollOAuth.error?.message ??
+            null,
+        isPending:
+            startOAuth.isPending ||
+            disconnectOAuth.isPending ||
+            (Boolean(sessionId) && pollOAuth.data?.status === 'pending'),
+        status: formatGoogleOAuthStatus(pollOAuth.data?.status ?? null),
+    };
+}
+
+function formatGoogleOAuthStatus(status: string | null) {
+    switch (status) {
+        case 'approved':
+            return 'Google connected.';
+        case 'error':
+            return 'Google connection failed.';
+        case 'expired':
+            return 'Google connection expired.';
+        case 'pending':
+            return 'Waiting for Google authorization...';
+        default:
+            return null;
+    }
+}
+
 function matchesMerchbasePlugin(search: string) {
     const normalized = search.trim().toLowerCase();
     if (normalized.length === 0) {
@@ -258,6 +372,20 @@ function matchesMerchbasePlugin(search: string) {
         'product',
         'catalog',
         'design',
+    ].some((value) => value.toLowerCase().includes(normalized));
+}
+
+function matchesGooglePlugin(search: string) {
+    const normalized = search.trim().toLowerCase();
+    if (normalized.length === 0) {
+        return true;
+    }
+
+    return [
+        'google',
+        'calendar',
+        googlePluginManifest.description,
+        googlePluginManifest.services[0]?.description ?? '',
     ].some((value) => value.toLowerCase().includes(normalized));
 }
 

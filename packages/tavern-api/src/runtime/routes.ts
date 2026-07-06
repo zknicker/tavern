@@ -60,6 +60,12 @@ export const agentRuntimeRoutes = {
     agentEnv: '/agent-env',
     timezoneSettings: '/timezone/settings',
     plugin: (id: string) => `/plugins/${encodeURIComponent(id)}`,
+    pluginGoogleCalendarEvents: '/plugins/google/calendar/events',
+    pluginGoogleDisconnect: '/plugins/google/oauth/disconnect',
+    pluginGoogleOAuthPoll: (sessionId: string) =>
+        `/plugins/google/oauth/sessions/${encodeURIComponent(sessionId)}`,
+    pluginGoogleOAuthStart: '/plugins/google/oauth/start',
+    pluginGoogleSettings: '/plugins/google/settings',
     pluginMerchbaseAction: '/plugins/merchbase/action',
     pluginMerchbaseSalesSeries: '/plugins/merchbase/sales/series',
     pluginMerchbaseSettings: '/plugins/merchbase/settings',

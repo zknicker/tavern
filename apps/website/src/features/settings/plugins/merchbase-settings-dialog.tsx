@@ -1,20 +1,23 @@
 import { PlugIcon } from '@hugeicons-pro/core-stroke-rounded';
 import { merchbasePluginManifest } from '@tavern/api/plugins/merchbase';
-import { type Dispatch, type SetStateAction, useState } from 'react';
+import type { Dispatch, SetStateAction } from 'react';
 import { Button } from '../../../components/ui/primitives/button.tsx';
 import { FieldError } from '../../../components/ui/primitives/field.tsx';
-import { Input } from '../../../components/ui/primitives/input.tsx';
-import { SecretInput } from '../../../components/ui/secret-input.tsx';
 import type { MerchbaseSettingsOutput } from '../../../lib/trpc.tsx';
 import { merchbaseEnvironmentLockTooltip } from './merchbase-settings-copy.ts';
 import type { MerchbaseSettingsDraft } from './merchbase-settings-model.ts';
 import {
-    PluginDialog,
-    PluginField,
-    PluginFieldRow,
-    PluginLockSwitch,
-    PluginNotice,
-} from './plugin-dialog.tsx';
+    type PluginConfigField,
+    PluginConfigFieldRow,
+    PluginConfigFields,
+} from './plugin-config-fields.tsx';
+import { PluginDialog, PluginLockSwitch, PluginNotice } from './plugin-dialog.tsx';
+import {
+    PluginSection,
+    PluginSectionStack,
+    PluginServiceList,
+    PluginServiceRow,
+} from './plugin-service-fields.tsx';
 
 type MerchbaseSettings = NonNullable<MerchbaseSettingsOutput>;
 
@@ -42,7 +45,7 @@ export function MerchbaseSettingsDialog({
     settings: MerchbaseSettings;
 }) {
     const environmentControlled = settings.enablementSource === 'environment';
-    const [apiKeyRevealed, setApiKeyRevealed] = useState(false);
+    const merchbaseFields = createMerchbaseFields({ settings, setupError });
 
     return (
         <PluginDialog
@@ -84,85 +87,113 @@ export function MerchbaseSettingsDialog({
             title="MerchBase"
             titleSuffix="Plugin"
         >
-            <PluginField label="Base URL">
-                <Input
-                    aria-label="MerchBase base URL"
-                    className="font-mono"
-                    disabled={isSaving}
-                    onChange={(event) =>
-                        onDraftChange((current) => ({
-                            ...current,
-                            baseUrl: event.currentTarget.value,
-                        }))
-                    }
-                    value={draft.baseUrl}
-                />
-            </PluginField>
+            <PluginSectionStack>
+                <PluginSection
+                    description="MerchBase exposes one read-only service to granted agents."
+                    title="Services"
+                >
+                    <PluginServiceList>
+                        <PluginServiceRow
+                            control={
+                                <span className="text-muted-foreground text-sm">Included</span>
+                            }
+                            description="Read sales, products, catalog, and design data."
+                            icon={PlugIcon}
+                            label="MerchBase"
+                        />
+                    </PluginServiceList>
+                </PluginSection>
 
-            <PluginFieldRow>
-                <PluginField label="Default account">
-                    <Input
-                        aria-label="MerchBase default account"
+                <PluginSection
+                    description="Configure the MerchBase account and API key used by this Plugin."
+                    title="Connection"
+                >
+                    <PluginConfigFields
                         disabled={isSaving}
-                        onChange={(event) =>
-                            onDraftChange((current) => ({
-                                ...current,
-                                defaultAccount: event.currentTarget.value,
-                            }))
-                        }
-                        placeholder="Use MerchBase default"
-                        value={draft.defaultAccount}
+                        draft={draft}
+                        fields={[merchbaseFields.baseUrl]}
+                        onDraftChange={onDraftChange}
                     />
-                </PluginField>
 
-                <PluginField label="Default marketplace">
-                    <Input
-                        aria-label="MerchBase default marketplace"
+                    <PluginConfigFieldRow
                         disabled={isSaving}
-                        onChange={(event) =>
-                            onDraftChange((current) => ({
-                                ...current,
-                                defaultMarketplace: event.currentTarget.value,
-                            }))
-                        }
-                        placeholder="Use MerchBase default"
-                        value={draft.defaultMarketplace}
+                        draft={draft}
+                        fields={[
+                            merchbaseFields.defaultAccount,
+                            merchbaseFields.defaultMarketplace,
+                        ]}
+                        onDraftChange={onDraftChange}
                     />
-                </PluginField>
-            </PluginFieldRow>
 
-            <PluginField
-                description={
-                    settings.apiKeyConfigured
-                        ? 'Leave blank to keep the current key.'
-                        : 'Required before enabling MerchBase.'
-                }
-                label="API key"
-            >
-                <SecretInput
-                    ariaLabel="MerchBase API key"
-                    disabled={isSaving}
-                    name="merchbase-api-key"
-                    onChange={(value) =>
-                        onDraftChange((current) => ({ ...current, apiKey: value }))
-                    }
-                    onRevealToggle={() => setApiKeyRevealed((revealed) => !revealed)}
-                    placeholder={settings.apiKeyConfigured ? '••••••••••••••••' : 'Enter API key'}
-                    revealed={apiKeyRevealed}
-                    value={draft.apiKey}
-                />
-                {setupError ? <FieldError>{setupError}</FieldError> : null}
-            </PluginField>
+                    <PluginConfigFields
+                        disabled={isSaving}
+                        draft={draft}
+                        fields={[merchbaseFields.apiKey]}
+                        onDraftChange={onDraftChange}
+                    />
 
-            {settings.skillConflict ? (
-                <PluginNotice title="Skill conflict">
-                    Existing skill at{' '}
-                    <span className="font-mono">{settings.skillConflict.skillPath}</span>. Enabling
-                    MerchBase will replace it after confirmation.
-                </PluginNotice>
-            ) : null}
+                    {settings.skillConflict ? (
+                        <PluginNotice title="Skill conflict">
+                            Existing skill at{' '}
+                            <span className="font-mono">{settings.skillConflict.skillPath}</span>.
+                            Enabling MerchBase will replace it after confirmation.
+                        </PluginNotice>
+                    ) : null}
+                </PluginSection>
+            </PluginSectionStack>
 
             {error ? <FieldError>{error}</FieldError> : null}
         </PluginDialog>
     );
+}
+
+function createMerchbaseFields({
+    settings,
+    setupError,
+}: {
+    settings: MerchbaseSettings;
+    setupError?: string | null;
+}) {
+    return {
+        apiKey: {
+            ariaLabel: 'MerchBase API key',
+            description: settings.apiKeyConfigured
+                ? 'Leave blank to keep the current key.'
+                : 'Required before enabling MerchBase.',
+            error: setupError,
+            id: 'merchbase-api-key',
+            kind: 'secret',
+            label: 'API key',
+            placeholder: settings.apiKeyConfigured ? '••••••••••••••••' : 'Enter API key',
+            read: (draft) => draft.apiKey,
+            write: (draft, apiKey) => ({ ...draft, apiKey }),
+        },
+        baseUrl: {
+            ariaLabel: 'MerchBase base URL',
+            id: 'merchbase-base-url',
+            kind: 'text',
+            label: 'Base URL',
+            monospace: true,
+            read: (draft) => draft.baseUrl,
+            write: (draft, baseUrl) => ({ ...draft, baseUrl }),
+        },
+        defaultAccount: {
+            ariaLabel: 'MerchBase default account',
+            id: 'merchbase-default-account',
+            kind: 'text',
+            label: 'Default account',
+            placeholder: 'Use MerchBase default',
+            read: (draft) => draft.defaultAccount,
+            write: (draft, defaultAccount) => ({ ...draft, defaultAccount }),
+        },
+        defaultMarketplace: {
+            ariaLabel: 'MerchBase default marketplace',
+            id: 'merchbase-default-marketplace',
+            kind: 'text',
+            label: 'Default marketplace',
+            placeholder: 'Use MerchBase default',
+            read: (draft) => draft.defaultMarketplace,
+            write: (draft, defaultMarketplace) => ({ ...draft, defaultMarketplace }),
+        },
+    } satisfies Record<string, PluginConfigField<MerchbaseSettingsDraft>>;
 }

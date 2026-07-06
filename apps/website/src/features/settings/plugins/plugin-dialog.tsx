@@ -113,6 +113,30 @@ export function PluginFieldRow({ children }: { children: ReactNode }) {
     return <div className="grid gap-4 sm:grid-cols-2">{children}</div>;
 }
 
+export function PluginToggleField({
+    control,
+    description,
+    label,
+}: {
+    control: ReactNode;
+    description?: ReactNode;
+    label: ReactNode;
+}) {
+    return (
+        <div className="flex items-center justify-between gap-4">
+            <div className="min-w-0">
+                <div className="text-foreground text-sm">{label}</div>
+                {description ? (
+                    <div className="text-muted-foreground text-sm leading-relaxed">
+                        {description}
+                    </div>
+                ) : null}
+            </div>
+            {control}
+        </div>
+    );
+}
+
 export function PluginNotice({
     children,
     title,

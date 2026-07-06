@@ -29,6 +29,7 @@ const capabilityLabels = {
     gateway: 'Agent connection',
     memoryWorkers: 'Memory updates',
     modelExecution: 'Model execution',
+    'plugin.google.calendar': 'Google Calendar',
     'plugin.merchbase': 'MerchBase',
     skills: 'Skills',
     semanticMemory: 'Memory',

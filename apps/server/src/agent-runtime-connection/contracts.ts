@@ -12,6 +12,7 @@ export const agentRuntimeCapabilitySchema = z.enum([
     'skills',
     'devToolkit',
     'plugin.merchbase',
+    'plugin.google.calendar',
 ]);
 
 export const agentRuntimeCapabilityStateSchema = z.enum([

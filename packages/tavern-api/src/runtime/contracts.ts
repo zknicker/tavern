@@ -415,6 +415,17 @@ const agentRuntimePluginSecretFieldSchema = z
     })
     .strict();
 
+const agentRuntimePluginServiceSchema = z
+    .object({
+        description: z.string().trim().min(1),
+        displayName: z.string().trim().min(1),
+        enabled: z.boolean(),
+        healthCapabilities: z.array(agentRuntimeCapabilityHealthIdSchema),
+        id: z.string().trim().min(1).max(128),
+        scopes: z.array(z.string().trim().min(1)),
+    })
+    .strict();
+
 export const agentRuntimePluginSchema = z
     .object({
         config: agentRuntimeJsonRecordSchema,
@@ -423,6 +434,7 @@ export const agentRuntimePluginSchema = z
         enabled: z.boolean(),
         id: agentRuntimePluginIdSchema,
         secrets: z.array(agentRuntimePluginSecretFieldSchema),
+        services: z.array(agentRuntimePluginServiceSchema),
         updatedAt: z.string().datetime().nullable(),
     })
     .strict();
@@ -480,6 +492,97 @@ export const agentRuntimeSaveMerchbaseSettingsSchema = z
         defaultAccount: z.string().trim().min(1).max(160).nullable().optional(),
         defaultMarketplace: z.string().trim().min(1).max(40).nullable().optional(),
         enabled: z.boolean().optional(),
+    })
+    .strict();
+
+export const agentRuntimeGoogleSettingsSchema = z
+    .object({
+        calendarEnabled: z.boolean(),
+        connected: z.boolean(),
+        connectedAccountEmail: z.string().trim().min(1).nullable(),
+        enabled: z.boolean(),
+        grantedScopes: z.array(z.string().trim().min(1)),
+        missingCalendarScopes: z.array(z.string().trim().min(1)),
+        updatedAt: z.string().datetime().nullable(),
+    })
+    .strict();
+
+export const agentRuntimeSaveGoogleSettingsSchema = z
+    .object({
+        calendarEnabled: z.boolean().optional(),
+        enabled: z.boolean().optional(),
+    })
+    .strict();
+
+export const agentRuntimeStartGoogleOAuthSchema = z.object({}).strict();
+
+export const agentRuntimeGoogleOAuthStartSchema = z
+    .object({
+        authUrl: z.string().url(),
+        expiresAt: z.string().datetime(),
+        sessionId: z.string().trim().min(1),
+    })
+    .strict();
+
+export const agentRuntimeGoogleOAuthPollInputSchema = z
+    .object({
+        sessionId: z.string().trim().min(1),
+    })
+    .strict();
+
+export const agentRuntimeGoogleOAuthPollSchema = z
+    .object({
+        errorMessage: z.string().trim().min(1).nullable(),
+        sessionId: z.string().trim().min(1),
+        status: z.enum(['approved', 'error', 'expired', 'pending']),
+    })
+    .strict();
+
+export const agentRuntimeGoogleCalendarEventSchema = z
+    .object({
+        description: z.string().nullable(),
+        end: z.string().nullable(),
+        htmlLink: z.string().url().nullable(),
+        id: z.string().trim().min(1),
+        location: z.string().nullable(),
+        start: z.string().nullable(),
+        status: z.string().nullable(),
+        summary: z.string().nullable(),
+    })
+    .strict();
+
+export const agentRuntimeGoogleCalendarEventsListInputSchema = z
+    .object({
+        calendarId: z.string().trim().min(1).default('primary'),
+        maxResults: z.number().int().min(1).max(50).default(10),
+        query: z.string().trim().min(1).max(512).optional(),
+        timeMax: z.string().datetime().optional(),
+        timeMin: z.string().datetime().optional(),
+        timeZone: z.string().trim().min(1).max(128).optional(),
+    })
+    .strict();
+
+export const agentRuntimeGoogleCalendarEventsListSchema = z
+    .object({
+        events: z.array(agentRuntimeGoogleCalendarEventSchema),
+    })
+    .strict();
+
+export const agentRuntimeGoogleCalendarEventCreateInputSchema = z
+    .object({
+        calendarId: z.string().trim().min(1).default('primary'),
+        description: z.string().trim().min(1).max(8192).optional(),
+        endDateTime: z.string().datetime(),
+        location: z.string().trim().min(1).max(1024).optional(),
+        startDateTime: z.string().datetime(),
+        summary: z.string().trim().min(1).max(1024),
+        timeZone: z.string().trim().min(1).max(128).optional(),
+    })
+    .strict();
+
+export const agentRuntimeGoogleCalendarEventCreateSchema = z
+    .object({
+        event: agentRuntimeGoogleCalendarEventSchema,
     })
     .strict();
 
@@ -2502,6 +2605,25 @@ export type AgentRuntimeMerchbaseActionResult = z.infer<
 export type AgentRuntimeMerchbaseSettings = z.infer<typeof agentRuntimeMerchbaseSettingsSchema>;
 export type AgentRuntimeSaveMerchbaseSettings = z.infer<
     typeof agentRuntimeSaveMerchbaseSettingsSchema
+>;
+export type AgentRuntimeGoogleSettings = z.infer<typeof agentRuntimeGoogleSettingsSchema>;
+export type AgentRuntimeSaveGoogleSettings = z.infer<typeof agentRuntimeSaveGoogleSettingsSchema>;
+export type AgentRuntimeGoogleOAuthStart = z.infer<typeof agentRuntimeGoogleOAuthStartSchema>;
+export type AgentRuntimeGoogleOAuthPollInput = z.infer<
+    typeof agentRuntimeGoogleOAuthPollInputSchema
+>;
+export type AgentRuntimeGoogleOAuthPoll = z.infer<typeof agentRuntimeGoogleOAuthPollSchema>;
+export type AgentRuntimeGoogleCalendarEventsListInput = z.input<
+    typeof agentRuntimeGoogleCalendarEventsListInputSchema
+>;
+export type AgentRuntimeGoogleCalendarEventsList = z.infer<
+    typeof agentRuntimeGoogleCalendarEventsListSchema
+>;
+export type AgentRuntimeGoogleCalendarEventCreateInput = z.input<
+    typeof agentRuntimeGoogleCalendarEventCreateInputSchema
+>;
+export type AgentRuntimeGoogleCalendarEventCreate = z.infer<
+    typeof agentRuntimeGoogleCalendarEventCreateSchema
 >;
 export type AgentRuntimeBinding = z.infer<typeof agentRuntimeBindingSchema>;
 export type AgentRuntimeBindingList = z.infer<typeof agentRuntimeBindingListSchema>;
