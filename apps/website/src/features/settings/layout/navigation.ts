@@ -66,6 +66,18 @@ export const staticSettingsNavItems = [
         to: appRoutes.settingsMemories,
     },
     {
+        icon: ZapIcon,
+        id: 'skills',
+        label: 'Skills',
+        to: appRoutes.settingsSkills,
+    },
+    {
+        icon: PuzzleIcon,
+        id: 'plugins',
+        label: 'Plugins',
+        to: appRoutes.settingsPlugins,
+    },
+    {
         icon: HourglassIcon,
         id: 'jobs',
         label: 'Jobs',
@@ -115,7 +127,16 @@ export const settingsNavItems = [...staticSettingsNavItems, ...agentSettingsNavI
 export const settingsNavSections = [
     {
         id: 'general',
-        itemIds: ['agent-runtime', 'appearance', 'profile', 'updates', 'models', 'memories'],
+        itemIds: [
+            'agent-runtime',
+            'appearance',
+            'profile',
+            'updates',
+            'models',
+            'memories',
+            'skills',
+            'plugins',
+        ],
         label: 'General',
     },
     {
