@@ -122,6 +122,7 @@ export function SimpleCodeEditor({
                     placeholder={placeholder}
                     preClassName="min-h-full"
                     readOnly={readOnly}
+                    style={{ minWidth: 'max-content', overflow: 'visible' }}
                     tabSize={4}
                     textareaClassName="min-h-full w-full outline-none"
                     value={value}

@@ -13,6 +13,9 @@
     font-family: var(--font-mono);
     font-size: var(--text-code);
     line-height: 1.65;
+    overflow-wrap: normal !important;
+    white-space: pre !important;
+    word-break: normal !important;
 }
 
 .tavern-simple-code-editor textarea {
@@ -21,9 +24,6 @@
 
 .tavern-simple-code-editor pre {
     margin: 0;
-    white-space: pre-wrap;
-    word-break: normal;
-    overflow-wrap: anywhere;
 }
 
 .tavern-simple-code-editor .token.comment,
