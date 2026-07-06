@@ -6,9 +6,39 @@ import {
     type TavernPluginServiceManifest,
     tavernPluginManifests,
 } from '@tavern/api/plugins';
+import { type WidgetName, widgetNameSchema } from '@tavern/api/widgets';
 import { AGENT_HOME } from '../config.ts';
 import { readSkillSource } from '../skills/store.ts';
 import { getPlugin } from './store.ts';
+
+const pluginOwnedWidgetNames = new Set<WidgetName>(
+    tavernPluginManifests.flatMap((definition) => definition.widgets.map((widget) => widget.name))
+);
+
+/**
+ * Widget names the agent may author: core widgets (owned by no Plugin) plus the
+ * widgets of each Plugin that is enabled and explicitly granted to this agent.
+ * Returned in canonical widget order so the generated prompt stays stable
+ * regardless of grant order. Unlike catalog listings, an unresolved (null)
+ * agent is treated as holding no grants: a plugin widget is only advertised
+ * when the grant is confirmed, so we never tell an agent to author a widget it
+ * cannot use.
+ */
+export function availableWidgetNamesForAgent(agent: AgentRuntimeAgent | null = null): WidgetName[] {
+    const grantedPluginIds = new Set(agent?.enabledPluginIds ?? []);
+    const grantedPluginWidgetNames = new Set<WidgetName>(
+        tavernPluginManifests
+            .filter(
+                (definition) =>
+                    grantedPluginIds.has(definition.id) && getPlugin(definition.id).enabled
+            )
+            .flatMap((definition) => definition.widgets.map((widget) => widget.name))
+    );
+
+    return widgetNameSchema.options.filter(
+        (name) => !pluginOwnedWidgetNames.has(name) || grantedPluginWidgetNames.has(name)
+    );
+}
 
 export interface PluginSkillBundle {
     content: string;

@@ -27,13 +27,13 @@ import { createTavernMemoryTools } from '../memory/agent-tools.ts';
 import { isMemoryEnabled } from '../memory/settings.ts';
 import { createGoogleToolsForAgent } from '../plugins/google-tools.ts';
 import { createMerchbaseToolsForAgent } from '../plugins/merchbase-tools.ts';
-import {
-    hasRenderableRichResponse,
-    parseRichResponseFromAssistantContent,
-    richResponseActivity,
-} from '../rich-responses/render.ts';
 import { createTavernSkillTools } from '../skills/agent-tools.ts';
 import { recordInjectedSkillUsage } from '../skills/telemetry.ts';
+import {
+    parseWidgetsFromAssistantContent,
+    widgetActivity,
+    widgetActivityIdForRun,
+} from '../widgets/render.ts';
 import type { AgentExecutor, AgentExecutorInput } from './agent-executor.ts';
 import { buildAgentInstructions } from './agent-instructions.ts';
 import { updateAgentSessionRuntimeState } from './agent-session-store.ts';
@@ -149,8 +149,8 @@ async function executeHarnessTurn(
     const completedAt = new Date().toISOString();
     const activityIds = turnStream.activityIds;
     const responseContent = turnStream.finalText || fallbackText || emptyAssistantMessageDiagnostic;
-    const richResponse = parseRichResponseFromAssistantContent(responseContent);
-    const messageContent = richResponse?.displayContent ?? responseContent;
+    const parsedWidgets = parseWidgetsFromAssistantContent(responseContent);
+    const messageContent = parsedWidgets?.displayContent ?? responseContent;
     const messageId = assistantMessageId(input.runId);
     const deliveryId = deliveryIdForRun(input.runId);
     const receipt = createDelivery(input.chatId, {
@@ -180,25 +180,24 @@ async function executeHarnessTurn(
     });
 
     const allActivityIds = [...activityIds];
-    if (hasRenderableRichResponse(richResponse)) {
-        const richResponseActivityId = richResponseActivityIdForRun(input.runId);
+    for (const [index, widget] of (parsedWidgets?.widgets ?? []).entries()) {
+        const activityId = widgetActivityIdForRun(input.runId, index);
         upsertResponseActivity(
             input.chatId,
             input.responseId,
-            richResponseActivity({
-                activityId: richResponseActivityId,
+            widgetActivity({
+                activityId,
                 agentId: input.agent.id,
-                fallbackText: richResponse.fallbackText,
                 messageId,
-                render: richResponse.render,
                 runId: input.runId,
                 sessionKey: input.agentSession.id,
                 source: 'agent-engine',
                 startedAt,
                 timestamp: completedAt,
+                widget,
             })
         );
-        allActivityIds.push(richResponseActivityId);
+        allActivityIds.push(activityId);
     }
 
     upsertResponse(input.chatId, {
@@ -635,10 +634,6 @@ function assistantMessageId(runId: string) {
 
 function deliveryIdForRun(runId: string) {
     return `del_${sanitizeId(runId)}_assistant`;
-}
-
-function richResponseActivityIdForRun(runId: string) {
-    return `act_${sanitizeId(runId)}_rich_response`;
 }
 
 function sanitizeId(value: string) {

@@ -1,14 +1,14 @@
 import { describe, expect, test } from 'bun:test';
-import { richResponseComponentId, richResponseRenderInputSchema } from '../contracts.ts';
+import { widgetComponentId, widgetRenderInputSchema } from '../contracts.ts';
 import {
-    richResponseBarChartPropsSchema,
-    richResponseComposedChartPropsSchema,
-    richResponseLineChartPropsSchema,
+    widgetBarChartPropsSchema,
+    widgetComposedChartPropsSchema,
+    widgetLineChartPropsSchema,
 } from './contracts.ts';
 
-describe('Rich Response chart contracts', () => {
-    test('render input accepts a bar chart spec', () => {
-        const props = richResponseBarChartPropsSchema.parse({
+describe('Widget chart contracts', () => {
+    test('render input accepts bar chart props', () => {
+        const props = widgetBarChartPropsSchema.parse({
             data: [{ quarter: 'Q1', revenue: 12_000 }],
             series: [{ key: 'revenue', label: 'Revenue' }],
             title: 'Quarterly Revenue',
@@ -16,18 +16,10 @@ describe('Rich Response chart contracts', () => {
             xKey: 'quarter',
         });
 
-        const result = richResponseRenderInputSchema.safeParse({
-            component: richResponseComponentId,
+        const result = widgetRenderInputSchema.safeParse({
+            component: widgetComponentId('bar-chart'),
             fallback: { text: props.title },
-            props: {
-                spec: {
-                    elements: {
-                        chart: { props, type: 'BarChart' },
-                    },
-                    root: 'chart',
-                    state: {},
-                },
-            },
+            props,
             target: 'chat.inline',
         });
 
@@ -35,7 +27,7 @@ describe('Rich Response chart contracts', () => {
     });
 
     test('line chart values may be negative', () => {
-        const result = richResponseLineChartPropsSchema.safeParse({
+        const result = widgetLineChartPropsSchema.safeParse({
             data: [{ day: 'Mon', delta: -4 }],
             series: [{ key: 'delta', label: 'Delta' }],
             title: 'Daily Delta',
@@ -46,7 +38,7 @@ describe('Rich Response chart contracts', () => {
     });
 
     test('composed chart rejects duplicated series keys', () => {
-        const result = richResponseComposedChartPropsSchema.safeParse({
+        const result = widgetComposedChartPropsSchema.safeParse({
             barSeries: [{ key: 'sales', label: 'Sales' }],
             data: [{ month: 'Jan', sales: 10 }],
             lineSeries: [{ key: 'sales', label: 'Sales' }],

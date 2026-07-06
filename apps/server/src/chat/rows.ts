@@ -56,7 +56,7 @@ function getRowTimestamp(row: ChatLogPage['rows'][number]) {
             ? row.message.timestamp
             : row.kind === 'worker'
               ? (row.startedAt ?? row.completedAt ?? row.worker.lastEventAt ?? row.worker.createdAt)
-              : row.kind === 'tool' || row.kind === 'rich_response'
+              : row.kind === 'tool' || row.kind === 'widget'
                 ? (row.startedAt ?? row.completedAt)
                 : row.timestamp;
     const parsed = timestamp ? Date.parse(timestamp) : Number.NaN;

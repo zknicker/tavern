@@ -29,8 +29,8 @@ and execution.
 - **Memory.** Tavern Memory is durable knowledge the user can inspect; Runtime
   can inject relevant Memory into turns.
 - **Automations.** Runtime owns scheduled work and records run history.
-- **Rich responses.** Runtime stores response activity for charts, widgets,
-  artifacts, and other rendered assistant output.
+- **Widgets.** Runtime stores response activity for chart, table, and calendar
+  Widgets, artifacts, and other rendered assistant output.
 
 ## Start Here
 

@@ -1,4 +1,4 @@
-import type { AgentRuntimeMerchbaseSalesSeries, RichResponseComposedChartProps } from '@tavern/api';
+import type { AgentRuntimeMerchbaseSalesSeries, WidgetComposedChartProps } from '@tavern/api';
 import { dateKeyFromBucketStart, shiftIsoDate } from './merchbase-date.ts';
 
 type MerchBaseSalesPoint = AgentRuntimeMerchbaseSalesSeries['series'][number];
@@ -9,7 +9,7 @@ export function buildMerchBaseSalesChartView(input: {
     startDate: string;
     title: string;
 }): {
-    chartProps: RichResponseComposedChartProps;
+    chartProps: WidgetComposedChartProps;
     currencyCode: string;
     series: MerchBaseSalesPoint[];
 } {

@@ -2,10 +2,7 @@ import { BrainIcon } from '@hugeicons-pro/core-stroke-rounded';
 import type { TranscriptItem, TranscriptRow } from './chat-transcript-model.ts';
 import { resolveToolStepIcon, type ToolStepIcon } from './tool-steps/tool-step-icons.ts';
 
-type ActivityRow = Exclude<
-    TranscriptRow,
-    Extract<TranscriptRow, { kind: 'message' | 'rich_response' }>
->;
+type ActivityRow = Exclude<TranscriptRow, Extract<TranscriptRow, { kind: 'message' | 'widget' }>>;
 
 export type ActivityItem = Extract<TranscriptItem, { kind: 'row' }> & {
     row: ActivityRow;
@@ -31,9 +28,7 @@ export function isActivityItem(item: TranscriptItem): item is ActivityItem {
 
     return (
         item.kind !== 'row' ||
-        (item.row.kind !== 'message' &&
-            item.row.kind !== 'rich_response' &&
-            !isNarrationToolRow(item.row))
+        (item.row.kind !== 'message' && item.row.kind !== 'widget' && !isNarrationToolRow(item.row))
     );
 }
 

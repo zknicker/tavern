@@ -308,11 +308,11 @@ test('buildTranscriptEntries keeps active thinking status after assistant narrat
     ).toEqual(['tool:exec', 'tool:message', 'activeStatus']);
 });
 
-test('buildTranscriptEntries keeps Rich Responses inline inside the agent turn', () => {
+test('buildTranscriptEntries keeps widgets inline inside the agent turn', () => {
     const entries = buildTranscriptEntries({
         activeReply: null,
         rows: [
-            withResponseId(richResponseRow('ui-1'), 'rsp_1'),
+            withResponseId(widgetRow('ui-1'), 'rsp_1'),
             withResponseId(agentMessage('agent-1', 'Here is the chart.', false, false), 'rsp_1'),
         ],
     });
@@ -326,7 +326,7 @@ test('buildTranscriptEntries keeps Rich Responses inline inside the agent turn',
 
     expect(
         entries[0].items.map((item) => (item.kind === 'row' ? item.row.kind : item.kind))
-    ).toEqual(['rich_response', 'message']);
+    ).toEqual(['widget', 'message']);
 });
 
 test('buildTranscriptEntries splits agent turns by response identity over gap heuristics', () => {
@@ -372,8 +372,8 @@ test('buildTranscriptEntries keeps one response together across long gaps', () =
 });
 
 function withResponseId(row: ChatRow, responseId: string): ChatRow {
-    if (!(row.kind === 'message' || row.kind === 'tool' || row.kind === 'rich_response')) {
-        throw new Error('Expected a message, tool, or Rich Response row.');
+    if (!(row.kind === 'message' || row.kind === 'tool' || row.kind === 'widget')) {
+        throw new Error('Expected a message, tool, or widget row.');
     }
 
     return { ...row, responseId };
@@ -477,7 +477,7 @@ function narrationRow(id: string, connectsToPrevious: boolean, connectsToNext: b
     };
 }
 
-function richResponseRow(id: string): ChatRow {
+function widgetRow(id: string): ChatRow {
     return {
         actor: { id: 'agent-1', kind: 'agent' },
         completedAt: '2026-05-11T16:00:05.000Z',
@@ -485,27 +485,16 @@ function richResponseRow(id: string): ChatRow {
         connectsToPrevious: false,
         id,
         isFirstInGroup: true,
-        kind: 'rich_response',
-        richResponse: {
-            component: 'tavern.rich_response',
+        kind: 'widget',
+        widget: {
+            component: 'tavern.widget.bar-chart',
             fallbackText: 'Quarterly Revenue',
             id,
             props: {
-                spec: {
-                    elements: {
-                        chart: {
-                            props: {
-                                data: [{ quarter: 'Q1', revenue: 12_000 }],
-                                series: [{ key: 'revenue', label: 'Revenue' }],
-                                title: 'Quarterly Revenue',
-                                xKey: 'quarter',
-                            },
-                            type: 'BarChart',
-                        },
-                    },
-                    root: 'chart',
-                    state: {},
-                },
+                data: [{ quarter: 'Q1', revenue: 12_000 }],
+                series: [{ key: 'revenue', label: 'Revenue' }],
+                title: 'Quarterly Revenue',
+                xKey: 'quarter',
             },
             target: 'chat.inline',
             validationError: null,

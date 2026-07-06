@@ -21,5 +21,5 @@ Internals docs explain how Tavern is built. Product-facing behavior belongs in
 | React conventions | [React Conventions](react.md) |
 | Chat demos | [Chat Demos](chat-demos.md) |
 | Tool presentation | [Tool Presentation](tool-presentation.md) |
-| Rich Responses | [Rich Responses](rich-responses.md) |
+| Widgets | [Widgets](widgets.md) |
 | Agent engine runtime | [Agent Engine Runtime](agent-engine-runtime.md) |

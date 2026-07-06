@@ -1,7 +1,7 @@
 ---
 summary: Decision to make Tavern Plugins settings-managed Runtime capabilities, not agent-managed setup flows.
 read_when:
-  - adding or changing Plugin configuration, health, settings, agent tools, or Rich Response components
+  - adding or changing Plugin configuration, health, settings, agent tools, or Widgets
 ---
 
 # Plugins are settings-managed Runtime capabilities
@@ -15,8 +15,7 @@ rather than agent tools. Future agent-assisted setup must run through a
 Tavern-wide settings flow, not a Plugin-specific shortcut.
 
 The Plugin manifest declares inventory and ownership metadata such as id, name,
-version, settings, secrets, Plugin-level health capabilities, Services, and Rich
-Response Components. Every Plugin declares at least one Service. Services own
+version, settings, secrets, Plugin-level health capabilities, Services, and Widgets. Every Plugin declares at least one Service. Services own
 their health capabilities, skills, and tool groups. In v1, the manifest does not
 declare dynamic executable wiring or enumerate Plugin-internal read operations;
 Runtime and App import first-party Plugin modules directly.
@@ -45,12 +44,12 @@ the Plugin itself from Settings -> Plugins, enable the desired Services inside
 that Plugin, then grant the Plugin to agents from agent capability settings.
 Tavern does not expose individual Plugin tool toggles.
 
-Runtime materializes Plugin-owned skills, tools, and Rich Response authoring
+Runtime materializes Plugin-owned skills, tools, and Widget authoring
 guidance for an agent turn only when the Plugin is globally enabled, the Service
 is enabled, required connection scopes are granted, and the Plugin is granted to
 that agent. Health remains diagnostic so transient upstream failures do not make
 agent tools appear and disappear during a turn. Historical chat rows with
-compiled Plugin-owned Rich Response Components continue to render after a grant
+compiled Plugin-owned Widgets continue to render after a grant
 is removed. If the Plugin is globally disabled, Plugin-backed interaction
 controls inside historical renders are disabled; Tavern does not use fallback
 data sources for live re-query.
@@ -77,10 +76,10 @@ runtime_plugin_secrets(
 For MerchBase, `runtime_plugins.config_json` stores non-secret settings such as
 base URL, default account, and default marketplace.
 `runtime_plugin_secrets.secret_json` stores the API key. API reads mask secrets;
-Plugin-backed Rich Responses, the managed `merchbase` Runtime tools, and
+Plugin-backed Widgets, the managed `merchbase` Runtime tools, and
 settings routes go through the Runtime Plugin service rather than reading these
 tables directly. The managed `merchbase` skill is instruction-only: it describes
-when to use the tools and Rich Response, but does not expose raw Runtime API
+when to use the tools and Widget, but does not expose raw Runtime API
 calls as the agent contract.
 
 For multi-Service Plugins such as Google, `runtime_plugins.config_json` stores

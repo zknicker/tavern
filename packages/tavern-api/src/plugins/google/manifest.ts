@@ -20,7 +20,6 @@ export const googlePluginManifest = tavernPluginManifestSchema.parse({
     displayName: 'Google',
     healthCapabilities: [],
     id: googlePluginId,
-    richResponseComponents: [],
     secrets: [{ name: 'oauth' }],
     services: [
         {
@@ -47,4 +46,5 @@ export const googlePluginManifest = tavernPluginManifestSchema.parse({
     ],
     settings: [],
     version: '1.0.0',
+    widgets: [],
 });

@@ -14,7 +14,7 @@ describe('Runtime DB schema repairs', () => {
         closeDb();
     });
 
-    it('repairs response activity kind constraints to allow rich response activity', () => {
+    it('repairs response activity kind constraints to allow widget activity', () => {
         const db = initTestDb();
         createLegacyResponseActivityTable(db);
         db.exec('PRAGMA foreign_keys = OFF');
@@ -27,7 +27,7 @@ describe('Runtime DB schema repairs', () => {
         ).run({
             $chatId: 'cht_old',
             $id: 'act_retired',
-            $kind: 'widget',
+            $kind: 'rich_response',
             $now: new Date().toISOString(),
             $responseId: 'rsp_old',
             $sequence: 1,
@@ -45,18 +45,18 @@ describe('Runtime DB schema repairs', () => {
 
         expect(() =>
             upsertResponseActivity('cht_legacy', 'rsp_legacy', {
-                id: 'act_rich_response',
-                kind: 'rich_response',
+                id: 'act_widget',
+                kind: 'widget',
                 status: 'completed',
-                title: 'Rich Response',
+                title: 'Widget',
             })
         ).not.toThrow();
-        expect(getResponseActivity('act_rich_response')).toMatchObject({
-            id: 'act_rich_response',
-            kind: 'rich_response',
+        expect(getResponseActivity('act_widget')).toMatchObject({
+            id: 'act_widget',
+            kind: 'widget',
         });
-        expect(tableSql(db, 'chat_response_activity')).toContain("'rich_response'");
-        expect(tableSql(db, 'chat_response_activity')).not.toContain("'widget'");
+        expect(tableSql(db, 'chat_response_activity')).toContain("'widget'");
+        expect(tableSql(db, 'chat_response_activity')).not.toContain("'rich_response'");
         expect(
             db
                 .prepare(
@@ -122,7 +122,7 @@ CREATE TABLE chat_response_activity (
   response_id    TEXT NOT NULL,
   chat_id        TEXT NOT NULL,
   sequence       INTEGER NOT NULL,
-  kind           TEXT NOT NULL CHECK (kind IN ('planning', 'reasoning', 'tool_call', 'tool_result', 'command', 'message', 'artifact', 'widget', 'custom')),
+  kind           TEXT NOT NULL CHECK (kind IN ('reasoning', 'tool_call', 'tool_result', 'command', 'message', 'artifact', 'rich_response', 'custom')),
   status         TEXT NOT NULL CHECK (status IN ('queued', 'running', 'completed', 'failed', 'cancelled')),
   title          TEXT NOT NULL,
   detail         TEXT,

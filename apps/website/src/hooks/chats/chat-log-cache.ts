@@ -9,9 +9,9 @@ type MessageRow = Extract<ChatLogRow, { kind: 'message' }>;
 type ToolRow = Extract<ChatLogRow, { kind: 'tool' }>;
 type ThinkingRow = Extract<ChatLogRow, { kind: 'system'; systemKind: 'thinking' }>;
 type NoticeRow = Extract<ChatLogRow, { kind: 'system'; systemKind: 'runtimeNotice' }>;
-type RichResponseRow = Extract<ChatLogRow, { kind: 'rich_response' }>;
+type WidgetRow = Extract<ChatLogRow, { kind: 'widget' }>;
 type WorkerRow = Extract<ChatLogRow, { kind: 'worker' }>;
-type ProgressRow = MessageRow | NoticeRow | ThinkingRow | ToolRow | RichResponseRow | WorkerRow;
+type ProgressRow = MessageRow | NoticeRow | ThinkingRow | ToolRow | WidgetRow | WorkerRow;
 export type ChatLogSteerNoticeSnapshot = MessageRow;
 
 export const defaultLiveChatLogLimit = 100;
@@ -264,8 +264,8 @@ function progressStepToChatRows(input: {
         return [progressStepToWorkerRow(input)];
     }
 
-    if (input.step.kind === 'rich_response') {
-        return [progressStepToRichResponseRow(input)];
+    if (input.step.kind === 'widget') {
+        return [progressStepToWidgetRow(input)];
     }
 
     return [progressStepToToolRow(input)];
@@ -419,19 +419,19 @@ function progressStepToWorkerRow(input: {
     };
 }
 
-function progressStepToRichResponseRow(input: {
+function progressStepToWidgetRow(input: {
     step: ChatTurnProgressStep;
     timestamp: string;
     turn: ChatTurn;
-}): RichResponseRow {
+}): WidgetRow {
     const id = progressActivityId(input.turn.runId, input.step.id);
-    const richResponse = input.step.richResponse ?? {
+    const widget = input.step.widget ?? {
         component: null,
         fallbackText: input.step.detail?.trim() || input.step.label,
         id,
         props: null,
         target: null,
-        validationError: 'Rich Response unavailable.',
+        validationError: 'Widget unavailable.',
     };
 
     return {
@@ -441,11 +441,11 @@ function progressStepToRichResponseRow(input: {
         connectsToPrevious: false,
         id,
         isFirstInGroup: true,
-        kind: 'rich_response',
-        richResponse: {
-            ...richResponse,
+        kind: 'widget',
+        widget: {
+            ...widget,
             id,
-            props: richResponse.props ?? null,
+            props: widget.props ?? null,
         },
         sessionKey: input.turn.sessionKey,
         startedAt: input.timestamp,
@@ -465,8 +465,8 @@ function mergeProgressRows(existing: ChatLogRow, next: ProgressRow) {
         return mergeWorkerRows(existing, next);
     }
 
-    if (existing.kind === 'rich_response' && next.kind === 'rich_response') {
-        return mergeRichResponseRows(existing, next);
+    if (existing.kind === 'widget' && next.kind === 'widget') {
+        return mergeWidgetRows(existing, next);
     }
 
     if (
@@ -520,7 +520,7 @@ function mergeWorkerRows(existing: WorkerRow, next: WorkerRow): WorkerRow {
     };
 }
 
-function mergeRichResponseRows(existing: RichResponseRow, next: RichResponseRow): RichResponseRow {
+function mergeWidgetRows(existing: WidgetRow, next: WidgetRow): WidgetRow {
     return {
         ...next,
         completedAt: next.completedAt ?? existing.completedAt,
@@ -665,7 +665,7 @@ function rowTimestamp(row: ChatLogRow) {
     const timestamp =
         row.kind === 'message'
             ? row.message.timestamp
-            : row.kind === 'tool' || row.kind === 'rich_response'
+            : row.kind === 'tool' || row.kind === 'widget'
               ? (row.startedAt ?? row.completedAt)
               : row.kind === 'worker'
                 ? (row.startedAt ?? row.completedAt ?? row.worker.lastEventAt)

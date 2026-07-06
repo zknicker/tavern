@@ -114,72 +114,53 @@ describe('Tavern Runtime Chat API store', () => {
             response_message_id: 'msg_demo_charts_response',
             status: 'completed',
         });
-        expect(getResponseActivity('act_demo_charts_rich_response')).toMatchObject({
-            id: 'act_demo_charts_rich_response',
-            kind: 'rich_response',
+        expect(getResponseActivity('act_demo_charts_widget_1')).toMatchObject({
+            id: 'act_demo_charts_widget_1',
+            kind: 'widget',
             metadata: {
-                richResponse: {
-                    props: {
-                        spec: {
-                            elements: {
-                                bar: { type: 'BarChart' },
-                                composed: { type: 'ComposedChart' },
-                                line: { type: 'LineChart' },
-                            },
-                        },
-                    },
-                },
+                widget: { component: 'tavern.widget.bar-chart' },
             },
             status: 'completed',
-            title: 'Rich Response',
+            title: 'Bar chart',
         });
-        expect(getResponseActivity('act_demo_calendar_day_rich_response')).toMatchObject({
-            id: 'act_demo_calendar_day_rich_response',
-            kind: 'rich_response',
+        expect(getResponseActivity('act_demo_charts_widget_3')).toMatchObject({
+            id: 'act_demo_charts_widget_3',
+            kind: 'widget',
+            metadata: {
+                widget: { component: 'tavern.widget.composed-chart' },
+            },
             status: 'completed',
-            title: 'Rich Response',
+            title: 'Chart',
+        });
+        expect(getResponseActivity('act_demo_calendar_day_widget')).toMatchObject({
+            id: 'act_demo_calendar_day_widget',
+            kind: 'widget',
+            status: 'completed',
+            title: 'Agenda',
         });
         expect(getResponseActivity('act_demo_merchbase_sales_chart')).toMatchObject({
             id: 'act_demo_merchbase_sales_chart',
-            kind: 'rich_response',
+            kind: 'widget',
             metadata: {
-                richResponse: {
-                    props: {
-                        spec: {
-                            elements: {
-                                chart: { type: 'MerchBaseSalesChart' },
-                            },
-                        },
-                    },
-                },
+                widget: { component: 'tavern.widget.merchbase-sales-chart' },
             },
             status: 'completed',
-            title: 'Rich Response',
+            title: 'MerchBase sales chart',
         });
-        expect(getResponseActivity('act_demo_calendar_event_rich_response')).toMatchObject({
-            id: 'act_demo_calendar_event_rich_response',
-            kind: 'rich_response',
+        expect(getResponseActivity('act_demo_calendar_event_widget')).toMatchObject({
+            id: 'act_demo_calendar_event_widget',
+            kind: 'widget',
             status: 'completed',
-            title: 'Rich Response',
+            title: 'Calendar event',
         });
-        expect(getResponseActivity('act_demo_rich_response_catalog')).toMatchObject({
-            id: 'act_demo_rich_response_catalog',
-            kind: 'rich_response',
+        expect(getResponseActivity('act_demo_widget_table')).toMatchObject({
+            id: 'act_demo_widget_table',
+            kind: 'widget',
             metadata: {
-                richResponse: {
-                    props: {
-                        spec: {
-                            elements: {
-                                separator: { type: 'Separator' },
-                                table: { type: 'Table' },
-                                title: { type: 'Heading' },
-                            },
-                        },
-                    },
-                },
+                widget: { component: 'tavern.widget.table' },
             },
             status: 'completed',
-            title: 'Rich Response',
+            title: 'Table',
         });
         expect(
             listMessages(developmentChatDemoIds.demo).messages.find(
@@ -227,11 +208,11 @@ describe('Tavern Runtime Chat API store', () => {
             title: 'old chart activity',
         });
         upsertResponseActivity(developmentChatDemoIds.demo, 'rsp_demo_charts', {
-            id: 'act_demo_charts_rich_response',
-            kind: 'rich_response',
+            id: 'act_demo_charts_widget_stale',
+            kind: 'widget',
             sequence: 2,
             status: 'completed',
-            title: 'Rich Response',
+            title: 'Widget',
         });
 
         expect(() => seedDevelopmentChatDemos({ db, enabled: true })).not.toThrow();
@@ -247,7 +228,11 @@ describe('Tavern Runtime Chat API store', () => {
             sequence: number;
         }[];
 
-        expect(rows.map((row) => row.id)).toEqual(['act_demo_charts_rich_response']);
+        expect(rows.map((row) => row.id)).toEqual([
+            'act_demo_charts_widget_1',
+            'act_demo_charts_widget_2',
+            'act_demo_charts_widget_3',
+        ]);
     });
 
     it('removes obsolete per-feature development demo chats', () => {

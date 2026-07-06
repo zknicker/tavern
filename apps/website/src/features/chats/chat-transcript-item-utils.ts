@@ -65,7 +65,7 @@ export function isTranscriptActivityItem(item: TranscriptItem) {
     return (
         item.kind !== 'row' ||
         (item.row.kind !== 'message' &&
-            item.row.kind !== 'rich_response' &&
+            item.row.kind !== 'widget' &&
             !isAssistantNarrationItem(item))
     );
 }

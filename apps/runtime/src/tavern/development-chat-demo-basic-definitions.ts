@@ -1,13 +1,15 @@
 import {
-    type RichResponseBarChartProps,
-    type RichResponseCalendarDayProps,
-    type RichResponseCalendarEventProps,
-    type RichResponseLineChartProps,
-    type RichResponseRenderInput,
-    richResponseCalendarDayPropsSchema,
-    richResponseCalendarEventPropsSchema,
-    richResponseComponentId,
-    richResponseLineChartPropsSchema,
+    type WidgetBarChartProps,
+    type WidgetCalendarDayProps,
+    type WidgetCalendarEventProps,
+    type WidgetLineChartProps,
+    type WidgetName,
+    type WidgetRenderInput,
+    widgetCalendarDayPropsSchema,
+    widgetCalendarEventPropsSchema,
+    widgetComponentId,
+    widgetLineChartPropsSchema,
+    widgetRenderInputSchema,
 } from '@tavern/api';
 import { developmentChatDemoIds } from '@tavern/api/development-chat-demos';
 import {
@@ -26,7 +28,7 @@ const longOAuthConsentUrl =
     'https://accounts.google.com/o/oauth2/auth?response_type=code&client_id=535034123734-jckkmfjk3qajgeo8mhcstmtkbdrt0gn2.apps.googleusercontent.com&redirect_uri=http%3A%2F%2Flocalhost%3A1&scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcalendar.events.readonly&access_type=offline&prompt=consent&state=tavern_static_preview_long_agent_response_token';
 
 export function lineChartDemo(): DevelopmentChatDemo {
-    const chartProps = richResponseLineChartPropsSchema.parse(lineChartDemoProps());
+    const chartProps = widgetLineChartPropsSchema.parse(lineChartDemoProps());
     const chatId = developmentChatDemoIds.lineChart;
     const runId = 'run_demo_line_chart';
     const requestMessageId = 'msg_demo_line_chart_request';
@@ -65,24 +67,24 @@ export function lineChartDemo(): DevelopmentChatDemo {
                     {
                         completed_at: demoTime,
                         detail: chartProps.title,
-                        id: 'act_demo_line_chart_rich_response',
-                        kind: 'rich_response',
+                        id: 'act_demo_line_chart_widget',
+                        kind: 'widget',
                         metadata: {
                             runtime: activityRuntimeMetadata({
                                 chatId,
-                                id: 'act_demo_line_chart_rich_response',
+                                id: 'act_demo_line_chart_widget',
                                 requestMessageId,
                                 runId,
                                 sequence: 1,
-                                source: 'demo.rich_response',
+                                source: 'demo.widget',
                             }),
-                            richResponse: lineChartDemoRenderInput(chartProps),
+                            widget: lineChartDemoRenderInput(chartProps),
                         },
                         sequence: 1,
                         started_at: demoTime,
                         status: 'completed',
                         summary: chartProps.title,
-                        title: 'Rich Response',
+                        title: 'Line chart',
                     },
                 ],
             },
@@ -109,7 +111,7 @@ export function artifactLinksDemo(): DevelopmentChatDemo {
 }
 
 export function calendarEventDemo(): DevelopmentChatDemo {
-    const eventProps = richResponseCalendarEventPropsSchema.parse(calendarEventDemoProps());
+    const eventProps = widgetCalendarEventPropsSchema.parse(calendarEventDemoProps());
     const chatId = developmentChatDemoIds.calendarEvent;
     const runId = 'run_demo_calendar_event';
     const requestMessageId = 'msg_demo_calendar_event_request';
@@ -148,24 +150,24 @@ export function calendarEventDemo(): DevelopmentChatDemo {
                     {
                         completed_at: demoTime,
                         detail: eventProps.title,
-                        id: 'act_demo_calendar_event_rich_response',
-                        kind: 'rich_response',
+                        id: 'act_demo_calendar_event_widget',
+                        kind: 'widget',
                         metadata: {
                             runtime: activityRuntimeMetadata({
                                 chatId,
-                                id: 'act_demo_calendar_event_rich_response',
+                                id: 'act_demo_calendar_event_widget',
                                 requestMessageId,
                                 runId,
                                 sequence: 1,
-                                source: 'demo.rich_response',
+                                source: 'demo.widget',
                             }),
-                            richResponse: calendarEventDemoRenderInput(eventProps),
+                            widget: calendarEventDemoRenderInput(eventProps),
                         },
                         sequence: 1,
                         started_at: demoTime,
                         status: 'completed',
                         summary: eventProps.title,
-                        title: 'Rich Response',
+                        title: 'Calendar event',
                     },
                 ],
             },
@@ -174,7 +176,7 @@ export function calendarEventDemo(): DevelopmentChatDemo {
 }
 
 export function calendarDayDemo(): DevelopmentChatDemo {
-    const dayProps = richResponseCalendarDayPropsSchema.parse(calendarDayDemoProps());
+    const dayProps = widgetCalendarDayPropsSchema.parse(calendarDayDemoProps());
     const chatId = developmentChatDemoIds.calendarDay;
     const runId = 'run_demo_calendar_day';
     const requestMessageId = 'msg_demo_calendar_day_request';
@@ -213,24 +215,24 @@ export function calendarDayDemo(): DevelopmentChatDemo {
                     {
                         completed_at: demoTime,
                         detail: dayProps.title ?? dayProps.date,
-                        id: 'act_demo_calendar_day_rich_response',
-                        kind: 'rich_response',
+                        id: 'act_demo_calendar_day_widget',
+                        kind: 'widget',
                         metadata: {
                             runtime: activityRuntimeMetadata({
                                 chatId,
-                                id: 'act_demo_calendar_day_rich_response',
+                                id: 'act_demo_calendar_day_widget',
                                 requestMessageId,
                                 runId,
                                 sequence: 1,
-                                source: 'demo.rich_response',
+                                source: 'demo.widget',
                             }),
-                            richResponse: calendarDayDemoRenderInput(dayProps),
+                            widget: calendarDayDemoRenderInput(dayProps),
                         },
                         sequence: 1,
                         started_at: demoTime,
                         status: 'completed',
                         summary: dayProps.title ?? dayProps.date,
-                        title: 'Rich Response',
+                        title: 'Agenda',
                     },
                 ],
             },
@@ -340,51 +342,36 @@ function completedTextDemo(input: {
     };
 }
 
-export function barChartDemoRenderInput(props: RichResponseBarChartProps): RichResponseRenderInput {
-    return richResponseDemoRenderInput('BarChart', props.title, props);
+export function barChartDemoRenderInput(props: WidgetBarChartProps): WidgetRenderInput {
+    return widgetDemoRenderInput('bar-chart', props.title, props);
 }
 
-export function lineChartDemoRenderInput(
-    props: RichResponseLineChartProps
-): RichResponseRenderInput {
-    return richResponseDemoRenderInput('LineChart', props.title, props);
+export function lineChartDemoRenderInput(props: WidgetLineChartProps): WidgetRenderInput {
+    return widgetDemoRenderInput('line-chart', props.title, props);
 }
 
-function calendarEventDemoRenderInput(
-    props: RichResponseCalendarEventProps
-): RichResponseRenderInput {
-    return richResponseDemoRenderInput('CalendarEvent', props.title, props);
+function calendarEventDemoRenderInput(props: WidgetCalendarEventProps): WidgetRenderInput {
+    return widgetDemoRenderInput('calendar-event', props.title, props);
 }
 
-function calendarDayDemoRenderInput(props: RichResponseCalendarDayProps): RichResponseRenderInput {
-    return richResponseDemoRenderInput('CalendarDay', props.title ?? props.date, props);
+function calendarDayDemoRenderInput(props: WidgetCalendarDayProps): WidgetRenderInput {
+    return widgetDemoRenderInput('calendar-day', props.title ?? props.date, props);
 }
 
-export function richResponseDemoRenderInput(
-    type: RichResponseRenderInput['props']['spec']['elements'][string]['type'],
+export function widgetDemoRenderInput(
+    name: WidgetName,
     fallbackText: string,
     props: Record<string, unknown>
-): RichResponseRenderInput {
-    return {
-        component: richResponseComponentId,
+): WidgetRenderInput {
+    return widgetRenderInputSchema.parse({
+        component: widgetComponentId(name),
         fallback: { text: fallbackText },
-        props: {
-            spec: {
-                elements: {
-                    display: {
-                        props,
-                        type,
-                    },
-                },
-                root: 'display',
-                state: {},
-            },
-        },
+        props,
         target: 'chat.inline',
-    };
+    });
 }
 
-export function chartDemoProps(): RichResponseBarChartProps {
+export function chartDemoProps(): WidgetBarChartProps {
     return {
         data: [
             { quarter: 'Q1', revenue: 12_000, expenses: 7600 },
@@ -402,7 +389,7 @@ export function chartDemoProps(): RichResponseBarChartProps {
     };
 }
 
-function calendarEventDemoProps(): RichResponseCalendarEventProps {
+function calendarEventDemoProps(): WidgetCalendarEventProps {
     return {
         calendar: 'Product',
         date: '2026-06-20',
@@ -415,7 +402,7 @@ function calendarEventDemoProps(): RichResponseCalendarEventProps {
     };
 }
 
-function calendarDayDemoProps(): RichResponseCalendarDayProps {
+function calendarDayDemoProps(): WidgetCalendarDayProps {
     return {
         date: '2026-06-20',
         events: [
@@ -444,7 +431,7 @@ function calendarDayDemoProps(): RichResponseCalendarDayProps {
     };
 }
 
-export function lineChartDemoProps(): RichResponseLineChartProps {
+export function lineChartDemoProps(): WidgetLineChartProps {
     return {
         data: [
             { date: 'May 20', users: 1320, pageviews: 5200 },

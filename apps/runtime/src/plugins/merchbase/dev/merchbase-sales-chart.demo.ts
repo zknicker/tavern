@@ -1,6 +1,5 @@
-import { type RichResponseRenderInput, richResponseComponentId } from '@tavern/api';
 import { developmentChatDemoIds } from '@tavern/api/development-chat-demos';
-import { richResponseMerchBaseSalesChartComponentType } from '@tavern/api/rich-responses/merchbase';
+import { widgetDemoRenderInput } from '../../../tavern/development-chat-demo-basic-definitions';
 import {
     activityRuntimeMetadata,
     assistantMessage,
@@ -49,7 +48,7 @@ export function merchbaseSalesChartDemo(): DevelopmentChatDemo {
                         completed_at: demoTime,
                         detail: 'MerchBase sales trend.',
                         id: 'act_demo_merchbase_sales_chart',
-                        kind: 'rich_response',
+                        kind: 'widget',
                         metadata: {
                             runtime: activityRuntimeMetadata({
                                 chatId,
@@ -59,42 +58,25 @@ export function merchbaseSalesChartDemo(): DevelopmentChatDemo {
                                 sequence: 1,
                                 source: 'demo.merchbase',
                             }),
-                            richResponse: merchbaseSalesChartRenderInput(),
+                            widget: widgetDemoRenderInput(
+                                'merchbase-sales-chart',
+                                'MerchBase sales',
+                                {
+                                    endDate: '2026-06-23',
+                                    rangeDays: 10,
+                                    title: 'MerchBase sales',
+                                }
+                            ),
                         },
                         sequence: 1,
                         started_at: demoTime,
                         status: 'completed',
                         summary: 'MerchBase sales trend.',
-                        title: 'Rich Response',
+                        title: 'MerchBase sales chart',
                     },
                 ],
             },
         ],
         title: 'Demo: MerchBase Sales Chart',
-    };
-}
-
-function merchbaseSalesChartRenderInput(): RichResponseRenderInput {
-    return {
-        component: richResponseComponentId,
-        fallback: { text: 'MerchBase sales chart.' },
-        props: {
-            spec: {
-                elements: {
-                    chart: {
-                        children: [],
-                        props: {
-                            endDate: '2026-06-23',
-                            rangeDays: 10,
-                            title: 'MerchBase sales',
-                        },
-                        type: richResponseMerchBaseSalesChartComponentType,
-                    },
-                },
-                root: 'chart',
-                state: {},
-            },
-        },
-        target: 'chat.inline',
     };
 }

@@ -1,6 +1,6 @@
 ---
 name: tavern-widgets
-description: Use when adding or changing Tavern Widgets, Widget tools, widget render contracts, host adapters, generated agent Widget guidance, or seeded Widget chat demos. Covers the end-to-end checklist across @tavern/api, Runtime, Server, Website, docs, and tests.
+description: Use when adding or changing Tavern Widgets, widget fence parsing, widget render contracts, generated agent Widget guidance, or seeded Widget chat demos. Covers the end-to-end checklist across @tavern/api, Runtime, Server, Website, docs, and tests.
 ---
 
 # Tavern Widgets
@@ -15,96 +15,89 @@ the canonical contract lives in repo docs and code.
 3. Read the docs routed for Widgets and demos:
    - `docs/internals/widgets.md`
    - `docs/internals/chat-demos.md`
-   - `docs/adr/0001-widgets-as-first-class-activity.md`
-   - `docs/adr/0002-widgets-use-explicit-wiring.md`
+   - `docs/adr/0010-widgets-use-tagged-fences.md`
 4. Preserve unrelated dirty work.
 
 ## Vocabulary
 
-- **Widget**: typed app-rendered UI block in chat or another known surface.
-- **Widget tool**: narrow agent-facing tool that collects typed intent.
-- **Widget component**: durable render component id plus props schema.
-- **Host adapter**: Runtime, Server, or Website wiring for a widget family.
+- **Widget**: typed app-rendered UI block in chat, authored by the agent as a
+  `widget:<name>` fenced code block containing one JSON object of props.
+- **Widget name**: kebab-case fence tag, e.g. `bar-chart`.
+- **Component id**: durable stored id, always `tavern.widget.<name>`.
+- **Render envelope**: stored `{ component, fallback, props, target }` payload
+  inside `widget` response activity metadata.
 
 ## Checklist
 
-For each new Widget component:
+For each new Widget:
 
-1. Add `packages/tavern-api/src/widgets/<family>/contracts.ts`.
-   - Export provider-safe tool name, durable component id, stored props schema,
-     and tool input schema.
-   - Stored props should be strict. Tool input may be forgiving when Runtime can
-     normalize safely.
-2. Add or update Runtime tool registration.
-   - Keep the model-facing description compact and decision-oriented.
-   - Name the user intent the tool satisfies, not only the input shape.
-   - Keep JSON schema, validation, and TypeScript schema behavior in parity.
-   - Return a short status result, not the full render payload.
-3. Project successful tool completion into durable `widget` response activity.
-   - Runtime owns chat/session/response routing; tool input must not include
-     routing ids.
-   - Store normalized props and deterministic fallback text.
-4. Wire generic `ui.render` only through Runtime's generic widget activity path.
-   Do not create widget-family stream event names.
-5. Add the Server host adapter.
-   - Generic host code parses the render envelope and owns unknown-component
-     fallback after registered adapters decline.
-   - Family adapters validate only their known component ids.
-6. Add the Website adapter.
-   - Validate again before rendering.
-   - Use app-owned components, tokens, and `WidgetFrame` for inline chat widgets.
-   - Never render model-provided HTML, JSX, CSS, class names, or component trees.
-7. Add one short generated `AGENTS.md` Widget bullet.
-   - One line per tool.
-   - Phrase availability conditionally: use render tools when available, with a
-     text/table fallback for non-Tavern channels.
-   - No examples or implementation notes in generated prompt context.
-8. Seed a dev chat demo.
-   - Use real Runtime chat rows, not static routes or local transcript fixtures.
-   - Use the real tool name for tool activity and the component id for widget
-     render payloads.
-9. Add focused tests at the seams:
-   - API contract parsing and normalization.
-   - Runtime tool/schema guidance and tool-to-widget projection.
-   - Server fallback and known-component projection.
-   - Website render/fallback behavior.
-   - Generated `AGENTS.md` Widget bullet.
-
-## Agent Adoption
-
-- Treat tool descriptions and schemas as the primary agent-facing contract.
-  Generated `AGENTS.md`, NOTES.md, and skills reinforce behavior but must not be
-  the only place the agent learns when to render.
-- When changing when an agent should choose a Widget, update the matching
-  surfaces together: tool description/schema, generated `AGENTS.md` guidance,
-  docs, and string tests.
-- Keep domain skills focused on mapping user intent to source/API/CLI data and
-  neutral chart-ready projections. Mention Tavern render tools only for local
-  Tavern preferences and always include a non-render fallback.
-- If the request is about behavior in a deployed managed agent, verify the
-  actual runtime workspace and skill paths before claiming NOTES.md or skill
-  edits apply there.
+1. Add the props schema in `packages/tavern-api/src/widgets/<family>/contracts.ts`
+   (or a new family folder).
+   - Strict Zod schema; model-friendly shorthands may normalize via
+     `.transform` (see the table matrix shorthand).
+2. Register the Widget in `packages/tavern-api/src/widgets/contracts.ts`:
+   - add the name to `widgetNameSchema`,
+   - add the schema to `widgetPropsSchemasByName`,
+   - add a `widgetRenderInputEntry` to `widgetRenderInputSchema`,
+   - add a display name in `widgetDisplayName`, and widget-specific fallback
+     text in `widgetFallbackText` when `title` alone is not enough.
+3. Add a `WidgetPromptEntry` (`{ description, signature, constraints? }`) to the
+   `widgetPromptEntries` map in `packages/tavern-api/src/widgets/prompt.ts`.
+   - One decision-oriented description line plus a compact props signature; keep
+     it small, it ships every turn.
+   - The `satisfies Record<WidgetName, WidgetPromptEntry>` guard turns a missing
+     entry into a compile error — that is the reminder, not this checklist.
+   - Plugin-owned entries live beside their schema (see
+     `widgets/merchbase/contracts.ts`) and are imported into the map.
+4. Runtime needs no per-widget wiring: fence parsing in
+   `apps/runtime/src/widgets/render.ts` covers all registered widgets, and
+   `availableWidgetNamesForAgent` gates the prompt. A core widget (owned by no
+   Plugin) is available to every agent automatically; a plugin widget appears
+   only when the Plugin is enabled and granted (via the manifest `widgets`
+   field), so no gating code is needed per widget.
+5. Add the Website renderer:
+   - a component under `apps/website/src/widgets/` using app-owned components,
+     tokens, and `WidgetFrame` where card framing fits,
+   - a case in the `widgetElement` switch in
+     `apps/website/src/widgets/render-widget.tsx`.
+   - Never render model-provided HTML, JSX, CSS, class names, or component
+     trees.
+6. Plugin-owned Widgets declare themselves in the Plugin manifest `widgets`
+   array and keep component source beside the Plugin where practical.
+7. Seed a dev chat demo.
+   - Use real Runtime chat rows via `widgetDemoRenderInput(name, fallback, props)`.
+   - Plugin-owned Widgets use one `dev/<widget>.demo.ts` module per widget.
+8. Add focused tests at the seams:
+   - API: props parsing/normalization and `parseWidgetPayload` behavior;
+     prompt assembly (`widgets/prompt.test.ts`).
+   - Runtime: fence parsing, display-content stripping, activity projection
+     (`apps/runtime/src/widgets/render.test.ts`). For a plugin widget, add a
+     grant case to `plugins/agent-capabilities.test.ts`.
+   - Website: transcript render + fallback (`chat-transcript.test.tsx`).
+   - Instructions: generated prompt strings and gating
+     (`apps/runtime/src/workspace/instructions.test.ts`).
 
 ## Standards
 
-- Tool names: provider-safe snake case, e.g. `render_bar_chart`.
-- Component ids: durable Tavern namespace, e.g. `tavern.render_bar_chart`.
-- No generic render-widget tool until a repeated pattern proves it is needed.
-- No centralized registry, manifest loader, or plugin system for first-party
-  widgets. Use explicit host imports and small switches.
+- Widget names: kebab-case, singular product nouns (`calendar-event`).
+- Component ids: always `tavern.widget.<name>`; never freeform.
+- Props are flat data. Interactivity lives in the React component, not in the
+  payload. No state, actions, event handlers, or dynamic expressions.
+- No centralized registry framework, manifest loader, or plugin system for
+  first-party Widgets. Use the explicit schema map and renderer switch.
 - Fallback/error state must stay visible to users.
-- ChatKit and AG-UI are reference semantics, not Tavern dependencies.
+- Invalid fences strip from the reply and produce no activity; never block the
+  prose.
 
 ## Verify
 
 Run the smallest lanes that cover changed seams. Common lanes:
 
 ```bash
-bun run --filter @tavern/api test -- src/widgets/<family>/contracts.test.ts
-bun run --filter @tavern/runtime test -- src/hermes/tavern-messenger-plugin.test.ts src/tavern/channel-relay.test.ts src/workspace/instructions.test.ts
-bun test apps/server/src/widgets/<family>.test.ts
+cd packages/tavern-api && bun test src/widgets/ && bun run typecheck
+bun run --filter @tavern/runtime test -- src/widgets/render.test.ts src/workspace/instructions.test.ts
+cd apps/website && bun test src/features/chats src/widgets && bun run typecheck
 bun run --filter @tavern/server typecheck
-bun run --filter @tavern/runtime typecheck
-bun run --filter @tavern/runtime lint
+bun run lint
 git diff --check
 ```

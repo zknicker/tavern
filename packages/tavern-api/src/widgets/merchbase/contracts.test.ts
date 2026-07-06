@@ -1,36 +1,28 @@
 import { describe, expect, test } from 'bun:test';
 import { agentRuntimeMerchbaseActionInputSchema } from '../../runtime/contracts.ts';
-import { richResponseComponentId, richResponseRenderInputSchema } from '../contracts.ts';
-import { richResponseMerchBaseSalesChartPropsSchema } from './contracts.ts';
+import { widgetComponentId, widgetRenderInputSchema } from '../contracts.ts';
+import { widgetMerchBaseSalesChartPropsSchema } from './contracts.ts';
 
-describe('Rich Response MerchBase contracts', () => {
+describe('Widget MerchBase contracts', () => {
     test('defaults sales charts to a 10 day trend range', () => {
-        const props = richResponseMerchBaseSalesChartPropsSchema.parse({
+        const props = widgetMerchBaseSalesChartPropsSchema.parse({
             title: 'Sales today',
         });
 
         expect(props.rangeDays).toBe(10);
     });
 
-    test('render input accepts a MerchBase sales chart spec', () => {
-        const props = richResponseMerchBaseSalesChartPropsSchema.parse({
+    test('render input accepts MerchBase sales chart props', () => {
+        const props = widgetMerchBaseSalesChartPropsSchema.parse({
             endDate: '2026-06-23',
             rangeDays: 10,
             title: 'MerchBase sales',
         });
 
-        const result = richResponseRenderInputSchema.safeParse({
-            component: richResponseComponentId,
+        const result = widgetRenderInputSchema.safeParse({
+            component: widgetComponentId('merchbase-sales-chart'),
             fallback: { text: props.title },
-            props: {
-                spec: {
-                    elements: {
-                        chart: { props, type: 'MerchBaseSalesChart' },
-                    },
-                    root: 'chart',
-                    state: {},
-                },
-            },
+            props,
             target: 'chat.inline',
         });
 

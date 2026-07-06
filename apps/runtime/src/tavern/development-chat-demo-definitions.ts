@@ -10,7 +10,6 @@ import {
     selfMessagesDemo,
 } from './development-chat-demo-basic-definitions';
 import { chartDemo } from './development-chat-demo-composed-chart-definition';
-import { richResponseCatalogDemo } from './development-chat-demo-rich-response-catalog-definition';
 import { toolHeadersDemo } from './development-chat-demo-tool-header-definitions';
 import { turnTimelineDemo } from './development-chat-demo-turn-timeline-definition';
 import {
@@ -18,12 +17,13 @@ import {
     type DevelopmentDemoMessage,
     demoTime,
 } from './development-chat-demo-types';
+import { widgetTableDemo } from './development-chat-demo-widget-table-definition';
 
 export const developmentChatDemos: DevelopmentChatDemo[] = [
     demoChannel([
         chartDemo(),
         merchbaseSalesChartDemo(),
-        richResponseCatalogDemo(),
+        widgetTableDemo(),
         calendarDayDemo(),
         calendarEventDemo(),
         artifactLinksDemo(),

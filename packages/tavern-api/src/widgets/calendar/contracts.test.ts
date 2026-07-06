@@ -1,13 +1,10 @@
 import { describe, expect, test } from 'bun:test';
-import { richResponseComponentId, richResponseRenderInputSchema } from '../contracts.ts';
-import {
-    richResponseCalendarDayPropsSchema,
-    richResponseCalendarEventPropsSchema,
-} from './contracts.ts';
+import { widgetComponentId, widgetRenderInputSchema } from '../contracts.ts';
+import { widgetCalendarDayPropsSchema, widgetCalendarEventPropsSchema } from './contracts.ts';
 
-describe('Rich Response calendar contracts', () => {
-    test('render input accepts a calendar event spec', () => {
-        const props = richResponseCalendarEventPropsSchema.parse({
+describe('Widget calendar contracts', () => {
+    test('render input accepts calendar event props', () => {
+        const props = widgetCalendarEventPropsSchema.parse({
             date: '2026-06-20',
             endTime: '14:00',
             startTime: '13:00',
@@ -15,18 +12,10 @@ describe('Rich Response calendar contracts', () => {
             title: 'Q1 roadmap review',
         });
 
-        const result = richResponseRenderInputSchema.safeParse({
-            component: richResponseComponentId,
+        const result = widgetRenderInputSchema.safeParse({
+            component: widgetComponentId('calendar-event'),
             fallback: { text: props.title },
-            props: {
-                spec: {
-                    elements: {
-                        event: { props, type: 'CalendarEvent' },
-                    },
-                    root: 'event',
-                    state: {},
-                },
-            },
+            props,
             target: 'chat.inline',
         });
 
@@ -34,7 +23,7 @@ describe('Rich Response calendar contracts', () => {
     });
 
     test('calendar day validates same-day event props', () => {
-        const result = richResponseCalendarDayPropsSchema.safeParse({
+        const result = widgetCalendarDayPropsSchema.safeParse({
             date: '2026-06-20',
             events: [
                 {
@@ -50,7 +39,7 @@ describe('Rich Response calendar contracts', () => {
     });
 
     test('timed events need an end time', () => {
-        const result = richResponseCalendarEventPropsSchema.safeParse({
+        const result = widgetCalendarEventPropsSchema.safeParse({
             date: '2026-06-20',
             startTime: '13:00',
             title: 'Q1 roadmap review',

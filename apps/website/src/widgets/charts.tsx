@@ -1,8 +1,8 @@
 import type {
-    RichResponseBarChartProps,
-    RichResponseComposedChartProps,
-    RichResponseLineChartProps,
-} from '@tavern/api/rich-responses/charts';
+    WidgetBarChartProps,
+    WidgetComposedChartProps,
+    WidgetLineChartProps,
+} from '@tavern/api/widgets/charts';
 import { type ReactNode, useEffect, useState } from 'react';
 import { Area, AreaChart } from '../components/charts/area-chart.tsx';
 import { Bar } from '../components/charts/bar.tsx';
@@ -17,7 +17,7 @@ import { SeriesBar } from '../components/charts/series-bar.tsx';
 import { ChartTooltip } from '../components/charts/tooltip/index.ts';
 import { XAxis } from '../components/charts/x-axis.tsx';
 import { YAxis } from '../components/charts/y-axis.tsx';
-import { RichResponseFrame } from '../components/rich-responses/rich-response-frame.tsx';
+import { WidgetFrame } from '../components/widgets/widget-frame.tsx';
 import { ChartLegend } from './chart-legend.tsx';
 import {
     buildBarChartMargin,
@@ -37,9 +37,9 @@ import {
     seriesColor,
 } from './chart-view-model.ts';
 
-const richResponseChartAspectRatio = '21 / 9';
+const widgetChartAspectRatio = '21 / 9';
 
-export function RichResponseBarChart({ props }: { props: RichResponseBarChartProps }) {
+export function WidgetBarChart({ props }: { props: WidgetBarChartProps }) {
     const [hoveredSeriesIndex, setHoveredSeriesIndex] = useState<null | number>(null);
     const legendItems = buildLegendItems(props);
     const margin = buildBarChartMargin(props);
@@ -51,7 +51,7 @@ export function RichResponseBarChart({ props }: { props: RichResponseBarChartPro
         >
             <ChartFrame title={props.title}>
                 <BarChart
-                    aspectRatio={richResponseChartAspectRatio}
+                    aspectRatio={widgetChartAspectRatio}
                     barGap={0.2}
                     barOuterGap={0.06}
                     data={props.data}
@@ -86,7 +86,7 @@ export function RichResponseBarChart({ props }: { props: RichResponseBarChartPro
     );
 }
 
-export function RichResponseLineChart({ props }: { props: RichResponseLineChartProps }) {
+export function WidgetLineChart({ props }: { props: WidgetLineChartProps }) {
     const [hoveredSeriesIndex, setHoveredSeriesIndex] = useState<null | number>(null);
     const chartData = normalizeLineChartData(props);
     const legendItems = buildLegendItems(props);
@@ -99,7 +99,7 @@ export function RichResponseLineChart({ props }: { props: RichResponseLineChartP
         >
             <ChartFrame title={props.title}>
                 <AreaChart
-                    aspectRatio={richResponseChartAspectRatio}
+                    aspectRatio={widgetChartAspectRatio}
                     data={chartData}
                     margin={margin}
                     xDataKey={props.xKey}
@@ -135,15 +135,15 @@ export function RichResponseLineChart({ props }: { props: RichResponseLineChartP
     );
 }
 
-export function RichResponseComposedChart({ props }: { props: RichResponseComposedChartProps }) {
+export function WidgetComposedChart({ props }: { props: WidgetComposedChartProps }) {
     return (
         <ChartFrame title={props.title}>
-            <RichResponseComposedChartBody props={props} />
+            <WidgetComposedChartBody props={props} />
         </ChartFrame>
     );
 }
 
-export function RichResponseComposedChartBody({
+export function WidgetComposedChartBody({
     chartMargin,
     datePillBottom,
     onActiveIndexChange,
@@ -155,7 +155,7 @@ export function RichResponseComposedChartBody({
     chartMargin?: Partial<Margin>;
     datePillBottom?: number;
     onActiveIndexChange?: (index: null | number) => void;
-    props: RichResponseComposedChartProps;
+    props: WidgetComposedChartProps;
     showLegend?: boolean;
     xAxisLabelBottom?: number;
     xAxisTickCount?: number;
@@ -176,7 +176,7 @@ export function RichResponseComposedChartBody({
             onHoverChange={setHoveredSeriesIndex}
         >
             <ComposedChart
-                aspectRatio={richResponseChartAspectRatio}
+                aspectRatio={widgetChartAspectRatio}
                 barGap={6}
                 data={chartData}
                 margin={margin}
@@ -258,10 +258,10 @@ function ComposedChartActiveIndexObserver({
 
 function ChartFrame({ children, title }: { children: ReactNode; title: string }) {
     return (
-        <RichResponseFrame size="full" title={title}>
+        <WidgetFrame size="full" title={title}>
             <div className="min-w-0" style={chartStyleVars}>
                 {children}
             </div>
-        </RichResponseFrame>
+        </WidgetFrame>
     );
 }

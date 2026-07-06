@@ -1,14 +1,11 @@
-import type {
-    RichResponseBarChartProps,
-    RichResponseComposedChartProps,
-} from '@tavern/api/rich-responses/charts';
+import type { WidgetBarChartProps, WidgetComposedChartProps } from '@tavern/api/widgets/charts';
 import type { CSSProperties } from 'react';
 import { buildPackedChartMargin } from '../components/charts/axis-packing.ts';
 import { intFmt } from '../components/charts/chart-formatters.ts';
 import type { LegendItemData } from '../components/charts/legend/index.ts';
 import type { TooltipRow } from '../components/charts/tooltip/index.ts';
 
-type ChartSeries = RichResponseBarChartProps['series'];
+type ChartSeries = WidgetBarChartProps['series'];
 export type ChartLegendItemData = LegendItemData & { unit?: string };
 
 type ChartUnitResolver =
@@ -17,7 +14,7 @@ type ChartUnitResolver =
     | undefined;
 
 interface ChartValueProps {
-    data: RichResponseBarChartProps['data'];
+    data: WidgetBarChartProps['data'];
     series: ChartSeries;
     title: string;
     unit?: string;
@@ -97,7 +94,7 @@ export function composedLineMarkerStyle(color: string) {
     };
 }
 
-export function buildBarChartMargin(props: RichResponseBarChartProps) {
+export function buildBarChartMargin(props: WidgetBarChartProps) {
     return buildPackedChartMargin({
         base: { bottom: 44, left: 30, right: 18, top: 24 },
         data: props.data,
@@ -133,7 +130,7 @@ export function buildLineChartMargin(data: Record<string, unknown>[], series: Ch
 
 export function buildComposedChartMargin(
     data: Record<string, unknown>[],
-    props: RichResponseComposedChartProps
+    props: WidgetComposedChartProps
 ) {
     const barUnit = composedBarUnit(props);
     const lineUnit = composedLineUnit(props);
@@ -160,19 +157,19 @@ export function buildComposedChartMargin(
     });
 }
 
-export function buildComposedSeries(props: RichResponseComposedChartProps): ChartSeries {
+export function buildComposedSeries(props: WidgetComposedChartProps): ChartSeries {
     return [...props.barSeries, ...props.lineSeries];
 }
 
-export function composedBarUnit(props: RichResponseComposedChartProps) {
+export function composedBarUnit(props: WidgetComposedChartProps) {
     return props.barUnit ?? props.unit;
 }
 
-export function composedLineUnit(props: RichResponseComposedChartProps) {
+export function composedLineUnit(props: WidgetComposedChartProps) {
     return props.lineUnit ?? props.unit;
 }
 
-export function composedSeriesUnit(props: RichResponseComposedChartProps, index: number) {
+export function composedSeriesUnit(props: WidgetComposedChartProps, index: number) {
     return index < props.barSeries.length ? composedBarUnit(props) : composedLineUnit(props);
 }
 

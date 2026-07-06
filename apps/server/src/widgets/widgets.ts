@@ -1,26 +1,26 @@
-import { richResponseRenderInputSchema } from '@tavern/api/rich-responses';
+import { widgetRenderInputSchema } from '@tavern/api/widgets';
 import type { TavernResponseActivity } from '@tavern/sdk';
 import type { ChatLogPage } from '../chat/contracts.ts';
 
-type RichResponseRow = Extract<ChatLogPage['rows'][number], { kind: 'rich_response' }>;
+type WidgetRow = Extract<ChatLogPage['rows'][number], { kind: 'widget' }>;
 
-export function richResponseRowFromActivity(input: {
+export function widgetRowFromActivity(input: {
     activity: TavernResponseActivity;
-    actor: RichResponseRow['actor'];
+    actor: WidgetRow['actor'];
     sessionKey: string | null;
-}): RichResponseRow | null {
-    if (input.activity.kind !== 'rich_response') {
+}): WidgetRow | null {
+    if (input.activity.kind !== 'widget') {
         return null;
     }
 
-    const payload = readRecord(input.activity.metadata).richResponse;
+    const payload = readRecord(input.activity.metadata).widget;
 
     if (payload === undefined) {
         return null;
     }
 
-    const parsed = richResponseRenderInputSchema.safeParse(payload);
-    const richResponse = parsed.success
+    const parsed = widgetRenderInputSchema.safeParse(payload);
+    const widget = parsed.success
         ? {
               component: parsed.data.component,
               fallbackText: parsed.data.fallback.text,
@@ -29,7 +29,7 @@ export function richResponseRowFromActivity(input: {
               target: parsed.data.target,
               validationError: null,
           }
-        : richResponseFromInvalidPayload(payload, input.activity, parsed.error.issues[0]?.message);
+        : widgetFromInvalidPayload(payload, input.activity, parsed.error.issues[0]?.message);
 
     return {
         actor: input.actor,
@@ -38,19 +38,19 @@ export function richResponseRowFromActivity(input: {
         connectsToPrevious: false,
         id: input.activity.id,
         isFirstInGroup: true,
-        kind: 'rich_response',
+        kind: 'widget',
         responseId: input.activity.response_id,
-        richResponse,
         sessionKey: input.sessionKey,
         startedAt: input.activity.started_at,
+        widget,
     };
 }
 
-function richResponseFromInvalidPayload(
+function widgetFromInvalidPayload(
     payload: unknown,
     activity: TavernResponseActivity,
     error: string | undefined
-): RichResponseRow['richResponse'] {
+): WidgetRow['widget'] {
     const record = readRecord(payload);
     const component = readString(record.component);
 
@@ -61,7 +61,7 @@ function richResponseFromInvalidPayload(
         id: activity.id,
         props: null,
         target: readString(record.target),
-        validationError: readString(record.validationError) ?? error ?? 'Invalid Rich Response.',
+        validationError: readString(record.validationError) ?? error ?? 'Invalid widget payload.',
     };
 }
 
@@ -71,7 +71,7 @@ function fallbackTextFromActivity(activity: TavernResponseActivity, component: s
         activity.detail?.trim() ||
         activity.title?.trim() ||
         component ||
-        'Unable to render Rich Response.'
+        'Unable to render widget.'
     );
 }
 

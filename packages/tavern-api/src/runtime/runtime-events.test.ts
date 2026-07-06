@@ -37,38 +37,27 @@ test('semanticMemory changed events carry coarse invalidation hints', () => {
     assert.equal(event.scope, 'content');
 });
 
-test('rich response progress events carry renderable payloads', () => {
+test('widget progress events carry renderable payloads', () => {
     const event = agentRuntimeEventSchema.parse({
         step: {
             detail: 'Quarterly Revenue',
-            id: 'act_rich_response_1',
-            kind: 'rich_response',
-            label: 'Rich Response',
-            richResponse: {
-                component: 'tavern.rich_response',
+            id: 'act_widget_1',
+            kind: 'widget',
+            label: 'Widget',
+            status: 'completed',
+            widget: {
+                component: 'tavern.widget.bar-chart',
                 fallbackText: 'Quarterly Revenue',
-                id: 'act_rich_response_1',
+                id: 'act_widget_1',
                 props: {
-                    spec: {
-                        elements: {
-                            chart: {
-                                props: {
-                                    data: [{ quarter: 'Q1', revenue: 12_000 }],
-                                    series: [{ key: 'revenue', label: 'Revenue' }],
-                                    title: 'Quarterly Revenue',
-                                    xKey: 'quarter',
-                                },
-                                type: 'BarChart',
-                            },
-                        },
-                        root: 'chart',
-                        state: {},
-                    },
+                    data: [{ quarter: 'Q1', revenue: 12_000 }],
+                    series: [{ key: 'revenue', label: 'Revenue' }],
+                    title: 'Quarterly Revenue',
+                    xKey: 'quarter',
                 },
                 target: 'chat.inline',
                 validationError: null,
             },
-            status: 'completed',
         },
         timestamp: '2026-06-11T12:00:00.000Z',
         turn: {
@@ -82,6 +71,6 @@ test('rich response progress events carry renderable payloads', () => {
     });
 
     assert.equal(event.type, 'turn.progress');
-    assert.equal(event.step.kind, 'rich_response');
-    assert.equal(event.step.richResponse?.fallbackText, 'Quarterly Revenue');
+    assert.equal(event.step.kind, 'widget');
+    assert.equal(event.step.widget?.fallbackText, 'Quarterly Revenue');
 });

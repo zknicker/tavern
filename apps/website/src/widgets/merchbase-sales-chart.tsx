@@ -1,9 +1,8 @@
 import { AmazonIcon } from '@hugeicons-pro/core-solid-rounded';
 import { PlugIcon } from '@hugeicons-pro/core-stroke-rounded';
 import { keepPreviousData } from '@tanstack/react-query';
-import type { RichResponseMerchBaseSalesChartProps } from '@tavern/api/rich-responses/merchbase';
+import type { WidgetMerchBaseSalesChartProps } from '@tavern/api/widgets/merchbase';
 import { memo, useCallback, useMemo, useState } from 'react';
-import { RichResponseFrame } from '../components/rich-responses/rich-response-frame.tsx';
 import {
     Empty,
     EmptyDescription,
@@ -12,22 +11,19 @@ import {
     EmptyTitle,
 } from '../components/ui/empty.tsx';
 import { Icon } from '../components/ui/icon.tsx';
+import { WidgetFrame } from '../components/widgets/widget-frame.tsx';
 import { useMerchbaseSettings } from '../hooks/plugins/use-merchbase-settings.ts';
 import { usePluginList } from '../hooks/plugins/use-plugin-list.ts';
 import { queryPolicy } from '../lib/query-policy.ts';
 import { type MerchbaseSalesSeriesOutput, trpc } from '../lib/trpc.tsx';
 import { cn } from '../lib/utils.ts';
 import { chartStyleVars } from './chart-view-model.ts';
-import { RichResponseComposedChartBody } from './charts.tsx';
+import { WidgetComposedChartBody } from './charts.tsx';
 import { dateKeyFromBucketStart, formatIsoDate, shiftIsoDate } from './merchbase-date.ts';
 import { DateRangeSelector } from './merchbase-date-range-selector.tsx';
 import { buildMerchBaseSalesChartView } from './merchbase-sales-chart-model.ts';
 
-export function RichResponseMerchBaseSalesChart({
-    props,
-}: {
-    props: RichResponseMerchBaseSalesChartProps;
-}) {
+export function WidgetMerchBaseSalesChart({ props }: { props: WidgetMerchBaseSalesChartProps }) {
     const initialEndDate = props.endDate ?? formatIsoDate(new Date());
     const [endDate, setEndDate] = useState(initialEndDate);
     const [startDate, setStartDate] = useState(() =>
@@ -73,7 +69,7 @@ export function RichResponseMerchBaseSalesChart({
     );
 
     return (
-        <RichResponseFrame
+        <WidgetFrame
             contentClassName="p-6"
             size="full"
             title={<MerchBaseTitle />}
@@ -92,7 +88,7 @@ export function RichResponseMerchBaseSalesChart({
                     title={props.title}
                 />
             </div>
-        </RichResponseFrame>
+        </WidgetFrame>
     );
 }
 
@@ -240,7 +236,7 @@ function PointSummary({ point }: { point: MerchbaseSalesSeriesOutput['series'][n
     );
 }
 
-const MemoizedComposedChartBody = memo(RichResponseComposedChartBody);
+const MemoizedComposedChartBody = memo(WidgetComposedChartBody);
 
 function SummaryMetric({ color, label, value }: { color?: string; label: string; value: string }) {
     return (

@@ -36,7 +36,7 @@ const timelineTurns = [
         'Medium answer: enough content to prove preview density without noise.',
     ],
     ['Mention tool work.', 'Tool work remains in drawers; the rail previews the surrounding turn.'],
-    ['Mention rich responses.', 'Rich Responses stay inline; the rail still indexes the turn.'],
+    ['Mention widgets.', 'Widgets stay inline; the rail still indexes the turn.'],
     ['Mention keyboard focus.', 'Keyboard focus expands the dash and opens the preview card.'],
     ['Mention hover motion.', 'Hover expands the focused dash and tapers nearby dashes.'],
     ['Mention dense history.', 'Dense history keeps all markers centered in the chat pane.'],

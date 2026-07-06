@@ -401,7 +401,7 @@ export interface components {
         /** @enum {string} */
         ResponseStatus: "queued" | "running" | "completed" | "failed" | "cancelled";
         /** @enum {string} */
-        ResponseActivityKind: "reasoning" | "tool_call" | "tool_result" | "command" | "message" | "artifact" | "rich_response" | "custom";
+        ResponseActivityKind: "reasoning" | "tool_call" | "tool_result" | "command" | "message" | "artifact" | "widget" | "custom";
         ChatResponse: {
             id: components["schemas"]["ResponseId"];
             chat_id: components["schemas"]["ChatId"];

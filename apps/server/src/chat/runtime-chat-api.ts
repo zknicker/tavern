@@ -6,10 +6,10 @@ import type {
 } from '@tavern/sdk';
 import { createTavernClientForConnection } from '../agent-runtime/client-factory.ts';
 import { listAgents } from '../agents/catalog.ts';
-import { richResponseRowFromActivity } from '../rich-responses/rich-responses.ts';
 import { sessionMessageAttachmentSchema } from '../sessions/contracts/messages.ts';
 import { getActiveAgentRuntimeConnection } from '../storage/agent-runtime-connections.ts';
 import { buildToolSummaryFromValues } from '../tools/summary.ts';
+import { widgetRowFromActivity } from '../widgets/widgets.ts';
 import type { ChatLogPage } from './contracts.ts';
 import { workerRowFromSubagentActivity } from './runtime-worker-rows.ts';
 
@@ -296,14 +296,14 @@ function activityToChatRows(
         return [workerRow];
     }
 
-    const richResponseRow = richResponseRowFromActivity({
+    const widgetRow = widgetRowFromActivity({
         activity,
         actor,
         sessionKey,
     });
 
-    if (richResponseRow) {
-        return [richResponseRow];
+    if (widgetRow) {
+        return [widgetRow];
     }
 
     if (!isRenderableActivity(activity, response, finalReplyTextByRunId)) {
@@ -755,7 +755,7 @@ function rowTimestamp(row: ChatLogPage['rows'][number]) {
     const timestamp =
         row.kind === 'message'
             ? row.message.timestamp
-            : row.kind === 'tool' || row.kind === 'rich_response'
+            : row.kind === 'tool' || row.kind === 'widget'
               ? (row.startedAt ?? row.completedAt)
               : row.kind === 'worker'
                 ? (row.startedAt ?? row.completedAt ?? row.worker.lastEventAt)

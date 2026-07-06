@@ -12,10 +12,10 @@ export const developmentChatDemoIds = {
     lineChart: developmentChatDemoId,
     longContent: developmentChatDemoId,
     merchbaseSalesChart: developmentChatDemoId,
-    richResponseCatalog: developmentChatDemoId,
     streamingStack: developmentChatDemoId,
     toolHeaders: developmentChatDemoId,
     turnTimeline: developmentChatDemoId,
+    widgetTable: developmentChatDemoId,
 } as const;
 
 export const obsoleteDevelopmentChatDemoIds = [

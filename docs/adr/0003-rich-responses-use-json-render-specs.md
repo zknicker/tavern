@@ -1,11 +1,12 @@
 ---
-summary: Decision to use json-render Rich Response specs for visual assistant replies.
+summary: Superseded decision to use json-render Rich Response specs for visual assistant replies.
 read_when:
-  - changing Rich Response persistence, catalog, renderer, prompts, or rendered assistant replies
-  - changing response activity kinds for app-rendered assistant UI
+  - reading the history behind Widget fences (see 0010-widgets-use-tagged-fences.md)
 ---
 
 # Rich Responses use json-render specs
+
+**Superseded by [ADR 0010](0010-widgets-use-tagged-fences.md): Widgets use tagged fences.**
 
 Tavern uses one json-render Rich Response island per assistant response. Rich Responses use a first-class `rich_response` activity kind, a Tavern-owned catalog of allowed components, and compact generated agent instructions that allow a `spec` fence when an answer is naturally table-, chart-, calendar-, or UI-shaped. The old render-tool path is removed instead of retained as a compatibility layer.
 

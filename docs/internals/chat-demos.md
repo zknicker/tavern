@@ -9,19 +9,19 @@ read_when:
 # Chat Demos
 
 Chat demos are dev-only Tavern chats seeded into Runtime SQLite. They let the app
-exercise the normal chat list, chat detail, timeline, activity projection, Rich Response
+exercise the normal chat list, chat detail, timeline, activity projection, Widget
 rendering, and composer code paths without asking an agent to generate data.
 
-Plugin-owned Rich Response Components use one dev demo module per component:
+Plugin-owned Widgets use one dev demo module per component:
 
 ```txt
 apps/runtime/src/plugins/<plugin>/dev/<component>.demo.ts
 ```
 
-The `.demo.ts` file owns the seeded chat rows, Rich Response spec, and any
+The `.demo.ts` file owns the seeded chat rows, Widget payload, and any
 inline fake data needed for that component's dev-only behavior. Do not add a
 separate `.fixture.ts` file unless duplication becomes real and painful. The
-demo always renders the real Rich Response Component; it must not provide a
+demo always renders the real Widget; it must not provide a
 dev-only renderer.
 
 ## Contract
@@ -55,4 +55,4 @@ app-local UI state, not durable Runtime chat rows.
 
 | Chat | Demonstrates |
 | --- | --- |
-| `cht_demo` | A representative colored channel named `demo` covering chart Rich Responses, MerchBase chart rendering, Rich Response primitives, calendar displays, artifact links, long-token wrapping, attachments, completed progress/tool work, stable tool drawer headers, sampled multi-turn history, and one stopped turn with thinking/progress/tool rows. |
+| `cht_demo` | A representative colored channel named `demo` covering chart Widgets, MerchBase chart rendering, the table Widget, calendar displays, artifact links, long-token wrapping, attachments, completed progress/tool work, stable tool drawer headers, sampled multi-turn history, and one stopped turn with thinking/progress/tool rows. |

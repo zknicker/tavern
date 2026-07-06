@@ -1,5 +1,4 @@
 import { describe, expect, test } from 'bun:test';
-import { richResponseMerchBaseSalesChartComponentType } from '../rich-responses/merchbase/contracts.ts';
 import {
     googleCalendarEventsScope,
     googleCalendarPluginHealthCapabilityId,
@@ -19,10 +18,10 @@ describe('Plugin manifests', () => {
             displayName: 'MerchBase',
             healthCapabilities: [],
             id: merchbasePluginId,
-            richResponseComponents: [{ type: richResponseMerchBaseSalesChartComponentType }],
             secrets: [{ name: 'apiKey' }],
             settings: ['baseUrl', 'defaultAccount', 'defaultMarketplace'],
             version: '1.0.0',
+            widgets: [{ name: 'merchbase-sales-chart' }],
         });
         expect(merchbasePluginManifest.services[0]).toMatchObject({
             defaultEnabled: true,

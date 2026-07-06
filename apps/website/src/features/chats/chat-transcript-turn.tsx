@@ -18,7 +18,7 @@ import type { ChatActiveReply } from '../../hooks/chats/chat-timeline-state.ts';
 import { useChatDismiss } from '../../hooks/chats/use-chat-dismiss.ts';
 import { formatShortTime } from '../../lib/format.ts';
 import { cn } from '../../lib/utils.ts';
-import { AgentRichResponse } from '../../rich-responses/render-rich-response.tsx';
+import { AgentWidget } from '../../widgets/render-widget.tsx';
 import { resolveAgentInk } from '../agents/agent-color-presets.ts';
 import { AgentFace, type HeadName } from './agent-face.tsx';
 import { CommandRunEntry } from './chat-command-card.tsx';
@@ -706,8 +706,8 @@ function AgentTurnItem({
         );
     }
 
-    if (item.kind === 'row' && item.row.kind === 'rich_response') {
-        return <AgentRichResponse row={item.row} />;
+    if (item.kind === 'row' && item.row.kind === 'widget') {
+        return <AgentWidget row={item.row} />;
     }
 
     if (item.kind === 'failure') {

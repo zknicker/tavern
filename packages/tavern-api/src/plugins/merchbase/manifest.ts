@@ -1,4 +1,3 @@
-import { richResponseMerchBaseSalesChartComponentType } from '../../rich-responses/merchbase/contracts.ts';
 import type { AgentRuntimeCapabilityHealthId } from '../../runtime/contracts.ts';
 import { tavernPluginManifestSchema } from '../contracts.ts';
 
@@ -12,7 +11,6 @@ export const merchbasePluginManifest = tavernPluginManifestSchema.parse({
     displayName: 'MerchBase',
     healthCapabilities: [],
     id: merchbasePluginId,
-    richResponseComponents: [{ type: richResponseMerchBaseSalesChartComponentType }],
     secrets: [{ name: 'apiKey' }],
     services: [
         {
@@ -51,4 +49,5 @@ export const merchbasePluginManifest = tavernPluginManifestSchema.parse({
     ],
     settings: ['baseUrl', 'defaultAccount', 'defaultMarketplace'],
     version: '1.0.0',
+    widgets: [{ name: 'merchbase-sales-chart' }],
 });

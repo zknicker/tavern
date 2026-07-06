@@ -2205,7 +2205,7 @@ export const agentRuntimeTurnSchema = z.object({
 export const agentRuntimeTurnProgressStatusSchema = z.enum(['active', 'completed', 'failed']);
 export const agentRuntimeMessagePhaseSchema = z.enum(['commentary', 'final_answer']);
 
-export const agentRuntimeRichResponseProgressSchema = z.object({
+export const agentRuntimeWidgetProgressSchema = z.object({
     component: z.string().trim().min(1).nullable(),
     fallbackText: z.string().trim().min(1),
     id: z.string().trim().min(1),
@@ -2224,7 +2224,7 @@ export const agentRuntimeTurnProgressStepSchema = z.object({
         'notice',
         'reasoning',
         'tool',
-        'rich_response',
+        'widget',
         'worker',
     ]),
     label: z.string().trim().min(1),
@@ -2233,7 +2233,7 @@ export const agentRuntimeTurnProgressStepSchema = z.object({
     clarification: agentRuntimeClarificationPromptSchema.optional(),
     toolCallId: z.string().trim().min(1).nullable().optional(),
     toolName: z.string().trim().min(1).nullable().optional(),
-    richResponse: agentRuntimeRichResponseProgressSchema.optional(),
+    widget: agentRuntimeWidgetProgressSchema.optional(),
 });
 
 export const agentRuntimeEventTypeSchema = z.enum([
@@ -2862,9 +2862,7 @@ export type AgentRuntimeJobSummary = z.infer<typeof agentRuntimeJobSummarySchema
 export type AgentRuntimeRunJobInput = z.infer<typeof agentRuntimeRunJobInputSchema>;
 export type AgentRuntimeRunJob = z.infer<typeof agentRuntimeRunJobSchema>;
 export type AgentRuntimeTurn = z.infer<typeof agentRuntimeTurnSchema>;
-export type AgentRuntimeRichResponseProgress = z.infer<
-    typeof agentRuntimeRichResponseProgressSchema
->;
+export type AgentRuntimeWidgetProgress = z.infer<typeof agentRuntimeWidgetProgressSchema>;
 export type AgentRuntimeTurnProgressStep = z.infer<typeof agentRuntimeTurnProgressStepSchema>;
 export type AgentRuntimeTurnCompletedEvent = z.infer<typeof agentRuntimeTurnCompletedEventSchema>;
 export type AgentRuntimeTurnFailedEvent = z.infer<typeof agentRuntimeTurnFailedEventSchema>;

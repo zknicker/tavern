@@ -21,7 +21,7 @@ const hourMs = 60 * 60 * 1000;
 const demoModelJson = JSON.stringify({ model: 'gpt-4.1-mini', provider: 'openai' });
 
 const captureObservationsEarly = [
-    '- [3] Zach is evaluating Rich Responses for chart-heavy answers and prefers line charts for time series.',
+    '- [3] Zach is evaluating chat Widgets for chart-heavy answers and prefers line charts for time series.',
     '- [7,9] The Artifact Panel should open Memory pages beside the chat instead of copying them into the chat.',
     '- [14] Weekly demo review happens on Fridays.',
 ].join('\n');

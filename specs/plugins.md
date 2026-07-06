@@ -66,7 +66,7 @@ APIs so encrypted storage can replace the backing store later without changing P
 Every Plugin manifest declares `services[]`.
 
 Plugin-level fields declare container metadata, global settings, write-only secrets, optional
-connection auth, Plugin-level health, and Rich Response ownership. Service-level fields declare
+connection auth, Plugin-level health, and Widget ownership. Service-level fields declare
 Service metadata, required OAuth scopes, health capabilities, skills, and tool groups.
 
 MerchBase is a one-Service Plugin. Google is a multi-Service Plugin whose first Service is

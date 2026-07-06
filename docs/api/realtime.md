@@ -94,8 +94,8 @@ app invalidation hints; clients recover by refetching Memory reads.
 Activity events project to live `turn.progress` steps for app patching. The
 step kind comes from the durable activity: activities carrying
 `metadata.runtime.notice` project as `notice` steps, activities carrying
-`metadata.subagent` source facts project as `worker` steps, and `rich_response`
-activities project as `rich_response` steps with the render payload for
+`metadata.subagent` source facts project as `worker` steps, and `widget`
+activities project as `widget` steps with the render payload for
 immediate inline rendering. Activities carrying `metadata.clarification`
 project as `tool` steps named `clarify` with a typed `clarification` payload
 for choices, answer state, disposition, and deadline. The projected step id

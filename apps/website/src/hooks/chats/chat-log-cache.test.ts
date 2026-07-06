@@ -236,33 +236,22 @@ test('progress patch inserts a notice step as a runtime-notice system row', () =
     });
 });
 
-test('progress patch inserts a Rich Response row for live Rich Response progress', () => {
+test('progress patch inserts a widget row for live widget progress', () => {
     const log = patchChatLogWithProgress(emptyLog(), {
         step: {
             detail: 'Quarterly Revenue',
-            id: 'act_run-1_rich_response',
-            kind: 'rich_response',
-            label: 'Rich Response',
-            richResponse: {
-                component: 'tavern.rich_response',
+            id: 'act_run-1_widget',
+            kind: 'widget',
+            label: 'widget',
+            widget: {
+                component: 'tavern.widget.bar-chart',
                 fallbackText: 'Quarterly Revenue',
-                id: 'act_run-1_rich_response',
+                id: 'act_run-1_widget',
                 props: {
-                    spec: {
-                        elements: {
-                            chart: {
-                                props: {
-                                    data: [{ quarter: 'Q1', revenue: 12_000 }],
-                                    series: [{ key: 'revenue', label: 'Revenue' }],
-                                    title: 'Quarterly Revenue',
-                                    xKey: 'quarter',
-                                },
-                                type: 'BarChart',
-                            },
-                        },
-                        root: 'chart',
-                        state: {},
-                    },
+                    data: [{ quarter: 'Q1', revenue: 12_000 }],
+                    series: [{ key: 'revenue', label: 'Revenue' }],
+                    title: 'Quarterly Revenue',
+                    xKey: 'quarter',
                 },
                 target: 'chat.inline',
                 validationError: null,
@@ -276,16 +265,14 @@ test('progress patch inserts a Rich Response row for live Rich Response progress
     expect(log?.rows).toHaveLength(1);
     expect(log?.rows[0]).toMatchObject({
         completedAt: '2026-05-22T19:00:03.000Z',
-        id: 'act_run-1_rich_response',
-        kind: 'rich_response',
-        richResponse: {
-            component: 'tavern.rich_response',
+        id: 'act_run-1_widget',
+        kind: 'widget',
+        widget: {
+            component: 'tavern.widget.bar-chart',
             fallbackText: 'Quarterly Revenue',
-            props: {
-                spec: expect.objectContaining({
-                    root: 'chart',
-                }),
-            },
+            props: expect.objectContaining({
+                title: 'Quarterly Revenue',
+            }),
             target: 'chat.inline',
             validationError: null,
         },

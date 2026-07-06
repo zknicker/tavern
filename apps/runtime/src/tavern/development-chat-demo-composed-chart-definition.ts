@@ -1,13 +1,12 @@
-import {
-    type RichResponseBarChartProps,
-    type RichResponseComposedChartProps,
-    type RichResponseLineChartProps,
-    type RichResponseRenderInput,
-    richResponseComponentId,
-    richResponseComposedChartPropsSchema,
-} from '@tavern/api';
+import { type WidgetComposedChartProps, widgetComposedChartPropsSchema } from '@tavern/api';
 import { developmentChatDemoIds } from '@tavern/api/development-chat-demos';
-import { chartDemoProps, lineChartDemoProps } from './development-chat-demo-basic-definitions';
+import {
+    barChartDemoRenderInput,
+    chartDemoProps,
+    lineChartDemoProps,
+    lineChartDemoRenderInput,
+    widgetDemoRenderInput,
+} from './development-chat-demo-basic-definitions';
 import {
     activityRuntimeMetadata,
     assistantMessage,
@@ -18,7 +17,7 @@ import {
 } from './development-chat-demo-types';
 
 export function composedChartDemo(): DevelopmentChatDemo {
-    const composedChartProps = richResponseComposedChartPropsSchema.parse(composedChartDemoProps());
+    const composedChartProps = widgetComposedChartPropsSchema.parse(composedChartDemoProps());
     const chatId = developmentChatDemoIds.composedChart;
     const runId = 'run_demo_composed_chart';
     const requestMessageId = 'msg_demo_composed_chart_request';
@@ -57,24 +56,28 @@ export function composedChartDemo(): DevelopmentChatDemo {
                     {
                         completed_at: demoTime,
                         detail: composedChartProps.title,
-                        id: 'act_demo_composed_chart_rich_response',
-                        kind: 'rich_response',
+                        id: 'act_demo_composed_chart_widget',
+                        kind: 'widget',
                         metadata: {
                             runtime: activityRuntimeMetadata({
                                 chatId,
-                                id: 'act_demo_composed_chart_rich_response',
+                                id: 'act_demo_composed_chart_widget',
                                 requestMessageId,
                                 runId,
                                 sequence: 1,
-                                source: 'demo.rich_response',
+                                source: 'demo.widget',
                             }),
-                            richResponse: composedChartOnlyDemoRenderInput(composedChartProps),
+                            widget: widgetDemoRenderInput(
+                                'composed-chart',
+                                composedChartProps.title,
+                                composedChartProps
+                            ),
                         },
                         sequence: 1,
                         started_at: demoTime,
                         status: 'completed',
                         summary: composedChartProps.title,
-                        title: 'Rich Response',
+                        title: 'Chart',
                     },
                 ],
             },
@@ -85,11 +88,36 @@ export function composedChartDemo(): DevelopmentChatDemo {
 export function chartDemo(): DevelopmentChatDemo {
     const barChartProps = chartDemoProps();
     const lineChartProps = lineChartDemoProps();
-    const composedChartProps = richResponseComposedChartPropsSchema.parse(composedChartDemoProps());
+    const composedChartProps = widgetComposedChartPropsSchema.parse(composedChartDemoProps());
     const chatId = developmentChatDemoIds.charts;
     const runId = 'run_demo_charts';
     const requestMessageId = 'msg_demo_charts_request';
     const responseMessageId = 'msg_demo_charts_response';
+
+    const chartActivities = [
+        {
+            id: 'act_demo_charts_widget_1',
+            summary: barChartProps.title,
+            title: 'Bar chart',
+            widget: barChartDemoRenderInput(barChartProps),
+        },
+        {
+            id: 'act_demo_charts_widget_2',
+            summary: lineChartProps.title,
+            title: 'Line chart',
+            widget: lineChartDemoRenderInput(lineChartProps),
+        },
+        {
+            id: 'act_demo_charts_widget_3',
+            summary: composedChartProps.title,
+            title: 'Chart',
+            widget: widgetDemoRenderInput(
+                'composed-chart',
+                composedChartProps.title,
+                composedChartProps
+            ),
+        },
+    ];
 
     return {
         chatId,
@@ -97,13 +125,13 @@ export function chartDemo(): DevelopmentChatDemo {
         messages: [
             userMessage({
                 chatId,
-                content: 'Show all available chart Rich Responses.',
+                content: 'Show all available chart widgets.',
                 id: requestMessageId,
                 nonce: 'demo-charts-request',
             }),
             assistantMessage({
                 chatId,
-                content: 'Here are all three chart displays.',
+                content: 'Here are all three chart widgets.',
                 id: responseMessageId,
                 nonce: 'demo-charts-response',
                 requestMessageId,
@@ -118,112 +146,36 @@ export function chartDemo(): DevelopmentChatDemo {
                     requestMessageId,
                     responseMessageId,
                     runId,
-                    summary: 'Rendered all chart Rich Response demos.',
+                    summary: 'Rendered all chart widget demos.',
                 }),
-                activities: [
-                    {
-                        completed_at: demoTime,
-                        detail: 'Bar, line, and composed charts.',
-                        id: 'act_demo_charts_rich_response',
-                        kind: 'rich_response',
-                        metadata: {
-                            runtime: activityRuntimeMetadata({
-                                chatId,
-                                id: 'act_demo_charts_rich_response',
-                                requestMessageId,
-                                runId,
-                                sequence: 1,
-                                source: 'demo.rich_response',
-                            }),
-                            richResponse: allChartsDemoRenderInput({
-                                barChartProps,
-                                composedChartProps,
-                                lineChartProps,
-                            }),
-                        },
-                        sequence: 1,
-                        started_at: demoTime,
-                        status: 'completed',
-                        summary: 'Bar, line, and composed charts.',
-                        title: 'Rich Response',
+                activities: chartActivities.map((activity, index) => ({
+                    completed_at: demoTime,
+                    detail: activity.summary,
+                    id: activity.id,
+                    kind: 'widget',
+                    metadata: {
+                        runtime: activityRuntimeMetadata({
+                            chatId,
+                            id: activity.id,
+                            requestMessageId,
+                            runId,
+                            sequence: index + 1,
+                            source: 'demo.widget',
+                        }),
+                        widget: activity.widget,
                     },
-                ],
+                    sequence: index + 1,
+                    started_at: demoTime,
+                    status: 'completed',
+                    summary: activity.summary,
+                    title: activity.title,
+                })),
             },
         ],
     };
 }
 
-function allChartsDemoRenderInput(input: {
-    barChartProps: RichResponseBarChartProps;
-    composedChartProps: RichResponseComposedChartProps;
-    lineChartProps: RichResponseLineChartProps;
-}): RichResponseRenderInput {
-    return {
-        component: richResponseComponentId,
-        fallback: { text: 'Bar, line, and composed charts.' },
-        props: {
-            spec: {
-                elements: {
-                    bar: {
-                        props: input.barChartProps,
-                        type: 'BarChart',
-                    },
-                    composed: {
-                        props: input.composedChartProps,
-                        type: 'ComposedChart',
-                    },
-                    line: {
-                        props: input.lineChartProps,
-                        type: 'LineChart',
-                    },
-                    root: {
-                        children: ['heading', 'intro', 'bar', 'line', 'composed'],
-                        props: { gap: 'lg' },
-                        type: 'Stack',
-                    },
-                    heading: {
-                        props: { text: 'Chart components' },
-                        type: 'Heading',
-                    },
-                    intro: {
-                        props: {
-                            muted: true,
-                            text: 'BarChart, LineChart, and ComposedChart rendered in one Rich Response.',
-                        },
-                        type: 'Text',
-                    },
-                },
-                root: 'root',
-                state: {},
-            },
-        },
-        target: 'chat.inline',
-    };
-}
-
-function composedChartOnlyDemoRenderInput(
-    props: RichResponseComposedChartProps
-): RichResponseRenderInput {
-    return {
-        component: richResponseComponentId,
-        fallback: { text: props.title },
-        props: {
-            spec: {
-                elements: {
-                    display: {
-                        props,
-                        type: 'ComposedChart',
-                    },
-                },
-                root: 'display',
-                state: {},
-            },
-        },
-        target: 'chat.inline',
-    };
-}
-
-function composedChartDemoProps(): RichResponseComposedChartProps {
+function composedChartDemoProps(): WidgetComposedChartProps {
     return {
         barUnit: 'units',
         barSeries: [{ key: 'units', label: 'Units' }],

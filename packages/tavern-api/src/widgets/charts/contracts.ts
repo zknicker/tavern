@@ -5,25 +5,21 @@ import {
     validateStoredChartProps,
 } from './chart-normalization.ts';
 
-export const richResponseBarChartComponentType = 'BarChart' as const;
-export const richResponseLineChartComponentType = 'LineChart' as const;
-export const richResponseComposedChartComponentType = 'ComposedChart' as const;
-
 const chartDatumValueSchema = z.union([z.string(), z.number(), z.boolean(), z.null()]);
 const chartSeriesKeySchema = z.string().trim().min(1).max(80);
 const chartUnitSchema = z.string().trim().min(1).max(40);
 
-export const richResponseChartSeriesSchema = z
+export const widgetChartSeriesSchema = z
     .object({
         key: chartSeriesKeySchema,
         label: z.string().trim().min(1).max(120),
     })
     .strict();
 
-export const richResponseBarChartPropsSchema = z
+export const widgetBarChartPropsSchema = z
     .object({
         data: z.array(z.record(z.string(), chartDatumValueSchema)).min(1).max(50),
-        series: z.array(richResponseChartSeriesSchema).min(1).max(4),
+        series: z.array(widgetChartSeriesSchema).min(1).max(4),
         title: z.string().trim().min(1).max(160),
         unit: chartUnitSchema.optional(),
         xKey: z.string().trim().min(1).max(80),
@@ -36,10 +32,10 @@ export const richResponseBarChartPropsSchema = z
         });
     });
 
-export const richResponseLineChartPropsSchema = z
+export const widgetLineChartPropsSchema = z
     .object({
         data: z.array(z.record(z.string(), chartDatumValueSchema)).min(1).max(50),
-        series: z.array(richResponseChartSeriesSchema).min(1).max(4),
+        series: z.array(widgetChartSeriesSchema).min(1).max(4),
         title: z.string().trim().min(1).max(160),
         unit: chartUnitSchema.optional(),
         xKey: z.string().trim().min(1).max(80),
@@ -52,13 +48,13 @@ export const richResponseLineChartPropsSchema = z
         });
     });
 
-export const richResponseComposedChartPropsSchema = z
+export const widgetComposedChartPropsSchema = z
     .object({
         barUnit: chartUnitSchema.optional(),
-        barSeries: z.array(richResponseChartSeriesSchema).min(1).max(4),
+        barSeries: z.array(widgetChartSeriesSchema).min(1).max(4),
         data: z.array(z.record(z.string(), chartDatumValueSchema)).min(1).max(50),
         lineUnit: chartUnitSchema.optional(),
-        lineSeries: z.array(richResponseChartSeriesSchema).min(1).max(4),
+        lineSeries: z.array(widgetChartSeriesSchema).min(1).max(4),
         title: z.string().trim().min(1).max(160),
         unit: chartUnitSchema.optional(),
         xKey: z.string().trim().min(1).max(80),
@@ -77,6 +73,6 @@ export const richResponseComposedChartPropsSchema = z
         validateComposedStoredSeriesKeys(props, context);
     });
 
-export type RichResponseBarChartProps = z.infer<typeof richResponseBarChartPropsSchema>;
-export type RichResponseLineChartProps = z.infer<typeof richResponseLineChartPropsSchema>;
-export type RichResponseComposedChartProps = z.infer<typeof richResponseComposedChartPropsSchema>;
+export type WidgetBarChartProps = z.infer<typeof widgetBarChartPropsSchema>;
+export type WidgetLineChartProps = z.infer<typeof widgetLineChartPropsSchema>;
+export type WidgetComposedChartProps = z.infer<typeof widgetComposedChartPropsSchema>;

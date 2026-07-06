@@ -6,7 +6,7 @@ CREATE TABLE chat_response_activity (
   response_id    TEXT NOT NULL,
   chat_id        TEXT NOT NULL,
   sequence       INTEGER NOT NULL,
-  kind           TEXT NOT NULL CHECK (kind IN ('reasoning', 'tool_call', 'tool_result', 'command', 'message', 'artifact', 'rich_response', 'custom')),
+  kind           TEXT NOT NULL CHECK (kind IN ('reasoning', 'tool_call', 'tool_result', 'command', 'message', 'artifact', 'widget', 'custom')),
   status         TEXT NOT NULL CHECK (status IN ('queued', 'running', 'completed', 'failed', 'cancelled')),
   title          TEXT NOT NULL,
   detail         TEXT,
@@ -75,16 +75,16 @@ CREATE TABLE skill_sources (
 )`;
 
 export function repairRuntimeSchema(db: Database): void {
-    ensureChatResponseActivityRichResponseKind(db);
+    ensureChatResponseActivityWidgetKind(db);
     ensureMemoryJobsSkillReviewKind(db);
     ensureSkillSourcesPluginSource(db);
     hydrateAgentSkillAssignments(db);
 }
 
-function ensureChatResponseActivityRichResponseKind(db: Database): void {
+function ensureChatResponseActivityWidgetKind(db: Database): void {
     const sql = tableSql(db, 'chat_response_activity');
 
-    if (!sql || (sql.includes("'rich_response'") && !sql.includes("'widget'"))) {
+    if (!sql || (sql.includes("'widget'") && !sql.includes("'rich_response'"))) {
         return;
     }
 
@@ -108,7 +108,7 @@ INSERT INTO chat_response_activity
          kind, status, title, detail, summary,
          artifact_ids_json, metadata_json, started_at, updated_at, completed_at
   FROM chat_response_activity_rebuild
-  WHERE kind <> 'widget';
+  WHERE kind <> 'rich_response';
 DROP TABLE temp.chat_response_activity_rebuild;
 ${CHAT_RESPONSE_ACTIVITY_INDEXES}
 `);

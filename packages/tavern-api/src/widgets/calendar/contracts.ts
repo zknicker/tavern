@@ -1,10 +1,7 @@
 import * as z from 'zod';
 import { isCalendarDate, isoDatePattern, minutes, timePattern } from './datetime.ts';
 
-export const richResponseCalendarEventComponentType = 'CalendarEvent' as const;
-export const richResponseCalendarDayComponentType = 'CalendarDay' as const;
-
-export const richResponseCalendarEventPropsSchema = z
+export const widgetCalendarEventPropsSchema = z
     .object({
         allDay: z.boolean().optional(),
         calendar: z.string().trim().min(1).max(80).optional(),
@@ -60,9 +57,9 @@ export const richResponseCalendarEventPropsSchema = z
         }
     });
 
-export type RichResponseCalendarEventProps = z.infer<typeof richResponseCalendarEventPropsSchema>;
+export type WidgetCalendarEventProps = z.infer<typeof widgetCalendarEventPropsSchema>;
 
-export const richResponseCalendarDayEventPropsSchema = z
+export const widgetCalendarDayEventPropsSchema = z
     .object({
         allDay: z.boolean().optional(),
         calendar: z.string().trim().min(1).max(80).optional(),
@@ -109,14 +106,12 @@ export const richResponseCalendarDayEventPropsSchema = z
         }
     });
 
-export type RichResponseCalendarDayEventProps = z.infer<
-    typeof richResponseCalendarDayEventPropsSchema
->;
+export type WidgetCalendarDayEventProps = z.infer<typeof widgetCalendarDayEventPropsSchema>;
 
-export const richResponseCalendarDayPropsSchema = z
+export const widgetCalendarDayPropsSchema = z
     .object({
         date: z.string().trim().regex(isoDatePattern, 'Date must use YYYY-MM-DD.'),
-        events: z.array(richResponseCalendarDayEventPropsSchema).max(12),
+        events: z.array(widgetCalendarDayEventPropsSchema).max(12),
         timezone: z.string().trim().min(1).max(80).optional(),
         title: z.string().trim().min(1).max(160).optional(),
     })
@@ -131,4 +126,4 @@ export const richResponseCalendarDayPropsSchema = z
         }
     });
 
-export type RichResponseCalendarDayProps = z.infer<typeof richResponseCalendarDayPropsSchema>;
+export type WidgetCalendarDayProps = z.infer<typeof widgetCalendarDayPropsSchema>;

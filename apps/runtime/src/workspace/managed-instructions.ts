@@ -12,10 +12,15 @@ export const agentWorkDirectoryName = 'workbench';
 export function renderAgentInstructions(
     agentName: string,
     notes: string,
-    options: { cronEnabled?: boolean; memoryEnabled?: boolean } = {}
+    options: {
+        availableWidgetNames?: readonly WidgetName[];
+        cronEnabled?: boolean;
+        memoryEnabled?: boolean;
+    } = {}
 ) {
     const cronEnabled = options.cronEnabled ?? true;
     const memoryEnabled = options.memoryEnabled ?? true;
+    const availableWidgetNames = options.availableWidgetNames ?? widgetNameSchema.options;
     const sections = [
         `# Tavern Agent Instructions
 
@@ -30,7 +35,7 @@ Tavern is a multi-agent chat app. The current chat may include the user, other h
         skillsSection,
         outputSection,
         securitySection,
-        richResponsesSection,
+        renderWidgetsSection(availableWidgetNames),
         renderNotesSection(notes),
     ].filter((section): section is string => Boolean(section));
 
@@ -114,18 +119,14 @@ Do not tell the user to run provider-specific setup commands or open provider-sp
 const outputSection = `## Outputs
 
 - Link inspectable files, Memory pages, docs, images, and generated assets. Prefer tool-returned links; otherwise use \`[name](tavern://workspace/path)\` for workspace files or \`[name](tavern://memory/path)\` for Memory pages.
-- Use one \`spec\` Rich Response only when the answer is naturally table-, chart-, calendar-, or UI-shaped. When unsure, use plain text.
-- Never output HTML, JSX, CSS, imports, class names, or widget/render instructions.`;
+- Use \`widget:<name>\` fences (see Widgets) when the answer is naturally table-, chart-, or calendar-shaped. When unsure, use plain text.
+- Never output HTML, JSX, CSS, imports, or class names.`;
 
-const richResponsesSection = `## Rich Responses
+function renderWidgetsSection(availableWidgetNames: readonly WidgetName[]) {
+    return `## Widgets
 
-${renderRichResponsePrompt({
-    customRules: [
-        'Use Rich Responses by default when an answer is primarily tabular, chartable, calendar-shaped, or visually scannable.',
-        'Use concise text only when a Rich Response would be forced, too small to matter, or too large to scan.',
-    ],
-    system: 'Use Rich Responses for generative UI in final replies.',
-})}`;
+${renderWidgetsPrompt(availableWidgetNames)}`;
+}
 
 const securitySection = `## Security
 
@@ -138,4 +139,5 @@ function renderNotesSection(notes: string) {
     return normalized.length > 0 ? `## Notes\n\n${normalized}` : null;
 }
 
-import { renderRichResponsePrompt } from '@tavern/api/rich-responses/catalog';
+import { type WidgetName, widgetNameSchema } from '@tavern/api/widgets';
+import { renderWidgetsPrompt } from '@tavern/api/widgets/prompt';

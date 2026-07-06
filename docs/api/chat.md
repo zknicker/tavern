@@ -363,7 +363,7 @@ Common activity kinds:
 | `tool_result` | Tool result material when it is represented separately. |
 | `command` | Shell-like command work when the runtime exposes it as a command. |
 | `artifact` | Renderable output, patch, file, image, document, or diff summary. |
-| `rich_response` | App-rendered assistant UI from a validated Rich Response Spec. |
+| `widget` | App-rendered assistant UI from a validated Widget payload. |
 | `custom` | Runtime-specific activity with typed metadata. |
 
 Clients open activity detail surfaces by stable activity id:

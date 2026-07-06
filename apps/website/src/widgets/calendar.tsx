@@ -1,20 +1,20 @@
 import type {
-    RichResponseCalendarDayEventProps,
-    RichResponseCalendarDayProps,
-    RichResponseCalendarEventProps,
-} from '@tavern/api/rich-responses/calendar';
-import { RichResponseFrame } from '../components/rich-responses/rich-response-frame.tsx';
+    WidgetCalendarDayEventProps,
+    WidgetCalendarDayProps,
+    WidgetCalendarEventProps,
+} from '@tavern/api/widgets/calendar';
 import { Elevated } from '../components/ui/surface.tsx';
+import { WidgetFrame } from '../components/widgets/widget-frame.tsx';
 import { cn } from '../lib/utils.ts';
 
-export function RichResponseCalendarEvent({ props }: { props: RichResponseCalendarEventProps }) {
+export function WidgetCalendarEvent({ props }: { props: WidgetCalendarEventProps }) {
     const date = dateFromCalendarValue(props.date);
     const timeLabel = formatEventTime(props);
     const detailText = [props.location, props.notes].filter(Boolean).join(' - ');
     const descriptionText = detailText || 'No description.';
 
     return (
-        <RichResponseFrame>
+        <WidgetFrame>
             <div className="flex items-start gap-3">
                 <CalendarTile date={date} />
                 <div className="flex min-h-[72px] min-w-0 flex-1 flex-col gap-1">
@@ -31,7 +31,7 @@ export function RichResponseCalendarEvent({ props }: { props: RichResponseCalend
                     </p>
                 </div>
             </div>
-        </RichResponseFrame>
+        </WidgetFrame>
     );
 }
 
@@ -59,12 +59,12 @@ function CalendarTile({ date }: { date: Date }) {
     );
 }
 
-export function RichResponseCalendarDay({ props }: { props: RichResponseCalendarDayProps }) {
+export function WidgetCalendarDay({ props }: { props: WidgetCalendarDayProps }) {
     const date = dateFromCalendarValue(props.date);
     const timezone = timezoneDisplayNameForDate(date, props.timezone);
 
     return (
-        <RichResponseFrame className="max-w-[30rem]">
+        <WidgetFrame className="max-w-[30rem]">
             <section
                 aria-label={props.title ?? formatFullDate(date)}
                 className="flex min-w-0 gap-3 max-[420px]:flex-col"
@@ -93,11 +93,11 @@ export function RichResponseCalendarDay({ props }: { props: RichResponseCalendar
                     )}
                 </div>
             </section>
-        </RichResponseFrame>
+        </WidgetFrame>
     );
 }
 
-function CalendarDayEventCard({ event }: { event: RichResponseCalendarDayEventProps }) {
+function CalendarDayEventCard({ event }: { event: WidgetCalendarDayEventProps }) {
     const detailText = [event.location, event.notes].filter(Boolean).join(' - ');
     const descriptionText = detailText || 'No description.';
 
@@ -138,7 +138,7 @@ function formatFullDate(date: Date) {
     return fullDateFormatter.format(date);
 }
 
-function formatEventTime(props: RichResponseCalendarEventProps) {
+function formatEventTime(props: WidgetCalendarEventProps) {
     const timezoneLabel = timezoneDisplayNameForDate(
         dateFromCalendarValue(props.date),
         props.timezone
@@ -155,7 +155,7 @@ function formatEventTime(props: RichResponseCalendarEventProps) {
     return joinTimeLabel(formatTimeRange(props.startTime, props.endTime), timezoneLabel);
 }
 
-function formatDayEventTime(event: RichResponseCalendarDayEventProps) {
+function formatDayEventTime(event: WidgetCalendarDayEventProps) {
     if (event.allDay) {
         return 'All day';
     }
@@ -225,7 +225,7 @@ function dateFromCalendarValue(value: string) {
     return new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
 }
 
-function dayEventKey(event: RichResponseCalendarDayEventProps, index: number) {
+function dayEventKey(event: WidgetCalendarDayEventProps, index: number) {
     return `${event.startTime ?? 'all-day'}-${event.endTime ?? 'open'}-${event.title}-${index}`;
 }
 
