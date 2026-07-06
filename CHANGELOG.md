@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.4.39 - 2026-07-06
+
+- Runtime/App: adds the Google Plugin with Tavern-managed OAuth and Google
+  Calendar event list, search, and create tools.
+- Runtime: packages the Tavern-owned Google OAuth desktop client into Runtime
+  release artifacts so Homebrew-installed Runtime builds can connect Google.
+- Runtime/App: streams live harness turn activity and simplifies live turn
+  narration with calmer replace-in-place updates.
+- Runtime/App: adds live Memory job events, Runtime home timezone handling, and
+  Semantic Memory root startup repair.
+- App: polishes chat toolbar icons, sidebar activity hover behavior, profile
+  photo controls, and transcript agent mention appearance.
+
 ## v1.4.38 - 2026-07-04
 
 - Runtime/API: adds the Memory stack with shared Memory tools, core memory
