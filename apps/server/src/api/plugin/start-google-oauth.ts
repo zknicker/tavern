@@ -1,5 +1,6 @@
 import { createConfiguredAgentRuntimeClient } from '../../agent-runtime/configured-client.ts';
 import { publicProcedure } from '../trpc.ts';
+import { startGoogleOAuthLoopback } from './google-oauth-loopback.ts';
 
 export const startGoogleOAuthProcedure = publicProcedure.mutation(async () => {
     const client = createConfiguredAgentRuntimeClient();
@@ -8,7 +9,7 @@ export const startGoogleOAuthProcedure = publicProcedure.mutation(async () => {
     }
 
     try {
-        return await client.startGoogleOAuth();
+        return await startGoogleOAuthLoopback(client);
     } finally {
         client.close();
     }

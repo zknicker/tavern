@@ -1,6 +1,7 @@
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import http from 'node:http';
 import {
+    type AgentRuntimeCompleteGoogleOAuth,
     type AgentRuntimeGoogleCalendarEventCreate,
     type AgentRuntimeGoogleCalendarEventCreateInput,
     type AgentRuntimeGoogleCalendarEventsList,
@@ -10,6 +11,8 @@ import {
     type AgentRuntimeGoogleSettings,
     type AgentRuntimePlugin,
     type AgentRuntimeSaveGoogleSettings,
+    type AgentRuntimeStartGoogleOAuth,
+    agentRuntimeCompleteGoogleOAuthSchema,
     agentRuntimeGoogleCalendarEventCreateInputSchema,
     agentRuntimeGoogleCalendarEventCreateSchema,
     agentRuntimeGoogleCalendarEventsListInputSchema,
@@ -19,6 +22,7 @@ import {
     agentRuntimeGoogleSettingsSchema,
     agentRuntimePluginSchema,
     agentRuntimeSaveGoogleSettingsSchema,
+    agentRuntimeStartGoogleOAuthSchema,
 } from '@tavern/api';
 import {
     googleCalendarEventsScope,
@@ -82,7 +86,7 @@ interface OAuthSession {
     expiresAt: string;
     id: string;
     redirectUri: string;
-    server: http.Server;
+    server: http.Server | null;
     state: string;
     status: 'approved' | 'error' | 'expired' | 'pending';
 }
@@ -133,47 +137,50 @@ export function saveGoogleSettings(
     return getGoogleSettings();
 }
 
-export async function startGoogleOAuth(): Promise<AgentRuntimeGoogleOAuthStart> {
+export async function startGoogleOAuth(
+    input: AgentRuntimeStartGoogleOAuth = {}
+): Promise<AgentRuntimeGoogleOAuthStart> {
+    const parsed = agentRuntimeStartGoogleOAuthSchema.parse(input);
     const credentials = getRequiredGoogleOAuthCredentials();
-    const secret = readGoogleSecret();
 
     const id = randomUUID();
     const state = base64Url(randomBytes(24));
     const codeVerifier = base64Url(randomBytes(48));
     const codeChallenge = base64Url(createHash('sha256').update(codeVerifier).digest());
     const expiresAt = new Date(Date.now() + oauthSessionTtlMs).toISOString();
-    const server = http.createServer();
     const session: OAuthSession = {
         codeVerifier,
         errorMessage: null,
         expiresAt,
         id,
-        redirectUri: '',
-        server,
+        redirectUri: parsed.redirectUri ?? '',
+        server: null,
         state,
         status: 'pending',
     };
 
-    await new Promise<void>((resolve, reject) => {
-        server.once('error', reject);
-        server.listen(0, '127.0.0.1', () => resolve());
-    });
-
-    const address = server.address();
-    if (!(address && typeof address === 'object')) {
-        server.close();
-        throw new Error('Google OAuth callback server did not start.');
-    }
-    session.redirectUri = `http://127.0.0.1:${address.port}/callback`;
-    server.on('request', (request, response) => {
-        void handleOAuthCallback({
-            credentials,
-            request,
-            response,
-            session,
-            secret,
+    if (!parsed.redirectUri) {
+        const server = http.createServer();
+        await new Promise<void>((resolve, reject) => {
+            server.once('error', reject);
+            server.listen(0, '127.0.0.1', () => resolve());
         });
-    });
+
+        const address = server.address();
+        if (!(address && typeof address === 'object')) {
+            server.close();
+            throw new Error('Google OAuth callback server did not start.');
+        }
+        session.redirectUri = `http://127.0.0.1:${address.port}/callback`;
+        session.server = server;
+        server.on('request', (request, response) => {
+            void handleOAuthCallback({
+                request,
+                response,
+                session,
+            });
+        });
+    }
     oauthSessions.set(id, session);
 
     const authUrl = new URL(googleAuthorizeEndpoint);
@@ -218,6 +225,59 @@ export function pollGoogleOAuth(sessionId: string): AgentRuntimeGoogleOAuthPoll 
         oauthSessions.delete(sessionId);
     }
     return result;
+}
+
+export async function completeGoogleOAuth(
+    sessionId: string,
+    input: AgentRuntimeCompleteGoogleOAuth
+): Promise<AgentRuntimeGoogleOAuthPoll> {
+    const session = oauthSessions.get(sessionId);
+    if (!session) {
+        return agentRuntimeGoogleOAuthPollSchema.parse({
+            errorMessage: 'Google OAuth session was not found.',
+            sessionId,
+            status: 'expired',
+        });
+    }
+
+    const parsed = agentRuntimeCompleteGoogleOAuthSchema.parse(input);
+    if (session.status !== 'pending') {
+        return formatOAuthPollResult(session);
+    }
+    if (Date.parse(session.expiresAt) <= Date.now()) {
+        session.status = 'expired';
+        session.errorMessage = 'Google OAuth session expired.';
+        closeOAuthSession(session);
+        return formatOAuthPollResult(session);
+    }
+
+    try {
+        if (parsed.state !== session.state) {
+            throw new Error('Google OAuth state did not match.');
+        }
+        if (parsed.error) {
+            throw new Error(parsed.error);
+        }
+        if (!parsed.code) {
+            throw new Error('Google OAuth did not return a code.');
+        }
+        const token = await exchangeOAuthCode({
+            code: parsed.code,
+            codeVerifier: session.codeVerifier,
+            credentials: getRequiredGoogleOAuthCredentials(),
+            redirectUri: session.redirectUri,
+        });
+        writeGoogleSecret({ ...readGoogleSecret(), oauth: token });
+        saveGoogleSettings({ enabled: true });
+        session.status = 'approved';
+    } catch (error) {
+        session.status = 'error';
+        session.errorMessage = error instanceof Error ? error.message : String(error);
+    } finally {
+        closeOAuthSession(session);
+    }
+
+    return formatOAuthPollResult(session);
 }
 
 export function disconnectGoogleOAuth(): AgentRuntimeGoogleSettings {
@@ -323,16 +383,12 @@ export async function createGoogleCalendarEvent(
 }
 
 async function handleOAuthCallback({
-    credentials,
     request,
     response,
-    secret,
     session,
 }: {
-    credentials: GoogleOAuthCredentials;
     request: http.IncomingMessage;
     response: http.ServerResponse;
-    secret: z.output<typeof storedGoogleSecretSchema>;
     session: OAuthSession;
 }) {
     try {
@@ -352,15 +408,13 @@ async function handleOAuthCallback({
         if (!code) {
             throw new Error('Google OAuth did not return a code.');
         }
-        const token = await exchangeOAuthCode({
+        const result = await completeGoogleOAuth(session.id, {
             code,
-            codeVerifier: session.codeVerifier,
-            credentials,
-            redirectUri: session.redirectUri,
+            state: url.searchParams.get('state') ?? '',
         });
-        writeGoogleSecret({ ...secret, oauth: token });
-        saveGoogleSettings({ enabled: true });
-        session.status = 'approved';
+        if (result.status !== 'approved') {
+            throw new Error(result.errorMessage ?? 'Google connection failed.');
+        }
         response
             .writeHead(200, { 'content-type': 'text/html; charset=utf-8' })
             .end('<h1>Google connected</h1><p>You can close this window and return to Tavern.</p>');
@@ -557,5 +611,15 @@ function base64Url(buffer: Buffer) {
 }
 
 function closeOAuthSession(session: OAuthSession) {
-    session.server.close();
+    const server = session.server;
+    session.server = null;
+    server?.close();
+}
+
+function formatOAuthPollResult(session: OAuthSession) {
+    return agentRuntimeGoogleOAuthPollSchema.parse({
+        errorMessage: session.errorMessage,
+        sessionId: session.id,
+        status: session.status,
+    });
 }

@@ -1,6 +1,7 @@
 import { agentRuntimeGoogleOAuthPollInputSchema } from '@tavern/api';
 import { createConfiguredAgentRuntimeClient } from '../../agent-runtime/configured-client.ts';
 import { publicProcedure } from '../trpc.ts';
+import { closeGoogleOAuthLoopback } from './google-oauth-loopback.ts';
 
 export const pollGoogleOAuthProcedure = publicProcedure
     .input(agentRuntimeGoogleOAuthPollInputSchema)
@@ -11,7 +12,11 @@ export const pollGoogleOAuthProcedure = publicProcedure
         }
 
         try {
-            return await client.pollGoogleOAuth(input);
+            const result = await client.pollGoogleOAuth(input);
+            if (result.status !== 'pending') {
+                closeGoogleOAuthLoopback(input.sessionId);
+            }
+            return result;
         } finally {
             client.close();
         }

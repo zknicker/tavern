@@ -103,6 +103,7 @@ GET  /plugins/google/settings
 PUT  /plugins/google/settings
 POST /plugins/google/oauth/start
 GET  /plugins/google/oauth/sessions/{sessionId}
+POST /plugins/google/oauth/sessions/{sessionId}/complete
 POST /plugins/google/oauth/disconnect
 POST /plugins/google/calendar/events
 ```
@@ -139,11 +140,13 @@ secret; Google does not treat that value as a confidential secret for installed
 apps. The current client lives in the Tavern Google Cloud project
 `tavern-499717` as the `Tavern` Desktop OAuth client.
 
-Settings starts a PKCE loopback OAuth flow from Runtime. Runtime opens a local
-callback server, returns the authorization URL and session id, stores tokens
-after the callback, and exposes a poll route for the app to observe completion.
-Agents are not told to run provider-specific setup commands or manage OAuth
-from chat.
+Settings starts a PKCE loopback OAuth flow. Runtime owns Google credentials,
+PKCE state, token exchange, stored tokens, and the poll session. Tavern App
+Server owns the browser-local callback listener and asks Runtime to use that
+redirect URI, so OAuth works when Runtime is hosted on another machine. Direct
+Runtime clients that do not provide a redirect URI may still let Runtime open
+its own loopback listener. Agents are not told to run provider-specific setup
+commands or manage OAuth from chat.
 
 ## MerchBase
 

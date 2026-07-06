@@ -17,6 +17,7 @@ import {
     type AgentRuntimeCapabilityHealthList,
     type AgentRuntimeChat,
     type AgentRuntimeCommandList,
+    type AgentRuntimeCompleteGoogleOAuth,
     type AgentRuntimeCreateAgent,
     type AgentRuntimeCreateCron,
     type AgentRuntimeCreateMessage,
@@ -104,6 +105,7 @@ import {
     type AgentRuntimeSkillHubUninstallInput,
     type AgentRuntimeSkillResetResult,
     type AgentRuntimeSkillSummary,
+    type AgentRuntimeStartGoogleOAuth,
     type AgentRuntimeStartModelProviderOAuth,
     type AgentRuntimeSteerTurn,
     type AgentRuntimeSteerTurnResult,
@@ -155,6 +157,7 @@ import {
     agentRuntimeCapabilityHealthSchema,
     agentRuntimeChatListSchema,
     agentRuntimeCommandListSchema,
+    agentRuntimeCompleteGoogleOAuthSchema,
     agentRuntimeCreateAgentSchema,
     agentRuntimeCreateCronSchema,
     agentRuntimeCreateMessageSchema,
@@ -250,6 +253,7 @@ import {
     agentRuntimeSkillListSchema,
     agentRuntimeSkillResetResultSchema,
     agentRuntimeSkillSchema,
+    agentRuntimeStartGoogleOAuthSchema,
     agentRuntimeStartModelProviderOAuthSchema,
     agentRuntimeSteerTurnResultSchema,
     agentRuntimeSteerTurnSchema,
@@ -344,6 +348,10 @@ export interface TavernAgentRuntimeClient {
     ): Promise<AgentRuntimeAgentEngineConfigSnapshot>;
     cancelModelProviderOAuth(input: AgentRuntimeCancelModelProviderOAuth): Promise<unknown>;
     close(): void;
+    completeGoogleOAuth(
+        sessionId: string,
+        input: AgentRuntimeCompleteGoogleOAuth
+    ): Promise<AgentRuntimeGoogleOAuthPoll>;
     createCronJob(input: AgentRuntimeCreateCron): Promise<AgentRuntimeCron>;
     createSemanticMemoryFolder(
         input: SemanticMemoryPathInput
@@ -538,7 +546,7 @@ export interface TavernAgentRuntimeClient {
         providerId: string,
         input: AgentRuntimeUpdateModelProvider
     ): Promise<AgentRuntimeModelProviderCatalogEntry>;
-    startGoogleOAuth(): Promise<AgentRuntimeGoogleOAuthStart>;
+    startGoogleOAuth(input?: AgentRuntimeStartGoogleOAuth): Promise<AgentRuntimeGoogleOAuthStart>;
     startModelProviderOAuth(input: AgentRuntimeStartModelProviderOAuth): Promise<unknown>;
     startUpdate(input?: { targetVersion?: null | string }): Promise<AgentRuntimeUpdate>;
     steerChatTurn(
@@ -2083,11 +2091,12 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         return agentRuntimeGoogleSettingsSchema.parse(await response.json());
     }
 
-    async startGoogleOAuth() {
+    async startGoogleOAuth(input: AgentRuntimeStartGoogleOAuth = {}) {
+        const payload = agentRuntimeStartGoogleOAuthSchema.parse(input);
         const response = await fetch(
             `${this.#baseUrl}${agentRuntimeRoutes.pluginGoogleOAuthStart}`,
             {
-                body: JSON.stringify({}),
+                body: JSON.stringify(payload),
                 headers: {
                     ...this.#authHeaders,
                     'content-type': 'application/json',
@@ -2102,6 +2111,28 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         }
 
         return agentRuntimeGoogleOAuthStartSchema.parse(await response.json());
+    }
+
+    async completeGoogleOAuth(sessionId: string, input: AgentRuntimeCompleteGoogleOAuth) {
+        const payload = agentRuntimeCompleteGoogleOAuthSchema.parse(input);
+        const response = await fetch(
+            `${this.#baseUrl}${agentRuntimeRoutes.pluginGoogleOAuthComplete(sessionId)}`,
+            {
+                body: JSON.stringify(payload),
+                headers: {
+                    ...this.#authHeaders,
+                    'content-type': 'application/json',
+                    [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+                },
+                method: 'POST',
+            }
+        );
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeGoogleOAuthPollSchema.parse(await response.json());
     }
 
     async pollGoogleOAuth(input: AgentRuntimeGoogleOAuthPollInput) {

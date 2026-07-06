@@ -541,7 +541,11 @@ export const agentRuntimeSaveGoogleSettingsSchema = z
     })
     .strict();
 
-export const agentRuntimeStartGoogleOAuthSchema = z.object({}).strict();
+export const agentRuntimeStartGoogleOAuthSchema = z
+    .object({
+        redirectUri: z.string().url().optional(),
+    })
+    .strict();
 
 export const agentRuntimeGoogleOAuthStartSchema = z
     .object({
@@ -554,6 +558,14 @@ export const agentRuntimeGoogleOAuthStartSchema = z
 export const agentRuntimeGoogleOAuthPollInputSchema = z
     .object({
         sessionId: z.string().trim().min(1),
+    })
+    .strict();
+
+export const agentRuntimeCompleteGoogleOAuthSchema = z
+    .object({
+        code: z.string().trim().min(1).optional(),
+        error: z.string().trim().min(1).optional(),
+        state: z.string().trim().min(1),
     })
     .strict();
 
@@ -2608,10 +2620,12 @@ export type AgentRuntimeSaveMerchbaseSettings = z.infer<
 >;
 export type AgentRuntimeGoogleSettings = z.infer<typeof agentRuntimeGoogleSettingsSchema>;
 export type AgentRuntimeSaveGoogleSettings = z.infer<typeof agentRuntimeSaveGoogleSettingsSchema>;
+export type AgentRuntimeStartGoogleOAuth = z.infer<typeof agentRuntimeStartGoogleOAuthSchema>;
 export type AgentRuntimeGoogleOAuthStart = z.infer<typeof agentRuntimeGoogleOAuthStartSchema>;
 export type AgentRuntimeGoogleOAuthPollInput = z.infer<
     typeof agentRuntimeGoogleOAuthPollInputSchema
 >;
+export type AgentRuntimeCompleteGoogleOAuth = z.infer<typeof agentRuntimeCompleteGoogleOAuthSchema>;
 export type AgentRuntimeGoogleOAuthPoll = z.infer<typeof agentRuntimeGoogleOAuthPollSchema>;
 export type AgentRuntimeGoogleCalendarEventsListInput = z.input<
     typeof agentRuntimeGoogleCalendarEventsListInputSchema

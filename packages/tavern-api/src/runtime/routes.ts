@@ -63,6 +63,8 @@ export const agentRuntimeRoutes = {
     plugin: (id: string) => `/plugins/${encodeURIComponent(id)}`,
     pluginGoogleCalendarEvents: '/plugins/google/calendar/events',
     pluginGoogleDisconnect: '/plugins/google/oauth/disconnect',
+    pluginGoogleOAuthComplete: (sessionId: string) =>
+        `/plugins/google/oauth/sessions/${encodeURIComponent(sessionId)}/complete`,
     pluginGoogleOAuthPoll: (sessionId: string) =>
         `/plugins/google/oauth/sessions/${encodeURIComponent(sessionId)}`,
     pluginGoogleOAuthStart: '/plugins/google/oauth/start',

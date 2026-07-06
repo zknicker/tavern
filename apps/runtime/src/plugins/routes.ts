@@ -1,4 +1,5 @@
 import {
+    agentRuntimeCompleteGoogleOAuthSchema,
     agentRuntimeGoogleCalendarEventsListInputSchema,
     agentRuntimeGoogleCalendarEventsListSchema,
     agentRuntimeGoogleOAuthPollSchema,
@@ -17,12 +18,14 @@ import {
     agentRuntimeRoutes,
     agentRuntimeSaveGoogleSettingsSchema,
     agentRuntimeSaveMerchbaseSettingsSchema,
+    agentRuntimeStartGoogleOAuthSchema,
 } from '@tavern/api';
 import { googleCalendarPluginHealthCapabilityId } from '@tavern/api/plugins/google';
 import { merchbasePluginHealthCapabilityId } from '@tavern/api/plugins/merchbase';
 import { refreshRuntimeCapabilities } from '../capabilities/store';
 import { badRequest, forbidden, json, notFound } from '../tavern/http';
 import {
+    completeGoogleOAuth,
     disconnectGoogleOAuth,
     getGooglePlugin,
     getGoogleSettings,
@@ -111,7 +114,35 @@ export async function handlePluginsRequest(request: Request): Promise<Response |
             return forbiddenResponse;
         }
         try {
-            return json(agentRuntimeGoogleOAuthStartSchema.parse(await startGoogleOAuth()));
+            const input = agentRuntimeStartGoogleOAuthSchema.parse(await readJson(request));
+            return json(agentRuntimeGoogleOAuthStartSchema.parse(await startGoogleOAuth(input)));
+        } catch (error) {
+            return badRequest(error instanceof Error ? error.message : String(error));
+        }
+    }
+
+    if (
+        request.method === 'POST' &&
+        segments.length === 6 &&
+        segments[1] === 'google' &&
+        segments[2] === 'oauth' &&
+        segments[3] === 'sessions' &&
+        segments[5] === 'complete'
+    ) {
+        const forbiddenResponse = requireTavernMutation(request, 'Google OAuth');
+        if (forbiddenResponse) {
+            return forbiddenResponse;
+        }
+        try {
+            const input = agentRuntimeCompleteGoogleOAuthSchema.parse(await readJson(request));
+            const result = await completeGoogleOAuth(segments[4] ?? '', input);
+            if (result.status !== 'pending') {
+                await refreshRuntimeCapabilities({
+                    ids: [googleCalendarPluginHealthCapabilityId],
+                    publishUpdated: true,
+                });
+            }
+            return json(agentRuntimeGoogleOAuthPollSchema.parse(result));
         } catch (error) {
             return badRequest(error instanceof Error ? error.message : String(error));
         }
