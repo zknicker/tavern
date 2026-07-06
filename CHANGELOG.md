@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.4.40 - 2026-07-06
+
+- Runtime/API/App: replaces rich responses with grant-scoped Tavern Widget
+  fences, Widget contracts, durable Widget activity, and app renderers for
+  charts, calendars, tables, and MerchBase displays.
+- Runtime/API/App: adds the runtime-native automation scheduler with cron job
+  storage, execution, delivery targets, agent tools, and refreshed automation
+  editor and run history views.
+- Runtime/App: adds background Memory and skill-work observability, including
+  worker status filters, job timelines, report drawers, and live run feedback.
+- Runtime/App: makes disk and Plugin skills writable, visible in the shared
+  library, updateable, restorable, and backed by usage telemetry and curator
+  workers.
+- App: polishes the Skills settings surface, automation editor sizing, agent
+  picker behavior, and settings navigation.
+
 ## v1.4.39 - 2026-07-06
 
 - Runtime/App: adds the Google Plugin with Tavern-managed OAuth and Google
