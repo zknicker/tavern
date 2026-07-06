@@ -692,6 +692,13 @@ App tables are cache, presentation, or execution evidence:
 | `session_deliveries`    | `chat_deliveries` or runtime delivery evidence           |
 | `cron_jobs`             | `automations`                                            |
 | `cron_runs`             | `automation_runs`                                        |
+| `tasks`                 | tracked tasks and epics mirror                           |
+
+Tracked tasks are canonical in the Runtime `tasks` table: tasks and epics share
+one table and one sequential T-number sequence (`number`), with status,
+priority, assignee (the local owner or an agent), parent epic link, and
+freeform labels. The app cache mirrors full task records per runtime keyed on
+(`runtime_id`, `runtime_task_id`).
 
 ## FTS
 

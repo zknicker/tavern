@@ -28,6 +28,8 @@ and execution.
   the configured sandbox mode.
 - **Memory.** Tavern Memory is durable knowledge the user can inspect; Runtime
   can inject relevant Memory into turns.
+- **Tasks.** A built-in tracker for tasks and epics shared by the user and
+  agents, with T-numbers, agent task tools, and dispatch-to-agent.
 - **Automations.** Runtime owns scheduled work and records run history.
 - **Widgets.** Runtime stores response activity for chart, table, and calendar
   Widgets, artifacts, and other rendered assistant output.

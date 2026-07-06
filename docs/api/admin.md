@@ -21,8 +21,8 @@ It is not a second product API.
 - **Runtime events.** Recent event lists and websocket notifications for
   operational state.
 - **Agent execution.** Engine config and local lifecycle control.
-- **Operational records.** Agents, sessions, jobs, cron jobs, cron runs, models,
-  skills, bindings, memory status, memory settings, and agent files.
+- **Operational records.** Agents, sessions, jobs, cron jobs, cron runs, tasks,
+  models, skills, bindings, memory status, memory settings, and agent files.
 - **Runtime chat relay.** The private websocket Runtime uses for accepted chat
   work and agent dispatch. Durable chat history still lives in the Chat API.
 
@@ -40,6 +40,7 @@ It is not a second product API.
 | Sessions and execution evidence | `/agent/sessions`, `/agent/sessions/previews`, `/agent/sessions/{sessionKey}/messages`, `/agent/sessions/{sessionKey}/graph`, `/agent/sessions/{sessionKey}/prompt`, `/agent/sessions/{sessionKey}/resync`                                                                                                                                 |
 | Jobs                            | `/jobs`, `/jobs/{slug}`, `/jobs/{slug}/run`                                                                                                                                                                                                                                                                                                |
 | Cron                            | `/cron-jobs`, `/cron-jobs/{id}`, `/cron-jobs/{id}/run`, `/cron-jobs/{id}/runs`, `/cron-runs`, `/cron-runs/{id}`                                                                                                                                                                                                                            |
+| Tasks                           | `/tasks`, `/tasks/{id}`                                                                                                                                                                                                                                                                                                                    |
 | Skills                          | `/skills`, `/skills/{id}`, `/skills/{id}/config`                                                                                                                                                                                                                                                                                           |
 | Skill hub                       | `/skills/hub/available`, `/skills/hub/preview`, `/skills/hub/scan`, `/skills/hub/install`, `/skills/hub/uninstall`, `/skills/hub/taps`, `/skills/hub/taps/{repo}`                                                                                                                                                                          |
 | Tools                           | `/tools`, `/tools/{id}/enabled`, `/tools/{id}/config`, `/tools/{id}/provider`, `/tools/{id}/env`, `/tools/{id}/post-setup`                                                                                                                                                                                                                 |
