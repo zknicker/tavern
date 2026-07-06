@@ -8,6 +8,7 @@ import {
     renderExtractionTranscript,
 } from '../memory/extraction-worker.ts';
 import { getStoredAgent } from '../tavern/agents-store.ts';
+import { resolveSkillSource } from './store.ts';
 
 interface SkillReviewPromptInput {
     agentId: string;
@@ -33,9 +34,10 @@ Update ladder — take the earliest step that fits:
 4. Create a new class-level skill. The name must describe a class of work;
    if it only makes sense for today's task, fall back to steps 1-3.
 
-Some skills are read-only (seeded or installed). When a lesson belongs in
-one of those, extend or create a writable skill that covers the same
-territory instead.
+Every skill in the list below is marked writable or read-only. Never write
+to a read-only skill — the write will fail. When a lesson belongs in a
+read-only skill's territory, patch or create a writable skill that covers
+it instead.
 
 User preference corrections belong embedded in the governing skill's body,
 phrased as how to do the work — not as a log of what went wrong.
@@ -63,7 +65,10 @@ export async function buildSkillReviewPrompt(
         '',
         'Enabled skills:',
         (await listEnabledSkills(input.agentId, options))
-            .map((skill) => `- ${skill.id}: ${skill.name}`)
+            .map(
+                (skill) =>
+                    `- ${skill.id}: ${skill.name} (${skill.writable ? 'writable' : 'read-only'})`
+            )
             .join('\n') || 'NONE',
         '',
         'Transcript window:',
@@ -118,7 +123,11 @@ async function listEnabledSkills(agentId: string, options: { skillsDir?: string 
         })
     )
         .filter((skill) => enabled.has(skill.id))
-        .map((skill) => ({ id: skill.id, name: skill.name }));
+        .map((skill) => ({
+            id: skill.id,
+            name: skill.name,
+            writable: resolveSkillSource(skill.id) === 'agent',
+        }));
 }
 
 function renderSignal(signal: LearningSignal) {
