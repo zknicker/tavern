@@ -11,6 +11,7 @@ import { withSavingToast } from '../../../lib/saving-toast.ts';
 import type { AgentListOutput, SkillListOutput } from '../../../lib/trpc.tsx';
 import { MissingAgentState } from '../../agents/missing-agent-state.tsx';
 import { useAgentSkillsUpdate } from '../../agents/use-agent-skills-update.ts';
+import { AddFromLibraryDialog } from '../../skills/add-from-library-dialog.tsx';
 import type { SkillEnablementController } from '../../skills/skill-preview-pane.tsx';
 import { SkillSourcesDialog } from '../../skills/skill-sources-dialog.tsx';
 import type { HubEntry } from '../../skills/skill-tree-model.ts';
@@ -23,6 +24,7 @@ type SkillSummary = SkillListOutput['skills'][number];
 export function AgentSkillsSettingsPage() {
     const { agentId } = useParams();
     const [sourcesOpen, setSourcesOpen] = React.useState(false);
+    const [libraryOpen, setLibraryOpen] = React.useState(false);
     const agentsQuery = useAgentList();
     const skillsQuery = useSkillList();
     const availableQuery = useSkillHubAvailable({ enabled: true });
@@ -87,16 +89,15 @@ export function AgentSkillsSettingsPage() {
     return (
         <div className="flex h-full min-h-0 flex-1 flex-col">
             <SkillsBrowser
-                available={availableQuery.data}
-                availableError={availableQuery.error?.message ?? null}
-                availablePending={availableQuery.isPending}
                 hubByName={hubByName}
+                onAddFromLibrary={() => setLibraryOpen(true)}
                 onManageSources={() => setSourcesOpen(true)}
                 runtimeByName={runtimeByName}
                 skillEnablement={skillEnablement}
                 skills={agentSkills}
             />
             <SkillSourcesDialog onOpenChange={setSourcesOpen} open={sourcesOpen} />
+            <AddFromLibraryDialog onOpenChange={setLibraryOpen} open={libraryOpen} />
 
             {skillsQuery.error ? (
                 <div className="fixed inset-x-4 bottom-4 z-50">

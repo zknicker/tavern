@@ -1,47 +1,8 @@
 import { expect, test } from 'bun:test';
 import { buildSkillTreePaths, buildSkillTreeSubjects } from './skill-tree-model.ts';
 
-test('buildSkillTreeSubjects maps installed and available skills into SKILL.md paths', () => {
+test('buildSkillTreeSubjects maps installed skills into flat SKILL.md paths', () => {
     const subjects = buildSkillTreeSubjects({
-        available: {
-            builtin: [
-                {
-                    description: 'Official optional skill',
-                    identifier: 'official/browser',
-                    name: 'browser',
-                    repo: null,
-                    source: 'official',
-                    tags: [],
-                    trustLevel: 'builtin',
-                },
-            ],
-            installed: {
-                'official/browser': {
-                    edited: true,
-                    name: 'browser',
-                    scanVerdict: null,
-                    trustLevel: 'builtin',
-                    updateAvailable: true,
-                },
-            },
-            taps: [
-                {
-                    path: 'skills/',
-                    repo: 'owner/repo',
-                    skills: [
-                        {
-                            description: 'Tap skill',
-                            identifier: 'owner/repo/skills/research',
-                            name: 'research',
-                            repo: 'owner/repo',
-                            source: 'github',
-                            tags: [],
-                            trustLevel: 'community',
-                        },
-                    ],
-                },
-            ],
-        },
         hubByName: new Map([
             [
                 'browser',
@@ -73,25 +34,13 @@ test('buildSkillTreeSubjects maps installed and available skills into SKILL.md p
         ],
     });
 
-    expect(subjects.map((subject) => subject.treePath)).toEqual([
-        'Installed skills/browser/SKILL.md',
-        'Available skills/owner/repo/research/SKILL.md',
-        'Available skills/Built-in library/browser/SKILL.md',
-    ]);
-    expect(buildSkillTreePaths(subjects)).toContain('Installed skills/browser/');
+    expect(subjects.map((subject) => subject.treePath)).toEqual(['browser/SKILL.md']);
+    expect(buildSkillTreePaths(subjects)).toContain('browser/');
 
-    const installedBrowser = subjects.find(
-        (subject) => subject.treePath === 'Installed skills/browser/SKILL.md'
-    );
+    const installedBrowser = subjects.find((subject) => subject.treePath === 'browser/SKILL.md');
     expect(installedBrowser?.edited).toBe(true);
     expect(installedBrowser?.updateAvailable).toBe(true);
     expect(installedBrowser?.managedSource).toBe('hub');
-
-    const availableBrowser = subjects.find(
-        (subject) => subject.treePath === 'Available skills/Built-in library/browser/SKILL.md'
-    );
-    expect(availableBrowser?.updateAvailable).toBe(true);
-    expect(availableBrowser?.managedSource).toBe('hub');
 });
 
 test('buildSkillTreeSubjects sources managed flags from the runtime summary', () => {
@@ -137,22 +86,18 @@ test('buildSkillTreeSubjects sources managed flags from the runtime summary', ()
         ],
     });
 
-    const seeded = subjects.find(
-        (subject) => subject.treePath === 'Installed skills/tavern-agent/SKILL.md'
-    );
+    const seeded = subjects.find((subject) => subject.treePath === 'tavern-agent/SKILL.md');
     expect(seeded?.managedSource).toBe('seeded');
     expect(seeded?.updateAvailable).toBe(true);
     expect(seeded?.edited).toBe(false);
 
-    const plugin = subjects.find(
-        (subject) => subject.treePath === 'Plugin Skills/MerchBase/merchbase/SKILL.md'
-    );
+    const plugin = subjects.find((subject) => subject.treePath === 'merchbase/SKILL.md');
     expect(plugin?.managedSource).toBe('plugin');
     expect(plugin?.edited).toBe(true);
     expect(plugin?.updateAvailable).toBe(false);
 });
 
-test('buildSkillTreeSubjects groups plugin skills under title-case Plugin Skills', () => {
+test('buildSkillTreeSubjects keeps plugin skills flat without a group folder', () => {
     const subjects = buildSkillTreeSubjects({
         hubByName: new Map(),
         skills: [
@@ -179,8 +124,6 @@ test('buildSkillTreeSubjects groups plugin skills under title-case Plugin Skills
         ],
     });
 
-    expect(subjects.map((subject) => subject.treePath)).toEqual([
-        'Plugin Skills/MerchBase/merchbase/SKILL.md',
-    ]);
+    expect(subjects.map((subject) => subject.treePath)).toEqual(['merchbase/SKILL.md']);
     expect(subjects[0]?.managedSource).toBe(null);
 });

@@ -2,6 +2,7 @@ import { AlertCircleIcon } from '@hugeicons/core-free-icons';
 import * as React from 'react';
 import { Alert, AlertDescription } from '../../components/ui/alert.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
+import { AddFromLibraryDialog } from '../../features/skills/add-from-library-dialog.tsx';
 import { SkillSourcesDialog } from '../../features/skills/skill-sources-dialog.tsx';
 import type { HubEntry } from '../../features/skills/skill-tree-model.ts';
 import { SkillsBrowser } from '../../features/skills/skills-browser.tsx';
@@ -12,6 +13,7 @@ import { useSkillList } from '../../hooks/skills/use-skill-list.ts';
 
 export function SkillsPage() {
     const [sourcesOpen, setSourcesOpen] = React.useState(false);
+    const [libraryOpen, setLibraryOpen] = React.useState(false);
     const skillsQuery = useSkillList();
     const availableQuery = useSkillHubAvailable({ enabled: true });
     const runtimeByName = useRuntimeManagedFlags();
@@ -38,15 +40,14 @@ export function SkillsPage() {
     return (
         <div className="flex h-full min-h-0 flex-1 flex-col">
             <SkillsBrowser
-                available={availableQuery.data}
-                availableError={availableQuery.error?.message ?? null}
-                availablePending={availableQuery.isPending}
                 hubByName={hubByName}
+                onAddFromLibrary={() => setLibraryOpen(true)}
                 onManageSources={() => setSourcesOpen(true)}
                 runtimeByName={runtimeByName}
                 skills={skills}
             />
             <SkillSourcesDialog onOpenChange={setSourcesOpen} open={sourcesOpen} />
+            <AddFromLibraryDialog onOpenChange={setLibraryOpen} open={libraryOpen} />
 
             {skillsQuery.error ? (
                 <div className="fixed inset-x-4 bottom-4 z-50">

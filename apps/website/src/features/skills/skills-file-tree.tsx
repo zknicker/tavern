@@ -101,11 +101,6 @@ function SkillsFileTreeInner({
 }
 
 function compareFileTreeEntries(left: FileTreeSortEntry, right: FileTreeSortEntry) {
-    const groupDelta = getGroupSortWeight(left) - getGroupSortWeight(right);
-    if (groupDelta !== 0) {
-        return groupDelta;
-    }
-
     if (left.isDirectory !== right.isDirectory) {
         return left.isDirectory ? -1 : 1;
     }
@@ -113,19 +108,6 @@ function compareFileTreeEntries(left: FileTreeSortEntry, right: FileTreeSortEntr
         numeric: true,
         sensitivity: 'base',
     });
-}
-
-function getGroupSortWeight(entry: FileTreeSortEntry) {
-    switch (entry.segments[0]) {
-        case 'Installed skills':
-            return 0;
-        case 'Plugin Skills':
-            return 1;
-        case 'Available skills':
-            return 2;
-        default:
-            return 3;
-    }
 }
 
 function syncTreeSelection(

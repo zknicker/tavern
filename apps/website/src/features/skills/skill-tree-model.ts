@@ -1,8 +1,4 @@
-import type {
-    SkillHubAvailableOutput,
-    SkillHubItemOutput,
-    SkillListOutput,
-} from '../../lib/trpc.tsx';
+import type { SkillListOutput } from '../../lib/trpc.tsx';
 
 type SkillSummary = SkillListOutput['skills'][number];
 export type ManagedSource = 'hub' | 'plugin' | 'seeded';
@@ -44,46 +40,13 @@ export interface SkillTreeSubject {
 }
 
 export function buildSkillTreeSubjects(input: {
-    available?: SkillHubAvailableOutput;
     hubByName: HubByName;
     runtimeByName?: RuntimeManagedByName;
     skills: SkillSummary[];
 }) {
     const runtimeByName = input.runtimeByName ?? new Map();
-    const subjects: SkillTreeSubject[] = [];
 
-    for (const skill of input.skills) {
-        subjects.push(installedTreeSubject(skill, input.hubByName, runtimeByName));
-    }
-
-    if (input.available) {
-        for (const tap of input.available.taps) {
-            for (const item of tap.skills) {
-                subjects.push(
-                    availableTreeSubject(
-                        item,
-                        input.skills,
-                        input.hubByName,
-                        runtimeByName,
-                        tap.repo
-                    )
-                );
-            }
-        }
-        for (const item of input.available.builtin) {
-            subjects.push(
-                availableTreeSubject(
-                    item,
-                    input.skills,
-                    input.hubByName,
-                    runtimeByName,
-                    'Built-in library'
-                )
-            );
-        }
-    }
-
-    return subjects;
+    return input.skills.map((skill) => installedTreeSubject(skill, input.hubByName, runtimeByName));
 }
 
 export function buildSkillTreePaths(subjects: SkillTreeSubject[]) {
@@ -102,7 +65,6 @@ function installedTreeSubject(
 ): SkillTreeSubject {
     const hubEntry = hubByName.get(skill.name);
     const managed = resolveManagedFlags(runtimeByName.get(skill.name), hubEntry);
-    const group = skill.plugin ? `Plugin Skills/${skill.plugin.displayName}` : 'Installed skills';
 
     return {
         dependencyState: skill.dependencyState,
@@ -118,46 +80,11 @@ function installedTreeSubject(
         readOnly: skill.readOnly,
         skillId: skill.id,
         sourceLabel: skill.plugin ? skill.plugin.displayName : 'Installed',
-        treePath: skillFilePath(group, skill.name),
+        treePath: skillFilePath(skill.name),
         trustLevel: skill.plugin ? 'builtin' : narrowTrustLevel(hubEntry?.trustLevel),
         uninstallName: hubEntry ? skill.name : null,
         updateAvailable: managed.updateAvailable,
         updatedAt: skill.updatedAt,
-    };
-}
-
-function availableTreeSubject(
-    item: SkillHubItemOutput,
-    skills: SkillSummary[],
-    hubByName: HubByName,
-    runtimeByName: RuntimeManagedByName,
-    sourceLabel: string
-): SkillTreeSubject {
-    const installedEntry = hubByName.get(item.name);
-    const inventorySkill = installedEntry
-        ? skills.find((skill) => skill.name === item.name)
-        : undefined;
-    const managed = resolveManagedFlags(runtimeByName.get(item.name), installedEntry);
-
-    return {
-        dependencyState: inventorySkill?.dependencyState ?? 'unknown',
-        description: item.description || inventorySkill?.description || null,
-        diagnostic: inventorySkill?.diagnostic ?? null,
-        edited: managed.edited,
-        enabled: inventorySkill?.enabled,
-        identifier: item.identifier,
-        installed: installedEntry !== undefined,
-        managedSource: managed.managedSource,
-        name: item.name,
-        plugin: inventorySkill?.plugin ?? null,
-        readOnly: inventorySkill?.readOnly ?? false,
-        skillId: inventorySkill?.id ?? null,
-        sourceLabel,
-        treePath: skillFilePath(`Available skills/${sourceLabel}`, item.name),
-        trustLevel: item.trustLevel,
-        uninstallName: installedEntry ? item.name : null,
-        updateAvailable: managed.updateAvailable,
-        updatedAt: inventorySkill?.updatedAt ?? null,
     };
 }
 
@@ -176,8 +103,8 @@ function resolveManagedFlags(
     };
 }
 
-function skillFilePath(group: string, name: string) {
-    return `${normalizeTreePath(group)}/${normalizeTreePath(name)}/SKILL.md`;
+function skillFilePath(name: string) {
+    return `${normalizeTreePath(name)}/SKILL.md`;
 }
 
 function normalizeTreePath(value: string) {

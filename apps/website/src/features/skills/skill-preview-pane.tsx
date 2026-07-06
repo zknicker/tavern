@@ -100,6 +100,7 @@ function SelectedSkillPreview({
                         createdBy={markdownMetadata.createdBy ?? getSkillCreator(subject)}
                         description={subject.description}
                         keywords={keywords}
+                        source={formatSkillSource(subject)}
                         updatedAt={subject.updatedAt}
                     />
                     {mutationError ? (
@@ -121,22 +122,26 @@ function SkillDetailSummary({
     createdBy,
     description,
     keywords,
+    source,
     updatedAt,
 }: {
     createdBy: string;
     description: null | string;
     keywords: string[];
+    source: string;
     updatedAt: null | string;
 }) {
     return (
         <div className="mt-6">
-            <div className="grid grid-cols-[max-content_max-content] gap-x-10 gap-y-1">
+            <div className="grid grid-cols-[max-content_max-content_max-content] gap-x-10 gap-y-1">
                 <span className="font-semibold text-muted-foreground text-sm">Created by</span>
                 <span className="font-semibold text-muted-foreground text-sm">Last updated at</span>
+                <span className="font-semibold text-muted-foreground text-sm">Source</span>
                 <span className="text-foreground text-sm leading-5">{createdBy}</span>
                 <span className="text-foreground text-sm leading-5">
                     {formatSkillPreviewDate(updatedAt)}
                 </span>
+                <span className="text-foreground text-sm leading-5">{source}</span>
             </div>
             {description ? (
                 <div className="mt-4 max-w-[48rem]">
@@ -159,6 +164,19 @@ function SkillDetailSummary({
             ) : null}
         </div>
     );
+}
+
+function formatSkillSource(subject: SkillTreeSubject) {
+    if (subject.plugin) {
+        return `Plugin · ${subject.plugin.displayName}`;
+    }
+    if (subject.managedSource === 'seeded') {
+        return 'Tavern default';
+    }
+    if (subject.managedSource === 'hub') {
+        return 'Library';
+    }
+    return 'Custom';
 }
 
 function SkillMarkdownPreview({

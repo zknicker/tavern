@@ -1,6 +1,7 @@
 import {
     Folder01Icon,
     FolderImportIcon,
+    LibraryIcon,
     MagicWand01Icon,
 } from '@hugeicons-pro/core-stroke-rounded';
 import * as React from 'react';
@@ -16,8 +17,7 @@ import {
     SidebarGroupContent,
     SidebarHeader,
 } from '../../components/ui/sidebar.tsx';
-import { Spinner } from '../../components/ui/spinner.tsx';
-import type { SkillHubAvailableOutput, SkillListOutput } from '../../lib/trpc.tsx';
+import type { SkillListOutput } from '../../lib/trpc.tsx';
 import { type SkillEnablementController, SkillPreviewPane } from './skill-preview-pane.tsx';
 import {
     buildSkillTreePaths,
@@ -30,19 +30,15 @@ import { SkillsFileTree } from './skills-file-tree.tsx';
 type SkillSummary = SkillListOutput['skills'][number];
 
 export function SkillsBrowser({
-    available,
-    availableError,
-    availablePending,
     hubByName,
+    onAddFromLibrary,
     onManageSources,
     runtimeByName,
     skillEnablement,
     skills,
 }: {
-    available?: SkillHubAvailableOutput;
-    availableError: null | string;
-    availablePending: boolean;
     hubByName: HubByName;
+    onAddFromLibrary: () => void;
     onManageSources: () => void;
     runtimeByName?: RuntimeManagedByName;
     skillEnablement?: SkillEnablementController;
@@ -56,8 +52,8 @@ export function SkillsBrowser({
         storageKey: 'tavern.skills.sidebar.width',
     });
     const subjects = React.useMemo(
-        () => buildSkillTreeSubjects({ available, hubByName, runtimeByName, skills }),
-        [available, hubByName, runtimeByName, skills]
+        () => buildSkillTreeSubjects({ hubByName, runtimeByName, skills }),
+        [hubByName, runtimeByName, skills]
     );
     const paths = React.useMemo(() => buildSkillTreePaths(subjects), [subjects]);
     const subjectsByPath = React.useMemo(
@@ -115,6 +111,11 @@ export function SkillsBrowser({
                             label="Create new skill"
                             onClick={() => undefined}
                         />
+                        <SkillSidebarCommand
+                            icon={LibraryIcon}
+                            label="Add from library"
+                            onClick={onAddFromLibrary}
+                        />
                     </div>
                 </SidebarHeader>
                 <div className="flex h-10 shrink-0 items-center border-border/70 border-b px-3 font-medium text-muted-foreground text-sm">
@@ -133,10 +134,6 @@ export function SkillsBrowser({
                         </SidebarGroupContent>
                     </SidebarGroup>
                 </SidebarContent>
-                <SkillTreeStatus
-                    availableError={availableError}
-                    availablePending={availablePending}
-                />
             </aside>
             <main className="flex min-h-0 min-w-0 flex-col">
                 <SkillPreviewPane skillEnablement={skillEnablement} subject={selectedSubject} />
@@ -164,31 +161,4 @@ function SkillSidebarCommand({
             <span className="truncate">{label}</span>
         </button>
     );
-}
-
-function SkillTreeStatus({
-    availableError,
-    availablePending,
-}: {
-    availableError: null | string;
-    availablePending: boolean;
-}) {
-    if (availablePending) {
-        return (
-            <div className="flex h-9 shrink-0 items-center gap-2 border-border/70 border-t px-3 text-muted-foreground text-sm">
-                <Spinner className="size-4" />
-                Loading available skills
-            </div>
-        );
-    }
-
-    if (availableError) {
-        return (
-            <div className="shrink-0 border-border/70 border-t px-3 py-2 text-error text-sm">
-                {availableError}
-            </div>
-        );
-    }
-
-    return null;
 }
