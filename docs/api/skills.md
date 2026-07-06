@@ -26,6 +26,13 @@ Plugin or runtime experiment.
   `enabledSkillIds`.
 * Setup requirements and source state are visible.
 * A skill can be visible while Runtime reports setup blockers.
+* Disk-backed skills are writable regardless of source. Plugin-owned skills are
+  not disk files and remain non-editable.
+* Hub installs record the installed content hash. Reinstalling an edited hub
+  skill returns a conflict unless `force` is set. Available hub entries report
+  `edited` and `updateAvailable` from the installed hash.
+* Only the seeded `tavern-agent` skill can be reset to a Tavern default through
+  `POST /skills/:id/reset`.
 * Tool ids are Runtime-native tool names.
 * Tool enablement separates the user's choice from whether Runtime reports the
   tool as usable.
@@ -47,9 +54,10 @@ The API covers:
   enablement state through `skills_list`
 * read a skill body and current hash through `skill_view`
 * create an agent-authored skill through `skill_create`
-* replace an agent-authored `SKILL.md` with hash checking through `skill_patch`
-* write agent-authored support files under `references/`, `templates/`,
+* replace a disk-backed `SKILL.md` with hash checking through `skill_patch`
+* write disk-backed support files under `references/`, `templates/`,
   `scripts/`, or `assets/` through `skill_write_file`
+* reset the seeded Tavern skill to the current default
 * read setup requirements
 * list Runtime-visible tools
 * read Runtime tool diagnostics where exposed
@@ -89,6 +97,10 @@ files, or Plugin-generated project files.
 Runtime refreshes skill and tool inventory after startup and after capability
 writes. App surfaces should refetch on Runtime capability events instead of
 blocking navigation on live discovery.
+
+Skill file writes publish `skill.updated` Runtime events. Hub uninstalls publish
+`skill.deleted`. Server mutations refresh or enqueue skill inventory sync and
+emit the same skill invalidation cascade used by other skill changes.
 
 ## Related Docs
 

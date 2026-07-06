@@ -55,8 +55,19 @@ agent's enabled skill ids; it does not copy the skill package.
 Agents can author skills into the same shared library. Agent-authored skills
 are auto-enabled for the creating agent, visible to other agents on the Skills
 settings page, and assigned to other agents through normal skill enablement.
-Runtime-seeded, hub-installed, and operator-placed skills stay read-only to
-agents.
+Every skill package on disk is writable by agents and workers, whether it was
+seeded, hub-installed, agent-created, or operator-placed. Plugin-provided skills
+are live Plugin reflections rather than files, so they cannot be edited.
+
+Hub-installed skills record the hash Tavern wrote at install time. Reinstalling
+an unedited hub skill replaces it cleanly. Reinstalling a skill whose local
+content differs from that installed hash reports a conflict unless the caller
+forces the reinstall. The hub inventory reports both local edits and whether the
+bundled hub version differs from the installed hash.
+
+The seeded `tavern-agent` skill is created once and is not refreshed in the
+background. Users can reset only that seeded skill to the current Tavern default;
+other skills do not have Tavern defaults.
 
 Agent-authored skills have a lifecycle. Runtime marks unused agent-created
 skills stale after 30 days and archives them after 90 days by moving the whole
@@ -71,10 +82,9 @@ SDK `HarnessAgent` `skills` setting. Missing assigned skills are stale settings
 and are ignored instead of failing unrelated chat work. Runtime does not copy
 assigned skill content into `system` instructions.
 
-Skill content updates are agent work. Outside Runtime-owned read-only skills,
-the agent edits the skill source in place and Runtime refreshes inventory
-afterward. Tavern does not own skill versioning, source merges, or a skill
-marketplace.
+Skill content updates are explicit agent or user work. Tavern never rewrites
+skill files in the background. Tavern-authored content arrives only through hub
+install/reinstall or the seeded skill reset.
 
 Tool exposure is Runtime work. Harness tools come from the selected executor and
 are governed by sandbox and approval policy. Plugin tools come from built-in
