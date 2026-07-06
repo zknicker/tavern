@@ -14,6 +14,7 @@ import {
     emitCronUpdated,
     emitSessionUpdated,
     emitSkillUpdated,
+    emitTasksUpdated,
 } from '../api/invalidation-events.ts';
 import { toCronRunInsert } from '../cron/runtime-run-record.ts';
 import { syncChatParticipantsForRuntime } from '../participants/chat-participants.ts';
@@ -24,6 +25,7 @@ import {
 import { syncAgentsForRuntime } from '../storage/agents.ts';
 import { syncCronJobsForRuntime } from '../storage/cron-jobs.ts';
 import { upsertCronRuns } from '../storage/cron-runs.ts';
+import { syncTasksForRuntime } from '../storage/tasks.ts';
 import type { SyncPrimitiveKind } from './contracts.ts';
 import { savePrimitiveSyncState } from './primitive-sync-state.ts';
 
@@ -152,6 +154,10 @@ export async function syncAgentRuntimeSessionMessagesWithRetry(input: {
 
 export async function syncAgentRuntimeCron(input?: SyncInput) {
     return await syncPrimitiveAcrossRuntimes('cron', input, syncCronForConnection);
+}
+
+export async function syncAgentRuntimeTasks(input?: SyncInput) {
+    return await syncPrimitiveAcrossRuntimes('task', input, syncTasksForConnection);
 }
 
 async function syncPrimitiveAcrossRuntimes(
@@ -354,6 +360,32 @@ function hasChanged(result: { deleted?: number; synced: number }) {
     return result.synced > 0 || (result.deleted ?? 0) > 0;
 }
 
+async function syncTasksForConnection(input: RuntimeSyncInput) {
+    const client = createAgentRuntimeClientForConnection(input.runtime);
+    const syncedAt = new Date().toISOString();
+    const tasks = (
+        await withCapabilityStatus(
+            {
+                capability: 'apiServer',
+                method: 'tasks.list',
+                runtimeId: input.runtime.id,
+            },
+            async () => await client.listTasks()
+        )
+    ).tasks;
+    const result = await syncTasksForRuntime({
+        runtimeId: input.runtime.id,
+        syncedAt,
+        tasks,
+    });
+
+    await input.log?.(
+        `Synced ${result.synced} tasks from ${input.runtime.name}; deleted ${result.deleted} missing tasks.`
+    );
+
+    return result;
+}
+
 async function syncCronForConnection(input: RuntimeSyncInput) {
     const client = createAgentRuntimeClientForConnection(input.runtime);
     const syncedAt = new Date().toISOString();
@@ -459,6 +491,9 @@ function emitForPrimitive(kind: SyncPrimitiveKind) {
             return;
         case 'skill':
             emitSkillUpdated();
+            return;
+        case 'task':
+            emitTasksUpdated();
             return;
     }
 }

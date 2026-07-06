@@ -7,6 +7,7 @@ export const syncPrimitiveKindSchema = z.enum([
     'cronRun',
     'session',
     'skill',
+    'task',
 ]);
 
 function normalizeSyncPrimitiveStatus(value: unknown) {

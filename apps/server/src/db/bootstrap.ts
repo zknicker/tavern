@@ -271,6 +271,30 @@ const schemaStatements = [
         ON cron_jobs (agent_id);`,
     `CREATE INDEX IF NOT EXISTS cron_jobs_last_synced_at_idx
         ON cron_jobs (last_synced_at);`,
+    `CREATE TABLE IF NOT EXISTS tasks (
+        id TEXT PRIMARY KEY NOT NULL,
+        runtime_id TEXT NOT NULL,
+        runtime_task_id TEXT NOT NULL,
+        number INTEGER NOT NULL,
+        kind TEXT NOT NULL,
+        title TEXT NOT NULL,
+        status TEXT NOT NULL,
+        priority TEXT NOT NULL,
+        assignee_kind TEXT,
+        assignee_agent_id TEXT,
+        epic_id TEXT,
+        raw_json TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        last_synced_at TEXT NOT NULL
+    );`,
+    `CREATE UNIQUE INDEX IF NOT EXISTS tasks_runtime_task_idx
+        ON tasks (runtime_id, runtime_task_id);`,
+    `CREATE INDEX IF NOT EXISTS tasks_runtime_idx
+        ON tasks (runtime_id);`,
+    'CREATE INDEX IF NOT EXISTS tasks_status_idx ON tasks (status);',
+    `CREATE INDEX IF NOT EXISTS tasks_last_synced_at_idx
+        ON tasks (last_synced_at);`,
     `CREATE TABLE IF NOT EXISTS sync_state (
         kind TEXT NOT NULL,
         id TEXT NOT NULL,

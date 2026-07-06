@@ -12,6 +12,7 @@ export * from './schema/provider-usage.ts';
 export * from './schema/session-activity.ts';
 export * from './schema/skills.ts';
 export * from './schema/sync.ts';
+export * from './schema/tasks.ts';
 export * from './schema/tavern-vault.ts';
 export * from './schema/telemetry.ts';
 export * from './schema/usage-source-settings.ts';

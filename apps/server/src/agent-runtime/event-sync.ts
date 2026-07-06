@@ -19,11 +19,16 @@ import {
     emitModelUpdated,
     emitSemanticMemoryUpdated,
     emitSessionUpdated,
+    emitTasksUpdated,
     emitWorkersUpdated,
 } from '../api/invalidation-events.ts';
 import { enqueueRuntimeSkillInventoryRefresh } from '../skills/inventory-job.ts';
 import { listReachableAgentRuntimeConnections } from '../storage/agent-runtime-connections.ts';
-import { syncAgentRuntimeAgents, syncAgentRuntimeCron } from '../sync/agent-runtime-sync.ts';
+import {
+    syncAgentRuntimeAgents,
+    syncAgentRuntimeCron,
+    syncAgentRuntimeTasks,
+} from '../sync/agent-runtime-sync.ts';
 import {
     clearTurnSessionActive,
     hasActiveTurnSession,
@@ -111,6 +116,16 @@ export async function applyObservedAgentRuntimeEvent(
                 console.warn('[tavern] failed to sync cron event', error);
             });
             emitCronUpdated();
+            return;
+        }
+        case 'task.updated':
+        case 'task.deleted': {
+            emitObservedAgentRuntimeEvent(event);
+            debugTurnEvent(event);
+            void syncAgentRuntimeTasks().catch((error) => {
+                console.warn('[tavern] failed to sync task event', error);
+            });
+            emitTasksUpdated();
             return;
         }
         case 'cron.runStarted':

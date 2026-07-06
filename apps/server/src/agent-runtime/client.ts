@@ -20,6 +20,7 @@ import {
     type AgentRuntimeCreateAgent,
     type AgentRuntimeCreateCron,
     type AgentRuntimeCreateMessage,
+    type AgentRuntimeCreateTask,
     type AgentRuntimeCron,
     type AgentRuntimeCronList,
     type AgentRuntimeCronRun,
@@ -127,9 +128,12 @@ import {
     type AgentRuntimeUpdateAgentSessionModel,
     type AgentRuntimeUpdateAgentSessionModelResult,
     type AgentRuntimeUpdateAgentThinkingDefault,
+    type AgentRuntimeTask,
+    type AgentRuntimeTaskList,
     type AgentRuntimeUpdateCron,
     type AgentRuntimeUpdateModelProvider,
     type AgentRuntimeUpdateSkillEnabled,
+    type AgentRuntimeUpdateTask,
     type AgentRuntimeUpdateToolEnabled,
     type AgentRuntimeUpsertBinding,
     type AgentRuntimeWorkspaceFileContent,
@@ -158,6 +162,7 @@ import {
     agentRuntimeCompleteGoogleOAuthSchema,
     agentRuntimeCreateAgentSchema,
     agentRuntimeCreateCronSchema,
+    agentRuntimeCreateTaskSchema,
     agentRuntimeCreateMessageSchema,
     agentRuntimeCronListSchema,
     agentRuntimeCronRunListSchema,
@@ -258,6 +263,8 @@ import {
     agentRuntimeStopTurnResultSchema,
     agentRuntimeStopTurnSchema,
     agentRuntimeSubmitModelProviderOAuthSchema,
+    agentRuntimeTaskListSchema,
+    agentRuntimeTaskSchema,
     agentRuntimeTimezoneSettingsSchema,
     agentRuntimeToolConfigSchema,
     agentRuntimeToolEnvUpdateResultSchema,
@@ -275,6 +282,7 @@ import {
     agentRuntimeUpdateAgentThinkingDefaultSchema,
     agentRuntimeUpdateCronSchema,
     agentRuntimeUpdateModelProviderSchema,
+    agentRuntimeUpdateTaskSchema,
     agentRuntimeUpdateSchema,
     agentRuntimeUpdateSkillEnabledSchema,
     agentRuntimeUpdateToolEnabledSchema,
@@ -351,6 +359,7 @@ export interface TavernAgentRuntimeClient {
         input: AgentRuntimeCompleteGoogleOAuth
     ): Promise<AgentRuntimeGoogleOAuthPoll>;
     createCronJob(input: AgentRuntimeCreateCron): Promise<AgentRuntimeCron>;
+    createTask(input: AgentRuntimeCreateTask): Promise<AgentRuntimeTask>;
     createSemanticMemoryFolder(
         input: SemanticMemoryPathInput
     ): Promise<SemanticMemoryPathMutationResult>;
@@ -360,6 +369,7 @@ export interface TavernAgentRuntimeClient {
     deleteAgent(agentId: string): Promise<AgentRuntimeArchiveAgent>;
     deleteBinding(bindingId: string): Promise<AgentRuntimeArchiveBinding>;
     deleteCronJob(jobId: string): Promise<AgentRuntimeArchiveCron>;
+    deleteTask(taskId: string): Promise<{ deleted: boolean; id: string }>;
     deleteDiscordBinding(
         bindingId: string,
         input: AgentRuntimeDeleteDiscordBinding
@@ -379,6 +389,7 @@ export interface TavernAgentRuntimeClient {
     getAgentFile(agentId: string, path: string): Promise<AgentRuntimeAgentFileContent>;
     getCapability(id: AgentRuntimeCapabilityHealthId): Promise<AgentRuntimeCapabilityHealth>;
     getCronJob(jobId: string): Promise<AgentRuntimeCron>;
+    getTask(taskId: string): Promise<AgentRuntimeTask>;
     getCurrentAgentSession(input: {
         agentId?: string;
         chatId: string;
@@ -422,6 +433,7 @@ export interface TavernAgentRuntimeClient {
     listCapabilities(): Promise<AgentRuntimeCapabilityHealthList>;
     listChats(): Promise<{ chats: AgentRuntimeChat[] }>;
     listCronJobs(): Promise<AgentRuntimeCronList>;
+    listTasks(): Promise<AgentRuntimeTaskList>;
     listCronRuns(jobId?: string): Promise<{ runs: AgentRuntimeCronRun[] }>;
     listDiscordBindings(): Promise<{ bindings: AgentRuntimeDiscordBinding[] }>;
     listEvents(input?: AgentRuntimeListEventsInput): Promise<AgentRuntimeEventList>;
@@ -576,6 +588,7 @@ export interface TavernAgentRuntimeClient {
         input: AgentRuntimeUpdateAgentThinkingDefault
     ): Promise<AgentRuntimeAgentEngineConfigSnapshot>;
     updateCronJob(jobId: string, input: AgentRuntimeUpdateCron): Promise<AgentRuntimeCron>;
+    updateTask(taskId: string, input: AgentRuntimeUpdateTask): Promise<AgentRuntimeTask>;
     updateSkillEnabled(
         skillId: string,
         input: AgentRuntimeUpdateSkillEnabled
@@ -956,6 +969,84 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         }
 
         return agentRuntimeArchiveCronSchema.parse(await response.json());
+    }
+
+    async createTask(input: AgentRuntimeCreateTask) {
+        const payload = agentRuntimeCreateTaskSchema.parse(input);
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.tasks}`, {
+            body: JSON.stringify(payload),
+            headers: {
+                ...this.#authHeaders,
+                'content-type': 'application/json',
+                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+            },
+            method: 'POST',
+        });
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeTaskSchema.parse(await response.json());
+    }
+
+    async getTask(taskId: string) {
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.task(taskId)}`, {
+            headers: this.#authHeaders,
+        });
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeTaskSchema.parse(await response.json());
+    }
+
+    async listTasks() {
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.tasks}`, {
+            headers: this.#authHeaders,
+        });
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeTaskListSchema.parse(await response.json());
+    }
+
+    async updateTask(taskId: string, input: AgentRuntimeUpdateTask) {
+        const payload = agentRuntimeUpdateTaskSchema.parse(input);
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.task(taskId)}`, {
+            body: JSON.stringify(payload),
+            headers: {
+                ...this.#authHeaders,
+                'content-type': 'application/json',
+                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+            },
+            method: 'PATCH',
+        });
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeTaskSchema.parse(await response.json());
+    }
+
+    async deleteTask(taskId: string) {
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.task(taskId)}`, {
+            headers: {
+                ...this.#authHeaders,
+                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+            },
+            method: 'DELETE',
+        });
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return (await response.json()) as { deleted: boolean; id: string };
     }
 
     async runCronJob(jobId: string, input?: AgentRuntimeRunCron) {
