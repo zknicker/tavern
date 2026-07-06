@@ -3,7 +3,6 @@ import path from 'node:path';
 import {
     type AgentRuntimeSkillHubActionResult,
     type AgentRuntimeSkillHubAvailable,
-    type AgentRuntimeSkillHubItem,
     type AgentRuntimeSkillHubPreview,
     type AgentRuntimeSkillHubScan,
     agentRuntimeSkillHubActionResultSchema,
@@ -17,36 +16,13 @@ import {
     sha256,
     tryRecordSkillSource,
 } from '../skills/store.ts';
+import { builtInHubSkills, bundledHubSkillContent } from './bundled-hub-skills.ts';
 import {
     agentEngineSkillsDir,
     listRuntimeSkills,
     normalizeRuntimeSkillId,
     tavernAgentSkillId,
 } from './skill-library.ts';
-
-const tavernWorkflowSkillId = 'tavern-workflow';
-const tavernWorkflowIdentifier = `builtin:${tavernWorkflowSkillId}`;
-const tavernWorkflowSkillMd = `---
-summary: Tavern workflow
----
-
-# Tavern Workflow
-
-Use Tavern workspace context, keep durable knowledge in Memory, and keep execution focused on the active chat goal.
-`;
-
-const builtInHubSkills = [
-    {
-        description: 'Tavern workspace habits, durable notes, and focused execution guidance.',
-        identifier: tavernWorkflowIdentifier,
-        name: tavernWorkflowSkillId,
-        repo: null,
-        skillMd: tavernWorkflowSkillMd,
-        source: 'builtin',
-        tags: ['tavern', 'workflow'],
-        trustLevel: 'builtin',
-    },
-] satisfies Array<AgentRuntimeSkillHubItem & { skillMd: string }>;
 
 export async function getSkillHubAvailable(
     options: { skillsDir?: string } = {}
@@ -68,6 +44,7 @@ export async function getSkillHubAvailable(
                             installed?.filePath && installedHash
                                 ? await hashFileOrNull(installed.filePath)
                                 : null;
+                        const bundledContent = bundledHubSkillContent(skill.name);
                         return [
                             skill.identifier,
                             {
@@ -80,7 +57,8 @@ export async function getSkillHubAvailable(
                                 trustLevel: skill.trustLevel,
                                 updateAvailable:
                                     installedHash !== null &&
-                                    sha256(skill.skillMd) !== installedHash,
+                                    bundledContent !== null &&
+                                    sha256(bundledContent) !== installedHash,
                             },
                         ];
                     })

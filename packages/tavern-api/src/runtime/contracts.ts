@@ -1205,10 +1205,14 @@ export const agentRuntimeSkillSummarySchema = z.object({
     configChecks: z.array(agentRuntimeSkillConfigCheckSchema).default([]),
     description: z.string().nullable(),
     disabled: z.boolean().optional(),
+    // Local content differs from the last Tavern-written version.
+    edited: z.boolean().optional(),
     eligible: z.boolean().optional(),
     filePath: z.string().trim().min(1).nullable().optional(),
     id: z.string().trim().min(1),
     install: z.array(agentRuntimeSkillInstallOptionSchema).default([]),
+    // Managed source with a Tavern default that can be restored.
+    managedSource: z.enum(['seeded', 'hub', 'plugin']).nullable().optional(),
     missing: agentRuntimeSkillRequirementsSchema,
     modelVisible: z.boolean().optional(),
     name: z.string().trim().min(1),
@@ -1217,6 +1221,8 @@ export const agentRuntimeSkillSummarySchema = z.object({
     runtimeSource: z.string().trim().min(1).nullable().optional(),
     skillKey: z.string().trim().min(1).nullable().optional(),
     source: agentRuntimeSkillSourceSchema,
+    // The current Tavern version differs from the last written version.
+    updateAvailable: z.boolean().optional(),
     updatedAt: z.string().datetime().nullable(),
     userInvocable: z.boolean().optional(),
 });

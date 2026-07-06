@@ -9,7 +9,7 @@ import { ensureRuntimeSchema } from '../db/schema.ts';
 import { findPluginServiceForSkill, pluginSkillContent } from '../plugins/agent-capabilities.ts';
 import { materializePluginSkills } from '../plugins/materialize-skills.ts';
 import { writePluginConfig } from '../plugins/store.ts';
-import { readSkillSource, sha256 } from '../skills/store.ts';
+import { createAgentSkill, readSkillSource, sha256 } from '../skills/store.ts';
 import { upsertStoredAgent } from '../tavern/agents-store.ts';
 import { getSkillHubAvailable, installSkillHubSkill } from './skill-hub-library.ts';
 import {
@@ -19,6 +19,7 @@ import {
     readAssignedSkillBundles,
     resetRuntimeSkillToDefault,
     resetTavernAgentSkill,
+    seedTavernAgentSkill,
     tavernAgentSkillId,
 } from './skill-library.ts';
 
@@ -194,6 +195,59 @@ describe('Runtime skill library', () => {
         expect(readSkillSource(tavernAgentSkillId)?.source).toBe('seeded');
     });
 
+    it('reports seeded skill summary edit and managed flags', async () => {
+        await seedTavernAgentSkill({ skillsDir });
+
+        await expect(readSkillSummary(tavernAgentSkillId)).resolves.toMatchObject({
+            edited: false,
+            managedSource: 'seeded',
+            updateAvailable: false,
+        });
+        expect(readSkillSource(tavernAgentSkillId)?.installedHash).toBe(sha256(defaultTavernSkill));
+
+        await fs.appendFile(path.join(skillsDir, tavernAgentSkillId, 'SKILL.md'), '\nLocal edit.');
+
+        await expect(readSkillSummary(tavernAgentSkillId)).resolves.toMatchObject({
+            edited: true,
+            managedSource: 'seeded',
+            updateAvailable: false,
+        });
+    });
+
+    it('reports hub skill summary update and edit flags', async () => {
+        await installSkillHubSkill('builtin:tavern-workflow', { skillsDir });
+
+        await expect(readSkillSummary('tavern-workflow')).resolves.toMatchObject({
+            edited: false,
+            managedSource: 'hub',
+            updateAvailable: false,
+        });
+
+        const oldBundle = '# Old Tavern Workflow\n';
+        getDb()
+            .prepare(
+                `UPDATE skill_sources
+                 SET installed_hash = $hash
+                 WHERE skill_id = 'tavern-workflow'`
+            )
+            .run({ $hash: sha256(oldBundle) });
+        await fs.writeFile(path.join(skillsDir, 'tavern-workflow', 'SKILL.md'), oldBundle, 'utf8');
+
+        await expect(readSkillSummary('tavern-workflow')).resolves.toMatchObject({
+            edited: false,
+            managedSource: 'hub',
+            updateAvailable: true,
+        });
+
+        await fs.appendFile(path.join(skillsDir, 'tavern-workflow', 'SKILL.md'), '\nLocal edit.');
+
+        await expect(readSkillSummary('tavern-workflow')).resolves.toMatchObject({
+            edited: true,
+            managedSource: 'hub',
+            updateAvailable: true,
+        });
+    });
+
     it('rejects reset for non-seeded skills', async () => {
         await expect(resetRuntimeSkillToDefault('tavern-workflow', { skillsDir })).rejects.toThrow(
             'Only seeded and Plugin skills have Tavern defaults.'
@@ -311,6 +365,57 @@ describe('Runtime skill library', () => {
         expect(readSkillSource('merchbase')?.source).toBe('plugin');
     });
 
+    it('reports Plugin skill summary update and edit flags', async () => {
+        enableMerchbasePlugin();
+        await materializePluginSkills({ skillsDir });
+
+        await expect(readSkillSummary('merchbase')).resolves.toMatchObject({
+            edited: false,
+            managedSource: 'plugin',
+            updateAvailable: false,
+        });
+
+        const oldContent = '# MerchBase\n\nOld generated content.';
+        getDb()
+            .prepare(
+                `UPDATE skill_sources
+                 SET installed_hash = $hash
+                 WHERE skill_id = 'merchbase'`
+            )
+            .run({ $hash: sha256(oldContent) });
+        await fs.writeFile(path.join(skillsDir, 'merchbase', 'SKILL.md'), oldContent, 'utf8');
+
+        await expect(readSkillSummary('merchbase')).resolves.toMatchObject({
+            edited: false,
+            managedSource: 'plugin',
+            updateAvailable: true,
+        });
+
+        await fs.appendFile(path.join(skillsDir, 'merchbase', 'SKILL.md'), '\nLocal edit.');
+
+        await expect(readSkillSummary('merchbase')).resolves.toMatchObject({
+            edited: true,
+            managedSource: 'plugin',
+            updateAvailable: true,
+        });
+    });
+
+    it('leaves agent-created skill summaries unmanaged', async () => {
+        await createAgentSkill({
+            agentId: null,
+            content: '# Research\n\nCheck primary sources.',
+            description: 'Research',
+            name: 'Research',
+            skillsDir,
+        });
+
+        await expect(readSkillSummary('research')).resolves.toMatchObject({
+            edited: false,
+            managedSource: null,
+            updateAvailable: false,
+        });
+    });
+
     it('loads assigned skill content for agent execution', async () => {
         await writeSkill('research', '# Research\n\nCheck primary sources.');
         await fs.mkdir(path.join(skillsDir, 'research', 'references'), {
@@ -371,6 +476,16 @@ describe('Runtime skill library', () => {
         const skillDir = path.join(skillsDir, name);
         await fs.mkdir(skillDir, { recursive: true });
         await fs.writeFile(path.join(skillDir, 'SKILL.md'), content, 'utf8');
+    }
+
+    async function readSkillSummary(skillId: string) {
+        const summary = (await listRuntimeSkills({ includePluginSkills: false, skillsDir })).find(
+            (skill) => skill.id === skillId
+        );
+        if (!summary) {
+            throw new Error(`Missing skill summary: ${skillId}`);
+        }
+        return summary;
     }
 
     function enableMerchbasePlugin() {

@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { tavernAgentSkillId } from './agent-engine/skill-library.ts';
+import { defaultTavernSkill, tavernAgentSkillId } from './agent-engine/skill-library.ts';
 import { refreshRuntimeCapabilities } from './capabilities/store.ts';
 import { dispatch } from './cli/main.ts';
 import { DATA_DIR } from './config.ts';
@@ -28,7 +28,7 @@ import {
 import { materializePluginSkills } from './plugins/materialize-skills.ts';
 import { startSkillCuratorScheduler, stopSkillCuratorScheduler } from './skills/curator.ts';
 import { startSkillReviewScheduler, stopSkillReviewScheduler } from './skills/review-queue.ts';
-import { recordSkillSource } from './skills/store.ts';
+import { recordSkillSource, sha256 } from './skills/store.ts';
 import { demoAgentId } from './tavern/development-chat-demo-types.ts';
 import { seedDevelopmentChatDemos } from './tavern/development-chat-demos.ts';
 import { seedDevelopmentSemanticMemoryDemos } from './tavern/development-memory-demos.ts';
@@ -55,7 +55,12 @@ async function main(): Promise<void> {
     ensurePrimaryManagedAgent(db);
     // The lazy seed during instruction prep can run before the DB exists and
     // skip source recording; without this the seeded skill reads as external.
-    recordSkillSource({ db, skillId: tavernAgentSkillId, source: 'seeded' });
+    recordSkillSource({
+        db,
+        installedHash: sha256(defaultTavernSkill),
+        skillId: tavernAgentSkillId,
+        source: 'seeded',
+    });
     await materializePluginSkills({ db }).catch((err) => {
         log.warn('Plugin skills failed to materialize during startup', { err });
     });

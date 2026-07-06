@@ -57,7 +57,9 @@ are auto-enabled for the creating agent, visible to other agents on the Skills
 settings page, and assigned to other agents through normal skill enablement.
 Every skill package on disk is writable by agents and workers, whether it was
 seeded, hub-installed, agent-created, or operator-placed. Plugin-provided skills
-are live Plugin reflections rather than files, so they cannot be edited.
+materialize to disk from the Plugin's current definition and can be edited.
+Managed seeded, hub, and Plugin skills show available-update state and can be
+restored to Tavern's current version.
 
 Hub-installed skills record the hash Tavern wrote at install time. Reinstalling
 an unedited hub skill replaces it cleanly. Reinstalling a skill whose local

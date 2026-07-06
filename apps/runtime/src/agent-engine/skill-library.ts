@@ -12,13 +12,16 @@ import {
     normalizeAgentRuntimeSkillFiles,
 } from '@tavern/api';
 import { AGENT_HOME } from '../config.ts';
-import {
-    findPluginServiceForSkill,
-    readPluginSkillBundlesForAgent,
-} from '../plugins/agent-capabilities.ts';
+import { readPluginSkillBundlesForAgent } from '../plugins/agent-capabilities.ts';
 import { resetPluginSkillToDefault } from '../plugins/materialize-skills.ts';
 import { publishSkillUpdated } from '../skills/events.ts';
-import { resolveSkillSource, sha256, tryRecordSkillSource } from '../skills/store.ts';
+import { sha256, tryRecordSkillSource } from '../skills/store.ts';
+import {
+    managedSkillSummaryState,
+    type SkillSummarySource,
+    tryReadSkillSummarySource,
+    tryResolveSkillSource,
+} from './managed-skill-summary.ts';
 
 export const agentEngineSkillsDir = path.join(AGENT_HOME, 'skills');
 export const tavernAgentSkillId = 'tavern-agent';
@@ -64,13 +67,13 @@ export async function seedTavernAgentSkill(options: { skillsDir?: string } = {})
     );
     const existing = await fs.readFile(skillPath, 'utf8').catch(() => null);
     if (existing !== null) {
-        tryRecordSkillSource({ skillId: tavernAgentSkillId, source: 'seeded' });
+        recordSeededTavernSkillSource();
         return;
     }
 
     await fs.mkdir(path.dirname(skillPath), { recursive: true });
     await fs.writeFile(skillPath, defaultTavernSkill, { mode: 0o600 });
-    tryRecordSkillSource({ skillId: tavernAgentSkillId, source: 'seeded' });
+    recordSeededTavernSkillSource();
 }
 
 export async function resetTavernAgentSkill(options: { skillsDir?: string } = {}) {
@@ -81,7 +84,7 @@ export async function resetTavernAgentSkill(options: { skillsDir?: string } = {}
     );
     await fs.mkdir(path.dirname(skillPath), { recursive: true });
     await fs.writeFile(skillPath, defaultTavernSkill, { mode: 0o600 });
-    tryRecordSkillSource({ skillId: tavernAgentSkillId, source: 'seeded' });
+    recordSeededTavernSkillSource();
     publishSkillUpdated(tavernAgentSkillId);
     return {
         hash: sha256(defaultTavernSkill),
@@ -162,7 +165,7 @@ export async function readAssignedSkillBundles(
             continue;
         }
         seen.add(skillId);
-        if (tryResolveSkillSource(skillId) === 'plugin') {
+        if (tryResolveSkillSource({ seededSkillId: tavernAgentSkillId, skillId }) === 'plugin') {
             continue;
         }
 
@@ -222,7 +225,7 @@ async function scanInstalledSkillSummaries(skillsDir: string) {
                 content,
                 filePath,
                 skillId,
-                skillSource: tryResolveSkillSource(skillId),
+                skillSource: tryReadSkillSummarySource(skillId),
                 stats,
             })
         );
@@ -236,11 +239,16 @@ function skillSummaryFromMarkdown(input: {
     content: string;
     filePath: string;
     skillId: string;
-    skillSource: ReturnType<typeof tryResolveSkillSource>;
+    skillSource: SkillSummarySource | null;
     stats: { mtime: Date } | null;
 }) {
-    const pluginMatch =
-        input.skillSource === 'plugin' ? findPluginServiceForSkill(input.skillId) : null;
+    const managedState = managedSkillSummaryState({
+        content: input.content,
+        defaultSeededContent: defaultTavernSkill,
+        seededSkillId: tavernAgentSkillId,
+        skillId: input.skillId,
+        skillSource: input.skillSource,
+    });
     return agentRuntimeSkillSummarySchema.parse({
         allowedTools: null,
         baseDir: input.baseDir,
@@ -249,10 +257,12 @@ function skillSummaryFromMarkdown(input: {
         configChecks: [],
         description: readSkillDescription(input.content),
         disabled: false,
+        edited: managedState.edited,
         eligible: true,
         filePath: input.filePath,
         id: input.skillId,
         install: [],
+        managedSource: managedState.managedSource,
         missing: emptyRequirements,
         modelVisible: true,
         name: input.skillId,
@@ -261,10 +271,10 @@ function skillSummaryFromMarkdown(input: {
         runtimeSource:
             input.skillId === tavernAgentSkillId
                 ? 'Agent engine'
-                : (pluginMatch?.service.skills.find((skill) => skill.name === input.skillId)
-                      ?.runtimeSource ?? 'Installed skill'),
+                : (managedState.pluginRuntimeSource ?? 'Installed skill'),
         skillKey: input.skillId,
         source: input.skillId === tavernAgentSkillId ? 'builtin' : 'installed',
+        updateAvailable: managedState.updateAvailable,
         updatedAt: input.stats?.mtime.toISOString() ?? null,
         userInvocable: true,
     });
@@ -276,20 +286,20 @@ function tavernAgentSummary(skillsDir: string) {
         content: defaultTavernSkill,
         filePath: path.join(skillsDir, tavernAgentSkillId, 'SKILL.md'),
         skillId: tavernAgentSkillId,
-        skillSource: 'seeded',
+        skillSource: {
+            installedHash: sha256(defaultTavernSkill),
+            source: 'seeded',
+        },
         stats: null,
     });
 }
 
-function tryResolveSkillSource(skillId: string) {
-    try {
-        return resolveSkillSource(skillId);
-    } catch (error) {
-        if (error instanceof Error && error.message.includes('Database not initialized')) {
-            return skillId === tavernAgentSkillId ? 'seeded' : 'external';
-        }
-        throw error;
-    }
+function recordSeededTavernSkillSource() {
+    tryRecordSkillSource({
+        installedHash: sha256(defaultTavernSkill),
+        skillId: tavernAgentSkillId,
+        source: 'seeded',
+    });
 }
 
 async function readSkillMarkdown(summary: AgentRuntimeSkillSummary) {
