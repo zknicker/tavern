@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.4.42 - 2026-07-06
+
+- Runtime/API/App: routes Google OAuth callbacks through the Tavern app server
+  so desktop Plugin setup completes reliably against Runtime-owned Google
+  settings.
+- Runtime/App: returns saved Plugin secret presence to settings forms so stored
+  MerchBase credentials remain visible and editable.
+- App: clears stale chat turn state after a response completes so completed
+  turns do not keep the transcript in a running state.
+
 ## v1.4.41 - 2026-07-06
 
 - App: repairs legacy automation cache tables during desktop backend startup so
