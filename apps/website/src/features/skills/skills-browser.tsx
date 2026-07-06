@@ -19,7 +19,12 @@ import {
 import { Spinner } from '../../components/ui/spinner.tsx';
 import type { SkillHubAvailableOutput, SkillListOutput } from '../../lib/trpc.tsx';
 import { type SkillEnablementController, SkillPreviewPane } from './skill-preview-pane.tsx';
-import { buildSkillTreePaths, buildSkillTreeSubjects, type HubByName } from './skill-tree-model.ts';
+import {
+    buildSkillTreePaths,
+    buildSkillTreeSubjects,
+    type HubByName,
+    type RuntimeManagedByName,
+} from './skill-tree-model.ts';
 import { SkillsFileTree } from './skills-file-tree.tsx';
 
 type SkillSummary = SkillListOutput['skills'][number];
@@ -30,6 +35,7 @@ export function SkillsBrowser({
     availablePending,
     hubByName,
     onManageSources,
+    runtimeByName,
     skillEnablement,
     skills,
 }: {
@@ -38,6 +44,7 @@ export function SkillsBrowser({
     availablePending: boolean;
     hubByName: HubByName;
     onManageSources: () => void;
+    runtimeByName?: RuntimeManagedByName;
     skillEnablement?: SkillEnablementController;
     skills: SkillSummary[];
 }) {
@@ -49,8 +56,8 @@ export function SkillsBrowser({
         storageKey: 'tavern.skills.sidebar.width',
     });
     const subjects = React.useMemo(
-        () => buildSkillTreeSubjects({ available, hubByName, skills }),
-        [available, hubByName, skills]
+        () => buildSkillTreeSubjects({ available, hubByName, runtimeByName, skills }),
+        [available, hubByName, runtimeByName, skills]
     );
     const paths = React.useMemo(() => buildSkillTreePaths(subjects), [subjects]);
     const subjectsByPath = React.useMemo(

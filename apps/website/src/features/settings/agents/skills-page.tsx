@@ -4,6 +4,7 @@ import { useParams } from 'react-router-dom';
 import { Alert, AlertDescription } from '../../../components/ui/alert.tsx';
 import { Icon } from '../../../components/ui/icon.tsx';
 import { useAgentList } from '../../../hooks/agents/use-agent-list.ts';
+import { useRuntimeManagedFlags } from '../../../hooks/skills/use-runtime-managed-flags.ts';
 import { useSkillHubAvailable } from '../../../hooks/skills/use-skill-hub-available.ts';
 import { useSkillList } from '../../../hooks/skills/use-skill-list.ts';
 import { withSavingToast } from '../../../lib/saving-toast.ts';
@@ -25,6 +26,7 @@ export function AgentSkillsSettingsPage() {
     const agentsQuery = useAgentList();
     const skillsQuery = useSkillList();
     const availableQuery = useSkillHubAvailable({ enabled: true });
+    const runtimeByName = useRuntimeManagedFlags({ agentId });
     const saveSkills = useAgentSkillsUpdate();
     const agent = agentsQuery.data?.agents.find((candidate) => candidate.id === agentId) ?? null;
     const skills = skillsQuery.data?.skills ?? [];
@@ -90,6 +92,7 @@ export function AgentSkillsSettingsPage() {
                 availablePending={availableQuery.isPending}
                 hubByName={hubByName}
                 onManageSources={() => setSourcesOpen(true)}
+                runtimeByName={runtimeByName}
                 skillEnablement={skillEnablement}
                 skills={agentSkills}
             />

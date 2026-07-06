@@ -20,10 +20,19 @@ import {
     showSkillFailureToast,
     UpdateConflictDialog,
 } from './skill-content-dialogs.tsx';
-import type { SkillTreeSubject } from './skill-tree-model.ts';
+import type { ManagedSource, SkillTreeSubject } from './skill-tree-model.ts';
 
-/** The seeded skill is the only skill with a Tavern default to reset to. */
-const seededSkillId = 'tavern-agent';
+/** Restore action copy per managed source. */
+function resetActionLabel(source: ManagedSource): string {
+    return source === 'seeded' ? 'Reset to default' : 'Restore Tavern version';
+}
+
+function restoreTargetLabel(source: ManagedSource): string {
+    if (source === 'seeded') {
+        return 'the Tavern default';
+    }
+    return source === 'plugin' ? "the plugin's current version" : 'the current Tavern version';
+}
 
 export interface SkillEnablementController {
     error: null | { message: string };
@@ -46,9 +55,13 @@ export function SkillDetailActions({
     const [conflictOpen, setConflictOpen] = React.useState(false);
     const [resetOpen, setResetOpen] = React.useState(false);
 
+    const managedSource = subject.managedSource;
+    // Hub skills replace via install-with-force; plugin/seeded regenerate via reset.
+    const isHubManaged = managedSource === 'hub' && Boolean(subject.identifier);
+
     const canUninstall = Boolean(subject.installed && subject.uninstallName);
-    const canReset = subject.installed && subject.skillId === seededSkillId;
-    const showUpdate = subject.installed && subject.updateAvailable && Boolean(subject.identifier);
+    const canReset = subject.installed && managedSource != null;
+    const showUpdate = subject.installed && subject.updateAvailable && managedSource != null;
     const showInstall = !subject.installed && Boolean(subject.identifier);
     const mutationBusy = install.isPending || uninstall.isPending || reset.isPending;
 
@@ -72,20 +85,45 @@ export function SkillDetailActions({
         );
     }
 
-    function runReset() {
+    function runReset(closeConflict = false) {
         if (!subject.skillId) {
             return;
         }
         reset.mutate(
             { skillId: subject.skillId },
             {
-                onError: (error) => showSkillFailureToast('Reset failed', error),
+                onError: (error) => showSkillFailureToast('Restore failed', error),
                 onSuccess: () => {
                     setResetOpen(false);
-                    toastManager.add({ title: 'Skill reset to default', type: 'success' });
+                    if (closeConflict) {
+                        setConflictOpen(false);
+                    }
+                    toastManager.add({ title: 'Skill restored', type: 'success' });
                 },
             }
         );
+    }
+
+    // Update entry point: hub runs the conflict-gated install flow; plugin/seeded
+    // regenerate via reset, confirming first only when the skill has local edits.
+    function onUpdate() {
+        if (isHubManaged) {
+            runUpdate(false);
+            return;
+        }
+        if (subject.edited) {
+            setConflictOpen(true);
+            return;
+        }
+        runReset();
+    }
+
+    function onConflictReplace() {
+        if (isHubManaged) {
+            runUpdate(true);
+            return;
+        }
+        runReset(true);
     }
 
     function runUninstall() {
@@ -112,13 +150,8 @@ export function SkillDetailActions({
                 />
             ) : null}
             {showUpdate ? (
-                <Button
-                    disabled={install.isPending}
-                    onClick={() => runUpdate(false)}
-                    size="sm"
-                    variant="secondary"
-                >
-                    {install.isPending ? (
+                <Button disabled={mutationBusy} onClick={onUpdate} size="sm" variant="secondary">
+                    {install.isPending || reset.isPending ? (
                         <Spinner className="size-4" />
                     ) : (
                         <Icon icon={RefreshIcon} />
@@ -157,10 +190,10 @@ export function SkillDetailActions({
                         <Icon className="size-4" icon={MoreHorizontalIcon} />
                     </MenuTrigger>
                     <MenuPopup align="end">
-                        {canReset ? (
+                        {canReset && managedSource ? (
                             <MenuItem disabled={mutationBusy} onClick={() => setResetOpen(true)}>
                                 <Icon className="size-4" icon={ArrowReloadHorizontalIcon} />
-                                Reset to default
+                                {resetActionLabel(managedSource)}
                             </MenuItem>
                         ) : null}
                         {canUninstall ? (
@@ -178,19 +211,22 @@ export function SkillDetailActions({
             ) : null}
 
             <UpdateConflictDialog
-                installing={install.isPending}
+                busy={install.isPending || reset.isPending}
                 name={subject.name}
                 onKeep={() => setConflictOpen(false)}
                 onOpenChange={setConflictOpen}
-                onReplace={() => runUpdate(true)}
+                onReplace={onConflictReplace}
                 open={conflictOpen}
+                restoreTarget={restoreTargetLabel(managedSource ?? 'hub')}
             />
             <ResetConfirmDialog
+                actionLabel={resetActionLabel(managedSource ?? 'seeded')}
                 name={subject.name}
-                onConfirm={runReset}
+                onConfirm={() => runReset()}
                 onOpenChange={setResetOpen}
                 open={resetOpen}
                 resetting={reset.isPending}
+                restoreTarget={restoreTargetLabel(managedSource ?? 'seeded')}
             />
         </div>
     );

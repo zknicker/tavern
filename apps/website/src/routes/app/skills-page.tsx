@@ -6,6 +6,7 @@ import { SkillSourcesDialog } from '../../features/skills/skill-sources-dialog.t
 import type { HubEntry } from '../../features/skills/skill-tree-model.ts';
 import { SkillsBrowser } from '../../features/skills/skills-browser.tsx';
 import { SkillsPageSkeleton } from '../../features/skills/skills-page-skeleton.tsx';
+import { useRuntimeManagedFlags } from '../../hooks/skills/use-runtime-managed-flags.ts';
 import { useSkillHubAvailable } from '../../hooks/skills/use-skill-hub-available.ts';
 import { useSkillList } from '../../hooks/skills/use-skill-list.ts';
 
@@ -13,6 +14,7 @@ export function SkillsPage() {
     const [sourcesOpen, setSourcesOpen] = React.useState(false);
     const skillsQuery = useSkillList();
     const availableQuery = useSkillHubAvailable({ enabled: true });
+    const runtimeByName = useRuntimeManagedFlags();
     const skills = skillsQuery.data?.skills ?? [];
     const hubByName = React.useMemo(() => {
         const byName = new Map<string, HubEntry>();
@@ -41,6 +43,7 @@ export function SkillsPage() {
                 availablePending={availableQuery.isPending}
                 hubByName={hubByName}
                 onManageSources={() => setSourcesOpen(true)}
+                runtimeByName={runtimeByName}
                 skills={skills}
             />
             <SkillSourcesDialog onOpenChange={setSourcesOpen} open={sourcesOpen} />

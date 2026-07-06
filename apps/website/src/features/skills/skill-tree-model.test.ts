@@ -85,11 +85,71 @@ test('buildSkillTreeSubjects maps installed and available skills into SKILL.md p
     );
     expect(installedBrowser?.edited).toBe(true);
     expect(installedBrowser?.updateAvailable).toBe(true);
+    expect(installedBrowser?.managedSource).toBe('hub');
 
     const availableBrowser = subjects.find(
         (subject) => subject.treePath === 'Available skills/Built-in library/browser/SKILL.md'
     );
     expect(availableBrowser?.updateAvailable).toBe(true);
+    expect(availableBrowser?.managedSource).toBe('hub');
+});
+
+test('buildSkillTreeSubjects sources managed flags from the runtime summary', () => {
+    const subjects = buildSkillTreeSubjects({
+        hubByName: new Map(),
+        runtimeByName: new Map([
+            ['tavern-agent', { edited: false, managedSource: 'seeded', updateAvailable: true }],
+            ['merchbase', { edited: true, managedSource: 'plugin', updateAvailable: false }],
+        ]),
+        skills: [
+            {
+                allowedTools: null,
+                dependencyState: 'ready',
+                description: 'Seeded agent skill',
+                diagnostic: null,
+                enabled: true,
+                id: 'tavern-agent',
+                missing: { anyBins: [], bins: [], config: [], env: [], os: [] },
+                name: 'tavern-agent',
+                plugin: null,
+                readOnly: false,
+                surface: 'agent',
+                updatedAt: null,
+                usability: 'enabled',
+                version: null,
+            },
+            {
+                allowedTools: null,
+                dependencyState: 'ready',
+                description: 'MerchBase workflow guidance',
+                diagnostic: null,
+                enabled: true,
+                id: 'merchbase',
+                missing: { anyBins: [], bins: [], config: [], env: [], os: [] },
+                name: 'merchbase',
+                plugin: { displayName: 'MerchBase', enabled: true, id: 'merchbase' },
+                readOnly: true,
+                surface: 'agent',
+                updatedAt: null,
+                usability: 'enabled',
+                version: null,
+            },
+        ],
+    });
+
+    const seeded = subjects.find(
+        (subject) => subject.treePath === 'Installed skills/tavern-agent/SKILL.md'
+    );
+    expect(seeded?.managedSource).toBe('seeded');
+    expect(seeded?.updateAvailable).toBe(true);
+    expect(seeded?.edited).toBe(false);
+
+    const plugin = subjects.find(
+        (subject) => subject.treePath === 'Plugin Skills/MerchBase/merchbase/SKILL.md'
+    );
+    expect(plugin?.managedSource).toBe('plugin');
+    expect(plugin?.edited).toBe(true);
+    expect(plugin?.updateAvailable).toBe(false);
 });
 
 test('buildSkillTreeSubjects groups plugin skills under title-case Plugin Skills', () => {
@@ -122,4 +182,5 @@ test('buildSkillTreeSubjects groups plugin skills under title-case Plugin Skills
     expect(subjects.map((subject) => subject.treePath)).toEqual([
         'Plugin Skills/MerchBase/merchbase/SKILL.md',
     ]);
+    expect(subjects[0]?.managedSource).toBe(null);
 });

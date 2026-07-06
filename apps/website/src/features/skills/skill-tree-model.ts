@@ -5,6 +5,7 @@ import type {
 } from '../../lib/trpc.tsx';
 
 type SkillSummary = SkillListOutput['skills'][number];
+export type ManagedSource = 'hub' | 'plugin' | 'seeded';
 export interface HubEntry {
     edited: boolean;
     identifier: string;
@@ -12,6 +13,14 @@ export interface HubEntry {
     updateAvailable: boolean;
 }
 export type HubByName = Map<string, HubEntry>;
+
+/** Runtime-owned managed-skill flags keyed by skill name. */
+export interface RuntimeManagedFlags {
+    edited?: boolean;
+    managedSource?: ManagedSource | null;
+    updateAvailable?: boolean;
+}
+export type RuntimeManagedByName = Map<string, RuntimeManagedFlags>;
 
 export interface SkillTreeSubject {
     dependencyState: SkillSummary['dependencyState'];
@@ -21,6 +30,7 @@ export interface SkillTreeSubject {
     enabled?: boolean;
     identifier: null | string;
     installed: boolean;
+    managedSource: ManagedSource | null;
     name: string;
     plugin: SkillSummary['plugin'];
     readOnly: boolean;
@@ -36,23 +46,39 @@ export interface SkillTreeSubject {
 export function buildSkillTreeSubjects(input: {
     available?: SkillHubAvailableOutput;
     hubByName: HubByName;
+    runtimeByName?: RuntimeManagedByName;
     skills: SkillSummary[];
 }) {
+    const runtimeByName = input.runtimeByName ?? new Map();
     const subjects: SkillTreeSubject[] = [];
 
     for (const skill of input.skills) {
-        subjects.push(installedTreeSubject(skill, input.hubByName));
+        subjects.push(installedTreeSubject(skill, input.hubByName, runtimeByName));
     }
 
     if (input.available) {
         for (const tap of input.available.taps) {
             for (const item of tap.skills) {
-                subjects.push(availableTreeSubject(item, input.skills, input.hubByName, tap.repo));
+                subjects.push(
+                    availableTreeSubject(
+                        item,
+                        input.skills,
+                        input.hubByName,
+                        runtimeByName,
+                        tap.repo
+                    )
+                );
             }
         }
         for (const item of input.available.builtin) {
             subjects.push(
-                availableTreeSubject(item, input.skills, input.hubByName, 'Built-in library')
+                availableTreeSubject(
+                    item,
+                    input.skills,
+                    input.hubByName,
+                    runtimeByName,
+                    'Built-in library'
+                )
             );
         }
     }
@@ -69,18 +95,24 @@ export function buildSkillTreePaths(subjects: SkillTreeSubject[]) {
     return [...paths];
 }
 
-function installedTreeSubject(skill: SkillSummary, hubByName: HubByName): SkillTreeSubject {
+function installedTreeSubject(
+    skill: SkillSummary,
+    hubByName: HubByName,
+    runtimeByName: RuntimeManagedByName
+): SkillTreeSubject {
     const hubEntry = hubByName.get(skill.name);
+    const managed = resolveManagedFlags(runtimeByName.get(skill.name), hubEntry);
     const group = skill.plugin ? `Plugin Skills/${skill.plugin.displayName}` : 'Installed skills';
 
     return {
         dependencyState: skill.dependencyState,
         description: skill.description,
         diagnostic: skill.diagnostic,
-        edited: hubEntry?.edited ?? false,
+        edited: managed.edited,
         enabled: skill.enabled,
         identifier: hubEntry?.identifier ?? null,
         installed: true,
+        managedSource: managed.managedSource,
         name: skill.name,
         plugin: skill.plugin,
         readOnly: skill.readOnly,
@@ -89,7 +121,7 @@ function installedTreeSubject(skill: SkillSummary, hubByName: HubByName): SkillT
         treePath: skillFilePath(group, skill.name),
         trustLevel: skill.plugin ? 'builtin' : narrowTrustLevel(hubEntry?.trustLevel),
         uninstallName: hubEntry ? skill.name : null,
-        updateAvailable: hubEntry?.updateAvailable ?? false,
+        updateAvailable: managed.updateAvailable,
         updatedAt: skill.updatedAt,
     };
 }
@@ -98,21 +130,24 @@ function availableTreeSubject(
     item: SkillHubItemOutput,
     skills: SkillSummary[],
     hubByName: HubByName,
+    runtimeByName: RuntimeManagedByName,
     sourceLabel: string
 ): SkillTreeSubject {
     const installedEntry = hubByName.get(item.name);
     const inventorySkill = installedEntry
         ? skills.find((skill) => skill.name === item.name)
         : undefined;
+    const managed = resolveManagedFlags(runtimeByName.get(item.name), installedEntry);
 
     return {
         dependencyState: inventorySkill?.dependencyState ?? 'unknown',
         description: item.description || inventorySkill?.description || null,
         diagnostic: inventorySkill?.diagnostic ?? null,
-        edited: installedEntry?.edited ?? false,
+        edited: managed.edited,
         enabled: inventorySkill?.enabled,
         identifier: item.identifier,
         installed: installedEntry !== undefined,
+        managedSource: managed.managedSource,
         name: item.name,
         plugin: inventorySkill?.plugin ?? null,
         readOnly: inventorySkill?.readOnly ?? false,
@@ -121,8 +156,23 @@ function availableTreeSubject(
         treePath: skillFilePath(`Available skills/${sourceLabel}`, item.name),
         trustLevel: item.trustLevel,
         uninstallName: installedEntry ? item.name : null,
-        updateAvailable: installedEntry?.updateAvailable ?? false,
+        updateAvailable: managed.updateAvailable,
         updatedAt: inventorySkill?.updatedAt ?? null,
+    };
+}
+
+/**
+ * Prefer runtime-owned managed flags; fall back to the hub entry when the
+ * runtime summary omits a field so hub-installed skills keep working.
+ */
+function resolveManagedFlags(
+    runtime: RuntimeManagedFlags | undefined,
+    hubEntry: HubEntry | undefined
+) {
+    return {
+        edited: runtime?.edited ?? hubEntry?.edited ?? false,
+        managedSource: runtime?.managedSource ?? (hubEntry ? 'hub' : null),
+        updateAvailable: runtime?.updateAvailable ?? hubEntry?.updateAvailable ?? false,
     };
 }
 
