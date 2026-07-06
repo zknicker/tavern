@@ -57,7 +57,7 @@ describe('Google OAuth credentials', () => {
         delete env[googleClientSecretEnv];
         delete env[runtimeAssetsDirEnv];
         const moduleUrl = pathToFileURL(
-            path.join(originalCwd, 'apps/runtime/src/plugins/google-oauth-credentials.ts')
+            path.join(import.meta.dirname, 'google-oauth-credentials.ts')
         ).href;
         const { stdout } = await execFileAsync(
             process.execPath,

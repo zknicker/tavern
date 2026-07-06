@@ -49,6 +49,7 @@ describe('Runtime capabilities store', () => {
             'gateway',
             'memoryWorkers',
             'modelExecution',
+            'plugin.google.calendar',
             'plugin.merchbase',
             'semanticMemory',
             'skills',

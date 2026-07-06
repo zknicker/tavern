@@ -17,9 +17,11 @@ test('buildSkillTreeSubjects maps installed and available skills into SKILL.md p
             ],
             installed: {
                 'official/browser': {
+                    edited: false,
                     name: 'browser',
                     scanVerdict: null,
                     trustLevel: 'builtin',
+                    updateAvailable: false,
                 },
             },
             taps: [

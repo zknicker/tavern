@@ -685,6 +685,7 @@ describe('Memory extraction', () => {
             return {
                 model: { model: 'fast-mini', provider: 'openai' },
                 observations: messages.map((message) => `- [${message.sequence}] noted`).join('\n'),
+                signals: [],
                 usage: {},
             };
         });

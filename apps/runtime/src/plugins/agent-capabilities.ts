@@ -100,7 +100,9 @@ export function readPluginSkillContent(input: {
 
 export function isPluginSkillId(skillId: string) {
     return tavernPluginManifests.some((definition) =>
-        definition.skills.some((skill) => skill.name === skillId)
+        definition.services.some((service) =>
+            service.skills.some((skill) => skill.name === skillId)
+        )
     );
 }
 
