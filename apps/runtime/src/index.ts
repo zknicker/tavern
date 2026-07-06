@@ -1,4 +1,5 @@
 import path from 'node:path';
+import { tavernAgentSkillId } from './agent-engine/skill-library.ts';
 import { refreshRuntimeCapabilities } from './capabilities/store.ts';
 import { dispatch } from './cli/main.ts';
 import { DATA_DIR } from './config.ts';
@@ -26,6 +27,7 @@ import {
 } from './memory/semantic/watcher.ts';
 import { startSkillCuratorScheduler, stopSkillCuratorScheduler } from './skills/curator.ts';
 import { startSkillReviewScheduler, stopSkillReviewScheduler } from './skills/review-queue.ts';
+import { recordSkillSource } from './skills/store.ts';
 import { demoAgentId } from './tavern/development-chat-demo-types.ts';
 import { seedDevelopmentChatDemos } from './tavern/development-chat-demos.ts';
 import { seedDevelopmentSemanticMemoryDemos } from './tavern/development-memory-demos.ts';
@@ -50,6 +52,9 @@ async function main(): Promise<void> {
     ensureRuntimeSchema(db);
     ensureRuntimeJobsSchema(db);
     ensurePrimaryManagedAgent(db);
+    // The lazy seed during instruction prep can run before the DB exists and
+    // skip source recording; without this the seeded skill reads as external.
+    recordSkillSource({ db, skillId: tavernAgentSkillId, source: 'seeded' });
     await runRuntimeDoctor({ db, reason: 'runtime_start' }).catch((err) => {
         log.warn('Runtime Doctor failed during startup', { err });
     });
