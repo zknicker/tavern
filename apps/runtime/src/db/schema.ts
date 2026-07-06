@@ -296,6 +296,30 @@ CREATE INDEX IF NOT EXISTS idx_cron_runs_job_created
 CREATE INDEX IF NOT EXISTS idx_cron_runs_created
   ON cron_runs(created_at DESC);
 
+CREATE TABLE IF NOT EXISTS tasks (
+  id                TEXT PRIMARY KEY,
+  number            INTEGER NOT NULL UNIQUE,
+  kind              TEXT NOT NULL DEFAULT 'task' CHECK (kind IN ('task', 'epic')),
+  title             TEXT NOT NULL,
+  description       TEXT,
+  status            TEXT NOT NULL DEFAULT 'backlog' CHECK (status IN ('backlog', 'todo', 'in_progress', 'done', 'canceled')),
+  priority          TEXT NOT NULL DEFAULT 'none' CHECK (priority IN ('none', 'urgent', 'high', 'medium', 'low')),
+  assignee_kind     TEXT CHECK (assignee_kind IS NULL OR assignee_kind IN ('user', 'agent')),
+  assignee_agent_id TEXT,
+  epic_id           TEXT,
+  labels_json       TEXT NOT NULL DEFAULT '[]',
+  created_at        TEXT NOT NULL,
+  updated_at        TEXT NOT NULL,
+  FOREIGN KEY(epic_id) REFERENCES tasks(id) ON DELETE SET NULL,
+  FOREIGN KEY(assignee_agent_id) REFERENCES agents(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_tasks_status
+  ON tasks(status);
+
+CREATE INDEX IF NOT EXISTS idx_tasks_epic
+  ON tasks(epic_id);
+
 CREATE TABLE IF NOT EXISTS memory_extraction_cursors (
   chat_id                  TEXT NOT NULL,
   agent_participant_id     TEXT NOT NULL,

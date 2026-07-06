@@ -81,6 +81,8 @@ export const agentRuntimeRoutes = {
     cronJobRuns: (id: string) => `/cron-jobs/${id}/runs`,
     cronRun: (id: string) => `/cron-runs/${id}`,
     cronRuns: '/cron-runs',
+    task: (id: string) => `/tasks/${encodeURIComponent(id)}`,
+    tasks: '/tasks',
     events: '/events',
     chatMessages: (chatId: string) => `/agent/chats/${chatId}/messages`,
     chatAgentSessionCurrent: (chatId: string) =>

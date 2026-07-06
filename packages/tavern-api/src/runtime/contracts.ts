@@ -1784,6 +1784,69 @@ export const agentRuntimeCronRunListSchema = z.object({
     runs: z.array(agentRuntimeCronRunSchema),
 });
 
+export const agentRuntimeTaskKindSchema = z.enum(['task', 'epic']);
+
+export const agentRuntimeTaskStatusSchema = z.enum([
+    'backlog',
+    'todo',
+    'in_progress',
+    'done',
+    'canceled',
+]);
+
+export const agentRuntimeTaskPrioritySchema = z.enum(['none', 'urgent', 'high', 'medium', 'low']);
+
+export const agentRuntimeTaskAssigneeSchema = z.union([
+    z.object({
+        kind: z.literal('user'),
+    }),
+    z.object({
+        agentId: z.string().trim().min(1),
+        kind: z.literal('agent'),
+    }),
+]);
+
+export const agentRuntimeTaskSchema = z.object({
+    assignee: agentRuntimeTaskAssigneeSchema.nullable(),
+    createdAt: z.string().datetime(),
+    description: z.string().nullable(),
+    epicId: z.string().trim().min(1).nullable(),
+    id: z.string().trim().min(1),
+    kind: agentRuntimeTaskKindSchema,
+    labels: z.array(z.string().trim().min(1)),
+    number: z.number().int().positive(),
+    priority: agentRuntimeTaskPrioritySchema,
+    status: agentRuntimeTaskStatusSchema,
+    title: z.string().trim().min(1),
+    updatedAt: z.string().datetime(),
+});
+
+export const agentRuntimeTaskListSchema = z.object({
+    tasks: z.array(agentRuntimeTaskSchema),
+});
+
+export const agentRuntimeCreateTaskSchema = z.object({
+    assignee: agentRuntimeTaskAssigneeSchema.nullable().optional(),
+    description: z.string().trim().min(1).nullable().optional(),
+    epicId: z.string().trim().min(1).nullable().optional(),
+    id: z.string().trim().min(1),
+    kind: agentRuntimeTaskKindSchema.optional(),
+    labels: z.array(z.string().trim().min(1)).optional(),
+    priority: agentRuntimeTaskPrioritySchema.optional(),
+    status: agentRuntimeTaskStatusSchema.optional(),
+    title: z.string().trim().min(1),
+});
+
+export const agentRuntimeUpdateTaskSchema = z.object({
+    assignee: agentRuntimeTaskAssigneeSchema.nullable().optional(),
+    description: z.string().trim().min(1).nullable().optional(),
+    epicId: z.string().trim().min(1).nullable().optional(),
+    labels: z.array(z.string().trim().min(1)).optional(),
+    priority: agentRuntimeTaskPrioritySchema.optional(),
+    status: agentRuntimeTaskStatusSchema.optional(),
+    title: z.string().trim().min(1).optional(),
+});
+
 export const agentRuntimeFrontendSchema = z.enum(['cli', 'discord', 'sdk', 'tavern', 'telegram']);
 
 export const agentRuntimeAgentSessionStatusSchema = z.enum(['active', 'archived', 'stopped']);
@@ -2269,6 +2332,8 @@ export const agentRuntimeEventTypeSchema = z.enum([
     'cron.deleted',
     'cron.runStarted',
     'cron.runFinished',
+    'task.updated',
+    'task.deleted',
     'memoryJob.updated',
     'semanticMemory.changed',
     'turn.started',
@@ -2363,6 +2428,18 @@ export const agentRuntimeCronDeletedEventSchema = z.object({
     cronJobId: z.string().trim().min(1),
     timestamp: z.string().datetime(),
     type: z.literal('cron.deleted'),
+});
+
+export const agentRuntimeTaskUpdatedEventSchema = z.object({
+    taskId: z.string().trim().min(1),
+    timestamp: z.string().datetime(),
+    type: z.literal('task.updated'),
+});
+
+export const agentRuntimeTaskDeletedEventSchema = z.object({
+    taskId: z.string().trim().min(1),
+    timestamp: z.string().datetime(),
+    type: z.literal('task.deleted'),
 });
 
 export const agentRuntimeCronRunStartedEventSchema = z.object({
@@ -2497,6 +2574,8 @@ export const agentRuntimeEventSchema = z.discriminatedUnion('type', [
     agentRuntimeCronDeletedEventSchema,
     agentRuntimeCronRunStartedEventSchema,
     agentRuntimeCronRunFinishedEventSchema,
+    agentRuntimeTaskUpdatedEventSchema,
+    agentRuntimeTaskDeletedEventSchema,
     agentRuntimeMemoryJobUpdatedEventSchema,
     agentRuntimeSemanticMemoryChangedEventSchema,
     agentRuntimeCapabilityUpdatedEventSchema,
@@ -2894,3 +2973,11 @@ export type AgentRuntimeTurnStartedEvent = z.infer<typeof agentRuntimeTurnStarte
 export type AgentRuntimeUpsertBinding = z.infer<typeof agentRuntimeUpsertBindingSchema>;
 export type AgentRuntimeUpdateAgent = z.infer<typeof agentRuntimeUpdateAgentSchema>;
 export type AgentRuntimeUpdateCron = z.infer<typeof agentRuntimeUpdateCronSchema>;
+export type AgentRuntimeTask = z.infer<typeof agentRuntimeTaskSchema>;
+export type AgentRuntimeTaskAssignee = z.infer<typeof agentRuntimeTaskAssigneeSchema>;
+export type AgentRuntimeTaskKind = z.infer<typeof agentRuntimeTaskKindSchema>;
+export type AgentRuntimeTaskList = z.infer<typeof agentRuntimeTaskListSchema>;
+export type AgentRuntimeTaskPriority = z.infer<typeof agentRuntimeTaskPrioritySchema>;
+export type AgentRuntimeTaskStatus = z.infer<typeof agentRuntimeTaskStatusSchema>;
+export type AgentRuntimeCreateTask = z.infer<typeof agentRuntimeCreateTaskSchema>;
+export type AgentRuntimeUpdateTask = z.infer<typeof agentRuntimeUpdateTaskSchema>;

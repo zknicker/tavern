@@ -22,6 +22,7 @@ import {
 } from '../agent-engine/skill-library.ts';
 import { readConfigValue } from '../config.ts';
 import { createTavernCronTools } from '../cron/agent-tools.ts';
+import { createTavernTaskTools } from '../tasks/agent-tools.ts';
 import { isRuntimeCronReady } from '../cron/manager-state.ts';
 import { createTavernMemoryTools } from '../memory/agent-tools.ts';
 import { isMemoryEnabled } from '../memory/settings.ts';
@@ -251,6 +252,7 @@ function createHarnessAgent(
         }),
         ...(isMemoryEnabled() ? createTavernMemoryTools() : {}),
         ...(isRuntimeCronReady() ? createTavernCronTools({ agentId: input.agent.id }) : {}),
+        ...createTavernTaskTools({ agentId: input.agent.id }),
         ...createTavernSkillTools({ agentId: input.agent.id }),
         ...createGoogleToolsForAgent(input.agent),
         ...createMerchbaseToolsForAgent(input.agent),

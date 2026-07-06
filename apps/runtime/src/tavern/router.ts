@@ -23,6 +23,7 @@ import { resetRuntimeSkillToDefault } from '../agent-engine/skill-library.ts';
 import { handleToolSetupRequest } from '../agent-engine/tool-setup-routes.ts';
 import { handleRuntimeCapabilitiesRequest } from '../capabilities/routes.ts';
 import { handleCronRequest } from '../cron/routes.ts';
+import { handleTasksRequest } from '../tasks/routes.ts';
 import { handleRuntimeJobsRequest } from '../jobs/routes.ts';
 import { listMacApps } from '../mac-apps/inventory.ts';
 import { handleMemoryRequest } from '../memory/routes.ts';
@@ -84,6 +85,11 @@ export async function handleTavernRuntimeRequest(request: Request): Promise<Resp
     const cronResponse = await handleCronRequest(request);
     if (cronResponse) {
         return cronResponse;
+    }
+
+    const tasksResponse = await handleTasksRequest(request);
+    if (tasksResponse) {
+        return tasksResponse;
     }
 
     const modelProviderResponse = await handleModelProviderRequest(request);
