@@ -10,6 +10,7 @@ import type { CronGetOutput, CronRunsOutput } from '../../lib/trpc.tsx';
 import { CronEditorScheduleFields } from './cron-editor-schedule-fields.tsx';
 import type { CronFormState } from './cron-form.ts';
 import { CronRunHistoryList } from './cron-run-history-list.tsx';
+import { CronAgentField } from './editor/cron-agent-field.tsx';
 import { CronDeliveryFields } from './editor/cron-delivery-fields.tsx';
 import { CronSectionHeader } from './editor/cron-section.tsx';
 import { CronSelectRow } from './editor/cron-select-field.tsx';
@@ -67,8 +68,10 @@ export function CronEditorSidebar({
     const agentOptions = useMemo(
         () =>
             (agentsQuery.data?.agents ?? []).map((agent) => ({
-                label: agent.name,
-                value: agent.id,
+                character: agent.effectiveCharacter,
+                id: agent.id,
+                name: agent.name,
+                primaryColor: agent.effectivePrimaryColor,
             })),
         [agentsQuery.data?.agents]
     );
@@ -128,12 +131,9 @@ export function CronEditorSidebar({
                     <SidebarSection title="Delivery">
                         <form.Field name="agentId">
                             {(field) => (
-                                <CronSelectRow
-                                    emptyText="No agents synced"
-                                    label="Agent"
+                                <CronAgentField
                                     onValueChange={field.handleChange}
                                     options={agentOptions}
-                                    placeholder="Select an agent"
                                     value={field.state.value}
                                 />
                             )}
