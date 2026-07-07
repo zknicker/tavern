@@ -291,7 +291,7 @@ export function SelectContent({
                                             width: selectedRect.width,
                                             height: selectedRect.height,
                                         }}
-                                        className="pointer-events-none absolute rounded-lg bg-active"
+                                        className="pointer-events-none absolute rounded-[10px] bg-active"
                                         data-slot="select-selected-background"
                                         exit={{
                                             opacity: 0,
@@ -315,7 +315,7 @@ export function SelectContent({
                                             width: activeRect.width,
                                             height: activeRect.height,
                                         }}
-                                        className="pointer-events-none absolute rounded-lg bg-hover"
+                                        className="pointer-events-none absolute rounded-[10px] bg-hover"
                                         data-slot="select-hover-background"
                                         exit={{ opacity: 0, transition: springs.fast }}
                                         initial={{
@@ -352,7 +352,7 @@ export function SelectItem({
     return (
         <SelectPrimitive.Item
             className={cn(
-                "relative z-10 grid min-h-8 in-data-[side=none]:min-w-[calc(var(--anchor-width)+1.25rem)] cursor-default grid-cols-[1rem_1fr] items-center gap-2 rounded-lg py-2 ps-2 pe-4 text-[13px] outline-none transition-colors duration-80 data-disabled:pointer-events-none data-highlighted:text-foreground data-selected:text-foreground data-disabled:opacity-50 [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+                "relative z-10 grid min-h-8 in-data-[side=none]:min-w-[calc(var(--anchor-width)+1.25rem)] cursor-default grid-cols-[1rem_1fr] items-center gap-2 rounded-[10px] py-2 ps-2 pe-4 text-[13px] outline-none transition-colors duration-80 data-disabled:pointer-events-none data-highlighted:text-foreground data-selected:text-foreground data-disabled:opacity-50 [&_svg:not([class*='size-'])]:size-4 [&_svg]:pointer-events-none [&_svg]:shrink-0",
                 className
             )}
             data-slot="select-item"
