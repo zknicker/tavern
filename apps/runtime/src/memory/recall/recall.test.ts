@@ -118,6 +118,28 @@ describe('memory recall', () => {
     );
 
     it.skipIf(!embeddingModelCached)(
+        'reports drift when pages change behind the recall index',
+        async () => {
+            await refreshRecallIndex();
+
+            await writeFile(
+                path.join(memoryRoot, 'new-page.md'),
+                ['---', 'summary: A page added after the last refresh', '---', '# New Page'].join(
+                    '\n'
+                )
+            );
+
+            const [capability] = await refreshRuntimeCapabilities({ ids: ['memoryRecall'] });
+            expect(capability).toMatchObject({
+                id: 'memoryRecall',
+                metadata: { pendingEmbeddings: 1, totalPages: 3 },
+                reason: 'Indexing 1 changed page for recall.',
+                state: 'degraded',
+            });
+        }
+    );
+
+    it.skipIf(!embeddingModelCached)(
         'recalls pages for natural-language queries once embedded',
         async () => {
             await refreshRecallIndex();

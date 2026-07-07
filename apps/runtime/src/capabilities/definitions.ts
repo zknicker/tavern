@@ -17,7 +17,7 @@ import {
 import { AGENT_WORKSPACE } from '../config.ts';
 import { isRuntimeCronReady } from '../cron/scheduler.ts';
 import { getDb, hasTable } from '../db/connection.ts';
-import { getRecallProvisioningStatus } from '../memory/recall/recall-index.ts';
+import { auditRecallIndex, getRecallProvisioningStatus } from '../memory/recall/recall-index.ts';
 import { resolveSemanticMemoryConfig } from '../memory/semantic/store.ts';
 import { isMemoryEnabled } from '../memory/settings.ts';
 import { loadVaultBackedCodexCredentials } from '../model-access/codex-settings.ts';
@@ -292,7 +292,9 @@ async function checkSemanticMemoryCapability(): Promise<RuntimeCapabilityCheckRe
 // Per-turn recall readiness: the recall index over Semantic Memory pages plus
 // its locally provisioned embedding model. Progress rides capability metadata
 // so the app can render a provisioning bar without a contract shape change.
-function checkMemoryRecallCapability(): RuntimeCapabilityCheckResult {
+// The ready-state check is an active drift audit: recall that silently fell
+// behind the pages (lost watcher events) reports pending work, not healthy.
+async function checkMemoryRecallCapability(): Promise<RuntimeCapabilityCheckResult> {
     if (!isMemoryEnabled()) {
         return {
             reason: 'Memory is off.',
@@ -309,7 +311,7 @@ function checkMemoryRecallCapability(): RuntimeCapabilityCheckResult {
 
     switch (status.phase) {
         case 'ready':
-            return { metadata, state: 'healthy' };
+            return await auditReadyMemoryRecall(metadata);
         case 'downloading-model':
             return {
                 metadata,
@@ -341,6 +343,34 @@ function checkMemoryRecallCapability(): RuntimeCapabilityCheckResult {
                 reason: 'Recall has not been provisioned yet.',
                 state: 'degraded',
             };
+    }
+}
+
+async function auditReadyMemoryRecall(
+    metadata: Record<string, unknown>
+): Promise<RuntimeCapabilityCheckResult> {
+    try {
+        const audit = await auditRecallIndex();
+        const auditMetadata = {
+            ...metadata,
+            pendingEmbeddings: audit.pendingEmbeddings,
+            totalPages: audit.totalPages,
+        };
+        if (audit.pendingEmbeddings > 0) {
+            return {
+                metadata: auditMetadata,
+                reason: `Indexing ${audit.pendingEmbeddings} changed ${audit.pendingEmbeddings === 1 ? 'page' : 'pages'} for recall.`,
+                state: 'degraded',
+            };
+        }
+        return { metadata: auditMetadata, state: 'healthy' };
+    } catch (error) {
+        return {
+            metadata,
+            reason: 'Recall index could not be audited.',
+            state: 'degraded',
+            technicalMessage: error instanceof Error ? error.message : String(error),
+        };
     }
 }
 

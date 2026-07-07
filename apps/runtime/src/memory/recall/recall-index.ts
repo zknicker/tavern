@@ -97,6 +97,33 @@ export async function updateRecallIndex() {
     await store.update();
 }
 
+export interface RecallIndexAudit {
+    pendingEmbeddings: number;
+    totalPages: number;
+    vectorIndexReady: boolean;
+}
+
+/**
+ * Drift audit for the capability check: re-scan the Memory root (hash-diff,
+ * cheap) and report pages the vector index has not embedded yet. Lost watcher
+ * events therefore surface as visible pending work within one capability poll
+ * instead of silently stale recall — and the audit schedules the healing
+ * refresh itself.
+ */
+export async function auditRecallIndex(): Promise<RecallIndexAudit> {
+    const store = await ensureRecallStore();
+    await store.update();
+    const status = await store.getStatus();
+    if (status.needsEmbedding > 0) {
+        scheduleRecallRefresh();
+    }
+    return {
+        pendingEmbeddings: status.needsEmbedding,
+        totalPages: status.totalDocuments,
+        vectorIndexReady: status.hasVectorIndex,
+    };
+}
+
 /**
  * Re-scan pages and refresh embeddings. Embedding failures (for example the
  * model download failing offline) degrade recall to unavailable instead of
