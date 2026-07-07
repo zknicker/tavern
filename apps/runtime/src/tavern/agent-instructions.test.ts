@@ -12,6 +12,7 @@ import { ensureRuntimeSchema } from '../db/schema.ts';
 import { handleMemorySettingsRequest } from '../memory/settings.ts';
 import type { AgentExecutorInput } from './agent-executor.ts';
 import { buildAgentInstructions } from './agent-instructions.ts';
+import { createChat } from './chat-api/index.ts';
 
 const now = '2026-06-29T12:00:00.000Z';
 
@@ -91,6 +92,37 @@ describe('agent instructions', () => {
         expect(instructions).toContain('Chat tools:');
         expect(instructions).toContain('- chat_messages_list:');
         expect(instructions).toContain('Memory tools (shared durable knowledge)');
+    });
+
+    it('describes the chat kind and participant roster with the agent marked', async () => {
+        createChat({
+            id: 'cht_general',
+            kind: 'channel',
+            participants: [
+                { id: 'usr_tavern', kind: 'user', label: 'You', metadata: {} },
+                {
+                    id: 'agt_primary',
+                    kind: 'agent',
+                    label: 'Blippy',
+                    metadata: { agentId: 'agt_primary' },
+                },
+                {
+                    id: 'agt_tiny',
+                    kind: 'agent',
+                    label: 'Tiny',
+                    metadata: { agentId: 'agt_tiny' },
+                },
+            ],
+            title: 'general',
+        });
+
+        const instructions = await buildAgentInstructions(
+            executorInput({ workspaceFolder: workspaceDir }),
+            { db: getDb(), skillsDir }
+        );
+
+        expect(instructions).toContain('This is the "general" channel.');
+        expect(instructions).toContain('Participants: Blippy (you), Tiny (agent), You');
     });
 
     it('keeps Memory tool guidance out of the instructions when Memory is disabled', async () => {
