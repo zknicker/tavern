@@ -147,6 +147,48 @@ describe('agent instructions', () => {
         expect(instructions).not.toContain('memory_search');
     });
 
+    it('nudges agents to capture and maintain skills', async () => {
+        const instructions = await buildAgentInstructions(
+            executorInput({ workspaceFolder: workspaceDir }),
+            { db: getDb(), skillsDir }
+        );
+
+        expect(instructions).toContain('save the approach as a skill');
+        expect(instructions).toContain('patch it immediately');
+    });
+
+    it('adds tool-use enforcement and execution discipline for gpt-family models', async () => {
+        const instructions = await buildAgentInstructions(
+            executorInput({ workspaceFolder: workspaceDir }, 'gpt-5.5'),
+            { db: getDb(), skillsDir }
+        );
+
+        expect(instructions).toContain('## Tool-Use Enforcement');
+        expect(instructions).toContain('## Execution Discipline');
+        expect(instructions).not.toContain('## Operational Directives');
+    });
+
+    it('adds Google operational directives for gemini models', async () => {
+        const instructions = await buildAgentInstructions(
+            executorInput({ workspaceFolder: workspaceDir }, 'gemini-2.5-pro'),
+            { db: getDb(), skillsDir }
+        );
+
+        expect(instructions).toContain('## Tool-Use Enforcement');
+        expect(instructions).toContain('## Operational Directives');
+        expect(instructions).not.toContain('## Execution Discipline');
+    });
+
+    it('adds no model steering for claude models', async () => {
+        const instructions = await buildAgentInstructions(
+            executorInput({ workspaceFolder: workspaceDir }, 'claude-opus-4-8'),
+            { db: getDb(), skillsDir }
+        );
+
+        expect(instructions).not.toContain('## Tool-Use Enforcement');
+        expect(instructions).not.toContain('## Execution Discipline');
+    });
+
     it('keeps assigned skills out of the AI SDK instruction text', async () => {
         const instructions = await buildAgentInstructions(
             executorInput({
@@ -187,7 +229,10 @@ describe('agent instructions', () => {
     });
 });
 
-function executorInput(agentOverrides: Partial<AgentRuntimeAgent> = {}): AgentExecutorInput {
+function executorInput(
+    agentOverrides: Partial<AgentRuntimeAgent> = {},
+    model = 'gpt-4.1-mini'
+): AgentExecutorInput {
     return {
         agent: {
             enabledSkillIds: [],
@@ -204,7 +249,7 @@ function executorInput(agentOverrides: Partial<AgentRuntimeAgent> = {}): AgentEx
             archivedAt: null,
             chatId: 'cht_general',
             createdAt: now,
-            effectiveModel: { model: 'gpt-4.1-mini', provider: 'openai' },
+            effectiveModel: { model, provider: 'openai' },
             generation: 1,
             id: 'ags_cht_general_agt_primary_1',
             promptContextSequence: 0,

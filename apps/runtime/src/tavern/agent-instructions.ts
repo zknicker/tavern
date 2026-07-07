@@ -6,6 +6,7 @@ import { isMemoryEnabled } from '../memory/settings.ts';
 import type { AgentExecutorInput } from './agent-executor.ts';
 import { getStoredAgent } from './agents-store.ts';
 import { getChat } from './chat-api/index.ts';
+import { modelOperationalInstructions } from './model-instructions.ts';
 
 export interface BuildAgentInstructionOptions {
     db?: Database;
@@ -21,7 +22,14 @@ export async function buildAgentInstructions(
         seedSkills: options.seedSkills,
         skillsDir: options.skillsDir,
     });
-    return [prepared.content, tavernChatInstructions(input)].join('\n\n');
+    const sections = [
+        prepared.content,
+        modelOperationalInstructions(input.agentSession.effectiveModel, {
+            memoryEnabled: isMemoryEnabled(),
+        }),
+        tavernChatInstructions(input),
+    ].filter((section): section is string => Boolean(section));
+    return sections.join('\n\n');
 }
 
 // Static per-session guidance lives here instead of the per-turn prompt so a
