@@ -17,6 +17,12 @@ Memory is one Tavern feature with layered storage:
 * **Semantic Memory.** Shared durable knowledge lives in Markdown pages users
   can inspect and edit through the Memory page. `TAXONOMY.md` routes where
   shared knowledge belongs.
+* **Memory recall index.** A derived, rebuildable search index over Semantic
+  Memory pages powers per-turn recall and `memory_search` with keyword and
+  semantic matching. Semantic matching uses a local embedding model provisioned
+  on first index refresh while Memory is enabled; until it is provisioned,
+  recall degrades to keyword search and per-turn recall stays off. The
+  Markdown pages remain canonical; deleting the index only forces a rebuild.
 
 There is no shared `USER.md` or shared `MEMORY.md`. Agents only update their
 own core memory files. Shared project, person, company, domain, and concept

@@ -16,8 +16,12 @@ Managed Tavern context does not use Lossless Claw. Runtime strips stale
 
 * Runtime injects generated agent instructions and, when Memory is enabled, the
   agent workspace `USER.md` and `MEMORY.md` core memory files.
-* Runtime may retrieve relevant shared Semantic Memory material for bounded
-  prompt context.
+* Runtime retrieves relevant shared Semantic Memory pages for bounded prompt
+  context: each turn's triggering message runs a semantic search over the
+  Memory recall index, and up to three pages above the relevance floor are
+  injected as a clearly-labeled recalled-context block (background context, not
+  user input, capped snippets). No hits, disabled Memory, or unprovisioned
+  recall models inject nothing. Recall never fails a turn.
 * The harness session owns prior user-agent turn history. Runtime does not
   replay a rolling Tavern transcript into every turn.
 * Runtime always includes the triggering Tavern message once.

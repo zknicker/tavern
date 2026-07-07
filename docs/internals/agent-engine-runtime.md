@@ -87,6 +87,14 @@ turn starts; mid-turn activity rows reference it.
 The prompt contains the current Tavern message plus bounded ambient channel
 context since the Agent session's `promptContextSequence`; it does not replay
 the prior user-agent transcript because the harness session owns that history.
+When Memory is enabled and the recall index is provisioned, the prompt also
+carries a recalled-Memory block: the triggering message runs a vector search
+over the qmd-backed recall index (`apps/runtime/src/memory/recall/`), and up to
+three pages above the relevance floor inject as labeled background context.
+qmd loads at runtime via dynamic import — its native modules cannot compile
+into the single-file Runtime binary — resolving the workspace package in dev
+and the artifact-staged copy under `share/tavern/node_modules` when packaged
+(`TAVERN_RUNTIME_QMD_PATH` overrides).
 Each turn prompt is time-anchored with the current time, and every included
 message carries its created-at timestamp. Static per-session guidance — the
 chat id, the staleness policy, and Tavern chat/Memory/automation tool
