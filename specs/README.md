@@ -18,7 +18,7 @@ agent-engine implementation choices directly.
 
 - Write specs in present tense.
 - Use Tavern product nouns: `agent`, `chat`, `message`, `response`, `activity`, `artifact`,
-  `session`, `cron`, `participant`, `job`.
+  `session`, `cron`, `participant`, `job`, `task`.
 - Keep obsolete migration history and research notes out of `specs/`. Durable architecture specs
   can include migration phases and open questions while a design is in flight.
 - Update `packages/tavern-api` when a cross-boundary first-party contract changes.
