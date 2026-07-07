@@ -258,6 +258,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/turns/{run_id}/prompt": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get the prompt evidence captured for one agent turn. */
+        get: operations["getTurnPrompt"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/events": {
         parameters: {
             query?: never;
@@ -303,6 +320,20 @@ export interface components {
         ChatId: string;
         MessageId: string;
         ResponseId: string;
+        TurnPromptRecallHit: {
+            path: string;
+            title: string;
+            score: number;
+            snippet: string;
+        };
+        TurnPromptEvidence: {
+            run_id: components["schemas"]["RunId"];
+            /** Format: date-time */
+            captured_at: string;
+            instructions: string;
+            prompt: string;
+            recall: components["schemas"]["TurnPromptRecallHit"][];
+        };
         ActivityId: string;
         ArtifactId: string;
         ParticipantId: string;
@@ -635,6 +666,7 @@ export interface components {
     };
     parameters: {
         ChatId: components["schemas"]["ChatId"];
+        RunId: components["schemas"]["RunId"];
         Cursor: string;
         Limit: number;
         MessageId: components["schemas"]["MessageId"];
@@ -1153,6 +1185,29 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["DeleteMessageReceipt"];
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    getTurnPrompt: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: components["parameters"]["RunId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Turn prompt evidence. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TurnPromptEvidence"];
                 };
             };
             default: components["responses"]["Error"];

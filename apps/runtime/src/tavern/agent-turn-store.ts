@@ -117,6 +117,51 @@ export function createAgentTurn(
     return getAgentTurnOrThrow(input.id, db);
 }
 
+export interface AgentTurnPromptEvidence {
+    capturedAt: string;
+    instructions: string;
+    prompt: string;
+    recall: Array<{ path: string; score: number; snippet: string; title: string }>;
+}
+
+/**
+ * Durable record of exactly what one turn's model call received: composed
+ * instructions, the per-turn prompt, and the Memory recall hits injected into
+ * it. Written at turn start so evidence survives crashed turns; read by the
+ * turn-prompt inspection route.
+ */
+export function recordAgentTurnPromptEvidence(
+    input: { evidence: AgentTurnPromptEvidence; id: string; now?: string },
+    db: Database = getDb()
+) {
+    const turn = getAgentTurnOrThrow(input.id, db);
+    const now = input.now ?? new Date().toISOString();
+    db.prepare(
+        `UPDATE agent_turns
+         SET metadata_json = $metadataJson,
+             updated_at = $now
+         WHERE id = $id`
+    ).run(
+        namedParams({
+            id: input.id,
+            metadataJson: JSON.stringify({ ...turn.metadata, promptEvidence: input.evidence }),
+            now,
+        })
+    );
+}
+
+export function getAgentTurnPromptEvidence(
+    id: string,
+    db: Database = getDb()
+): AgentTurnPromptEvidence | null {
+    const turn = getAgentTurn(id, db);
+    const evidence = turn?.metadata.promptEvidence;
+    if (!evidence || typeof evidence !== 'object' || Array.isArray(evidence)) {
+        return null;
+    }
+    return evidence as unknown as AgentTurnPromptEvidence;
+}
+
 export function getAgentTurn(id: string, db: Database = getDb()) {
     const row = db
         .prepare('SELECT * FROM agent_turns WHERE id = $id LIMIT 1')

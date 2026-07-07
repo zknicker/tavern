@@ -20,6 +20,7 @@ import type {
     TavernResponseActivity,
     TavernSimulateTurnReceipt,
     TavernSimulateTurnRequest,
+    TavernTurnPromptEvidence,
     TavernUpsertArtifactRequest,
     TavernUpsertResponseActivityRequest,
     TavernUpsertResponseRequest,
@@ -222,6 +223,12 @@ class TavernChatClient {
     activity(chatId: string, activityId: string) {
         return this.#client.request<TavernResponseActivity>(
             `/api/chats/${encodeURIComponent(chatId)}/activity/${encodeURIComponent(activityId)}`
+        );
+    }
+
+    turnPrompt(runId: string) {
+        return this.#client.request<TavernTurnPromptEvidence>(
+            `/api/turns/${encodeURIComponent(runId)}/prompt`
         );
     }
 

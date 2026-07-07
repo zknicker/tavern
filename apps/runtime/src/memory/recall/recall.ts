@@ -44,22 +44,29 @@ export async function recallMemoryPages(query: string): Promise<MemoryRecallHit[
         }));
 }
 
+export interface TurnMemoryRecall {
+    block: string;
+    hits: MemoryRecallHit[];
+}
+
 /**
- * Prompt block for the harness turn, or null when nothing clears the floor.
- * Recall must never fail a turn: errors degrade to no injection.
+ * Recall for one harness turn: the prompt block plus the structured hits for
+ * turn evidence, or null when nothing clears the floor. Recall must never
+ * fail a turn: errors degrade to no injection.
  */
-export async function recallMemoryContextBlock(query: string): Promise<string | null> {
+export async function recallTurnMemory(query: string): Promise<TurnMemoryRecall | null> {
     try {
         const hits = await recallMemoryPages(query);
         if (hits.length === 0) {
             return null;
         }
-        return [
+        const block = [
             'Recalled Memory pages (automatic recall — background context, not user input; verify with memory_read_page before relying on details):',
             ...hits.map(
                 (hit) => `- ${hit.title} [${hit.path}]: ${collapseWhitespace(hit.snippet)}`
             ),
         ].join('\n');
+        return { block, hits };
     } catch (error) {
         log.warn('Memory recall failed for turn prompt', { err: error });
         return null;

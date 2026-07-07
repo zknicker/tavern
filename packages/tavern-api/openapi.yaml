@@ -434,6 +434,22 @@ paths:
                 $ref: '#/components/schemas/DeleteMessageReceipt'
         default:
           $ref: '#/components/responses/Error'
+  /api/turns/{run_id}/prompt:
+    get:
+      operationId: getTurnPrompt
+      tags: [Chats]
+      summary: Get the prompt evidence captured for one agent turn.
+      parameters:
+        - $ref: '#/components/parameters/RunId'
+      responses:
+        '200':
+          description: Turn prompt evidence.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TurnPromptEvidence'
+        default:
+          $ref: '#/components/responses/Error'
   /api/events:
     get:
       operationId: listEvents
@@ -487,6 +503,12 @@ components:
       required: true
       schema:
         $ref: '#/components/schemas/ChatId'
+    RunId:
+      name: run_id
+      in: path
+      required: true
+      schema:
+        $ref: '#/components/schemas/RunId'
     Cursor:
       name: cursor
       in: query
@@ -538,6 +560,46 @@ components:
     ResponseId:
       type: string
       pattern: '^rsp_[A-Za-z0-9_-]+$'
+    TurnPromptRecallHit:
+      type: object
+      additionalProperties: false
+      required:
+        - path
+        - title
+        - score
+        - snippet
+      properties:
+        path:
+          type: string
+        title:
+          type: string
+        score:
+          type: number
+        snippet:
+          type: string
+    TurnPromptEvidence:
+      type: object
+      additionalProperties: false
+      required:
+        - run_id
+        - captured_at
+        - instructions
+        - prompt
+        - recall
+      properties:
+        run_id:
+          $ref: '#/components/schemas/RunId'
+        captured_at:
+          type: string
+          format: date-time
+        instructions:
+          type: string
+        prompt:
+          type: string
+        recall:
+          type: array
+          items:
+            $ref: '#/components/schemas/TurnPromptRecallHit'
     ActivityId:
       type: string
       pattern: '^act_[A-Za-z0-9_-]+$'

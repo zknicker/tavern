@@ -23,8 +23,9 @@ import {
 import { readConfigValue } from '../config.ts';
 import { createTavernCronTools } from '../cron/agent-tools.ts';
 import { isRuntimeCronReady } from '../cron/manager-state.ts';
+import { log } from '../log.ts';
 import { createTavernMemoryTools } from '../memory/agent-tools.ts';
-import { recallMemoryContextBlock } from '../memory/recall/recall.ts';
+import { recallTurnMemory } from '../memory/recall/recall.ts';
 import { isMemoryEnabled } from '../memory/settings.ts';
 import { createGoogleToolsForAgent } from '../plugins/google-tools.ts';
 import { createMerchbaseToolsForAgent } from '../plugins/merchbase-tools.ts';
@@ -39,6 +40,7 @@ import {
 import type { AgentExecutor, AgentExecutorInput } from './agent-executor.ts';
 import { buildAgentInstructions } from './agent-instructions.ts';
 import { updateAgentSessionRuntimeState } from './agent-session-store.ts';
+import { recordAgentTurnPromptEvidence } from './agent-turn-store.ts';
 import {
     createDelivery,
     getChat,
@@ -98,7 +100,21 @@ async function executeHarnessTurn(
 
     const instructions = await buildAgentInstructions(input);
     const skills = await readHarnessAgentSkills(input);
-    const recallContext = await recallMemoryContextBlock(input.content);
+    const recall = await recallTurnMemory(input.content);
+    const prompt = harnessPrompt(input, recall?.block);
+    try {
+        recordAgentTurnPromptEvidence({
+            evidence: {
+                capturedAt: startedAt,
+                instructions,
+                prompt,
+                recall: recall?.hits ?? [],
+            },
+            id: input.runId,
+        });
+    } catch (error) {
+        log.warn('Turn prompt evidence was not recorded', { err: error, runId: input.runId });
+    }
     const agent = harnessAgentFactory(input, createLocalTrustedSandboxProvider, {
         instructions,
         skills,
@@ -118,7 +134,7 @@ async function executeHarnessTurn(
 
         const turn = await agent.stream({
             abortSignal,
-            prompt: harnessPrompt(input, recallContext),
+            prompt,
             session,
         });
         turnStream = await persistHarnessTurnStream(

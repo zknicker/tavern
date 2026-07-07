@@ -7,6 +7,7 @@ import type {
     TavernUpsertResponseActivityRequest,
     TavernUpsertResponseRequest,
 } from '@tavern/api';
+import { getAgentTurnPromptEvidence } from './agent-turn-store';
 import {
     clearChat,
     createChat,
@@ -185,6 +186,21 @@ async function route(request: Request, url: URL): Promise<Response> {
     const responseMatch = url.pathname.match(/^\/api\/responses\/([^/]+)$/u);
     if (responseMatch && request.method === 'DELETE') {
         return json(deleteResponse(decodeURIComponent(responseMatch[1])));
+    }
+
+    const turnPromptMatch = url.pathname.match(/^\/api\/turns\/([^/]+)\/prompt$/u);
+    if (turnPromptMatch && request.method === 'GET') {
+        const runId = decodeURIComponent(turnPromptMatch[1]);
+        const evidence = getAgentTurnPromptEvidence(runId);
+        return evidence
+            ? json({
+                  captured_at: evidence.capturedAt,
+                  instructions: evidence.instructions,
+                  prompt: evidence.prompt,
+                  recall: evidence.recall,
+                  run_id: runId,
+              })
+            : notFound();
     }
 
     const messageMatch = url.pathname.match(/^\/api\/messages\/([^/]+)$/u);

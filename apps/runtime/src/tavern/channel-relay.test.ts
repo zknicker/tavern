@@ -5,7 +5,11 @@ import { ensureRuntimeSchema } from '../db/schema.ts';
 import { setModelProviderEnabled } from '../models/provider-store.ts';
 import type { AgentExecutor, AgentExecutorInput, AgentExecutorResult } from './agent-executor';
 import { resetAgentExecutorForTesting, setAgentExecutorForTesting } from './agent-turn-runner.ts';
-import { listAgentTurnsForSession } from './agent-turn-store.ts';
+import {
+    getAgentTurnPromptEvidence,
+    listAgentTurnsForSession,
+    recordAgentTurnPromptEvidence,
+} from './agent-turn-store.ts';
 import { upsertStoredAgent } from './agents-store.ts';
 import { sendTavernChannelMessage, stopTavernChannelTurn } from './channel-relay.ts';
 import {
@@ -18,6 +22,7 @@ import {
     upsertResponse,
     upsertResponseActivity,
 } from './chat-api/index.ts';
+import { handleTavernApiRequest } from './chat-api-router.ts';
 
 describe('Tavern channel relay', () => {
     const originalClaudeCommand = process.env.TAVERN_AGENT_CLAUDE_CODE_COMMAND;
@@ -119,6 +124,50 @@ describe('Tavern channel relay', () => {
             { id: 'run_1_primary', status: 'completed' },
             { id: 'run_2_primary', status: 'running' },
         ]);
+    });
+
+    it('persists and serves turn prompt evidence', async () => {
+        createAgentChat('agt_primary');
+        setAgentExecutorForTesting(createFakeAgentExecutor());
+        await sendTavernChannelMessage('cht_general', messageInput());
+
+        recordAgentTurnPromptEvidence({
+            evidence: {
+                capturedAt: '2026-07-07T12:00:00.000Z',
+                instructions: 'You are Tavern.',
+                prompt: 'Current Tavern turn: hello',
+                recall: [
+                    {
+                        path: 'memory/hamilton.md',
+                        score: 0.61,
+                        snippet: 'Hamilton tickets at the Orpheum.',
+                        title: 'Hamilton Show',
+                    },
+                ],
+            },
+            id: 'run_1_primary',
+        });
+
+        expect(getAgentTurnPromptEvidence('run_1_primary')).toMatchObject({
+            prompt: 'Current Tavern turn: hello',
+            recall: [{ path: 'memory/hamilton.md' }],
+        });
+
+        const served = await handleTavernApiRequest(
+            new Request('http://runtime.test/api/turns/run_1_primary/prompt')
+        );
+        expect(served?.status).toBe(200);
+        expect(await served?.json()).toMatchObject({
+            captured_at: '2026-07-07T12:00:00.000Z',
+            prompt: 'Current Tavern turn: hello',
+            recall: [{ title: 'Hamilton Show' }],
+            run_id: 'run_1_primary',
+        });
+
+        const missing = await handleTavernApiRequest(
+            new Request('http://runtime.test/api/turns/run_none/prompt')
+        );
+        expect(missing?.status).toBe(404);
     });
 
     it('fans one multi-mention message out to each mentioned agent as its own turn', async () => {

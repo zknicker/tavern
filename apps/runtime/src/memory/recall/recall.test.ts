@@ -7,7 +7,7 @@ import { getRuntimeCapability, refreshRuntimeCapabilities } from '../../capabili
 import { closeDb, initTestDb } from '../../db/connection.ts';
 import { ensureRuntimeSchema } from '../../db/schema.ts';
 import { loadQmd } from './qmd-loader.ts';
-import { recallMemoryContextBlock, recallMemoryPages, searchMemoryPages } from './recall.ts';
+import { recallMemoryPages, recallTurnMemory, searchMemoryPages } from './recall.ts';
 import {
     getRecallProvisioningStatus,
     isRecallSemanticReady,
@@ -84,7 +84,7 @@ describe('memory recall', () => {
     it('returns no per-turn recall before embeddings are provisioned', async () => {
         expect(isRecallSemanticReady()).toBe(false);
         expect(await recallMemoryPages('when is my hamilton show?')).toEqual([]);
-        expect(await recallMemoryContextBlock('when is my hamilton show?')).toBeNull();
+        expect(await recallTurnMemory('when is my hamilton show?')).toBeNull();
     });
 
     it('reports recall capability as degraded until provisioned', async () => {
@@ -170,12 +170,13 @@ describe('memory recall', () => {
             expect(hits[0]?.path).toBe('memory/hamilton.md');
             expect(hits[0]?.score).toBeGreaterThanOrEqual(0.2);
 
-            const block = await recallMemoryContextBlock(
+            const recall = await recallTurnMemory(
                 'when is [@Blippy](agent://agt_primary) seeing that theater thing?'
             );
-            expect(block).toContain('Recalled Memory pages');
-            expect(block).toContain('memory/hamilton.md');
-            expect(block).toContain('not user input');
+            expect(recall?.block).toContain('Recalled Memory pages');
+            expect(recall?.block).toContain('memory/hamilton.md');
+            expect(recall?.block).toContain('not user input');
+            expect(recall?.hits[0]?.path).toBe('memory/hamilton.md');
         }
     );
 
@@ -183,10 +184,8 @@ describe('memory recall', () => {
         'omits recall for queries no page clears the relevance floor on',
         async () => {
             await refreshRecallIndex();
-            const block = await recallMemoryContextBlock(
-                'completely unrelated quantum badger festival'
-            );
-            expect(block).toBeNull();
+            const recall = await recallTurnMemory('completely unrelated quantum badger festival');
+            expect(recall).toBeNull();
         }
     );
 });

@@ -161,6 +161,33 @@ describe('Tavern SDK client', () => {
         );
     });
 
+    it('gets turn prompt evidence through the OpenAPI path', async () => {
+        const requests: Request[] = [];
+        const client = createTavernClient({
+            baseUrl: 'http://runtime.test/',
+            fetch: (async (input, init) => {
+                const request = new Request(input, init);
+                requests.push(request);
+
+                return Response.json({
+                    captured_at: '2026-07-07T12:00:00.000Z',
+                    instructions: 'You are Tavern.',
+                    prompt: 'Current Tavern turn: ...',
+                    recall: [],
+                    run_id: 'run_1_primary',
+                });
+            }) as typeof fetch,
+        });
+
+        const evidence = await client.chat.turnPrompt('run_1_primary');
+
+        expect(evidence.run_id).toBe('run_1_primary');
+        expect(evidence.recall).toEqual([]);
+        expect(requests).toHaveLength(1);
+        expect(requests[0].method).toBe('GET');
+        expect(requests[0].url).toBe('http://runtime.test/api/turns/run_1_primary/prompt');
+    });
+
     it('gets one response activity through the OpenAPI path', async () => {
         const requests: Request[] = [];
         const client = createTavernClient({
