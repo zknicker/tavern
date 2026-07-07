@@ -171,13 +171,8 @@ test('settings and mcpServer client requests carry the Authorization header', as
         () => client.listMcpServers(),
         () => client.removeMcpServer('mcpServer-1'),
         () => client.testMcpServer('mcpServer-1'),
-        () => client.listCommands(),
-        () =>
-            client.runCommand({
-                agentId: 'agt_main',
-                chatId: 'cht_1',
-                command: '/status',
-            }),
+        () => client.getCurrentAgentSession({ chatId: 'cht_1' }),
+        () => client.resetAgentSession('cht_1', { agentId: 'agt_main' }),
     ];
 
     for (const call of calls) {

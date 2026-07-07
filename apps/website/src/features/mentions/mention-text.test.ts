@@ -26,30 +26,10 @@ describe('mention text helpers', () => {
         });
     });
 
-    it('finds the leading / command query and ignores mid-message slashes', () => {
-        expect(getActiveMentionQuery('/mod', 4)).toEqual({
-            end: 4,
-            query: 'mod',
-            start: 0,
-            trigger: '/',
-        });
+    it('never treats leading or mid-message slashes as a trigger', () => {
+        expect(getActiveMentionQuery('/mod', 4)).toBeNull();
         expect(getActiveMentionQuery('see /mod', 8)).toBeNull();
         expect(getActiveMentionQuery('/usr/local', 10)).toBeNull();
-    });
-
-    it('keeps /model argument completion active after the command name', () => {
-        expect(getActiveMentionQuery('/model ', 7)).toEqual({
-            end: 7,
-            query: 'model ',
-            start: 0,
-            trigger: '/',
-        });
-        expect(getActiveMentionQuery('/model gpt', 10)).toEqual({
-            end: 10,
-            query: 'model gpt',
-            start: 0,
-            trigger: '/',
-        });
     });
 
     it('keeps mention offsets aligned when text changes before the mention', () => {

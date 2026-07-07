@@ -12,7 +12,7 @@ import {
     updateCurrentAgentSessionModel,
 } from './agent-session-store';
 import { upsertStoredAgent } from './agents-store';
-import { createChat } from './chat-api';
+import { createChat, upsertResponse } from './chat-api';
 import { handleTavernRuntimeRequest } from './router';
 
 describe('Tavern Runtime agent sessions', () => {
@@ -237,7 +237,7 @@ describe('Tavern Runtime agent sessions', () => {
 
         const currentResponse = await handleTavernRuntimeRequest(
             new Request(
-                `http://runtime.test${agentRuntimeRoutes.chatAgentSessionCurrent('cht_one')}?agentParticipantId=agt_primary`
+                `http://runtime.test${agentRuntimeRoutes.chatAgentSessionCurrent('cht_one')}?agentId=agt_primary`
             )
         );
         const currentPayload = await currentResponse.json();
@@ -248,6 +248,7 @@ describe('Tavern Runtime agent sessions', () => {
                 effectiveModel: { model: 'gpt-4.1-mini', provider: 'openai' },
                 id: 'ags_cht_one_agt_primary_1',
             },
+            stats: { contextTokens: null, turnCount: 0 },
         });
 
         const updateResponse = await handleTavernRuntimeRequest(
@@ -271,6 +272,126 @@ describe('Tavern Runtime agent sessions', () => {
             session: {
                 effectiveModel: { model: 'gpt-4.1', provider: 'openai' },
                 id: 'ags_cht_one_agt_primary_1',
+            },
+        });
+    });
+
+    it('aggregates turn count and context tokens from the session turn evidence', async () => {
+        seedAgentChat({ chatId: 'cht_one', model: 'gpt-4.1-mini' });
+        const session = ensureCurrentAgentSession({
+            agentParticipantId: 'agt_primary',
+            chatId: 'cht_one',
+            now: '2026-06-29T12:00:00.000Z',
+        });
+
+        seedTurnResponse({ contextTokens: 1200, id: 'rsp_turn_1', sessionId: session.id });
+        seedTurnResponse({ contextTokens: 4800, id: 'rsp_turn_2', sessionId: session.id });
+        // A turn without usage still counts, but never wins the context read.
+        seedTurnResponse({ contextTokens: null, id: 'rsp_turn_3', sessionId: session.id });
+
+        const response = await handleTavernRuntimeRequest(
+            new Request(
+                `http://runtime.test${agentRuntimeRoutes.chatAgentSessionCurrent('cht_one')}?agentId=agt_primary`
+            )
+        );
+        const payload = await response.json();
+
+        expect(response.status).toBe(200);
+        expect(payload).toMatchObject({
+            stats: { contextTokens: 4800, turnCount: 3 },
+        });
+    });
+
+    it('lists past sessions newest first with their turn counts', async () => {
+        seedAgentChat({ chatId: 'cht_one', model: 'gpt-4.1-mini' });
+        const first = ensureCurrentAgentSession({
+            agentParticipantId: 'agt_primary',
+            chatId: 'cht_one',
+            now: '2026-06-29T12:00:00.000Z',
+        });
+        seedTurnResponse({ contextTokens: 800, id: 'rsp_first_1', sessionId: first.id });
+        seedTurnResponse({ contextTokens: 1600, id: 'rsp_first_2', sessionId: first.id });
+        const second = startNewAgentSession({
+            agentParticipantId: 'agt_primary',
+            chatId: 'cht_one',
+            now: '2026-06-29T13:00:00.000Z',
+        });
+        startNewAgentSession({
+            agentParticipantId: 'agt_primary',
+            chatId: 'cht_one',
+            now: '2026-06-29T14:00:00.000Z',
+        });
+
+        const response = await handleTavernRuntimeRequest(
+            new Request(
+                `http://runtime.test${agentRuntimeRoutes.chatAgentSessionCurrent('cht_one')}?agentId=agt_primary`
+            )
+        );
+        const payload = (await response.json()) as {
+            pastSessions: Record<string, unknown>[];
+        };
+
+        expect(response.status).toBe(200);
+        expect(payload.pastSessions).toMatchObject([
+            { id: second.id, status: 'archived', turnCount: 0 },
+            { id: first.id, status: 'archived', turnCount: 2 },
+        ]);
+        expect(payload.pastSessions[0]).not.toHaveProperty('resumeState');
+    });
+
+    it('resets the seat session through the Runtime HTTP route and records a notice', async () => {
+        seedAgentChat({ chatId: 'cht_one', model: 'gpt-4.1-mini' });
+        ensureCurrentAgentSession({
+            agentParticipantId: 'agt_primary',
+            chatId: 'cht_one',
+            now: '2026-06-29T12:00:00.000Z',
+        });
+
+        const resetResponse = await handleTavernRuntimeRequest(
+            new Request(
+                `http://runtime.test${agentRuntimeRoutes.chatAgentSessionReset('cht_one')}`,
+                {
+                    body: JSON.stringify({ agentId: 'agt_primary' }),
+                    headers: { 'content-type': 'application/json' },
+                    method: 'POST',
+                }
+            )
+        );
+        const resetPayload = await resetResponse.json();
+
+        expect(resetResponse.status).toBe(200);
+        expect(resetPayload).toMatchObject({
+            session: {
+                generation: 2,
+                id: 'ags_cht_one_agt_primary_2',
+                status: 'active',
+            },
+        });
+
+        const sessions = listAgentSessionsForSeat({
+            agentParticipantId: 'agt_primary',
+            chatId: 'cht_one',
+        });
+        expect(sessions.map((session) => [session.generation, session.status]).sort()).toEqual([
+            [1, 'archived'],
+            [2, 'active'],
+        ]);
+
+        // The reset lands as durable timeline evidence: one activity holding
+        // a new-session notice for the fresh session id.
+        const activityRows = getDb()
+            .prepare('SELECT metadata_json FROM chat_response_activity WHERE chat_id = $chatId')
+            .all(namedParams({ chatId: 'cht_one' })) as { metadata_json: string }[];
+
+        expect(activityRows).toHaveLength(1);
+        expect(JSON.parse(activityRows[0].metadata_json)).toMatchObject({
+            runtime: {
+                notice: {
+                    kind: 'new_session',
+                    sessionId: 'ags_cht_one_agt_primary_2',
+                    title: 'New session',
+                },
+                source: 'session-reset',
             },
         });
     });
@@ -310,6 +431,22 @@ function seedAgentChat(input: { chatId: string; model: string }) {
             },
         ],
         title: input.chatId,
+    });
+}
+
+function seedTurnResponse(input: { contextTokens: number | null; id: string; sessionId: string }) {
+    upsertResponse('cht_one', {
+        id: input.id,
+        metadata: {
+            runtime: {
+                agentId: 'agt_primary',
+                agentSessionId: input.sessionId,
+                ...(input.contextTokens !== null ? { contextTokens: input.contextTokens } : {}),
+                source: 'agent-engine',
+            },
+        },
+        participant_id: 'agt_primary',
+        status: 'completed',
     });
 }
 

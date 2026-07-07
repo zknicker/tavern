@@ -8,9 +8,7 @@ describe('selectVisibleOptions', () => {
         expect(
             selectVisibleOptions({
                 activeQuery: createQuery('@'),
-                commandOptions: [],
                 mentionOptions: [agentOption, skillOption, appOption],
-                supportsCommands: false,
             })
         ).toEqual([agentOption]);
     });
@@ -19,9 +17,7 @@ describe('selectVisibleOptions', () => {
         expect(
             selectVisibleOptions({
                 activeQuery: createQuery('$'),
-                commandOptions: [],
                 mentionOptions: [agentOption, skillOption, appOption],
-                supportsCommands: false,
             })
         ).toEqual([skillOption]);
     });

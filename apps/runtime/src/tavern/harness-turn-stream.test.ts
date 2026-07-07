@@ -121,7 +121,48 @@ describe('persistHarnessTurnStream', () => {
 
         expect(result.finalText).toBe('Done.');
         expect(result.activityIds).toEqual([]);
+        expect(result.contextTokens).toBeNull();
         expect(getResponseActivity(messageActivityIdForRun(runId, 0))).toBeNull();
+    });
+
+    it('reads context tokens from the final step usage, not the turn total', async () => {
+        async function* parts() {
+            yield {
+                finishReason: 'tool-calls',
+                type: 'finish-step',
+                usage: usagePart(900, 40),
+            };
+            yield* textSegment('txt_final', 'Done.');
+            yield {
+                finishReason: 'stop',
+                type: 'finish-step',
+                usage: usagePart(1200, 80),
+            };
+            yield {
+                finishReason: 'stop',
+                totalUsage: usagePart(2100, 120),
+                type: 'finish',
+            };
+        }
+
+        const result = await persistHarnessTurnStream(target(), parts());
+
+        expect(result.contextTokens).toBe(1280);
+    });
+
+    it('falls back to the finish total when no step reported usage', async () => {
+        async function* parts() {
+            yield* textSegment('txt_final', 'Done.');
+            yield {
+                finishReason: 'stop',
+                totalUsage: usagePart(500, 25),
+                type: 'finish',
+            };
+        }
+
+        const result = await persistHarnessTurnStream(target(), parts());
+
+        expect(result.contextTokens).toBe(525);
     });
 
     it('marks a tool activity failed when the tool errors', async () => {
@@ -277,6 +318,18 @@ function* textSegment(id: string, text: string) {
 
 function toolCallPart(toolCallId: string, toolName: string, input: unknown) {
     return { input, toolCallId, toolName, type: 'tool-call' };
+}
+
+function usagePart(inputTotal: number, outputTotal: number) {
+    return {
+        inputTokens: {
+            cacheRead: undefined,
+            cacheWrite: undefined,
+            noCache: undefined,
+            total: inputTotal,
+        },
+        outputTokens: { reasoning: undefined, text: undefined, total: outputTotal },
+    };
 }
 
 function toolResultPart(toolCallId: string, toolName: string, input: unknown, output: unknown) {

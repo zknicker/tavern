@@ -3,7 +3,6 @@ import test from 'node:test';
 import type { TavernChatMessage, TavernChatResponse, TavernResponseActivity } from '@tavern/sdk';
 import {
     cancelledResponseToChatRow,
-    commandRunFromActivity,
     failedTurnFromResponses,
     mapResponseIdsByMessageId,
     visibleTimelineSources,
@@ -39,57 +38,7 @@ test('a reply that triggers the next turn stays attributed to its producing resp
     assert.equal(mapping.get('message-user'), 'rsp_first');
 });
 
-test('command activity with a typed slash command maps to a command run', () => {
-    assert.deepEqual(
-        commandRunFromActivity(
-            commandActivity({
-                detail: 'Model set to tavern-e2e-fake',
-                metadata: { command: { status: 'completed', text: '/model sonnet' } },
-                status: 'completed',
-            })
-        ),
-        {
-            command: '/model sonnet',
-            output: 'Model set to tavern-e2e-fake',
-            responseId: 'rsp_cmd_1',
-            status: 'completed',
-        }
-    );
-});
-
-test('failed command activity maps to a failed command run', () => {
-    assert.deepEqual(
-        commandRunFromActivity(
-            commandActivity({
-                detail: 'slash worker start failed',
-                metadata: { command: { status: 'failed', text: '/compact' } },
-                status: 'failed',
-            })
-        ),
-        {
-            command: '/compact',
-            output: 'slash worker start failed',
-            responseId: 'rsp_cmd_1',
-            status: 'failed',
-        }
-    );
-});
-
-test('command activity without a slash command stays out of the command-run lane', () => {
-    assert.equal(
-        commandRunFromActivity(
-            commandActivity({
-                detail: 'ls -la',
-                metadata: {},
-                status: 'completed',
-                title: 'shell',
-            })
-        ),
-        null
-    );
-});
-
-function commandActivity(input: {
+function activityRow(input: {
     detail: string;
     metadata: Record<string, unknown>;
     status: TavernResponseActivity['status'];
@@ -100,15 +49,15 @@ function commandActivity(input: {
         chat_id: 'chat-1',
         completed_at: '2026-06-12T12:00:01.000Z',
         detail: input.detail,
-        id: 'act_cmd_1',
-        kind: 'command',
+        id: 'act_1',
+        kind: 'custom',
         metadata: input.metadata,
-        response_id: 'rsp_cmd_1',
+        response_id: 'rsp_1',
         sequence: 1,
         started_at: '2026-06-12T12:00:00.000Z',
         status: input.status,
         summary: null,
-        title: input.title ?? '/model',
+        title: input.title ?? 'activity',
         updated_at: '2026-06-12T12:00:01.000Z',
     };
 }
@@ -184,7 +133,7 @@ test('cancelled response maps to a stopped system row', () => {
     ]);
 });
 
-test('cancelled command response stays out of the stopped system row lane', () => {
+test('cancelled historical command response stays out of the stopped system row lane', () => {
     const cancelledCommand = response({
         id: 'response-cancelled-command',
         metadata: { runtime: { source: 'command' } },
@@ -212,11 +161,11 @@ test('soft-deleted rows never reach the timeline', () => {
     const visible = visibleTimelineSources({
         activity: [
             {
-                ...commandActivity({ detail: 'live', metadata: {}, status: 'completed' }),
+                ...activityRow({ detail: 'live', metadata: {}, status: 'completed' }),
                 response_id: 'rsp_live',
             },
             {
-                ...commandActivity({ detail: 'gone', metadata: {}, status: 'completed' }),
+                ...activityRow({ detail: 'gone', metadata: {}, status: 'completed' }),
                 id: 'act_deleted',
                 response_id: 'rsp_deleted',
             },
@@ -239,7 +188,7 @@ test('soft-deleted rows never reach the timeline', () => {
     );
     assert.deepEqual(
         visible.activity.map((entry) => entry.id),
-        ['act_cmd_1']
+        ['act_1']
     );
     // The dismissed failed response no longer drives the failure banner.
     assert.equal(failedTurnFromResponses(visible.responses), null);
