@@ -2,12 +2,10 @@ import { parseAgentReferenceTarget } from '@tavern/api/rich-references';
 import * as React from 'react';
 import { queryPolicy } from '../../lib/query-policy.ts';
 import { type AgentListOutput, trpc } from '../../lib/trpc.tsx';
-import type { ChatContextFullness } from '../chats/chat-context-fullness.ts';
 import { MentionEditor, type MentionEditorHandle } from './mention-editor.tsx';
 import { MentionPicker } from './mention-picker.tsx';
 import type { ActiveMentionQuery, Mention, MentionOption } from './mention-types.ts';
 import { selectVisibleOptions } from './mention-visible-options.ts';
-import { useCommandOptions } from './use-command-options.ts';
 import { useMentionOptions } from './use-mention-options.ts';
 
 export interface MentionComposerState {
@@ -29,29 +27,19 @@ export interface MentionComposerState {
 export function useMentionComposer({
     agentId,
     agents,
-    commandArgumentOptions,
     content,
-    contextFullness = null,
     mentionableAgentIds = [],
-    onCommandAction,
     onTextChange,
     onSubmit,
     onMentionsChange,
-    supportsCommands = false,
 }: {
     agentId: string;
     agents: AgentListOutput['agents'];
-    commandArgumentOptions?: (query: ActiveMentionQuery) => MentionOption[] | null;
     content: string;
-    contextFullness?: ChatContextFullness | null;
     mentionableAgentIds?: readonly string[];
-    onCommandAction?: (command: string) => void;
     onTextChange: (content: string) => void;
     onSubmit?: () => void;
     onMentionsChange?: (mentions: Mention[]) => void;
-    // Commands run in an existing chat session; the new-chat composer
-    // leaves the `/` palette off.
-    supportsCommands?: boolean;
 }) {
     const utils = trpc.useUtils();
     const editorRef = React.useRef<MentionEditorHandle | null>(null);
@@ -76,14 +64,10 @@ export function useMentionComposer({
         query: activeQuery?.query ?? '',
         trigger: activeQuery?.trigger ?? null,
     });
-    const commandOptions = useCommandOptions({ contextFullness, enabled: supportsCommands });
     const trigger = activeQuery?.trigger ?? '@';
     const visibleMentionOptions = selectVisibleOptions({
         activeQuery,
-        commandArgumentOptions: activeQuery ? commandArgumentOptions?.(activeQuery) : null,
-        commandOptions,
         mentionOptions: mentionOptionsState.options,
-        supportsCommands,
     });
     const prefetchMentionOptions = React.useCallback(() => {
         if (skillScopeAgentIds.length === 0) {
@@ -130,18 +114,6 @@ export function useMentionComposer({
 
     function handleMentionSelect(option: MentionOption) {
         dismissedQueryRef.current = null;
-
-        if (option.kind === 'command') {
-            if (option.action?.kind === 'run-command') {
-                setActiveQuery(null);
-                onCommandAction?.(option.action.command);
-                return;
-            }
-
-            editorRef.current?.replaceActiveQuery(option.insertText);
-            return;
-        }
-
         editorRef.current?.insertMention(option);
     }
 
@@ -192,7 +164,7 @@ export function useMentionComposer({
     }
 
     function handleActiveQueryChange(query: ActiveMentionQuery | null) {
-        if (!query || (query.trigger === '/' && !supportsCommands)) {
+        if (!query) {
             dismissedQueryRef.current = null;
             setActiveQuery(null);
             return;

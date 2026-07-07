@@ -21,7 +21,6 @@ import { cn } from '../../lib/utils.ts';
 import { AgentWidget } from '../../widgets/render-widget.tsx';
 import { resolveAgentInk } from '../agents/agent-color-presets.ts';
 import { AgentFace, type HeadName } from './agent-face.tsx';
-import { CommandRunEntry } from './chat-command-card.tsx';
 import { ChatMarkdownText } from './chat-markdown-text.tsx';
 import { useStreamingTextRanges } from './chat-streaming-text-ranges.ts';
 import {
@@ -108,14 +107,6 @@ export function TranscriptEntryView({
             entry.item.row.systemKind === 'runtimeNotice'
         ) {
             return <RuntimeNoticeEntry row={entry.item.row} />;
-        }
-
-        if (
-            entry.item.kind === 'row' &&
-            entry.item.row.kind === 'system' &&
-            entry.item.row.systemKind === 'commandRun'
-        ) {
-            return <CommandRunEntry chatId={chatId} row={entry.item.row} />;
         }
 
         return (

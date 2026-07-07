@@ -6,10 +6,9 @@ import { patchLiveChatLogQueries } from './chat-log-query-patch.ts';
 import { useTimelineActions } from './use-timeline-context.tsx';
 
 /**
- * Dismisses one timeline row (a command card or failed-turn banner) by
- * soft-deleting its response in Tavern Runtime. The row is removed from the
- * local caches immediately; the durable delete keeps it gone everywhere.
- * See specs/composer-commands.md.
+ * Dismisses a failed-turn banner by soft-deleting its response in Tavern
+ * Runtime. The banner is removed from the local caches immediately; the
+ * durable delete keeps it gone everywhere.
  */
 export function useChatDismiss(chatId: string | undefined) {
     const queryClient = useQueryClient();
@@ -45,25 +44,12 @@ function removeResponseFromLog(
         return log;
     }
 
-    // Dismissable rows are response evidence, not messages, so the page's
-    // totalMessages count is unaffected.
-    const rows = log.rows.filter(
-        (row) =>
-            !(
-                row.kind === 'system' &&
-                row.systemKind === 'commandRun' &&
-                row.commandRun.responseId === responseId
-            )
-    );
-    const failedTurn = log.failedTurn?.responseId === responseId ? null : log.failedTurn;
-
-    if (rows.length === log.rows.length && failedTurn === log.failedTurn) {
+    if (log.failedTurn?.responseId !== responseId) {
         return log;
     }
 
     return {
         ...log,
-        failedTurn,
-        rows,
+        failedTurn: null,
     };
 }

@@ -2,10 +2,6 @@ import { StopIcon } from '@hugeicons-pro/core-solid-rounded';
 import * as React from 'react';
 import { Icon } from '../../components/ui/icon.tsx';
 import {
-    buildChatRoutingModelOptions,
-    type ModelOptionItem,
-} from '../../components/ui/model-route-shared.ts';
-import {
     PromptInput,
     PromptInputActions,
     PromptInputBody,
@@ -19,19 +15,16 @@ import { useChatSend } from '../../hooks/chats/use-chat-send.ts';
 import { useChatSteer } from '../../hooks/chats/use-chat-steer.ts';
 import { useChatStop } from '../../hooks/chats/use-chat-stop.ts';
 import { runtimeUnhealthyTooltip, useCapability } from '../../hooks/connections/use-capability.ts';
-import { useModelList } from '../../hooks/models/use-model-list.ts';
 import { getDesktopBridge } from '../../lib/desktop-bridge.ts';
-import { getModelProviderConfig } from '../../lib/model-provider-config.ts';
 import type { AgentListOutput } from '../../lib/trpc.tsx';
 import { cn } from '../../lib/utils.ts';
 import { compileMentionSubmission, normalizeMentions } from '../mentions/mention-text.ts';
-import type { ActiveMentionQuery, Mention, MentionOption } from '../mentions/mention-types.ts';
+import type { Mention } from '../mentions/mention-types.ts';
 import {
     MentionComposerEditor,
     MentionComposerPicker,
     useMentionComposer,
 } from '../mentions/use-mention-composer.tsx';
-import { useChatCommandRunner } from './chat-command.ts';
 import {
     ChatComposerAttachmentList,
     readComposerAttachment,
@@ -92,7 +85,6 @@ export function ChatMessageComposer({
     const steerTurn = useChatSteer();
     const stopTurn = useChatStop();
     const gatewayCapability = useCapability('gateway');
-    const modelList = useModelList();
     const composerQueue = useChatComposerQueue(chatId);
     const composerDraft = useChatComposerDraftState({ boundAgentIds, chatId });
     const drainingQueueRef = React.useRef(false);
@@ -106,10 +98,6 @@ export function ChatMessageComposer({
     const { agentId, attachments, content, editingQueuedMessageId, mentions } = composerDraft.draft;
     const { setAgentId, setAttachments, setContent, setEditingQueuedMessageId, setMentions } =
         composerDraft;
-    const allModelOptions = React.useMemo(
-        () => buildChatRoutingModelOptions(modelList.data),
-        [modelList.data]
-    );
     const isCompact = variant === 'compact';
     const isAgentDm = conversationKind === 'direct';
     const trimmedContent = content.trim();
@@ -186,39 +174,16 @@ export function ChatMessageComposer({
         }
     }, [composerQueue.queue]);
 
-    const chatCommands = useChatCommandRunner();
-    const modelCommandOptions = React.useMemo(
-        () => createModelCommandOptions(allModelOptions),
-        [allModelOptions]
-    );
-    const resolveCommandArgumentOptions = React.useCallback(
-        (query: ActiveMentionQuery) => {
-            const modelQuery = getModelCommandArgumentQuery(query.query);
-
-            if (modelQuery === null) {
-                return null;
-            }
-
-            return filterModelCommandOptions(modelCommandOptions, modelQuery);
-        },
-        [modelCommandOptions]
-    );
     const mentionComposer = useMentionComposer({
         agentId,
         agents,
-        commandArgumentOptions: resolveCommandArgumentOptions,
         content,
-        contextFullness,
         mentionableAgentIds: boundAgentIds,
-        onCommandAction: (command) => {
-            void handleCommandAction(command);
-        },
         onTextChange: setContent,
         onSubmit: () => {
             void handleSubmit();
         },
         onMentionsChange: setMentions,
-        supportsCommands: true,
     });
     const focusTextEditorRef = React.useRef(mentionComposer.focusTextEditor);
     focusTextEditorRef.current = mentionComposer.focusTextEditor;
@@ -248,21 +213,6 @@ export function ChatMessageComposer({
         event?.preventDefault();
 
         if (!canSubmit) {
-            return;
-        }
-
-        // A known leading-slash command runs in the chat's session instead of
-        // starting a turn; unknown slash text falls through and sends.
-        if (chatCommands.isBareModelCommand(content)) {
-            setContent('/model ');
-            setMentions([]);
-            mentionComposer.focusTextEditor();
-            return;
-        }
-
-        if (chatCommands.matchCommand(content)) {
-            const command = content.trim();
-            await handleCommandAction(command);
             return;
         }
 
@@ -436,16 +386,6 @@ export function ChatMessageComposer({
         await addSelectedAttachments(files);
     }
 
-    async function handleCommandAction(command: string) {
-        setContent('');
-        setMentions([]);
-        await chatCommands.runCommand({
-            agentId,
-            chatId,
-            command,
-        });
-    }
-
     async function addSelectedAttachments(files: File[]) {
         try {
             setAttachmentError(null);
@@ -614,57 +554,6 @@ export function getComposerPrimaryAction(input: {
     isReplyActive: boolean;
 }) {
     return input.activeRunId && input.isReplyActive && !input.hasDraftPayload ? 'stop' : 'submit';
-}
-
-function createModelCommandOptions(models: readonly ModelOptionItem[]): MentionOption[] {
-    return models.map((model) => {
-        const provider = getModelProviderConfig(model.provider);
-
-        return {
-            action: {
-                command: `/model ${model.value}`,
-                kind: 'run-command',
-            },
-            description: `${model.value} · ${formatAvailabilityLabel(model.availability)}`,
-            groupLabel: 'Models',
-            id: `model-command:${model.value}`,
-            insertText: `/model ${model.value}`,
-            kind: 'command',
-            label: model.label,
-            projection: 'capability-reference',
-            sourceLabel: provider.displayName,
-        };
-    });
-}
-
-function filterModelCommandOptions(options: MentionOption[], query: string) {
-    const normalized = query.trim().toLowerCase();
-
-    if (!normalized) {
-        return options;
-    }
-
-    return options.filter((option) =>
-        [option.label, option.description ?? '', option.sourceLabel ?? '']
-            .join(' ')
-            .toLowerCase()
-            .includes(normalized)
-    );
-}
-
-function getModelCommandArgumentQuery(query: string) {
-    const match = /^model\s+(.*)$/iu.exec(query);
-
-    return match ? (match[1] ?? '') : null;
-}
-
-function formatAvailabilityLabel(availability: ModelOptionItem['availability']) {
-    switch (availability) {
-        case 'configured':
-            return 'configured';
-        case 'available':
-            return 'available';
-    }
 }
 
 function getSendDisabledTooltip({

@@ -1,7 +1,6 @@
 import type { IconSvgElement } from '@hugeicons/react';
 import {
     ChromeIcon,
-    CommandLineIcon,
     CubeIcon,
     File01Icon,
     Folder01Icon,
@@ -19,7 +18,6 @@ import type { MentionOptionKind } from './mention-types.ts';
 const mentionIconKeys = [
     'agent',
     'chrome',
-    'command',
     'file',
     'folder',
     'github',
@@ -51,7 +49,6 @@ type MentionAppearanceOverride = Partial<MentionAppearance>;
 const defaultMentionAppearance = {
     agent: { icon: 'agent' },
     app: { icon: 'plugin' },
-    command: { icon: 'command' },
     directory: { icon: 'folder' },
     file: { icon: 'file' },
     image: { icon: 'image' },
@@ -93,7 +90,6 @@ const capabilityAppearanceOverrides = {
 const mentionIconMap = {
     agent: CubeIcon,
     chrome: ChromeIcon,
-    command: CommandLineIcon,
     file: File01Icon,
     folder: Folder01Icon,
     github: Github01Icon,

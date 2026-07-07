@@ -23,31 +23,6 @@ export function getActiveMentionQuery(
         };
     }
 
-    // `/` opens the command palette only as the very first character of the
-    // composer, so typed paths and URLs never trigger it. A second slash
-    // (path typing) closes the palette.
-    const modelCommandMatch = /^\/model\s+([^\n]*)$/iu.exec(beforeCaret);
-
-    if (modelCommandMatch) {
-        return {
-            end: caretIndex,
-            query: `model ${modelCommandMatch[1] ?? ''}`,
-            start: 0,
-            trigger: '/',
-        };
-    }
-
-    const commandMatch = /^\/([^\s/]*)$/u.exec(beforeCaret);
-
-    if (commandMatch) {
-        return {
-            end: caretIndex,
-            query: commandMatch[1] ?? '',
-            start: 0,
-            trigger: '/',
-        };
-    }
-
     return null;
 }
 
@@ -145,11 +120,6 @@ export function selectMention(input: {
     option: MentionOption;
 }) {
     const { activeQuery, content, mentions, option } = input;
-
-    if (option.kind === 'command') {
-        throw new Error('Commands execute as actions and do not serialize as mentions.');
-    }
-
     const before = content.slice(0, activeQuery.start);
     const after = content.slice(activeQuery.end);
     const text = option.insertText;

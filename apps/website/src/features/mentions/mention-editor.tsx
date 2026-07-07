@@ -15,9 +15,6 @@ import type { ActiveMentionQuery, Mention, MentionKind, MentionOption } from './
 export interface MentionEditorHandle {
     focus: () => void;
     insertMention: (option: MentionOption) => void;
-    // Replaces the active trigger query with plain text (no mention chip);
-    // command palette selections insert "/name " for the user to finish.
-    replaceActiveQuery: (text: string) => void;
 }
 
 export function MentionEditor({
@@ -66,9 +63,6 @@ export function MentionEditor({
             },
             insertMention(option) {
                 insertMentionOption(viewRef.current, option);
-            },
-            replaceActiveQuery(text) {
-                replaceActiveQueryText(viewRef.current, text);
             },
         }),
         []
@@ -336,28 +330,6 @@ function insertMentionOption(view: EditorView | null, option: MentionOption) {
     const transaction = view.state.tr.replaceWith(from, to, replacement);
 
     transaction.setSelection(TextSelection.create(transaction.doc, selectionPosition));
-
-    view.dispatch(transaction);
-    view.focus();
-}
-
-function replaceActiveQueryText(view: EditorView | null, text: string) {
-    if (!view) {
-        return;
-    }
-
-    const activeQuery = getActiveQuery(view.state.doc, view.state.selection.from);
-
-    if (!activeQuery) {
-        return;
-    }
-
-    const from = view.state.selection.from - optionQueryLength(activeQuery);
-    const to = view.state.selection.from;
-    const replacement = mentionSchema.text(text);
-    const transaction = view.state.tr.replaceWith(from, to, replacement);
-
-    transaction.setSelection(TextSelection.create(transaction.doc, from + replacement.nodeSize));
 
     view.dispatch(transaction);
     view.focus();

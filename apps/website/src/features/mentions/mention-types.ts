@@ -1,8 +1,6 @@
 export type MentionKind = 'agent' | 'app' | 'directory' | 'file' | 'image' | 'plugin' | 'skill';
-// Picker options cover one extra kind: commands render in the same picker but
-// execute as actions and never serialize into stored Mention metadata.
-export type MentionOptionKind = MentionKind | 'command';
-export type MentionTrigger = '@' | '$' | '/';
+export type MentionOptionKind = MentionKind;
+export type MentionTrigger = '@' | '$';
 export type MentionProjection =
     | 'agent-reference'
     | 'capability-reference'
@@ -22,10 +20,6 @@ export interface Mention {
 }
 
 export interface MentionOption {
-    action?: {
-        command: string;
-        kind: 'run-command';
-    };
     description?: string | null;
     groupLabel?: string;
     id: string;
@@ -35,10 +29,6 @@ export interface MentionOption {
     metadata?: Record<string, unknown>;
     projection: MentionProjection;
     sourceLabel?: string | null;
-    statusAdornment?: {
-        kind: 'context-fullness';
-        percent: number;
-    };
 }
 
 export interface ActiveMentionQuery {

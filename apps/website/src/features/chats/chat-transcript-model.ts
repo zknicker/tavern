@@ -472,7 +472,7 @@ function getItemParticipant(item: TranscriptItem): 'agent' | 'system' | 'user' {
         return 'agent';
     }
 
-    if (row.systemKind === 'runtimeNotice' || row.systemKind === 'commandRun') {
+    if (row.systemKind === 'runtimeNotice') {
         return 'system';
     }
 
