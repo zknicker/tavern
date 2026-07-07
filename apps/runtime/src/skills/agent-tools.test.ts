@@ -3,7 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { installSkillHubSkill } from '../agent-engine/skill-hub-library.ts';
-import { seedTavernAgentSkill, tavernAgentSkillId } from '../agent-engine/skill-library.ts';
+import { seedManagedSkills, tavernAgentSkillId } from '../agent-engine/skill-library.ts';
 import { closeDb, getDb, initTestDb } from '../db/connection.ts';
 import { ensureRuntimeSchema } from '../db/schema.ts';
 import { getStoredAgent, upsertStoredAgent } from '../tavern/agents-store.ts';
@@ -136,7 +136,7 @@ describe('skill agent tools', () => {
 
     test('accepts writes to seeded, hub, and external disk skills', async () => {
         const tools = createTavernSkillTools({ agentId: 'agt_author', skillsDir });
-        await seedTavernAgentSkill({ skillsDir });
+        await seedManagedSkills({ skillsDir });
         await installSkillHubSkill('builtin:tavern-workflow', { skillsDir });
         await writeSkill('operator-skill', '# Operator Skill\n');
 

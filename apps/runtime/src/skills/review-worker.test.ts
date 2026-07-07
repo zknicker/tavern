@@ -3,7 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { generateText } from 'ai';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
-import { seedTavernAgentSkill, tavernAgentSkillId } from '../agent-engine/skill-library.ts';
+import { seedManagedSkills, tavernAgentSkillId } from '../agent-engine/skill-library.ts';
 import { closeDb, initTestDb } from '../db/connection.ts';
 import { ensureRuntimeSchema } from '../db/schema.ts';
 import { processDueSkillReviews, resetSkillReviewSchedulerForTesting } from './review-queue.ts';
@@ -127,7 +127,7 @@ describe('skill review worker', () => {
     });
 
     test('patches seeded disk skills when review signals justify it', async () => {
-        await seedTavernAgentSkill({ skillsDir });
+        await seedManagedSkills({ skillsDir });
         seedReviewAgentChat({ enabledSkillIds: [tavernAgentSkillId], workspace });
         insertReviewWindowMessages();
         queueReview({

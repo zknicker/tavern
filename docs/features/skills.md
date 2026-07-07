@@ -67,9 +67,11 @@ content differs from that installed hash reports a conflict unless the caller
 forces the reinstall. The hub inventory reports both local edits and whether the
 bundled hub version differs from the installed hash.
 
-The seeded `tavern-agent` skill is created once and is not refreshed in the
-background. Users can reset only that seeded skill to the current Tavern default;
-other skills do not have Tavern defaults.
+The seeded `tavern-agent` and `tasks` skills are created once and are not
+refreshed in the background. Users can reset only seeded skills to the current
+Tavern default; other non-Plugin skills do not have Tavern defaults. The
+`tasks` skill teaches board etiquette for the Tasks tracker and is enabled for
+new agents (and the managed agent) by default.
 
 Agent-authored skills have a lifecycle. Runtime marks unused agent-created
 skills stale after 30 days and archives them after 90 days by moving the whole

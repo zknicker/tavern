@@ -19,9 +19,9 @@ import {
 import { builtInHubSkills, bundledHubSkillContent } from './bundled-hub-skills.ts';
 import {
     agentEngineSkillsDir,
+    isSeededSkillId,
     listRuntimeSkills,
     normalizeRuntimeSkillId,
-    tavernAgentSkillId,
 } from './skill-library.ts';
 
 export async function getSkillHubAvailable(
@@ -152,8 +152,8 @@ export async function uninstallSkillHubSkill(
     if (!normalized) {
         return actionResult(false, [`Invalid skill name: ${name}`], null);
     }
-    if (normalized === tavernAgentSkillId) {
-        return actionResult(false, ['tavern-agent is a bundled Runtime skill.'], null);
+    if (isSeededSkillId(normalized)) {
+        return actionResult(false, [`${normalized} is a bundled Runtime skill.`], null);
     }
 
     const skillDir = path.join(options.skillsDir ?? agentEngineSkillsDir, normalized);

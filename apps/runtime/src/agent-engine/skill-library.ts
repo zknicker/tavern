@@ -25,11 +25,84 @@ import {
 
 export const agentEngineSkillsDir = path.join(AGENT_HOME, 'skills');
 export const tavernAgentSkillId = 'tavern-agent';
+export const tasksSkillId = 'tasks';
 
 export const defaultTavernSkill = `# Tavern Agent
 
 Use Tavern chat context, memory, files, and local tools. Keep replies direct and action-oriented.
 `;
+
+export const defaultTasksSkill = `---
+name: tasks
+description: >
+  Use for the shared Tasks board: filing tracked work, updating task status,
+  working dispatched tasks, epics, and T-number references.
+---
+
+# Tasks
+
+Managed by Tavern. Do not edit this skill directory; Tavern refreshes it on
+startup. For durable agent-managed skill changes, create or update a separate
+skill in your normal skills directory.
+
+The Tasks board is the durable work tracker you share with the user. Every
+item has a short T-number (T-1, T-2, ...) either of you can drop into a chat
+message. The user sees the board on the Tasks page; keep it accurate enough
+to trust.
+
+## Tools
+
+Use \`tasks_list\`, \`tasks_get\`, \`tasks_create\`, and \`tasks_update\`.
+Reference tasks as T-<number> in replies so the user can find them on the
+board.
+
+## When to file a task
+
+File a task when the user asks to track work, or when real follow-up work
+surfaces that should outlive this conversation. Would the user expect to see
+it on the board? Then file it: short imperative title, description with
+enough context to act on later without this chat.
+
+Do not mirror your in-conversation working steps onto the board. The board
+tracks outcomes the user cares about, not your scratch plan for the current
+turn.
+
+## Working a task
+
+Mark a task in_progress before you start it, and done when you finish, with
+a closing reply that names the T-number and the outcome. If the work turns
+out to be unnecessary, mark it canceled and say why. Keep one task
+in_progress per stream of work.
+
+Statuses: backlog (not scheduled), todo (ready to start), in_progress, done,
+canceled.
+
+## Dispatched tasks
+
+A dispatch message names a task (like T-12) and is your work order: mark it
+in_progress, do the work in this chat, keep the task updated as scope
+changes, and mark it done when you deliver.
+
+## Epics and hygiene
+
+Group related tasks under an epic when a push spans several tasks; check for
+an existing epic with \`tasks_list\` before creating one. Search the board
+before filing to avoid duplicates. Update stale tasks instead of abandoning
+them.
+`;
+
+const seededSkillDefaults: Record<string, string> = {
+    [tasksSkillId]: defaultTasksSkill,
+    [tavernAgentSkillId]: defaultTavernSkill,
+};
+
+export function isSeededSkillId(skillId: string): boolean {
+    return skillId in seededSkillDefaults;
+}
+
+export function seededSkillDefaultEntries(): Array<[skillId: string, content: string]> {
+    return Object.entries(seededSkillDefaults);
+}
 
 const emptyRequirements = {
     anyBins: [],
@@ -59,36 +132,38 @@ interface RuntimeSkillOptions {
     skillsDir?: string;
 }
 
-export async function seedTavernAgentSkill(options: { skillsDir?: string } = {}) {
-    const skillPath = path.join(
-        options.skillsDir ?? agentEngineSkillsDir,
-        tavernAgentSkillId,
-        'SKILL.md'
-    );
+export async function seedManagedSkills(options: { skillsDir?: string } = {}) {
+    for (const skillId of Object.keys(seededSkillDefaults)) {
+        await seedSeededSkill(skillId, options);
+    }
+}
+
+async function seedSeededSkill(skillId: string, options: { skillsDir?: string } = {}) {
+    const skillPath = path.join(options.skillsDir ?? agentEngineSkillsDir, skillId, 'SKILL.md');
     const existing = await fs.readFile(skillPath, 'utf8').catch(() => null);
     if (existing !== null) {
-        recordSeededTavernSkillSource();
+        recordSeededSkillSource(skillId);
         return;
     }
 
     await fs.mkdir(path.dirname(skillPath), { recursive: true });
-    await fs.writeFile(skillPath, defaultTavernSkill, { mode: 0o600 });
-    recordSeededTavernSkillSource();
+    await fs.writeFile(skillPath, seededSkillDefaults[skillId], { mode: 0o600 });
+    recordSeededSkillSource(skillId);
 }
 
-export async function resetTavernAgentSkill(options: { skillsDir?: string } = {}) {
-    const skillPath = path.join(
-        options.skillsDir ?? agentEngineSkillsDir,
-        tavernAgentSkillId,
-        'SKILL.md'
-    );
+export async function resetSeededSkill(skillId: string, options: { skillsDir?: string } = {}) {
+    const defaultContent = seededSkillDefaults[skillId];
+    if (defaultContent === undefined) {
+        throw new Error(`Skill ${skillId} is not a seeded Tavern skill.`);
+    }
+    const skillPath = path.join(options.skillsDir ?? agentEngineSkillsDir, skillId, 'SKILL.md');
     await fs.mkdir(path.dirname(skillPath), { recursive: true });
-    await fs.writeFile(skillPath, defaultTavernSkill, { mode: 0o600 });
-    recordSeededTavernSkillSource();
-    publishSkillUpdated(tavernAgentSkillId);
+    await fs.writeFile(skillPath, defaultContent, { mode: 0o600 });
+    recordSeededSkillSource(skillId);
+    publishSkillUpdated(skillId);
     return {
-        hash: sha256(defaultTavernSkill),
-        skillId: tavernAgentSkillId,
+        hash: sha256(defaultContent),
+        skillId,
     };
 }
 
@@ -96,8 +171,8 @@ export async function resetRuntimeSkillToDefault(
     skillId: string,
     options: { skillsDir?: string } = {}
 ) {
-    if (skillId === tavernAgentSkillId) {
-        return await resetTavernAgentSkill(options);
+    if (isSeededSkillId(skillId)) {
+        return await resetSeededSkill(skillId, options);
     }
     const pluginReset = await resetPluginSkillToDefault(skillId, options);
     if (pluginReset) {
@@ -109,8 +184,10 @@ export async function resetRuntimeSkillToDefault(
 export async function listRuntimeSkills(options: RuntimeSkillOptions = {}) {
     const skillsDir = options.skillsDir ?? agentEngineSkillsDir;
     const scanned = await scanInstalledSkillSummaries(skillsDir);
-    const hasTavernAgent = scanned.some((skill) => skill.id === tavernAgentSkillId);
-    const installedSkills = hasTavernAgent ? scanned : [tavernAgentSummary(skillsDir), ...scanned];
+    const missingSeeded = Object.keys(seededSkillDefaults)
+        .filter((skillId) => !scanned.some((skill) => skill.id === skillId))
+        .map((skillId) => seededSkillSummary(skillsDir, skillId));
+    const installedSkills = [...missingSeeded, ...scanned];
     const agent = options.agent;
     const agentInstalledSkills = agent
         ? installedSkills.map((skill) => ({
@@ -137,10 +214,11 @@ export async function getRuntimeSkill(
         return null;
     }
 
+    const seededDefault = seededSkillDefaults[summary.id];
     const contentMarkdown =
-        summary.id === tavernAgentSkillId
-            ? await fs.readFile(summary.filePath ?? '', 'utf8').catch(() => defaultTavernSkill)
-            : await readSkillMarkdown(summary);
+        seededDefault === undefined
+            ? await readSkillMarkdown(summary)
+            : await fs.readFile(summary.filePath ?? '', 'utf8').catch(() => seededDefault);
     if (contentMarkdown === null) {
         return null;
     }
@@ -242,17 +320,18 @@ function skillSummaryFromMarkdown(input: {
     skillSource: SkillSummarySource | null;
     stats: { mtime: Date } | null;
 }) {
+    const seeded = isSeededSkillId(input.skillId);
     const managedState = managedSkillSummaryState({
         content: input.content,
-        defaultSeededContent: defaultTavernSkill,
-        seededSkillId: tavernAgentSkillId,
+        defaultSeededContent: seededSkillDefaults[input.skillId] ?? defaultTavernSkill,
+        seededSkillId: seeded ? input.skillId : tavernAgentSkillId,
         skillId: input.skillId,
         skillSource: input.skillSource,
     });
     return agentRuntimeSkillSummarySchema.parse({
         allowedTools: null,
         baseDir: input.baseDir,
-        bundled: input.skillId === tavernAgentSkillId,
+        bundled: seeded,
         commandVisible: true,
         configChecks: [],
         description: readSkillDescription(input.content),
@@ -268,36 +347,35 @@ function skillSummaryFromMarkdown(input: {
         name: input.skillId,
         primaryEnv: null,
         requirements: emptyRequirements,
-        runtimeSource:
-            input.skillId === tavernAgentSkillId
-                ? 'Agent engine'
-                : (managedState.pluginRuntimeSource ?? 'Installed skill'),
+        runtimeSource: seeded
+            ? 'Agent engine'
+            : (managedState.pluginRuntimeSource ?? 'Installed skill'),
         skillKey: input.skillId,
-        source: input.skillId === tavernAgentSkillId ? 'builtin' : 'installed',
+        source: seeded ? 'builtin' : 'installed',
         updateAvailable: managedState.updateAvailable,
         updatedAt: input.stats?.mtime.toISOString() ?? null,
         userInvocable: true,
     });
 }
 
-function tavernAgentSummary(skillsDir: string) {
+function seededSkillSummary(skillsDir: string, skillId: string) {
     return skillSummaryFromMarkdown({
-        baseDir: path.join(skillsDir, tavernAgentSkillId),
-        content: defaultTavernSkill,
-        filePath: path.join(skillsDir, tavernAgentSkillId, 'SKILL.md'),
-        skillId: tavernAgentSkillId,
+        baseDir: path.join(skillsDir, skillId),
+        content: seededSkillDefaults[skillId],
+        filePath: path.join(skillsDir, skillId, 'SKILL.md'),
+        skillId,
         skillSource: {
-            installedHash: sha256(defaultTavernSkill),
+            installedHash: sha256(seededSkillDefaults[skillId]),
             source: 'seeded',
         },
         stats: null,
     });
 }
 
-function recordSeededTavernSkillSource() {
+function recordSeededSkillSource(skillId: string) {
     tryRecordSkillSource({
-        installedHash: sha256(defaultTavernSkill),
-        skillId: tavernAgentSkillId,
+        installedHash: sha256(seededSkillDefaults[skillId]),
+        skillId,
         source: 'seeded',
     });
 }

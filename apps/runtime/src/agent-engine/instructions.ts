@@ -9,7 +9,7 @@ import {
     getAgentWorkspaceSource,
     registerAgentWorkspace,
 } from '../workspace/instructions.ts';
-import { seedTavernAgentSkill } from './skill-library.ts';
+import { seedManagedSkills } from './skill-library.ts';
 
 export const agentEngineAgentId = 'main';
 
@@ -55,7 +55,7 @@ export async function prepareAgentEngineInstructions(
     });
 
     if (options.seedSkills !== false) {
-        await seedTavernAgentSkill({ skillsDir: options.skillsDir });
+        await seedManagedSkills({ skillsDir: options.skillsDir });
     }
 
     return {

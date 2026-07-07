@@ -24,6 +24,7 @@ import { unsupportedAgentEngineSurface } from '../agent-engine/errors.ts';
 import {
     getRuntimeSkill,
     listRuntimeSkills,
+    tasksSkillId,
     tavernAgentSkillId,
 } from '../agent-engine/skill-library.ts';
 import { AGENT_HOME, AGENT_WORKSPACE } from '../config.ts';
@@ -75,7 +76,7 @@ async function dispatchAgentEngineStatic({ request, url }: { request: Request; u
         const input = agentRuntimeCreateAgentSchema.parse(await readJson(request));
         const agent = upsertStoredAgent({
             agent: {
-                enabledSkillIds: input.enabledSkillIds ?? [tavernAgentSkillId],
+                enabledSkillIds: input.enabledSkillIds ?? [tavernAgentSkillId, tasksSkillId],
                 enabledPluginIds: input.enabledPluginIds ?? [],
                 id: input.id,
                 isAdmin: input.isAdmin ?? false,
@@ -340,7 +341,7 @@ function ensurePrimaryAgent() {
 
     return upsertStoredAgent({
         agent: {
-            enabledSkillIds: [tavernAgentSkillId],
+            enabledSkillIds: [tavernAgentSkillId, tasksSkillId],
             enabledPluginIds: [],
             id: defaultAgentEngineAgentId,
             isAdmin: true,

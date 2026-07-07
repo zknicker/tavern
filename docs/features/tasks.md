@@ -25,6 +25,9 @@ the user and agents.
 * **Labels.** Freeform comma-separated labels for ad-hoc grouping.
 * **Agent task tools.** Agents list, read, file, and update tasks from chat
   with their `tasks_*` tools, including marking work in progress and done.
+* **Managed tasks skill.** A seeded `tasks` skill teaches board etiquette:
+  when to file tasks, status hygiene, dispatched-task handling, and epics.
+  It is enabled for agents by default and resettable to the Tavern default.
 * **Dispatch to agent.** From a task's detail page, dispatch sends the task
   into the chosen agent's direct chat and assigns it, so the work happens in
   the room.

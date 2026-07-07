@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { defaultTavernSkill, tavernAgentSkillId } from './agent-engine/skill-library.ts';
+import { seededSkillDefaultEntries } from './agent-engine/skill-library.ts';
 import { refreshRuntimeCapabilities } from './capabilities/store.ts';
 import { dispatch } from './cli/main.ts';
 import { DATA_DIR } from './config.ts';
@@ -54,13 +54,15 @@ async function main(): Promise<void> {
     ensureRuntimeJobsSchema(db);
     ensurePrimaryManagedAgent(db);
     // The lazy seed during instruction prep can run before the DB exists and
-    // skip source recording; without this the seeded skill reads as external.
-    recordSkillSource({
-        db,
-        installedHash: sha256(defaultTavernSkill),
-        skillId: tavernAgentSkillId,
-        source: 'seeded',
-    });
+    // skip source recording; without this the seeded skills read as external.
+    for (const [skillId, content] of seededSkillDefaultEntries()) {
+        recordSkillSource({
+            db,
+            installedHash: sha256(content),
+            skillId,
+            source: 'seeded',
+        });
+    }
     await materializePluginSkills({ db }).catch((err) => {
         log.warn('Plugin skills failed to materialize during startup', { err });
     });

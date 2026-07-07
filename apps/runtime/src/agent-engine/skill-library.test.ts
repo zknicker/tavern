@@ -13,13 +13,15 @@ import { createAgentSkill, readSkillSource, sha256 } from '../skills/store.ts';
 import { upsertStoredAgent } from '../tavern/agents-store.ts';
 import { getSkillHubAvailable, installSkillHubSkill } from './skill-hub-library.ts';
 import {
+    defaultTasksSkill,
     defaultTavernSkill,
     getRuntimeSkill,
     listRuntimeSkills,
     readAssignedSkillBundles,
     resetRuntimeSkillToDefault,
-    resetTavernAgentSkill,
-    seedTavernAgentSkill,
+    resetSeededSkill,
+    seedManagedSkills,
+    tasksSkillId,
     tavernAgentSkillId,
 } from './skill-library.ts';
 
@@ -185,7 +187,7 @@ describe('Runtime skill library', () => {
     it('resets the seeded Tavern skill to the release default', async () => {
         await writeSkill(tavernAgentSkillId, '# Tavern Agent\n\nLocal edit.');
 
-        await expect(resetTavernAgentSkill({ skillsDir })).resolves.toEqual({
+        await expect(resetSeededSkill(tavernAgentSkillId, { skillsDir })).resolves.toEqual({
             hash: sha256(defaultTavernSkill),
             skillId: tavernAgentSkillId,
         });
@@ -195,8 +197,29 @@ describe('Runtime skill library', () => {
         expect(readSkillSource(tavernAgentSkillId)?.source).toBe('seeded');
     });
 
+    it('seeds the managed tasks skill beside the agent skill', async () => {
+        await seedManagedSkills({ skillsDir });
+
+        await expect(
+            fs.readFile(path.join(skillsDir, tasksSkillId, 'SKILL.md'), 'utf8')
+        ).resolves.toBe(defaultTasksSkill);
+        expect(readSkillSource(tasksSkillId)?.source).toBe('seeded');
+        await expect(readSkillSummary(tasksSkillId)).resolves.toMatchObject({
+            bundled: true,
+            edited: false,
+            managedSource: 'seeded',
+        });
+
+        const bundles = await readAssignedSkillBundles(
+            { enabledSkillIds: [tasksSkillId] },
+            { skillsDir }
+        );
+        expect(bundles).toHaveLength(1);
+        expect(bundles[0]?.content).toContain('Dispatched tasks');
+    });
+
     it('reports seeded skill summary edit and managed flags', async () => {
-        await seedTavernAgentSkill({ skillsDir });
+        await seedManagedSkills({ skillsDir });
 
         await expect(readSkillSummary(tavernAgentSkillId)).resolves.toMatchObject({
             edited: false,
