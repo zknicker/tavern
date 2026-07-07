@@ -12,6 +12,7 @@ import { FluidList, FluidListItem } from '../../components/ui/fluid-list.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import { formatRelativeTime } from '../../lib/format.ts';
 import type { TaskRecord } from '../../lib/trpc.tsx';
+import { AgentOptionLabel, type AgentSelectOption } from '../agents/agent-option-label.tsx';
 import {
     formatTaskNumber,
     type TaskStatus,
@@ -28,13 +29,13 @@ const taskStatusIcons: Record<TaskStatus, IconSvgElement> = {
 };
 
 interface TaskStatusGroupProps {
-    assigneeName: (task: TaskRecord) => string | null;
+    agents: AgentSelectOption[];
     onOpen: (task: TaskRecord) => void;
     status: TaskStatus;
     tasks: TaskRecord[];
 }
 
-export function TaskStatusGroup({ assigneeName, onOpen, status, tasks }: TaskStatusGroupProps) {
+export function TaskStatusGroup({ agents, onOpen, status, tasks }: TaskStatusGroupProps) {
     return (
         <section className="grid gap-1">
             <div className="flex items-center gap-2 px-3 py-1.5">
@@ -53,7 +54,7 @@ export function TaskStatusGroup({ assigneeName, onOpen, status, tasks }: TaskSta
             <FluidList>
                 {tasks.map((task, index) => (
                     <FluidListItem index={index} key={task.id}>
-                        <TaskRow assigneeName={assigneeName(task)} onOpen={onOpen} task={task} />
+                        <TaskRow agents={agents} onOpen={onOpen} task={task} />
                     </FluidListItem>
                 ))}
             </FluidList>
@@ -61,12 +62,40 @@ export function TaskStatusGroup({ assigneeName, onOpen, status, tasks }: TaskSta
     );
 }
 
+function TaskRowAssignee({
+    agents,
+    assignee,
+}: {
+    agents: AgentSelectOption[];
+    assignee: TaskRecord['assignee'];
+}) {
+    if (assignee === null) {
+        return null;
+    }
+
+    if (assignee.kind === 'user') {
+        return (
+            <span className="hidden max-w-28 truncate text-muted-foreground text-xs md:inline">
+                You
+            </span>
+        );
+    }
+
+    const agent = agents.find((candidate) => candidate.id === assignee.agentId);
+
+    return (
+        <span className="hidden max-w-32 text-muted-foreground text-xs md:flex md:min-w-0">
+            {agent ? <AgentOptionLabel agent={agent} /> : <span>{assignee.agentId}</span>}
+        </span>
+    );
+}
+
 function TaskRow({
-    assigneeName,
+    agents,
     onOpen,
     task,
 }: {
-    assigneeName: string | null;
+    agents: AgentSelectOption[];
     onOpen: (task: TaskRecord) => void;
     task: TaskRecord;
 }) {
@@ -104,11 +133,7 @@ function TaskRow({
                         {taskPriorityLabels[task.priority]}
                     </span>
                 ) : null}
-                {assigneeName ? (
-                    <span className="hidden max-w-28 truncate text-muted-foreground text-xs md:inline">
-                        {assigneeName}
-                    </span>
-                ) : null}
+                <TaskRowAssignee agents={agents} assignee={task.assignee} />
                 <span className="hidden w-16 text-right text-muted-foreground text-xs sm:inline">
                     {formatRelativeTime(task.updatedAt)}
                 </span>

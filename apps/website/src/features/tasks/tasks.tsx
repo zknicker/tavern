@@ -30,23 +30,6 @@ export function Tasks() {
         () => filterTasks({ assignee, query: deferredQuery, tasks, view }),
         [assignee, deferredQuery, tasks, view]
     );
-    const assigneeName = React.useCallback(
-        (task: TaskRecord) => {
-            if (task.assignee?.kind === 'user') {
-                return 'You';
-            }
-
-            if (task.assignee?.kind === 'agent') {
-                const agentId = task.assignee.agentId;
-
-                return agents.find((agent) => agent.id === agentId)?.name ?? agentId;
-            }
-
-            return null;
-        },
-        [agents]
-    );
-
     const openTask = React.useCallback(
         (task: TaskRecord) => {
             navigate(appRoutes.task(task.id));
@@ -59,7 +42,6 @@ export function Tasks() {
             actionErrorMessage={null}
             agents={agents}
             assignee={assignee}
-            assigneeName={assigneeName}
             connectionState={toRuntimePageConnectionState(runtimeConnection.status)}
             filteredTasks={filteredTasks}
             onAssigneeChange={setAssignee}

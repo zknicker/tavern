@@ -44,7 +44,6 @@ interface TasksViewProps {
     actionErrorMessage: string | null;
     agents: AgentSelectOption[];
     assignee: TaskAssigneeFilter;
-    assigneeName: (task: TaskRecord) => string | null;
     connectionState: 'reachable' | 'unconfigured' | 'unreachable';
     filteredTasks: TaskRecord[];
     onAssigneeChange: (assignee: TaskAssigneeFilter) => void;
@@ -63,7 +62,6 @@ export function TasksView({
     actionErrorMessage,
     agents,
     assignee,
-    assigneeName,
     connectionState,
     filteredTasks,
     onAssigneeChange,
@@ -209,7 +207,7 @@ export function TasksView({
                             <div className="grid gap-5">
                                 {groups.map((group) => (
                                     <TaskStatusGroup
-                                        assigneeName={assigneeName}
+                                        agents={agents}
                                         key={group.status}
                                         onOpen={onOpen}
                                         status={group.status}
