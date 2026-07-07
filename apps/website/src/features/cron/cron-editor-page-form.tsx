@@ -13,6 +13,7 @@ import {
 type CronJob = CronGetOutput['job'];
 
 interface CronEditorPageFormProps {
+    actions: React.ReactNode;
     isRunsPending: boolean;
     job: CronJob | null;
     onRunSelect: (run: CronRunsOutput['runs'][number]) => void;
@@ -21,6 +22,7 @@ interface CronEditorPageFormProps {
 }
 
 function CronEditorPageFormInner({
+    actions,
     isRunsPending,
     job,
     onRunSelect,
@@ -54,6 +56,7 @@ function CronEditorPageFormInner({
                     <>
                         <CronEditorPromptPane errorMessage={errorMessage} form={form} />
                         <CronEditorSidebar
+                            actions={actions}
                             form={form}
                             isRunsPending={isRunsPending}
                             job={job}

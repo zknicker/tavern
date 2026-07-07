@@ -1,6 +1,5 @@
 import * as React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AppShellContentHeader } from '../../components/ui/app-shell.tsx';
 import { Button } from '../../components/ui/primitives/button.tsx';
 import { Separator } from '../../components/ui/separator.tsx';
 import { TabsSubtle, TabsSubtleItem, TabsSubtleList } from '../../components/ui/tabs-subtle.tsx';
@@ -76,28 +75,6 @@ export function TaskNew() {
 
     return (
         <div className="flex flex-1 flex-col overflow-hidden">
-            <AppShellContentHeader>
-                <div className="ml-auto flex shrink-0 items-center gap-2">
-                    <Button
-                        onClick={() => navigate(appRoutes.tasks)}
-                        size="sm"
-                        type="button"
-                        variant="ghost"
-                    >
-                        Cancel
-                    </Button>
-                    <Button
-                        disabled={!title.trim()}
-                        loading={createMutation.isPending}
-                        onClick={createTask}
-                        size="sm"
-                        type="button"
-                    >
-                        {kind === 'epic' ? 'Create epic' : 'Create task'}
-                    </Button>
-                </div>
-            </AppShellContentHeader>
-
             <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
                 <TaskEditorPane
                     autoFocusTitle
@@ -108,6 +85,25 @@ export function TaskNew() {
                     titlePlaceholder={kind === 'epic' ? 'Untitled epic' : 'Untitled task'}
                 />
                 <TaskEditorSidebar>
+                    <div className="flex items-center justify-end gap-2">
+                        <Button
+                            onClick={() => navigate(appRoutes.tasks)}
+                            size="sm"
+                            type="button"
+                            variant="ghost"
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            disabled={!title.trim()}
+                            loading={createMutation.isPending}
+                            onClick={createTask}
+                            size="sm"
+                            type="button"
+                        >
+                            {kind === 'epic' ? 'Create epic' : 'Create task'}
+                        </Button>
+                    </div>
                     <TabsSubtle
                         onValueChange={(value) => setKind(value as 'epic' | 'task')}
                         value={kind}

@@ -1,7 +1,6 @@
 import { Trash2 } from '@hugeicons/core-free-icons';
 import * as React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AppShellContentHeader } from '../../components/ui/app-shell.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import { Button } from '../../components/ui/primitives/button.tsx';
 import { Separator } from '../../components/ui/separator.tsx';
@@ -120,23 +119,21 @@ export function TaskDetail({ taskId }: { taskId: string }) {
 
     return (
         <div className="flex flex-1 flex-col overflow-hidden">
-            <AppShellContentHeader>
-                <Button
-                    className="ml-auto shrink-0"
-                    loading={deleteMutation.isPending}
-                    onClick={deleteTask}
-                    size="sm"
-                    type="button"
-                    variant="ghost"
-                >
-                    <Icon aria-hidden="true" className="size-4" icon={Trash2} />
-                    Delete
-                </Button>
-            </AppShellContentHeader>
-
             <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
                 <TaskDetailPane key={task.id} onSave={patchTask} task={task} />
                 <TaskEditorSidebar>
+                    <div className="flex justify-end">
+                        <Button
+                            loading={deleteMutation.isPending}
+                            onClick={deleteTask}
+                            size="sm"
+                            type="button"
+                            variant="ghost"
+                        >
+                            <Icon aria-hidden="true" className="size-4" icon={Trash2} />
+                            Delete
+                        </Button>
+                    </div>
                     <TaskFields
                         agents={agents}
                         disabled={updateMutation.isPending}

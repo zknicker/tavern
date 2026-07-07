@@ -17,7 +17,7 @@ export function CronEditorPromptPane({ errorMessage, form }: CronEditorPromptPan
 
     return (
         <div className="flex min-h-0 min-w-0 flex-1">
-            <main className="mx-auto flex min-h-0 w-full flex-1 flex-col gap-6 px-4 pt-3 pb-8 lg:max-w-4xl lg:px-10">
+            <main className="mx-auto flex min-h-0 w-full flex-1 flex-col gap-6 px-4 pt-6 pb-8 lg:max-w-4xl lg:px-10">
                 <div className="flex shrink-0 flex-col gap-1">
                     <form.Field name="name">
                         {(field) => (

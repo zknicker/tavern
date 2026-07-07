@@ -13,7 +13,7 @@ import { appRoutes } from '../../lib/app-routes.ts';
 import type { CronDeliveryTargetsOutput, CronGetOutput } from '../../lib/trpc.tsx';
 import { cn } from '../../lib/utils.ts';
 import { CronDeleteDialog } from './cron-delete-dialog.tsx';
-import { CronEditorHeader } from './cron-editor-header.tsx';
+import { CronEditorActions } from './cron-editor-actions.tsx';
 import { CronEditorPageForm } from './cron-editor-page-form.tsx';
 import type { CronFormState } from './cron-form.ts';
 import { buildCronCreateInput, buildCronUpdateInput } from './cron-inputs.ts';
@@ -73,36 +73,38 @@ export function CronEditor() {
         navigate(appRoutes.automations);
     }, [navigate]);
 
+    const editorActions = (
+        <CronEditorActions
+            canEdit={canEdit && !isLoadingEditor}
+            canRunActions={Boolean(job)}
+            isDeleting={deleteMutation.isPending}
+            isNew={isNew}
+            isPending={isPending}
+            isRunning={runMutation.isPending}
+            onDelete={() => {
+                setDeleteDialogOpen(true);
+            }}
+            onRun={() => {
+                if (!job) {
+                    return;
+                }
+
+                const optimisticRunId = optimisticCronRuns.recordManualRun();
+
+                void runMutation
+                    .mutateAsync({
+                        jobId: job.id,
+                        mode: 'enqueue',
+                    })
+                    .catch(() => {
+                        optimisticCronRuns.markManualRunFailed(optimisticRunId);
+                    });
+            }}
+        />
+    );
+
     return (
         <div className="flex flex-1 flex-col overflow-hidden">
-            <CronEditorHeader
-                canEdit={canEdit && !isLoadingEditor}
-                canRunActions={Boolean(job)}
-                isDeleting={deleteMutation.isPending}
-                isNew={isNew}
-                isPending={isPending}
-                isRunning={runMutation.isPending}
-                onDelete={() => {
-                    setDeleteDialogOpen(true);
-                }}
-                onRun={() => {
-                    if (!job) {
-                        return;
-                    }
-
-                    const optimisticRunId = optimisticCronRuns.recordManualRun();
-
-                    void runMutation
-                        .mutateAsync({
-                            jobId: job.id,
-                            mode: 'enqueue',
-                        })
-                        .catch(() => {
-                            optimisticCronRuns.markManualRunFailed(optimisticRunId);
-                        });
-                }}
-            />
-
             {runMutation.error ? (
                 <div className="border-error/40 border-b bg-error-bg px-4 py-3">
                     <p className="text-error-foreground text-sm">{runMutation.error.message}</p>
@@ -115,6 +117,7 @@ export function CronEditor() {
                 </div>
             ) : shouldRenderForm ? (
                 <CronEditorPageForm
+                    actions={editorActions}
                     isRunsPending={cronRunsQuery.isPending}
                     job={job}
                     onRunSelect={(run) => {
