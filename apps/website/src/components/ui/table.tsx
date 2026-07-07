@@ -86,16 +86,21 @@ const Table = forwardRef<HTMLTableElement, TableProps>(
                                 <motion.div
                                     animate={{
                                         opacity: 1,
-                                        top: activeRect.top,
-                                        left: activeRect.left,
+                                        x: activeRect.left,
+                                        y: activeRect.top,
                                         width: activeRect.width,
                                         height: activeRect.height,
                                     }}
-                                    className="absolute bg-hover"
+                                    // x/y instead of top/left: uniform rows
+                                    // then move on pure transforms, so the
+                                    // spring never forces layout mid-flight
+                                    // (visible as stutter inside blurred
+                                    // surfaces like drawers).
+                                    className="absolute top-0 left-0 bg-hover"
                                     initial={{
                                         opacity: 0,
-                                        top: activeRect.top,
-                                        left: activeRect.left,
+                                        x: activeRect.left,
+                                        y: activeRect.top,
                                         width: activeRect.width,
                                         height: activeRect.height,
                                     }}
@@ -158,18 +163,22 @@ const TableRow = forwardRef<HTMLTableRowElement, TableRowProps>(
     ({ index, className, style, ...props }, ref): ReactElement => {
         const internalRef = useRef<HTMLTableRowElement>(null);
         const context = useContext(TableContext);
+        // Register against the stable callback, not the context object —
+        // the context identity changes on every hover crossing, and
+        // re-registering all rows mid-spring re-measures the table per frame.
+        const registerItem = context?.registerItem;
 
         useEffect(() => {
-            if (index === undefined || !context) {
+            if (index === undefined || !registerItem) {
                 return;
             }
 
-            context.registerItem(index, internalRef.current);
+            registerItem(index, internalRef.current);
 
             return () => {
-                context.registerItem(index, null);
+                registerItem(index, null);
             };
-        }, [context, index]);
+        }, [registerItem, index]);
 
         const isBodyRow = index !== undefined;
         const activeIndex = context?.activeIndex ?? null;
@@ -181,9 +190,11 @@ const TableRow = forwardRef<HTMLTableRowElement, TableRowProps>(
         return (
             <tr
                 className={cn(
-                    'group/row relative z-10 border-b transition-[border-color] duration-100 data-[state=selected]:bg-active',
+                    // Border swaps instantly and text stays static on hover:
+                    // the moving background is the only animated element, so
+                    // crossings never trigger extra style transitions.
+                    'relative z-10 border-b data-[state=selected]:bg-active',
                     hideBorder ? 'border-transparent' : 'border-border/60',
-                    isBodyRow && activeIndex === index && 'is-active',
                     className
                 )}
                 data-proximity-index={index}
@@ -222,7 +233,7 @@ const TableCell = forwardRef<HTMLTableCellElement, TdHTMLAttributes<HTMLTableCel
     ({ className, ...props }, ref): ReactElement => (
         <td
             className={cn(
-                'whitespace-nowrap px-3 py-2 align-middle text-muted-foreground leading-none transition-colors duration-100 group-[.is-active]/row:text-foreground has-[[role=checkbox]]:pe-0',
+                'whitespace-nowrap px-3 py-2 align-middle text-muted-foreground leading-none has-[[role=checkbox]]:pe-0',
                 className
             )}
             data-slot="table-cell"
