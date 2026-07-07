@@ -326,7 +326,7 @@ export async function listChatDetails(options?: { chatId?: string; includeExtern
             const lastActivityAt =
                 runtimeLastActivityAt ??
                 (identity.type === 'tavern'
-                    ? (agentRuntimeChatEntry?.record.updatedAt ?? null)
+                    ? (agentRuntimeChatEntry?.record.lastActivityAt ?? null)
                     : null);
             const latestSession =
                 [...chatSessions]

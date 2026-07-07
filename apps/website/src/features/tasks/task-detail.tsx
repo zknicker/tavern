@@ -1,6 +1,7 @@
 import { Trash2 } from '@hugeicons/core-free-icons';
 import * as React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { RelativeTime } from '../../components/time/relative-time.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import { Button } from '../../components/ui/primitives/button.tsx';
 import { Separator } from '../../components/ui/separator.tsx';
@@ -18,7 +19,6 @@ import {
     useTaskUpdate,
 } from '../../hooks/tasks/use-task-mutations.ts';
 import { appRoutes } from '../../lib/app-routes.ts';
-import { formatRelativeTime } from '../../lib/format.ts';
 import { EmptyState } from '../shell/empty-state.tsx';
 import { TaskDispatchField } from './task-dispatch-field.tsx';
 import { TaskEditorPane } from './task-editor-pane.tsx';
@@ -164,13 +164,13 @@ export function TaskDetail({ taskId }: { taskId: string }) {
                             <div className="flex items-center justify-between gap-4">
                                 <span className="text-muted-foreground">Created</span>
                                 <span className="text-foreground">
-                                    {formatRelativeTime(task.createdAt)}
+                                    <RelativeTime value={task.createdAt} />
                                 </span>
                             </div>
                             <div className="flex items-center justify-between gap-4">
                                 <span className="text-muted-foreground">Updated</span>
                                 <span className="text-foreground">
-                                    {formatRelativeTime(task.updatedAt)}
+                                    <RelativeTime value={task.updatedAt} />
                                 </span>
                             </div>
                         </div>

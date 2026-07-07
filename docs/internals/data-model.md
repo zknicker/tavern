@@ -91,6 +91,9 @@ chat_reads
 ```
 
 These tables live in Runtime SQLite and back the OpenAPI chat contract.
+Runtime derives `chat.last_activity_at` from the latest undeleted
+`chat_messages.created_at`; `chats.updated_at` remains metadata/container
+update time.
 
 Agent sessions also live in Runtime SQLite. They are execution routing state,
 not chat history.

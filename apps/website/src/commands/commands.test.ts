@@ -139,7 +139,6 @@ function createChat(overrides: Partial<ChatListItem> = {}): ChatListItem {
         isDisabled: false,
         isEnabled: true,
         lastActivityAt: '2026-07-07T12:00:00.000Z',
-        lastActivityLabel: 'just now',
         latestSession: null,
         participants: [],
         scope: 'channel',

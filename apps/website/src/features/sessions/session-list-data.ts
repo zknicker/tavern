@@ -17,7 +17,8 @@ export interface SessionCardData {
 
 export function buildSessionList(
     agents: AgentListOutput['agents'],
-    sessions: SessionListOutput['sessions']
+    sessions: SessionListOutput['sessions'],
+    now = Date.now()
 ) {
     return sessions.map((session) => {
         const agentName =
@@ -28,7 +29,7 @@ export function buildSessionList(
             agentName,
             id: session.id,
             key: session.key,
-            lastActivity: formatRelativeTime(session.startedAt),
+            lastActivity: formatRelativeTime(session.startedAt, now),
             messageCount: session.messageCount,
             name: session.name,
             searchText: [agentName, session.source, session.name].join('\n').toLowerCase(),

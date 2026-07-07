@@ -37,6 +37,7 @@ export interface ChatRow {
     has_active_turn: number;
     id: string;
     kind: 'channel' | 'dm';
+    last_activity_at: string | null;
     last_message_sequence: number;
     metadata_json: string;
     pinned: number;

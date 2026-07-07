@@ -1,7 +1,7 @@
+import { RelativeTime } from '../../components/time/relative-time.tsx';
 import { Badge } from '../../components/ui/badge.tsx';
 import { DayDivider, formatDayLabel } from '../../components/ui/day-divider.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
-import { formatRelativeTime } from '../../lib/format.ts';
 import type { WorkerListOutput } from '../../lib/trpc.tsx';
 import { workerKindConfig, workerStatusVariants } from './config.ts';
 
@@ -74,7 +74,7 @@ export function WorkerRow({
                                     {worker.status}
                                 </Badge>
                                 <span className="ml-auto shrink-0 font-mono text-muted-foreground/50 text-xs tabular-nums">
-                                    {formatRelativeTime(timestamp)}
+                                    <RelativeTime value={timestamp} />
                                 </span>
                             </div>
 

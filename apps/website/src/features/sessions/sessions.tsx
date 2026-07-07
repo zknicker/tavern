@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { useRelativeNow } from '../../components/time/relative-time.tsx';
 import { useAgentListSuspense } from '../../hooks/agents/use-agent-list.ts';
 import {
     toRuntimePageConnectionState,
@@ -23,9 +24,10 @@ function SessionsContent() {
     const [agents] = useAgentListSuspense();
     const runtimeConnection = useRuntimeConnection();
     const [sessionsData] = useSessionListSuspense();
+    const relativeNow = useRelativeNow();
     const sessions = React.useMemo(
-        () => buildSessionList(agents.agents, sessionsData.sessions),
-        [agents.agents, sessionsData.sessions]
+        () => buildSessionList(agents.agents, sessionsData.sessions, relativeNow),
+        [agents.agents, sessionsData.sessions, relativeNow]
     );
 
     return (

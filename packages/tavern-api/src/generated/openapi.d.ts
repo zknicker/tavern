@@ -354,6 +354,7 @@ export interface components {
             title: string | null;
             created_at: components["schemas"]["Timestamp"];
             updated_at: components["schemas"]["Timestamp"];
+            last_activity_at: components["schemas"]["Timestamp"] | null;
             last_message_sequence: number;
             has_active_turn: boolean;
             participants: components["schemas"]["Participant"][];

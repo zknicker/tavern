@@ -93,7 +93,7 @@ test('listChats includes Tavern chats before any synced activity exists', async 
         ['You', 'Planner']
     );
     assert.equal(listedChats(result)[0]?.sessionCount, 0);
-    assert.equal(listedChats(result)[0]?.lastActivityAt, '2026-04-06T12:01:00.000Z');
+    assert.equal(listedChats(result)[0]?.lastActivityAt, null);
 });
 
 test('listChats projects Runtime-owned Tavern channels and DMs', async () => {
@@ -161,22 +161,39 @@ test('listChats hides stale Runtime-owned Tavern DMs for deleted agents', async 
     assert.deepEqual(result.ids, []);
 });
 
-test('new Runtime-owned Tavern chats sort by chat update time before runtime activity syncs', async () => {
+test('Runtime-owned Tavern chats sort by message activity before runtime activity syncs', async () => {
     await seedPlanningChat({ includeSession: true });
     tavernChats.push(
         runtimeTavernChat({
             agentIds: ['agent:planner'],
             displayName: 'Fresh chat',
             id: freshChatId,
+            lastActivityAt: '2026-04-06T12:03:00.000Z',
             updatedAt: '2026-04-06T12:10:00.000Z',
         })
     );
 
     const result = await listChats();
 
-    assert.equal(listedChats(result)[0]?.id, freshChatId);
-    assert.equal(listedChats(result)[0]?.lastActivityAt, '2026-04-06T12:10:00.000Z');
-    assert.equal(listedChats(result)[1]?.id, planningChatId);
+    assert.equal(listedChats(result)[0]?.id, planningChatId);
+    assert.equal(listedChats(result)[1]?.id, freshChatId);
+    assert.equal(listedChats(result)[1]?.lastActivityAt, '2026-04-06T12:03:00.000Z');
+});
+
+test('Runtime-owned Tavern chat metadata updates do not become sidebar activity', async () => {
+    await seedPlanningChat({ includeSession: false });
+    tavernChats[0] = runtimeTavernChat({
+        agentIds: ['agent:planner'],
+        displayName: 'Planning renamed',
+        id: planningChatId,
+        lastActivityAt: '2026-04-06T12:01:00.000Z',
+        updatedAt: '2026-04-06T12:30:00.000Z',
+    });
+
+    const result = await listChats();
+
+    assert.equal(listedChats(result)[0]?.displayName, 'Planning renamed');
+    assert.equal(listedChats(result)[0]?.lastActivityAt, '2026-04-06T12:01:00.000Z');
 });
 
 test('Tavern session sync does not overwrite Runtime-owned chat labels', async () => {
@@ -678,6 +695,7 @@ function runtimeTavernChat(input: {
     displayName: string;
     id: string;
     kind?: 'channel' | 'dm';
+    lastActivityAt?: string | null;
     updatedAt: string;
 }): TavernChat {
     const kind = input.kind ?? 'channel';
@@ -685,6 +703,7 @@ function runtimeTavernChat(input: {
         created_at: input.updatedAt,
         id: input.id,
         kind,
+        last_activity_at: input.lastActivityAt ?? null,
         last_message_sequence: 0,
         metadata: {
             runtime: {

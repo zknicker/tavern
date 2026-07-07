@@ -14,10 +14,10 @@ function getWorkerStatus(level: LogListOutput['logs'][number]['level']) {
     }
 }
 
-export function buildWorkerRecords(logs: LogListOutput['logs']) {
+export function buildWorkerRecords(logs: LogListOutput['logs'], now = Date.now()) {
     return logs.map((log) => ({
         channel: log.source,
-        completedAt: formatRelativeTime(log.time),
+        completedAt: formatRelativeTime(log.time, now),
         duration: 'live',
         id: log.id,
         name: truncate(log.message, 52),

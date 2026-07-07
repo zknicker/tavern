@@ -2,7 +2,7 @@ import * as React from 'react';
 import type { ChatTimelineState } from '../../../hooks/chats/chat-timeline-state.ts';
 import type { ChatStartDraft } from '../../../hooks/chats/use-chat-start-drafts.tsx';
 import { formatTimestamp } from '../../../lib/format.ts';
-import type { ChatListItem } from '../../chats/chat-list-data.ts';
+import { type ChatListItem, getChatLastActivityLabel } from '../../chats/chat-list-data.ts';
 import { buildChatPath, buildNewChatDraftPath } from '../../chats/chat-path.ts';
 
 export const openChatTabsStorageKey = 'tavern.chatTabs.openChatIds.v1';
@@ -163,7 +163,9 @@ function compareCreatedAt(left: string | null, right: string | null) {
 }
 
 export function formatTopbarChatActivityTitle(chat: ChatListItem) {
-    return chat.lastActivityAt ? formatTimestamp(chat.lastActivityAt) : chat.lastActivityLabel;
+    return chat.lastActivityAt
+        ? formatTimestamp(chat.lastActivityAt)
+        : getChatLastActivityLabel(chat);
 }
 
 /* ------------------------------------------------------------------ drafts */

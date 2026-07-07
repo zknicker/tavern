@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { useRelativeNow } from '../../components/time/relative-time.tsx';
 import {
     toRuntimePageConnectionState,
     useRuntimeConnection,
@@ -12,7 +13,11 @@ export function Logs() {
     const { navigateToSettings } = useLayoutContext();
     const runtimeConnection = useRuntimeConnection();
     const [logs] = useLogsSuspense();
-    const workers = React.useMemo(() => buildWorkerRecords(logs.logs), [logs.logs]);
+    const relativeNow = useRelativeNow();
+    const workers = React.useMemo(
+        () => buildWorkerRecords(logs.logs, relativeNow),
+        [logs.logs, relativeNow]
+    );
 
     return (
         <WorkerLogs

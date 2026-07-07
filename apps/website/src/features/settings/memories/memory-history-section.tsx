@@ -1,6 +1,7 @@
 import { ArrowRight01Icon, ChatIcon, Moon02Icon } from '@hugeicons-pro/core-stroke-rounded';
 import type { MemoryJobSummary } from '@tavern/api';
 import * as React from 'react';
+import { useRelativeNow } from '../../../components/time/relative-time.tsx';
 import { Badge } from '../../../components/ui/badge.tsx';
 import { Icon } from '../../../components/ui/icon.tsx';
 import { Menu, MenuItem, MenuPopup, MenuTrigger } from '../../../components/ui/menu.tsx';
@@ -168,10 +169,11 @@ function MemoryJobRow({
 }) {
     const badge = memoryJobBadge(job);
     const detailLine = memoryJobDetailLine(job);
+    const relativeNow = useRelativeNow();
     const meta = [
         memoryJobKindLabel(job),
         agentName,
-        formatRelativeTime(job.completedAt ?? job.createdAt),
+        formatRelativeTime(job.completedAt ?? job.createdAt, relativeNow),
         detailLine,
     ]
         .filter(Boolean)

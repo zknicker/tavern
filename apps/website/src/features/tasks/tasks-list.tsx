@@ -7,10 +7,10 @@ import {
     Loading03Icon,
 } from '@hugeicons-pro/core-stroke-rounded';
 import * as React from 'react';
+import { RelativeTime } from '../../components/time/relative-time.tsx';
 import { Badge } from '../../components/ui/badge.tsx';
 import { FluidList, FluidListItem } from '../../components/ui/fluid-list.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
-import { formatRelativeTime } from '../../lib/format.ts';
 import type { TaskRecord } from '../../lib/trpc.tsx';
 import { AgentOptionLabel, type AgentSelectOption } from '../agents/agent-option-label.tsx';
 import {
@@ -135,7 +135,7 @@ function TaskRow({
                 ) : null}
                 <TaskRowAssignee agents={agents} assignee={task.assignee} />
                 <span className="hidden w-16 text-right text-muted-foreground text-xs sm:inline">
-                    {formatRelativeTime(task.updatedAt)}
+                    <RelativeTime value={task.updatedAt} />
                 </span>
             </div>
         </div>

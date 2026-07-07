@@ -14,6 +14,7 @@ import {
     createChat,
     createDelivery,
     createMessage,
+    deleteMessage,
     deleteResponse,
     getChat,
     getResponse,
@@ -477,6 +478,39 @@ describe('Tavern Runtime Chat API store', () => {
         });
 
         expect(getChat('cht_1')).toMatchObject({ has_active_turn: false });
+    });
+
+    it('projects last activity from durable undeleted messages', () => {
+        createChat({ id: 'cht_1', title: 'Test' });
+
+        expect(getChat('cht_1')).toMatchObject({ last_activity_at: null });
+        expect(listChats().chats).toEqual([
+            expect.objectContaining({ id: 'cht_1', last_activity_at: null }),
+        ]);
+
+        const first = createMessage('cht_1', messageInput('msg_1', 'nonce_1', 'hello'));
+        const second = createMessage('cht_1', messageInput('msg_2', 'nonce_2', 'again'));
+
+        expect(getChat('cht_1')).toMatchObject({
+            last_activity_at: second.message.created_at,
+        });
+        expect(listChats().chats).toEqual([
+            expect.objectContaining({
+                id: 'cht_1',
+                last_activity_at: second.message.created_at,
+            }),
+        ]);
+
+        createChat({ id: 'cht_1', title: 'Renamed' });
+        expect(getChat('cht_1')).toMatchObject({
+            last_activity_at: second.message.created_at,
+            title: 'Renamed',
+        });
+
+        deleteMessage('msg_2');
+        expect(getChat('cht_1')).toMatchObject({
+            last_activity_at: first.message.created_at,
+        });
     });
 
     it('does not treat deleted or delivered responses as active chat state', () => {

@@ -1,6 +1,7 @@
 import { useReducedMotion } from 'framer-motion';
 import type * as React from 'react';
 import { useResolvedThemeOptional } from '../../components/theme-provider.tsx';
+import { RelativeTime } from '../../components/time/relative-time.tsx';
 import { Button } from '../../components/ui/button.tsx';
 import {
     Drawer,
@@ -16,7 +17,6 @@ import { Table, TableBody, TableCell, TableRow } from '../../components/ui/table
 import { useAgentAppearanceLookup } from '../../hooks/agents/use-agent-appearance.ts';
 import { useAgentSession, useAgentSessionReset } from '../../hooks/agents/use-agent-session.ts';
 import { useModelList } from '../../hooks/models/use-model-list.ts';
-import { formatRelativeTime } from '../../lib/format.ts';
 import { getModelProviderConfig } from '../../lib/model-provider-config.ts';
 import type { AgentSessionOutput, ModelListOutput } from '../../lib/trpc.tsx';
 import { resolveAgentInk } from '../agents/agent-color-presets.ts';
@@ -158,7 +158,7 @@ function PastSessionList({ sessions }: { sessions: AgentSessionOutput['pastSessi
                                     </span>
                                 </TableCell>
                                 <TableCell className="w-px text-right text-muted-foreground text-xs">
-                                    {formatPastSessionTiming(session)}
+                                    <PastSessionTiming session={session} />
                                 </TableCell>
                             </TableRow>
                         ))}
@@ -169,13 +169,20 @@ function PastSessionList({ sessions }: { sessions: AgentSessionOutput['pastSessi
     );
 }
 
-// "ended 2h ago" for archived sessions; stopped ones name the state instead.
-function formatPastSessionTiming(session: AgentSessionOutput['pastSessions'][number]) {
+function PastSessionTiming({ session }: { session: AgentSessionOutput['pastSessions'][number] }) {
     if (session.status === 'stopped') {
-        return `stopped ${formatRelativeTime(session.updatedAt)}`;
+        return (
+            <>
+                stopped <RelativeTime value={session.updatedAt} />
+            </>
+        );
     }
 
-    return `ended ${formatRelativeTime(session.archivedAt ?? session.updatedAt)}`;
+    return (
+        <>
+            ended <RelativeTime value={session.archivedAt ?? session.updatedAt} />
+        </>
+    );
 }
 
 function AgentSessionFacts({
@@ -204,8 +211,8 @@ function AgentSessionFacts({
         ...(session.status !== 'active'
             ? [['Status', formatSessionStatus(session.status)] as [string, React.ReactNode]]
             : []),
-        ['Started', formatRelativeTime(session.createdAt)],
-        ['Last activity', formatRelativeTime(session.updatedAt)],
+        ['Started', <RelativeTime key="created" value={session.createdAt} />],
+        ['Last activity', <RelativeTime key="updated" value={session.updatedAt} />],
     ];
 
     return (

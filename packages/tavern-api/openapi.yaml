@@ -639,6 +639,7 @@ components:
         - title
         - created_at
         - updated_at
+        - last_activity_at
         - last_message_sequence
         - has_active_turn
         - participants
@@ -655,6 +656,10 @@ components:
           $ref: '#/components/schemas/Timestamp'
         updated_at:
           $ref: '#/components/schemas/Timestamp'
+        last_activity_at:
+          oneOf:
+            - $ref: '#/components/schemas/Timestamp'
+            - type: 'null'
         last_message_sequence:
           type: integer
           minimum: 0

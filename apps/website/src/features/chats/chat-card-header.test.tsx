@@ -20,7 +20,6 @@ test('ChatCardHeader renders chat labels and omits session link blocks', () => {
                 isDisabled: false,
                 isEnabled: true,
                 lastActivityAt: '2026-03-31T14:57:00.000Z',
-                lastActivityLabel: '1d ago',
                 latestSession: {
                     agentId: 'main',
                     lastActivityAt: '2026-03-31T14:57:00.000Z',
@@ -82,7 +81,6 @@ test('ChatCardHeader derives runtime DM titles from chat primitives', () => {
                 isDisabled: false,
                 isEnabled: true,
                 lastActivityAt: '2026-05-02T20:48:22.769Z',
-                lastActivityLabel: 'now',
                 latestSession: null,
                 participants: [
                     {
@@ -137,7 +135,6 @@ test('ChatCardHeader badges first-party Tavern chats by provider', () => {
                 isDisabled: false,
                 isEnabled: true,
                 lastActivityAt: null,
-                lastActivityLabel: 'no activity yet',
                 latestSession: {
                     agentId: 'blippy',
                     sessionId: null,
@@ -192,7 +189,6 @@ test('ChatCardHeader omits duplicate badges for system sessions', () => {
                 isDisabled: true,
                 isEnabled: false,
                 lastActivityAt: '2026-05-08T18:10:15.508Z',
-                lastActivityLabel: 'now',
                 latestSession: {
                     agentId: 'main',
                     sessionId: null,

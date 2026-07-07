@@ -1,5 +1,5 @@
 import type { ChatListItem } from '../features/chats/chat-list-data.ts';
-import { getChatAgentId } from '../features/chats/chat-list-data.ts';
+import { getChatAgentId, getChatLastActivityLabel } from '../features/chats/chat-list-data.ts';
 import { buildChatPath } from '../features/chats/chat-path.ts';
 import {
     buildSidebarChatGroups,
@@ -49,7 +49,7 @@ function buildChatNavigationCommand(
             isChannel ? 'channel' : 'direct message',
             isChannel ? 'room' : 'dm',
             chat.searchText,
-            chat.lastActivityLabel,
+            getChatLastActivityLabel(chat),
         ],
         run: () => context.navigate(buildChatPath(chat.id)),
         title,

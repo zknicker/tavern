@@ -3,6 +3,7 @@ import * as React from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { ChannelIconBox } from '../../components/chats/channel-icon-box.tsx';
 import { useResolvedThemeOptional } from '../../components/theme-provider.tsx';
+import { useRelativeNow } from '../../components/time/relative-time.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import { Button } from '../../components/ui/primitives/button.tsx';
 import {
@@ -35,7 +36,12 @@ import { markChatTiming } from '../../lib/chat-timing.ts';
 import { resolveAgentInk } from '../agents/agent-color-presets.ts';
 import { AgentFace } from '../chats/agent-face.tsx';
 import { ChannelDialog } from '../chats/channel-dialog.tsx';
-import { buildChatList, type ChatListItem, getChatAgentId } from '../chats/chat-list-data.ts';
+import {
+    buildChatList,
+    type ChatListItem,
+    getChatAgentId,
+    getChatLastActivityLabel,
+} from '../chats/chat-list-data.ts';
 import { buildChatPath } from '../chats/chat-path.ts';
 import { getChannelColorStyle } from './channel-color-options.ts';
 import {
@@ -72,6 +78,7 @@ export function AppSidebarChatList() {
     const archiveChat = useChatArchive();
     const systemPrompt = useChatSystemPrompt();
     const tabAppearance = useChatTabAppearance();
+    const relativeNow = useRelativeNow();
     const [renamingChat, setRenamingChat] = React.useState<ChatListItem | null>(null);
     const [creatingChannel, setCreatingChannel] = React.useState(false);
     const [editingParticipantsChat, setEditingParticipantsChat] =
@@ -173,6 +180,7 @@ export function AppSidebarChatList() {
                                     chat={chat}
                                     isActive={location.pathname === buildChatPath(chat.id)}
                                     key={chat.id}
+                                    now={relativeNow}
                                     onArchive={(selectedChat) => {
                                         void archiveSidebarChat(selectedChat);
                                     }}
@@ -223,6 +231,7 @@ export function AppSidebarChatList() {
                                     chat={chat}
                                     isActive={location.pathname === buildChatPath(chat.id)}
                                     key={chat.id}
+                                    now={relativeNow}
                                     onArchive={(selectedChat) => {
                                         void archiveSidebarChat(selectedChat);
                                     }}
@@ -394,9 +403,11 @@ function SidebarRecentChatItem({
     onEditSystemPrompt,
     onEditParticipants,
     onRename,
+    now,
 }: {
     chat: ChatListItem;
     isActive: boolean;
+    now: number;
     onArchive: (chat: ChatListItem) => void;
     onCustomizeColor: (chat: ChatListItem, color: string | null) => void;
     onEditParticipants: (chat: ChatListItem) => void;
@@ -428,7 +439,7 @@ function SidebarRecentChatItem({
                     <div className="flex min-w-0 flex-1 items-center gap-2.5 overflow-visible">
                         <SidebarChatIcon chat={chat} style={channelColorStyle} />
                         <span className="min-w-0 flex-1 truncate">{title}</span>
-                        <SidebarChatActivity chat={chat} hidden={hasActiveTurn} />
+                        <SidebarChatActivity chat={chat} hidden={hasActiveTurn} now={now} />
                         {hasActiveTurn ? (
                             <span aria-hidden="true" className="w-6 shrink-0" />
                         ) : null}
@@ -491,14 +502,22 @@ function getSidebarParticipantInitial(chat: ChatListItem) {
     return (normalized[0] ?? '?').toUpperCase();
 }
 
-function SidebarChatActivity({ chat, hidden }: { chat: ChatListItem; hidden: boolean }) {
+function SidebarChatActivity({
+    chat,
+    hidden,
+    now,
+}: {
+    chat: ChatListItem;
+    hidden: boolean;
+    now: number;
+}) {
     if (hidden) {
         return null;
     }
 
     return (
         <span className="shrink-0 text-sidebar-muted text-xs group-focus-within/menu-item:text-sidebar-accent-foreground/70 group-hover/menu-item:text-sidebar-accent-foreground/70">
-            {formatSidebarActivityLabel(chat.lastActivityLabel)}
+            {formatSidebarActivityLabel(getChatLastActivityLabel(chat, now))}
         </span>
     );
 }

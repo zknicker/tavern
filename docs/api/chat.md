@@ -48,6 +48,11 @@ observed `external` participants for non-Tavern frontends. Agent session
 state attaches to agent participants. The app must not infer routing from a
 route id or display name.
 
+`chat.last_activity_at` is the latest undeleted durable message timestamp, or
+`null` before the chat has messages. It is separate from `chat.updated_at`,
+which changes when chat metadata, title, or participants change. Sidebar and
+overview recency should use `last_activity_at`, not metadata update time.
+
 An agent participant is the Chat's Agent seat. Runtime stores that seat's
 current Agent session:
 
@@ -127,7 +132,8 @@ The Tavern app keeps list and detail reads separate:
   include `hasActiveTurn` so compact views can show in-progress agent work
   without reading the full chat log. Channels and DMs are durable rooms in the
   app sidebar. External execution references belong to `agent.chats.list`, not
-  the global Tavern chat list.
+  the global Tavern chat list. Tavern chat list recency comes from
+  `last_activity_at`; metadata-only edits must not make a chat look newly active.
 * `chat.get` returns one full chat record by `chatId`.
 * `chat.updateTabAppearance` changes the durable channel color metadata for a
   Tavern chat.

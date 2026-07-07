@@ -76,7 +76,7 @@ function getRunOccurredAt(run: CronRunRecord) {
     return run.startedAt ?? run.scheduledFor;
 }
 
-function buildExecutions(runs: CronRunRecord[]): CronExecution[] {
+function buildExecutions(runs: CronRunRecord[], now = Date.now()): CronExecution[] {
     return [...runs]
         .sort(
             (left, right) =>
@@ -94,7 +94,7 @@ function buildExecutions(runs: CronRunRecord[]): CronExecution[] {
                 id: run.id,
                 occurredAt,
                 occurredAtFormatted: formatTimestamp(occurredAt),
-                occurredAtRelative: formatRelativeTime(occurredAt),
+                occurredAtRelative: formatRelativeTime(occurredAt, now),
                 status: run.status,
                 trigger: run.trigger,
                 turnId: run.turnId,
@@ -102,7 +102,11 @@ function buildExecutions(runs: CronRunRecord[]): CronExecution[] {
         });
 }
 
-export function buildCronList(cronJobs: CronListOutput['jobs'], runs: CronRunsOutput['runs'] = []) {
+export function buildCronList(
+    cronJobs: CronListOutput['jobs'],
+    runs: CronRunsOutput['runs'] = [],
+    now = Date.now()
+) {
     const runsByJobId = new Map<string, CronRunRecord[]>();
 
     for (const run of runs) {
@@ -118,13 +122,13 @@ export function buildCronList(cronJobs: CronListOutput['jobs'], runs: CronRunsOu
             channelId: job.agentId ?? 'agent-runtime',
             description: job.description ?? '',
             enabled: job.enabled,
-            executions: buildExecutions(runsByJobId.get(job.id) ?? []),
+            executions: buildExecutions(runsByJobId.get(job.id) ?? [], now),
             id: job.id,
             isRunning: Boolean(job.state.runningAtMs),
             job,
             lastErrorMessage: formatCronErrorMessage(job.state.lastErrorMessage),
             lastErrorRaw: job.state.lastErrorMessage ?? null,
-            lastRun: formatRelativeTime(lastRunAt),
+            lastRun: formatRelativeTime(lastRunAt, now),
             nextRun: formatTimestamp(getNextRunAt(job)),
             name: job.name,
             schedule: formatCronSchedule(job.schedule, true),

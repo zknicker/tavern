@@ -1,8 +1,9 @@
 import * as React from 'react';
+import { RelativeTime } from '../../components/time/relative-time.tsx';
 import { Separator } from '../../components/ui/separator.tsx';
 import { SettingsGroup, SettingsSection } from '../../components/ui/settings-row.tsx';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../../components/ui/tooltip.tsx';
-import { formatRelativeTime, formatTimestamp } from '../../lib/format.ts';
+import { formatTimestamp } from '../../lib/format.ts';
 import type { JobsListOutput } from '../../lib/trpc.tsx';
 import { cn } from '../../lib/utils.ts';
 import { buildJobSummaryMetaParts, formatNextRunShort } from './job-summary-format.ts';
@@ -106,7 +107,7 @@ function JobDotTooltipBody({ job }: { job: JobSummary }) {
                 ) : null}
                 {job.latestRun?.createdAt ? (
                     <div className="text-muted-foreground tabular-nums">
-                        Latest run {formatRelativeTime(job.latestRun.createdAt)} ·{' '}
+                        Latest run <RelativeTime value={job.latestRun.createdAt} /> ·{' '}
                         {formatTimestamp(job.latestRun.createdAt)}
                     </div>
                 ) : (

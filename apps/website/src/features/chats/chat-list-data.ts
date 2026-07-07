@@ -23,9 +23,6 @@ export function buildChatListItem(chat: ChatListRecord) {
         ...chat,
         hasActivity: chat.sessionCount > 0,
         isDisabled: !chat.isEnabled,
-        lastActivityLabel: chat.lastActivityAt
-            ? formatRelativeTime(chat.lastActivityAt)
-            : 'no activity yet',
         agentRuntimeSyncLabel:
             chat.agentRuntimeSync?.status === 'error'
                 ? (chat.agentRuntimeSync.lastError ?? 'Runtime update failed')
@@ -49,6 +46,13 @@ export function buildChatListItem(chat: ChatListRecord) {
 }
 
 export type ChatListItem = ReturnType<typeof buildChatList>[number];
+
+export function getChatLastActivityLabel(
+    chat: Pick<ChatListRecord, 'lastActivityAt'>,
+    now?: number
+) {
+    return chat.lastActivityAt ? formatRelativeTime(chat.lastActivityAt, now) : 'no activity yet';
+}
 
 // The agent whose avatar represents this chat (DM rows, tab favicons, room
 // topbars). Prefers the agent participant, falling back to the bound agent.

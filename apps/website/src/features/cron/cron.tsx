@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useRelativeNow } from '../../components/time/relative-time.tsx';
 import {
     toRuntimePageConnectionState,
     useRuntimeConnection,
@@ -31,9 +32,10 @@ export function Cron() {
     const toggleMutation = useCronToggle();
     const runMutation = useCronRun();
     const { deferredQuery, query, setQuery } = useSearch();
+    const relativeNow = useRelativeNow();
     const cronJobs = React.useMemo(
-        () => buildCronList(cronJobsQuery.data?.jobs ?? []),
-        [cronJobsQuery.data?.jobs]
+        () => buildCronList(cronJobsQuery.data?.jobs ?? [], [], relativeNow),
+        [cronJobsQuery.data?.jobs, relativeNow]
     );
     const [filter, setFilter] = React.useState<CronFilter>('all');
     const [deleteJob, setDeleteJob] = React.useState<CronListItem | null>(null);

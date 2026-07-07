@@ -15,6 +15,7 @@ import { getActiveAgentRuntimeConnection } from '../storage/agent-runtime-connec
 export interface RuntimeChatRecord {
     chat: AgentRuntimeChat;
     createdAt: string | null;
+    lastActivityAt: string | null;
     runtimeId: string;
     updatedAt: string | null;
 }
@@ -60,6 +61,7 @@ export async function listRuntimeChatRecords(options?: {
         const record: RuntimeChatRecord = {
             chat: tavernChatToRuntimeChat(chat),
             createdAt: chat.created_at,
+            lastActivityAt: chat.last_activity_at,
             runtimeId: connection.id,
             updatedAt: chat.updated_at,
         };
@@ -83,6 +85,7 @@ export async function listRuntimeChatRecords(options?: {
         .map((chat) => ({
             chat: tavernChatToRuntimeChat(chat),
             createdAt: chat.created_at,
+            lastActivityAt: chat.last_activity_at,
             runtimeId: connection.id,
             updatedAt: chat.updated_at,
         }))
@@ -93,6 +96,7 @@ export async function listRuntimeChatRecords(options?: {
               .map((chat) => ({
                   chat,
                   createdAt: null,
+                  lastActivityAt: null,
                   runtimeId: connection.id,
                   updatedAt: null,
               }))

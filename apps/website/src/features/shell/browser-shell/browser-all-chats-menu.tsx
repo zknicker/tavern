@@ -10,8 +10,11 @@ import { Icon } from '../../../components/ui/icon.tsx';
 import { Menu, MenuItem, MenuPopup, MenuTrigger } from '../../../components/ui/menu.tsx';
 import { Button } from '../../../components/ui/primitives/button.tsx';
 import { useChatList } from '../../../hooks/chats/use-chat-list.ts';
-import type { ChatListItem } from '../../chats/chat-list-data.ts';
-import { buildChatList } from '../../chats/chat-list-data.ts';
+import {
+    buildChatList,
+    type ChatListItem,
+    getChatLastActivityLabel,
+} from '../../chats/chat-list-data.ts';
 import { buildChatPath } from '../../chats/chat-path.ts';
 import { buildSidebarChatGroups, formatSidebarActivityLabel } from '../sidebar-chat-list-model.ts';
 import { formatTopbarChatActivityTitle, sortChatsByCreatedAt } from './chat-tabs-model.ts';
@@ -69,7 +72,7 @@ export function BrowserAllChatsMenu() {
                                 className="shrink-0 text-muted-foreground text-xs tabular-nums"
                                 title={formatTopbarChatActivityTitle(chat)}
                             >
-                                {formatSidebarActivityLabel(chat.lastActivityLabel)}
+                                {formatSidebarActivityLabel(getChatLastActivityLabel(chat))}
                             </span>
                         </MenuItem>
                     ))

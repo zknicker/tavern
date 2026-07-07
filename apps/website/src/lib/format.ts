@@ -39,7 +39,7 @@ export function formatShortTime(value: string | null | undefined) {
         .toLowerCase();
 }
 
-export function formatRelativeTime(value: string | null | undefined) {
+export function formatRelativeTime(value: string | null | undefined, now = Date.now()) {
     if (!value || value === 'unknown') {
         return 'unknown';
     }
@@ -50,7 +50,7 @@ export function formatRelativeTime(value: string | null | undefined) {
         return value;
     }
 
-    const diffMs = Date.now() - date.getTime();
+    const diffMs = now - date.getTime();
     const diffMinutes = Math.max(0, Math.round(diffMs / 60_000));
 
     if (diffMinutes < 2) {

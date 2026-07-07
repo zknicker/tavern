@@ -1,7 +1,7 @@
 import type { MemoryWorkerStatus } from '@tavern/api';
+import { RelativeTime } from '../../../components/time/relative-time.tsx';
 import { Badge } from '../../../components/ui/badge.tsx';
 import { Separator } from '../../../components/ui/separator.tsx';
-import { formatRelativeTime } from '../../../lib/format.ts';
 import { cn } from '../../../lib/utils.ts';
 import {
     formatDuration,
@@ -71,7 +71,7 @@ function LastRun({ worker }: { worker: MemoryWorkerStatus | null }) {
     }
 
     const duration = formatDuration(lastRun.durationMs);
-    const when = formatRelativeTime(lastRun.completedAt ?? lastRun.startedAt);
+    const when = lastRun.completedAt ?? lastRun.startedAt;
 
     return (
         <div className="flex w-40 shrink-0 items-center justify-end gap-2">
@@ -83,7 +83,7 @@ function LastRun({ worker }: { worker: MemoryWorkerStatus | null }) {
                 )}
             />
             <span className="truncate text-meta text-muted-foreground tabular-nums">
-                {when}
+                <RelativeTime value={when} />
                 {duration ? ` · ${duration}` : ''}
             </span>
             {lastRun.status === 'failed' ? (

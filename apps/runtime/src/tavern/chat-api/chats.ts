@@ -4,12 +4,12 @@ import type {
     TavernCreateChatRequest,
     TavernListChatsResponse,
 } from '@tavern/api';
-import { getDb } from '../../db/connection';
-import type { Database } from '../../db/sqlite';
-import { namedParams, optionalRow } from '../../db/sqlite';
-import { assertTavernIdPrefix } from './ids';
-import { clampLimit } from './limits';
-import type { ChatRow, ParticipantRow } from './types';
+import { getDb } from '../../db/connection.ts';
+import type { Database } from '../../db/sqlite.ts';
+import { namedParams, optionalRow } from '../../db/sqlite.ts';
+import { assertTavernIdPrefix } from './ids.ts';
+import { clampLimit } from './limits.ts';
+import type { ChatRow, ParticipantRow } from './types.ts';
 
 type ChatKind = TavernChat['kind'];
 type ChatParticipant = TavernApiSchema<'Participant'>;
@@ -86,6 +86,12 @@ export function listChats(
     const rows = db
         .prepare(
             `SELECT chats.*,
+                    (
+                        SELECT MAX(chat_messages.created_at)
+                        FROM chat_messages
+                        WHERE chat_messages.chat_id = chats.id
+                          AND chat_messages.deleted_at IS NULL
+                    ) AS last_activity_at,
                     EXISTS (
                         SELECT 1
                         FROM chat_responses
@@ -116,6 +122,12 @@ export function getChat(id: string, db: Database = getDb()): TavernChat | null {
         db
             .prepare(
                 `SELECT chats.*,
+                    (
+                        SELECT MAX(chat_messages.created_at)
+                        FROM chat_messages
+                        WHERE chat_messages.chat_id = chats.id
+                          AND chat_messages.deleted_at IS NULL
+                    ) AS last_activity_at,
                     EXISTS (
                         SELECT 1
                         FROM chat_responses
@@ -152,6 +164,7 @@ function rowToChat(row: ChatRow, db: Database): TavernChat {
         has_active_turn: Boolean(row.has_active_turn),
         id: row.id,
         kind: row.kind,
+        last_activity_at: row.last_activity_at,
         last_message_sequence: row.last_message_sequence,
         metadata: JSON.parse(row.metadata_json) as Record<string, unknown>,
         participants: listChatParticipants(row.id, db),

@@ -8,7 +8,7 @@ import { cn } from '../../lib/utils.ts';
 import { getActorNameClassName, getActorNameStyle } from '../rows/actor-color.ts';
 import { type AgentChatPreviewLine, buildAgentChatPreview } from './agent-chat-preview.ts';
 import { getChatCardDomId } from './chat-card-dom-id.ts';
-import type { ChatListItem } from './chat-list-data.ts';
+import { type ChatListItem, getChatLastActivityLabel } from './chat-list-data.ts';
 import { buildChatPath } from './chat-path.ts';
 
 export function AgentChatCard({
@@ -49,7 +49,8 @@ export function AgentChatCard({
                 className="truncate px-4 text-muted-foreground text-xs"
                 title={chat.latestSession?.sessionKey ?? chat.displayName}
             >
-                {chat.latestSession?.sessionKey ?? chat.displayName} {chat.lastActivityLabel}
+                {chat.latestSession?.sessionKey ?? chat.displayName}{' '}
+                {getChatLastActivityLabel(chat)}
             </p>
 
             <div className="flex min-h-0 flex-1 flex-col justify-end px-4 pt-3 pb-3.5">
