@@ -42,6 +42,14 @@ Managed Tavern context does not use Lossless Claw. Runtime strips stale
   triggering message sequence after the turn, never to the assistant response
   sequence, so messages created while the Agent is working are still eligible
   next time.
+* Session resets (`/new`, `/clear`, the app reset action, automatic rotation)
+  snapshot the cursor at the chat's newest message, so fresh context starts at
+  the reset point instead of replaying pre-reset history. Brand-new seats keep
+  cursor 0 for join catch-up.
+* Agent sessions rotate automatically for freshness: daily at 4am in the home
+  timezone, or after 24 hours of inactivity, whichever comes first — evaluated
+  when a turn is about to start. The rotated session's first turn states that
+  earlier conversation is not in context; continuity comes from Memory.
 * Agents can read same-chat history through read-only Tavern chat tools when
   bounded prompt context is insufficient.
 * Context management does not create a separate long-term source of truth.
