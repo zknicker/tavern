@@ -6,8 +6,10 @@ export function createAgentParticipantId(agentId: string) {
     return agentId.startsWith('agt_') ? agentId : `agt_${agentId.replace(/[^A-Za-z0-9_-]/g, '_')}`;
 }
 
-export function createRunId(messageId: string) {
-    return `run_${stripPrefix(messageId, 'msg_')}`;
+export function createRunId(messageId: string, agentId: string) {
+    const messagePart = stripPrefix(messageId, 'msg_');
+    const agentPart = stripPrefix(agentId, 'agt_').replace(/[^A-Za-z0-9_-]/g, '_');
+    return `run_${messagePart}_${agentPart}`;
 }
 
 export function assertTavernIdPrefix(

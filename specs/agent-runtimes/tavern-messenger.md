@@ -71,7 +71,9 @@ agent from the chat.
    running response.
 4. Runtime dispatches the message to the generated Tavern agent channel with
    the current Agent session and Tavern message context.
-5. Runtime returns an accepted receipt with `runId`.
+5. Runtime returns an accepted receipt with `runId`. Run ids derive from the
+   message id plus the agent id, so one message mentioning several agents fans
+   out into one distinct turn and response per mentioned agent.
 6. The channel streams engine events back to Runtime. Runtime maps assistant
    output into durable response, activity, and assistant message records.
 7. Tavern App reconciles optimistic rows from durable chat reads and realtime
@@ -92,7 +94,7 @@ Runtime stores agent execution facts under `metadata.runtime`:
     "source": "agent-engine",
     "agentId": "agt_primary",
     "agentSessionId": "ags_cht_tavern_agent_dm_agt_primary_1",
-    "runId": "run_msg_123",
+    "runId": "run_123_primary",
     "engineSessionId": "ses_..."
   }
 }

@@ -185,7 +185,7 @@ function messageCreatedToRuntimeEvent(
             threadRootId: message.thread_root_id ?? message.id,
             timestamp: message.created_at,
         },
-        runId: metadataRuntimeString(message.metadata, 'runId') ?? createRunId(message.id),
+        runId: metadataRuntimeString(message.metadata, 'runId') ?? createRunId(message.id, agentId),
         timestamp,
         type: 'chat.messageAccepted',
     };

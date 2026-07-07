@@ -44,46 +44,46 @@ describe('Tavern channel relay', () => {
         const accepted = await sendTavernChannelMessage('cht_general', messageInput());
 
         expect(accepted).toMatchObject({
-            runId: 'run_1',
+            runId: 'run_1_primary',
             status: 'accepted',
         });
 
         const sessionId = 'ags_cht_general_agt_primary_1';
         await waitFor(
             () =>
-                getResponse('rsp_run_1')?.status === 'completed' &&
+                getResponse('rsp_run_1_primary')?.status === 'completed' &&
                 listAgentTurnsForSession(sessionId)[0]?.status === 'completed'
         );
 
         expect(listAgentTurnsForSession(sessionId)).toMatchObject([
             {
-                activityIds: ['act_run_1_fake_executor'],
+                activityIds: ['act_run_1_primary_fake_executor'],
                 agentId: 'agt_primary',
                 agentParticipantId: 'agt_primary',
                 agentSessionId: sessionId,
                 attempt: 1,
                 chatId: 'cht_general',
-                id: 'run_1',
-                outputMessageIds: ['msg_run_1_fake_executor'],
-                responseId: 'rsp_run_1',
+                id: 'run_1_primary',
+                outputMessageIds: ['msg_run_1_primary_fake_executor'],
+                responseId: 'rsp_run_1_primary',
                 status: 'completed',
                 triggerMessageId: 'msg_1',
             },
         ]);
-        expect(getResponse('rsp_run_1')).toMatchObject({
+        expect(getResponse('rsp_run_1_primary')).toMatchObject({
             participant_id: 'agt_primary',
             request_message_id: 'msg_1',
-            response_message_id: 'msg_run_1_fake_executor',
+            response_message_id: 'msg_run_1_primary_fake_executor',
             status: 'completed',
         });
-        expect(getResponseActivity('act_run_1_fake_executor')).toMatchObject({
-            response_id: 'rsp_run_1',
+        expect(getResponseActivity('act_run_1_primary_fake_executor')).toMatchObject({
+            response_id: 'rsp_run_1_primary',
             status: 'completed',
             title: 'Fake executor',
         });
         expect(listMessages('cht_general').messages.map((message) => message.id)).toEqual([
             'msg_1',
-            'msg_run_1_fake_executor',
+            'msg_run_1_primary_fake_executor',
         ]);
         expect(listEvents().events.map((event) => event.type)).toEqual([
             'message.created',
@@ -100,24 +100,56 @@ describe('Tavern channel relay', () => {
         setAgentExecutorForTesting(executor);
 
         await sendTavernChannelMessage('cht_general', messageInput({ messageId: 'msg_1' }));
-        await waitFor(() => executor.startedRunIds().includes('run_1'));
+        await waitFor(() => executor.startedRunIds().includes('run_1_primary'));
         await sendTavernChannelMessage(
             'cht_general',
             messageInput({ messageId: 'msg_2', nonce: 'nonce_2' })
         );
 
-        expect(executor.startedRunIds()).toEqual(['run_1']);
+        expect(executor.startedRunIds()).toEqual(['run_1_primary']);
         expect(listAgentTurnsForSession('ags_cht_general_agt_primary_1')).toMatchObject([
-            { id: 'run_1', status: 'running' },
-            { id: 'run_2', status: 'queued' },
+            { id: 'run_1_primary', status: 'running' },
+            { id: 'run_2_primary', status: 'queued' },
         ]);
 
-        executor.resolveRun('run_1', { activityIds: [], outputMessageIds: [] });
-        await waitFor(() => executor.startedRunIds().includes('run_2'));
+        executor.resolveRun('run_1_primary', { activityIds: [], outputMessageIds: [] });
+        await waitFor(() => executor.startedRunIds().includes('run_2_primary'));
 
         expect(listAgentTurnsForSession('ags_cht_general_agt_primary_1')).toMatchObject([
-            { id: 'run_1', status: 'completed' },
-            { id: 'run_2', status: 'running' },
+            { id: 'run_1_primary', status: 'completed' },
+            { id: 'run_2_primary', status: 'running' },
+        ]);
+    });
+
+    it('fans one multi-mention message out to each mentioned agent as its own turn', async () => {
+        createAgentChat('agt_alpha', 'agt_beta');
+        const executor = createControlledExecutor();
+        setAgentExecutorForTesting(executor);
+
+        const first = await sendTavernChannelMessage(
+            'cht_general',
+            messageInput({ agentId: 'agt_alpha', messageId: 'msg_1' })
+        );
+        const second = await sendTavernChannelMessage(
+            'cht_general',
+            messageInput({ agentId: 'agt_beta', messageId: 'msg_1' })
+        );
+
+        expect(first.runId).toBe('run_1_alpha');
+        expect(second.runId).toBe('run_1_beta');
+
+        await waitFor(() => executor.startedRunIds().length === 2);
+
+        expect(listAgentTurnsForSession('ags_cht_general_agt_alpha_1')).toMatchObject([
+            { id: 'run_1_alpha', status: 'running', triggerMessageId: 'msg_1' },
+        ]);
+        expect(listAgentTurnsForSession('ags_cht_general_agt_beta_1')).toMatchObject([
+            { id: 'run_1_beta', status: 'running', triggerMessageId: 'msg_1' },
+        ]);
+        expect(getResponse('rsp_run_1_alpha')).toMatchObject({ participant_id: 'agt_alpha' });
+        expect(getResponse('rsp_run_1_beta')).toMatchObject({ participant_id: 'agt_beta' });
+        expect(listMessages('cht_general').messages.map((message) => message.id)).toEqual([
+            'msg_1',
         ]);
     });
 
@@ -137,12 +169,12 @@ describe('Tavern channel relay', () => {
 
         await waitFor(() => executor.startedRunIds().length === 2);
 
-        expect(executor.startedRunIds().sort()).toEqual(['run_alpha', 'run_beta']);
+        expect(executor.startedRunIds().sort()).toEqual(['run_alpha_alpha', 'run_beta_beta']);
         expect(listAgentTurnsForSession('ags_cht_general_agt_alpha_1')).toMatchObject([
-            { id: 'run_alpha', status: 'running' },
+            { id: 'run_alpha_alpha', status: 'running' },
         ]);
         expect(listAgentTurnsForSession('ags_cht_general_agt_beta_1')).toMatchObject([
-            { id: 'run_beta', status: 'running' },
+            { id: 'run_beta_beta', status: 'running' },
         ]);
     });
 
@@ -152,16 +184,16 @@ describe('Tavern channel relay', () => {
         setAgentExecutorForTesting(executor);
 
         await sendTavernChannelMessage('cht_general', messageInput());
-        await waitFor(() => executor.startedRunIds().includes('run_1'));
+        await waitFor(() => executor.startedRunIds().includes('run_1_primary'));
 
-        const result = await stopTavernChannelTurn({ runId: 'run_1' });
+        const result = await stopTavernChannelTurn({ runId: 'run_1_primary' });
 
-        expect(result).toEqual({ runId: 'run_1', stopped: true });
-        expect(executor.stoppedRunIds()).toEqual(['run_1']);
+        expect(result).toEqual({ runId: 'run_1_primary', stopped: true });
+        expect(executor.stoppedRunIds()).toEqual(['run_1_primary']);
         expect(listAgentTurnsForSession('ags_cht_general_agt_primary_1')).toMatchObject([
-            { id: 'run_1', status: 'cancelled' },
+            { id: 'run_1_primary', status: 'cancelled' },
         ]);
-        expect(getResponse('rsp_run_1')).toMatchObject({
+        expect(getResponse('rsp_run_1_primary')).toMatchObject({
             status: 'cancelled',
             summary: 'Turn stopped.',
         });
@@ -173,15 +205,15 @@ describe('Tavern channel relay', () => {
         setAgentExecutorForTesting(executor);
 
         await sendTavernChannelMessage('cht_general', messageInput());
-        await waitFor(() => executor.startedRunIds().includes('run_1'));
+        await waitFor(() => executor.startedRunIds().includes('run_1_primary'));
 
-        executor.rejectRun('run_1', new Error('model call failed'));
+        executor.rejectRun('run_1_primary', new Error('model call failed'));
 
-        await waitFor(() => getResponse('rsp_run_1')?.status === 'failed');
+        await waitFor(() => getResponse('rsp_run_1_primary')?.status === 'failed');
         expect(listAgentTurnsForSession('ags_cht_general_agt_primary_1')).toMatchObject([
-            { id: 'run_1', metadata: { error: 'model call failed' }, status: 'failed' },
+            { id: 'run_1_primary', metadata: { error: 'model call failed' }, status: 'failed' },
         ]);
-        expect(getResponse('rsp_run_1')).toMatchObject({
+        expect(getResponse('rsp_run_1_primary')).toMatchObject({
             request_message_id: 'msg_1',
             status: 'failed',
             summary: 'model call failed',
@@ -194,21 +226,24 @@ describe('Tavern channel relay', () => {
         setAgentExecutorForTesting(executor);
 
         await sendTavernChannelMessage('cht_general', messageInput());
-        await waitFor(() => executor.startedRunIds().includes('run_1'));
+        await waitFor(() => executor.startedRunIds().includes('run_1_primary'));
 
-        executor.rejectRun('run_1', { code: 'auth_failed', message: 'Provider auth failed' });
+        executor.rejectRun('run_1_primary', {
+            code: 'auth_failed',
+            message: 'Provider auth failed',
+        });
 
-        await waitFor(() => getResponse('rsp_run_1')?.status === 'failed');
+        await waitFor(() => getResponse('rsp_run_1_primary')?.status === 'failed');
         expect(listAgentTurnsForSession('ags_cht_general_agt_primary_1')).toMatchObject([
             {
-                id: 'run_1',
+                id: 'run_1_primary',
                 metadata: {
                     error: '{"code":"auth_failed","message":"Provider auth failed"}',
                 },
                 status: 'failed',
             },
         ]);
-        expect(getResponse('rsp_run_1')).toMatchObject({
+        expect(getResponse('rsp_run_1_primary')).toMatchObject({
             status: 'failed',
             summary: '{"code":"auth_failed","message":"Provider auth failed"}',
         });
@@ -221,19 +256,19 @@ describe('Tavern channel relay', () => {
         setAgentExecutorForTesting(executor);
 
         await sendTavernChannelMessage('cht_general', messageInput());
-        await waitFor(() => executor.startedRunIds().includes('run_1'));
+        await waitFor(() => executor.startedRunIds().includes('run_1_primary'));
 
-        await waitFor(() => getResponse('rsp_run_1')?.status === 'failed');
+        await waitFor(() => getResponse('rsp_run_1_primary')?.status === 'failed');
 
-        expect(executor.stoppedRunIds()).toEqual(['run_1']);
+        expect(executor.stoppedRunIds()).toEqual(['run_1_primary']);
         expect(listAgentTurnsForSession('ags_cht_general_agt_primary_1')).toMatchObject([
             {
-                id: 'run_1',
+                id: 'run_1_primary',
                 metadata: { error: 'Agent turn timed out after 25ms.' },
                 status: 'failed',
             },
         ]);
-        expect(getResponse('rsp_run_1')).toMatchObject({
+        expect(getResponse('rsp_run_1_primary')).toMatchObject({
             request_message_id: 'msg_1',
             status: 'failed',
             summary: 'Agent turn timed out after 25ms.',

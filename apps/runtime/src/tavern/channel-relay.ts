@@ -40,7 +40,7 @@ export async function sendTavernChannelMessage(
     if (!modelInventory.models.some((model) => model.availability === 'available')) {
         throw new Error('No executable model is configured. Add or repair a model provider.');
     }
-    const runId = createRunId(payload.message.id);
+    const runId = createRunId(payload.message.id, payload.agent.agentId);
     const responseId = createResponseId(runId);
     const storedAgent = requireStoredAgent(payload.agent.agentId);
     const agentSession = ensureCurrentAgentSession({
