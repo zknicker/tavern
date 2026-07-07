@@ -96,10 +96,17 @@ into the single-file Runtime binary — resolving the workspace package in dev
 and the artifact-staged copy under `share/tavern/node_modules` when packaged
 (`TAVERN_RUNTIME_QMD_PATH` overrides).
 Each turn prompt is time-anchored with the current time, and every included
-message carries its created-at timestamp. Static per-session guidance — the
-chat id, the staleness policy, and Tavern chat/Memory/automation tool
-guidance — lives in the composed agent instructions, not the per-turn prompt,
-so long sessions carry one copy instead of one per turn.
+message carries its send time — weekday-prefixed home-timezone wall clock,
+e.g. `Sun 2026-07-05T13:22:42-04:00` (`apps/runtime/src/tavern/harness-prompt.ts`,
+timezone from `resolveHomeTimezone()`). Static per-session guidance — the
+chat id, the home timezone, the staleness policy, and Tavern
+chat/Memory/automation tool guidance — lives in the composed agent
+instructions, not the per-turn prompt, so long sessions carry one copy instead
+of one per turn. Channel instructions also teach the silent reply: a turn
+whose final text is exactly `NO_REPLY` completes without delivering an
+assistant message; the response row and a "Chose not to reply" activity remain
+as evidence. The token is honored in every chat kind but taught only in
+channels.
 The composed instructions also state the chat's kind, title, and participant
 roster (the agent's own seat marked), and append model-family operational
 guidance (`apps/runtime/src/tavern/model-instructions.ts`): tool-use

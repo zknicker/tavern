@@ -70,6 +70,11 @@ happen, and keep the durable timeline as context.
 * **Addressing.** Channel messages are human chat by default. Mentioning one
   or more agent participants starts one turn per mentioned agent. Agent DMs
   address the one agent participant automatically.
+* **Silent replies.** An agent can decline to respond: a turn whose reply is
+  exactly `NO_REPLY` completes without delivering an assistant message. The
+  response settles as completed with a "Chose not to reply" summary and
+  activity row, so the turn drawer still shows the agent saw the message.
+  Channel agents are taught this; the token is honored in every chat kind.
 * **Agent drawer.** Clicking an agent avatar opens a drawer with the seat's
   current Agent session (model, status, timing) and a New session action that
   starts fresh context without clearing the chat. The reset lands as a
