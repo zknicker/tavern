@@ -105,6 +105,8 @@ export function CronEditor() {
 
     return (
         <div className="flex flex-1 flex-col overflow-hidden">
+            {isMissingJob ? null : <div className="px-4 pt-3 lg:hidden">{editorActions}</div>}
+
             {runMutation.error ? (
                 <div className="border-error/40 border-b bg-error-bg px-4 py-3">
                     <p className="text-error-foreground text-sm">{runMutation.error.message}</p>

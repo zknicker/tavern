@@ -73,8 +73,31 @@ export function TaskNew() {
             });
     };
 
+    const actions = (
+        <div className="flex items-center justify-end gap-2">
+            <Button
+                onClick={() => navigate(appRoutes.tasks)}
+                size="sm"
+                type="button"
+                variant="ghost"
+            >
+                Cancel
+            </Button>
+            <Button
+                disabled={!title.trim()}
+                loading={createMutation.isPending}
+                onClick={createTask}
+                size="sm"
+                type="button"
+            >
+                {kind === 'epic' ? 'Create epic' : 'Create task'}
+            </Button>
+        </div>
+    );
+
     return (
         <div className="flex flex-1 flex-col overflow-hidden">
+            <div className="px-4 pt-3 lg:hidden">{actions}</div>
             <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
                 <TaskEditorPane
                     autoFocusTitle
@@ -85,25 +108,7 @@ export function TaskNew() {
                     titlePlaceholder={kind === 'epic' ? 'Untitled epic' : 'Untitled task'}
                 />
                 <TaskEditorSidebar>
-                    <div className="flex items-center justify-end gap-2">
-                        <Button
-                            onClick={() => navigate(appRoutes.tasks)}
-                            size="sm"
-                            type="button"
-                            variant="ghost"
-                        >
-                            Cancel
-                        </Button>
-                        <Button
-                            disabled={!title.trim()}
-                            loading={createMutation.isPending}
-                            onClick={createTask}
-                            size="sm"
-                            type="button"
-                        >
-                            {kind === 'epic' ? 'Create epic' : 'Create task'}
-                        </Button>
-                    </div>
+                    <div className="max-lg:hidden">{actions}</div>
                     <TabsSubtle
                         onValueChange={(value) => setKind(value as 'epic' | 'task')}
                         value={kind}

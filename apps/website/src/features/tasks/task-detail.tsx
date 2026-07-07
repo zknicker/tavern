@@ -117,23 +117,28 @@ export function TaskDetail({ taskId }: { taskId: string }) {
         );
     }
 
+    const actions = (
+        <div className="flex justify-end">
+            <Button
+                loading={deleteMutation.isPending}
+                onClick={deleteTask}
+                size="sm"
+                type="button"
+                variant="ghost"
+            >
+                <Icon aria-hidden="true" className="size-4" icon={Trash2} />
+                Delete
+            </Button>
+        </div>
+    );
+
     return (
         <div className="flex flex-1 flex-col overflow-hidden">
+            <div className="px-4 pt-3 lg:hidden">{actions}</div>
             <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
                 <TaskDetailPane key={task.id} onSave={patchTask} task={task} />
                 <TaskEditorSidebar>
-                    <div className="flex justify-end">
-                        <Button
-                            loading={deleteMutation.isPending}
-                            onClick={deleteTask}
-                            size="sm"
-                            type="button"
-                            variant="ghost"
-                        >
-                            <Icon aria-hidden="true" className="size-4" icon={Trash2} />
-                            Delete
-                        </Button>
-                    </div>
+                    <div className="max-lg:hidden">{actions}</div>
                     <TaskFields
                         agents={agents}
                         disabled={updateMutation.isPending}
