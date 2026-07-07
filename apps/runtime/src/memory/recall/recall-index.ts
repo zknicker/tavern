@@ -42,6 +42,10 @@ export interface RecallProvisioningStatus {
 
 const recallCollection = 'memory';
 const refreshDebounceMs = 2000;
+// A failed refresh (offline model download, missing SQLite extension) retries
+// on its own schedule; waiting for the next page change could leave recall
+// degraded indefinitely on a quiet Memory root.
+const degradedRetryMs = 5 * 60 * 1000;
 // qmd's default embedding model (embeddinggemma-300M-Q8_0) download size, used
 // only to shape download progress; the poll clamps below 1 so an off estimate
 // never reports a finished download early.
@@ -123,10 +127,11 @@ export async function refreshRecallIndex() {
         setProvisioning({ phase: 'degraded', progress: null, reason });
         if (!embedFailureLogged) {
             embedFailureLogged = true;
-            log.warn('Memory recall embeddings unavailable; recall is degraded until refresh', {
+            log.warn('Memory recall embeddings unavailable; retrying in the background', {
                 err: error,
             });
         }
+        scheduleRecallRefresh(degradedRetryMs);
     } finally {
         stopModelDownloadTracking();
     }
@@ -183,7 +188,7 @@ export async function resetRecallIndexForTesting(options: RecallIndexOptions = {
     lastCapabilityPushAt = 0;
 }
 
-function scheduleRecallRefresh() {
+function scheduleRecallRefresh(delayMs = refreshDebounceMs) {
     if (refreshTimer) {
         clearTimeout(refreshTimer);
     }
@@ -192,7 +197,7 @@ function scheduleRecallRefresh() {
         void refreshRecallIndex().catch((error) => {
             log.warn('Memory recall index refresh failed', { err: error });
         });
-    }, refreshDebounceMs);
+    }, delayMs);
 }
 
 async function resolveRecallRoot() {
