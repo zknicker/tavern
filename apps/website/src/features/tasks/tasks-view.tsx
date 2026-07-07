@@ -219,7 +219,7 @@ function TasksBoardPlaceholder({
         <div className="flex flex-col items-center gap-3 rounded-xl border border-border/70 border-dashed px-6 py-14 text-center">
             {isBoardEmpty ? (
                 <>
-                    <p className="text-muted-foreground text-sm">
+                    <p className="text-foreground/80 text-sm">
                         Create a task, or ask an agent to file one from chat.
                     </p>
                     <Button
@@ -235,10 +235,16 @@ function TasksBoardPlaceholder({
                 </>
             ) : (
                 <>
-                    <p className="text-muted-foreground text-sm">
+                    <p className="text-foreground/80 text-sm">
                         No tasks match the current view, assignee, or search.
                     </p>
-                    <Button onClick={onClearFilters} size="sm" type="button" variant="ghost">
+                    <Button
+                        className="rounded-full"
+                        onClick={onClearFilters}
+                        size="sm"
+                        type="button"
+                        variant="secondary"
+                    >
                         Clear filters
                     </Button>
                 </>
