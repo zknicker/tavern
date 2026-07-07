@@ -1,30 +1,63 @@
+import type { IconSvgElement } from '@hugeicons/react';
+import {
+    CancelCircleIcon,
+    CheckmarkCircle02Icon,
+    CircleIcon,
+    DashedLineCircleIcon,
+    Loading03Icon,
+} from '@hugeicons-pro/core-stroke-rounded';
 import * as React from 'react';
 import { Badge } from '../../components/ui/badge.tsx';
 import { FluidList, FluidListItem } from '../../components/ui/fluid-list.tsx';
+import { Icon } from '../../components/ui/icon.tsx';
 import { formatRelativeTime } from '../../lib/format.ts';
 import type { TaskRecord } from '../../lib/trpc.tsx';
 import {
     formatTaskNumber,
+    type TaskStatus,
     taskPriorityLabels,
-    taskStatusBadgeVariants,
     taskStatusLabels,
 } from './task-presentation.ts';
 
-interface TasksListProps {
+const taskStatusIcons: Record<TaskStatus, IconSvgElement> = {
+    backlog: DashedLineCircleIcon,
+    canceled: CancelCircleIcon,
+    done: CheckmarkCircle02Icon,
+    in_progress: Loading03Icon,
+    todo: CircleIcon,
+};
+
+interface TaskStatusGroupProps {
     assigneeName: (task: TaskRecord) => string | null;
     onOpen: (task: TaskRecord) => void;
+    status: TaskStatus;
     tasks: TaskRecord[];
 }
 
-export function TasksList({ assigneeName, onOpen, tasks }: TasksListProps) {
+export function TaskStatusGroup({ assigneeName, onOpen, status, tasks }: TaskStatusGroupProps) {
     return (
-        <FluidList>
-            {tasks.map((task, index) => (
-                <FluidListItem index={index} key={task.id}>
-                    <TaskRow assigneeName={assigneeName(task)} onOpen={onOpen} task={task} />
-                </FluidListItem>
-            ))}
-        </FluidList>
+        <section className="grid gap-1">
+            <div className="flex items-center gap-2 px-3 py-1.5">
+                <Icon
+                    aria-hidden="true"
+                    className="size-4 shrink-0 text-muted-foreground"
+                    icon={taskStatusIcons[status]}
+                />
+                <span className="font-medium text-foreground text-sm">
+                    {taskStatusLabels[status]}
+                </span>
+                <span className="text-muted-foreground/72 text-sm tabular-nums">
+                    {tasks.length}
+                </span>
+            </div>
+            <FluidList>
+                {tasks.map((task, index) => (
+                    <FluidListItem index={index} key={task.id}>
+                        <TaskRow assigneeName={assigneeName(task)} onOpen={onOpen} task={task} />
+                    </FluidListItem>
+                ))}
+            </FluidList>
+        </section>
     );
 }
 
@@ -40,7 +73,7 @@ function TaskRow({
     const openTask = React.useCallback(() => onOpen(task), [onOpen, task]);
 
     return (
-        <div className="group/task-row relative flex min-h-12 w-full items-center gap-3 rounded-xl px-3 py-2.5 text-sm">
+        <div className="group/task-row relative flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2 text-sm">
             <button
                 aria-label={`Open ${formatTaskNumber(task)} ${task.title}`}
                 className="no-drag absolute inset-0 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
@@ -76,9 +109,6 @@ function TaskRow({
                         {assigneeName}
                     </span>
                 ) : null}
-                <Badge variant={taskStatusBadgeVariants[task.status]}>
-                    {taskStatusLabels[task.status]}
-                </Badge>
                 <span className="hidden w-16 text-right text-muted-foreground text-xs sm:inline">
                     {formatRelativeTime(task.updatedAt)}
                 </span>

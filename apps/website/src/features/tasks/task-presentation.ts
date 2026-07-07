@@ -45,6 +45,15 @@ export function isActiveTask(task: TaskRecord) {
     return task.status === 'todo' || task.status === 'in_progress';
 }
 
+export function groupTasksByStatus(tasks: TaskRecord[]) {
+    return taskStatusOrder
+        .map((status) => ({
+            status,
+            tasks: tasks.filter((task) => task.status === status),
+        }))
+        .filter((group) => group.tasks.length > 0);
+}
+
 export function filterTasks(input: {
     assignee: TaskAssigneeFilter;
     query: string;

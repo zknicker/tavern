@@ -9,7 +9,7 @@ import { useTaskList } from '../../hooks/tasks/use-task-list.ts';
 import { useTaskCreate } from '../../hooks/tasks/use-task-mutations.ts';
 import { appRoutes } from '../../lib/app-routes.ts';
 import { TaskEditorPane } from './task-editor-pane.tsx';
-import { TaskEditorSection, TaskEditorSidebar } from './task-editor-sidebar.tsx';
+import { TaskEditorSidebar } from './task-editor-sidebar.tsx';
 import { TaskFields, type TaskFieldsValue } from './task-fields.tsx';
 import { formatTaskNumber } from './task-presentation.ts';
 import { useTaskAgentOptions } from './use-task-agent-options.ts';
@@ -107,21 +107,19 @@ export function TaskNew() {
                     titlePlaceholder={kind === 'epic' ? 'Untitled epic' : 'Untitled task'}
                 />
                 <TaskEditorSidebar>
-                    <TaskEditorSection title="Kind">
-                        <TabsSubtle
-                            onValueChange={(value) => setKind(value as 'epic' | 'task')}
-                            value={kind}
-                        >
-                            <TabsSubtleList className="w-full">
-                                <TabsSubtleItem className="flex-1" size="sm" value="task">
-                                    Task
-                                </TabsSubtleItem>
-                                <TabsSubtleItem className="flex-1" size="sm" value="epic">
-                                    Epic
-                                </TabsSubtleItem>
-                            </TabsSubtleList>
-                        </TabsSubtle>
-                    </TaskEditorSection>
+                    <TabsSubtle
+                        onValueChange={(value) => setKind(value as 'epic' | 'task')}
+                        value={kind}
+                    >
+                        <TabsSubtleList className="w-full">
+                            <TabsSubtleItem className="flex-1" size="sm" value="task">
+                                Task
+                            </TabsSubtleItem>
+                            <TabsSubtleItem className="flex-1" size="sm" value="epic">
+                                Epic
+                            </TabsSubtleItem>
+                        </TabsSubtleList>
+                    </TabsSubtle>
                     <TaskFields
                         agents={agents}
                         disabled={createMutation.isPending}

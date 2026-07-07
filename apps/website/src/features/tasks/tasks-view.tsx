@@ -1,4 +1,12 @@
 import { Plus } from '@hugeicons/core-free-icons';
+import type { IconSvgElement } from '@hugeicons/react';
+import {
+    CheckListIcon,
+    DashedLineCircleIcon,
+    Layers01Icon,
+    Loading03Icon,
+    UserIcon,
+} from '@hugeicons-pro/core-stroke-rounded';
 import { Icon } from '../../components/ui/icon.tsx';
 import { Button } from '../../components/ui/primitives/button.tsx';
 import { SearchInput } from '../../components/ui/primitives/search-input.tsx';
@@ -10,19 +18,19 @@ import {
     SelectTrigger,
     SelectValue,
 } from '../../components/ui/select.tsx';
-import { TabsSubtle, TabsSubtleItem, TabsSubtleList } from '../../components/ui/tabs-subtle.tsx';
 import type { TaskRecord } from '../../lib/trpc.tsx';
+import { cn } from '../../lib/utils.ts';
 import { AgentOptionLabel, type AgentSelectOption } from '../agents/agent-option-label.tsx';
 import { EmptyState } from '../shell/empty-state.tsx';
-import type { TaskAssigneeFilter, TaskView } from './task-presentation.ts';
-import { TasksList } from './tasks-list.tsx';
+import { groupTasksByStatus, type TaskAssigneeFilter, type TaskView } from './task-presentation.ts';
+import { TaskStatusGroup } from './tasks-list.tsx';
 
-const taskViews: Array<{ label: string; value: TaskView }> = [
-    { label: 'All', value: 'all' },
-    { label: 'Active', value: 'active' },
-    { label: 'Backlog', value: 'backlog' },
-    { label: 'My tasks', value: 'mine' },
-    { label: 'Epics', value: 'epics' },
+const taskViews: Array<{ icon: IconSvgElement; label: string; value: TaskView }> = [
+    { icon: CheckListIcon, label: 'All tasks', value: 'all' },
+    { icon: Loading03Icon, label: 'Active', value: 'active' },
+    { icon: DashedLineCircleIcon, label: 'Backlog', value: 'backlog' },
+    { icon: UserIcon, label: 'My tasks', value: 'mine' },
+    { icon: Layers01Icon, label: 'Epics', value: 'epics' },
 ];
 
 interface TasksViewProps {
@@ -74,6 +82,8 @@ export function TasksView({
         );
     }
 
+    const groups = groupTasksByStatus(filteredTasks);
+
     return (
         <div className="flex flex-1 flex-col overflow-hidden">
             {actionErrorMessage ? (
@@ -83,87 +93,105 @@ export function TasksView({
             ) : null}
 
             <ScrollArea className="flex-1">
-                <div className="mx-auto flex w-full max-w-3xl flex-col px-5 py-8">
-                    <header className="relative z-40 flex items-start pb-6">
-                        <div>
-                            <h1 className="font-semibold text-2xl text-foreground">Tasks</h1>
-                            <p className="mt-1 text-muted-foreground text-sm">
-                                Tracked work you and your agents share
-                            </p>
-                        </div>
-                        <Button
-                            className="ml-auto shrink-0 rounded-full"
-                            onClick={onCreate}
-                            size="sm"
-                            type="button"
-                            variant="secondary"
-                        >
-                            <Icon aria-hidden="true" className="size-4" icon={Plus} />
-                            New task
-                        </Button>
-                    </header>
+                <div className="mx-auto grid w-full max-w-5xl grid-cols-1 gap-x-10 gap-y-6 px-5 py-8 md:grid-cols-[11rem_minmax(0,1fr)]">
+                    <nav
+                        aria-label="Task views"
+                        className="flex flex-row flex-wrap gap-1 self-start md:sticky md:top-8 md:flex-col"
+                    >
+                        {taskViews.map((taskView) => {
+                            const isActive = taskView.value === view;
 
-                    <section className="grid gap-3">
-                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                            <TabsSubtle
-                                onValueChange={(value) => onViewChange(value as TaskView)}
-                                value={view}
-                            >
-                                <TabsSubtleList>
-                                    {taskViews.map((taskView) => (
-                                        <TabsSubtleItem
-                                            key={taskView.value}
-                                            size="sm"
-                                            value={taskView.value}
-                                        >
-                                            {taskView.label}
-                                        </TabsSubtleItem>
-                                    ))}
-                                </TabsSubtleList>
-                            </TabsSubtle>
-                            <div className="flex items-center gap-2 sm:ml-auto">
-                                <Select
-                                    onValueChange={(value) => {
-                                        if (value) {
-                                            onAssigneeChange(value as TaskAssigneeFilter);
-                                        }
-                                    }}
-                                    value={assignee}
+                            return (
+                                <button
+                                    className={cn(
+                                        'flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring',
+                                        isActive
+                                            ? 'bg-active font-medium text-foreground'
+                                            : 'text-muted-foreground hover:bg-hover hover:text-foreground'
+                                    )}
+                                    key={taskView.value}
+                                    onClick={() => onViewChange(taskView.value)}
+                                    type="button"
                                 >
-                                    <SelectTrigger aria-label="Filter by assignee">
-                                        <SelectValue>
-                                            {assigneeFilterLabel(assignee, agents)}
-                                        </SelectValue>
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="anyone">Anyone</SelectItem>
-                                        <SelectItem value="me">Me</SelectItem>
-                                        <SelectItem value="unassigned">Unassigned</SelectItem>
-                                        {agents.map((agent) => (
-                                            <SelectItem key={agent.id} value={`agent:${agent.id}`}>
-                                                <AgentOptionLabel agent={agent} />
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                                <SearchInput
-                                    aria-label="Search tasks"
-                                    className="w-full sm:max-w-64 [&_[data-slot=input-control]]:rounded-full"
-                                    name="task-search"
-                                    onChange={(event) => onQueryChange(event.target.value)}
-                                    placeholder="Search tasks..."
-                                    size="default"
-                                    value={query}
-                                />
+                                    <Icon
+                                        aria-hidden="true"
+                                        className="size-4 shrink-0 opacity-80"
+                                        icon={taskView.icon}
+                                    />
+                                    {taskView.label}
+                                </button>
+                            );
+                        })}
+                    </nav>
+
+                    <div className="flex min-w-0 flex-col gap-5">
+                        <header className="flex items-start">
+                            <div>
+                                <h1 className="font-semibold text-2xl text-foreground">Tasks</h1>
+                                <p className="mt-1 text-muted-foreground text-sm">
+                                    Tracked work you and your agents share
+                                </p>
                             </div>
+                            <Button
+                                className="ml-auto shrink-0 rounded-full"
+                                onClick={onCreate}
+                                size="sm"
+                                type="button"
+                                variant="secondary"
+                            >
+                                <Icon aria-hidden="true" className="size-4" icon={Plus} />
+                                New task
+                            </Button>
+                        </header>
+
+                        <div className="flex items-center gap-2">
+                            <Select
+                                onValueChange={(value) => {
+                                    if (value) {
+                                        onAssigneeChange(value as TaskAssigneeFilter);
+                                    }
+                                }}
+                                value={assignee}
+                            >
+                                <SelectTrigger aria-label="Filter by assignee" className="w-44">
+                                    <SelectValue>
+                                        {assigneeFilterLabel(assignee, agents)}
+                                    </SelectValue>
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="anyone">Anyone</SelectItem>
+                                    <SelectItem value="me">Me</SelectItem>
+                                    <SelectItem value="unassigned">Unassigned</SelectItem>
+                                    {agents.map((agent) => (
+                                        <SelectItem key={agent.id} value={`agent:${agent.id}`}>
+                                            <AgentOptionLabel agent={agent} />
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <SearchInput
+                                aria-label="Search tasks"
+                                className="w-full flex-1 [&_[data-slot=input-control]]:rounded-full"
+                                name="task-search"
+                                onChange={(event) => onQueryChange(event.target.value)}
+                                placeholder="Search tasks..."
+                                size="default"
+                                value={query}
+                            />
                         </div>
 
-                        {filteredTasks.length > 0 ? (
-                            <TasksList
-                                assigneeName={assigneeName}
-                                onOpen={onOpen}
-                                tasks={filteredTasks}
-                            />
+                        {groups.length > 0 ? (
+                            <div className="grid gap-5">
+                                {groups.map((group) => (
+                                    <TaskStatusGroup
+                                        assigneeName={assigneeName}
+                                        key={group.status}
+                                        onOpen={onOpen}
+                                        status={group.status}
+                                        tasks={group.tasks}
+                                    />
+                                ))}
+                            </div>
                         ) : (
                             <TasksBoardPlaceholder
                                 isBoardEmpty={tasks.length === 0}
@@ -171,7 +199,7 @@ export function TasksView({
                                 onCreate={onCreate}
                             />
                         )}
-                    </section>
+                    </div>
                 </div>
             </ScrollArea>
         </div>
@@ -219,10 +247,7 @@ function TasksBoardPlaceholder({
     );
 }
 
-function assigneeFilterLabel(
-    assignee: TaskAssigneeFilter,
-    agents: Array<{ id: string; name: string }>
-) {
+function assigneeFilterLabel(assignee: TaskAssigneeFilter, agents: AgentSelectOption[]) {
     if (assignee === 'anyone') {
         return 'Anyone';
     }
