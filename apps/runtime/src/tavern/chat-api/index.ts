@@ -6,6 +6,7 @@ export {
     createMessage,
     deleteMessage,
     getMessage,
+    latestMessageSequence,
     listMessages,
     listRecentMessagesBefore,
     listRecentMessagesBetween,

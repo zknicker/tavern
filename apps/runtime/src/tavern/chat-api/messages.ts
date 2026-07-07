@@ -385,6 +385,17 @@ function parseStoredAttachments(value: string | null): Record<string, unknown>[]
     return [];
 }
 
+/** The chat's newest message sequence; 0 when the chat has no messages. */
+export function latestMessageSequence(chatId: string, db: Database = getDb()) {
+    const row = db
+        .prepare('SELECT last_message_sequence FROM chats WHERE id = $chatId')
+        .get(namedParams({ chatId })) as { last_message_sequence: number } | null;
+    if (!row) {
+        throw new Error(`Chat ${chatId} does not exist.`);
+    }
+    return row.last_message_sequence;
+}
+
 function nextMessageSequence(chatId: string, db: Database) {
     const row = db
         .prepare('SELECT last_message_sequence FROM chats WHERE id = $chatId')

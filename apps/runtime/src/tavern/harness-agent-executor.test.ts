@@ -294,6 +294,44 @@ describe('harness agent executor', () => {
         expect(prompt.match(/current channel ask/g)).toHaveLength(1);
     });
 
+    it('marks the first turn of a rotated session as fresh context', async () => {
+        seedPromptChat({ chatId: 'cht_fresh_note', kind: 'channel' });
+        createPromptMessage('cht_fresh_note', {
+            authorId: 'usr_alice',
+            content: 'morning!',
+            id: 'msg_fresh_note',
+            role: 'user',
+        });
+
+        const rotated = await harnessPrompt(
+            executorInput(
+                { model: 'gpt-4.1-mini', provider: 'openai' },
+                {
+                    chatId: 'cht_fresh_note',
+                    content: 'morning!',
+                    generation: 2,
+                    requestMessageId: 'msg_fresh_note',
+                    runtimeSessionId: null,
+                }
+            )
+        );
+        expect(rotated).toContain('This session just started fresh');
+
+        const resumed = await harnessPrompt(
+            executorInput(
+                { model: 'gpt-4.1-mini', provider: 'openai' },
+                {
+                    chatId: 'cht_fresh_note',
+                    content: 'morning!',
+                    generation: 2,
+                    requestMessageId: 'msg_fresh_note',
+                    runtimeSessionId: 'ses_live',
+                }
+            )
+        );
+        expect(resumed).not.toContain('This session just started fresh');
+    });
+
     it('anchors the prompt in time with a current-time line and per-message timestamps', async () => {
         seedPromptChat({ chatId: 'cht_time', kind: 'channel' });
         createPromptMessage('cht_time', {
@@ -429,7 +467,9 @@ function executorInput(
         chatId?: string;
         content?: string;
         enabledSkillIds?: string[];
+        generation?: number;
         promptContextSequence?: number;
+        runtimeSessionId?: null | string;
         requestMessageId?: string;
         workspaceFolder?: string;
     } = {}
@@ -451,11 +491,11 @@ function executorInput(
             chatId,
             createdAt: now,
             effectiveModel: model,
-            generation: 1,
+            generation: input.generation ?? 1,
             id: `ags_${chatId}_agt_primary_1`,
             promptContextSequence: input.promptContextSequence ?? 0,
             resumeState: null,
-            runtimeSessionId: null,
+            runtimeSessionId: input.runtimeSessionId ?? null,
             status: 'active',
             updatedAt: now,
         } satisfies AgentRuntimeAgentSession,

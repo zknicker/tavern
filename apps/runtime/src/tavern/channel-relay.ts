@@ -22,6 +22,7 @@ import {
     upsertResponseActivity,
 } from './chat-api/index.ts';
 import { ensurePrimaryManagedAgent } from './managed-agent.ts';
+import { ensureFreshAgentSession } from './session-freshness.ts';
 
 export async function sendTavernChannelMessage(
     chatId: string,
@@ -43,6 +44,7 @@ export async function sendTavernChannelMessage(
     const runId = createRunId(payload.message.id, payload.agent.agentId);
     const responseId = createResponseId(runId);
     const storedAgent = requireStoredAgent(payload.agent.agentId);
+    ensureFreshAgentSession({ agentId: payload.agent.agentId, chatId });
     const agentSession = ensureCurrentAgentSession({
         agentParticipantId: payload.agent.agentId,
         chatId,

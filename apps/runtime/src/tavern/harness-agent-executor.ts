@@ -466,6 +466,15 @@ export function harnessPrompt(input: AgentExecutorInput, recallContext?: string 
             : `- triggering message: ${input.requestMessageId}`,
     ];
 
+    // First turn of a rotated session: no engine session exists yet, so prior
+    // conversation is genuinely absent — say so instead of letting the model
+    // guess. New seats (generation 1) get channel catch-up instead.
+    if (!input.agentSession.runtimeSessionId && input.agentSession.generation > 1) {
+        sections.push(
+            '- This session just started fresh; earlier conversation is not in context. Use the chat tools or Memory if you need it.'
+        );
+    }
+
     if (recallContext) {
         sections.push('', recallContext);
     }

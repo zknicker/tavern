@@ -1,6 +1,6 @@
 import { startNewAgentSession } from './agent-session-store.ts';
 import { createAgentParticipantId } from './chat-api/ids.ts';
-import { upsertResponse, upsertResponseActivity } from './chat-api/index.ts';
+import { latestMessageSequence, upsertResponse, upsertResponseActivity } from './chat-api/index.ts';
 
 /**
  * Rotates the agent seat's current Agent session so the chat's next message
@@ -8,21 +8,34 @@ import { upsertResponse, upsertResponseActivity } from './chat-api/index.ts';
  * lands as a durable new-session notice row so every client can see when
  * fresh context started. See specs/agent-drawer.md.
  */
-export function resetAgentSession(input: { agentId: string; chatId: string }) {
+export function resetAgentSession(input: { agentId: string; chatId: string; noticeText?: string }) {
+    // Fresh context starts at the reset point: snapshot the cursor so the new
+    // session's first turn does not replay pre-reset channel history.
     const session = startNewAgentSession({
         agentParticipantId: createAgentParticipantId(input.agentId),
         chatId: input.chatId,
+        promptContextSequence: latestMessageSequence(input.chatId),
     });
-    recordSessionResetNotice({ ...input, sessionId: session.id });
+    recordSessionResetNotice({
+        agentId: input.agentId,
+        chatId: input.chatId,
+        sessionId: session.id,
+        text: input.noticeText ?? 'Started a fresh session. New messages start with fresh context.',
+    });
     return { session };
 }
 
 // Evidence is written after the reset settles so the timeline never shows an
 // in-flight row for it.
-function recordSessionResetNotice(input: { agentId: string; chatId: string; sessionId: string }) {
+function recordSessionResetNotice(input: {
+    agentId: string;
+    chatId: string;
+    sessionId: string;
+    text: string;
+}) {
     const responseId = `rsp_session_${crypto.randomUUID()}`;
     const participantId = createAgentParticipantId(input.agentId);
-    const text = 'Started a fresh session. New messages start with fresh context.';
+    const text = input.text;
 
     upsertResponse(input.chatId, {
         id: responseId,

@@ -83,6 +83,7 @@ export function startNewAgentSession(input: {
     db?: Database;
     effectiveModel?: AgentRuntimeModelName;
     now?: string;
+    promptContextSequence?: number;
     resumeState?: Record<string, unknown> | null;
     runtimeSessionId?: string | null;
 }) {
@@ -144,7 +145,7 @@ export function startNewAgentSession(input: {
                 $effectiveModelJson,
                 $runtimeSessionId,
                 $resumeStateJson,
-                0,
+                $promptContextSequence,
                 'active',
                 $now,
                 $now,
@@ -159,6 +160,7 @@ export function startNewAgentSession(input: {
                 generation,
                 id,
                 now,
+                promptContextSequence: input.promptContextSequence ?? 0,
                 resumeStateJson:
                     input.resumeState === undefined || input.resumeState === null
                         ? null
