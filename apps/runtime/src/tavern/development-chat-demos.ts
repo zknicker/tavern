@@ -13,6 +13,7 @@ import {
 } from './chat-api';
 import { developmentChatDemos } from './development-chat-demo-definitions';
 import { type DevelopmentDemoMessage, demoAgentId, demoTime } from './development-chat-demo-types';
+import { seedDevelopmentRecallEvidence } from './development-recall-demo';
 import { ensurePrimaryManagedAgent } from './managed-agent';
 
 export function shouldSeedDevelopmentChatDemos() {
@@ -66,6 +67,8 @@ export function seedDevelopmentChatDemos({
 
         seedDemoAgentSessions(demo.chatId, db);
     }
+
+    seedDevelopmentRecallEvidence(db);
 
     return { seeded: developmentChatDemos.length };
 }
