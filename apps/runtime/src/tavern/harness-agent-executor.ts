@@ -207,6 +207,9 @@ async function executeHarnessTurn(
             runtime: {
                 ...runtime,
                 completedAt,
+                ...(turnStream.contextTokens !== null
+                    ? { contextTokens: turnStream.contextTokens }
+                    : {}),
                 model: input.agentSession.effectiveModel,
             },
         },

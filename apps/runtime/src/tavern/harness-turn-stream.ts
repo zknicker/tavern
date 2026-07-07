@@ -18,6 +18,11 @@ export interface HarnessTurnStreamTarget {
 
 export interface HarnessTurnStreamOutcome {
     activityIds: string[];
+    /**
+     * Tokens in the model's context at the end of the turn: the final step's
+     * input + output totals. Null when the harness reported no usage.
+     */
+    contextTokens: number | null;
     /** Last streamed text segment; the turn's reply. Empty when none streamed. */
     finalText: string;
 }
@@ -55,6 +60,7 @@ export async function persistHarnessTurnStream(
 
     return {
         activityIds: state.activityIds,
+        contextTokens: state.contextTokens,
         finalText: state.pendingText?.content ?? '',
     };
 }
@@ -68,6 +74,7 @@ interface PendingText {
 interface StreamState {
     aborted: boolean;
     activityIds: string[];
+    contextTokens: number | null;
     pendingText: PendingText | null;
     reasoningBuffers: Map<string, { content: string; startedAt: string }>;
     reasoningIndex: number;
@@ -81,6 +88,7 @@ function createStreamState(): StreamState {
     return {
         aborted: false,
         activityIds: [],
+        contextTokens: null,
         pendingText: null,
         reasoningBuffers: new Map(),
         reasoningIndex: 0,
@@ -122,6 +130,15 @@ function handleStreamPart(target: HarnessTurnStreamTarget, state: StreamState, p
             return;
         case 'tool-error':
             handleToolError(target, state, part);
+            return;
+        case 'finish-step':
+            // The final step's context is the session's context size.
+            state.contextTokens = usageContextTokens(part.usage) ?? state.contextTokens;
+            return;
+        case 'finish':
+            // totalUsage sums every step, so it only serves as a fallback
+            // when the harness never reported per-step usage.
+            state.contextTokens ??= usageContextTokens(part.totalUsage);
             return;
         case 'error':
             state.streamError ??=
@@ -444,6 +461,30 @@ function asToolPart(part: Record<string, unknown>): ToolStreamPart | null {
         toolCallId: part.toolCallId,
         toolName: part.toolName,
     };
+}
+
+// LanguageModelV4Usage: nested input/output token groups with optional totals.
+function usageContextTokens(usage: unknown): number | null {
+    if (!isRecord(usage)) {
+        return null;
+    }
+
+    const inputTotal = tokenTotal(usage.inputTokens);
+    const outputTotal = tokenTotal(usage.outputTokens);
+
+    if (inputTotal === null && outputTotal === null) {
+        return null;
+    }
+
+    return (inputTotal ?? 0) + (outputTotal ?? 0);
+}
+
+function tokenTotal(group: unknown): number | null {
+    if (!isRecord(group)) {
+        return null;
+    }
+
+    return typeof group.total === 'number' && Number.isFinite(group.total) ? group.total : null;
 }
 
 function isStreamPart(part: unknown): part is { type: string } & Record<string, unknown> {

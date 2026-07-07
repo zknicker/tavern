@@ -10,9 +10,8 @@ import { getResponse } from './responses';
 /**
  * Timeline dismissal: soft-deletes keep rows and sequence slots but drop them
  * from the product timeline. deleteResponse dismisses one response (and its
- * activity) — used for command cards and failed turns. clearChat dismisses
- * everything currently in a chat — used by the /clear composer command.
- * See specs/composer-commands.md.
+ * activity) — used for failed turns. clearChat dismisses everything currently
+ * in a chat — a Chat API primitive for external clients.
  */
 export function deleteResponse(id: string, db: Database = getDb()): TavernDeleteResponseReceipt {
     assertTavernIdPrefix(id, 'rsp_', 'Response id');

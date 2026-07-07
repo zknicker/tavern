@@ -3,6 +3,8 @@ import {
     agentRuntimeMacAppListSchema,
     agentRuntimeMutationHeaders,
     agentRuntimeMutationOrigins,
+    agentRuntimeResetAgentSessionResultSchema,
+    agentRuntimeResetAgentSessionSchema,
     agentRuntimeRoutes,
     agentRuntimeSkillResetResultSchema,
     agentRuntimeUpdateAgentSessionModelResultSchema,
@@ -14,7 +16,6 @@ import {
     runtimeRoutes,
 } from '@tavern/api';
 import { handleAgentEnvRequest } from '../agent-engine/agent-env-routes.ts';
-import { handleCommandsRequest } from '../agent-engine/command-routes.ts';
 import { handleMcpRequest } from '../agent-engine/mcp-routes.ts';
 import { handleMcpServersRequest } from '../agent-engine/mcp-server-routes.ts';
 import { handleSkillHubRequest } from '../agent-engine/skill-hub-routes.ts';
@@ -35,7 +36,10 @@ import { handleModelProviderRequest } from '../models/provider-routes.ts';
 import { handlePluginsRequest } from '../plugins/routes.ts';
 import { handleTimezoneSettingsRequest } from '../timezone-settings.ts';
 import { handleWorkspaceRequest } from '../workspace/routes.ts';
+import { resetAgentSession } from './agent-session-reset.ts';
+import { readAgentSessionStats, readPastAgentSessionSummaries } from './agent-session-stats.ts';
 import { readCurrentAgentSession, updateCurrentAgentSessionModel } from './agent-session-store.ts';
+import { createAgentParticipantId } from './chat-api/ids.ts';
 import { handleTavernApiRequest } from './chat-api-router.ts';
 import { handleDevToolkitRequest } from './development-turn-simulator.ts';
 import { badRequest, forbidden, json, notFound, readJson } from './http.ts';
@@ -130,11 +134,6 @@ export async function handleTavernRuntimeRequest(request: Request): Promise<Resp
     const pluginsResponse = await handlePluginsRequest(request);
     if (pluginsResponse) {
         return pluginsResponse;
-    }
-
-    const commandsResponse = await handleCommandsRequest(request);
-    if (commandsResponse) {
-        return commandsResponse;
     }
 
     const devToolkitResponse = await handleDevToolkitRequest(request);
@@ -235,6 +234,25 @@ export async function handleTavernRuntimeRequest(request: Request): Promise<Resp
     }
 
     if (
+        request.method === 'POST' &&
+        segments[0] === 'agent' &&
+        segments[1] === 'chats' &&
+        segments[2] &&
+        segments[3] === 'agent-sessions' &&
+        segments[4] === 'reset'
+    ) {
+        const input = agentRuntimeResetAgentSessionSchema.parse(await readJson(request));
+        return json(
+            agentRuntimeResetAgentSessionResultSchema.parse(
+                resetAgentSession({
+                    agentId: input.agentId,
+                    chatId: segments[2],
+                })
+            )
+        );
+    }
+
+    if (
         request.method === 'GET' &&
         segments[0] === 'agent' &&
         segments[1] === 'chats' &&
@@ -242,12 +260,25 @@ export async function handleTavernRuntimeRequest(request: Request): Promise<Resp
         segments[3] === 'agent-sessions' &&
         segments[4] === 'current'
     ) {
+        // Clients address agents by agent id; the seat's participant id is a
+        // Runtime detail derived from it.
+        const agentId = url.searchParams.get('agentId');
+        const agentParticipantId = agentId ? createAgentParticipantId(agentId) : undefined;
+        const session = readCurrentAgentSession({
+            agentParticipantId,
+            chatId: segments[2],
+        });
         return json(
             agentRuntimeCurrentAgentSessionResultSchema.parse({
-                session: readCurrentAgentSession({
-                    agentParticipantId: url.searchParams.get('agentParticipantId') ?? undefined,
+                pastSessions: readPastAgentSessionSummaries({
+                    agentParticipantId,
                     chatId: segments[2],
+                    currentSessionId: session?.id ?? null,
                 }),
+                session,
+                stats: session
+                    ? readAgentSessionStats({ chatId: segments[2], sessionId: session.id })
+                    : null,
             })
         );
     }
