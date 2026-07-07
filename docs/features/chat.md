@@ -50,14 +50,24 @@ happen, and keep the durable timeline as context.
   color and trusted chat-specific agent instructions.
 * **Offline catch-up.** Tavern Runtime keeps chat history while the app is
   closed; the app reloads from durable rows and refetches on reconnect.
+* **Concurrent turns.** Live turn state is plural end to end: each agent seat
+  runs one turn at a time, so a multi-agent channel legitimately carries
+  several concurrent live replies. The app models `activeReplies`,
+  `activeTurns`, and `failedTurns` keyed by run, the `chat.log.list` page
+  carries the same plural shape, and each live reply renders its own
+  streaming turn entry and status row. Failure banners are per agent seat: an
+  agent's failure stays visible until that agent runs again, regardless of
+  what other agents do in the chat.
 * **Mid-turn steering.** The chat composer stays available while an agent turn
   is running. Drafts entered during an active turn are queued for the same chat
   and agent, then sent when the active response settles. A queued text-only
-  draft can be steered into the active turn while that turn is still live;
-  queued drafts with attachments stay normal next-turn messages because
-  steering carries only text. Explicit stopping remains a separate control. A
-  stopped turn settles as `cancelled`; late engine output from that turn is not
-  delivered as the assistant reply.
+  draft can be steered into the active turn while that turn is still live —
+  only when exactly one run is live; with several concurrent runs the target
+  is ambiguous, so the draft stays queued. Queued drafts with attachments stay
+  normal next-turn messages because steering carries only text. Explicit
+  stopping remains a separate control — with concurrent runs the stop control
+  stops every live run in the chat. A stopped turn settles as `cancelled`;
+  late engine output from that turn is not delivered as the assistant reply.
 * **Composer context.** The composer keeps a compositional input shell with
   attachment, queue, and submit slots. Agent model defaults live in Agent
   settings. Users can pick or drag files into the composer. Durable chat
