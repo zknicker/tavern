@@ -68,14 +68,12 @@ describe('Codex app-server skills', () => {
         expect(merged.map((skill) => skill.id)).toEqual(['agent-browser', 'codex:github:github']);
     });
 
-    it('rejects when the Codex app-server executable is unavailable', async () => {
+    it('degrades to no skills when the Codex executable is unavailable', async () => {
         const originalPath = process.env.PATH;
         process.env.PATH = '/definitely-missing-codex-bin';
 
         try {
-            await expect(listCodexAppServerSkills()).rejects.toThrow(
-                /Executable not found|ENOENT/u
-            );
+            await expect(listCodexAppServerSkills()).resolves.toEqual([]);
         } finally {
             process.env.PATH = originalPath;
         }

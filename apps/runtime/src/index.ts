@@ -2,6 +2,7 @@ import path from 'node:path';
 import { seededSkillDefaultEntries } from './agent-engine/skill-library.ts';
 import { refreshRuntimeCapabilities } from './capabilities/store.ts';
 import { dispatch } from './cli/main.ts';
+import { ensureCliOnPath } from './cli-path.ts';
 import { DATA_DIR } from './config.ts';
 import { type RuntimeCronManager, startRuntimeCronManager } from './cron/scheduler.ts';
 import { initDb } from './db/connection.ts';
@@ -59,6 +60,12 @@ async function main(): Promise<void> {
     await loadQmd().catch((err) => {
         log.warn('Memory recall search engine failed to load; recall is unavailable', { err });
     });
+
+    // Homebrew/launchd services strip the user PATH; heal well-known CLI
+    // homes so harness bridges and CLI spawns keep working under the service.
+    for (const cli of ['codex', 'claude']) {
+        ensureCliOnPath(cli);
+    }
 
     const dbPath = path.join(DATA_DIR, 'runtime.db');
     const db = initDb(dbPath);

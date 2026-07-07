@@ -1,7 +1,8 @@
 import { type ChildProcessWithoutNullStreams, spawn } from 'node:child_process';
 import { createInterface } from 'node:readline';
-
 import type { AgentRuntimeSkillSummary } from '@tavern/api';
+import { findExecutable } from '../cli-path.ts';
+import { log } from '../log.ts';
 
 const requestTimeoutMs = 10_000;
 const emptyRequirements = {
@@ -33,15 +34,36 @@ interface CodexSkillRecord {
 }
 
 export async function listCodexAppServerSkills(): Promise<AgentRuntimeSkillSummary[]> {
-    const client = new CodexAppServerClient();
+    // A missing or broken codex CLI must degrade to an empty skill list — this
+    // runs inside request handling, where a spawn failure crashed the Runtime
+    // uncaught when the service PATH lost codex.
+    if (!findExecutable('codex')) {
+        warnCodexUnavailableOnce();
+        return [];
+    }
 
+    const client = new CodexAppServerClient();
     try {
         await client.initialize();
         const result = await client.request('skills/list', {});
         return mapCodexSkillsResult(result);
+    } catch (error) {
+        log.warn('Codex app-server skills are unavailable', { err: error });
+        return [];
     } finally {
         client.close();
     }
+}
+
+let codexUnavailableWarned = false;
+function warnCodexUnavailableOnce() {
+    if (codexUnavailableWarned) {
+        return;
+    }
+    codexUnavailableWarned = true;
+    log.warn(
+        'Codex CLI is not on the Runtime PATH; Codex app-server skills are unavailable. Install codex or set TAVERN_AGENT_CODEX_CLI_COMMAND.'
+    );
 }
 
 export function mapCodexSkillsResult(result: unknown): AgentRuntimeSkillSummary[] {
