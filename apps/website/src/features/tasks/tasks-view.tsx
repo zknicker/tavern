@@ -263,6 +263,7 @@ function assigneeFilterLabel(assignee: TaskAssigneeFilter, agents: AgentSelectOp
     }
 
     const agentId = assignee.slice('agent:'.length);
+    const agent = agents.find((candidate) => candidate.id === agentId);
 
-    return agents.find((agent) => agent.id === agentId)?.name ?? agentId;
+    return agent ? <AgentOptionLabel agent={agent} /> : agentId;
 }
