@@ -19,6 +19,7 @@ import { onOpenRouterSettingsUpdate } from './openrouter-settings/on-update.ts';
 import { onSemanticMemoryUpdate } from './semantic-memory/on-update.ts';
 import { onSessionUpdate } from './session/on-update.ts';
 import { onSkillUpdate } from './skill/on-update.ts';
+import { onTasksUpdate } from './tasks/on-update.ts';
 import { createRouter } from './trpc.ts';
 import { onLiveUsageUpdate } from './usage/on-live-update.ts';
 import { onWorkersUpdate } from './worker/on-update.ts';
@@ -59,6 +60,9 @@ export const wsRouter = createRouter({
     }),
     skill: createRouter({
         onUpdate: onSkillUpdate,
+    }),
+    tasks: createRouter({
+        onUpdate: onTasksUpdate,
     }),
     agentRuntime: createRouter({
         onCapabilityUpdated: onAgentRuntimeCapabilityUpdated,

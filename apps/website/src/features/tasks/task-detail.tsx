@@ -19,7 +19,6 @@ import {
     formatCapabilityDisabledReason,
     useCapability,
 } from '../../hooks/connections/use-capability.ts';
-import { useTaskEvents } from '../../hooks/tasks/use-task-events.ts';
 import { useTaskGet } from '../../hooks/tasks/use-task-get.ts';
 import { useTaskList } from '../../hooks/tasks/use-task-list.ts';
 import {
@@ -43,7 +42,6 @@ export function TaskDetail({ taskId }: { taskId: string }) {
     const dispatchMutation = useTaskDispatch();
     const gateway = useCapability('gateway');
     const [dispatchAgentId, setDispatchAgentId] = React.useState<string | null>(null);
-    useTaskEvents();
 
     const task = taskQuery.data?.task ?? null;
     const agents = React.useMemo(

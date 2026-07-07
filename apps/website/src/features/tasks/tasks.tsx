@@ -7,7 +7,6 @@ import {
     useRuntimeConnection,
 } from '../../hooks/connections/use-runtime-connection.ts';
 import { useSearch } from '../../hooks/shell/use-search.ts';
-import { useTaskEvents } from '../../hooks/tasks/use-task-events.ts';
 import { useTaskList } from '../../hooks/tasks/use-task-list.ts';
 import { useTaskCreate } from '../../hooks/tasks/use-task-mutations.ts';
 import { appRoutes } from '../../lib/app-routes.ts';
@@ -33,7 +32,6 @@ export function Tasks() {
     const [view, setView] = React.useState<TaskView>('all');
     const [assignee, setAssignee] = React.useState<TaskAssigneeFilter>('anyone');
     const [isCreateOpen, setIsCreateOpen] = React.useState(false);
-    useTaskEvents();
 
     const tasks = React.useMemo(() => tasksQuery.data?.tasks ?? [], [tasksQuery.data?.tasks]);
     const agents = React.useMemo(
