@@ -1,4 +1,4 @@
-import { afterEach, mock, test } from 'bun:test';
+import { afterAll, afterEach, mock, test } from 'bun:test';
 import assert from 'node:assert/strict';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -6,26 +6,25 @@ import { join } from 'node:path';
 
 const originalDatabasePath = process.env.DATABASE_PATH;
 const originalTavernRuntimeUrl = process.env.TAVERN_RUNTIME_URL;
+const originalFetch = globalThis.fetch;
 const listCapabilities = mock(async () => {
     throw new Error('Runtime request failed with status 502.');
 });
-const closeRuntimeClient = mock(() => undefined);
 
-mock.module('../src/agent-runtime/client-factory.ts', () => ({
-    createAgentRuntimeClientForConnection: mock(() => ({
-        close: closeRuntimeClient,
-        listCapabilities,
-    })),
-}));
+globalThis.fetch = (async () => Response.json(await listCapabilities())) as typeof fetch;
 
 afterEach(() => {
     process.env.DATABASE_PATH = originalDatabasePath;
     process.env.TAVERN_RUNTIME_URL = originalTavernRuntimeUrl;
+    globalThis.fetch = (async () => Response.json(await listCapabilities())) as typeof fetch;
     listCapabilities.mockImplementation(async () => {
         throw new Error('Runtime request failed with status 502.');
     });
     listCapabilities.mockClear();
-    closeRuntimeClient.mockClear();
+});
+
+afterAll(() => {
+    globalThis.fetch = originalFetch;
 });
 
 test('clearAgentRuntimeConnection can clear an active Tavern Runtime environment override', async () => {
@@ -192,6 +191,27 @@ test('Tavern Runtime environment override does not replace the saved Runtime URL
     assert.equal(connection?.source, 'environment');
     assert.equal(connection?.baseUrl, 'http://127.0.0.1:18790');
     assert.equal(saved?.baseUrl, 'https://zachs-mac-mini.example:18790');
+    assert.equal(
+        connection?.capabilities.some((capability) => capability.capability === 'memoryRecall'),
+        true
+    );
+    assert.deepEqual(
+        connection?.capabilities.find((capability) => capability.capability === 'memoryRecall'),
+        {
+            capability: 'memoryRecall',
+            checkedAt: null,
+            displayName: null,
+            errorCode: null,
+            lastHealthyAt: null,
+            metadataJson: '{}',
+            method: 'app.expected',
+            reason: 'Runtime has not reported this capability yet.',
+            runtimeId: 'dev-runtime',
+            state: 'unknown',
+            technicalMessage: null,
+            updatedAt: null,
+        }
+    );
 
     await agentRuntimeConnection.clearAgentRuntimeConnection({ clearEnvironmentOverride: true });
 });

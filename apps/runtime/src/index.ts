@@ -151,6 +151,7 @@ async function main(): Promise<void> {
     await refreshRuntimeCapabilities({
         ids: [
             'semanticMemory',
+            'memoryRecall',
             'memoryWorkers',
             'gateway',
             'apiServer',

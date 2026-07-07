@@ -374,13 +374,62 @@ async function catchUpRuntimeEvents(connection: RuntimeConnectionRecord, revisio
         }
 
         for (const event of events) {
-            await applyObservedAgentRuntimeEvent(event, connection);
+            await applyCatchUpRuntimeEvent(event, connection);
         }
+        emitRuntimeReconnectInvalidations();
     } catch (error) {
         if (revision === connectionRevision) {
             console.warn('[tavern] failed to catch up runtime events', error);
         }
     }
+}
+
+export async function applyCatchUpRuntimeEvent(
+    event: AgentRuntimeEvent,
+    connection?: RuntimeConnectionRecord
+) {
+    clearCatchUpTerminalTurn(event);
+
+    if (!shouldApplyCatchUpRuntimeEvent(event)) {
+        return;
+    }
+
+    await applyObservedAgentRuntimeEvent(event, connection);
+}
+
+export function shouldApplyCatchUpRuntimeEvent(event: AgentRuntimeEvent) {
+    switch (event.type) {
+        case 'turn.cancelled':
+        case 'turn.completed':
+        case 'turn.failed':
+        case 'turn.progress':
+        case 'turn.replyUpdated':
+        case 'turn.started':
+        case 'turn.statusUpdated':
+        case 'turn.steered':
+            return false;
+        default:
+            return true;
+    }
+}
+
+function clearCatchUpTerminalTurn(event: AgentRuntimeEvent) {
+    switch (event.type) {
+        case 'turn.cancelled':
+        case 'turn.completed':
+        case 'turn.failed':
+            clearTurnSessionActive(event.turn.sessionKey);
+            return;
+        default:
+            return;
+    }
+}
+
+function emitRuntimeReconnectInvalidations() {
+    emitChatUpdated();
+    emitChatLogUpdated();
+    emitSessionUpdated();
+    emitWorkersUpdated();
 }
 
 export function refreshAgentRuntimeEventSync() {

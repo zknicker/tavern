@@ -14,7 +14,11 @@ import {
 } from '../storage/agent-runtime-connections.ts';
 import { parseAgentRuntimeConnectionAuth } from './auth.ts';
 import type { AgentRuntimeCapabilityStatus, AgentRuntimeConnection } from './contracts.ts';
-import { type AgentRuntimeCapability, agentRuntimeCapabilitySchema } from './contracts.ts';
+import {
+    type AgentRuntimeCapability,
+    agentRuntimeCapabilities,
+    agentRuntimeCapabilitySchema,
+} from './contracts.ts';
 import {
     clearEnvironmentAgentRuntimeConnection,
     getEnvironmentAgentRuntimeConnection,
@@ -84,7 +88,10 @@ function toAgentRuntimeConnection(input: {
     runtimeVersion?: null | string;
     source: 'environment' | 'saved';
 }): AgentRuntimeConnection {
-    const capabilities = input.capabilities ?? [];
+    const capabilities = hydrateExpectedRuntimeCapabilities({
+        capabilities: input.capabilities ?? [],
+        runtimeId: input.id,
+    });
     const appVersion = input.appVersion ?? appPackage.version;
     const runtimeVersion = input.runtimeVersion ?? null;
     const requiredRuntimeVersion = getRequiredRuntimeVersion(appVersion);
@@ -110,6 +117,40 @@ function toAgentRuntimeConnection(input: {
             requiredRuntimeVersion,
             runtimeVersion,
         }),
+    };
+}
+
+function hydrateExpectedRuntimeCapabilities(input: {
+    capabilities: AgentRuntimeConnection['capabilities'];
+    runtimeId: string;
+}): AgentRuntimeConnection['capabilities'] {
+    const byCapability = new Map(
+        input.capabilities.map((capability) => [capability.capability, capability] as const)
+    );
+
+    return agentRuntimeCapabilities.map(
+        (capability) =>
+            byCapability.get(capability) ?? missingRuntimeCapability(capability, input.runtimeId)
+    );
+}
+
+function missingRuntimeCapability(
+    capability: AgentRuntimeCapability,
+    runtimeId: string
+): AgentRuntimeCapabilityStatus {
+    return {
+        capability,
+        checkedAt: null,
+        displayName: null,
+        errorCode: null,
+        lastHealthyAt: null,
+        metadataJson: '{}',
+        method: 'app.expected',
+        reason: 'Runtime has not reported this capability yet.',
+        runtimeId,
+        state: 'unknown',
+        technicalMessage: null,
+        updatedAt: null,
     };
 }
 

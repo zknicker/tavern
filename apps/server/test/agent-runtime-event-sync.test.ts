@@ -24,6 +24,7 @@ const emitSessionUpdated = mock(() => undefined);
 const emitSemanticMemoryUpdated = mock(() => undefined);
 const emitSkillInvalidationCascade = mock(() => undefined);
 const emitSkillUpdated = mock(() => undefined);
+const emitTasksUpdated = mock(() => undefined);
 const emitTavernEvent = mock(() => undefined);
 const emitUsageLiveUpdated = mock(() => undefined);
 const emitVaultUpdated = mock(() => undefined);
@@ -76,6 +77,7 @@ mock.module('../src/api/invalidation-events.ts', () => ({
     emitSemanticMemoryUpdated,
     emitSkillInvalidationCascade,
     emitSkillUpdated,
+    emitTasksUpdated,
     emitTavernEvent,
     emitUsageLiveUpdated,
     emitVaultUpdated,
@@ -131,6 +133,7 @@ beforeEach(async () => {
     emitSemanticMemoryUpdated.mockClear();
     emitSkillInvalidationCascade.mockClear();
     emitSkillUpdated.mockClear();
+    emitTasksUpdated.mockClear();
     emitChatLogUpdated.mockClear();
     emitChatUpdated.mockClear();
     emitTavernEvent.mockClear();
@@ -286,9 +289,20 @@ test('startAgentRuntimeEventSync refreshes connection state and catches up durab
 
     expect(subscribeAgentRuntimeEventsForConnection).toHaveBeenCalledTimes(1);
     expect(listEvents).toHaveBeenCalledWith({ limit: 500 });
-    expect(emitChatUpdated).toHaveBeenCalledWith({ chatId: tavernChatId });
-    expect(emitSessionUpdated).toHaveBeenCalledWith({ sessionKey: 'session-1' });
-    expect(emitChatLogUpdated).toHaveBeenCalledWith({ sessionKey: 'session-1' });
+    expect(emitChatUpdated).toHaveBeenCalledWith();
+    expect(emitSessionUpdated).toHaveBeenCalledWith();
+    expect(emitChatLogUpdated).toHaveBeenCalledWith();
+    expect(emitObservedAgentRuntimeEvent).not.toHaveBeenCalledWith({
+        timestamp: '2026-05-12T19:00:00.000Z',
+        turn: {
+            agentId: 'agent:test',
+            chatId: tavernChatId,
+            runId: 'run-1',
+            sessionKey: 'session-1',
+            startedAt: '2026-05-12T19:00:00.000Z',
+        },
+        type: 'turn.completed',
+    });
     expect(markAgentRuntimeConnectionReachable).toHaveBeenCalledWith({
         connectionId: 'runtime-1',
     });

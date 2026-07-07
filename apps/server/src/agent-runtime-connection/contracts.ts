@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { connectionStateSchema } from '../contracts/shared.ts';
 
-export const agentRuntimeCapabilitySchema = z.enum([
+export const agentRuntimeCapabilities = [
     'codexOAuth',
     'semanticMemory',
     'memoryRecall',
@@ -15,7 +15,9 @@ export const agentRuntimeCapabilitySchema = z.enum([
     'devToolkit',
     'plugin.merchbase',
     'plugin.google.calendar',
-]);
+] as const;
+
+export const agentRuntimeCapabilitySchema = z.enum(agentRuntimeCapabilities);
 
 export const agentRuntimeCapabilityStateSchema = z.enum([
     'degraded',
