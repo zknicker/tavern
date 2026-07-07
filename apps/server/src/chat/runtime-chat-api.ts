@@ -271,20 +271,6 @@ function activityToChatRows(
         ];
     }
 
-    const commandRun = commandRunFromActivity(activity);
-
-    if (commandRun) {
-        return [
-            {
-                commandRun,
-                id: activity.id,
-                kind: 'system' as const,
-                systemKind: 'commandRun' as const,
-                timestamp: activity.started_at,
-            },
-        ];
-    }
-
     const workerRow = workerRowFromSubagentActivity({
         activity,
         actor,
@@ -518,29 +504,6 @@ function runtimeNoticeKind(value: unknown) {
         : null;
 }
 
-// Composer command runs persist as command-kind activity with the typed
-// command under metadata.command; they render as standalone system cards
-// instead of work-log tool rows.
-export function commandRunFromActivity(activity: TavernResponseActivity) {
-    if (activity.kind !== 'command') {
-        return null;
-    }
-
-    const commandMetadata = readRecord(activity.metadata.command);
-    const command = readString(commandMetadata.text) ?? activity.title;
-
-    if (!command.startsWith('/')) {
-        return null;
-    }
-
-    return {
-        command,
-        output: activity.detail ?? '',
-        responseId: activity.response_id,
-        status: activity.status === 'failed' ? ('failed' as const) : ('completed' as const),
-    };
-}
-
 function runtimeNoticeFallbackTitle(kind: 'auto_compaction' | 'new_session' | 'status') {
     switch (kind) {
         case 'auto_compaction':
@@ -576,7 +539,6 @@ function isRenderableActivity(
     return (
         activity.kind === 'tool_call' ||
         activity.kind === 'tool_result' ||
-        activity.kind === 'command' ||
         activity.kind === 'artifact' ||
         activity.kind === 'custom' ||
         activity.kind === 'reasoning'
@@ -584,9 +546,6 @@ function isRenderableActivity(
 }
 
 function activityName(activity: TavernResponseActivity) {
-    if (activity.kind === 'command') {
-        return 'command';
-    }
     if (activity.kind === 'artifact') {
         return 'artifact';
     }
@@ -704,8 +663,8 @@ function activeReplyFromResponses(
 export function failedTurnFromResponses(
     responses: readonly TavernChatResponse[]
 ): ChatLogPage['failedTurn'] {
-    // Command runs carry their own failure state on the command card; they
-    // never drive the failed-turn banner.
+    // Historical composer-command evidence (source 'command') predates the
+    // agent drawer and never drives the failed-turn banner.
     const latestResponse = responses
         .filter((response) => runtimeMetadataString(response, 'source') !== 'command')
         .sort((left, right) => Date.parse(right.updated_at) - Date.parse(left.updated_at));

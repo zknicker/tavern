@@ -1,7 +1,6 @@
 import { createRouter } from '../trpc.ts';
 import { listAgentActivityRoute } from './activity.ts';
 import { listAgentChatsRoute } from './chats-list.ts';
-import { listAgentCommandsProcedure, runAgentCommandProcedure } from './commands.ts';
 import { createAgentProcedure } from './create.ts';
 import { deleteAgent } from './delete.ts';
 import { getAgentEnvSettingsProcedure, saveAgentEnvSettingsProcedure } from './env-settings.ts';
@@ -14,6 +13,7 @@ import { onAgentUpdate } from './on-update.ts';
 import { getPrimaryAgentRoute } from './primary.ts';
 import { saveAgentProfile } from './save-profile.ts';
 import { saveAgentSkillsProcedure } from './save-skills.ts';
+import { getAgentSessionProcedure, resetAgentSessionProcedure } from './session.ts';
 import { updateAgentModelProcedure } from './update-model.ts';
 import { updateAgentNameProcedure } from './update-name.ts';
 import { updateAgentThinkingDefaultProcedure } from './update-thinking-default.ts';
@@ -29,7 +29,6 @@ export const agentRouter = createRouter({
     chats: createRouter({
         list: listAgentChatsRoute,
     }),
-    commands: listAgentCommandsProcedure,
     create: createAgentProcedure,
     delete: deleteAgent,
     envSettings: getAgentEnvSettingsProcedure,
@@ -40,11 +39,12 @@ export const agentRouter = createRouter({
     onInstructionsUpdate: onAgentInstructionsUpdate,
     onUpdate: onAgentUpdate,
     primary: getPrimaryAgentRoute,
-    runCommand: runAgentCommandProcedure,
+    resetSession: resetAgentSessionProcedure,
     saveEnvSettings: saveAgentEnvSettingsProcedure,
     saveProfile: saveAgentProfile,
     saveSkills: saveAgentSkillsProcedure,
     saveWorkspaceFile: saveAgentWorkspaceFile,
+    session: getAgentSessionProcedure,
     updateModel: updateAgentModelProcedure,
     updateName: updateAgentNameProcedure,
     updateThinkingDefault: updateAgentThinkingDefaultProcedure,

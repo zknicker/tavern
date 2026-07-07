@@ -4,8 +4,8 @@ import { getActiveAgentRuntimeConnection } from '../storage/agent-runtime-connec
 
 /**
  * Dismissing a timeline row soft-deletes its response in Tavern Runtime: the
- * row (command card, failed turn) disappears from the timeline on every
- * client but stays durable. See specs/composer-commands.md.
+ * row (a failed turn) disappears from the timeline on every client but stays
+ * durable.
  */
 export async function dismissChatResponse(input: { chatId: string; responseId: string }) {
     const connection = await getActiveAgentRuntimeConnection();

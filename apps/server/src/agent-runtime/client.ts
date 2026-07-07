@@ -16,7 +16,6 @@ import {
     type AgentRuntimeCapabilityHealthId,
     type AgentRuntimeCapabilityHealthList,
     type AgentRuntimeChat,
-    type AgentRuntimeCommandList,
     type AgentRuntimeCompleteGoogleOAuth,
     type AgentRuntimeCreateAgent,
     type AgentRuntimeCreateCron,
@@ -64,8 +63,8 @@ import {
     type AgentRuntimePluginList,
     type AgentRuntimePollModelProviderOAuth,
     type AgentRuntimeRenderedWorkspaceInstructions,
-    type AgentRuntimeRunCommand,
-    type AgentRuntimeRunCommandResult,
+    type AgentRuntimeResetAgentSession,
+    type AgentRuntimeResetAgentSessionResult,
     type AgentRuntimeRunCron,
     type AgentRuntimeRunJob,
     type AgentRuntimeRunJobInput,
@@ -156,7 +155,6 @@ import {
     agentRuntimeCapabilityHealthListSchema,
     agentRuntimeCapabilityHealthSchema,
     agentRuntimeChatListSchema,
-    agentRuntimeCommandListSchema,
     agentRuntimeCompleteGoogleOAuthSchema,
     agentRuntimeCreateAgentSchema,
     agentRuntimeCreateCronSchema,
@@ -211,9 +209,9 @@ import {
     agentRuntimePluginSchema,
     agentRuntimePollModelProviderOAuthSchema,
     agentRuntimeRenderedWorkspaceInstructionsSchema,
+    agentRuntimeResetAgentSessionResultSchema,
+    agentRuntimeResetAgentSessionSchema,
     agentRuntimeRoutes,
-    agentRuntimeRunCommandResultSchema,
-    agentRuntimeRunCommandSchema,
     agentRuntimeRunCronSchema,
     agentRuntimeRunJobInputSchema,
     agentRuntimeRunJobSchema,
@@ -382,7 +380,7 @@ export interface TavernAgentRuntimeClient {
     getCapability(id: AgentRuntimeCapabilityHealthId): Promise<AgentRuntimeCapabilityHealth>;
     getCronJob(jobId: string): Promise<AgentRuntimeCron>;
     getCurrentAgentSession(input: {
-        agentParticipantId?: string;
+        agentId?: string;
         chatId: string;
     }): Promise<AgentRuntimeCurrentAgentSessionResult>;
     getGoogleSettings(): Promise<AgentRuntimeGoogleSettings>;
@@ -423,7 +421,6 @@ export interface TavernAgentRuntimeClient {
     listBindings(): Promise<{ bindings: AgentRuntimeBinding[] }>;
     listCapabilities(): Promise<AgentRuntimeCapabilityHealthList>;
     listChats(): Promise<{ chats: AgentRuntimeChat[] }>;
-    listCommands(): Promise<AgentRuntimeCommandList>;
     listCronJobs(): Promise<AgentRuntimeCronList>;
     listCronRuns(jobId?: string): Promise<{ runs: AgentRuntimeCronRun[] }>;
     listDiscordBindings(): Promise<{ bindings: AgentRuntimeDiscordBinding[] }>;
@@ -475,10 +472,13 @@ export interface TavernAgentRuntimeClient {
     refreshCapability(id: AgentRuntimeCapabilityHealthId): Promise<AgentRuntimeCapabilityHealth>;
     removeMcpServer(name: string): Promise<{ ok: boolean }>;
     removeSkillHubTap(repo: string): Promise<AgentRuntimeSkillHubTapList>;
+    resetAgentSession(
+        chatId: string,
+        input: AgentRuntimeResetAgentSession
+    ): Promise<AgentRuntimeResetAgentSessionResult>;
     resetSkill(skillId: string): Promise<AgentRuntimeSkillResetResult>;
     restartForUpdate(): Promise<AgentRuntimeUpdate>;
     resyncSession(sessionKey: string): Promise<AgentRuntimeSessionResync>;
-    runCommand(input: AgentRuntimeRunCommand): Promise<AgentRuntimeRunCommandResult>;
     runCronJob(jobId: string, input?: AgentRuntimeRunCron): Promise<AgentRuntimeCronRun>;
     runMemoryDream(agentId: string): Promise<MemoryDreamResult>;
     runRuntimeJob(
@@ -1042,35 +1042,26 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         return parseAgentRuntimeCapabilityHealthList(await response.json());
     }
 
-    async listCommands() {
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.commands}`, {
-            headers: this.#authHeaders,
-        });
+    async resetAgentSession(chatId: string, input: AgentRuntimeResetAgentSession) {
+        const payload = agentRuntimeResetAgentSessionSchema.parse(input);
+        const response = await fetch(
+            `${this.#baseUrl}${agentRuntimeRoutes.chatAgentSessionReset(chatId)}`,
+            {
+                body: JSON.stringify(payload),
+                headers: {
+                    ...this.#authHeaders,
+                    'content-type': 'application/json',
+                    [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+                },
+                method: 'POST',
+            }
+        );
 
         if (!response.ok) {
             await readErrorResponse(response);
         }
 
-        return agentRuntimeCommandListSchema.parse(await response.json());
-    }
-
-    async runCommand(input: AgentRuntimeRunCommand) {
-        const payload = agentRuntimeRunCommandSchema.parse(input);
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.commandsRun}`, {
-            body: JSON.stringify(payload),
-            headers: {
-                ...this.#authHeaders,
-                'content-type': 'application/json',
-                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
-            },
-            method: 'POST',
-        });
-
-        if (!response.ok) {
-            await readErrorResponse(response);
-        }
-
-        return agentRuntimeRunCommandResultSchema.parse(await response.json());
+        return agentRuntimeResetAgentSessionResultSchema.parse(await response.json());
     }
 
     async getCapability(id: AgentRuntimeCapabilityHealthId) {
@@ -2514,13 +2505,13 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         return agentRuntimeMessageAcceptedSchema.parse(await response.json());
     }
 
-    async getCurrentAgentSession(input: { agentParticipantId?: string; chatId: string }) {
+    async getCurrentAgentSession(input: { agentId?: string; chatId: string }) {
         const url = new URL(
             `${this.#baseUrl}${agentRuntimeRoutes.chatAgentSessionCurrent(input.chatId)}`
         );
 
-        if (input.agentParticipantId) {
-            url.searchParams.set('agentParticipantId', input.agentParticipantId);
+        if (input.agentId) {
+            url.searchParams.set('agentId', input.agentId);
         }
 
         const response = await fetch(url, {
