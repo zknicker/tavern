@@ -307,8 +307,9 @@ export async function saveCatalogAgentSettings(
     let nextEnabledSkillIds: string[] | undefined;
 
     if (input.enabledSkillIds !== undefined) {
+        // Read the library view, not the agent view: agent-scoped reads mark
+        // unassigned skills as ineligible, which would reject every new assignment.
         const runtimeSkills = await listRuntimeSkillSummaries({
-            agentId: input.agentId,
             client: runtimeClient,
             runtimeId,
         });
