@@ -114,6 +114,13 @@ export function createAppRouter() {
                                     ),
                                 },
                                 {
+                                    path: 'tasks/new',
+                                    lazy: lazyRoute(
+                                        () => import('./routes/app/task-new-page.tsx'),
+                                        'TaskNewPage'
+                                    ),
+                                },
+                                {
                                     path: 'tasks/:taskId',
                                     lazy: lazyRoute(
                                         () => import('./routes/app/task-detail-page.tsx'),

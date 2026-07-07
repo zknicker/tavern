@@ -12,7 +12,6 @@ import {
 } from '../../components/ui/breadcrumb.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import { Button } from '../../components/ui/primitives/button.tsx';
-import { ScrollArea } from '../../components/ui/scroll-area.tsx';
 import { toastManager } from '../../components/ui/toast.tsx';
 import { useAgentList } from '../../hooks/agents/use-agent-list.ts';
 import {
@@ -27,10 +26,14 @@ import {
     useTaskUpdate,
 } from '../../hooks/tasks/use-task-mutations.ts';
 import { appRoutes } from '../../lib/app-routes.ts';
+import { formatRelativeTime } from '../../lib/format.ts';
 import { EmptyState } from '../shell/empty-state.tsx';
-import { TaskContentEditor } from './task-content-editor.tsx';
+import { TaskDispatchField } from './task-dispatch-field.tsx';
+import { TaskEditorPane } from './task-editor-pane.tsx';
+import { TaskEditorSidebar } from './task-editor-sidebar.tsx';
+import { TaskFields } from './task-fields.tsx';
 import { formatTaskNumber } from './task-presentation.ts';
-import { TaskPropertiesPanel } from './task-properties-panel.tsx';
+import { useTaskAgentOptions } from './use-task-agent-options.ts';
 
 export function TaskDetail({ taskId }: { taskId: string }) {
     const navigate = useNavigate();
@@ -44,16 +47,7 @@ export function TaskDetail({ taskId }: { taskId: string }) {
     const [dispatchAgentId, setDispatchAgentId] = React.useState<string | null>(null);
 
     const task = taskQuery.data?.task ?? null;
-    const agents = React.useMemo(
-        () =>
-            (agentsQuery.data?.agents ?? []).map((agent) => ({
-                character: agent.effectiveCharacter,
-                id: agent.id,
-                name: agent.name,
-                primaryColor: agent.effectivePrimaryColor,
-            })),
-        [agentsQuery.data?.agents]
-    );
+    const agents = useTaskAgentOptions(agentsQuery.data?.agents);
     const epics = React.useMemo(
         () => (tasksQuery.data?.tasks ?? []).filter((candidate) => candidate.kind === 'epic'),
         [tasksQuery.data?.tasks]
@@ -162,36 +156,70 @@ export function TaskDetail({ taskId }: { taskId: string }) {
                 </Button>
             </AppShellContentHeader>
 
-            <ScrollArea className="flex-1">
-                <div className="mx-auto flex w-full max-w-4xl flex-col gap-8 px-5 py-8 lg:flex-row">
-                    <TaskContentEditor
-                        description={task.description}
-                        isSaving={updateMutation.isPending}
-                        key={task.id}
-                        onSaveDescription={(description) => patchTask({ description })}
-                        onSaveTitle={(title) => patchTask({ title })}
-                        title={task.title}
-                    />
-                    <TaskPropertiesPanel
+            <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
+                <TaskDetailPane key={task.id} onSave={patchTask} task={task} />
+                <TaskEditorSidebar>
+                    <TaskFields
                         agents={agents}
-                        dispatchAgentId={suggestedAgentId}
-                        dispatchDisabledReason={
+                        disabled={updateMutation.isPending}
+                        epics={epics.filter((epic) => epic.id !== task.id)}
+                        onChange={patchTask}
+                        showEpic={task.kind === 'task'}
+                        value={task}
+                    />
+                    <TaskDispatchField
+                        agents={agents}
+                        disabledReason={
                             gateway.healthy ? null : formatCapabilityDisabledReason(gateway)
                         }
-                        epics={epics.filter((epic) => epic.id !== task.id)}
+                        dispatchAgentId={suggestedAgentId}
                         isDispatching={dispatchMutation.isPending}
-                        isSaving={updateMutation.isPending}
-                        onAssigneeChange={(assignee) => patchTask({ assignee })}
                         onDispatch={dispatch}
                         onDispatchAgentChange={setDispatchAgentId}
-                        onEpicChange={(epicId) => patchTask({ epicId })}
-                        onLabelsChange={(labels) => patchTask({ labels })}
-                        onPriorityChange={(priority) => patchTask({ priority })}
-                        onStatusChange={(status) => patchTask({ status })}
-                        task={task}
                     />
-                </div>
-            </ScrollArea>
+                    <div className="space-y-1 text-muted-foreground text-xs">
+                        <p>Created {formatRelativeTime(task.createdAt)}</p>
+                        <p>Updated {formatRelativeTime(task.updatedAt)}</p>
+                    </div>
+                </TaskEditorSidebar>
+            </div>
         </div>
+    );
+}
+
+function TaskDetailPane({
+    onSave,
+    task,
+}: {
+    onSave: (patch: { description?: string | null; title?: string }) => void;
+    task: { description: string | null; title: string };
+}) {
+    const [title, setTitle] = React.useState(task.title);
+    const [description, setDescription] = React.useState(task.description ?? '');
+
+    return (
+        <TaskEditorPane
+            description={description}
+            onDescriptionBlur={() => {
+                const trimmed = description.trim();
+
+                if (trimmed !== (task.description ?? '')) {
+                    onSave({ description: trimmed ? trimmed : null });
+                }
+            }}
+            onDescriptionChange={setDescription}
+            onTitleBlur={() => {
+                const trimmed = title.trim();
+
+                if (trimmed && trimmed !== task.title) {
+                    onSave({ title: trimmed });
+                } else if (!trimmed) {
+                    setTitle(task.title);
+                }
+            }}
+            onTitleChange={setTitle}
+            title={title}
+            titlePlaceholder="Untitled task"
+        />
     );
 }

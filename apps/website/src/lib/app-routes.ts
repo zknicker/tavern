@@ -6,6 +6,7 @@ export const appRoutes = {
     },
     newChatDraft: '/chats/new',
     tasks: '/tasks',
+    newTask: '/tasks/new',
     task(taskId: string) {
         return `/tasks/${encodeURIComponent(taskId)}`;
     },
