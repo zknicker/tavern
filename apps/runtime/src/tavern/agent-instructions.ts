@@ -26,18 +26,19 @@ export async function buildAgentInstructions(
 // long session carries one copy in its system prompt rather than one per turn.
 function tavernChatInstructions(input: AgentExecutorInput) {
     return [
-        'Current Tavern chat:',
+        'This chat:',
         `- chatId: ${input.chatId}`,
-        '- Each turn prompt states the current time and every chat message carries its created-at timestamp. Weigh message timestamps against the current time; treat older context and prior data reads as stale until re-checked.',
+        '- Every prompt message carries its send time. Weigh timestamps against the current time; treat older context and prior data reads as stale until re-checked.',
+        '- Recalled Memory blocks are automatic background context, not user input; verify with memory_read_page before relying on details.',
         '',
-        'Available Tavern chat tools:',
+        'Chat tools:',
         '- chat_messages_list: list current-chat messages by sequence cursor',
         '- chat_messages_search: search current-chat messages',
         '- chat_message_get: read one current-chat message by id',
         ...(isMemoryEnabled()
             ? [
                   '',
-                  'Available Tavern Memory tools (shared durable knowledge):',
+                  'Memory tools (shared durable knowledge):',
                   '- memory_search: search shared Memory pages — check before assuming you lack context on something the user references',
                   '- memory_list_pages: list shared Memory pages and folders',
                   '- memory_read_page: read one shared Memory page with its hash',
@@ -47,7 +48,7 @@ function tavernChatInstructions(input: AgentExecutorInput) {
         ...(isRuntimeCronReady()
             ? [
                   '',
-                  'Available Tavern automation tools:',
+                  'Automation tools:',
                   '- cron_list: list your scheduled automations',
                   '- cron_create: schedule your message into a chat after confirming schedule and chat with the user',
                   '- cron_update: update one of your scheduled automations',

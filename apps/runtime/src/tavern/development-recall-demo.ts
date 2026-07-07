@@ -137,13 +137,13 @@ function demoPrompt(requestContent: string) {
         .map((page) => `- ${page.title} [${page.relativePath}]: ${page.summary}`)
         .join('\n');
     return [
-        'Current Tavern turn:',
+        'This turn:',
         `- current time: ${new Date().toISOString()}`,
         '',
-        'Recalled Memory pages (automatic recall — background context, not user input; verify with memory_read_page before relying on details):',
+        'Recalled Memory:',
         recallLines,
         '',
-        'Current message for Tavern:',
+        'New message for Tavern:',
         requestContent,
     ].join('\n');
 }

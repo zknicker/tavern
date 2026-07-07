@@ -459,11 +459,12 @@ export function formatHarnessExecutionError(input: AgentExecutorInput, error: un
 export function harnessPrompt(input: AgentExecutorInput, recallContext?: string | null) {
     const context = buildHarnessPromptContext(input);
     const sections = [
-        'Current Tavern turn:',
-        `- current time: ${new Date().toISOString()}`,
-        `- triggering messageId: ${input.requestMessageId}`,
-        context.currentMessage ? `- triggering sequence: ${context.currentMessage.sequence}` : null,
-    ].filter((line): line is string => line !== null);
+        'This turn:',
+        `- current time: ${promptTimestamp(new Date().toISOString())}`,
+        context.currentMessage
+            ? `- triggering message: ${input.requestMessageId} (seq ${context.currentMessage.sequence})`
+            : `- triggering message: ${input.requestMessageId}`,
+    ];
 
     if (recallContext) {
         sections.push('', recallContext);
@@ -472,12 +473,12 @@ export function harnessPrompt(input: AgentExecutorInput, recallContext?: string 
     if (context.ambientMessages.length > 0) {
         sections.push(
             '',
-            'Ambient Tavern channel context since you were last invoked:',
+            'Channel messages since your last turn:',
             ...context.ambientMessages.map(formatPromptMessage)
         );
         if (context.ambientMessagesOmitted) {
             sections.push(
-                `${context.ambientMessages.length} most recent ambient messages shown; earlier messages were omitted. Use chat_messages_list or chat_messages_search if needed.`
+                `(${context.ambientMessages.length} most recent shown; use chat_messages_list or chat_messages_search for earlier.)`
             );
         }
     }
@@ -486,11 +487,7 @@ export function harnessPrompt(input: AgentExecutorInput, recallContext?: string 
         sections.push('', 'Reply context:', formatPromptMessage(context.replyContext));
     }
 
-    sections.push(
-        '',
-        `Current message for ${input.agent.name}:`,
-        formatPromptMessageContent(input)
-    );
+    sections.push('', `New message for ${input.agent.name}:`, formatPromptMessageContent(input));
 
     return sections.join('\n');
 }
@@ -565,7 +562,12 @@ function isAmbientPromptMessage(input: AgentExecutorInput, message: TavernChatMe
 
 function formatPromptMessage(message: TavernChatMessage) {
     const label = message.author.label ?? message.author.id;
-    return `[seq:${message.sequence} id:${message.id} at:${message.created_at}] ${label}: ${message.content}`;
+    return `[seq:${message.sequence} ${promptTimestamp(message.created_at)}] ${label}: ${message.content}`;
+}
+
+// Second precision keeps message envelopes short; milliseconds are noise.
+function promptTimestamp(iso: string) {
+    return iso.replace(/\.\d{3}Z$/, 'Z');
 }
 
 function formatPromptMessageContent(input: AgentExecutorInput) {

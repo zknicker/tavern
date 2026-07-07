@@ -50,7 +50,7 @@ describe('development recall demo seeding', () => {
             'projects/demo-dashboard.md',
             'people/demo-user.md',
         ]);
-        expect(evidence?.prompt).toContain('Recalled Memory pages');
+        expect(evidence?.prompt).toContain('Recalled Memory:');
     });
 
     it('reseeds idempotently', () => {

@@ -85,12 +85,12 @@ describe('agent instructions', () => {
             { db: getDb(), skillsDir }
         );
 
-        expect(instructions).toContain('Current Tavern chat:');
+        expect(instructions).toContain('This chat:');
         expect(instructions).toContain('- chatId: cht_general');
         expect(instructions).toContain('treat older context and prior data reads as stale');
-        expect(instructions).toContain('Available Tavern chat tools:');
+        expect(instructions).toContain('Chat tools:');
         expect(instructions).toContain('- chat_messages_list:');
-        expect(instructions).toContain('Available Tavern Memory tools');
+        expect(instructions).toContain('Memory tools (shared durable knowledge)');
     });
 
     it('keeps Memory tool guidance out of the instructions when Memory is disabled', async () => {
@@ -110,8 +110,8 @@ describe('agent instructions', () => {
             { db: getDb(), skillsDir }
         );
 
-        expect(instructions).toContain('Available Tavern chat tools:');
-        expect(instructions).not.toContain('Available Tavern Memory tools');
+        expect(instructions).toContain('Chat tools:');
+        expect(instructions).not.toContain('Memory tools (shared durable knowledge)');
         expect(instructions).not.toContain('memory_search');
     });
 

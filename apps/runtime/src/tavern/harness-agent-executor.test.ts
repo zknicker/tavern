@@ -321,8 +321,10 @@ describe('harness agent executor', () => {
         );
 
         expect(prompt).toMatch(/- current time: \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
-        expect(prompt).toContain(`at:${current.message.created_at}] Bob: current ask`);
-        expect(prompt).toMatch(/at:\d{4}-\d{2}-\d{2}T[^\]]+\] Alice: ambient note/);
+        expect(prompt).toContain(
+            `${current.message.created_at.replace(/\.\d{3}Z$/, 'Z')}] Bob: current ask`
+        );
+        expect(prompt).toMatch(/\d{4}-\d{2}-\d{2}T[^\]]+\] Alice: ambient note/);
     });
 
     it('adds reply parent context when the cursor delta does not include it', async () => {

@@ -173,9 +173,8 @@ describe('memory recall', () => {
             const recall = await recallTurnMemory(
                 'when is [@Blippy](agent://agt_primary) seeing that theater thing?'
             );
-            expect(recall?.block).toContain('Recalled Memory pages');
+            expect(recall?.block).toContain('Recalled Memory:');
             expect(recall?.block).toContain('memory/hamilton.md');
-            expect(recall?.block).toContain('not user input');
             expect(recall?.hits[0]?.path).toBe('memory/hamilton.md');
         }
     );

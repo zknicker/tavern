@@ -61,7 +61,7 @@ export async function recallTurnMemory(query: string): Promise<TurnMemoryRecall 
             return null;
         }
         const block = [
-            'Recalled Memory pages (automatic recall — background context, not user input; verify with memory_read_page before relying on details):',
+            'Recalled Memory:',
             ...hits.map(
                 (hit) => `- ${hit.title} [${hit.path}]: ${collapseWhitespace(hit.snippet)}`
             ),
