@@ -1,5 +1,10 @@
 import type { IconSvgElement } from '@hugeicons/react';
-import { Database02Icon, Folder01Icon, Joystick04Icon } from '@hugeicons-pro/core-stroke-rounded';
+import {
+    CheckListIcon,
+    Database02Icon,
+    Folder01Icon,
+    Joystick04Icon,
+} from '@hugeicons-pro/core-stroke-rounded';
 import { TavernLogo } from '../../components/tavern-logo.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import type { RouteTab } from '../../hooks/shell/use-route-tab.ts';
@@ -22,11 +27,13 @@ export function RouteTabIcon({ className, tab }: { className?: string; tab: Rout
 
 export function getRouteTabIcon(tab: RouteTab): IconSvgElement | undefined {
     switch (tab) {
+        case 'tasks':
+            return CheckListIcon;
         case 'workspace':
             return Folder01Icon;
         case 'memory':
             return Database02Icon;
-        case 'tasks':
+        case 'automations':
         case 'overview':
             return undefined;
     }
@@ -34,12 +41,13 @@ export function getRouteTabIcon(tab: RouteTab): IconSvgElement | undefined {
 
 export function getRouteTabIconNode(tab: RouteTab, className = routeTabIconNodeClassName) {
     switch (tab) {
-        case 'tasks':
+        case 'automations':
             return (
                 <Icon aria-hidden="true" className={className} icon={Joystick04Icon} size={20} />
             );
         case 'overview':
             return <TavernLogo aria-hidden="true" className={className} />;
+        case 'tasks':
         case 'workspace':
         case 'memory':
             return undefined;
