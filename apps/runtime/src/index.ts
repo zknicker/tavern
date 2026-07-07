@@ -19,6 +19,11 @@ import {
     startMemoryExtractionScheduler,
     stopMemoryExtractionScheduler,
 } from './memory/extraction.ts';
+import { loadQmd } from './memory/recall/qmd-loader.ts';
+import {
+    startRecallIndexMaintenance,
+    stopRecallIndexMaintenance,
+} from './memory/recall/recall-index.ts';
 import { prepareSemanticMemoryRoot, resolveSemanticMemoryConfig } from './memory/semantic/store.ts';
 import {
     closeSemanticMemoryWatcher,
@@ -47,6 +52,13 @@ let shuttingDown = false;
 
 async function main(): Promise<void> {
     log.info('Tavern Runtime starting');
+
+    // The recall search engine swaps in an extension-capable SQLite build via
+    // bun:sqlite setCustomSQLite, which only works before the first Database
+    // instance exists in the process — load it before any runtime database.
+    await loadQmd().catch((err) => {
+        log.warn('Memory recall search engine failed to load; recall is unavailable', { err });
+    });
 
     const dbPath = path.join(DATA_DIR, 'runtime.db');
     const db = initDb(dbPath);
@@ -118,6 +130,7 @@ async function main(): Promise<void> {
     void startSemanticMemoryWatcher(resolveSemanticMemoryConfig).catch((err) => {
         log.warn('SemanticMemory live updates failed to start', { err });
     });
+    startRecallIndexMaintenance();
     runtimeJobs = await startRuntimeJobsManager();
     log.info('Runtime jobs ready');
     runtimeCron = await startRuntimeCronManager();
@@ -178,6 +191,9 @@ async function shutdown(signal: string): Promise<void> {
     log.info('Stopping SemanticMemory live updates');
     await closeSemanticMemoryWatcher();
     log.info('SemanticMemory live updates stopped');
+    log.info('Stopping Memory recall index');
+    await stopRecallIndexMaintenance();
+    log.info('Memory recall index stopped');
     log.info('Stopping Runtime jobs');
     await runtimeJobs?.stop();
     log.info('Runtime jobs stopped');

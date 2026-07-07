@@ -1,10 +1,10 @@
 import type { ToolSet } from '@ai-sdk/provider-utils';
 import { tool } from 'ai';
 import * as z from 'zod';
+import { searchMemoryPages } from './recall/recall.ts';
 import {
     listSemanticMemoryPages,
     readSemanticMemoryFile,
-    searchSemanticMemory,
     writeSemanticMemoryFile,
 } from './semantic/store.ts';
 
@@ -24,13 +24,12 @@ export function createTavernMemoryTools(): ToolSet {
         }),
         memory_search: tool({
             description:
-                'Search shared Memory pages by title, tags, aliases, and text. Use this whenever the user references something you lack context on — durable knowledge from past sessions may already cover it.',
+                'Search shared Memory pages with keyword and semantic matching. Use this whenever the user references something you lack context on — durable knowledge from past sessions may already cover it.',
             inputSchema: z.object({
                 limit: z.number().int().positive().max(50).optional(),
                 query: z.string().min(1),
             }),
-            execute: async ({ limit, query }) =>
-                await searchSemanticMemory({ limit: limit ?? 10, query }),
+            execute: async ({ limit, query }) => await searchMemoryPages({ limit, query }),
         }),
         memory_read_page: tool({
             description: 'Read one shared Semantic Memory Markdown file with its current hash.',

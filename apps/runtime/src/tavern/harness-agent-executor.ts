@@ -24,6 +24,7 @@ import { readConfigValue } from '../config.ts';
 import { createTavernCronTools } from '../cron/agent-tools.ts';
 import { isRuntimeCronReady } from '../cron/manager-state.ts';
 import { createTavernMemoryTools } from '../memory/agent-tools.ts';
+import { recallMemoryContextBlock } from '../memory/recall/recall.ts';
 import { isMemoryEnabled } from '../memory/settings.ts';
 import { createGoogleToolsForAgent } from '../plugins/google-tools.ts';
 import { createMerchbaseToolsForAgent } from '../plugins/merchbase-tools.ts';
@@ -97,6 +98,7 @@ async function executeHarnessTurn(
 
     const instructions = await buildAgentInstructions(input);
     const skills = await readHarnessAgentSkills(input);
+    const recallContext = await recallMemoryContextBlock(input.content);
     const agent = harnessAgentFactory(input, createLocalTrustedSandboxProvider, {
         instructions,
         skills,
@@ -116,7 +118,7 @@ async function executeHarnessTurn(
 
         const turn = await agent.stream({
             abortSignal,
-            prompt: harnessPrompt(input),
+            prompt: harnessPrompt(input, recallContext),
             session,
         });
         turnStream = await persistHarnessTurnStream(
@@ -438,7 +440,7 @@ export function formatHarnessExecutionError(input: AgentExecutorInput, error: un
     return new Error(message);
 }
 
-export function harnessPrompt(input: AgentExecutorInput) {
+export function harnessPrompt(input: AgentExecutorInput, recallContext?: string | null) {
     const context = buildHarnessPromptContext(input);
     const sections = [
         'Current Tavern turn:',
@@ -446,6 +448,10 @@ export function harnessPrompt(input: AgentExecutorInput) {
         `- triggering messageId: ${input.requestMessageId}`,
         context.currentMessage ? `- triggering sequence: ${context.currentMessage.sequence}` : null,
     ].filter((line): line is string => line !== null);
+
+    if (recallContext) {
+        sections.push('', recallContext);
+    }
 
     if (context.ambientMessages.length > 0) {
         sections.push(
