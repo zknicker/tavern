@@ -84,6 +84,6 @@ function sumTokenCounts(values: unknown[]): number | null {
     return total > 0 ? total : null;
 }
 
-function normalizeModelId(value: string) {
+export function normalizeModelId(value: string) {
     return value.split('/').filter(Boolean).at(-1)?.trim() ?? value.trim();
 }

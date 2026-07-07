@@ -25,6 +25,7 @@ export type AgentOutput = RouterOutput['agent']['get'];
 export type AgentActivityOutput = RouterOutput['agent']['activity'];
 export type AgentChatListOutput = RouterOutput['agent']['chats']['list'];
 export type AgentListOutput = RouterOutput['agent']['list'];
+export type AgentSessionOutput = RouterOutput['agent']['session'];
 export type PrimaryAgentOutput = RouterOutput['agent']['primary'];
 export type ChatGetOutput = RouterOutput['chat']['get'];
 export type ChatMessageAttachmentInput = NonNullable<
