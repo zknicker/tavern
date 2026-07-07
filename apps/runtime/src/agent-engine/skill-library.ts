@@ -74,14 +74,19 @@ a closing reply that names the T-number and the outcome. If the work turns
 out to be unnecessary, mark it canceled and say why. Keep one task
 in_progress per stream of work.
 
+If you cannot finish — missing input, missing access, or a dependency —
+say exactly what is blocking in your reply, append the blocker to the task
+description, and set the task back to todo so it is not stranded
+in_progress.
+
 Statuses: backlog (not scheduled), todo (ready to start), in_progress, done,
 canceled.
 
 ## Dispatched tasks
 
-A dispatch message names a task (like T-12) and is your work order: mark it
-in_progress, do the work in this chat, keep the task updated as scope
-changes, and mark it done when you deliver.
+A dispatch message names a task (like T-12) and is your work order: read it
+first with \`tasks_get\`, mark it in_progress, do the work in this chat,
+keep the task updated as scope changes, and mark it done when you deliver.
 
 ## Epics and hygiene
 
