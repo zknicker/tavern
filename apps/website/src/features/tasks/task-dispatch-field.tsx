@@ -74,12 +74,9 @@ export function TaskDispatchField({
                         variant="secondary"
                     >
                         <Icon aria-hidden="true" className="size-4" icon={SentIcon} />
-                        Dispatch to agent
+                        Dispatch to DM
                     </Button>
                 </div>
-                <p className="text-muted-foreground text-xs leading-4">
-                    Work happens in the agent's direct chat.
-                </p>
             </div>
         </TaskEditorSection>
     );
