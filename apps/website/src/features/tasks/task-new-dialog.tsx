@@ -19,6 +19,7 @@ import {
 import { TabsSubtle, TabsSubtleItem, TabsSubtleList } from '../../components/ui/tabs-subtle.tsx';
 import { Textarea } from '../../components/ui/textarea.tsx';
 import type { TaskRecord } from '../../lib/trpc.tsx';
+import { AgentOptionLabel, type AgentSelectOption } from '../agents/agent-option-label.tsx';
 import {
     type TaskPriority,
     type TaskStatus,
@@ -27,11 +28,6 @@ import {
     taskStatusLabels,
     taskStatusOrder,
 } from './task-presentation.ts';
-
-export interface TaskNewDialogAgentOption {
-    id: string;
-    name: string;
-}
 
 export interface TaskNewDialogSubmit {
     assigneeAgentId: string | null;
@@ -44,7 +40,7 @@ export interface TaskNewDialogSubmit {
 }
 
 interface TaskNewDialogProps {
-    agents: TaskNewDialogAgentOption[];
+    agents: AgentSelectOption[];
     epics: TaskRecord[];
     errorMessage: string | null;
     isOpen: boolean;
@@ -55,6 +51,22 @@ interface TaskNewDialogProps {
 
 const unassignedValue = 'unassigned';
 const noEpicValue = 'none';
+
+function AssigneeValueLabel({
+    agents,
+    assignee,
+}: {
+    agents: AgentSelectOption[];
+    assignee: string;
+}) {
+    if (assignee === unassignedValue) {
+        return 'Unassigned';
+    }
+
+    const agent = agents.find((candidate) => candidate.id === assignee);
+
+    return agent ? <AgentOptionLabel agent={agent} /> : assignee;
+}
 
 export function TaskNewDialog({
     agents,
@@ -222,17 +234,14 @@ export function TaskNewDialog({
                             >
                                 <SelectTrigger className="w-full">
                                     <SelectValue>
-                                        {assignee === unassignedValue
-                                            ? 'Unassigned'
-                                            : (agents.find((agent) => agent.id === assignee)
-                                                  ?.name ?? assignee)}
+                                        <AssigneeValueLabel agents={agents} assignee={assignee} />
                                     </SelectValue>
                                 </SelectTrigger>
                                 <SelectContent>
                                     <SelectItem value={unassignedValue}>Unassigned</SelectItem>
                                     {agents.map((agent) => (
                                         <SelectItem key={agent.id} value={agent.id}>
-                                            {agent.name}
+                                            <AgentOptionLabel agent={agent} />
                                         </SelectItem>
                                     ))}
                                 </SelectContent>

@@ -37,8 +37,10 @@ export function Tasks() {
     const agents = React.useMemo(
         () =>
             (agentsQuery.data?.agents ?? []).map((agent) => ({
+                character: agent.effectiveCharacter,
                 id: agent.id,
                 name: agent.name,
+                primaryColor: agent.effectivePrimaryColor,
             })),
         [agentsQuery.data?.agents]
     );

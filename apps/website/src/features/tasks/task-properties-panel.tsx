@@ -12,6 +12,7 @@ import {
 } from '../../components/ui/select.tsx';
 import { formatRelativeTime } from '../../lib/format.ts';
 import type { TaskRecord } from '../../lib/trpc.tsx';
+import { AgentOptionLabel, type AgentSelectOption } from '../agents/agent-option-label.tsx';
 import {
     type TaskPriority,
     type TaskStatus,
@@ -25,7 +26,7 @@ const unassignedValue = 'unassigned';
 const noEpicValue = 'none';
 
 interface TaskPropertiesPanelProps {
-    agents: Array<{ id: string; name: string }>;
+    agents: AgentSelectOption[];
     dispatchAgentId: string | null;
     dispatchDisabledReason: string | null;
     epics: TaskRecord[];
@@ -69,7 +70,8 @@ export function TaskPropertiesPanel({
             : task.assignee.kind === 'user'
               ? 'user'
               : task.assignee.agentId;
-    const dispatchAgentName = agents.find((agent) => agent.id === dispatchAgentId)?.name;
+    const assigneeAgent = agents.find((agent) => agent.id === assigneeValue);
+    const dispatchAgent = agents.find((agent) => agent.id === dispatchAgentId);
 
     return (
         <div className="flex w-full flex-col gap-4 lg:w-64">
@@ -139,12 +141,15 @@ export function TaskPropertiesPanel({
                 >
                     <SelectTrigger className="w-full">
                         <SelectValue>
-                            {assigneeValue === unassignedValue
-                                ? 'Unassigned'
-                                : assigneeValue === 'user'
-                                  ? 'You'
-                                  : (agents.find((agent) => agent.id === assigneeValue)?.name ??
-                                    assigneeValue)}
+                            {assigneeValue === unassignedValue ? (
+                                'Unassigned'
+                            ) : assigneeValue === 'user' ? (
+                                'You'
+                            ) : assigneeAgent ? (
+                                <AgentOptionLabel agent={assigneeAgent} />
+                            ) : (
+                                assigneeValue
+                            )}
                         </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
@@ -152,7 +157,7 @@ export function TaskPropertiesPanel({
                         <SelectItem value="user">You</SelectItem>
                         {agents.map((agent) => (
                             <SelectItem key={agent.id} value={agent.id}>
-                                {agent.name}
+                                <AgentOptionLabel agent={agent} />
                             </SelectItem>
                         ))}
                     </SelectContent>
@@ -172,13 +177,17 @@ export function TaskPropertiesPanel({
                     >
                         <SelectTrigger className="w-full">
                             <SelectValue placeholder="Choose agent">
-                                {dispatchAgentName ?? 'Choose agent'}
+                                {dispatchAgent ? (
+                                    <AgentOptionLabel agent={dispatchAgent} />
+                                ) : (
+                                    'Choose agent'
+                                )}
                             </SelectValue>
                         </SelectTrigger>
                         <SelectContent>
                             {agents.map((agent) => (
                                 <SelectItem key={agent.id} value={agent.id}>
-                                    {agent.name}
+                                    <AgentOptionLabel agent={agent} />
                                 </SelectItem>
                             ))}
                         </SelectContent>

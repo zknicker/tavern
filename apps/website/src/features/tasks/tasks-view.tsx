@@ -12,6 +12,7 @@ import {
 } from '../../components/ui/select.tsx';
 import { TabsSubtle, TabsSubtleItem, TabsSubtleList } from '../../components/ui/tabs-subtle.tsx';
 import type { TaskRecord } from '../../lib/trpc.tsx';
+import { AgentOptionLabel, type AgentSelectOption } from '../agents/agent-option-label.tsx';
 import { EmptyState } from '../shell/empty-state.tsx';
 import type { TaskAssigneeFilter, TaskView } from './task-presentation.ts';
 import { TasksList } from './tasks-list.tsx';
@@ -26,7 +27,7 @@ const taskViews: Array<{ label: string; value: TaskView }> = [
 
 interface TasksViewProps {
     actionErrorMessage: string | null;
-    agents: Array<{ id: string; name: string }>;
+    agents: AgentSelectOption[];
     assignee: TaskAssigneeFilter;
     assigneeName: (task: TaskRecord) => string | null;
     connectionState: 'reachable' | 'unconfigured' | 'unreachable';
@@ -140,7 +141,7 @@ export function TasksView({
                                         <SelectItem value="unassigned">Unassigned</SelectItem>
                                         {agents.map((agent) => (
                                             <SelectItem key={agent.id} value={`agent:${agent.id}`}>
-                                                {agent.name}
+                                                <AgentOptionLabel agent={agent} />
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
