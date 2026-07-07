@@ -8,7 +8,7 @@ export default function App() {
 
     return (
         <>
-            <CommandMenu />
+            <CommandMenu router={router} />
             <RouterProvider router={router} />
         </>
     );

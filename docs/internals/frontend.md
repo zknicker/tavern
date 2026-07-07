@@ -16,6 +16,7 @@ capability lives; keep route and feature folders for page assembly.
 | --- | --- |
 | `routes/` | Thin route entrypoints |
 | `features/` | Page and workflow composition |
+| `commands/` | Global command menu definitions grouped by product capability |
 | `components/` | Reusable UI owned by a capability |
 | `hooks/` | App-level data and event hooks owned by a capability |
 | `lib/` | Non-React formatting, view models, and adapters |
@@ -24,6 +25,9 @@ capability lives; keep route and feature folders for page assembly.
 
 * Promote shared chat, agent, memory, automation, or stats UI to the matching
   `components/<capability>` or `hooks/<capability>` folder.
+* Keep global command menu actions under `src/commands`. Command modules own
+  search labels, keywords, disabled reasons, and route/action callbacks; the
+  shell command menu only renders groups.
 * Composer `@`/`$` autocomplete, rich reference badges, and transcript
   reference rendering belong to the mentions product area, not a tool-specific
   feature. See [Rich References](../../specs/mentions.md).

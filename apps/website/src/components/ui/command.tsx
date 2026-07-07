@@ -13,8 +13,8 @@ import {
     AutocompleteItem,
     AutocompleteList,
     AutocompleteSeparator,
-} from '@/components/ui/autocomplete';
-import { cn } from '@/lib/utils';
+} from '@/components/ui/autocomplete.tsx';
+import { cn } from '@/lib/utils.ts';
 
 export const CommandDialog: typeof CommandDialogPrimitive.Root = CommandDialogPrimitive.Root;
 
@@ -111,7 +111,7 @@ export function CommandInput({
     ...props
 }: React.ComponentProps<typeof AutocompleteInput>): React.ReactElement {
     return (
-        <div className="px-2.5 py-1.5">
+        <div className="px-3 py-2.5">
             <AutocompleteInput
                 autoFocus
                 className={cn(
@@ -133,8 +133,13 @@ export function CommandList({
 }: React.ComponentProps<typeof AutocompleteList>): React.ReactElement {
     return (
         <AutocompleteList
-            className={cn('not-empty:scroll-py-2 not-empty:p-2', className)}
+            className={cn(
+                'not-empty:scroll-py-2 not-empty:p-2 in-data-has-overflow-y:pe-1',
+                className
+            )}
             data-slot="command-list"
+            scrollbarGutter={false}
+            scrollFade={false}
             {...props}
         />
     );
@@ -191,7 +196,14 @@ export function CommandItem({
     ...props
 }: React.ComponentProps<typeof AutocompleteItem>): React.ReactElement {
     return (
-        <AutocompleteItem className={cn('py-1.5', className)} data-slot="command-item" {...props} />
+        <AutocompleteItem
+            className={cn(
+                'min-h-11 gap-3 rounded-lg px-3 py-2 text-[15px] sm:min-h-10 sm:text-sm',
+                className
+            )}
+            data-slot="command-item"
+            {...props}
+        />
     );
 }
 
@@ -231,7 +243,7 @@ export function CommandFooter({
     return (
         <div
             className={cn(
-                'flex items-center justify-between gap-2 rounded-b-[calc(var(--radius-2xl)-1px)] border-t px-5 py-3 text-muted-foreground text-xs',
+                'flex items-center justify-between gap-2 rounded-b-[calc(var(--radius-2xl)-1px)] border-t px-4 py-2.5 text-muted-foreground text-xs',
                 className
             )}
             data-slot="command-footer"
