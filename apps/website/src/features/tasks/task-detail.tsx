@@ -1,15 +1,7 @@
 import { Trash2 } from '@hugeicons/core-free-icons';
 import * as React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { AppShellContentHeader } from '../../components/ui/app-shell.tsx';
-import {
-    Breadcrumb,
-    BreadcrumbItem,
-    BreadcrumbLink,
-    BreadcrumbList,
-    BreadcrumbPage,
-    BreadcrumbSeparator,
-} from '../../components/ui/breadcrumb.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import { Button } from '../../components/ui/primitives/button.tsx';
 import { toastManager } from '../../components/ui/toast.tsx';
@@ -128,21 +120,6 @@ export function TaskDetail({ taskId }: { taskId: string }) {
     return (
         <div className="flex flex-1 flex-col overflow-hidden">
             <AppShellContentHeader>
-                <Breadcrumb aria-label="Task breadcrumb" className="flex-1">
-                    <BreadcrumbList className="min-w-0 flex-nowrap">
-                        <BreadcrumbItem>
-                            <BreadcrumbLink render={<Link to={appRoutes.tasks} />}>
-                                Tasks
-                            </BreadcrumbLink>
-                        </BreadcrumbItem>
-                        <BreadcrumbSeparator />
-                        <BreadcrumbItem className="min-w-0">
-                            <BreadcrumbPage className="min-w-0 truncate">
-                                {formatTaskNumber(task)}
-                            </BreadcrumbPage>
-                        </BreadcrumbItem>
-                    </BreadcrumbList>
-                </Breadcrumb>
                 <Button
                     className="ml-auto shrink-0"
                     loading={deleteMutation.isPending}

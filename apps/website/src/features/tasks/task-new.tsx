@@ -1,14 +1,6 @@
 import * as React from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { AppShellContentHeader } from '../../components/ui/app-shell.tsx';
-import {
-    Breadcrumb,
-    BreadcrumbItem,
-    BreadcrumbLink,
-    BreadcrumbList,
-    BreadcrumbPage,
-    BreadcrumbSeparator,
-} from '../../components/ui/breadcrumb.tsx';
 import { Button } from '../../components/ui/primitives/button.tsx';
 import { TabsSubtle, TabsSubtleItem, TabsSubtleList } from '../../components/ui/tabs-subtle.tsx';
 import { toastManager } from '../../components/ui/toast.tsx';
@@ -84,21 +76,6 @@ export function TaskNew() {
     return (
         <div className="flex flex-1 flex-col overflow-hidden">
             <AppShellContentHeader>
-                <Breadcrumb aria-label="Task breadcrumb" className="flex-1">
-                    <BreadcrumbList className="min-w-0 flex-nowrap">
-                        <BreadcrumbItem>
-                            <BreadcrumbLink render={<Link to={appRoutes.tasks} />}>
-                                Tasks
-                            </BreadcrumbLink>
-                        </BreadcrumbItem>
-                        <BreadcrumbSeparator />
-                        <BreadcrumbItem className="min-w-0">
-                            <BreadcrumbPage className="min-w-0 truncate">
-                                {kind === 'epic' ? 'New epic' : 'New task'}
-                            </BreadcrumbPage>
-                        </BreadcrumbItem>
-                    </BreadcrumbList>
-                </Breadcrumb>
                 <div className="ml-auto flex shrink-0 items-center gap-2">
                     <Button
                         onClick={() => navigate(appRoutes.tasks)}
