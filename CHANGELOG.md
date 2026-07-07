@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.4.43 - 2026-07-07
+
+- Runtime/API/App: adds Tavern Tasks with Runtime-owned task storage, agent
+  task tools, server sync, realtime invalidation, dispatch, and full app list,
+  detail, and editor surfaces.
+- Runtime/API/App: replaces composer command proxies with agent session routes
+  plus the agent drawer for session facts, usage, reset, and archived demo
+  sessions.
+- Runtime/App: adds per-turn Memory recall over the packaged qmd semantic
+  index, recall capability health, prompt evidence capture, and dev-mode turn
+  inspection.
+- Runtime: improves turn prompt context with timestamps, chat identity, roster,
+  model-family guidance, and per-agent run ids for multi-agent fan-out.
+- App: adds the Cmd+K command menu, merges per-agent Skills and Plugins into an
+  enabled-first settings page, refreshes Tasks and Automations layout polish,
+  and adds the alien agent avatar.
+- App/Server: fixes settings catch-all redirects, app-root command menu
+  mounting, task realtime registration, skill-save validation, agent DM sync,
+  chat composer focus, and code editor line-number alignment.
+
 ## v1.4.42 - 2026-07-06
 
 - Runtime/API/App: routes Google OAuth callbacks through the Tavern app server
