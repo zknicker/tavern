@@ -158,6 +158,7 @@ const updateInputSchema = z
 function toToolTask(task: AgentRuntimeTask, options: { includeDescription?: boolean } = {}) {
     return {
         assignee: task.assignee,
+        createdAt: task.createdAt,
         ...(options.includeDescription ? { description: task.description } : {}),
         epicId: task.epicId,
         id: task.id,
@@ -167,5 +168,6 @@ function toToolTask(task: AgentRuntimeTask, options: { includeDescription?: bool
         priority: task.priority,
         status: task.status,
         title: task.title,
+        updatedAt: task.updatedAt,
     };
 }
