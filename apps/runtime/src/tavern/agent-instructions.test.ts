@@ -79,6 +79,42 @@ describe('agent instructions', () => {
         expect(instructions).toContain('Be terse, concrete, and steady.');
     });
 
+    it('includes the Tavern chat section with chat id, staleness policy, and tool guidance', async () => {
+        const instructions = await buildAgentInstructions(
+            executorInput({ workspaceFolder: workspaceDir }),
+            { db: getDb(), skillsDir }
+        );
+
+        expect(instructions).toContain('Current Tavern chat:');
+        expect(instructions).toContain('- chatId: cht_general');
+        expect(instructions).toContain('treat older context and prior data reads as stale');
+        expect(instructions).toContain('Available Tavern chat tools:');
+        expect(instructions).toContain('- chat_messages_list:');
+        expect(instructions).toContain('Available Tavern Memory tools');
+    });
+
+    it('keeps Memory tool guidance out of the instructions when Memory is disabled', async () => {
+        await handleMemorySettingsRequest(
+            new Request('http://runtime.test/memory/settings', {
+                body: JSON.stringify({ enabled: false }),
+                headers: {
+                    'content-type': 'application/json',
+                    [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+                },
+                method: 'PUT',
+            })
+        );
+
+        const instructions = await buildAgentInstructions(
+            executorInput({ workspaceFolder: workspaceDir }),
+            { db: getDb(), skillsDir }
+        );
+
+        expect(instructions).toContain('Available Tavern chat tools:');
+        expect(instructions).not.toContain('Available Tavern Memory tools');
+        expect(instructions).not.toContain('memory_search');
+    });
+
     it('keeps assigned skills out of the AI SDK instruction text', async () => {
         const instructions = await buildAgentInstructions(
             executorInput({

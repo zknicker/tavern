@@ -87,6 +87,11 @@ turn starts; mid-turn activity rows reference it.
 The prompt contains the current Tavern message plus bounded ambient channel
 context since the Agent session's `promptContextSequence`; it does not replay
 the prior user-agent transcript because the harness session owns that history.
+Each turn prompt is time-anchored with the current time, and every included
+message carries its created-at timestamp. Static per-session guidance — the
+chat id, the staleness policy, and Tavern chat/Memory/automation tool
+guidance — lives in the composed agent instructions, not the per-turn prompt,
+so long sessions carry one copy instead of one per turn.
 After a turn settles, Runtime advances `promptContextSequence` to the
 triggering message sequence.
 

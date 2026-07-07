@@ -441,35 +441,10 @@ export function formatHarnessExecutionError(input: AgentExecutorInput, error: un
 export function harnessPrompt(input: AgentExecutorInput) {
     const context = buildHarnessPromptContext(input);
     const sections = [
-        'Current Tavern chat:',
-        `- chatId: ${input.chatId}`,
+        'Current Tavern turn:',
+        `- current time: ${new Date().toISOString()}`,
         `- triggering messageId: ${input.requestMessageId}`,
         context.currentMessage ? `- triggering sequence: ${context.currentMessage.sequence}` : null,
-        '',
-        'Available Tavern chat tools:',
-        '- chat_messages_list: list current-chat messages by sequence cursor',
-        '- chat_messages_search: search current-chat messages',
-        '- chat_message_get: read one current-chat message by id',
-        ...(isMemoryEnabled()
-            ? [
-                  '',
-                  'Available Tavern Memory tools (shared durable knowledge):',
-                  '- memory_search: search shared Memory pages — check before assuming you lack context on something the user references',
-                  '- memory_list_pages: list shared Memory pages and folders',
-                  '- memory_read_page: read one shared Memory page with its hash',
-                  '- memory_write_page: write one shared Memory page (explicit user-requested Memory work only)',
-              ]
-            : []),
-        ...(isRuntimeCronReady()
-            ? [
-                  '',
-                  'Available Tavern automation tools:',
-                  '- cron_list: list your scheduled automations',
-                  '- cron_create: schedule your message into a chat after confirming schedule and chat with the user',
-                  '- cron_update: update one of your scheduled automations',
-                  '- cron_delete: delete one of your scheduled automations',
-              ]
-            : []),
     ].filter((line): line is string => line !== null);
 
     if (context.ambientMessages.length > 0) {
@@ -568,7 +543,7 @@ function isAmbientPromptMessage(input: AgentExecutorInput, message: TavernChatMe
 
 function formatPromptMessage(message: TavernChatMessage) {
     const label = message.author.label ?? message.author.id;
-    return `[seq:${message.sequence} id:${message.id}] ${label}: ${message.content}`;
+    return `[seq:${message.sequence} id:${message.id} at:${message.created_at}] ${label}: ${message.content}`;
 }
 
 function formatPromptMessageContent(input: AgentExecutorInput) {

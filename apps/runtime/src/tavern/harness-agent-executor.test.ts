@@ -294,6 +294,37 @@ describe('harness agent executor', () => {
         expect(prompt.match(/current channel ask/g)).toHaveLength(1);
     });
 
+    it('anchors the prompt in time with a current-time line and per-message timestamps', async () => {
+        seedPromptChat({ chatId: 'cht_time', kind: 'channel' });
+        createPromptMessage('cht_time', {
+            authorId: 'usr_alice',
+            content: 'ambient note',
+            id: 'msg_time_ambient',
+            role: 'user',
+        });
+        const current = createPromptMessage('cht_time', {
+            authorId: 'usr_bob',
+            content: 'current ask',
+            id: 'msg_time_current',
+            role: 'user',
+        });
+
+        const prompt = await harnessPrompt(
+            executorInput(
+                { model: 'gpt-4.1-mini', provider: 'openai' },
+                {
+                    chatId: 'cht_time',
+                    content: 'current ask',
+                    requestMessageId: 'msg_time_current',
+                }
+            )
+        );
+
+        expect(prompt).toMatch(/- current time: \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
+        expect(prompt).toContain(`at:${current.message.created_at}] Bob: current ask`);
+        expect(prompt).toMatch(/at:\d{4}-\d{2}-\d{2}T[^\]]+\] Alice: ambient note/);
+    });
+
     it('adds reply parent context when the cursor delta does not include it', async () => {
         seedPromptChat({ chatId: 'cht_reply', kind: 'channel' });
         createPromptMessage('cht_reply', {

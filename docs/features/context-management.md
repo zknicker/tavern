@@ -21,6 +21,11 @@ Managed Tavern context does not use Lossless Claw. Runtime strips stale
 * The harness session owns prior user-agent turn history. Runtime does not
   replay a rolling Tavern transcript into every turn.
 * Runtime always includes the triggering Tavern message once.
+* Turn prompts are time-anchored: each prompt states the current time and every
+  included chat message carries its created-at timestamp. The staleness policy
+  ("treat older context and prior data reads as stale until re-checked") and
+  Tavern tool guidance live in the agent instructions, so they are stated once
+  per session instead of once per turn.
 * Channel turns may include ambient channel messages since that Agent session's
   prompt context cursor. DM turns do not include ambient history because each
   DM user message already belongs to that Agent session.
