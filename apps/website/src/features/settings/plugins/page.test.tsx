@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { renderToString } from 'react-dom/server';
 import { GoogleSettingsCard } from './google-settings-card.tsx';
-import { GoogleSettingsDialogBody } from './google-settings-dialog.tsx';
+import { GoogleSettingsDialogBody, getGoogleEnableLockReason } from './google-settings-dialog.tsx';
 import { MerchbaseSettingsCard } from './page.tsx';
 
 describe('MerchBase Plugin settings', () => {
@@ -159,9 +159,30 @@ describe('MerchBase Plugin settings', () => {
         expect(markup).toContain('Connection');
         expect(markup).toContain('Calendar');
         expect(markup).not.toContain('Needs connection');
+        expect(markup).toContain('Connect Google before enabling the Plugin or using Calendar.');
         expect(markup).not.toContain('OAuth client ID');
         expect(markup).not.toContain('OAuth client secret');
         expect(markup).toContain('Connect');
+    });
+
+    test('locks Google enablement until setup is ready', () => {
+        const reason = getGoogleEnableLockReason(
+            {
+                calendarEnabled: true,
+                connected: false,
+                connectedAccountEmail: null,
+                enabled: false,
+                grantedScopes: [],
+                missingCalendarScopes: ['https://www.googleapis.com/auth/calendar.events'],
+                updatedAt: '2026-07-05T12:00:00.000Z',
+            },
+            {
+                calendarEnabled: true,
+                enabled: false,
+            }
+        );
+
+        expect(reason).toBe('Connect Google before enabling the Plugin.');
     });
 
     test('does not render Google OAuth client fields when connect fails', () => {
@@ -190,7 +211,9 @@ describe('MerchBase Plugin settings', () => {
 
         expect(markup).not.toContain('OAuth client settings');
         expect(markup).not.toContain('Client ID');
+        expect(markup).toContain('Google setup failed');
         expect(markup).toContain('Google connection failed.');
+        expect(markup).not.toContain('data-slot="field-error"');
     });
 
     test('surfaces a merchbase skill conflict without exposing the path inline', () => {

@@ -8,7 +8,7 @@ import { SettingsRow } from '../../../components/ui/settings-row.tsx';
 import { Skeleton } from '../../../components/ui/skeleton.tsx';
 import type { GoogleSettingsOutput } from '../../../lib/trpc.tsx';
 import { cn } from '../../../lib/utils.ts';
-import { GoogleSettingsDialog } from './google-settings-dialog.tsx';
+import { GoogleSettingsDialog, getGoogleEnableLockReason } from './google-settings-dialog.tsx';
 import {
     createGoogleDraft,
     type GoogleSettingsDraft,
@@ -111,7 +111,10 @@ export function GoogleSettingsControl({
     );
     const normalized = normalizeGoogleDraft(draft);
     const hasChanges = hasGoogleDraftChanges(settings, normalized);
-    const canSave = hasChanges;
+    const enableLockReason = normalized.enabled
+        ? getGoogleEnableLockReason(settings, normalized)
+        : null;
+    const canSave = hasChanges && enableLockReason === null;
 
     React.useEffect(() => {
         setDraft(createGoogleDraft(settings));
