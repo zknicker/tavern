@@ -65,6 +65,31 @@ const requiredCapabilities = new Set<CapabilityId>([
 
 const supportingCapabilities = new Set<CapabilityId>(['codexOAuth']);
 
+// Customer-facing explainers shown in each capability's hover card. Plain
+// product language: what the user gets when this is healthy.
+const capabilityDescriptions: Partial<Record<CapabilityId, string>> = {
+    apiServer: 'The control surface the app uses to manage and inspect agent execution.',
+    codexOAuth: 'Codex account access, so agents can run on your Codex subscription models.',
+    cron: 'Scheduled automations, so agents can check in, remind, and report on a timer.',
+    dashboardServer: 'The engine that executes your agents’ turns.',
+    devToolkit: 'Development-stack tools for simulated agent turns. Off in normal installs.',
+    gateway: 'Delivers your messages to agents and streams their replies and activity back.',
+    memoryRecall:
+        'Your Memory pages are indexed automatically whenever they change, so agents instantly recall relevant knowledge in every conversation. First-time setup downloads a small on-device model.',
+    memoryWorkers:
+        'Background capture that distills settled conversations into durable Memory after the fact.',
+    modelExecution: 'At least one AI model is connected and ready to run agent turns.',
+    'plugin.google.calendar': 'Google Calendar access for your agents.',
+    'plugin.merchbase': 'MerchBase sales and product data tools for your agents.',
+    semanticMemory:
+        'The shared Memory library — durable knowledge pages your agents read, write, and cite.',
+    skills: 'Reusable skills agents load for specialized tasks.',
+};
+
+export function getCapabilityDescription(capability: RuntimeCapability) {
+    return capabilityDescriptions[capability.capability] ?? null;
+}
+
 export function getCapabilityLabel(capability: RuntimeCapability) {
     return capability.displayName ?? capability.capability;
 }

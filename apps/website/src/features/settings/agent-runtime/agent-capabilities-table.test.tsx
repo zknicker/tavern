@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { AgentCapabilitiesSummary } from './agent-capabilities-table.tsx';
+import { AgentCapabilitiesSummary, CapabilityTooltipContent } from './agent-capabilities-table.tsx';
 
 function capability(input: {
     capability:
@@ -139,4 +139,28 @@ test('AgentCapabilitiesSummary ignores progress metadata on healthy capabilities
     );
 
     assert.doesNotMatch(markup, /progressbar/);
+});
+
+test('CapabilityTooltipContent leads with the customer-facing capability explainer', () => {
+    const markup = renderToStaticMarkup(
+        <CapabilityTooltipContent
+            capability={{
+                capability: 'memoryRecall',
+                checkedAt: '2026-05-28T12:00:00.000Z',
+                displayName: 'Memory recall',
+                errorCode: null,
+                lastHealthyAt: null,
+                metadataJson: '{"phase":"ready"}',
+                method: 'runtime.capabilities',
+                reason: null,
+                runtimeId: 'runtime-1',
+                state: 'healthy',
+                technicalMessage: null,
+                updatedAt: '2026-05-28T12:00:00.000Z',
+            }}
+        />
+    );
+
+    assert.match(markup, /indexed automatically whenever they change/);
+    assert.match(markup, /Healthy/);
 });

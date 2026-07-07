@@ -7,7 +7,11 @@ import {
     TooltipTrigger,
 } from '../../../components/ui/tooltip.tsx';
 import type { AgentRuntimeConnectionOutput } from '../../../lib/trpc.tsx';
-import { type CapabilityView, groupCapabilities } from './agent-capabilities-view.ts';
+import {
+    type CapabilityView,
+    getCapabilityDescription,
+    groupCapabilities,
+} from './agent-capabilities-view.ts';
 
 type RuntimeConnection = NonNullable<AgentRuntimeConnectionOutput>;
 type RuntimeCapability = RuntimeConnection['capabilities'][number];
@@ -109,12 +113,14 @@ function RelativeTime({ value }: { value: string | null }) {
     );
 }
 
-function CapabilityTooltipContent({ capability }: { capability: RuntimeCapability }) {
+export function CapabilityTooltipContent({ capability }: { capability: RuntimeCapability }) {
     const detail = getDetail(capability);
+    const description = getCapabilityDescription(capability);
     const isHealthy = capability.state === 'healthy';
 
     return (
-        <div className="grid gap-0.5">
+        <div className="grid max-w-64 gap-0.5">
+            {description ? <p className="pb-1 text-neutral-300">{description}</p> : null}
             <p className="font-medium">{stateLabels[capability.state]}</p>
             {detail ? <p className="text-neutral-300">{detail}</p> : null}
             <p className="text-neutral-300">Checked {formatAbsolute(capability.checkedAt)}</p>
