@@ -5,6 +5,7 @@ import { createHash } from 'node:crypto';
 import { createReadStream } from 'node:fs';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { fail, loadEnvFile, readJson, repoRoot } from './release-utils.mjs';
 
 const artifactRoot = path.join(repoRoot, 'apps', 'website', 'electron-dist');
@@ -13,6 +14,14 @@ const googleOAuthClientIdEnv = 'TAVERN_GOOGLE_OAUTH_CLIENT_ID';
 const googleOAuthClientSecretEnv = 'TAVERN_GOOGLE_OAUTH_CLIENT_SECRET';
 
 loadEnvFile();
+
+export const requiredRuntimeArtifactPaths = [
+    'bin/tavern',
+    'bin/tavern-runtime',
+    'share/tavern/node_modules/@tavern/sdk/package.json',
+    'share/tavern/node_modules/@tobilu/qmd/package.json',
+    'share/tavern/runtime-assets/google/oauth-client.json',
+];
 
 const main = async () => {
     const version = await readReleaseVersion();
@@ -40,6 +49,10 @@ const main = async () => {
 
     await stageRuntimePackages(stageRoot);
     await stageRuntimeAssets(stageRoot);
+    const missingPaths = await findMissingRuntimeArtifactPaths(stageRoot);
+    if (missingPaths.length > 0) {
+        fail('Runtime artifact staging is incomplete', { missingPaths });
+    }
     await fs.mkdir(runtimeArtifactDir, { recursive: true });
     run('tar', ['-czf', artifactPath, '-C', stageRoot, '.']);
     await fs.writeFile(checksumPath, `${await sha256File(artifactPath)}  ${artifactName}\n`);
@@ -48,7 +61,9 @@ const main = async () => {
     console.log(`Wrote ${path.relative(repoRoot, checksumPath)}`);
 };
 
-await main();
+if (isMainModule()) {
+    await main();
+}
 
 async function readReleaseVersion() {
     const runtimePackageJson = await readJson('apps/runtime/package.json');
@@ -70,11 +85,11 @@ function readTargetTriple() {
 async function stageRuntimePackages(stageRoot) {
     const nodeModulesRoot = path.join(stageRoot, 'share', 'tavern', 'node_modules');
 
+    await stageMemoryRecallEngine(stageRoot);
     await copyPackage(
         path.join(repoRoot, 'packages', 'tavern-sdk'),
         path.join(nodeModulesRoot, '@tavern', 'sdk')
     );
-    await stageMemoryRecallEngine(stageRoot);
 }
 
 // qmd powers Memory recall search. It carries native modules (better-sqlite3,
@@ -198,6 +213,25 @@ async function copyPackage(sourcePath, targetPath) {
     });
 }
 
+export async function findMissingRuntimeArtifactPaths(stageRoot) {
+    const results = await Promise.all(
+        requiredRuntimeArtifactPaths.map(async (relativePath) => {
+            try {
+                await fs.stat(path.join(stageRoot, relativePath));
+                return null;
+            } catch (error) {
+                if (error.code === 'ENOENT') {
+                    return relativePath;
+                }
+
+                throw error;
+            }
+        })
+    );
+
+    return results.filter(Boolean);
+}
+
 function run(command, args) {
     execFileSync(command, args, {
         cwd: repoRoot,
@@ -215,4 +249,8 @@ async function sha256File(filePath) {
             .on('end', resolve);
     });
     return hash.digest('hex');
+}
+
+function isMainModule() {
+    return Boolean(process.argv[1]) && import.meta.url === pathToFileURL(process.argv[1]).href;
 }
