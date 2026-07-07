@@ -417,7 +417,8 @@ function SidebarRecentChatItem({
     const title = getSidebarChatTitle(chat);
     const path = buildChatPath(chat.id);
     const timelineState = useChatRuntimeTimelineState(chat.id);
-    const hasActiveTurn = chat.hasActiveTurn || hasLocalActiveTurn(timelineState);
+    const hasActiveTurn =
+        chat.activeTurnParticipantIds.length > 0 || hasLocalActiveTurn(timelineState);
     const channelColorStyle = getChannelColorStyle(chat.tabAppearance.color);
 
     return (

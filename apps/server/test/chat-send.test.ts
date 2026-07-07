@@ -42,9 +42,11 @@ test('sendTavernChatMessage writes human-only channel messages without invoking 
 
         if (url.pathname === '/api/chats' && request.method === 'POST') {
             return Response.json({
+                active_turn_participant_ids: [],
                 created_at: '2026-04-06T12:10:00.000Z',
                 id: planningChatId,
                 kind: body.kind ?? 'channel',
+                last_activity_at: null,
                 last_message_sequence: 0,
                 metadata: body.metadata,
                 participants: body.participants ?? [],
@@ -301,6 +303,7 @@ function runtimeClient({ calls }: { calls: unknown[] }) {
         listChats: async () => ({
             chats: [
                 {
+                    activeTurnParticipantIds: [],
                     bindingId: null,
                     bindings: [{ agentId: 'agent:planner' }],
                     id: planningChatId,
@@ -473,8 +476,10 @@ function runtimeTavernChat(input?: {
     const kind = input?.kind ?? 'channel';
     return {
         created_at: '2026-04-06T12:01:00.000Z',
+        active_turn_participant_ids: [],
         id: planningChatId,
         kind,
+        last_activity_at: null,
         last_message_sequence: 0,
         metadata: {
             runtime: {

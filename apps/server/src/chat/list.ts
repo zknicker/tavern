@@ -395,6 +395,7 @@ export async function listChatDetails(options?: { chatId?: string; includeExtern
                 boundAgentIds.some((agentId) => agentById.has(agentId));
 
             return {
+                activeTurnParticipantIds: agentRuntimeChat?.activeTurnParticipantIds ?? [],
                 boundAgentIds,
                 canSend,
                 conversationKind,
@@ -402,7 +403,6 @@ export async function listChatDetails(options?: { chatId?: string; includeExtern
                 displayName,
                 externalId: identity.externalId,
                 framework: identity.type === 'tavern' ? 'tavern' : 'agentRuntime',
-                hasActiveTurn: agentRuntimeChat?.hasActiveTurn ?? false,
                 id: chatId,
                 isEnabled: canSend,
                 lastActivityAt,
@@ -435,6 +435,7 @@ export async function listChatDetails(options?: { chatId?: string; includeExtern
 
 function toChatListItem(chat: Chat) {
     return {
+        activeTurnParticipantIds: chat.activeTurnParticipantIds,
         agentRuntimeSync: chat.agentRuntimeSync,
         boundAgentIds: chat.boundAgentIds,
         canSend: chat.canSend,
@@ -442,7 +443,6 @@ function toChatListItem(chat: Chat) {
         createdAt: chat.createdAt,
         displayName: chat.displayName,
         framework: chat.framework,
-        hasActiveTurn: chat.hasActiveTurn,
         id: chat.id,
         isEnabled: chat.isEnabled,
         lastActivityAt: chat.lastActivityAt,

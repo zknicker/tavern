@@ -133,7 +133,7 @@ function createChat(overrides: Partial<ChatListItem> = {}): ChatListItem {
         createdAt: '2026-07-07T12:00:00.000Z',
         displayName: 'demo',
         framework: 'tavern',
-        hasActiveTurn: false,
+        activeTurnParticipantIds: [],
         hasActivity: true,
         id: 'cht_demo',
         isDisabled: false,

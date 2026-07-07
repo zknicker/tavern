@@ -70,6 +70,7 @@ export const chatSourceSchema = z.object({
 });
 
 export const chatSchema = z.object({
+    activeTurnParticipantIds: z.array(z.string().trim().min(1)),
     boundAgentIds: z.array(z.string()),
     canSend: z.boolean(),
     conversationKind: chatConversationKindSchema,
@@ -77,7 +78,6 @@ export const chatSchema = z.object({
     displayName: z.string(),
     externalId: z.string().nullable(),
     framework: z.string(),
-    hasActiveTurn: z.boolean(),
     id: z.string(),
     isEnabled: z.boolean(),
     lastActivityAt: z.string().nullable(),
@@ -97,6 +97,7 @@ export const chatSchema = z.object({
 });
 
 export const chatListItemSchema = chatSchema.pick({
+    activeTurnParticipantIds: true,
     agentRuntimeSync: true,
     boundAgentIds: true,
     canSend: true,
@@ -104,7 +105,6 @@ export const chatListItemSchema = chatSchema.pick({
     createdAt: true,
     displayName: true,
     framework: true,
-    hasActiveTurn: true,
     id: true,
     isEnabled: true,
     lastActivityAt: true,

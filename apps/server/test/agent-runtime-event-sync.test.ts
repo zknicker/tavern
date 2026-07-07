@@ -247,10 +247,14 @@ beforeEach(async () => {
         }
 
         return Response.json({
+            active_turn_participant_ids: [],
             created_at: '2026-05-12T19:00:00.000Z',
             id: tavernChatId,
+            kind: 'channel',
+            last_activity_at: '2026-05-12T19:00:00.000Z',
             last_message_sequence: 1,
             metadata: {},
+            participants: [],
             title: null,
             updated_at: '2026-05-12T19:00:00.000Z',
         });

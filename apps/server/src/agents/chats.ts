@@ -8,6 +8,7 @@ export async function listAgentChats(input: { agentId: string }) {
         agentChats.map((chat) => [
             chat.id,
             {
+                activeTurnParticipantIds: chat.activeTurnParticipantIds,
                 agentRuntimeSync: chat.agentRuntimeSync,
                 boundAgentIds: chat.boundAgentIds,
                 canSend: chat.canSend,
@@ -15,7 +16,6 @@ export async function listAgentChats(input: { agentId: string }) {
                 createdAt: chat.createdAt,
                 displayName: chat.displayName,
                 framework: chat.framework,
-                hasActiveTurn: chat.hasActiveTurn,
                 id: chat.id,
                 isEnabled: chat.isEnabled,
                 lastActivityAt: chat.lastActivityAt,

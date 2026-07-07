@@ -424,6 +424,7 @@ test('session queries read bounded runtime session history', async () => {
         listChats: async () => ({
             chats: [
                 {
+                    activeTurnParticipantIds: [],
                     bindingId: null,
                     bindings: [{ agentId: 'support' }],
                     id: 'chat-support',

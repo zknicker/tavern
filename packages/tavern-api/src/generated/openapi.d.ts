@@ -356,7 +356,7 @@ export interface components {
             updated_at: components["schemas"]["Timestamp"];
             last_activity_at: components["schemas"]["Timestamp"] | null;
             last_message_sequence: number;
-            has_active_turn: boolean;
+            active_turn_participant_ids: string[];
             participants: components["schemas"]["Participant"][];
             metadata: components["schemas"]["JsonObject"];
         };

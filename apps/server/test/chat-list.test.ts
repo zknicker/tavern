@@ -257,7 +257,7 @@ test('agent chat list labels internal runtime sessions by source', async () => {
         {
             bindingId: null,
             bindings: [{ agentId: 'main' }],
-            hasActiveTurn: false,
+            activeTurnParticipantIds: [],
             id: internalChatId,
             inboundMode: 'active',
             metadata: {
@@ -424,7 +424,7 @@ test('agent chat list titles runtime DMs from participants and platform metadata
         {
             bindingId: null,
             bindings: [{ agentId: 'blippy' }],
-            hasActiveTurn: false,
+            activeTurnParticipantIds: [],
             id: 'discord:agent:blippy:dm:user:778786269458464829',
             inboundMode: 'active',
             metadata: {},
@@ -515,7 +515,7 @@ test('agent chat list resolves DM targets through participant identities', async
         {
             bindingId: null,
             bindings: [{ agentId: 'blippy' }],
-            hasActiveTurn: false,
+            activeTurnParticipantIds: [],
             id: 'discord:agent:blippy:dm:user:778786269458464829',
             inboundMode: 'active' as const,
             metadata: {},
@@ -551,7 +551,7 @@ test('agent chat list resolves DM targets through participant identities', async
         {
             bindingId: null,
             bindings: [{ agentId: 'main' }],
-            hasActiveTurn: false,
+            activeTurnParticipantIds: [],
             id: 'discord:agent:main:dm:user:778786269458464829',
             inboundMode: 'active' as const,
             metadata: {},
@@ -700,6 +700,7 @@ function runtimeTavernChat(input: {
 }): TavernChat {
     const kind = input.kind ?? 'channel';
     return {
+        active_turn_participant_ids: [],
         created_at: input.updatedAt,
         id: input.id,
         kind,

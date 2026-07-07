@@ -358,9 +358,9 @@ function tavernChatToRuntimeChat(chat: TavernChat): AgentRuntimeChat {
     const target = `${chat.kind}:${chat.id}`;
 
     return {
+        activeTurnParticipantIds: chat.active_turn_participant_ids,
         bindingId: null,
         bindings: agentIds.map((agentId) => ({ agentId })),
-        hasActiveTurn: chat.has_active_turn,
         id: chat.id,
         inboundMode: 'active',
         metadata: {

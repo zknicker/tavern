@@ -71,7 +71,8 @@ export function TavernBrowserTabsProvider({ children }: { children: ReactNode })
 
     const isChatBusy = React.useCallback(
         (chat: ChatListItem) =>
-            chat.hasActiveTurn || (timelineStates[chat.id]?.activeTurns.length ?? 0) > 0,
+            chat.activeTurnParticipantIds.length > 0 ||
+            (timelineStates[chat.id]?.activeTurns.length ?? 0) > 0,
         [timelineStates]
     );
 

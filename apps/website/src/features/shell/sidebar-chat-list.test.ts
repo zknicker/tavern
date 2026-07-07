@@ -24,7 +24,7 @@ function createChat(overrides: Partial<ChatListItem> = {}): ChatListItem {
         createdAt: '2026-05-01T12:00:00.000Z',
         displayName: 'Tavern chat',
         framework: 'tavern',
-        hasActiveTurn: false,
+        activeTurnParticipantIds: [],
         hasActivity: true,
         id: 'chat-1',
         isDisabled: false,

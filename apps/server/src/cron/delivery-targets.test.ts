@@ -13,7 +13,7 @@ function createAgentRuntimeChat(
     return {
         bindingId: null,
         bindings: [],
-        hasActiveTurn: false,
+        activeTurnParticipantIds: [],
         id,
         inboundMode: 'observe',
         metadata: {},

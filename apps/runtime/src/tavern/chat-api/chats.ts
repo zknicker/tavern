@@ -92,14 +92,14 @@ export function listChats(
                         WHERE chat_messages.chat_id = chats.id
                           AND chat_messages.deleted_at IS NULL
                     ) AS last_activity_at,
-                    EXISTS (
-                        SELECT 1
+                    (
+                        SELECT json_group_array(DISTINCT chat_responses.participant_id)
                         FROM chat_responses
                         WHERE chat_responses.chat_id = chats.id
                           AND chat_responses.deleted_at IS NULL
                           AND chat_responses.status IN ('queued', 'running')
                           AND chat_responses.response_message_id IS NULL
-                    ) AS has_active_turn
+                    ) AS active_turn_participant_ids
              FROM chats
              WHERE id > $cursor
              ORDER BY id ASC
@@ -128,14 +128,14 @@ export function getChat(id: string, db: Database = getDb()): TavernChat | null {
                         WHERE chat_messages.chat_id = chats.id
                           AND chat_messages.deleted_at IS NULL
                     ) AS last_activity_at,
-                    EXISTS (
-                        SELECT 1
+                    (
+                        SELECT json_group_array(DISTINCT chat_responses.participant_id)
                         FROM chat_responses
                         WHERE chat_responses.chat_id = chats.id
                           AND chat_responses.deleted_at IS NULL
                           AND chat_responses.status IN ('queued', 'running')
                           AND chat_responses.response_message_id IS NULL
-                    ) AS has_active_turn
+                    ) AS active_turn_participant_ids
              FROM chats
              WHERE id = $id`
             )
@@ -160,8 +160,8 @@ export function getChatOrThrow(id: string, db: Database): TavernChat {
 
 function rowToChat(row: ChatRow, db: Database): TavernChat {
     return {
+        active_turn_participant_ids: parseActiveTurnParticipantIds(row.active_turn_participant_ids),
         created_at: row.created_at,
-        has_active_turn: Boolean(row.has_active_turn),
         id: row.id,
         kind: row.kind,
         last_activity_at: row.last_activity_at,
@@ -171,6 +171,22 @@ function rowToChat(row: ChatRow, db: Database): TavernChat {
         title: row.title,
         updated_at: row.updated_at,
     };
+}
+
+function parseActiveTurnParticipantIds(value: string | null): string[] {
+    if (!value) {
+        return [];
+    }
+
+    const parsed = JSON.parse(value) as unknown;
+    if (
+        !Array.isArray(parsed) ||
+        parsed.some((participantId) => typeof participantId !== 'string')
+    ) {
+        throw new Error('Invalid active_turn_participant_ids JSON.');
+    }
+
+    return [...parsed].sort();
 }
 
 function listChatParticipants(chatId: string, db: Database = getDb()): ChatParticipant[] {

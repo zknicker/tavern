@@ -129,8 +129,8 @@ The Tavern app keeps list and detail reads separate:
 
 * `chat.list` returns ordered Tavern chat ids plus lightweight list items. It is
   the sidebar and overview contract, not a full chat detail payload. List items
-  include `hasActiveTurn` so compact views can show in-progress agent work
-  without reading the full chat log. Channels and DMs are durable rooms in the
+  include `activeTurnParticipantIds` so compact views can show in-progress
+  agent work without reading the full chat log. Channels and DMs are durable rooms in the
   app sidebar. External execution references belong to `agent.chats.list`, not
   the global Tavern chat list. Tavern chat list recency comes from
   `last_activity_at`; metadata-only edits must not make a chat look newly active.

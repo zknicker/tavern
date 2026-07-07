@@ -1354,9 +1354,9 @@ export const agentRuntimeChatParticipantSchema = z.discriminatedUnion('type', [
 ]);
 
 export const agentRuntimeChatSchema = z.object({
+    activeTurnParticipantIds: z.array(z.string()),
     bindingId: z.string().trim().min(1).nullable(),
     bindings: z.array(agentRuntimeChatBindingSchema),
-    hasActiveTurn: z.boolean(),
     id: z.string().trim().min(1),
     inboundMode: agentRuntimeInboundModeSchema,
     metadata: agentRuntimeJsonRecordSchema,

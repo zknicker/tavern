@@ -147,7 +147,7 @@ export function ChromeTabsProvider({ children }: { children: ReactNode }) {
                     id: tab.id,
                     route: tab.route,
                     title: descriptor.title,
-                    busy: chat?.hasActiveTurn ?? false,
+                    busy: (chat?.activeTurnParticipantIds.length ?? 0) > 0,
                     closeable: true,
                     sortable: true,
                 };
