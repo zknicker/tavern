@@ -55,7 +55,7 @@ const CHAT_COMPOSER_PLACEHOLDER = "Let's go on an adventure...";
 
 export function ChatMessageComposer({
     agentRuntimeSyncLabel = null,
-    activeRunId = null,
+    activeRunIds = [],
     agents,
     blockReason = null,
     boundAgentIds,
@@ -69,7 +69,7 @@ export function ChatMessageComposer({
     variant = 'detail',
 }: {
     agentRuntimeSyncLabel?: string | null;
-    activeRunId?: string | null;
+    activeRunIds?: readonly string[];
     agents: AgentListOutput['agents'];
     blockReason?: string | null;
     boundAgentIds: string[];
@@ -126,7 +126,7 @@ export function ChatMessageComposer({
         pendingSteerQueuedIds
     );
     const primaryAction = getComposerPrimaryAction({
-        activeRunId,
+        hasActiveRun: activeRunIds.length > 0,
         hasDraftPayload: hasPayload,
         isReplyActive,
     });
@@ -261,18 +261,21 @@ export function ChatMessageComposer({
             composerQueue.promote(id);
             if (
                 shouldInterruptActiveTurnForQueuedMessage(entry) &&
-                activeRunId &&
+                activeRunIds.length > 0 &&
                 !stopTurn.isPending
             ) {
-                stopTurn.mutate({
-                    chatId,
-                    runId: activeRunId,
-                });
+                stopActiveRuns();
             }
             return;
         }
 
         dispatchQueuedEntry(entry);
+    }
+
+    function stopActiveRuns() {
+        for (const runId of activeRunIds) {
+            stopTurn.mutate({ chatId, runId });
+        }
     }
 
     async function steerQueuedEntry(entry: ChatComposerQueuedMessage, runId: string) {
@@ -501,16 +504,11 @@ export function ChatMessageComposer({
                     {contextFullness ? (
                         <ChatComposerContextFullness fullness={contextFullness} />
                     ) : null}
-                    {primaryAction === 'stop' && activeRunId ? (
+                    {primaryAction === 'stop' && activeRunIds.length > 0 ? (
                         <PromptInputButton
                             aria-label={stopTurn.isPending ? 'Stopping response' : 'Stop response'}
                             disabled={stopTurn.isPending}
-                            onClick={() =>
-                                stopTurn.mutate({
-                                    chatId,
-                                    runId: activeRunId,
-                                })
-                            }
+                            onClick={stopActiveRuns}
                             size="icon-tight"
                             tooltip={stopTurn.isPending ? 'Stopping response' : 'Stop response'}
                             type="button"
@@ -551,11 +549,11 @@ export function ChatMessageComposer({
 }
 
 export function getComposerPrimaryAction(input: {
-    activeRunId: string | null;
+    hasActiveRun: boolean;
     hasDraftPayload: boolean;
     isReplyActive: boolean;
 }) {
-    return input.activeRunId && input.isReplyActive && !input.hasDraftPayload ? 'stop' : 'submit';
+    return input.hasActiveRun && input.isReplyActive && !input.hasDraftPayload ? 'stop' : 'submit';
 }
 
 function getSendDisabledTooltip({

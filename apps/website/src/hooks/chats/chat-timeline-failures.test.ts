@@ -58,8 +58,8 @@ test('failTimelineTurn clears thinking and stores a terminal error', () => {
         turn,
     });
 
-    expect(failed.activeReply).toBeNull();
-    expect(failed.failedTurn?.error).toBe('Docker is not running');
+    expect(failed.activeReplies).toEqual([]);
+    expect(failed.failedTurns[0]?.error).toBe('Docker is not running');
 });
 
 test('applyLogSnapshot clears thinking when the durable error message lands', () => {
@@ -76,8 +76,8 @@ test('applyLogSnapshot clears thinking when the durable error message lands', ()
     });
     const next = applyLogSnapshot(failed, failureLog());
 
-    expect(next.failedTurn).toBeNull();
-    expect(next.activeReply).toBeNull();
+    expect(next.failedTurns).toEqual([]);
+    expect(next.activeReplies).toEqual([]);
     expect(next.timeline).toHaveLength(1);
 });
 
@@ -90,5 +90,5 @@ test('applyReplySnapshot does not restore thinking when the durable error messag
         startedAt: '2026-04-21T16:08:42.000Z',
     });
 
-    expect(next.activeReply).toBeNull();
+    expect(next.activeReplies).toEqual([]);
 });

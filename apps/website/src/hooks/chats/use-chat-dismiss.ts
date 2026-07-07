@@ -44,12 +44,14 @@ function removeResponseFromLog(
         return log;
     }
 
-    if (log.failedTurn?.responseId !== responseId) {
+    const failedTurns = log.failedTurns.filter((failure) => failure.responseId !== responseId);
+
+    if (failedTurns.length === log.failedTurns.length) {
         return log;
     }
 
     return {
         ...log,
-        failedTurn: null,
+        failedTurns,
     };
 }

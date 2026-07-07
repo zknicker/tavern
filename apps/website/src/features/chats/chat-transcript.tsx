@@ -38,25 +38,25 @@ const directConversationMessageLayout: ConversationMessageLayout = {
 };
 
 export function ChatTranscript({
-    activeReply,
+    activeReplies,
     agentStatusCharacter = null,
     chatId,
     conversationLayout = directConversationMessageLayout,
     currentSessionKey,
     defaultOpenWorkGroups = false,
-    failedTurn = null,
+    failedTurns = [],
     hiddenCount = 0,
     rows,
     onTurnTimelineMarkersChange,
     scrollContentRef,
 }: {
-    activeReply: ChatActiveReply | null;
+    activeReplies: readonly ChatActiveReply[];
     agentStatusCharacter?: AgentCharacter | null;
     chatId?: string;
     conversationLayout?: ConversationMessageLayout;
     currentSessionKey?: string | null;
     defaultOpenWorkGroups?: boolean;
-    failedTurn?: ChatTurnFailure | null;
+    failedTurns?: readonly ChatTurnFailure[];
     hiddenCount?: number;
     onTurnTimelineMarkersChange?: (markers: ChatTurnTimelineMarker[]) => void;
     rows: TranscriptRow[];
@@ -65,11 +65,11 @@ export function ChatTranscript({
     const entries = React.useMemo(
         () =>
             buildTranscriptEntries({
-                activeReply,
-                failedTurn,
+                activeReplies,
+                failedTurns,
                 rows,
             }),
-        [activeReply, failedTurn, rows]
+        [activeReplies, failedTurns, rows]
     );
     const rawTranscriptRows = React.useMemo(
         () => buildTranscriptRenderRows(entries, hiddenCount),
@@ -105,12 +105,12 @@ export function ChatTranscript({
     // back into the pane during that gap.
     const seenRepliedRunsRef = React.useRef(new Set<string>());
     const repliedRunIds = React.useMemo(() => {
-        for (const runId of getRepliedRunIds(rows, activeReply)) {
+        for (const runId of getRepliedRunIds(rows, activeReplies)) {
             seenRepliedRunsRef.current.add(runId);
         }
 
         return new Set(seenRepliedRunsRef.current);
-    }, [rows, activeReply]);
+    }, [rows, activeReplies]);
     const renderContext = React.useMemo(
         () =>
             ({
@@ -132,26 +132,24 @@ export function ChatTranscript({
     );
 
     React.useEffect(() => {
-        if (!activeReply) {
-            return;
+        for (const reply of activeReplies) {
+            markChatTiming('thinking-visible', {
+                runId: reply.runId,
+                sessionKey: reply.sessionKey,
+            });
         }
-
-        markChatTiming('thinking-visible', {
-            runId: activeReply.runId,
-            sessionKey: activeReply.sessionKey,
-        });
-    }, [activeReply]);
+    }, [activeReplies]);
 
     React.useEffect(() => {
-        if (!(activeReply && activeReply.isThinking === false && activeReply.text?.trim())) {
-            return;
+        for (const reply of activeReplies) {
+            if (reply.isThinking === false && reply.text?.trim()) {
+                markChatTiming('final-message-visible', {
+                    runId: reply.runId,
+                    sessionKey: reply.sessionKey,
+                });
+            }
         }
-
-        markChatTiming('final-message-visible', {
-            runId: activeReply.runId,
-            sessionKey: activeReply.sessionKey,
-        });
-    }, [activeReply]);
+    }, [activeReplies]);
 
     React.useEffect(() => {
         if (!latestAgentMessage) {
@@ -184,7 +182,7 @@ export function ChatTranscript({
                                 scrollAnchor={isTranscriptRenderRowScrollAnchor(row)}
                             >
                                 <TranscriptRenderRowItem
-                                    activeReply={activeReply}
+                                    activeReplies={activeReplies}
                                     agentStatusCharacter={agentStatusCharacter}
                                     row={row}
                                 />

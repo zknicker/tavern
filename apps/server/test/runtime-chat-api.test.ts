@@ -976,14 +976,16 @@ test('listRuntimeChatTimeline exposes running responses as active replies after 
     const timeline = await getRuntimeChatTimelinePage('cht_1');
 
     expect(timeline?.rows.map((row) => row.id)).toEqual(['msg_user']);
-    expect(timeline?.activeReply).toEqual({
-        agentId: 'main',
-        isThinking: true,
-        runId: 'run_1',
-        sessionKey: 'session_1',
-        startedAt: '2026-05-18T12:00:01.500Z',
-        text: '',
-    });
+    expect(timeline?.activeReplies).toEqual([
+        {
+            agentId: 'main',
+            isThinking: true,
+            runId: 'run_1',
+            sessionKey: 'session_1',
+            startedAt: '2026-05-18T12:00:01.500Z',
+            text: '',
+        },
+    ]);
 });
 
 test('older timeline pages forward the cursor and never carry live turn state', async () => {
@@ -1034,8 +1036,8 @@ test('older timeline pages forward the cursor and never carry live turn state', 
     const page = await getRuntimeChatTimelinePage('cht_1', { beforeSequence: 9, limit: 50 });
 
     expect(requests).toEqual(['/api/chats/cht_1/timeline?before_sequence=9&limit=50']);
-    expect(page?.activeReply).toBeNull();
-    expect(page?.failedTurn).toBeNull();
+    expect(page?.activeReplies).toEqual([]);
+    expect(page?.failedTurns).toEqual([]);
     expect(page?.nextBeforeSequence).toBe(3);
     expect(page?.totalMessages).toBe(12);
 });

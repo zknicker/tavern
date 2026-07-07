@@ -12,8 +12,8 @@ export async function getChatLogPage(input: { cursor?: ChatLogCursor; id: string
 
     if (page === null) {
         return chatLogPageSchema.parse({
-            activeReply: null,
-            failedTurn: null,
+            activeReplies: [],
+            failedTurns: [],
             limit: input.limit,
             nextBeforeSequence: null,
             rows: [],
@@ -22,8 +22,8 @@ export async function getChatLogPage(input: { cursor?: ChatLogCursor; id: string
     }
 
     return chatLogPageSchema.parse({
-        activeReply: page.activeReply,
-        failedTurn: page.failedTurn,
+        activeReplies: page.activeReplies,
+        failedTurns: page.failedTurns,
         limit: input.limit,
         nextBeforeSequence: page.nextBeforeSequence,
         rows: page.rows,

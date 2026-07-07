@@ -182,16 +182,18 @@ describe('sidebar chat list', () => {
     });
 
     test('uses explicit active turn state for local sidebar progress', () => {
-        expect(hasLocalActiveTurn({ activeTurn: null })).toBeFalse();
+        expect(hasLocalActiveTurn({ activeTurns: [] })).toBeFalse();
         expect(
             hasLocalActiveTurn({
-                activeTurn: {
-                    agentId: 'agent-1',
-                    chatId: 'chat-1',
-                    runId: 'run-1',
-                    sessionKey: 'session-1',
-                    startedAt: '2026-05-06T12:00:00.000Z',
-                },
+                activeTurns: [
+                    {
+                        agentId: 'agent-1',
+                        chatId: 'chat-1',
+                        runId: 'run-1',
+                        sessionKey: 'session-1',
+                        startedAt: '2026-05-06T12:00:00.000Z',
+                    },
+                ],
             })
         ).toBeTrue();
     });

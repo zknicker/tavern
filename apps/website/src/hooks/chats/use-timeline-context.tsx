@@ -4,8 +4,6 @@ import type { ChatLogOutput } from '../../lib/trpc.tsx';
 import type { ChatLogSteerNoticeSnapshot } from './chat-log-cache.ts';
 import {
     applyLogSnapshot,
-    applyReplySnapshot,
-    type ChatActiveReply,
     type ChatReplyUpdate,
     type ChatTimelineState,
     type ChatTurn,
@@ -46,7 +44,6 @@ interface TimelineActionsValue {
         runId: string;
     }) => void;
     setLog: (chatId: string, log: ChatLogOutput | undefined) => void;
-    setReply: (chatId: string, activeReply: ChatActiveReply | null) => void;
     showSteerNotice: (input: {
         chatId: string;
         content: string;
@@ -108,13 +105,6 @@ export function TimelineContextProvider({ children }: PropsWithChildren) {
     const setLog = React.useCallback(
         (chatId: string, log: ChatLogOutput | undefined) => {
             setTimelineState(chatId, (state) => applyLogSnapshot(state, log));
-        },
-        [setTimelineState]
-    );
-
-    const setReply = React.useCallback(
-        (chatId: string, activeReply: ChatActiveReply | null) => {
-            setTimelineState(chatId, (state) => applyReplySnapshot(state, activeReply));
         },
         [setTimelineState]
     );
@@ -252,7 +242,6 @@ export function TimelineContextProvider({ children }: PropsWithChildren) {
             removeOptimisticStop,
             rollbackSteerNotice,
             setLog,
-            setReply,
             showSteerNotice,
             startTurn,
             updateReply,
@@ -268,7 +257,6 @@ export function TimelineContextProvider({ children }: PropsWithChildren) {
             removeOptimisticStop,
             rollbackSteerNotice,
             setLog,
-            setReply,
             showSteerNotice,
             startTurn,
             updateReply,

@@ -12,7 +12,7 @@ import { getChatCardDomId } from './chat-card-dom-id.ts';
 import { ChatCardHeader } from './chat-card-header.tsx';
 import type { ChatListItem } from './chat-list-data.ts';
 import { ChatMessageComposer } from './chat-message-composer.tsx';
-import { getSteerableRunId } from './chat-steering.ts';
+import { getActiveRunIds, getSteerableRunId } from './chat-steering.ts';
 import { ChatTimeline } from './chat-timeline.tsx';
 import { ChatTranscriptLoadingIndicator } from './chat-transcript-loading-indicator.tsx';
 import { ChatTurnTimeline, type ChatTurnTimelineMarker } from './chat-turn-timeline.tsx';
@@ -39,9 +39,9 @@ export function ChatCard({
     const rows = timeline.rows;
     const rowCount = rows.length;
     const totalMessages = timeline.totalMessages;
-    const hasActiveReply = timeline.activeReply !== null;
-    const hasActiveTurn = timeline.activeTurn !== null || hasActiveReply;
-    const hasTimelineContent = rowCount > 0 || hasActiveReply || timeline.failedTurn !== null;
+    const hasActiveReply = timeline.activeReplies.length > 0;
+    const hasActiveTurn = timeline.activeTurns.length > 0 || hasActiveReply;
+    const hasTimelineContent = rowCount > 0 || hasActiveReply || timeline.failedTurns.length > 0;
     const isInitialTranscriptPending =
         timeline.isPending && !timeline.historyLoaded && !hasActiveReply;
     const contentRef = React.useRef<HTMLDivElement | null>(null);
@@ -87,8 +87,8 @@ export function ChatCard({
                     <MessageScrollerViewport className="px-3 py-3" ref={viewportRef}>
                         {isInitialTranscriptPending ? null : hasTimelineContent ? (
                             <ChatTimeline
-                                activeReply={timeline.activeReply}
-                                failedTurn={timeline.failedTurn}
+                                activeReplies={timeline.activeReplies}
+                                failedTurns={timeline.failedTurns}
                                 onTurnTimelineMarkersChange={setTurnTimelineMarkers}
                                 rows={rows}
                                 scrollContentRef={contentRef}
@@ -111,9 +111,13 @@ export function ChatCard({
                 </MessageScroller>
             </MessageScrollerProvider>
 
-            <ChatActiveStatusStack activeReply={timeline.activeReply} agents={agents} rows={rows} />
+            <ChatActiveStatusStack
+                activeReplies={timeline.activeReplies}
+                agents={agents}
+                rows={rows}
+            />
             <ChatMessageComposer
-                activeRunId={timeline.activeTurn?.runId ?? timeline.activeReply?.runId ?? null}
+                activeRunIds={getActiveRunIds(timeline)}
                 agentRuntimeSyncLabel={chat.agentRuntimeSyncLabel}
                 agents={agents}
                 boundAgentIds={chat.boundAgentIds}
@@ -123,8 +127,8 @@ export function ChatCard({
                 isDisabled={chat.isDisabled}
                 isReplyActive={hasActiveTurn}
                 steerRunId={getSteerableRunId({
-                    activeReply: timeline.activeReply,
-                    activeTurn: timeline.activeTurn,
+                    activeReplies: timeline.activeReplies,
+                    activeTurns: timeline.activeTurns,
                     rows,
                 })}
                 variant="compact"

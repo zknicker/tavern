@@ -89,7 +89,7 @@ test('applyLogSnapshot retains loaded history through the completion refetch', (
         totalMessages: 4,
     });
 
-    expect(next.activeReply).toBeNull();
+    expect(next.activeReplies).toEqual([]);
     expect(next.timeline.map((row) => row.id)).toEqual(['old-1', 'old-2', 'recent-1', 'reply-1']);
     expect(next.totalMessages).toBe(4);
 });

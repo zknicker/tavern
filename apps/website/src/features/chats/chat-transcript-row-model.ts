@@ -1,6 +1,6 @@
 import { formatDayLabel } from '../../components/ui/day-divider.tsx';
 import type { TranscriptEntry } from './chat-transcript-model.ts';
-import { getItemSessionKey, transcriptEntryUsesActiveReply } from './chat-transcript-model.ts';
+import { findTranscriptEntryActiveReply, getItemSessionKey } from './chat-transcript-model.ts';
 
 export type TranscriptRenderRow =
     | { id: 'hidden-count'; kind: 'hiddenCount' }
@@ -138,15 +138,15 @@ export function getEstimatedTranscriptRowsSize(rows: TranscriptRenderRow[]) {
     return rowSize + gapSize;
 }
 
-export function transcriptRenderRowUsesActiveReply(
+export function findTranscriptRenderRowActiveReply(
     row: TranscriptRenderRow | undefined,
-    activeReply: Parameters<typeof transcriptEntryUsesActiveReply>[1]
+    activeReplies: Parameters<typeof findTranscriptEntryActiveReply>[1]
 ) {
     if (!row || row.kind === 'hiddenCount' || row.kind === 'dayDivider') {
-        return false;
+        return null;
     }
 
-    return transcriptEntryUsesActiveReply(row.entry, activeReply);
+    return findTranscriptEntryActiveReply(row.entry, activeReplies);
 }
 
 function shouldRenderTranscriptEntry(entry: TranscriptEntry) {

@@ -61,13 +61,13 @@ export function ChatDraftDetail({
     const canUseSyncedComposer = canDraftUseSyncedComposer(draft);
     const composerChatId = canUseSyncedComposer ? draft.realChatId : null;
     const activeRunId =
-        handoffState?.activeTurn?.runId ??
-        handoffFrame.activeReply?.runId ??
+        handoffState?.activeTurns[0]?.runId ??
+        handoffFrame.activeReplies[0]?.runId ??
         draft?.realRunId ??
         null;
     const steerRunId = getSteerableRunId({
-        activeReply: handoffFrame.activeReply,
-        activeTurn: handoffState?.activeTurn ?? null,
+        activeReplies: handoffFrame.activeReplies,
+        activeTurns: handoffState?.activeTurns ?? [],
         rows: handoffState?.timeline,
     });
     const fallbackTimeline = draft
@@ -111,20 +111,20 @@ export function ChatDraftDetail({
 
     return (
         <ChatDetailFrame
-            activeReply={handoffFrame.activeReply}
+            activeReplies={handoffFrame.activeReplies}
             agentStatusCharacter={selectedAgent?.effectiveCharacter ?? null}
             chatId={timelineChatId}
             emptyLabel=""
-            failedTurn={handoffFrame.failedTurn}
+            failedTurns={handoffFrame.failedTurns}
             footer={
                 <ChatDetailFooter
-                    activeReply={handoffFrame.activeReply}
+                    activeReplies={handoffFrame.activeReplies}
                     agents={agentsQuery.data?.agents ?? []}
                     rows={visibleTimeline?.rows ?? []}
                 >
                     {composerChatId ? (
                         <ChatMessageComposer
-                            activeRunId={activeRunId}
+                            activeRunIds={activeRunId ? [activeRunId] : []}
                             agents={agentsQuery.data?.agents ?? []}
                             boundAgentIds={boundAgentIds}
                             canSend
@@ -132,8 +132,8 @@ export function ChatDraftDetail({
                             conversationKind="direct"
                             isDisabled={false}
                             isReplyActive={isDraftReplyActive({
-                                activeReply: handoffFrame.activeReply,
-                                activeTurn: handoffState?.activeTurn,
+                                activeReplies: handoffFrame.activeReplies,
+                                activeTurns: handoffState?.activeTurns ?? [],
                                 agentsPending: agentsQuery.isPending,
                                 draft,
                             })}
@@ -187,13 +187,12 @@ export function buildDraftHandoffLog(
     }
 
     return {
-        activeReply: handoffState.activeReply
-            ? {
-                  ...handoffState.activeReply,
-                  isThinking: handoffState.activeReply.isThinking ?? true,
-                  text: handoffState.activeReply.text ?? '',
-              }
-            : null,
+        activeReplies: handoffState.activeReplies.map((reply) => ({
+            ...reply,
+            isThinking: reply.isThinking ?? true,
+            text: reply.text ?? '',
+        })),
+        failedTurns: handoffState.failedTurns,
         limit: Math.max(handoffState.timeline.length, draftTimelineLimit),
         nextBeforeSequence: null,
         rows: handoffState.timeline,
@@ -208,9 +207,12 @@ export function resolveDraftHandoffFrame({
     draftActiveReply: ChatActiveReply | null;
     handoffState: ChatTimelineState | undefined;
 }) {
+    const handoffReplies = handoffState?.activeReplies ?? [];
+
     return {
-        activeReply: handoffState?.activeReply ?? draftActiveReply,
-        failedTurn: handoffState?.failedTurn ?? null,
+        activeReplies:
+            handoffReplies.length > 0 ? handoffReplies : draftActiveReply ? [draftActiveReply] : [],
+        failedTurns: handoffState?.failedTurns ?? [],
     };
 }
 
@@ -236,13 +238,13 @@ export function canDraftUseSyncedComposer(
 }
 
 export function isDraftReplyActive({
-    activeReply,
-    activeTurn,
+    activeReplies,
+    activeTurns,
     agentsPending,
     draft,
 }: {
-    activeReply: { isThinking?: boolean | null } | null;
-    activeTurn?: unknown;
+    activeReplies: readonly { isThinking?: boolean | null }[];
+    activeTurns: readonly unknown[];
     agentsPending: boolean;
     draft: Pick<ChatStartDraft, 'status'> | null;
 }) {
@@ -250,9 +252,13 @@ export function isDraftReplyActive({
         return true;
     }
 
-    if (draft?.status !== 'error' && activeTurn) {
+    if (draft?.status === 'error') {
+        return false;
+    }
+
+    if (activeTurns.length > 0) {
         return true;
     }
 
-    return draft?.status !== 'error' && activeReply?.isThinking !== false && activeReply !== null;
+    return activeReplies.some((reply) => reply.isThinking !== false);
 }

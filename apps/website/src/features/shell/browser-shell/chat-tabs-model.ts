@@ -190,13 +190,13 @@ export function parseDraftTabValue(value: string) {
     return value.startsWith(draftTabPrefix) ? value.slice(draftTabPrefix.length) : null;
 }
 
-export function hasLocalActiveTurn(state: Pick<ChatTimelineState, 'activeTurn'>) {
-    return state.activeTurn !== null;
+export function hasLocalActiveTurn(state: Pick<ChatTimelineState, 'activeTurns'>) {
+    return state.activeTurns.length > 0;
 }
 
 export function isDraftActiveTurn(
     draft: ChatStartDraft,
-    timelineState: Pick<ChatTimelineState, 'activeTurn'>
+    timelineState: Pick<ChatTimelineState, 'activeTurns'>
 ) {
     return (
         draft.status === 'queued' ||

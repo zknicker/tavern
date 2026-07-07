@@ -9,7 +9,7 @@ import type { ChatActiveReply } from '../../hooks/chats/chat-timeline-state.ts';
 import { type ChatLogOutput, trpc } from '../../lib/trpc.tsx';
 import { ArtifactLogEntry } from '../sessions/log/event-entry/artifact-entry.tsx';
 import { ToolDrawerBody } from '../sessions/tools/tool-drawer-body.tsx';
-import { findLastAgentTurnEntry } from './chat-active-turn.ts';
+import { findActiveTurnEntry, findLastAgentTurnEntry } from './chat-active-turn.ts';
 import { ChatTranscript } from './chat-transcript.tsx';
 import { groupAgentItems } from './chat-transcript-item-utils.ts';
 import { SystemStep } from './chat-transcript-system-step.tsx';
@@ -2111,7 +2111,7 @@ function renderTranscript(
             <QueryClientProvider client={queryClient}>
                 <MemoryRouter>
                     <ChatTranscript
-                        activeReply={null}
+                        activeReplies={[]}
                         chatId={options.chatId}
                         defaultOpenWorkGroups={options.defaultOpenWorkGroups}
                         rows={rows}
@@ -2125,10 +2125,13 @@ function renderTranscript(
 // Renders the turn-drawer body for the last agent turn — the surface tool
 // work moved to now that the chat pane is prose-only.
 function renderTurnBody(rows: ChatRow[], activeReply: ChatActiveReply | null = null) {
-    const entry = findLastAgentTurnEntry({
-        activeReply,
-        rows,
-    });
+    const entry = activeReply
+        ? (findActiveTurnEntry({
+              activeReplies: [activeReply],
+              rows,
+              runId: activeReply.runId,
+          }) ?? findLastAgentTurnEntry({ rows }))
+        : findLastAgentTurnEntry({ rows });
     const queryClient = new QueryClient({
         defaultOptions: {
             queries: {
@@ -2188,7 +2191,7 @@ function renderActiveTranscript(
             <QueryClientProvider client={queryClient}>
                 <MemoryRouter>
                     <ChatTranscript
-                        activeReply={activeReply}
+                        activeReplies={[activeReply]}
                         chatId="cht_test"
                         conversationLayout={conversationLayout}
                         rows={rows}

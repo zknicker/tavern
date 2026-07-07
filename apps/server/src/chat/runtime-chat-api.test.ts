@@ -3,7 +3,7 @@ import test from 'node:test';
 import type { TavernChatMessage, TavernChatResponse, TavernResponseActivity } from '@tavern/sdk';
 import {
     cancelledResponseToChatRow,
-    failedTurnFromResponses,
+    failedTurnsFromResponses,
     mapResponseIdsByMessageId,
     visibleTimelineSources,
 } from './runtime-chat-api.ts';
@@ -62,7 +62,7 @@ function activityRow(input: {
     };
 }
 
-test('failed turn only reflects the latest response', () => {
+test('an agent seat with a newer response supersedes its own failure', () => {
     const failed = response({
         id: 'response-failed',
         metadata: { error: 'boom' },
@@ -76,10 +76,10 @@ test('failed turn only reflects the latest response', () => {
         updatedAt: '2026-06-08T12:01:00.000Z',
     });
 
-    assert.equal(failedTurnFromResponses([failed, completed]), null);
+    assert.deepEqual(failedTurnsFromResponses([failed, completed]), []);
 });
 
-test('latest failed response returns a failed turn', () => {
+test('a failed seat returns a failed turn', () => {
     const failed = response({
         id: 'response-failed',
         metadata: {
@@ -94,17 +94,41 @@ test('latest failed response returns a failed turn', () => {
         updatedAt: '2026-06-08T12:01:00.000Z',
     });
 
-    assert.deepEqual(failedTurnFromResponses([failed]), {
-        error: 'Agent failed to produce a reply.',
-        responseId: 'response-failed',
-        turn: {
-            agentId: 'agent-main',
-            chatId: 'chat-1',
-            runId: 'run-failed',
-            sessionKey: 'session-failed',
-            startedAt: '2026-06-08T12:00:00.000Z',
+    assert.deepEqual(failedTurnsFromResponses([failed]), [
+        {
+            error: 'Agent failed to produce a reply.',
+            responseId: 'response-failed',
+            turn: {
+                agentId: 'agent-main',
+                chatId: 'chat-1',
+                runId: 'run-failed',
+                sessionKey: 'session-failed',
+                startedAt: '2026-06-08T12:00:00.000Z',
+            },
         },
+    ]);
+});
+
+test("another agent's newer response does not hide a failed seat", () => {
+    const failed = response({
+        id: 'response-failed',
+        status: 'failed',
+        updatedAt: '2026-06-08T12:00:00.000Z',
     });
+    const otherAgentCompleted = {
+        ...response({
+            id: 'response-other',
+            responseMessageId: 'message-other',
+            status: 'completed',
+            updatedAt: '2026-06-08T12:01:00.000Z',
+        }),
+        participant_id: 'agt_other',
+    };
+
+    const failures = failedTurnsFromResponses([failed, otherAgentCompleted]);
+
+    assert.equal(failures.length, 1);
+    assert.equal(failures[0]?.responseId, 'response-failed');
 });
 
 test('cancelled response maps to a stopped system row', () => {
@@ -191,7 +215,7 @@ test('soft-deleted rows never reach the timeline', () => {
         ['act_1']
     );
     // The dismissed failed response no longer drives the failure banner.
-    assert.equal(failedTurnFromResponses(visible.responses), null);
+    assert.deepEqual(failedTurnsFromResponses(visible.responses), []);
 });
 
 function message(input: { id: string }): TavernChatMessage {

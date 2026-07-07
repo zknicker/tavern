@@ -66,16 +66,18 @@ describe('buildDraftActiveReply', () => {
 describe('buildDraftHandoffLog', () => {
     test('exposes live handoff rows to the draft transcript', () => {
         const log = buildDraftHandoffLog({
-            activeReply: {
-                agentId: 'agent-1',
-                isThinking: true,
-                runId: 'run-1',
-                sessionKey: 'session-1',
-                startedAt: '2026-05-13T12:00:01.000Z',
-                text: '',
-            },
-            activeTurn: null,
-            failedTurn: null,
+            activeReplies: [
+                {
+                    agentId: 'agent-1',
+                    isThinking: true,
+                    runId: 'run-1',
+                    sessionKey: 'session-1',
+                    startedAt: '2026-05-13T12:00:01.000Z',
+                    text: '',
+                },
+            ],
+            activeTurns: [],
+            failedTurns: [],
             historyLoaded: false,
             timeline: [
                 {
@@ -139,14 +141,16 @@ describe('isDraftReplyActive', () => {
     test('treats reconciled active replies as queue-blocking', () => {
         expect(
             isDraftReplyActive({
-                activeReply: buildDraftActiveReply(
-                    createDraft({
-                        realChatId: 'chat-1',
-                        realRunId: 'run-1',
-                        status: 'reconciled',
-                    })
-                ),
-                activeTurn: null,
+                activeReplies: [
+                    buildDraftActiveReply(
+                        createDraft({
+                            realChatId: 'chat-1',
+                            realRunId: 'run-1',
+                            status: 'reconciled',
+                        })
+                    ),
+                ].filter((reply) => reply !== null),
+                activeTurns: [],
                 agentsPending: false,
                 draft: createDraft({ status: 'reconciled' }),
             })
@@ -156,8 +160,8 @@ describe('isDraftReplyActive', () => {
     test('does not block after the handoff reply is complete', () => {
         expect(
             isDraftReplyActive({
-                activeReply: { isThinking: false },
-                activeTurn: null,
+                activeReplies: [{ isThinking: false }],
+                activeTurns: [],
                 agentsPending: false,
                 draft: createDraft({ status: 'reconciled' }),
             })

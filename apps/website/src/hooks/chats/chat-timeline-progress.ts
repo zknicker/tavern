@@ -18,21 +18,22 @@ export function patchTimelineProgress(
 
     return {
         ...state,
-        activeTurn: input.turn,
+        activeTurns: [
+            ...state.activeTurns.filter((turn) => turn.runId !== input.turn.runId),
+            input.turn,
+        ],
         timeline: patched.rows,
     };
 }
 
 function timelineLog(state: ChatTimelineState): ChatLogOutput {
     return {
-        activeReply: state.activeReply
-            ? {
-                  ...state.activeReply,
-                  isThinking: state.activeReply.isThinking ?? true,
-                  text: state.activeReply.text ?? '',
-              }
-            : null,
-        failedTurn: state.failedTurn,
+        activeReplies: state.activeReplies.map((reply) => ({
+            ...reply,
+            isThinking: reply.isThinking ?? true,
+            text: reply.text ?? '',
+        })),
+        failedTurns: state.failedTurns,
         limit: Math.max(state.timeline.length + 1, 100),
         nextBeforeSequence: null,
         rows: state.timeline,

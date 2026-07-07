@@ -16,12 +16,7 @@ export function SessionLog({
     return (
         <div className="flex flex-col gap-0 py-1">
             <SessionLogHiddenCount hiddenCount={hiddenCount} />
-            <ChatTranscript
-                activeReply={null}
-                currentSessionKey={currentSessionKey}
-                failedTurn={null}
-                rows={rows}
-            />
+            <ChatTranscript activeReplies={[]} currentSessionKey={currentSessionKey} rows={rows} />
         </div>
     );
 }

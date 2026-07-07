@@ -195,7 +195,8 @@ test('turn progress applies preamble and normalized tool updates without refetch
     const invalidatedQueries: string[] = [];
     const patchedProgress: string[] = [];
     let log: ChatLogOutput | undefined = {
-        activeReply: null,
+        activeReplies: [],
+        failedTurns: [],
         limit: 100,
         nextBeforeSequence: null,
         rows: [],
@@ -262,7 +263,8 @@ test('turn progress applies preamble and normalized tool updates without refetch
 test('turn progress preserves clarification prompt data in live chat rows', async () => {
     const patchedProgress: string[] = [];
     let log: ChatLogOutput | undefined = {
-        activeReply: null,
+        activeReplies: [],
+        failedTurns: [],
         limit: 100,
         nextBeforeSequence: null,
         rows: [],

@@ -70,7 +70,8 @@ export function TavernBrowserTabsProvider({ children }: { children: ReactNode })
     const hasActiveDraft = drafts.listDrafts().some((draft) => draft.status !== 'error');
 
     const isChatBusy = React.useCallback(
-        (chat: ChatListItem) => chat.hasActiveTurn || timelineStates[chat.id]?.activeTurn != null,
+        (chat: ChatListItem) =>
+            chat.hasActiveTurn || (timelineStates[chat.id]?.activeTurns.length ?? 0) > 0,
         [timelineStates]
     );
 

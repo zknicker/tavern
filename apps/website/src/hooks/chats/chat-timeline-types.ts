@@ -48,10 +48,13 @@ export interface ChatTurnProgressStep {
     };
 }
 
+// Live turn state is plural: each agent seat can run one turn at a time, so a
+// multi-agent chat legitimately carries several concurrent runs. Collections
+// are keyed by runId and ordered by startedAt.
 export interface ChatTimelineState {
-    activeReply: ChatActiveReply | null;
-    activeTurn: ChatTurn | null;
-    failedTurn: ChatTurnFailure | null;
+    activeReplies: ChatActiveReply[];
+    activeTurns: ChatTurn[];
+    failedTurns: ChatTurnFailure[];
     historyLoaded: boolean;
     timeline: ChatTimeline;
     totalMessages: number;

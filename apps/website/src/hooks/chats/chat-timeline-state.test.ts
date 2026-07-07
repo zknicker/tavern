@@ -44,7 +44,7 @@ function stoppedRow() {
 test('startTimelineTurn creates blank active reply state', () => {
     const state = startTimelineTurn(emptyTimelineState(), turn);
 
-    expect(state.activeReply).toMatchObject({
+    expect(state.activeReplies[0]).toMatchObject({
         agentId: 'claw',
         isThinking: true,
         runId: 'run-1',
@@ -52,8 +52,8 @@ test('startTimelineTurn creates blank active reply state', () => {
         startedAt: '2026-04-21T16:08:42.000Z',
         text: '',
     });
-    expect(state.activeTurn).toEqual(turn);
-    expect(state.failedTurn).toBeNull();
+    expect(state.activeTurns).toEqual([turn]);
+    expect(state.failedTurns).toEqual([]);
 });
 
 test('applyLogSnapshot clears the active reply when the assistant message lands', () => {
@@ -84,21 +84,21 @@ test('applyLogSnapshot clears the active reply when the assistant message lands'
         totalMessages: 1,
     });
 
-    expect(next.activeReply).toBeNull();
-    expect(next.activeTurn).toBeNull();
+    expect(next.activeReplies).toEqual([]);
+    expect(next.activeTurns).toEqual([]);
     expect(next.timeline).toHaveLength(1);
 });
 
 test('clearTimelineTurn clears a matching active turn after active reply is gone', () => {
     const state = {
         ...emptyTimelineState(),
-        activeTurn: turn,
+        activeTurns: [turn],
     };
 
     const next = clearTimelineTurn(state, { runId: 'run-1' });
 
-    expect(next.activeReply).toBeNull();
-    expect(next.activeTurn).toBeNull();
+    expect(next.activeReplies).toEqual([]);
+    expect(next.activeTurns).toEqual([]);
 });
 
 test('applyLogSnapshot preserves active reply while durable activity is running', () => {
@@ -131,8 +131,8 @@ test('applyLogSnapshot preserves active reply while durable activity is running'
         totalMessages: 1,
     });
 
-    expect(next.activeReply?.runId).toBe('run-1');
-    expect(next.activeTurn?.runId).toBe('run-1');
+    expect(next.activeReplies[0]?.runId).toBe('run-1');
+    expect(next.activeTurns[0]?.runId).toBe('run-1');
     expect(next.timeline[0]?.id).toBe('act_tool_web');
 });
 
@@ -159,7 +159,7 @@ test('patchTimelineProgress adds live activity before durable log data arrives',
             },
         },
     ]);
-    expect(state.activeTurn).toEqual(turn);
+    expect(state.activeTurns).toEqual([turn]);
 });
 
 test('patchTimelineWithSteerNotice inserts a visible user row before durable log data arrives', () => {
@@ -169,7 +169,7 @@ test('patchTimelineWithSteerNotice inserts a visible user row before durable log
         timestamp: '2026-04-21T16:08:44.000Z',
     });
 
-    expect(state.activeTurn).toEqual(turn);
+    expect(state.activeTurns).toEqual([turn]);
     expect(state.timeline).toHaveLength(1);
     expect(state.timeline[0]).toMatchObject({
         id: 'act_run-1_runtime_notice_steered_message',
@@ -203,7 +203,7 @@ test('applyLogSnapshot preserves optimistic steer rows during stale live refetch
     expect(next.timeline.map((row) => row.id)).toEqual([
         'act_run-1_runtime_notice_steered_message',
     ]);
-    expect(next.activeTurn).toEqual(turn);
+    expect(next.activeTurns).toEqual([turn]);
     expect(readTimelineSteerNotice(next, { runId: 'run-1' })).toMatchObject({
         message: {
             content: 'use the shorter summary',
@@ -268,8 +268,8 @@ test('optimisticallyStopTimelineTurn adds a local stopped row without dropping a
         stoppedAt: '2026-04-21T16:08:44.000Z',
     });
 
-    expect(stopped.activeReply?.runId).toBe('run-1');
-    expect(stopped.activeTurn?.runId).toBe('run-1');
+    expect(stopped.activeReplies[0]?.runId).toBe('run-1');
+    expect(stopped.activeTurns[0]?.runId).toBe('run-1');
     expect(stopped.timeline).toMatchObject([
         {
             id: 'optimistic-stop:run-1',
@@ -314,8 +314,8 @@ test('applyLogSnapshot replaces optimistic stopped rows with durable cancellatio
         totalMessages: 1,
     });
 
-    expect(next.activeReply).toBeNull();
-    expect(next.activeTurn).toBeNull();
+    expect(next.activeReplies).toEqual([]);
+    expect(next.activeTurns).toEqual([]);
     expect(next.timeline.map((row) => row.id)).toEqual(['response-1:cancelled']);
 });
 
@@ -328,7 +328,7 @@ test('removeOptimisticStoppedTurn removes only the local stopped row', () => {
     const next = removeOptimisticStoppedTurn(stopped, { runId: 'run-1' });
 
     expect(next.timeline).toHaveLength(0);
-    expect(next.activeReply?.runId).toBe('run-1');
+    expect(next.activeReplies[0]?.runId).toBe('run-1');
 });
 
 test('patchTimelineProgress updates the same preamble and tool rows through completion', () => {
@@ -414,7 +414,7 @@ test('applyLogSnapshot preserves live progress rows when the optimistic run id m
         totalMessages: 0,
     });
 
-    expect(next.activeReply?.runId).toBe('run_1');
+    expect(next.activeReplies[0]?.runId).toBe('run_1');
     expect(next.timeline.map((row) => row.id)).toEqual(['act_run_1_tool_web']);
     expect(next.totalMessages).toBe(0);
 });
@@ -467,7 +467,7 @@ test('updateTimelineReply stores streamed text and thinking state', () => {
         turn,
     });
 
-    expect(state.activeReply).toMatchObject({
+    expect(state.activeReplies[0]).toMatchObject({
         isThinking: false,
         text: 'Done',
     });
@@ -485,7 +485,7 @@ test('updateTimelineReply accumulates delta-only streamed text', () => {
         turn,
     });
 
-    expect(second.activeReply?.text).toBe('Hello');
+    expect(second.activeReplies[0]?.text).toBe('Hello');
 });
 
 test('updateTimelineReply ignores stale shorter full-text snapshots for the same run', () => {
@@ -500,16 +500,18 @@ test('updateTimelineReply ignores stale shorter full-text snapshots for the same
         turn,
     });
 
-    expect(stale.activeReply?.text).toBe("Absolutely - here's another one:\n\nAt morning's edge");
-    expect(stale.activeReply?.isThinking).toBe(false);
+    expect(stale.activeReplies[0]?.text).toBe(
+        "Absolutely - here's another one:\n\nAt morning's edge"
+    );
+    expect(stale.activeReplies[0]?.isThinking).toBe(false);
 });
 
 test('clearTimelineTurn only clears the matching run', () => {
     const state = startTimelineTurn(emptyTimelineState(), turn);
 
-    expect(clearTimelineTurn(state, { runId: 'other' }).activeReply?.runId).toBe('run-1');
-    expect(clearTimelineTurn(state, { runId: 'run-1' }).activeReply).toBeNull();
-    expect(clearTimelineTurn(state, { runId: 'run-1' }).activeTurn).toBeNull();
+    expect(clearTimelineTurn(state, { runId: 'other' }).activeReplies[0]?.runId).toBe('run-1');
+    expect(clearTimelineTurn(state, { runId: 'run-1' }).activeReplies).toEqual([]);
+    expect(clearTimelineTurn(state, { runId: 'run-1' }).activeTurns).toEqual([]);
 });
 
 test('completeTimelineTurn keeps active reply visible while clearing active work', () => {
@@ -518,10 +520,10 @@ test('completeTimelineTurn keeps active reply visible while clearing active work
         turn,
     });
 
-    expect(completed.activeReply?.runId).toBe('run-1');
-    expect(completed.activeReply?.completedAt).toBe('2026-04-21T16:08:46.000Z');
-    expect(completed.activeReply?.isThinking).toBe(false);
-    expect(completed.activeTurn).toBeNull();
+    expect(completed.activeReplies[0]?.runId).toBe('run-1');
+    expect(completed.activeReplies[0]?.completedAt).toBe('2026-04-21T16:08:46.000Z');
+    expect(completed.activeReplies[0]?.isThinking).toBe(false);
+    expect(completed.activeTurns).toEqual([]);
 });
 
 test('completeTimelineTurn marks live progress rows complete', () => {
@@ -554,9 +556,9 @@ test('failTimelineTurn stores a failed turn marker', () => {
         turn,
     });
 
-    expect(failed.activeReply).toBeNull();
-    expect(failed.activeTurn).toBeNull();
-    expect(failed.failedTurn).toEqual({ error: 'boom', responseId: null, turn });
+    expect(failed.activeReplies).toEqual([]);
+    expect(failed.activeTurns).toEqual([]);
+    expect(failed.failedTurns).toEqual([{ error: 'boom', responseId: null, turn }]);
 });
 
 test('updateTimelineReply replace resets streamed text without ending the turn', () => {
@@ -572,7 +574,7 @@ test('updateTimelineReply replace resets streamed text without ending the turn',
         turn,
     });
 
-    expect(cleared.activeReply).toMatchObject({
+    expect(cleared.activeReplies[0]).toMatchObject({
         isThinking: true,
         runId: 'run-1',
         text: '',
@@ -612,8 +614,8 @@ test('applyLogSnapshot keeps the active reply when narration activity messages l
         totalMessages: 1,
     });
 
-    expect(next.activeReply?.runId).toBe('run-1');
-    expect(next.activeReply?.text).toBe('Looking into it');
+    expect(next.activeReplies[0]?.runId).toBe('run-1');
+    expect(next.activeReplies[0]?.text).toBe('Looking into it');
 });
 
 test('applyReplySnapshot does not regress streamed text from a stale snapshot', () => {
@@ -631,8 +633,8 @@ test('applyReplySnapshot does not regress streamed text from a stale snapshot', 
         text: 'Long',
     });
 
-    expect(next.activeReply?.text).toBe('Long streamed answer');
-    expect(next.activeReply?.isThinking).toBe(false);
+    expect(next.activeReplies[0]?.text).toBe('Long streamed answer');
+    expect(next.activeReplies[0]?.isThinking).toBe(false);
 });
 
 test('applyReplySnapshot does not restore thinking after the assistant message is visible', () => {
@@ -671,5 +673,71 @@ test('applyReplySnapshot does not restore thinking after the assistant message i
         text: '',
     });
 
-    expect(next.activeReply).toBeNull();
+    expect(next.activeReplies).toEqual([]);
+});
+
+const otherTurn = {
+    agentId: 'tiny',
+    chatId: 'chat-1',
+    runId: 'run-2',
+    sessionKey: 'session-2',
+    startedAt: '2026-04-21T16:08:43.000Z',
+};
+
+test('two concurrent turns keep independent live replies', () => {
+    const both = startTimelineTurn(startTimelineTurn(emptyTimelineState(), turn), otherTurn);
+    const streamed = updateTimelineReply(
+        updateTimelineReply(both, { delta: 'From claw', text: '', turn }),
+        { delta: 'From tiny', text: '', turn: otherTurn }
+    );
+
+    expect(streamed.activeReplies.map((reply) => reply.runId)).toEqual(['run-1', 'run-2']);
+    expect(streamed.activeReplies[0]?.text).toBe('From claw');
+    expect(streamed.activeReplies[1]?.text).toBe('From tiny');
+    expect(streamed.activeTurns.map((entry) => entry.runId)).toEqual(['run-1', 'run-2']);
+});
+
+test('completing one turn leaves the other run streaming', () => {
+    const both = startTimelineTurn(startTimelineTurn(emptyTimelineState(), turn), otherTurn);
+    const completed = completeTimelineTurn(both, {
+        completedAt: '2026-04-21T16:08:46.000Z',
+        turn,
+    });
+
+    expect(completed.activeReplies.find((reply) => reply.runId === 'run-1')?.isThinking).toBe(
+        false
+    );
+    expect(completed.activeReplies.find((reply) => reply.runId === 'run-2')?.isThinking).toBe(true);
+    expect(completed.activeTurns.map((entry) => entry.runId)).toEqual(['run-2']);
+});
+
+test('failing one turn keeps the other run and only clears its own banner on restart', () => {
+    const both = startTimelineTurn(startTimelineTurn(emptyTimelineState(), turn), otherTurn);
+    const failed = failTimelineTurn(both, { error: 'boom', turn });
+
+    expect(failed.activeReplies.map((reply) => reply.runId)).toEqual(['run-2']);
+    expect(failed.failedTurns.map((failure) => failure.turn.runId)).toEqual(['run-1']);
+
+    // The same agent starting a new turn clears its failure; the other
+    // agent's failure would stay.
+    const restarted = startTimelineTurn(failed, {
+        ...turn,
+        runId: 'run-3',
+        startedAt: '2026-04-21T16:09:00.000Z',
+    });
+
+    expect(restarted.failedTurns).toEqual([]);
+    expect(restarted.activeReplies.map((reply) => reply.runId)).toEqual(['run-2', 'run-3']);
+});
+
+test('stop for one run leaves the other untouched', () => {
+    const both = startTimelineTurn(startTimelineTurn(emptyTimelineState(), turn), otherTurn);
+    const stopped = optimisticallyStopTimelineTurn(both, {
+        chatId: 'chat-1',
+        runId: 'run-2',
+        stoppedAt: '2026-04-21T16:08:44.000Z',
+    });
+
+    expect(stopped.timeline.map((row) => row.id)).toEqual(['optimistic-stop:run-2']);
+    expect(stopped.activeReplies.map((reply) => reply.runId)).toEqual(['run-1', 'run-2']);
 });

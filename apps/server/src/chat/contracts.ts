@@ -243,32 +243,28 @@ export const chatLogToolRowSchema = toolRowSchema;
 export const chatLogWorkerRowSchema = workerRowSchema;
 export const chatLogRowSchema = historyRowSchema;
 
-export const chatLogActiveReplySchema = z
-    .object({
+export const chatLogActiveReplySchema = z.object({
+    agentId: z.string().trim().min(1),
+    isThinking: z.boolean(),
+    runId: z.string().trim().min(1),
+    sessionKey: z.string().trim().min(1),
+    startedAt: z.string().datetime(),
+    text: z.string(),
+});
+
+export const chatLogTurnFailureSchema = z.object({
+    error: z.string().trim().min(1),
+    // Live turn.failed events carry no durable response id; the durable
+    // refetch fills it in, which is what enables dismissal.
+    responseId: z.string().trim().min(1).nullable(),
+    turn: z.object({
         agentId: z.string().trim().min(1),
-        isThinking: z.boolean(),
+        chatId: z.string().trim().min(1),
         runId: z.string().trim().min(1),
         sessionKey: z.string().trim().min(1),
         startedAt: z.string().datetime(),
-        text: z.string(),
-    })
-    .nullable();
-
-export const chatLogTurnFailureSchema = z
-    .object({
-        error: z.string().trim().min(1),
-        // Live turn.failed events carry no durable response id; the durable
-        // refetch fills it in, which is what enables dismissal.
-        responseId: z.string().trim().min(1).nullable(),
-        turn: z.object({
-            agentId: z.string().trim().min(1),
-            chatId: z.string().trim().min(1),
-            runId: z.string().trim().min(1),
-            sessionKey: z.string().trim().min(1),
-            startedAt: z.string().datetime(),
-        }),
-    })
-    .nullable();
+    }),
+});
 
 export const dismissChatLogRowInputSchema = z.object({
     chatId: z.string().trim().min(1),
@@ -276,8 +272,10 @@ export const dismissChatLogRowInputSchema = z.object({
 });
 
 export const chatLogPageSchema = z.object({
-    activeReply: chatLogActiveReplySchema,
-    failedTurn: chatLogTurnFailureSchema.optional(),
+    // Each agent seat can run one turn at a time, so a multi-agent chat
+    // carries several concurrent live replies; ordered by startedAt.
+    activeReplies: z.array(chatLogActiveReplySchema),
+    failedTurns: z.array(chatLogTurnFailureSchema),
     limit: z.number().int().positive(),
     // Cursor for the next older turn-aligned page; null at history start.
     nextBeforeSequence: z.number().int().positive().nullable(),

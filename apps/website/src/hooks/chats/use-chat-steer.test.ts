@@ -10,7 +10,8 @@ import { createChatSteerMutationHandlers } from './chat-steer-mutation.ts';
 
 function emptyLog(): ChatLogOutput {
     return {
-        activeReply: null,
+        activeReplies: [],
+        failedTurns: [],
         limit: 100,
         nextBeforeSequence: null,
         rows: [],

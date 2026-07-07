@@ -2,12 +2,13 @@ import type { ChatLogOutput } from '../../lib/trpc.tsx';
 import { hasLoggedTurnFailure } from './chat-timeline-failures.ts';
 import {
     type ActiveReplyMergeOptions,
-    hasAssistantReplyForActiveTurn,
+    areSameActiveReplies,
+    findActiveReply,
     hasTerminalReplyOrFailure,
-    isSameActiveReply,
-    isSameActiveReplyRun,
     mergeActiveReplySnapshot,
     normalizeActiveReply,
+    removeActiveReply,
+    upsertActiveReply,
 } from './chat-timeline-reply.ts';
 import {
     hasTurnStatusRow,
@@ -22,14 +23,14 @@ import type {
 } from './chat-timeline-types.ts';
 
 type ChatLogPage = NonNullable<ChatLogOutput>;
-type ChatLogInput = Omit<ChatLogPage, 'activeReply' | 'failedTurn'> &
-    Partial<Pick<ChatLogPage, 'activeReply' | 'failedTurn'>>;
+type ChatLogInput = Omit<ChatLogPage, 'activeReplies' | 'failedTurns'> &
+    Partial<Pick<ChatLogPage, 'activeReplies' | 'failedTurns'>>;
 
 export function emptyTimelineState(): ChatTimelineState {
     return {
-        activeReply: null,
-        activeTurn: null,
-        failedTurn: null,
+        activeReplies: [],
+        activeTurns: [],
+        failedTurns: [],
         historyLoaded: false,
         timeline: [],
         totalMessages: 0,
@@ -45,18 +46,29 @@ export function applyLogSnapshot(
     }
 
     const snapshot = normalizeChatLog(log);
-    const hasTerminalMessage =
-        hasTerminalReplyOrFailure({
-            activeReply: state.activeReply,
-            rows: snapshot.rows,
-        }) ||
-        snapshot.failedTurn !== null ||
-        hasTurnStatusRow(snapshot.rows, state.activeReply?.runId ?? state.activeTurn?.runId);
-    const nextActiveReply = hasTerminalMessage ? null : state.activeReply;
-    const nextActiveTurn = hasTerminalMessage ? null : state.activeTurn;
-    const nextFailedTurn =
-        snapshot.failedTurn ??
-        (hasFailureMessage(snapshot.rows, state.failedTurn) ? null : state.failedTurn);
+    const isTerminalRun = (runId: string) =>
+        hasTurnStatusRow(snapshot.rows, runId) ||
+        snapshot.failedTurns.some((failure) => failure.turn.runId === runId);
+    const survivingReplies = state.activeReplies.filter(
+        (reply) =>
+            !(
+                hasTerminalReplyOrFailure({ activeReply: reply, rows: snapshot.rows }) ||
+                isTerminalRun(reply.runId)
+            )
+    );
+    const nextActiveReplies = mergeSnapshotReplies(survivingReplies, snapshot, isTerminalRun);
+    const nextActiveTurns = state.activeTurns.filter(
+        (turn) =>
+            !(
+                isTerminalRun(turn.runId) ||
+                hasLoggedTurnFailure(snapshot.rows, turn.runId) ||
+                hasTerminalReplyOrFailure({
+                    activeReply: { ...turn, text: '' },
+                    rows: snapshot.rows,
+                })
+            )
+    );
+    const nextFailedTurns = mergeSnapshotFailures(state.failedTurns, snapshot);
     const historyLoaded = true;
     // The loaded transcript only grows while the chat stays open. The tail
     // page refetches from the newest message, so new durable turns slide the
@@ -64,44 +76,95 @@ export function applyLogSnapshot(
     // keeps them until the chat unmounts.
     const loggedRows = retainLoadedHistory({
         hasOlderHistory: snapshot.nextBeforeSequence !== null,
-        liveRunIds: [state.activeReply?.runId, state.activeTurn?.runId],
+        liveRunIds: [
+            ...state.activeReplies.map((reply) => reply.runId),
+            ...state.activeTurns.map((turn) => turn.runId),
+        ],
         logged: snapshot.rows,
         previous: state.timeline,
     });
-    const nextTimeline = hasTerminalMessage
-        ? loggedRows
-        : mergeActiveProgressRows({
-              liveRows: state.timeline,
-              loggedRows,
-              runId: state.activeReply?.runId,
-          });
+    const nextTimeline = mergeActiveProgressRows({
+        liveRows: state.timeline,
+        loggedRows,
+        runIds: nextActiveReplies.map((reply) => reply.runId),
+    });
     const nextTotal = snapshot.totalMessages;
 
     if (
         areSameTimeline(state.timeline, nextTimeline) &&
         state.totalMessages === nextTotal &&
         state.historyLoaded === historyLoaded &&
-        isSameActiveReply(state.activeReply, nextActiveReply) &&
-        state.activeTurn === nextActiveTurn &&
-        isSameTurnFailure(state.failedTurn, nextFailedTurn)
+        areSameActiveReplies(state.activeReplies, nextActiveReplies) &&
+        areSameActiveTurns(state.activeTurns, nextActiveTurns) &&
+        areSameTurnFailures(state.failedTurns, nextFailedTurns)
     ) {
         return state;
     }
 
     return {
-        activeReply: nextActiveReply,
-        activeTurn: nextActiveTurn,
-        failedTurn: nextFailedTurn,
+        activeReplies: nextActiveReplies,
+        activeTurns: nextActiveTurns,
+        failedTurns: nextFailedTurns,
         historyLoaded,
         timeline: nextTimeline,
         totalMessages: nextTotal,
     };
 }
 
+// Snapshot replies fill in runs the client has not seen live (another
+// device's turn, a reload mid-turn); live-streamed text always wins the merge.
+function mergeSnapshotReplies(
+    replies: ChatActiveReply[],
+    snapshot: ChatLogPage,
+    isTerminalRun: (runId: string) => boolean
+) {
+    let next = replies;
+
+    for (const snapshotReply of snapshot.activeReplies) {
+        if (
+            isTerminalRun(snapshotReply.runId) ||
+            hasTerminalReplyOrFailure({ activeReply: snapshotReply, rows: snapshot.rows })
+        ) {
+            continue;
+        }
+
+        const merged = mergeActiveReplySnapshot(
+            findActiveReply(next, snapshotReply.runId),
+            normalizeActiveReply(snapshotReply)
+        );
+
+        if (merged) {
+            next = upsertActiveReply(next, merged);
+        }
+    }
+
+    return next;
+}
+
+// Durable failures (with responseId, so dismissal works) win over live-event
+// failures for the same run; live failures survive until the log confirms or
+// contradicts them.
+function mergeSnapshotFailures(failures: ChatTurnFailure[], snapshot: ChatLogPage) {
+    const next = failures.filter(
+        (failure) =>
+            !(
+                snapshot.failedTurns.some(
+                    (snapshotFailure) => snapshotFailure.turn.runId === failure.turn.runId
+                ) || hasLoggedTurnFailure(snapshot.rows, failure.turn.runId)
+            )
+    );
+    const merged = [...next, ...snapshot.failedTurns];
+
+    return merged.length === failures.length &&
+        merged.every((failure, index) => isSameTurnFailure(failure, failures[index] ?? null))
+        ? failures
+        : merged;
+}
+
 function normalizeChatLog(log: ChatLogInput): ChatLogPage {
     return {
-        activeReply: log.activeReply ?? null,
-        failedTurn: log.failedTurn ?? null,
+        activeReplies: log.activeReplies ?? [],
+        failedTurns: log.failedTurns ?? [],
         limit: log.limit,
         nextBeforeSequence: log.nextBeforeSequence,
         rows: log.rows,
@@ -111,62 +174,39 @@ function normalizeChatLog(log: ChatLogInput): ChatLogPage {
 
 export function applyReplySnapshot(
     state: ChatTimelineState,
-    activeReply: ChatActiveReply | null,
+    activeReply: ChatActiveReply,
     options: ActiveReplyMergeOptions = {}
 ): ChatTimelineState {
-    const normalizedActiveReply = mergeActiveReplySnapshot(
-        state.activeReply,
+    // A run the client already marked failed stays failed; only live turn
+    // events (authoritative) may write to it again, and those are filtered
+    // upstream in updateTimelineReply.
+    if (
+        !options.authoritative &&
+        state.failedTurns.some((failure) => failure.turn.runId === activeReply.runId)
+    ) {
+        return state;
+    }
+
+    const merged = mergeActiveReplySnapshot(
+        findActiveReply(state.activeReplies, activeReply.runId),
         normalizeActiveReply(activeReply),
         options
     );
-    const nextActiveReply = (() => {
-        if (hasAssistantReplyForActiveTurn(state.timeline, normalizedActiveReply)) {
-            return null;
-        }
+    const isTerminal =
+        merged === null ||
+        hasTerminalReplyOrFailure({ activeReply: merged, rows: state.timeline }) ||
+        hasTurnStatusRow(state.timeline, merged.runId);
+    const nextActiveReplies = isTerminal
+        ? removeActiveReply(state.activeReplies, activeReply.runId)
+        : upsertActiveReply(state.activeReplies, merged);
 
-        if (normalizedActiveReply !== null) {
-            if (
-                state.failedTurn?.turn.runId === normalizedActiveReply.runId ||
-                hasLoggedTurnFailure(state.timeline, normalizedActiveReply.runId) ||
-                hasTurnStatusRow(state.timeline, normalizedActiveReply.runId)
-            ) {
-                return null;
-            }
-
-            return normalizedActiveReply;
-        }
-
-        if (state.failedTurn?.turn.runId === state.activeReply?.runId) {
-            return null;
-        }
-
-        return hasAssistantReplyForActiveTurn(state.timeline, state.activeReply) ||
-            Boolean(
-                state.activeReply && hasLoggedTurnFailure(state.timeline, state.activeReply.runId)
-            ) ||
-            Boolean(
-                state.activeReply && hasTurnStatusRow(state.timeline, state.activeReply.runId)
-            ) ||
-            state.failedTurn?.turn.runId === state.activeReply?.runId
-            ? null
-            : state.activeReply;
-    })();
-
-    if (isSameActiveReply(state.activeReply, nextActiveReply)) {
+    if (nextActiveReplies === state.activeReplies) {
         return state;
     }
 
     return {
         ...state,
-        activeReply: nextActiveReply,
-        activeTurn:
-            nextActiveReply || state.activeTurn?.runId !== state.activeReply?.runId
-                ? state.activeTurn
-                : null,
-        failedTurn:
-            nextActiveReply && isSameActiveReplyRun(state.activeReply, nextActiveReply)
-                ? state.failedTurn
-                : null,
+        activeReplies: nextActiveReplies,
     };
 }
 
@@ -186,6 +226,25 @@ export function isSameTurnFailure(left: ChatTurnFailure | null, right: ChatTurnF
     );
 }
 
+function areSameTurnFailures(left: readonly ChatTurnFailure[], right: readonly ChatTurnFailure[]) {
+    return (
+        left === right ||
+        (left.length === right.length &&
+            left.every((failure, index) => isSameTurnFailure(failure, right[index] ?? null)))
+    );
+}
+
+function areSameActiveTurns(
+    left: ChatTimelineState['activeTurns'],
+    right: ChatTimelineState['activeTurns']
+) {
+    return (
+        left === right ||
+        (left.length === right.length &&
+            left.every((turn, index) => turn.runId === right[index]?.runId))
+    );
+}
+
 function areSameTimeline(left: ChatTimeline, right: ChatTimeline) {
     if (left === right) {
         return true;
@@ -198,18 +257,14 @@ function areSameTimeline(left: ChatTimeline, right: ChatTimeline) {
     return left.every((row, index) => row.id === right[index]?.id);
 }
 
-function hasFailureMessage(rows: ChatTimeline, failure: ChatTurnFailure | null) {
-    return failure ? hasLoggedTurnFailure(rows, failure.turn.runId) : false;
-}
-
 // Rows we already showed stay loaded when the fetched window no longer
 // covers the full log: a slid window can drop any loaded row, not just the
 // timestamp-oldest. A full-coverage window is authoritative — a row missing
-// there was deleted. The live run's own progress rows are placeholders until
+// there was deleted. The live runs' own progress rows are placeholders until
 // the log confirms them, so they never qualify as retained history.
 function retainLoadedHistory(input: {
     hasOlderHistory: boolean;
-    liveRunIds: (string | undefined)[];
+    liveRunIds: string[];
     logged: ChatTimeline;
     previous: ChatTimeline;
 }): ChatTimeline {
@@ -243,25 +298,29 @@ function retainLoadedHistory(input: {
         : [...retainedRows, ...input.logged].sort(compareTimelineRows);
 }
 
-function isLiveRunActivityRowId(rowId: string, runIds: (string | undefined)[]) {
+function isLiveRunActivityRowId(rowId: string, runIds: string[]) {
     return runIds.some(
-        (runId) => runId && (rowId.startsWith(`act_${runId}_`) || rowId.startsWith(`act_${runId}-`))
+        (runId) => rowId.startsWith(`act_${runId}_`) || rowId.startsWith(`act_${runId}-`)
     );
 }
 
 function mergeActiveProgressRows(input: {
     liveRows: ChatTimeline;
     loggedRows: ChatTimeline;
-    runId?: string;
+    runIds: string[];
 }) {
+    if (input.runIds.length === 0) {
+        return input.loggedRows;
+    }
+
     const loggedIds = new Set(input.loggedRows.map((row) => row.id));
     const loggedStoppedRunIds = stoppedRunIds(input.loggedRows);
     const missingLiveRows = input.liveRows.filter(
         (row) =>
             (isOptimisticStopRow(row)
                 ? !loggedStoppedRunIds.has(row.turnStatus.runId)
-                : isLiveProgressRow(row, input.runId) || isLiveSteerNoticeRow(row, input.runId)) &&
-            !loggedIds.has(row.id)
+                : isLiveProgressRow(row, input.runIds) ||
+                  isLiveSteerNoticeRow(row, input.runIds)) && !loggedIds.has(row.id)
     );
 
     if (missingLiveRows.length === 0) {
@@ -275,15 +334,15 @@ function stoppedRunIds(rows: ChatTimeline) {
     return new Set(rows.filter(isTurnStatusRow).map((row) => row.turnStatus.runId));
 }
 
-function isLiveProgressRow(row: ChatTimeline[number], runId?: string) {
+function isLiveProgressRow(row: ChatTimeline[number], runIds: string[]) {
     if (row.kind !== 'tool' || !row.id.startsWith('act_')) {
         return false;
     }
 
-    return !runId || row.id.startsWith(`act_${runId}_`);
+    return runIds.some((runId) => row.id.startsWith(`act_${runId}_`));
 }
 
-function isLiveSteerNoticeRow(row: ChatTimeline[number], runId?: string) {
+function isLiveSteerNoticeRow(row: ChatTimeline[number], runIds: string[]) {
     if (
         row.kind !== 'message' ||
         !row.id.startsWith('act_') ||
@@ -292,7 +351,7 @@ function isLiveSteerNoticeRow(row: ChatTimeline[number], runId?: string) {
         return false;
     }
 
-    return !runId || row.id === `act_${runId}_runtime_notice_steered_message`;
+    return runIds.some((runId) => row.id === `act_${runId}_runtime_notice_steered_message`);
 }
 
 function compareTimelineRows(left: ChatTimeline[number], right: ChatTimeline[number]) {

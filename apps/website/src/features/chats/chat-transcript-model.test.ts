@@ -13,7 +13,7 @@ test('buildTranscriptEntries keeps agent tool calls inside the agent turn', () =
     ];
 
     const entries = buildTranscriptEntries({
-        activeReply: null,
+        activeReplies: [],
         rows,
     });
 
@@ -38,7 +38,7 @@ test('buildTranscriptEntries keeps thinking rows inside the agent turn', () => {
     ];
 
     const entries = buildTranscriptEntries({
-        activeReply: null,
+        activeReplies: [],
         rows,
     });
 
@@ -85,7 +85,7 @@ test('buildTranscriptEntries keeps a new run out of the previous run turn entry'
     };
 
     const entries = buildTranscriptEntries({
-        activeReply: null,
+        activeReplies: [],
         rows: [durableReplyRow(), nextRunNarration],
     });
 
@@ -103,7 +103,7 @@ test('buildTranscriptEntries keeps runtime notices as standalone system entries'
     ];
 
     const entries = buildTranscriptEntries({
-        activeReply: null,
+        activeReplies: [],
         rows,
     });
 
@@ -115,14 +115,16 @@ test('buildTranscriptEntries keeps runtime notices as standalone system entries'
 
 test('buildTranscriptEntries renders active reply text after durable activity', () => {
     const entries = buildTranscriptEntries({
-        activeReply: {
-            agentId: 'agent-1',
-            isThinking: true,
-            runId: 'run-1',
-            sessionKey: 'session-1',
-            startedAt: '2026-05-11T16:00:00.000Z',
-            text: 'Working...',
-        },
+        activeReplies: [
+            {
+                agentId: 'agent-1',
+                isThinking: true,
+                runId: 'run-1',
+                sessionKey: 'session-1',
+                startedAt: '2026-05-11T16:00:00.000Z',
+                text: 'Working...',
+            },
+        ],
         rows: [toolRow('tool-1', false, false)],
     });
 
@@ -140,14 +142,16 @@ test('buildTranscriptEntries renders active reply text after durable activity', 
 
 test('buildTranscriptEntries hides active reply when a stopped row is visible', () => {
     const entries = buildTranscriptEntries({
-        activeReply: {
-            agentId: 'agent-1',
-            isThinking: false,
-            runId: 'run-1',
-            sessionKey: 'session-1',
-            startedAt: '2026-05-11T16:00:00.000Z',
-            text: 'Partial answer',
-        },
+        activeReplies: [
+            {
+                agentId: 'agent-1',
+                isThinking: false,
+                runId: 'run-1',
+                sessionKey: 'session-1',
+                startedAt: '2026-05-11T16:00:00.000Z',
+                text: 'Partial answer',
+            },
+        ],
         rows: [turnStatusRow('stop-1')],
     });
 
@@ -176,14 +180,16 @@ test('buildTranscriptEntries keeps prior completed tool activity grouped during 
     ];
 
     const entries = buildTranscriptEntries({
-        activeReply: {
-            agentId: 'agent-1',
-            isThinking: true,
-            runId: 'run-2',
-            sessionKey: 'session-1',
-            startedAt: '2026-05-11T16:01:00.000Z',
-            text: '',
-        },
+        activeReplies: [
+            {
+                agentId: 'agent-1',
+                isThinking: true,
+                runId: 'run-2',
+                sessionKey: 'session-1',
+                startedAt: '2026-05-11T16:01:00.000Z',
+                text: '',
+            },
+        ],
         rows,
     });
 
@@ -208,14 +214,16 @@ test('buildTranscriptEntries keeps prior completed tool activity grouped during 
 
 test('buildTranscriptEntries shows thinking status without a generic activity block', () => {
     const entries = buildTranscriptEntries({
-        activeReply: {
-            agentId: 'agent-1',
-            isThinking: true,
-            runId: 'run-1',
-            sessionKey: 'session-1',
-            startedAt: '2026-05-11T16:00:00.000Z',
-            text: '',
-        },
+        activeReplies: [
+            {
+                agentId: 'agent-1',
+                isThinking: true,
+                runId: 'run-1',
+                sessionKey: 'session-1',
+                startedAt: '2026-05-11T16:00:00.000Z',
+                text: '',
+            },
+        ],
         rows: [],
     });
 
@@ -234,14 +242,16 @@ test('buildTranscriptEntries shows thinking status without a generic activity bl
 
 test('buildTranscriptEntries keeps empty non-thinking replies in thinking status', () => {
     const entries = buildTranscriptEntries({
-        activeReply: {
-            agentId: 'agent-1',
-            isThinking: false,
-            runId: 'run-1',
-            sessionKey: 'session-1',
-            startedAt: '2026-05-11T16:00:00.000Z',
-            text: '',
-        },
+        activeReplies: [
+            {
+                agentId: 'agent-1',
+                isThinking: false,
+                runId: 'run-1',
+                sessionKey: 'session-1',
+                startedAt: '2026-05-11T16:00:00.000Z',
+                text: '',
+            },
+        ],
         rows: [],
     });
 
@@ -260,14 +270,16 @@ test('buildTranscriptEntries keeps empty non-thinking replies in thinking status
 
 test('buildTranscriptEntries keeps active thinking status after tool activity starts', () => {
     const entries = buildTranscriptEntries({
-        activeReply: {
-            agentId: 'agent-1',
-            isThinking: true,
-            runId: 'run-1',
-            sessionKey: 'session-1',
-            startedAt: '2026-05-11T16:00:00.000Z',
-            text: '',
-        },
+        activeReplies: [
+            {
+                agentId: 'agent-1',
+                isThinking: true,
+                runId: 'run-1',
+                sessionKey: 'session-1',
+                startedAt: '2026-05-11T16:00:00.000Z',
+                text: '',
+            },
+        ],
         rows: [toolRow('tool-1', false, false)],
     });
 
@@ -284,14 +296,16 @@ test('buildTranscriptEntries keeps active thinking status after tool activity st
 
 test('buildTranscriptEntries keeps active thinking status after assistant narration', () => {
     const entries = buildTranscriptEntries({
-        activeReply: {
-            agentId: 'agent-1',
-            isThinking: true,
-            runId: 'run-1',
-            sessionKey: 'session-1',
-            startedAt: '2026-05-11T16:00:00.000Z',
-            text: '',
-        },
+        activeReplies: [
+            {
+                agentId: 'agent-1',
+                isThinking: true,
+                runId: 'run-1',
+                sessionKey: 'session-1',
+                startedAt: '2026-05-11T16:00:00.000Z',
+                text: '',
+            },
+        ],
         rows: [toolRow('tool-1', false, true), narrationRow('narration-1', true, false)],
     });
 
@@ -310,7 +324,7 @@ test('buildTranscriptEntries keeps active thinking status after assistant narrat
 
 test('buildTranscriptEntries keeps widgets inline inside the agent turn', () => {
     const entries = buildTranscriptEntries({
-        activeReply: null,
+        activeReplies: [],
         rows: [
             withResponseId(widgetRow('ui-1'), 'rsp_1'),
             withResponseId(agentMessage('agent-1', 'Here is the chart.', false, false), 'rsp_1'),
@@ -339,7 +353,7 @@ test('buildTranscriptEntries splits agent turns by response identity over gap he
         withResponseId(agentMessage('agent-2', 'Second reply.', false, false), 'rsp_2'),
     ];
 
-    const entries = buildTranscriptEntries({ activeReply: null, rows });
+    const entries = buildTranscriptEntries({ activeReplies: [], rows });
 
     expect(entries).toHaveLength(2);
     expect(entries[0]).toMatchObject({ id: 'turn:rsp_1', kind: 'turn', participant: 'agent' });
@@ -365,7 +379,7 @@ test('buildTranscriptEntries keeps one response together across long gaps', () =
         },
     ];
 
-    const entries = buildTranscriptEntries({ activeReply: null, rows });
+    const entries = buildTranscriptEntries({ activeReplies: [], rows });
 
     expect(entries).toHaveLength(1);
     expect(entries[0]).toMatchObject({ id: 'turn:rsp_1', kind: 'turn', participant: 'agent' });
@@ -637,11 +651,11 @@ function runThinkingRow(text: string): ChatRow {
 
 test('agent turn entries keep one run-stable id from live streaming to durable rows', () => {
     const streamingOnly = buildTranscriptEntries({
-        activeReply: handoffReply('', true),
+        activeReplies: [handoffReply('', true)],
         rows: [userMessage('message-user', 'hi', false, false)],
     });
     const withWork = buildTranscriptEntries({
-        activeReply: handoffReply('', true),
+        activeReplies: [handoffReply('', true)],
         rows: [
             userMessage('message-user', 'hi', false, false),
             runNarrationMessage('act_run_handoff_message_1', '2026-05-11T16:00:01.000Z'),
@@ -649,7 +663,7 @@ test('agent turn entries keep one run-stable id from live streaming to durable r
         ],
     });
     const settled = buildTranscriptEntries({
-        activeReply: null,
+        activeReplies: [],
         rows: [
             userMessage('message-user', 'hi', false, false),
             runNarrationMessage('act_run_handoff_message_1', '2026-05-11T16:00:01.000Z'),
@@ -668,7 +682,7 @@ test('agent turn entries keep one run-stable id from live streaming to durable r
 
 test('the live reply item is suppressed once the durable reply row lands', () => {
     const entries = buildTranscriptEntries({
-        activeReply: handoffReply('Done. Clouds check the window,'),
+        activeReplies: [handoffReply('Done. Clouds check the window,')],
         rows: [
             userMessage('message-user', 'hi', false, false),
             runNarrationMessage('act_run_handoff_message_1', '2026-05-11T16:00:01.000Z'),
@@ -685,7 +699,7 @@ test('the live reply item is suppressed once the durable reply row lands', () =>
 
 test('duplicate thinking text is hidden when it matches the active reply', () => {
     const entries = buildTranscriptEntries({
-        activeReply: handoffReply('Done. Clouds check the window,'),
+        activeReplies: [handoffReply('Done. Clouds check the window,')],
         rows: [runThinkingRow('Done. Clouds')],
     });
     const agentTurn = entries.find(
@@ -707,7 +721,7 @@ test('duplicate thinking text is hidden when it matches the active reply', () =>
 
 test('duplicate thinking text is hidden when it matches the durable reply', () => {
     const entries = buildTranscriptEntries({
-        activeReply: null,
+        activeReplies: [],
         rows: [runThinkingRow('Done. Clouds'), durableReplyRow()],
     });
     const agentTurn = entries.find(
@@ -729,7 +743,7 @@ test('duplicate thinking text is hidden when it matches the durable reply', () =
 
 test('agent turns split by a runtime notice keep unique entry ids', () => {
     const entries = buildTranscriptEntries({
-        activeReply: null,
+        activeReplies: [],
         rows: [
             runNarrationMessage('act_run_handoff_message_1', '2026-05-11T16:00:01.000Z'),
             runtimeNoticeRow('notice-1'),
@@ -764,19 +778,21 @@ test('turn id stays stable when the live tail toggles around tool-only items', (
         },
     };
     const tailOnly = buildTranscriptEntries({
-        activeReply: {
-            agentId: 'agent-1',
-            isThinking: true,
-            runId: uuidRunId,
-            sessionKey: 'session-1',
-            startedAt: '2026-05-11T16:00:00.500Z',
-            text: '',
-        },
+        activeReplies: [
+            {
+                agentId: 'agent-1',
+                isThinking: true,
+                runId: uuidRunId,
+                sessionKey: 'session-1',
+                startedAt: '2026-05-11T16:00:00.500Z',
+                text: '',
+            },
+        ],
         rows: [],
     });
     // While a tool runs, the live tail hides and tool rows are the only
     // items — the id must not flip to a row key.
-    const toolOnly = buildTranscriptEntries({ activeReply: null, rows: [uuidTool] });
+    const toolOnly = buildTranscriptEntries({ activeReplies: [], rows: [uuidTool] });
 
     const ids = [tailOnly, toolOnly].map(
         (entries) =>

@@ -26,7 +26,7 @@ const agents = [
 
 test('ChatActiveStatusStack renders active agent status above the composer', () => {
     const markup = renderToStaticMarkup(
-        <ChatActiveStatusStack activeReply={activeReply} agents={agents} rows={[]} />
+        <ChatActiveStatusStack activeReplies={[activeReply]} agents={agents} rows={[]} />
     );
 
     assert.match(markup, /aria-label="Active agent status"/);
@@ -37,7 +37,7 @@ test('ChatActiveStatusStack renders active agent status above the composer', () 
 test('ChatActiveStatusStack follows current work state from active progress rows', () => {
     const markup = renderToStaticMarkup(
         <ChatActiveStatusStack
-            activeReply={activeReply}
+            activeReplies={[activeReply]}
             agents={agents}
             rows={[
                 {
@@ -92,7 +92,7 @@ test('ChatActiveStatusStack streams a cumulative work summary and offers turn de
         }) satisfies TranscriptRow;
     const markup = renderToStaticMarkup(
         <ChatActiveStatusStack
-            activeReply={activeReply}
+            activeReplies={[activeReply]}
             agents={agents}
             chatId="cht_test"
             rows={[
@@ -112,7 +112,7 @@ test('ChatActiveStatusStack streams a cumulative work summary and offers turn de
 
 test('ChatActiveStatusStack does not render without an active reply', () => {
     const markup = renderToStaticMarkup(
-        <ChatActiveStatusStack activeReply={null} agents={agents} rows={[]} />
+        <ChatActiveStatusStack activeReplies={[]} agents={agents} rows={[]} />
     );
 
     assert.equal(markup, '');
@@ -120,7 +120,7 @@ test('ChatActiveStatusStack does not render without an active reply', () => {
 
 test('ChatActiveStatusStack reserves the detail status row while idle', () => {
     const markup = renderToStaticMarkup(
-        <ChatActiveStatusStack activeReply={null} agents={agents} rows={[]} variant="detail" />
+        <ChatActiveStatusStack activeReplies={[]} agents={agents} rows={[]} variant="detail" />
     );
 
     // The detail surface keeps the row's space so the transcript never
@@ -132,7 +132,7 @@ test('ChatActiveStatusStack reserves the detail status row while idle', () => {
 
 test('ChatDetailFooter renders active status before the detail composer', () => {
     const markup = renderToStaticMarkup(
-        <ChatDetailFooter activeReply={activeReply} agents={agents} rows={[]}>
+        <ChatDetailFooter activeReplies={[activeReply]} agents={agents} rows={[]}>
             <div data-slot="composer">Composer</div>
         </ChatDetailFooter>
     );

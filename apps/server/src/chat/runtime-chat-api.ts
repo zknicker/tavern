@@ -14,8 +14,8 @@ import type { ChatLogPage } from './contracts.ts';
 import { workerRowFromSubagentActivity } from './runtime-worker-rows.ts';
 
 export interface RuntimeChatTimelinePage {
-    activeReply: ChatLogPage['activeReply'];
-    failedTurn: ChatLogPage['failedTurn'];
+    activeReplies: ChatLogPage['activeReplies'];
+    failedTurns: ChatLogPage['failedTurns'];
     nextBeforeSequence: number | null;
     rows: ChatLogPage['rows'];
     totalMessages: number;
@@ -68,8 +68,8 @@ export async function getRuntimeChatTimelinePage(
     const rows = [...messageRows, ...activityRows, ...artifactRows, ...turnStatusRows];
     // Active and failed turn states describe the newest history; the latest
     // page is the only one whose responses can carry them.
-    const activeReply = isLatestPage ? activeReplyFromResponses(responses) : null;
-    const failedTurn = isLatestPage ? failedTurnFromResponses(responses) : null;
+    const activeReplies = isLatestPage ? activeRepliesFromResponses(responses) : [];
+    const failedTurns = isLatestPage ? failedTurnsFromResponses(responses) : [];
     const sortedRows = rows.sort((left, right) => {
         const timestampDelta = rowTimestamp(left) - rowTimestamp(right);
 
@@ -77,8 +77,8 @@ export async function getRuntimeChatTimelinePage(
     });
 
     return {
-        activeReply,
-        failedTurn,
+        activeReplies,
+        failedTurns,
         nextBeforeSequence: page.next_before_sequence,
         rows: sortedRows,
         totalMessages: page.total_messages,
@@ -631,69 +631,80 @@ function messageText(message: TavernChatMessage) {
     return message.content;
 }
 
-function activeReplyFromResponses(
+// Every in-flight run is a live reply: each agent seat runs one turn at a
+// time, so concurrent entries belong to different seats.
+function activeRepliesFromResponses(
     responses: readonly TavernChatResponse[]
-): ChatLogPage['activeReply'] {
-    const activeResponses = responses
+): ChatLogPage['activeReplies'] {
+    return responses
         .filter(
             (response) =>
                 (response.status === 'queued' || response.status === 'running') &&
                 !response.response_message_id
         )
-        .sort((left, right) => Date.parse(right.updated_at) - Date.parse(left.updated_at));
-    const response = activeResponses[0];
-
-    if (!response) {
-        return null;
-    }
-
-    return {
-        agentId: runtimeMetadataString(response, 'agentId') ?? response.participant_id,
-        isThinking: true,
-        runId: runtimeMetadataString(response, 'runId') ?? response.id,
-        sessionKey:
-            runtimeMetadataString(response, 'agentSessionId') ??
-            runtimeMetadataString(response, 'sessionKey') ??
-            response.id,
-        startedAt: runtimeMetadataString(response, 'startedAt') ?? response.created_at,
-        text: response.summary ?? '',
-    };
+        .map((response) => ({
+            agentId: runtimeMetadataString(response, 'agentId') ?? response.participant_id,
+            isThinking: true,
+            runId: runtimeMetadataString(response, 'runId') ?? response.id,
+            sessionKey: responseSessionKey(response),
+            startedAt: runtimeMetadataString(response, 'startedAt') ?? response.created_at,
+            text: response.summary ?? '',
+        }))
+        .sort((left, right) => Date.parse(left.startedAt) - Date.parse(right.startedAt));
 }
 
-export function failedTurnFromResponses(
+// One failure banner per agent seat (participant): a seat's failure stays
+// visible until that agent runs again in this chat, regardless of what other
+// agents do. Session rotation keeps the participant, so it never resurrects
+// older failures.
+export function failedTurnsFromResponses(
     responses: readonly TavernChatResponse[]
-): ChatLogPage['failedTurn'] {
+): ChatLogPage['failedTurns'] {
     // Historical composer-command evidence (source 'command') predates the
     // agent drawer and never drives the failed-turn banner.
-    const latestResponse = responses
-        .filter((response) => runtimeMetadataString(response, 'source') !== 'command')
-        .sort((left, right) => Date.parse(right.updated_at) - Date.parse(left.updated_at));
+    const latestBySeat = new Map<string, TavernChatResponse>();
 
-    if (!(latestResponse[0]?.status === 'failed' && !latestResponse[0].response_message_id)) {
-        return null;
+    for (const response of responses) {
+        if (runtimeMetadataString(response, 'source') === 'command') {
+            continue;
+        }
+
+        const seatKey = response.participant_id;
+        const current = latestBySeat.get(seatKey);
+
+        if (!current || Date.parse(response.updated_at) > Date.parse(current.updated_at)) {
+            latestBySeat.set(seatKey, response);
+        }
     }
 
-    const failedResponse = latestResponse[0];
+    return [...latestBySeat.values()]
+        .filter((response) => response.status === 'failed' && !response.response_message_id)
+        .map((failedResponse) => ({
+            error:
+                runtimeMetadataString(failedResponse, 'error') ??
+                readString(failedResponse.metadata.error) ??
+                'Agent failed to produce a reply.',
+            responseId: failedResponse.id,
+            turn: {
+                agentId:
+                    runtimeMetadataString(failedResponse, 'agentId') ??
+                    failedResponse.participant_id,
+                chatId: failedResponse.chat_id,
+                runId: runtimeMetadataString(failedResponse, 'runId') ?? failedResponse.id,
+                sessionKey: responseSessionKey(failedResponse),
+                startedAt:
+                    runtimeMetadataString(failedResponse, 'startedAt') ?? failedResponse.created_at,
+            },
+        }))
+        .sort((left, right) => Date.parse(left.turn.startedAt) - Date.parse(right.turn.startedAt));
+}
 
-    return {
-        error:
-            runtimeMetadataString(failedResponse, 'error') ??
-            readString(failedResponse.metadata.error) ??
-            'Agent failed to produce a reply.',
-        responseId: failedResponse.id,
-        turn: {
-            agentId:
-                runtimeMetadataString(failedResponse, 'agentId') ?? failedResponse.participant_id,
-            chatId: failedResponse.chat_id,
-            runId: runtimeMetadataString(failedResponse, 'runId') ?? failedResponse.id,
-            sessionKey:
-                runtimeMetadataString(failedResponse, 'agentSessionId') ??
-                runtimeMetadataString(failedResponse, 'sessionKey') ??
-                failedResponse.id,
-            startedAt:
-                runtimeMetadataString(failedResponse, 'startedAt') ?? failedResponse.created_at,
-        },
-    };
+function responseSessionKey(response: TavernChatResponse) {
+    return (
+        runtimeMetadataString(response, 'agentSessionId') ??
+        runtimeMetadataString(response, 'sessionKey') ??
+        response.id
+    );
 }
 
 function runtimeMetadataString(

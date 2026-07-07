@@ -109,8 +109,55 @@ export function mergeActiveReplySnapshot(
     };
 }
 
-export function isSameActiveReplyRun(left: ChatActiveReply | null, right: ChatActiveReply | null) {
-    return left?.runId === right?.runId;
+export function findActiveReply(replies: readonly ChatActiveReply[], runId: string) {
+    return replies.find((reply) => reply.runId === runId) ?? null;
+}
+
+// Replace-by-runId or insert, keeping startedAt order so render order is
+// stable across upserts. Returns the same array when nothing changed.
+export function upsertActiveReply(
+    replies: readonly ChatActiveReply[],
+    reply: ChatActiveReply
+): ChatActiveReply[] {
+    const existing = findActiveReply(replies, reply.runId);
+
+    if (existing && isSameActiveReply(existing, reply)) {
+        return replies as ChatActiveReply[];
+    }
+
+    return sortActiveReplies([...replies.filter((entry) => entry.runId !== reply.runId), reply]);
+}
+
+export function removeActiveReply(
+    replies: readonly ChatActiveReply[],
+    runId: string
+): ChatActiveReply[] {
+    const next = replies.filter((reply) => reply.runId !== runId);
+
+    return next.length === replies.length ? (replies as ChatActiveReply[]) : next;
+}
+
+export function areSameActiveReplies(
+    left: readonly ChatActiveReply[],
+    right: readonly ChatActiveReply[]
+) {
+    if (left === right) {
+        return true;
+    }
+
+    if (left.length !== right.length) {
+        return false;
+    }
+
+    return left.every((reply, index) => isSameActiveReply(reply, right[index] ?? null));
+}
+
+function sortActiveReplies(replies: ChatActiveReply[]) {
+    return replies.sort(
+        (left, right) =>
+            (getTimestampMs(left.startedAt) ?? 0) - (getTimestampMs(right.startedAt) ?? 0) ||
+            left.runId.localeCompare(right.runId)
+    );
 }
 
 function hasDurableAssistantReply(rows: ChatTimeline, activeReply: ChatActiveReply) {

@@ -17,7 +17,7 @@ import type { ConversationMessageLayout } from './chat-transcript-model.ts';
 import { ChatTurnTimeline, type ChatTurnTimelineMarker } from './chat-turn-timeline.tsx';
 
 export function ChatDetailFrame({
-    activeReply,
+    activeReplies,
     agentStatusCharacter = null,
     chatId,
     conversationLayout,
@@ -26,7 +26,7 @@ export function ChatDetailFrame({
     error,
     artifactPanel,
     fetchOlderHistory,
-    failedTurn,
+    failedTurns,
     footer,
     hasOlderHistory = false,
     header,
@@ -36,7 +36,7 @@ export function ChatDetailFrame({
     rows,
     totalMessages,
 }: {
-    activeReply: ChatActiveReply | null;
+    activeReplies: readonly ChatActiveReply[];
     agentStatusCharacter?: AgentCharacter | null;
     chatId: string;
     conversationLayout?: ConversationMessageLayout;
@@ -45,7 +45,7 @@ export function ChatDetailFrame({
     error?: unknown;
     artifactPanel?: React.ReactNode;
     fetchOlderHistory?: () => void;
-    failedTurn?: ChatTurnFailure | null;
+    failedTurns?: readonly ChatTurnFailure[];
     footer: React.ReactNode;
     hasOlderHistory?: boolean;
     header?: React.ReactNode;
@@ -60,8 +60,8 @@ export function ChatDetailFrame({
     const [turnTimelineMarkers, setTurnTimelineMarkers] = React.useState<ChatTurnTimelineMarker[]>(
         []
     );
-    const hasActiveReply = activeReply !== null;
-    const hasTimelineContent = rows.length > 0 || hasActiveReply || failedTurn !== null;
+    const hasActiveReply = activeReplies.length > 0;
+    const hasTimelineContent = rows.length > 0 || hasActiveReply || (failedTurns?.length ?? 0) > 0;
     const isInitialTranscriptPending = isPending && !historyLoaded && !hasActiveReply;
     const handleScroll = () => {
         const viewport = viewportRef.current;
@@ -109,12 +109,12 @@ export function ChatDetailFrame({
                                     </MessageScrollerContent>
                                 ) : hasTimelineContent ? (
                                     <ChatTimeline
-                                        activeReply={activeReply}
+                                        activeReplies={activeReplies}
                                         agentStatusCharacter={agentStatusCharacter}
                                         chatId={chatId}
                                         conversationLayout={conversationLayout}
                                         defaultOpenWorkGroups={defaultOpenWorkGroups}
-                                        failedTurn={failedTurn}
+                                        failedTurns={failedTurns}
                                         onTurnTimelineMarkersChange={setTurnTimelineMarkers}
                                         rows={rows}
                                         scrollContentRef={contentRef}
@@ -143,7 +143,7 @@ export function ChatDetailFrame({
                                 viewportRef={viewportRef}
                             />
                             <TurnStartAutoScroll
-                                activeRunId={activeReply?.runId ?? null}
+                                activeRunId={activeReplies.at(-1)?.runId ?? null}
                                 viewportRef={viewportRef}
                             />
                             {hasTimelineContent ? (

@@ -61,6 +61,6 @@ export function getSidebarChatTitle(chat: ChatListItem) {
     return resolveTavernChatName(chat);
 }
 
-export function hasLocalActiveTurn(state: Pick<ChatTimelineState, 'activeTurn'>) {
-    return state.activeTurn !== null;
+export function hasLocalActiveTurn(state: Pick<ChatTimelineState, 'activeTurns'>) {
+    return state.activeTurns.length > 0;
 }

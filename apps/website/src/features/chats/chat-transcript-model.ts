@@ -47,8 +47,8 @@ export type TranscriptEntry = TranscriptSystemEntry | TranscriptTurnEntry;
 const turnMaxGapMs = 5 * 60 * 1000;
 
 export function buildTranscriptEntries(input: {
-    activeReply: ChatActiveReply | null;
-    failedTurn?: ChatTurnFailure | null;
+    activeReplies: readonly ChatActiveReply[];
+    failedTurns?: readonly ChatTurnFailure[];
     rows: TranscriptRow[];
 }) {
     const items = buildTranscriptItems(input);
@@ -182,45 +182,40 @@ function isLikelyRunId(value: string) {
 }
 
 function buildTranscriptItems(input: {
-    activeReply: ChatActiveReply | null;
-    failedTurn?: ChatTurnFailure | null;
+    activeReplies: readonly ChatActiveReply[];
+    failedTurns?: readonly ChatTurnFailure[];
     rows: TranscriptRow[];
 }) {
-    // Once the turn's durable reply is in the rows, the live reply items are
+    // Once a turn's durable reply is in the rows, its live reply items are
     // redundant: rendering both creates sibling segments with one `reply:`
     // key, which restructures the turn (and replays animations) during the
     // completion handoff.
-    const activeReply =
-        input.activeReply &&
-        !(
-            hasDurableReplyRow(input.rows, input.activeReply.runId) ||
-            hasStoppedTurnRow(input.rows, input.activeReply.runId)
-        )
-            ? input.activeReply
-            : null;
+    const activeReplies = input.activeReplies.filter(
+        (reply) =>
+            !(
+                hasDurableReplyRow(input.rows, reply.runId) ||
+                hasStoppedTurnRow(input.rows, reply.runId)
+            )
+    );
     const items: TranscriptItem[] = input.rows.flatMap((row) => {
-        if (isDuplicateReplyThinkingRow(row, input.rows, activeReply)) {
+        if (isDuplicateReplyThinkingRow(row, input.rows, activeReplies)) {
             return [];
         }
 
         return [{ kind: 'row', row }];
     });
-    const activeReplyText = activeReply?.text?.trim() ?? '';
 
-    if (activeReply && activeReplyText.length > 0) {
-        items.push({ kind: 'activeReply', reply: activeReply });
+    // One live item per run; run-keyed grouping keeps each in its own turn.
+    for (const reply of activeReplies) {
+        if ((reply.text?.trim() ?? '').length > 0) {
+            items.push({ kind: 'activeReply', reply });
+        } else {
+            items.push({ kind: 'activeStatus', reply, status: 'thinking' });
+        }
     }
 
-    if (activeReply && activeReplyText.length === 0) {
-        items.push({
-            kind: 'activeStatus',
-            reply: activeReply,
-            status: 'thinking',
-        });
-    }
-
-    if (input.failedTurn) {
-        items.push({ failure: input.failedTurn, kind: 'failure' });
+    for (const failure of input.failedTurns ?? []) {
+        items.push({ failure, kind: 'failure' });
     }
 
     return items;
@@ -252,7 +247,7 @@ function isThinkingRow(row: TranscriptRow) {
 function isDuplicateReplyThinkingRow(
     row: TranscriptRow,
     rows: TranscriptRow[],
-    activeReply: ChatActiveReply | null
+    activeReplies: readonly ChatActiveReply[]
 ) {
     if (!isThinkingRow(row)) {
         return false;
@@ -265,10 +260,9 @@ function isDuplicateReplyThinkingRow(
         return false;
     }
 
-    if (
-        activeReply?.runId === runId &&
-        isTranscriptTextPrefix(thinkingText, activeReply.text ?? '')
-    ) {
+    const activeReply = activeReplies.find((reply) => reply.runId === runId);
+
+    if (activeReply && isTranscriptTextPrefix(thinkingText, activeReply.text ?? '')) {
         return true;
     }
 
@@ -319,7 +313,7 @@ export function isActivityBackedMessageRow(row: TranscriptRow) {
  */
 export function getRepliedRunIds(
     rows: TranscriptRow[],
-    activeReply: ChatActiveReply | null
+    activeReplies: readonly ChatActiveReply[]
 ): ReadonlySet<string> {
     const runIds = new Set<string>();
 
@@ -337,8 +331,10 @@ export function getRepliedRunIds(
         }
     }
 
-    if (activeReply?.text?.trim()) {
-        runIds.add(activeReply.runId);
+    for (const reply of activeReplies) {
+        if (reply.text?.trim()) {
+            runIds.add(reply.runId);
+        }
     }
 
     return runIds;
@@ -520,6 +516,28 @@ function getActorKey(actor: TranscriptActor) {
  * pass it only to entries that can actually be active and let memoized
  * historical rows skip the re-render.
  */
+export function findTranscriptEntryActiveReply(
+    entry: TranscriptEntry,
+    activeReplies: readonly ChatActiveReply[]
+): ChatActiveReply | null {
+    if (entry.kind !== 'turn' || entry.participant !== 'agent') {
+        return null;
+    }
+
+    // An entry that already carries a live item belongs to exactly that run;
+    // the sessionKey heuristic below is only for run-less historical rows.
+    const liveItem = entry.items.find(
+        (item): item is Extract<TranscriptItem, { kind: 'activeReply' | 'activeStatus' }> =>
+            item.kind === 'activeReply' || item.kind === 'activeStatus'
+    );
+
+    if (liveItem) {
+        return activeReplies.find((reply) => reply.runId === liveItem.reply.runId) ?? null;
+    }
+
+    return activeReplies.find((reply) => transcriptEntryUsesActiveReply(entry, reply)) ?? null;
+}
+
 export function transcriptEntryUsesActiveReply(
     entry: TranscriptEntry,
     activeReply: ChatActiveReply | null

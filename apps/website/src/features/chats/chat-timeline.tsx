@@ -7,23 +7,23 @@ import type { ConversationMessageLayout } from './chat-transcript-model.ts';
 import type { ChatTurnTimelineMarker } from './chat-turn-timeline.tsx';
 
 export function ChatTimeline({
-    activeReply,
+    activeReplies,
     agentStatusCharacter = null,
     chatId,
     conversationLayout,
     defaultOpenWorkGroups = false,
-    failedTurn,
+    failedTurns,
     onTurnTimelineMarkersChange,
     rows,
     scrollContentRef,
     totalMessages,
 }: {
-    activeReply: ChatActiveReply | null;
+    activeReplies: readonly ChatActiveReply[];
     agentStatusCharacter?: AgentCharacter | null;
     chatId?: string;
     conversationLayout?: ConversationMessageLayout;
     defaultOpenWorkGroups?: boolean;
-    failedTurn?: ChatTurnFailure | null;
+    failedTurns?: readonly ChatTurnFailure[];
     onTurnTimelineMarkersChange?: (markers: ChatTurnTimelineMarker[]) => void;
     rows: NonNullable<ChatLogOutput>['rows'];
     scrollContentRef?: React.RefObject<HTMLDivElement | null>;
@@ -33,12 +33,12 @@ export function ChatTimeline({
 
     return (
         <ChatTranscript
-            activeReply={activeReply}
+            activeReplies={activeReplies}
             agentStatusCharacter={agentStatusCharacter}
             chatId={chatId}
             conversationLayout={conversationLayout}
             defaultOpenWorkGroups={defaultOpenWorkGroups}
-            failedTurn={failedTurn}
+            failedTurns={failedTurns}
             hiddenCount={hiddenCount}
             onTurnTimelineMarkersChange={onTurnTimelineMarkersChange}
             rows={rows}

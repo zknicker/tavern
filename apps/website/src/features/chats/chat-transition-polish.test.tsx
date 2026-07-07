@@ -111,16 +111,18 @@ test('chat message wraps long pasted tokens inside the bubble', () => {
 test('draft handoff waits while the accepted turn is still blank thinking', () => {
     expect(
         shouldReleaseDraftHandoff({
-            activeReply: {
-                agentId: 'agent-1',
-                isThinking: true,
-                runId: 'run-1',
-                sessionKey: 'session-1',
-                startedAt: '2026-05-13T12:00:00.000Z',
-                text: '',
-            },
-            activeTurn: null,
-            failedTurn: null,
+            activeReplies: [
+                {
+                    agentId: 'agent-1',
+                    isThinking: true,
+                    runId: 'run-1',
+                    sessionKey: 'session-1',
+                    startedAt: '2026-05-13T12:00:00.000Z',
+                    text: '',
+                },
+            ],
+            activeTurns: [],
+            failedTurns: [],
             historyLoaded: true,
             timeline: [],
             totalMessages: 0,
@@ -139,38 +141,42 @@ test('draft handoff forwards the real active reply once the turn starts', () => 
             text: '',
         },
         handoffState: {
-            activeReply: {
-                agentId: 'agent-1',
-                isThinking: true,
-                runId: 'run-1',
-                sessionKey: 'session-1',
-                startedAt: '2026-05-13T12:00:01.000Z',
-                text: '',
-            },
-            activeTurn: null,
-            failedTurn: null,
+            activeReplies: [
+                {
+                    agentId: 'agent-1',
+                    isThinking: true,
+                    runId: 'run-1',
+                    sessionKey: 'session-1',
+                    startedAt: '2026-05-13T12:00:01.000Z',
+                    text: '',
+                },
+            ],
+            activeTurns: [],
+            failedTurns: [],
             historyLoaded: true,
             timeline: [],
             totalMessages: 0,
         },
     });
 
-    expect(frame.activeReply?.runId).toBe('run-1');
+    expect(frame.activeReplies[0]?.runId).toBe('run-1');
 });
 
 test('draft handoff releases when the active reply has visible text', () => {
     expect(
         shouldReleaseDraftHandoff({
-            activeReply: {
-                agentId: 'agent-1',
-                isThinking: false,
-                runId: 'run-1',
-                sessionKey: 'session-1',
-                startedAt: '2026-05-13T12:00:00.000Z',
-                text: 'Done.',
-            },
-            activeTurn: null,
-            failedTurn: null,
+            activeReplies: [
+                {
+                    agentId: 'agent-1',
+                    isThinking: false,
+                    runId: 'run-1',
+                    sessionKey: 'session-1',
+                    startedAt: '2026-05-13T12:00:00.000Z',
+                    text: 'Done.',
+                },
+            ],
+            activeTurns: [],
+            failedTurns: [],
             historyLoaded: true,
             timeline: [],
             totalMessages: 0,
@@ -181,9 +187,9 @@ test('draft handoff releases when the active reply has visible text', () => {
 test('draft handoff waits when the loaded real chat only has the user message', () => {
     expect(
         shouldReleaseDraftHandoff({
-            activeReply: null,
-            activeTurn: null,
-            failedTurn: null,
+            activeReplies: [],
+            activeTurns: [],
+            failedTurns: [],
             historyLoaded: true,
             timeline: [
                 {
@@ -214,9 +220,9 @@ test('draft handoff waits when the loaded real chat only has the user message', 
 test('draft handoff releases when no active reply remains after terminal history loads', () => {
     expect(
         shouldReleaseDraftHandoff({
-            activeReply: null,
-            activeTurn: null,
-            failedTurn: null,
+            activeReplies: [],
+            activeTurns: [],
+            failedTurns: [],
             historyLoaded: true,
             timeline: [
                 {
@@ -247,20 +253,16 @@ test('draft handoff releases when no active reply remains after terminal history
 test('visible non-thinking fallback replies do not keep the composer blocked', () => {
     expect(
         isBlockingActiveTurn({
-            activeReply: {
-                isThinking: false,
-            },
-            activeTurn: null,
+            activeReplies: [{ isThinking: false }],
+            activeTurns: [],
             agentsPending: false,
         })
     ).toBe(false);
 
     expect(
         isBlockingActiveTurn({
-            activeReply: {
-                isThinking: true,
-            },
-            activeTurn: null,
+            activeReplies: [{ isThinking: true }],
+            activeTurns: [],
             agentsPending: false,
         })
     ).toBe(true);
@@ -269,17 +271,36 @@ test('visible non-thinking fallback replies do not keep the composer blocked', (
 test('active tool-only turns keep the composer in queue mode', () => {
     expect(
         isBlockingActiveTurn({
-            activeReply: null,
-            activeTurn: {
-                agentId: 'agent-1',
-                chatId: 'chat-1',
-                runId: 'run-1',
-                sessionKey: 'session-1',
-                startedAt: '2026-05-13T12:00:00.000Z',
-            },
+            activeReplies: [],
+            activeTurns: [
+                {
+                    agentId: 'agent-1',
+                    chatId: 'chat-1',
+                    runId: 'run-1',
+                    sessionKey: 'session-1',
+                    startedAt: '2026-05-13T12:00:00.000Z',
+                },
+            ],
             agentsPending: false,
         })
     ).toBe(true);
+});
+
+test('steering is unavailable while several runs are live', () => {
+    const turnFor = (runId: string) => ({
+        agentId: `agent-${runId}`,
+        chatId: 'chat-1',
+        runId,
+        sessionKey: `session-${runId}`,
+        startedAt: '2026-05-13T12:00:00.000Z',
+    });
+
+    expect(
+        getSteerableRunId({
+            activeReplies: [{ runId: 'run-1' }, { runId: 'run-2' }],
+            activeTurns: [turnFor('run-1'), turnFor('run-2')],
+        })
+    ).toBeNull();
 });
 
 test('steering is available while the active run is still live', () => {
@@ -291,42 +312,29 @@ test('steering is available while the active run is still live', () => {
         startedAt: '2026-05-13T12:00:00.000Z',
     };
 
-    expect(getSteerableRunId({ activeReply: null, activeTurn })).toBe('run-1');
+    expect(getSteerableRunId({ activeReplies: [], activeTurns: [activeTurn] })).toBe('run-1');
     expect(
         getSteerableRunId({
-            activeReply: {
-                runId: 'run-1',
-                text: '',
-            },
-            activeTurn,
+            activeReplies: [{ runId: 'run-1' }],
+            activeTurns: [activeTurn],
         })
     ).toBe('run-1');
     expect(
         getSteerableRunId({
-            activeReply: {
-                runId: 'run-1',
-                text: 'I will check that first.',
-            },
-            activeTurn,
+            activeReplies: [{ runId: 'run-1' }],
+            activeTurns: [activeTurn],
         })
     ).toBe('run-1');
     expect(
         getSteerableRunId({
-            activeReply: {
-                completedAt: '2026-05-13T12:00:03.000Z',
-                runId: 'run-1',
-                text: 'Canada is too broad.',
-            },
-            activeTurn: null,
+            activeReplies: [{ completedAt: '2026-05-13T12:00:03.000Z', runId: 'run-1' }],
+            activeTurns: [],
         })
     ).toBeNull();
     expect(
         getSteerableRunId({
-            activeReply: {
-                runId: 'run-1',
-                text: '',
-            },
-            activeTurn,
+            activeReplies: [{ runId: 'run-1' }],
+            activeTurns: [activeTurn],
             rows: [
                 {
                     actor: { id: 'agent-1', kind: 'agent' },
@@ -353,11 +361,8 @@ test('steering is available while the active run is still live', () => {
     ).toBe('run-1');
     expect(
         getSteerableRunId({
-            activeReply: {
-                runId: 'run-1',
-                text: '',
-            },
-            activeTurn,
+            activeReplies: [{ runId: 'run-1' }],
+            activeTurns: [activeTurn],
             rows: [
                 {
                     actor: { id: 'agent-1', kind: 'agent' },

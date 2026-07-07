@@ -4,8 +4,8 @@ const sessionRailMaxGapMs = 5 * 60 * 1000;
 
 type ChatLogRow = NonNullable<ChatLogOutput>['rows'][number];
 type ChatLogPage = NonNullable<ChatLogOutput>;
-type ChatLogInput = Omit<ChatLogPage, 'activeReply' | 'failedTurn'> &
-    Partial<Pick<ChatLogPage, 'activeReply' | 'failedTurn'>>;
+type ChatLogInput = Omit<ChatLogPage, 'activeReplies' | 'failedTurns'> &
+    Partial<Pick<ChatLogPage, 'activeReplies' | 'failedTurns'>>;
 type ChatMessageRow = Extract<ChatLogRow, { kind: 'message' }>;
 
 const localTimelineMessageMetadataKey = '__tavernLocalTimelineMessage';
@@ -141,8 +141,8 @@ function buildUserMessageRow(input: {
 
 function createEmptyLog(limit: number): ChatLogPage {
     return {
-        activeReply: null,
-        failedTurn: null,
+        activeReplies: [],
+        failedTurns: [],
         limit,
         nextBeforeSequence: null,
         rows: [],
@@ -246,8 +246,8 @@ export function getLoggedTimelineMessageIds(
 
 function normalizeChatLog(log: ChatLogInput): ChatLogPage {
     return {
-        activeReply: log.activeReply ?? null,
-        failedTurn: log.failedTurn ?? null,
+        activeReplies: log.activeReplies ?? [],
+        failedTurns: log.failedTurns ?? [],
         limit: log.limit,
         nextBeforeSequence: log.nextBeforeSequence,
         rows: log.rows,

@@ -3,13 +3,13 @@ import { ChatActiveStatusStack } from './chat-active-status-stack.tsx';
 
 type ChatDetailFooterProps = Pick<
     React.ComponentProps<typeof ChatActiveStatusStack>,
-    'activeReply' | 'agents' | 'chatId' | 'rows'
+    'activeReplies' | 'agents' | 'chatId' | 'rows'
 > & {
     children: React.ReactNode;
 };
 
 export function ChatDetailFooter({
-    activeReply,
+    activeReplies,
     agents,
     chatId,
     children,
@@ -18,7 +18,7 @@ export function ChatDetailFooter({
     return (
         <>
             <ChatActiveStatusStack
-                activeReply={activeReply}
+                activeReplies={activeReplies}
                 agents={agents}
                 chatId={chatId}
                 rows={rows}

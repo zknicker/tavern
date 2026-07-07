@@ -12,7 +12,8 @@ const turn = {
 
 function emptyLog(): ChatLogOutput {
     return {
-        activeReply: null,
+        activeReplies: [],
+        failedTurns: [],
         limit: 100,
         nextBeforeSequence: null,
         rows: [],

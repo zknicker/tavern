@@ -17,7 +17,7 @@ import { ChatTurnDrawer } from './chat-turn-drawer.tsx';
 import { useStableWorkGroupLabel, WorkGroupHeaderText } from './work-group-header-text.tsx';
 
 interface ChatActiveStatusStackProps {
-    activeReply: ChatActiveReply | null;
+    activeReplies: readonly ChatActiveReply[];
     agents: AgentListOutput['agents'];
     chatId?: string;
     className?: string;
@@ -25,19 +25,24 @@ interface ChatActiveStatusStackProps {
     variant?: 'compact' | 'detail';
 }
 
+// One status row per live run: each agent seat runs one turn at a time, so
+// concurrent rows belong to different agents.
 export function ChatActiveStatusStack({
-    activeReply,
+    activeReplies,
     agents,
     chatId,
     className,
     rows,
     variant = 'compact',
 }: ChatActiveStatusStackProps) {
-    const [drawerOpen, setDrawerOpen] = React.useState(false);
-    const agent = activeReply
-        ? (agents.find((entry) => entry.id === activeReply.agentId) ?? null)
+    const [drawerRunId, setDrawerRunId] = React.useState<string | null>(null);
+    const drawerReply = drawerRunId
+        ? (activeReplies.find((reply) => reply.runId === drawerRunId) ?? null)
         : null;
-    // The turn drawer must outlive the status row: if it is open when the
+    const drawerAgent = drawerReply
+        ? (agents.find((entry) => entry.id === drawerReply.agentId) ?? null)
+        : null;
+    // The turn drawer must outlive the status row: if it is open when its
     // turn completes, it keeps showing the same turn (and the same agent
     // identity) from its durable rows instead of vanishing mid-read.
     const lastAgentRef = React.useRef<{
@@ -46,33 +51,37 @@ export function ChatActiveStatusStack({
         name: string;
     }>({ character: null, color: null, name: 'Agent' });
 
-    if (agent) {
+    if (drawerAgent) {
         lastAgentRef.current = {
-            character: agent.effectiveCharacter ?? null,
-            color: agent.effectivePrimaryColor ?? null,
-            name: agent.name,
+            character: drawerAgent.effectiveCharacter ?? null,
+            color: drawerAgent.effectivePrimaryColor ?? null,
+            name: drawerAgent.name,
         };
     }
 
-    const turnEntry = React.useMemo(() => {
-        if (activeReply) {
-            return findActiveTurnEntry({ activeReply, rows });
+    const drawerEntry = React.useMemo(() => {
+        if (!drawerRunId) {
+            return null;
         }
 
-        return drawerOpen ? findLastAgentTurnEntry({ rows }) : null;
-    }, [activeReply, drawerOpen, rows]);
-    const agentName = agent?.name ?? lastAgentRef.current.name;
-    const agentCharacter = agent?.effectiveCharacter ?? lastAgentRef.current.character;
-    const agentColor = agent?.effectivePrimaryColor ?? lastAgentRef.current.color;
+        return (
+            findActiveTurnEntry({ activeReplies, rows, runId: drawerRunId }) ??
+            findLastAgentTurnEntry({ rows, runId: drawerRunId })
+        );
+    }, [activeReplies, drawerRunId, rows]);
+    const drawerAgentName = drawerAgent?.name ?? lastAgentRef.current.name;
+    const drawerAgentCharacter = drawerAgent?.effectiveCharacter ?? lastAgentRef.current.character;
+    const drawerAgentColor = drawerAgent?.effectivePrimaryColor ?? lastAgentRef.current.color;
 
     // The detail surface reserves the status row's space permanently so the
     // transcript never reflows when a turn starts or ends — the indicator
     // fades in place instead of pushing the log up.
     const reserveSpace = variant === 'detail';
+    const hasActiveReplies = activeReplies.length > 0;
 
     return (
         <>
-            {activeReply || reserveSpace ? (
+            {hasActiveReplies || reserveSpace ? (
                 <section
                     aria-label="Active agent status"
                     className={cn(
@@ -90,22 +99,20 @@ export function ChatActiveStatusStack({
                         className={cn(
                             'mx-auto flex w-full max-w-[60rem] flex-col gap-1',
                             variant === 'detail' && 'px-0 transition-opacity duration-200 ease-out',
-                            reserveSpace && !activeReply && 'opacity-0'
+                            reserveSpace && !hasActiveReplies && 'opacity-0'
                         )}
                     >
-                        {activeReply ? (
-                            <ChatActiveStatusItem
-                                activeReply={activeReply}
-                                agentCharacter={agentCharacter}
-                                agentName={agentName}
-                                agentPrimaryColor={agentColor}
-                                onViewDetails={() => setDrawerOpen(true)}
-                                rows={rows}
-                                workIcon={getWorkGroupIcon(
-                                    turnEntry?.items.filter(isActivityItem) ?? []
-                                )}
-                                workSummary={formatTurnWorkSummary(turnEntry)}
-                            />
+                        {hasActiveReplies ? (
+                            activeReplies.map((reply) => (
+                                <ChatActiveStatusRow
+                                    activeReplies={activeReplies}
+                                    agents={agents}
+                                    key={reply.runId}
+                                    onViewDetails={() => setDrawerRunId(reply.runId)}
+                                    reply={reply}
+                                    rows={rows}
+                                />
+                            ))
                         ) : (
                             <div aria-hidden className="h-8" />
                         )}
@@ -113,16 +120,53 @@ export function ChatActiveStatusStack({
                 </section>
             ) : null}
             <ChatTurnDrawer
-                agentCharacter={agentCharacter}
-                agentColor={agentColor}
-                agentName={agentName}
+                agentCharacter={drawerAgentCharacter}
+                agentColor={drawerAgentColor}
+                agentName={drawerAgentName}
                 chatId={chatId}
-                entry={turnEntry}
-                onOpenChange={setDrawerOpen}
-                open={drawerOpen}
-                turnActive={Boolean(activeReply)}
+                entry={drawerEntry}
+                onOpenChange={(open) => {
+                    if (!open) {
+                        setDrawerRunId(null);
+                    }
+                }}
+                open={drawerRunId !== null}
+                turnActive={drawerReply !== null}
             />
         </>
+    );
+}
+
+function ChatActiveStatusRow({
+    activeReplies,
+    agents,
+    onViewDetails,
+    reply,
+    rows,
+}: {
+    activeReplies: readonly ChatActiveReply[];
+    agents: AgentListOutput['agents'];
+    onViewDetails: () => void;
+    reply: ChatActiveReply;
+    rows: TranscriptRow[];
+}) {
+    const agent = agents.find((entry) => entry.id === reply.agentId) ?? null;
+    const turnEntry = React.useMemo(
+        () => findActiveTurnEntry({ activeReplies, rows, runId: reply.runId }),
+        [activeReplies, reply.runId, rows]
+    );
+
+    return (
+        <ChatActiveStatusItem
+            activeReply={reply}
+            agentCharacter={agent?.effectiveCharacter ?? null}
+            agentName={agent?.name ?? 'Agent'}
+            agentPrimaryColor={agent?.effectivePrimaryColor ?? null}
+            onViewDetails={onViewDetails}
+            rows={rows}
+            workIcon={getWorkGroupIcon(turnEntry?.items.filter(isActivityItem) ?? [])}
+            workSummary={formatTurnWorkSummary(turnEntry)}
+        />
     );
 }
 

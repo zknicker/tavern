@@ -23,7 +23,7 @@ import { ChatMessageComposer } from './chat-message-composer.tsx';
 import { getChatMessageLayout } from './chat-message-layout.ts';
 import { buildChatPath } from './chat-path.ts';
 import { ChatRoomTopbar } from './chat-room-topbar.tsx';
-import { getSteerableRunId } from './chat-steering.ts';
+import { getActiveRunIds, getSteerableRunId } from './chat-steering.ts';
 
 export const chatDetailLogLimit = 24;
 export const demoChannelLogLimit = 48;
@@ -113,15 +113,15 @@ export function shouldReleaseDraftHandoff(state: ChatTimelineState | undefined) 
         return false;
     }
 
-    if (state.failedTurn) {
+    if (state.failedTurns.length > 0) {
         return true;
     }
 
-    if (!state.activeReply) {
+    if (state.activeReplies.length === 0) {
         return state.historyLoaded && hasTerminalChatRow(state);
     }
 
-    return (state.activeReply.text ?? '').trim().length > 0;
+    return state.activeReplies.some((reply) => (reply.text ?? '').trim().length > 0);
 }
 
 function hasTerminalChatRow(state: ChatTimelineState) {
@@ -135,19 +135,19 @@ function hasTerminalChatRow(state: ChatTimelineState) {
 }
 
 export function isBlockingActiveTurn(input: {
-    activeReply: { isThinking?: boolean | null } | null;
-    activeTurn?: unknown;
+    activeReplies: readonly { isThinking?: boolean | null }[];
+    activeTurns: readonly unknown[];
     agentsPending: boolean;
 }) {
     if (input.agentsPending) {
         return true;
     }
 
-    if (input.activeTurn) {
+    if (input.activeTurns.length > 0) {
         return true;
     }
 
-    return input.activeReply?.isThinking !== false && input.activeReply !== null;
+    return input.activeReplies.some((reply) => reply.isThinking !== false);
 }
 
 function SyncedAgentChatDetail({ chat, chatId }: { chat: ChatListItem; chatId: string }) {
@@ -172,8 +172,8 @@ function SyncedAgentChatDetail({ chat, chatId }: { chat: ChatListItem; chatId: s
         : null;
     const artifactPanel = useChatArtifactPanelState(chatId);
     const isTurnBlocking = isBlockingActiveTurn({
-        activeReply: timeline.activeReply,
-        activeTurn: timeline.activeTurn,
+        activeReplies: timeline.activeReplies,
+        activeTurns: timeline.activeTurns,
         agentsPending: agentsQuery.isPending,
     });
 
@@ -184,26 +184,24 @@ function SyncedAgentChatDetail({ chat, chatId }: { chat: ChatListItem; chatId: s
     return (
         <ArtifactPanelOpenProvider onOpen={artifactPanel.open}>
             <ChatDetailFrame
-                activeReply={timeline.activeReply}
+                activeReplies={timeline.activeReplies}
                 agentStatusCharacter={agent?.effectiveCharacter ?? null}
                 artifactPanel={<ChatArtifactPanel agentId={agentId} state={artifactPanel} />}
                 chatId={chat.id}
                 conversationLayout={conversationLayout}
                 emptyLabel="No synced messages for this chat yet."
                 error={timeline.error}
-                failedTurn={timeline.failedTurn}
+                failedTurns={timeline.failedTurns}
                 fetchOlderHistory={timeline.fetchOlderHistory}
                 footer={
                     <ChatDetailFooter
-                        activeReply={timeline.activeReply}
+                        activeReplies={timeline.activeReplies}
                         agents={agents}
                         chatId={chat.id}
                         rows={rows}
                     >
                         <ChatMessageComposer
-                            activeRunId={
-                                timeline.activeTurn?.runId ?? timeline.activeReply?.runId ?? null
-                            }
+                            activeRunIds={getActiveRunIds(timeline)}
                             agentRuntimeSyncLabel={chat.agentRuntimeSyncLabel}
                             agents={agents}
                             boundAgentIds={chat.boundAgentIds}
@@ -214,8 +212,8 @@ function SyncedAgentChatDetail({ chat, chatId }: { chat: ChatListItem; chatId: s
                             isDisabled={chat.isDisabled}
                             isReplyActive={isTurnBlocking}
                             steerRunId={getSteerableRunId({
-                                activeReply: timeline.activeReply,
-                                activeTurn: timeline.activeTurn,
+                                activeReplies: timeline.activeReplies,
+                                activeTurns: timeline.activeTurns,
                                 rows,
                             })}
                         />

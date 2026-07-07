@@ -6,13 +6,13 @@ import { SessionLogHiddenCount } from '../sessions/session-log-hidden-count.tsx'
 import type { TranscriptActor, TranscriptEntry, TranscriptItem } from './chat-transcript-model.ts';
 import { useTranscriptRenderContext } from './chat-transcript-render-context.tsx';
 import {
+    findTranscriptRenderRowActiveReply,
     type TranscriptRenderRow,
-    transcriptRenderRowUsesActiveReply,
 } from './chat-transcript-row-model.ts';
 import { TranscriptEntryView } from './chat-transcript-turn.tsx';
 
 interface TranscriptRenderRowProps {
-    activeReply: ChatActiveReply | null;
+    activeReplies: readonly ChatActiveReply[];
     agentStatusCharacter?: AgentCharacter | null;
     row: TranscriptRenderRow;
 }
@@ -23,10 +23,14 @@ interface TranscriptRenderRowViewProps {
     row: TranscriptRenderRow;
 }
 
-export function TranscriptRenderRowItem({ activeReply, row, ...props }: TranscriptRenderRowProps) {
+export function TranscriptRenderRowItem({
+    activeReplies,
+    row,
+    ...props
+}: TranscriptRenderRowProps) {
     return (
         <TranscriptRenderRowView
-            activeReply={transcriptRenderRowUsesActiveReply(row, activeReply) ? activeReply : null}
+            activeReply={findTranscriptRenderRowActiveReply(row, activeReplies)}
             row={row}
             {...props}
         />

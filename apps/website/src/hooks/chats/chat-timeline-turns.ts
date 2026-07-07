@@ -1,4 +1,4 @@
-import { normalizeActiveReply } from './chat-timeline-reply.ts';
+import { findActiveReply, removeActiveReply, upsertActiveReply } from './chat-timeline-reply.ts';
 import { applyReplySnapshot, isSameTurnFailure } from './chat-timeline-snapshots.ts';
 import {
     createOptimisticStopRow,
@@ -23,8 +23,10 @@ export function startTimelineTurn(state: ChatTimelineState, turn: ChatTurn): Cha
             startedAt: turn.startedAt,
             text: '',
         }),
-        activeTurn: turn,
-        failedTurn: null,
+        activeTurns: upsertActiveTurn(state.activeTurns, turn),
+        // A new turn by this agent supersedes its failure banner; other
+        // agents' failures stay visible.
+        failedTurns: state.failedTurns.filter((failure) => failure.turn.agentId !== turn.agentId),
     };
 }
 
@@ -32,14 +34,11 @@ export function updateTimelineReply(
     state: ChatTimelineState,
     update: ChatReplyUpdate
 ): ChatTimelineState {
-    if (state.failedTurn?.turn.runId === update.turn.runId) {
+    if (state.failedTurns.some((failure) => failure.turn.runId === update.turn.runId)) {
         return state;
     }
 
-    const existingReply =
-        state.activeReply && state.activeReply.runId === update.turn.runId
-            ? state.activeReply
-            : null;
+    const existingReply = findActiveReply(state.activeReplies, update.turn.runId);
     const existingText = existingReply?.text ?? '';
     const nextText = update.replace
         ? update.text
@@ -48,21 +47,25 @@ export function updateTimelineReply(
               incomingDelta: update.delta,
               incomingText: update.text,
           });
-    const nextReply = normalizeActiveReply({
-        agentId: update.turn.agentId,
-        isThinking: update.isThinking ?? existingReply?.isThinking,
-        runId: update.turn.runId,
-        sessionKey: update.turn.sessionKey,
-        startedAt: update.turn.startedAt,
-        statusSequence: existingReply?.statusSequence ?? null,
-        text: nextText,
-    });
-
-    const nextState = applyReplySnapshot(state, nextReply, { authoritative: true });
+    const nextState = applyReplySnapshot(
+        state,
+        {
+            agentId: update.turn.agentId,
+            isThinking: update.isThinking ?? existingReply?.isThinking ?? true,
+            runId: update.turn.runId,
+            sessionKey: update.turn.sessionKey,
+            startedAt: update.turn.startedAt,
+            statusSequence: existingReply?.statusSequence ?? null,
+            text: nextText,
+        },
+        { authoritative: true }
+    );
 
     return {
         ...nextState,
-        activeTurn: nextState.activeReply ? update.turn : nextState.activeTurn,
+        activeTurns: findActiveReply(nextState.activeReplies, update.turn.runId)
+            ? upsertActiveTurn(nextState.activeTurns, update.turn)
+            : nextState.activeTurns,
     };
 }
 
@@ -95,17 +98,25 @@ export function clearTimelineTurn(
         runId?: string;
     } = {}
 ): ChatTimelineState {
-    const activeReplyMatches = !input.runId || state.activeReply?.runId === input.runId;
-    const activeTurnMatches = !input.runId || state.activeTurn?.runId === input.runId;
+    const activeReplies = input.runId
+        ? removeActiveReply(state.activeReplies, input.runId)
+        : state.activeReplies.length > 0
+          ? []
+          : state.activeReplies;
+    const activeTurns = input.runId
+        ? removeActiveTurn(state.activeTurns, input.runId)
+        : state.activeTurns.length > 0
+          ? []
+          : state.activeTurns;
 
-    if (!((activeReplyMatches && state.activeReply) || (activeTurnMatches && state.activeTurn))) {
+    if (activeReplies === state.activeReplies && activeTurns === state.activeTurns) {
         return state;
     }
 
     return {
         ...state,
-        activeReply: activeReplyMatches ? null : state.activeReply,
-        activeTurn: activeTurnMatches ? null : state.activeTurn,
+        activeReplies,
+        activeTurns,
     };
 }
 
@@ -117,27 +128,23 @@ export function completeTimelineTurn(
     }
 ): ChatTimelineState {
     const timeline = completeLiveProgressRows(state.timeline, input);
+    const activeTurns = removeActiveTurn(state.activeTurns, input.turn.runId);
+    const reply = findActiveReply(state.activeReplies, input.turn.runId);
 
-    if (!state.activeReply || state.activeReply.runId !== input.turn.runId) {
-        return state.activeTurn?.runId === input.turn.runId
-            ? {
-                  ...state,
-                  activeTurn: null,
-                  timeline,
-              }
-            : timeline === state.timeline
-              ? state
-              : { ...state, timeline };
+    if (!reply) {
+        return activeTurns === state.activeTurns && timeline === state.timeline
+            ? state
+            : { ...state, activeTurns, timeline };
     }
 
     return {
         ...state,
-        activeReply: {
-            ...state.activeReply,
+        activeReplies: upsertActiveReply(state.activeReplies, {
+            ...reply,
             completedAt: input.completedAt,
             isThinking: false,
-        },
-        activeTurn: null,
+        }),
+        activeTurns,
         timeline,
     };
 }
@@ -146,27 +153,29 @@ export function updateTimelineTurnStatus(
     state: ChatTimelineState,
     update: ChatTurnStatusUpdate
 ): ChatTimelineState {
-    if (state.failedTurn?.turn.runId === update.turn.runId) {
+    if (state.failedTurns.some((failure) => failure.turn.runId === update.turn.runId)) {
         return state;
     }
 
-    if (!state.activeReply || state.activeReply.runId !== update.turn.runId) {
-        return state.activeTurn?.runId === update.turn.runId
-            ? { ...state, activeTurn: update.turn }
+    const reply = findActiveReply(state.activeReplies, update.turn.runId);
+
+    if (!reply) {
+        return findActiveTurn(state.activeTurns, update.turn.runId)
+            ? { ...state, activeTurns: upsertActiveTurn(state.activeTurns, update.turn) }
             : state;
     }
 
-    if (state.activeReply.statusSequence === update.sequence) {
+    if (reply.statusSequence === update.sequence) {
         return state;
     }
 
     return {
         ...state,
-        activeReply: {
-            ...state.activeReply,
+        activeReplies: upsertActiveReply(state.activeReplies, {
+            ...reply,
             statusSequence: update.sequence,
-        },
-        activeTurn: update.turn,
+        }),
+        activeTurns: upsertActiveTurn(state.activeTurns, update.turn),
     };
 }
 
@@ -213,18 +222,18 @@ export function optimisticallyStopTimelineTurn(
         return state;
     }
 
+    const reply = findActiveReply(state.activeReplies, input.runId);
     const activeTurn =
-        state.activeTurn?.runId === input.runId
-            ? state.activeTurn
-            : state.activeReply?.runId === input.runId
-              ? {
-                    agentId: state.activeReply.agentId,
-                    chatId: input.chatId,
-                    runId: state.activeReply.runId,
-                    sessionKey: state.activeReply.sessionKey,
-                    startedAt: state.activeReply.startedAt,
-                }
-              : null;
+        findActiveTurn(state.activeTurns, input.runId) ??
+        (reply
+            ? {
+                  agentId: reply.agentId,
+                  chatId: input.chatId,
+                  runId: reply.runId,
+                  sessionKey: reply.sessionKey,
+                  startedAt: reply.startedAt,
+              }
+            : null);
 
     if (!activeTurn) {
         return state;
@@ -259,28 +268,29 @@ export function failTimelineTurn(
         turn: ChatTurn;
     }
 ): ChatTimelineState {
-    if (state.activeReply && state.activeReply.runId !== input.turn.runId) {
-        return state;
-    }
-
     const failedTurn = {
         error: input.error,
         responseId: null,
         turn: input.turn,
     };
+    const existing = state.failedTurns.find((failure) => failure.turn.runId === input.turn.runId);
 
-    if (!state.activeReply && isSameTurnFailure(state.failedTurn, failedTurn)) {
+    if (
+        isSameTurnFailure(existing ?? null, failedTurn) &&
+        !findActiveReply(state.activeReplies, input.turn.runId) &&
+        !findActiveTurn(state.activeTurns, input.turn.runId)
+    ) {
         return state;
     }
 
     return {
         ...state,
-        activeReply: null,
-        activeTurn:
-            state.activeTurn?.runId === input.turn.runId || !state.activeTurn
-                ? null
-                : state.activeTurn,
-        failedTurn,
+        activeReplies: removeActiveReply(state.activeReplies, input.turn.runId),
+        activeTurns: removeActiveTurn(state.activeTurns, input.turn.runId),
+        failedTurns: [
+            ...state.failedTurns.filter((failure) => failure.turn.runId !== input.turn.runId),
+            failedTurn,
+        ],
     };
 }
 
@@ -290,12 +300,43 @@ export function dismissTimelineFailure(
     state: ChatTimelineState,
     input: { responseId: string }
 ): ChatTimelineState {
-    if (state.failedTurn?.responseId !== input.responseId) {
-        return state;
+    const failedTurns = state.failedTurns.filter(
+        (failure) => failure.responseId !== input.responseId
+    );
+
+    return failedTurns.length === state.failedTurns.length ? state : { ...state, failedTurns };
+}
+
+function findActiveTurn(turns: readonly ChatTurn[], runId: string) {
+    return turns.find((turn) => turn.runId === runId) ?? null;
+}
+
+function upsertActiveTurn(turns: readonly ChatTurn[], turn: ChatTurn): ChatTurn[] {
+    const existing = findActiveTurn(turns, turn.runId);
+
+    if (existing && isSameActiveTurn(existing, turn)) {
+        return turns as ChatTurn[];
     }
 
-    return {
-        ...state,
-        failedTurn: null,
-    };
+    return [...turns.filter((entry) => entry.runId !== turn.runId), turn].sort(
+        (left, right) =>
+            Date.parse(left.startedAt) - Date.parse(right.startedAt) ||
+            left.runId.localeCompare(right.runId)
+    );
+}
+
+function removeActiveTurn(turns: readonly ChatTurn[], runId: string): ChatTurn[] {
+    const next = turns.filter((turn) => turn.runId !== runId);
+
+    return next.length === turns.length ? (turns as ChatTurn[]) : next;
+}
+
+function isSameActiveTurn(left: ChatTurn, right: ChatTurn) {
+    return (
+        left.agentId === right.agentId &&
+        left.chatId === right.chatId &&
+        left.runId === right.runId &&
+        left.sessionKey === right.sessionKey &&
+        left.startedAt === right.startedAt
+    );
 }
