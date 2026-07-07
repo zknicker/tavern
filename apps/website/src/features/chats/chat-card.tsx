@@ -12,7 +12,7 @@ import { getChatCardDomId } from './chat-card-dom-id.ts';
 import { ChatCardHeader } from './chat-card-header.tsx';
 import type { ChatListItem } from './chat-list-data.ts';
 import { ChatMessageComposer } from './chat-message-composer.tsx';
-import { getActiveRunIds, getSteerableRunId } from './chat-steering.ts';
+import { getActiveRunIds, getSteerableTurnTargets } from './chat-steering.ts';
 import { ChatTimeline } from './chat-timeline.tsx';
 import { ChatTranscriptLoadingIndicator } from './chat-transcript-loading-indicator.tsx';
 import { ChatTurnTimeline, type ChatTurnTimelineMarker } from './chat-turn-timeline.tsx';
@@ -126,7 +126,7 @@ export function ChatCard({
                 conversationKind={chat.conversationKind}
                 isDisabled={chat.isDisabled}
                 isReplyActive={hasActiveTurn}
-                steerRunId={getSteerableRunId({
+                steerTargets={getSteerableTurnTargets({
                     activeReplies: timeline.activeReplies,
                     activeTurns: timeline.activeTurns,
                     rows,

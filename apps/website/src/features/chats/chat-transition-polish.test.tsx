@@ -11,7 +11,7 @@ import {
 } from './agent-chat-detail.tsx';
 import { AgentStatusIndicator } from './agent-status-indicator.tsx';
 import { resolveDraftHandoffFrame } from './chat-draft-detail.tsx';
-import { getSteerableRunId } from './chat-steering.ts';
+import { getSteerableTurnTargets, resolveSteerRunId } from './chat-steering.ts';
 
 test('chat detail cold-open loads a narrow transcript tail', () => {
     expect(chatDetailLogLimit).toBeLessThanOrEqual(30);
@@ -286,21 +286,31 @@ test('active tool-only turns keep the composer in queue mode', () => {
     ).toBe(true);
 });
 
-test('steering is unavailable while several runs are live', () => {
-    const turnFor = (runId: string) => ({
-        agentId: `agent-${runId}`,
+test('steering with several live runs needs a single mentioned running agent', () => {
+    const turnFor = (runId: string, agentId: string) => ({
+        agentId,
         chatId: 'chat-1',
         runId,
         sessionKey: `session-${runId}`,
         startedAt: '2026-05-13T12:00:00.000Z',
     });
+    const targets = getSteerableTurnTargets({
+        activeReplies: [
+            { agentId: 'agent-a', runId: 'run-1' },
+            { agentId: 'agent-b', runId: 'run-2' },
+        ],
+        activeTurns: [turnFor('run-1', 'agent-a'), turnFor('run-2', 'agent-b')],
+    });
 
-    expect(
-        getSteerableRunId({
-            activeReplies: [{ runId: 'run-1' }, { runId: 'run-2' }],
-            activeTurns: [turnFor('run-1'), turnFor('run-2')],
-        })
-    ).toBeNull();
+    expect(targets).toHaveLength(2);
+    // No mentions: ambiguous, stays queued.
+    expect(resolveSteerRunId(targets)).toBeNull();
+    // Exactly one running agent mentioned: steer that run.
+    expect(resolveSteerRunId(targets, { mentionAgentIds: ['agent-b'] })).toBe('run-2');
+    // Mentioning both running agents is still ambiguous.
+    expect(resolveSteerRunId(targets, { mentionAgentIds: ['agent-a', 'agent-b'] })).toBeNull();
+    // Mentioning an idle agent resolves nothing.
+    expect(resolveSteerRunId(targets, { mentionAgentIds: ['agent-idle'] })).toBeNull();
 });
 
 test('steering is available while the active run is still live', () => {
@@ -311,29 +321,31 @@ test('steering is available while the active run is still live', () => {
         sessionKey: 'session-1',
         startedAt: '2026-05-13T12:00:00.000Z',
     };
+    const steerRunId = (input: Parameters<typeof getSteerableTurnTargets>[0]) =>
+        resolveSteerRunId(getSteerableTurnTargets(input));
 
-    expect(getSteerableRunId({ activeReplies: [], activeTurns: [activeTurn] })).toBe('run-1');
+    expect(steerRunId({ activeReplies: [], activeTurns: [activeTurn] })).toBe('run-1');
     expect(
-        getSteerableRunId({
-            activeReplies: [{ runId: 'run-1' }],
+        steerRunId({
+            activeReplies: [{ agentId: 'agent-1', runId: 'run-1' }],
             activeTurns: [activeTurn],
         })
     ).toBe('run-1');
     expect(
-        getSteerableRunId({
-            activeReplies: [{ runId: 'run-1' }],
-            activeTurns: [activeTurn],
-        })
-    ).toBe('run-1');
-    expect(
-        getSteerableRunId({
-            activeReplies: [{ completedAt: '2026-05-13T12:00:03.000Z', runId: 'run-1' }],
+        steerRunId({
+            activeReplies: [
+                {
+                    agentId: 'agent-1',
+                    completedAt: '2026-05-13T12:00:03.000Z',
+                    runId: 'run-1',
+                },
+            ],
             activeTurns: [],
         })
     ).toBeNull();
     expect(
-        getSteerableRunId({
-            activeReplies: [{ runId: 'run-1' }],
+        steerRunId({
+            activeReplies: [{ agentId: 'agent-1', runId: 'run-1' }],
             activeTurns: [activeTurn],
             rows: [
                 {
@@ -360,8 +372,8 @@ test('steering is available while the active run is still live', () => {
         })
     ).toBe('run-1');
     expect(
-        getSteerableRunId({
-            activeReplies: [{ runId: 'run-1' }],
+        steerRunId({
+            activeReplies: [{ agentId: 'agent-1', runId: 'run-1' }],
             activeTurns: [activeTurn],
             rows: [
                 {

@@ -23,7 +23,7 @@ import { ChatMessageComposer } from './chat-message-composer.tsx';
 import { getChatMessageLayout } from './chat-message-layout.ts';
 import { buildChatPath } from './chat-path.ts';
 import { ChatRoomTopbar } from './chat-room-topbar.tsx';
-import { getActiveRunIds, getSteerableRunId } from './chat-steering.ts';
+import { getActiveRunIds, getSteerableTurnTargets } from './chat-steering.ts';
 
 export const chatDetailLogLimit = 24;
 export const demoChannelLogLimit = 48;
@@ -211,7 +211,7 @@ function SyncedAgentChatDetail({ chat, chatId }: { chat: ChatListItem; chatId: s
                             conversationKind={chat.conversationKind}
                             isDisabled={chat.isDisabled}
                             isReplyActive={isTurnBlocking}
-                            steerRunId={getSteerableRunId({
+                            steerTargets={getSteerableTurnTargets({
                                 activeReplies: timeline.activeReplies,
                                 activeTurns: timeline.activeTurns,
                                 rows,

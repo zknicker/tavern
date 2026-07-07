@@ -23,7 +23,7 @@ import {
 import { ChatDetailFooter } from './chat-detail-footer.tsx';
 import { ChatDetailFrame } from './chat-detail-frame.tsx';
 import { ChatMessageComposer } from './chat-message-composer.tsx';
-import { getSteerableRunId } from './chat-steering.ts';
+import { getSteerableTurnTargets } from './chat-steering.ts';
 
 const draftTimelineLimit = 100;
 
@@ -65,7 +65,7 @@ export function ChatDraftDetail({
         handoffFrame.activeReplies[0]?.runId ??
         draft?.realRunId ??
         null;
-    const steerRunId = getSteerableRunId({
+    const steerTargets = getSteerableTurnTargets({
         activeReplies: handoffFrame.activeReplies,
         activeTurns: handoffState?.activeTurns ?? [],
         rows: handoffState?.timeline,
@@ -137,7 +137,7 @@ export function ChatDraftDetail({
                                 agentsPending: agentsQuery.isPending,
                                 draft,
                             })}
-                            steerRunId={steerRunId}
+                            steerTargets={steerTargets}
                         />
                     ) : (
                         <PromptInput

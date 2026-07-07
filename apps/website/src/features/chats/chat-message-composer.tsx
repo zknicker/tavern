@@ -49,6 +49,7 @@ import {
     ChatComposerContextFullness,
 } from './chat-composer-tools.tsx';
 import type { ChatContextFullness } from './chat-context-fullness.ts';
+import { resolveSteerRunId, type SteerableTurnTarget } from './chat-steering.ts';
 
 export type ChatMessageComposerVariant = 'compact' | 'detail';
 const CHAT_COMPOSER_PLACEHOLDER = "Let's go on an adventure...";
@@ -65,7 +66,7 @@ export function ChatMessageComposer({
     contextFullness = null,
     isDisabled,
     isReplyActive,
-    steerRunId = null,
+    steerTargets = [],
     variant = 'detail',
 }: {
     agentRuntimeSyncLabel?: string | null;
@@ -79,7 +80,7 @@ export function ChatMessageComposer({
     contextFullness?: ChatContextFullness | null;
     isDisabled: boolean;
     isReplyActive: boolean;
-    steerRunId?: string | null;
+    steerTargets?: readonly SteerableTurnTarget[];
     variant?: ChatMessageComposerVariant;
 }) {
     const sendMessage = useChatSend();
@@ -226,10 +227,15 @@ export function ChatMessageComposer({
         setAttachmentError(null);
 
         if (editingQueuedMessageId || isSendBlocked) {
+            const mentionAgentIds = mentions
+                .filter((mention) => mention.kind === 'agent')
+                .map((mention) => mention.id);
+
             composerQueue.enqueue({
                 agentId,
                 ...(submittedAttachments.length ? { attachments: submittedAttachments } : {}),
                 content: submission.content,
+                ...(mentionAgentIds.length > 0 ? { mentionAgentIds } : {}),
             });
             setEditingQueuedMessageId(null);
             return;
@@ -253,6 +259,10 @@ export function ChatMessageComposer({
         }
 
         if (isSendBlocked || sendMessage.isPending) {
+            const steerRunId = resolveSteerRunId(steerTargets, {
+                mentionAgentIds: entry.mentionAgentIds,
+            });
+
             if (steerRunId && isQueuedMessageSteerable(entry)) {
                 void steerQueuedEntry(entry, steerRunId);
                 return;
@@ -455,7 +465,7 @@ export function ChatMessageComposer({
                 active={useMainDropTarget && attachmentDrop.isFileDropActive}
             />
             <ChatComposerQueuePanel
-                canSteerBlockedMessages={Boolean(steerRunId)}
+                canSteerBlockedMessages={steerTargets.length > 0}
                 isBlocked={isSendBlocked}
                 onEdit={handleEditQueuedMessage}
                 onMove={composerQueue.move}

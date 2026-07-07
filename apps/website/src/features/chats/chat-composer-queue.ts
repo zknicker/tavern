@@ -9,6 +9,9 @@ export interface ChatComposerQueuedMessage {
     content: string;
     createdAt: string;
     id: string;
+    // Agent ids the draft @-mentioned, captured at queue time so a queued
+    // draft can steer a specific agent's run when several are live.
+    mentionAgentIds?: string[];
 }
 
 export function useChatComposerQueue(chatId: string) {
@@ -247,6 +250,9 @@ function parseQueuedMessage(value: unknown): ChatComposerQueuedMessage[] {
             ? (row.metadata as Record<string, unknown>)
             : undefined;
     const attachments = parseAttachments(row.attachments);
+    const mentionAgentIds = Array.isArray(row.mentionAgentIds)
+        ? row.mentionAgentIds.filter((entry): entry is string => typeof entry === 'string')
+        : [];
     return [
         {
             agentId: row.agentId,
@@ -254,6 +260,7 @@ function parseQueuedMessage(value: unknown): ChatComposerQueuedMessage[] {
             content: row.content,
             createdAt: row.createdAt,
             id: row.id,
+            ...(mentionAgentIds.length > 0 ? { mentionAgentIds } : {}),
             ...(metadata ? { metadata } : {}),
         },
     ];
