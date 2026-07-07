@@ -52,19 +52,21 @@ An agent participant is the Chat's Agent seat. Runtime stores that seat's
 current Agent session:
 
 ```http
-GET  /agent/chats/{chat_id}/agent-sessions/current?agentParticipantId=
+GET  /agent/chats/{chat_id}/agent-sessions/current?agentId=
+POST /agent/chats/{chat_id}/agent-sessions/reset
 PATCH /agent/chats/{chat_id}/agent-sessions/model
 ```
 
 `GET current` returns the current Agent session for that Chat seat or `null`.
-Rotating the seat to a fresh session is a composer command: `/new` starts fresh
-context, and `/clear` rotates and also clears the timeline. Rotating archives
-older active sessions for that seat and updates only the current chat's agent
-participant. See [Composer Commands](../../specs/composer-commands.md). `PATCH
-model` changes the current session's effective model; same execution-kind
-changes update in place, and cross-kind changes rotate to a new Agent session.
-Other chats using the same agent definition keep their own current sessions and
-models.
+`POST reset` rotates the seat to a fresh session (the app's agent-drawer New
+session action): the active session is archived, the next generation becomes
+current, and the reset lands in the timeline as a durable new-session notice.
+Rotating archives older active sessions for that seat and updates only the
+current chat's agent participant. See
+[Agent Drawer](../../specs/agent-drawer.md). `PATCH model` changes the current
+session's effective model; same execution-kind changes update in place, and
+cross-kind changes rotate to a new Agent session. Other chats using the same
+agent definition keep their own current sessions and models.
 
 ## Addressing
 
@@ -480,9 +482,8 @@ currently in the chat in one operation and emits one `chat.cleared` event.
 Soft delete sets `deleted_at`, keeps the row, and preserves the per-chat
 sequence slot so cursors remain stable. List endpoints still return
 soft-deleted rows with `deleted_at` set; clients drop them from the product
-timeline. Hard delete is not part of the Chat API. Dismissing a command card
-or failed turn in the app and the `/clear` composer command both ride this
-contract.
+timeline. Hard delete is not part of the Chat API. Dismissing a failed turn
+in the app rides this contract.
 
 ## Runtime Metadata
 

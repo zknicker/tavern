@@ -60,23 +60,24 @@ happen, and keep the durable timeline as context.
   delivered as the assistant reply.
 * **Composer context.** The composer keeps a compositional input shell with
   attachment, queue, and submit slots. Agent model defaults live in Agent
-  settings. Chat-scoped model changes use Runtime session controls such as
-  `/model`, not per-message composer overrides.
-  Users can pick or drag files into the composer. Durable chat messages store
-  attachment arrays.
+  settings. Users can pick or drag files into the composer. Durable chat
+  messages store attachment arrays.
 * **Triggers.** `@` autocompletes Agents in the current chat; `$`
-  autocompletes skills; a leading `/` opens the agent command palette and
-  submits as a command run instead of a message. See
+  autocompletes skills. A leading `/` is plain message text — agent session
+  actions live in the agent drawer instead. See
   [mentions](../../specs/mentions.md) and
-  [composer-commands](../../specs/composer-commands.md).
+  [agent-drawer](../../specs/agent-drawer.md).
 * **Addressing.** Channel messages are human chat by default. Mentioning one
   or more agent participants starts one turn per mentioned agent. Agent DMs
   address the one agent participant automatically.
-* **Dismissal and clear.** Command cards and failed-turn banners can be
-  dismissed with a hover X; `/clear` empties the visible timeline and starts
-  fresh context. Both soft-delete durable rows in Tavern Runtime — sequence
-  slots and history records are retained, and the result syncs to every
-  client. See [composer-commands](../../specs/composer-commands.md).
+* **Agent drawer.** Clicking an agent avatar opens a drawer with the seat's
+  current Agent session (model, status, timing) and a New session action that
+  starts fresh context without clearing the chat. The reset lands as a
+  durable new-session notice row. See
+  [agent-drawer](../../specs/agent-drawer.md).
+* **Dismissal.** Failed-turn banners can be dismissed with a hover X. The
+  dismissal soft-deletes the durable row in Tavern Runtime — sequence slots
+  and history records are retained, and the result syncs to every client.
 
 ## Timeline inputs
 
