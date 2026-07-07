@@ -394,7 +394,12 @@ export function createAppRouter() {
                                         },
                                         {
                                             path: '*',
-                                            element: <Navigate replace to="agent-runtime" />,
+                                            element: (
+                                                <Navigate
+                                                    replace
+                                                    to={appRoutes.settingsAgentRuntime}
+                                                />
+                                            ),
                                         },
                                     ],
                                 },
