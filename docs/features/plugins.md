@@ -14,8 +14,9 @@ and repair; agents only get Plugin tools when the Plugin and Service are usable.
 
 ## In the box
 
-* **Settings -> Agents -> Plugins.** Users enable or disable built-in
-  Tavern Plugins and edit Plugin settings and secrets.
+* **Settings -> Plugins.** Users enable or disable built-in Tavern Plugins and
+  edit Plugin settings and secrets. Per-agent grants live on each agent's
+  Skills & Plugins page.
 * **Plugin and Service health.** Runtime capability checks report whether a
   Plugin connection or Service is ready for agent-visible reads.
 * **Plugin skills and tools.** Enabled Plugin Services expose their agent-facing
@@ -50,9 +51,10 @@ Enablement is ordered: a Plugin cannot be enabled until its required connection
 configuration exists (a MerchBase API key, a connected Google account), and an
 agent grant cannot be enabled until the Plugin is globally enabled. Runtime
 rejects out-of-order enablement writes, disconnecting Google disables the
-Plugin, and the app only offers grant toggles for Plugins that are enabled and
-healthy. Existing grants survive a global disable; they resume when the Plugin
-is enabled again.
+Plugin, and the app only offers adding globally enabled Plugins to an agent.
+Existing grants survive a global disable; they stay listed on the agent's
+Skills & Plugins page with a short hint and resume when the Plugin is enabled
+again.
 
 The Plugin manifest declares inventory and ownership metadata: Plugin id, name,
 version, settings, secrets, Plugin-level health capability ids, Services, and

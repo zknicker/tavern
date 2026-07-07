@@ -21,7 +21,7 @@ can continue to feel primary-agent-first.
 * **Runtime-managed agent records.** Runtime can store multiple agents with
   independent names, enabled skill ids, model choices, and workspace folders.
   Settings -> Agents lists those agents, creates new agents, and routes each
-  agent to General, Skills, Plugins, Channels, and Memory pages.
+  agent to General, Skills & Plugins, Channels, and Memory pages.
   General edits the selected agent's display name, color, character, model,
   thinking default, environment variables, and destructive agent deletion.
   The home timezone lives on the Tavern Runtime settings page.
@@ -51,7 +51,10 @@ can continue to feel primary-agent-first.
 
 The primary app sidebar lists product areas and chats. It does not list agents.
 Agent configuration lives in Settings -> Agents. Each agent has its own sidebar
-section with General, Skills, Plugins, Channels, and Memory pages.
+section with General, Skills & Plugins, Channels, and Memory pages. The
+Skills & Plugins page lists only what the agent already has; new skills and
+Plugin grants are added through searchable pickers that offer only globally
+usable entries, so global setup problems never render as per-agent noise.
 Model fallbacks, web page summarizer model, context compression, permission
 prompts, and subagent model defaults are not settings surfaces until the local
 agent engine supports them.
