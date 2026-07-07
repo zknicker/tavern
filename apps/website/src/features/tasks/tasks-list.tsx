@@ -37,8 +37,8 @@ interface TaskStatusGroupProps {
 
 export function TaskStatusGroup({ agents, onOpen, status, tasks }: TaskStatusGroupProps) {
     return (
-        <section className="grid gap-1">
-            <div className="flex items-center gap-2 px-3 py-1.5">
+        <section>
+            <div className="flex items-center gap-2 bg-muted/40 px-4 py-1.5">
                 <Icon
                     aria-hidden="true"
                     className="size-4 shrink-0 text-muted-foreground"
@@ -51,7 +51,7 @@ export function TaskStatusGroup({ agents, onOpen, status, tasks }: TaskStatusGro
                     {tasks.length}
                 </span>
             </div>
-            <FluidList>
+            <FluidList className="px-2 py-1">
                 {tasks.map((task, index) => (
                     <FluidListItem index={index} key={task.id}>
                         <TaskRow agents={agents} onOpen={onOpen} task={task} />

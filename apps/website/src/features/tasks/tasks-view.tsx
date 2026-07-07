@@ -100,7 +100,7 @@ export function TasksView({
             <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[220px_minmax(0,1fr)]">
                 <aside className="flex min-h-0 flex-col border-sidebar-border border-r bg-[var(--sidebar)] max-md:hidden">
                     <SidebarGroup>
-                        <SidebarGroupLabel>Views</SidebarGroupLabel>
+                        <SidebarGroupLabel>Tasks</SidebarGroupLabel>
                         <SidebarGroupContent>
                             <SidebarMenu>
                                 {taskViews.map((taskView) => (
@@ -119,92 +119,88 @@ export function TasksView({
                     </SidebarGroup>
                 </aside>
 
-                <section className="flex min-h-0 flex-1 flex-col overflow-y-scroll [scrollbar-gutter:stable]">
-                    <div className="mx-auto flex w-full max-w-3xl flex-col gap-5 px-5 py-8">
-                        <nav aria-label="Task views" className="flex flex-wrap gap-1 md:hidden">
-                            {taskViews.map((taskView) => {
-                                const isActive = taskView.value === view;
+                <section className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                    <nav
+                        aria-label="Task views"
+                        className="flex flex-wrap gap-1 px-4 pt-2 md:hidden"
+                    >
+                        {taskViews.map((taskView) => {
+                            const isActive = taskView.value === view;
 
-                                return (
-                                    <button
-                                        className={cn(
-                                            'flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring',
-                                            isActive
-                                                ? 'bg-active font-medium text-foreground'
-                                                : 'text-muted-foreground hover:bg-hover hover:text-foreground'
-                                        )}
-                                        key={taskView.value}
-                                        onClick={() => onViewChange(taskView.value)}
-                                        type="button"
-                                    >
-                                        <Icon
-                                            aria-hidden="true"
-                                            className="size-4 shrink-0 opacity-80"
-                                            icon={taskView.icon}
-                                        />
-                                        {taskView.label}
-                                    </button>
-                                );
-                            })}
-                        </nav>
+                            return (
+                                <button
+                                    className={cn(
+                                        'flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-sm outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring',
+                                        isActive
+                                            ? 'bg-active font-medium text-foreground'
+                                            : 'text-muted-foreground hover:bg-hover hover:text-foreground'
+                                    )}
+                                    key={taskView.value}
+                                    onClick={() => onViewChange(taskView.value)}
+                                    type="button"
+                                >
+                                    <Icon
+                                        aria-hidden="true"
+                                        className="size-4 shrink-0 opacity-80"
+                                        icon={taskView.icon}
+                                    />
+                                    {taskView.label}
+                                </button>
+                            );
+                        })}
+                    </nav>
 
-                        <header className="flex items-start">
-                            <div>
-                                <h1 className="font-semibold text-2xl text-foreground">Tasks</h1>
-                                <p className="mt-1 text-muted-foreground text-sm">
-                                    Tracked work you and your agents share
-                                </p>
-                            </div>
-                            <Button
-                                className="ml-auto shrink-0 rounded-full"
-                                onClick={onCreate}
+                    <div className="flex shrink-0 items-center gap-2 border-border/70 border-b px-4 py-2.5">
+                        <Select
+                            onValueChange={(value) => {
+                                if (value) {
+                                    onAssigneeChange(value as TaskAssigneeFilter);
+                                }
+                            }}
+                            value={assignee}
+                        >
+                            <SelectTrigger
+                                aria-label="Filter by assignee"
+                                className="w-44"
                                 size="sm"
-                                type="button"
-                                variant="secondary"
                             >
-                                <Icon aria-hidden="true" className="size-4" icon={Plus} />
-                                New task
-                            </Button>
-                        </header>
+                                <SelectValue>{assigneeFilterLabel(assignee, agents)}</SelectValue>
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="anyone">Anyone</SelectItem>
+                                <SelectItem value="me">Me</SelectItem>
+                                <SelectItem value="unassigned">Unassigned</SelectItem>
+                                {agents.map((agent) => (
+                                    <SelectItem key={agent.id} value={`agent:${agent.id}`}>
+                                        <AgentOptionLabel agent={agent} />
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                        <SearchInput
+                            aria-label="Search tasks"
+                            className="w-full max-w-72 [&_[data-slot=input-control]]:rounded-full"
+                            name="task-search"
+                            onChange={(event) => onQueryChange(event.target.value)}
+                            placeholder="Search tasks..."
+                            size="sm"
+                            value={query}
+                        />
+                        <Button
+                            className="ml-auto shrink-0 rounded-full"
+                            onClick={onCreate}
+                            size="sm"
+                            type="button"
+                            variant="secondary"
+                        >
+                            <Icon aria-hidden="true" className="size-4" icon={Plus} />
+                            New task
+                        </Button>
+                    </div>
 
-                        <div className="flex items-center gap-2">
-                            <Select
-                                onValueChange={(value) => {
-                                    if (value) {
-                                        onAssigneeChange(value as TaskAssigneeFilter);
-                                    }
-                                }}
-                                value={assignee}
-                            >
-                                <SelectTrigger aria-label="Filter by assignee" className="w-44">
-                                    <SelectValue>
-                                        {assigneeFilterLabel(assignee, agents)}
-                                    </SelectValue>
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="anyone">Anyone</SelectItem>
-                                    <SelectItem value="me">Me</SelectItem>
-                                    <SelectItem value="unassigned">Unassigned</SelectItem>
-                                    {agents.map((agent) => (
-                                        <SelectItem key={agent.id} value={`agent:${agent.id}`}>
-                                            <AgentOptionLabel agent={agent} />
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                            <SearchInput
-                                aria-label="Search tasks"
-                                className="w-full flex-1 [&_[data-slot=input-control]]:rounded-full"
-                                name="task-search"
-                                onChange={(event) => onQueryChange(event.target.value)}
-                                placeholder="Search tasks..."
-                                size="default"
-                                value={query}
-                            />
-                        </div>
-
+                    <div className="min-h-0 flex-1 overflow-y-scroll [scrollbar-gutter:stable]">
                         {groups.length > 0 ? (
-                            <div className="grid gap-5">
+                            <div className="flex flex-col pb-8">
                                 {groups.map((group) => (
                                     <TaskStatusGroup
                                         agents={agents}
