@@ -30,6 +30,7 @@
     "@merchbase/http-client": "4.0.0",
     "@tavern/api": "workspace:*",
     "@tavern/codex-usage": "workspace:*",
+    "@tobilu/qmd": "2.5.3",
     "ai": "7.0.6",
     "bunqueue": "2.6.38",
     "chokidar": "4.0.3",

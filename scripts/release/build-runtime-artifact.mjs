@@ -74,6 +74,38 @@ async function stageRuntimePackages(stageRoot) {
         path.join(repoRoot, 'packages', 'tavern-sdk'),
         path.join(nodeModulesRoot, '@tavern', 'sdk')
     );
+    await stageMemoryRecallEngine(stageRoot);
+}
+
+// qmd powers Memory recall search. It carries native modules (better-sqlite3,
+// sqlite-vec, node-llama-cpp) that cannot compile into the single-file Runtime
+// binary, so the Runtime dynamic-imports it from share/tavern/node_modules.
+// npm (not bun) installs it so native postinstall scripts run for the build
+// host platform, matching the per-platform artifact target.
+async function stageMemoryRecallEngine(stageRoot) {
+    const shareRoot = path.join(stageRoot, 'share', 'tavern');
+    const runtimePackageJson = await readJson('apps/runtime/package.json');
+    const qmdVersion = runtimePackageJson.dependencies['@tobilu/qmd'];
+    if (!qmdVersion) {
+        fail('apps/runtime/package.json is missing the @tobilu/qmd dependency');
+    }
+
+    await fs.mkdir(shareRoot, { recursive: true });
+    execFileSync(
+        'npm',
+        [
+            'install',
+            `@tobilu/qmd@${qmdVersion}`,
+            '--prefix',
+            shareRoot,
+            '--no-package-lock',
+            '--omit=dev',
+            '--no-audit',
+            '--no-fund',
+        ],
+        { cwd: shareRoot, env: process.env, stdio: 'inherit' }
+    );
+    await fs.rm(path.join(shareRoot, 'package.json'), { force: true });
 }
 
 async function stageRuntimeAssets(stageRoot) {
