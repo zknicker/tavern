@@ -193,7 +193,13 @@ function TasksBoardPlaceholder({
                     <p className="text-muted-foreground text-sm">
                         Create a task, or ask an agent to file one from chat.
                     </p>
-                    <Button onClick={onCreate} size="sm" type="button" variant="secondary">
+                    <Button
+                        className="rounded-full"
+                        onClick={onCreate}
+                        size="sm"
+                        type="button"
+                        variant="secondary"
+                    >
                         <Icon aria-hidden="true" className="size-4" icon={Plus} />
                         New task
                     </Button>
