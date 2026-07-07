@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.4.44 - 2026-07-07
+
+- Runtime/App: refreshes the Memory recall capability during Runtime startup and
+  keeps expected capability rows visible while the Runtime is still warming up.
+- App: reconciles Runtime event catch-up after reconnect without replaying stale
+  live turn progress, while still clearing terminal turn state and invalidating
+  chat, session, and worker views.
+- Runtime release: preserves the packaged `@tavern/sdk` after staging qmd so
+  Homebrew can install the Runtime artifact successfully.
+
 ## v1.4.43 - 2026-07-07
 
 - Runtime/API/App: adds Tavern Tasks with Runtime-owned task storage, agent
