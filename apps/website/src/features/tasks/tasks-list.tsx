@@ -38,7 +38,7 @@ interface TaskStatusGroupProps {
 export function TaskStatusGroup({ agents, onOpen, status, tasks }: TaskStatusGroupProps) {
     return (
         <section>
-            <div className="flex items-center gap-2 bg-muted/40 px-4 py-1.5">
+            <div className="mx-2 flex items-center gap-2 rounded-lg bg-muted/40 px-3 py-1.5">
                 <Icon
                     aria-hidden="true"
                     className="size-4 shrink-0 text-muted-foreground"
@@ -51,7 +51,7 @@ export function TaskStatusGroup({ agents, onOpen, status, tasks }: TaskStatusGro
                     {tasks.length}
                 </span>
             </div>
-            <FluidList className="px-2 py-1">
+            <FluidList className="px-2 py-1" highlightClassName="rounded-lg">
                 {tasks.map((task, index) => (
                     <FluidListItem index={index} key={task.id}>
                         <TaskRow agents={agents} onOpen={onOpen} task={task} />
@@ -102,10 +102,10 @@ function TaskRow({
     const openTask = React.useCallback(() => onOpen(task), [onOpen, task]);
 
     return (
-        <div className="group/task-row relative flex min-h-11 w-full items-center gap-3 rounded-xl px-3 py-2 text-sm">
+        <div className="group/task-row relative flex min-h-11 w-full items-center gap-3 rounded-lg px-3 py-2 text-sm">
             <button
                 aria-label={`Open ${formatTaskNumber(task)} ${task.title}`}
-                className="no-drag absolute inset-0 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+                className="no-drag absolute inset-0 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 data-window-drag-disabled=""
                 onClick={openTask}
                 type="button"

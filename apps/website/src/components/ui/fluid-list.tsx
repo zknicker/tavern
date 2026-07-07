@@ -18,8 +18,12 @@ const FluidListContext = React.createContext<FluidListContextValue | null>(null)
 export function FluidList({
     children,
     className,
+    highlightClassName,
     ...props
-}: React.ComponentPropsWithoutRef<'div'>) {
+}: React.ComponentPropsWithoutRef<'div'> & {
+    /** Overrides the moving hover highlight, e.g. a softer corner radius. */
+    highlightClassName?: string;
+}) {
     const containerRef = React.useRef<HTMLDivElement>(null);
     const { activeIndex, handlers, itemRects, registerItem, sessionRef } =
         useProximityHover(containerRef);
@@ -44,7 +48,7 @@ export function FluidList({
                                     width: activeRect.width,
                                     height: activeRect.height,
                                 }}
-                                className="absolute rounded-xl bg-hover"
+                                className={cn('absolute rounded-xl bg-hover', highlightClassName)}
                                 initial={{
                                     opacity: 0,
                                     top: activeRect.top,

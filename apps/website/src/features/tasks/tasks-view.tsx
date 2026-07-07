@@ -159,11 +159,7 @@ export function TasksView({
                             }}
                             value={assignee}
                         >
-                            <SelectTrigger
-                                aria-label="Filter by assignee"
-                                className="w-44"
-                                size="sm"
-                            >
+                            <SelectTrigger aria-label="Filter by assignee" className="w-48">
                                 <SelectValue>{assigneeFilterLabel(assignee, agents)}</SelectValue>
                             </SelectTrigger>
                             <SelectContent>
@@ -179,17 +175,16 @@ export function TasksView({
                         </Select>
                         <SearchInput
                             aria-label="Search tasks"
-                            className="w-full max-w-72 [&_[data-slot=input-control]]:rounded-full"
+                            className="w-full max-w-96 [&_[data-slot=input-control]]:rounded-full"
                             name="task-search"
                             onChange={(event) => onQueryChange(event.target.value)}
                             placeholder="Search tasks..."
-                            size="sm"
+                            size="default"
                             value={query}
                         />
                         <Button
                             className="ml-auto shrink-0 rounded-full"
                             onClick={onCreate}
-                            size="sm"
                             type="button"
                             variant="secondary"
                         >
