@@ -112,7 +112,7 @@ export function TaskNewDialog({
             }}
             open={isOpen}
         >
-            <DialogContent>
+            <DialogContent size="lg">
                 <DialogHeader>
                     <DialogTitle>{kind === 'epic' ? 'New epic' : 'New task'}</DialogTitle>
                     <DialogDescription>
