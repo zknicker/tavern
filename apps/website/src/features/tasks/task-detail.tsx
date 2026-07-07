@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { AppShellContentHeader } from '../../components/ui/app-shell.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import { Button } from '../../components/ui/primitives/button.tsx';
+import { Separator } from '../../components/ui/separator.tsx';
 import { toastManager } from '../../components/ui/toast.tsx';
 import { useAgentList } from '../../hooks/agents/use-agent-list.ts';
 import {
@@ -22,7 +23,7 @@ import { formatRelativeTime } from '../../lib/format.ts';
 import { EmptyState } from '../shell/empty-state.tsx';
 import { TaskDispatchField } from './task-dispatch-field.tsx';
 import { TaskEditorPane } from './task-editor-pane.tsx';
-import { TaskEditorSidebar } from './task-editor-sidebar.tsx';
+import { TaskEditorSection, TaskEditorSidebar } from './task-editor-sidebar.tsx';
 import { TaskFields } from './task-fields.tsx';
 import { formatTaskNumber } from './task-presentation.ts';
 import { useTaskAgentOptions } from './use-task-agent-options.ts';
@@ -144,6 +145,7 @@ export function TaskDetail({ taskId }: { taskId: string }) {
                         showEpic={task.kind === 'task'}
                         value={task}
                     />
+                    <Separator />
                     <TaskDispatchField
                         agents={agents}
                         disabledReason={
@@ -154,10 +156,23 @@ export function TaskDetail({ taskId }: { taskId: string }) {
                         onDispatch={dispatch}
                         onDispatchAgentChange={setDispatchAgentId}
                     />
-                    <div className="space-y-1 text-muted-foreground text-xs">
-                        <p>Created {formatRelativeTime(task.createdAt)}</p>
-                        <p>Updated {formatRelativeTime(task.updatedAt)}</p>
-                    </div>
+                    <Separator />
+                    <TaskEditorSection title="Activity">
+                        <div className="grid gap-2 text-sm">
+                            <div className="flex items-center justify-between gap-4">
+                                <span className="text-muted-foreground">Created</span>
+                                <span className="text-foreground">
+                                    {formatRelativeTime(task.createdAt)}
+                                </span>
+                            </div>
+                            <div className="flex items-center justify-between gap-4">
+                                <span className="text-muted-foreground">Updated</span>
+                                <span className="text-foreground">
+                                    {formatRelativeTime(task.updatedAt)}
+                                </span>
+                            </div>
+                        </div>
+                    </TaskEditorSection>
                 </TaskEditorSidebar>
             </div>
         </div>

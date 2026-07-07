@@ -2,6 +2,7 @@ import * as React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AppShellContentHeader } from '../../components/ui/app-shell.tsx';
 import { Button } from '../../components/ui/primitives/button.tsx';
+import { Separator } from '../../components/ui/separator.tsx';
 import { TabsSubtle, TabsSubtleItem, TabsSubtleList } from '../../components/ui/tabs-subtle.tsx';
 import { toastManager } from '../../components/ui/toast.tsx';
 import { useAgentList } from '../../hooks/agents/use-agent-list.ts';
@@ -120,6 +121,7 @@ export function TaskNew() {
                             </TabsSubtleItem>
                         </TabsSubtleList>
                     </TabsSubtle>
+                    <Separator />
                     <TaskFields
                         agents={agents}
                         disabled={createMutation.isPending}

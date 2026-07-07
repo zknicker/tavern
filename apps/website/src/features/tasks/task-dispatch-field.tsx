@@ -10,6 +10,7 @@ import {
 } from '../../components/ui/select.tsx';
 import { AgentOptionLabel, type AgentSelectOption } from '../agents/agent-option-label.tsx';
 import { TaskEditorSection } from './task-editor-sidebar.tsx';
+import { TaskFieldRow } from './task-fields.tsx';
 
 interface TaskDispatchFieldProps {
     agents: AgentSelectOption[];
@@ -33,36 +34,39 @@ export function TaskDispatchField({
     return (
         <TaskEditorSection title="Dispatch">
             <div className="grid gap-2">
-                <Select
-                    disabled={isDispatching || agents.length === 0}
-                    onValueChange={(next) => {
-                        if (next) {
-                            onDispatchAgentChange(next);
-                        }
-                    }}
-                    value={dispatchAgentId ?? ''}
-                >
-                    <SelectTrigger className="w-full">
-                        <SelectValue placeholder="Choose agent">
-                            {dispatchAgent ? (
-                                <AgentOptionLabel agent={dispatchAgent} />
-                            ) : (
-                                'Choose agent'
-                            )}
-                        </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                        {agents.map((agent) => (
-                            <SelectItem key={agent.id} value={agent.id}>
-                                <AgentOptionLabel agent={agent} />
-                            </SelectItem>
-                        ))}
-                    </SelectContent>
-                </Select>
+                <TaskFieldRow label="Agent">
+                    <Select
+                        disabled={isDispatching || agents.length === 0}
+                        onValueChange={(next) => {
+                            if (next) {
+                                onDispatchAgentChange(next);
+                            }
+                        }}
+                        value={dispatchAgentId ?? ''}
+                    >
+                        <SelectTrigger className="max-w-[12rem]" size="sm">
+                            <SelectValue placeholder="Choose agent">
+                                {dispatchAgent ? (
+                                    <AgentOptionLabel agent={dispatchAgent} />
+                                ) : (
+                                    'Choose agent'
+                                )}
+                            </SelectValue>
+                        </SelectTrigger>
+                        <SelectContent>
+                            {agents.map((agent) => (
+                                <SelectItem key={agent.id} value={agent.id}>
+                                    <AgentOptionLabel agent={agent} />
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
+                </TaskFieldRow>
                 <Button
                     disabled={disabledReason !== null || dispatchAgentId === null}
                     loading={isDispatching}
                     onClick={onDispatch}
+                    size="sm"
                     title={disabledReason ?? undefined}
                     type="button"
                     variant="secondary"
