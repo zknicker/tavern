@@ -135,9 +135,9 @@ export function SkillsBrowser({
                     </SidebarGroup>
                 </SidebarContent>
             </aside>
-            <main className="flex min-h-0 min-w-0 flex-col">
+            <section className="flex min-h-0 min-w-0 flex-col">
                 <SkillPreviewPane skillEnablement={skillEnablement} subject={selectedSubject} />
-            </main>
+            </section>
         </div>
     );
 }

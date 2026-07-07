@@ -85,12 +85,14 @@ export function TavernBrowserShellFrame({
                 />
                 <div className="flex min-h-0 flex-1 overflow-hidden">
                     {showChannelRail ? <BrowserShellSidebar /> : null}
-                    <div
+                    {/* A real <main> landmark, matching the sidebar layout's
+                        AppShellMain — pages and e2e assertions rely on it. */}
+                    <main
                         className="relative flex min-h-0 flex-1 flex-col overflow-hidden"
                         data-slot="app-shell-main"
                     >
                         {children}
-                    </div>
+                    </main>
                 </div>
             </div>
             <TabOutline />

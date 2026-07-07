@@ -181,7 +181,7 @@ function CronEditorSkeleton() {
     return (
         <div aria-busy="true" className="flex min-h-0 flex-1 flex-col lg:flex-row">
             <span className="sr-only">Loading automation editor</span>
-            <main className="min-w-0 flex-1">
+            <section className="min-w-0 flex-1">
                 <div className="mx-auto flex h-full min-h-[42rem] w-full max-w-4xl flex-col gap-6 px-6 pt-3 pb-8 lg:px-10">
                     <div className="flex shrink-0 flex-col gap-2 pt-1">
                         <Skeleton className="h-9 w-80 max-w-full rounded-md" />
@@ -197,7 +197,7 @@ function CronEditorSkeleton() {
                         </div>
                     </div>
                 </div>
-            </main>
+            </section>
 
             <aside className="relative w-full border-border/70 border-t lg:w-[22rem] lg:border-t-0 lg:border-l-0 lg:before:absolute lg:before:inset-y-0 lg:before:left-0 lg:before:w-px lg:before:bg-gradient-to-t lg:before:from-border/70 lg:before:via-60% lg:before:via-border/70 lg:before:to-transparent lg:before:content-['']">
                 <div className="flex flex-col gap-4 px-4 pt-7 pb-4">

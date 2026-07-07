@@ -395,7 +395,7 @@ export function SemanticMemory() {
                     pageSelected={Boolean(pageDetail)}
                 />
             </div>
-            <main className="col-start-2 row-start-2 flex min-h-0 flex-col overflow-hidden">
+            <section className="col-start-2 row-start-2 flex min-h-0 flex-col overflow-hidden">
                 <div className="flex h-full min-h-0 flex-1 flex-col">
                     {moveError ? (
                         <div className="border-border/70 border-b bg-destructive/5 px-4 py-2 text-destructive-foreground text-sm">
@@ -424,7 +424,7 @@ export function SemanticMemory() {
                         }
                     />
                 </div>
-            </main>
+            </section>
             <SemanticMemoryPathDialog
                 errorMessage={pathDialogError}
                 isPending={createPage.isPending || createFolder.isPending || movePath.isPending}

@@ -29,7 +29,7 @@ export function TaskEditorPane({
 }: TaskEditorPaneProps) {
     return (
         <div className="flex min-h-0 min-w-0 flex-1">
-            <main className="mx-auto flex min-h-0 w-full flex-1 flex-col gap-6 px-4 pt-6 pb-8 lg:max-w-4xl lg:px-10">
+            <section className="mx-auto flex min-h-0 w-full flex-1 flex-col gap-6 px-4 pt-6 pb-8 lg:max-w-4xl lg:px-10">
                 <Input
                     aria-label="Task title"
                     autoFocus={autoFocusTitle}
@@ -53,7 +53,7 @@ export function TaskEditorPane({
                         value={description}
                     />
                 </Field>
-            </main>
+            </section>
         </div>
     );
 }

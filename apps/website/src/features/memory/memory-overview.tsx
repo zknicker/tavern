@@ -24,7 +24,7 @@ export function MemoryOverview({ status }: { status: SemanticMemoryHubStatus | n
 
     return (
         <div className="min-h-0 flex-1 overflow-y-auto [scrollbar-gutter:stable]">
-            <main className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-8 pt-12 pb-24 text-left">
+            <section className="mx-auto flex w-full max-w-3xl flex-col gap-8 px-8 pt-12 pb-24 text-left">
                 <header className="space-y-2">
                     <h1 className="font-semibold text-2xl tracking-tight">Memory</h1>
                     <p className="max-w-2xl text-muted-foreground text-sm leading-6">
@@ -152,7 +152,7 @@ export function MemoryOverview({ status }: { status: SemanticMemoryHubStatus | n
                         </Button>
                     </SettingsRow>
                 </MemorySection>
-            </main>
+            </section>
         </div>
     );
 }

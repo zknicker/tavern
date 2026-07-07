@@ -194,7 +194,7 @@ export function WorkspaceBrowserContent({
                     </SidebarGroup>
                 </SidebarContent>
             </aside>
-            <main className="flex min-h-0 min-w-0 flex-col">
+            <section className="flex min-h-0 min-w-0 flex-col">
                 <div className="min-h-0 flex-1 overflow-hidden">
                     {selectedTarget ? (
                         <WorkspaceArtifactContent agentId={agentId} target={selectedTarget} />
@@ -208,7 +208,7 @@ export function WorkspaceBrowserContent({
                         />
                     )}
                 </div>
-            </main>
+            </section>
         </div>
     );
 }

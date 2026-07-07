@@ -77,7 +77,7 @@ export function SemanticMemoryBrowserContent({
                     />
                 </div>
             </aside>
-            <main className="flex min-h-0 min-w-0 flex-col">
+            <section className="flex min-h-0 min-w-0 flex-col">
                 <SemanticMemoryBrowserPreview
                     emptyDetail={
                         initialDirectory
@@ -101,7 +101,7 @@ export function SemanticMemoryBrowserContent({
                     pageBody={pageQuery.data?.body ?? null}
                     pagePath={selectedPage?.path ?? null}
                 />
-            </main>
+            </section>
         </div>
     );
 }
