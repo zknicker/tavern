@@ -65,6 +65,11 @@ export function createChatTurnEventHandlers(utils: ChatTurnEventUtils) {
         utils.agent.activity.invalidate().catch(() => undefined);
     };
 
+    const isTerminalRun = (runId: string) =>
+        terminalTurnIds.has(`completed:${runId}`) ||
+        terminalTurnIds.has(`cancelled:${runId}`) ||
+        terminalTurnIds.has(`failed:${runId}`);
+
     return {
         onTurnCompleted: (_turn: ChatTurn) => {
             if (!rememberTerminalTurn(terminalTurnIds, `completed:${_turn.runId}`)) {
@@ -121,6 +126,9 @@ export function createChatTurnEventHandlers(utils: ChatTurnEventUtils) {
             timestamp?: string;
             turn: ChatTurn;
         }) => {
+            if (isTerminalRun(input.turn.runId)) {
+                return;
+            }
             const timestamp = input.timestamp ?? new Date().toISOString();
 
             markChatTiming('client.turnProgressEvent', {
@@ -154,6 +162,11 @@ export function createChatTurnEventHandlers(utils: ChatTurnEventUtils) {
             });
         },
         onTurnReplyUpdated: (update: ChatReplyUpdate) => {
+            // A reply update landing after the turn's terminal event would
+            // resurrect active state with no terminal event left to clear it.
+            if (isTerminalRun(update.turn.runId)) {
+                return;
+            }
             markChatTiming('client.turnReplyUpdatedEvent', {
                 chatId: update.turn.chatId,
                 runId: update.turn.runId,
