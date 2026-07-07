@@ -42,7 +42,7 @@ Managed Tavern context does not use Lossless Claw. Runtime strips stale
   triggering message sequence after the turn, never to the assistant response
   sequence, so messages created while the Agent is working are still eligible
   next time.
-* Session resets (`/new`, `/clear`, the app reset action, automatic rotation)
+* Session resets (the agent drawer's new-session action, automatic rotation)
   snapshot the cursor at the chat's newest message, so fresh context starts at
   the reset point instead of replaying pre-reset history. Brand-new seats keep
   cursor 0 for join catch-up.
