@@ -210,7 +210,7 @@ test('saveCatalogAgentSettings persists skill enablement through runtime agent c
     );
 
     assert.deepEqual(savedEnabledSkillIds, ['browser']);
-    assert.equal(listedSkillsAgentId, 'blippy');
+    assert.equal(listedSkillsAgentId, null);
     assert.deepEqual(agent.enabledSkillIds, ['browser']);
 });
 

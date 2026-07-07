@@ -144,8 +144,9 @@ test('getCurrentAgentSession reads the current chat-scoped agent session', async
     const fetchMock = mock(async (input: RequestInfo | URL) => {
         const url = new URL(String(input));
         assert.equal(url.pathname, agentRuntimeRoutes.chatAgentSessionCurrent('cht_general'));
-        assert.equal(url.searchParams.get('agentParticipantId'), 'agt_primary');
+        assert.equal(url.searchParams.get('agentId'), 'agt_primary');
         return Response.json({
+            pastSessions: [],
             session: {
                 agentId: 'agt_primary',
                 agentParticipantId: 'agt_primary',
@@ -160,13 +161,14 @@ test('getCurrentAgentSession reads the current chat-scoped agent session', async
                 status: 'active',
                 updatedAt: '2026-06-29T12:00:00.000Z',
             },
+            stats: { contextTokens: null, turnCount: 0 },
         });
     });
     globalThis.fetch = fetchMock as typeof fetch;
 
     const client = createAgentRuntimeClient('http://runtime.test');
     const result = await client.getCurrentAgentSession({
-        agentParticipantId: 'agt_primary',
+        agentId: 'agt_primary',
         chatId: 'cht_general',
     });
 
