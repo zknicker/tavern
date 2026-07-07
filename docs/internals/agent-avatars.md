@@ -33,6 +33,10 @@ frame and can be clipped or warped with the head art.
 - `thirdEye: { dx, dy }` adds a live center eye at an eye-canvas offset from
   `(240, 240)`. Its pose is the L/R average, so it blinks and follows gaze with
   the pair (the alien's forehead eye).
+- `eyeScale: { w, h }` restyles a head's eyes by scaling every emotion pose's
+  width/height (radii saturate, so a squarer aspect reads rounder). The alien
+  uses `{ w: 1.05, h: 0.62 }` — wide round eyes that leave its round white
+  sockets showing all around, instead of the standard tall capsule.
 - `AgentFace` still accepts `ink` for currentColor-backed marks, but current
   warp-layer characters mostly use authored fill colors.
 

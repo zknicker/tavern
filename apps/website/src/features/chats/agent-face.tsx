@@ -60,6 +60,11 @@ export interface HeadSpec {
     back: ReactNode[];
     clip?: number;
     eyeColor: string;
+    /** Per-head eye restyle: width/height scale on every resolved pose. Corner
+        radii saturate in buildPathPts, so a squarer aspect reads rounder.
+        Alien uses this — its round white sockets want wide round eyes, not the
+        standard tall capsule. */
+    eyeScale?: { w: number; h: number };
     front: ReactNode[];
     hlColor?: string;
     slot?: Slot;
@@ -298,6 +303,24 @@ function ptsToD(pts: number[]): string {
 function buildPath(p: number[], bx: number): string {
     return ptsToD(buildPathPts(p, bx));
 }
+// Per-head eye restyle (HeadSpec.eyeScale) applied to a resolved pose. Size,
+// radii, tapers, and bumps scale together so every emotion keeps its read;
+// offsets (gaze, rotation, crescent) stay untouched so motion is unchanged.
+function applyEyeScale(p: number[], es: { w: number; h: number }): number[] {
+    const r = Math.max(es.w, es.h);
+    p[2] *= es.w;
+    p[3] *= es.h;
+    p[4] *= r;
+    p[5] *= r;
+    p[6] *= r;
+    p[7] *= r;
+    p[8] *= es.h;
+    p[9] *= es.h;
+    p[10] *= es.h;
+    p[11] *= es.h;
+    return p;
+}
+
 // slot transform applied numerically (so warped heads can emit eyes in canvas space)
 function applySlot(pts: number[], sl: Slot): number[] {
     const tx = 240 * (1 - sl.s) + sl.dx,
@@ -826,13 +849,16 @@ const HEADS = {
     }),
 
     // ── Alien: style v3 — green head, engine eyes clipped to the three white
-    //     sockets, plus a live third eye in the forehead socket
+    //     sockets, plus a live third eye in the forehead socket. The sockets
+    //     are round, so the eyes trade the standard tall capsule for a wide
+    //     round pose that leaves socket white showing all around.
     alien: (_dark: boolean) => ({
         back: [],
         front: [],
         warp: ALIEN_WARP,
         clip: 3, // white sockets layer
         eyeColor: '#020403',
+        eyeScale: { w: 1.05, h: 0.62 },
         hlColor: '#fbfbfb',
         thirdEye: { dx: -2.9, dy: -120.9 },
     }),
@@ -911,6 +937,7 @@ export function AgentFace({
         warp?: WarpSet | null;
         clip?: number;
         third?: { dx: number; dy: number } | null;
+        eyes?: { w: number; h: number } | null;
     }>({ emotion, intensity, speed, blinking, drama });
     pr.current = { emotion, intensity, speed, blinking, drama };
 
@@ -920,8 +947,11 @@ export function AgentFace({
     pr.current.warp = H.warp || null;
     pr.current.clip = H.clip != null ? H.clip : -1;
     pr.current.third = H.thirdEye || null;
+    pr.current.eyes = H.eyeScale || null;
     const thirdDx = H.thirdEye?.dx,
         thirdDy = H.thirdEye?.dy;
+    const eyeScaleW = H.eyeScale?.w,
+        eyeScaleH = H.eyeScale?.h;
 
     useEffect(() => {
         if (!animate) {
@@ -1231,6 +1261,11 @@ export function AgentFace({
 
             const pL = resolve('L'),
                 pR = resolve('R');
+            const es = pr.current.eyes;
+            if (es) {
+                applyEyeScale(pL, es);
+                applyEyeScale(pR, es);
+            }
             const third = pr.current.third;
             let pC: number[] | null = null,
                 cx3 = 240;
@@ -1351,6 +1386,11 @@ export function AgentFace({
         };
         const pL = pose('L'),
             pR = pose('R');
+        if (eyeScaleW != null && eyeScaleH != null) {
+            const es = { w: eyeScaleW, h: eyeScaleH };
+            applyEyeScale(pL, es);
+            applyEyeScale(pR, es);
+        }
         let pC: number[] | null = null,
             cx3 = 240;
         if (thirdDx != null && thirdDy != null) {
@@ -1409,7 +1449,7 @@ export function AgentFace({
         if (dropRef.current) {
             dropRef.current.setAttribute('opacity', '0');
         }
-    }, [animate, emotion, intensity, thirdDx, thirdDy]);
+    }, [animate, emotion, eyeScaleH, eyeScaleW, intensity, thirdDx, thirdDy]);
 
     const eyeColor = head === 'none' ? (dark ? LIGHTEYE : color) : H.eyeColor;
     const slotTf = `translate(${sl.dx} ${sl.dy}) translate(${CY} ${CY}) scale(${sl.s}) translate(${-CY} ${-CY})`;
