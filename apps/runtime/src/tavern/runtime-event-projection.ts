@@ -8,7 +8,7 @@ import type {
 import type { Database } from '../db/sqlite';
 import { log } from '../log';
 import { widgetProgressFromActivity } from '../widgets/render';
-import { listEvents } from './chat-api';
+import { getResponse, listEvents } from './chat-api';
 import { createRunId } from './chat-api/ids';
 
 export interface PersistedRuntimeEvent {
@@ -22,12 +22,12 @@ export function listProjectedTavernRuntimeEvents(
 ): PersistedRuntimeEvent[] {
     const afterCursor = options.afterCursor ?? 0;
     const limit = Math.min(Math.max(options.limit ?? 500, 1), 500);
-    return listEvents({ afterCursor: String(afterCursor), limit }, db).events.flatMap(
-        chatEventToRuntimeEvents
+    return listEvents({ afterCursor: String(afterCursor), limit }, db).events.flatMap((event) =>
+        chatEventToRuntimeEvents(event, db)
     );
 }
 
-function chatEventToRuntimeEvents(event: TavernChatEvent): PersistedRuntimeEvent[] {
+function chatEventToRuntimeEvents(event: TavernChatEvent, db?: Database): PersistedRuntimeEvent[] {
     // Composer command runs are settled evidence, not live turns; projecting
     // them would surface a phantom in-flight turn in the app.
     if (isCommandRunEvent(event)) {
@@ -96,7 +96,7 @@ function chatEventToRuntimeEvents(event: TavernChatEvent): PersistedRuntimeEvent
         case 'activity.updated':
         case 'activity.completed':
         case 'activity.failed':
-            return activityEventToRuntimeEvents(event);
+            return activityEventToRuntimeEvents(event, db);
         case 'chat.read':
             return [
                 {
@@ -225,9 +225,21 @@ function activityEventToRuntimeEvents(
                 | 'activity.failed'
                 | 'activity.updated';
         }
-    >
+    >,
+    db?: Database
 ): PersistedRuntimeEvent[] {
-    const turn = activityToTurn(event.activity);
+    const turn = activityToTurn(event.activity, db);
+
+    // No turn identity and no owning response: projecting would invent an
+    // actor, so the activity stays execution evidence without a live step.
+    if (!turn) {
+        log.warn('Activity event has no resolvable turn identity', {
+            activityId: event.activity.id,
+            responseId: event.activity.response_id,
+        });
+        return [];
+    }
+
     const detail = activityStepDetail(event.activity);
     const widget = widgetProgressFromActivity(event.activity) ?? undefined;
     const runtimeEvent: AgentRuntimeEvent = {
@@ -286,15 +298,39 @@ function responseToTurn(
     };
 }
 
+// Activity rows may lack turn identity metadata; the owning response is the
+// source of truth then. A hard-coded fallback actor would misattribute
+// progress in a multi-agent chat, so a fully unresolvable activity projects
+// no turn at all.
 function activityToTurn(
-    activity: TavernResponseActivity
-): Extract<AgentRuntimeEvent, { type: 'turn.started' }>['turn'] {
+    activity: TavernResponseActivity,
+    db?: Database
+): Extract<AgentRuntimeEvent, { type: 'turn.started' }>['turn'] | null {
+    const metadataAgentId = metadataRuntimeString(activity.metadata, 'agentId');
+
+    if (metadataAgentId) {
+        return {
+            agentId: metadataAgentId,
+            chatId: activity.chat_id,
+            runId: metadataRuntimeString(activity.metadata, 'runId') ?? activity.response_id,
+            sessionKey: runtimeTurnReference(activity.metadata) ?? activity.response_id,
+            startedAt: metadataRuntimeString(activity.metadata, 'startedAt') ?? activity.started_at,
+        };
+    }
+
+    const response = getResponse(activity.response_id, db);
+
+    if (!response) {
+        return null;
+    }
+
+    const base = responseToTurn(response);
+
     return {
-        agentId: metadataRuntimeString(activity.metadata, 'agentId') ?? 'main',
-        chatId: activity.chat_id,
-        runId: metadataRuntimeString(activity.metadata, 'runId') ?? activity.response_id,
-        sessionKey: runtimeTurnReference(activity.metadata) ?? activity.response_id,
-        startedAt: metadataRuntimeString(activity.metadata, 'startedAt') ?? activity.started_at,
+        ...base,
+        runId: metadataRuntimeString(activity.metadata, 'runId') ?? base.runId,
+        sessionKey: runtimeTurnReference(activity.metadata) ?? base.sessionKey,
+        startedAt: metadataRuntimeString(activity.metadata, 'startedAt') ?? base.startedAt,
     };
 }
 

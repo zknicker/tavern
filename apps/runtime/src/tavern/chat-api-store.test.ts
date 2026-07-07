@@ -67,6 +67,32 @@ describe('Tavern Runtime Chat API store', () => {
         expect(projected).not.toContain('turn.progress');
     });
 
+    it('attributes metadata-less activity progress to the owning response, never a default agent', () => {
+        createChat({ id: 'cht_1', title: 'Test' });
+        upsertResponse('cht_1', {
+            id: 'rsp_live_1',
+            metadata: { runtime: { agentId: 'agt_tiny', runId: 'run_live_1' } },
+            participant_id: 'agt_tiny',
+            status: 'running',
+        });
+        upsertResponseActivity('cht_1', 'rsp_live_1', {
+            detail: 'ls -la',
+            id: 'act_rsp_live_1_tool',
+            kind: 'tool_call',
+            metadata: {},
+            status: 'running',
+            title: 'terminal',
+        });
+
+        const progress = listProjectedTavernRuntimeEvents()
+            .map((entry) => entry.event)
+            .filter((event) => event.type === 'turn.progress');
+
+        expect(progress).toHaveLength(1);
+        expect(progress[0]?.type === 'turn.progress' && progress[0].turn.agentId).toBe('agt_tiny');
+        expect(progress[0]?.type === 'turn.progress' && progress[0].turn.runId).toBe('run_live_1');
+    });
+
     it('seeds development chat demos as durable Runtime chats', () => {
         const first = seedDevelopmentChatDemos({ db: getDb(), enabled: true });
         const second = seedDevelopmentChatDemos({ db: getDb(), enabled: true });
@@ -454,9 +480,9 @@ describe('Tavern Runtime Chat API store', () => {
     it('projects active chat state from durable queued and running responses', () => {
         createChat({ id: 'cht_1', title: 'Test' });
 
-        expect(getChat('cht_1')).toMatchObject({ has_active_turn: false });
+        expect(getChat('cht_1')).toMatchObject({ active_turn_participant_ids: [] });
         expect(listChats().chats).toEqual([
-            expect.objectContaining({ has_active_turn: false, id: 'cht_1' }),
+            expect.objectContaining({ active_turn_participant_ids: [], id: 'cht_1' }),
         ]);
 
         upsertResponse('cht_1', {
@@ -465,10 +491,25 @@ describe('Tavern Runtime Chat API store', () => {
             status: 'queued',
         });
 
-        expect(getChat('cht_1')).toMatchObject({ has_active_turn: true });
+        expect(getChat('cht_1')).toMatchObject({ active_turn_participant_ids: ['agt_1'] });
         expect(listChats().chats).toEqual([
-            expect.objectContaining({ has_active_turn: true, id: 'cht_1' }),
+            expect.objectContaining({ active_turn_participant_ids: ['agt_1'], id: 'cht_1' }),
         ]);
+
+        upsertResponse('cht_1', {
+            id: 'rsp_2',
+            participant_id: 'agt_1',
+            status: 'running',
+        });
+        upsertResponse('cht_1', {
+            id: 'rsp_3',
+            participant_id: 'agt_2',
+            status: 'running',
+        });
+
+        expect(getChat('cht_1')).toMatchObject({
+            active_turn_participant_ids: ['agt_1', 'agt_2'],
+        });
 
         upsertResponse('cht_1', {
             completed_at: '2026-07-02T19:12:37.495Z',
@@ -476,8 +517,20 @@ describe('Tavern Runtime Chat API store', () => {
             participant_id: 'agt_1',
             status: 'completed',
         });
+        upsertResponse('cht_1', {
+            completed_at: '2026-07-02T19:12:37.495Z',
+            id: 'rsp_2',
+            participant_id: 'agt_1',
+            status: 'completed',
+        });
+        upsertResponse('cht_1', {
+            completed_at: '2026-07-02T19:12:37.495Z',
+            id: 'rsp_3',
+            participant_id: 'agt_2',
+            status: 'completed',
+        });
 
-        expect(getChat('cht_1')).toMatchObject({ has_active_turn: false });
+        expect(getChat('cht_1')).toMatchObject({ active_turn_participant_ids: [] });
     });
 
     it('projects last activity from durable undeleted messages', () => {
@@ -534,9 +587,9 @@ describe('Tavern Runtime Chat API store', () => {
         });
         deleteResponse('rsp_deleted');
 
-        expect(getChat('cht_1')).toMatchObject({ has_active_turn: false });
+        expect(getChat('cht_1')).toMatchObject({ active_turn_participant_ids: [] });
         expect(listChats().chats).toEqual([
-            expect.objectContaining({ has_active_turn: false, id: 'cht_1' }),
+            expect.objectContaining({ active_turn_participant_ids: [], id: 'cht_1' }),
         ]);
     });
 
