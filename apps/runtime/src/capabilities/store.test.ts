@@ -47,6 +47,7 @@ describe('Runtime capabilities store', () => {
             'dashboardServer',
             'devToolkit',
             'gateway',
+            'memoryRecall',
             'memoryWorkers',
             'modelExecution',
             'plugin.google.calendar',

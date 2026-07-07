@@ -35,6 +35,7 @@ const capabilityCategories: Partial<Record<CapabilityId, CapabilityCategoryId>> 
     'plugin.merchbase': 'plugins',
     skills: 'extensions',
     semanticMemory: 'knowledge',
+    memoryRecall: 'knowledge',
 };
 
 const capabilityDisplayOrder: CapabilityId[] = [
@@ -43,6 +44,7 @@ const capabilityDisplayOrder: CapabilityId[] = [
     'dashboardServer',
     'gateway',
     'semanticMemory',
+    'memoryRecall',
     'modelExecution',
     'skills',
     'plugin.merchbase',

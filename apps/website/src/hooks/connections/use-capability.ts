@@ -28,6 +28,7 @@ const capabilityLabels = {
     dashboardServer: 'Agent engine',
     devToolkit: 'Dev toolkit',
     gateway: 'Agent connection',
+    memoryRecall: 'Memory recall',
     memoryWorkers: 'Memory updates',
     modelExecution: 'Model execution',
     'plugin.google.calendar': 'Google Calendar',

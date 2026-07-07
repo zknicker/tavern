@@ -62,6 +62,24 @@ function getDetail(capability: RuntimeCapability) {
     return capability.reason ?? capability.technicalMessage ?? null;
 }
 
+// Provisioning-style capabilities report a 0..1 progress value in metadata
+// (e.g. Memory recall model download). Anything malformed renders as no bar.
+function getProgress(capability: RuntimeCapability): number | null {
+    if (capability.state === 'healthy' || !capability.metadataJson) {
+        return null;
+    }
+    try {
+        const metadata: unknown = JSON.parse(capability.metadataJson);
+        if (typeof metadata !== 'object' || metadata === null) {
+            return null;
+        }
+        const progress = (metadata as Record<string, unknown>).progress;
+        return typeof progress === 'number' && progress >= 0 && progress <= 1 ? progress : null;
+    } catch {
+        return null;
+    }
+}
+
 function getStateDotClass(state: CapabilityState): string {
     switch (state) {
         case 'healthy':
@@ -171,6 +189,7 @@ function CapabilityRow({
 }) {
     const capability = view.item;
     const isClickable = Boolean(onCapabilityClick);
+    const progress = getProgress(capability);
 
     return (
         <div className="group flex min-w-0 items-center justify-between gap-3">
@@ -240,8 +259,34 @@ function CapabilityRow({
                 </Tooltip>
             </dt>
             <dd className="flex h-5 shrink-0 items-center gap-1 font-mono text-meta text-muted-foreground tabular-nums">
-                <RelativeTime value={capability.checkedAt} />
+                {progress === null ? (
+                    <RelativeTime value={capability.checkedAt} />
+                ) : (
+                    <CapabilityProgress progress={progress} />
+                )}
             </dd>
         </div>
+    );
+}
+
+function CapabilityProgress({ progress }: { progress: number }) {
+    const percent = Math.round(progress * 100);
+    return (
+        <span className="flex items-center gap-1.5">
+            <span
+                aria-label="Provisioning progress"
+                aria-valuemax={100}
+                aria-valuemin={0}
+                aria-valuenow={percent}
+                className="h-1 w-16 overflow-hidden rounded-full bg-background"
+                role="progressbar"
+            >
+                <span
+                    className="block h-full rounded-full bg-warning transition-[width] duration-500"
+                    style={{ width: `${percent}%` }}
+                />
+            </span>
+            <span>{percent}%</span>
+        </span>
     );
 }

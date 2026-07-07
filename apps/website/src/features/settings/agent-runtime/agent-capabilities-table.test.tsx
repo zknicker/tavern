@@ -88,3 +88,55 @@ test('AgentCapabilitiesSummary prefers runtime display names and falls back to i
     assert.match(markup, /Agent engine/);
     assert.match(markup, /gateway/);
 });
+
+test('AgentCapabilitiesSummary renders a provisioning progress bar from capability metadata', () => {
+    const markup = renderToStaticMarkup(
+        <AgentCapabilitiesSummary
+            capabilities={[
+                {
+                    capability: 'memoryRecall',
+                    checkedAt: '2026-05-28T12:00:00.000Z',
+                    displayName: 'Memory recall',
+                    errorCode: null,
+                    lastHealthyAt: null,
+                    metadataJson: '{"phase":"downloading-model","progress":0.42}',
+                    method: 'runtime.capabilities',
+                    reason: 'Downloading the recall model (42%).',
+                    runtimeId: 'runtime-1',
+                    state: 'degraded',
+                    technicalMessage: null,
+                    updatedAt: '2026-05-28T12:00:00.000Z',
+                },
+            ]}
+        />
+    );
+
+    assert.match(markup, /Memory recall/);
+    assert.match(markup, /progressbar/);
+    assert.match(markup, /42%/);
+});
+
+test('AgentCapabilitiesSummary ignores progress metadata on healthy capabilities', () => {
+    const markup = renderToStaticMarkup(
+        <AgentCapabilitiesSummary
+            capabilities={[
+                {
+                    capability: 'memoryRecall',
+                    checkedAt: '2026-05-28T12:00:00.000Z',
+                    displayName: 'Memory recall',
+                    errorCode: null,
+                    lastHealthyAt: null,
+                    metadataJson: '{"phase":"ready"}',
+                    method: 'runtime.capabilities',
+                    reason: null,
+                    runtimeId: 'runtime-1',
+                    state: 'healthy',
+                    technicalMessage: null,
+                    updatedAt: '2026-05-28T12:00:00.000Z',
+                },
+            ]}
+        />
+    );
+
+    assert.doesNotMatch(markup, /progressbar/);
+});

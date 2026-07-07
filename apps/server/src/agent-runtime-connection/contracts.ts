@@ -4,6 +4,7 @@ import { connectionStateSchema } from '../contracts/shared.ts';
 export const agentRuntimeCapabilitySchema = z.enum([
     'codexOAuth',
     'semanticMemory',
+    'memoryRecall',
     'memoryWorkers',
     'dashboardServer',
     'apiServer',

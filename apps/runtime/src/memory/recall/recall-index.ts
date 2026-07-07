@@ -1,3 +1,5 @@
+import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import type { QMDStore } from '@tobilu/qmd';
 import { DATA_DIR } from '../../config.ts';
@@ -24,8 +26,28 @@ interface ActiveRecallIndex {
     store: QMDStore;
 }
 
+export type RecallProvisioningPhase =
+    | 'degraded'
+    | 'downloading-model'
+    | 'embedding'
+    | 'idle'
+    | 'ready'
+    | 'updating';
+
+export interface RecallProvisioningStatus {
+    phase: RecallProvisioningPhase;
+    progress: number | null;
+    reason: string | null;
+}
+
 const recallCollection = 'memory';
 const refreshDebounceMs = 2000;
+// qmd's default embedding model (embeddinggemma-300M-Q8_0) download size, used
+// only to shape download progress; the poll clamps below 1 so an off estimate
+// never reports a finished download early.
+const embeddingModelTargetBytes = 320 * 1024 * 1024;
+const downloadPollMs = 1000;
+const capabilityPushThrottleMs = 1000;
 
 let active: ActiveRecallIndex | null = null;
 let semanticReady = false;
@@ -33,6 +55,9 @@ let embedFailureLogged = false;
 let refreshTimer: ReturnType<typeof setTimeout> | null = null;
 let unsubscribe: (() => void) | null = null;
 let overrides: RecallIndexOptions = {};
+let provisioning: RecallProvisioningStatus = { phase: 'idle', progress: null, reason: null };
+let downloadPoller: ReturnType<typeof setInterval> | null = null;
+let lastCapabilityPushAt = 0;
 
 export async function ensureRecallStore(): Promise<QMDStore> {
     const root = await resolveRecallRoot();
@@ -58,6 +83,10 @@ export function isRecallSemanticReady() {
     return semanticReady;
 }
 
+export function getRecallProvisioningStatus(): RecallProvisioningStatus {
+    return provisioning;
+}
+
 /** Re-scan pages into the lex index without touching embedding models. */
 export async function updateRecallIndex() {
     const store = await ensureRecallStore();
@@ -70,20 +99,36 @@ export async function updateRecallIndex() {
  * failing the caller; the next refresh retries.
  */
 export async function refreshRecallIndex() {
+    setProvisioning({ phase: 'updating', progress: null, reason: null });
     const store = await ensureRecallStore();
     await store.update();
     try {
-        await store.embed();
+        startModelDownloadTracking();
+        await store.embed({
+            onProgress: (info) => {
+                stopModelDownloadTracking();
+                setProvisioning({
+                    phase: 'embedding',
+                    progress: info.totalChunks > 0 ? info.chunksEmbedded / info.totalChunks : null,
+                    reason: null,
+                });
+            },
+        });
         semanticReady = true;
         embedFailureLogged = false;
+        setProvisioning({ phase: 'ready', progress: null, reason: null });
     } catch (error) {
         semanticReady = false;
+        const reason = error instanceof Error ? error.message : String(error);
+        setProvisioning({ phase: 'degraded', progress: null, reason });
         if (!embedFailureLogged) {
             embedFailureLogged = true;
             log.warn('Memory recall embeddings unavailable; recall is degraded until refresh', {
                 err: error,
             });
         }
+    } finally {
+        stopModelDownloadTracking();
     }
 }
 
@@ -126,6 +171,7 @@ export async function stopRecallIndexMaintenance() {
         clearTimeout(refreshTimer);
         refreshTimer = null;
     }
+    stopModelDownloadTracking();
     await closeRecallIndex();
 }
 
@@ -133,6 +179,8 @@ export async function resetRecallIndexForTesting(options: RecallIndexOptions = {
     await stopRecallIndexMaintenance();
     overrides = options;
     embedFailureLogged = false;
+    provisioning = { phase: 'idle', progress: null, reason: null };
+    lastCapabilityPushAt = 0;
 }
 
 function scheduleRecallRefresh() {
@@ -153,4 +201,77 @@ async function resolveRecallRoot() {
     }
     const config = await resolveSemanticMemoryConfig();
     return path.resolve(config.memoryPath);
+}
+
+function setProvisioning(next: RecallProvisioningStatus) {
+    provisioning = next;
+    pushRecallCapability();
+}
+
+// The embedding model downloads inside the first embed call with no progress
+// hook, so shape progress from the model cache directory size while waiting
+// for the first embed progress event.
+function startModelDownloadTracking() {
+    if (downloadPoller || embeddingModelCached()) {
+        return;
+    }
+    setProvisioning({ phase: 'downloading-model', progress: 0, reason: null });
+    downloadPoller = setInterval(() => {
+        const progress = Math.min(modelCacheBytes() / embeddingModelTargetBytes, 0.99);
+        setProvisioning({ phase: 'downloading-model', progress, reason: null });
+    }, downloadPollMs);
+}
+
+function stopModelDownloadTracking() {
+    if (!downloadPoller) {
+        return;
+    }
+    clearInterval(downloadPoller);
+    downloadPoller = null;
+}
+
+function qmdModelCacheDir() {
+    return path.join(os.homedir(), '.cache', 'qmd', 'models');
+}
+
+function embeddingModelCached() {
+    try {
+        return fs
+            .readdirSync(qmdModelCacheDir())
+            .some((name) => name.includes('embeddinggemma') && name.endsWith('.gguf'));
+    } catch {
+        return false;
+    }
+}
+
+function modelCacheBytes() {
+    try {
+        const dir = qmdModelCacheDir();
+        return fs
+            .readdirSync(dir)
+            .reduce((total, name) => total + fs.statSync(path.join(dir, name)).size, 0);
+    } catch {
+        return 0;
+    }
+}
+
+// Lazy import: the capabilities store depends on capability definitions, which
+// read this module's provisioning status — a static import here would close
+// that cycle. Push failures only delay the next capability poll.
+function pushRecallCapability() {
+    const now = Date.now();
+    if (now - lastCapabilityPushAt < capabilityPushThrottleMs) {
+        return;
+    }
+    lastCapabilityPushAt = now;
+    void import('../../capabilities/store.ts')
+        .then((capabilities) =>
+            capabilities.refreshRuntimeCapabilities({
+                ids: ['memoryRecall'],
+                publishUpdated: true,
+            })
+        )
+        .catch(() => {
+            // Capability refresh is best-effort; the scheduled poll catches up.
+        });
 }

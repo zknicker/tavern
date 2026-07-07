@@ -3,11 +3,13 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { homedir, tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { refreshRuntimeCapabilities } from '../../capabilities/store.ts';
 import { closeDb, initTestDb } from '../../db/connection.ts';
 import { ensureRuntimeSchema } from '../../db/schema.ts';
 import { loadQmd } from './qmd-loader.ts';
 import { recallMemoryContextBlock, recallMemoryPages, searchMemoryPages } from './recall.ts';
 import {
+    getRecallProvisioningStatus,
     isRecallSemanticReady,
     refreshRecallIndex,
     resetRecallIndexForTesting,
@@ -84,6 +86,36 @@ describe('memory recall', () => {
         expect(await recallMemoryPages('when is my hamilton show?')).toEqual([]);
         expect(await recallMemoryContextBlock('when is my hamilton show?')).toBeNull();
     });
+
+    it('reports recall capability as degraded until provisioned', async () => {
+        expect(getRecallProvisioningStatus()).toEqual({
+            phase: 'idle',
+            progress: null,
+            reason: null,
+        });
+
+        const [capability] = await refreshRuntimeCapabilities({ ids: ['memoryRecall'] });
+        expect(capability).toMatchObject({
+            id: 'memoryRecall',
+            reason: 'Recall has not been provisioned yet.',
+            state: 'degraded',
+        });
+    });
+
+    it.skipIf(!embeddingModelCached)(
+        'reports recall capability healthy once embeddings are provisioned',
+        async () => {
+            await refreshRecallIndex();
+            expect(getRecallProvisioningStatus().phase).toBe('ready');
+
+            const [capability] = await refreshRuntimeCapabilities({ ids: ['memoryRecall'] });
+            expect(capability).toMatchObject({
+                id: 'memoryRecall',
+                metadata: { phase: 'ready' },
+                state: 'healthy',
+            });
+        }
+    );
 
     it.skipIf(!embeddingModelCached)(
         'recalls pages for natural-language queries once embedded',

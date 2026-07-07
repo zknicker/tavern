@@ -8,6 +8,7 @@ export const agentRuntimeProtocolVersion = 1 as const;
 const agentRuntimeCoreCapabilityIds = [
     'codexOAuth',
     'semanticMemory',
+    'memoryRecall',
     'memoryWorkers',
     'dashboardServer',
     'apiServer',

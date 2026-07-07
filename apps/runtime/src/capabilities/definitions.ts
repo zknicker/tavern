@@ -17,7 +17,9 @@ import {
 import { AGENT_WORKSPACE } from '../config.ts';
 import { isRuntimeCronReady } from '../cron/scheduler.ts';
 import { getDb, hasTable } from '../db/connection.ts';
+import { getRecallProvisioningStatus } from '../memory/recall/recall-index.ts';
 import { resolveSemanticMemoryConfig } from '../memory/semantic/store.ts';
+import { isMemoryEnabled } from '../memory/settings.ts';
 import { loadVaultBackedCodexCredentials } from '../model-access/codex-settings.ts';
 import { listAgentModels } from '../models/catalog-service.ts';
 import { resolveModelCategorySelection } from '../models/category-settings.ts';
@@ -75,6 +77,17 @@ export const runtimeCapabilityDefinitions: RuntimeCapabilityDefinition[] = [
         },
         displayName: 'Memory updates',
         id: 'memoryWorkers',
+        refresh: {
+            intervalMs: 5 * minuteMs,
+            runOnStart: true,
+        },
+    },
+    {
+        check() {
+            return checkMemoryRecallCapability();
+        },
+        displayName: 'Memory recall',
+        id: 'memoryRecall',
         refresh: {
             intervalMs: 5 * minuteMs,
             runOnStart: true,
@@ -273,6 +286,61 @@ async function checkSemanticMemoryCapability(): Promise<RuntimeCapabilityCheckRe
             state: 'unavailable',
             technicalMessage: error instanceof Error ? error.message : String(error),
         };
+    }
+}
+
+// Per-turn recall readiness: the recall index over Semantic Memory pages plus
+// its locally provisioned embedding model. Progress rides capability metadata
+// so the app can render a provisioning bar without a contract shape change.
+function checkMemoryRecallCapability(): RuntimeCapabilityCheckResult {
+    if (!isMemoryEnabled()) {
+        return {
+            reason: 'Memory is off.',
+            state: 'unavailable',
+        };
+    }
+
+    const status = getRecallProvisioningStatus();
+    const percent = status.progress === null ? null : `${Math.round(status.progress * 100)}%`;
+    const metadata = {
+        phase: status.phase,
+        ...(status.progress === null ? {} : { progress: status.progress }),
+    };
+
+    switch (status.phase) {
+        case 'ready':
+            return { metadata, state: 'healthy' };
+        case 'downloading-model':
+            return {
+                metadata,
+                reason: `Downloading the recall model${percent ? ` (${percent})` : ''}.`,
+                state: 'degraded',
+            };
+        case 'embedding':
+            return {
+                metadata,
+                reason: `Indexing Memory pages for recall${percent ? ` (${percent})` : ''}.`,
+                state: 'degraded',
+            };
+        case 'updating':
+            return {
+                metadata,
+                reason: 'Preparing the recall index.',
+                state: 'degraded',
+            };
+        case 'degraded':
+            return {
+                metadata,
+                reason: 'Recall is keyword-only; semantic recall is unavailable.',
+                state: 'degraded',
+                technicalMessage: status.reason,
+            };
+        default:
+            return {
+                metadata,
+                reason: 'Recall has not been provisioned yet.',
+                state: 'degraded',
+            };
     }
 }
 

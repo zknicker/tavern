@@ -23,6 +23,10 @@ Memory is one Tavern feature with layered storage:
   on first index refresh while Memory is enabled; until it is provisioned,
   recall degrades to keyword search and per-turn recall stays off. The
   Markdown pages remain canonical; deleting the index only forces a rebuild.
+  Recall readiness is the `memoryRecall` Runtime capability: provisioning
+  (model download, page indexing) reports as degraded with live progress on
+  the Runtime capabilities surface, and one-time provisioning does not appear
+  in Memory run history.
 
 There is no shared `USER.md` or shared `MEMORY.md`. Agents only update their
 own core memory files. Shared project, person, company, domain, and concept
