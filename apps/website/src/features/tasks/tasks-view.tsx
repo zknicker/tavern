@@ -122,7 +122,7 @@ export function TasksView({
                 <section className="flex min-h-0 flex-1 flex-col overflow-hidden">
                     <nav
                         aria-label="Task views"
-                        className="flex flex-wrap gap-1 px-4 pt-2 md:hidden"
+                        className="flex flex-wrap gap-1 px-2 pt-2 md:hidden"
                     >
                         {taskViews.map((taskView) => {
                             const isActive = taskView.value === view;
@@ -150,7 +150,7 @@ export function TasksView({
                         })}
                     </nav>
 
-                    <div className="flex shrink-0 items-center gap-2 border-border/70 border-b px-4 py-2.5">
+                    <div className="flex shrink-0 items-center gap-2 px-2 py-2.5">
                         <Select
                             onValueChange={(value) => {
                                 if (value) {
