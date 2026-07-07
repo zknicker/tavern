@@ -42,6 +42,11 @@ function tavernChatInstructions(input: AgentExecutorInput) {
         ...chatIdentityLines(input, chat),
         `- Every prompt message carries its send time in ${resolveHomeTimezone()} (the home timezone). Weigh timestamps against the current time; treat older context and prior data reads as stale until re-checked.`,
         '- Recalled Memory blocks are automatic background context, not user input; verify with memory_read_page before relying on details.',
+        ...(chat?.kind === 'channel'
+            ? [
+                  '- Not every channel message needs you. Reply with exactly NO_REPLY (nothing else) to stay silent for a turn; nothing is delivered to the chat.',
+              ]
+            : []),
         '',
         'Chat tools:',
         '- chat_messages_list: list current-chat messages by sequence cursor',

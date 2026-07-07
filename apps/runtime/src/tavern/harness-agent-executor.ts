@@ -46,6 +46,9 @@ import { assistantFinalAnswerPhase, persistHarnessTurnStream } from './harness-t
 export type { HarnessAssistantMessagePhase } from './harness-turn-stream.ts';
 
 const emptyAssistantMessageDiagnostic = 'No reply: the harness returned empty content.';
+// A reply of exactly this token is a sanctioned silent turn: the assistant
+// turn stays in session history, but nothing is delivered to the chat.
+const silentReplyToken = 'NO_REPLY';
 
 interface ActiveHarnessTurn {
     controller: AbortController;
@@ -156,6 +159,15 @@ async function executeHarnessTurn(
     const completedAt = new Date().toISOString();
     const activityIds = turnStream.activityIds;
     const responseContent = turnStream.finalText || fallbackText || emptyAssistantMessageDiagnostic;
+    if (responseContent === silentReplyToken) {
+        return completeSilentHarnessTurn(input, {
+            activityIds,
+            completedAt,
+            contextTokens: turnStream.contextTokens,
+            runtime,
+            startedAt,
+        });
+    }
     const parsedWidgets = parseWidgetsFromAssistantContent(responseContent);
     const messageContent = parsedWidgets?.displayContent ?? responseContent;
     const messageId = assistantMessageId(input.runId);
@@ -231,6 +243,59 @@ async function executeHarnessTurn(
         activityIds: allActivityIds,
         outputMessageIds: [receipt.message.id],
     };
+}
+
+// A silent turn completes without a delivery: no assistant message lands in
+// the chat, and the response row plus one activity row remain as evidence
+// that the agent read the message and chose not to reply.
+function completeSilentHarnessTurn(
+    input: AgentExecutorInput,
+    turn: {
+        activityIds: string[];
+        completedAt: string;
+        contextTokens: number | null;
+        runtime: Record<string, unknown>;
+        startedAt: string;
+    }
+) {
+    const activityId = silentReplyActivityIdForRun(input.runId);
+    upsertResponseActivity(input.chatId, input.responseId, {
+        completed_at: turn.completedAt,
+        id: activityId,
+        kind: 'custom',
+        metadata: {
+            runtime: { ...turn.runtime, model: input.agentSession.effectiveModel },
+        },
+        started_at: turn.startedAt,
+        status: 'completed',
+        summary: 'Read the message and chose not to reply.',
+        title: 'Chose not to reply',
+    });
+    upsertResponse(input.chatId, {
+        completed_at: turn.completedAt,
+        id: input.responseId,
+        metadata: {
+            runtime: {
+                ...turn.runtime,
+                completedAt: turn.completedAt,
+                ...(turn.contextTokens !== null ? { contextTokens: turn.contextTokens } : {}),
+                model: input.agentSession.effectiveModel,
+            },
+        },
+        participant_id: input.agentSession.agentParticipantId,
+        request_message_id: input.requestMessageId,
+        status: 'completed',
+        summary: 'Chose not to reply.',
+    });
+
+    return {
+        activityIds: [...turn.activityIds, activityId],
+        outputMessageIds: [],
+    };
+}
+
+export function silentReplyActivityIdForRun(runId: string) {
+    return `act_${sanitizeId(runId)}_silent_reply`;
 }
 
 let harnessAgentFactory: typeof createHarnessAgent = createHarnessAgent;

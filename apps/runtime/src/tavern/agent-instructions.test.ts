@@ -95,6 +95,51 @@ describe('agent instructions', () => {
         expect(instructions).toContain('Memory tools (shared durable knowledge)');
     });
 
+    it('teaches NO_REPLY in channels but not in direct messages', async () => {
+        createChat({
+            id: 'cht_general',
+            kind: 'channel',
+            participants: [
+                { id: 'usr_tavern', kind: 'user', label: 'You', metadata: {} },
+                {
+                    id: 'agt_primary',
+                    kind: 'agent',
+                    label: 'Blippy',
+                    metadata: { agentId: 'agt_primary' },
+                },
+            ],
+            title: 'general',
+        });
+        const channelInstructions = await buildAgentInstructions(
+            executorInput({ workspaceFolder: workspaceDir }),
+            { db: getDb(), skillsDir }
+        );
+        expect(channelInstructions).toContain('Reply with exactly NO_REPLY');
+
+        createChat({
+            id: 'cht_dm',
+            kind: 'dm',
+            participants: [
+                { id: 'usr_tavern', kind: 'user', label: 'You', metadata: {} },
+                {
+                    id: 'agt_primary',
+                    kind: 'agent',
+                    label: 'Blippy',
+                    metadata: { agentId: 'agt_primary' },
+                },
+            ],
+            title: 'Blippy',
+        });
+        const dmInput = executorInput({ workspaceFolder: workspaceDir });
+        dmInput.chatId = 'cht_dm';
+        dmInput.agentSession.chatId = 'cht_dm';
+        const dmInstructions = await buildAgentInstructions(dmInput, {
+            db: getDb(),
+            skillsDir,
+        });
+        expect(dmInstructions).not.toContain('NO_REPLY');
+    });
+
     it('describes the chat kind and participant roster with the agent marked', async () => {
         createChat({
             id: 'cht_general',

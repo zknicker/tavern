@@ -25,6 +25,7 @@ import {
     formatHarnessExecutionError,
     piAuthOptions,
     setHarnessAgentFactoryForTesting,
+    silentReplyActivityIdForRun,
 } from './harness-agent-executor.ts';
 import { harnessPrompt } from './harness-prompt.ts';
 import { messageActivityIdForRun, toolActivityIdForRun } from './harness-turn-stream.ts';
@@ -209,6 +210,92 @@ describe('harness agent executor', () => {
             const reply = getMessage(result.outputMessageIds[0] ?? '');
             expect(reply?.content).toBe('Sales today: 17 units.');
             expect(getResponse(input.responseId)?.status).toBe('completed');
+        } finally {
+            restoreFactory();
+        }
+    });
+
+    it('completes a NO_REPLY turn without delivering an assistant message', async () => {
+        seedPromptChat({ chatId: 'cht_silent', kind: 'channel' });
+        createPromptMessage('cht_silent', {
+            authorId: 'usr_alice',
+            content: 'just chatting with Bob here',
+            id: 'msg_silent',
+            role: 'user',
+        });
+
+        const restoreFactory = setHarnessAgentFactoryForTesting(
+            fakeStreamingAgentFactory(fakeTextSegment('txt_1', 'NO_REPLY'))
+        );
+        try {
+            const input = executorInput(
+                { model: 'claude-opus-4-8', provider: 'claude' },
+                {
+                    chatId: 'cht_silent',
+                    content: 'just chatting with Bob here',
+                    requestMessageId: 'msg_silent',
+                    workspaceFolder: mkdtempSync(path.join(os.tmpdir(), 'tavern-exec-test-')),
+                }
+            );
+            upsertResponse('cht_silent', {
+                id: input.responseId,
+                participant_id: 'agt_primary',
+                request_message_id: 'msg_silent',
+                status: 'running',
+                summary: 'Working on it.',
+            });
+
+            const result = await createHarnessAgentExecutor().execute(input);
+
+            expect(result.outputMessageIds).toEqual([]);
+            const response = getResponse(input.responseId);
+            expect(response?.status).toBe('completed');
+            expect(response?.response_message_id).toBeNull();
+            expect(response?.summary).toBe('Chose not to reply.');
+            const activityId = silentReplyActivityIdForRun(input.runId);
+            expect(result.activityIds).toContain(activityId);
+            expect(getResponseActivity(activityId)?.title).toBe('Chose not to reply');
+        } finally {
+            restoreFactory();
+        }
+    });
+
+    it('delivers replies that merely mention NO_REPLY', async () => {
+        seedPromptChat({ chatId: 'cht_not_silent', kind: 'channel' });
+        createPromptMessage('cht_not_silent', {
+            authorId: 'usr_alice',
+            content: 'should you stay quiet?',
+            id: 'msg_not_silent',
+            role: 'user',
+        });
+
+        const restoreFactory = setHarnessAgentFactoryForTesting(
+            fakeStreamingAgentFactory(fakeTextSegment('txt_1', 'NO_REPLY would be rude here.'))
+        );
+        try {
+            const input = executorInput(
+                { model: 'claude-opus-4-8', provider: 'claude' },
+                {
+                    chatId: 'cht_not_silent',
+                    content: 'should you stay quiet?',
+                    requestMessageId: 'msg_not_silent',
+                    workspaceFolder: mkdtempSync(path.join(os.tmpdir(), 'tavern-exec-test-')),
+                }
+            );
+            upsertResponse('cht_not_silent', {
+                id: input.responseId,
+                participant_id: 'agt_primary',
+                request_message_id: 'msg_not_silent',
+                status: 'running',
+                summary: 'Working on it.',
+            });
+
+            const result = await createHarnessAgentExecutor().execute(input);
+
+            expect(result.outputMessageIds).toHaveLength(1);
+            expect(getMessage(result.outputMessageIds[0] ?? '')?.content).toBe(
+                'NO_REPLY would be rude here.'
+            );
         } finally {
             restoreFactory();
         }
