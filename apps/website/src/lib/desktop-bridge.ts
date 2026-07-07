@@ -38,6 +38,8 @@ export interface TavernDesktopBridge {
     getTabs: () => Promise<DesktopTabsState>;
     /** Chrome → main: navigate the active tab's content view to a route (client-side, no reload). */
     navigateActiveView: (route: string) => Promise<void>;
+    /** Main → content: the Developer menu toggled dev mode for this device. */
+    onDevModeToggle?: (listener: () => void) => () => void;
     /** Release happened over this window's strip: commit the docked ghost tab as real. */
     onDockCommit: (listener: (route: string) => void) => () => void;
     /** The dragged tab left this window's strip: drop the ghost preview. */

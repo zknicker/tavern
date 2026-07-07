@@ -9,6 +9,7 @@ const {
     screen,
     shell,
     WebContentsView,
+    webContents,
 } = require('electron');
 const path = require('node:path');
 const { spawn, execFile, spawnSync } = require('node:child_process');
@@ -735,6 +736,18 @@ function installAppMenu() {
                         }),
                     id: openDevtoolsMenuId,
                     label: 'Open Web Inspector',
+                },
+                {
+                    accelerator: 'CmdOrCtrl+Alt+D',
+                    click: () => {
+                        // Broadcast to every window and content view so all
+                        // surfaces flip together; the renderer owns the state.
+                        for (const contents of webContents.getAllWebContents()) {
+                            contents.send('desktop:dev-mode:toggle');
+                        }
+                    },
+                    id: 'toggle-dev-mode',
+                    label: 'Toggle Dev Mode',
                 },
             ],
         },

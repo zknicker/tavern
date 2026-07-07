@@ -1,6 +1,7 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './app.tsx';
+import { DevModeProvider } from './components/dev-mode-provider.tsx';
 import { ThemeProvider } from './components/theme-provider.tsx';
 import { DesktopEditContextMenuProvider } from './components/ui/edit-context-menu.tsx';
 import { ToastProvider } from './components/ui/toast.tsx';
@@ -26,13 +27,15 @@ const isChromeSurface = getDesktopSurface() === 'chrome';
 createRoot(rootElement).render(
     <StrictMode>
         <ThemeProvider>
-            <ToastProvider>
-                <TavernProviders>
-                    <DesktopEditContextMenuProvider>
-                        {isChromeSurface ? <ChromeApp /> : <App />}
-                    </DesktopEditContextMenuProvider>
-                </TavernProviders>
-            </ToastProvider>
+            <DevModeProvider>
+                <ToastProvider>
+                    <TavernProviders>
+                        <DesktopEditContextMenuProvider>
+                            {isChromeSurface ? <ChromeApp /> : <App />}
+                        </DesktopEditContextMenuProvider>
+                    </TavernProviders>
+                </ToastProvider>
+            </DevModeProvider>
         </ThemeProvider>
     </StrictMode>
 );

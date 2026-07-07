@@ -19,6 +19,7 @@ import { startChatRoute } from './start.ts';
 import { steerChatTurnRoute } from './steer.ts';
 import { stopChatTurnRoute } from './stop.ts';
 import { getChatToolRoute } from './tool-get.ts';
+import { getChatTurnPromptRoute } from './turn-prompt-get.ts';
 import { updateChatRoute } from './update.ts';
 import { updateChatSystemPromptRoute } from './update-system-prompt.ts';
 import { updateChatTabAppearanceRoute } from './update-tab-appearance.ts';
@@ -29,6 +30,9 @@ export const chatRouter = createRouter({
     get: getChatRoute,
     tool: createRouter({
         get: getChatToolRoute,
+    }),
+    turnPrompt: createRouter({
+        get: getChatTurnPromptRoute,
     }),
     list: listChatsRoute,
     log: createRouter({
