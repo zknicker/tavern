@@ -24,8 +24,6 @@ export const agentRuntimeRoutes = {
     capability: (id: string) => `/capabilities/${encodeURIComponent(id)}`,
     capabilityRefresh: (id: string) => `/capabilities/${encodeURIComponent(id)}/refresh`,
     capabilitiesRefresh: '/capabilities/refresh',
-    commands: '/commands',
-    commandsRun: '/commands/run',
     devSimulateTurn: '/dev/simulate-turn',
     update: '/update',
     updateRestart: '/update/restart',
@@ -89,6 +87,8 @@ export const agentRuntimeRoutes = {
         `/agent/chats/${encodeURIComponent(chatId)}/agent-sessions/current`,
     chatAgentSessionModel: (chatId: string) =>
         `/agent/chats/${encodeURIComponent(chatId)}/agent-sessions/model`,
+    chatAgentSessionReset: (chatId: string) =>
+        `/agent/chats/${encodeURIComponent(chatId)}/agent-sessions/reset`,
     chatTurnSteer: (chatId: string, runId: string) =>
         `/agent/chats/${encodeURIComponent(chatId)}/turns/${encodeURIComponent(runId)}/steer`,
     chatTurnStop: (chatId: string, runId: string) =>

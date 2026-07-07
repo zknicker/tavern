@@ -393,32 +393,6 @@ export const agentRuntimeSaveAgentEnvResultSchema = agentRuntimeAgentEnvSchema.e
     restartScheduled: z.boolean(),
 });
 
-export const agentRuntimeCommandSchema = z.object({
-    category: z.string().trim().min(1),
-    description: z.string().trim().min(1).nullable(),
-    // Canonical slash form, such as "/model".
-    name: z
-        .string()
-        .trim()
-        .regex(/^\/[a-z0-9][a-z0-9_-]*$/iu),
-});
-
-export const agentRuntimeCommandListSchema = z.object({
-    commands: z.array(agentRuntimeCommandSchema),
-});
-
-export const agentRuntimeRunCommandSchema = z.object({
-    agentId: z.string().trim().min(1),
-    chatId: z.string().trim().min(1),
-    // Raw command text as typed, including the leading slash and any args.
-    command: z.string().trim().min(1).max(2000),
-});
-
-export const agentRuntimeRunCommandResultSchema = z.object({
-    output: z.string(),
-    status: z.enum(['completed', 'failed']),
-});
-
 export const agentRuntimeThinkingLevelSchema = z.enum([
     'off',
     'minimal',
@@ -1837,8 +1811,30 @@ export const agentRuntimeProfileSchema = z.object({
     updatedAt: z.string().datetime(),
 });
 
+// Aggregated from the session's durable turn evidence. Null when there is no
+// current session.
+export const agentRuntimeAgentSessionStatsSchema = z.object({
+    contextTokens: z.number().int().nonnegative().nullable(),
+    turnCount: z.number().int().nonnegative(),
+});
+
+// High-level history entry for a seat's earlier sessions: enough for a list
+// row, never the session's resume state.
+export const agentRuntimeAgentSessionSummarySchema = z.object({
+    archivedAt: z.string().datetime().nullable(),
+    createdAt: z.string().datetime(),
+    effectiveModel: agentRuntimeModelNameSchema,
+    id: z.string().trim().min(1),
+    status: agentRuntimeAgentSessionStatusSchema,
+    turnCount: z.number().int().nonnegative(),
+    updatedAt: z.string().datetime(),
+});
+
 export const agentRuntimeCurrentAgentSessionResultSchema = z.object({
+    // Newest first, excluding the current session.
+    pastSessions: z.array(agentRuntimeAgentSessionSummarySchema),
     session: agentRuntimeAgentSessionSchema.nullable(),
+    stats: agentRuntimeAgentSessionStatsSchema.nullable(),
 });
 
 export const agentRuntimeUpdateAgentSessionModelSchema = z.object({
@@ -1848,6 +1844,17 @@ export const agentRuntimeUpdateAgentSessionModelSchema = z.object({
 
 export const agentRuntimeUpdateAgentSessionModelResultSchema = z.object({
     rotated: z.boolean(),
+    session: agentRuntimeAgentSessionSchema,
+});
+
+// Rotates the agent seat's current session so the chat's next message opens a
+// brand-new engine session. Timeline stays untouched; the reset lands as a
+// durable new-session notice row.
+export const agentRuntimeResetAgentSessionSchema = z.object({
+    agentId: z.string().trim().min(1),
+});
+
+export const agentRuntimeResetAgentSessionResultSchema = z.object({
     session: agentRuntimeAgentSessionSchema,
 });
 
@@ -2761,10 +2768,6 @@ export type AgentRuntimeAgentEnv = z.infer<typeof agentRuntimeAgentEnvSchema>;
 export type AgentRuntimeAgentEnvVariable = z.infer<typeof agentRuntimeAgentEnvVariableSchema>;
 export type AgentRuntimeSaveAgentEnv = z.infer<typeof agentRuntimeSaveAgentEnvSchema>;
 export type AgentRuntimeSaveAgentEnvResult = z.infer<typeof agentRuntimeSaveAgentEnvResultSchema>;
-export type AgentRuntimeCommand = z.infer<typeof agentRuntimeCommandSchema>;
-export type AgentRuntimeCommandList = z.infer<typeof agentRuntimeCommandListSchema>;
-export type AgentRuntimeRunCommand = z.infer<typeof agentRuntimeRunCommandSchema>;
-export type AgentRuntimeRunCommandResult = z.infer<typeof agentRuntimeRunCommandResultSchema>;
 export type AgentRuntimeAgentEngineConfig = z.infer<typeof agentRuntimeAgentEngineConfigSchema>;
 export type AgentRuntimeAgentEngineConfigSnapshot = z.infer<
     typeof agentRuntimeAgentEngineConfigSnapshotSchema
@@ -2831,6 +2834,12 @@ export type AgentRuntimeCurrentAgentSessionResult = z.infer<
 >;
 export type AgentRuntimeUpdateAgentSessionModel = z.infer<
     typeof agentRuntimeUpdateAgentSessionModelSchema
+>;
+export type AgentRuntimeAgentSessionStats = z.infer<typeof agentRuntimeAgentSessionStatsSchema>;
+export type AgentRuntimeAgentSessionSummary = z.infer<typeof agentRuntimeAgentSessionSummarySchema>;
+export type AgentRuntimeResetAgentSession = z.infer<typeof agentRuntimeResetAgentSessionSchema>;
+export type AgentRuntimeResetAgentSessionResult = z.infer<
+    typeof agentRuntimeResetAgentSessionResultSchema
 >;
 export type AgentRuntimeUpdateAgentSessionModelResult = z.infer<
     typeof agentRuntimeUpdateAgentSessionModelResultSchema
