@@ -100,6 +100,11 @@ message carries its created-at timestamp. Static per-session guidance — the
 chat id, the staleness policy, and Tavern chat/Memory/automation tool
 guidance — lives in the composed agent instructions, not the per-turn prompt,
 so long sessions carry one copy instead of one per turn.
+The composed instructions also state the chat's kind, title, and participant
+roster (the agent's own seat marked), and append model-family operational
+guidance (`apps/runtime/src/tavern/model-instructions.ts`): tool-use
+enforcement and execution discipline for gpt/codex-class models, Google
+directives for gemini/gemma, nothing for Claude models.
 After a turn settles, Runtime advances `promptContextSequence` to the
 triggering message sequence.
 Each turn also records prompt evidence — the composed instructions, the
