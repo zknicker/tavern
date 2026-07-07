@@ -2,12 +2,10 @@ import { PlugIcon } from '@hugeicons-pro/core-stroke-rounded';
 import type { AgentRuntimeSaveGoogleSettings } from '@tavern/api';
 import { googlePluginManifest } from '@tavern/api/plugins/google';
 import * as React from 'react';
-import { Badge } from '../../../components/ui/badge.tsx';
 import { Icon } from '../../../components/ui/icon.tsx';
 import { Button } from '../../../components/ui/primitives/button.tsx';
 import { SettingsRow } from '../../../components/ui/settings-row.tsx';
 import { Skeleton } from '../../../components/ui/skeleton.tsx';
-import { Switch } from '../../../components/ui/switch.tsx';
 import type { GoogleSettingsOutput } from '../../../lib/trpc.tsx';
 import { cn } from '../../../lib/utils.ts';
 import { GoogleSettingsDialog } from './google-settings-dialog.tsx';
@@ -18,6 +16,7 @@ import {
     normalizeGoogleDraft,
     toGoogleSaveInput,
 } from './google-settings-model.ts';
+import { PluginEnablementSwitch } from './plugin-enablement-switch.tsx';
 
 type GoogleSettings = NonNullable<GoogleSettingsOutput>;
 
@@ -70,24 +69,16 @@ export function GoogleSettingsCard({
             onSave={onSave}
             settings={currentSettings}
         >
-            {({ openSettingsDialog, requestSave }) => {
-                function handleEnabledChange(enabled: boolean) {
-                    if (enabled && !currentSettings.connected) {
-                        openSettingsDialog();
-                        return;
+            {({ openSettingsDialog, requestSave }) => (
+                <GooglePluginRow
+                    isSaving={isSaving}
+                    onEnabledChange={(enabled) =>
+                        void requestSave({ enabled }).catch(() => undefined)
                     }
-                    void requestSave({ enabled }).catch(() => undefined);
-                }
-
-                return (
-                    <GooglePluginRow
-                        isSaving={isSaving}
-                        onEnabledChange={handleEnabledChange}
-                        onSelect={openSettingsDialog}
-                        settings={currentSettings}
-                    />
-                );
-            }}
+                    onSelect={openSettingsDialog}
+                    settings={currentSettings}
+                />
+            )}
         </GoogleSettingsControl>
     );
 }
@@ -175,6 +166,9 @@ function GooglePluginRow({
     onSelect: () => void;
     settings: GoogleSettings;
 }) {
+    // Turning off stays available even when setup later breaks; only enabling locks.
+    const needsSetup = !(settings.enabled || settings.connected);
+
     return (
         <SettingsRow
             description={googlePluginManifest.description}
@@ -187,11 +181,6 @@ function GooglePluginRow({
                 >
                     <Icon className="size-5" icon={PlugIcon} />
                     <span className="truncate">Google</span>
-                    {settings.connected ? null : (
-                        <Badge size="sm" variant="error">
-                            Needs setup
-                        </Badge>
-                    )}
                 </span>
             }
             trailingWidth="intrinsic"
@@ -200,10 +189,15 @@ function GooglePluginRow({
                 <Button disabled={isSaving} onClick={onSelect} variant="ghost">
                     {settings.connected ? 'Configure' : 'Set up'}
                 </Button>
-                <Switch
-                    aria-label={`${settings.enabled ? 'Disable' : 'Enable'} Google`}
+                <PluginEnablementSwitch
+                    aria-label={
+                        needsSetup
+                            ? 'Google needs setup before it can be enabled'
+                            : `${settings.enabled ? 'Disable' : 'Enable'} Google`
+                    }
                     checked={settings.enabled}
                     disabled={isSaving}
+                    lockReason={needsSetup ? 'Connect a Google account before enabling it.' : null}
                     onCheckedChange={onEnabledChange}
                 />
             </div>

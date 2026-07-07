@@ -1,50 +1,48 @@
 import * as React from 'react';
 import { useParams } from 'react-router-dom';
-import { Badge } from '../../../components/ui/badge.tsx';
-import { EmptyState } from '../../../components/ui/empty-state.tsx';
-import { SearchInput } from '../../../components/ui/primitives/search-input.tsx';
 import { Separator } from '../../../components/ui/separator.tsx';
 import {
     SettingsGroup,
     SettingsPage,
     SettingsPageHeader,
-    SettingsRow,
+    SettingsSection,
 } from '../../../components/ui/settings-row.tsx';
-import { Switch } from '../../../components/ui/switch.tsx';
 import { useAgentList } from '../../../hooks/agents/use-agent-list.ts';
+import { useRuntimeCapabilityEvents } from '../../../hooks/connections/use-runtime-events.ts';
+import { usePluginList, useSetAgentPluginGrant } from '../../../hooks/plugins/use-plugin-list.ts';
 import { useSkillList } from '../../../hooks/skills/use-skill-list.ts';
 import { withSavingToast } from '../../../lib/saving-toast.ts';
-import type { AgentListOutput, SkillListOutput } from '../../../lib/trpc.tsx';
+import type { PluginListOutput } from '../../../lib/trpc.tsx';
+import {
+    selectAddablePlugins,
+    selectAddableSkills,
+    selectAgentSkills,
+    selectGrantedPlugins,
+} from '../../agents/agent-abilities.ts';
 import { MissingAgentState } from '../../agents/missing-agent-state.tsx';
+import { PickerPopover } from '../../agents/picker-popover.tsx';
 import { useAgentSkillsUpdate } from '../../agents/use-agent-skills-update.ts';
 import { formatSkillName } from '../../skills/skill-name-format.ts';
 import { SkillsPageSkeleton } from '../../skills/skills-page-skeleton.tsx';
+import { AgentPluginRow, AgentSkillRow } from './ability-rows.tsx';
 
-type Agent = AgentListOutput['agents'][number];
-type SkillSummary = SkillListOutput['skills'][number];
+type Plugin = PluginListOutput['plugins'][number];
 
 export function AgentSkillsSettingsPage() {
+    useRuntimeCapabilityEvents();
     const { agentId } = useParams();
-    const [search, setSearch] = React.useState('');
-    const deferredSearch = React.useDeferredValue(search);
     const agentsQuery = useAgentList();
     const skillsQuery = useSkillList();
+    const pluginsQuery = usePluginList();
     const saveSkills = useAgentSkillsUpdate();
+    const setGrant = useSetAgentPluginGrant();
     const agent = agentsQuery.data?.agents.find((candidate) => candidate.id === agentId) ?? null;
-
-    // Plugin skills are governed by the plugin grant, not per-skill enablement,
-    // so they never appear here. Enabling the plugin injects its skills.
-    const skills = React.useMemo(
-        () =>
-            (skillsQuery.data?.skills ?? [])
-                .filter((skill) => !skill.plugin)
-                .filter((skill) => matchesSkill(skill, deferredSearch)),
-        [skillsQuery.data?.skills, deferredSearch]
-    );
+    const skills = skillsQuery.data?.skills ?? [];
+    const plugins = pluginsQuery.data?.plugins ?? [];
 
     if (
-        (agentsQuery.isPending || skillsQuery.isPending) &&
-        !(agentsQuery.data && skillsQuery.data)
+        (agentsQuery.isPending || skillsQuery.isPending || pluginsQuery.isPending) &&
+        !(agentsQuery.data && skillsQuery.data && pluginsQuery.data)
     ) {
         return <SkillsPageSkeleton />;
     }
@@ -53,38 +51,59 @@ export function AgentSkillsSettingsPage() {
         return <MissingAgentState agentId={agentId ?? 'unknown'} />;
     }
 
+    const agentSkills = selectAgentSkills(skills, agent);
+    const addableSkills = selectAddableSkills(skills, agent);
+    const grantedPlugins = selectGrantedPlugins(plugins, agent);
+    const addablePlugins = selectAddablePlugins(plugins, agent);
+    const isSavingSkills = saveSkills.isPending && saveSkills.variables?.agentId === agent.id;
+
+    const saveSkillIds = (enabledSkillIds: string[]) =>
+        void withSavingToast(() =>
+            saveSkills.mutateAsync({ agentId: agent.id, enabledSkillIds })
+        ).catch(() => undefined);
+
+    const setPluginGrant = (pluginId: Plugin['id'], enabled: boolean) =>
+        void withSavingToast(() =>
+            setGrant.mutateAsync({ agentId: agent.id, enabled, pluginId })
+        ).catch(() => undefined);
+
     return (
         <SettingsPage>
-            <SettingsPageHeader title="Skills" />
+            <SettingsPageHeader
+                description={`Choose what ${agent.name} can use.`}
+                title="Skills & Plugins"
+            />
 
-            <div className="grid gap-3">
-                <SearchInput
-                    aria-label="Search skills"
-                    className="w-full [&_[data-slot=input-control]]:h-9"
-                    name="agent-skill-search"
-                    onChange={(event) => setSearch(event.target.value)}
-                    placeholder="Search skills..."
-                    value={search}
-                />
-
-                {skills.length > 0 ? (
+            <SettingsSection
+                action={
+                    <PickerPopover
+                        emptyText="Every usable skill is already added. Install or enable more on the Skills settings page."
+                        isPending={isSavingSkills}
+                        items={addableSkills.map((skill) => ({
+                            id: skill.id,
+                            name: formatSkillName(skill.name),
+                        }))}
+                        label="Add skills"
+                        onAdd={(item) =>
+                            saveSkillIds([...new Set([...agent.enabledSkillIds, item.id])])
+                        }
+                        searchPlaceholder="Search skills..."
+                    />
+                }
+                title="Skills"
+            >
+                {agentSkills.length > 0 ? (
                     <SettingsGroup>
-                        {skills.map((skill, index) => (
+                        {agentSkills.map((skill, index) => (
                             <React.Fragment key={skill.id}>
                                 {index > 0 ? <Separator /> : null}
                                 <AgentSkillRow
                                     agent={agent}
-                                    isSaving={
-                                        saveSkills.isPending &&
-                                        saveSkills.variables?.agentId === agent.id
-                                    }
-                                    onEnabledChange={(enabled) =>
-                                        toggleSkill({
-                                            agent,
-                                            enabled,
-                                            saveSkills,
-                                            skillId: skill.id,
-                                        })
+                                    isSaving={isSavingSkills}
+                                    onRemove={() =>
+                                        saveSkillIds(
+                                            agent.enabledSkillIds.filter((id) => id !== skill.id)
+                                        )
                                     }
                                     skill={skill}
                                 />
@@ -92,83 +111,63 @@ export function AgentSkillsSettingsPage() {
                         ))}
                     </SettingsGroup>
                 ) : (
-                    <EmptyState
-                        className="py-8"
-                        description="Add skills from the global Skills page to enable them here."
-                        title="No skills"
+                    <EmptySectionText
+                        text={`No skills yet. Add skills to give ${agent.name} reusable abilities.`}
                     />
                 )}
-            </div>
+            </SettingsSection>
+
+            <SettingsSection
+                action={
+                    <PickerPopover
+                        emptyText="Every enabled plugin is already added. Enable more on the Plugins settings page."
+                        isPending={setGrant.isPending}
+                        items={addablePlugins.map((plugin) => ({
+                            id: plugin.id,
+                            name: plugin.displayName,
+                        }))}
+                        label="Add plugins"
+                        onAdd={(item) => setPluginGrant(item.id, true)}
+                        searchPlaceholder="Search plugins..."
+                    />
+                }
+                title="Plugins"
+            >
+                {grantedPlugins.length > 0 ? (
+                    <SettingsGroup>
+                        {grantedPlugins.map((plugin, index) => (
+                            <React.Fragment key={plugin.id}>
+                                {index > 0 ? <Separator /> : null}
+                                <AgentPluginRow
+                                    agent={agent}
+                                    isSaving={
+                                        setGrant.isPending &&
+                                        setGrant.variables?.pluginId === plugin.id
+                                    }
+                                    onRemove={() => setPluginGrant(plugin.id, false)}
+                                    plugin={plugin}
+                                />
+                            </React.Fragment>
+                        ))}
+                    </SettingsGroup>
+                ) : (
+                    <EmptySectionText
+                        text={
+                            addablePlugins.length > 0
+                                ? `No plugins yet. Add a plugin to let ${agent.name} use its skills and tools.`
+                                : 'No plugins yet. Enable a plugin on the Plugins settings page first.'
+                        }
+                    />
+                )}
+            </SettingsSection>
         </SettingsPage>
     );
 }
 
-function AgentSkillRow({
-    agent,
-    isSaving,
-    onEnabledChange,
-    skill,
-}: {
-    agent: Agent;
-    isSaving: boolean;
-    onEnabledChange: (enabled: boolean) => void;
-    skill: SkillSummary;
-}) {
-    const enabled = agent.enabledSkillIds.includes(skill.id);
-    const assignable = skill.usability === 'enabled';
-    const displayName = formatSkillName(skill.name);
+function EmptySectionText({ text }: { text: string }) {
     return (
-        <SettingsRow
-            description={skill.description}
-            title={
-                <span className="flex min-w-0 items-center gap-2">
-                    <span className="truncate">{displayName}</span>
-                    {assignable ? null : (
-                        <Badge size="sm" variant="error">
-                            {skill.enabled
-                                ? (skill.diagnostic ?? 'Needs setup')
-                                : 'Enable it in Skills first'}
-                        </Badge>
-                    )}
-                </span>
-            }
-            trailingWidth="intrinsic"
-        >
-            <Switch
-                aria-label={`${enabled ? 'Disable' : 'Enable'} ${displayName} for ${agent.name}`}
-                checked={enabled}
-                disabled={isSaving || !(enabled || assignable)}
-                onCheckedChange={onEnabledChange}
-            />
-        </SettingsRow>
-    );
-}
-
-function toggleSkill(input: {
-    agent: Agent;
-    enabled: boolean;
-    saveSkills: ReturnType<typeof useAgentSkillsUpdate>;
-    skillId: string;
-}) {
-    const next = input.enabled
-        ? [...input.agent.enabledSkillIds, input.skillId]
-        : input.agent.enabledSkillIds.filter((candidate) => candidate !== input.skillId);
-
-    void withSavingToast(() =>
-        input.saveSkills.mutateAsync({
-            agentId: input.agent.id,
-            enabledSkillIds: [...new Set(next)],
-        })
-    ).catch(() => undefined);
-}
-
-function matchesSkill(skill: SkillSummary, search: string) {
-    const normalized = search.trim().toLowerCase();
-    if (normalized.length === 0) {
-        return true;
-    }
-
-    return [skill.name, skill.description ?? ''].some((value) =>
-        value.toLowerCase().includes(normalized)
+        <p className="rounded-xl border border-border border-dashed px-4 py-5 text-center text-muted-foreground text-sm">
+            {text}
+        </p>
     );
 }

@@ -41,7 +41,6 @@ export const settingsCapabilityRequirements = {
     agent: ['apiServer', 'modelExecution'],
     'agent-channels': ['apiServer'],
     'agent-general': ['apiServer', 'modelExecution'],
-    'agent-plugins': ['apiServer'],
     'agent-skills': ['apiServer', 'skills'],
     'notes-md': [],
     appearance: [],

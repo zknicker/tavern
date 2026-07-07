@@ -29,6 +29,7 @@ describe('agent page paths', () => {
         expect(getActiveAgentPage('/agent/memory')).toBeNull();
         expect(getActiveAgentPage('/settings/agents/atlas/tools')).toBeNull();
         expect(getActiveAgentPage('/settings/agents/atlas/mcp')).toBeNull();
+        expect(getActiveAgentPage('/settings/agents/atlas/plugins')).toBeNull();
         expect(getActiveAgentPage('/overview')).toBeNull();
     });
 });

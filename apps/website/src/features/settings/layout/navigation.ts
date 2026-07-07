@@ -100,14 +100,8 @@ export const agentSettingsNavItems = [
     {
         icon: ZapIcon,
         id: 'agent-skills',
-        label: 'Skills',
+        label: 'Skills & Plugins',
         tab: 'skills',
-    },
-    {
-        icon: PuzzleIcon,
-        id: 'agent-plugins',
-        label: 'Plugins',
-        tab: 'plugins',
     },
     {
         icon: ChatIcon,

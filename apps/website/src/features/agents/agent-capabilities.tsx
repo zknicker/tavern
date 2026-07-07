@@ -1,10 +1,11 @@
-import { Add01Icon } from '@hugeicons-pro/core-duotone-rounded';
-import * as React from 'react';
-import { Icon } from '../../components/ui/icon.tsx';
+import type * as React from 'react';
+import { withSavingToast } from '../../lib/saving-toast.ts';
 import type { AgentListOutput, SkillListOutput } from '../../lib/trpc.tsx';
-import { cn } from '../../lib/utils.ts';
 import { SkillBadge } from '../skills/skill-badge.tsx';
-import { AgentSkillDialog } from './agent-skill-dialog.tsx';
+import { formatSkillName } from '../skills/skill-name-format.ts';
+import { selectAddableSkills } from './agent-abilities.ts';
+import { PickerPopover } from './picker-popover.tsx';
+import { useAgentSkillsUpdate } from './use-agent-skills-update.ts';
 
 const visibleCapabilityLimit = 6;
 
@@ -21,16 +22,37 @@ export function AgentCapabilities({
     skillsError: string | null;
     skillsPending: boolean;
 }) {
-    const [skillDialogOpen, setSkillDialogOpen] = React.useState(false);
+    const saveSkills = useAgentSkillsUpdate();
     const visibleSkills = enabledSkills.slice(0, visibleCapabilityLimit);
     const skillOverflow = enabledSkills.length - visibleSkills.length;
+    const addableSkills = selectAddableSkills(skills, agent);
 
     return (
         <section className="flex flex-col gap-2">
             <CapabilityRow
-                addLabel="Add skill"
-                isEmpty={visibleSkills.length === 0}
-                onAdd={() => setSkillDialogOpen(true)}
+                addControl={
+                    <PickerPopover
+                        emptyText="Every usable skill is already added. Install or enable more on the Skills settings page."
+                        isPending={saveSkills.isPending}
+                        items={addableSkills.map((skill) => ({
+                            id: skill.id,
+                            name: formatSkillName(skill.name),
+                        }))}
+                        label="Add skill"
+                        onAdd={(item) =>
+                            void withSavingToast(() =>
+                                saveSkills.mutateAsync({
+                                    agentId: agent.id,
+                                    enabledSkillIds: [
+                                        ...new Set([...agent.enabledSkillIds, item.id]),
+                                    ],
+                                })
+                            ).catch(() => undefined)
+                        }
+                        searchPlaceholder="Search skills..."
+                        triggerVariant="ghost"
+                    />
+                }
                 overflowCount={skillOverflow}
                 title="Skills"
             >
@@ -46,28 +68,18 @@ export function AgentCapabilities({
                     Skills are unavailable: {skillsError}
                 </p>
             ) : null}
-            <AgentSkillDialog
-                agent={agent}
-                onOpenChange={setSkillDialogOpen}
-                open={skillDialogOpen}
-                skills={skills}
-            />
         </section>
     );
 }
 
 function CapabilityRow({
-    addLabel,
+    addControl,
     children,
-    isEmpty,
-    onAdd,
     overflowCount,
     title,
 }: {
-    addLabel: string;
+    addControl: React.ReactNode;
     children: React.ReactNode;
-    isEmpty: boolean;
-    onAdd: () => void;
     overflowCount: number;
     title: string;
 }) {
@@ -81,17 +93,7 @@ function CapabilityRow({
                         +{overflowCount}
                     </span>
                 ) : null}
-                <button
-                    className={cn(
-                        'inline-flex items-center gap-1 rounded-md px-2 py-1 font-medium text-muted-foreground text-sm transition-colors hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-                        isEmpty && '-ml-2'
-                    )}
-                    onClick={onAdd}
-                    type="button"
-                >
-                    <Icon className="size-3.5" icon={Add01Icon} />
-                    {addLabel}
-                </button>
+                {addControl}
             </div>
         </div>
     );

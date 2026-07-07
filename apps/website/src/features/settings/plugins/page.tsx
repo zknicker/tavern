@@ -1,20 +1,14 @@
 import { googlePluginManifest } from '@tavern/api/plugins/google';
 import { merchbasePluginManifest } from '@tavern/api/plugins/merchbase';
 import * as React from 'react';
-import { useParams } from 'react-router-dom';
-import { Badge } from '../../../components/ui/badge.tsx';
 import { SearchInput } from '../../../components/ui/primitives/search-input.tsx';
 import { Separator } from '../../../components/ui/separator.tsx';
 import {
     SettingsGroup,
     SettingsPage,
     SettingsPageHeader,
-    SettingsRow,
     SettingsSection,
 } from '../../../components/ui/settings-row.tsx';
-import { Switch } from '../../../components/ui/switch.tsx';
-import { useAgentList } from '../../../hooks/agents/use-agent-list.ts';
-import { useCapability } from '../../../hooks/connections/use-capability.ts';
 import { useRuntimeCapabilityEvents } from '../../../hooks/connections/use-runtime-events.ts';
 import {
     useDisconnectGoogleOAuth,
@@ -27,9 +21,7 @@ import {
     useMerchbaseSettings,
     useSaveMerchbaseSettings,
 } from '../../../hooks/plugins/use-merchbase-settings.ts';
-import { usePluginList, useSetAgentPluginGrant } from '../../../hooks/plugins/use-plugin-list.ts';
 import { withSavingToast } from '../../../lib/saving-toast.ts';
-import type { AgentListOutput, PluginListOutput } from '../../../lib/trpc.tsx';
 import { EmptyState } from '../../shell/empty-state.tsx';
 import { GoogleSettingsCard } from './google-settings-card.tsx';
 import { MerchbaseSettingsCard } from './merchbase-settings-card.tsx';
@@ -38,12 +30,6 @@ export { MerchbaseSettingsCard } from './merchbase-settings-card.tsx';
 
 export function PluginsSettingsPage() {
     useRuntimeCapabilityEvents();
-    const { agentId } = useParams();
-
-    return agentId ? <AgentPluginsSettingsPage agentId={agentId} /> : <GlobalPluginsSettingsPage />;
-}
-
-function GlobalPluginsSettingsPage() {
     const [search, setSearch] = React.useState('');
     const deferredSearch = React.useDeferredValue(search);
     const merchbaseSettingsQuery = useMerchbaseSettings();
@@ -118,156 +104,6 @@ function GlobalPluginsSettingsPage() {
                 </SettingsGroup>
             </SettingsSection>
         </SettingsPage>
-    );
-}
-
-function AgentPluginsSettingsPage({ agentId }: { agentId: string }) {
-    const [search, setSearch] = React.useState('');
-    const deferredSearch = React.useDeferredValue(search);
-    const agentsQuery = useAgentList();
-    const pluginsQuery = usePluginList();
-    const setGrant = useSetAgentPluginGrant();
-    const agent = agentsQuery.data?.agents.find((candidate) => candidate.id === agentId) ?? null;
-    const plugins = pluginsQuery.data?.plugins.filter((plugin) =>
-        matchesAgentPlugin(plugin, deferredSearch)
-    );
-
-    if ((agentsQuery.isPending || pluginsQuery.isPending) && !(agentsQuery.data && plugins)) {
-        return (
-            <SettingsPage>
-                <SettingsPageHeader title="Plugins" />
-                <p className="px-3 text-muted-foreground text-sm">Loading Plugin grants...</p>
-            </SettingsPage>
-        );
-    }
-
-    if (!agent) {
-        return (
-            <SettingsPage>
-                <SettingsPageHeader title="Plugins" />
-                <p className="px-3 text-muted-foreground text-sm">Agent not found.</p>
-            </SettingsPage>
-        );
-    }
-
-    return (
-        <SettingsPage>
-            <SettingsPageHeader title="Plugins" />
-
-            <div className="grid gap-3">
-                <SearchInput
-                    aria-label="Search plugin grants"
-                    className="w-full [&_[data-slot=input-control]]:h-9"
-                    name="agent-plugin-search"
-                    onChange={(event) => setSearch(event.target.value)}
-                    placeholder="Search plugins..."
-                    value={search}
-                />
-
-                <SettingsGroup>
-                    {plugins && plugins.length > 0 ? (
-                        plugins.map((plugin, index) => (
-                            <React.Fragment key={plugin.id}>
-                                {index > 0 ? <Separator /> : null}
-                                <AgentPluginGrantItem
-                                    agent={agent}
-                                    isSaving={
-                                        setGrant.isPending &&
-                                        setGrant.variables?.pluginId === plugin.id
-                                    }
-                                    onEnabledChange={(enabled) =>
-                                        void withSavingToast(() =>
-                                            setGrant.mutateAsync({
-                                                agentId: agent.id,
-                                                enabled,
-                                                pluginId: plugin.id,
-                                            })
-                                        ).catch(() => undefined)
-                                    }
-                                    plugin={plugin}
-                                />
-                            </React.Fragment>
-                        ))
-                    ) : (
-                        <EmptyState
-                            className="py-8"
-                            description="Try a different name or description."
-                            title="No matches"
-                        />
-                    )}
-                </SettingsGroup>
-            </div>
-        </SettingsPage>
-    );
-}
-
-function AgentPluginGrantItem({
-    agent,
-    isSaving,
-    onEnabledChange,
-    plugin,
-}: {
-    agent: AgentListOutput['agents'][number];
-    isSaving: boolean;
-    onEnabledChange: (enabled: boolean) => void;
-    plugin: PluginListOutput['plugins'][number];
-}) {
-    const capability = useCapability(
-        plugin.services
-            .filter((service) => service.enabled)
-            .flatMap((service) => service.healthCapabilities)
-    );
-
-    return (
-        <AgentPluginGrantRow
-            agent={agent}
-            health={{ healthy: capability.healthy, reason: capability.reason }}
-            isSaving={isSaving}
-            onEnabledChange={onEnabledChange}
-            plugin={plugin}
-        />
-    );
-}
-
-export function AgentPluginGrantRow({
-    agent,
-    health,
-    isSaving,
-    onEnabledChange,
-    plugin,
-}: {
-    agent: AgentListOutput['agents'][number];
-    health: { healthy: boolean; reason: string | null };
-    isSaving: boolean;
-    onEnabledChange: (enabled: boolean) => void;
-    plugin: PluginListOutput['plugins'][number];
-}) {
-    const granted = agent.enabledPluginIds.includes(plugin.id);
-    const grantable = plugin.enabled && health.healthy;
-    return (
-        <SettingsRow
-            description={plugin.description}
-            title={
-                <span className="flex min-w-0 items-center gap-2">
-                    <span className="truncate">{plugin.displayName}</span>
-                    {grantable ? null : (
-                        <Badge size="sm" variant="error">
-                            {plugin.enabled
-                                ? (health.reason ?? 'Not healthy. Check Plugins.')
-                                : 'Enable it in Plugins first'}
-                        </Badge>
-                    )}
-                </span>
-            }
-            trailingWidth="intrinsic"
-        >
-            <Switch
-                aria-label={`${granted ? 'Revoke' : 'Grant'} ${plugin.displayName} for ${agent.name}`}
-                checked={granted}
-                disabled={isSaving || !(granted || grantable)}
-                onCheckedChange={onEnabledChange}
-            />
-        </SettingsRow>
     );
 }
 
@@ -352,15 +188,4 @@ function matchesGooglePlugin(search: string) {
         googlePluginManifest.description,
         googlePluginManifest.services[0]?.description ?? '',
     ].some((value) => value.toLowerCase().includes(normalized));
-}
-
-function matchesAgentPlugin(plugin: PluginListOutput['plugins'][number], search: string) {
-    const normalized = search.trim().toLowerCase();
-    if (normalized.length === 0) {
-        return true;
-    }
-
-    return [plugin.id, plugin.displayName, plugin.description].some((value) =>
-        value.toLowerCase().includes(normalized)
-    );
 }

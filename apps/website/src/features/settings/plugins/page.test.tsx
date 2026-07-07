@@ -1,9 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import { renderToString } from 'react-dom/server';
-import type { AgentListOutput, PluginListOutput } from '../../../lib/trpc.tsx';
 import { GoogleSettingsCard } from './google-settings-card.tsx';
 import { GoogleSettingsDialogBody } from './google-settings-dialog.tsx';
-import { AgentPluginGrantRow, MerchbaseSettingsCard } from './page.tsx';
+import { MerchbaseSettingsCard } from './page.tsx';
 
 describe('MerchBase Plugin settings', () => {
     test('renders the plugin row without exposing connection details', () => {
@@ -53,9 +52,10 @@ describe('MerchBase Plugin settings', () => {
             />
         );
 
-        expect(markup).toContain('Needs setup');
+        expect(markup).not.toContain('Needs setup');
         expect(markup).toContain('Set up');
-        expect(markup).toContain('Enable MerchBase');
+        expect(markup).toContain('MerchBase needs setup before it can be enabled');
+        expect(markup).toContain('disabled=""');
         expect(markup).not.toContain('Configure');
     });
 
@@ -79,11 +79,34 @@ describe('MerchBase Plugin settings', () => {
 
         expect(markup).toContain('Google');
         expect(markup).toContain('Set up');
-        expect(markup).toContain('Needs setup');
+        expect(markup).not.toContain('Needs setup');
         expect(markup).toContain('Disable Google');
         expect(markup).not.toContain('client-id.apps.googleusercontent.com');
         expect(markup).not.toContain('client-secret');
         expect(markup).not.toContain('calendar.events');
+    });
+
+    test('locks enabling a disconnected Google without a badge', () => {
+        const markup = renderToString(
+            <GoogleSettingsCard
+                onConnect={() => undefined}
+                onDisconnect={() => undefined}
+                onSave={() => undefined}
+                settings={{
+                    calendarEnabled: true,
+                    connected: false,
+                    connectedAccountEmail: null,
+                    enabled: false,
+                    grantedScopes: [],
+                    missingCalendarScopes: ['https://www.googleapis.com/auth/calendar.events'],
+                    updatedAt: '2026-07-05T12:00:00.000Z',
+                }}
+            />
+        );
+
+        expect(markup).not.toContain('Needs setup');
+        expect(markup).toContain('Google needs setup before it can be enabled');
+        expect(markup).toContain('disabled=""');
     });
 
     test('renders connected Google as configurable', () => {
@@ -168,128 +191,6 @@ describe('MerchBase Plugin settings', () => {
         expect(markup).not.toContain('OAuth client settings');
         expect(markup).not.toContain('Client ID');
         expect(markup).toContain('Google connection failed.');
-    });
-
-    test('renders an agent Plugin grant toggle without configuration', () => {
-        const agent = {
-            enabledPluginIds: ['merchbase'],
-            id: 'agent_123',
-            name: 'Tavern',
-        } as unknown as AgentListOutput['agents'][number];
-        const plugin = {
-            config: {},
-            description: 'Analyze Amazon Merch sales and product data from MerchBase.',
-            displayName: 'MerchBase',
-            enabled: true,
-            id: 'merchbase',
-            secrets: [{ hasValue: true, name: 'apiKey' }],
-            services: [
-                {
-                    description: 'Read-only MerchBase sales, product, catalog, and design tools.',
-                    displayName: 'MerchBase',
-                    enabled: true,
-                    healthCapabilities: ['plugin.merchbase'],
-                    id: 'merchbase',
-                    scopes: [],
-                },
-            ],
-            updatedAt: '2026-06-23T12:00:00.000Z',
-        } as unknown as PluginListOutput['plugins'][number];
-
-        const markup = renderToString(
-            <AgentPluginGrantRow
-                agent={agent}
-                health={{ healthy: true, reason: null }}
-                isSaving={false}
-                onEnabledChange={() => undefined}
-                plugin={plugin}
-            />
-        );
-
-        expect(markup).toContain('Revoke MerchBase for Tavern');
-        expect(markup).not.toContain('Configure');
-        expect(markup).not.toContain('Enable it in Plugins first');
-    });
-
-    test('blocks new grants while the plugin is unhealthy', () => {
-        const agent = {
-            enabledPluginIds: [],
-            id: 'agent_123',
-            name: 'Tavern',
-        } as unknown as AgentListOutput['agents'][number];
-        const plugin = {
-            config: {},
-            description: 'Analyze Amazon Merch sales and product data from MerchBase.',
-            displayName: 'MerchBase',
-            enabled: true,
-            id: 'merchbase',
-            secrets: [{ hasValue: true, name: 'apiKey' }],
-            services: [
-                {
-                    description: 'Read-only MerchBase sales, product, catalog, and design tools.',
-                    displayName: 'MerchBase',
-                    enabled: true,
-                    healthCapabilities: ['plugin.merchbase'],
-                    id: 'merchbase',
-                    scopes: [],
-                },
-            ],
-            updatedAt: '2026-06-23T12:00:00.000Z',
-        } as unknown as PluginListOutput['plugins'][number];
-
-        const markup = renderToString(
-            <AgentPluginGrantRow
-                agent={agent}
-                health={{ healthy: false, reason: 'MerchBase is not reachable.' }}
-                isSaving={false}
-                onEnabledChange={() => undefined}
-                plugin={plugin}
-            />
-        );
-
-        expect(markup).toContain('MerchBase is not reachable.');
-        expect(markup).toContain('disabled');
-    });
-
-    test('does not duplicate plugin disabled state in agent grant rows', () => {
-        const agent = {
-            enabledPluginIds: ['google'],
-            id: 'agent_123',
-            name: 'Tavern',
-        } as unknown as AgentListOutput['agents'][number];
-        const plugin = {
-            config: {},
-            description: 'Read Google Workspace data through Tavern-managed Google services.',
-            displayName: 'Google',
-            enabled: false,
-            id: 'google',
-            secrets: [],
-            services: [
-                {
-                    description: 'Read and create Google Calendar events.',
-                    displayName: 'Google Calendar',
-                    enabled: true,
-                    healthCapabilities: ['plugin.google.calendar'],
-                    id: 'calendar',
-                    scopes: ['https://www.googleapis.com/auth/calendar.events'],
-                },
-            ],
-            updatedAt: '2026-07-05T12:00:00.000Z',
-        } as unknown as PluginListOutput['plugins'][number];
-
-        const markup = renderToString(
-            <AgentPluginGrantRow
-                agent={agent}
-                health={{ healthy: false, reason: 'Google is disabled.' }}
-                isSaving={false}
-                onEnabledChange={() => undefined}
-                plugin={plugin}
-            />
-        );
-
-        expect(markup).toContain('Read Google Workspace data');
-        expect(markup).toContain('Enable it in Plugins first');
-        expect(markup).not.toContain('Grant is saved');
     });
 
     test('surfaces a merchbase skill conflict without exposing the path inline', () => {

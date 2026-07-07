@@ -321,17 +321,11 @@ export function createAppRouter() {
                                         },
                                         {
                                             path: 'agents/:agentId/tools',
-                                            element: <AgentPluginsRedirect />,
+                                            element: <AgentSkillsRedirect />,
                                         },
                                         {
                                             path: 'agents/:agentId/plugins',
-                                            lazy: lazyRoute(
-                                                () =>
-                                                    import(
-                                                        './routes/app/settings-plugins-page.tsx'
-                                                    ),
-                                                'SettingsPluginsPage'
-                                            ),
+                                            element: <AgentSkillsRedirect />,
                                         },
                                         {
                                             path: 'agents/:agentId/channels',
@@ -342,7 +336,7 @@ export function createAppRouter() {
                                         },
                                         {
                                             path: 'agents/:agentId/mcp',
-                                            element: <AgentPluginsRedirect />,
+                                            element: <AgentSkillsRedirect />,
                                         },
                                         {
                                             path: 'agents/:agentId/memory',
@@ -421,9 +415,9 @@ export function createAppRouter() {
     ]);
 }
 
-function AgentPluginsRedirect() {
+function AgentSkillsRedirect() {
     const { agentId } = useParams();
-    return <Navigate replace to={buildAgentSettingsPath(agentId, 'plugins')} />;
+    return <Navigate replace to={buildAgentSettingsPath(agentId, 'skills')} />;
 }
 
 function LegacyDashboardRedirect() {

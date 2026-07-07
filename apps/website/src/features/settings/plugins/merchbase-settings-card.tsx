@@ -15,8 +15,6 @@ import { Icon } from '../../../components/ui/icon.tsx';
 import { Button } from '../../../components/ui/primitives/button.tsx';
 import { SettingsRow } from '../../../components/ui/settings-row.tsx';
 import { Skeleton } from '../../../components/ui/skeleton.tsx';
-import { Switch } from '../../../components/ui/switch.tsx';
-import { Tooltip, TooltipContent, TooltipTrigger } from '../../../components/ui/tooltip.tsx';
 import type { MerchbaseSettingsOutput } from '../../../lib/trpc.tsx';
 import { cn } from '../../../lib/utils.ts';
 import { merchbaseEnvironmentLockTooltip } from './merchbase-settings-copy.ts';
@@ -28,6 +26,7 @@ import {
     normalizeDraft,
     toSaveInput,
 } from './merchbase-settings-model.ts';
+import { PluginEnablementSwitch } from './plugin-enablement-switch.tsx';
 
 type MerchbaseSettings = NonNullable<MerchbaseSettingsOutput>;
 type MerchbaseSettingsControlRender = (control: {
@@ -75,25 +74,14 @@ export function MerchbaseSettingsCard({
             onSave={onSave}
             settings={currentSettings}
         >
-            {({ openSettingsDialog, requestSave }) => {
-                function handleEnabledChange(enabled: boolean) {
-                    if (enabled && !currentSettings.apiKeyConfigured) {
-                        openSettingsDialog({ enabled: true });
-                        return;
-                    }
-
-                    requestSave({ enabled });
-                }
-
-                return (
-                    <MerchbasePluginRow
-                        isSaving={isSaving}
-                        onEnabledChange={handleEnabledChange}
-                        onSelect={openSettingsDialog}
-                        settings={currentSettings}
-                    />
-                );
-            }}
+            {({ openSettingsDialog, requestSave }) => (
+                <MerchbasePluginRow
+                    isSaving={isSaving}
+                    onEnabledChange={(enabled) => requestSave({ enabled })}
+                    onSelect={openSettingsDialog}
+                    settings={currentSettings}
+                />
+            )}
         </MerchbaseSettingsControl>
     );
 }
@@ -197,6 +185,13 @@ function MerchbasePluginRow({
     settings: MerchbaseSettings;
 }) {
     const environmentControlled = settings.enablementSource === 'environment';
+    // Turning off stays available even when setup later breaks; only enabling locks.
+    const needsSetup = !(settings.enabled || settings.apiKeyConfigured);
+    const lockReason = environmentControlled
+        ? merchbaseEnvironmentLockTooltip
+        : needsSetup
+          ? 'Set up MerchBase with an API key before enabling it.'
+          : null;
 
     return (
         <SettingsRow
@@ -215,11 +210,6 @@ function MerchbasePluginRow({
                             Skill conflict
                         </Badge>
                     ) : null}
-                    {settings.apiKeyConfigured ? null : (
-                        <Badge size="sm" variant="error">
-                            Needs setup
-                        </Badge>
-                    )}
                 </span>
             }
             trailingWidth="intrinsic"
@@ -228,43 +218,21 @@ function MerchbasePluginRow({
                 <Button disabled={isSaving} onClick={() => onSelect()} variant="ghost">
                     {settings.apiKeyConfigured ? 'Configure' : 'Set up'}
                 </Button>
-                <MerchbaseEnablementSwitch
+                <PluginEnablementSwitch
                     aria-label={
                         environmentControlled
                             ? 'MerchBase enablement is managed by local Tavern configuration'
-                            : `${settings.enabled ? 'Disable' : 'Enable'} MerchBase`
+                            : needsSetup
+                              ? 'MerchBase needs setup before it can be enabled'
+                              : `${settings.enabled ? 'Disable' : 'Enable'} MerchBase`
                     }
                     checked={settings.enabled}
-                    disabled={isSaving || environmentControlled}
-                    environmentControlled={environmentControlled}
+                    disabled={isSaving}
+                    lockReason={lockReason}
                     onCheckedChange={onEnabledChange}
                 />
             </div>
         </SettingsRow>
-    );
-}
-
-function MerchbaseEnablementSwitch({
-    environmentControlled,
-    ...props
-}: React.ComponentProps<typeof Switch> & {
-    environmentControlled: boolean;
-}) {
-    const control = <Switch {...props} />;
-
-    if (!environmentControlled) {
-        return control;
-    }
-
-    return (
-        <Tooltip>
-            <TooltipTrigger render={<span className="inline-flex cursor-default" />}>
-                {control}
-            </TooltipTrigger>
-            <TooltipContent className="max-w-64" side="left">
-                {merchbaseEnvironmentLockTooltip}
-            </TooltipContent>
-        </Tooltip>
     );
 }
 
