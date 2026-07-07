@@ -189,6 +189,15 @@ function TaskDetailPane({
     const [title, setTitle] = React.useState(task.title);
     const [description, setDescription] = React.useState(task.description ?? '');
 
+    // Adopt external edits (agent tools, other windows) so a later blur
+    // does not save stale text over them.
+    React.useEffect(() => {
+        setTitle(task.title);
+    }, [task.title]);
+    React.useEffect(() => {
+        setDescription(task.description ?? '');
+    }, [task.description]);
+
     return (
         <TaskEditorPane
             description={description}

@@ -62,21 +62,24 @@ export function TaskDispatchField({
                         </SelectContent>
                     </Select>
                 </TaskFieldRow>
-                <Button
-                    disabled={disabledReason !== null || dispatchAgentId === null}
-                    loading={isDispatching}
-                    onClick={onDispatch}
-                    size="sm"
-                    title={disabledReason ?? undefined}
-                    type="button"
-                    variant="secondary"
-                >
-                    <Icon aria-hidden="true" className="size-4" icon={SentIcon} />
-                    Dispatch to agent
-                </Button>
-                <p className="text-muted-foreground text-xs">
-                    Sends this task into the agent's direct chat so the work happens in the room.
-                </p>
+                <div className="flex items-center justify-between gap-4">
+                    <p className="min-w-0 text-muted-foreground text-xs leading-4">
+                        Work happens in the agent's direct chat.
+                    </p>
+                    <Button
+                        className="shrink-0"
+                        disabled={disabledReason !== null || dispatchAgentId === null}
+                        loading={isDispatching}
+                        onClick={onDispatch}
+                        size="sm"
+                        title={disabledReason ?? undefined}
+                        type="button"
+                        variant="secondary"
+                    >
+                        <Icon aria-hidden="true" className="size-4" icon={SentIcon} />
+                        Dispatch
+                    </Button>
+                </div>
             </div>
         </TaskEditorSection>
     );
