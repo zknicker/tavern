@@ -38,7 +38,7 @@ describe('development recall demo seeding', () => {
         const turns = getDb()
             .prepare(
                 `SELECT id, status FROM agent_turns
-                 WHERE chat_id = $chatId
+                 WHERE chat_id = $chatId AND metadata_json LIKE '%promptEvidence%'
                  ORDER BY created_at DESC`
             )
             .all({ $chatId: developmentChatDemoId }) as Array<{ id: string; status: string }>;
@@ -58,7 +58,10 @@ describe('development recall demo seeding', () => {
         seedDevelopmentChatDemos({ db: getDb(), enabled: true });
 
         const count = getDb()
-            .prepare('SELECT COUNT(*) AS n FROM agent_turns WHERE chat_id = $chatId')
+            .prepare(
+                `SELECT COUNT(*) AS n FROM agent_turns
+                 WHERE chat_id = $chatId AND metadata_json LIKE '%promptEvidence%'`
+            )
             .get({ $chatId: developmentChatDemoId }) as { n: number };
         expect(count.n).toBeLessThanOrEqual(2);
     });

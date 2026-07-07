@@ -1,11 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { developmentChatDemoId } from '@tavern/api/development-chat-demos';
-import { AGENT_WORKSPACE } from '../config';
 import type { Database } from '../db/sqlite';
 import { namedParams } from '../db/sqlite';
 import { resolveSemanticMemoryConfigSync } from '../memory/semantic/store';
-import { ensureCurrentAgentSession } from './agent-session-store';
 import {
     completeAgentTurn,
     createAgentTurn,
@@ -74,25 +72,21 @@ export function seedDevelopmentRecallEvidence(db: Database) {
         return;
     }
 
-    // A bare agents row satisfies the agent-session foreign key without the
-    // agent-store side effects (a stored agent gets its own DM chat).
-    db.prepare(
-        `INSERT INTO agents
-            (id, name, primary_color, workspace_folder, enabled_skill_ids_json, is_admin, raw_json, last_synced_at, created_at, updated_at)
-         VALUES ($id, 'Tavern', NULL, $workspaceFolder, '[]', 0, '{}', $now, $now, $now)
-         ON CONFLICT(id) DO NOTHING`
-    ).run(
-        namedParams({
-            id: demoAgentId,
-            now: new Date().toISOString(),
-            workspaceFolder: AGENT_WORKSPACE,
-        })
-    );
-    const session = ensureCurrentAgentSession({
-        agentParticipantId: demoAgentId,
-        chatId: developmentChatDemoId,
-        db,
-    });
+    // Reuse the newest demo-seeded Agent session so evidence turns share the
+    // agent-drawer lineage instead of minting an extra session row.
+    const session = db
+        .prepare(
+            `SELECT id FROM agent_sessions
+             WHERE chat_id = $chatId AND agent_participant_id = $agentParticipantId
+             ORDER BY generation DESC
+             LIMIT 1`
+        )
+        .get(namedParams({ agentParticipantId: demoAgentId, chatId: developmentChatDemoId })) as
+        | { id: string }
+        | undefined;
+    if (!session) {
+        return;
+    }
 
     for (const response of responses) {
         const runId = response.id.replace(/^rsp_/, 'run_');
