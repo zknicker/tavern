@@ -236,8 +236,9 @@ async function resolveRecallRoot() {
 }
 
 function setProvisioning(next: RecallProvisioningStatus) {
+    const phaseChanged = provisioning.phase !== next.phase;
     provisioning = next;
-    pushRecallCapability();
+    pushRecallCapability(phaseChanged);
 }
 
 // The embedding model downloads inside the first embed call with no progress
@@ -290,9 +291,12 @@ function modelCacheBytes() {
 // Lazy import: the capabilities store depends on capability definitions, which
 // read this module's provisioning status — a static import here would close
 // that cycle. Push failures only delay the next capability poll.
-function pushRecallCapability() {
+// Phase changes bypass the throttle: it exists to absorb same-phase progress
+// ticks, and dropping a terminal push would freeze the UI on a stale state
+// (a yellow 100% bar) until the next scheduled capability poll.
+function pushRecallCapability(force = false) {
     const now = Date.now();
-    if (now - lastCapabilityPushAt < capabilityPushThrottleMs) {
+    if (!force && now - lastCapabilityPushAt < capabilityPushThrottleMs) {
         return;
     }
     lastCapabilityPushAt = now;

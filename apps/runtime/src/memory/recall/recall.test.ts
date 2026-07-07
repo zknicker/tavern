@@ -3,7 +3,7 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { homedir, tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { refreshRuntimeCapabilities } from '../../capabilities/store.ts';
+import { getRuntimeCapability, refreshRuntimeCapabilities } from '../../capabilities/store.ts';
 import { closeDb, initTestDb } from '../../db/connection.ts';
 import { ensureRuntimeSchema } from '../../db/schema.ts';
 import { loadQmd } from './qmd-loader.ts';
@@ -111,6 +111,27 @@ describe('memory recall', () => {
             const [capability] = await refreshRuntimeCapabilities({ ids: ['memoryRecall'] });
             expect(capability).toMatchObject({
                 id: 'memoryRecall',
+                metadata: { phase: 'ready' },
+                state: 'healthy',
+            });
+        }
+    );
+
+    it.skipIf(!embeddingModelCached)(
+        'pushes the terminal ready state past the progress throttle',
+        async () => {
+            // Provisioning fires a 100%-progress push moments before ready;
+            // the throttle must not swallow the trailing phase change or the
+            // capability row freezes on a degraded 100% bar until the poll.
+            await refreshRecallIndex();
+
+            const deadline = Date.now() + 3000;
+            let capability = getRuntimeCapability('memoryRecall');
+            while (Date.now() < deadline && capability.state !== 'healthy') {
+                await new Promise((resolve) => setTimeout(resolve, 25));
+                capability = getRuntimeCapability('memoryRecall');
+            }
+            expect(capability).toMatchObject({
                 metadata: { phase: 'ready' },
                 state: 'healthy',
             });
