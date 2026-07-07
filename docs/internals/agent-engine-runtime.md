@@ -102,6 +102,11 @@ guidance — lives in the composed agent instructions, not the per-turn prompt,
 so long sessions carry one copy instead of one per turn.
 After a turn settles, Runtime advances `promptContextSequence` to the
 triggering message sequence.
+Each turn also records prompt evidence — the composed instructions, the
+per-turn prompt, and the Memory recall hits — in `agent_turns` metadata at
+turn start, served on demand at `GET /api/turns/{run_id}/prompt`. The app's
+turn drawer shows the recall matches; dev mode (desktop Developer menu) adds
+the raw prompt blob.
 
 Tool calls are auto-approved. Tavern does not expose an interactive tool
 approval prompt. Harness tools come from the selected executor, Plugin tools
