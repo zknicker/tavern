@@ -4,6 +4,7 @@ import {
     formatLocalDateSlug,
     formatLocalIsoWithOffset,
     formatLocalTime,
+    formatLocalTimestampWithWeekday,
     isValidTimezone,
     resolveTimezone,
 } from './timezone';
@@ -26,6 +27,25 @@ describe('formatLocalIsoWithOffset', () => {
     it('falls back to UTC for invalid timezones', () => {
         expect(formatLocalIsoWithOffset(new Date('2026-01-01T12:00:00.000Z'), 'IST-2')).toBe(
             '2026-01-01T12:00:00+00:00'
+        );
+    });
+});
+
+describe('formatLocalTimestampWithWeekday', () => {
+    it('prefixes the local weekday, crossing the date line with the wall clock', () => {
+        const date = new Date('2026-07-05T17:22:42.000Z');
+        expect(formatLocalTimestampWithWeekday(date, 'America/New_York')).toBe(
+            'Sun 2026-07-05T13:22:42-04:00'
+        );
+        // Tokyo is already Monday at this instant.
+        expect(formatLocalTimestampWithWeekday(date, 'Asia/Tokyo')).toBe(
+            'Mon 2026-07-06T02:22:42+09:00'
+        );
+    });
+
+    it('falls back to UTC for invalid timezones', () => {
+        expect(formatLocalTimestampWithWeekday(new Date('2026-01-01T12:00:00.000Z'), 'IST-2')).toBe(
+            'Thu 2026-01-01T12:00:00+00:00'
         );
     });
 });

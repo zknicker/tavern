@@ -42,6 +42,19 @@ export function formatLocalIsoWithOffset(date: Date, timezone: string): string {
 }
 
 /**
+ * Format an instant as a weekday-prefixed local ISO timestamp, e.g.
+ * `Sun 2026-07-05T13:22:42-04:00`. Falls back to UTC if the timezone is
+ * invalid.
+ */
+export function formatLocalTimestampWithWeekday(date: Date, timezone: string): string {
+    const weekday = new Intl.DateTimeFormat('en-US', {
+        timeZone: resolveTimezone(timezone),
+        weekday: 'short',
+    }).format(date);
+    return `${weekday} ${formatLocalIsoWithOffset(date, timezone)}`;
+}
+
+/**
  * Format an instant as the local calendar date (`YYYY-MM-DD`) in the given
  * timezone. Falls back to UTC if the timezone is invalid.
  */

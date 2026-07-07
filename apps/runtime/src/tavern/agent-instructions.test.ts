@@ -89,6 +89,7 @@ describe('agent instructions', () => {
         expect(instructions).toContain('This chat:');
         expect(instructions).toContain('- chatId: cht_general');
         expect(instructions).toContain('treat older context and prior data reads as stale');
+        expect(instructions).toMatch(/send time in \S+ \(the home timezone\)/);
         expect(instructions).toContain('Chat tools:');
         expect(instructions).toContain('- chat_messages_list:');
         expect(instructions).toContain('Memory tools (shared durable knowledge)');

@@ -3,6 +3,7 @@ import { isRuntimeCronReady } from '../cron/manager-state.ts';
 import { getDb } from '../db/connection.ts';
 import type { Database } from '../db/sqlite.ts';
 import { isMemoryEnabled } from '../memory/settings.ts';
+import { resolveHomeTimezone } from '../timezone-settings.ts';
 import type { AgentExecutorInput } from './agent-executor.ts';
 import { getStoredAgent } from './agents-store.ts';
 import { getChat } from './chat-api/index.ts';
@@ -35,10 +36,11 @@ export async function buildAgentInstructions(
 // Static per-session guidance lives here instead of the per-turn prompt so a
 // long session carries one copy in its system prompt rather than one per turn.
 function tavernChatInstructions(input: AgentExecutorInput) {
+    const chat = getChat(input.chatId);
     return [
         'This chat:',
-        ...chatIdentityLines(input),
-        '- Every prompt message carries its send time. Weigh timestamps against the current time; treat older context and prior data reads as stale until re-checked.',
+        ...chatIdentityLines(input, chat),
+        `- Every prompt message carries its send time in ${resolveHomeTimezone()} (the home timezone). Weigh timestamps against the current time; treat older context and prior data reads as stale until re-checked.`,
         '- Recalled Memory blocks are automatic background context, not user input; verify with memory_read_page before relying on details.',
         '',
         'Chat tools:',
@@ -70,8 +72,7 @@ function tavernChatInstructions(input: AgentExecutorInput) {
 
 // The agent should know where it is speaking: channel vs direct message, the
 // chat's name, and who else holds a seat — including which seat is its own.
-function chatIdentityLines(input: AgentExecutorInput) {
-    const chat = getChat(input.chatId);
+function chatIdentityLines(input: AgentExecutorInput, chat: ReturnType<typeof getChat>) {
     if (!chat) {
         return [`- chatId: ${input.chatId}`];
     }

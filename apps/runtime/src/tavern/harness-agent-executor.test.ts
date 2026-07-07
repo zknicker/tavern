@@ -7,8 +7,10 @@ import type {
     AgentRuntimeModelName,
 } from '@tavern/api';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { closeDb, initTestDb } from '../db/connection.ts';
+import { closeDb, getDb, initTestDb } from '../db/connection.ts';
 import { ensureRuntimeSchema } from '../db/schema.ts';
+import { namedParams } from '../db/sqlite.ts';
+import { formatLocalTimestampWithWeekday } from '../timezone.ts';
 import {
     createChat,
     createMessage,
@@ -21,10 +23,10 @@ import {
     claudeCodeAuthOptions,
     createHarnessAgentExecutor,
     formatHarnessExecutionError,
-    harnessPrompt,
     piAuthOptions,
     setHarnessAgentFactoryForTesting,
 } from './harness-agent-executor.ts';
+import { harnessPrompt } from './harness-prompt.ts';
 import { messageActivityIdForRun, toolActivityIdForRun } from './harness-turn-stream.ts';
 
 const now = '2026-06-29T12:00:00.000Z';
@@ -333,6 +335,7 @@ describe('harness agent executor', () => {
     });
 
     it('anchors the prompt in time with a current-time line and per-message timestamps', async () => {
+        setHomeTimezone('UTC');
         seedPromptChat({ chatId: 'cht_time', kind: 'channel' });
         createPromptMessage('cht_time', {
             authorId: 'usr_alice',
@@ -358,11 +361,42 @@ describe('harness agent executor', () => {
             )
         );
 
-        expect(prompt).toMatch(/- current time: \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
-        expect(prompt).toContain(
-            `${current.message.created_at.replace(/\.\d{3}Z$/, 'Z')}] Bob: current ask`
+        expect(prompt).toMatch(
+            /- current time: [A-Z][a-z]{2} \d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\+00:00/
         );
-        expect(prompt).toMatch(/\d{4}-\d{2}-\d{2}T[^\]]+\] Alice: ambient note/);
+        expect(prompt).toContain(
+            `${formatLocalTimestampWithWeekday(new Date(current.message.created_at), 'UTC')}] Bob: current ask`
+        );
+        expect(prompt).toMatch(/\w{3} \d{4}-\d{2}-\d{2}T[^\]]+\] Alice: ambient note/);
+    });
+
+    it('renders prompt timestamps in the configured home timezone', async () => {
+        setHomeTimezone('America/New_York');
+        seedPromptChat({ chatId: 'cht_home_tz', kind: 'channel' });
+        const current = createPromptMessage('cht_home_tz', {
+            authorId: 'usr_bob',
+            content: 'current ask',
+            id: 'msg_home_tz_current',
+            role: 'user',
+        });
+
+        const prompt = await harnessPrompt(
+            executorInput(
+                { model: 'gpt-4.1-mini', provider: 'openai' },
+                {
+                    chatId: 'cht_home_tz',
+                    content: 'current ask',
+                    requestMessageId: 'msg_home_tz_current',
+                }
+            )
+        );
+
+        expect(prompt).toContain(
+            `${formatLocalTimestampWithWeekday(
+                new Date(current.message.created_at),
+                'America/New_York'
+            )}] Bob: current ask`
+        );
     });
 
     it('adds reply parent context when the cursor delta does not include it', async () => {
@@ -557,6 +591,29 @@ function createPromptMessage(
         ...(input.parentMessageId ? { parent_message_id: input.parentMessageId } : {}),
         role: input.role,
     });
+}
+
+function fakeStreamingAgentFactory(parts: Iterable<unknown>) {
+    const fakeAgent = {
+        createSession: () =>
+            Promise.resolve({
+                destroy: () => Promise.resolve(),
+                sessionId: 'ses_fake',
+                stop: () => Promise.resolve({}),
+            }),
+        stream: () => Promise.resolve({ fullStream: parts, text: Promise.resolve('') }),
+    };
+    return (() => fakeAgent) as unknown as Parameters<typeof setHarnessAgentFactoryForTesting>[0];
+}
+
+function setHomeTimezone(timezone: string) {
+    getDb()
+        .prepare(
+            `INSERT INTO runtime_metadata (key, value, updated_at)
+             VALUES ('runtime:timezone', $value, $now)
+             ON CONFLICT(key) DO UPDATE SET value = excluded.value`
+        )
+        .run(namedParams({ now: new Date().toISOString(), value: JSON.stringify({ timezone }) }));
 }
 
 function* fakeTextSegment(id: string, text: string) {
