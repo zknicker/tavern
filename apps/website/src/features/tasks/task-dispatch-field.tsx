@@ -62,10 +62,7 @@ export function TaskDispatchField({
                         </SelectContent>
                     </Select>
                 </TaskFieldRow>
-                <div className="flex items-center justify-between gap-4">
-                    <p className="min-w-0 text-muted-foreground text-xs leading-4">
-                        Work happens in the agent's direct chat.
-                    </p>
+                <div className="flex items-center justify-end">
                     <Button
                         className="shrink-0"
                         disabled={disabledReason !== null || dispatchAgentId === null}
@@ -77,9 +74,12 @@ export function TaskDispatchField({
                         variant="secondary"
                     >
                         <Icon aria-hidden="true" className="size-4" icon={SentIcon} />
-                        Dispatch
+                        Dispatch to agent
                     </Button>
                 </div>
+                <p className="text-muted-foreground text-xs leading-4">
+                    Work happens in the agent's direct chat.
+                </p>
             </div>
         </TaskEditorSection>
     );
