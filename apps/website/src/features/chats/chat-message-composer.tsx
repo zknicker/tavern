@@ -20,6 +20,7 @@ import { useChatSteer } from '../../hooks/chats/use-chat-steer.ts';
 import { useChatStop } from '../../hooks/chats/use-chat-stop.ts';
 import { runtimeUnhealthyTooltip, useCapability } from '../../hooks/connections/use-capability.ts';
 import { useModelList } from '../../hooks/models/use-model-list.ts';
+import { getDesktopBridge } from '../../lib/desktop-bridge.ts';
 import { getModelProviderConfig } from '../../lib/model-provider-config.ts';
 import type { AgentListOutput } from '../../lib/trpc.tsx';
 import { cn } from '../../lib/utils.ts';
@@ -219,6 +220,29 @@ export function ChatMessageComposer({
         onMentionsChange: setMentions,
         supportsCommands: true,
     });
+    const focusTextEditorRef = React.useRef(mentionComposer.focusTextEditor);
+    focusTextEditorRef.current = mentionComposer.focusTextEditor;
+    const canAutoFocusComposer = variant === 'detail' && !isComposerBlocked && canSendToRuntime;
+    const chatAutoFocusKey = canAutoFocusComposer ? chatId : null;
+
+    React.useEffect(() => {
+        if (!chatAutoFocusKey) {
+            return;
+        }
+
+        const frame = requestAnimationFrame(() => focusTextEditorRef.current());
+        return () => cancelAnimationFrame(frame);
+    }, [chatAutoFocusKey]);
+
+    React.useEffect(() => {
+        if (!canAutoFocusComposer) {
+            return;
+        }
+
+        return getDesktopBridge()?.onViewActivated?.(() => {
+            focusTextEditorRef.current();
+        });
+    }, [canAutoFocusComposer]);
 
     async function handleSubmit(event?: React.FormEvent<HTMLFormElement>) {
         event?.preventDefault();

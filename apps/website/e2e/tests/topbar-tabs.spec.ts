@@ -80,6 +80,21 @@ test('starting a chat from the blank tab consumes it in place', async ({ page })
     await expect(page.locator(blankTabSelector)).toHaveCount(0);
 });
 
+test('switching back to an open chat tab focuses the message composer', async ({ page }) => {
+    await startChat(page, 'First tab marker. Reply exactly `QA_FIRST_TAB_OK`.', 'QA_FIRST_TAB_OK');
+    await expect(page).toHaveURL(/\/chats\/cht_/u);
+    const firstChatUrl = page.url();
+    await expect(page.locator(blankTabSelector)).toHaveCount(0);
+
+    await page.locator(newTabButtonSelector).click();
+    await page.getByRole('button', { name: 'Workspace' }).click();
+    await expect(page).toHaveURL(/\/workspace/u);
+
+    await page.locator('button[title^="First tab marker"]').click();
+    await expect(page).toHaveURL(firstChatUrl);
+    await expect(page.getByRole('textbox', { name: 'Chat message' })).toBeFocused();
+});
+
 test('closing the last tab keeps the window non-empty (opens a fresh blank tab)', async ({
     page,
 }) => {
@@ -153,6 +168,10 @@ async function startChat(page: Page, prompt: string, expectedReply: string) {
     await page.goto('/overview');
     // A fresh window opens a blank tab on the Tavern home; start the chat from it.
     await page.waitForURL(/\/new\//u);
+    await startChatFromActiveBlank(page, prompt, expectedReply);
+}
+
+async function startChatFromActiveBlank(page: Page, prompt: string, expectedReply: string) {
     await fillComposer(page, '#home-prompt', prompt);
     await page.getByRole('button', { name: 'Start chat' }).click();
     await expect(page.locator(`text=${expectedReply}`).first()).toBeVisible({ timeout: 45_000 });

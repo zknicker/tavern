@@ -380,6 +380,8 @@ function activateTab(window, tabId) {
 
     positionActiveView(window);
     broadcastTabs(window);
+    tab.view.webContents.focus();
+    tab.view.webContents.send('desktop:view:activated');
 }
 
 function closeTab(window, tabId) {

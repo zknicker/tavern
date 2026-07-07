@@ -35,6 +35,12 @@ contextBridge.exposeInMainWorld('tavernDesktop', {
         ipcRenderer.on('desktop:view:navigate-to', handler);
         return () => ipcRenderer.off('desktop:view:navigate-to', handler);
     },
+    // Main → content: this WebContentsView became the visible active tab.
+    onViewActivated: (listener) => {
+        const handler = () => listener();
+        ipcRenderer.on('desktop:view:activated', handler);
+        return () => ipcRenderer.off('desktop:view:activated', handler);
+    },
     checkForUpdate: () => ipcRenderer.invoke('desktop:update:check'),
     downloadUpdate: () => ipcRenderer.invoke('desktop:update:download'),
     ensureServerOrigin: () => ipcRenderer.invoke('desktop:server:ensure'),
