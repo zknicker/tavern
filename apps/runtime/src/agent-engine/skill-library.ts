@@ -100,7 +100,7 @@ export function isSeededSkillId(skillId: string): boolean {
     return skillId in seededSkillDefaults;
 }
 
-export function seededSkillDefaultEntries(): Array<[skillId: string, content: string]> {
+export function seededSkillDefaultEntries(): [skillId: string, content: string][] {
     return Object.entries(seededSkillDefaults);
 }
 
