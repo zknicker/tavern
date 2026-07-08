@@ -90,7 +90,9 @@ test('chat message prose uses the shadcn bubble content styling', () => {
     // ghost text; the owner's own message is a right-anchored secondary pill.
     expect(assistant).toContain('rounded-xl');
     expect(assistant).toContain('data-variant="ghost"');
-    expect(user).toContain('rounded-full');
+    // The owner bubble matches the prompt input's surface radius so long
+    // multi-line sends don't balloon into pill shapes.
+    expect(user).toContain('rounded-3xl');
     expect(user).toContain('data-variant="secondary"');
 });
 
