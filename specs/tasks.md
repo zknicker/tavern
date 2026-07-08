@@ -25,9 +25,12 @@ an agent assignee are picked up and executed without a human pressing Dispatch.
   A task with an unfinished dependency is waiting: it keeps its status and
   shows what it waits on. Cycles are rejected at write time. There is no
   parent/child hierarchy and no automatic status motion from edges.
-- Labels are freeform strings, filterable on the board — the lightweight
-  way to tag a domain, product, or SKU. No managed label catalog, colors,
-  or label hierarchy.
+- Labels are first-class records modeled after Linear: a unique name and a
+  color from the app palette. Tasks reference labels; the board filters by
+  them. Labels are the lightweight way to tag a domain, product, or SKU.
+  New labels are created inline from the label picker; rename, recolor,
+  and delete live on a small labels management surface. Deleting a label
+  removes it from its tasks. Label groups are out of scope.
 - A task can carry a `scheduledFor` date: the earliest it should be worked.
   A dated task is waiting until its date arrives, exactly like an unmet
   dependency — it keeps its status and is skipped by the dispatcher.
@@ -38,10 +41,19 @@ an agent assignee are picked up and executed without a human pressing Dispatch.
 ### Attachments
 
 - The description and summary render as markdown, including images.
-- A task carries attachments: references to Runtime artifacts and files
-  produced by chat turns — not a new storage system. Agents attach their
-  key work products at close-out so the outcome is reviewable from the
-  task page; a design task's images render inline where review happens.
+- A task carries attachments: references to files in an agent's workspace —
+  the same files the work produced — not copies. There is no separate
+  asset store and no asset URL server. The app reads attachment bytes
+  through the existing Runtime workspace-file APIs and renders them inline
+  as data, the same path chat artifact previews use today.
+- An attachment records the owning agent, the workspace-relative path, and
+  the media type at attach time. Agents attach by path — they already know
+  it, they wrote the file.
+- Image attachments render inline on the task page, so a design task's
+  outputs are reviewable exactly where the `review` decision happens.
+- An attachment whose file has moved or been deleted renders as visibly
+  missing; Tavern never substitutes a guess. Snapshotting attachment bytes
+  at close-out is future work.
 - Board writes are never gated on agent activity. The user can edit, retitle,
   reprioritize, block, or cancel any task while an agent is mid-turn.
 
@@ -99,8 +111,11 @@ Dispatched work runs in a dedicated task chat, not the agent's DM.
   `todo` (see status ownership).
 - Terminal transitions through `tasks_update` carry a short `summary` — what
   changed, how it was verified, what remains. The summary lands on the task,
-  not in the description. When the work produced artifacts, the transition
-  attaches references to the key ones.
+  not in the description. When the work produced files, the transition
+  attaches the key ones by workspace path.
+- Agents apply labels by name. An unknown label name creates the label
+  with an auto-assigned color, so an agent can mint a new SKU tag without
+  a round-trip through the user.
 - Agents set `scheduledFor` when filing dated follow-ups ("check the ad
   performance of X next week"); like all agent-created tasks these land in
   `backlog` for the user to promote.
@@ -250,5 +265,6 @@ Dispatched work runs in a dedicated task chat, not the agent's DM.
 - Idempotency keys for automation-created tasks.
 - Two-way calendar sync (e.g. the Google Calendar plugin) for scheduled
   tasks; the calendar view is board-only until then.
+- Label groups; attachment byte snapshots at close-out.
 - Plan-approval gates before execution; goal-mode loops with judges;
   heartbeats; multi-host coordination.
