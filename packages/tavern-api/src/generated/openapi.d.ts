@@ -97,6 +97,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/chats/{chat_id}/responses/{response_id}/evidence": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read one turn's execution evidence.
+         * @description A turn's execution record — its activity and artifacts plus the owning response — queried on demand. Evidence never rides the chat timeline; consumers fetch it per turn.
+         */
+        get: operations["getResponseEvidence"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/chats/{chat_id}/deliveries": {
         parameters: {
             query?: never;
@@ -463,6 +483,13 @@ export interface components {
             activity: components["schemas"]["ResponseActivity"][];
             artifacts: components["schemas"]["ChatArtifact"][];
             next_sequence: number | null;
+        };
+        ResponseEvidence: {
+            activity: components["schemas"]["ResponseActivity"][];
+            artifacts: components["schemas"]["ChatArtifact"][];
+            /** @description The turn's output message, when one was delivered. */
+            reply_message: components["schemas"]["ChatMessage"] | null;
+            response: components["schemas"]["ChatResponse"];
         };
         ChatTimelinePage: {
             messages: components["schemas"]["ChatMessage"][];
@@ -872,6 +899,30 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ChatTimelinePage"];
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    getResponseEvidence: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                chat_id: components["parameters"]["ChatId"];
+                response_id: components["parameters"]["ResponseId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One turn's execution evidence. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ResponseEvidence"];
                 };
             };
             default: components["responses"]["Error"];

@@ -7,6 +7,7 @@ import type {
     TavernUpsertResponseActivityRequest,
     TavernUpsertResponseRequest,
 } from '@tavern/api';
+import { getDb } from '../db/connection';
 import { getAgentTurnPromptEvidence } from './agent-turn-store';
 import {
     clearChat,
@@ -18,7 +19,10 @@ import {
     getChat,
     getChatTimelinePage,
     getMessage,
+    getResponse,
     getResponseActivity,
+    listActivityForResponses,
+    listArtifactsForResponses,
     listChats,
     listEvents,
     listMessages,
@@ -107,6 +111,32 @@ async function route(request: Request, url: URL): Promise<Response> {
                 limit: numberParam(url, 'limit'),
             })
         );
+    }
+
+    // Turn evidence: one response's execution record (activity + artifacts),
+    // queried on demand instead of riding the timeline page.
+    const responseEvidenceMatch = url.pathname.match(
+        /^\/api\/chats\/([^/]+)\/responses\/([^/]+)\/evidence$/u
+    );
+    if (responseEvidenceMatch && request.method === 'GET') {
+        const chatId = decodeURIComponent(responseEvidenceMatch[1]);
+        const responseId = decodeURIComponent(responseEvidenceMatch[2]);
+        const response = getResponse(responseId);
+
+        if (!response || response.chat_id !== chatId) {
+            return notFound();
+        }
+
+        const db = getDb();
+
+        return json({
+            activity: listActivityForResponses([responseId], db),
+            artifacts: listArtifactsForResponses([responseId], db),
+            reply_message: response.response_message_id
+                ? getMessage(response.response_message_id, db)
+                : null,
+            response,
+        });
     }
 
     const chatResponsesMatch = url.pathname.match(/^\/api\/chats\/([^/]+)\/responses$/u);

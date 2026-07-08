@@ -16,6 +16,8 @@ export { markRead } from './reads';
 export {
     getResponse,
     getResponseActivity,
+    listActivityForResponses,
+    listArtifactsForResponses,
     listResponses,
     upsertArtifact,
     upsertResponse,

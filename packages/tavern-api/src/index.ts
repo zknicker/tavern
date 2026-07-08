@@ -26,6 +26,7 @@ export type TavernListMessagesResponse = TavernApiSchema<'ListMessagesResponse'>
 export type TavernListResponsesResponse = TavernApiSchema<'ListResponsesResponse'>;
 export type TavernMarkReadRequest = TavernApiSchema<'MarkReadRequest'>;
 export type TavernResponseActivity = TavernApiSchema<'ResponseActivity'>;
+export type TavernResponseEvidence = TavernApiSchema<'ResponseEvidence'>;
 export type TavernTurnPromptEvidence = TavernApiSchema<'TurnPromptEvidence'>;
 export type TavernTurnPromptRecallHit = TavernApiSchema<'TurnPromptRecallHit'>;
 export type TavernUpsertArtifactRequest = TavernApiSchema<'UpsertArtifactRequest'>;

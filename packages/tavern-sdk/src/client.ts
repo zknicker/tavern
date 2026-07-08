@@ -18,6 +18,7 @@ import type {
     TavernListResponsesResponse,
     TavernMarkReadRequest,
     TavernResponseActivity,
+    TavernResponseEvidence,
     TavernSimulateTurnReceipt,
     TavernSimulateTurnRequest,
     TavernTurnPromptEvidence,
@@ -223,6 +224,12 @@ class TavernChatClient {
     activity(chatId: string, activityId: string) {
         return this.#client.request<TavernResponseActivity>(
             `/api/chats/${encodeURIComponent(chatId)}/activity/${encodeURIComponent(activityId)}`
+        );
+    }
+
+    responseEvidence(chatId: string, responseId: string) {
+        return this.#client.request<TavernResponseEvidence>(
+            `/api/chats/${encodeURIComponent(chatId)}/responses/${encodeURIComponent(responseId)}/evidence`
         );
     }
 

@@ -189,6 +189,27 @@ paths:
                 $ref: '#/components/schemas/ChatTimelinePage'
         default:
           $ref: '#/components/responses/Error'
+  /api/chats/{chat_id}/responses/{response_id}/evidence:
+    get:
+      operationId: getResponseEvidence
+      tags: [Chats]
+      summary: Read one turn's execution evidence.
+      description: >
+        A turn's execution record — its activity and artifacts plus the
+        owning response — queried on demand. Evidence never rides the chat
+        timeline; consumers fetch it per turn.
+      parameters:
+        - $ref: '#/components/parameters/ChatId'
+        - $ref: '#/components/parameters/ResponseId'
+      responses:
+        '200':
+          description: One turn's execution evidence.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResponseEvidence'
+        default:
+          $ref: '#/components/responses/Error'
   /api/chats/{chat_id}/deliveries:
     post:
       operationId: createChatDelivery
@@ -988,6 +1009,30 @@ components:
             $ref: '#/components/schemas/ChatArtifact'
         next_sequence:
           type: [integer, 'null']
+    ResponseEvidence:
+      type: object
+      additionalProperties: false
+      required:
+        - activity
+        - artifacts
+        - reply_message
+        - response
+      properties:
+        activity:
+          type: array
+          items:
+            $ref: '#/components/schemas/ResponseActivity'
+        artifacts:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChatArtifact'
+        reply_message:
+          description: The turn's output message, when one was delivered.
+          oneOf:
+            - $ref: '#/components/schemas/ChatMessage'
+            - type: 'null'
+        response:
+          $ref: '#/components/schemas/ChatResponse'
     ChatTimelinePage:
       type: object
       additionalProperties: false
