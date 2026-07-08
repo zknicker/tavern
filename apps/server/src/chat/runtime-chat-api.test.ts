@@ -2,8 +2,10 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { TavernChatMessage, TavernChatResponse, TavernResponseActivity } from '@tavern/sdk';
 import {
+    activityToChatRows,
     cancelledResponseToChatRow,
     failedTurnsFromResponses,
+    isTimelineActivityRow,
     mapResponseIdsByMessageId,
     visibleTimelineSources,
 } from './runtime-chat-api.ts';
@@ -130,6 +132,77 @@ test("another agent's newer response does not hide a failed seat", () => {
     assert.equal(failures.length, 1);
     assert.equal(failures[0]?.responseId, 'response-failed');
 });
+
+test('the timeline keeps conversation units and routes execution to evidence', () => {
+    const running = response({
+        id: 'response-live',
+        metadata: { runtime: { agentId: 'agt_primary', runId: 'run_live' } },
+        status: 'running',
+        updatedAt: '2026-06-08T12:01:00.000Z',
+    });
+    const responsesById = new Map([[running.id, running]]);
+    const buildRows = (activity: TavernResponseActivity) =>
+        activityToChatRows(activity, responsesById, new Map(), new Map());
+    const timelineKinds = (activity: TavernResponseActivity) =>
+        buildRows(activity)
+            .filter(isTimelineActivityRow)
+            .map((row) => row.kind);
+
+    // Execution evidence never reaches the timeline.
+    assert.deepEqual(timelineKinds(activity({ id: 'act_tool', kind: 'tool_call' })), []);
+    assert.deepEqual(timelineKinds(activity({ id: 'act_think', kind: 'reasoning' })), []);
+    assert.deepEqual(
+        timelineKinds(activity({ detail: 'Narrating...', id: 'act_msg', kind: 'message' })),
+        []
+    );
+
+    // Conversation units stay: the widget is part of the contribution and it
+    // carries turn identity as a field.
+    const widgetRows = buildRows(
+        activity({
+            id: 'act_widget',
+            kind: 'widget',
+            metadata: { widget: { component: 'table', fallback: { text: 'Table' } } },
+        })
+    ).filter(isTimelineActivityRow);
+    assert.deepEqual(
+        widgetRows.map((row) => ({ kind: row.kind, runId: 'runId' in row ? row.runId : null })),
+        [{ kind: 'widget', runId: 'run_live' }]
+    );
+
+    // The evidence set (unfiltered) keeps the execution record.
+    assert.deepEqual(
+        buildRows(activity({ id: 'act_tool', kind: 'tool_call' })).map((row) => row.kind),
+        ['tool']
+    );
+});
+
+function activity(input: {
+    detail?: string;
+    id: string;
+    kind: TavernResponseActivity['kind'];
+    metadata?: Record<string, unknown>;
+}): TavernResponseActivity {
+    return {
+        artifact_ids: [],
+        chat_id: 'chat-1',
+        completed_at: '2026-06-08T12:01:00.000Z',
+        detail: input.detail ?? null,
+        id: input.id,
+        kind: input.kind,
+        metadata: {
+            runtime: { agentId: 'agt_primary', runId: 'run_live' },
+            ...(input.metadata ?? {}),
+        },
+        response_id: 'response-live',
+        sequence: 1,
+        started_at: '2026-06-08T12:00:30.000Z',
+        status: 'completed',
+        summary: input.detail ?? input.id,
+        title: input.id,
+        updated_at: '2026-06-08T12:01:00.000Z',
+    } as TavernResponseActivity;
+}
 
 test('cancelled response maps to a stopped system row', () => {
     const cancelled = response({

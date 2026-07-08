@@ -40,6 +40,7 @@ export function widgetRowFromActivity(input: {
         isFirstInGroup: true,
         kind: 'widget',
         responseId: input.activity.response_id,
+        runId: readRuntimeRunId(input.activity),
         sessionKey: input.sessionKey,
         startedAt: input.activity.started_at,
         widget,
@@ -77,6 +78,10 @@ function fallbackTextFromActivity(activity: TavernResponseActivity, component: s
 
 function readFallbackText(value: unknown) {
     return readString(readRecord(value).text);
+}
+
+function readRuntimeRunId(activity: TavernResponseActivity) {
+    return readString(readRecord(activity.metadata.runtime).runId);
 }
 
 function readRecord(value: unknown): Record<string, unknown> {

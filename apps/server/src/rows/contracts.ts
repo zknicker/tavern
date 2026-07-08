@@ -36,6 +36,9 @@ export const messageRowSchema = z.object({
     kind: z.literal('message'),
     message: messageRowMessageSchema,
     responseId: z.string().optional(),
+    // Turn identity for agent replies: the message is the turn's output, and
+    // consumers associate the two by this field, never by parsing ids.
+    runId: z.string().nullable().optional(),
 });
 
 export const toolRowSchema = z.object({
@@ -90,6 +93,8 @@ export const widgetRowSchema = z.object({
     isFirstInGroup: z.boolean(),
     kind: z.literal('widget'),
     responseId: z.string().optional(),
+    // Turn identity: the widget is part of its turn's contribution.
+    runId: z.string().nullable().optional(),
     sessionKey: z.string().nullable(),
     startedAt: z.string().nullable(),
     widget: widgetSchema,

@@ -60,15 +60,22 @@ export async function getRuntimeChatTimelinePage(
     const messageRows = messages.flatMap((message) =>
         messageToChatRows(message, agentsById, responseIdByMessageId)
     );
-    const activityRows = activity.flatMap((entry) =>
-        activityToChatRows(entry, responsesById, finalReplyTextByRunId, agentNamesById)
-    );
+    // The timeline carries conversation units only (specs/chat-timeline.md);
+    // tool, reasoning, worker, and narration rows are turn evidence served by
+    // chat.turn.evidence.
+    const activityRows = activity
+        .flatMap((entry) =>
+            activityToChatRows(entry, responsesById, finalReplyTextByRunId, agentNamesById)
+        )
+        .filter(isTimelineActivityRow);
     const artifactRows = artifacts.map(artifactToChatRow);
     const turnStatusRows = responses.flatMap(cancelledResponseToChatRow);
     const rows = [...messageRows, ...activityRows, ...artifactRows, ...turnStatusRows];
     // Active and failed turn states describe the newest history; the latest
     // page is the only one whose responses can carry them.
-    const activeReplies = isLatestPage ? activeRepliesFromResponses(responses) : [];
+    const activeReplies = isLatestPage
+        ? activeRepliesFromResponses(responses, latestNarrationByResponse(activity))
+        : [];
     const failedTurns = isLatestPage ? failedTurnsFromResponses(responses) : [];
     const sortedRows = rows.sort((left, right) => {
         const timestampDelta = rowTimestamp(left) - rowTimestamp(right);
@@ -83,6 +90,46 @@ export async function getRuntimeChatTimelinePage(
         rows: sortedRows,
         totalMessages: page.total_messages,
     };
+}
+
+// Conversation-visible activity projections: widgets and runtime notices are
+// part of the contribution, steered messages are user speech, clarifications
+// are conversational questions. Everything else an activity produces is
+// execution evidence.
+export function isTimelineActivityRow(row: ChatLogPage['rows'][number]) {
+    if (row.kind === 'widget') {
+        return true;
+    }
+    if (row.kind === 'system') {
+        return row.systemKind === 'runtimeNotice';
+    }
+    if (row.kind === 'tool') {
+        return Boolean(row.clarification);
+    }
+    if (row.kind === 'message') {
+        return row.actor?.kind === 'participant';
+    }
+    return false;
+}
+
+// The latest intra-turn narration per response: the one narration state the
+// timeline exposes while a turn runs. History stays in turn evidence.
+function latestNarrationByResponse(activity: readonly TavernResponseActivity[]) {
+    const latest = new Map<string, string>();
+
+    for (const entry of activity) {
+        if (entry.kind !== 'message' || runtimeNoticeFromActivity(entry)) {
+            continue;
+        }
+
+        const detail = entry.detail?.trim();
+
+        if (detail) {
+            latest.set(entry.response_id, detail);
+        }
+    }
+
+    return latest;
 }
 
 // Soft-deleted rows stay durable in Runtime (sequence slots are stable) but
@@ -128,7 +175,7 @@ export function visibleTimelineSources(input: {
     };
 }
 
-function artifactToChatRow(artifact: TavernArtifact): ChatLogPage['rows'][number] {
+export function artifactToChatRow(artifact: TavernArtifact): ChatLogPage['rows'][number] {
     return {
         responseId: artifact.response_id ?? undefined,
         artifact: {
@@ -203,6 +250,7 @@ function messageToChatRows(
         isFirstInGroup: true,
         kind: 'message',
         responseId: responseIdByMessageId.get(message.id),
+        runId: runtimeMetadataString(message, 'runId'),
         message: {
             actor,
             attachments: messageAttachments(message),
@@ -236,7 +284,7 @@ function messageAttachments(message: TavernChatMessage) {
     return attachments.length > 0 ? attachments : undefined;
 }
 
-function activityToChatRows(
+export function activityToChatRows(
     activity: TavernResponseActivity,
     responsesById: ReadonlyMap<string, TavernChatResponse>,
     finalReplyTextByRunId: ReadonlyMap<string, string>,
@@ -630,14 +678,15 @@ function clarificationFromActivity(activity: TavernResponseActivity) {
     };
 }
 
-function messageText(message: TavernChatMessage) {
+export function messageText(message: TavernChatMessage) {
     return message.content;
 }
 
 // Every in-flight run is a live reply: each agent seat runs one turn at a
 // time, so concurrent entries belong to different seats.
 function activeRepliesFromResponses(
-    responses: readonly TavernChatResponse[]
+    responses: readonly TavernChatResponse[],
+    narrationByResponseId: ReadonlyMap<string, string> = new Map()
 ): ChatLogPage['activeReplies'] {
     return responses
         .filter(
@@ -648,6 +697,7 @@ function activeRepliesFromResponses(
         .map((response) => ({
             agentId: runtimeMetadataString(response, 'agentId') ?? response.participant_id,
             isThinking: true,
+            narrationText: narrationByResponseId.get(response.id) ?? null,
             runId: runtimeMetadataString(response, 'runId') ?? response.id,
             sessionKey: responseSessionKey(response),
             startedAt: runtimeMetadataString(response, 'startedAt') ?? response.created_at,
@@ -710,7 +760,7 @@ function responseSessionKey(response: TavernChatResponse) {
     );
 }
 
-function runtimeMetadataString(
+export function runtimeMetadataString(
     message: TavernChatMessage | TavernChatResponse | TavernResponseActivity | null,
     key: string
 ) {
