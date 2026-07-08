@@ -31,5 +31,6 @@ export function useChatTimeline(input: { chatId: string; limit: number }) {
         historyLoaded: timelineWithLog.historyLoaded,
         rows: timelineWithLog.timeline,
         totalMessages: timelineWithLog.totalMessages,
+        turnEvidence: timelineWithLog.turnEvidence,
     };
 }

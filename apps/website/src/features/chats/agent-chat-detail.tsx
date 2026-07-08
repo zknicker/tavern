@@ -199,6 +199,7 @@ function SyncedAgentChatDetail({ chat, chatId }: { chat: ChatListItem; chatId: s
                         agents={agents}
                         chatId={chat.id}
                         rows={rows}
+                        turnEvidence={timeline.turnEvidence}
                     >
                         <ChatMessageComposer
                             activeRunIds={getActiveRunIds(timeline)}

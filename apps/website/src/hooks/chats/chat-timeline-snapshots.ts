@@ -34,6 +34,7 @@ export function emptyTimelineState(): ChatTimelineState {
         historyLoaded: false,
         timeline: [],
         totalMessages: 0,
+        turnEvidence: {},
     };
 }
 
@@ -108,7 +109,27 @@ export function applyLogSnapshot(
         historyLoaded,
         timeline: nextTimeline,
         totalMessages: nextTotal,
+        // Live evidence only serves running turns; ended runs read the
+        // durable chat.turn.evidence query instead.
+        turnEvidence: pruneTurnEvidence(state.turnEvidence, [
+            ...nextActiveReplies.map((reply) => reply.runId),
+            ...nextActiveTurns.map((turn) => turn.runId),
+        ]),
     };
+}
+
+function pruneTurnEvidence(
+    turnEvidence: ChatTimelineState['turnEvidence'],
+    liveRunIds: readonly string[]
+): ChatTimelineState['turnEvidence'] {
+    const live = new Set(liveRunIds);
+    const keys = Object.keys(turnEvidence);
+
+    if (keys.every((runId) => live.has(runId))) {
+        return turnEvidence;
+    }
+
+    return Object.fromEntries(Object.entries(turnEvidence).filter(([runId]) => live.has(runId)));
 }
 
 // Snapshot replies fill in runs the client has not seen live (another

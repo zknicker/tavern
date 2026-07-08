@@ -128,13 +128,16 @@ export function completeTimelineTurn(
     }
 ): ChatTimelineState {
     const timeline = completeLiveProgressRows(state.timeline, input);
+    const turnEvidence = completeRunEvidence(state.turnEvidence, input);
     const activeTurns = removeActiveTurn(state.activeTurns, input.turn.runId);
     const reply = findActiveReply(state.activeReplies, input.turn.runId);
 
     if (!reply) {
-        return activeTurns === state.activeTurns && timeline === state.timeline
+        return activeTurns === state.activeTurns &&
+            timeline === state.timeline &&
+            turnEvidence === state.turnEvidence
             ? state
-            : { ...state, activeTurns, timeline };
+            : { ...state, activeTurns, timeline, turnEvidence };
     }
 
     return {
@@ -146,7 +149,25 @@ export function completeTimelineTurn(
         }),
         activeTurns,
         timeline,
+        turnEvidence,
     };
+}
+
+// The run's live evidence settles with the turn, so a drawer open at the
+// completion beat shows finished steps instead of perpetually running ones.
+function completeRunEvidence(
+    turnEvidence: ChatTimelineState['turnEvidence'],
+    input: { completedAt: string; turn: ChatTurn }
+): ChatTimelineState['turnEvidence'] {
+    const rows = turnEvidence[input.turn.runId];
+
+    if (!rows) {
+        return turnEvidence;
+    }
+
+    const completed = completeLiveProgressRows(rows, input);
+
+    return completed === rows ? turnEvidence : { ...turnEvidence, [input.turn.runId]: completed };
 }
 
 export function updateTimelineTurnStatus(

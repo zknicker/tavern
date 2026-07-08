@@ -1,7 +1,7 @@
 import type { AgentCharacter } from '@tavern/api/agent-appearance';
 import * as React from 'react';
 import { Icon } from '../../components/ui/icon.tsx';
-import type { ChatActiveReply } from '../../hooks/chats/chat-timeline-state.ts';
+import type { ChatActiveReply, ChatTimelineState } from '../../hooks/chats/chat-timeline-state.ts';
 import type { AgentListOutput } from '../../lib/trpc.tsx';
 import { cn } from '../../lib/utils.ts';
 import { getAgentStatusLabel, resolveAgentStatusExpression } from './agent-status-expression.ts';
@@ -22,6 +22,10 @@ interface ChatActiveStatusStackProps {
     chatId?: string;
     className?: string;
     rows: TranscriptRow[];
+    // Live execution evidence keyed by run — work summaries and the live
+    // drawer read from it, since execution rows never ride the timeline
+    // (specs/chat-timeline.md).
+    turnEvidence?: ChatTimelineState['turnEvidence'];
     variant?: 'compact' | 'detail';
 }
 
@@ -33,9 +37,15 @@ export function ChatActiveStatusStack({
     chatId,
     className,
     rows,
+    turnEvidence = {},
     variant = 'compact',
 }: ChatActiveStatusStackProps) {
     const [drawerRunId, setDrawerRunId] = React.useState<string | null>(null);
+    const rowsWithEvidence = React.useMemo(() => {
+        const evidence = Object.values(turnEvidence).flat();
+
+        return evidence.length > 0 ? [...rows, ...evidence] : rows;
+    }, [rows, turnEvidence]);
     const drawerReply = drawerRunId
         ? (activeReplies.find((reply) => reply.runId === drawerRunId) ?? null)
         : null;
@@ -65,10 +75,10 @@ export function ChatActiveStatusStack({
         }
 
         return (
-            findActiveTurnEntry({ activeReplies, rows, runId: drawerRunId }) ??
-            findLastAgentTurnEntry({ rows, runId: drawerRunId })
+            findActiveTurnEntry({ activeReplies, rows: rowsWithEvidence, runId: drawerRunId }) ??
+            findLastAgentTurnEntry({ rows: rowsWithEvidence, runId: drawerRunId })
         );
-    }, [activeReplies, drawerRunId, rows]);
+    }, [activeReplies, drawerRunId, rowsWithEvidence]);
     const drawerAgentName = drawerAgent?.name ?? lastAgentRef.current.name;
     const drawerAgentCharacter = drawerAgent?.effectiveCharacter ?? lastAgentRef.current.character;
     const drawerAgentColor = drawerAgent?.effectivePrimaryColor ?? lastAgentRef.current.color;
@@ -110,7 +120,7 @@ export function ChatActiveStatusStack({
                                     key={reply.runId}
                                     onViewDetails={() => setDrawerRunId(reply.runId)}
                                     reply={reply}
-                                    rows={rows}
+                                    rows={rowsWithEvidence}
                                 />
                             ))
                         ) : (

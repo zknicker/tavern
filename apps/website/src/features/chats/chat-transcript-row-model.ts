@@ -1,5 +1,5 @@
 import { formatDayLabel } from '../../components/ui/day-divider.tsx';
-import type { TranscriptEntry } from './chat-transcript-model.ts';
+import type { TranscriptEntry, TranscriptItem } from './chat-transcript-model.ts';
 import { findTranscriptEntryActiveReply, getItemSessionKey } from './chat-transcript-model.ts';
 
 export type TranscriptRenderRow =
@@ -149,12 +149,37 @@ export function findTranscriptRenderRowActiveReply(
     return findTranscriptEntryActiveReply(row.entry, activeReplies);
 }
 
+// Every rendered row paints at its natural size — an entry with nothing to
+// show emits no row at all, so timeline spacing stays structurally even
+// (specs/chat-timeline.md). Mirrors the pane's visibility rules: thinking
+// status renders in the status stack, and a lifecycle note with no content
+// above it is noise.
 function shouldRenderTranscriptEntry(entry: TranscriptEntry) {
     if (entry.kind !== 'turn' || entry.participant !== 'agent') {
         return true;
     }
 
-    return entry.items.some((item) => item.kind !== 'activeStatus');
+    return entry.items.some(isPaneVisibleAgentItem);
+}
+
+function isPaneVisibleAgentItem(item: TranscriptItem) {
+    if (item.kind === 'activeReply' || item.kind === 'failure') {
+        return true;
+    }
+
+    if (item.kind !== 'row') {
+        return false;
+    }
+
+    if (item.row.kind === 'message' || item.row.kind === 'widget') {
+        return true;
+    }
+
+    if (item.row.kind === 'system' && item.row.systemKind === 'artifact') {
+        return true;
+    }
+
+    return item.row.kind === 'tool' && Boolean(item.row.clarification);
 }
 
 function isActiveStatusOnlyAgentEntry(entry: TranscriptEntry) {

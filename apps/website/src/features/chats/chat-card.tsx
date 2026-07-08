@@ -115,6 +115,7 @@ export function ChatCard({
                 activeReplies={timeline.activeReplies}
                 agents={agents}
                 rows={rows}
+                turnEvidence={timeline.turnEvidence}
             />
             <ChatMessageComposer
                 activeRunIds={getActiveRunIds(timeline)}

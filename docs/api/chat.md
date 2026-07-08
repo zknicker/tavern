@@ -139,10 +139,18 @@ The Tavern app keeps list and detail reads separate:
   Tavern chat.
 * `chat.updateSystemPrompt` changes trusted chat-specific agent instructions
   for a Tavern chat. Empty text clears the prompt.
-* `chat.log.list` returns turn-aligned pages of durable timeline rows for one
-  chat, including messages, responses, running and completed activity, and
-  renderable artifacts. Pages walk backward from the newest message with a
-  `beforeSequence` cursor; rows carry their owning `responseId`.
+* `chat.log.list` returns turn-aligned pages of conversation rows for one
+  chat: participant messages, widgets, artifacts, runtime notices, stop notes,
+  and clarifications. Execution evidence (tool calls, reasoning, workers,
+  narration history) never rides the timeline — see
+  [chat-timeline](../../specs/chat-timeline.md). Pages walk backward from the
+  newest message with a `beforeSequence` cursor; rows carry their owning
+  `responseId`, and agent contributions carry `runId`. Active replies include
+  `narrationText`, the turn's latest intra-turn narration.
+* `chat.turn.evidence` returns one turn's execution record — tool, reasoning,
+  narration, and worker rows plus artifacts — by `chatId` + `responseId`. The
+  turn drawer queries it on demand; live turns stream evidence through turn
+  progress events instead.
 
 Invalidate `chat.list` when membership or list ordering can change. Invalidate
 `chat.get` when one chat's detail fields can change. Response and activity
@@ -151,10 +159,12 @@ when messages, responses, activity, or artifacts are persisted.
 Channel color and system prompt changes invalidate `chat.list` and the changed
 `chat.get` record.
 
-Live turn progress updates the visible `chat.log.list` cache by activity id.
-The eventual durable read returns the same row ids, so running activity becomes
-completed activity without remounting the transcript. Streamed final reply text
-stays app-local until the final assistant message is persisted.
+Live turn progress feeds two app surfaces: every step lands in the run's live
+evidence (the drawer's source while a turn streams), and conversation-visible
+steps — widgets, notices, steered messages — update the visible
+`chat.log.list` cache by activity id. Narration steps update the active
+reply's `narrationText`; streamed final reply text stays app-local until the
+final assistant message is persisted.
 
 `chat.stop` and `chat.steer` are turn-control mutations, not message writes.
 `chat.stop` settles a queued or running Runtime turn as cancelled and settles

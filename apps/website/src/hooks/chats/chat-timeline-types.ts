@@ -5,6 +5,9 @@ export interface ChatActiveReply {
     agentId: string;
     completedAt?: string | null;
     isThinking?: boolean;
+    // Latest intra-turn narration: the live contribution's text until reply
+    // text streams. Narration history lives in turn evidence.
+    narrationText?: string | null;
     runId: string;
     sessionKey: string;
     startedAt: string;
@@ -58,6 +61,10 @@ export interface ChatTimelineState {
     historyLoaded: boolean;
     timeline: ChatTimeline;
     totalMessages: number;
+    // Live execution evidence per active run, in arrival order. Feeds the
+    // turn drawer while a turn streams; durable turns query
+    // chat.turn.evidence instead. Cleared when the run ends.
+    turnEvidence: Record<string, ChatTimeline>;
 }
 
 export interface ChatTurnFailure {

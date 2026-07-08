@@ -49,6 +49,7 @@ export function isSameActiveReply(left: ChatActiveReply | null, right: ChatActiv
         left.agentId === right.agentId &&
         (left.completedAt ?? null) === (right.completedAt ?? null) &&
         (left.isThinking ?? true) === (right.isThinking ?? true) &&
+        (left.narrationText ?? null) === (right.narrationText ?? null) &&
         left.runId === right.runId &&
         left.sessionKey === right.sessionKey &&
         left.startedAt === right.startedAt &&
@@ -104,6 +105,9 @@ export function mergeActiveReplySnapshot(
                 ? false
                 : incoming.isThinking,
         completedAt: incoming.completedAt ?? current.completedAt ?? null,
+        // Narration arrives on progress events, not reply updates; a reply
+        // update must not erase the contribution's narration state.
+        narrationText: incoming.narrationText ?? current.narrationText ?? null,
         statusSequence: incoming.statusSequence ?? current.statusSequence ?? null,
         text: incomingText.length >= currentText.length ? incomingText : currentText,
     };

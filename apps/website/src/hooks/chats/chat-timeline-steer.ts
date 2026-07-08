@@ -45,6 +45,7 @@ function timelineLog(state: ChatTimelineState): ChatLogOutput {
         activeReplies: state.activeReplies.map((reply) => ({
             ...reply,
             isThinking: reply.isThinking ?? true,
+            narrationText: reply.narrationText ?? null,
             text: reply.text ?? '',
         })),
         failedTurns: state.failedTurns,

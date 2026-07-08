@@ -11,12 +11,14 @@ import {
 } from '../../components/ui/drawer.tsx';
 import { useChatTurnPrompt } from '../../hooks/chats/use-chat-turn-prompt.ts';
 import { formatShortTime, formatTimestamp } from '../../lib/format.ts';
+import { trpc } from '../../lib/trpc.tsx';
 import { resolveAgentInk } from '../agents/agent-color-presets.ts';
 import { AgentFace, type HeadName } from './agent-face.tsx';
 import { groupAgentItems } from './chat-transcript-item-utils.ts';
 import {
     getItemRunId,
     getItemTimestamp,
+    type TranscriptItem,
     type TranscriptTurnEntry,
 } from './chat-transcript-model.ts';
 import { AgentTurnSegment } from './chat-transcript-turn.tsx';
@@ -131,8 +133,9 @@ function ChatTurnDrawerHeader({
     );
 }
 
-// The drawer's turn rendering, exported separately so it stays testable
-// without the drawer's portal.
+// The drawer's data wiring: execution evidence is turn-scoped
+// (specs/chat-timeline.md) — live turns read the run's streamed evidence,
+// completed turns query chat.turn.evidence on demand.
 export function ChatTurnBody({
     chatId,
     entry,
@@ -142,8 +145,38 @@ export function ChatTurnBody({
     entry: TranscriptTurnEntry | null;
     turnActive?: boolean;
 }) {
-    const segments = entry ? groupAgentItems(entry.items) : [];
-    const runId = entry?.items.map(getItemRunId).find((value) => value !== null) ?? null;
+    const evidenceItems = useTurnEvidenceItems({
+        chatId: chatId ?? null,
+        responseId: entry?.responseId ?? null,
+        turnActive,
+    });
+    const items = mergeTurnItems(evidenceItems, entry?.items ?? []);
+
+    return (
+        <ChatTurnItems
+            chatId={chatId}
+            items={items}
+            turnActive={turnActive}
+            turnStartedAt={entry?.timestamp ?? null}
+        />
+    );
+}
+
+// The drawer's turn rendering, exported separately so it stays testable
+// without the drawer's portal or live stores.
+export function ChatTurnItems({
+    chatId,
+    items,
+    turnActive = false,
+    turnStartedAt = null,
+}: {
+    chatId?: string;
+    items: readonly TranscriptItem[];
+    turnActive?: boolean;
+    turnStartedAt?: string | null;
+}) {
+    const runId = items.map(getItemRunId).find((value) => value !== null) ?? null;
+    const segments = groupAgentItems([...items]);
 
     if (segments.length === 0) {
         return <p className="text-muted-foreground text-sm">Nothing to show yet.</p>;
@@ -162,13 +195,53 @@ export function ChatTurnBody({
                     segment={segment}
                     turnActive={turnActive && index === segments.length - 1}
                     turnCompletedAt={null}
-                    turnStartedAt={entry?.timestamp ?? null}
+                    turnStartedAt={turnStartedAt}
                     turnStopped={false}
                 />
             ))}
             <TurnPromptEvidence runId={runId} />
         </div>
     );
+}
+
+// Live turns carry their evidence in the entry itself (the status stack
+// builds it from streamed run evidence); completed turns fetch the durable
+// execution record on demand.
+function useTurnEvidenceItems(input: {
+    chatId: string | null;
+    responseId: string | null;
+    turnActive: boolean;
+}): TranscriptItem[] {
+    const evidenceQuery = trpc.chat.turn.evidence.useQuery(
+        { chatId: input.chatId ?? '', responseId: input.responseId ?? '' },
+        { enabled: Boolean(input.chatId && input.responseId && !input.turnActive) }
+    );
+    const rows = input.turnActive ? [] : (evidenceQuery.data?.rows ?? []);
+
+    return rows.map((row) => ({ kind: 'row' as const, row }));
+}
+
+// Evidence rows and the entry's own conversation items (reply, widgets) can
+// overlap; the entry's copy wins so the pane and drawer agree, and the merged
+// set reads in execution order.
+function mergeTurnItems(evidenceItems: TranscriptItem[], entryItems: readonly TranscriptItem[]) {
+    const entryIds = new Set(
+        entryItems.flatMap((item) => (item.kind === 'row' ? [item.row.id] : []))
+    );
+    const merged = [
+        ...evidenceItems.filter((item) => item.kind !== 'row' || !entryIds.has(item.row.id)),
+        ...entryItems,
+    ];
+
+    return merged.sort((left, right) => {
+        const leftTime = Date.parse(getItemTimestamp(left) ?? '');
+        const rightTime = Date.parse(getItemTimestamp(right) ?? '');
+
+        return (
+            (Number.isNaN(leftTime) ? Number.MAX_SAFE_INTEGER : leftTime) -
+            (Number.isNaN(rightTime) ? Number.MAX_SAFE_INTEGER : rightTime)
+        );
+    });
 }
 
 // Wiki recall matches always show when the turn had them; the raw prompt

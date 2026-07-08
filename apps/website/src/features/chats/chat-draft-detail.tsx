@@ -190,6 +190,7 @@ export function buildDraftHandoffLog(
         activeReplies: handoffState.activeReplies.map((reply) => ({
             ...reply,
             isThinking: reply.isThinking ?? true,
+            narrationText: reply.narrationText ?? null,
             text: reply.text ?? '',
         })),
         failedTurns: handoffState.failedTurns,

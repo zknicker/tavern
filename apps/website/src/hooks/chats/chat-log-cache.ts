@@ -28,9 +28,17 @@ export function patchChatLogWithProgress(
         return undefined;
     }
 
-    const sourceLog = normalizeChatLog(log);
+    // The timeline carries conversation units only (specs/chat-timeline.md):
+    // widgets, runtime notices, and steered user messages. Tool, reasoning,
+    // worker, and narration steps are turn evidence and never become rows.
+    const conversationRows = progressStepToChatRows(input).filter(isConversationProgressRow);
 
-    const rows = upsertProgressRows(sourceLog.rows, progressStepToChatRows(input));
+    if (conversationRows.length === 0) {
+        return undefined;
+    }
+
+    const sourceLog = normalizeChatLog(log);
+    const rows = upsertProgressRows(sourceLog.rows, conversationRows);
 
     // Live progress only grows the loaded page. Progress rows are never
     // durable chat messages, so the message total is untouched.
@@ -38,6 +46,21 @@ export function patchChatLogWithProgress(
         ...sourceLog,
         rows: rows.sort(compareChatLogRows),
     };
+}
+
+function isConversationProgressRow(row: ProgressRow) {
+    if (row.kind === 'widget') {
+        return true;
+    }
+    if (row.kind === 'system') {
+        return row.systemKind === 'runtimeNotice';
+    }
+    // Clarifications are conversational questions, not execution evidence.
+    if (row.kind === 'tool') {
+        return Boolean(row.clarification);
+    }
+    // Steer notices project as user messages; agent narration is evidence.
+    return row.kind === 'message' && row.message.senderType === 'user';
 }
 
 export function patchChatLogWithSteerNotice(
@@ -197,7 +220,10 @@ function upsertRows(current: readonly ChatLogRow[], nextRows: readonly ProgressR
     return rows;
 }
 
-function upsertProgressRows(current: readonly ChatLogRow[], nextRows: readonly ProgressRow[]) {
+export function upsertProgressRows(
+    current: readonly ChatLogRow[],
+    nextRows: readonly ProgressRow[]
+) {
     let rows = [...current];
 
     for (const row of nextRows) {
@@ -235,7 +261,7 @@ function progressStepToNoticeRow(input: {
     };
 }
 
-function progressStepToChatRows(input: {
+export function progressStepToChatRows(input: {
     step: ChatTurnProgressStep;
     timestamp: string;
     turn: ChatTurn;
@@ -443,6 +469,7 @@ function progressStepToWidgetRow(input: {
         id,
         isFirstInGroup: true,
         kind: 'widget',
+        runId: input.turn.runId,
         widget: {
             ...widget,
             id,

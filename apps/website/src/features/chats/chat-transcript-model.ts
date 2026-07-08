@@ -46,6 +46,12 @@ export type TranscriptEntry = TranscriptSystemEntry | TranscriptTurnEntry;
 
 const turnMaxGapMs = 5 * 60 * 1000;
 
+// A turn maps to one comment (specs/chat-timeline.md): each agent message,
+// live reply, or failure is its own entry keyed by run identity, and the
+// turn's attachments (widgets, clarifications, stop notes) join that entry by
+// run or response id — a direct lookup, never order-sensitive grouping.
+// Consecutive user messages still read as one block, which is presentation
+// adjacency, not turn reconstruction.
 export function buildTranscriptEntries(input: {
     activeReplies: readonly ChatActiveReply[];
     failedTurns?: readonly ChatTurnFailure[];
@@ -53,6 +59,46 @@ export function buildTranscriptEntries(input: {
 }) {
     const items = buildTranscriptItems(input);
     const entries: TranscriptEntry[] = [];
+    const anchorsByRun = new Map<string, TranscriptTurnEntry>();
+    const anchorsByResponse = new Map<string, TranscriptTurnEntry>();
+    const attachments: TranscriptTurnEntry[] = [];
+    const usedIds = new Set<string>();
+
+    const pushTurnEntry = (
+        item: TranscriptItem,
+        participant: 'agent' | 'user',
+        options: { attachment?: boolean } = {}
+    ) => {
+        const responseId = getItemResponseId(item);
+        const runId = participant === 'agent' ? getItemRunId(item) : null;
+        // Run identity first: live tail items only carry the run id, so a
+        // response-keyed id would remount the turn at the live → durable
+        // swap. The response id covers turns with no extractable run id.
+        // Attachments never claim the turn id — it belongs to the anchor
+        // they usually merge into.
+        const candidate =
+            participant === 'agent' && !options.attachment
+                ? runId
+                    ? `turn:${runId}`
+                    : responseId
+                      ? `turn:${responseId}`
+                      : getTranscriptItemKey(item)
+                : getTranscriptItemKey(item);
+        const id = usedIds.has(candidate) ? getTranscriptItemKey(item) : candidate;
+        usedIds.add(id);
+        const entry: TranscriptTurnEntry = {
+            actor: getItemActor(item),
+            id,
+            items: [item],
+            key: getTurnKey(item, participant),
+            kind: 'turn',
+            participant,
+            responseId,
+            timestamp: getItemTimestamp(item),
+        };
+        entries.push(entry);
+        return entry;
+    };
 
     for (const item of items) {
         const participant = getItemParticipant(item);
@@ -67,59 +113,108 @@ export function buildTranscriptEntries(input: {
             continue;
         }
 
-        const key = getTurnKey(item, participant);
-        const responseId = getItemResponseId(item);
-        const previous = entries.at(-1);
+        if (participant === 'user') {
+            const previous = entries.at(-1);
 
-        if (previous?.kind === 'turn' && canAppendToTurn(previous, item, participant, key)) {
-            previous.items.push(item);
-            previous.responseId ??= responseId;
+            if (previous?.kind === 'turn' && canAppendUserMessage(previous, item)) {
+                previous.items.push(item);
+                continue;
+            }
+
+            pushTurnEntry(item, 'user');
             continue;
         }
 
-        entries.push({
-            actor: getItemActor(item),
-            id: getTranscriptItemKey(item),
-            items: [item],
-            key,
-            kind: 'turn',
-            participant,
-            responseId,
-            timestamp: getItemTimestamp(item),
-        });
+        if (isTurnAttachmentItem(item)) {
+            attachments.push(pushTurnEntry(item, 'agent', { attachment: true }));
+            continue;
+        }
+
+        const entry = pushTurnEntry(item, 'agent');
+
+        const runId = getItemRunId(item);
+
+        if (runId && !anchorsByRun.has(runId)) {
+            anchorsByRun.set(runId, entry);
+        }
+
+        if (entry.responseId && !anchorsByResponse.has(entry.responseId)) {
+            anchorsByResponse.set(entry.responseId, entry);
+        }
     }
 
-    applyStableTurnEntryIds(entries);
+    // Attachments join their turn's comment; without an anchor (a live widget
+    // before any reply text, a stop note with no output) they stand alone at
+    // their own position.
+    for (const entry of attachments) {
+        const item = entry.items[0];
+
+        if (!item) {
+            continue;
+        }
+
+        const runId = getItemRunId(item);
+        const anchor =
+            (runId ? anchorsByRun.get(runId) : undefined) ??
+            (entry.responseId ? anchorsByResponse.get(entry.responseId) : undefined);
+
+        if (!anchor || anchor === entry) {
+            // No contribution to join (a stopped turn's leftovers): the first
+            // attachment fronts the cluster so the rest of the run still
+            // reads as one unit — a widget with its stop note, for example.
+            if (runId && !anchorsByRun.has(runId)) {
+                anchorsByRun.set(runId, entry);
+            }
+            if (entry.responseId && !anchorsByResponse.has(entry.responseId)) {
+                anchorsByResponse.set(entry.responseId, entry);
+            }
+            continue;
+        }
+
+        anchor.items.push(item);
+        anchor.responseId ??= entry.responseId;
+        entries.splice(entries.indexOf(entry), 1);
+    }
 
     return entries;
 }
 
-// Agent turn entries are keyed by run identity when any item carries one, so
-// the entry (and the work disclosure inside it) keeps a single React identity
-// from the first live item through the durable refetch. Keying by the first
-// item alone remounts the whole turn when the leading item changes shape
-// across the live → durable swap.
-function applyStableTurnEntryIds(entries: TranscriptEntry[]) {
-    const usedIds = new Set<string>();
-
-    for (const entry of entries) {
-        if (entry.kind !== 'turn' || entry.participant !== 'agent') {
-            continue;
-        }
-
-        // Run identity first: live tail items only carry the run id, so a
-        // response-keyed id would remount the turn at the live → durable
-        // swap. The response id covers turns with no extractable run id.
-        const runId = entry.items.map(getItemRunId).find((value) => value !== null);
-        const candidate = runId
-            ? `turn:${runId}`
-            : entry.responseId
-              ? `turn:${entry.responseId}`
-              : entry.id;
-
-        entry.id = usedIds.has(candidate) ? entry.id : candidate;
-        usedIds.add(entry.id);
+// Widgets, clarifications, stop notes, and artifacts are parts of a turn's
+// contribution rather than contributions of their own. Execution evidence
+// (tools, workers, thinking, narration) never rides the timeline, but when a
+// caller feeds a run's evidence in — the status stack building the live
+// drawer's entry — it folds into the same turn.
+function isTurnAttachmentItem(item: TranscriptItem) {
+    if (item.kind !== 'row') {
+        return false;
     }
+
+    if (isActivityBackedMessageRow(item.row) && item.row.kind === 'message') {
+        return item.row.message.senderType === 'agent';
+    }
+
+    return (
+        item.row.kind === 'widget' ||
+        item.row.kind === 'tool' ||
+        item.row.kind === 'worker' ||
+        (item.row.kind === 'system' &&
+            (item.row.systemKind === 'turnStatus' ||
+                item.row.systemKind === 'artifact' ||
+                item.row.systemKind === 'thinking'))
+    );
+}
+
+function canAppendUserMessage(entry: TranscriptTurnEntry, item: TranscriptItem) {
+    if (entry.participant !== 'user' || entry.key !== getTurnKey(item, 'user')) {
+        return false;
+    }
+
+    const currentTimestamp = parseTimestamp(getItemTimestamp(item));
+    const previousTimestamp = parseTimestamp(
+        entry.items.at(-1) ? getItemTimestamp(entry.items.at(-1) as TranscriptItem) : null
+    );
+
+    return Math.abs(currentTimestamp - previousTimestamp) <= turnMaxGapMs;
 }
 
 export function getItemRunId(item: TranscriptItem) {
@@ -149,6 +244,10 @@ export function getItemRunId(item: TranscriptItem) {
         return item.row.runId;
     }
 
+    if (item.row.kind === 'worker') {
+        return item.row.worker.runId;
+    }
+
     if (item.row.kind === 'system' && item.row.systemKind === 'thinking') {
         const messageId = item.row.thinking.messageId.trim();
 
@@ -157,27 +256,7 @@ export function getItemRunId(item: TranscriptItem) {
         }
     }
 
-    // Tool, worker, and some thinking rows carry no runtime metadata, but
-    // their activity ids embed the run id. Without this, the turn id flips
-    // between turn:<runId> and a row id whenever the live tail toggles,
-    // remounting the whole turn mid-stream.
-    return activityRowRunId(item.row.id);
-}
-
-// Activity ids embed the run id followed by a part marker. Run ids carry a
-// per-agent suffix (`run_<uuid>_<agent>`), so the marker-based capture is
-// lazy up to the first known marker; ids with opaque part suffixes (live
-// tool steps keyed by raw tool-call id) fall back to the uuid boundary.
-// Rows that carry a `runId` field never reach this derivation.
-const markedActivityRunIdPattern =
-    /^act_(run_.+?)_(?:tool|message|reasoning|widget|silent_reply|runtime_notice)(?:_|$)/;
-const uuidActivityRunIdPattern =
-    /^act_(run_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})_/;
-
-function activityRowRunId(id: string) {
-    return (
-        markedActivityRunIdPattern.exec(id)?.[1] ?? uuidActivityRunIdPattern.exec(id)?.[1] ?? null
-    );
+    return null;
 }
 
 function runtimeMetadataRunId(metadata: Record<string, unknown> | null | undefined) {
@@ -220,9 +299,14 @@ function buildTranscriptItems(input: {
         return [{ kind: 'row', row }];
     });
 
-    // One live item per run; run-keyed grouping keeps each in its own turn.
+    // One live item per run — the turn's evolving contribution. Reply text
+    // wins once it streams; until then the latest narration is the
+    // contribution's current state.
     for (const reply of activeReplies) {
-        if ((reply.text?.trim() ?? '').length > 0) {
+        const hasText =
+            (reply.text?.trim() ?? '').length > 0 || (reply.narrationText?.trim() ?? '').length > 0;
+
+        if (hasText) {
             items.push({ kind: 'activeReply', reply });
         } else {
             items.push({ kind: 'activeStatus', reply, status: 'thinking' });
@@ -353,115 +437,6 @@ export function getRepliedRunIds(
     }
 
     return runIds;
-}
-
-function canAppendToTurn(
-    entry: TranscriptTurnEntry,
-    item: TranscriptItem,
-    participant: 'agent' | 'user',
-    key: string
-) {
-    if (entry.participant !== participant) {
-        return false;
-    }
-
-    // Response identity is server truth for agent turn membership: rows of
-    // one response always share a turn, rows of different responses never
-    // do, regardless of timestamp gaps.
-    const itemResponseId = getItemResponseId(item);
-
-    if (participant === 'agent' && entry.responseId && itemResponseId) {
-        return entry.responseId === itemResponseId;
-    }
-
-    // Live-projected rows carry no response id, so run identity is the
-    // fallback boundary: items of different runs never share an agent turn,
-    // keeping a new run's narration out of the previous run's entry.
-    if (participant === 'agent') {
-        const itemRunId = getItemRunId(item);
-        const entryRunId = getTurnEntryRunId(entry);
-
-        if (itemRunId && entryRunId && itemRunId !== entryRunId) {
-            return false;
-        }
-    }
-
-    const previous = entry.items.at(-1);
-
-    if (canAppendAgentActivity(entry, item, previous)) {
-        return true;
-    }
-
-    if (entry.key !== key) {
-        return false;
-    }
-
-    if (previous && hasExplicitConnection(item, previous)) {
-        return true;
-    }
-
-    const currentTimestamp = parseTimestamp(getItemTimestamp(item));
-    const previousTimestamp = parseTimestamp(previous ? getItemTimestamp(previous) : null);
-
-    return Math.abs(currentTimestamp - previousTimestamp) <= turnMaxGapMs;
-}
-
-function getTurnEntryRunId(entry: TranscriptTurnEntry) {
-    for (const item of entry.items) {
-        const runId = getItemRunId(item);
-
-        if (runId) {
-            return runId;
-        }
-    }
-
-    return null;
-}
-
-function canAppendAgentActivity(
-    entry: TranscriptTurnEntry,
-    item: TranscriptItem,
-    previous: TranscriptItem | undefined
-) {
-    if (entry.participant !== 'agent' || !(isActivityItem(item) || isActivityItem(previous))) {
-        return false;
-    }
-
-    const entryActorKey = getActorKey(entry.actor);
-    const itemActorKey = getActorKey(getItemActor(item));
-
-    if (entryActorKey !== itemActorKey && entryActorKey !== null && itemActorKey !== null) {
-        return false;
-    }
-
-    const currentTimestamp = parseTimestamp(getItemTimestamp(item));
-    const previousTimestamp = parseTimestamp(previous ? getItemTimestamp(previous) : null);
-
-    return Math.abs(currentTimestamp - previousTimestamp) <= turnMaxGapMs;
-}
-
-function isActivityItem(item: TranscriptItem | undefined) {
-    if (!item) {
-        return false;
-    }
-
-    if (item.kind !== 'row') {
-        return item.kind === 'failure';
-    }
-
-    return item.row.kind !== 'message' && item.row.kind !== 'widget';
-}
-
-function hasExplicitConnection(current: TranscriptItem, previous: TranscriptItem) {
-    if (current.kind !== 'row' || previous.kind !== 'row') {
-        return false;
-    }
-
-    if (current.row.kind === 'system' || previous.row.kind === 'system') {
-        return false;
-    }
-
-    return current.row.connectsToPrevious && previous.row.connectsToNext;
 }
 
 function getItemParticipant(item: TranscriptItem): 'agent' | 'system' | 'user' {

@@ -50,6 +50,12 @@ happen, and keep the durable timeline as context.
   color and trusted chat-specific agent instructions.
 * **Offline catch-up.** Tavern Runtime keeps chat history while the app is
   closed; the app reloads from durable rows and refetches on reconnect.
+* **Conversation vs. evidence.** The chat timeline carries conversation units
+  only — messages, widgets, artifacts, notices. An agent's turn is one comment
+  evolving in place: latest narration until reply text streams, then the
+  reply, swapped for the durable message at completion. Execution evidence
+  (tools, reasoning, narration history, workers) lives behind the turn
+  drawer's per-turn query. See [chat-timeline](../../specs/chat-timeline.md).
 * **Concurrent turns.** Live turn state is plural end to end: each agent seat
   runs one turn at a time, so a multi-agent channel legitimately carries
   several concurrent live replies. The app models `activeReplies`,

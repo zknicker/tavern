@@ -661,9 +661,15 @@ function AgentTurnItem({
     revealNarration?: boolean;
 }) {
     if (item.kind === 'activeReply') {
+        // The contribution's current state: streamed reply text once it
+        // exists, the latest narration until then.
+        const liveText = item.reply.text?.trim()
+            ? (item.reply.text ?? '')
+            : (item.reply.narrationText ?? '');
+
         return (
             <AssistantReplyText
-                content={getActiveReplyDisplayText(item.reply.text ?? '')}
+                content={getActiveReplyDisplayText(liveText)}
                 revealKey={item.reply.runId}
                 revealText={isStreamingActiveReply(item.reply)}
                 slotKey={item.reply.runId}
