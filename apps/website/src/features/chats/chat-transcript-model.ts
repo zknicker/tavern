@@ -143,6 +143,12 @@ export function getItemRunId(item: TranscriptItem) {
         return item.row.turnStatus.runId;
     }
 
+    // Server-projected work rows carry run identity as a field; prefer it
+    // over deriving from row ids.
+    if ('runId' in item.row && typeof item.row.runId === 'string' && item.row.runId.length > 0) {
+        return item.row.runId;
+    }
+
     if (item.row.kind === 'system' && item.row.systemKind === 'thinking') {
         const messageId = item.row.thinking.messageId.trim();
 
@@ -158,11 +164,20 @@ export function getItemRunId(item: TranscriptItem) {
     return activityRowRunId(item.row.id);
 }
 
-const activityRunIdPattern =
+// Activity ids embed the run id followed by a part marker. Run ids carry a
+// per-agent suffix (`run_<uuid>_<agent>`), so the marker-based capture is
+// lazy up to the first known marker; ids with opaque part suffixes (live
+// tool steps keyed by raw tool-call id) fall back to the uuid boundary.
+// Rows that carry a `runId` field never reach this derivation.
+const markedActivityRunIdPattern =
+    /^act_(run_.+?)_(?:tool|message|reasoning|widget|silent_reply|runtime_notice)(?:_|$)/;
+const uuidActivityRunIdPattern =
     /^act_(run_[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})_/;
 
 function activityRowRunId(id: string) {
-    return activityRunIdPattern.exec(id)?.[1] ?? null;
+    return (
+        markedActivityRunIdPattern.exec(id)?.[1] ?? uuidActivityRunIdPattern.exec(id)?.[1] ?? null
+    );
 }
 
 function runtimeMetadataRunId(metadata: Record<string, unknown> | null | undefined) {

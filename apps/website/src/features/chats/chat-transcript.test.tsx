@@ -1875,6 +1875,75 @@ test('ChatTranscript keeps active work headers stable between fast completed too
     assert.doesNotMatch(markup, /Searched code 2 times/);
 });
 
+test('ChatTranscript narration renders one replace-in-place slot for suffixed run ids', () => {
+    const runId = 'run_0198f00d-1111-4222-8333-444455556666_blippy';
+    const narrationRow = (index: number, text: string) => ({
+        actor: { id: 'blippy', kind: 'agent' },
+        connectsToNext: false,
+        connectsToPrevious: false,
+        id: `act_${runId}_message_${index}`,
+        isFirstInGroup: true,
+        kind: 'message',
+        message: {
+            tavernAgentId: 'blippy',
+            content: text,
+            id: `act_${runId}_message_${index}`,
+            metadata: { runtime: { runId, sessionKey: 'ses_1' } },
+            sender: 'blippy',
+            senderType: 'agent',
+            sourceSessionId: null,
+            sourceSessionKey: 'ses_1',
+            timestamp: `2026-07-07T12:00:0${index}.000Z`,
+        },
+    });
+    const rows = [
+        narrationRow(1, 'Preamble: taking a look.'),
+        narrationRow(2, 'Update: halfway there.'),
+    ] as ChatRow[];
+    const liveReply = {
+        agentId: 'blippy',
+        isThinking: true,
+        runId,
+        sessionKey: 'ses_1',
+        startedAt: '2026-07-07T12:00:00.000Z',
+        text: '',
+    };
+
+    // While the run is live, exactly ONE narration slot renders in the pane —
+    // successive updates replace in place, never stack. (The paced reveal
+    // starts empty in static markup, so assert structure, not text.)
+    const live = renderActiveTranscript(liveReply, rows);
+    assert.equal(live.match(/data-from="assistant"/g)?.length ?? 0, 1);
+    assert.doesNotMatch(live, /Preamble: taking a look\./);
+
+    // Once the run's final reply lands, narration leaves the pane entirely.
+    const done = renderTranscript([
+        ...rows,
+        {
+            actor: { id: 'blippy', kind: 'agent' },
+            connectsToNext: false,
+            connectsToPrevious: false,
+            id: 'msg_final',
+            isFirstInGroup: true,
+            kind: 'message',
+            message: {
+                tavernAgentId: 'blippy',
+                content: 'All done.',
+                id: 'msg_final',
+                metadata: { runtime: { runId, sessionKey: 'ses_1' } },
+                sender: 'blippy',
+                senderType: 'agent',
+                sourceSessionId: null,
+                sourceSessionKey: 'ses_1',
+                timestamp: '2026-07-07T12:00:05.000Z',
+            },
+        },
+    ] as ChatRow[]);
+    assert.match(done, /All done\./);
+    assert.doesNotMatch(done, /Preamble: taking a look\./);
+    assert.doesNotMatch(done, /Update: halfway there\./);
+});
+
 test('ChatTranscript keeps narration messages in the work log above later tools', () => {
     const now = Date.now();
     const markup = renderActiveTurnBody(

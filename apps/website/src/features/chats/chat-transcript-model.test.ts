@@ -1,6 +1,7 @@
 import { expect, test } from 'bun:test';
 import type { ChatLogOutput } from '../../lib/trpc.tsx';
-import { buildTranscriptEntries } from './chat-transcript-model.ts';
+import type { TranscriptRow } from './chat-transcript-model.ts';
+import { buildTranscriptEntries, getItemRunId } from './chat-transcript-model.ts';
 
 type ChatRow = NonNullable<ChatLogOutput>['rows'][number];
 type ToolChatRow = Extract<ChatRow, { kind: 'tool' }>;
@@ -800,4 +801,88 @@ test('turn id stays stable when the live tail toggles around tool-only items', (
     );
 
     expect(ids).toEqual([`turn:${uuidRunId}`, `turn:${uuidRunId}`]);
+});
+
+test('suffixed per-agent run ids keep one turn identity across live and durable rows', () => {
+    const runId = 'run_0198f00d-1111-4222-8333-444455556666_blippy';
+    const rows = [
+        {
+            actor: { id: 'agt_blippy', kind: 'agent' },
+            completedAt: null,
+            connectsToNext: false,
+            connectsToPrevious: false,
+            id: `act_${runId}_tool_call1`,
+            isFirstInGroup: true,
+            kind: 'tool',
+            sessionKey: 'ses_1',
+            spawnedRelationships: [],
+            startedAt: '2026-07-07T12:00:01.000Z',
+            toolCall: {
+                callId: 'call1',
+                facts: [],
+                label: 'ls',
+                name: 'bash',
+                status: 'running',
+                summaryParts: ['ls'],
+            },
+        },
+        {
+            actor: { id: 'agt_blippy', kind: 'agent' },
+            connectsToNext: false,
+            connectsToPrevious: false,
+            id: 'msg_reply',
+            isFirstInGroup: true,
+            kind: 'message',
+            message: {
+                content: 'Done.',
+                id: 'msg_reply',
+                metadata: { runtime: { runId } },
+                sender: 'Blippy',
+                senderType: 'agent',
+                sourceSessionId: null,
+                sourceSessionKey: 'ses_1',
+                tavernAgentId: 'agt_blippy',
+                timestamp: '2026-07-07T12:00:05.000Z',
+            },
+        },
+    ] as unknown as TranscriptRow[];
+
+    const items = rows.map((row) => ({ kind: 'row' as const, row }));
+    expect(items.map((item) => getItemRunId(item))).toEqual([runId, runId]);
+
+    const entries = buildTranscriptEntries({ activeReplies: [], rows });
+    const agentTurns = entries.filter(
+        (entry) => entry.kind === 'turn' && entry.participant === 'agent'
+    );
+    expect(agentTurns).toHaveLength(1);
+    expect(agentTurns[0]?.id).toBe(`turn:${runId}`);
+});
+
+test('server-provided runId on tool rows wins over id derivation', () => {
+    const item = {
+        kind: 'row' as const,
+        row: {
+            actor: { id: 'agt_blippy', kind: 'agent' },
+            completedAt: null,
+            connectsToNext: false,
+            connectsToPrevious: false,
+            id: 'act_opaque_row_id',
+            isFirstInGroup: true,
+            kind: 'tool',
+            runId: 'run_from_server_metadata',
+            sessionKey: 'ses_1',
+            spawnedRelationships: [],
+            startedAt: '2026-07-07T12:00:01.000Z',
+            toolCall: {
+                callId: 'call1',
+                facts: [],
+                label: 'ls',
+                name: 'bash',
+                status: 'running',
+                summaryParts: ['ls'],
+            },
+        } as unknown as TranscriptRow,
+    };
+
+    expect(getItemRunId(item)).toBe('run_from_server_metadata');
 });

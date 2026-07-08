@@ -336,6 +336,9 @@ function activityToChatRows(
             kind: 'tool' as const,
             clarification: clarificationFromActivity(activity),
             responseId: activity.response_id,
+            runId:
+                runtimeMetadataString(activity, 'runId') ??
+                runtimeMetadataString(response, 'runId'),
             sessionKey,
             spawnedRelationships: [],
             startedAt: activity.started_at,
@@ -708,7 +711,7 @@ function responseSessionKey(response: TavernChatResponse) {
 }
 
 function runtimeMetadataString(
-    message: TavernChatMessage | TavernChatResponse | null,
+    message: TavernChatMessage | TavernChatResponse | TavernResponseActivity | null,
     key: string
 ) {
     const runtime = message?.metadata.runtime;

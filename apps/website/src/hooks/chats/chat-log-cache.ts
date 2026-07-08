@@ -353,6 +353,7 @@ function progressStepToToolRow(input: {
         id: progressActivityId(input.turn.runId, input.step.id),
         isFirstInGroup: true,
         kind: 'tool',
+        runId: input.turn.runId,
         sessionKey: input.turn.sessionKey,
         spawnedRelationships: [],
         startedAt: input.timestamp,

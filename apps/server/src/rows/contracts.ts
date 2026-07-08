@@ -48,6 +48,10 @@ export const toolRowSchema = z.object({
     isFirstInGroup: z.boolean(),
     kind: z.literal('tool'),
     responseId: z.string().optional(),
+    // Run identity from the owning activity's runtime metadata. Transcript
+    // turn grouping keys on this; deriving it from row ids breaks once run
+    // ids carry an agent suffix.
+    runId: z.string().nullable().optional(),
     sessionKey: z.string().nullable(),
     startedAt: z.string().nullable(),
     spawnedRelationships: z.array(sessionRelationshipSchema).default([]),
