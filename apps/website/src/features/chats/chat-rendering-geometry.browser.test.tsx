@@ -1,7 +1,11 @@
 import { afterAll, beforeAll, expect, test } from 'bun:test';
 import { type Browser, chromium, type Page } from '@playwright/test';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { httpLink } from '@trpc/client';
+import type { ReactNode } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { ChatMessage } from '../../components/chats/chat-message.tsx';
+import { trpc } from '../../lib/trpc.tsx';
 import { ChatMarkdownText } from './chat-markdown-text.tsx';
 import {
     ChatTranscriptMessageContent,
@@ -86,12 +90,12 @@ test('streaming word lift changes paint position without changing line layout', 
 });
 
 test('active and durable assistant reply wrappers keep the same text geometry', async () => {
-    const liveMarkup = renderToStaticMarkup(
+    const liveMarkup = renderChatMarkup(
         <ChatMessage animateEnter={false} from="assistant">
             <ChatMarkdownText content={appointmentText} />
         </ChatMessage>
     );
-    const durableMarkup = renderToStaticMarkup(
+    const durableMarkup = renderChatMarkup(
         <ChatMessage
             animateEnter={false}
             attachments={renderTranscriptMessageAttachments(
@@ -250,6 +254,32 @@ test('work disclosure anchoring keeps the header pinned while content expands be
 
     await page.close();
 });
+
+// Message content resolves live agent appearance through tRPC, so static
+// markup renders need the app query providers; the dead-end link never
+// fetches because static rendering runs no effects.
+function renderChatMarkup(node: ReactNode): string {
+    const queryClient = new QueryClient({
+        defaultOptions: {
+            queries: {
+                retry: false,
+            },
+        },
+    });
+    const client = trpc.createClient({
+        links: [
+            httpLink({
+                url: 'http://127.0.0.1:1/trpc',
+            }),
+        ],
+    });
+
+    return renderToStaticMarkup(
+        <trpc.Provider client={client} queryClient={queryClient}>
+            <QueryClientProvider client={queryClient}>{node}</QueryClientProvider>
+        </trpc.Provider>
+    );
+}
 
 async function newGeometryPage(body: string): Promise<Page> {
     const page = await browser.newPage({
