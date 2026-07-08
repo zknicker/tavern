@@ -45,7 +45,7 @@ import { assistantFinalAnswerPhase, persistHarnessTurnStream } from './harness-t
 
 export type { HarnessAssistantMessagePhase } from './harness-turn-stream.ts';
 
-const emptyAssistantMessageDiagnostic = 'No reply: the harness returned empty content.';
+const emptyAssistantMessageDiagnostic = 'No reply: the model returned empty content.';
 // A reply of exactly this token is a sanctioned silent turn: the assistant
 // turn stays in session history, but nothing is delivered to the chat.
 const silentReplyToken = 'NO_REPLY';
