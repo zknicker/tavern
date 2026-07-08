@@ -56,6 +56,14 @@ an agent assignee are picked up and executed without a human pressing Dispatch.
   previews work today. Image attachments render inline on the task page,
   so a design task's outputs are reviewable exactly where the `review`
   decision happens; summary markdown can embed an attachment by filename.
+- Promotion runs in reverse for rework. Dispatching a task that already
+  has attachments materializes them into the assignee's workbench under a
+  task folder (`workbench/tasks/<T-number>/`), and the work order names
+  them — so the agent iterates on the actual deliverables even if its
+  original working files are long gone.
+- Re-attaching replaces by filename: the task always shows the current
+  deliverables. Prior versions are not kept; the work chat transcript is
+  the history.
 - The artifacts root is the one heavy directory in Runtime state. Light
   state — the runtime database and workspace text — backs up cheaply
   without it, and the artifacts root can later move to object storage as
