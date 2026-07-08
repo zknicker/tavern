@@ -32,6 +32,8 @@ agent-engine implementation choices directly.
 - `sync-model.md`: runtime mapping, freshness, deletion, edit, event, and job behavior.
 - `agents.md`, `chats.md`, `sessions.md`, `messages.md`, `cron.md`: core runtime-owned
   primitives as Tavern presents them.
+- `chat-timeline.md`: the chat timeline vs agent turn evidence boundary — conversation units,
+  live turn presentation, and turn-scoped evidence queries.
 - `participants.md`: observed participants, labels, and self actor presentation.
 - `mentions.md`: `@` references in composers, their metadata, and their runtime effects.
 - `jobs.md`, `workers.md`, `models.md`, `skills.md`, `tools.md`, `plugins.md`, `catalog.md`,
