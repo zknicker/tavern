@@ -14,13 +14,50 @@ an agent assignee are picked up and executed without a human pressing Dispatch.
 ## Board
 
 - One table of tasks and epics (`kind`), one shared T-number sequence.
-- Statuses: `backlog`, `todo`, `in_progress`, `done`, `canceled`, and (with
-  auto-dispatch) `blocked`.
+- Statuses: `backlog`, `todo`, `in_progress`, `blocked`, `review`, `done`,
+  `canceled`.
 - Assignee is the local user or an agent. Priority orders work: urgent, high,
   medium, low, none.
-- Manual dispatch sends a work order into the assignee agent's DM and marks
-  the task assigned to that agent. Work happens in the chat; the closing reply
+- The description is the brief: what the task is and how to tell it is done.
+  The summary is the outcome, written at close-out. Closing a task never
+  overwrites its description.
+- Board writes are never gated on agent activity. The user can edit, retitle,
+  reprioritize, block, or cancel any task while an agent is mid-turn.
+
+### Status ownership
+
+Statuses move by behavior, not declaration:
+
+- The user moves anything anywhere. `backlog` and `todo` ordering is triage.
+- The dispatcher (manual or auto) moves `todo` to `in_progress` when it
+  claims a task for an agent.
+- The working agent moves its claimed task to terminal states through task
+  tools: `done` (or `review` when review is required), `blocked`, or
+  `canceled`.
+- Recovery rules (below) are the only other writer.
+
+### Manual dispatch
+
+- Dispatch sends a work order into the assignee agent's DM: the T-number,
+  title, description, and the standing instruction to keep the task current.
+- Manual and auto dispatch share one claim path, so they cannot double-claim
+  the same task.
+
+## Agent Contract
+
+- Tools: `tasks_list`, `tasks_get`, `tasks_create`, `tasks_update`. All task
+  reads and writes by agents flow through tools, never through direct storage.
+- Terminal transitions through `tasks_update` carry a short `summary` — what
+  changed, how it was verified, what remains. The summary lands on the task,
+  not in the description.
+- Setting `blocked` requires a reason and a reason kind:
+  - `needs_input` — the user must answer or provide something.
+  - `error` — the work failed; the reason carries the failure detail.
+- A dispatched turn's first task action is reading the card (`tasks_get`);
+  its last is exactly one terminal `tasks_update`. The closing chat reply
   names the T-number and the outcome.
+- The seeded `tasks` skill is the doctrine of record; tool descriptions carry
+  only the short operational rules.
 
 ## Auto-Dispatch
 
@@ -37,33 +74,53 @@ an agent assignee are picked up and executed without a human pressing Dispatch.
 - A Runtime-owned loop beside the cron scheduler, evaluated on an interval
   (default 60s). No engine dependency owns dispatching.
 - Claim order: priority first (urgent through none), then oldest `updated_at`.
-- Claiming sets the task `in_progress` and sends the same work order as manual
-  dispatch into the agent's DM. There is no separate headless execution path:
-  auto-dispatched work is an ordinary chat turn, visible, steerable, and
-  stoppable.
+- A claim is one atomic conditional write (`todo` to `in_progress`, expected
+  assignee, attempt recorded). A lost race is a no-op, never a second
+  dispatch.
+- Claiming sends the same work order as manual dispatch into the agent's DM.
+  There is no separate headless execution path: auto-dispatched work is an
+  ordinary chat turn, visible, steerable, and stoppable.
 - At most one auto-dispatched task runs per agent at a time, and a global
-  concurrent-run cap applies (default 1). The dispatcher never interrupts an
-  agent that is mid-turn for any reason.
-- Recovery: if the dispatching turn ends without the task leaving
-  `in_progress`, the dispatcher returns the task to `todo` once. On the second
-  failed attempt it marks the task `blocked` with the failure detail, so a
-  broken task cannot thrash.
+  concurrent-run cap applies (default 1). Both caps must allow a claim. The
+  dispatcher never interrupts an agent that is mid-turn for any reason.
+- Every dispatch records its trigger (`manual` or `auto`), the dispatching
+  turn, and the attempt count on the task.
+
+### Recovery and failure
+
+- Protocol violation: the dispatched turn completes but the task is still
+  `in_progress`. Counts as a failed attempt.
+- Turn failure or crash: counts as a failed attempt.
+- First failed attempt returns the task to `todo`; the second marks it
+  `blocked` (`error`) with the failure detail. A broken task cannot thrash.
+- User-stopped turns are not failures: stopping a dispatched turn marks the
+  task `blocked` (`needs_input`, "stopped by user"). The dispatcher never
+  re-claims work the user deliberately halted.
+- The dispatcher relies on the Runtime turn lifecycle for liveness. There are
+  no separate heartbeats; a turn the Runtime considers live is live.
 
 ### Blocked
 
-- `blocked` is a first-class status with a required reason recorded on the
-  task.
-- Agents set it through `tasks_update` when work cannot proceed (missing
-  input, missing access, dependency), stating the blocker in the reason and in
-  the closing chat reply.
-- The dispatcher skips `blocked` tasks. A human (or an agent, on new
-  information) moves the task back to `todo` to requeue it.
+- The dispatcher skips `blocked` tasks. Moving a task back to `todo` requeues
+  it; the human does this after resolving the blocker, or an agent does on
+  new information.
+- Blocked reasons and kinds appear on the board and in notifications so
+  `needs_input` (answer me) reads differently from `error` (fix me).
+
+### Review
+
+- A per-agent `review` policy (default off) routes that agent's completions
+  to `review` instead of `done`. The summary and closing reply are written as
+  usual; the human moves `review` to `done` after checking the work, or back
+  to `todo` with edits to the description for another pass.
+- Review is the control for trust-building and for work the user wants to
+  check before it counts — completion means ready for review, not reviewed.
+- The user can use the `review` column manually regardless of the policy.
 
 ### Close-out
 
-- Terminal transitions (`done`, `blocked`, `canceled`) should carry a short
-  summary, recorded on the task and shown on the task detail page, so the
-  board is reviewable without opening the work chat.
+- Terminal transitions carry the summary on the task, so the board is
+  reviewable without opening the work chat.
 - The full work transcript stays in the agent's DM; the task carries the
   outcome, not the process.
 
@@ -72,19 +129,21 @@ an agent assignee are picked up and executed without a human pressing Dispatch.
 - A task created from a chat turn records that chat as its originating chat.
 - Terminal transitions of auto-dispatched tasks send one short notification
   message to the originating chat when one exists: the T-number, the terminal
-  status, and the summary line. Detail stays pull-based (task page, work DM).
+  status, and the first line of the summary. Detail stays pull-based (task
+  page, work DM).
 - Tasks without an originating chat produce no extra message; the DM close-out
   is the record. Digest-style rollups are ordinary cron automations, not
   dispatcher features.
 
 ### Controls
 
-- Auto-dispatch is off by default. A Runtime-owned setting enables it
-  globally; a per-agent flag opts each agent in.
-- The global setting is the kill switch: disabling it stops new claims
-  immediately and never interrupts in-flight turns.
-- Concurrency caps (global and the per-agent single-task rule) are Runtime
-  settings with safe defaults, not per-task knobs.
+- Auto-dispatch is off by default. Runtime-owned settings:
+  - global enable (the kill switch: disabling stops new claims immediately
+    and never interrupts in-flight turns),
+  - per-agent enable,
+  - per-agent review policy,
+  - global concurrent-run cap (default 1).
+- Concurrency and interval defaults are Runtime settings, not per-task knobs.
 - Auto-dispatch grants no new powers. Agents run with the same tools,
   sandbox, and instructions as any chat turn; irreversible-action rules live
   in agent doctrine, not the dispatcher.
@@ -97,6 +156,13 @@ an agent assignee are picked up and executed without a human pressing Dispatch.
 
 ## Out of Scope (Future)
 
-- Parent/child task dependencies and auto-promotion.
-- Per-attempt run history with structured handoffs; comment threads on tasks.
-- Heartbeats, goal-mode loops, and multi-host coordination.
+- Parent/child dependencies, auto-promotion, decomposition, and orchestrator
+  agents that fan work out to other agents.
+- Per-attempt run history rows with structured handoffs; task comment
+  threads; attachments.
+- A `dependency` blocked kind that waits on linked tasks instead of a human.
+- Spend budgets that pause an agent's auto-dispatch at a cap.
+- Scheduled tasks (`not before` times) and idempotency keys for
+  automation-created tasks.
+- Plan-approval gates before execution; goal-mode loops with judges;
+  heartbeats; multi-host coordination.
