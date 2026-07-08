@@ -4,6 +4,7 @@ import { AGENT_WORKSPACE } from '../config';
 import type { Database } from '../db/sqlite';
 import { namedParams } from '../db/sqlite';
 import { registerAgentWorkspace } from '../workspace/instructions';
+import { getStoredAgent, upsertStoredAgent } from './agents-store';
 import {
     createChat,
     createMessage,
@@ -12,7 +13,13 @@ import {
     upsertResponseActivity,
 } from './chat-api';
 import { developmentChatDemos } from './development-chat-demo-definitions';
-import { type DevelopmentDemoMessage, demoAgentId, demoTime } from './development-chat-demo-types';
+import {
+    type DevelopmentDemoMessage,
+    demoAgentId,
+    demoSecondAgentId,
+    demoSecondAgentName,
+    demoTime,
+} from './development-chat-demo-types';
 import { seedDevelopmentRecallEvidence } from './development-recall-demo';
 import { ensurePrimaryManagedAgent } from './managed-agent';
 
@@ -31,19 +38,22 @@ export function seedDevelopmentChatDemos({
         return { seeded: 0 };
     }
 
+    const primaryAgent = ensurePrimaryManagedAgent(db);
     registerAgentWorkspace(db, {
-        agentId: demoAgentId,
-        agentName: 'Tavern',
-        workspaceDir: AGENT_WORKSPACE,
+        agentId: primaryAgent.id,
+        agentName: primaryAgent.name,
+        workspaceDir: primaryAgent.workspaceFolder,
     });
+    ensureSecondDemoAgent(db);
     pruneObsoleteDevelopmentDemoChats(db);
 
     for (const demo of developmentChatDemos) {
+        const agentIds = demo.agentIds ?? [demoAgentId];
         createChat(
             {
                 id: demo.chatId,
                 metadata: tavernChatMetadata({
-                    agentIds: [demoAgentId],
+                    agentIds,
                     color: demo.color ?? null,
                     displayName: demo.title,
                     id: demo.chatId,
@@ -65,7 +75,7 @@ export function seedDevelopmentChatDemos({
             }
         }
 
-        seedDemoAgentSessions(demo.chatId, db);
+        seedDemoAgentSessions(demo.chatId, agentIds, db);
     }
 
     seedDevelopmentRecallEvidence(db);
@@ -73,44 +83,84 @@ export function seedDevelopmentChatDemos({
     return { seeded: developmentChatDemos.length };
 }
 
+// The second demo seat. A stored agent like any other — the roster, facepile,
+// and mention picker resolve it exactly as they would a user-created agent.
+function ensureSecondDemoAgent(db: Database) {
+    if (getStoredAgent(demoSecondAgentId, db)) {
+        return;
+    }
+
+    const agent = upsertStoredAgent({
+        agent: {
+            enabledSkillIds: [],
+            id: demoSecondAgentId,
+            isAdmin: false,
+            name: demoSecondAgentName,
+            primaryColor: null,
+            workspaceFolder: `${AGENT_WORKSPACE}-${demoSecondAgentName.toLowerCase()}`,
+        },
+        db,
+    });
+    registerAgentWorkspace(db, {
+        agentId: agent.id,
+        agentName: agent.name,
+        workspaceDir: agent.workspaceFolder,
+    });
+}
+
 // Archived Agent sessions as agent-drawer scenery: the demo transcript reads
 // as the tail of two earlier sessions. Live session rows always win — inserts
 // use ON CONFLICT DO NOTHING, and demo responses are only tied to session
 // rows this seeder authored, so real turns keep their own counts.
-function seedDemoAgentSessions(chatId: string, db: Database) {
-    // The demo agent is the primary managed agent; the sessions FK needs its
-    // agents row, which may not exist yet on a fresh database.
-    ensurePrimaryManagedAgent(db);
-    const sessions = [
-        {
-            archivedAt: '2026-06-13T20:15:00.000Z',
-            createdAt: '2026-06-12T10:00:00.000Z',
-            generation: 1,
-            model: { model: 'claude-opus-4-8', provider: 'claude' },
-        },
-        {
-            archivedAt: '2026-06-15T17:40:00.000Z',
-            createdAt: '2026-06-13T20:15:00.000Z',
-            generation: 2,
-            model: { model: 'gpt-5.5', provider: 'codex' },
-        },
-        {
-            archivedAt: '2026-06-16T18:30:00.000Z',
-            createdAt: '2026-06-15T17:40:00.000Z',
-            generation: 3,
-            model: { model: 'claude-sonnet-5', provider: 'claude' },
-        },
-        {
-            archivedAt: demoTime,
-            createdAt: '2026-06-16T18:30:00.000Z',
-            generation: 4,
-            model: { model: 'gpt-5.5', provider: 'codex' },
-        },
-    ];
+function seedDemoAgentSessions(chatId: string, agentIds: string[], db: Database) {
+    for (const agentId of agentIds) {
+        seedDemoAgentSessionsForAgent(chatId, agentId, db);
+    }
+}
+
+function seedDemoAgentSessionsForAgent(chatId: string, agentId: string, db: Database) {
+    // The primary demo agent gets a multi-generation history; other seats read
+    // as a single archived session.
+    const sessions =
+        agentId === demoAgentId
+            ? [
+                  {
+                      archivedAt: '2026-06-13T20:15:00.000Z',
+                      createdAt: '2026-06-12T10:00:00.000Z',
+                      generation: 1,
+                      model: { model: 'claude-opus-4-8', provider: 'claude' },
+                  },
+                  {
+                      archivedAt: '2026-06-15T17:40:00.000Z',
+                      createdAt: '2026-06-13T20:15:00.000Z',
+                      generation: 2,
+                      model: { model: 'gpt-5.5', provider: 'codex' },
+                  },
+                  {
+                      archivedAt: '2026-06-16T18:30:00.000Z',
+                      createdAt: '2026-06-15T17:40:00.000Z',
+                      generation: 3,
+                      model: { model: 'claude-sonnet-5', provider: 'claude' },
+                  },
+                  {
+                      archivedAt: demoTime,
+                      createdAt: '2026-06-16T18:30:00.000Z',
+                      generation: 4,
+                      model: { model: 'gpt-5.5', provider: 'codex' },
+                  },
+              ]
+            : [
+                  {
+                      archivedAt: demoTime,
+                      createdAt: '2026-06-16T09:00:00.000Z',
+                      generation: 1,
+                      model: { model: 'claude-sonnet-5', provider: 'claude' },
+                  },
+              ];
 
     const seededSessionIds: string[] = [];
     for (const session of sessions) {
-        const id = demoSessionId(chatId, session.generation);
+        const id = demoSessionId(chatId, agentId, session.generation);
         // Refresh rows this seeder authored on earlier boots (archived, no
         // engine session, no resume state) so timestamp or model changes in
         // the definitions land; anything a real turn touched stays put.
@@ -133,8 +183,8 @@ function seedDemoAgentSessions(chatId: string, db: Database) {
              ON CONFLICT(id) DO NOTHING`
         ).run(
             namedParams({
-                agentId: demoAgentId,
-                agentParticipantId: demoAgentId,
+                agentId,
+                agentParticipantId: agentId,
                 archivedAt: session.archivedAt,
                 chatId,
                 createdAt: session.createdAt,
@@ -165,10 +215,11 @@ function seedDemoAgentSessions(chatId: string, db: Database) {
         .prepare(
             `SELECT id FROM chat_responses
              WHERE chat_id = $chatId
+               AND participant_id = $participantId
                AND json_extract(metadata_json, '$.runtime.source') = 'development-demo'
              ORDER BY created_at ASC, id ASC`
         )
-        .all(namedParams({ chatId })) as { id: string }[];
+        .all(namedParams({ chatId, participantId: agentId })) as { id: string }[];
     const perSession = Math.ceil(demoResponseIds.length / seededSessionIds.length);
 
     for (const [index, row] of demoResponseIds.entries()) {
@@ -182,8 +233,8 @@ function seedDemoAgentSessions(chatId: string, db: Database) {
     }
 }
 
-function demoSessionId(chatId: string, generation: number) {
-    return `ags_${chatId}_${demoAgentId}_${generation}`;
+function demoSessionId(chatId: string, agentId: string, generation: number) {
+    return `ags_${chatId}_${agentId}_${generation}`;
 }
 
 function pruneObsoleteDevelopmentDemoChats(db: Database) {

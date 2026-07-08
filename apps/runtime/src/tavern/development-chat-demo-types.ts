@@ -5,6 +5,9 @@ import type {
 } from '@tavern/api';
 
 export interface DevelopmentChatDemo {
+    // Agent seats in the chat, primary-first. Defaults to the primary demo
+    // agent when omitted.
+    agentIds?: string[];
     chatId: string;
     color?: string | null;
     messages: DevelopmentDemoMessage[];
@@ -21,6 +24,10 @@ export type DevelopmentDemoResponse = TavernUpsertResponseRequest & {
 };
 
 export const demoAgentId = 'agt_primary';
+// Second demo seat for multi-agent chats. The id hashes to the bird default
+// character, so Wren wears a wren without a stored appearance override.
+export const demoSecondAgentId = 'agt_wren';
+export const demoSecondAgentName = 'Wren';
 export const demoUserParticipantId = 'usr_demo';
 // The app owner (local human participant, see the server's
 // `localHumanParticipantId`). Messages authored here render as the viewer's own
@@ -49,13 +56,21 @@ function humanMessage(input: DemoMessageInput, authorId: string): DevelopmentDem
 }
 
 export function assistantMessage(input: DemoMessageInput): DevelopmentDemoMessage {
-    const { chatId, createdAt = demoTime, requestMessageId, runId, ...message } = input;
+    const {
+        agentId = demoAgentId,
+        chatId,
+        createdAt = demoTime,
+        requestMessageId,
+        runId,
+        ...message
+    } = input;
 
     return {
         ...message,
-        author_id: demoAgentId,
+        author_id: agentId,
         createdAt,
         metadata: responseRuntimeMetadata({
+            agentId,
             chatId,
             requestMessageId: requestMessageId ?? message.id,
             runId: runId ?? `run_${message.id}`,
@@ -65,6 +80,7 @@ export function assistantMessage(input: DemoMessageInput): DevelopmentDemoMessag
 }
 
 type DemoMessageInput = Omit<TavernCreateMessageRequest, 'author_id' | 'metadata' | 'role'> & {
+    agentId?: string;
     chatId: string;
     createdAt?: string;
     requestMessageId?: string;
@@ -72,6 +88,7 @@ type DemoMessageInput = Omit<TavernCreateMessageRequest, 'author_id' | 'metadata
 };
 
 export function completedResponse(input: {
+    agentId?: string;
     chatId: string;
     id: string;
     requestMessageId: string;
@@ -83,7 +100,7 @@ export function completedResponse(input: {
         completed_at: demoTime,
         id: input.id,
         metadata: responseRuntimeMetadata(input),
-        participant_id: demoAgentId,
+        participant_id: input.agentId ?? demoAgentId,
         request_message_id: input.requestMessageId,
         response_message_id: input.responseMessageId,
         status: 'completed',
@@ -149,6 +166,7 @@ export function toolActivity(
 }
 
 export interface ActivityInput {
+    agentId?: string;
     chatId: string;
     detail?: string;
     id: string;
@@ -162,16 +180,19 @@ export interface ActivityInput {
 }
 
 export function responseRuntimeMetadata(input: {
+    agentId?: string;
     chatId: string;
     requestMessageId: string;
     runId: string;
 }) {
+    const agentId = input.agentId ?? demoAgentId;
+
     return {
         runtime: {
-            agentId: demoAgentId,
+            agentId,
             messageId: input.requestMessageId,
             runId: input.runId,
-            sessionKey: sessionKey(input.chatId),
+            sessionKey: sessionKey(input.chatId, agentId),
             source: 'development-demo',
             startedAt: demoTime,
         },
@@ -179,17 +200,19 @@ export function responseRuntimeMetadata(input: {
 }
 
 export function activityRuntimeMetadata(input: ActivityInput) {
+    const agentId = input.agentId ?? demoAgentId;
+
     return {
-        agentId: demoAgentId,
+        agentId,
         messageId: input.requestMessageId,
         runId: input.runId,
-        sessionKey: sessionKey(input.chatId),
+        sessionKey: sessionKey(input.chatId, agentId),
         source: input.source ?? 'development-demo',
         toolCallId: input.toolCallId,
         toolName: input.toolName,
     };
 }
 
-export function sessionKey(chatId: string) {
-    return `agent:${demoAgentId}:tavern:channel:${chatId}`;
+export function sessionKey(chatId: string, agentId: string = demoAgentId) {
+    return `agent:${agentId}:tavern:channel:${chatId}`;
 }

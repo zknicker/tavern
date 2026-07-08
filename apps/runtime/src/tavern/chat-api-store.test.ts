@@ -97,15 +97,20 @@ describe('Tavern Runtime Chat API store', () => {
         const first = seedDevelopmentChatDemos({ db: getDb(), enabled: true });
         const second = seedDevelopmentChatDemos({ db: getDb(), enabled: true });
 
-        expect(first.seeded).toBe(1);
-        expect(second.seeded).toBe(1);
-        // Seeding demo sessions ensures the primary managed agent, which
-        // carries its built-in DM — the same invariant every real boot has.
+        expect(first.seeded).toBe(2);
+        expect(second.seeded).toBe(2);
+        // Seeding ensures both demo agents, which carry their built-in DMs —
+        // the same invariant every real boot has.
         expect(
             listChats()
                 .chats.map((chat) => chat.id)
                 .sort()
-        ).toEqual([developmentChatDemoIds.demo, 'cht_tavern_agent_dm']);
+        ).toEqual([
+            'cht_agt_wren_dm',
+            developmentChatDemoIds.demo,
+            developmentChatDemoIds.team,
+            'cht_tavern_agent_dm',
+        ]);
         expect(getChat(developmentChatDemoIds.demo)).toMatchObject({
             id: developmentChatDemoIds.demo,
             metadata: {

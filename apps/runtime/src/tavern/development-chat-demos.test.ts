@@ -1,10 +1,16 @@
-import { developmentChatDemoId } from '@tavern/api/development-chat-demos';
+import {
+    developmentChatDemoId,
+    developmentChatTeamDemoId,
+} from '@tavern/api/development-chat-demos';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { closeDb, getDb, initTestDb } from '../db/connection';
 import { ensureRuntimeSchema } from '../db/schema';
 import { namedParams } from '../db/sqlite';
 import { readPastAgentSessionSummaries } from './agent-session-stats';
 import { startNewAgentSession } from './agent-session-store';
+import { getStoredAgent } from './agents-store';
+import { getChat } from './chat-api';
+import { demoAgentId, demoSecondAgentId } from './development-chat-demo-types';
 import { seedDevelopmentChatDemos } from './development-chat-demos';
 
 describe('development chat demo sessions', () => {
@@ -87,5 +93,37 @@ describe('development chat demo sessions', () => {
             count: number;
         };
         expect(liveTurnCount.count).toBe(0);
+    });
+
+    it('seeds the team demo with two named agent seats and per-seat turns', () => {
+        seedDevelopmentChatDemos({ db: getDb(), enabled: true });
+
+        // Both seats are real stored agents with the current default names.
+        expect(getStoredAgent(demoAgentId)?.name).toBe('Otto');
+        expect(getStoredAgent(demoSecondAgentId)?.name).toBe('Wren');
+
+        const chat = getChat(developmentChatTeamDemoId);
+        const agentSeats = chat?.participants.filter((participant) => participant.kind === 'agent');
+        expect(new Set(agentSeats?.map((participant) => participant.id))).toEqual(
+            new Set([demoAgentId, demoSecondAgentId])
+        );
+
+        // One completed turn per seat, each tied to that seat's own session.
+        const responses = getDb()
+            .prepare(
+                `SELECT participant_id,
+                        json_extract(metadata_json, '$.runtime.agentSessionId') AS session_id
+                 FROM chat_responses WHERE chat_id = $chatId`
+            )
+            .all(namedParams({ chatId: developmentChatTeamDemoId })) as {
+            participant_id: string;
+            session_id: string | null;
+        }[];
+        expect(new Set(responses.map((row) => row.participant_id))).toEqual(
+            new Set([demoAgentId, demoSecondAgentId])
+        );
+        for (const row of responses) {
+            expect(row.session_id).toContain(row.participant_id);
+        }
     });
 });

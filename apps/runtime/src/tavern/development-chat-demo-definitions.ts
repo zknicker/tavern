@@ -10,6 +10,7 @@ import {
     selfMessagesDemo,
 } from './development-chat-demo-basic-definitions';
 import { chartDemo } from './development-chat-demo-composed-chart-definition';
+import { teamDemo } from './development-chat-demo-team-definition';
 import { toolHeadersDemo } from './development-chat-demo-tool-header-definitions';
 import { turnTimelineDemo } from './development-chat-demo-turn-timeline-definition';
 import {
@@ -35,6 +36,7 @@ export const developmentChatDemos: DevelopmentChatDemo[] = [
         selfMessagesDemo(),
         streamingStackDemo(),
     ]),
+    teamDemo(),
 ];
 
 function demoChannel(demos: DevelopmentChatDemo[]): DevelopmentChatDemo {

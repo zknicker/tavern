@@ -1,7 +1,10 @@
 export const developmentChatDemoId = 'cht_demo';
+// Multi-agent demo chat: two agent seats sharing one channel.
+export const developmentChatTeamDemoId = 'cht_demo_team';
 
 export const developmentChatDemoIds = {
     demo: developmentChatDemoId,
+    team: developmentChatTeamDemoId,
     activityTurn: developmentChatDemoId,
     artifactLinks: developmentChatDemoId,
     attachment: developmentChatDemoId,
