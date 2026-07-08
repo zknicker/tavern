@@ -21,8 +21,8 @@ test('wsRouter exposes all chat event subscriptions used by the app', () => {
     ]);
 });
 
-test('wsRouter exposes Semantic Memory event subscriptions used by the app', () => {
-    expect(
-        Object.keys(wsRouter._def.procedures).filter((key) => key.startsWith('semanticMemory.'))
-    ).toEqual(['semanticMemory.onUpdate']);
+test('wsRouter exposes Wiki event subscriptions used by the app', () => {
+    expect(Object.keys(wsRouter._def.procedures).filter((key) => key.startsWith('wiki.'))).toEqual([
+        'wiki.onUpdate',
+    ]);
 });

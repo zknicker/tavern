@@ -3,7 +3,10 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import { findMissingRuntimeArtifactPaths } from './build-runtime-artifact.mjs';
+import {
+    findMissingRuntimeArtifactPaths,
+    findUnexpectedRuntimeAssetPaths,
+} from './build-runtime-artifact.mjs';
 
 test('runtime artifact validation catches missing staged SDK', async () => {
     const stageRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'tavern-runtime-artifact-'));
@@ -39,4 +42,18 @@ test('runtime artifact validation catches missing staged SDK', async () => {
     );
 
     assert.deepEqual(await findMissingRuntimeArtifactPaths(stageRoot), []);
+});
+
+test('runtime artifact validation rejects unexpected runtime asset roots', async () => {
+    const stageRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'tavern-runtime-artifact-'));
+    const runtimeAssetsRoot = path.join(stageRoot, 'share/tavern/runtime-assets');
+
+    await fs.mkdir(path.join(runtimeAssetsRoot, 'google'), { recursive: true });
+    await fs.mkdir(path.join(runtimeAssetsRoot, 'harness-bridges'), { recursive: true });
+    await fs.mkdir(path.join(runtimeAssetsRoot, 'legacy-skills/memory'), { recursive: true });
+    await fs.writeFile(path.join(runtimeAssetsRoot, 'legacy-skills/memory/SKILL.md'), '');
+
+    assert.deepEqual(await findUnexpectedRuntimeAssetPaths(stageRoot), [
+        'share/tavern/runtime-assets/legacy-skills',
+    ]);
 });

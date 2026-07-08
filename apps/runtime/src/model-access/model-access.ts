@@ -38,7 +38,10 @@ export async function handleModelAccessRequest(request: Request): Promise<Respon
         // Lazy import: capability checks read model settings from this module tree.
         void import('../capabilities/store.ts')
             .then((store) =>
-                store.refreshRuntimeCapabilities({ ids: ['memoryWorkers'], publishUpdated: true })
+                store.refreshRuntimeCapabilities({
+                    ids: ['memoryExtraction', 'memoryDreaming'],
+                    publishUpdated: true,
+                })
             )
             .catch(() => {});
         return json(agentRuntimeModelProviderApiKeyResultSchema.parse({ ok: true }));

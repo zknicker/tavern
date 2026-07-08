@@ -12,9 +12,9 @@ import {
 import { getDb } from '../db/connection.ts';
 import { namedParams } from '../db/sqlite.ts';
 import { conflict, forbidden, json, notFound } from '../tavern/http.ts';
+import { getMemoryActivity } from './activity.ts';
 import { processQueuedMemoryDreams, queueMemoryDream } from './dreaming.ts';
 import { isMemoryEnabled } from './settings.ts';
-import { listMemoryWorkers } from './worker-status.ts';
 
 interface MemoryJobRow {
     agent_id: string;
@@ -48,8 +48,8 @@ export async function handleMemoryRequest(request: Request): Promise<Response | 
         return json(memoryJobListSchema.parse({ jobs: listMemoryJobs(url) }));
     }
 
-    if (request.method === 'GET' && url.pathname === agentRuntimeRoutes.memoryWorkers) {
-        return json(listMemoryWorkers());
+    if (request.method === 'GET' && url.pathname === agentRuntimeRoutes.memoryActivity) {
+        return json(getMemoryActivity());
     }
 
     const jobMatch = url.pathname.match(/^\/memory\/jobs\/([^/]+)$/u);

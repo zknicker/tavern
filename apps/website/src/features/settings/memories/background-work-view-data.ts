@@ -1,29 +1,29 @@
 import type {
+    MemoryActivity,
+    MemoryActivityNextRun,
     MemoryJobDetail,
     MemoryJobSummary,
-    MemoryWorkerNextRun,
-    MemoryWorkerStatus,
 } from '@tavern/api';
 import type { BadgeProps } from '../../../components/ui/badge.tsx';
 
 /** tRPC output inference relaxes z.unknown() metadata into optional records. */
-export type WorkerReportView = Omit<MemoryJobDetail, 'metadata' | 'transcript' | 'usage'> & {
+export type MemoryRunReportView = Omit<MemoryJobDetail, 'metadata' | 'transcript' | 'usage'> & {
     metadata?: Record<string, unknown>;
     transcript?: unknown;
     usage?: unknown;
 };
 
-type WorkerKind = MemoryWorkerStatus['kind'];
-type WorkerStatus = MemoryJobSummary['status'];
+type ActivityKind = MemoryActivity['kind'];
+type RunStatus = MemoryJobSummary['status'];
 
-export interface WorkerProfile {
-    kind: WorkerKind;
+export interface ActivityProfile {
+    kind: ActivityKind;
     name: string;
     purpose: string;
 }
 
-/** Ordered worker profiles: human name plus a one-line purpose per kind. */
-export const workerProfiles: readonly WorkerProfile[] = [
+/** Ordered activity profiles: human name plus a one-line purpose per kind. */
+export const activityProfiles: readonly ActivityProfile[] = [
     {
         kind: 'extraction',
         name: 'Extraction',
@@ -32,7 +32,7 @@ export const workerProfiles: readonly WorkerProfile[] = [
     {
         kind: 'dream',
         name: 'Dreaming',
-        purpose: 'Promotes stable evidence into core and shared Memory.',
+        purpose: 'Promotes stable evidence into core Memory and shared Wiki.',
     },
     {
         kind: 'skill_review',
@@ -46,18 +46,18 @@ export const workerProfiles: readonly WorkerProfile[] = [
     },
 ];
 
-const workerNameByKind: Record<WorkerKind, string> = {
+const activityNameByKind: Record<ActivityKind, string> = {
     curation: 'Curation',
     dream: 'Dreaming',
     extraction: 'Extraction',
     skill_review: 'Skill review',
 };
 
-export function workerName(kind: WorkerKind): string {
-    return workerNameByKind[kind];
+export function activityName(kind: ActivityKind): string {
+    return activityNameByKind[kind];
 }
 
-const statusLabels: Record<WorkerStatus, string> = {
+const statusLabels: Record<RunStatus, string> = {
     completed: 'Completed',
     failed: 'Failed',
     queued: 'Queued',
@@ -65,11 +65,11 @@ const statusLabels: Record<WorkerStatus, string> = {
     skipped: 'Skipped',
 };
 
-export function workerStatusLabel(status: WorkerStatus): string {
+export function runStatusLabel(status: RunStatus): string {
     return statusLabels[status];
 }
 
-export function workerStatusVariant(status: WorkerStatus): BadgeProps['variant'] {
+export function runStatusVariant(status: RunStatus): BadgeProps['variant'] {
     switch (status) {
         case 'completed':
             return 'success';
@@ -88,7 +88,7 @@ export function workerStatusVariant(status: WorkerStatus): BadgeProps['variant']
  * Token-backed dot color per status. success/info/error carry outcome; skipped
  * and anything neutral fall back to the muted family. No hand-rolled colors.
  */
-export function workerStatusDotClassName(status: WorkerStatus): string {
+export function runStatusDotClassName(status: RunStatus): string {
     switch (status) {
         case 'completed':
             return 'bg-success';
@@ -102,7 +102,7 @@ export function workerStatusDotClassName(status: WorkerStatus): string {
     }
 }
 
-/** Compact duration for the worker table and run rows. */
+/** Compact duration for the activity table and run rows. */
 export function formatDuration(durationMs: number | null): string | null {
     if (durationMs === null || durationMs < 0) {
         return null;
@@ -119,8 +119,8 @@ export function formatDuration(durationMs: number | null): string | null {
     return rest > 0 ? `${minutes}m ${rest}s` : `${minutes}m`;
 }
 
-/** "in 2h" for scheduled runs, or the plain condition a waiting worker needs. */
-export function formatNextRun(nextRun: MemoryWorkerNextRun | null, enabled: boolean): string {
+/** "in 2h" for scheduled runs, or the plain condition a waiting activity needs. */
+export function formatNextRun(nextRun: MemoryActivityNextRun | null, enabled: boolean): string {
     if (!enabled) {
         return '—';
     }
@@ -154,15 +154,15 @@ function formatUntil(at: string): string {
     return `in ${days}d`;
 }
 
-/** Timeline lane rows, one per worker kind, newest run at the front of each lane. */
+/** Timeline lane rows, one per activity kind, newest run at the front of each lane. */
 export interface TimelineLane {
-    kind: WorkerKind;
+    kind: ActivityKind;
     name: string;
     runs: MemoryJobSummary[];
 }
 
 export function buildTimelineLanes(jobs: MemoryJobSummary[]): TimelineLane[] {
-    return workerProfiles.map((profile) => ({
+    return activityProfiles.map((profile) => ({
         kind: profile.kind,
         name: profile.name,
         runs: jobs

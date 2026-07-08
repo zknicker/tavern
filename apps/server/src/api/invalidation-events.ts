@@ -26,7 +26,7 @@ export const tavernEventNames = {
     sessionUpdated: 'session.updated',
     skillUpdated: 'skill.updated',
     usageLiveUpdated: 'usage.live.updated',
-    semanticMemoryUpdated: 'semanticMemory.updated',
+    wikiUpdated: 'wiki.updated',
     workersUpdated: 'workers.updated',
 } as const;
 
@@ -144,13 +144,13 @@ export function emitUsageLiveUpdated() {
     emitTavernEvent(tavernEventNames.usageLiveUpdated);
 }
 
-export function emitSemanticMemoryUpdated(input: {
+export function emitWikiUpdated(input: {
     paths?: string[];
     reason?: string;
     scope: 'content' | 'root';
     timestamp?: string;
 }) {
-    emitTavernEvent(tavernEventNames.semanticMemoryUpdated, {
+    emitTavernEvent(tavernEventNames.wikiUpdated, {
         ...createInvalidationEvent(),
         paths: input.paths ?? [],
         reason: input.reason,

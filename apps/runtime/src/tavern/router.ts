@@ -26,7 +26,6 @@ import { handleCronRequest } from '../cron/routes.ts';
 import { handleRuntimeJobsRequest } from '../jobs/routes.ts';
 import { listMacApps } from '../mac-apps/inventory.ts';
 import { handleMemoryRequest } from '../memory/routes.ts';
-import { handleSemanticMemoryRequest } from '../memory/semantic/routes.ts';
 import { handleMemorySettingsRequest } from '../memory/settings.ts';
 import { handleModelAccessRequest } from '../model-access/model-access.ts';
 import { handleOpenAiSettingsRequest } from '../model-access/openai-settings.ts';
@@ -36,6 +35,7 @@ import { handleModelProviderRequest } from '../models/provider-routes.ts';
 import { handlePluginsRequest } from '../plugins/routes.ts';
 import { handleTasksRequest } from '../tasks/routes.ts';
 import { handleTimezoneSettingsRequest } from '../timezone-settings.ts';
+import { handleWikiRequest } from '../wiki/routes.ts';
 import { handleWorkspaceRequest } from '../workspace/routes.ts';
 import { resetAgentSession } from './agent-session-reset.ts';
 import { readAgentSessionStats, readPastAgentSessionSummaries } from './agent-session-stats.ts';
@@ -67,9 +67,9 @@ export async function handleTavernRuntimeRequest(request: Request): Promise<Resp
         );
     }
 
-    const semanticMemoryResponse = await handleSemanticMemoryRequest(request);
-    if (semanticMemoryResponse) {
-        return semanticMemoryResponse;
+    const wikiResponse = await handleWikiRequest(request);
+    if (wikiResponse) {
+        return wikiResponse;
     }
 
     const memoryResponse = await handleMemoryRequest(request);

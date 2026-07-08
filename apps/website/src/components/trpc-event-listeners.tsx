@@ -11,10 +11,10 @@ import { useCronEvents } from '../hooks/cron/use-cron-events.ts';
 import { useMemoryJobEvents } from '../hooks/memory/use-memory-job-events.ts';
 import { useModelEvents } from '../hooks/models/use-model-events.ts';
 import { useUsageEvents } from '../hooks/models/use-usage-events.ts';
-import { useSemanticMemoryEvents } from '../hooks/semantic-memory/use-semantic-memory-events.ts';
 import { useSessionEvents } from '../hooks/sessions/use-session-events.ts';
 import { useSkillEvents } from '../hooks/skills/use-events.ts';
 import { useTaskEvents } from '../hooks/tasks/use-task-events.ts';
+import { useWikiEvents } from '../hooks/wiki/use-wiki-events.ts';
 import { useWorkerEvents } from '../hooks/workers/use-worker-events.ts';
 
 export function TrpcEventListeners() {
@@ -32,7 +32,7 @@ export function TrpcEventListeners() {
     useSkillEvents();
     useTaskEvents();
     useUsageEvents();
-    useSemanticMemoryEvents();
+    useWikiEvents();
     useWorkerEvents();
 
     return null;

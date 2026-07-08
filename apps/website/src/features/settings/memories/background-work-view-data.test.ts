@@ -9,8 +9,8 @@ import {
     readSignals,
     readSkillActions,
     readTransitions,
-    workerStatusDotClassName,
-    workerStatusVariant,
+    runStatusDotClassName,
+    runStatusVariant,
 } from './background-work-view-data.ts';
 
 test('formatDuration renders compact human durations', () => {
@@ -22,7 +22,7 @@ test('formatDuration renders compact human durations', () => {
     expect(formatDuration(120_000)).toBe('2m');
 });
 
-test('formatNextRun handles disabled, waiting, and scheduled workers', () => {
+test('formatNextRun handles disabled, waiting, and scheduled activity', () => {
     expect(formatNextRun(null, false)).toBe('—');
     expect(formatNextRun({ kind: 'scheduled', at: new Date().toISOString() }, false)).toBe('—');
     expect(formatNextRun({ kind: 'waiting', waitingOn: 'learning signals' }, true)).toBe(
@@ -33,12 +33,12 @@ test('formatNextRun handles disabled, waiting, and scheduled workers', () => {
 });
 
 test('status maps to token dot classes and badge variants without hand-rolled colors', () => {
-    expect(workerStatusDotClassName('completed')).toBe('bg-success');
-    expect(workerStatusDotClassName('failed')).toBe('bg-error');
-    expect(workerStatusDotClassName('running')).toBe('bg-info');
-    expect(workerStatusDotClassName('skipped')).toBe('bg-muted-foreground/55');
-    expect(workerStatusVariant('completed')).toBe('success');
-    expect(workerStatusVariant('failed')).toBe('error');
+    expect(runStatusDotClassName('completed')).toBe('bg-success');
+    expect(runStatusDotClassName('failed')).toBe('bg-error');
+    expect(runStatusDotClassName('running')).toBe('bg-info');
+    expect(runStatusDotClassName('skipped')).toBe('bg-muted-foreground/55');
+    expect(runStatusVariant('completed')).toBe('success');
+    expect(runStatusVariant('failed')).toBe('error');
 });
 
 test('buildTimelineLanes groups runs by kind, newest first, in a stable lane order', () => {

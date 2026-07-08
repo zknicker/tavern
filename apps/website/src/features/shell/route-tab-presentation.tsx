@@ -31,7 +31,7 @@ export function getRouteTabIcon(tab: RouteTab): IconSvgElement | undefined {
             return CheckListIcon;
         case 'workspace':
             return Folder01Icon;
-        case 'memory':
+        case 'wiki':
             return Database02Icon;
         case 'automations':
         case 'overview':
@@ -49,7 +49,7 @@ export function getRouteTabIconNode(tab: RouteTab, className = routeTabIconNodeC
             return <TavernLogo aria-hidden="true" className={className} />;
         case 'tasks':
         case 'workspace':
-        case 'memory':
+        case 'wiki':
             return undefined;
     }
 }

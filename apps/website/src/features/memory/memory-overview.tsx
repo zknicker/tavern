@@ -12,14 +12,14 @@ import { SettingsRow, SettingsValue } from '../../components/ui/settings-row.tsx
 import { Switch } from '../../components/ui/switch.tsx';
 import { appRoutes } from '../../lib/app-routes.ts';
 import {
-    formatSemanticMemoryAccess,
-    formatSemanticMemoryConfigSource,
-    getSemanticMemoryHealth,
-    type SemanticMemoryHubStatus,
+    formatWikiAccess,
+    formatWikiConfigSource,
+    getWikiHealth,
+    type WikiHubStatus,
 } from './memory-status-format.ts';
 
-export function MemoryOverview({ status }: { status: SemanticMemoryHubStatus | null }) {
-    const health = getSemanticMemoryHealth(status);
+export function MemoryOverview({ status }: { status: WikiHubStatus | null }) {
+    const health = getWikiHealth(status);
     const unavailable = 'Tavern Runtime unavailable';
 
     return (
@@ -73,24 +73,24 @@ export function MemoryOverview({ status }: { status: SemanticMemoryHubStatus | n
                     <Separator />
                     <SettingsRow
                         description="Browse Markdown pages, links, backlinks, and search results."
-                        title="Memory files"
+                        title="Wiki pages"
                         trailingWidth="intrinsic"
                     >
                         <Button
-                            render={<NavLink to={appRoutes.memory} />}
+                            render={<NavLink to={appRoutes.wiki} />}
                             size="sm"
                             variant="outline"
                         >
                             <Icon icon={Folder01Icon} />
-                            <span>Open Memory</span>
+                            <span>Open Wiki</span>
                         </Button>
                     </SettingsRow>
                 </MemorySection>
 
                 <MemorySection title="Memory">
                     <SettingsRow
-                        description="Runtime can resolve and inspect the Memory folder."
-                        title="Memory health"
+                        description="Runtime can resolve and inspect the Wiki folder."
+                        title="Wiki health"
                         trailingWidth="intrinsic"
                     >
                         <Badge variant={health.variant}>{health.label}</Badge>
@@ -98,9 +98,7 @@ export function MemoryOverview({ status }: { status: SemanticMemoryHubStatus | n
                     <Separator />
                     <SettingsRow title="Config source">
                         <SettingsValue>
-                            {status
-                                ? formatSemanticMemoryConfigSource(status.configSource)
-                                : unavailable}
+                            {status ? formatWikiConfigSource(status.configSource) : unavailable}
                         </SettingsValue>
                     </SettingsRow>
                     <Separator />
@@ -113,11 +111,11 @@ export function MemoryOverview({ status }: { status: SemanticMemoryHubStatus | n
                     </SettingsRow>
                     <Separator />
                     <SettingsRow title="Access">
-                        <SettingsValue>{formatSemanticMemoryAccess(status)}</SettingsValue>
+                        <SettingsValue>{formatWikiAccess(status)}</SettingsValue>
                     </SettingsRow>
                     <Separator />
-                    <SettingsRow title="Memory path" trailingWidth="wide">
-                        <CodeSnippet lines={status?.memoryPath ?? unavailable} />
+                    <SettingsRow title="Wiki path" trailingWidth="wide">
+                        <CodeSnippet lines={status?.wikiPath ?? unavailable} />
                     </SettingsRow>
                 </MemorySection>
 
@@ -138,15 +136,11 @@ export function MemoryOverview({ status }: { status: SemanticMemoryHubStatus | n
                     </SettingsRow>
                     <Separator />
                     <SettingsRow
-                        description="File-level changes remain inspectable in Memory."
+                        description="File-level changes remain inspectable in Wiki."
                         title="Changed files"
                         trailingWidth="intrinsic"
                     >
-                        <Button
-                            render={<NavLink to={appRoutes.memory} />}
-                            size="sm"
-                            variant="ghost"
-                        >
+                        <Button render={<NavLink to={appRoutes.wiki} />} size="sm" variant="ghost">
                             <span>Browse files</span>
                             <Icon icon={ArrowRight01Icon} />
                         </Button>

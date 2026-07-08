@@ -61,7 +61,7 @@ const directWorkerProviders = new Set(['openai', 'openai-compatible', 'openroute
 const defaultOpenRouterWorkerModel = 'openai/gpt-4.1-mini';
 
 /**
- * Background Memory workers run as direct model calls, so their Automatic
+ * Memory background work runs as direct model calls, so its Automatic
  * cannot follow a harness provider. Use the agent default when it is already
  * direct; otherwise fall back to whichever direct connection is configured.
  */
@@ -80,7 +80,7 @@ export function defaultWorkerModelSelection(): AgentRuntimeModelName {
         return { model: defaultOpenRouterWorkerModel, provider: 'openrouter' };
     }
     // Nothing direct is configured; report the agent default so the
-    // memoryWorkers capability explains what is missing.
+    // Memory extraction/dreaming capabilities explain what is missing.
     return agentDefault;
 }
 

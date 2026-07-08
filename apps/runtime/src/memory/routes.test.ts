@@ -62,7 +62,7 @@ describe('Memory routes', () => {
         });
     });
 
-    test('lists Memory workers with scheduled next runs and latest run summaries', async () => {
+    test('lists Memory activity with scheduled next runs and latest run summaries', async () => {
         vi.useFakeTimers();
         vi.setSystemTime(new Date('2026-07-02T20:00:00.000Z'));
         saveModelCategories('openai');
@@ -88,12 +88,12 @@ describe('Memory routes', () => {
         writeMetadata(skillCuratorMetadataKey, '2026-07-01T20:00:00.000Z');
 
         const response = await handleMemoryRequest(
-            new Request('http://runtime.test/memory/workers')
+            new Request('http://runtime.test/memory/activity')
         );
 
         expect(response?.status).toBe(200);
         await expect(response?.json()).resolves.toMatchObject({
-            workers: [
+            activities: [
                 {
                     enabled: true,
                     kind: 'extraction',
@@ -126,11 +126,11 @@ describe('Memory routes', () => {
         saveModelCategories('openai');
 
         const response = await handleMemoryRequest(
-            new Request('http://runtime.test/memory/workers')
+            new Request('http://runtime.test/memory/activity')
         );
         expect(response?.status).toBe(200);
         await expect(response?.json()).resolves.toMatchObject({
-            workers: [
+            activities: [
                 { kind: 'extraction', nextRun: { kind: 'waiting', waitingOn: 'chat activity' } },
                 {
                     kind: 'dream',
@@ -157,12 +157,12 @@ describe('Memory routes', () => {
         writeMetadata(skillCuratorMetadataKey, '2026-06-20T20:00:00.000Z');
 
         const response = await handleMemoryRequest(
-            new Request('http://runtime.test/memory/workers')
+            new Request('http://runtime.test/memory/activity')
         );
 
         expect(response?.status).toBe(200);
         await expect(response?.json()).resolves.toMatchObject({
-            workers: [
+            activities: [
                 {},
                 {},
                 {},
@@ -171,7 +171,7 @@ describe('Memory routes', () => {
         });
     });
 
-    test('disables worker rows when configured categories lack a LanguageModel adapter', async () => {
+    test('disables activity rows when configured categories lack a LanguageModel adapter', async () => {
         saveModelCategories('claude');
         insertChat('chat_memory');
         insertDebounce('2026-07-02T20:05:00.000Z');
@@ -185,12 +185,12 @@ describe('Memory routes', () => {
         insertSkillReviewQueue('2026-07-02T20:06:00.000Z');
 
         const response = await handleMemoryRequest(
-            new Request('http://runtime.test/memory/workers')
+            new Request('http://runtime.test/memory/activity')
         );
 
         expect(response?.status).toBe(200);
         await expect(response?.json()).resolves.toMatchObject({
-            workers: [
+            activities: [
                 { enabled: false, kind: 'extraction', nextRun: null },
                 { enabled: false, kind: 'dream', nextRun: null },
                 { enabled: false, kind: 'skill_review', nextRun: null },

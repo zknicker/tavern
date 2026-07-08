@@ -55,11 +55,11 @@ test('ChatMarkdownText renders compact heading blocks', () => {
 test('ChatMarkdownText renders Tavern resource links', () => {
     const markup = renderToStaticMarkup(
         <ArtifactPanelOpenProvider onOpen={() => undefined}>
-            <ChatMarkdownText content="[INDEX.md](tavern://memory/INDEX.md)" />
+            <ChatMarkdownText content="[INDEX.md](tavern://wiki/INDEX.md)" />
         </ArtifactPanelOpenProvider>
     );
 
-    expect(markup).toContain('href="tavern://memory/INDEX.md"');
+    expect(markup).toContain('href="tavern://wiki/INDEX.md"');
     expect(markup).toContain('INDEX.md');
 });
 

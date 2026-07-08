@@ -167,15 +167,15 @@ test('buildToolLabel summarizes session_status output', () => {
     );
 });
 
-test('buildToolLabel summarizes memory search queries and counts', () => {
+test('buildToolLabel summarizes wiki search queries and counts', () => {
     assert.equal(
         getLabel({
             argumentsValue: {
                 query: 'Etsy due date overdue shipping orders business rules',
             },
-            name: 'memory_search',
+            name: 'wiki_search',
             resultValue: {
-                results: [{ path: 'memory/2026-02-16.md' }],
+                hits: [{ path: 'memory/2026-02-16.md' }],
             },
         }),
         'search · Etsy due date overdue shipping… · 1 result'

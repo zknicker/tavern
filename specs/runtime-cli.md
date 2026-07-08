@@ -27,11 +27,11 @@ tavern engine               Group help (exit 1)
 tavern engine status [--json]
 tavern engine install
 tavern engine clean [--all]
-tavern memory               Group help (exit 1)
-tavern memory status [--json]
-tavern memory list [--json]
-tavern memory get <path> [--json]
-tavern memory search <query> [--json]
+tavern wiki               Group help (exit 1)
+tavern wiki status [--json]
+tavern wiki list [--json]
+tavern wiki get <path> [--json]
+tavern wiki search <query> [--json]
 tavern version | -v | --version
 tavern help [command]
 ```
@@ -70,8 +70,8 @@ Maintenance
   update         Stage a Runtime upgrade through Homebrew
   restart        Restart the service and wait for health
 
-Memory
-  memory         Browse Memory files (status, list, get, search)
+Wiki
+  memory         Browse Wiki files (status, list, get, search)
 
 Engine
   engine         Inspect, install, or clean the managed agent engine
@@ -84,20 +84,20 @@ Environment
 ```
 
 `tavern help update` / `tavern update --help` shows summary, usage, flags with
-descriptions, and examples. Bare `tavern engine` / `tavern memory` print group
+descriptions, and examples. Bare `tavern engine` / `tavern wiki` print group
 help and exit 1.
 
-## Memory Commands
+## Wiki Commands
 
-`tavern memory` commands are thin Runtime clients.
+`tavern wiki` commands are thin Runtime clients.
 
-* `status` reports the resolved Memory path, config source, page count,
+* `status` reports the resolved Wiki path, config source, page count,
   `TAXONOMY.md` presence, and filesystem access.
-* `list` prints Markdown pages relative to the Memory root.
+* `list` prints Markdown pages relative to the Wiki root.
 * `get <path>` prints a page.
 * `search <query>` prints lightweight search hits.
 
-Writes and maintenance happen through the managed `memory` skill, not the CLI.
+Writes and maintenance happen through managed Wiki tools, not the CLI.
 
 ## Status
 
@@ -138,7 +138,7 @@ Engine
 | `commands/status.ts` | `tavern status` |
 | `commands/update.ts` | `tavern update` |
 | `commands/restart.ts` | `tavern restart` |
-| `commands/memory.ts` | `tavern memory ...` subcommands |
+| `commands/wiki.ts` | `tavern wiki ...` subcommands |
 | `commands/engine.ts` | `tavern engine ...` subcommands |
 
 ## Acceptance Criteria

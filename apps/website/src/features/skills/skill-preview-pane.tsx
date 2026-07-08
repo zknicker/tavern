@@ -7,7 +7,7 @@ import { useSkillEnabledSet } from '../../hooks/skills/use-skill-enabled-set.ts'
 import { useSkillHubPreview } from '../../hooks/skills/use-skill-hub-preview.ts';
 import { useSkillHubScan } from '../../hooks/skills/use-skill-hub-scan.ts';
 import { useSkillPreview } from '../../hooks/skills/use-skill-preview.ts';
-import { SemanticMemoryMarkdownViewer } from '../memory/semantic/semantic-memory-markdown-viewer.tsx';
+import { WikiMarkdownViewer } from '../wiki/wiki-markdown-viewer.tsx';
 import { SkillDetailActions, type SkillEnablementController } from './skill-detail-actions.tsx';
 import { formatSkillName } from './skill-name-format.ts';
 import {
@@ -207,7 +207,7 @@ function SkillMarkdownPreview({
     }
     return (
         <article className="mt-5 min-w-0 rounded-xl border border-border/70 bg-card px-9 py-7 [&_>div]:text-base [&_>div]:leading-7 [&_a]:break-all [&_blockquote]:break-words [&_h1]:mb-4 [&_h1]:text-[1.25rem] [&_h1]:leading-7 [&_h1]:tracking-normal [&_h2]:mt-7 [&_h2]:mb-3 [&_h2]:text-[1.0625rem] [&_h2]:leading-6 [&_h3]:text-base [&_li]:break-words [&_p]:my-4 [&_p]:break-words [&_pre]:rounded-lg [&_pre]:border [&_pre]:border-border/60 [&_pre]:bg-background [&_pre]:px-4 [&_pre]:py-3">
-            <SemanticMemoryMarkdownViewer value={markdown} />
+            <WikiMarkdownViewer value={markdown} />
         </article>
     );
 }

@@ -398,13 +398,6 @@ CREATE TABLE IF NOT EXISTS skill_review_queue (
 CREATE INDEX IF NOT EXISTS idx_skill_review_queue_due
   ON skill_review_queue(scheduled_for);
 
-CREATE TABLE IF NOT EXISTS memory_page_tombstones (
-  path        TEXT PRIMARY KEY,
-  deleted_at  TEXT NOT NULL,
-  actor       TEXT NOT NULL DEFAULT 'user',
-  reason      TEXT
-);
-
 CREATE TABLE IF NOT EXISTS chat_messages (
   id                TEXT PRIMARY KEY,
   chat_id           TEXT NOT NULL,

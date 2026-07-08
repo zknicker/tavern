@@ -30,12 +30,15 @@ const capabilityCategories: Partial<Record<CapabilityId, CapabilityCategoryId>> 
     codexOAuth: 'runtimeCore',
     dashboardServer: 'runtimeCore',
     gateway: 'runtimeCore',
+    memory: 'knowledge',
+    memoryDreaming: 'knowledge',
+    memoryExtraction: 'knowledge',
     modelExecution: 'extensions',
     'plugin.google.calendar': 'plugins',
     'plugin.merchbase': 'plugins',
     skills: 'extensions',
-    semanticMemory: 'knowledge',
-    memoryRecall: 'knowledge',
+    wiki: 'knowledge',
+    wikiRecall: 'knowledge',
 };
 
 const capabilityDisplayOrder: CapabilityId[] = [
@@ -43,8 +46,11 @@ const capabilityDisplayOrder: CapabilityId[] = [
     'apiServer',
     'dashboardServer',
     'gateway',
-    'semanticMemory',
-    'memoryRecall',
+    'memory',
+    'memoryExtraction',
+    'memoryDreaming',
+    'wiki',
+    'wikiRecall',
     'modelExecution',
     'skills',
     'plugin.merchbase',
@@ -74,15 +80,17 @@ const capabilityDescriptions: Partial<Record<CapabilityId, string>> = {
     dashboardServer: 'The engine that executes your agents’ turns.',
     devToolkit: 'Development-stack tools for simulated agent turns. Off in normal installs.',
     gateway: 'Delivers your messages to agents and streams their replies and activity back.',
-    memoryRecall:
-        'Your Memory pages are indexed automatically whenever they change, so agents instantly recall relevant knowledge in every conversation. First-time setup downloads a small on-device model.',
-    memoryWorkers:
-        'Background capture that distills settled conversations into durable Memory after the fact.',
+    memory: 'Per-agent USER.md and MEMORY.md files are enabled and available in each agent workspace.',
+    memoryDreaming:
+        'Background dreaming can promote stable evidence into Wiki and per-agent Memory using the Standard background model.',
+    memoryExtraction:
+        'Background extraction can distill settled conversations into per-agent episodic evidence using the Fast background model.',
+    wikiRecall:
+        'Your Wiki pages are indexed automatically whenever they change, so agents instantly recall relevant shared knowledge in every conversation. First-time setup downloads a small on-device model.',
     modelExecution: 'At least one AI model is connected and ready to run agent turns.',
     'plugin.google.calendar': 'Google Calendar access for your agents.',
     'plugin.merchbase': 'MerchBase sales and product data tools for your agents.',
-    semanticMemory:
-        'The shared Memory library — durable knowledge pages your agents read, write, and cite.',
+    wiki: 'The shared Wiki — durable Markdown pages your agents read, write, and cite.',
     skills: 'Reusable skills agents load for specialized tasks.',
 };
 

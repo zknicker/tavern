@@ -20,9 +20,6 @@ import { readConfigValue } from '../config.ts';
 import { createTavernCronTools } from '../cron/agent-tools.ts';
 import { isRuntimeCronReady } from '../cron/manager-state.ts';
 import { log } from '../log.ts';
-import { createTavernMemoryTools } from '../memory/agent-tools.ts';
-import { recallTurnMemory } from '../memory/recall/recall.ts';
-import { isMemoryEnabled } from '../memory/settings.ts';
 import { createGoogleToolsForAgent } from '../plugins/google-tools.ts';
 import { createMerchbaseToolsForAgent } from '../plugins/merchbase-tools.ts';
 import { createTavernSkillTools } from '../skills/agent-tools.ts';
@@ -33,6 +30,8 @@ import {
     widgetActivity,
     widgetActivityIdForRun,
 } from '../widgets/render.ts';
+import { createTavernWikiTools } from '../wiki/agent-tools.ts';
+import { recallTurnWiki } from '../wiki/recall/recall.ts';
 import type { AgentExecutor, AgentExecutorInput } from './agent-executor.ts';
 import { buildAgentInstructions } from './agent-instructions.ts';
 import { updateAgentSessionRuntimeState } from './agent-session-store.ts';
@@ -91,7 +90,7 @@ async function executeHarnessTurn(
 
     const instructions = await buildAgentInstructions(input);
     const skills = await readHarnessAgentSkills(input);
-    const recall = await recallTurnMemory(input.content);
+    const recall = await recallTurnWiki(input.content);
     const prompt = harnessPrompt(input, recall?.block);
     try {
         recordAgentTurnPromptEvidence({
@@ -321,7 +320,7 @@ function createHarnessAgent(
         ...createTavernChatTools({
             chatId: input.chatId,
         }),
-        ...(isMemoryEnabled() ? createTavernMemoryTools() : {}),
+        ...createTavernWikiTools(),
         ...(isRuntimeCronReady() ? createTavernCronTools({ agentId: input.agent.id }) : {}),
         ...createTavernTaskTools({ agentId: input.agent.id }),
         ...createTavernSkillTools({ agentId: input.agent.id }),

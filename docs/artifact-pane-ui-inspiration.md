@@ -1,14 +1,14 @@
 ---
-summary: Artifact Pane UI notes for chat-scoped inspectable outputs, tabs, renderers, and linked Memory/workspace targets.
+summary: Artifact Pane UI notes for chat-scoped inspectable outputs, tabs, renderers, and linked Wiki/workspace targets.
 read_when:
-  - changing Artifact Pane UI, inspectable output links, chat artifact tabs, or linked Memory/workspace renderers
+  - changing Artifact Pane UI, inspectable output links, chat artifact tabs, or linked Wiki/workspace renderers
 ---
 
 # Artifact Pane UI Notes
 
 ## Current Direction
 
-The artifact pane should feel like a compact assistant workspace attached to the chat, not a full browser. It opens when the user clicks a linked output such as a Memory page, Markdown file, HTML preview, image, or generated asset.
+The artifact pane should feel like a compact assistant workspace attached to the chat, not a full browser. It opens when the user clicks a linked output such as a Wiki page, Markdown file, HTML preview, image, or generated asset.
 
 ## Chrome
 
@@ -50,13 +50,13 @@ The pane should borrow the useful parts of Codex, Claude, and OpenCode:
 - Should every tab eventually get its own close affordance?
 - Should images use zoom/pan controls in the first version?
 - Should HTML previews support an address/source bar, or just a title row?
-- Should workspace files and Memory pages share one link scheme, or stay visibly distinct?
+- Should workspace files and Wiki pages share one link scheme, or stay visibly distinct?
 
 ## Sample Agent Reply
 
 I wrote the output here:
 
-- [Panel Brief](tavern://memory/Demos/Panel%20Brief.md)
+- [Panel Brief](tavern://wiki/Demos/Panel%20Brief.md)
 - [Preview HTML](tavern://workspace/out/preview.html)
 - [Generated Chart](tavern://workspace/out/chart.png)
 

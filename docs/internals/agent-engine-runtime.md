@@ -87,9 +87,9 @@ turn starts; mid-turn activity rows reference it.
 The prompt contains the current Tavern message plus bounded ambient channel
 context since the Agent session's `promptContextSequence`; it does not replay
 the prior user-agent transcript because the harness session owns that history.
-When Memory is enabled and the recall index is provisioned, the prompt also
-carries a recalled-Memory block: the triggering message runs a vector search
-over the qmd-backed recall index (`apps/runtime/src/memory/recall/`), and up to
+When Wiki recall is provisioned, the prompt also carries a recalled-Wiki block:
+the triggering message runs a vector search over the qmd-backed recall index
+(`apps/runtime/src/wiki/recall/`), and up to
 three pages above the relevance floor inject as labeled background context.
 qmd loads at runtime via dynamic import — its native modules cannot compile
 into the single-file Runtime binary — resolving the workspace package in dev
@@ -115,7 +115,7 @@ directives for gemini/gemma, nothing for Claude models.
 After a turn settles, Runtime advances `promptContextSequence` to the
 triggering message sequence.
 Each turn also records prompt evidence — the composed instructions, the
-per-turn prompt, and the Memory recall hits — in `agent_turns` metadata at
+per-turn prompt, and the Wiki recall hits — in `agent_turns` metadata at
 turn start, served on demand at `GET /api/turns/{run_id}/prompt`. The app's
 turn drawer shows the recall matches; dev mode (desktop Developer menu) adds
 the raw prompt blob.

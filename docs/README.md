@@ -9,7 +9,7 @@ read_when:
 
 Tavern is a Discord-style chat app where humans and agents participate in
 channels and DMs. Runtime is the always-on backend that owns chat state, Agent
-sessions, model provider setup, executable model inventory, tools, Memory, jobs,
+sessions, model provider setup, executable model inventory, tools, Memory, Wiki, jobs,
 and execution.
 
 ## Product Shape
@@ -26,8 +26,10 @@ and execution.
 - **Tools, skills, and Plugins.** Runtime owns the tool/skill inventory and
   built-in Plugin integrations. Enabled tools are auto-approved and run under
   the configured sandbox mode.
-- **Memory.** Tavern Memory is durable knowledge the user can inspect; Runtime
-  can inject relevant Memory into turns.
+- **Memory.** Tavern Memory is per-agent durable context in `USER.md` and
+  `MEMORY.md`, with background extraction and dreaming.
+- **Wiki.** Tavern Wiki is the shared Git-backed Markdown knowledge graph.
+  Runtime can inject relevant Wiki snippets into turns.
 - **Tasks.** A built-in tracker for tasks and epics shared by the user and
   agents, with T-numbers, agent task tools, and dispatch-to-agent.
 - **Automations.** Runtime owns scheduled work and records run history.

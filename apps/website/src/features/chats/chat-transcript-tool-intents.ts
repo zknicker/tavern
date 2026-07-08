@@ -203,6 +203,8 @@ function failedIntentNoun(kind: ToolIntentKind) {
             return 'audio generation';
         case 'web':
             return 'web search';
+        case 'wiki':
+            return 'wiki check';
         case 'worker':
             return 'agent task';
     }

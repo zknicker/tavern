@@ -10,10 +10,10 @@ export interface CliFlag {
     valueName?: string;
 }
 
-export type CliSection = 'Server' | 'Status' | 'Maintenance' | 'Memory' | 'Engine';
+export type CliSection = 'Server' | 'Status' | 'Maintenance' | 'Wiki' | 'Engine';
 
 /** Section render order in global help. */
-export const SECTION_ORDER: CliSection[] = ['Server', 'Status', 'Maintenance', 'Memory', 'Engine'];
+export const SECTION_ORDER: CliSection[] = ['Server', 'Status', 'Maintenance', 'Wiki', 'Engine'];
 
 /** A registered top-level command or command group. */
 export interface CliCommand {
@@ -115,28 +115,28 @@ const restartCommand: CliCommand = {
     },
 };
 
-const memoryCommand: CliCommand = {
-    name: 'memory',
-    section: 'Memory',
+const wikiCommand: CliCommand = {
+    name: 'wiki',
+    section: 'Wiki',
     group: true,
-    summary: 'Browse Memory files (status, list, get, search)',
-    usage: 'tavern memory <status|list|get|search> [flags]',
+    summary: 'Browse Wiki pages (status, list, get, search)',
+    usage: 'tavern wiki <status|list|get|search> [flags]',
     flags: [
         { name: '--json', description: 'Emit one JSON document' },
         { name: '--runtime-url', valueName: '<url>', description: 'Override the Runtime API URL' },
     ],
-    examples: ['tavern memory status', 'tavern memory list', 'tavern memory get MEMORY.md'],
+    examples: ['tavern wiki status', 'tavern wiki list', 'tavern wiki get INDEX.md'],
     async run(_args, raw) {
         if (raw.length === 0) {
             const { printGroupHelp } = await import('./help');
-            printGroupHelp(memoryCommand, process.stdout);
+            printGroupHelp(wikiCommand, process.stdout);
             return 1;
         }
-        const [{ MEMORY_SUBCOMMANDS }, { dispatchSubcommand }] = await Promise.all([
-            import('./commands/memory'),
+        const [{ WIKI_SUBCOMMANDS }, { dispatchSubcommand }] = await Promise.all([
+            import('./commands/wiki'),
             import('./subcommand'),
         ]);
-        return await dispatchSubcommand('memory', MEMORY_SUBCOMMANDS, raw);
+        return await dispatchSubcommand('wiki', WIKI_SUBCOMMANDS, raw);
     },
 };
 
@@ -199,7 +199,7 @@ export const COMMANDS: CliCommand[] = [
     tokenCommand,
     updateCommand,
     restartCommand,
-    memoryCommand,
+    wikiCommand,
     engineCommand,
     helpCommand,
 ];

@@ -104,7 +104,7 @@ export function createAppRouter() {
                                 },
                                 {
                                     path: 'workers',
-                                    element: <Navigate replace to={appRoutes.memory} />,
+                                    element: <Navigate replace to={appRoutes.wiki} />,
                                 },
                                 {
                                     path: 'tasks',
@@ -161,11 +161,11 @@ export function createAppRouter() {
                                 },
                                 {
                                     path: 'events',
-                                    element: <Navigate replace to={appRoutes.memory} />,
+                                    element: <Navigate replace to={appRoutes.wiki} />,
                                 },
                                 {
                                     path: 'logs',
-                                    element: <Navigate replace to={appRoutes.memory} />,
+                                    element: <Navigate replace to={appRoutes.wiki} />,
                                 },
                                 {
                                     path: 'workspace',
@@ -175,19 +175,19 @@ export function createAppRouter() {
                                     ),
                                 },
                                 {
-                                    path: 'memory',
+                                    path: 'wiki',
                                     lazy: lazyRoute(
-                                        () => import('./routes/app/memory-page.tsx'),
-                                        'MemoryPage'
+                                        () => import('./routes/app/wiki-page.tsx'),
+                                        'WikiPage'
                                     ),
                                 },
                                 {
                                     path: 'pulse',
-                                    element: <Navigate replace to={appRoutes.memory} />,
+                                    element: <Navigate replace to={appRoutes.wiki} />,
                                 },
                                 {
                                     path: 'memories',
-                                    element: <Navigate replace to={appRoutes.memory} />,
+                                    element: <Navigate replace to={appRoutes.wiki} />,
                                 },
                                 {
                                     path: 'jobs',
@@ -474,7 +474,7 @@ function resolveLegacyDashboardPath(pathname: string) {
         case 'memories':
         case 'pulse':
         case 'workers':
-            return appRoutes.memory;
+            return appRoutes.wiki;
         case 'jobs':
         case 'models':
             return appRoutes.overview;
@@ -486,7 +486,7 @@ function resolveLegacyDashboardPath(pathname: string) {
             return appRoutes.settingsSkills;
         case 'stats':
             return appRoutes.settingsStats;
-        case 'memory':
+        case 'wiki':
         case 'workspace':
             return `/${suffix}`;
         default:

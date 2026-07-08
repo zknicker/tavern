@@ -54,7 +54,7 @@ export function scheduleMemoryExtractionForTurn(
     if (turn.status !== 'completed' || !isMemoryEnabled()) {
         return false;
     }
-    // Don't queue work the workers cannot run; the memoryWorkers capability
+    // Don't queue work extraction cannot run; the memoryExtraction capability
     // surfaces the fix instead of filling history with doomed retries.
     if (!supportsLanguageModelForRuntime(resolveModelCategorySelection('fast'))) {
         return false;

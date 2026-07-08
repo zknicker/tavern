@@ -99,8 +99,8 @@ export function artifactLinksDemo(): DevelopmentChatDemo {
         reply: [
             'Created two inspectable Memory notes:',
             '',
-            '- [Artifact Panel brief](tavern://memory/Demos/Panel%20Brief.md)',
-            '- [Inspectable output rules](tavern://memory/Demos/Output%20Rules.md)',
+            '- [Artifact Panel brief](tavern://wiki/Demos/Panel%20Brief.md)',
+            '- [Inspectable output rules](tavern://wiki/Demos/Output%20Rules.md)',
             '',
             'Workspace links use the same shape. This one opens the panel with the current unsupported state: [preview.html](tavern://workspace/out/preview.html).',
         ].join('\n'),

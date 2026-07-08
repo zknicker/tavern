@@ -15,7 +15,6 @@ import { openAiSettingsRouter } from './openai-settings/router.ts';
 import { openRouterSettingsRouter } from './openrouter-settings/router.ts';
 import { participantRouter } from './participant/router.ts';
 import { pluginRouter } from './plugin/router.ts';
-import { semanticMemoryRouter } from './semantic-memory/router.ts';
 import { sessionRouter } from './session/router.ts';
 import { skillRouter } from './skill/router.ts';
 import { subAgentRouter } from './sub-agent/router.ts';
@@ -23,6 +22,7 @@ import { tasksRouter } from './tasks/router.ts';
 import { timezoneRouter } from './timezone/router.ts';
 import { createRouter } from './trpc.ts';
 import { usageRouter } from './usage/router.ts';
+import { wikiRouter } from './wiki/router.ts';
 import { workerRouter } from './worker/router.ts';
 
 export const appRouter = createRouter({
@@ -49,7 +49,7 @@ export const appRouter = createRouter({
     tasks: tasksRouter,
     timezone: timezoneRouter,
     usage: usageRouter,
-    semanticMemory: semanticMemoryRouter,
+    wiki: wikiRouter,
     worker: workerRouter,
 });
 

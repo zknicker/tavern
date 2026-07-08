@@ -3,9 +3,11 @@ import { connectionStateSchema } from '../contracts/shared.ts';
 
 export const agentRuntimeCapabilities = [
     'codexOAuth',
-    'semanticMemory',
-    'memoryRecall',
-    'memoryWorkers',
+    'memory',
+    'wiki',
+    'wikiRecall',
+    'memoryExtraction',
+    'memoryDreaming',
     'dashboardServer',
     'apiServer',
     'gateway',

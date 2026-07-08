@@ -3,7 +3,7 @@ import path from 'node:path';
 import { developmentChatDemoId } from '@tavern/api/development-chat-demos';
 import type { Database } from '../db/sqlite';
 import { namedParams } from '../db/sqlite';
-import { resolveSemanticMemoryConfigSync } from '../memory/semantic/store';
+import { resolveWikiConfigSync } from '../wiki/store';
 import {
     completeAgentTurn,
     createAgentTurn,
@@ -13,12 +13,12 @@ import { getMessage } from './chat-api';
 import { demoAgentId } from './development-chat-demo-types';
 
 /**
- * Dev-stack-only recall demo data: a few Semantic Memory pages plus prompt
- * evidence on the newest #demo turns, so the turn drawer's Recalled Memory
+ * Dev-stack-only recall demo data: a few Wiki pages plus prompt
+ * evidence on the newest #demo turns, so the turn drawer's Recalled Wiki
  * section and dev-mode prompt blob render without a live model turn.
  */
 
-const demoMemoryPages = [
+const demoWikiPages = [
     {
         body: [
             '---',
@@ -52,7 +52,7 @@ const demoMemoryPages = [
 ];
 
 export function seedDevelopmentRecallEvidence(db: Database) {
-    seedDemoMemoryPages();
+    seedDemoWikiPages();
 
     const responses = db
         .prepare(
@@ -112,7 +112,7 @@ export function seedDevelopmentRecallEvidence(db: Database) {
                     instructions:
                         '# Tavern Agent Instructions (demo)\n\nYou are Tavern, the demo agent. Static chat guidance and tool descriptions live here.',
                     prompt: demoPrompt(request?.content ?? 'Show the demo.'),
-                    recall: demoMemoryPages.map((page, index) => ({
+                    recall: demoWikiPages.map((page, index) => ({
                         path: page.relativePath,
                         score: 0.58 - index * 0.17,
                         snippet: page.summary,
@@ -127,14 +127,14 @@ export function seedDevelopmentRecallEvidence(db: Database) {
 }
 
 function demoPrompt(requestContent: string) {
-    const recallLines = demoMemoryPages
+    const recallLines = demoWikiPages
         .map((page) => `- ${page.title} [${page.relativePath}]: ${page.summary}`)
         .join('\n');
     return [
         'This turn:',
         `- current time: ${new Date().toISOString()}`,
         '',
-        'Recalled Memory:',
+        'Recalled Wiki:',
         recallLines,
         '',
         'New message for Tavern:',
@@ -142,10 +142,10 @@ function demoPrompt(requestContent: string) {
     ].join('\n');
 }
 
-function seedDemoMemoryPages() {
-    const memoryRoot = resolveSemanticMemoryConfigSync().memoryPath;
-    for (const page of demoMemoryPages) {
-        const pagePath = path.join(memoryRoot, page.relativePath);
+function seedDemoWikiPages() {
+    const wikiRoot = resolveWikiConfigSync().wikiPath;
+    for (const page of demoWikiPages) {
+        const pagePath = path.join(wikiRoot, page.relativePath);
         if (fs.existsSync(pagePath)) {
             continue;
         }

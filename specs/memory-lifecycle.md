@@ -1,13 +1,13 @@
 # Memory Lifecycle
 
-Tavern Memory has three layers:
+Tavern Memory has two per-agent layers plus a separate shared Wiki:
 
 * agent-local core memory files: `USER.md` and `MEMORY.md`
 * hidden per-agent Episodic Memory extracted from chats
-* shared Semantic Memory Markdown pages inspected in the app
+* shared Wiki Markdown pages inspected in the app, not part of Memory
 
 There is no shared `USER.md` or shared `MEMORY.md`. Shared knowledge lives in
-Semantic Memory.
+Wiki.
 
 ## Context Management Boundary
 
@@ -19,7 +19,7 @@ work, but it is not Tavern Memory. Runtime injects the owning agent's
 
 ## Memory Lifecycle
 
-Semantic Memory owns durable knowledge files under the configured root:
+Wiki owns durable shared knowledge files under the configured root:
 
 ```txt
 TAXONOMY.md
@@ -27,35 +27,34 @@ projects/example.md
 research/example/...
 ```
 
-Agents may write Semantic Memory when explicitly asked to remember or organize
-shared knowledge, using the agent Memory tools. Extraction workers distill the
+Agents may write Wiki when explicitly asked to remember or organize
+shared knowledge, using the agent Wiki tools. Extraction workers distill the
 settled message window with the Fast model category and append the resulting
 observations to hidden per-agent episodic evidence after completed turns and an
 idle debounce. Extraction observations also carry learning signals that queue
 skill review; see [Skill Learning](skill-learning.md). Dreaming workers promote
-stable evidence into the owning agent's core memory files or shared Semantic
-Memory, and run only when that agent has new evidence since its last dream.
+stable evidence into the owning agent's core memory files or shared Wiki, and
+run only when that agent has new evidence since its last dream.
 
 ## Correction And Forgetting
 
 Corrections are direct Memory edits. Forgetting is explicit archive, rewrite, or
 delete work. User edits and deletes are authoritative.
 
-The Memory page reflects the current Semantic Memory files; it does not keep a
+The Wiki page reflects the current Wiki files; it does not keep a
 second copy.
 
 ## Maintenance
 
 Maintenance runs through extraction, dreaming, and explicit agent Memory work.
-Runtime exposes Memory readiness and browsing APIs so Semantic Memory can be
-inspected from Tavern.
+Runtime exposes Memory readiness and browsing APIs so Wiki can be inspected from Tavern.
 
 ## Observability
 
-The memories settings page shows a background work surface for Runtime
-workers: extraction, dreaming, skill review, and curation.
+The memories settings page shows a background activity surface for extraction,
+dreaming, skill review, and curation.
 
-- One row per worker kind: enabled state, last run outcome and duration, and
+- One row per activity kind: enabled state, last run outcome and duration, and
   the next planned run or the condition it is waiting on.
 - A timeline of runs over time by kind, with failures visible.
 - Each run opens its report: extraction observations recorded, dream outcomes,

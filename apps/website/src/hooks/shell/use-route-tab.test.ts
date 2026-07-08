@@ -23,14 +23,14 @@ describe('app route tab', () => {
         expect(getRouteTab('/tasks')).toBe('tasks');
         expect(getRouteTab('/automations')).toBe('automations');
         expect(getRouteTab('/workspace')).toBe('workspace');
-        expect(getRouteTab('/memory')).toBe('memory');
+        expect(getRouteTab('/wiki')).toBe('wiki');
     });
 
     test('keeps dashboard tab detection during redirects', () => {
         expect(getRouteTab('/dashboard/overview')).toBe('overview');
         expect(getRouteTab('/dashboard/cron')).toBe('automations');
         expect(getRouteTab('/dashboard/workspace')).toBe('workspace');
-        expect(getRouteTab('/dashboard/memory')).toBe('memory');
+        expect(getRouteTab('/dashboard/wiki')).toBe('wiki');
     });
 
     test('returns null when no app tab is active', () => {

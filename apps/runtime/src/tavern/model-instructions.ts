@@ -16,7 +16,7 @@ const googleFamilies = ['gemini', 'gemma'];
 
 export function modelOperationalInstructions(
     model: AgentRuntimeModelName,
-    options: { memoryEnabled?: boolean } = {}
+    options: { wikiEnabled?: boolean } = {}
 ): string | null {
     const name = model.model.toLowerCase();
     const sections: string[] = [];
@@ -25,7 +25,7 @@ export function modelOperationalInstructions(
         sections.push(toolUseEnforcement);
     }
     if (disciplineFamilies.some((family) => name.includes(family))) {
-        sections.push(executionDiscipline(options.memoryEnabled ?? true));
+        sections.push(executionDiscipline(options.wikiEnabled ?? true));
     }
     if (googleFamilies.some((family) => name.includes(family))) {
         sections.push(googleOperationalDirectives);
@@ -40,7 +40,7 @@ You MUST use your tools to take action — do not describe what you would do wit
 
 Keep working until the task is actually complete. Every response should either contain tool calls that make progress or deliver a final result. Responses that only describe intentions are not acceptable.`;
 
-function executionDiscipline(memoryEnabled: boolean) {
+function executionDiscipline(wikiEnabled: boolean) {
     return `## Execution Discipline
 
 Tool persistence:
@@ -51,7 +51,7 @@ Tool persistence:
 Never answer these from memory — always use a tool:
 - Arithmetic, hashes, encodings, current time or dates → your shell.
 - File contents, sizes, structure → your file tools.
-- Older chat messages → the chat tools.${memoryEnabled ? '\n- Durable knowledge the user references → memory_search.' : ''}
+- Older chat messages → the chat tools.${wikiEnabled ? '\n- Durable shared knowledge the user references → wiki_search.' : ''}
 - Your core memory files describe the user, not the machine you run on.
 
 Act on the obvious interpretation instead of asking ("what time is it?" → run it). Ask for clarification only when the ambiguity changes which tool you would call. If required context is missing and retrievable, retrieve it; if you must proceed without it, label assumptions explicitly.

@@ -76,17 +76,17 @@ describe('dispatch', () => {
 
     test('group --help → group help, exit 0', async () => {
         const read = capture('stdout');
-        const result = await dispatch(['memory', '--help']);
+        const result = await dispatch(['wiki', '--help']);
         expect(result).toEqual({ kind: 'exit', code: 0 });
-        expect(read()).toContain('tavern memory');
+        expect(read()).toContain('tavern wiki');
     });
 
     test('subcommand --help → that subcommand help, not group help, exit 0', async () => {
         const read = capture('stdout');
-        const result = await dispatch(['memory', 'list', '--help']);
+        const result = await dispatch(['wiki', 'list', '--help']);
         expect(result).toEqual({ kind: 'exit', code: 0 });
         const out = read();
-        expect(out).toContain('tavern memory list');
+        expect(out).toContain('tavern wiki list');
         expect(out).not.toContain('<status|list|get|search>');
     });
 

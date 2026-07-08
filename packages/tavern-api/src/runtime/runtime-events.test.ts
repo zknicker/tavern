@@ -23,16 +23,16 @@ test('engine restart events reject unknown phases', () => {
     );
 });
 
-test('semanticMemory changed events carry coarse invalidation hints', () => {
+test('wiki changed events carry coarse invalidation hints', () => {
     const event = agentRuntimeEventSchema.parse({
         paths: ['Projects/Alpha.md'],
         reason: 'watch',
         scope: 'content',
         timestamp: '2026-06-21T12:00:00.000Z',
-        type: 'semanticMemory.changed',
+        type: 'wiki.changed',
     });
 
-    assert.equal(event.type, 'semanticMemory.changed');
+    assert.equal(event.type, 'wiki.changed');
     assert.deepEqual(event.paths, ['Projects/Alpha.md']);
     assert.equal(event.scope, 'content');
 });

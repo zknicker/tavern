@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ## v1.4.44 - 2026-07-07
 
-- Runtime/App: refreshes the Memory recall capability during Runtime startup and
+- Runtime/App: refreshes the Wiki recall capability during Runtime startup and
   keeps expected capability rows visible while the Runtime is still warming up.
 - App: reconciles Runtime event catch-up after reconnect without replaying stale
   live turn progress, while still clearing terminal turn state and invalidating
@@ -20,7 +20,7 @@ All notable changes to this project will be documented in this file.
 - Runtime/API/App: replaces composer command proxies with agent session routes
   plus the agent drawer for session facts, usage, reset, and archived demo
   sessions.
-- Runtime/App: adds per-turn Memory recall over the packaged qmd semantic
+- Runtime/App: adds per-turn Wiki recall over the packaged qmd semantic
   index, recall capability health, prompt evidence capture, and dev-mode turn
   inspection.
 - Runtime: improves turn prompt context with timestamps, chat identity, roster,
@@ -75,15 +75,15 @@ All notable changes to this project will be documented in this file.
 - Runtime/App: streams live harness turn activity and simplifies live turn
   narration with calmer replace-in-place updates.
 - Runtime/App: adds live Memory job events, Runtime home timezone handling, and
-  Semantic Memory root startup repair.
+  Wiki root startup repair.
 - App: polishes chat toolbar icons, sidebar activity hover behavior, profile
   photo controls, and transcript agent mention appearance.
 
 ## v1.4.38 - 2026-07-04
 
-- Runtime/API: adds the Memory stack with shared Memory tools, core memory
+- Runtime/API: adds the Memory stack with shared Wiki tools, core memory
   prompt wiring, model-driven memory workers, worker health, and the
-  `memoryWorkers` Runtime capability.
+  Memory worker Runtime capabilities.
 - Runtime/App: adds rich references for agents, skills, apps, plugins, and
   workspace paths, including skill activation hints and agent-scoped skill
   autocomplete.

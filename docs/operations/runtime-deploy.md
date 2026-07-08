@@ -21,10 +21,10 @@ tavern                 # banner, live runtime status line, command list
 tavern serve
 tavern status [--json] [--runtime-url <url>]
 tavern token [--json]
-tavern memory list
-tavern memory get INDEX.md
-tavern memory search "theme across project notes"
-tavern memory status
+tavern wiki list
+tavern wiki get INDEX.md
+tavern wiki search "theme across project notes"
+tavern wiki status
 tavern engine status
 tavern engine install
 tavern engine clean
@@ -37,7 +37,7 @@ tavern help [command]
 Bare `tavern` does not start the server; it prints the banner, a one-line
 runtime status, and the command list. Help is generated from the command
 registry: `tavern help <command>` and `--help` work on every command, bare
-`tavern engine` / `tavern memory` print group help, and unknown commands get
+`tavern engine` / `tavern wiki` print group help, and unknown commands get
 a did-you-mean suggestion. Exit codes are `0` success, `1` operational
 failure, `2` usage error. Read commands support `--json`.
 
@@ -56,8 +56,8 @@ suppressed.
 
 `memory` commands are thin CLI clients for the managed Runtime. They require a
 running Runtime and use `TAVERN_RUNTIME_URL`, or `http://127.0.0.1:18790` by
-default. They browse the resolved Memory root; writes and maintenance happen
-through Memory tools. When the Runtime is unreachable they fail
+default. They browse the resolved Wiki root; writes and maintenance happen
+through Wiki tools. When the Runtime is unreachable they fail
 with a pointer to `tavern status`.
 
 `tavern` is the preferred CLI. `tavern-runtime` remains as a compatibility

@@ -34,13 +34,21 @@ const builtInTools = [
     },
     {
         configured: true,
-        description: 'Browse, search, and update shared Semantic Memory pages.',
+        description: 'Browse, search, and update shared Wiki pages.',
         enabled: true,
-        id: 'memory',
-        label: 'Memory',
-        name: 'memory',
+        id: 'wiki',
+        label: 'Wiki',
+        name: 'wiki',
         readOnly: false,
-        tools: ['memory_list_pages', 'memory_search', 'memory_read_page', 'memory_write_page'],
+        tools: [
+            'wiki_list',
+            'wiki_search',
+            'wiki_read',
+            'wiki_write',
+            'wiki_backlinks',
+            'wiki_move',
+            'wiki_delete',
+        ],
     },
 ] satisfies AgentRuntimeTool[];
 

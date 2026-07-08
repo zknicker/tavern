@@ -32,7 +32,7 @@ const categoryRows = [
     },
     {
         category: 'standard',
-        description: 'Skill review.',
+        description: 'Dreaming and skill review.',
         title: 'Standard',
     },
     {
@@ -63,8 +63,12 @@ export function BackgroundModelsSection() {
         },
     });
     const inventoryQuery = useModelInventory();
-    const workers = useCapability('memoryWorkers');
-    const resolvedByCategory = readResolvedCategories(workers.status?.metadataJson ?? null);
+    const extraction = useCapability('memoryExtraction');
+    const dreaming = useCapability('memoryDreaming');
+    const resolvedByCategory = {
+        ...readResolvedCategories(extraction.status?.metadataJson ?? null),
+        ...readResolvedCategories(dreaming.status?.metadataJson ?? null),
+    };
 
     const options = (inventoryQuery.data?.providers ?? [])
         .filter((provider) => workerModelProviders.has(provider.provider))

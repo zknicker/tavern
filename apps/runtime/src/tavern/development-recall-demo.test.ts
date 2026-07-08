@@ -10,30 +10,30 @@ import { getAgentTurnPromptEvidence } from './agent-turn-store.ts';
 import { seedDevelopmentChatDemos } from './development-chat-demos.ts';
 
 describe('development recall demo seeding', () => {
-    let memoryRoot: string;
-    const originalMemoryPath = process.env.TAVERN_MEMORY_PATH;
+    let wikiRoot: string;
+    const originalWikiPath = process.env.TAVERN_WIKI_PATH;
 
     beforeEach(async () => {
-        memoryRoot = await mkdtemp(path.join(tmpdir(), 'tavern-recall-demo-'));
-        process.env.TAVERN_MEMORY_PATH = memoryRoot;
+        wikiRoot = await mkdtemp(path.join(tmpdir(), 'tavern-recall-demo-'));
+        process.env.TAVERN_WIKI_PATH = wikiRoot;
         ensureRuntimeSchema(initTestDb());
     });
 
     afterEach(async () => {
-        if (originalMemoryPath === undefined) {
-            process.env.TAVERN_MEMORY_PATH = undefined;
+        if (originalWikiPath === undefined) {
+            process.env.TAVERN_WIKI_PATH = undefined;
         } else {
-            process.env.TAVERN_MEMORY_PATH = originalMemoryPath;
+            process.env.TAVERN_WIKI_PATH = originalWikiPath;
         }
         closeDb();
-        await rm(memoryRoot, { force: true, recursive: true });
+        await rm(wikiRoot, { force: true, recursive: true });
     });
 
-    it('seeds demo memory pages and settled turns with prompt evidence', () => {
+    it('seeds demo Wiki pages and settled turns with prompt evidence', () => {
         seedDevelopmentChatDemos({ db: getDb(), enabled: true });
 
-        expect(existsSync(path.join(memoryRoot, 'projects/demo-dashboard.md'))).toBe(true);
-        expect(existsSync(path.join(memoryRoot, 'people/demo-user.md'))).toBe(true);
+        expect(existsSync(path.join(wikiRoot, 'projects/demo-dashboard.md'))).toBe(true);
+        expect(existsSync(path.join(wikiRoot, 'people/demo-user.md'))).toBe(true);
 
         const turns = getDb()
             .prepare(
@@ -50,7 +50,7 @@ describe('development recall demo seeding', () => {
             'projects/demo-dashboard.md',
             'people/demo-user.md',
         ]);
-        expect(evidence?.prompt).toContain('Recalled Memory:');
+        expect(evidence?.prompt).toContain('Recalled Wiki:');
     });
 
     it('reseeds idempotently', () => {

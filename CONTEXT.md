@@ -42,7 +42,7 @@ _Avoid_: Agent run, Chat, session
 **Agent workspace**:
 The per-agent filesystem home that stores that agent's editable identity, instructions, briefing
 files, episodic observations, generated files, and working state.
-_Avoid_: Shared Memory root, Runtime storage root, provider home
+_Avoid_: Wiki root, Runtime storage root, provider home
 
 **Active turn stream**:
 Transient Runtime state for an in-progress Agent turn, used for live updates before durable Chat
@@ -216,7 +216,7 @@ The app-owned side surface where users open and inspect Artifact Panel targets b
 _Avoid_: Workbench, browser shell, output pane, Artifact Space
 
 **Artifact Panel target**:
-A Tavern-owned openable target such as a chat Artifact, Memory file, workspace file, image, or
+A Tavern-owned openable target such as a chat Artifact, Wiki page, workspace file, image, or
 generated asset.
 _Avoid_: Local path, browser URL, tool result blob
 
@@ -230,7 +230,7 @@ output. Tavern does not auto-open the Artifact Panel when targets are created.
 _Avoid_: Canvas trigger, automatic artifact presentation, artifact launch
 
 **Inspectable output**:
-A workspace file, Memory file, Markdown or HTML doc, image, or generated asset an agent created or
+A workspace file, Wiki page, Markdown or HTML doc, image, or generated asset an agent created or
 updated for the user to inspect.
 _Avoid_: Tavern resource, tool result, attachment
 
@@ -245,42 +245,42 @@ visual system.
 _Avoid_: Model component, widget primitive
 
 **Memory**:
-Tavern's durable knowledge system: user-inspectable Markdown knowledge, per-agent briefings,
-episodic observations, and long-running context.
-_Avoid_: Vault, wiki, knowledgebase, prompt-time memory
+Tavern's per-agent durable context system: briefing files, episodic observations, and background
+workers that keep those files useful.
+_Avoid_: Wiki, vault, knowledgebase, prompt-time memory
 
-**Memory root**:
-The shared user-owned Markdown directory that contains durable cross-agent Semantic Memory.
-_Avoid_: Vault root, wiki root, Runtime storage root, managed workspace, workbench
+**Wiki**:
+The shared user-owned Markdown graph for durable cross-agent knowledge. Agents browse and maintain it
+through `wiki_*` tools.
+_Avoid_: Memory, vault, prompt briefing, episodic log
+
+**Wiki root**:
+The filesystem directory that stores the shared Wiki Markdown files and local Git history.
+_Avoid_: Runtime storage root, managed workspace, workbench
 
 **Agent briefing file**:
 An agent-owned startup briefing file in the Agent workspace, such as `MEMORY.md` or `USER.md`,
 loaded into that agent's prompt and refreshed from Memory by background workers.
-_Avoid_: Shared MEMORY.md, shared USER.md, Vault page
+_Avoid_: root-level briefing files, Vault page
 
 **Agent briefing layer**:
 The Layer 1 Memory layer made from an Agent workspace's `USER.md` and `MEMORY.md` files.
-_Avoid_: Shared Memory root, semantic Memory, episodic Memory
+_Avoid_: Wiki root, shared Wiki page, episodic Memory
 
 **Episodic Memory**:
 The per-agent Layer 2 Memory layer of background-extracted observations from chats, turns, and
 external events before they are promoted into stable knowledge.
-_Avoid_: Chat transcript, assistant briefing, semantic page
-
-**Semantic Memory**:
-The Layer 3 Memory layer of user-inspectable Markdown knowledge pages that agents may read and edit
-as durable Memory.
-_Avoid_: Wiki, Vault, prompt briefing, episodic log
+_Avoid_: Chat transcript, assistant briefing, Wiki page
 
 **Memory dreaming**:
-The background Memory maintenance pass that reviews Episodic Memory and Semantic Memory, promotes
-stable knowledge, and refreshes Agent briefing files.
+The background Memory maintenance pass that reviews Episodic Memory, promotes stable knowledge to
+the Wiki, and refreshes Agent briefing files.
 _Avoid_: Extraction, summarization, compaction
 
-**Memory surface**:
-The Tavern Runtime-owned access surface for the Memory root: path resolution, safe reads, writes,
-freshness, and status.
-_Avoid_: Vault API, wiki browser, ingestion system, maintenance job
+**Wiki surface**:
+The Tavern Runtime-owned access surface for the Wiki root: path resolution, safe reads, writes,
+moves, deletes, backlinks, freshness, and status.
+_Avoid_: Vault API, Memory browser, ingestion system, maintenance job
 
 **Charts**:
 The Rich Response Component family for agent-authored chart displays.

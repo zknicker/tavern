@@ -7,7 +7,7 @@ export const routeTabs = [
     { id: 'tasks', label: 'Tasks', path: appRoutes.tasks },
     { id: 'automations', label: 'Automations', path: appRoutes.automations },
     { id: 'workspace', label: 'Workspace', path: appRoutes.workspace },
-    { id: 'memory', label: 'Memory', path: appRoutes.memory },
+    { id: 'wiki', label: 'Wiki', path: appRoutes.wiki },
 ] as const;
 
 type RouteTab = (typeof routeTabs)[number]['id'];

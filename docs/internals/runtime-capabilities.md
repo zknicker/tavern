@@ -19,7 +19,7 @@ pages can use capability health to decide whether a feature is available,
 degraded, or blocked.
 
 Capabilities are not quality scores. Domain freshness, content quality, missing
-Memory topics, and broken Memory links belong to domain status APIs or future
+Memory topics, and broken Wiki links belong to domain status APIs or future
 Tasks workflows, not Runtime capability health.
 
 The app only renders capability state. It does not decide whether a Runtime
@@ -219,7 +219,11 @@ and external dependencies.
 | `dashboardServer` | Runtime can reach agent-engine dashboard status. |
 | `apiServer` | Runtime can make an authenticated agent-engine API call. |
 | `gateway` | Runtime can open the agent-engine event stream. |
-| `memory` | The configured Memory root can be read and Memory tools are available. Runtime reports write access in capability metadata because Semantic Memory maintenance needs it, but read-only roots remain browseable. |
+| `memory` | Memory is enabled, and each registered agent workspace can hold core `USER.md` and `MEMORY.md` files. |
+| `wiki` | The configured Wiki root can be read and Wiki tools are available. Runtime reports write access in capability metadata because Wiki maintenance needs it, but read-only roots remain browseable. |
+| `wikiRecall` | The Wiki recall index is provisioned or actively provisioning over the Wiki root. |
+| `memoryExtraction` | Background Memory extraction can run with Fast-category direct model access. |
+| `memoryDreaming` | Background Memory dreaming can run with Standard-category direct model access. |
 | `modelExecution` | Runtime has at least one usable agent execution model for the relevant agent or action. |
 | `skills` | Runtime can reach skill inventory. App-side capability methods under `skills` also track the skill hub (`skill-hub.*`), tool setup, and advanced MCP management (`mcp.*`) surfaces. |
 | `plugin.merchbase` | Runtime has an enabled MerchBase Plugin, an API key, and can read the configured MerchBase account. |

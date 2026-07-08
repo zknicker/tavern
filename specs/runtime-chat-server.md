@@ -61,8 +61,8 @@ automations
 automation_runs
 ```
 
-Memory and search are runtime-owned product surfaces. The Memory page reads the
-configured Semantic Memory root; context-management status reads Runtime
+Memory, Wiki, and search are runtime-owned product surfaces. The Wiki page reads the
+configured Wiki root; context-management status reads Runtime
 prompt-time readiness. Table details live with those feature contracts.
 
 ## App Cache And Evidence

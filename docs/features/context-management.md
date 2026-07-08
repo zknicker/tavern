@@ -1,8 +1,8 @@
 ---
-summary: Context management feature for bounded turn context and the boundary with Tavern Memory.
+summary: Context management feature for bounded turn context and the boundary with Tavern Memory and Wiki.
 read_when:
   - changing prompt-time context readiness or context-engine status
-  - changing how active turns receive bounded context from chat, participants, activity, or Memory material
+  - changing how active turns receive bounded context from chat, participants, activity, Memory, or Wiki material
 ---
 
 # Context Management
@@ -16,9 +16,9 @@ Managed Tavern context does not use Lossless Claw. Runtime strips stale
 
 * Runtime injects generated agent instructions and, when Memory is enabled, the
   agent workspace `USER.md` and `MEMORY.md` core memory files.
-* Runtime retrieves relevant shared Semantic Memory pages for bounded prompt
+* Runtime retrieves relevant shared Wiki pages for bounded prompt
   context: each turn's triggering message runs a semantic search over the
-  Memory recall index, and up to three pages above the relevance floor are
+  Wiki recall index, and up to three pages above the relevance floor are
   injected as a clearly-labeled recalled-context block (background context, not
   user input, capped snippets). No hits, disabled Memory, or unprovisioned
   recall models inject nothing. Recall never fails a turn.
@@ -55,8 +55,8 @@ Managed Tavern context does not use Lossless Claw. Runtime strips stale
 * Agents can read same-chat history through read-only Tavern chat tools when
   bounded prompt context is insufficient.
 * Context management does not create a separate long-term source of truth.
-  Durable knowledge belongs to Memory.
-* Semantic Memory filesystem failures and context-engine failures are separate
+  Durable shared knowledge belongs to Wiki. Durable per-agent defaults belong to Memory.
+* Wiki filesystem failures and context-engine failures are separate
   readiness signals.
 
 ## Runtime Setup
@@ -72,12 +72,12 @@ readiness.
 
 ## Relationship To Memory
 
-Memory owns durable knowledge. Context management chooses what Memory and chat
+Memory and Wiki own durable knowledge. Context management chooses what Memory, Wiki, and chat
 material belongs in the active prompt.
 
 When an active turn needs continuity, Runtime manages bounded prompt context
-from chat history, participant context, core memory files, and relevant Semantic
-Memory. Background extraction and dreaming maintain Memory separately from the
+from chat history, participant context, core memory files, and relevant Wiki
+pages. Background extraction and dreaming maintain Memory separately from the
 active turn path.
 
 ## Related Docs

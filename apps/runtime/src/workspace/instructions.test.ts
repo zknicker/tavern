@@ -80,7 +80,7 @@ describe('generated agent instructions', () => {
         expect(content).toContain('`NOTES.md` is for non-memory standing instructions');
         expect(content).toContain('`TAXONOMY.md` routing');
         expect(content).toContain('capture runs after chat activity settles');
-        expect(content).toContain('run `memory_search` before concluding you lack context');
+        expect(content).toContain('run `wiki_search` before concluding you lack context');
         expect(content).toContain('dreaming promotes what matters');
         expect(content).toContain('## Automations');
         expect(content).toContain('`cron_create`');
@@ -95,7 +95,7 @@ describe('generated agent instructions', () => {
         expect(content).toContain('## Outputs');
         expect(content).toContain('Link inspectable files');
         expect(content).toContain('[name](tavern://workspace/path)');
-        expect(content).toContain('[name](tavern://memory/path)');
+        expect(content).toContain('[name](tavern://wiki/path)');
         expect(content).not.toContain('tavern://vault');
         expect(content).toContain('## Widgets');
         expect(content).toContain('widget:<name>');

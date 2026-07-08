@@ -67,7 +67,7 @@ function getDetail(capability: RuntimeCapability) {
 }
 
 // Provisioning-style capabilities report a 0..1 progress value in metadata
-// (e.g. Memory recall model download). Anything malformed renders as no bar.
+// (e.g. Wiki recall model download). Anything malformed renders as no bar.
 function getProgress(capability: RuntimeCapability): number | null {
     if (capability.state === 'healthy' || !capability.metadataJson) {
         return null;

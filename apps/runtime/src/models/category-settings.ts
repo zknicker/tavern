@@ -47,7 +47,10 @@ export async function handleModelCategorySettingsRequest(
         // Lazy import: capabilities/definitions imports this module.
         void import('../capabilities/store.ts')
             .then((store) =>
-                store.refreshRuntimeCapabilities({ ids: ['memoryWorkers'], publishUpdated: true })
+                store.refreshRuntimeCapabilities({
+                    ids: ['memoryExtraction', 'memoryDreaming'],
+                    publishUpdated: true,
+                })
             )
             .catch(() => {});
 

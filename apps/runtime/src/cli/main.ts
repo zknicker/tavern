@@ -64,7 +64,7 @@ async function runCommand(command: CliCommand, rest: string[]): Promise<number> 
 
 /**
  * Groups (memory/engine) print group help only for the bare group or a leading
- * `--help`. Once a subcommand token is present (`memory list --help`), the group
+ * `--help`. Once a subcommand token is present (`wiki list --help`), the group
  * defers to subcommand dispatch so the subcommand renders its own help.
  */
 async function runGroup(command: CliCommand, rest: string[]): Promise<number> {

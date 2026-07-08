@@ -10,7 +10,7 @@ const appRoutePrefixes = [
     '/chats',
     '/tasks',
     '/workspace',
-    '/memory',
+    '/wiki',
     '/settings',
     '/new/',
     '/onboarding',

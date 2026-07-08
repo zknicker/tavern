@@ -8,7 +8,7 @@ describe('shouldShowMainTopDragFade', () => {
     });
 
     test('disables the fade for fixed app pages', () => {
-        expect(shouldShowMainTopDragFade('/memory')).toBe(false);
+        expect(shouldShowMainTopDragFade('/wiki')).toBe(false);
         expect(shouldShowMainTopDragFade('/tasks')).toBe(false);
         expect(shouldShowMainTopDragFade('/overview')).toBe(false);
         expect(shouldShowMainTopDragFade('/settings')).toBe(false);

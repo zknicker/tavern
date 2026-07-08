@@ -90,9 +90,9 @@ export function buildToolLabel(input: {
             const pathSummary = formatFilePathSummary(filePath);
             return joinLabel([input.name, pathSummary]) ?? input.name;
         }
-        case 'memory_search': {
+        case 'wiki_search': {
             const query = summarizeText(getString(argumentsValue?.query));
-            const count = Array.isArray(resultValue?.results) ? resultValue.results.length : null;
+            const count = Array.isArray(resultValue?.hits) ? resultValue.hits.length : null;
             return joinLabel(['search', query, formatCountLabel(count, 'result')]) ?? 'search';
         }
         case 'message': {

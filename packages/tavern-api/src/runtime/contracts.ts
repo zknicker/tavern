@@ -7,9 +7,11 @@ export const agentRuntimeProtocolVersion = 1 as const;
 
 const agentRuntimeCoreCapabilityIds = [
     'codexOAuth',
-    'semanticMemory',
-    'memoryRecall',
-    'memoryWorkers',
+    'memory',
+    'wiki',
+    'wikiRecall',
+    'memoryExtraction',
+    'memoryDreaming',
     'dashboardServer',
     'apiServer',
     'gateway',
@@ -319,12 +321,12 @@ export const memoryJobListSchema = z.object({
     jobs: z.array(memoryJobSummarySchema),
 });
 
-export const memoryWorkerNextRunSchema = z.union([
+export const memoryActivityNextRunSchema = z.union([
     z.object({ at: z.string().datetime(), kind: z.literal('scheduled') }),
     z.object({ kind: z.literal('waiting'), waitingOn: z.string().trim().min(1) }),
 ]);
 
-export const memoryWorkerStatusSchema = z.object({
+export const memoryActivitySchema = z.object({
     enabled: z.boolean(),
     kind: memoryJobKindSchema,
     lastRun: z
@@ -337,11 +339,11 @@ export const memoryWorkerStatusSchema = z.object({
             status: memoryJobStatusSchema,
         })
         .nullable(),
-    nextRun: memoryWorkerNextRunSchema.nullable(),
+    nextRun: memoryActivityNextRunSchema.nullable(),
 });
 
-export const memoryWorkerStatusListSchema = z.object({
-    workers: z.array(memoryWorkerStatusSchema),
+export const memoryActivityListSchema = z.object({
+    activities: z.array(memoryActivitySchema),
 });
 
 export const memoryDreamRequestSchema = z.object({
@@ -1527,130 +1529,129 @@ export const agentRuntimeModelsSchema = z.object({
     updatedAt: z.string().datetime().nullable(),
 });
 
-export const semanticMemoryConfigSourceSchema = z.enum(['default', 'environment', 'settings']);
+export const wikiConfigSourceSchema = z.enum(['default', 'environment', 'settings']);
 
-export const semanticMemoryPageLinkSchema = z.object({
+export const wikiPageLinkSchema = z.object({
     label: z.string().trim().min(1).nullable(),
     target: z.string().trim().min(1),
 });
 
-export const semanticMemoryPageSummarySchema = z.object({
+export const wikiPageSummarySchema = z.object({
     path: z.string().trim().min(1),
     title: z.string().trim().min(1),
     updatedAt: z.string().datetime(),
 });
 
-export const semanticMemoryPageSchema = semanticMemoryPageSummarySchema.extend({
+export const wikiPageSchema = wikiPageSummarySchema.extend({
     body: z.string(),
     frontmatter: z.record(z.string(), z.unknown()).default({}),
-    links: z.array(semanticMemoryPageLinkSchema).default([]),
+    links: z.array(wikiPageLinkSchema).default([]),
     size: z.number().int().nonnegative(),
-    memoryPath: z.string().trim().min(1),
+    wikiPath: z.string().trim().min(1),
 });
 
-export const semanticMemoryPageListSchema = z.object({
+export const wikiPageListSchema = z.object({
     folders: z.array(z.string().trim().min(1)).default([]),
-    pages: z.array(semanticMemoryPageSummarySchema),
+    pages: z.array(wikiPageSummarySchema),
 });
 
-export const memoryPathKindSchema = z.enum(['folder', 'page']);
+export const wikiPathKindSchema = z.enum(['folder', 'page']);
 
-export const semanticMemoryCreatePageSchema = z.object({
+export const wikiCreatePageSchema = z.object({
     body: z.string().optional(),
     path: z.string().trim().min(1, 'Enter a page path.'),
 });
 
-export const semanticMemorySavePageSchema = z.object({
+export const wikiSavePageSchema = z.object({
     body: z.string(),
     path: z.string().trim().min(1, 'Enter a page path.'),
 });
 
-export const memoryPathInputSchema = z.object({
-    path: z.string().trim().min(1, 'Enter a Memory path.'),
+export const wikiPathInputSchema = z.object({
+    path: z.string().trim().min(1, 'Enter a Wiki path.'),
 });
 
-export const semanticMemoryMovePathSchema = z.object({
+export const wikiMovePathSchema = z.object({
     fromPath: z.string().trim().min(1, 'Enter the current path.'),
-    kind: memoryPathKindSchema,
+    kind: wikiPathKindSchema,
     toPath: z.string().trim().min(1, 'Enter the new path.'),
 });
 
-export const memoryPathMutationResultSchema = z.object({
-    kind: memoryPathKindSchema,
-    page: semanticMemoryPageSchema.nullable().default(null),
+export const wikiPathMutationResultSchema = z.object({
+    kind: wikiPathKindSchema,
+    page: wikiPageSchema.nullable().default(null),
     path: z.string().trim().min(1),
 });
 
-export const semanticMemorySearchInputSchema = z.object({
+export const wikiSearchInputSchema = z.object({
     limit: z.number().int().positive().max(100).default(20),
     offset: z.number().int().nonnegative().default(0),
     query: z.string().trim().min(1),
 });
 
-export const semanticMemorySearchHitSchema = z.object({
-    page: semanticMemoryPageSummarySchema,
+export const wikiSearchHitSchema = z.object({
+    page: wikiPageSummarySchema,
     score: z.number().nonnegative(),
     snippet: z.string().default(''),
 });
 
-export const semanticMemorySearchResultSchema = z.object({
-    hits: z.array(semanticMemorySearchHitSchema),
+export const wikiSearchResultSchema = z.object({
+    hits: z.array(wikiSearchHitSchema),
     limit: z.number().int().positive().default(20),
     offset: z.number().int().nonnegative().default(0),
     query: z.string().trim().min(1),
     totalHitCount: z.number().int().nonnegative(),
 });
 
-export const semanticMemoryBacklinkSchema = z.object({
+export const wikiBacklinkSchema = z.object({
     fromPath: z.string().trim().min(1),
     fromTitle: z.string().trim().min(1),
     label: z.string().trim().min(1).nullable(),
     targetPath: z.string().trim().min(1),
 });
 
-export const semanticMemoryBacklinkListSchema = z.object({
-    links: z.array(semanticMemoryBacklinkSchema),
+export const wikiBacklinkListSchema = z.object({
+    links: z.array(wikiBacklinkSchema),
     targetPath: z.string().trim().min(1),
 });
 
-export const semanticMemoryFreshnessStateSchema = z.enum(['idle', 'watching', 'degraded']);
+export const wikiFreshnessStateSchema = z.enum(['idle', 'watching', 'degraded']);
 
-export const semanticMemoryFreshnessSchema = z.object({
+export const wikiFreshnessSchema = z.object({
     live: z.boolean(),
     reason: z.string().trim().min(1).nullable(),
-    state: semanticMemoryFreshnessStateSchema,
+    state: wikiFreshnessStateSchema,
 });
 
-export const semanticMemoryStatusSchema = z.object({
-    configSource: semanticMemoryConfigSourceSchema,
-    freshness: semanticMemoryFreshnessSchema.default({
+export const wikiStatusSchema = z.object({
+    configSource: wikiConfigSourceSchema,
+    freshness: wikiFreshnessSchema.default({
         live: false,
-        reason: 'Memory live updates have not started.',
+        reason: 'Wiki live updates have not started.',
         state: 'idle',
     }),
     indexExists: z.boolean(),
     pageCount: z.number().int().nonnegative(),
     readable: z.boolean(),
-    memoryPath: z.string().trim().min(1),
+    wikiPath: z.string().trim().min(1),
     writable: z.boolean(),
 });
 
-export const agentRuntimeSemanticMemorySettingsSchema = z.object({
-    configSource: semanticMemoryConfigSourceSchema,
+export const agentRuntimeWikiSettingsSchema = z.object({
+    configSource: wikiConfigSourceSchema,
     configuredPath: z.string().trim().min(1).nullable(),
     environmentPath: z.string().trim().min(1).nullable(),
     effectivePath: z.string().trim().min(1),
     updatedAt: z.string().datetime().nullable(),
 });
 
-export const agentRuntimeSaveSemanticMemorySettingsSchema = z.object({
-    memoryPath: z.string().trim().min(1, 'Enter a Memory path.'),
+export const agentRuntimeSaveWikiSettingsSchema = z.object({
+    wikiPath: z.string().trim().min(1, 'Enter a Wiki path.'),
 });
 
-export const agentRuntimeSaveSemanticMemorySettingsResultSchema =
-    agentRuntimeSemanticMemorySettingsSchema.extend({
-        restartScheduled: z.boolean(),
-    });
+export const agentRuntimeSaveWikiSettingsResultSchema = agentRuntimeWikiSettingsSchema.extend({
+    restartScheduled: z.boolean(),
+});
 
 export const agentRuntimeCronDeliverySchema = z.object({
     chatId: z.string().trim().min(1),
@@ -2336,7 +2337,7 @@ export const agentRuntimeEventTypeSchema = z.enum([
     'task.updated',
     'task.deleted',
     'memoryJob.updated',
-    'semanticMemory.changed',
+    'wiki.changed',
     'turn.started',
     'turn.progress',
     'turn.replyUpdated',
@@ -2463,15 +2464,15 @@ export const agentRuntimeMemoryJobUpdatedEventSchema = z.object({
     type: z.literal('memoryJob.updated'),
 });
 
-export const agentRuntimeSemanticMemoryChangedScopeSchema = z.enum(['content', 'root']);
-export const agentRuntimeSemanticMemoryChangedReasonSchema = z.enum(['watch', 'bulk', 'settings']);
+export const agentRuntimeWikiChangedScopeSchema = z.enum(['content', 'root']);
+export const agentRuntimeWikiChangedReasonSchema = z.enum(['watch', 'bulk', 'settings']);
 
-export const agentRuntimeSemanticMemoryChangedEventSchema = z.object({
+export const agentRuntimeWikiChangedEventSchema = z.object({
     paths: z.array(z.string().trim().min(1)).default([]),
-    reason: agentRuntimeSemanticMemoryChangedReasonSchema.optional(),
-    scope: agentRuntimeSemanticMemoryChangedScopeSchema,
+    reason: agentRuntimeWikiChangedReasonSchema.optional(),
+    scope: agentRuntimeWikiChangedScopeSchema,
     timestamp: z.string().datetime(),
-    type: z.literal('semanticMemory.changed'),
+    type: z.literal('wiki.changed'),
 });
 
 export const agentRuntimeCapabilityUpdatedEventSchema = z.object({
@@ -2578,7 +2579,7 @@ export const agentRuntimeEventSchema = z.discriminatedUnion('type', [
     agentRuntimeTaskUpdatedEventSchema,
     agentRuntimeTaskDeletedEventSchema,
     agentRuntimeMemoryJobUpdatedEventSchema,
-    agentRuntimeSemanticMemoryChangedEventSchema,
+    agentRuntimeWikiChangedEventSchema,
     agentRuntimeCapabilityUpdatedEventSchema,
     agentRuntimeTurnStartedEventSchema,
     agentRuntimeTurnProgressEventSchema,
@@ -2730,32 +2731,28 @@ export type AgentRuntimeBinding = z.infer<typeof agentRuntimeBindingSchema>;
 export type AgentRuntimeBindingList = z.infer<typeof agentRuntimeBindingListSchema>;
 export type AgentRuntimeBindingMatch = z.infer<typeof agentRuntimeBindingMatchSchema>;
 export type PlatformBindingStatus = z.infer<typeof agentRuntimeBindingStatusSchema>;
-export type SemanticMemoryBacklink = z.infer<typeof semanticMemoryBacklinkSchema>;
-export type SemanticMemoryBacklinkList = z.infer<typeof semanticMemoryBacklinkListSchema>;
-export type SemanticMemoryConfigSource = z.infer<typeof semanticMemoryConfigSourceSchema>;
-export type SemanticMemoryCreatePage = z.infer<typeof semanticMemoryCreatePageSchema>;
-export type SemanticMemoryFreshness = z.infer<typeof semanticMemoryFreshnessSchema>;
-export type SemanticMemoryFreshnessState = z.infer<typeof semanticMemoryFreshnessStateSchema>;
-export type SemanticMemoryMovePath = z.infer<typeof semanticMemoryMovePathSchema>;
-export type SemanticMemoryPage = z.infer<typeof semanticMemoryPageSchema>;
-export type SemanticMemoryPageList = z.infer<typeof semanticMemoryPageListSchema>;
-export type SemanticMemoryPageSummary = z.infer<typeof semanticMemoryPageSummarySchema>;
-export type SemanticMemoryPathInput = z.infer<typeof memoryPathInputSchema>;
-export type SemanticMemoryPathKind = z.infer<typeof memoryPathKindSchema>;
-export type SemanticMemoryPathMutationResult = z.infer<typeof memoryPathMutationResultSchema>;
-export type SemanticMemorySavePage = z.infer<typeof semanticMemorySavePageSchema>;
-export type SemanticMemorySearchInput = z.input<typeof semanticMemorySearchInputSchema>;
-export type SemanticMemorySearchResult = z.infer<typeof semanticMemorySearchResultSchema>;
-export type SemanticMemoryStatus = z.infer<typeof semanticMemoryStatusSchema>;
-export type SemanticMemoryPageLink = z.infer<typeof semanticMemoryPageLinkSchema>;
-export type AgentRuntimeSemanticMemorySettings = z.infer<
-    typeof agentRuntimeSemanticMemorySettingsSchema
->;
-export type AgentRuntimeSaveSemanticMemorySettings = z.infer<
-    typeof agentRuntimeSaveSemanticMemorySettingsSchema
->;
-export type AgentRuntimeSaveSemanticMemorySettingsResult = z.infer<
-    typeof agentRuntimeSaveSemanticMemorySettingsResultSchema
+export type WikiBacklink = z.infer<typeof wikiBacklinkSchema>;
+export type WikiBacklinkList = z.infer<typeof wikiBacklinkListSchema>;
+export type WikiConfigSource = z.infer<typeof wikiConfigSourceSchema>;
+export type WikiCreatePage = z.infer<typeof wikiCreatePageSchema>;
+export type WikiFreshness = z.infer<typeof wikiFreshnessSchema>;
+export type WikiFreshnessState = z.infer<typeof wikiFreshnessStateSchema>;
+export type WikiMovePath = z.infer<typeof wikiMovePathSchema>;
+export type WikiPage = z.infer<typeof wikiPageSchema>;
+export type WikiPageList = z.infer<typeof wikiPageListSchema>;
+export type WikiPageSummary = z.infer<typeof wikiPageSummarySchema>;
+export type WikiPathInput = z.infer<typeof wikiPathInputSchema>;
+export type WikiPathKind = z.infer<typeof wikiPathKindSchema>;
+export type WikiPathMutationResult = z.infer<typeof wikiPathMutationResultSchema>;
+export type WikiSavePage = z.infer<typeof wikiSavePageSchema>;
+export type WikiSearchInput = z.input<typeof wikiSearchInputSchema>;
+export type WikiSearchResult = z.infer<typeof wikiSearchResultSchema>;
+export type WikiStatus = z.infer<typeof wikiStatusSchema>;
+export type WikiPageLink = z.infer<typeof wikiPageLinkSchema>;
+export type AgentRuntimeWikiSettings = z.infer<typeof agentRuntimeWikiSettingsSchema>;
+export type AgentRuntimeSaveWikiSettings = z.infer<typeof agentRuntimeSaveWikiSettingsSchema>;
+export type AgentRuntimeSaveWikiSettingsResult = z.infer<
+    typeof agentRuntimeSaveWikiSettingsResultSchema
 >;
 export type AgentRuntimeModelAccess = z.infer<typeof agentRuntimeModelAccessSchema>;
 export type AgentRuntimeModelAccessId = z.infer<typeof agentRuntimeModelAccessIdSchema>;
@@ -2841,9 +2838,9 @@ export type MemoryJobKind = z.infer<typeof memoryJobKindSchema>;
 export type MemoryJobList = z.infer<typeof memoryJobListSchema>;
 export type MemoryJobStatus = z.infer<typeof memoryJobStatusSchema>;
 export type MemoryJobSummary = z.infer<typeof memoryJobSummarySchema>;
-export type MemoryWorkerNextRun = z.infer<typeof memoryWorkerNextRunSchema>;
-export type MemoryWorkerStatus = z.infer<typeof memoryWorkerStatusSchema>;
-export type MemoryWorkerStatusList = z.infer<typeof memoryWorkerStatusListSchema>;
+export type MemoryActivityNextRun = z.infer<typeof memoryActivityNextRunSchema>;
+export type MemoryActivity = z.infer<typeof memoryActivitySchema>;
+export type MemoryActivityList = z.infer<typeof memoryActivityListSchema>;
 export type AgentRuntimeAgentEnv = z.infer<typeof agentRuntimeAgentEnvSchema>;
 export type AgentRuntimeAgentEnvVariable = z.infer<typeof agentRuntimeAgentEnvVariableSchema>;
 export type AgentRuntimeSaveAgentEnv = z.infer<typeof agentRuntimeSaveAgentEnvSchema>;

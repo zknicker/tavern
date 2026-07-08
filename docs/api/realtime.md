@@ -88,7 +88,7 @@ Chat events:
 * `chat.read`
 
 Automation, Memory, skill, and stats events use the same durable event log when
-they affect client-visible Runtime state. Memory file-change notifications are
+they affect client-visible Runtime state. Wiki page-change notifications are
 app invalidation hints; clients recover by refetching Memory reads.
 
 Activity events project to live `turn.progress` steps for app patching. The
@@ -114,7 +114,7 @@ Examples:
 * transient active-turn indicators
 * short-lived hover/debug state
 * app-only invalidation hints
-* Memory file-change invalidation hints
+* Wiki page-change invalidation hints
 
 Tool progress, assistant progress, and provider-exposed thinking summaries
 are not ephemeral notifications in Tavern chat. Runtime persists them as

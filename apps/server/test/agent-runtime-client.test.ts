@@ -55,7 +55,7 @@ test('client sends no Authorization header when constructed without a token', as
     assert.equal(capturedAuthorization, undefined);
 });
 
-test('listCapabilities parses Memory capability rows', async () => {
+test('listCapabilities parses Wiki capability rows', async () => {
     const now = new Date().toISOString();
     const fetchMock = mock(async (input: RequestInfo | URL) => {
         assert.equal(String(input), `http://runtime.test${agentRuntimeRoutes.capabilities}`);
@@ -78,9 +78,9 @@ test('listCapabilities parses Memory capability rows', async () => {
                     checkedAt: now,
                     displayName: 'Memory',
                     healthy: true,
-                    id: 'semanticMemory',
+                    id: 'wiki',
                     lastHealthyAt: now,
-                    metadata: { memoryPath: '/Users/zknicker/.tavern/runtime/memory' },
+                    metadata: { wikiPath: '/Users/zknicker/.tavern/runtime/wiki' },
                     nextCheckAt: now,
                     reason: null,
                     state: 'healthy',
@@ -108,7 +108,7 @@ test('listCapabilities parses Memory capability rows', async () => {
 
     assert.deepEqual(
         capabilities.capabilities.map((capability) => capability.id),
-        ['dashboardServer', 'semanticMemory']
+        ['dashboardServer', 'wiki']
     );
     assert.equal(capabilities.info.version, '1.2.9');
 });
@@ -138,6 +138,29 @@ test('listEvents sends durable cursor filters to Runtime', async () => {
         events.events.map((event) => event.type),
         ['chat.historyChanged']
     );
+});
+
+test('getMemoryActivity reads the Memory activity rollup', async () => {
+    const fetchMock = mock(async (input: RequestInfo | URL) => {
+        assert.equal(String(input), `http://runtime.test${agentRuntimeRoutes.memoryActivity}`);
+        return Response.json({
+            activities: [
+                {
+                    enabled: true,
+                    kind: 'extraction',
+                    lastRun: null,
+                    nextRun: { kind: 'waiting', waitingOn: 'chat activity' },
+                },
+            ],
+        });
+    });
+    globalThis.fetch = fetchMock as typeof fetch;
+
+    const client = createAgentRuntimeClient('http://runtime.test');
+    const result = await client.getMemoryActivity();
+
+    assert.equal(result.activities[0]?.kind, 'extraction');
+    assert.equal(result.activities[0]?.nextRun?.kind, 'waiting');
 });
 
 test('getCurrentAgentSession reads the current chat-scoped agent session', async () => {

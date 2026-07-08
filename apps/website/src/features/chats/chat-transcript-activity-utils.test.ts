@@ -144,10 +144,10 @@ test('errored tool rows are not active when completion is missing', () => {
     ).toBe(false);
 });
 
-test('work group summary does not treat memory search as code search', () => {
-    const items = [toolItem({ name: 'memory_search', summaryParts: ['SOUL.md'] })];
+test('work group summary does not treat wiki search as code search', () => {
+    const items = [toolItem({ name: 'wiki_search', summaryParts: ['SOUL.md'] })];
 
-    expect(formatWorkGroupSummary(items)).toBe('Checked memory');
+    expect(formatWorkGroupSummary(items)).toBe('Checked wiki');
 });
 
 test('work group summary does not treat message reads as file reads', () => {

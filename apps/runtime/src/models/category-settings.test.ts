@@ -44,7 +44,7 @@ describe('model category settings', () => {
         vi.stubEnv('OPENROUTER_API_KEY', '');
 
         // Nothing direct configured: keep the harness default so the
-        // memoryWorkers capability reports what is missing.
+        // Memory extraction/dreaming capabilities report what is missing.
         expect(resolveModelCategorySelection('fast').provider).toBe('claude');
 
         // An OpenRouter key alone makes Automatic worker-runnable.

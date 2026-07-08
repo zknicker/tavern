@@ -17,8 +17,6 @@ import { fallbackBinDirectories, findExecutable } from '../cli-path.ts';
 import { AGENT_WORKSPACE } from '../config.ts';
 import { isRuntimeCronReady } from '../cron/scheduler.ts';
 import { getDb, hasTable } from '../db/connection.ts';
-import { auditRecallIndex, getRecallProvisioningStatus } from '../memory/recall/recall-index.ts';
-import { resolveSemanticMemoryConfig } from '../memory/semantic/store.ts';
 import { isMemoryEnabled } from '../memory/settings.ts';
 import { loadVaultBackedCodexCredentials } from '../model-access/codex-settings.ts';
 import { listAgentModels } from '../models/catalog-service.ts';
@@ -27,7 +25,10 @@ import { createLanguageModelForRuntime } from '../models/language-model.ts';
 import { resolveAgentModelSummary } from '../models/model-access.ts';
 import { checkGoogleCalendarCapability } from '../plugins/google.ts';
 import { checkMerchbaseCapability } from '../plugins/merchbase.ts';
+import { listStoredAgents } from '../tavern/agents-store.ts';
 import { isDevToolkitEnabled } from '../tavern/development-turn-simulator.ts';
+import { auditRecallIndex, getRecallProvisioningStatus } from '../wiki/recall/recall-index.ts';
+import { resolveWikiConfig } from '../wiki/store.ts';
 
 export interface RuntimeCapabilityCheckResult {
     metadata?: Record<string, unknown>;
@@ -62,10 +63,10 @@ export const runtimeCapabilityDefinitions: RuntimeCapabilityDefinition[] = [
     },
     {
         async check() {
-            return await checkSemanticMemoryCapability();
+            return await checkMemoryCapability();
         },
         displayName: 'Memory',
-        id: 'semanticMemory',
+        id: 'memory',
         refresh: {
             intervalMs: 5 * minuteMs,
             runOnStart: true,
@@ -73,10 +74,32 @@ export const runtimeCapabilityDefinitions: RuntimeCapabilityDefinition[] = [
     },
     {
         async check() {
-            return await checkMemoryWorkersCapability();
+            return await checkWikiCapability();
         },
-        displayName: 'Memory updates',
-        id: 'memoryWorkers',
+        displayName: 'Wiki',
+        id: 'wiki',
+        refresh: {
+            intervalMs: 5 * minuteMs,
+            runOnStart: true,
+        },
+    },
+    {
+        async check() {
+            return await checkMemoryModelCapability('fast', 'Memory extraction');
+        },
+        displayName: 'Memory extraction',
+        id: 'memoryExtraction',
+        refresh: {
+            intervalMs: 5 * minuteMs,
+            runOnStart: true,
+        },
+    },
+    {
+        async check() {
+            return await checkMemoryModelCapability('standard', 'Memory dreaming');
+        },
+        displayName: 'Memory dreaming',
+        id: 'memoryDreaming',
         refresh: {
             intervalMs: 5 * minuteMs,
             runOnStart: true,
@@ -84,10 +107,10 @@ export const runtimeCapabilityDefinitions: RuntimeCapabilityDefinition[] = [
     },
     {
         check() {
-            return checkMemoryRecallCapability();
+            return checkWikiRecallCapability();
         },
-        displayName: 'Memory recall',
-        id: 'memoryRecall',
+        displayName: 'Wiki recall',
+        id: 'wikiRecall',
         refresh: {
             intervalMs: 5 * minuteMs,
             runOnStart: true,
@@ -220,88 +243,112 @@ function checkCronCapability(): RuntimeCapabilityCheckResult {
     }
 }
 
-/**
- * Extraction and dreaming run as headless model calls, so they need at least
- * one direct model connection (OpenAI, OpenRouter, or an OpenAI-compatible
- * endpoint). Harness-only setups can chat but cannot run Memory updates.
- */
-async function checkMemoryWorkersCapability(): Promise<RuntimeCapabilityCheckResult> {
-    const categories = [
-        { category: 'fast', model: resolveModelCategorySelection('fast') },
-        { category: 'standard', model: resolveModelCategorySelection('standard') },
-    ] as const;
-    const metadata = Object.fromEntries(
-        categories.map((entry) => [entry.category, `${entry.model.provider}/${entry.model.model}`])
-    );
+async function checkMemoryModelCapability(
+    category: 'fast' | 'standard',
+    displayName: string
+): Promise<RuntimeCapabilityCheckResult> {
+    if (!isMemoryEnabled()) {
+        return {
+            metadata: { enabled: false },
+            reason: 'Memory is off.',
+            state: 'unavailable',
+        };
+    }
 
-    for (const entry of categories) {
-        try {
-            await createLanguageModelForRuntime(entry.model);
-        } catch (error) {
-            return {
-                metadata,
-                reason: 'Memory updates need a direct model connection. Add an OpenAI or OpenRouter key, or choose background models in Settings → Models.',
-                state: 'unavailable',
-                technicalMessage:
-                    error instanceof Error
-                        ? `${entry.category}: ${error.message}`
-                        : `${entry.category}: model unavailable`,
-            };
-        }
+    const model = resolveModelCategorySelection(category);
+    const metadata = { [category]: `${model.provider}/${model.model}` };
+
+    try {
+        await createLanguageModelForRuntime(model);
+    } catch (error) {
+        return {
+            metadata,
+            reason: `${displayName} needs a direct model connection. Add an OpenAI or OpenRouter key, or choose a background model in Settings → Models.`,
+            state: 'unavailable',
+            technicalMessage:
+                error instanceof Error
+                    ? `${category}: ${error.message}`
+                    : `${category}: model unavailable`,
+        };
     }
 
     return { metadata, state: 'healthy' };
 }
 
-async function checkSemanticMemoryCapability(): Promise<RuntimeCapabilityCheckResult> {
-    const config = await resolveSemanticMemoryConfig();
-    const memoryPath = config.memoryPath;
+async function checkMemoryCapability(): Promise<RuntimeCapabilityCheckResult> {
+    const enabled = isMemoryEnabled();
+    const agents = listStoredAgents().agents;
+    const metadata = {
+        agentCount: agents.length,
+        enabled,
+    };
+
+    if (!enabled) {
+        return {
+            metadata,
+            reason: 'Memory is off.',
+            state: 'unavailable',
+        };
+    }
+
+    const inaccessible = agents.find((agent) => !canUseWorkspaceForMemory(agent.workspaceFolder));
+    if (inaccessible) {
+        return {
+            metadata: {
+                ...metadata,
+                workspaceFolder: inaccessible.workspaceFolder,
+            },
+            reason: `Memory workspace for ${inaccessible.name} is not readable, writable, and traversable.`,
+            state: 'unavailable',
+            technicalMessage: inaccessible.workspaceFolder,
+        };
+    }
+
+    return { metadata, state: 'healthy' };
+}
+
+async function checkWikiCapability(): Promise<RuntimeCapabilityCheckResult> {
+    const config = await resolveWikiConfig();
+    const wikiPath = config.wikiPath;
     const metadata = {
         configSource: config.source,
-        memoryPath,
+        wikiPath,
     };
     try {
-        if (fs.existsSync(memoryPath)) {
-            const stat = fs.statSync(memoryPath);
+        if (fs.existsSync(wikiPath)) {
+            const stat = fs.statSync(wikiPath);
             if (!stat.isDirectory()) {
                 return {
-                    reason: 'Memory path is not a directory.',
+                    reason: 'Wiki path is not a directory.',
                     state: 'unavailable',
-                    technicalMessage: memoryPath,
+                    technicalMessage: wikiPath,
                 };
             }
-            fs.accessSync(memoryPath, fs.constants.R_OK);
-            const writable = canAccess(memoryPath, fs.constants.W_OK);
+            fs.accessSync(wikiPath, fs.constants.R_OK);
+            const writable = canAccess(wikiPath, fs.constants.W_OK);
             return { metadata: { ...metadata, writable }, state: 'healthy' };
         }
 
-        fs.accessSync(path.dirname(memoryPath), fs.constants.R_OK | fs.constants.W_OK);
+        fs.accessSync(path.dirname(wikiPath), fs.constants.R_OK | fs.constants.W_OK);
         return {
             metadata: { ...metadata, missing: true },
             state: 'healthy',
         };
     } catch (error) {
         return {
-            reason: 'Memory path is not readable.',
+            reason: 'Wiki path is not readable.',
             state: 'unavailable',
             technicalMessage: error instanceof Error ? error.message : String(error),
         };
     }
 }
 
-// Per-turn recall readiness: the recall index over Semantic Memory pages plus
+// Per-turn recall readiness: the recall index over Wiki pages plus
 // its locally provisioned embedding model. Progress rides capability metadata
 // so the app can render a provisioning bar without a contract shape change.
 // The ready-state check is an active drift audit: recall that silently fell
 // behind the pages (lost watcher events) reports pending work, not healthy.
-async function checkMemoryRecallCapability(): Promise<RuntimeCapabilityCheckResult> {
-    if (!isMemoryEnabled()) {
-        return {
-            reason: 'Memory is off.',
-            state: 'unavailable',
-        };
-    }
-
+async function checkWikiRecallCapability(): Promise<RuntimeCapabilityCheckResult> {
     const status = getRecallProvisioningStatus();
     const percent = status.progress === null ? null : `${Math.round(status.progress * 100)}%`;
     const metadata = {
@@ -311,7 +358,7 @@ async function checkMemoryRecallCapability(): Promise<RuntimeCapabilityCheckResu
 
     switch (status.phase) {
         case 'ready':
-            return await auditReadyMemoryRecall(metadata);
+            return await auditReadyWikiRecall(metadata);
         case 'downloading-model':
             return {
                 metadata,
@@ -321,7 +368,7 @@ async function checkMemoryRecallCapability(): Promise<RuntimeCapabilityCheckResu
         case 'embedding':
             return {
                 metadata,
-                reason: `Indexing Memory pages for recall${percent ? ` (${percent})` : ''}.`,
+                reason: `Indexing Wiki pages for recall${percent ? ` (${percent})` : ''}.`,
                 state: 'degraded',
             };
         case 'updating':
@@ -346,7 +393,7 @@ async function checkMemoryRecallCapability(): Promise<RuntimeCapabilityCheckResu
     }
 }
 
-async function auditReadyMemoryRecall(
+async function auditReadyWikiRecall(
     metadata: Record<string, unknown>
 ): Promise<RuntimeCapabilityCheckResult> {
     try {
@@ -381,6 +428,29 @@ function canAccess(targetPath: string, mode: number): boolean {
     } catch {
         return false;
     }
+}
+
+function canUseWorkspaceForMemory(workspaceFolder: string): boolean {
+    try {
+        const targetPath = path.resolve(workspaceFolder);
+        const memoryDirectoryMode = fs.constants.R_OK | fs.constants.W_OK | fs.constants.X_OK;
+        if (fs.existsSync(targetPath)) {
+            const stat = fs.statSync(targetPath);
+            return stat.isDirectory() && canAccess(targetPath, memoryDirectoryMode);
+        }
+
+        return canAccess(nearestExistingParent(targetPath), memoryDirectoryMode);
+    } catch {
+        return false;
+    }
+}
+
+function nearestExistingParent(targetPath: string): string {
+    let current = path.dirname(targetPath);
+    while (!(fs.existsSync(current) || path.dirname(current) === current)) {
+        current = path.dirname(current);
+    }
+    return current;
 }
 
 // Dev-stack-only helpers (simulated turns). Healthy only when the runtime

@@ -92,7 +92,7 @@ describe('agent instructions', () => {
         expect(instructions).toMatch(/send time in \S+ \(the home timezone\)/);
         expect(instructions).toContain('Chat tools:');
         expect(instructions).toContain('- chat_messages_list:');
-        expect(instructions).toContain('Memory tools (shared durable knowledge)');
+        expect(instructions).toContain('Wiki tools (shared durable knowledge)');
     });
 
     it('teaches NO_REPLY in channels but not in direct messages', async () => {
@@ -171,7 +171,7 @@ describe('agent instructions', () => {
         expect(instructions).toContain('Participants: Blippy (you), Tiny (agent), You');
     });
 
-    it('keeps Memory tool guidance out of the instructions when Memory is disabled', async () => {
+    it('keeps Wiki tool guidance when core Memory is disabled', async () => {
         await handleMemorySettingsRequest(
             new Request('http://runtime.test/memory/settings', {
                 body: JSON.stringify({ enabled: false }),
@@ -189,8 +189,8 @@ describe('agent instructions', () => {
         );
 
         expect(instructions).toContain('Chat tools:');
-        expect(instructions).not.toContain('Memory tools (shared durable knowledge)');
-        expect(instructions).not.toContain('memory_search');
+        expect(instructions).toContain('Wiki tools (shared durable knowledge)');
+        expect(instructions).toContain('wiki_search');
     });
 
     it('nudges agents to capture and maintain skills', async () => {

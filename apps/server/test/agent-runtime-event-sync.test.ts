@@ -21,7 +21,7 @@ const emitAgentEngineConfigUpdated = mock(() => undefined);
 const emitOpenRouterSettingsInvalidationCascade = mock(() => undefined);
 const emitOpenRouterSettingsUpdated = mock(() => undefined);
 const emitSessionUpdated = mock(() => undefined);
-const emitSemanticMemoryUpdated = mock(() => undefined);
+const emitWikiUpdated = mock(() => undefined);
 const emitSkillInvalidationCascade = mock(() => undefined);
 const emitSkillUpdated = mock(() => undefined);
 const emitTasksUpdated = mock(() => undefined);
@@ -74,7 +74,7 @@ mock.module('../src/api/invalidation-events.ts', () => ({
     emitOpenRouterSettingsInvalidationCascade,
     emitOpenRouterSettingsUpdated,
     emitSessionUpdated,
-    emitSemanticMemoryUpdated,
+    emitWikiUpdated,
     emitSkillInvalidationCascade,
     emitSkillUpdated,
     emitTasksUpdated,
@@ -130,7 +130,7 @@ beforeEach(async () => {
     emitOpenRouterSettingsInvalidationCascade.mockClear();
     emitOpenRouterSettingsUpdated.mockClear();
     emitSessionUpdated.mockClear();
-    emitSemanticMemoryUpdated.mockClear();
+    emitWikiUpdated.mockClear();
     emitSkillInvalidationCascade.mockClear();
     emitSkillUpdated.mockClear();
     emitTasksUpdated.mockClear();

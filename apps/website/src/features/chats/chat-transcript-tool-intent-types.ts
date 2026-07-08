@@ -21,6 +21,7 @@ export type ToolIntentKind =
     | 'tool'
     | 'voice'
     | 'web'
+    | 'wiki'
     | 'worker';
 
 export interface ToolIntent {

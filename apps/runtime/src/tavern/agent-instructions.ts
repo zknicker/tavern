@@ -2,7 +2,6 @@ import { prepareAgentEngineInstructions } from '../agent-engine/instructions.ts'
 import { isRuntimeCronReady } from '../cron/manager-state.ts';
 import { getDb } from '../db/connection.ts';
 import type { Database } from '../db/sqlite.ts';
-import { isMemoryEnabled } from '../memory/settings.ts';
 import { resolveHomeTimezone } from '../timezone-settings.ts';
 import type { AgentExecutorInput } from './agent-executor.ts';
 import { getStoredAgent } from './agents-store.ts';
@@ -25,9 +24,7 @@ export async function buildAgentInstructions(
     });
     const sections = [
         prepared.content,
-        modelOperationalInstructions(input.agentSession.effectiveModel, {
-            memoryEnabled: isMemoryEnabled(),
-        }),
+        modelOperationalInstructions(input.agentSession.effectiveModel),
         tavernChatInstructions(input),
     ].filter((section): section is string => Boolean(section));
     return sections.join('\n\n');
@@ -41,7 +38,7 @@ function tavernChatInstructions(input: AgentExecutorInput) {
         'This chat:',
         ...chatIdentityLines(input, chat),
         `- Every prompt message carries its send time in ${resolveHomeTimezone()} (the home timezone). Weigh timestamps against the current time; treat older context and prior data reads as stale until re-checked.`,
-        '- Recalled Memory blocks are automatic background context, not user input; verify with memory_read_page before relying on details.',
+        '- Recalled Wiki blocks are automatic background context, not user input; verify with wiki_read before relying on details.',
         ...(chat?.kind === 'channel'
             ? [
                   '- Not every channel message needs you. Reply with exactly NO_REPLY (nothing else) to stay silent for a turn; nothing is delivered to the chat.',
@@ -52,16 +49,15 @@ function tavernChatInstructions(input: AgentExecutorInput) {
         '- chat_messages_list: list current-chat messages by sequence cursor',
         '- chat_messages_search: search current-chat messages',
         '- chat_message_get: read one current-chat message by id',
-        ...(isMemoryEnabled()
-            ? [
-                  '',
-                  'Memory tools (shared durable knowledge):',
-                  '- memory_search: search shared Memory pages — check before assuming you lack context on something the user references',
-                  '- memory_list_pages: list shared Memory pages and folders',
-                  '- memory_read_page: read one shared Memory page with its hash',
-                  '- memory_write_page: write one shared Memory page (explicit user-requested Memory work only)',
-              ]
-            : []),
+        '',
+        'Wiki tools (shared durable knowledge):',
+        '- wiki_search: search shared Wiki pages — check before assuming you lack context on something the user references',
+        '- wiki_list: list shared Wiki pages and folders',
+        '- wiki_read: read one shared Wiki page with its hash',
+        '- wiki_write: write one shared Wiki page (explicit user-requested Wiki work only)',
+        '- wiki_backlinks: list pages that link to a Wiki page',
+        '- wiki_move: move or rename one Wiki page',
+        '- wiki_delete: delete one Wiki page',
         ...(isRuntimeCronReady()
             ? [
                   '',

@@ -8,11 +8,11 @@ import {
 } from '../../components/ui/resizable-pane-rail.tsx';
 import { ScrollArea } from '../../components/ui/scroll-area.tsx';
 import { TabPanel, Tabs } from '../../components/ui/tabs.tsx';
-import { useSemanticMemoryPage } from '../../hooks/semantic-memory/use-semantic-memory-page.ts';
+import { useWikiPage } from '../../hooks/wiki/use-wiki-page.ts';
 import { cn } from '../../lib/utils.ts';
-import { SemanticMemoryMarkdownViewer } from '../memory/semantic/semantic-memory-markdown-viewer.tsx';
+import { WikiMarkdownViewer } from '../wiki/wiki-markdown-viewer.tsx';
 import { ArtifactPanelChrome } from './chat-artifact-panel-chrome.tsx';
-import { SemanticMemoryBrowserContent } from './chat-artifact-semantic-memory-content.tsx';
+import { WikiBrowserContent } from './chat-artifact-wiki-content.tsx';
 import { WorkspaceBrowserContent } from './chat-artifact-workspace-content.tsx';
 import { WorkspaceArtifactContent } from './chat-artifact-workspace-preview.tsx';
 import { getArtifactPanelTargetKey, type TavernResourceTarget } from './tavern-resource-link.ts';
@@ -200,12 +200,12 @@ function ArtifactPanelContent({
     agentId: string;
     target: TavernResourceTarget;
 }) {
-    if (target.kind === 'memoryPage') {
-        return <SemanticMemoryArtifactContent target={target} />;
+    if (target.kind === 'wikiPage') {
+        return <WikiArtifactContent target={target} />;
     }
 
-    if (target.kind === 'memoryDirectory') {
-        return <SemanticMemoryBrowserContent initialDirectoryPath={target.path} />;
+    if (target.kind === 'wikiDirectory') {
+        return <WikiBrowserContent initialDirectoryPath={target.path} />;
     }
 
     if (target.kind === 'workspaceRoot' || target.kind === 'workspaceDirectory') {
@@ -215,31 +215,31 @@ function ArtifactPanelContent({
     return <WorkspaceArtifactContent agentId={agentId} target={target} />;
 }
 
-function SemanticMemoryArtifactContent({
+function WikiArtifactContent({
     target,
 }: {
-    target: Extract<TavernResourceTarget, { kind: 'memoryPage' }>;
+    target: Extract<TavernResourceTarget, { kind: 'wikiPage' }>;
 }) {
-    const pageQuery = useSemanticMemoryPage({ path: target.path });
+    const pageQuery = useWikiPage({ path: target.path });
 
     if (pageQuery.isPending) {
-        return <ArtifactPanelEmpty detail="Loading Memory page..." title={target.path} />;
+        return <ArtifactPanelEmpty detail="Loading Wiki page..." title={target.path} />;
     }
 
     if (pageQuery.error) {
-        return <ArtifactPanelEmpty detail="Unable to load this Memory page." title={target.path} />;
+        return <ArtifactPanelEmpty detail="Unable to load this Wiki page." title={target.path} />;
     }
 
     if (!pageQuery.data) {
         return (
-            <ArtifactPanelEmpty detail="No Memory page exists at this path." title={target.path} />
+            <ArtifactPanelEmpty detail="No Wiki page exists at this path." title={target.path} />
         );
     }
 
     return (
         <ScrollArea className="h-full min-h-0" scrollFade>
             <article className="mx-auto max-w-[42rem] px-7 pt-7 pb-12">
-                <SemanticMemoryMarkdownViewer value={pageQuery.data.body} />
+                <WikiMarkdownViewer value={pageQuery.data.body} />
             </article>
         </ScrollArea>
     );

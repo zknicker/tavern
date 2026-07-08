@@ -171,7 +171,7 @@ export function ChatTurnBody({
     );
 }
 
-// Memory recall matches always show when the turn had them; the raw prompt
+// Wiki recall matches always show when the turn had them; the raw prompt
 // blob is dev-mode-only runtime evidence.
 function TurnPromptEvidence({ runId }: { runId: string | null }) {
     const { devMode } = useDevMode();
@@ -186,7 +186,7 @@ function TurnPromptEvidence({ runId }: { runId: string | null }) {
         <div className="flex min-w-0 flex-col gap-3">
             {recall.length > 0 ? (
                 <section className="grid gap-1.5">
-                    <h4 className="font-medium text-muted-foreground text-xs">Recalled Memory</h4>
+                    <h4 className="font-medium text-muted-foreground text-xs">Recalled Wiki</h4>
                     <ul className="grid gap-1 rounded-md bg-muted px-3 py-2">
                         {recall.map((hit) => (
                             <li

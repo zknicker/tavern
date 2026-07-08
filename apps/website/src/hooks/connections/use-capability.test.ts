@@ -37,8 +37,8 @@ describe('Runtime capability gates', () => {
         expect(formatCapabilityDisabledReason(capability)).toBe('Tavern update required.');
     });
 
-    test('gates Memories settings on Memory', () => {
-        expect(settingsCapabilityRequirements.memories).toEqual(['semanticMemory']);
+    test('keeps Memories settings reachable without Wiki readiness', () => {
+        expect(settingsCapabilityRequirements.memories).toEqual([]);
     });
 
     test('gates Plugins settings on Runtime API access', () => {
@@ -49,8 +49,8 @@ describe('Runtime capability gates', () => {
         expect(routeTabCapabilityRequirements.workspace).toEqual(['apiServer']);
     });
 
-    test('gates the Memory app tab on Memory', () => {
-        expect(routeTabCapabilityRequirements.memory).toEqual(['semanticMemory']);
+    test('gates the Wiki app tab on Wiki readiness', () => {
+        expect(routeTabCapabilityRequirements.wiki).toEqual(['wiki']);
     });
 
     test('gates Stats settings on model execution', () => {
@@ -72,7 +72,7 @@ describe('Runtime capability gates', () => {
             'modelExecution',
         ]);
         expect(settingsCapabilityRequirements['agent-skills']).toEqual(['apiServer', 'skills']);
-        expect(settingsCapabilityRequirements.memories).toEqual(['semanticMemory']);
+        expect(settingsCapabilityRequirements.memories).toEqual([]);
     });
 
     test('gates Automations on agent runtime capabilities', () => {

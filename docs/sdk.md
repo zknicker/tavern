@@ -83,7 +83,7 @@ Ownership:
 | Health, status, and admin control | [Admin API](api/admin.md) |
 | Agents, models, skills, and Plugin grants | [Agents API](api/agents.md) |
 | Memory inspection and review | [Memory API](api/memory.md) |
-| Memory files and citations | [Memory API](api/memory.md) |
+| Wiki pages and citations | [Memory API](api/memory.md) |
 | Cron automations and run history | [Automations API](api/automations.md) |
 | Skill packages and assignment | [Skills API](api/skills.md) |
 | Usage and operational stats | [Stats API](api/stats.md) |

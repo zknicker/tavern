@@ -11,8 +11,8 @@ implementation slices in
 Make the current implementation match the clean Tavern-native architecture:
 Runtime owns chats, participants, Agent seats, Agent sessions, Agent turns,
 model catalog, tool inventory, and agent records. App and Server remain clients.
-AI SDK is the execution dependency. No Eve, Hermes, OpenClaw, or compatibility
-routing concepts should remain in first-party product contracts.
+AI SDK is the execution dependency. No retired upstream execution systems or
+compatibility routing concepts should remain in first-party product contracts.
 
 ## Gap 1: Presence And Session Binding Vocabulary
 
@@ -202,7 +202,8 @@ Ideal end state:
 
 - Docs use the same product nouns as ADR 0007.
 - No product docs describe interactive approvals, toolsets, presence routing,
-  session-key routing, Eve, Hermes, or OpenClaw as active implementation.
+  session-key routing, retired upstream execution systems, or compatibility
+  routing as active implementation.
 - Generated API contracts match the Runtime product contracts.
 
 Verification:

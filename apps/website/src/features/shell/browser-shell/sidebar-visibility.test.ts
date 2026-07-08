@@ -16,6 +16,6 @@ describe('browser shell sidebar visibility', () => {
     it('hides the chat rail on utility routes', () => {
         expect(shouldShowBrowserShellSidebar('/settings')).toBe(false);
         expect(shouldShowBrowserShellSidebar('/workspace')).toBe(false);
-        expect(shouldShowBrowserShellSidebar('/memory')).toBe(false);
+        expect(shouldShowBrowserShellSidebar('/wiki')).toBe(false);
     });
 });

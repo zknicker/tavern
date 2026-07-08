@@ -82,7 +82,7 @@ These scopes may overlap, but they are not interchangeable.
 
 Participant observations and participant relationships should use an explicit scope model.
 
-- `shared`: knowledge intended to be available across the agent's relevant shared memory space
+- `shared`: knowledge intended to be available across the agent's relevant shared Wiki space
 - `agent`: the agent's own durable understanding about a participant
 - `participant`: a participant-specific point of view about another participant
 
@@ -90,7 +90,7 @@ Every participant-knowledge record should therefore preserve:
 
 - the subject participant
 - the scope kind
-- the owning agent or shared memory space
+- the owning agent or shared Wiki space
 - the observer participant when the scope kind is `participant`
 
 Observer-scoped knowledge lets Tavern represent "A thinks B prefers email" separately from "the

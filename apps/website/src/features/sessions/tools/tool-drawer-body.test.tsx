@@ -30,7 +30,7 @@ function buildDetails(overrides: Partial<ToolDrawerDetails>): ToolDrawerDetails 
 test('resolveToolDrawerBody matches exact names, substrings, then the generic fallback', () => {
     assert.equal(resolveToolDrawerBody('bash'), TerminalToolDrawerBody);
     assert.equal(resolveToolDrawerBody('computer-exec-runner'), TerminalToolDrawerBody);
-    assert.equal(resolveToolDrawerBody('memory_search'), FileToolDrawerBody);
+    assert.equal(resolveToolDrawerBody('wiki_search'), FileToolDrawerBody);
     assert.equal(resolveToolDrawerBody('weather'), GenericToolDrawerBody);
 });
 

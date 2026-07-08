@@ -12,7 +12,7 @@ export interface ChatTurnPromptEvidence {
 
 /**
  * Runtime-owned prompt evidence for one agent turn: the composed instructions,
- * the per-turn prompt, and the Memory recall hits injected into it. Null when
+ * the per-turn prompt, and the Wiki recall hits injected into it. Null when
  * no Runtime is connected or the turn has no captured evidence.
  */
 export async function getChatTurnPrompt(runId: string): Promise<ChatTurnPromptEvidence | null> {

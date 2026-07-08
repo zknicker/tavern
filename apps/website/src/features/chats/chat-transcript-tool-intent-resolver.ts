@@ -96,6 +96,10 @@ export function getToolIntent(item: ActivityItem): ToolIntent | null {
         return { kind: 'memory' };
     }
 
+    if (normalizedName.includes('wiki')) {
+        return { kind: 'wiki' };
+    }
+
     if (subject) {
         return {
             kind: 'tool',

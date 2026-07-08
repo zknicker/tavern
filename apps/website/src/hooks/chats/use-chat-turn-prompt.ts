@@ -1,7 +1,7 @@
 import { trpc } from '../../lib/trpc.tsx';
 
 /**
- * Prompt evidence for one agent turn: Memory recall matches plus, for dev
+ * Prompt evidence for one agent turn: Wiki recall matches plus, for dev
  * mode, the raw instructions and prompt the model received. Fetched on demand
  * when the turn drawer opens; null when the Runtime kept no evidence.
  */

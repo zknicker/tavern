@@ -7,26 +7,26 @@ import { resolveModelCategorySelection } from '../models/category-settings.ts';
 import { createLanguageModelForRuntime } from '../models/language-model.ts';
 import { getStoredAgent } from '../tavern/agents-store.ts';
 import {
+    type EpisodicMemoryFile,
+    listAgentEpisodicMemoryFiles,
+    listWikiPages,
+    readWikiFile,
+    type WikiFileChange,
+    writeWikiFile,
+} from '../wiki/store.ts';
+import {
     type AgentCoreMemoryFileChange,
     agentCoreMemoryFileNames,
     readAgentCoreMemoryFile,
     writeAgentCoreMemoryFile,
 } from './core-memory.ts';
-import {
-    type EpisodicMemoryFile,
-    listAgentEpisodicMemoryFiles,
-    listSemanticMemoryPages,
-    readSemanticMemoryFile,
-    type SemanticMemoryFileChange,
-    writeSemanticMemoryFile,
-} from './semantic/store.ts';
 
 export interface MemoryDreamInput {
     agentId: string;
     jobId: string;
 }
 
-export type MemoryDreamFileChange = AgentCoreMemoryFileChange | SemanticMemoryFileChange;
+export type MemoryDreamFileChange = AgentCoreMemoryFileChange | WikiFileChange;
 
 export interface MemoryDreamOutcome {
     fileChanges: MemoryDreamFileChange[];
@@ -91,28 +91,28 @@ function createMemoryDreamTools(input: MemoryDreamInput, fileChanges: MemoryDrea
                     })
                 ),
         }),
-        memory_list_pages: tool({
-            description: 'List shared Semantic Memory pages and folders.',
+        wiki_list: tool({
+            description: 'List shared Wiki pages and folders.',
             inputSchema: z.object({}),
-            execute: async () => await listSemanticMemoryPages(),
+            execute: async () => await listWikiPages(),
         }),
-        memory_read_page: tool({
-            description: 'Read one shared Semantic Memory Markdown file with its current hash.',
+        wiki_read: tool({
+            description: 'Read one shared Wiki Markdown page with its current hash.',
             inputSchema: z.object({
                 path: z.string().min(1),
             }),
-            execute: async ({ path }) => await readSemanticMemoryFile({ path }),
+            execute: async ({ path }) => await readWikiFile({ path }),
         }),
-        memory_write_page: tool({
+        wiki_write: tool({
             description:
-                'Write one shared Semantic Memory Markdown file using the hash returned by memory_read_page.',
+                'Write one shared Wiki Markdown page using the hash returned by wiki_read.',
             inputSchema: z.object({
                 content: z.string(),
                 expectedHash: z.string().nullable(),
                 path: z.string().min(1),
             }),
             execute: async ({ content, expectedHash, path }) => {
-                const change = await writeSemanticMemoryFile({ content, expectedHash, path });
+                const change = await writeWikiFile({ content, expectedHash, path });
                 fileChanges.push(change);
                 return change;
             },
@@ -192,14 +192,14 @@ function memoryDreamInstructions(agentName: string) {
         'You are Tavern’s background Memory dreaming worker.',
         `You maintain durable Memory for ${agentName}.`,
         'Do not answer the user. Do not use personality, SOUL, chat tools, shell, or workspace file tools.',
-        'Use only the provided Memory tools.',
+        'Use only the provided Memory and Wiki tools.',
         'Read episodic Memory, then promote only stable, useful, non-secret evidence. Route by TAXONOMY.md:',
-        '- Durable shared knowledge goes to Semantic Memory pages via memory_write_page, routed to whatever folder TAXONOMY.md assigns the subject.',
+        '- Durable shared knowledge goes to Wiki pages via wiki_write, routed to whatever folder TAXONOMY.md assigns the subject.',
         '- Stable user profile facts and preferences for this agent go to its USER.md via memory_write_core.',
         '- Durable operating rules that change this agent’s default behavior go to its MEMORY.md via memory_write_core.',
         'Core memory is loaded into every session start, so keep it compact: promote only high-value entries, merge duplicates, and prune stale lines while preserving user-authored content.',
-        'Do not create or edit USER.md or MEMORY.md in shared Semantic Memory.',
-        'For semantic writes, preserve frontmatter and user-authored content where possible.',
+        'Do not create or edit USER.md or MEMORY.md in the shared Wiki.',
+        'For Wiki writes, preserve frontmatter and user-authored content where possible.',
         'Add evidence-backed History entries before changing Current.',
         'If there is nothing durable to promote, make no changes and say so briefly.',
     ].join('\n');
@@ -207,7 +207,7 @@ function memoryDreamInstructions(agentName: string) {
 
 function memoryDreamPrompt() {
     return [
-        'Review this agent’s episodic Memory, its core memory files, and shared Semantic Memory.',
+        'Review this agent’s episodic Memory, its core memory files, and the shared Wiki.',
         'Promote only durable, non-secret knowledge. Use write tools only with the latest expectedHash from the matching read tool.',
         'Your final text is shown to the user as this run’s summary. Keep it to one or two plain sentences about what changed; never mention job ids or internal identifiers.',
     ].join('\n');

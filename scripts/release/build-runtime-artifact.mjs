@@ -23,6 +23,8 @@ export const requiredRuntimeArtifactPaths = [
     'share/tavern/runtime-assets/google/oauth-client.json',
 ];
 
+const allowedRuntimeAssetRoots = new Set(['google', 'harness-bridges']);
+
 const main = async () => {
     const version = await readReleaseVersion();
     const targetTriple = readTargetTriple();
@@ -50,8 +52,9 @@ const main = async () => {
     await stageRuntimePackages(stageRoot);
     await stageRuntimeAssets(stageRoot);
     const missingPaths = await findMissingRuntimeArtifactPaths(stageRoot);
-    if (missingPaths.length > 0) {
-        fail('Runtime artifact staging is incomplete', { missingPaths });
+    const unexpectedAssetPaths = await findUnexpectedRuntimeAssetPaths(stageRoot);
+    if (missingPaths.length > 0 || unexpectedAssetPaths.length > 0) {
+        fail('Runtime artifact staging is incomplete', { missingPaths, unexpectedAssetPaths });
     }
     await fs.mkdir(runtimeArtifactDir, { recursive: true });
     run('tar', ['-czf', artifactPath, '-C', stageRoot, '.']);
@@ -85,19 +88,19 @@ function readTargetTriple() {
 async function stageRuntimePackages(stageRoot) {
     const nodeModulesRoot = path.join(stageRoot, 'share', 'tavern', 'node_modules');
 
-    await stageMemoryRecallEngine(stageRoot);
+    await stageWikiRecallEngine(stageRoot);
     await copyPackage(
         path.join(repoRoot, 'packages', 'tavern-sdk'),
         path.join(nodeModulesRoot, '@tavern', 'sdk')
     );
 }
 
-// qmd powers Memory recall search. It carries native modules (better-sqlite3,
+// qmd powers Wiki recall search. It carries native modules (better-sqlite3,
 // sqlite-vec, node-llama-cpp) that cannot compile into the single-file Runtime
 // binary, so the Runtime dynamic-imports it from share/tavern/node_modules.
 // npm (not bun) installs it so native postinstall scripts run for the build
 // host platform, matching the per-platform artifact target.
-async function stageMemoryRecallEngine(stageRoot) {
+async function stageWikiRecallEngine(stageRoot) {
     const shareRoot = path.join(stageRoot, 'share', 'tavern');
     const runtimePackageJson = await readJson('apps/runtime/package.json');
     const qmdVersion = runtimePackageJson.dependencies['@tobilu/qmd'];
@@ -125,9 +128,7 @@ async function stageMemoryRecallEngine(stageRoot) {
 
 async function stageRuntimeAssets(stageRoot) {
     const runtimeAssetsRoot = path.join(stageRoot, 'share', 'tavern', 'runtime-assets');
-    await fs.cp(path.join(repoRoot, 'apps', 'runtime', 'assets'), runtimeAssetsRoot, {
-        recursive: true,
-    });
+    await fs.mkdir(runtimeAssetsRoot, { recursive: true });
     await stageGoogleOAuthAssets(runtimeAssetsRoot);
     await stageHarnessBridgeAssets(runtimeAssetsRoot);
 }
@@ -230,6 +231,23 @@ export async function findMissingRuntimeArtifactPaths(stageRoot) {
     );
 
     return results.filter(Boolean);
+}
+
+export async function findUnexpectedRuntimeAssetPaths(stageRoot) {
+    const runtimeAssetsRoot = path.join(stageRoot, 'share', 'tavern', 'runtime-assets');
+    let entries;
+    try {
+        entries = await fs.readdir(runtimeAssetsRoot, { withFileTypes: true });
+    } catch (error) {
+        if (error.code === 'ENOENT') {
+            return [];
+        }
+        throw error;
+    }
+
+    return entries
+        .filter((entry) => !allowedRuntimeAssetRoots.has(entry.name))
+        .map((entry) => path.join('share', 'tavern', 'runtime-assets', entry.name));
 }
 
 function run(command, args) {

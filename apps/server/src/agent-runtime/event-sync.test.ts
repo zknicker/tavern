@@ -85,15 +85,15 @@ test('capability.updated refreshes the cached runtime capability snapshot', asyn
     assert.equal(capabilityState(refreshed, 'apiServer'), 'healthy');
 });
 
-test('semanticMemory.changed emits a SemanticMemory invalidation event', async () => {
-    const invalidation = nextSemanticMemoryInvalidation();
+test('wiki.changed emits a Wiki invalidation event', async () => {
+    const invalidation = nextWikiInvalidation();
 
     await applyObservedAgentRuntimeEvent({
         paths: ['Projects/Alpha.md'],
         reason: 'watch',
         scope: 'content',
         timestamp: '2026-06-21T12:00:00.000Z',
-        type: 'semanticMemory.changed',
+        type: 'wiki.changed',
     });
 
     await assert.doesNotReject(async () => {
@@ -230,7 +230,7 @@ function buildCapabilitySnapshot(states: Record<string, AgentRuntimeCapabilityHe
     };
 }
 
-async function nextSemanticMemoryInvalidation() {
+async function nextWikiInvalidation() {
     const controller = new AbortController();
     const timeout = setTimeout(() => {
         controller.abort();
@@ -238,7 +238,7 @@ async function nextSemanticMemoryInvalidation() {
 
     try {
         for await (const event of subscribeToTavernEvent(
-            tavernEventNames.semanticMemoryUpdated,
+            tavernEventNames.wikiUpdated,
             controller.signal
         )) {
             clearTimeout(timeout);
@@ -248,5 +248,5 @@ async function nextSemanticMemoryInvalidation() {
         clearTimeout(timeout);
     }
 
-    throw new Error('Timed out waiting for SemanticMemory invalidation.');
+    throw new Error('Timed out waiting for Wiki invalidation.');
 }

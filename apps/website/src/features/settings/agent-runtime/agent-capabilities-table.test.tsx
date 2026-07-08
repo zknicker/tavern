@@ -4,13 +4,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { AgentCapabilitiesSummary, CapabilityTooltipContent } from './agent-capabilities-table.tsx';
 
 function capability(input: {
-    capability:
-        | 'apiServer'
-        | 'dashboardServer'
-        | 'gateway'
-        | 'modelExecution'
-        | 'skills'
-        | 'semanticMemory';
+    capability: 'apiServer' | 'dashboardServer' | 'gateway' | 'modelExecution' | 'skills' | 'wiki';
     displayName?: string;
     state?: 'degraded' | 'healthy' | 'unknown' | 'unavailable';
 }) {
@@ -35,14 +29,14 @@ test('AgentCapabilitiesSummary renders per-capability refresh actions', () => {
         <AgentCapabilitiesSummary
             capabilities={[
                 {
-                    capability: 'semanticMemory',
+                    capability: 'wiki',
                     checkedAt: '2026-05-28T12:00:00.000Z',
                     displayName: 'Memory',
                     errorCode: null,
                     lastHealthyAt: null,
                     metadataJson: '{}',
                     method: 'runtime.capabilities',
-                    reason: 'Memory path is not readable and writable.',
+                    reason: 'Wiki path is not readable and writable.',
                     runtimeId: 'runtime-1',
                     state: 'unavailable',
                     technicalMessage: null,
@@ -94,9 +88,9 @@ test('AgentCapabilitiesSummary renders a provisioning progress bar from capabili
         <AgentCapabilitiesSummary
             capabilities={[
                 {
-                    capability: 'memoryRecall',
+                    capability: 'wikiRecall',
                     checkedAt: '2026-05-28T12:00:00.000Z',
-                    displayName: 'Memory recall',
+                    displayName: 'Wiki recall',
                     errorCode: null,
                     lastHealthyAt: null,
                     metadataJson: '{"phase":"downloading-model","progress":0.42}',
@@ -111,7 +105,7 @@ test('AgentCapabilitiesSummary renders a provisioning progress bar from capabili
         />
     );
 
-    assert.match(markup, /Memory recall/);
+    assert.match(markup, /Wiki recall/);
     assert.match(markup, /progressbar/);
     assert.match(markup, /42%/);
 });
@@ -121,9 +115,9 @@ test('AgentCapabilitiesSummary ignores progress metadata on healthy capabilities
         <AgentCapabilitiesSummary
             capabilities={[
                 {
-                    capability: 'memoryRecall',
+                    capability: 'wikiRecall',
                     checkedAt: '2026-05-28T12:00:00.000Z',
-                    displayName: 'Memory recall',
+                    displayName: 'Wiki recall',
                     errorCode: null,
                     lastHealthyAt: null,
                     metadataJson: '{"phase":"ready"}',
@@ -145,9 +139,9 @@ test('CapabilityTooltipContent leads with the customer-facing capability explain
     const markup = renderToStaticMarkup(
         <CapabilityTooltipContent
             capability={{
-                capability: 'memoryRecall',
+                capability: 'wikiRecall',
                 checkedAt: '2026-05-28T12:00:00.000Z',
-                displayName: 'Memory recall',
+                displayName: 'Wiki recall',
                 errorCode: null,
                 lastHealthyAt: null,
                 metadataJson: '{"phase":"ready"}',

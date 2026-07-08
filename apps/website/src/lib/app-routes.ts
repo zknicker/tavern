@@ -16,7 +16,7 @@ export const appRoutes = {
         return `/automations/edit/${encodeURIComponent(jobId)}`;
     },
     workspace: '/workspace',
-    memory: '/memory',
+    wiki: '/wiki',
     settings: '/settings',
     settingsAgentRuntime: '/settings/agent-runtime',
     settingsAppearance: '/settings/appearance',

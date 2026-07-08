@@ -17,7 +17,7 @@ import { useSkillHubPreview } from '../../hooks/skills/use-skill-hub-preview.ts'
 import { useSkillHubScan } from '../../hooks/skills/use-skill-hub-scan.ts';
 import { useSkillHubUninstall } from '../../hooks/skills/use-skill-hub-uninstall.ts';
 import { cn } from '../../lib/utils.ts';
-import { SemanticMemoryMarkdownViewer } from '../memory/semantic/semantic-memory-markdown-viewer.tsx';
+import { WikiMarkdownViewer } from '../wiki/wiki-markdown-viewer.tsx';
 import { SkillScanBadge, SkillTrustBadge } from './skill-hub-badges.tsx';
 import { formatSkillName } from './skill-name-format.ts';
 
@@ -224,7 +224,7 @@ function SkillMarkdownCard({ identifier }: { identifier: null | string }) {
     return (
         <MarkdownCardFrame>
             <div className="h-full overflow-auto px-5 py-4">
-                <SemanticMemoryMarkdownViewer value={body} />
+                <WikiMarkdownViewer value={body} />
             </div>
         </MarkdownCardFrame>
     );

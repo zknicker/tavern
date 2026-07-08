@@ -28,13 +28,15 @@ const capabilityLabels = {
     dashboardServer: 'Agent engine',
     devToolkit: 'Dev toolkit',
     gateway: 'Agent connection',
-    memoryRecall: 'Memory recall',
-    memoryWorkers: 'Memory updates',
+    memory: 'Memory',
+    memoryDreaming: 'Memory dreaming',
+    memoryExtraction: 'Memory extraction',
     modelExecution: 'Model execution',
     'plugin.google.calendar': 'Google Calendar',
     'plugin.merchbase': 'MerchBase',
     skills: 'Skills',
-    semanticMemory: 'Memory',
+    wiki: 'Wiki',
+    wikiRecall: 'Wiki recall',
 } satisfies Record<RuntimeCapabilityId, string>;
 
 export const settingsCapabilityRequirements = {
@@ -50,7 +52,7 @@ export const settingsCapabilityRequirements = {
     mcp: ['apiServer'],
     plugins: ['apiServer'],
     jobs: [],
-    memories: ['semanticMemory'],
+    memories: [],
     models: ['apiServer'],
     sessions: ['apiServer'],
     skills: ['apiServer', 'skills'],
@@ -73,7 +75,7 @@ export const routeTabCapabilityRequirements = {
     // Tasks only need the runtime API for CRUD; dispatch gates on gateway at the button level.
     tasks: ['apiServer'],
     overview: [],
-    memory: ['semanticMemory'],
+    wiki: ['wiki'],
     workspace: ['apiServer'],
 } as const satisfies Record<RouteTab, readonly RuntimeCapabilityId[]>;
 

@@ -126,7 +126,7 @@ export interface AgentTurnPromptEvidence {
 
 /**
  * Durable record of exactly what one turn's model call received: composed
- * instructions, the per-turn prompt, and the Memory recall hits injected into
+ * instructions, the per-turn prompt, and the Wiki recall hits injected into
  * it. Written at turn start so evidence survives crashed turns; read by the
  * turn-prompt inspection route.
  */

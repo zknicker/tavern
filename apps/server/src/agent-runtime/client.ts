@@ -82,12 +82,11 @@ import {
     type AgentRuntimeSaveModelProviderApiKey,
     type AgentRuntimeSaveOpenAiSettings,
     type AgentRuntimeSaveOpenRouterSettings,
-    type AgentRuntimeSaveSemanticMemorySettings,
-    type AgentRuntimeSaveSemanticMemorySettingsResult,
     type AgentRuntimeSaveTimezoneSettings,
     type AgentRuntimeSaveTimezoneSettingsResult,
+    type AgentRuntimeSaveWikiSettings,
+    type AgentRuntimeSaveWikiSettingsResult,
     type AgentRuntimeSaveWorkspaceInstructions,
-    type AgentRuntimeSemanticMemorySettings,
     type AgentRuntimeSessionGraph,
     type AgentRuntimeSessionList,
     type AgentRuntimeSessionMessageList,
@@ -136,6 +135,7 @@ import {
     type AgentRuntimeUpdateTask,
     type AgentRuntimeUpdateToolEnabled,
     type AgentRuntimeUpsertBinding,
+    type AgentRuntimeWikiSettings,
     type AgentRuntimeWorkspaceFileContent,
     type AgentRuntimeWorkspaceFileList,
     type AgentRuntimeWorkspaceFileListInput,
@@ -233,12 +233,11 @@ import {
     agentRuntimeSaveModelProviderApiKeySchema,
     agentRuntimeSaveOpenAiSettingsSchema,
     agentRuntimeSaveOpenRouterSettingsSchema,
-    agentRuntimeSaveSemanticMemorySettingsResultSchema,
-    agentRuntimeSaveSemanticMemorySettingsSchema,
     agentRuntimeSaveTimezoneSettingsResultSchema,
     agentRuntimeSaveTimezoneSettingsSchema,
+    agentRuntimeSaveWikiSettingsResultSchema,
+    agentRuntimeSaveWikiSettingsSchema,
     agentRuntimeSaveWorkspaceInstructionsSchema,
-    agentRuntimeSemanticMemorySettingsSchema,
     agentRuntimeSessionGraphSchema,
     agentRuntimeSessionListSchema,
     agentRuntimeSessionMessageListSchema,
@@ -287,43 +286,44 @@ import {
     agentRuntimeUpdateTaskSchema,
     agentRuntimeUpdateToolEnabledSchema,
     agentRuntimeUpsertBindingSchema,
+    agentRuntimeWikiSettingsSchema,
     agentRuntimeWorkspaceFileContentSchema,
     agentRuntimeWorkspaceFileListInputSchema,
     agentRuntimeWorkspaceFileListSchema,
     agentRuntimeWorkspaceInstructionsSchema,
+    type MemoryActivityList,
     type MemoryDreamResult,
     type MemoryJobDetail,
     type MemoryJobKind,
     type MemoryJobList,
     type MemoryJobStatus,
-    type MemoryWorkerStatusList,
+    memoryActivityListSchema,
     memoryDreamResultSchema,
     memoryJobDetailSchema,
     memoryJobListSchema,
-    memoryPathInputSchema,
-    memoryPathMutationResultSchema,
-    memoryWorkerStatusListSchema,
     runtimeEventListSchema,
-    type SemanticMemoryBacklinkList,
-    type SemanticMemoryCreatePage,
-    type SemanticMemoryMovePath,
-    type SemanticMemoryPage,
-    type SemanticMemoryPageList,
-    type SemanticMemoryPathInput,
-    type SemanticMemoryPathMutationResult,
-    type SemanticMemorySavePage,
-    type SemanticMemorySearchInput,
-    type SemanticMemorySearchResult,
-    type SemanticMemoryStatus,
-    semanticMemoryBacklinkListSchema,
-    semanticMemoryCreatePageSchema,
-    semanticMemoryMovePathSchema,
-    semanticMemoryPageListSchema,
-    semanticMemoryPageSchema,
-    semanticMemorySavePageSchema,
-    semanticMemorySearchInputSchema,
-    semanticMemorySearchResultSchema,
-    semanticMemoryStatusSchema,
+    type WikiBacklinkList,
+    type WikiCreatePage,
+    type WikiMovePath,
+    type WikiPage,
+    type WikiPageList,
+    type WikiPathInput,
+    type WikiPathMutationResult,
+    type WikiSavePage,
+    type WikiSearchInput,
+    type WikiSearchResult,
+    type WikiStatus,
+    wikiBacklinkListSchema,
+    wikiCreatePageSchema,
+    wikiMovePathSchema,
+    wikiPageListSchema,
+    wikiPageSchema,
+    wikiPathInputSchema,
+    wikiPathMutationResultSchema,
+    wikiSavePageSchema,
+    wikiSearchInputSchema,
+    wikiSearchResultSchema,
+    wikiStatusSchema,
 } from '@tavern/api';
 import { z } from 'zod';
 
@@ -359,13 +359,9 @@ export interface TavernAgentRuntimeClient {
         input: AgentRuntimeCompleteGoogleOAuth
     ): Promise<AgentRuntimeGoogleOAuthPoll>;
     createCronJob(input: AgentRuntimeCreateCron): Promise<AgentRuntimeCron>;
-    createSemanticMemoryFolder(
-        input: SemanticMemoryPathInput
-    ): Promise<SemanticMemoryPathMutationResult>;
-    createSemanticMemoryPage(
-        input: SemanticMemoryCreatePage
-    ): Promise<SemanticMemoryPathMutationResult>;
     createTask(input: AgentRuntimeCreateTask): Promise<AgentRuntimeTask>;
+    createWikiFolder(input: WikiPathInput): Promise<WikiPathMutationResult>;
+    createWikiPage(input: WikiCreatePage): Promise<WikiPathMutationResult>;
     deleteAgent(agentId: string): Promise<AgentRuntimeArchiveAgent>;
     deleteBinding(bindingId: string): Promise<AgentRuntimeArchiveBinding>;
     deleteCronJob(jobId: string): Promise<AgentRuntimeArchiveCron>;
@@ -375,13 +371,9 @@ export interface TavernAgentRuntimeClient {
     ): Promise<AgentRuntimeAgentEngineConfigSnapshot>;
     deleteOpenAiSettings(): Promise<AgentRuntimeOpenAiSettings>;
     deleteOpenRouterSettings(): Promise<AgentRuntimeOpenRouterSettings>;
-    deleteSemanticMemoryFolder(
-        input: SemanticMemoryPathInput
-    ): Promise<SemanticMemoryPathMutationResult>;
-    deleteSemanticMemoryPage(
-        input: SemanticMemoryPathInput
-    ): Promise<SemanticMemoryPathMutationResult>;
     deleteTask(taskId: string): Promise<{ deleted: boolean; id: string }>;
+    deleteWikiFolder(input: WikiPathInput): Promise<WikiPathMutationResult>;
+    deleteWikiPage(input: WikiPathInput): Promise<WikiPathMutationResult>;
     disconnectGoogleOAuth(): Promise<AgentRuntimeGoogleSettings>;
     getAgentConfig(agentId: string): Promise<AgentRuntimeAgent>;
     getAgentEngineConfig(): Promise<AgentRuntimeAgentEngineConfigSnapshot>;
@@ -395,6 +387,7 @@ export interface TavernAgentRuntimeClient {
     }): Promise<AgentRuntimeCurrentAgentSessionResult>;
     getGoogleSettings(): Promise<AgentRuntimeGoogleSettings>;
     getMcpCatalog(): Promise<AgentRuntimeMcpCatalog>;
+    getMemoryActivity(): Promise<MemoryActivityList>;
     getMemoryJob(jobId: string): Promise<MemoryJobDetail | null>;
     getMemorySettings(): Promise<AgentRuntimeMemorySettings>;
     getMerchbaseSettings(): Promise<AgentRuntimeMerchbaseSettings>;
@@ -407,9 +400,6 @@ export interface TavernAgentRuntimeClient {
     getOpenRouterSettings(): Promise<AgentRuntimeOpenRouterSettings>;
     getPlugin(id: AgentRuntimePluginId): Promise<AgentRuntimePlugin>;
     getRuntimeJob(slug: AgentRuntimeJobSlug): Promise<AgentRuntimeJobDetail | null>;
-    getSemanticMemoryPage(input: { path: string }): Promise<SemanticMemoryPage | null>;
-    getSemanticMemorySettings(): Promise<AgentRuntimeSemanticMemorySettings>;
-    getSemanticMemoryStatus(): Promise<SemanticMemoryStatus>;
     getSessionGraph(sessionKey: string): Promise<AgentRuntimeSessionGraph>;
     getSessionPrompt(sessionKey: string): Promise<AgentRuntimeSessionPrompt | null>;
     getSkill(skillId: string): Promise<AgentRuntimeSkill>;
@@ -418,6 +408,9 @@ export interface TavernAgentRuntimeClient {
     getTimezoneSettings(): Promise<AgentRuntimeTimezoneSettings>;
     getToolConfig(toolId: string): Promise<AgentRuntimeToolConfig>;
     getUpdateStatus(): Promise<AgentRuntimeUpdate>;
+    getWikiPage(input: { path: string }): Promise<WikiPage | null>;
+    getWikiSettings(): Promise<AgentRuntimeWikiSettings>;
+    getWikiStatus(): Promise<WikiStatus>;
     getWorkspaceFile(agentId: string, path: string): Promise<AgentRuntimeWorkspaceFileContent>;
     getWorkspaceInstructions(agentId: string): Promise<AgentRuntimeRenderedWorkspaceInstructions>;
     installMcpCatalogEntry(
@@ -439,11 +432,8 @@ export interface TavernAgentRuntimeClient {
     listMacApps(options?: { limit?: number; query?: string }): Promise<AgentRuntimeMacAppList>;
     listMcpServers(): Promise<AgentRuntimeMcpServerList>;
     listMemoryJobs(input?: AgentRuntimeListMemoryJobsInput): Promise<MemoryJobList>;
-    listMemoryWorkers(): Promise<MemoryWorkerStatusList>;
     listPlugins(): Promise<AgentRuntimePluginList>;
     listRuntimeJobs(): Promise<AgentRuntimeJobList>;
-    listSemanticMemoryBacklinks(input: { path: string }): Promise<SemanticMemoryBacklinkList>;
-    listSemanticMemoryPages(): Promise<SemanticMemoryPageList>;
     listSessionMessages(
         sessionKey: string,
         options?: AgentRuntimeListSessionMessagesOptions
@@ -458,13 +448,13 @@ export interface TavernAgentRuntimeClient {
     ): Promise<{ skills: AgentRuntimeSkillSummary[] }>;
     listTasks(): Promise<AgentRuntimeTaskList>;
     listTools(): Promise<AgentRuntimeToolList>;
+    listWikiBacklinks(input: { path: string }): Promise<WikiBacklinkList>;
+    listWikiPages(): Promise<WikiPageList>;
     listWorkspaceFiles(
         agentId: string,
         input?: AgentRuntimeWorkspaceFileListInput
     ): Promise<AgentRuntimeWorkspaceFileList>;
-    moveSemanticMemoryPath(
-        input: SemanticMemoryMovePath
-    ): Promise<SemanticMemoryPathMutationResult>;
+    moveWikiPath(input: WikiMovePath): Promise<WikiPathMutationResult>;
     pollGoogleOAuth(input: AgentRuntimeGoogleOAuthPollInput): Promise<AgentRuntimeGoogleOAuthPoll>;
     pollModelProviderOAuth(input: AgentRuntimePollModelProviderOAuth): Promise<unknown>;
     postMessage(
@@ -525,12 +515,6 @@ export interface TavernAgentRuntimeClient {
     saveOpenRouterSettings(
         input: AgentRuntimeSaveOpenRouterSettings
     ): Promise<AgentRuntimeOpenRouterSettings>;
-    saveSemanticMemoryPage(
-        input: SemanticMemorySavePage
-    ): Promise<SemanticMemoryPathMutationResult>;
-    saveSemanticMemorySettings(
-        input: AgentRuntimeSaveSemanticMemorySettings
-    ): Promise<AgentRuntimeSaveSemanticMemorySettingsResult>;
     saveTimezoneSettings(
         input: AgentRuntimeSaveTimezoneSettings
     ): Promise<AgentRuntimeSaveTimezoneSettingsResult>;
@@ -538,12 +522,16 @@ export interface TavernAgentRuntimeClient {
         toolId: string,
         input: AgentRuntimeToolEnvUpdate
     ): Promise<AgentRuntimeToolEnvUpdateResult>;
+    saveWikiPage(input: WikiSavePage): Promise<WikiPathMutationResult>;
+    saveWikiSettings(
+        input: AgentRuntimeSaveWikiSettings
+    ): Promise<AgentRuntimeSaveWikiSettingsResult>;
     saveWorkspaceInstructions(
         agentId: string,
         input: AgentRuntimeSaveWorkspaceInstructions
     ): Promise<AgentRuntimeWorkspaceInstructions>;
     scanSkillHubSkill(identifier: string): Promise<AgentRuntimeSkillHubScan>;
-    searchSemanticMemory(input: SemanticMemorySearchInput): Promise<SemanticMemorySearchResult>;
+    searchWiki(input: WikiSearchInput): Promise<WikiSearchResult>;
     selectToolProvider(
         toolId: string,
         input: AgentRuntimeToolProviderSelect
@@ -670,11 +658,7 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
 
     close() {}
 
-    async postSemanticMemoryQuery<T>(
-        route: string,
-        input: unknown,
-        schema: z.ZodType<T>
-    ): Promise<T> {
+    async postWikiQuery<T>(route: string, input: unknown, schema: z.ZodType<T>): Promise<T> {
         const response = await fetch(`${this.#baseUrl}${route}`, {
             body: JSON.stringify(input),
             headers: { ...this.#authHeaders, 'content-type': 'application/json' },
@@ -1109,8 +1093,8 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         return memoryJobListSchema.parse(await response.json());
     }
 
-    async listMemoryWorkers() {
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.memoryWorkers}`, {
+    async getMemoryActivity() {
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.memoryActivity}`, {
             headers: this.#authHeaders,
         });
 
@@ -1118,7 +1102,7 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
             await readErrorResponse(response);
         }
 
-        return memoryWorkerStatusListSchema.parse(await response.json());
+        return memoryActivityListSchema.parse(await response.json());
     }
 
     async listCapabilities() {
@@ -1275,8 +1259,8 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         return agentRuntimeRunJobSchema.parse(await response.json());
     }
 
-    async getSemanticMemoryStatus() {
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.semanticMemoryStatus}`, {
+    async getWikiStatus() {
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.wikiStatus}`, {
             headers: this.#authHeaders,
         });
 
@@ -1284,49 +1268,43 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
             await readErrorResponse(response);
         }
 
-        return semanticMemoryStatusSchema.parse(await response.json());
+        return wikiStatusSchema.parse(await response.json());
     }
 
-    async getSemanticMemorySettings() {
-        const response = await fetch(
-            `${this.#baseUrl}${agentRuntimeRoutes.semanticMemorySettings}`,
-            {
-                headers: this.#authHeaders,
-            }
-        );
+    async getWikiSettings() {
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.wikiSettings}`, {
+            headers: this.#authHeaders,
+        });
 
         if (!response.ok) {
             await readErrorResponse(response);
         }
 
-        return agentRuntimeSemanticMemorySettingsSchema.parse(await response.json());
+        return agentRuntimeWikiSettingsSchema.parse(await response.json());
     }
 
-    async saveSemanticMemorySettings(input: AgentRuntimeSaveSemanticMemorySettings) {
-        const payload = agentRuntimeSaveSemanticMemorySettingsSchema.parse(input);
-        const response = await fetch(
-            `${this.#baseUrl}${agentRuntimeRoutes.semanticMemorySettings}`,
-            {
-                body: JSON.stringify(payload),
-                headers: {
-                    ...this.#authHeaders,
-                    'content-type': 'application/json',
-                    [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
-                },
-                method: 'PUT',
-            }
-        );
+    async saveWikiSettings(input: AgentRuntimeSaveWikiSettings) {
+        const payload = agentRuntimeSaveWikiSettingsSchema.parse(input);
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.wikiSettings}`, {
+            body: JSON.stringify(payload),
+            headers: {
+                ...this.#authHeaders,
+                'content-type': 'application/json',
+                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+            },
+            method: 'PUT',
+        });
 
         if (!response.ok) {
             await readErrorResponse(response);
         }
 
-        return agentRuntimeSaveSemanticMemorySettingsResultSchema.parse(await response.json());
+        return agentRuntimeSaveWikiSettingsResultSchema.parse(await response.json());
     }
 
-    async createSemanticMemoryPage(input: SemanticMemoryCreatePage) {
-        const payload = semanticMemoryCreatePageSchema.parse(input);
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.semanticMemoryPages}`, {
+    async createWikiPage(input: WikiCreatePage) {
+        const payload = wikiCreatePageSchema.parse(input);
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.wikiPages}`, {
             body: JSON.stringify(payload),
             headers: {
                 ...this.#authHeaders,
@@ -1340,13 +1318,13 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
             await readErrorResponse(response);
         }
 
-        return memoryPathMutationResultSchema.parse(await response.json());
+        return wikiPathMutationResultSchema.parse(await response.json());
     }
 
-    async saveSemanticMemoryPage(input: SemanticMemorySavePage) {
-        const payload = semanticMemorySavePageSchema.parse(input);
+    async saveWikiPage(input: WikiSavePage) {
+        const payload = wikiSavePageSchema.parse(input);
         const response = await fetch(
-            `${this.#baseUrl}${agentRuntimeRoutes.semanticMemoryPage(payload.path)}`,
+            `${this.#baseUrl}${agentRuntimeRoutes.wikiPage(payload.path)}`,
             {
                 body: JSON.stringify({ body: payload.body }),
                 headers: {
@@ -1362,33 +1340,30 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
             await readErrorResponse(response);
         }
 
-        return memoryPathMutationResultSchema.parse(await response.json());
+        return wikiPathMutationResultSchema.parse(await response.json());
     }
 
-    async createSemanticMemoryFolder(input: SemanticMemoryPathInput) {
-        const payload = memoryPathInputSchema.parse(input);
-        const response = await fetch(
-            `${this.#baseUrl}${agentRuntimeRoutes.semanticMemoryFolders}`,
-            {
-                body: JSON.stringify(payload),
-                headers: {
-                    ...this.#authHeaders,
-                    'content-type': 'application/json',
-                    [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
-                },
-                method: 'POST',
-            }
-        );
+    async createWikiFolder(input: WikiPathInput) {
+        const payload = wikiPathInputSchema.parse(input);
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.wikiFolders}`, {
+            body: JSON.stringify(payload),
+            headers: {
+                ...this.#authHeaders,
+                'content-type': 'application/json',
+                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+            },
+            method: 'POST',
+        });
 
         if (!response.ok) {
             await readErrorResponse(response);
         }
 
-        return memoryPathMutationResultSchema.parse(await response.json());
+        return wikiPathMutationResultSchema.parse(await response.json());
     }
 
-    async listSemanticMemoryPages() {
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.semanticMemoryPages}`, {
+    async listWikiPages() {
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.wikiPages}`, {
             headers: this.#authHeaders,
         });
 
@@ -1396,16 +1371,13 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
             await readErrorResponse(response);
         }
 
-        return semanticMemoryPageListSchema.parse(await response.json());
+        return wikiPageListSchema.parse(await response.json());
     }
 
-    async getSemanticMemoryPage(input: { path: string }) {
-        const response = await fetch(
-            `${this.#baseUrl}${agentRuntimeRoutes.semanticMemoryPage(input.path)}`,
-            {
-                headers: this.#authHeaders,
-            }
-        );
+    async getWikiPage(input: { path: string }) {
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.wikiPage(input.path)}`, {
+            headers: this.#authHeaders,
+        });
 
         if (response.status === 404) {
             return null;
@@ -1414,13 +1386,13 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
             await readErrorResponse(response);
         }
 
-        return semanticMemoryPageSchema.parse(await response.json());
+        return wikiPageSchema.parse(await response.json());
     }
 
-    async deleteSemanticMemoryPage(input: SemanticMemoryPathInput) {
-        const payload = memoryPathInputSchema.parse(input);
+    async deleteWikiPage(input: WikiPathInput) {
+        const payload = wikiPathInputSchema.parse(input);
         const response = await fetch(
-            `${this.#baseUrl}${agentRuntimeRoutes.semanticMemoryPage(payload.path)}`,
+            `${this.#baseUrl}${agentRuntimeRoutes.wikiPage(payload.path)}`,
             {
                 headers: {
                     ...this.#authHeaders,
@@ -1434,13 +1406,13 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
             await readErrorResponse(response);
         }
 
-        return memoryPathMutationResultSchema.parse(await response.json());
+        return wikiPathMutationResultSchema.parse(await response.json());
     }
 
-    async deleteSemanticMemoryFolder(input: SemanticMemoryPathInput) {
-        const payload = memoryPathInputSchema.parse(input);
+    async deleteWikiFolder(input: WikiPathInput) {
+        const payload = wikiPathInputSchema.parse(input);
         const response = await fetch(
-            `${this.#baseUrl}${agentRuntimeRoutes.semanticMemoryFolder(payload.path)}`,
+            `${this.#baseUrl}${agentRuntimeRoutes.wikiFolder(payload.path)}`,
             {
                 headers: {
                     ...this.#authHeaders,
@@ -1454,42 +1426,39 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
             await readErrorResponse(response);
         }
 
-        return memoryPathMutationResultSchema.parse(await response.json());
+        return wikiPathMutationResultSchema.parse(await response.json());
     }
 
-    async moveSemanticMemoryPath(input: SemanticMemoryMovePath) {
-        const payload = semanticMemoryMovePathSchema.parse(input);
-        const response = await fetch(
-            `${this.#baseUrl}${agentRuntimeRoutes.semanticMemoryMovePath}`,
-            {
-                body: JSON.stringify(payload),
-                headers: {
-                    ...this.#authHeaders,
-                    'content-type': 'application/json',
-                    [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
-                },
-                method: 'POST',
-            }
-        );
+    async moveWikiPath(input: WikiMovePath) {
+        const payload = wikiMovePathSchema.parse(input);
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.wikiMovePath}`, {
+            body: JSON.stringify(payload),
+            headers: {
+                ...this.#authHeaders,
+                'content-type': 'application/json',
+                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+            },
+            method: 'POST',
+        });
 
         if (!response.ok) {
             await readErrorResponse(response);
         }
 
-        return memoryPathMutationResultSchema.parse(await response.json());
+        return wikiPathMutationResultSchema.parse(await response.json());
     }
 
-    async searchSemanticMemory(input: SemanticMemorySearchInput) {
-        return await this.postSemanticMemoryQuery(
-            agentRuntimeRoutes.semanticMemorySearch,
-            semanticMemorySearchInputSchema.parse(input),
-            semanticMemorySearchResultSchema
+    async searchWiki(input: WikiSearchInput) {
+        return await this.postWikiQuery(
+            agentRuntimeRoutes.wikiSearch,
+            wikiSearchInputSchema.parse(input),
+            wikiSearchResultSchema
         );
     }
 
-    async listSemanticMemoryBacklinks(input: { path: string }) {
+    async listWikiBacklinks(input: { path: string }) {
         const response = await fetch(
-            `${this.#baseUrl}${agentRuntimeRoutes.semanticMemoryBacklinks(input.path)}`,
+            `${this.#baseUrl}${agentRuntimeRoutes.wikiBacklinks(input.path)}`,
             {
                 headers: this.#authHeaders,
             }
@@ -1499,7 +1468,7 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
             await readErrorResponse(response);
         }
 
-        return semanticMemoryBacklinkListSchema.parse(await response.json());
+        return wikiBacklinkListSchema.parse(await response.json());
     }
 
     async getModels() {

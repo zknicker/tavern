@@ -22,7 +22,7 @@ export function MemoriesSettings() {
     return (
         <SettingsPage>
             <SettingsPageHeader title="Memory" />
-            <MemoryWorkersBanner />
+            <MemoryActivityBanner />
             <SettingsGroup>
                 <MemoryEnabledRow />
             </SettingsGroup>
@@ -32,9 +32,16 @@ export function MemoriesSettings() {
     );
 }
 
-function MemoryWorkersBanner() {
-    const workers = useCapability('memoryWorkers');
-    if (workers.healthy || workers.state === 'unknown') {
+function MemoryActivityBanner() {
+    const extraction = useCapability('memoryExtraction');
+    const dreaming = useCapability('memoryDreaming');
+    const blockedCapabilities = [extraction, dreaming].filter(
+        (capability) =>
+            !capability.healthy &&
+            capability.state !== 'unknown' &&
+            capability.reason !== 'Memory is off.'
+    );
+    if (blockedCapabilities.length === 0) {
         return null;
     }
 

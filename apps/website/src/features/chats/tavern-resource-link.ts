@@ -1,6 +1,6 @@
 export type TavernResourceTarget =
-    | { kind: 'memoryDirectory'; path: string }
-    | { kind: 'memoryPage'; path: string }
+    | { kind: 'wikiDirectory'; path: string }
+    | { kind: 'wikiPage'; path: string }
     | { kind: 'workspaceDirectory'; path: string }
     | { kind: 'workspaceFile'; path: string }
     | { kind: 'workspaceRoot'; path: '' };
@@ -30,8 +30,8 @@ export function parseTavernResourceLink(href: string): TavernResourceTarget | nu
     }
 
     switch (url.hostname) {
-        case 'memory':
-            return path ? { kind: 'memoryPage', path } : { kind: 'memoryDirectory', path: '' };
+        case 'wiki':
+            return path ? { kind: 'wikiPage', path } : { kind: 'wikiDirectory', path: '' };
         case 'workspace':
             return path
                 ? { kind: 'workspaceFile', path }
@@ -46,8 +46,8 @@ export function getArtifactPanelTargetKey(target: TavernResourceTarget) {
 }
 
 export function getArtifactPanelTargetLabel(target: TavernResourceTarget) {
-    if (target.kind === 'memoryDirectory') {
-        return target.path ? (target.path.split('/').filter(Boolean).at(-1) ?? 'Memory') : 'Memory';
+    if (target.kind === 'wikiDirectory') {
+        return target.path ? (target.path.split('/').filter(Boolean).at(-1) ?? 'Wiki') : 'Wiki';
     }
 
     if (target.kind === 'workspaceDirectory') {
@@ -66,7 +66,7 @@ export function getArtifactPanelTargetLabel(target: TavernResourceTarget) {
 
 export function formatTavernResourceLink(target: TavernResourceTarget) {
     const host =
-        target.kind === 'memoryPage' || target.kind === 'memoryDirectory' ? 'memory' : 'workspace';
+        target.kind === 'wikiPage' || target.kind === 'wikiDirectory' ? 'wiki' : 'workspace';
     const path = target.path
         .split('/')
         .filter(Boolean)

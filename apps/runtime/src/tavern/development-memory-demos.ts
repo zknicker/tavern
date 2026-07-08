@@ -1,12 +1,9 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
-import {
-    prepareSemanticMemoryRoot,
-    resolveSemanticMemoryConfigSync,
-} from '../memory/semantic/store';
+import { prepareWikiRoot, resolveWikiConfigSync } from '../wiki/store';
 import { shouldSeedDevelopmentChatDemos } from './development-chat-demos';
 
-const demoSemanticMemoryPages = [
+const demoWikiPages = [
     {
         body: [
             '# Artifact Panel brief',
@@ -15,9 +12,9 @@ const demoSemanticMemoryPages = [
             '',
             '## Contract',
             '',
-            '- Links open Memory pages or workspace files.',
+            '- Links open Wiki pages or workspace files.',
             '- Clicking a link opens a chat-scoped panel target.',
-            '- Memory pages stay Memory pages; they are not copied into chat artifacts.',
+            '- Wiki pages stay Wiki pages; they are not copied into chat artifacts.',
             '',
             'Related: [Inspectable output rules](Output Rules.md)',
         ].join('\n'),
@@ -27,11 +24,11 @@ const demoSemanticMemoryPages = [
         body: [
             '# Inspectable output rules',
             '',
-            'Agents link outputs the user may want to inspect: workspace files, Memory pages, Markdown or HTML docs, images, and generated assets.',
+            'Agents link outputs the user may want to inspect: workspace files, Wiki pages, Markdown or HTML docs, images, and generated assets.',
             '',
             '| Target | Example |',
             '| --- | --- |',
-            '| Memory page | `[Brief](tavern://memory/Demos/Panel%20Brief.md)` |',
+            '| Wiki page | `[Brief](tavern://wiki/Demos/Panel%20Brief.md)` |',
             '| Workspace file | `[preview.html](tavern://workspace/out/preview.html)` |',
             '',
             'The final reply should link the thing itself. It should not explain the panel.',
@@ -40,7 +37,7 @@ const demoSemanticMemoryPages = [
     },
 ] as const;
 
-export async function seedDevelopmentSemanticMemoryDemos({
+export async function seedDevelopmentWikiDemos({
     enabled = shouldSeedDevelopmentChatDemos(),
 }: {
     enabled?: boolean;
@@ -49,14 +46,14 @@ export async function seedDevelopmentSemanticMemoryDemos({
         return { seeded: 0 };
     }
 
-    const { memoryPath } = resolveSemanticMemoryConfigSync();
-    await prepareSemanticMemoryRoot(memoryPath);
+    const { wikiPath } = resolveWikiConfigSync();
+    await prepareWikiRoot(wikiPath);
 
-    for (const page of demoSemanticMemoryPages) {
-        const absolutePath = path.join(memoryPath, page.path);
+    for (const page of demoWikiPages) {
+        const absolutePath = path.join(wikiPath, page.path);
         await fs.mkdir(path.dirname(absolutePath), { recursive: true });
         await fs.writeFile(absolutePath, `${page.body}\n`);
     }
 
-    return { seeded: demoSemanticMemoryPages.length };
+    return { seeded: demoWikiPages.length };
 }

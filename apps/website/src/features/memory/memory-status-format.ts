@@ -1,12 +1,10 @@
 import type { BadgeProps } from '../../components/ui/badge.tsx';
-import type { SemanticMemorySettingsOutput, SemanticMemoryStatusOutput } from '../../lib/trpc.tsx';
+import type { WikiSettingsOutput, WikiStatusOutput } from '../../lib/trpc.tsx';
 
-export type SemanticMemoryHubStatus = NonNullable<SemanticMemoryStatusOutput>;
-export type SemanticMemorySettings = NonNullable<SemanticMemorySettingsOutput>;
+export type WikiHubStatus = NonNullable<WikiStatusOutput>;
+export type WikiSettings = NonNullable<WikiSettingsOutput>;
 
-export function formatSemanticMemoryAccess(
-    status: Pick<SemanticMemoryHubStatus, 'readable' | 'writable'> | null
-) {
+export function formatWikiAccess(status: Pick<WikiHubStatus, 'readable' | 'writable'> | null) {
     if (!status) {
         return 'Unavailable';
     }
@@ -22,7 +20,7 @@ export function formatSemanticMemoryAccess(
     return 'Unavailable';
 }
 
-export function formatSemanticMemoryConfigSource(source: SemanticMemorySettings['configSource']) {
+export function formatWikiConfigSource(source: WikiSettings['configSource']) {
     switch (source) {
         case 'default':
             return 'Default';
@@ -33,7 +31,7 @@ export function formatSemanticMemoryConfigSource(source: SemanticMemorySettings[
     }
 }
 
-export function getSemanticMemoryHealth(status: SemanticMemoryHubStatus | null): {
+export function getWikiHealth(status: WikiHubStatus | null): {
     label: string;
     variant: BadgeProps['variant'];
 } {

@@ -70,7 +70,7 @@ test('dream detail shows the per-run summary and file changes, not process narra
                 {
                     input: { path: 'people/zach.md' },
                     toolCallId: 'c2',
-                    toolName: 'memory_write_page',
+                    toolName: 'wiki_write',
                 },
             ],
         },
