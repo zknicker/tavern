@@ -66,7 +66,13 @@ describe('session freshness', () => {
     it('does not rotate fresh or never-used sessions', () => {
         const session = seedActiveSession('2026-07-07T14:00:00.000Z');
 
-        expect(ensureFreshAgentSession({ agentId: 'agt_primary', chatId })).toBeNull();
+        expect(
+            ensureFreshAgentSession({
+                agentId: 'agt_primary',
+                chatId,
+                now: new Date('2026-07-07T14:30:00.000Z'),
+            })
+        ).toBeNull();
         // Session that never ran a turn stays put even when old.
         backdateSession(session.id, '2026-07-01T00:00:00.000Z');
         clearRuntimeSessionId(session.id);
