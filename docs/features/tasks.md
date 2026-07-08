@@ -19,7 +19,8 @@ the user and agents.
   works as a reference in chat messages.
 * **Status and priority.** Status is backlog, todo, in progress, blocked,
   review, done, or canceled. Priority is none, urgent, high, medium, or low.
-  The Active view covers todo plus in progress.
+  The Active view covers todo, in progress, blocked, and review — everything
+  live or demanding attention.
 * **Assignees.** A task is unassigned, owned by the user, or assigned to an
   agent.
 * **Labels.** Freeform comma-separated labels for ad-hoc grouping.

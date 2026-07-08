@@ -1,10 +1,12 @@
 import type { IconSvgElement } from '@hugeicons/react';
 import {
+    AlertCircleIcon,
     CancelCircleIcon,
     CheckmarkCircle02Icon,
     CircleIcon,
     DashedLineCircleIcon,
     Loading03Icon,
+    ViewIcon,
 } from '@hugeicons-pro/core-stroke-rounded';
 import * as React from 'react';
 import { RelativeTime } from '../../components/time/relative-time.tsx';
@@ -16,15 +18,19 @@ import { AgentOptionLabel, type AgentSelectOption } from '../agents/agent-option
 import {
     formatTaskNumber,
     type TaskStatus,
+    taskBlockedReasonBadgeVariants,
+    taskBlockedReasonLabels,
     taskPriorityLabels,
     taskStatusLabels,
 } from './task-presentation.ts';
 
 const taskStatusIcons: Record<TaskStatus, IconSvgElement> = {
     backlog: DashedLineCircleIcon,
+    blocked: AlertCircleIcon,
     canceled: CancelCircleIcon,
     done: CheckmarkCircle02Icon,
     in_progress: Loading03Icon,
+    review: ViewIcon,
     todo: CircleIcon,
 };
 
@@ -120,6 +126,11 @@ function TaskRow({
                     {task.title}
                 </span>
                 {task.kind === 'epic' ? <Badge variant="subtle">Epic</Badge> : null}
+                {task.status === 'blocked' && task.blockedReason ? (
+                    <Badge variant={taskBlockedReasonBadgeVariants[task.blockedReason.kind]}>
+                        {taskBlockedReasonLabels[task.blockedReason.kind]}
+                    </Badge>
+                ) : null}
                 {task.labels.map((label) => (
                     <Badge key={label} variant="secondary">
                         {label}

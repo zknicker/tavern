@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { SimpleCodeEditor } from '../../components/code-editor/simple-code-editor.tsx';
 import { Field, FieldLabel } from '../../components/ui/primitives/field.tsx';
 import { Input } from '../../components/ui/primitives/input.tsx';
@@ -6,6 +7,7 @@ import { cn } from '../../lib/utils.ts';
 interface TaskEditorPaneProps {
     autoFocusTitle?: boolean;
     description: string;
+    footer?: ReactNode;
     onDescriptionBlur?: () => void;
     onDescriptionChange: (value: string) => void;
     onTitleBlur?: () => void;
@@ -20,6 +22,7 @@ const editableWashClassName =
 export function TaskEditorPane({
     autoFocusTitle = false,
     description,
+    footer,
     onDescriptionBlur,
     onDescriptionChange,
     onTitleBlur,
@@ -53,6 +56,7 @@ export function TaskEditorPane({
                         value={description}
                     />
                 </Field>
+                {footer}
             </section>
         </div>
     );

@@ -20,6 +20,7 @@ import {
 } from '../../hooks/tasks/use-task-mutations.ts';
 import { appRoutes } from '../../lib/app-routes.ts';
 import { EmptyState } from '../shell/empty-state.tsx';
+import { TaskBlockedReason } from './task-blocked-reason.tsx';
 import { TaskDispatchField } from './task-dispatch-field.tsx';
 import { TaskEditorPane } from './task-editor-pane.tsx';
 import { TaskEditorSection, TaskEditorSidebar } from './task-editor-sidebar.tsx';
@@ -147,6 +148,16 @@ export function TaskDetail({ taskId }: { taskId: string }) {
                         showEpic={task.kind === 'task'}
                         value={task}
                     />
+                    {task.status === 'blocked' ? (
+                        <>
+                            <Separator />
+                            <TaskBlockedReason
+                                disabled={updateMutation.isPending}
+                                onChange={(blockedReason) => patchTask({ blockedReason })}
+                                value={task.blockedReason}
+                            />
+                        </>
+                    ) : null}
                     <Separator />
                     <TaskDispatchField
                         agents={agents}
@@ -186,7 +197,7 @@ function TaskDetailPane({
     task,
 }: {
     onSave: (patch: { description?: string | null; title?: string }) => void;
-    task: { description: string | null; title: string };
+    task: { description: string | null; summary: string | null; title: string };
 }) {
     const [title, setTitle] = React.useState(task.title);
     const [description, setDescription] = React.useState(task.description ?? '');
@@ -203,6 +214,7 @@ function TaskDetailPane({
     return (
         <TaskEditorPane
             description={description}
+            footer={task.summary ? <TaskSummary summary={task.summary} /> : null}
             onDescriptionBlur={() => {
                 const trimmed = description.trim();
 
@@ -224,5 +236,18 @@ function TaskDetailPane({
             title={title}
             titlePlaceholder="Untitled task"
         />
+    );
+}
+
+// The agent's close-out outcome, written at terminal transitions. Read-only;
+// plain text for now (markdown rendering lands in a later phase).
+function TaskSummary({ summary }: { summary: string }) {
+    return (
+        <section className="shrink-0 space-y-2">
+            <h2 className="font-medium text-muted-foreground text-sm">Summary</h2>
+            <div className="whitespace-pre-wrap rounded-lg border bg-muted/30 px-3 py-2 text-foreground text-sm">
+                {summary}
+            </div>
+        </section>
     );
 }

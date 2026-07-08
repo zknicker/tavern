@@ -5,26 +5,52 @@ export type TaskAssigneeFilter = 'anyone' | 'me' | 'unassigned' | `agent:${strin
 
 export type TaskStatus = TaskRecord['status'];
 export type TaskPriority = TaskRecord['priority'];
+export type TaskBlockedReason = NonNullable<TaskRecord['blockedReason']>;
+export type TaskBlockedReasonKind = TaskBlockedReason['kind'];
 
-export const taskStatusOrder: TaskStatus[] = ['backlog', 'todo', 'in_progress', 'done', 'canceled'];
+export const taskStatusOrder: TaskStatus[] = [
+    'backlog',
+    'todo',
+    'in_progress',
+    'blocked',
+    'review',
+    'done',
+    'canceled',
+];
 
 export const taskStatusLabels: Record<TaskStatus, string> = {
     backlog: 'Backlog',
+    blocked: 'Blocked',
     canceled: 'Canceled',
     done: 'Done',
     in_progress: 'In progress',
+    review: 'In review',
     todo: 'Todo',
 };
 
 export const taskStatusBadgeVariants: Record<
     TaskStatus,
-    'info' | 'subtle' | 'success' | 'warning'
+    'error' | 'info' | 'subtle' | 'success' | 'warning'
 > = {
     backlog: 'subtle',
+    blocked: 'error',
     canceled: 'subtle',
     done: 'success',
     in_progress: 'info',
+    review: 'info',
     todo: 'warning',
+};
+
+// Blocked reasons read differently on the board: needs_input asks the user to
+// answer, error reports a failure to fix.
+export const taskBlockedReasonLabels: Record<TaskBlockedReasonKind, string> = {
+    error: 'Failed',
+    needs_input: 'Needs input',
+};
+
+export const taskBlockedReasonBadgeVariants: Record<TaskBlockedReasonKind, 'error' | 'warning'> = {
+    error: 'error',
+    needs_input: 'warning',
 };
 
 export const taskPriorityOrder: TaskPriority[] = ['none', 'urgent', 'high', 'medium', 'low'];
@@ -41,8 +67,15 @@ export function formatTaskNumber(task: Pick<TaskRecord, 'number'>) {
     return `T-${task.number}`;
 }
 
+// Active = live or demanding attention: queued, running, stuck, or awaiting
+// the user's check. Terminal and triage states stay out.
 export function isActiveTask(task: TaskRecord) {
-    return task.status === 'todo' || task.status === 'in_progress';
+    return (
+        task.status === 'todo' ||
+        task.status === 'in_progress' ||
+        task.status === 'blocked' ||
+        task.status === 'review'
+    );
 }
 
 export function groupTasksByStatus(tasks: TaskRecord[]) {
