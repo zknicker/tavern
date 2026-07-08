@@ -25,6 +25,23 @@ an agent assignee are picked up and executed without a human pressing Dispatch.
   A task with an unfinished dependency is waiting: it keeps its status and
   shows what it waits on. Cycles are rejected at write time. There is no
   parent/child hierarchy and no automatic status motion from edges.
+- Labels are freeform strings, filterable on the board — the lightweight
+  way to tag a domain, product, or SKU. No managed label catalog, colors,
+  or label hierarchy.
+- A task can carry a `scheduledFor` date: the earliest it should be worked.
+  A dated task is waiting until its date arrives, exactly like an unmet
+  dependency — it keeps its status and is skipped by the dispatcher.
+  Scheduling gates dispatch, never triage: promotion and edits work as
+  always. Crons remain the tool for recurring roles; `scheduledFor` is for
+  one-shot dated work.
+
+### Attachments
+
+- The description and summary render as markdown, including images.
+- A task carries attachments: references to Runtime artifacts and files
+  produced by chat turns — not a new storage system. Agents attach their
+  key work products at close-out so the outcome is reviewable from the
+  task page; a design task's images render inline where review happens.
 - Board writes are never gated on agent activity. The user can edit, retitle,
   reprioritize, block, or cancel any task while an agent is mid-turn.
 
@@ -82,7 +99,11 @@ Dispatched work runs in a dedicated task chat, not the agent's DM.
   `todo` (see status ownership).
 - Terminal transitions through `tasks_update` carry a short `summary` — what
   changed, how it was verified, what remains. The summary lands on the task,
-  not in the description.
+  not in the description. When the work produced artifacts, the transition
+  attaches references to the key ones.
+- Agents set `scheduledFor` when filing dated follow-ups ("check the ad
+  performance of X next week"); like all agent-created tasks these land in
+  `backlog` for the user to promote.
 - Setting `blocked` requires a reason and a reason kind:
   - `needs_input` — the user must answer or provide something.
   - `error` — the work failed; the reason carries the failure detail.
@@ -97,14 +118,16 @@ Dispatched work runs in a dedicated task chat, not the agent's DM.
 ### Eligibility
 
 - A task is eligible when all hold: `kind` is task, status is `todo`, the
-  assignee is an agent, every dependency is `done`, and auto-dispatch is
-  enabled globally and for that agent.
+  assignee is an agent, every dependency is `done`, its `scheduledFor` (when
+  set) has arrived, and auto-dispatch is enabled globally and for that
+  agent.
 - `backlog` is never auto-dispatched. Moving a card to `todo` with an agent
   assignee is the go signal. Epics are grouping records and never dispatch.
-- A `todo` task with unmet dependencies is waiting, not hidden: it keeps its
-  status and becomes claimable the moment its last dependency closes, so a
-  chain staged in `todo` executes in order. A `canceled` dependency never
-  satisfies the edge; the dependent stays held for the user to re-triage.
+- A `todo` task with unmet dependencies or a future `scheduledFor` is
+  waiting, not hidden: it keeps its status and becomes claimable the moment
+  its last dependency closes or its date arrives, so a chain staged in
+  `todo` executes in order. A `canceled` dependency never satisfies the
+  edge; the dependent stays held for the user to re-triage.
 
 ### Dispatcher
 
@@ -198,8 +221,16 @@ Dispatched work runs in a dedicated task chat, not the agent's DM.
   row.
 - Blocked rows surface the reason kind so `needs_input` and `error` read
   differently at a glance.
-- A waiting `todo` task shows the T-numbers it waits on; dependencies are
-  edited from the task detail sidebar.
+- A waiting `todo` task shows the T-numbers it waits on or its
+  `scheduledFor` date; dependencies and scheduling are edited from the task
+  detail sidebar.
+- The board offers a calendar view laid out by `scheduledFor`: dated work —
+  planned designs, follow-up checks, agent-suggested work for coming weeks —
+  week by week. The calendar reads the board only; external calendar sync
+  is future plugin plumbing.
+- Rows support multi-select with bulk actions: set status (including
+  promoting a staged chain to `todo` in one move), assignee, priority,
+  epic, labels, and cancel.
 - Queue position is implicit in the board's priority-then-oldest sort. There
   is no separate queue view.
 
@@ -214,9 +245,10 @@ Dispatched work runs in a dedicated task chat, not the agent's DM.
 - Parent/child hierarchy, subtasks, and orchestrator agents that fan work
   out to other agents.
 - Per-attempt run history rows with structured handoffs; task comment
-  threads; attachments.
+  threads.
 - Spend budgets that pause an agent's auto-dispatch at a cap.
-- Scheduled tasks (`not before` times) and idempotency keys for
-  automation-created tasks.
+- Idempotency keys for automation-created tasks.
+- Two-way calendar sync (e.g. the Google Calendar plugin) for scheduled
+  tasks; the calendar view is board-only until then.
 - Plan-approval gates before execution; goal-mode loops with judges;
   heartbeats; multi-host coordination.
