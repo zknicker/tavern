@@ -127,9 +127,9 @@ Dispatched work runs in a dedicated task chat, not the agent's DM.
   changed, how it was verified, what remains. The summary lands on the task,
   not in the description. When the work produced files, the transition
   attaches the key ones by workspace path; Runtime promotes the copies
-  (see Attachments). Work files belong in the workspace `workbench/`
-  directory — scratch the agent may clean freely once deliverables are
-  attached.
+  (see Attachments). Task work happens under `workbench/tasks/<T-number>/`
+  in the workspace — the same folder rework materializes into — and is
+  scratch the agent may clean freely once deliverables are attached.
 - Agents apply labels by name. An unknown label name creates the label
   with an auto-assigned color, so an agent can mint a new SKU tag without
   a round-trip through the user.
