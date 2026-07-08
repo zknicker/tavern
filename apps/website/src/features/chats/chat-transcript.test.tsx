@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { httpLink } from '@trpc/client';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter } from 'react-router-dom';
+import { DevModeProvider } from '../../components/dev-mode-provider.tsx';
 import { mergeTimelineMessages } from '../../hooks/chats/chat-timeline-messages.ts';
 import type { ChatActiveReply } from '../../hooks/chats/chat-timeline-state.ts';
 import { type ChatLogOutput, trpc } from '../../lib/trpc.tsx';
@@ -2110,12 +2111,14 @@ function renderTranscript(
         <trpc.Provider client={client} queryClient={queryClient}>
             <QueryClientProvider client={queryClient}>
                 <MemoryRouter>
-                    <ChatTranscript
-                        activeReplies={[]}
-                        chatId={options.chatId}
-                        defaultOpenWorkGroups={options.defaultOpenWorkGroups}
-                        rows={rows}
-                    />
+                    <DevModeProvider>
+                        <ChatTranscript
+                            activeReplies={[]}
+                            chatId={options.chatId}
+                            defaultOpenWorkGroups={options.defaultOpenWorkGroups}
+                            rows={rows}
+                        />
+                    </DevModeProvider>
                 </MemoryRouter>
             </QueryClientProvider>
         </trpc.Provider>
@@ -2151,11 +2154,13 @@ function renderTurnBody(rows: ChatRow[], activeReply: ChatActiveReply | null = n
         <trpc.Provider client={client} queryClient={queryClient}>
             <QueryClientProvider client={queryClient}>
                 <MemoryRouter>
-                    <ChatTurnBody
-                        chatId="cht_test"
-                        entry={entry}
-                        turnActive={Boolean(activeReply)}
-                    />
+                    <DevModeProvider>
+                        <ChatTurnBody
+                            chatId="cht_test"
+                            entry={entry}
+                            turnActive={Boolean(activeReply)}
+                        />
+                    </DevModeProvider>
                 </MemoryRouter>
             </QueryClientProvider>
         </trpc.Provider>
@@ -2190,12 +2195,14 @@ function renderActiveTranscript(
         <trpc.Provider client={client} queryClient={queryClient}>
             <QueryClientProvider client={queryClient}>
                 <MemoryRouter>
-                    <ChatTranscript
-                        activeReplies={[activeReply]}
-                        chatId="cht_test"
-                        conversationLayout={conversationLayout}
-                        rows={rows}
-                    />
+                    <DevModeProvider>
+                        <ChatTranscript
+                            activeReplies={[activeReply]}
+                            chatId="cht_test"
+                            conversationLayout={conversationLayout}
+                            rows={rows}
+                        />
+                    </DevModeProvider>
                 </MemoryRouter>
             </QueryClientProvider>
         </trpc.Provider>
