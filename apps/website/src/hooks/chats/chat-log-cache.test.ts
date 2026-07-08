@@ -1,6 +1,11 @@
 import { expect, test } from 'bun:test';
 import type { ChatLogOutput } from '../../lib/trpc.tsx';
-import { patchChatLogWithProgress, patchChatLogWithSteerNotice } from './chat-log-cache.ts';
+import {
+    patchChatLogWithProgress,
+    patchChatLogWithSteerNotice,
+    progressStepToChatRows,
+    upsertProgressRows,
+} from './chat-log-cache.ts';
 
 const turn = {
     agentId: 'main',
@@ -21,7 +26,7 @@ function emptyLog(): ChatLogOutput {
     };
 }
 
-test('progress patch inserts assistant progress as a prose message row', () => {
+test('narration steps are evidence: they never patch the timeline', () => {
     const log = patchChatLogWithProgress(emptyLog(), {
         step: {
             detail: 'I will run a timed shell check before the final reply.',
@@ -35,8 +40,25 @@ test('progress patch inserts assistant progress as a prose message row', () => {
         turn,
     });
 
-    expect(log?.rows).toHaveLength(1);
-    expect(log?.rows[0]).toMatchObject({
+    expect(log).toBeUndefined();
+});
+
+test('narration steps build prose message rows for turn evidence', () => {
+    const rows = progressStepToChatRows({
+        step: {
+            detail: 'I will run a timed shell check before the final reply.',
+            id: 'preamble-1',
+            kind: 'message',
+            label: 'Assistant reply',
+            messagePhase: 'commentary',
+            status: 'active',
+        },
+        timestamp: '2026-05-22T19:00:01.000Z',
+        turn,
+    });
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
         id: 'act_run-1_preamble-1',
         kind: 'message',
         message: {
@@ -69,8 +91,8 @@ test('progress patch waits for query data before patching the cache', () => {
     expect(log).toBeUndefined();
 });
 
-test('progress patch updates an existing activity row without replacing its start time', () => {
-    const running = patchChatLogWithProgress(emptyLog(), {
+test('evidence merge updates a tool row without replacing its start time', () => {
+    const running = progressStepToChatRows({
         step: {
             id: 'tool-call-1',
             kind: 'tool',
@@ -82,22 +104,24 @@ test('progress patch updates an existing activity row without replacing its star
         timestamp: '2026-05-22T19:00:01.000Z',
         turn,
     });
-    const completed = patchChatLogWithProgress(running, {
-        step: {
-            detail: 'completed 5.0s',
-            id: 'tool-call-1',
-            kind: 'tool',
-            label: 'Used /bin/zsh -lc "sleep 5; printf \'done\\n\'"',
-            status: 'completed',
-            toolCallId: 'tool-call-1',
-            toolName: 'bash',
-        },
-        timestamp: '2026-05-22T19:00:06.000Z',
-        turn,
-    });
+    const completed = upsertProgressRows(
+        running,
+        progressStepToChatRows({
+            step: {
+                detail: 'completed 5.0s',
+                id: 'tool-call-1',
+                kind: 'tool',
+                label: 'Used /bin/zsh -lc "sleep 5; printf \'done\\n\'"',
+                status: 'completed',
+                toolCallId: 'tool-call-1',
+                toolName: 'bash',
+            },
+            timestamp: '2026-05-22T19:00:06.000Z',
+            turn,
+        })
+    );
 
-    expect(completed?.totalMessages).toBe(0);
-    expect(completed?.rows[0]).toMatchObject({
+    expect(completed[0]).toMatchObject({
         completedAt: '2026-05-22T19:00:06.000Z',
         id: 'act_run-1_tool-call-1',
         startedAt: '2026-05-22T19:00:01.000Z',
@@ -114,8 +138,8 @@ test('progress patch updates an existing activity row without replacing its star
     });
 });
 
-test('progress patch renders live reasoning as one thinking row instead of a tool row', () => {
-    const first = patchChatLogWithProgress(emptyLog(), {
+test('evidence merge keeps live reasoning as one thinking row', () => {
+    const first = progressStepToChatRows({
         step: {
             detail: 'I should',
             id: 'reasoning',
@@ -126,20 +150,23 @@ test('progress patch renders live reasoning as one thinking row instead of a too
         timestamp: '2026-05-22T19:00:01.000Z',
         turn,
     });
-    const second = patchChatLogWithProgress(first, {
-        step: {
-            detail: 'I should answer directly.',
-            id: 'reasoning',
-            kind: 'reasoning',
-            label: 'Thinking',
-            status: 'active',
-        },
-        timestamp: '2026-05-22T19:00:02.000Z',
-        turn,
-    });
+    const second = upsertProgressRows(
+        first,
+        progressStepToChatRows({
+            step: {
+                detail: 'I should answer directly.',
+                id: 'reasoning',
+                kind: 'reasoning',
+                label: 'Thinking',
+                status: 'active',
+            },
+            timestamp: '2026-05-22T19:00:02.000Z',
+            turn,
+        })
+    );
 
-    expect(second?.totalMessages).toBe(0);
-    expect(second?.rows[0]).toMatchObject({
+    expect(second).toHaveLength(1);
+    expect(second[0]).toMatchObject({
         id: 'act_run-1_reasoning',
         kind: 'system',
         systemKind: 'thinking',
@@ -150,8 +177,8 @@ test('progress patch renders live reasoning as one thinking row instead of a too
     });
 });
 
-test('progress patch keeps preamble and normalized tool activity stable through completion', () => {
-    const withPreamble = patchChatLogWithProgress(emptyLog(), {
+test('evidence keeps preamble and normalized tool activity stable through completion', () => {
+    const withPreamble = progressStepToChatRows({
         step: {
             detail: 'I will run a timed shell check before the final reply.',
             id: 'assistant-preamble',
@@ -162,45 +189,50 @@ test('progress patch keeps preamble and normalized tool activity stable through 
         timestamp: '2026-05-22T19:00:01.000Z',
         turn,
     });
-    const withRunningTool = patchChatLogWithProgress(withPreamble, {
-        step: {
-            id: 'call_mock_read_123',
-            kind: 'tool',
-            label: 'read from QA_KICKOFF_TASK.md',
-            status: 'active',
-            toolCallId: 'call_mock_read_123',
-            toolName: 'read',
-        },
-        timestamp: '2026-05-22T19:00:02.000Z',
-        turn,
-    });
-    const completed = patchChatLogWithProgress(withRunningTool, {
-        step: {
-            detail: '# QA kickoff task',
-            id: 'call_mock_read_123',
-            kind: 'tool',
-            label: 'read from QA_KICKOFF_TASK.md',
-            status: 'completed',
-            toolCallId: 'call_mock_read_123',
-            toolName: 'read',
-        },
-        timestamp: '2026-05-22T19:00:06.000Z',
-        turn,
-    });
+    const withRunningTool = upsertProgressRows(
+        withPreamble,
+        progressStepToChatRows({
+            step: {
+                id: 'call_mock_read_123',
+                kind: 'tool',
+                label: 'read from QA_KICKOFF_TASK.md',
+                status: 'active',
+                toolCallId: 'call_mock_read_123',
+                toolName: 'read',
+            },
+            timestamp: '2026-05-22T19:00:02.000Z',
+            turn,
+        })
+    );
+    const completed = upsertProgressRows(
+        withRunningTool,
+        progressStepToChatRows({
+            step: {
+                detail: '# QA kickoff task',
+                id: 'call_mock_read_123',
+                kind: 'tool',
+                label: 'read from QA_KICKOFF_TASK.md',
+                status: 'completed',
+                toolCallId: 'call_mock_read_123',
+                toolName: 'read',
+            },
+            timestamp: '2026-05-22T19:00:06.000Z',
+            turn,
+        })
+    );
 
-    expect(completed?.totalMessages).toBe(0);
-    expect(completed?.rows.map((row) => row.id)).toEqual([
+    expect(completed.map((row) => row.id)).toEqual([
         'act_run-1_assistant-preamble',
         'act_run-1_call_mock_read_123',
     ]);
-    expect(completed?.rows[0]).toMatchObject({
+    expect(completed[0]).toMatchObject({
         kind: 'message',
         message: {
             content: 'I will run a timed shell check before the final reply.',
             sourceSessionKey: turn.sessionKey,
         },
     });
-    expect(completed?.rows[1]).toMatchObject({
+    expect(completed[1]).toMatchObject({
         completedAt: '2026-05-22T19:00:06.000Z',
         startedAt: '2026-05-22T19:00:02.000Z',
         toolCall: {
@@ -326,8 +358,8 @@ test('progress patch inserts a visible steer message without a system notice', (
     });
 });
 
-test('progress patch tracks a worker step through running and completed states', () => {
-    const running = patchChatLogWithProgress(emptyLog(), {
+test('evidence merge tracks a worker step through running and completed states', () => {
+    const running = progressStepToChatRows({
         step: {
             id: 'run-1_subagent_sub_1',
             kind: 'worker',
@@ -337,20 +369,23 @@ test('progress patch tracks a worker step through running and completed states',
         timestamp: '2026-05-22T19:00:01.000Z',
         turn,
     });
-    const completed = patchChatLogWithProgress(running, {
-        step: {
-            detail: 'Summarized 12 files.',
-            id: 'run-1_subagent_sub_1',
-            kind: 'worker',
-            label: 'Summarize the repo',
-            status: 'completed',
-        },
-        timestamp: '2026-05-22T19:00:09.000Z',
-        turn,
-    });
+    const completed = upsertProgressRows(
+        running,
+        progressStepToChatRows({
+            step: {
+                detail: 'Summarized 12 files.',
+                id: 'run-1_subagent_sub_1',
+                kind: 'worker',
+                label: 'Summarize the repo',
+                status: 'completed',
+            },
+            timestamp: '2026-05-22T19:00:09.000Z',
+            turn,
+        })
+    );
 
-    expect(completed?.rows).toHaveLength(1);
-    expect(completed?.rows[0]).toMatchObject({
+    expect(completed).toHaveLength(1);
+    expect(completed[0]).toMatchObject({
         completedAt: '2026-05-22T19:00:09.000Z',
         id: 'act_run-1_subagent_sub_1',
         kind: 'worker',
@@ -364,8 +399,8 @@ test('progress patch tracks a worker step through running and completed states',
     });
 });
 
-test('progress patch prefers the command detail over a bare tool-name label', () => {
-    const log = patchChatLogWithProgress(emptyLog(), {
+test('evidence tool rows prefer the command detail over a bare tool-name label', () => {
+    const rows = progressStepToChatRows({
         step: {
             detail: "pwd && ls -la | sed -n '1,8p'",
             id: 'tool-call-2',
@@ -379,7 +414,7 @@ test('progress patch prefers the command detail over a bare tool-name label', ()
         turn,
     });
 
-    expect(log?.rows[0]).toMatchObject({
+    expect(rows[0]).toMatchObject({
         kind: 'tool',
         toolCall: {
             name: 'terminal',

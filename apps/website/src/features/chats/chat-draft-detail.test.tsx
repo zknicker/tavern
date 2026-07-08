@@ -102,6 +102,7 @@ describe('buildDraftHandoffLog', () => {
                 },
             ],
             totalMessages: 1,
+            turnEvidence: {},
         });
 
         expect(log?.rows.map((row) => row.id)).toEqual(['act_run-1_tool']);

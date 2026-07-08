@@ -10,12 +10,12 @@ import type { ChatActiveReply } from '../../hooks/chats/chat-timeline-state.ts';
 import { type ChatLogOutput, trpc } from '../../lib/trpc.tsx';
 import { ArtifactLogEntry } from '../sessions/log/event-entry/artifact-entry.tsx';
 import { ToolDrawerBody } from '../sessions/tools/tool-drawer-body.tsx';
-import { findActiveTurnEntry, findLastAgentTurnEntry } from './chat-active-turn.ts';
 import { ChatTranscript } from './chat-transcript.tsx';
 import { groupAgentItems } from './chat-transcript-item-utils.ts';
+import type { TranscriptItem } from './chat-transcript-model.ts';
 import { SystemStep } from './chat-transcript-system-step.tsx';
 import { filterPaneSegments, getActiveReplyDisplayText } from './chat-transcript-turn.tsx';
-import { ChatTurnBody } from './chat-turn-drawer.tsx';
+import { ChatTurnItems } from './chat-turn-drawer.tsx';
 import { ToolStep } from './tool-steps/registry.tsx';
 
 test('ChatTranscript renders hover time and copy action without session or usage badges', () => {
@@ -1150,10 +1150,10 @@ test('ArtifactLogEntry renders durable artifact titles', () => {
     assert.match(markup, /Report/);
 });
 
-test('ChatTranscript renders completed assistant narration as prose', () => {
+test('the turn drawer renders completed narration evidence as prose', () => {
     const narrationText =
         'Open https://accounts.google.com/o/oauth2/auth?response_type=code&client_id=preview-client.apps.googleusercontent.com&redirect_uri=http%3A%2F%2Flocalhost%3A1&scope=calendar.events.readonly before the final reply.';
-    const markup = renderTranscript([
+    const markup = renderTurnBody([
         {
             actor: { id: 'tiny', kind: 'agent' },
             completedAt: '2026-03-31T15:00:01.000Z',
@@ -1875,50 +1875,27 @@ test('ChatTranscript keeps active work headers stable between fast completed too
     assert.doesNotMatch(markup, /Searched code 2 times/);
 });
 
-test('ChatTranscript narration renders one replace-in-place slot for suffixed run ids', () => {
+test('ChatTranscript renders narration as one evolving live contribution', () => {
     const runId = 'run_0198f00d-1111-4222-8333-444455556666_blippy';
-    const narrationRow = (index: number, text: string) => ({
-        actor: { id: 'blippy', kind: 'agent' },
-        connectsToNext: false,
-        connectsToPrevious: false,
-        id: `act_${runId}_message_${index}`,
-        isFirstInGroup: true,
-        kind: 'message',
-        message: {
-            tavernAgentId: 'blippy',
-            content: text,
-            id: `act_${runId}_message_${index}`,
-            metadata: { runtime: { runId, sessionKey: 'ses_1' } },
-            sender: 'blippy',
-            senderType: 'agent',
-            sourceSessionId: null,
-            sourceSessionKey: 'ses_1',
-            timestamp: `2026-07-07T12:00:0${index}.000Z`,
-        },
-    });
-    const rows = [
-        narrationRow(1, 'Preamble: taking a look.'),
-        narrationRow(2, 'Update: halfway there.'),
-    ] as ChatRow[];
     const liveReply = {
         agentId: 'blippy',
         isThinking: true,
+        narrationText: 'Update: halfway there.',
         runId,
         sessionKey: 'ses_1',
         startedAt: '2026-07-07T12:00:00.000Z',
         text: '',
     };
 
-    // While the run is live, exactly ONE narration slot renders in the pane —
-    // successive updates replace in place, never stack. (The paced reveal
-    // starts empty in static markup, so assert structure, not text.)
-    const live = renderActiveTranscript(liveReply, rows);
+    // The turn is one comment evolving in place: narration is the
+    // contribution's current text, rendered through exactly one assistant
+    // bubble. (The paced reveal starts empty in static markup, so assert
+    // structure, not text.)
+    const live = renderActiveTranscript(liveReply, []);
     assert.equal(live.match(/data-from="assistant"/g)?.length ?? 0, 1);
-    assert.doesNotMatch(live, /Preamble: taking a look\./);
 
-    // Once the run's final reply lands, narration leaves the pane entirely.
+    // Once the run's final reply lands, only the durable message renders.
     const done = renderTranscript([
-        ...rows,
         {
             actor: { id: 'blippy', kind: 'agent' },
             connectsToNext: false,
@@ -1940,8 +1917,7 @@ test('ChatTranscript narration renders one replace-in-place slot for suffixed ru
         },
     ] as ChatRow[]);
     assert.match(done, /All done\./);
-    assert.doesNotMatch(done, /Preamble: taking a look\./);
-    assert.doesNotMatch(done, /Update: halfway there\./);
+    assert.equal(done.match(/data-from="assistant"/g)?.length ?? 0, 1);
 });
 
 test('ChatTranscript keeps narration messages in the work log above later tools', () => {
@@ -2197,13 +2173,14 @@ function renderTranscript(
 // Renders the turn-drawer body for the last agent turn — the surface tool
 // work moved to now that the chat pane is prose-only.
 function renderTurnBody(rows: ChatRow[], activeReply: ChatActiveReply | null = null) {
-    const entry = activeReply
-        ? (findActiveTurnEntry({
-              activeReplies: [activeReply],
-              rows,
-              runId: activeReply.runId,
-          }) ?? findLastAgentTurnEntry({ rows }))
-        : findLastAgentTurnEntry({ rows });
+    // The drawer merges turn-scoped evidence with the entry's conversation
+    // items; tests feed that merged view directly.
+    const items: TranscriptItem[] = rows.map((row) => ({ kind: 'row' as const, row }));
+
+    if (activeReply) {
+        items.push({ kind: 'activeReply', reply: activeReply });
+    }
+
     const queryClient = new QueryClient({
         defaultOptions: {
             queries: {
@@ -2224,9 +2201,9 @@ function renderTurnBody(rows: ChatRow[], activeReply: ChatActiveReply | null = n
             <QueryClientProvider client={queryClient}>
                 <MemoryRouter>
                     <DevModeProvider>
-                        <ChatTurnBody
+                        <ChatTurnItems
                             chatId="cht_test"
-                            entry={entry}
+                            items={items}
                             turnActive={Boolean(activeReply)}
                         />
                     </DevModeProvider>

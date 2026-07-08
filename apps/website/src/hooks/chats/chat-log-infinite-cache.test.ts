@@ -28,9 +28,10 @@ test('live progress preserves the loaded newest-page boundary row', () => {
     const next = patchInfiniteChatLogWithProgress(cache, (current) =>
         patchChatLogWithProgress(current, {
             step: {
-                id: 'tool:web',
-                kind: 'tool',
-                label: 'Using web search',
+                detail: 'Quarterly revenue',
+                id: 'widget:chart',
+                kind: 'widget',
+                label: 'Rendered a chart',
                 status: 'active',
             },
             timestamp: '2026-04-27T17:20:08.408Z',
@@ -41,7 +42,7 @@ test('live progress preserves the loaded newest-page boundary row', () => {
     expect(next?.pages[0]?.rows.map((row) => row.id)).toEqual([
         'message-3',
         'message-4',
-        'act_run-1_tool_web',
+        'act_run-1_widget_chart',
     ]);
     expect(next?.pages[0]?.limit).toBe(2);
     expect(next?.pages[0]?.totalMessages).toBe(4);
@@ -57,9 +58,10 @@ test('single-page live progress keeps loaded history instead of trimming', () =>
     const next = patchInfiniteChatLogWithProgress(cache, (current) =>
         patchChatLogWithProgress(current, {
             step: {
-                id: 'tool:web',
-                kind: 'tool',
-                label: 'Using web search',
+                detail: 'Quarterly revenue',
+                id: 'widget:chart',
+                kind: 'widget',
+                label: 'Rendered a chart',
                 status: 'active',
             },
             timestamp: '2026-04-27T17:20:08.408Z',
@@ -70,7 +72,7 @@ test('single-page live progress keeps loaded history instead of trimming', () =>
     expect(next?.pages.at(-1)?.rows.map((row) => row.id)).toEqual([
         'message-3',
         'message-4',
-        'act_run-1_tool_web',
+        'act_run-1_widget_chart',
     ]);
     expect(next?.pages.at(-1)?.limit).toBe(2);
     expect(next?.pages.at(-1)?.nextBeforeSequence).toBe(3);

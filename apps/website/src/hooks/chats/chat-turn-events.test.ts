@@ -191,7 +191,7 @@ test('turn status updates live timeline state without patching durable chat acti
     expect(invalidatedQueries).toEqual([]);
 });
 
-test('turn progress applies preamble and normalized tool updates without refetching chat log', async () => {
+test('turn progress keeps evidence steps out of the chat log without refetching', async () => {
     const invalidatedQueries: string[] = [];
     const patchedProgress: string[] = [];
     let log: ChatLogOutput | undefined = {
@@ -205,7 +205,8 @@ test('turn progress applies preamble and normalized tool updates without refetch
     const handlers = createHandlers({
         invalidatedQueries,
         patchLog: (updater) => {
-            log = updater(log);
+            // Mirrors React Query: an undefined updater result is a no-op.
+            log = updater(log) ?? log;
         },
         patchedProgress,
     });
@@ -249,14 +250,9 @@ test('turn progress applies preamble and normalized tool updates without refetch
     await Promise.resolve();
 
     expect(patchedProgress).toEqual(['chat-1', 'chat-1', 'chat-1']);
-    expect(log?.rows.map((row) => row.id)).toEqual([
-        'act_run-1_assistant-preamble',
-        'act_run-1_call_mock_read_123',
-    ]);
-    expect(log?.rows[1]).toMatchObject({
-        completedAt: '2026-04-27T17:20:10.000Z',
-        startedAt: '2026-04-27T17:20:09.000Z',
-    });
+    // Narration and tool steps are turn evidence: the timeline cache stays
+    // untouched and nothing refetches.
+    expect(log?.rows).toEqual([]);
     expect(invalidatedQueries).toEqual([]);
 });
 
@@ -272,7 +268,8 @@ test('turn progress preserves clarification prompt data in live chat rows', asyn
     };
     const handlers = createHandlers({
         patchLog: (updater) => {
-            log = updater(log);
+            // Mirrors React Query: an undefined updater result is a no-op.
+            log = updater(log) ?? log;
         },
         patchedProgress,
     });

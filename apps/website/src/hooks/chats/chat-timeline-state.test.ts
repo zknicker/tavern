@@ -136,7 +136,7 @@ test('applyLogSnapshot preserves active reply while durable activity is running'
     expect(next.timeline[0]?.id).toBe('act_tool_web');
 });
 
-test('patchTimelineProgress adds live activity before durable log data arrives', () => {
+test('patchTimelineProgress routes tool steps to live turn evidence, not the timeline', () => {
     const state = patchTimelineProgress(startTimelineTurn(emptyTimelineState(), turn), {
         step: {
             id: 'tool:web',
@@ -148,7 +148,8 @@ test('patchTimelineProgress adds live activity before durable log data arrives',
         turn,
     });
 
-    expect(state.timeline).toMatchObject([
+    expect(state.timeline).toEqual([]);
+    expect(state.turnEvidence['run-1']).toMatchObject([
         {
             completedAt: null,
             id: 'act_run-1_tool_web',
@@ -160,6 +161,28 @@ test('patchTimelineProgress adds live activity before durable log data arrives',
         },
     ]);
     expect(state.activeTurns).toEqual([turn]);
+});
+
+test('patchTimelineProgress narration updates the live contribution text', () => {
+    const state = patchTimelineProgress(startTimelineTurn(emptyTimelineState(), turn), {
+        step: {
+            detail: 'Checking the queue before answering.',
+            id: 'preamble-1',
+            kind: 'message',
+            label: 'Assistant reply',
+            messagePhase: 'commentary',
+            status: 'active',
+        },
+        timestamp: '2026-04-21T16:08:43.000Z',
+        turn,
+    });
+
+    expect(state.timeline).toEqual([]);
+    expect(state.activeReplies[0]).toMatchObject({
+        narrationText: 'Checking the queue before answering.',
+        runId: 'run-1',
+    });
+    expect(state.turnEvidence['run-1']?.map((row) => row.id)).toEqual(['act_run-1_preamble-1']);
 });
 
 test('patchTimelineWithSteerNotice inserts a visible user row before durable log data arrives', () => {
@@ -237,7 +260,7 @@ test('rollbackTimelineSteerNotice restores the previous visible steer row', () =
     });
 });
 
-test('applyLogSnapshot preserves live progress rows while the turn is active', () => {
+test('applyLogSnapshot keeps live turn evidence while the run is active', () => {
     const live = patchTimelineProgress(startTimelineTurn(emptyTimelineState(), turn), {
         step: {
             id: 'tool:web',
@@ -256,7 +279,8 @@ test('applyLogSnapshot preserves live progress rows while the turn is active', (
         totalMessages: 0,
     });
 
-    expect(next.timeline.map((row) => row.id)).toEqual(['act_run-1_tool_web']);
+    expect(next.turnEvidence['run-1']?.map((row) => row.id)).toEqual(['act_run-1_tool_web']);
+    expect(next.timeline).toEqual([]);
     expect(next.totalMessages).toBe(0);
 });
 
@@ -331,7 +355,7 @@ test('removeOptimisticStoppedTurn removes only the local stopped row', () => {
     expect(next.activeReplies[0]?.runId).toBe('run-1');
 });
 
-test('patchTimelineProgress updates the same preamble and tool rows through completion', () => {
+test('patchTimelineProgress merges evidence steps in place through completion', () => {
     const withPreamble = patchTimelineProgress(startTimelineTurn(emptyTimelineState(), turn), {
         step: {
             detail: 'I will inspect the workspace before replying.',
@@ -369,18 +393,19 @@ test('patchTimelineProgress updates the same preamble and tool rows through comp
         turn,
     });
 
-    expect(completed.timeline.map((row) => row.id)).toEqual([
+    const evidence = completed.turnEvidence['run-1'] ?? [];
+    expect(evidence.map((row) => row.id)).toEqual([
         'act_run-1_assistant-preamble',
         'act_run-1_call_mock_read_123',
     ]);
-    expect(completed.timeline[0]).toMatchObject({
+    expect(evidence[0]).toMatchObject({
         kind: 'message',
         message: {
             content: 'I will inspect the workspace before replying.',
             sourceSessionKey: 'session-1',
         },
     });
-    expect(completed.timeline[1]).toMatchObject({
+    expect(evidence[1]).toMatchObject({
         completedAt: '2026-04-21T16:08:48.000Z',
         startedAt: '2026-04-21T16:08:44.000Z',
         toolCall: {
@@ -388,9 +413,10 @@ test('patchTimelineProgress updates the same preamble and tool rows through comp
             name: 'read',
         },
     });
+    expect(completed.timeline).toEqual([]);
 });
 
-test('applyLogSnapshot preserves live progress rows when the optimistic run id matches Runtime', () => {
+test('applyLogSnapshot keeps evidence for an optimistic run id that matches Runtime', () => {
     const optimisticTurn = {
         ...turn,
         runId: 'run_1',
@@ -415,7 +441,7 @@ test('applyLogSnapshot preserves live progress rows when the optimistic run id m
     });
 
     expect(next.activeReplies[0]?.runId).toBe('run_1');
-    expect(next.timeline.map((row) => row.id)).toEqual(['act_run_1_tool_web']);
+    expect(next.turnEvidence.run_1?.map((row) => row.id)).toEqual(['act_run_1_tool_web']);
     expect(next.totalMessages).toBe(0);
 });
 
@@ -526,7 +552,7 @@ test('completeTimelineTurn keeps active reply visible while clearing active work
     expect(completed.activeTurns).toEqual([]);
 });
 
-test('completeTimelineTurn marks live progress rows complete', () => {
+test('completeTimelineTurn settles the run live evidence', () => {
     const running = patchTimelineProgress(startTimelineTurn(emptyTimelineState(), turn), {
         step: {
             id: 'call_read_1',
@@ -544,7 +570,7 @@ test('completeTimelineTurn marks live progress rows complete', () => {
         turn,
     });
 
-    expect(completed.timeline[0]).toMatchObject({
+    expect(completed.turnEvidence['run-1']?.[0]).toMatchObject({
         completedAt: '2026-04-21T16:08:46.000Z',
         id: 'act_run-1_call_read_1',
     });

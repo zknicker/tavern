@@ -6,11 +6,11 @@ import { buildTranscriptEntries, getItemRunId } from './chat-transcript-model.ts
 type ChatRow = NonNullable<ChatLogOutput>['rows'][number];
 type ToolChatRow = Extract<ChatRow, { kind: 'tool' }>;
 
-test('buildTranscriptEntries keeps agent tool calls inside the agent turn', () => {
+test('clarification tool rows join their turn comment by response id', () => {
     const rows: ChatRow[] = [
         userMessage('user-1', 'Use the tool', false, false),
-        toolRow('tool-1', true, true),
-        agentMessage('agent-1', 'Done.', true, false),
+        withResponseId(toolRow('tool-1', false, false), 'rsp_1'),
+        withResponseId(agentMessage('agent-1', 'Done.', false, false), 'rsp_1'),
     ];
 
     const entries = buildTranscriptEntries({
@@ -20,45 +20,16 @@ test('buildTranscriptEntries keeps agent tool calls inside the agent turn', () =
 
     expect(entries).toHaveLength(2);
     expect(entries[0]).toMatchObject({ kind: 'turn', participant: 'user' });
-    expect(entries[1]).toMatchObject({ kind: 'turn', participant: 'agent' });
+    expect(entries[1]).toMatchObject({ id: 'turn:rsp_1', kind: 'turn', participant: 'agent' });
 
     if (entries[1]?.kind !== 'turn') {
         throw new Error('Expected agent turn entry.');
     }
 
+    // The attachment renders below the reply, inside the same comment.
     expect(
         entries[1].items.map((item) => (item.kind === 'row' ? item.row.kind : item.kind))
-    ).toEqual(['tool', 'message']);
-});
-
-test('buildTranscriptEntries keeps thinking rows inside the agent turn', () => {
-    const rows: ChatRow[] = [
-        toolRow('tool-1', false, false),
-        thinkingRow('thinking-1'),
-        agentMessage('agent-1', 'Done.', false, false),
-    ];
-
-    const entries = buildTranscriptEntries({
-        activeReplies: [],
-        rows,
-    });
-
-    expect(entries).toHaveLength(1);
-    expect(entries[0]).toMatchObject({ kind: 'turn', participant: 'agent' });
-
-    if (entries[0]?.kind !== 'turn') {
-        throw new Error('Expected agent turn entry.');
-    }
-
-    expect(
-        entries[0].items.map((item) =>
-            item.kind === 'row' && item.row.kind === 'system'
-                ? `${item.row.kind}:${item.row.systemKind}`
-                : item.kind === 'row'
-                  ? item.row.kind
-                  : item.kind
-        )
-    ).toEqual(['tool', 'system:thinking', 'message']);
+    ).toEqual(['message', 'tool']);
 });
 
 test('buildTranscriptEntries keeps a new run out of the previous run turn entry', () => {
@@ -114,7 +85,8 @@ test('buildTranscriptEntries keeps runtime notices as standalone system entries'
     expect(entries[2]).toMatchObject({ kind: 'turn', participant: 'agent' });
 });
 
-test('buildTranscriptEntries renders active reply text after durable activity', () => {
+test('run-matched attachments join the live contribution', () => {
+    const liveTool = { ...toolRow('tool-1', false, false), runId: 'run-1' } as ChatRow;
     const entries = buildTranscriptEntries({
         activeReplies: [
             {
@@ -126,11 +98,11 @@ test('buildTranscriptEntries renders active reply text after durable activity', 
                 text: 'Working...',
             },
         ],
-        rows: [toolRow('tool-1', false, false)],
+        rows: [liveTool],
     });
 
     expect(entries).toHaveLength(1);
-    expect(entries[0]).toMatchObject({ kind: 'turn', participant: 'agent' });
+    expect(entries[0]).toMatchObject({ id: 'turn:run-1', kind: 'turn', participant: 'agent' });
 
     if (entries[0]?.kind !== 'turn') {
         throw new Error('Expected agent turn entry.');
@@ -138,7 +110,7 @@ test('buildTranscriptEntries renders active reply text after durable activity', 
 
     expect(
         entries[0].items.map((item) => (item.kind === 'row' ? item.row.kind : item.kind))
-    ).toEqual(['tool', 'activeReply']);
+    ).toEqual(['activeReply', 'tool']);
 });
 
 test('buildTranscriptEntries hides active reply when a stopped row is visible', () => {
@@ -166,51 +138,6 @@ test('buildTranscriptEntries hides active reply when a stopped row is visible', 
     expect(entries[0].items.map((item) => (item.kind === 'row' ? item.row.id : item.kind))).toEqual(
         ['stop-1']
     );
-});
-
-test('buildTranscriptEntries keeps prior completed tool activity grouped during a later active turn', () => {
-    const rows: ChatRow[] = [
-        userMessage('user-1', 'Use the tool', false, false),
-        toolRow('tool-1', false, false, null),
-        toolRow('tool-2', false, false, null),
-        toolRow('tool-3', false, false, null),
-        toolRow('tool-4', false, false, null),
-        toolRow('tool-5', false, false, null),
-        agentMessage('agent-1', 'Done.', false, false),
-        userMessage('user-2', 'Do it again', false, false),
-    ];
-
-    const entries = buildTranscriptEntries({
-        activeReplies: [
-            {
-                agentId: 'agent-1',
-                isThinking: true,
-                runId: 'run-2',
-                sessionKey: 'session-1',
-                startedAt: '2026-05-11T16:01:00.000Z',
-                text: '',
-            },
-        ],
-        rows,
-    });
-
-    const completedAgentTurn = entries.find(
-        (entry) =>
-            entry.kind === 'turn' &&
-            entry.participant === 'agent' &&
-            entry.items.some((item) => item.kind === 'row' && item.row.id === 'tool-1')
-    );
-
-    expect(completedAgentTurn).toBeDefined();
-
-    if (completedAgentTurn?.kind !== 'turn') {
-        throw new Error('Expected completed agent turn entry.');
-    }
-
-    expect(
-        completedAgentTurn.items.map((item) => (item.kind === 'row' ? item.row.kind : item.kind))
-    ).toEqual(['tool', 'tool', 'tool', 'tool', 'tool', 'message']);
-    expect(entries.filter((entry) => entry.kind === 'system')).toHaveLength(0);
 });
 
 test('buildTranscriptEntries shows thinking status without a generic activity block', () => {
@@ -269,19 +196,20 @@ test('buildTranscriptEntries keeps empty non-thinking replies in thinking status
     });
 });
 
-test('buildTranscriptEntries keeps active thinking status after tool activity starts', () => {
+test('a narrating reply renders as the live contribution', () => {
     const entries = buildTranscriptEntries({
         activeReplies: [
             {
                 agentId: 'agent-1',
                 isThinking: true,
+                narrationText: 'Checking the queue before answering.',
                 runId: 'run-1',
                 sessionKey: 'session-1',
                 startedAt: '2026-05-11T16:00:00.000Z',
                 text: '',
             },
         ],
-        rows: [toolRow('tool-1', false, false)],
+        rows: [],
     });
 
     expect(entries).toHaveLength(1);
@@ -290,37 +218,35 @@ test('buildTranscriptEntries keeps active thinking status after tool activity st
         throw new Error('Expected agent turn entry.');
     }
 
-    expect(
-        entries[0].items.map((item) => (item.kind === 'row' ? item.row.kind : item.kind))
-    ).toEqual(['tool', 'activeStatus']);
+    expect(entries[0].id).toBe('turn:run-1');
+    expect(entries[0].items.map((item) => item.kind)).toEqual(['activeReply']);
 });
 
-test('buildTranscriptEntries keeps active thinking status after assistant narration', () => {
+test('an empty reply keeps its own thinking-status entry beside other turns', () => {
     const entries = buildTranscriptEntries({
         activeReplies: [
             {
                 agentId: 'agent-1',
                 isThinking: true,
-                runId: 'run-1',
+                runId: 'run-2',
                 sessionKey: 'session-1',
-                startedAt: '2026-05-11T16:00:00.000Z',
+                startedAt: '2026-05-11T16:00:10.000Z',
                 text: '',
             },
         ],
-        rows: [toolRow('tool-1', false, true), narrationRow('narration-1', true, false)],
+        rows: [withResponseId(agentMessage('agent-1', 'Earlier reply.', false, false), 'rsp_1')],
     });
 
-    expect(entries).toHaveLength(1);
+    const agentTurns = entries.filter(
+        (entry) => entry.kind === 'turn' && entry.participant === 'agent'
+    );
+    expect(agentTurns.map((entry) => entry.id)).toEqual(['turn:rsp_1', 'turn:run-2']);
 
-    if (entries[0]?.kind !== 'turn') {
+    if (agentTurns[1]?.kind !== 'turn') {
         throw new Error('Expected agent turn entry.');
     }
 
-    expect(
-        entries[0].items.map((item) =>
-            item.kind === 'row' ? `${item.row.kind}:${getRowKindLabel(item.row)}` : item.kind
-        )
-    ).toEqual(['tool:exec', 'tool:message', 'activeStatus']);
+    expect(agentTurns[1].items.map((item) => item.kind)).toEqual(['activeStatus']);
 });
 
 test('buildTranscriptEntries keeps widgets inline inside the agent turn', () => {
@@ -339,9 +265,10 @@ test('buildTranscriptEntries keeps widgets inline inside the agent turn', () => 
         throw new Error('Expected agent turn entry.');
     }
 
+    // The widget is part of the contribution and renders below the reply.
     expect(
         entries[0].items.map((item) => (item.kind === 'row' ? item.row.kind : item.kind))
-    ).toEqual(['widget', 'message']);
+    ).toEqual(['message', 'widget']);
 });
 
 test('buildTranscriptEntries splits agent turns by response identity over gap heuristics', () => {
@@ -474,24 +401,6 @@ function toolRow(
     };
 }
 
-function narrationRow(id: string, connectsToPrevious: boolean, connectsToNext: boolean): ChatRow {
-    const row = toolRow(id, connectsToPrevious, connectsToNext) as ToolChatRow;
-
-    return {
-        ...row,
-        completedAt: null,
-        startedAt: '2026-05-11T16:00:06.000Z',
-        toolCall: {
-            callId: null,
-            facts: [],
-            label: 'I found the first file.',
-            name: 'message',
-            status: 'running',
-            summaryParts: ['I found the first file.'],
-        },
-    };
-}
-
 function widgetRow(id: string): ChatRow {
     return {
         actor: { id: 'agent-1', kind: 'agent' },
@@ -516,26 +425,6 @@ function widgetRow(id: string): ChatRow {
         },
         sessionKey: 'session-1',
         startedAt: '2026-05-11T16:00:01.000Z',
-    };
-}
-
-function getRowKindLabel(row: ChatRow) {
-    return row.kind === 'tool' ? row.toolCall.name : row.kind;
-}
-
-function thinkingRow(id: string): ChatRow {
-    return {
-        id,
-        kind: 'system',
-        systemKind: 'thinking',
-        thinking: {
-            id,
-            messageId: 'message-thinking',
-            sender: 'Agent',
-            text: 'Need to inspect the files before replying.',
-            timestamp: '2026-05-11T16:00:01.500Z',
-        },
-        timestamp: '2026-05-11T16:00:01.500Z',
     };
 }
 
@@ -660,7 +549,7 @@ test('agent turn entries keep one run-stable id from live streaming to durable r
         rows: [
             userMessage('message-user', 'hi', false, false),
             runNarrationMessage('act_run_handoff_message_1', '2026-05-11T16:00:01.000Z'),
-            toolRow('act_run_handoff_tool_1', false, false),
+            { ...toolRow('act_run_handoff_tool_1', false, false), runId: handoffRunId } as ChatRow,
         ],
     });
     const settled = buildTranscriptEntries({
@@ -668,7 +557,7 @@ test('agent turn entries keep one run-stable id from live streaming to durable r
         rows: [
             userMessage('message-user', 'hi', false, false),
             runNarrationMessage('act_run_handoff_message_1', '2026-05-11T16:00:01.000Z'),
-            toolRow('act_run_handoff_tool_1', false, false),
+            { ...toolRow('act_run_handoff_tool_1', false, false), runId: handoffRunId } as ChatRow,
             durableReplyRow(),
         ],
     });
@@ -756,52 +645,42 @@ test('agent turns split by a runtime notice keep unique entry ids', () => {
     expect(new Set(turnIds).size).toBe(turnIds.length);
 });
 
-test('turn id stays stable when the live tail toggles around tool-only items', () => {
-    const uuidRunId = 'run_3784febf-6024-47a3-a357-1d281a357f47';
-    const uuidTool: ChatRow = {
-        actor: { id: 'agent-1', kind: 'agent' },
-        completedAt: null,
-        connectsToNext: false,
-        connectsToPrevious: false,
-        id: `act_${uuidRunId}_call_1`,
-        isFirstInGroup: true,
-        kind: 'tool',
-        sessionKey: 'session-1',
-        spawnedRelationships: [],
-        startedAt: '2026-05-11T16:00:01.000Z',
-        toolCall: {
-            callId: 'call_1',
-            facts: [],
-            label: 'pwd',
-            name: 'terminal',
-            status: 'running',
-            summaryParts: ['pwd'],
-        },
-    };
-    const tailOnly = buildTranscriptEntries({
-        activeReplies: [
-            {
-                agentId: 'agent-1',
-                isThinking: true,
-                runId: uuidRunId,
-                sessionKey: 'session-1',
-                startedAt: '2026-05-11T16:00:00.500Z',
-                text: '',
-            },
-        ],
-        rows: [],
+test('interleaved multi-agent rows keep one comment per turn', () => {
+    // The original ghost-row bug: two seats streaming at once interleave
+    // their rows. Each turn must still map to exactly one entry.
+    const widgetA = { ...widgetRow('act_a_widget'), runId: 'run_a' } as ChatRow;
+    const widgetB = { ...widgetRow('act_b_widget'), runId: 'run_b' } as ChatRow;
+    const replyA = withRunId(agentMessage('msg_a', 'Reply A.', false, false), 'run_a');
+    const replyB = withRunId(agentMessage('msg_b', 'Reply B.', false, false), 'run_b');
+
+    const entries = buildTranscriptEntries({
+        activeReplies: [],
+        rows: [widgetA, widgetB, replyA, replyB],
     });
-    // While a tool runs, the live tail hides and tool rows are the only
-    // items — the id must not flip to a row key.
-    const toolOnly = buildTranscriptEntries({ activeReplies: [], rows: [uuidTool] });
 
-    const ids = [tailOnly, toolOnly].map(
-        (entries) =>
-            entries.find((entry) => entry.kind === 'turn' && entry.participant === 'agent')?.id
+    const agentTurns = entries.filter(
+        (entry) => entry.kind === 'turn' && entry.participant === 'agent'
     );
+    expect(agentTurns.map((entry) => entry.id)).toEqual(['turn:run_a', 'turn:run_b']);
 
-    expect(ids).toEqual([`turn:${uuidRunId}`, `turn:${uuidRunId}`]);
+    for (const entry of agentTurns) {
+        if (entry.kind !== 'turn') {
+            throw new Error('Expected agent turn entry.');
+        }
+
+        expect(
+            entry.items.map((item) => (item.kind === 'row' ? item.row.kind : item.kind))
+        ).toEqual(['message', 'widget']);
+    }
 });
+
+function withRunId(row: ChatRow, runId: string): ChatRow {
+    if (row.kind !== 'message') {
+        throw new Error('Expected a message row.');
+    }
+
+    return { ...row, runId };
+}
 
 test('suffixed per-agent run ids keep one turn identity across live and durable rows', () => {
     const runId = 'run_0198f00d-1111-4222-8333-444455556666_blippy';
@@ -814,6 +693,7 @@ test('suffixed per-agent run ids keep one turn identity across live and durable 
             id: `act_${runId}_tool_call1`,
             isFirstInGroup: true,
             kind: 'tool',
+            runId,
             sessionKey: 'ses_1',
             spawnedRelationships: [],
             startedAt: '2026-07-07T12:00:01.000Z',

@@ -79,6 +79,7 @@ test('ChatActiveStatusStack streams a cumulative work summary and offers turn de
             isFirstInGroup: true,
             kind: 'tool',
             sessionKey: 'agent:agent-1:session-1',
+            runId: 'run-1',
             spawnedRelationships: [],
             startedAt: '2026-07-01T17:00:01.000Z',
             toolCall: {
@@ -95,11 +96,14 @@ test('ChatActiveStatusStack streams a cumulative work summary and offers turn de
             activeReplies={[activeReply]}
             agents={agents}
             chatId="cht_test"
-            rows={[
-                toolRow('act_run-1_tool_1', 'exec', 'ls -la'),
-                toolRow('act_run-1_tool_2', 'exec', 'bun run lint'),
-                toolRow('act_run-1_tool_3', 'read_file', 'docs/README.md'),
-            ]}
+            rows={[]}
+            turnEvidence={{
+                'run-1': [
+                    toolRow('act_run-1_tool_1', 'exec', 'ls -la'),
+                    toolRow('act_run-1_tool_2', 'exec', 'bun run lint'),
+                    toolRow('act_run-1_tool_3', 'read_file', 'docs/README.md'),
+                ],
+            }}
         />
     );
 
