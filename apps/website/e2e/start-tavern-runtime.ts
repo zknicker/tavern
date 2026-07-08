@@ -1,7 +1,7 @@
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { AgentExecutor, AgentExecutorInput } from '../../runtime/src/tavern/agent-executor.ts';
+import type { AgentExecutorInput } from '../../runtime/src/tavern/agent-executor.ts';
 
 const workspaceRoot = fileURLToPath(new URL('../../../', import.meta.url));
 const runId = process.env.TAVERN_E2E_RUN_ID ?? 'default';
@@ -26,81 +26,120 @@ process.chdir(workspaceRoot);
 const { setAgentExecutorForTesting } = await import(
     '../../runtime/src/tavern/agent-turn-runner.ts'
 );
-const chatApi = await import('../../runtime/src/tavern/chat-api/index.ts');
-setAgentExecutorForTesting(createE2eAgentExecutor(chatApi));
+const { createHarnessAgentExecutor, setHarnessAgentFactoryForTesting } = await import(
+    '../../runtime/src/tavern/harness-agent-executor.ts'
+);
+
+// The e2e mock fakes only the model harness; the real executor runs — real
+// instructions, prompt assembly, activity persistence, widget parsing, empty
+// and silent-reply handling — so e2e exercises the product turn path.
+setHarnessAgentFactoryForTesting(createFakeHarnessAgentFactory());
+setAgentExecutorForTesting(createHarnessAgentExecutor());
 
 // The runtime entry dispatches on argv and only starts the server on the `serve` subcommand.
 process.argv = [process.argv[0] ?? 'bun', process.argv[1] ?? 'start-tavern-runtime.ts', 'serve'];
 
 await import('../../runtime/src/index.ts');
 
-function createE2eAgentExecutor(api: typeof chatApi): AgentExecutor {
-    return {
-        async execute(input) {
-            const now = new Date().toISOString();
-            const activityId = e2eActivityId(input.runId);
-            const messageId = e2eMessageId(input.runId);
-            const deliveryId = e2eDeliveryId(input.runId);
-            const runtime = {
-                agentId: input.agent.id,
-                agentSessionId: input.agentSession.id,
-                engine: 'agent-engine',
-                messageId: input.requestMessageId,
-                runId: input.runId,
-                source: 'agent-engine',
-            };
+function createFakeHarnessAgentFactory() {
+    return ((input: AgentExecutorInput) => ({
+        createSession: () =>
+            Promise.resolve({
+                destroy: () => Promise.resolve(),
+                sessionId:
+                    input.agentSession.runtimeSessionId ?? `ses_e2e_${input.agentSession.id}`,
+                stop: () => Promise.resolve({}),
+            }),
+        stream: () =>
+            Promise.resolve({ fullStream: e2eTurnParts(input), text: Promise.resolve('') }),
+    })) as unknown as Parameters<typeof setHarnessAgentFactoryForTesting>[0];
+}
 
-            api.upsertResponseActivity(input.chatId, input.responseId, {
-                completed_at: now,
-                detail: 'Generated a deterministic e2e agent response.',
-                id: activityId,
-                kind: 'message',
-                metadata: { runtime },
-                started_at: now,
-                status: 'completed',
-                title: 'E2E executor',
-            });
+// Marker-driven model behavior. Prompts opt into tools, narration, widgets,
+// slowness, or an empty reply; everything else echoes deterministically.
+async function* e2eTurnParts(input: AgentExecutorInput) {
+    const content = input.content;
+    const readTarget = content.match(/(?:Read|against) `([^`]+)`/iu)?.[1] ?? null;
+    const slow = /slow QA command/iu.test(content);
 
-            const receipt = api.createDelivery(input.chatId, {
-                agent_id: input.agentSession.agentParticipantId,
-                id: deliveryId,
-                message: {
-                    attachments: [],
-                    author_id: input.agentSession.agentParticipantId,
-                    content: e2eResponseContent(input),
-                    id: messageId,
-                    metadata: { runtime },
-                    role: 'assistant',
-                },
-                metadata: { runtime },
-                turn_id: input.runId,
-            });
+    if (readTarget) {
+        yield {
+            input: { file_path: readTarget },
+            toolCallId: 'tool_e2e_read',
+            toolName: 'read',
+            type: 'tool-call',
+        };
 
-            api.upsertResponse(input.chatId, {
-                completed_at: now,
-                id: input.responseId,
-                metadata: {
-                    runtime: {
-                        ...runtime,
-                        completedAt: now,
-                    },
-                },
-                participant_id: input.agentSession.agentParticipantId,
-                request_message_id: input.requestMessageId,
-                response_message_id: receipt.message.id,
-                status: 'completed',
-                summary: 'E2E executor completed.',
-            });
+        if (slow) {
+            await delay(2500);
+        }
 
-            return {
-                activityIds: [activityId],
-                outputMessageIds: [receipt.message.id],
-            };
-        },
-        stop() {
-            return true;
-        },
-    };
+        yield {
+            input: { file_path: readTarget },
+            output: '# QA kickoff task',
+            toolCallId: 'tool_e2e_read',
+            toolName: 'read',
+            type: 'tool-result',
+        };
+    }
+
+    // No text parts at all: the executor's empty-content diagnostic path.
+    if (/empty response exhaustion/iu.test(content)) {
+        return;
+    }
+
+    if (/render a tall table/iu.test(content)) {
+        yield* textSegment('txt_narration', 'Investigating variance across regions.');
+        yield* streamedTextSegment(
+            'txt_reply',
+            tallTableReply(parseExactReply(content) ?? 'QA_TABLE_OK')
+        );
+        return;
+    }
+
+    yield* textSegment('txt_reply', e2eResponseContent(input));
+}
+
+function* textSegment(id: string, text: string) {
+    yield { id, type: 'text-start' };
+    yield { id, text, type: 'text-delta' };
+    yield { id, type: 'text-end' };
+}
+
+// Stream the reply in small paced deltas so live-reveal and follow-scroll
+// behavior engage like a real model turn.
+async function* streamedTextSegment(id: string, text: string) {
+    yield { id, type: 'text-start' };
+
+    const chunkSize = Math.max(24, Math.ceil(text.length / 24));
+
+    for (let index = 0; index < text.length; index += chunkSize) {
+        yield { id, text: text.slice(index, index + chunkSize), type: 'text-delta' };
+        await delay(50);
+    }
+
+    yield { id, type: 'text-end' };
+}
+
+function tallTableReply(marker: string) {
+    const rows = Array.from(
+        { length: 30 },
+        (_, index) => `["Region ${index + 1}","${(1000 + index * 37).toLocaleString('en-US')}"]`
+    );
+
+    return [
+        `Here is the table.\n${marker}`,
+        '',
+        '```widget:table',
+        `{"columns":["Region","Variance"],"rows":[${rows.join(',')}]}`,
+        '```',
+    ].join('\n');
+}
+
+function delay(ms: number) {
+    return new Promise((resolve) => {
+        setTimeout(resolve, ms);
+    });
 }
 
 function e2eResponseContent(input: AgentExecutorInput) {
@@ -119,16 +158,4 @@ function parseExactReply(content: string) {
     }
     const bare = content.match(/reply exactly\s+([A-Z0-9_-]+)/iu);
     return bare?.[1] ?? null;
-}
-
-function e2eActivityId(runId: string) {
-    return `act_${runId}_e2e_executor`.replace(/[^A-Za-z0-9_-]/g, '_');
-}
-
-function e2eDeliveryId(runId: string) {
-    return `del_${runId}_e2e_executor`.replace(/[^A-Za-z0-9_-]/g, '_');
-}
-
-function e2eMessageId(runId: string) {
-    return `msg_${runId}_e2e_executor`.replace(/[^A-Za-z0-9_-]/g, '_');
 }
