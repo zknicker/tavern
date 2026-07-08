@@ -1,6 +1,6 @@
 {
   "scripts": {
-    "setup": "cp /Users/zknicker/Programming/tavern/.env .\nbun install --frozen-lockfile",
+    "setup": "bun install --frozen-lockfile",
     "run": "bun run desktop:dev:runtime",
     "archive": "true"
   }
