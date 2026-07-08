@@ -1792,11 +1792,18 @@ export const agentRuntimeTaskStatusSchema = z.enum([
     'backlog',
     'todo',
     'in_progress',
+    'blocked',
+    'review',
     'done',
     'canceled',
 ]);
 
 export const agentRuntimeTaskPrioritySchema = z.enum(['none', 'urgent', 'high', 'medium', 'low']);
+
+export const agentRuntimeTaskBlockedReasonSchema = z.object({
+    kind: z.enum(['needs_input', 'error']),
+    message: z.string(),
+});
 
 export const agentRuntimeTaskAssigneeSchema = z.union([
     z.object({
@@ -1810,6 +1817,7 @@ export const agentRuntimeTaskAssigneeSchema = z.union([
 
 export const agentRuntimeTaskSchema = z.object({
     assignee: agentRuntimeTaskAssigneeSchema.nullable(),
+    blockedReason: agentRuntimeTaskBlockedReasonSchema.nullable(),
     createdAt: z.string().datetime(),
     description: z.string().nullable(),
     epicId: z.string().trim().min(1).nullable(),
@@ -1819,6 +1827,7 @@ export const agentRuntimeTaskSchema = z.object({
     number: z.number().int().positive(),
     priority: agentRuntimeTaskPrioritySchema,
     status: agentRuntimeTaskStatusSchema,
+    summary: z.string().nullable(),
     title: z.string().trim().min(1),
     updatedAt: z.string().datetime(),
 });
@@ -1829,6 +1838,7 @@ export const agentRuntimeTaskListSchema = z.object({
 
 export const agentRuntimeCreateTaskSchema = z.object({
     assignee: agentRuntimeTaskAssigneeSchema.nullable().optional(),
+    blockedReason: agentRuntimeTaskBlockedReasonSchema.nullable().optional(),
     description: z.string().trim().min(1).nullable().optional(),
     epicId: z.string().trim().min(1).nullable().optional(),
     id: z.string().trim().min(1),
@@ -1836,16 +1846,19 @@ export const agentRuntimeCreateTaskSchema = z.object({
     labels: z.array(z.string().trim().min(1)).optional(),
     priority: agentRuntimeTaskPrioritySchema.optional(),
     status: agentRuntimeTaskStatusSchema.optional(),
+    summary: z.string().nullable().optional(),
     title: z.string().trim().min(1),
 });
 
 export const agentRuntimeUpdateTaskSchema = z.object({
     assignee: agentRuntimeTaskAssigneeSchema.nullable().optional(),
+    blockedReason: agentRuntimeTaskBlockedReasonSchema.nullable().optional(),
     description: z.string().trim().min(1).nullable().optional(),
     epicId: z.string().trim().min(1).nullable().optional(),
     labels: z.array(z.string().trim().min(1)).optional(),
     priority: agentRuntimeTaskPrioritySchema.optional(),
     status: agentRuntimeTaskStatusSchema.optional(),
+    summary: z.string().nullable().optional(),
     title: z.string().trim().min(1).optional(),
 });
 
@@ -2957,6 +2970,7 @@ export type AgentRuntimeUpdateAgent = z.infer<typeof agentRuntimeUpdateAgentSche
 export type AgentRuntimeUpdateCron = z.infer<typeof agentRuntimeUpdateCronSchema>;
 export type AgentRuntimeTask = z.infer<typeof agentRuntimeTaskSchema>;
 export type AgentRuntimeTaskAssignee = z.infer<typeof agentRuntimeTaskAssigneeSchema>;
+export type AgentRuntimeTaskBlockedReason = z.infer<typeof agentRuntimeTaskBlockedReasonSchema>;
 export type AgentRuntimeTaskKind = z.infer<typeof agentRuntimeTaskKindSchema>;
 export type AgentRuntimeTaskList = z.infer<typeof agentRuntimeTaskListSchema>;
 export type AgentRuntimeTaskPriority = z.infer<typeof agentRuntimeTaskPrioritySchema>;

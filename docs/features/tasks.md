@@ -17,14 +17,15 @@ the user and agents.
   bigger pushes stay legible.
 * **T-numbers.** Every task gets a short sequential number (T-1, T-2, ...) that
   works as a reference in chat messages.
-* **Status and priority.** Status is backlog, todo, in progress, done, or
-  canceled. Priority is none, urgent, high, medium, or low. The Active view
-  covers todo plus in progress.
+* **Status and priority.** Status is backlog, todo, in progress, blocked,
+  review, done, or canceled. Priority is none, urgent, high, medium, or low.
+  The Active view covers todo plus in progress.
 * **Assignees.** A task is unassigned, owned by the user, or assigned to an
   agent.
 * **Labels.** Freeform comma-separated labels for ad-hoc grouping.
 * **Agent task tools.** Agents list, read, file, and update tasks from chat
-  with their `tasks_*` tools, including marking work in progress and done.
+  with their `tasks_*` tools. Agent-created tasks land in backlog for user
+  triage; only the user promotes tasks into todo.
 * **Managed tasks skill.** A seeded `tasks` skill teaches board etiquette:
   when to file tasks, status hygiene, dispatched-task handling, and epics.
   It is enabled for agents by default and resettable to the Tavern default.
@@ -34,6 +35,11 @@ the user and agents.
 
 The Tasks page lives beside Automations in the sidebar. Automations are
 scheduled runs; Tasks are tracked outcomes.
+
+Descriptions are the work brief. Summaries are the close-out outcome: what
+changed, how it was checked, and what remains. Blocking reasons distinguish
+`needs_input` from `error` so the board shows whether the user must answer or
+the work failed.
 
 ## Boundary
 

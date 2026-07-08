@@ -113,6 +113,61 @@ describe('Runtime DB schema repairs', () => {
             },
         ]);
     });
+
+    it('repairs task status constraints and preserves existing rows', () => {
+        const db = initTestDb();
+        createLegacyTasksTable(db);
+        db.exec('PRAGMA foreign_keys = OFF');
+        db.prepare(
+            `INSERT INTO tasks (
+                id, number, kind, title, description, status, priority,
+                labels_json, created_at, updated_at
+             )
+             VALUES (
+                'tsk_old', 1, 'task', 'Old task', 'Keep this row', 'todo',
+                'high', '["legacy"]', '2026-07-02T20:00:00.000Z',
+                '2026-07-02T20:00:00.000Z'
+             )`
+        ).run();
+        db.exec('PRAGMA foreign_keys = ON');
+
+        ensureRuntimeSchema(db);
+        db.prepare(
+            `INSERT INTO tasks (
+                id, number, kind, title, status, priority, labels_json,
+                created_at, updated_at
+             )
+             VALUES (
+                'tsk_blocked', 2, 'task', 'Blocked task', 'blocked',
+                'none', '[]', '2026-07-02T20:01:00.000Z',
+                '2026-07-02T20:01:00.000Z'
+             )`
+        ).run();
+
+        expect(tableSql(db, 'tasks')).toContain("'review'");
+        expect(
+            db
+                .prepare(
+                    'SELECT id, status, title, description, labels_json FROM tasks ORDER BY number'
+                )
+                .all()
+        ).toEqual([
+            {
+                description: 'Keep this row',
+                id: 'tsk_old',
+                labels_json: '["legacy"]',
+                status: 'todo',
+                title: 'Old task',
+            },
+            {
+                description: null,
+                id: 'tsk_blocked',
+                labels_json: '[]',
+                status: 'blocked',
+                title: 'Blocked task',
+            },
+        ]);
+    });
 });
 
 function createLegacyResponseActivityTable(db: Database) {
@@ -170,6 +225,34 @@ CREATE INDEX IF NOT EXISTS idx_memory_jobs_agent_created
 
 CREATE INDEX IF NOT EXISTS idx_memory_jobs_status_due
   ON memory_jobs(status, created_at);
+`);
+}
+
+function createLegacyTasksTable(db: Database) {
+    db.exec(`
+CREATE TABLE tasks (
+  id                TEXT PRIMARY KEY,
+  number            INTEGER NOT NULL UNIQUE,
+  kind              TEXT NOT NULL DEFAULT 'task' CHECK (kind IN ('task', 'epic')),
+  title             TEXT NOT NULL,
+  description       TEXT,
+  status            TEXT NOT NULL DEFAULT 'backlog' CHECK (status IN ('backlog', 'todo', 'in_progress', 'done', 'canceled')),
+  priority          TEXT NOT NULL DEFAULT 'none' CHECK (priority IN ('none', 'urgent', 'high', 'medium', 'low')),
+  assignee_kind     TEXT CHECK (assignee_kind IS NULL OR assignee_kind IN ('user', 'agent')),
+  assignee_agent_id TEXT,
+  epic_id           TEXT,
+  labels_json       TEXT NOT NULL DEFAULT '[]',
+  created_at        TEXT NOT NULL,
+  updated_at        TEXT NOT NULL,
+  FOREIGN KEY(epic_id) REFERENCES tasks(id) ON DELETE SET NULL,
+  FOREIGN KEY(assignee_agent_id) REFERENCES agents(id) ON DELETE SET NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_tasks_status
+  ON tasks(status);
+
+CREATE INDEX IF NOT EXISTS idx_tasks_epic
+  ON tasks(epic_id);
 `);
 }
 

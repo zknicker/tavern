@@ -1,9 +1,11 @@
 import {
+    agentRuntimeCreateTaskSchema,
     agentRuntimeTaskAssigneeSchema,
     agentRuntimeTaskKindSchema,
     agentRuntimeTaskPrioritySchema,
     agentRuntimeTaskSchema,
     agentRuntimeTaskStatusSchema,
+    agentRuntimeUpdateTaskSchema,
 } from '@tavern/api';
 import * as z from 'zod';
 
@@ -25,27 +27,10 @@ export const getTaskInputSchema = z.object({
     taskId: z.string().trim().min(1),
 });
 
-export const createTaskInputSchema = z.object({
-    assignee: taskAssigneeSchema.nullable().optional(),
-    description: z.string().trim().min(1).nullable().optional(),
-    epicId: z.string().trim().min(1).nullable().optional(),
-    kind: taskKindSchema.optional(),
-    labels: z.array(z.string().trim().min(1)).optional(),
-    priority: taskPrioritySchema.optional(),
-    status: taskStatusSchema.optional(),
-    title: z.string().trim().min(1),
-});
+export const createTaskInputSchema = agentRuntimeCreateTaskSchema.omit({ id: true });
 
 export const updateTaskInputSchema = z.object({
-    patch: z.object({
-        assignee: taskAssigneeSchema.nullable().optional(),
-        description: z.string().trim().min(1).nullable().optional(),
-        epicId: z.string().trim().min(1).nullable().optional(),
-        labels: z.array(z.string().trim().min(1)).optional(),
-        priority: taskPrioritySchema.optional(),
-        status: taskStatusSchema.optional(),
-        title: z.string().trim().min(1).optional(),
-    }),
+    patch: agentRuntimeUpdateTaskSchema,
     taskId: z.string().trim().min(1),
 });
 

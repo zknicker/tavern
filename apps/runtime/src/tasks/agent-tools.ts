@@ -1,5 +1,5 @@
 import type { ToolSet } from '@ai-sdk/provider-utils';
-import type { AgentRuntimeTask } from '@tavern/api';
+import type { AgentRuntimeTask, AgentRuntimeUpdateTask } from '@tavern/api';
 import { tool } from 'ai';
 import * as z from 'zod';
 import { publishTaskUpdated } from './events.ts';
@@ -46,7 +46,7 @@ export function createTavernTaskTools(input: { agentId: string }): ToolSet {
         }),
         tasks_create: tool({
             description:
-                'File a new task (or epic) on the shared Tasks board. Use when the user asks to track work, or when you notice follow-up work worth tracking. Returns the new T-number.',
+                'File a new task or epic in backlog for user triage. Agents cannot queue tasks into todo.',
             inputSchema: createInputSchema,
             execute: (rawInput) => {
                 const parsed = createInputSchema.parse(rawInput);
@@ -60,7 +60,6 @@ export function createTavernTaskTools(input: { agentId: string }): ToolSet {
                     kind: parsed.kind,
                     labels: parsed.labels,
                     priority: parsed.priority,
-                    status: parsed.status,
                     title: parsed.title,
                 });
                 publishTaskUpdated(task.id);
@@ -69,10 +68,11 @@ export function createTavernTaskTools(input: { agentId: string }): ToolSet {
         }),
         tasks_update: tool({
             description:
-                'Update a task on the Tasks board: status (backlog/todo/in_progress/done/canceled), priority, title, description, labels, or epic. Mark tasks in_progress when you start them and done when you finish. Only include fields that should change.',
+                'Update task fields. Do not set todo. Blocked needs a reason; done/review/canceled need a summary.',
             inputSchema: updateInputSchema,
             execute: (rawInput) => {
                 const parsed = updateInputSchema.parse(rawInput);
+                assertAgentUpdateAllowed(parsed);
                 const existing = parsed.taskId
                     ? getTask(parsed.taskId)
                     : getTaskByNumber(parsed.number ?? 0);
@@ -87,6 +87,8 @@ export function createTavernTaskTools(input: { agentId: string }): ToolSet {
                     ...(parsed.labels === undefined ? {} : { labels: parsed.labels }),
                     ...(parsed.priority === undefined ? {} : { priority: parsed.priority }),
                     ...(parsed.status === undefined ? {} : { status: parsed.status }),
+                    ...blockedReasonPatch(parsed),
+                    ...(parsed.summary === undefined ? {} : { summary: parsed.summary }),
                     ...(parsed.title === undefined ? {} : { title: parsed.title }),
                     ...(parsed.assignToMe
                         ? { assignee: { agentId: input.agentId, kind: 'agent' } }
@@ -102,7 +104,16 @@ export function createTavernTaskTools(input: { agentId: string }): ToolSet {
     };
 }
 
-const statusSchema = z.enum(['backlog', 'todo', 'in_progress', 'done', 'canceled']);
+const statusSchema = z.enum([
+    'backlog',
+    'todo',
+    'in_progress',
+    'blocked',
+    'review',
+    'done',
+    'canceled',
+]);
+const blockedReasonKindSchema = z.enum(['needs_input', 'error']);
 const prioritySchema = z.enum(['none', 'urgent', 'high', 'medium', 'low']);
 const kindSchema = z.enum(['task', 'epic']);
 
@@ -133,7 +144,6 @@ const createInputSchema = z
         kind: kindSchema.optional(),
         labels: z.array(z.string().trim().min(1)).optional(),
         priority: prioritySchema.optional(),
-        status: statusSchema.optional(),
         title: z.string().trim().min(1),
     })
     .strict();
@@ -141,12 +151,15 @@ const createInputSchema = z
 const updateInputSchema = z
     .object({
         assignToMe: z.boolean().optional(),
+        blockedReason: z.string().trim().min(1).optional(),
+        blockedReasonKind: blockedReasonKindSchema.optional(),
         description: z.string().trim().min(1).nullable().optional(),
         epicId: z.string().trim().min(1).nullable().optional(),
         labels: z.array(z.string().trim().min(1)).optional(),
         number: z.number().int().positive().optional(),
         priority: prioritySchema.optional(),
         status: statusSchema.optional(),
+        summary: z.string().trim().min(1).optional(),
         taskId: z.string().trim().min(1).optional(),
         title: z.string().trim().min(1).optional(),
     })
@@ -155,9 +168,46 @@ const updateInputSchema = z
         message: 'Provide a T-number or task id.',
     });
 
+type UpdateInput = z.infer<typeof updateInputSchema>;
+
+function assertAgentUpdateAllowed(input: UpdateInput) {
+    if (input.status === 'todo') {
+        throw new Error('Only the user promotes tasks into todo.');
+    }
+
+    if (input.status === 'blocked' && !(input.blockedReasonKind && input.blockedReason)) {
+        throw new Error('Setting blocked requires blockedReasonKind and blockedReason.');
+    }
+
+    if (
+        (input.status === 'done' || input.status === 'review' || input.status === 'canceled') &&
+        !input.summary
+    ) {
+        throw new Error('Setting done, review, or canceled requires a summary.');
+    }
+}
+
+function blockedReasonPatch(input: UpdateInput): Partial<AgentRuntimeUpdateTask> {
+    if (input.status !== 'blocked') {
+        return {};
+    }
+
+    if (!(input.blockedReasonKind && input.blockedReason)) {
+        throw new Error('Setting blocked requires blockedReasonKind and blockedReason.');
+    }
+
+    return {
+        blockedReason: {
+            kind: input.blockedReasonKind,
+            message: input.blockedReason,
+        },
+    };
+}
+
 function toToolTask(task: AgentRuntimeTask, options: { includeDescription?: boolean } = {}) {
     return {
         assignee: task.assignee,
+        blockedReason: task.blockedReason,
         createdAt: task.createdAt,
         ...(options.includeDescription ? { description: task.description } : {}),
         epicId: task.epicId,
@@ -167,6 +217,7 @@ function toToolTask(task: AgentRuntimeTask, options: { includeDescription?: bool
         number: `T-${task.number}`,
         priority: task.priority,
         status: task.status,
+        summary: task.summary,
         title: task.title,
         updatedAt: task.updatedAt,
     };

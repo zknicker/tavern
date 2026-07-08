@@ -74,10 +74,41 @@ CREATE TABLE skill_sources (
   archived_at         TEXT
 )`;
 
+const TASKS_TABLE = `
+CREATE TABLE tasks (
+  id                TEXT PRIMARY KEY,
+  number            INTEGER NOT NULL UNIQUE,
+  kind              TEXT NOT NULL DEFAULT 'task' CHECK (kind IN ('task', 'epic')),
+  title             TEXT NOT NULL,
+  description       TEXT,
+  summary           TEXT,
+  blocked_reason_kind TEXT CHECK (blocked_reason_kind IS NULL OR blocked_reason_kind IN ('needs_input', 'error')),
+  blocked_reason_message TEXT,
+  status            TEXT NOT NULL DEFAULT 'backlog' CHECK (status IN ('backlog', 'todo', 'in_progress', 'blocked', 'review', 'done', 'canceled')),
+  priority          TEXT NOT NULL DEFAULT 'none' CHECK (priority IN ('none', 'urgent', 'high', 'medium', 'low')),
+  assignee_kind     TEXT CHECK (assignee_kind IS NULL OR assignee_kind IN ('user', 'agent')),
+  assignee_agent_id TEXT,
+  epic_id           TEXT,
+  labels_json       TEXT NOT NULL DEFAULT '[]',
+  created_at        TEXT NOT NULL,
+  updated_at        TEXT NOT NULL,
+  FOREIGN KEY(epic_id) REFERENCES tasks(id) ON DELETE SET NULL,
+  FOREIGN KEY(assignee_agent_id) REFERENCES agents(id) ON DELETE SET NULL
+)`;
+
+const TASKS_INDEXES = `
+CREATE INDEX IF NOT EXISTS idx_tasks_status
+  ON tasks(status);
+
+CREATE INDEX IF NOT EXISTS idx_tasks_epic
+  ON tasks(epic_id);
+`;
+
 export function repairRuntimeSchema(db: Database): void {
     ensureChatResponseActivityWidgetKind(db);
     ensureMemoryJobsSkillReviewKind(db);
     ensureSkillSourcesPluginSource(db);
+    ensureTasksBlockedAndReviewStatus(db);
     hydrateAgentSkillAssignments(db);
 }
 
@@ -213,6 +244,51 @@ INSERT INTO skill_sources
          created_at, updated_at, archived_at
   FROM skill_sources_rebuild;
 DROP TABLE temp.skill_sources_rebuild;
+`);
+        db.exec('COMMIT');
+        transactionOpen = false;
+    } catch (error) {
+        if (transactionOpen) {
+            db.exec('ROLLBACK');
+        }
+        throw error;
+    } finally {
+        db.exec('PRAGMA foreign_keys = ON');
+    }
+}
+
+function ensureTasksBlockedAndReviewStatus(db: Database): void {
+    const sql = tableSql(db, 'tasks');
+
+    if (!sql || sql.includes("'review'")) {
+        return;
+    }
+
+    let transactionOpen = false;
+    db.exec('PRAGMA foreign_keys = OFF');
+    try {
+        db.exec('BEGIN IMMEDIATE');
+        transactionOpen = true;
+        db.exec(`
+DROP TABLE IF EXISTS temp.tasks_rebuild;
+CREATE TEMP TABLE tasks_rebuild AS
+  SELECT id, number, kind, title, description, NULL AS summary,
+         NULL AS blocked_reason_kind, NULL AS blocked_reason_message,
+         status, priority, assignee_kind, assignee_agent_id, epic_id,
+         labels_json, created_at, updated_at
+  FROM tasks;
+DROP TABLE tasks;
+${TASKS_TABLE};
+INSERT INTO tasks
+  (id, number, kind, title, description, summary, blocked_reason_kind,
+   blocked_reason_message, status, priority, assignee_kind, assignee_agent_id,
+   epic_id, labels_json, created_at, updated_at)
+  SELECT id, number, kind, title, description, summary, blocked_reason_kind,
+         blocked_reason_message, status, priority, assignee_kind,
+         assignee_agent_id, epic_id, labels_json, created_at, updated_at
+  FROM tasks_rebuild;
+DROP TABLE temp.tasks_rebuild;
+${TASKS_INDEXES}
 `);
         db.exec('COMMIT');
         transactionOpen = false;

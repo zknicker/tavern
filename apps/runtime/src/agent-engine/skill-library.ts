@@ -69,24 +69,34 @@ turn.
 
 ## Working a task
 
-Mark a task in_progress before you start it, and done when you finish, with
-a closing reply that names the T-number and the outcome. If the work turns
-out to be unnecessary, mark it canceled and say why. Keep one task
-in_progress per stream of work.
+Statuses:
+- backlog: filed for user triage.
+- todo: ready queue; only the user promotes work here.
+- in_progress: actively being worked.
+- blocked: cannot continue until input arrives or an error is resolved.
+- review: ready for the user to check.
+- done: finished.
+- canceled: intentionally closed without doing it.
 
-If you cannot finish — missing input, missing access, or a dependency —
-say exactly what is blocking in your reply, append the blocker to the task
-description, and set the task back to todo so it is not stranded
-in_progress.
+Agent-created tasks always land in backlog. Never set a task to todo; the user
+promotes work into the queue.
 
-Statuses: backlog (not scheduled), todo (ready to start), in_progress, done,
-canceled.
+Mark a task in_progress before you start it. When closing as done, review, or
+canceled, include a short summary: what changed, how you verified it, and what
+remains. The description is the brief; never overwrite it for close-out.
+
+If you cannot finish, set the task blocked with a reason kind:
+- needs_input: the user must answer or provide something.
+- error: the work failed; include the failure detail.
+
+Keep one task in_progress per stream of work.
 
 ## Dispatched tasks
 
 A dispatch message names a task (like T-12) and is your work order: read it
 first with \`tasks_get\`, mark it in_progress, do the work in this chat,
-keep the task updated as scope changes, and mark it done when you deliver.
+keep the task updated as scope changes, and close it: done when you deliver,
+blocked when you cannot continue, canceled when the work should not happen.
 
 ## Epics and hygiene
 

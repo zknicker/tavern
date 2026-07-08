@@ -32,6 +32,7 @@ afterEach(() => {
 function buildTask(overrides: Partial<Record<string, unknown>> = {}) {
     return {
         assignee: null,
+        blockedReason: null,
         createdAt: '2026-07-01T13:00:00.000Z',
         description: 'Fix the invite email link.',
         epicId: null,
@@ -41,6 +42,7 @@ function buildTask(overrides: Partial<Record<string, unknown>> = {}) {
         number: 1,
         priority: 'high' as const,
         status: 'backlog' as const,
+        summary: null,
         title: 'Fix invite link',
         updatedAt: '2026-07-02T13:00:00.000Z',
         ...overrides,
@@ -52,7 +54,14 @@ test('listTasks returns mirrored tasks ordered by number descending', async () =
     await saveTaskRecord({ runtimeId: 'runtime-1', task: buildTask() });
     await saveTaskRecord({
         runtimeId: 'runtime-1',
-        task: buildTask({ id: 'tsk_2', number: 2, title: 'Second' }),
+        task: buildTask({
+            blockedReason: { kind: 'error', message: 'Runtime failed.' },
+            id: 'tsk_2',
+            number: 2,
+            status: 'blocked',
+            summary: 'Stopped after runtime failure.',
+            title: 'Second',
+        }),
     });
 
     const result = await listTasks();
@@ -63,6 +72,11 @@ test('listTasks returns mirrored tasks ordered by number descending', async () =
         labels: ['bug'],
         priority: 'high',
         title: 'Fix invite link',
+    });
+    expect(result.tasks[0]).toMatchObject({
+        blockedReason: { kind: 'error', message: 'Runtime failed.' },
+        status: 'blocked',
+        summary: 'Stopped after runtime failure.',
     });
 });
 

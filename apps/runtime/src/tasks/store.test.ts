@@ -45,33 +45,56 @@ describe('tasks store', () => {
         const created = createTask({ id: createTaskId(), title: 'Defaults' });
         expect(created).toMatchObject({
             assignee: null,
+            blockedReason: null,
             description: null,
             epicId: null,
             kind: 'task',
             labels: [],
             priority: 'none',
             status: 'backlog',
+            summary: null,
         });
 
         const updated = updateTask(created.id, {
             assignee: { agentId: 'agt_primary', kind: 'agent' },
+            blockedReason: { kind: 'needs_input', message: 'Waiting on copy.' },
             description: 'Longer body',
             labels: ['bug', 'ui'],
             priority: 'high',
-            status: 'in_progress',
+            status: 'blocked',
+            summary: 'Paused until copy arrives.',
             title: 'Renamed',
         });
         expect(updated).toMatchObject({
             assignee: { agentId: 'agt_primary', kind: 'agent' },
+            blockedReason: { kind: 'needs_input', message: 'Waiting on copy.' },
             description: 'Longer body',
             labels: ['bug', 'ui'],
             priority: 'high',
-            status: 'in_progress',
+            status: 'blocked',
+            summary: 'Paused until copy arrives.',
             title: 'Renamed',
         });
 
-        const cleared = updateTask(created.id, { assignee: null });
+        const cleared = updateTask(created.id, {
+            assignee: null,
+            status: 'in_progress',
+        });
         expect(cleared?.assignee).toBeNull();
+        expect(cleared?.blockedReason).toBeNull();
+    });
+
+    test('allows direct blocked writes without a reason', () => {
+        const created = createTask({
+            id: createTaskId(),
+            status: 'blocked',
+            title: 'Human-blocked task',
+        });
+
+        expect(created).toMatchObject({
+            blockedReason: null,
+            status: 'blocked',
+        });
     });
 
     test('links tasks to epics and clears the link when the epic is deleted', () => {
@@ -93,10 +116,11 @@ describe('tasks store', () => {
 
     test('filters by status and kind', () => {
         createTask({ id: createTaskId(), status: 'todo', title: 'Todo item' });
-        createTask({ id: createTaskId(), status: 'done', title: 'Done item' });
+        createTask({ id: createTaskId(), status: 'review', title: 'Review item' });
         createTask({ id: createTaskId(), kind: 'epic', title: 'Epic item' });
 
         expect(listTasks({ status: 'todo' })).toHaveLength(1);
+        expect(listTasks({ status: 'review' })).toHaveLength(1);
         expect(listTasks({ kind: 'epic' })).toHaveLength(1);
         expect(listTasks()).toHaveLength(3);
     });

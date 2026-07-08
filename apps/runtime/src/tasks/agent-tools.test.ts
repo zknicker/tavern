@@ -53,12 +53,93 @@ describe('tasks agent tools', () => {
         const updated = await runTool<Record<string, unknown>, { task: ToolTask }>(
             tools,
             'tasks_update',
-            { assignToMe: true, number: 1, status: 'done' }
+            {
+                assignToMe: true,
+                number: 1,
+                status: 'done',
+                summary: 'Fixed invite link. Verified in tests. Nothing remains.',
+            }
         );
         expect(updated.task).toMatchObject({
             assignee: { agentId: 'agt_primary', kind: 'agent' },
             status: 'done',
+            summary: 'Fixed invite link. Verified in tests. Nothing remains.',
         });
+    });
+
+    test('creates tasks in backlog and rejects a status input', async () => {
+        const tools = createTavernTaskTools({ agentId: 'agt_primary' });
+
+        const created = await runTool<Record<string, unknown>, { task: ToolTask }>(
+            tools,
+            'tasks_create',
+            { title: 'Needs triage' }
+        );
+        expect(created.task.status).toBe('backlog');
+        expect(getTask(created.task.id)?.status).toBe('backlog');
+
+        await expect(
+            runTool(tools, 'tasks_create', { status: 'todo', title: 'Sneaky queue jump' })
+        ).rejects.toThrow(/unrecognized/i);
+    });
+
+    test('rejects agent updates that promote tasks to todo', async () => {
+        const task = createTask({ id: createTaskId(), title: 'Queued by human only' });
+        const tools = createTavernTaskTools({ agentId: 'agt_primary' });
+
+        await expect(
+            runTool(tools, 'tasks_update', { status: 'todo', taskId: task.id })
+        ).rejects.toThrow('Only the user promotes tasks into todo.');
+    });
+
+    test('requires a reason when setting blocked', async () => {
+        const task = createTask({ id: createTaskId(), title: 'Blocked work' });
+        const tools = createTavernTaskTools({ agentId: 'agt_primary' });
+
+        await expect(
+            runTool(tools, 'tasks_update', { status: 'blocked', taskId: task.id })
+        ).rejects.toThrow('Setting blocked requires blockedReasonKind and blockedReason.');
+
+        const updated = await runTool<Record<string, unknown>, { task: ToolTask }>(
+            tools,
+            'tasks_update',
+            {
+                blockedReason: 'Missing API key.',
+                blockedReasonKind: 'needs_input',
+                status: 'blocked',
+                taskId: task.id,
+            }
+        );
+
+        expect(updated.task).toMatchObject({
+            blockedReason: { kind: 'needs_input', message: 'Missing API key.' },
+            status: 'blocked',
+        });
+    });
+
+    test('requires a summary for close-out statuses', async () => {
+        const task = createTask({ id: createTaskId(), title: 'Close me' });
+        const tools = createTavernTaskTools({ agentId: 'agt_primary' });
+
+        await expect(
+            runTool(tools, 'tasks_update', { status: 'review', taskId: task.id })
+        ).rejects.toThrow('Setting done, review, or canceled requires a summary.');
+
+        const updated = await runTool<Record<string, unknown>, { task: ToolTask }>(
+            tools,
+            'tasks_update',
+            {
+                status: 'review',
+                summary: 'Drafted the change. Verified with focused tests. Needs user review.',
+                taskId: task.id,
+            }
+        );
+
+        expect(updated.task).toMatchObject({
+            status: 'review',
+            summary: 'Drafted the change. Verified with focused tests. Needs user review.',
+        });
+        expect(getTask(task.id)?.description).toBeNull();
     });
 
     test('filters the list to tasks assigned to the executing agent', async () => {
@@ -111,11 +192,13 @@ function storeTestAgent(agentId: string) {
 
 interface ToolTask {
     assignee: unknown;
+    blockedReason?: unknown;
     description?: string | null;
     id: string;
     number: string;
     priority: string;
     status: string;
+    summary?: string | null;
     title: string;
 }
 

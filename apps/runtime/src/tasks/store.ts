@@ -21,19 +21,24 @@ export function createTask(input: AgentRuntimeCreateTask, db: Database = getDb()
     if (input.epicId) {
         assertEpicExists(input.epicId, db);
     }
+    const blockedReason = input.status === 'blocked' ? (input.blockedReason ?? null) : null;
     db.prepare(
         `INSERT INTO tasks (
-            id, number, kind, title, description, status, priority,
+            id, number, kind, title, description, summary, blocked_reason_kind,
+            blocked_reason_message, status, priority,
             assignee_kind, assignee_agent_id, epic_id, labels_json, created_at, updated_at
          )
          VALUES (
             $id, (SELECT COALESCE(MAX(number), 0) + 1 FROM tasks), $kind, $title, $description,
-            $status, $priority, $assigneeKind, $assigneeAgentId, $epicId, $labelsJson, $now, $now
+            $summary, $blockedReasonKind, $blockedReasonMessage, $status, $priority,
+            $assigneeKind, $assigneeAgentId, $epicId, $labelsJson, $now, $now
          )`
     ).run(
         namedParams({
             assigneeAgentId: input.assignee?.kind === 'agent' ? input.assignee.agentId : null,
             assigneeKind: input.assignee?.kind ?? null,
+            blockedReasonKind: blockedReason?.kind ?? null,
+            blockedReasonMessage: blockedReason?.message ?? null,
             description: input.description ?? null,
             epicId: input.epicId ?? null,
             id: input.id,
@@ -42,6 +47,7 @@ export function createTask(input: AgentRuntimeCreateTask, db: Database = getDb()
             now,
             priority: input.priority ?? 'none',
             status: input.status ?? 'backlog',
+            summary: input.summary ?? null,
             title: input.title,
         })
     );
@@ -57,7 +63,7 @@ export function updateTask(
     if (!existing) {
         return null;
     }
-    const merged = { ...existing, ...input };
+    const merged = mergeTaskUpdate(existing, input);
     if (merged.epicId && merged.epicId !== existing.epicId) {
         assertEpicExists(merged.epicId, db);
     }
@@ -68,6 +74,9 @@ export function updateTask(
         `UPDATE tasks
          SET title = $title,
              description = $description,
+             summary = $summary,
+             blocked_reason_kind = $blockedReasonKind,
+             blocked_reason_message = $blockedReasonMessage,
              status = $status,
              priority = $priority,
              assignee_kind = $assigneeKind,
@@ -80,6 +89,8 @@ export function updateTask(
         namedParams({
             assigneeAgentId: merged.assignee?.kind === 'agent' ? merged.assignee.agentId : null,
             assigneeKind: merged.assignee?.kind ?? null,
+            blockedReasonKind: merged.blockedReason?.kind ?? null,
+            blockedReasonMessage: merged.blockedReason?.message ?? null,
             description: merged.description,
             epicId: merged.epicId,
             id,
@@ -87,6 +98,7 @@ export function updateTask(
             now: new Date().toISOString(),
             priority: merged.priority,
             status: merged.status,
+            summary: merged.summary,
             title: merged.title,
         })
     );
@@ -140,6 +152,11 @@ export function getTaskOrThrow(id: string, db: Database = getDb()): AgentRuntime
         throw new Error(`Missing task ${id}.`);
     }
     return task;
+}
+
+function mergeTaskUpdate(existing: AgentRuntimeTask, input: AgentRuntimeUpdateTask) {
+    const merged = { ...existing, ...input };
+    return merged.status === 'blocked' ? merged : { ...merged, blockedReason: null };
 }
 
 function assertEpicExists(epicId: string, db: Database) {

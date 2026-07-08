@@ -1,6 +1,7 @@
 import type {
     AgentRuntimeTask,
     AgentRuntimeTaskAssignee,
+    AgentRuntimeTaskBlockedReason,
     AgentRuntimeTaskKind,
     AgentRuntimeTaskPriority,
     AgentRuntimeTaskStatus,
@@ -10,6 +11,8 @@ import { agentRuntimeTaskSchema } from '@tavern/api';
 export interface TaskRow {
     assignee_agent_id: string | null;
     assignee_kind: 'agent' | 'user' | null;
+    blocked_reason_kind: 'error' | 'needs_input' | null;
+    blocked_reason_message: string | null;
     created_at: string;
     description: string | null;
     epic_id: string | null;
@@ -19,6 +22,7 @@ export interface TaskRow {
     number: number;
     priority: AgentRuntimeTaskPriority;
     status: AgentRuntimeTaskStatus;
+    summary: string | null;
     title: string;
     updated_at: string;
 }
@@ -26,6 +30,7 @@ export interface TaskRow {
 export function taskRowToTask(row: TaskRow): AgentRuntimeTask {
     return agentRuntimeTaskSchema.parse({
         assignee: taskAssigneeFromRow(row),
+        blockedReason: blockedReasonFromRow(row),
         createdAt: row.created_at,
         description: row.description,
         epicId: row.epic_id,
@@ -35,6 +40,7 @@ export function taskRowToTask(row: TaskRow): AgentRuntimeTask {
         number: row.number,
         priority: row.priority,
         status: row.status,
+        summary: row.summary,
         title: row.title,
         updatedAt: row.updated_at,
     });
@@ -50,4 +56,15 @@ function taskAssigneeFromRow(row: TaskRow): AgentRuntimeTaskAssignee | null {
     }
 
     return null;
+}
+
+function blockedReasonFromRow(row: TaskRow): AgentRuntimeTaskBlockedReason | null {
+    if (!row.blocked_reason_kind) {
+        return null;
+    }
+
+    return {
+        kind: row.blocked_reason_kind,
+        message: row.blocked_reason_message ?? '',
+    };
 }

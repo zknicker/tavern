@@ -302,7 +302,10 @@ CREATE TABLE IF NOT EXISTS tasks (
   kind              TEXT NOT NULL DEFAULT 'task' CHECK (kind IN ('task', 'epic')),
   title             TEXT NOT NULL,
   description       TEXT,
-  status            TEXT NOT NULL DEFAULT 'backlog' CHECK (status IN ('backlog', 'todo', 'in_progress', 'done', 'canceled')),
+  summary           TEXT,
+  blocked_reason_kind TEXT CHECK (blocked_reason_kind IS NULL OR blocked_reason_kind IN ('needs_input', 'error')),
+  blocked_reason_message TEXT,
+  status            TEXT NOT NULL DEFAULT 'backlog' CHECK (status IN ('backlog', 'todo', 'in_progress', 'blocked', 'review', 'done', 'canceled')),
   priority          TEXT NOT NULL DEFAULT 'none' CHECK (priority IN ('none', 'urgent', 'high', 'medium', 'low')),
   assignee_kind     TEXT CHECK (assignee_kind IS NULL OR assignee_kind IN ('user', 'agent')),
   assignee_agent_id TEXT,
@@ -603,6 +606,22 @@ export function ensureRuntimeSchema(db: Database): void {
         column: 'installed_hash',
         definition: 'TEXT',
         table: 'skill_sources',
+    });
+    ensureColumn(db, {
+        column: 'summary',
+        definition: 'TEXT',
+        table: 'tasks',
+    });
+    ensureColumn(db, {
+        column: 'blocked_reason_kind',
+        definition:
+            "TEXT CHECK (blocked_reason_kind IS NULL OR blocked_reason_kind IN ('needs_input', 'error'))",
+        table: 'tasks',
+    });
+    ensureColumn(db, {
+        column: 'blocked_reason_message',
+        definition: 'TEXT',
+        table: 'tasks',
     });
     ensureColumn(db, {
         column: 'attempts',
