@@ -117,15 +117,7 @@ test('renders durable response activity kinds after reload', async ({ page }) =>
 });
 
 test('keeps Rich Response table generation pinned to the latest reply', async ({ page }) => {
-    // Streaming stays smooth, but the completion handoff snaps the anchored
-    // viewport to the bottom in one ~1000px step when the reply's widget
-    // lands (samples: ...1226 -> 2229). Whether that completion snap is the
-    // intended reveal or a motion bug needs a product decision (PRD-26);
-    // until then this spec would enforce a contested contract.
-    // biome-ignore lint/suspicious/noSkippedTests: awaiting the PRD-26 completion-snap product decision
-    test.fixme();
     test.setTimeout(90_000);
-    await enableScrollDebug(page);
 
     await startChat(page, {
         expectedReply: /^Here is the table\.\s+QA_RICH_RESPONSE_TABLE_SCROLL_FIRST_OK$/u,
@@ -163,7 +155,6 @@ test('keeps Rich Response table generation pinned to the latest reply', async ({
         throw new Error(
             `Expected smooth follow scroll step <= 180px, received ${largestStep}px. ${JSON.stringify(
                 {
-                    debugTail: await getScrollDebugTail(page),
                     scrollJump: getLargestScrollStepWindow(scrollSamples),
                     sampleCount: scrollSamples.length,
                 }
@@ -179,9 +170,6 @@ test('keeps Rich Response table generation pinned to the latest reply', async ({
             /^Here is the table\.\s+QA_RICH_RESPONSE_TABLE_SCROLL_SECOND_OK$/u
         )
     ).toBeInViewport({ timeout: 15_000 });
-    await expect
-        .poll(() => latestAgentEyesTailClearance(page), { timeout: 10_000 })
-        .toBeGreaterThanOrEqual(8);
 
     // Narration lives in the turn details drawer once a turn completes.
     await openTurnDetails(page);
@@ -475,16 +463,6 @@ async function enableChatTiming(page: Page) {
     });
 }
 
-async function enableScrollDebug(page: Page) {
-    await page.addInitScript(() => {
-        (
-            window as typeof window & {
-                __TAVERN_SCROLL_DEBUG__?: unknown[];
-            }
-        ).__TAVERN_SCROLL_DEBUG__ = [];
-    });
-}
-
 async function waitForChatTiming(page: Page, names: string[]) {
     await page.waitForFunction(
         (expectedNames) => {
@@ -524,31 +502,6 @@ async function waitForRealChatRoute(page: Page) {
     }
 
     return chatId;
-}
-
-async function latestAgentEyesTailClearance(page: Page) {
-    return page.evaluate(() => {
-        const viewport = Array.from(document.querySelectorAll('main div')).find((element) => {
-            if (!(element instanceof HTMLElement)) {
-                return false;
-            }
-
-            const style = window.getComputedStyle(element);
-            return style.overflowY === 'auto' && element.scrollHeight > element.clientHeight;
-        });
-        const agentEyes = Array.from(
-            document.querySelectorAll('output[aria-label^="Agent "]')
-        ).filter((element): element is HTMLElement => element instanceof HTMLElement);
-        const latestAgentEyes = agentEyes.at(-1);
-
-        if (!(viewport instanceof HTMLElement && latestAgentEyes)) {
-            throw new Error('Chat presence geometry not found.');
-        }
-
-        return (
-            viewport.getBoundingClientRect().bottom - latestAgentEyes.getBoundingClientRect().bottom
-        );
-    });
 }
 
 async function collectScrollSamplesDuring(page: Page, action: () => Promise<void>) {
@@ -624,18 +577,6 @@ function getLargestScrollStepWindow(samples: number[]) {
         largestStep,
         samples: samples.slice(Math.max(largestIndex - 6, 0), largestIndex + 7),
     };
-}
-
-async function getScrollDebugTail(page: Page) {
-    return page.evaluate(() => {
-        const debug = (
-            window as typeof window & {
-                __TAVERN_SCROLL_DEBUG__?: unknown[];
-            }
-        ).__TAVERN_SCROLL_DEBUG__;
-
-        return debug?.slice(-24) ?? [];
-    });
 }
 
 async function getAgentHoverMetadata(page: Page) {

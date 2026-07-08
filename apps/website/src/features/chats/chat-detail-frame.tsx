@@ -7,6 +7,7 @@ import {
     MessageScrollerProvider,
     MessageScrollerViewport,
     useMessageScroller,
+    useMessageScrollerScrollable,
 } from '../../components/ui/message-scroller.tsx';
 import type { ChatActiveReply, ChatTurnFailure } from '../../hooks/chats/chat-timeline-state.ts';
 import type { ChatLogOutput } from '../../lib/trpc.tsx';
@@ -144,7 +145,6 @@ export function ChatDetailFrame({
                             />
                             <TurnStartAutoScroll
                                 activeRunId={activeReplies.at(-1)?.runId ?? null}
-                                viewportRef={viewportRef}
                             />
                             {hasTimelineContent ? (
                                 <MessageScrollerButton
@@ -172,19 +172,20 @@ export function ChatDetailFrame({
 // anchor, so the visible spacer opts out. This covers turns that start without
 // a new user message: simulated turns, cron deliveries, and channel triggers
 // from other participants.
-function TurnStartAutoScroll({
-    activeRunId,
-    viewportRef,
-}: {
-    activeRunId: string | null;
-    viewportRef: React.RefObject<HTMLDivElement | null>;
-}) {
+function TurnStartAutoScroll({ activeRunId }: { activeRunId: string | null }) {
     const { scrollToEnd } = useMessageScroller();
+    // Spacer-aware "content below the viewport" from the scroller itself. Raw
+    // scrollHeight math counts the send-anchor spacer plus freshly streamed
+    // rows under the anchor, so it reported "not at end" for composer sends
+    // and the scrollToEnd below destroyed the anchor.
+    const { end: contentBelowViewport } = useMessageScrollerScrollable();
     const lastRunIdRef = React.useRef<string | null>(activeRunId);
-    // Latest-callback ref: keeps the effect off the scroller context's
-    // per-render callback identity so the scheduled frame survives re-renders.
+    // Latest-value refs: keep the effect off the scroller context's
+    // per-render identity so the scheduled frame survives re-renders.
     const scrollToEndRef = React.useRef(scrollToEnd);
     scrollToEndRef.current = scrollToEnd;
+    const contentBelowViewportRef = React.useRef(contentBelowViewport);
+    contentBelowViewportRef.current = contentBelowViewport;
 
     React.useEffect(() => {
         if (!activeRunId || lastRunIdRef.current === activeRunId) {
@@ -193,25 +194,21 @@ function TurnStartAutoScroll({
         }
 
         lastRunIdRef.current = activeRunId;
-        // Synchronous on purpose: requestAnimationFrame never fires in
-        // hidden windows.
-        const viewport = viewportRef.current;
-        const distanceFromEnd = viewport
-            ? viewport.scrollHeight - viewport.clientHeight - viewport.scrollTop
-            : 0;
 
-        // Already at the end (including the send-anchored position, where the
-        // spacer keeps the anchored message "at end"): scrolling would only
-        // disturb the anchored mode.
-        if (distanceFromEnd <= 4) {
+        // No real content below the viewport: the reader already sees the
+        // latest rows (a send-anchored viewport counts — its spacer is not
+        // content), so moving would only disturb the anchor.
+        if (!contentBelowViewportRef.current) {
             return;
         }
 
+        // Synchronous on purpose: requestAnimationFrame never fires in
+        // hidden windows.
         scrollToEndRef.current({
             // Hidden windows never animate smooth scrolls; jump instead.
             behavior: document.visibilityState === 'hidden' ? 'auto' : 'smooth',
         });
-    }, [activeRunId, viewportRef]);
+    }, [activeRunId]);
 
     return null;
 }
