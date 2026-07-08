@@ -21,6 +21,10 @@ an agent assignee are picked up and executed without a human pressing Dispatch.
 - The description is the brief: what the task is and how to tell it is done.
   The summary is the outcome, written at close-out. Closing a task never
   overwrites its description.
+- Tasks can depend on other tasks (`blockedBy` edges, task-to-task only).
+  A task with an unfinished dependency is waiting: it keeps its status and
+  shows what it waits on. Cycles are rejected at write time. There is no
+  parent/child hierarchy and no automatic status motion from edges.
 - Board writes are never gated on agent activity. The user can edit, retitle,
   reprioritize, block, or cancel any task while an agent is mid-turn.
 
@@ -29,6 +33,11 @@ an agent assignee are picked up and executed without a human pressing Dispatch.
 Statuses move by behavior, not declaration:
 
 - The user moves anything anywhere. `backlog` and `todo` ordering is triage.
+- Only the user moves a task into `todo`. Agent-created tasks always enter
+  `backlog` for triage, and agent tools cannot set `todo`. Human promotion
+  is the sole path into the auto-dispatch queue, so an agent filing work
+  for itself can never queue it — recursive self-dispatch is structurally
+  impossible.
 - The dispatcher (manual or auto) moves `todo` to `in_progress` when it
   claims a task for an agent.
 - The working agent moves its claimed task to terminal states through task
@@ -38,15 +47,39 @@ Statuses move by behavior, not declaration:
 
 ### Manual dispatch
 
-- Dispatch sends a work order into the assignee agent's DM: the T-number,
+- Dispatch sends a work order into the task's work chat: the T-number,
   title, description, and the standing instruction to keep the task current.
 - Manual and auto dispatch share one claim path, so they cannot double-claim
   the same task.
+- Manual dispatch is a human override: it ignores dependency holds.
+
+## Work Chats
+
+Dispatched work runs in a dedicated task chat, not the agent's DM.
+
+- A task chat is an ordinary Runtime chat with scope `task`, titled by the
+  T-number and title, holding the user and the assignee agent. No new
+  conversation primitive: everything a chat supports — visible turns,
+  steering, stopping, sessions — works unchanged.
+- The chat is created on first dispatch and reused by every later attempt,
+  so one task accumulates one transcript across retries. Reassigning the
+  task adds the new assignee to the same chat; history stays in place.
+- The task records its work chat and the task page links to it. Task chats
+  are grouped apart from DMs and channels in the chat list and auto-archive
+  when the task reaches a terminal status; archived task chats stay
+  reachable from the task page.
+- Per-task chats keep batch work in separate contexts (ten tasks, ten
+  transcripts) and are the prerequisite for a concurrent-run cap above one.
 
 ## Agent Contract
 
 - Tools: `tasks_list`, `tasks_get`, `tasks_create`, `tasks_update`. All task
   reads and writes by agents flow through tools, never through direct storage.
+- `tasks_create` and `tasks_update` accept dependencies by T-number, so an
+  agent decomposing a batch can file ordered work in `backlog` for the user
+  to promote as one chain.
+- `tasks_create` always files into `backlog`; `tasks_update` cannot set
+  `todo` (see status ownership).
 - Terminal transitions through `tasks_update` carry a short `summary` — what
   changed, how it was verified, what remains. The summary lands on the task,
   not in the description.
@@ -64,10 +97,14 @@ Statuses move by behavior, not declaration:
 ### Eligibility
 
 - A task is eligible when all hold: `kind` is task, status is `todo`, the
-  assignee is an agent, and auto-dispatch is enabled globally and for that
-  agent.
+  assignee is an agent, every dependency is `done`, and auto-dispatch is
+  enabled globally and for that agent.
 - `backlog` is never auto-dispatched. Moving a card to `todo` with an agent
   assignee is the go signal. Epics are grouping records and never dispatch.
+- A `todo` task with unmet dependencies is waiting, not hidden: it keeps its
+  status and becomes claimable the moment its last dependency closes, so a
+  chain staged in `todo` executes in order. A `canceled` dependency never
+  satisfies the edge; the dependent stays held for the user to re-triage.
 
 ### Dispatcher
 
@@ -77,9 +114,9 @@ Statuses move by behavior, not declaration:
 - A claim is one atomic conditional write (`todo` to `in_progress`, expected
   assignee, attempt recorded). A lost race is a no-op, never a second
   dispatch.
-- Claiming sends the same work order as manual dispatch into the agent's DM.
-  There is no separate headless execution path: auto-dispatched work is an
-  ordinary chat turn, visible, steerable, and stoppable.
+- Claiming sends the same work order as manual dispatch into the task's
+  work chat. There is no separate headless execution path: auto-dispatched
+  work is an ordinary chat turn, visible, steerable, and stoppable.
 - At most one auto-dispatched task runs per agent at a time, and a global
   concurrent-run cap applies (default 1). Both caps must allow a claim. The
   dispatcher never interrupts an agent that is mid-turn for any reason.
@@ -102,8 +139,7 @@ Statuses move by behavior, not declaration:
 ### Blocked
 
 - The dispatcher skips `blocked` tasks. Moving a task back to `todo` requeues
-  it; the human does this after resolving the blocker, or an agent does on
-  new information.
+  it; only the human does this, after resolving the blocker.
 - Blocked reasons and kinds appear on the board and in notifications so
   `needs_input` (answer me) reads differently from `error` (fix me).
 
@@ -121,8 +157,8 @@ Statuses move by behavior, not declaration:
 
 - Terminal transitions carry the summary on the task, so the board is
   reviewable without opening the work chat.
-- The full work transcript stays in the agent's DM; the task carries the
-  outcome, not the process.
+- The full work transcript stays in the task's work chat; the task carries
+  the outcome, not the process.
 
 ### Notifications
 
@@ -131,9 +167,9 @@ Statuses move by behavior, not declaration:
   message to the originating chat when one exists: the T-number, the terminal
   status, and the first line of the summary. Detail stays pull-based (task
   page, work DM).
-- Tasks without an originating chat produce no extra message; the DM close-out
-  is the record. Digest-style rollups are ordinary cron automations, not
-  dispatcher features.
+- Tasks without an originating chat produce no extra message; the work-chat
+  close-out is the record. Digest-style rollups are ordinary cron
+  automations, not dispatcher features.
 
 ### Controls
 
@@ -162,6 +198,8 @@ Statuses move by behavior, not declaration:
   row.
 - Blocked rows surface the reason kind so `needs_input` and `error` read
   differently at a glance.
+- A waiting `todo` task shows the T-numbers it waits on; dependencies are
+  edited from the task detail sidebar.
 - Queue position is implicit in the board's priority-then-oldest sort. There
   is no separate queue view.
 
@@ -173,11 +211,10 @@ Statuses move by behavior, not declaration:
 
 ## Out of Scope (Future)
 
-- Parent/child dependencies, auto-promotion, decomposition, and orchestrator
-  agents that fan work out to other agents.
+- Parent/child hierarchy, subtasks, and orchestrator agents that fan work
+  out to other agents.
 - Per-attempt run history rows with structured handoffs; task comment
   threads; attachments.
-- A `dependency` blocked kind that waits on linked tasks instead of a human.
 - Spend budgets that pause an agent's auto-dispatch at a cap.
 - Scheduled tasks (`not before` times) and idempotency keys for
   automation-created tasks.
