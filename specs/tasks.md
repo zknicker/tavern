@@ -148,6 +148,23 @@ Statuses move by behavior, not declaration:
   sandbox, and instructions as any chat turn; irreversible-action rules live
   in agent doctrine, not the dispatcher.
 
+### Surfaces
+
+- Per-agent enable and the per-agent review policy live on the agent's
+  settings page beside its other capabilities. The global enable and
+  concurrent-run cap live in app settings.
+- The Tasks page shows whether the board is live: when auto-dispatch is
+  enabled, the toolbar carries a compact queue indicator (running and queued
+  counts); when disabled, the board shows nothing extra.
+- An `in_progress` task whose dispatched turn is running shows a live
+  activity indicator on its row and detail page, and links to the work chat.
+  Dispatch trigger (`manual` or `auto`) appears on the detail page, not the
+  row.
+- Blocked rows surface the reason kind so `needs_input` and `error` read
+  differently at a glance.
+- Queue position is implicit in the board's priority-then-oldest sort. There
+  is no separate queue view.
+
 ### Capabilities
 
 - Auto-dispatch readiness is a Runtime capability. Apps gate the dispatcher
