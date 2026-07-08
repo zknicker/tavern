@@ -110,7 +110,7 @@ export function seedDevelopmentRecallEvidence(db: Database) {
                 evidence: {
                     capturedAt: new Date().toISOString(),
                     instructions:
-                        '# Tavern Agent Instructions (demo)\n\nYou are Tavern, the demo agent. Static chat guidance and tool descriptions live here.',
+                        '# Tavern Agent Instructions (demo)\n\nYou are Otto, the demo agent. Static chat guidance and tool descriptions live here.',
                     prompt: demoPrompt(request?.content ?? 'Show the demo.'),
                     recall: demoWikiPages.map((page, index) => ({
                         path: page.relativePath,

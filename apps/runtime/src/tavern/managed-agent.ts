@@ -1,5 +1,5 @@
 import type { AgentRuntimeAgent } from '@tavern/api';
-import { defaultAgentEngineAgentId } from '../agent-engine/constants.ts';
+import { defaultAgentDisplayName, defaultAgentEngineAgentId } from '../agent-engine/constants.ts';
 import { tasksSkillId, tavernAgentSkillId } from '../agent-engine/skill-library.ts';
 import { AGENT_WORKSPACE } from '../config.ts';
 import { getDb } from '../db/connection.ts';
@@ -12,7 +12,7 @@ export function primaryManagedAgent(): AgentRuntimeAgent {
         enabledSkillIds: [tavernAgentSkillId, tasksSkillId],
         id: defaultAgentEngineAgentId,
         isAdmin: true,
-        name: 'Tavern',
+        name: defaultAgentDisplayName,
         primaryColor: null,
         workspaceFolder: AGENT_WORKSPACE,
     };
@@ -23,16 +23,24 @@ export function ensurePrimaryManagedAgent(db?: Database) {
     const existing = getStoredAgent(defaultAgentEngineAgentId, targetDb);
     if (existing) {
         // The managed agent always carries the Tavern-seeded skills, even when
-        // it was stored before a new seeded skill existed.
-        const upgraded = existing.enabledSkillIds.includes(tasksSkillId)
-            ? existing
-            : upsertStoredAgent({
-                  agent: {
-                      ...existing,
-                      enabledSkillIds: [...existing.enabledSkillIds, tasksSkillId],
-                  },
-                  db: targetDb,
-              });
+        // it was stored before a new seeded skill existed. Agents stored under
+        // the retired "Tavern" default pick up the current default name; a
+        // user-chosen name stays put.
+        const needsSkill = !existing.enabledSkillIds.includes(tasksSkillId);
+        const needsRename = existing.name === 'Tavern';
+        const upgraded =
+            needsSkill || needsRename
+                ? upsertStoredAgent({
+                      agent: {
+                          ...existing,
+                          enabledSkillIds: needsSkill
+                              ? [...existing.enabledSkillIds, tasksSkillId]
+                              : existing.enabledSkillIds,
+                          name: needsRename ? defaultAgentDisplayName : existing.name,
+                      },
+                      db: targetDb,
+                  })
+                : existing;
         registerAgentWorkspace(targetDb, {
             agentId: upgraded.id,
             agentName: upgraded.name,

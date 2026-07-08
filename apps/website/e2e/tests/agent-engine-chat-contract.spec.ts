@@ -139,10 +139,10 @@ async function mentionTavernAgent(page: Page, text: string) {
     await composer.click();
     await page.keyboard.press(process.platform === 'darwin' ? 'Meta+A' : 'Control+A');
     await page.keyboard.press('Backspace');
-    await composer.pressSequentially('@Tavern');
+    await composer.pressSequentially('@Otto');
     await page
         .getByRole('listbox')
-        .getByRole('option', { name: /Tavern Agent in this chat/u })
+        .getByRole('option', { name: /Otto Agent in this chat/u })
         .click();
     await composer.pressSequentially(` ${text}`);
     await composer.press('Enter');

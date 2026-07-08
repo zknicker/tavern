@@ -27,7 +27,7 @@ import {
     tasksSkillId,
     tavernAgentSkillId,
 } from '../agent-engine/skill-library.ts';
-import { AGENT_HOME, AGENT_WORKSPACE } from '../config.ts';
+import { AGENT_HOME } from '../config.ts';
 import { getDb } from '../db/connection.ts';
 import { runRuntimeDoctor } from '../doctor/runtime-doctor.ts';
 import { listAgentModels } from '../models/catalog-service.ts';
@@ -55,6 +55,7 @@ import {
     stopTavernChannelTurn,
 } from './channel-relay.ts';
 import { json } from './http.ts';
+import { primaryManagedAgent } from './managed-agent.ts';
 import { getRuntimeTool, listRuntimeTools } from './tool-catalog.ts';
 
 export async function handleAgentProxyRequest(request: Request): Promise<Response | null> {
@@ -340,15 +341,7 @@ function ensurePrimaryAgent() {
     }
 
     return upsertStoredAgent({
-        agent: {
-            enabledSkillIds: [tavernAgentSkillId, tasksSkillId],
-            enabledPluginIds: [],
-            id: defaultAgentEngineAgentId,
-            isAdmin: true,
-            name: 'Tavern',
-            primaryColor: null,
-            workspaceFolder: AGENT_WORKSPACE,
-        },
+        agent: { ...primaryManagedAgent(), enabledPluginIds: [] },
     });
 }
 

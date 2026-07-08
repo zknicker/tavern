@@ -40,7 +40,7 @@ describe('Runtime agent and agent engine reads', () => {
                     },
                     id: 'agt_primary',
                     isAdmin: true,
-                    name: 'Tavern',
+                    name: 'Otto',
                     primaryColor: null,
                     thinkingDefault: null,
                     workspaceFolder: AGENT_WORKSPACE,
@@ -82,7 +82,7 @@ describe('Runtime agent and agent engine reads', () => {
         expect(listResponse.status).toBe(200);
         await expect(listResponse.json()).resolves.toMatchObject({
             agents: expect.arrayContaining([
-                expect.objectContaining({ id: 'agt_primary', name: 'Tavern' }),
+                expect.objectContaining({ id: 'agt_primary', name: 'Otto' }),
                 expect.objectContaining({
                     enabledSkillIds: ['research'],
                     id: 'agt_research',

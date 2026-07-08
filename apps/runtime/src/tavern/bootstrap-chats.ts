@@ -1,4 +1,4 @@
-import { defaultAgentEngineAgentId } from '../agent-engine/constants';
+import { defaultAgentDisplayName, defaultAgentEngineAgentId } from '../agent-engine/constants';
 import type { Database } from '../db/sqlite';
 import { createChat, getChat } from './chat-api';
 
@@ -14,7 +14,7 @@ export function seedWorkspaceChats(input: {
     const agents = input.agents ?? [
         {
             id: input.agentId ?? defaultAgentEngineAgentId,
-            name: input.agentName ?? 'Tavern',
+            name: input.agentName ?? defaultAgentDisplayName,
         },
     ];
     let seeded = 0;

@@ -9,6 +9,7 @@ import {
     getAgentWorkspaceSource,
     registerAgentWorkspace,
 } from '../workspace/instructions.ts';
+import { defaultAgentDisplayName } from './constants.ts';
 import { seedManagedSkills } from './skill-library.ts';
 
 export const agentEngineAgentId = 'main';
@@ -34,7 +35,7 @@ export async function prepareAgentEngineInstructions(
     } = {}
 ) {
     const agentId = typeof agent === 'string' ? agent : agent.id;
-    const agentName = typeof agent === 'string' ? 'Tavern' : agent.name;
+    const agentName = typeof agent === 'string' ? defaultAgentDisplayName : agent.name;
     const workspaceDir = typeof agent === 'string' ? AGENT_WORKSPACE : agent.workspaceFolder;
     const source =
         getAgentWorkspaceSource(db, agentId) ??
