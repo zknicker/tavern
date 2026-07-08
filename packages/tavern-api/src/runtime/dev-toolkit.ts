@@ -3,7 +3,7 @@ import * as z from 'zod';
 // Dev toolkit: development-stack-only runtime helpers for exercising live
 // chat surfaces (streaming turns, tool activity, failures) without a model.
 
-export const devToolkitScenarioSchema = z.enum(['tooling', 'narration', 'failure']);
+export const devToolkitScenarioSchema = z.enum(['tooling', 'narration', 'failure', 'multi-agent']);
 export type DevToolkitScenario = z.infer<typeof devToolkitScenarioSchema>;
 
 export const tavernSimulateTurnRequestSchema = z.object({

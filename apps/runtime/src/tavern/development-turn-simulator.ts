@@ -78,37 +78,59 @@ export function simulateDevelopmentTurn(input: {
         throw new Error(`Chat ${input.chatId} does not exist.`);
     }
 
-    const agentId =
-        chat.participants.find((participant) => participant.kind === 'agent')?.id ?? demoAgentId;
+    const agentIds = chat.participants
+        .filter((participant) => participant.kind === 'agent')
+        .map((participant) => participant.id);
     const messages = listMessages(input.chatId, { limit: 200 }, db);
     const requestMessageId = messages.messages.at(-1)?.id ?? null;
     const stamp = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
-    const runId = `run_devsim_${stamp}`;
-    const responseId = `rsp_devsim_${stamp}`;
     const paceMs = input.paceMs ?? defaultPaceMs;
     const scenario = input.scenario ?? 'tooling';
-    const context: SimulationContext = {
-        agentId,
-        chatId: input.chatId,
-        db,
-        paceMs,
-        requestMessageId,
-        responseId,
-        runId,
-        runtime: {
+    const buildContext = (agentId: string, suffix = ''): SimulationContext => {
+        const runId = `run_devsim_${stamp}${suffix}`;
+
+        return {
             agentId,
+            chatId: input.chatId,
+            db,
+            paceMs,
+            requestMessageId,
+            responseId: `rsp_devsim_${stamp}${suffix}`,
             runId,
-            // Delivered messages must carry a turn reference or the runtime
-            // event projection cannot map them.
-            sessionKey: `agent:${agentId}:tavern:devsim:${input.chatId}`,
-            source: 'dev-toolkit',
-            startedAt: new Date().toISOString(),
-        },
+            runtime: {
+                agentId,
+                runId,
+                // Delivered messages must carry a turn reference or the runtime
+                // event projection cannot map them.
+                sessionKey: `agent:${agentId}:tavern:devsim:${input.chatId}`,
+                source: 'dev-toolkit',
+                startedAt: new Date().toISOString(),
+            },
+        };
     };
 
+    if (scenario === 'multi-agent') {
+        if (agentIds.length < 2) {
+            throw new Error(
+                'The multi-agent scenario needs a chat with two agents — use the seeded "team demo" chat.'
+            );
+        }
+
+        const contexts = agentIds
+            .slice(0, 2)
+            .map((agentId, index) => buildContext(agentId, `_${index === 0 ? 'a' : 'b'}`));
+        const run = runMultiAgentScenario(contexts[0], contexts[1]);
+
+        return {
+            receipt: { response_id: contexts[0].responseId, run_id: contexts[0].runId },
+            run,
+        };
+    }
+
+    const context = buildContext(agentIds[0] ?? demoAgentId);
     const run = runScenario(scenario, context);
 
-    return { receipt: { response_id: responseId, run_id: runId }, run };
+    return { receipt: { response_id: context.responseId, run_id: context.runId }, run };
 }
 
 interface SimulationContext {
@@ -122,7 +144,10 @@ interface SimulationContext {
     runtime: Record<string, string>;
 }
 
-function runScenario(scenario: DevToolkitScenario, context: SimulationContext) {
+function runScenario(
+    scenario: Exclude<DevToolkitScenario, 'multi-agent'>,
+    context: SimulationContext
+) {
     switch (scenario) {
         case 'failure':
             return runFailureScenario(context);
@@ -131,6 +156,43 @@ function runScenario(scenario: DevToolkitScenario, context: SimulationContext) {
         default:
             return runToolingScenario(context);
     }
+}
+
+// Two agents answering the same request at once: both runs stream live so the
+// status stack shows two seats working, then the replies land one after the
+// other. The second seat starts a beat later so the overlap reads naturally.
+async function runMultiAgentScenario(first: SimulationContext, second: SimulationContext) {
+    const secondRun = (async () => {
+        await sleep(Math.ceil(second.paceMs / 2));
+        await runSecondSeatScenario(second);
+    })();
+
+    await Promise.all([runToolingScenario(first), secondRun]);
+}
+
+async function runSecondSeatScenario(context: SimulationContext) {
+    const pause = () => sleep(context.paceMs);
+
+    upsertRun(context, { status: 'running' });
+    await pause();
+
+    narration(context, 'Checking the queue for anything risky before I answer.');
+    await pause();
+
+    toolActivity(context, 1, 'read_file', 'QUEUE.md', { running: true });
+    await pause();
+
+    toolActivity(context, 1, 'read_file', 'QUEUE.md', { running: false });
+    upsertRun(context, {
+        status: 'running',
+        summary: 'Two items stand out —',
+    });
+    await pause();
+
+    completeRun(
+        context,
+        'Two items stand out: the schema change needs a fresh-database pass, and the calendar token expires Friday.'
+    );
 }
 
 async function runToolingScenario(context: SimulationContext) {

@@ -100,6 +100,48 @@ describe('development turn simulator', () => {
         expect(response?.metadata.error).toContain('Simulated failure');
     });
 
+    it('runs two agent seats concurrently for the multi-agent scenario', async () => {
+        for (const agentId of ['agt_alpha', 'agt_beta']) {
+            createMessage('cht_devsim', {
+                author_id: agentId,
+                content: `seed ${agentId}`,
+                id: `msg_seed_${agentId}`,
+                role: 'assistant',
+            });
+        }
+
+        const simulation = simulateDevelopmentTurn({
+            chatId: 'cht_devsim',
+            paceMs: 0,
+            scenario: 'multi-agent',
+        });
+        await simulation.run;
+
+        const page = getChatTimelinePage('cht_devsim', { limit: 40 });
+        const completed = page.responses.filter((entry) => entry.id.startsWith('rsp_devsim_'));
+        expect(completed).toHaveLength(2);
+        expect(completed.every((entry) => entry.status === 'completed')).toBe(true);
+        expect(new Set(completed.map((entry) => entry.participant_id))).toEqual(
+            new Set(['agt_alpha', 'agt_beta'])
+        );
+
+        const replies = page.messages.filter((message) =>
+            completed.some((entry) => entry.response_message_id === message.id)
+        );
+        expect(replies).toHaveLength(2);
+        expect(new Set(replies.map((message) => message.content)).size).toBe(2);
+    });
+
+    it('rejects the multi-agent scenario in a single-agent chat', () => {
+        expect(() =>
+            simulateDevelopmentTurn({
+                chatId: 'cht_devsim',
+                paceMs: 0,
+                scenario: 'multi-agent',
+            })
+        ).toThrow(/two agents/);
+    });
+
     it('refuses to run outside the development stack', () => {
         process.env.TAVERN_DEV_STACK = undefined;
 
