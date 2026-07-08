@@ -41,19 +41,25 @@ an agent assignee are picked up and executed without a human pressing Dispatch.
 ### Attachments
 
 - The description and summary render as markdown, including images.
-- A task carries attachments: references to files in an agent's workspace —
-  the same files the work produced — not copies. There is no separate
-  asset store and no asset URL server. The app reads attachment bytes
-  through the existing Runtime workspace-file APIs and renders them inline
-  as data, the same path chat artifact previews use today.
-- An attachment records the owning agent, the workspace-relative path, and
-  the media type at attach time. Agents attach by path — they already know
-  it, they wrote the file.
-- Image attachments render inline on the task page, so a design task's
-  outputs are reviewable exactly where the `review` decision happens.
-- An attachment whose file has moved or been deleted renders as visibly
-  missing; Tavern never substitutes a guess. Snapshotting attachment bytes
-  at close-out is future work.
+- Attaching promotes. An agent attaches deliverables by workspace path at
+  close-out — it wrote the files, it knows the paths — and Runtime copies
+  each named file into the task's folder under the Runtime-owned artifacts
+  root, outside any agent workspace. The task references the promoted
+  copy, never the live workspace file: a path is a claim, a promoted copy
+  is a fact. Agents stay free to reorganize and clean their workspaces
+  without breaking the board.
+- An attachment records filename, media type, byte size, and its source.
+  Task rows stay light — pointers and summaries, never blobs; bytes live
+  in the artifacts root on disk.
+- There is no asset URL server. The app reads attachment bytes through
+  Runtime APIs and renders them inline, the same way chat artifact
+  previews work today. Image attachments render inline on the task page,
+  so a design task's outputs are reviewable exactly where the `review`
+  decision happens; summary markdown can embed an attachment by filename.
+- The artifacts root is the one heavy directory in Runtime state. Light
+  state — the runtime database and workspace text — backs up cheaply
+  without it, and the artifacts root can later move to object storage as
+  a storage-provider change, not a product change.
 - Board writes are never gated on agent activity. The user can edit, retitle,
   reprioritize, block, or cancel any task while an agent is mid-turn.
 
@@ -112,7 +118,10 @@ Dispatched work runs in a dedicated task chat, not the agent's DM.
 - Terminal transitions through `tasks_update` carry a short `summary` — what
   changed, how it was verified, what remains. The summary lands on the task,
   not in the description. When the work produced files, the transition
-  attaches the key ones by workspace path.
+  attaches the key ones by workspace path; Runtime promotes the copies
+  (see Attachments). Work files belong in the workspace `workbench/`
+  directory — scratch the agent may clean freely once deliverables are
+  attached.
 - Agents apply labels by name. An unknown label name creates the label
   with an auto-assigned color, so an agent can mint a new SKU tag without
   a round-trip through the user.
@@ -265,6 +274,8 @@ Dispatched work runs in a dedicated task chat, not the agent's DM.
 - Idempotency keys for automation-created tasks.
 - Two-way calendar sync (e.g. the Google Calendar plugin) for scheduled
   tasks; the calendar view is board-only until then.
-- Label groups; attachment byte snapshots at close-out.
+- Label groups.
+- Object-storage or CDN backends for the artifacts root; local disk is the
+  only provider for now.
 - Plan-approval gates before execution; goal-mode loops with judges;
   heartbeats; multi-host coordination.
