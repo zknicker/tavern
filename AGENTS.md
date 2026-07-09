@@ -175,7 +175,7 @@ so `docs:list` routes future agents correctly.
 
 ### Issue tracker
 
-Issues live in the Linear `TAVERN` team. See `docs/agents/issue-tracker.md`.
+Issues live in the Linear `PRD` team with the `Tavern` label. See `docs/agents/issue-tracker.md`.
 
 ### Triage labels
 
