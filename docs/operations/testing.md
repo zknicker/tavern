@@ -126,17 +126,21 @@ Live provider tests are opt-in. They are not part of normal CI or default local
 test lanes because they spend provider credits and depend on local tools,
 network, and account state.
 
-For OpenAI API-key agent execution, use a manual Runtime smoke against the Pi
-harness path:
+Run the automated smoke lane from `apps/runtime`:
 
 ```sh
-bun run --filter @tavern/runtime dev
+bun run --filter @tavern/runtime test:smoke
 ```
 
-Set `OPENAI_API_KEY`, `TAVERN_AGENT_API_KEY`, or AI Gateway credentials before
-starting Runtime, then send a temporary chat message and verify the turn
-persists Tavern-native response state. Automated tests should fake the executor
-boundary instead of spending provider credits.
+The lane (`src/tavern/harness-agent-executor.smoke.ts`) executes one real agent
+turn per provider through the harness executor against a temp database: OpenAI
+via the Pi harness, Claude Code, and Codex. Each provider case skips itself
+when its CLI or credentials are missing (OpenAI needs `OPENAI_API_KEY` or
+`TAVERN_AGENT_API_KEY`; Claude needs the `claude` CLI; Codex needs the `codex`
+CLI plus `~/.codex/auth.json`). An available provider that errors is a real
+failure. Read the run summary — a skip-heavy pass proves less than it looks.
+Other automated tests should fake the executor boundary instead of spending
+provider credits.
 
 Memory has no provider-backed live smoke lane. Runtime tests should cover path
 resolution, Markdown reads, search, and backlinks with temporary Memory
