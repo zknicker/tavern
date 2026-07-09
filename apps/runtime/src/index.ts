@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { seededSkillDefaultEntries } from './agent-engine/skill-library.ts';
+import { seededSkillDefaultEntries, seedManagedSkills } from './agent-engine/skill-library.ts';
 import { refreshRuntimeCapabilities } from './capabilities/store.ts';
 import { dispatch } from './cli/main.ts';
 import { ensureCliOnPath } from './cli-path.ts';
@@ -81,6 +81,11 @@ async function main(): Promise<void> {
             source: 'seeded',
         });
     }
+    // Refresh managed skill files at startup so doctrine updates reach
+    // existing installs before the first turn composes instructions.
+    await seedManagedSkills().catch((err) => {
+        log.warn('Seeded skills failed to refresh during startup', { err });
+    });
     await materializePluginSkills({ db }).catch((err) => {
         log.warn('Plugin skills failed to materialize during startup', { err });
     });
