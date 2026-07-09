@@ -339,7 +339,7 @@ function createHarnessAgent(
         }),
         ...createTavernWikiTools(),
         ...(isRuntimeCronReady() ? createTavernCronTools({ agentId: input.agent.id }) : {}),
-        ...createTavernTaskTools({ agentId: input.agent.id }),
+        ...createTavernTaskTools({ agentId: input.agent.id, chatId: input.chatId }),
         ...createTavernSkillTools({ agentId: input.agent.id }),
         ...createGoogleToolsForAgent(input.agent),
         ...createMerchbaseToolsForAgent(input.agent),

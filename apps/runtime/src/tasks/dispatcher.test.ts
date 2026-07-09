@@ -150,6 +150,7 @@ function buildTask(overrides: Partial<AgentRuntimeTask> = {}): AgentRuntimeTask 
         kind: 'task',
         labels: [],
         number: 1,
+        originChatId: null,
         priority: 'medium',
         scheduledFor: null,
         status: 'todo',

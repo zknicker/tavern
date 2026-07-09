@@ -311,6 +311,7 @@ CREATE TABLE IF NOT EXISTS tasks (
   assignee_agent_id TEXT,
   epic_id           TEXT,
   scheduled_for     TEXT,
+  origin_chat_id    TEXT,
   work_chat_id      TEXT,
   dispatch_trigger  TEXT CHECK (dispatch_trigger IS NULL OR dispatch_trigger IN ('manual', 'auto')),
   dispatch_attempts INTEGER NOT NULL DEFAULT 0 CHECK (dispatch_attempts >= 0),
@@ -679,6 +680,11 @@ export function ensureRuntimeSchema(db: Database): void {
     });
     ensureColumn(db, {
         column: 'scheduled_for',
+        definition: 'TEXT',
+        table: 'tasks',
+    });
+    ensureColumn(db, {
+        column: 'origin_chat_id',
         definition: 'TEXT',
         table: 'tasks',
     });

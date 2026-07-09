@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { closeDb, initTestDb } from '../db/connection.ts';
 import { ensureRuntimeSchema } from '../db/schema.ts';
 import { upsertStoredAgent } from '../tavern/agents-store.ts';
+import { createChat } from '../tavern/chat-api/index.ts';
 import { createTavernTaskTools } from './agent-tools.ts';
 import { createTaskId } from './ids.ts';
 import { createTask, getTask } from './store.ts';
@@ -95,6 +96,23 @@ describe('tasks agent tools', () => {
         await expect(
             runTool(tools, 'tasks_create', { status: 'todo', title: 'Sneaky queue jump' })
         ).rejects.toThrow(/unrecognized/i);
+    });
+
+    test('records tool chat context as immutable task origin', async () => {
+        createChat({ id: 'cht_origin' });
+        const tools = createTavernTaskTools({ agentId: 'agt_primary', chatId: 'cht_origin' });
+        const created = await runTool<Record<string, unknown>, { task: ToolTask }>(
+            tools,
+            'tasks_create',
+            { title: 'Remember this chat' }
+        );
+
+        expect(getTask(created.task.id)?.originChatId).toBe('cht_origin');
+        await runTool(tools, 'tasks_update', {
+            taskId: created.task.id,
+            title: 'Still remembers this chat',
+        });
+        expect(getTask(created.task.id)?.originChatId).toBe('cht_origin');
     });
 
     test('rejects agent updates that promote tasks to todo', async () => {

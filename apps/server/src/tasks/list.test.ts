@@ -45,6 +45,7 @@ function buildTask(overrides: Partial<Record<string, unknown>> = {}) {
         kind: 'task' as const,
         labels: [{ color: 'red' as const, id: 'lbl_bug', name: 'bug' }],
         number: 1,
+        originChatId: 'cht_origin',
         priority: 'high' as const,
         scheduledFor: null,
         status: 'backlog' as const,
@@ -96,6 +97,7 @@ test('listTasks returns mirrored tasks ordered by number descending', async () =
         labels: [{ color: 'red', id: 'lbl_bug', name: 'bug' }],
         priority: 'high',
         title: 'Fix invite link',
+        originChatId: 'cht_origin',
     });
     expect(result.tasks[0]).toMatchObject({
         blockedBy: ['tsk_1'],

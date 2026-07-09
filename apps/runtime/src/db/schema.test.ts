@@ -172,7 +172,7 @@ describe('Runtime DB schema repairs', () => {
         expect(
             db
                 .prepare(
-                    `SELECT id, status, title, description, scheduled_for
+                    `SELECT id, status, title, description, origin_chat_id, scheduled_for
                      FROM tasks ORDER BY number`
                 )
                 .all()
@@ -180,6 +180,7 @@ describe('Runtime DB schema repairs', () => {
             {
                 description: 'Keep this row',
                 id: 'tsk_old',
+                origin_chat_id: null,
                 scheduled_for: null,
                 status: 'todo',
                 title: 'Old task',
@@ -187,6 +188,7 @@ describe('Runtime DB schema repairs', () => {
             {
                 description: null,
                 id: 'tsk_other',
+                origin_chat_id: null,
                 scheduled_for: null,
                 status: 'todo',
                 title: 'Other task',
@@ -194,6 +196,7 @@ describe('Runtime DB schema repairs', () => {
             {
                 description: null,
                 id: 'tsk_blocked',
+                origin_chat_id: null,
                 scheduled_for: null,
                 status: 'blocked',
                 title: 'Blocked task',

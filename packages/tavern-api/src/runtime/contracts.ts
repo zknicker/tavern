@@ -1907,6 +1907,7 @@ export const agentRuntimeTaskSchema = z.object({
     kind: agentRuntimeTaskKindSchema,
     labels: z.array(agentRuntimeTaskLabelSchema),
     number: z.number().int().positive(),
+    originChatId: z.string().trim().min(1).nullable(),
     priority: agentRuntimeTaskPrioritySchema,
     scheduledFor: agentRuntimeTaskScheduledForSchema.nullable(),
     status: agentRuntimeTaskStatusSchema,

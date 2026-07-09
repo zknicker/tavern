@@ -40,6 +40,9 @@ the user and agents.
 * **Agent task tools.** Agents list, read, file, and update tasks from chat
   with their `tasks_*` tools. Agent-created tasks land in backlog for user
   triage; only the user promotes tasks into todo.
+* **Origin notifications.** Tasks filed by an agent remember their originating
+  chat. Auto-dispatched close-outs post one short result there, unless the
+  originating chat is also the task's work chat.
 * **Managed tasks skill.** A seeded `tasks` skill teaches board etiquette:
   when to file tasks, status hygiene, dispatched-task handling, and epics.
   It is enabled for agents by default and resettable to the Tavern default.

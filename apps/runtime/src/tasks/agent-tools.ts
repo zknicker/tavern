@@ -1,18 +1,20 @@
 import type { ToolSet } from '@ai-sdk/provider-utils';
-import {
-    type AgentRuntimeTask,
-    type AgentRuntimeUpdateTask,
-    agentRuntimeTaskScheduledForSchema,
-} from '@tavern/api';
+import type { AgentRuntimeTask, AgentRuntimeUpdateTask } from '@tavern/api';
 import { tool } from 'ai';
-import * as z from 'zod';
 import { getStoredAgent } from '../tavern/agents-store.ts';
+import {
+    createInputSchema,
+    getInputSchema,
+    listInputSchema,
+    type TaskToolUpdateInput,
+    updateInputSchema,
+} from './agent-tool-inputs.ts';
 import { promoteTaskAttachments } from './attachments.ts';
 import { publishTaskUpdated } from './events.ts';
 import { createTaskId } from './ids.ts';
 import { createTask, getTask, getTaskByNumber, listTasks, updateTask } from './store.ts';
 
-export function createTavernTaskTools(input: { agentId: string }): ToolSet {
+export function createTavernTaskTools(input: { agentId: string; chatId?: string }): ToolSet {
     return {
         tasks_list: tool({
             description:
@@ -64,20 +66,23 @@ export function createTavernTaskTools(input: { agentId: string }): ToolSet {
             inputSchema: createInputSchema,
             execute: (rawInput) => {
                 const parsed = createInputSchema.parse(rawInput);
-                const task = createTask({
-                    assignee: parsed.assignToMe
-                        ? { agentId: input.agentId, kind: 'agent' }
-                        : undefined,
-                    blockedBy: resolveBlockedByNumbers(parsed.blockedBy),
-                    description: parsed.description,
-                    epicId: parsed.epicId,
-                    id: createTaskId(),
-                    kind: parsed.kind,
-                    labels: parsed.labels,
-                    priority: parsed.priority,
-                    scheduledFor: parsed.scheduledFor,
-                    title: parsed.title,
-                });
+                const task = createTask(
+                    {
+                        assignee: parsed.assignToMe
+                            ? { agentId: input.agentId, kind: 'agent' }
+                            : undefined,
+                        blockedBy: resolveBlockedByNumbers(parsed.blockedBy),
+                        description: parsed.description,
+                        epicId: parsed.epicId,
+                        id: createTaskId(),
+                        kind: parsed.kind,
+                        labels: parsed.labels,
+                        priority: parsed.priority,
+                        scheduledFor: parsed.scheduledFor,
+                        title: parsed.title,
+                    },
+                    { originChatId: input.chatId }
+                );
                 publishTaskUpdated(task.id);
                 return Promise.resolve({
                     task: toToolTask(task, { numberLookup: createTaskNumberLookup(listTasks()) }),
@@ -146,79 +151,7 @@ export function createTavernTaskTools(input: { agentId: string }): ToolSet {
     };
 }
 
-const statusSchema = z.enum([
-    'backlog',
-    'todo',
-    'in_progress',
-    'blocked',
-    'review',
-    'done',
-    'canceled',
-]);
-const blockedReasonKindSchema = z.enum(['needs_input', 'error']);
-const prioritySchema = z.enum(['none', 'urgent', 'high', 'medium', 'low']);
-const kindSchema = z.enum(['task', 'epic']);
-const tNumberSchema = z.number().int().positive();
-
-const listInputSchema = z
-    .object({
-        assignedToMe: z.boolean().optional(),
-        epicId: z.string().trim().min(1).optional(),
-        kind: kindSchema.optional(),
-        status: statusSchema.optional(),
-    })
-    .strict();
-
-const getInputSchema = z
-    .object({
-        number: z.number().int().positive().optional(),
-        taskId: z.string().trim().min(1).optional(),
-    })
-    .strict()
-    .refine((value) => value.number !== undefined || value.taskId !== undefined, {
-        message: 'Provide a T-number or task id.',
-    });
-
-const createInputSchema = z
-    .object({
-        assignToMe: z.boolean().optional(),
-        blockedBy: z.array(tNumberSchema).optional(),
-        description: z.string().trim().min(1).nullable().optional(),
-        epicId: z.string().trim().min(1).nullable().optional(),
-        kind: kindSchema.optional(),
-        labels: z.array(z.string().trim().min(1)).optional(),
-        priority: prioritySchema.optional(),
-        scheduledFor: agentRuntimeTaskScheduledForSchema.nullable().optional(),
-        title: z.string().trim().min(1),
-    })
-    .strict();
-
-const updateInputSchema = z
-    .object({
-        assignToMe: z.boolean().optional(),
-        attachments: z.array(z.string().trim().min(1)).optional(),
-        blockedBy: z.array(tNumberSchema).optional(),
-        blockedReason: z.string().trim().min(1).optional(),
-        blockedReasonKind: blockedReasonKindSchema.optional(),
-        description: z.string().trim().min(1).nullable().optional(),
-        epicId: z.string().trim().min(1).nullable().optional(),
-        labels: z.array(z.string().trim().min(1)).optional(),
-        number: z.number().int().positive().optional(),
-        priority: prioritySchema.optional(),
-        scheduledFor: agentRuntimeTaskScheduledForSchema.nullable().optional(),
-        status: statusSchema.optional(),
-        summary: z.string().trim().min(1).optional(),
-        taskId: z.string().trim().min(1).optional(),
-        title: z.string().trim().min(1).optional(),
-    })
-    .strict()
-    .refine((value) => value.number !== undefined || value.taskId !== undefined, {
-        message: 'Provide a T-number or task id.',
-    });
-
-type UpdateInput = z.infer<typeof updateInputSchema>;
-
-function assertAgentUpdateAllowed(input: UpdateInput) {
+function assertAgentUpdateAllowed(input: TaskToolUpdateInput) {
     if (input.status === 'todo') {
         throw new Error('Only the user promotes tasks into todo.');
     }
@@ -236,7 +169,7 @@ function assertAgentUpdateAllowed(input: UpdateInput) {
 }
 
 function assertAttachmentUpdateAllowed(
-    input: UpdateInput,
+    input: TaskToolUpdateInput,
     currentStatus: AgentRuntimeTask['status']
 ) {
     if (!input.attachments || input.attachments.length === 0) {
@@ -253,7 +186,7 @@ function assertAttachmentUpdateAllowed(
     }
 }
 
-function blockedReasonPatch(input: UpdateInput): Partial<AgentRuntimeUpdateTask> {
+function blockedReasonPatch(input: TaskToolUpdateInput): Partial<AgentRuntimeUpdateTask> {
     if (input.status !== 'blocked') {
         return {};
     }

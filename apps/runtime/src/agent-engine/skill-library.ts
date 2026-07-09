@@ -62,6 +62,7 @@ File a task when the user asks to track work, or when real follow-up work
 surfaces that should outlive this conversation. Would the user expect to see
 it on the board? Then file it: short imperative title, description with
 enough context to act on later without this chat.
+Tasks you file remember this chat; auto-dispatched close-outs post a short result here.
 
 Do not mirror your in-conversation working steps onto the board. The board
 tracks outcomes the user cares about, not your scratch plan for the current

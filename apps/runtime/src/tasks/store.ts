@@ -20,8 +20,15 @@ export interface ListTasksFilter {
     status?: AgentRuntimeTaskStatus;
 }
 
-export function createTask(input: AgentRuntimeCreateTask, db: Database = getDb()) {
+export function createTask(
+    input: AgentRuntimeCreateTask,
+    options: { originChatId?: string | null } = {},
+    db: Database = getDb()
+) {
     const now = new Date().toISOString();
+    if (options.originChatId) {
+        assertChatExists(options.originChatId, db);
+    }
     if (input.epicId) {
         assertEpicExists(input.epicId, db);
     }
@@ -32,13 +39,13 @@ export function createTask(input: AgentRuntimeCreateTask, db: Database = getDb()
             `INSERT INTO tasks (
                 id, number, kind, title, description, summary, blocked_reason_kind,
                 blocked_reason_message, status, priority, assignee_kind, assignee_agent_id,
-                epic_id, scheduled_for, work_chat_id, created_at, updated_at
+                epic_id, scheduled_for, origin_chat_id, work_chat_id, created_at, updated_at
              )
              VALUES (
                 $id, (SELECT COALESCE(MAX(number), 0) + 1 FROM tasks), $kind, $title,
                 $description, $summary, $blockedReasonKind, $blockedReasonMessage, $status,
                 $priority, $assigneeKind, $assigneeAgentId, $epicId, $scheduledFor,
-                NULL, $now, $now
+                $originChatId, NULL, $now, $now
              )`
         ).run(
             namedParams({
@@ -51,6 +58,7 @@ export function createTask(input: AgentRuntimeCreateTask, db: Database = getDb()
                 id: input.id,
                 kind: input.kind ?? 'task',
                 now,
+                originChatId: options.originChatId ?? null,
                 priority: input.priority ?? 'none',
                 scheduledFor: input.scheduledFor ?? null,
                 status: input.status ?? 'backlog',

@@ -7,6 +7,7 @@ import {
     stopTaskDispatch,
 } from './dispatch-store.ts';
 import { publishTaskUpdated } from './events.ts';
+import { sendTaskTerminalNotification } from './terminal-notification.ts';
 
 export type DispatchTurnSettlement =
     | { status: 'cancelled' }
@@ -26,6 +27,7 @@ export function recoverTaskDispatchForTurn(
     const recovered = recoverMatchedTask(task.id, task.status, settlement, db);
     if (recovered) {
         publishTaskUpdated(recovered.id);
+        sendTaskTerminalNotification({ db, runId, task: recovered });
     }
     return recovered;
 }

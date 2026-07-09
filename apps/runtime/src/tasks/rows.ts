@@ -24,6 +24,7 @@ export interface TaskRow {
     id: string;
     kind: AgentRuntimeTaskKind;
     number: number;
+    origin_chat_id: string | null;
     priority: AgentRuntimeTaskPriority;
     scheduled_for: string | null;
     status: AgentRuntimeTaskStatus;
@@ -54,6 +55,7 @@ export function taskRowToTask(
         kind: row.kind,
         labels,
         number: row.number,
+        originChatId: row.origin_chat_id,
         priority: row.priority,
         scheduledFor: row.scheduled_for,
         status: row.status,

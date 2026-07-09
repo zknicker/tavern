@@ -61,6 +61,7 @@ describe('tasks store', () => {
             epicId: null,
             kind: 'task',
             labels: [],
+            originChatId: null,
             priority: 'none',
             scheduledFor: null,
             status: 'backlog',
