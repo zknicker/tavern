@@ -94,7 +94,8 @@ export async function searchWikiPages(input: { limit?: number; query: string }) 
             path: hit.displayPath,
             score: hit.score,
             snippet: collapseWhitespace(
-                hit.bestChunk || extractSnippet(hit.body, query, recallSnippetMaxLength).snippet
+                hit.bestChunk ||
+                    extractSnippet(hit.body ?? '', query, recallSnippetMaxLength).snippet
             ),
             title: hit.title,
         })),
