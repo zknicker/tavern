@@ -88,10 +88,8 @@ function finalizeExistingMessage(
     const byId = getMessage(input.id, db);
 
     if (byId && isStreamingPost(byId, chatId, input)) {
-        if (byId.content === input.content) {
-            return byId;
-        }
-
+        // Metadata always settles — the delivery clears the streaming flag
+        // even when the last streamed edit already matched the final text.
         db.prepare(
             'UPDATE chat_messages SET content = $content, metadata_json = $metadataJson WHERE id = $id'
         ).run(

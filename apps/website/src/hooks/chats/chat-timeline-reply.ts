@@ -184,6 +184,13 @@ function isDurableReplyForActiveReply(row: ChatTimelineMessageRow, activeReply: 
         return false;
     }
 
+    // The turn's post exists from its first visible content and is still
+    // being edited (specs/chat-timeline.md): only the finalized post — the
+    // delivery clears the streaming flag — ends the turn's live state.
+    if (isStreamingPostMessageRow(row)) {
+        return false;
+    }
+
     if (getMessageRuntimeRunId(row) === activeReply.runId) {
         return true;
     }
@@ -246,6 +253,17 @@ function getMessageRuntimeRunId(row: ChatTimelineMessageRow) {
 
 function isActivityMessageRow(row: ChatTimelineMessageRow) {
     return row.id.startsWith('act_');
+}
+
+function isStreamingPostMessageRow(row: ChatTimelineMessageRow) {
+    const runtime = row.message.metadata?.runtime;
+
+    return Boolean(
+        runtime &&
+            typeof runtime === 'object' &&
+            !Array.isArray(runtime) &&
+            (runtime as Record<string, unknown>).streaming === true
+    );
 }
 
 function getRuntimeMetadataString(

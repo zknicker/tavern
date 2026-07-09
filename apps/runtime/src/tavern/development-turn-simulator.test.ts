@@ -45,6 +45,11 @@ describe('development turn simulator', () => {
         );
         expect(reply?.role).toBe('assistant');
         expect(reply?.content.length).toBeGreaterThan(0);
+        // The delivery settles the post even when the last streamed edit
+        // already matched the final text: a lingering streaming flag would
+        // keep the thinking indicator alive forever.
+        const runtime = reply?.metadata.runtime as Record<string, unknown> | undefined;
+        expect(runtime?.streaming).toBeUndefined();
     });
 
     it('writes the long narration turn: preamble, reasoning, intra-turn updates, reply', async () => {

@@ -443,6 +443,51 @@ test('applyLogSnapshot keeps evidence for an optimistic run id that matches Runt
     expect(next.totalMessages).toBe(0);
 });
 
+test('applyLogSnapshot keeps live state while the turn post is still streaming', () => {
+    const post = (streaming: boolean) => ({
+        actor: { id: 'claw', kind: 'agent' as const },
+        connectsToNext: false,
+        connectsToPrevious: false,
+        id: 'msg_run-1_assistant',
+        isFirstInGroup: true,
+        kind: 'message' as const,
+        runId: 'run-1',
+        message: {
+            tavernAgentId: 'claw',
+            content: 'Checking the queue.',
+            id: 'msg_run-1_assistant',
+            metadata: { runtime: { runId: 'run-1', ...(streaming ? { streaming: true } : {}) } },
+            sender: 'Claw',
+            senderType: 'agent' as const,
+            sourceSessionId: null,
+            sourceSessionKey: 'session-1',
+            timestamp: '2026-04-21T16:08:44.000Z',
+        },
+    });
+    const live = startTimelineTurn(emptyTimelineState(), turn);
+
+    // The post exists from first narration but the turn is still running: the
+    // thinking indicator must not disappear.
+    const streaming = applyLogSnapshot(live, {
+        limit: 100,
+        nextBeforeSequence: null,
+        rows: [post(true)],
+        totalMessages: 1,
+    });
+    expect(streaming.activeReplies[0]?.runId).toBe('run-1');
+    expect(streaming.activeTurns[0]?.runId).toBe('run-1');
+
+    // The finalized post (delivery cleared the streaming flag) ends the
+    // turn's live state.
+    const finalized = applyLogSnapshot(live, {
+        limit: 100,
+        nextBeforeSequence: null,
+        rows: [post(false)],
+        totalMessages: 1,
+    });
+    expect(finalized.activeReplies).toEqual([]);
+});
+
 test('applyLogSnapshot clears live progress rows when the assistant message lands', () => {
     const live = patchTimelineProgress(startTimelineTurn(emptyTimelineState(), turn), {
         step: {
