@@ -27,6 +27,7 @@ const categories: CapabilityCategory[] = [
 
 const capabilityCategories: Partial<Record<CapabilityId, CapabilityCategoryId>> = {
     apiServer: 'runtimeCore',
+    browser: 'runtimeCore',
     codexOAuth: 'runtimeCore',
     dashboardServer: 'runtimeCore',
     gateway: 'runtimeCore',
@@ -46,6 +47,7 @@ const capabilityDisplayOrder: CapabilityId[] = [
     'apiServer',
     'dashboardServer',
     'gateway',
+    'browser',
     'memory',
     'memoryExtraction',
     'memoryDreaming',
@@ -75,6 +77,7 @@ const supportingCapabilities = new Set<CapabilityId>(['codexOAuth']);
 // product language: what the user gets when this is healthy.
 const capabilityDescriptions: Partial<Record<CapabilityId, string>> = {
     apiServer: 'The control surface the app uses to manage and inspect agent execution.',
+    browser: 'The supervised browser agents use for authenticated web work.',
     codexOAuth: 'Codex account access, so agents can run on your Codex subscription models.',
     cron: 'Scheduled automations, so agents can check in, remind, and report on a timer.',
     dashboardServer: 'The engine that executes your agents’ turns.',

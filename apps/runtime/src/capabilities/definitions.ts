@@ -29,6 +29,7 @@ import { listStoredAgents } from '../tavern/agents-store.ts';
 import { isDevToolkitEnabled } from '../tavern/development-turn-simulator.ts';
 import { auditRecallIndex, getRecallProvisioningStatus } from '../wiki/recall/recall-index.ts';
 import { resolveWikiConfig } from '../wiki/store.ts';
+import { checkBrowserHostCapability } from './browser-host.ts';
 
 export interface RuntimeCapabilityCheckResult {
     metadata?: Record<string, unknown>;
@@ -146,6 +147,17 @@ export const runtimeCapabilityDefinitions: RuntimeCapabilityDefinition[] = [
         id: 'gateway',
         refresh: {
             intervalMs: 5 * minuteMs,
+            runOnStart: true,
+        },
+    },
+    {
+        async check() {
+            return await checkBrowserHostCapability();
+        },
+        displayName: 'Browser',
+        id: 'browser',
+        refresh: {
+            intervalMs: minuteMs,
             runOnStart: true,
         },
     },

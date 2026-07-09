@@ -4,7 +4,14 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { AgentCapabilitiesSummary, CapabilityTooltipContent } from './agent-capabilities-table.tsx';
 
 function capability(input: {
-    capability: 'apiServer' | 'dashboardServer' | 'gateway' | 'modelExecution' | 'skills' | 'wiki';
+    capability:
+        | 'apiServer'
+        | 'browser'
+        | 'dashboardServer'
+        | 'gateway'
+        | 'modelExecution'
+        | 'skills'
+        | 'wiki';
     displayName?: string;
     state?: 'degraded' | 'healthy' | 'unknown' | 'unavailable';
 }) {
@@ -59,12 +66,14 @@ test('AgentCapabilitiesSummary groups by category', () => {
                 capability({ capability: 'modelExecution', state: 'unknown' }),
                 capability({ capability: 'apiServer' }),
                 capability({ capability: 'gateway' }),
+                capability({ capability: 'browser' }),
                 capability({ capability: 'skills' }),
             ]}
         />
     );
 
     assert.ok(markup.indexOf('Runtime core') < markup.indexOf('Skills &amp; models'));
+    assert.match(markup, /browser/);
     assert.doesNotMatch(markup, /Required/);
     assert.doesNotMatch(markup, /Supporting/);
 });

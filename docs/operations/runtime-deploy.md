@@ -156,6 +156,18 @@ Tailscale, a reverse proxy, or another trusted network path.
 
 Change `TAVERN_RUNTIME_PORT` only when the app Runtime URL uses the same port.
 
+Runtime projects a same-host BrowserHost into its primitive `browser` capability through
+`http://127.0.0.1:18442` by default. When BrowserHost runs on another tailnet machine, override the
+endpoint:
+
+```bash
+TAVERN_BROWSER_HOST_URL=https://zachs-mac-mini.example.ts.net:18443
+```
+
+Runtime reads `/v1/status`; BrowserHost remains the health source of truth. A pressured but
+responsive browser stays available with pressure metadata. Starting or recovering maps to
+`degraded`; stopped, unresponsive, or unsafe states map to `unavailable`.
+
 ## Version Match
 
 Tavern App and Tavern Runtime do not need exact release-version lockstep. The

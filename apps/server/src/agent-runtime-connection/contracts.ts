@@ -11,6 +11,7 @@ export const agentRuntimeCapabilities = [
     'dashboardServer',
     'apiServer',
     'gateway',
+    'browser',
     'modelExecution',
     'skills',
     'cron',

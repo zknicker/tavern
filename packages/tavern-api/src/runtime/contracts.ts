@@ -15,6 +15,7 @@ const agentRuntimeCoreCapabilityIds = [
     'dashboardServer',
     'apiServer',
     'gateway',
+    'browser',
     'modelExecution',
     'skills',
     'cron',

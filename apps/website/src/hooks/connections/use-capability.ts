@@ -23,6 +23,7 @@ export const runtimeUnhealthyTooltip =
 const runtimeDisconnectedReason = 'Tavern Runtime is disconnected.';
 const capabilityLabels = {
     apiServer: 'Agent engine API',
+    browser: 'Browser',
     codexOAuth: 'Codex OAuth',
     cron: 'Automations',
     dashboardServer: 'Agent engine',

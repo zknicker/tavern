@@ -30,6 +30,7 @@ const envConfig = readEnvFile([
     'TAVERN_RUNTIME_PORT',
     'TAVERN_RUNTIME_ROOT',
     'TAVERN_RUNTIME_TOKEN',
+    'TAVERN_BROWSER_HOST_URL',
     'TAVERN_WIKI_PATH',
     'CODEX_MODEL',
     'OPENAI_API_KEY',

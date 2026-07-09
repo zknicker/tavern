@@ -219,6 +219,7 @@ and external dependencies.
 | `dashboardServer` | Runtime can reach agent-engine dashboard status. |
 | `apiServer` | Runtime can make an authenticated agent-engine API call. |
 | `gateway` | Runtime can open the agent-engine event stream. |
+| `browser` | BrowserHost reports the durable agent browser responsive; sustained pressure remains available with pressure metadata. |
 | `memory` | Memory is enabled, and each registered agent workspace can hold core `USER.md` and `MEMORY.md` files. |
 | `wiki` | The configured Wiki root can be read and Wiki tools are available. Runtime reports write access in capability metadata because Wiki maintenance needs it, but read-only roots remain browseable. |
 | `wikiRecall` | The Wiki recall index is provisioned or actively provisioning over the Wiki root. |
