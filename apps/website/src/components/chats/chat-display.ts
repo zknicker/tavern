@@ -4,10 +4,10 @@ interface ChatDisplayParticipant {
 }
 
 export interface ChatDisplayInput {
-    conversationKind: 'channel' | 'direct' | 'group' | 'topic';
+    conversationKind: 'channel' | 'direct' | 'group' | 'task' | 'topic';
     displayName: string;
     participants: ChatDisplayParticipant[];
-    scope: 'channel' | 'dm' | 'group' | 'topic' | null;
+    scope: 'channel' | 'dm' | 'group' | 'task' | 'topic' | null;
     targetParticipant: {
         name: string;
     } | null;

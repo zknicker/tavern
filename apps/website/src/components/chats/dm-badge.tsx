@@ -5,13 +5,13 @@ import { Icon } from '../ui/icon.tsx';
 import { ChatTitle } from './chat-title.tsx';
 
 interface DmBadgeChat {
-    conversationKind: 'channel' | 'direct' | 'group' | 'topic';
+    conversationKind: 'channel' | 'direct' | 'group' | 'task' | 'topic';
     displayName: string;
     participants: {
         actorType: 'agent' | 'participant';
         name: string;
     }[];
-    scope: 'channel' | 'dm' | 'group' | 'topic' | null;
+    scope: 'channel' | 'dm' | 'group' | 'task' | 'topic' | null;
     targetParticipant: {
         name: string;
     } | null;

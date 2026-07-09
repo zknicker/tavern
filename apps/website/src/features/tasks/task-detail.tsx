@@ -76,10 +76,11 @@ export function TaskDetail({ taskId }: { taskId: string }) {
             .mutateAsync({ agentId: suggestedAgentId, taskId })
             .then((result) => {
                 toastManager.add({
-                    description: 'The agent will pick it up in its direct chat.',
+                    description: 'The agent is picking it up in the work chat.',
                     title: `${formatTaskNumber(result.task)} dispatched`,
                     type: 'success',
                 });
+                navigate(appRoutes.chat(result.chatId));
             })
             .catch((error: unknown) => {
                 toastManager.add({
@@ -88,7 +89,7 @@ export function TaskDetail({ taskId }: { taskId: string }) {
                     type: 'error',
                 });
             });
-    }, [dispatchMutation, suggestedAgentId, taskId]);
+    }, [dispatchMutation, navigate, suggestedAgentId, taskId]);
 
     const deleteTask = React.useCallback(() => {
         deleteMutation
@@ -197,6 +198,12 @@ export function TaskDetail({ taskId }: { taskId: string }) {
                         isDispatching={dispatchMutation.isPending}
                         onDispatch={dispatch}
                         onDispatchAgentChange={setDispatchAgentId}
+                        onOpenWorkChat={() => {
+                            if (task.workChatId) {
+                                navigate(appRoutes.chat(task.workChatId));
+                            }
+                        }}
+                        workChatId={task.workChatId}
                     />
                     <Separator />
                     <TaskEditorSection title="Activity">

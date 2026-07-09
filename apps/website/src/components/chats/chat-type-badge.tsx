@@ -5,13 +5,13 @@ import { DmBadge } from './dm-badge.tsx';
 import { TavernBadge } from './tavern-badge.tsx';
 
 interface ChatTypeBadgeChat {
-    conversationKind: 'channel' | 'direct' | 'group' | 'topic';
+    conversationKind: 'channel' | 'direct' | 'group' | 'task' | 'topic';
     displayName: string;
     participants: {
         actorType: 'agent' | 'participant';
         name: string;
     }[];
-    scope: 'channel' | 'dm' | 'group' | 'topic' | null;
+    scope: 'channel' | 'dm' | 'group' | 'task' | 'topic' | null;
     source: {
         kind: string;
         label: string;

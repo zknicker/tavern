@@ -1,4 +1,4 @@
-import { SentIcon } from '@hugeicons/core-free-icons';
+import { BubbleChatIcon, SentIcon } from '@hugeicons/core-free-icons';
 import { Icon } from '../../components/ui/icon.tsx';
 import { Button } from '../../components/ui/primitives/button.tsx';
 import {
@@ -19,6 +19,8 @@ interface TaskDispatchFieldProps {
     isDispatching: boolean;
     onDispatch: () => void;
     onDispatchAgentChange: (agentId: string) => void;
+    onOpenWorkChat: () => void;
+    workChatId: string | null;
 }
 
 export function TaskDispatchField({
@@ -28,6 +30,8 @@ export function TaskDispatchField({
     isDispatching,
     onDispatch,
     onDispatchAgentChange,
+    onOpenWorkChat,
+    workChatId,
 }: TaskDispatchFieldProps) {
     const dispatchAgent = agents.find((agent) => agent.id === dispatchAgentId);
 
@@ -62,7 +66,21 @@ export function TaskDispatchField({
                         </SelectContent>
                     </Select>
                 </TaskFieldRow>
-                <div className="flex items-center justify-end">
+                <div className="flex items-center justify-between gap-2">
+                    {workChatId ? (
+                        <Button
+                            className="shrink-0 text-muted-foreground"
+                            onClick={onOpenWorkChat}
+                            size="sm"
+                            type="button"
+                            variant="ghost"
+                        >
+                            <Icon aria-hidden="true" className="size-4" icon={BubbleChatIcon} />
+                            Open work chat
+                        </Button>
+                    ) : (
+                        <span />
+                    )}
                     <Button
                         className="shrink-0"
                         disabled={disabledReason !== null || dispatchAgentId === null}
@@ -74,7 +92,7 @@ export function TaskDispatchField({
                         variant="secondary"
                     >
                         <Icon aria-hidden="true" className="size-4" icon={SentIcon} />
-                        Dispatch to DM
+                        Dispatch
                     </Button>
                 </div>
             </div>

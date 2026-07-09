@@ -254,6 +254,43 @@ export function AppSidebarChatList() {
                         </SidebarMenu>
                     </SidebarGroupContent>
                 </SidebarGroup>
+                {sidebarChats.taskChats.length > 0 ? (
+                    <SidebarGroup className="group/tasks pt-1">
+                        <div className="relative flex h-8 items-center px-2">
+                            <div className="font-medium text-[var(--nav-section-label)] text-sm">
+                                Task chats
+                            </div>
+                        </div>
+                        <SidebarGroupContent>
+                            <SidebarMenu>
+                                {sidebarChats.taskChats.map((chat) => (
+                                    <SidebarRecentChatItem
+                                        chat={chat}
+                                        isActive={location.pathname === buildChatPath(chat.id)}
+                                        key={chat.id}
+                                        now={relativeNow}
+                                        onArchive={(selectedChat) => {
+                                            void archiveSidebarChat(selectedChat);
+                                        }}
+                                        onCustomizeColor={(selectedChat, color) => {
+                                            tabAppearance.reset();
+                                            void setChannelColor(selectedChat, color);
+                                        }}
+                                        onEditParticipants={(selectedChat) => {
+                                            updateChat.reset();
+                                            setEditingParticipantsChat(selectedChat);
+                                        }}
+                                        onEditSystemPrompt={(selectedChat) => {
+                                            systemPrompt.reset();
+                                            setEditingSystemPromptChat(selectedChat);
+                                        }}
+                                        onRename={openRename}
+                                    />
+                                ))}
+                            </SidebarMenu>
+                        </SidebarGroupContent>
+                    </SidebarGroup>
+                ) : null}
                 <SidebarGroup className="pt-1 pb-2">
                     <SidebarGroupContent>
                         <SidebarMenu>

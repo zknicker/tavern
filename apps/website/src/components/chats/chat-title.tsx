@@ -4,13 +4,13 @@ import { Icon } from '../ui/icon.tsx';
 import { getChatDisplayTitle, isRuntimeDm, resolveTavernChatName } from './chat-display.ts';
 
 interface ChatTitleChat {
-    conversationKind: 'channel' | 'direct' | 'group' | 'topic';
+    conversationKind: 'channel' | 'direct' | 'group' | 'task' | 'topic';
     displayName: string;
     participants: {
         actorType: 'agent' | 'participant';
         name: string;
     }[];
-    scope: 'channel' | 'dm' | 'group' | 'topic' | null;
+    scope: 'channel' | 'dm' | 'group' | 'task' | 'topic' | null;
     targetParticipant: {
         name: string;
     } | null;

@@ -24,6 +24,7 @@ export function buildSidebarChatGroups(chats: ChatListItem[]) {
         channels: allChats.filter((chat) => chat.conversationKind === 'channel'),
         directMessages: allChats.filter((chat) => chat.conversationKind === 'direct'),
         recentChats: allChats,
+        taskChats: allChats.filter((chat) => chat.conversationKind === 'task'),
     };
 }
 
