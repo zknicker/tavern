@@ -22,7 +22,7 @@ export function SettingsLayout() {
     );
 }
 
-function SettingsContent({
+export function SettingsContent({
     appLayoutMode,
     layoutContext,
 }: {
