@@ -192,11 +192,14 @@ export function TaskDetail({ taskId }: { taskId: string }) {
                     ) : null}
                     <Separator />
                     <TaskDispatchField
+                        activeDispatchRunId={task.activeDispatchRunId}
                         agents={agents}
                         disabledReason={
                             gateway.healthy ? null : formatCapabilityDisabledReason(gateway)
                         }
                         dispatchAgentId={suggestedAgentId}
+                        dispatchAttempts={task.dispatchAttempts}
+                        dispatchTrigger={task.dispatchTrigger}
                         isDispatching={dispatchMutation.isPending}
                         onDispatch={dispatch}
                         onDispatchAgentChange={setDispatchAgentId}

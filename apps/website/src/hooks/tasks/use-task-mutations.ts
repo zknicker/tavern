@@ -1,4 +1,17 @@
-import { trpc } from '../../lib/trpc.tsx';
+import * as React from 'react';
+import { type AppRouterInputs, trpc } from '../../lib/trpc.tsx';
+
+type TaskUpdatePatch = AppRouterInputs['tasks']['update']['patch'];
+
+export interface BulkTaskUpdate {
+    patch: TaskUpdatePatch;
+    taskId: string;
+}
+
+export interface BulkTaskUpdateResult {
+    failed: number;
+    total: number;
+}
 
 function useInvalidateTasks() {
     const utils = trpc.useUtils();
@@ -6,6 +19,33 @@ function useInvalidateTasks() {
     return async () => {
         await Promise.all([utils.tasks.get.invalidate(), utils.tasks.list.invalidate()]);
     };
+}
+
+/**
+ * Applies a patch to many tasks at once. Requests fire together and settle
+ * independently so one rejection never blocks the rest; the caller learns how
+ * many failed and the cache invalidates once after everything settles.
+ */
+export function useTaskBulkUpdate() {
+    const utils = trpc.useUtils();
+    const mutation = trpc.tasks.update.useMutation();
+
+    return React.useCallback(
+        async (updates: BulkTaskUpdate[]): Promise<BulkTaskUpdateResult> => {
+            const results = await Promise.allSettled(
+                updates.map((update) =>
+                    mutation.mutateAsync({ patch: update.patch, taskId: update.taskId })
+                )
+            );
+            await Promise.all([utils.tasks.get.invalidate(), utils.tasks.list.invalidate()]);
+
+            return {
+                failed: results.filter((result) => result.status === 'rejected').length,
+                total: updates.length,
+            };
+        },
+        [mutation, utils]
+    );
 }
 
 export function useTaskCreate() {

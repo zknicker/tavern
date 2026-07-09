@@ -10,7 +10,7 @@ import {
 } from '@hugeicons-pro/core-stroke-rounded';
 import type { TaskRecord } from '../../lib/trpc.tsx';
 
-export type TaskView = 'all' | 'active' | 'backlog' | 'mine' | 'epics';
+export type TaskView = 'all' | 'active' | 'backlog' | 'mine' | 'epics' | 'calendar';
 export type TaskAssigneeFilter = 'anyone' | 'me' | 'unassigned' | `agent:${string}`;
 // 'all', or a specific label id.
 export type TaskLabelFilter = 'all' | string;
@@ -73,6 +73,14 @@ export const taskBlockedReasonLabels: Record<TaskBlockedReasonKind, string> = {
 export const taskBlockedReasonBadgeVariants: Record<TaskBlockedReasonKind, 'error' | 'warning'> = {
     error: 'error',
     needs_input: 'warning',
+};
+
+export type TaskDispatchTrigger = NonNullable<TaskRecord['dispatchTrigger']>;
+
+// How the running or last turn was started, shown as quiet detail metadata.
+export const taskDispatchTriggerLabels: Record<TaskDispatchTrigger, string> = {
+    auto: 'Auto-dispatched',
+    manual: 'Dispatched manually',
 };
 
 export const taskPriorityOrder: TaskPriority[] = ['none', 'urgent', 'high', 'medium', 'low'];
@@ -142,6 +150,49 @@ export function describeTaskWaiting(
     }
 
     return { scheduledLabel, waitsOn };
+}
+
+// A dispatched turn is live while the task holds an active run id.
+export function isTaskRunning(task: TaskRecord) {
+    return task.activeDispatchRunId !== null;
+}
+
+// A todo task an agent owns that is clear to run now: dependencies met and its
+// scheduledFor date arrived. Mirrors describeTaskWaiting, which reports the
+// inverse (why a task is still held).
+export function isTaskDispatchEligible(task: TaskRecord, tasksById: Map<string, TaskRecord>) {
+    return (
+        task.kind === 'task' &&
+        task.status === 'todo' &&
+        task.assignee?.kind === 'agent' &&
+        !isTaskRunning(task) &&
+        describeTaskWaiting(task, tasksById) === null
+    );
+}
+
+export interface DispatchQueueSummary {
+    queued: number;
+    running: number;
+}
+
+// Live board pulse for the auto-dispatch toolbar indicator: how many tasks are
+// running now and how many eligible tasks are waiting their turn.
+export function summarizeDispatchQueue(
+    tasks: TaskRecord[],
+    tasksById: Map<string, TaskRecord>
+): DispatchQueueSummary {
+    let running = 0;
+    let queued = 0;
+
+    for (const task of tasks) {
+        if (isTaskRunning(task)) {
+            running += 1;
+        } else if (isTaskDispatchEligible(task, tasksById)) {
+            queued += 1;
+        }
+    }
+
+    return { queued, running };
 }
 
 // Active = live or demanding attention: queued, running, stuck, or awaiting

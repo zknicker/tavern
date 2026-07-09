@@ -21,6 +21,7 @@ type RouterOutput = inferRouterOutputs<AppRouter>;
 type RouterInput = inferRouterInputs<AppRouter>;
 
 export type AppRouterOutputs = RouterOutput;
+export type AppRouterInputs = RouterInput;
 export type AgentOutput = RouterOutput['agent']['get'];
 export type AgentActivityOutput = RouterOutput['agent']['activity'];
 export type AgentChatListOutput = RouterOutput['agent']['chats']['list'];

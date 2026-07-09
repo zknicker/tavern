@@ -2,14 +2,18 @@ import { Attachment01Icon, Calendar03Icon } from '@hugeicons-pro/core-stroke-rou
 import * as React from 'react';
 import { RelativeTime } from '../../components/time/relative-time.tsx';
 import { Badge } from '../../components/ui/badge.tsx';
+import { Checkbox } from '../../components/ui/checkbox.tsx';
 import { FluidList, FluidListItem } from '../../components/ui/fluid-list.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import type { TaskRecord } from '../../lib/trpc.tsx';
+import { cn } from '../../lib/utils.ts';
 import { AgentOptionLabel, type AgentSelectOption } from '../agents/agent-option-label.tsx';
 import { LabelChip } from './label-chip.tsx';
+import { TaskActivityIndicator } from './task-activity-indicator.tsx';
 import {
     describeTaskWaiting,
     formatTaskNumber,
+    isTaskRunning,
     type TaskStatus,
     taskBlockedReasonBadgeVariants,
     taskBlockedReasonLabels,
@@ -18,9 +22,14 @@ import {
     taskStatusLabels,
 } from './task-presentation.ts';
 
+export type TaskSelectMode = 'range' | 'toggle';
+
 interface TaskStatusGroupProps {
     agents: AgentSelectOption[];
+    isSelected: (id: string) => boolean;
     onOpen: (task: TaskRecord) => void;
+    onToggleSelect: (task: TaskRecord, mode: TaskSelectMode) => void;
+    selectionActive: boolean;
     status: TaskStatus;
     tasks: TaskRecord[];
     tasksById: Map<string, TaskRecord>;
@@ -28,7 +37,10 @@ interface TaskStatusGroupProps {
 
 export function TaskStatusGroup({
     agents,
+    isSelected,
     onOpen,
+    onToggleSelect,
+    selectionActive,
     status,
     tasks,
     tasksById,
@@ -54,6 +66,9 @@ export function TaskStatusGroup({
                         <TaskRow
                             agents={agents}
                             onOpen={onOpen}
+                            onToggleSelect={onToggleSelect}
+                            selected={isSelected(task.id)}
+                            selectionActive={selectionActive}
                             task={task}
                             tasksById={tasksById}
                         />
@@ -95,28 +110,72 @@ function TaskRowAssignee({
 function TaskRow({
     agents,
     onOpen,
+    onToggleSelect,
+    selected,
+    selectionActive,
     task,
     tasksById,
 }: {
     agents: AgentSelectOption[];
     onOpen: (task: TaskRecord) => void;
+    onToggleSelect: (task: TaskRecord, mode: TaskSelectMode) => void;
+    selected: boolean;
+    selectionActive: boolean;
     task: TaskRecord;
     tasksById: Map<string, TaskRecord>;
 }) {
-    const openTask = React.useCallback(() => onOpen(task), [onOpen, task]);
+    const handleClick = React.useCallback(
+        (event: React.MouseEvent) => {
+            if (event.metaKey || event.ctrlKey) {
+                onToggleSelect(task, 'toggle');
+                return;
+            }
+
+            if (event.shiftKey) {
+                onToggleSelect(task, 'range');
+                return;
+            }
+
+            onOpen(task);
+        },
+        [onOpen, onToggleSelect, task]
+    );
     const waiting = describeTaskWaiting(task, tasksById);
+    const running = task.status === 'in_progress' && isTaskRunning(task);
 
     return (
-        <div className="group/task-row relative flex min-h-11 w-full items-center gap-3 rounded-lg px-3 py-2 text-sm">
+        <div
+            className={cn(
+                'group/task-row relative flex min-h-11 w-full items-center gap-2 rounded-lg px-3 py-2 text-sm',
+                selected ? 'bg-active' : null
+            )}
+        >
             <button
                 aria-label={`Open ${formatTaskNumber(task)} ${task.title}`}
                 className="no-drag absolute inset-0 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
                 data-window-drag-disabled=""
-                onClick={openTask}
+                onClick={handleClick}
                 type="button"
             />
 
-            <span className="pointer-events-none relative z-10 w-12 shrink-0 font-mono text-muted-foreground text-xs tabular-nums">
+            <span
+                className={cn(
+                    'relative z-20 flex w-5 shrink-0 items-center justify-center transition-opacity',
+                    selected || selectionActive
+                        ? 'opacity-100'
+                        : 'opacity-0 focus-within:opacity-100 group-hover/task-row:opacity-100'
+                )}
+            >
+                <Checkbox
+                    aria-label={`Select ${formatTaskNumber(task)}`}
+                    checked={selected}
+                    className="size-4"
+                    onCheckedChange={() => onToggleSelect(task, 'toggle')}
+                />
+            </span>
+
+            <span className="pointer-events-none relative z-10 flex w-12 shrink-0 items-center gap-1.5 font-mono text-muted-foreground text-xs tabular-nums">
+                {running ? <TaskActivityIndicator label="Working now" /> : null}
                 {formatTaskNumber(task)}
             </span>
 

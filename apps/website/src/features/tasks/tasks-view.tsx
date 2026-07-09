@@ -1,6 +1,6 @@
-import { Plus } from '@hugeicons/core-free-icons';
 import type { IconSvgElement } from '@hugeicons/react';
 import {
+    Calendar03Icon,
     CheckListIcon,
     DashedLineCircleIcon,
     Layers01Icon,
@@ -9,15 +9,6 @@ import {
 } from '@hugeicons-pro/core-stroke-rounded';
 import * as React from 'react';
 import { Icon } from '../../components/ui/icon.tsx';
-import { Button } from '../../components/ui/primitives/button.tsx';
-import { SearchInput } from '../../components/ui/primitives/search-input.tsx';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '../../components/ui/select.tsx';
 import {
     SidebarGroup,
     SidebarGroupContent,
@@ -26,22 +17,23 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '../../components/ui/sidebar.tsx';
+import type { BulkTaskUpdate, BulkTaskUpdateResult } from '../../hooks/tasks/use-task-mutations.ts';
+import type { TaskSelection } from '../../hooks/tasks/use-task-selection.ts';
 import type { LabelRecord, TaskRecord } from '../../lib/trpc.tsx';
 import { cn } from '../../lib/utils.ts';
-import { AgentOptionLabel, type AgentSelectOption } from '../agents/agent-option-label.tsx';
+import type { AgentSelectOption } from '../agents/agent-option-label.tsx';
 import { EmptyState } from '../shell/empty-state.tsx';
-import { LabelDot } from './label-chip.tsx';
-import { ManageLabelsDialog } from './manage-labels-dialog.tsx';
+import { TaskBulkActions } from './task-bulk-actions.tsx';
 import {
+    type DispatchQueueSummary,
     groupTasksByStatus,
     type TaskAssigneeFilter,
     type TaskLabelFilter,
     type TaskView,
 } from './task-presentation.ts';
+import { TasksCalendar } from './tasks-calendar.tsx';
 import { TaskStatusGroup } from './tasks-list.tsx';
-
-// Sentinel select value that opens the manage dialog instead of filtering.
-const manageLabelsValue = 'manage:labels';
+import { TasksToolbar } from './tasks-toolbar.tsx';
 
 const taskViews: Array<{ icon: IconSvgElement; label: string; value: TaskView }> = [
     { icon: CheckListIcon, label: 'All tasks', value: 'all' },
@@ -49,13 +41,16 @@ const taskViews: Array<{ icon: IconSvgElement; label: string; value: TaskView }>
     { icon: DashedLineCircleIcon, label: 'Backlog', value: 'backlog' },
     { icon: UserIcon, label: 'My tasks', value: 'mine' },
     { icon: Layers01Icon, label: 'Epics', value: 'epics' },
+    { icon: Calendar03Icon, label: 'Calendar', value: 'calendar' },
 ];
 
 interface TasksViewProps {
     actionErrorMessage: string | null;
     agents: AgentSelectOption[];
     assignee: TaskAssigneeFilter;
+    bulkUpdate: (updates: BulkTaskUpdate[]) => Promise<BulkTaskUpdateResult>;
     connectionState: 'reachable' | 'unconfigured' | 'unreachable';
+    epics: TaskRecord[];
     filteredTasks: TaskRecord[];
     label: TaskLabelFilter;
     labels: LabelRecord[];
@@ -68,6 +63,10 @@ interface TasksViewProps {
     onQueryChange: (query: string) => void;
     onViewChange: (view: TaskView) => void;
     query: string;
+    queueSummary: DispatchQueueSummary;
+    selectedTasks: TaskRecord[];
+    selection: TaskSelection;
+    showQueueIndicator: boolean;
     tasks: TaskRecord[];
     view: TaskView;
 }
@@ -76,7 +75,9 @@ export function TasksView({
     actionErrorMessage,
     agents,
     assignee,
+    bulkUpdate,
     connectionState,
+    epics,
     filteredTasks,
     label,
     labels,
@@ -89,11 +90,14 @@ export function TasksView({
     onQueryChange,
     onViewChange,
     query,
+    queueSummary,
+    selectedTasks,
+    selection,
+    showQueueIndicator,
     tasks,
     view,
 }: TasksViewProps) {
     const tasksById = React.useMemo(() => new Map(tasks.map((task) => [task.id, task])), [tasks]);
-    const [manageLabelsOpen, setManageLabelsOpen] = React.useState(false);
 
     if (tasks.length === 0 && connectionState !== 'reachable') {
         return (
@@ -139,7 +143,7 @@ export function TasksView({
                     </SidebarGroup>
                 </aside>
 
-                <section className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                <section className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
                     <nav
                         aria-label="Task views"
                         className="flex flex-wrap gap-1 px-2 pt-2 md:hidden"
@@ -170,108 +174,67 @@ export function TasksView({
                         })}
                     </nav>
 
-                    <div className="flex shrink-0 items-center gap-2 px-2 py-2.5">
-                        <Select
-                            onValueChange={(value) => {
-                                if (value) {
-                                    onAssigneeChange(value as TaskAssigneeFilter);
-                                }
-                            }}
-                            value={assignee}
-                        >
-                            <SelectTrigger aria-label="Filter by assignee" className="w-48">
-                                <SelectValue>{assigneeFilterLabel(assignee, agents)}</SelectValue>
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="anyone">Anyone</SelectItem>
-                                <SelectItem value="me">Me</SelectItem>
-                                <SelectItem value="unassigned">Unassigned</SelectItem>
-                                {agents.map((agent) => (
-                                    <SelectItem key={agent.id} value={`agent:${agent.id}`}>
-                                        <AgentOptionLabel agent={agent} />
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                        <Select
-                            onValueChange={(value) => {
-                                if (value === manageLabelsValue) {
-                                    setManageLabelsOpen(true);
-                                    return;
-                                }
-                                if (value) {
-                                    onLabelChange(value);
-                                }
-                            }}
-                            value={label}
-                        >
-                            <SelectTrigger aria-label="Filter by label" className="w-40">
-                                <SelectValue>{labelFilterValue(label, labels)}</SelectValue>
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">Any label</SelectItem>
-                                {labels.map((candidate) => (
-                                    <SelectItem key={candidate.id} value={candidate.id}>
-                                        <span className="flex items-center gap-2">
-                                            <LabelDot color={candidate.color} />
-                                            {candidate.name}
-                                        </span>
-                                    </SelectItem>
-                                ))}
-                                <SelectItem value={manageLabelsValue}>
-                                    <span className="text-muted-foreground">Manage labels...</span>
-                                </SelectItem>
-                            </SelectContent>
-                        </Select>
-                        <SearchInput
-                            aria-label="Search tasks"
-                            className="w-full max-w-96 [&_[data-slot=input-control]]:rounded-full"
-                            name="task-search"
-                            onChange={(event) => onQueryChange(event.target.value)}
-                            placeholder="Search tasks..."
-                            size="default"
-                            value={query}
-                        />
-                        <Button
-                            className="ml-auto shrink-0 rounded-full"
-                            onClick={onCreate}
-                            type="button"
-                            variant="secondary"
-                        >
-                            <Icon aria-hidden="true" className="size-4" icon={Plus} />
-                            New task
-                        </Button>
-                    </div>
+                    <TasksToolbar
+                        agents={agents}
+                        assignee={assignee}
+                        label={label}
+                        labels={labels}
+                        onAssigneeChange={onAssigneeChange}
+                        onCreate={onCreate}
+                        onLabelChange={onLabelChange}
+                        onQueryChange={onQueryChange}
+                        query={query}
+                        queueSummary={queueSummary}
+                        showQueueIndicator={showQueueIndicator}
+                    />
 
-                    <div className="min-h-0 flex-1 overflow-y-scroll [scrollbar-gutter:stable]">
-                        {groups.length > 0 ? (
-                            <div className="flex flex-col pb-8">
-                                {groups.map((group) => (
-                                    <TaskStatusGroup
-                                        agents={agents}
-                                        key={group.status}
-                                        onOpen={onOpen}
-                                        status={group.status}
-                                        tasks={group.tasks}
-                                        tasksById={tasksById}
-                                    />
-                                ))}
-                            </div>
-                        ) : tasks.length === 0 ? (
-                            <EmptyState
-                                actionLabel="New task"
-                                description="Create a task, or ask an agent to file one from chat. Tasks and epics are shared between you and your agents."
-                                onAction={onCreate}
-                                title="No tasks yet"
-                            />
-                        ) : (
-                            <TasksEmptyResults onClearFilters={onClearFilters} />
-                        )}
-                    </div>
+                    {view === 'calendar' ? (
+                        <TasksCalendar onOpen={onOpen} tasks={filteredTasks} />
+                    ) : (
+                        <div className="min-h-0 flex-1 overflow-y-scroll [scrollbar-gutter:stable]">
+                            {groups.length > 0 ? (
+                                <div className="flex flex-col pb-8">
+                                    {groups.map((group) => (
+                                        <TaskStatusGroup
+                                            agents={agents}
+                                            isSelected={selection.isSelected}
+                                            key={group.status}
+                                            onOpen={onOpen}
+                                            onToggleSelect={(task, mode) =>
+                                                selection.select(task.id, mode)
+                                            }
+                                            selectionActive={selection.selectionActive}
+                                            status={group.status}
+                                            tasks={group.tasks}
+                                            tasksById={tasksById}
+                                        />
+                                    ))}
+                                </div>
+                            ) : tasks.length === 0 ? (
+                                <EmptyState
+                                    actionLabel="New task"
+                                    description="Create a task, or ask an agent to file one from chat. Tasks and epics are shared between you and your agents."
+                                    onAction={onCreate}
+                                    title="No tasks yet"
+                                />
+                            ) : (
+                                <TasksEmptyResults onClearFilters={onClearFilters} />
+                            )}
+                        </div>
+                    )}
+
+                    {selectedTasks.length > 0 ? (
+                        <TaskBulkActions
+                            agents={agents}
+                            bulkUpdate={bulkUpdate}
+                            epics={epics}
+                            labels={labels}
+                            onClear={selection.clear}
+                            selectedTasks={selectedTasks}
+                        />
+                    ) : null}
                 </section>
             </div>
-
-            <ManageLabelsDialog onOpenChange={setManageLabelsOpen} open={manageLabelsOpen} />
         </div>
     );
 }
@@ -291,40 +254,4 @@ function TasksEmptyResults({ onClearFilters }: { onClearFilters: () => void }) {
             </button>
         </div>
     );
-}
-
-function labelFilterValue(label: TaskLabelFilter, labels: LabelRecord[]) {
-    if (label === 'all') {
-        return 'Any label';
-    }
-
-    const match = labels.find((candidate) => candidate.id === label);
-
-    return match ? (
-        <span className="flex items-center gap-2">
-            <LabelDot color={match.color} />
-            {match.name}
-        </span>
-    ) : (
-        'Any label'
-    );
-}
-
-function assigneeFilterLabel(assignee: TaskAssigneeFilter, agents: AgentSelectOption[]) {
-    if (assignee === 'anyone') {
-        return 'Anyone';
-    }
-
-    if (assignee === 'me') {
-        return 'Me';
-    }
-
-    if (assignee === 'unassigned') {
-        return 'Unassigned';
-    }
-
-    const agentId = assignee.slice('agent:'.length);
-    const agent = agents.find((candidate) => candidate.id === agentId);
-
-    return agent ? <AgentOptionLabel agent={agent} /> : agentId;
 }
