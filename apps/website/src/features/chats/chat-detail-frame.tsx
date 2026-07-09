@@ -6,8 +6,6 @@ import {
     MessageScrollerContent,
     MessageScrollerProvider,
     MessageScrollerViewport,
-    useMessageScroller,
-    useMessageScrollerScrollable,
 } from '../../components/ui/message-scroller.tsx';
 import type { ChatActiveReply, ChatTurnFailure } from '../../hooks/chats/chat-timeline-state.ts';
 import type { ChatLogOutput } from '../../lib/trpc.tsx';
@@ -143,9 +141,6 @@ export function ChatDetailFrame({
                                 key={chatId}
                                 viewportRef={viewportRef}
                             />
-                            <TurnStartAutoScroll
-                                activeRunId={activeReplies.at(-1)?.runId ?? null}
-                            />
                             {hasTimelineContent ? (
                                 <MessageScrollerButton
                                     aria-label="Jump to latest message"
@@ -166,49 +161,3 @@ export function ChatDetailFrame({
     );
 }
 
-// Reveal a turn the moment it starts. Turns kicked off by a composer send are
-// already anchored by the new user-message item (scrolled to the top with the
-// spacer filling the viewport below) — scrolling then would collapse that
-// anchor, so the visible spacer opts out. This covers turns that start without
-// a new user message: simulated turns, cron deliveries, and channel triggers
-// from other participants.
-function TurnStartAutoScroll({ activeRunId }: { activeRunId: string | null }) {
-    const { scrollToEnd } = useMessageScroller();
-    // Spacer-aware "content below the viewport" from the scroller itself. Raw
-    // scrollHeight math counts the send-anchor spacer plus freshly streamed
-    // rows under the anchor, so it reported "not at end" for composer sends
-    // and the scrollToEnd below destroyed the anchor.
-    const { end: contentBelowViewport } = useMessageScrollerScrollable();
-    const lastRunIdRef = React.useRef<string | null>(activeRunId);
-    // Latest-value refs: keep the effect off the scroller context's
-    // per-render identity so the scheduled frame survives re-renders.
-    const scrollToEndRef = React.useRef(scrollToEnd);
-    scrollToEndRef.current = scrollToEnd;
-    const contentBelowViewportRef = React.useRef(contentBelowViewport);
-    contentBelowViewportRef.current = contentBelowViewport;
-
-    React.useEffect(() => {
-        if (!activeRunId || lastRunIdRef.current === activeRunId) {
-            lastRunIdRef.current = activeRunId;
-            return;
-        }
-
-        lastRunIdRef.current = activeRunId;
-
-        // No real content below the viewport: the reader already sees the
-        // latest rows (a send-anchored viewport counts — its spacer is not
-        // content), so moving would only disturb the anchor.
-        if (!contentBelowViewportRef.current) {
-            return;
-        }
-
-        // Synchronous on purpose: requestAnimationFrame never fires in
-        // hidden windows.
-        scrollToEndRef.current({
-            // Hidden windows never animate smooth scrolls; jump instead.
-            behavior: document.visibilityState === 'hidden' ? 'auto' : 'smooth',
-        });
-    }, [activeRunId]);
-
-    return null;
-}
