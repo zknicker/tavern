@@ -1,0 +1,14 @@
+diff --git a/dist/index.js b/dist/index.js
+index 86ae6f9db637ede643a17a6625cc09278275e87e..a4ef32a17bbcad7ff41c06f5aba993a7e2c0164f 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -379,7 +379,8 @@ function createPiModelResolver(modelRegistry, env = process.env) {
+     if (!effectiveId) return void 0;
+     const models = loadModels();
+     const matches = (m) => m.id === effectiveId || m.name === effectiveId;
+-    return useGateway && models.find((m) => m.provider === "vercel-ai-gateway" && matches(m)) || models.find(matches);
++    const canonicalMatch = models.find((m) => `${m.provider}/${m.id}` === effectiveId);
++    return useGateway && models.find((m) => m.provider === "vercel-ai-gateway" && matches(m)) || canonicalMatch || models.find(matches);
+   };
+ }
+ 

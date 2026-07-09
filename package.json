@@ -60,6 +60,7 @@
     "ws": "8.21.0"
   },
   "patchedDependencies": {
-    "@shadcn/react@0.1.0": "patches/@shadcn%2Freact@0.1.0.patch"
+    "@shadcn/react@0.1.0": "patches/@shadcn%2Freact@0.1.0.patch",
+    "@ai-sdk/harness-pi@1.0.8": "patches/@ai-sdk%2Fharness-pi@1.0.8.patch"
   }
 }

@@ -422,7 +422,7 @@ export function createHarnessForModel(input: {
             const thinkingLevel = piThinkingLevel(input.thinkingDefault);
             return createPi({
                 ...(auth ? { auth } : {}),
-                model: piModelId(modelName, auth),
+                model: piModelId(modelName),
                 ...(thinkingLevel ? { thinkingLevel } : {}),
             }) as HarnessV1<ToolSet>;
         }
@@ -481,15 +481,11 @@ export function piAuthOptions(
     return undefined;
 }
 
-function piModelId(model: AgentRuntimeModelName, auth: PiAuthOptions | undefined) {
-    if (model.provider === 'openai' && !auth?.customEnv && hasAiGatewayAuth()) {
-        return `openai/${model.model}`;
-    }
-    return model.model;
-}
-
-function hasAiGatewayAuth() {
-    return Boolean(readConfigValue('AI_GATEWAY_API_KEY') ?? readConfigValue('VERCEL_OIDC_TOKEN'));
+// Pi rejects bare model ids that exist under several providers (gpt-4.1-mini
+// also ships as azure-openai-responses), so OpenAI routes must use the
+// canonical provider/model reference.
+function piModelId(model: AgentRuntimeModelName) {
+    return model.provider === 'openai' ? `openai/${model.model}` : model.model;
 }
 
 export function formatHarnessExecutionError(input: AgentExecutorInput, error: unknown): Error {
