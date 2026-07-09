@@ -33,15 +33,22 @@ projection.
 - The app maps timeline units to rendered comments one-to-one. The app does not group, merge,
   or suppress timeline rows to reconstruct turn structure.
 
-## Live Turn Presentation
+## Posts: A Turn's Message Is Created At First Content
 
-- Live turn state (`activeReplies` and per-seat failures) is presentation state keyed by run
-  identity, delivered alongside the timeline, not inside it.
-- The pane renders one in-progress contribution per active run, positioned where its message
-  will land. Its content is the turn's current best text: latest narration until reply text
-  streams, then the streamed reply.
-- The completion handoff swaps the in-progress contribution for the durable message under the
-  same rendered identity. No unmount, no reflow, no scroll movement beyond normal content growth.
+- The timeline is append-only from the reader's seat: a new unit only ever appears at the end,
+  and no unit ever moves. This is a storage guarantee, not a client sorting policy.
+- The moment a turn first produces visible content — its first narration or first streamed reply
+  text — Runtime creates the turn's real chat message row (`createPost`). The row's sequence
+  fixes its timeline position permanently. Turn start time never determines position; a turn
+  that works silently in tools has no timeline presence until it says something.
+- Everything after is an edit to that post (`editPost`): narration supersession, streamed reply
+  text, and the final content are content updates to the same message row, delivered live over
+  turn events and settled durably at turn end. Completion links the delivery to the same message
+  id; stop and failure settle the post with the last content it showed.
+- Before a turn has content, it appears only in the status stack (`activeReplies` presentation
+  state) — thinking is not a timeline unit.
+- Two agents answering concurrently produce posts ordered by who spoke first, regardless of
+  which turn started first or finished first.
 
 ## Turn Evidence Contract
 
