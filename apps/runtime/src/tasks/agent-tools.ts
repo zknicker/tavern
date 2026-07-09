@@ -7,6 +7,7 @@ import {
 import { tool } from 'ai';
 import * as z from 'zod';
 import { getStoredAgent } from '../tavern/agents-store.ts';
+import { promoteTaskAttachments } from './attachments.ts';
 import { publishTaskUpdated } from './events.ts';
 import { createTaskId } from './ids.ts';
 import { createTask, getTask, getTaskByNumber, listTasks, updateTask } from './store.ts';
@@ -85,9 +86,9 @@ export function createTavernTaskTools(input: { agentId: string }): ToolSet {
         }),
         tasks_update: tool({
             description:
-                'Update task fields. Do not set todo. Labels by name, auto-created; blocked needs a reason; done/review/canceled need a summary.',
+                'Update task fields and attach deliverables by workspace path. Do not set todo. Labels by name, auto-created; blocked needs a reason; done/review/canceled need a summary.',
             inputSchema: updateInputSchema,
-            execute: (rawInput) => {
+            execute: async (rawInput) => {
                 const parsed = updateInputSchema.parse(rawInput);
                 assertAgentUpdateAllowed(parsed);
                 const existing = parsed.taskId
@@ -96,9 +97,17 @@ export function createTavernTaskTools(input: { agentId: string }): ToolSet {
                 if (!existing) {
                     throw new Error('Task not found.');
                 }
+                assertAttachmentUpdateAllowed(parsed, existing.status);
                 const reviewPolicyApplied =
                     parsed.status === 'done' &&
                     getStoredAgent(input.agentId)?.taskReviewPolicy === true;
+                if (parsed.attachments && parsed.attachments.length > 0) {
+                    await promoteTaskAttachments({
+                        agentId: input.agentId,
+                        paths: parsed.attachments,
+                        taskId: existing.id,
+                    });
+                }
                 const task = updateTask(existing.id, {
                     ...(parsed.description === undefined
                         ? {}
@@ -126,12 +135,12 @@ export function createTavernTaskTools(input: { agentId: string }): ToolSet {
                     throw new Error('Task not found.');
                 }
                 publishTaskUpdated(task.id);
-                return Promise.resolve({
+                return {
                     ...(reviewPolicyApplied
                         ? { note: 'Review policy routed this completion to review.' }
                         : {}),
                     task: toToolTask(task, { numberLookup: createTaskNumberLookup(listTasks()) }),
-                });
+                };
             },
         }),
     };
@@ -187,6 +196,7 @@ const createInputSchema = z
 const updateInputSchema = z
     .object({
         assignToMe: z.boolean().optional(),
+        attachments: z.array(z.string().trim().min(1)).optional(),
         blockedBy: z.array(tNumberSchema).optional(),
         blockedReason: z.string().trim().min(1).optional(),
         blockedReasonKind: blockedReasonKindSchema.optional(),
@@ -222,6 +232,24 @@ function assertAgentUpdateAllowed(input: UpdateInput) {
         !input.summary
     ) {
         throw new Error('Setting done, review, or canceled requires a summary.');
+    }
+}
+
+function assertAttachmentUpdateAllowed(
+    input: UpdateInput,
+    currentStatus: AgentRuntimeTask['status']
+) {
+    if (!input.attachments || input.attachments.length === 0) {
+        return;
+    }
+    const closesTask =
+        input.status !== currentStatus &&
+        (input.status === 'done' || input.status === 'review' || input.status === 'canceled');
+    const worksInProgress = currentStatus === 'in_progress' || input.status === 'in_progress';
+    if (!(closesTask || worksInProgress)) {
+        throw new Error(
+            'Attachments require closing the task as done, review, or canceled, or working in_progress.'
+        );
     }
 }
 
@@ -267,6 +295,7 @@ function toToolTask(
 ) {
     return {
         assignee: task.assignee,
+        attachments: task.attachments.map((attachment) => attachment.filename),
         blockedBy: task.blockedBy.map((taskId) => options.numberLookup?.get(taskId) ?? taskId),
         blockedReason: task.blockedReason,
         createdAt: task.createdAt,

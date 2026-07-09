@@ -8,6 +8,7 @@ import {
     agentRuntimeUpdateTaskSchema,
 } from '@tavern/api';
 import { badRequest, json, notFound, readJson } from '../tavern/http.ts';
+import { deleteTaskAttachment, readTaskAttachment } from './attachments.ts';
 import { publishTaskDeleted, publishTaskUpdated } from './events.ts';
 import {
     createTask,
@@ -53,6 +54,18 @@ async function respondToTasksRequest(input: {
         }
 
         const taskId = segments[1];
+        if (segments[2] === 'attachments' && segments[3] && !segments[4]) {
+            const attachmentId = segments[3];
+            if (method === 'GET') {
+                const attachment = await readTaskAttachment(taskId, attachmentId);
+                return attachment ? json(attachment) : notFound();
+            }
+            if (method === 'DELETE') {
+                const deleted = await deleteTaskAttachment(taskId, attachmentId);
+                return deleted ? json({ deleted: true, id: attachmentId }) : notFound();
+            }
+            return null;
+        }
         if (segments[2] === 'dispatch' && !segments[3] && method === 'POST') {
             const input = agentRuntimeDispatchTaskSchema.parse(await readJson(request));
             return json(

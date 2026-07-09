@@ -197,3 +197,30 @@ test('getCurrentAgentSession reads the current chat-scoped agent session', async
 
     assert.equal(result.session?.effectiveModel.model, 'gpt-4.1-mini');
 });
+
+test('task attachment methods read bytes and delete one attachment', async () => {
+    const requests: Array<{ method: string; url: string }> = [];
+    const route = agentRuntimeRoutes.taskAttachment('tsk_1', 'att_1');
+    const fetchMock = mock(async (input: RequestInfo | URL, init?: RequestInit) => {
+        requests.push({ method: init?.method ?? 'GET', url: String(input) });
+        return init?.method === 'DELETE'
+            ? Response.json({ deleted: true, id: 'att_1' })
+            : Response.json({
+                  contentBase64: Buffer.from('deliverable').toString('base64'),
+                  filename: 'result.txt',
+                  mediaType: 'text/plain',
+              });
+    });
+    globalThis.fetch = fetchMock as typeof fetch;
+
+    const client = createAgentRuntimeClient('http://runtime.test');
+    const attachment = await client.getTaskAttachment('tsk_1', 'att_1');
+    const deleted = await client.deleteTaskAttachment('tsk_1', 'att_1');
+
+    assert.equal(attachment.filename, 'result.txt');
+    assert.deepEqual(deleted, { deleted: true, id: 'att_1' });
+    assert.deepEqual(requests, [
+        { method: 'GET', url: `http://runtime.test${route}` },
+        { method: 'DELETE', url: `http://runtime.test${route}` },
+    ]);
+});

@@ -1,3 +1,6 @@
+import fs from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { closeDb, initTestDb } from '../db/connection.ts';
 import { ensureRuntimeSchema } from '../db/schema.ts';
@@ -7,14 +10,21 @@ import { createTaskId } from './ids.ts';
 import { createTask, getTask } from './store.ts';
 
 describe('tasks agent tools', () => {
-    beforeEach(() => {
+    let tempRoot: string;
+    const originalArtifactsRoot = process.env.TAVERN_TASK_ARTIFACTS_DIR;
+
+    beforeEach(async () => {
+        tempRoot = await fs.mkdtemp(path.join(tmpdir(), 'tavern-task-tools-'));
+        process.env.TAVERN_TASK_ARTIFACTS_DIR = path.join(tempRoot, 'artifacts');
         ensureRuntimeSchema(initTestDb());
-        storeTestAgent('agt_primary');
-        storeTestAgent('agt_other');
+        await storeTestAgent('agt_primary', path.join(tempRoot, 'agt_primary'));
+        await storeTestAgent('agt_other', path.join(tempRoot, 'agt_other'));
     });
 
-    afterEach(() => {
+    afterEach(async () => {
         closeDb();
+        restoreEnv('TAVERN_TASK_ARTIFACTS_DIR', originalArtifactsRoot);
+        await fs.rm(tempRoot, { force: true, recursive: true });
     });
 
     test('creates, lists, reads, and updates tasks', async () => {
@@ -224,9 +234,50 @@ describe('tasks agent tools', () => {
         );
         expect(getTask(created.task.id)?.title).toBe('Persist me');
     });
+
+    test('attaches deliverables end-to-end while in progress', async () => {
+        const task = createTask({ id: createTaskId(), status: 'in_progress', title: 'Ship file' });
+        const relativePath = `workbench/tasks/T-${task.number}/result.txt`;
+        const workspaceFile = path.join(tempRoot, 'agt_primary', ...relativePath.split('/'));
+        await fs.mkdir(path.dirname(workspaceFile), { recursive: true });
+        await fs.writeFile(workspaceFile, 'deliverable');
+        const tools = createTavernTaskTools({ agentId: 'agt_primary' });
+
+        const updated = await runTool<Record<string, unknown>, { task: ToolTask }>(
+            tools,
+            'tasks_update',
+            { attachments: [relativePath], taskId: task.id }
+        );
+        expect(updated.task.attachments).toEqual(['result.txt']);
+        expect(getTask(task.id)?.attachments).toMatchObject([
+            { filename: 'result.txt', sourcePath: relativePath },
+        ]);
+
+        const closable = createTask({ id: createTaskId(), title: 'Close with output' });
+        const closed = await runTool<Record<string, unknown>, { task: ToolTask }>(
+            tools,
+            'tasks_update',
+            {
+                attachments: [relativePath],
+                status: 'review',
+                summary: 'Attached the deliverable. Verified promotion. Ready for review.',
+                taskId: closable.id,
+            }
+        );
+        expect(closed.task).toMatchObject({ attachments: ['result.txt'], status: 'review' });
+
+        const backlog = createTask({ id: createTaskId(), title: 'Not started' });
+        await expect(
+            runTool(tools, 'tasks_update', {
+                attachments: [relativePath],
+                taskId: backlog.id,
+            })
+        ).rejects.toThrow('Attachments require closing the task');
+    });
 });
 
-function storeTestAgent(agentId: string) {
+async function storeTestAgent(agentId: string, workspaceFolder: string) {
+    await fs.mkdir(workspaceFolder, { recursive: true });
     upsertStoredAgent({
         agent: {
             enabledSkillIds: [],
@@ -234,13 +285,14 @@ function storeTestAgent(agentId: string) {
             isAdmin: false,
             name: agentId,
             primaryColor: null,
-            workspaceFolder: `/tmp/${agentId}`,
+            workspaceFolder,
         },
     });
 }
 
 interface ToolTask {
     assignee: unknown;
+    attachments?: string[];
     blockedBy?: string[];
     blockedReason?: unknown;
     description?: string | null;
@@ -252,6 +304,14 @@ interface ToolTask {
     status: string;
     summary?: string | null;
     title: string;
+}
+
+function restoreEnv(key: string, value: string | undefined) {
+    if (value === undefined) {
+        delete process.env[key];
+    } else {
+        process.env[key] = value;
+    }
 }
 
 type ToolName = keyof ReturnType<typeof createTavernTaskTools>;

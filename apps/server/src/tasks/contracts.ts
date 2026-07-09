@@ -38,6 +38,11 @@ export const deleteTaskInputSchema = z.object({
     taskId: z.string().trim().min(1),
 });
 
+export const taskAttachmentInputSchema = z.object({
+    attachmentId: z.string().trim().min(1),
+    taskId: z.string().trim().min(1),
+});
+
 export const dispatchTaskInputSchema = z.object({
     agentId: z.string().trim().min(1),
     taskId: z.string().trim().min(1),

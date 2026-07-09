@@ -704,7 +704,10 @@ one table and one sequential T-number sequence (`number`), with status,
 priority, assignee (the local owner or an agent), parent epic link, and
 first-class labels. Dispatch bookkeeping stores the last trigger, attempt
 count, and active Agent turn id. Runtime stores labels in `labels` and task membership in
-`task_labels`; task payloads include full label objects ordered by name. The app
+`task_labels`; task payloads include full label objects ordered by name.
+`task_attachments` stores attachment metadata with a cascading task foreign key
+and a case-insensitive filename unique key. Attachment bytes live outside
+SQLite under the Runtime artifacts root at `tasks/<task-id>/<filename>`. The app
 cache mirrors full task records per runtime keyed on (`runtime_id`,
 `runtime_task_id`).
 

@@ -117,6 +117,7 @@ import {
     type AgentRuntimeStopTurnResult,
     type AgentRuntimeSubmitModelProviderOAuth,
     type AgentRuntimeTask,
+    type AgentRuntimeTaskAttachmentContent,
     type AgentRuntimeTaskLabel,
     type AgentRuntimeTaskLabelList,
     type AgentRuntimeTaskList,
@@ -276,6 +277,7 @@ import {
     agentRuntimeStopTurnResultSchema,
     agentRuntimeStopTurnSchema,
     agentRuntimeSubmitModelProviderOAuthSchema,
+    agentRuntimeTaskAttachmentContentSchema,
     agentRuntimeTaskLabelListSchema,
     agentRuntimeTaskLabelSchema,
     agentRuntimeTaskListSchema,
@@ -389,6 +391,10 @@ export interface TavernAgentRuntimeClient {
     deleteOpenAiSettings(): Promise<AgentRuntimeOpenAiSettings>;
     deleteOpenRouterSettings(): Promise<AgentRuntimeOpenRouterSettings>;
     deleteTask(taskId: string): Promise<{ deleted: boolean; id: string }>;
+    deleteTaskAttachment(
+        taskId: string,
+        attachmentId: string
+    ): Promise<{ deleted: boolean; id: string }>;
     deleteTaskLabel(labelId: string): Promise<{ deleted: boolean; id: string }>;
     deleteWikiFolder(input: WikiPathInput): Promise<WikiPathMutationResult>;
     deleteWikiPage(input: WikiPathInput): Promise<WikiPathMutationResult>;
@@ -425,6 +431,10 @@ export interface TavernAgentRuntimeClient {
     getSkill(skillId: string): Promise<AgentRuntimeSkill>;
     getSkillHubAvailable(): Promise<AgentRuntimeSkillHubAvailable>;
     getTask(taskId: string): Promise<AgentRuntimeTask>;
+    getTaskAttachment(
+        taskId: string,
+        attachmentId: string
+    ): Promise<AgentRuntimeTaskAttachmentContent>;
     getTimezoneSettings(): Promise<AgentRuntimeTimezoneSettings>;
     getToolConfig(toolId: string): Promise<AgentRuntimeToolConfig>;
     getUpdateStatus(): Promise<AgentRuntimeUpdate>;
@@ -1035,6 +1045,17 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         return agentRuntimeTaskSchema.parse(await response.json());
     }
 
+    async getTaskAttachment(taskId: string, attachmentId: string) {
+        const response = await fetch(
+            `${this.#baseUrl}${agentRuntimeRoutes.taskAttachment(taskId, attachmentId)}`,
+            { headers: this.#authHeaders }
+        );
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+        return agentRuntimeTaskAttachmentContentSchema.parse(await response.json());
+    }
+
     async listTasks() {
         const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.tasks}`, {
             headers: this.#authHeaders,
@@ -1098,6 +1119,23 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
             await readErrorResponse(response);
         }
 
+        return (await response.json()) as { deleted: boolean; id: string };
+    }
+
+    async deleteTaskAttachment(taskId: string, attachmentId: string) {
+        const response = await fetch(
+            `${this.#baseUrl}${agentRuntimeRoutes.taskAttachment(taskId, attachmentId)}`,
+            {
+                headers: {
+                    ...this.#authHeaders,
+                    [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+                },
+                method: 'DELETE',
+            }
+        );
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
         return (await response.json()) as { deleted: boolean; id: string };
     }
 

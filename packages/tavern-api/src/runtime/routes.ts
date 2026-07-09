@@ -85,6 +85,8 @@ export const agentRuntimeRoutes = {
     label: (id: string) => `/labels/${encodeURIComponent(id)}`,
     labels: '/labels',
     task: (id: string) => `/tasks/${encodeURIComponent(id)}`,
+    taskAttachment: (taskId: string, attachmentId: string) =>
+        `/tasks/${encodeURIComponent(taskId)}/attachments/${encodeURIComponent(attachmentId)}`,
     taskDispatch: (id: string) => `/tasks/${encodeURIComponent(id)}/dispatch`,
     taskDispatchSettings: '/tasks/dispatch-settings',
     taskWorkChat: (id: string) => `/tasks/${encodeURIComponent(id)}/work-chat`,

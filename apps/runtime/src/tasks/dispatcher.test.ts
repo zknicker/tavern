@@ -138,6 +138,7 @@ function buildTask(overrides: Partial<AgentRuntimeTask> = {}): AgentRuntimeTask 
     return {
         activeDispatchRunId: null,
         assignee: { agentId: 'agt_primary', kind: 'agent' },
+        attachments: [],
         blockedBy: [],
         blockedReason: null,
         createdAt: '2026-07-09T10:00:00.000Z',

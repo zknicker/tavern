@@ -33,6 +33,7 @@ function buildTask(overrides: Partial<Record<string, unknown>> = {}) {
     return {
         activeDispatchRunId: null,
         assignee: null,
+        attachments: [],
         blockedBy: [],
         blockedReason: null,
         createdAt: '2026-07-01T13:00:00.000Z',
@@ -57,7 +58,21 @@ function buildTask(overrides: Partial<Record<string, unknown>> = {}) {
 
 test('listTasks returns mirrored tasks ordered by number descending', async () => {
     spyOn(agentRuntimeSync, 'syncAgentRuntimeTasks').mockImplementation(async () => []);
-    await saveTaskRecord({ runtimeId: 'runtime-1', task: buildTask() });
+    await saveTaskRecord({
+        runtimeId: 'runtime-1',
+        task: buildTask({
+            attachments: [
+                {
+                    byteSize: 11,
+                    filename: 'result.txt',
+                    id: 'att_1',
+                    mediaType: 'text/plain',
+                    promotedAt: '2026-07-02T12:00:00.000Z',
+                    sourcePath: 'workbench/tasks/T-1/result.txt',
+                },
+            ],
+        }),
+    });
     await saveTaskRecord({
         runtimeId: 'runtime-1',
         task: buildTask({
@@ -76,6 +91,7 @@ test('listTasks returns mirrored tasks ordered by number descending', async () =
 
     expect(result.tasks.map((task) => task.number)).toEqual([2, 1]);
     expect(result.tasks[1]).toMatchObject({
+        attachments: [{ filename: 'result.txt', id: 'att_1' }],
         id: 'tsk_1',
         labels: [{ color: 'red', id: 'lbl_bug', name: 'bug' }],
         priority: 'high',
@@ -92,10 +108,25 @@ test('listTasks returns mirrored tasks ordered by number descending', async () =
 
 test('getTask returns the mirrored record or null', async () => {
     spyOn(agentRuntimeSync, 'syncAgentRuntimeTasks').mockImplementation(async () => []);
-    await saveTaskRecord({ runtimeId: 'runtime-1', task: buildTask() });
+    await saveTaskRecord({
+        runtimeId: 'runtime-1',
+        task: buildTask({
+            attachments: [
+                {
+                    byteSize: 11,
+                    filename: 'result.txt',
+                    id: 'att_1',
+                    mediaType: 'text/plain',
+                    promotedAt: '2026-07-02T12:00:00.000Z',
+                    sourcePath: 'workbench/tasks/T-1/result.txt',
+                },
+            ],
+        }),
+    });
 
     const found = await getTask({ taskId: 'tsk_1' });
     expect(found.task?.title).toBe('Fix invite link');
+    expect(found.task?.attachments[0]?.filename).toBe('result.txt');
 
     const missing = await getTask({ taskId: 'tsk_missing' });
     expect(missing.task).toBeNull();

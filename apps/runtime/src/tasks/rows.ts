@@ -1,6 +1,7 @@
 import type {
     AgentRuntimeTask,
     AgentRuntimeTaskAssignee,
+    AgentRuntimeTaskAttachment,
     AgentRuntimeTaskBlockedReason,
     AgentRuntimeTaskKind,
     AgentRuntimeTaskLabel,
@@ -35,11 +36,13 @@ export interface TaskRow {
 export function taskRowToTask(
     row: TaskRow,
     blockedBy: string[] = [],
-    labels: AgentRuntimeTaskLabel[] = []
+    labels: AgentRuntimeTaskLabel[] = [],
+    attachments: AgentRuntimeTaskAttachment[] = []
 ): AgentRuntimeTask {
     return agentRuntimeTaskSchema.parse({
         activeDispatchRunId: row.active_dispatch_run_id,
         assignee: taskAssigneeFromRow(row),
+        attachments,
         blockedBy,
         blockedReason: blockedReasonFromRow(row),
         createdAt: row.created_at,

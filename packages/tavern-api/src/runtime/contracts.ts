@@ -1877,9 +1877,25 @@ export const agentRuntimeTaskAssigneeSchema = z.union([
 
 export const agentRuntimeTaskDispatchTriggerSchema = z.enum(['manual', 'auto']);
 
+export const agentRuntimeTaskAttachmentSchema = z.object({
+    byteSize: z.number().int().nonnegative(),
+    filename: z.string().trim().min(1),
+    id: z.string().trim().min(1),
+    mediaType: z.string().trim().min(1).nullable(),
+    promotedAt: z.string().datetime(),
+    sourcePath: z.string().trim().min(1),
+});
+
+export const agentRuntimeTaskAttachmentContentSchema = z.object({
+    contentBase64: z.string(),
+    filename: z.string().trim().min(1),
+    mediaType: z.string().trim().min(1).nullable(),
+});
+
 export const agentRuntimeTaskSchema = z.object({
     activeDispatchRunId: z.string().trim().min(1).nullable(),
     assignee: agentRuntimeTaskAssigneeSchema.nullable(),
+    attachments: z.array(agentRuntimeTaskAttachmentSchema),
     blockedBy: z.array(z.string().trim().min(1)),
     blockedReason: agentRuntimeTaskBlockedReasonSchema.nullable(),
     createdAt: z.string().datetime(),
@@ -3091,6 +3107,10 @@ export type AgentRuntimeUpsertBinding = z.infer<typeof agentRuntimeUpsertBinding
 export type AgentRuntimeUpdateAgent = z.infer<typeof agentRuntimeUpdateAgentSchema>;
 export type AgentRuntimeUpdateCron = z.infer<typeof agentRuntimeUpdateCronSchema>;
 export type AgentRuntimeTask = z.infer<typeof agentRuntimeTaskSchema>;
+export type AgentRuntimeTaskAttachment = z.infer<typeof agentRuntimeTaskAttachmentSchema>;
+export type AgentRuntimeTaskAttachmentContent = z.infer<
+    typeof agentRuntimeTaskAttachmentContentSchema
+>;
 export type AgentRuntimeTaskAssignee = z.infer<typeof agentRuntimeTaskAssigneeSchema>;
 export type AgentRuntimeTaskBlockedReason = z.infer<typeof agentRuntimeTaskBlockedReasonSchema>;
 export type AgentRuntimeTaskKind = z.infer<typeof agentRuntimeTaskKindSchema>;

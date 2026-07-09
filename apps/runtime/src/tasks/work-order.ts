@@ -10,6 +10,7 @@ import { getStoredAgent } from '../tavern/agents-store.ts';
 import { sendTavernChannelMessage } from '../tavern/channel-relay.ts';
 import { createRunId } from '../tavern/chat-api/ids.ts';
 import { createChat, getChat } from '../tavern/chat-api/index.ts';
+import { materializeTaskAttachments } from './attachments.ts';
 import {
     claimTaskDispatch,
     recordTaskDispatchRun,
@@ -57,6 +58,11 @@ export async function dispatchTaskWorkOrder(input: {
 
         let dispatchRunId: string | null = null;
         try {
+            const materializedPaths = await materializeTaskAttachments({
+                agentId: input.agentId,
+                db,
+                taskId: claimed.id,
+            });
             const chatId = ensureTaskWorkChat({ agentId: input.agentId, db, task: claimed });
             const messageId = `msg_${randomUUID()}`;
             const runId = createRunId(messageId, input.agentId);
@@ -69,7 +75,7 @@ export async function dispatchTaskWorkOrder(input: {
             const accepted = await sendTavernChannelMessage(chatId, {
                 agent: { agentId: input.agentId },
                 message: {
-                    content: buildDispatchMessage(claimed),
+                    content: buildDispatchMessage(claimed, materializedPaths),
                     id: messageId,
                     metadata: {
                         tavern: {
@@ -157,10 +163,18 @@ function ensureTaskWorkChat(input: { agentId: string; db: Database; task: AgentR
     return chatId;
 }
 
-function buildDispatchMessage(task: AgentRuntimeTask) {
+function buildDispatchMessage(task: AgentRuntimeTask, materializedPaths: string[]) {
     const lines = [`You've been dispatched task T-${task.number}: ${task.title}`];
     if (task.description) {
         lines.push('', task.description);
+    }
+    if (materializedPaths.length > 0) {
+        lines.push(
+            '',
+            `Prior deliverables are in workbench/tasks/T-${task.number}/: ${materializedPaths
+                .map((filePath) => filePath.split('/').at(-1))
+                .join(', ')}.`
+        );
     }
     lines.push(
         '',

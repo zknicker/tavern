@@ -360,6 +360,23 @@ CREATE TABLE IF NOT EXISTS task_labels (
 CREATE INDEX IF NOT EXISTS idx_task_labels_label
   ON task_labels(label_id);
 
+CREATE TABLE IF NOT EXISTS task_attachments (
+  id          TEXT PRIMARY KEY,
+  task_id     TEXT NOT NULL,
+  filename    TEXT NOT NULL,
+  media_type  TEXT,
+  byte_size   INTEGER NOT NULL CHECK (byte_size >= 0),
+  source_path TEXT NOT NULL,
+  promoted_at TEXT NOT NULL,
+  FOREIGN KEY(task_id) REFERENCES tasks(id) ON DELETE CASCADE
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_task_attachments_task_filename
+  ON task_attachments(task_id, lower(filename));
+
+CREATE INDEX IF NOT EXISTS idx_task_attachments_task
+  ON task_attachments(task_id);
+
 CREATE TABLE IF NOT EXISTS memory_extraction_cursors (
   chat_id                  TEXT NOT NULL,
   agent_participant_id     TEXT NOT NULL,

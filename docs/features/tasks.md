@@ -32,6 +32,11 @@ the user and agents.
   and SKUs. Tasks carry full label objects, labels can be created inline from
   the picker, and the labels management surface supports rename, recolor, and
   delete. Deleting a label removes it from its tasks.
+* **Attachments.** Attaching a workspace file promotes a copy into the
+  Runtime-owned artifacts root, outside agent workspaces. Re-attaching replaces
+  by filename. Dispatch materializes current deliverables into
+  `workbench/tasks/<T-number>/` for rework, while task records carry only file
+  metadata and pointers.
 * **Agent task tools.** Agents list, read, file, and update tasks from chat
   with their `tasks_*` tools. Agent-created tasks land in backlog for user
   triage; only the user promotes tasks into todo.

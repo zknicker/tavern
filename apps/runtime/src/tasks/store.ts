@@ -9,6 +9,7 @@ import { getDb } from '../db/connection.ts';
 import type { Database } from '../db/sqlite.ts';
 import { namedParams } from '../db/sqlite.ts';
 import { assertChatExists, setChatArchived } from '../tavern/chat-api/index.ts';
+import { deleteTaskArtifacts, loadAttachmentsForTasks } from './attachments.ts';
 import { loadBlockedByMap, replaceTaskDependencies } from './dependencies.ts';
 import { loadLabelsForTasks, replaceTaskLabels, resolveLabelNames } from './labels.ts';
 import { type TaskRow, taskRowToTask } from './rows.ts';
@@ -179,6 +180,9 @@ export function setTaskWorkChat(
 
 export function deleteTask(id: string, db: Database = getDb()): boolean {
     const result = db.prepare('DELETE FROM tasks WHERE id = $id').run(namedParams({ id }));
+    if (result.changes > 0) {
+        deleteTaskArtifacts(id);
+    }
     return result.changes > 0;
 }
 
@@ -209,8 +213,17 @@ export function listTasks(filter: ListTasksFilter = {}, db: Database = getDb()) 
         rows.map((row) => row.id),
         db
     );
+    const attachments = loadAttachmentsForTasks(
+        rows.map((row) => row.id),
+        db
+    );
     return rows.map((row) =>
-        taskRowToTask(row, blockedBy.get(row.id) ?? [], labels.get(row.id) ?? [])
+        taskRowToTask(
+            row,
+            blockedBy.get(row.id) ?? [],
+            labels.get(row.id) ?? [],
+            attachments.get(row.id) ?? []
+        )
     );
 }
 
@@ -222,7 +235,8 @@ export function getTask(id: string, db: Database = getDb()): AgentRuntimeTask | 
         ? taskRowToTask(
               row,
               loadBlockedByMap([row.id], db).get(row.id) ?? [],
-              loadLabelsForTasks([row.id], db).get(row.id) ?? []
+              loadLabelsForTasks([row.id], db).get(row.id) ?? [],
+              loadAttachmentsForTasks([row.id], db).get(row.id) ?? []
           )
         : null;
 }
@@ -235,7 +249,8 @@ export function getTaskByNumber(number: number, db: Database = getDb()): AgentRu
         ? taskRowToTask(
               row,
               loadBlockedByMap([row.id], db).get(row.id) ?? [],
-              loadLabelsForTasks([row.id], db).get(row.id) ?? []
+              loadLabelsForTasks([row.id], db).get(row.id) ?? [],
+              loadAttachmentsForTasks([row.id], db).get(row.id) ?? []
           )
         : null;
 }

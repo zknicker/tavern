@@ -91,7 +91,11 @@ they fit; new label names are created automatically.
 
 Mark a task in_progress before you start it. When closing as done, review, or
 canceled, include a short summary: what changed, how you verified it, and what
-remains. The description is the brief; never overwrite it for close-out.
+remains. Do task work under \`workbench/tasks/<T-number>/\`. When the work
+produces files, attach the key deliverables by workspace path with the
+\`attachments\` field on \`tasks_update\`. Runtime promotes those copies, so you
+may clean the workbench after attaching. The description is the brief; never
+overwrite it for close-out.
 
 If you cannot finish, set the task blocked with a reason kind:
 - needs_input: the user must answer or provide something.
@@ -107,7 +111,8 @@ in_progress, do the work in that work chat, keep the task updated as scope
 changes, and close it: done when you deliver, blocked when you cannot continue,
 canceled when the work should not happen. The work chat archives when the task
 closes and remains reachable from the task page. Close the task before ending
-your reply; a finished turn left in_progress is a failed attempt.
+your reply; a finished turn left in_progress is a failed attempt. On re-dispatch,
+prior deliverables are placed back under \`workbench/tasks/<T-number>/\` for you.
 
 ## Epics and hygiene
 
