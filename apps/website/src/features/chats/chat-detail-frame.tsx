@@ -92,11 +92,13 @@ export function ChatDetailFrame({
                             <MessageScrollerViewport
                                 // Widen the side gutters at lg+ so the turn
                                 // timeline rail has room beside the messages;
-                                // the rail itself hides below lg. The deep
-                                // bottom padding (272px) reserves breathing
-                                // room under the last message so the
-                                // transcript never crowds the composer.
-                                className="px-6 pt-4 pb-68 lg:px-16"
+                                // the rail itself hides below lg. At rest the
+                                // conversation hugs the composer — the bottom
+                                // padding (96px) is just clearance for a
+                                // two-row floating status stack. The send
+                                // runway comes from the scroller's anchor
+                                // spacer, not static padding.
+                                className="px-6 pt-4 pb-24 lg:px-16"
                                 onScroll={handleScroll}
                                 ref={viewportRef}
                             >

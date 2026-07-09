@@ -251,8 +251,17 @@ function UserTurnAnchorEffect({
 
         // Synchronous on purpose: requestAnimationFrame never fires in
         // hidden windows, and the target item is already mounted when the
-        // effect runs.
-        scrollToMessageRef.current(rowId, { align: 'start' });
+        // effect runs. The anchor glides — an instant jump reads as a broken
+        // frame — except for hidden windows (smooth never settles there) and
+        // reduced-motion readers.
+        const instant =
+            document.visibilityState === 'hidden' ||
+            window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+        scrollToMessageRef.current(rowId, {
+            align: 'start',
+            behavior: instant ? 'auto' : 'smooth',
+        });
     }, [changeKey, chatId, rowId]);
 
     return null;
