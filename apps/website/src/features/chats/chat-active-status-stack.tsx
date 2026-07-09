@@ -83,49 +83,37 @@ export function ChatActiveStatusStack({
     const drawerAgentCharacter = drawerAgent?.effectiveCharacter ?? lastAgentRef.current.character;
     const drawerAgentColor = drawerAgent?.effectivePrimaryColor ?? lastAgentRef.current.color;
 
-    // The detail surface reserves the status row's space permanently so the
-    // transcript never reflows when a turn starts or ends — the indicator
-    // fades in place instead of pushing the log up.
-    const reserveSpace = variant === 'detail';
+    // The detail surface floats this stack over the transcript's reserved
+    // bottom padding (ChatDetailFooter), so appearing and disappearing rows
+    // never resize the scroller viewport or move the reader.
     const hasActiveReplies = activeReplies.length > 0;
 
     return (
         <>
-            {hasActiveReplies || reserveSpace ? (
+            {hasActiveReplies ? (
                 <section
                     aria-label="Active agent status"
                     className={cn(
                         variant === 'compact'
                             ? 'border-r-[3px] border-r-border/70 bg-card px-5 pt-2 pb-1'
-                            : // No background: the row sits inline on the pane
-                              // surface, and painting an opaque layer over the
-                              // shell's translucent backdrop reads as a faint
-                              // seam above the composer.
-                              'px-6 pt-2 pb-1 lg:px-16',
+                            : // Fades toward the transcript so scrolled content
+                              // slides under it without a hard seam above the
+                              // composer.
+                              'bg-gradient-to-t from-background via-background/85 to-transparent px-6 pt-3 pb-1 lg:px-16',
                         className
                     )}
                 >
-                    <div
-                        className={cn(
-                            'mx-auto flex w-full max-w-[60rem] flex-col gap-1',
-                            variant === 'detail' && 'px-0 transition-opacity duration-200 ease-out',
-                            reserveSpace && !hasActiveReplies && 'opacity-0'
-                        )}
-                    >
-                        {hasActiveReplies ? (
-                            activeReplies.map((reply) => (
-                                <ChatActiveStatusRow
-                                    activeReplies={activeReplies}
-                                    agents={agents}
-                                    key={reply.runId}
-                                    onViewDetails={() => setDrawerRunId(reply.runId)}
-                                    reply={reply}
-                                    rows={rowsWithEvidence}
-                                />
-                            ))
-                        ) : (
-                            <div aria-hidden className="h-8" />
-                        )}
+                    <div className="mx-auto flex w-full max-w-[60rem] flex-col gap-1">
+                        {activeReplies.map((reply) => (
+                            <ChatActiveStatusRow
+                                activeReplies={activeReplies}
+                                agents={agents}
+                                key={reply.runId}
+                                onViewDetails={() => setDrawerRunId(reply.runId)}
+                                reply={reply}
+                                rows={rowsWithEvidence}
+                            />
+                        ))}
                     </div>
                 </section>
             ) : null}

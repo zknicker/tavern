@@ -17,16 +17,22 @@ export function ChatDetailFooter({
     turnEvidence,
 }: ChatDetailFooterProps) {
     return (
-        <>
-            <ChatActiveStatusStack
-                activeReplies={activeReplies}
-                agents={agents}
-                chatId={chatId}
-                rows={rows}
-                turnEvidence={turnEvidence}
-                variant="detail"
-            />
+        <div className="relative">
+            {/* Floats over the transcript's reserved bottom padding: status
+                rows appearing or disappearing never change layout or scroll
+                position. */}
+            <div className="pointer-events-none absolute inset-x-0 bottom-full z-10">
+                <ChatActiveStatusStack
+                    activeReplies={activeReplies}
+                    agents={agents}
+                    chatId={chatId}
+                    className="pointer-events-auto"
+                    rows={rows}
+                    turnEvidence={turnEvidence}
+                    variant="detail"
+                />
+            </div>
             {children}
-        </>
+        </div>
     );
 }
