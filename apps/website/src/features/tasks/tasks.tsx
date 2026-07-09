@@ -5,12 +5,18 @@ import {
     toRuntimePageConnectionState,
     useRuntimeConnection,
 } from '../../hooks/connections/use-runtime-connection.ts';
+import { useLabelList } from '../../hooks/labels/use-label-list.ts';
 import { useSearch } from '../../hooks/shell/use-search.ts';
 import { useTaskList } from '../../hooks/tasks/use-task-list.ts';
 import { appRoutes } from '../../lib/app-routes.ts';
 import type { TaskRecord } from '../../lib/trpc.tsx';
 import { useLayoutContext } from '../shell/use-layout-context.ts';
-import { filterTasks, type TaskAssigneeFilter, type TaskView } from './task-presentation.ts';
+import {
+    filterTasks,
+    type TaskAssigneeFilter,
+    type TaskLabelFilter,
+    type TaskView,
+} from './task-presentation.ts';
 import { TasksView } from './tasks-view.tsx';
 import { useTaskAgentOptions } from './use-task-agent-options.ts';
 
@@ -20,15 +26,18 @@ export function Tasks() {
     const runtimeConnection = useRuntimeConnection();
     const tasksQuery = useTaskList();
     const agentsQuery = useAgentList();
+    const labelsQuery = useLabelList();
     const { deferredQuery, query, setQuery } = useSearch();
     const [view, setView] = React.useState<TaskView>('all');
     const [assignee, setAssignee] = React.useState<TaskAssigneeFilter>('anyone');
+    const [label, setLabel] = React.useState<TaskLabelFilter>('all');
 
     const tasks = React.useMemo(() => tasksQuery.data?.tasks ?? [], [tasksQuery.data?.tasks]);
     const agents = useTaskAgentOptions(agentsQuery.data?.agents);
+    const labels = React.useMemo(() => labelsQuery.data?.labels ?? [], [labelsQuery.data?.labels]);
     const filteredTasks = React.useMemo(
-        () => filterTasks({ assignee, query: deferredQuery, tasks, view }),
-        [assignee, deferredQuery, tasks, view]
+        () => filterTasks({ assignee, label, query: deferredQuery, tasks, view }),
+        [assignee, deferredQuery, label, tasks, view]
     );
     const openTask = React.useCallback(
         (task: TaskRecord) => {
@@ -44,15 +53,19 @@ export function Tasks() {
             assignee={assignee}
             connectionState={toRuntimePageConnectionState(runtimeConnection.status)}
             filteredTasks={filteredTasks}
+            label={label}
+            labels={labels}
             onAssigneeChange={setAssignee}
             onClearFilters={() => {
                 setView('all');
                 setAssignee('anyone');
+                setLabel('all');
                 setQuery('');
             }}
             onCreate={() => {
                 navigate(appRoutes.newTask);
             }}
+            onLabelChange={setLabel}
             onNavigateToSettings={navigateToSettings}
             onOpen={openTask}
             onQueryChange={setQuery}

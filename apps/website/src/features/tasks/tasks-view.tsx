@@ -26,12 +26,22 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '../../components/ui/sidebar.tsx';
-import type { TaskRecord } from '../../lib/trpc.tsx';
+import type { LabelRecord, TaskRecord } from '../../lib/trpc.tsx';
 import { cn } from '../../lib/utils.ts';
 import { AgentOptionLabel, type AgentSelectOption } from '../agents/agent-option-label.tsx';
 import { EmptyState } from '../shell/empty-state.tsx';
-import { groupTasksByStatus, type TaskAssigneeFilter, type TaskView } from './task-presentation.ts';
+import { LabelDot } from './label-chip.tsx';
+import { ManageLabelsDialog } from './manage-labels-dialog.tsx';
+import {
+    groupTasksByStatus,
+    type TaskAssigneeFilter,
+    type TaskLabelFilter,
+    type TaskView,
+} from './task-presentation.ts';
 import { TaskStatusGroup } from './tasks-list.tsx';
+
+// Sentinel select value that opens the manage dialog instead of filtering.
+const manageLabelsValue = 'manage:labels';
 
 const taskViews: Array<{ icon: IconSvgElement; label: string; value: TaskView }> = [
     { icon: CheckListIcon, label: 'All tasks', value: 'all' },
@@ -47,9 +57,12 @@ interface TasksViewProps {
     assignee: TaskAssigneeFilter;
     connectionState: 'reachable' | 'unconfigured' | 'unreachable';
     filteredTasks: TaskRecord[];
+    label: TaskLabelFilter;
+    labels: LabelRecord[];
     onAssigneeChange: (assignee: TaskAssigneeFilter) => void;
     onClearFilters: () => void;
     onCreate: () => void;
+    onLabelChange: (label: TaskLabelFilter) => void;
     onNavigateToSettings: () => void;
     onOpen: (task: TaskRecord) => void;
     onQueryChange: (query: string) => void;
@@ -65,9 +78,12 @@ export function TasksView({
     assignee,
     connectionState,
     filteredTasks,
+    label,
+    labels,
     onAssigneeChange,
     onClearFilters,
     onCreate,
+    onLabelChange,
     onNavigateToSettings,
     onOpen,
     onQueryChange,
@@ -77,6 +93,7 @@ export function TasksView({
     view,
 }: TasksViewProps) {
     const tasksById = React.useMemo(() => new Map(tasks.map((task) => [task.id, task])), [tasks]);
+    const [manageLabelsOpen, setManageLabelsOpen] = React.useState(false);
 
     if (tasks.length === 0 && connectionState !== 'reachable') {
         return (
@@ -176,6 +193,36 @@ export function TasksView({
                                 ))}
                             </SelectContent>
                         </Select>
+                        <Select
+                            onValueChange={(value) => {
+                                if (value === manageLabelsValue) {
+                                    setManageLabelsOpen(true);
+                                    return;
+                                }
+                                if (value) {
+                                    onLabelChange(value);
+                                }
+                            }}
+                            value={label}
+                        >
+                            <SelectTrigger aria-label="Filter by label" className="w-40">
+                                <SelectValue>{labelFilterValue(label, labels)}</SelectValue>
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Any label</SelectItem>
+                                {labels.map((candidate) => (
+                                    <SelectItem key={candidate.id} value={candidate.id}>
+                                        <span className="flex items-center gap-2">
+                                            <LabelDot color={candidate.color} />
+                                            {candidate.name}
+                                        </span>
+                                    </SelectItem>
+                                ))}
+                                <SelectItem value={manageLabelsValue}>
+                                    <span className="text-muted-foreground">Manage labels...</span>
+                                </SelectItem>
+                            </SelectContent>
+                        </Select>
                         <SearchInput
                             aria-label="Search tasks"
                             className="w-full max-w-96 [&_[data-slot=input-control]]:rounded-full"
@@ -223,6 +270,8 @@ export function TasksView({
                     </div>
                 </section>
             </div>
+
+            <ManageLabelsDialog onOpenChange={setManageLabelsOpen} open={manageLabelsOpen} />
         </div>
     );
 }
@@ -231,7 +280,7 @@ function TasksEmptyResults({ onClearFilters }: { onClearFilters: () => void }) {
     return (
         <div className="flex flex-1 flex-col items-center justify-center py-12 text-center">
             <p className="text-muted-foreground text-sm">
-                No tasks match the current view, assignee, or search.
+                No tasks match the current view, filters, or search.
             </p>
             <button
                 className="mt-2 text-muted-foreground text-xs underline underline-offset-2 hover:text-foreground"
@@ -241,6 +290,23 @@ function TasksEmptyResults({ onClearFilters }: { onClearFilters: () => void }) {
                 Clear filters
             </button>
         </div>
+    );
+}
+
+function labelFilterValue(label: TaskLabelFilter, labels: LabelRecord[]) {
+    if (label === 'all') {
+        return 'Any label';
+    }
+
+    const match = labels.find((candidate) => candidate.id === label);
+
+    return match ? (
+        <span className="flex items-center gap-2">
+            <LabelDot color={match.color} />
+            {match.name}
+        </span>
+    ) : (
+        'Any label'
     );
 }
 

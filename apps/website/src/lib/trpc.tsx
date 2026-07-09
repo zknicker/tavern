@@ -118,6 +118,10 @@ export type ToolConfigOutput = RouterOutput['skill']['toolConfig'];
 export type SubAgentListOutput = RouterOutput['subAgent']['list'];
 export type TaskListOutput = RouterOutput['tasks']['list'];
 export type TaskRecord = TaskListOutput['tasks'][number];
+export type TaskLabel = TaskRecord['labels'][number];
+export type TaskLabelColor = TaskLabel['color'];
+export type LabelListOutput = RouterOutput['labels']['list'];
+export type LabelRecord = LabelListOutput['labels'][number];
 export type WorkerListOutput = RouterOutput['worker']['list'];
 
 function getTrpcUrl(serverOrigin: string | null) {

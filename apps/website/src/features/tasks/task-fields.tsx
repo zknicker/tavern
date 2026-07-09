@@ -1,6 +1,4 @@
 import type { ReactNode } from 'react';
-import * as React from 'react';
-import { Input } from '../../components/ui/primitives/input.tsx';
 import { Label } from '../../components/ui/primitives/label.tsx';
 import {
     Select,
@@ -12,6 +10,7 @@ import {
 import { Separator } from '../../components/ui/separator.tsx';
 import type { TaskRecord } from '../../lib/trpc.tsx';
 import { AgentOptionLabel, type AgentSelectOption } from '../agents/agent-option-label.tsx';
+import { LabelPicker } from './label-picker.tsx';
 import { TaskEditorSection } from './task-editor-sidebar.tsx';
 import {
     type TaskPriority,
@@ -194,52 +193,16 @@ export function TaskFields({
                             </Select>
                         </TaskFieldRow>
                     ) : null}
-                    <TaskFieldRow label="Labels">
-                        <TaskLabelsInput
+                    <div className="grid gap-1.5">
+                        <Label className="text-muted-foreground">Labels</Label>
+                        <LabelPicker
                             disabled={disabled}
                             labels={value.labels}
-                            onCommit={(labels) => onChange({ labels })}
+                            onChange={(labels) => onChange({ labels })}
                         />
-                    </TaskFieldRow>
+                    </div>
                 </div>
             </TaskEditorSection>
         </>
-    );
-}
-
-function TaskLabelsInput({
-    disabled,
-    labels,
-    onCommit,
-}: {
-    disabled: boolean;
-    labels: string[];
-    onCommit: (labels: string[]) => void;
-}) {
-    const [labelsValue, setLabelsValue] = React.useState(labels.join(', '));
-
-    React.useEffect(() => {
-        setLabelsValue(labels.join(', '));
-    }, [labels]);
-
-    return (
-        <Input
-            className="max-w-[12rem]"
-            disabled={disabled}
-            onBlur={() => {
-                const next = labelsValue
-                    .split(',')
-                    .map((label) => label.trim())
-                    .filter(Boolean);
-
-                if (next.join(',') !== labels.join(',')) {
-                    onCommit(next);
-                }
-            }}
-            onChange={(event) => setLabelsValue(event.currentTarget.value)}
-            placeholder="comma, separated"
-            size="sm"
-            value={labelsValue}
-        />
     );
 }

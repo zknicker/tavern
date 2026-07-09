@@ -6,6 +6,7 @@ import { FluidList, FluidListItem } from '../../components/ui/fluid-list.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import type { TaskRecord } from '../../lib/trpc.tsx';
 import { AgentOptionLabel, type AgentSelectOption } from '../agents/agent-option-label.tsx';
+import { LabelChip } from './label-chip.tsx';
 import {
     describeTaskWaiting,
     formatTaskNumber,
@@ -142,9 +143,7 @@ function TaskRow({
                     </Badge>
                 ) : null}
                 {task.labels.map((label) => (
-                    <Badge key={label} variant="secondary">
-                        {label}
-                    </Badge>
+                    <LabelChip color={label.color} key={label.id} name={label.name} />
                 ))}
             </div>
 

@@ -149,7 +149,13 @@ export function TaskDetail({ taskId }: { taskId: string }) {
                         epics={epics.filter((epic) => epic.id !== task.id)}
                         onChange={patchTask}
                         showEpic={task.kind === 'task'}
-                        value={task}
+                        value={{
+                            assignee: task.assignee,
+                            epicId: task.epicId,
+                            labels: task.labels.map((label) => label.name),
+                            priority: task.priority,
+                            status: task.status,
+                        }}
                     />
                     {task.kind === 'task' ? (
                         <>

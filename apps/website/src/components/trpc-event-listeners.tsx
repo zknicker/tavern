@@ -8,6 +8,7 @@ import {
     useRuntimeConnectionEvents,
 } from '../hooks/connections/use-runtime-events.ts';
 import { useCronEvents } from '../hooks/cron/use-cron-events.ts';
+import { useLabelEvents } from '../hooks/labels/use-label-events.ts';
 import { useMemoryJobEvents } from '../hooks/memory/use-memory-job-events.ts';
 import { useModelEvents } from '../hooks/models/use-model-events.ts';
 import { useUsageEvents } from '../hooks/models/use-usage-events.ts';
@@ -25,6 +26,7 @@ export function TrpcEventListeners() {
     useRuntimeCapabilityEvents();
     useRuntimeConnectionEvents();
     useCronEvents();
+    useLabelEvents();
     useMemoryJobEvents();
     useModelEvents();
     useOpenRouterSettingsEvents();

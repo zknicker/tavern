@@ -12,6 +12,8 @@ import type { TaskRecord } from '../../lib/trpc.tsx';
 
 export type TaskView = 'all' | 'active' | 'backlog' | 'mine' | 'epics';
 export type TaskAssigneeFilter = 'anyone' | 'me' | 'unassigned' | `agent:${string}`;
+// 'all', or a specific label id.
+export type TaskLabelFilter = 'all' | string;
 
 export type TaskStatus = TaskRecord['status'];
 export type TaskPriority = TaskRecord['priority'];
@@ -164,6 +166,7 @@ export function groupTasksByStatus(tasks: TaskRecord[]) {
 
 export function filterTasks(input: {
     assignee: TaskAssigneeFilter;
+    label: TaskLabelFilter;
     query: string;
     tasks: TaskRecord[];
     view: TaskView;
@@ -179,6 +182,10 @@ export function filterTasks(input: {
             return false;
         }
 
+        if (input.label !== 'all' && !task.labels.some((label) => label.id === input.label)) {
+            return false;
+        }
+
         if (!query) {
             return true;
         }
@@ -187,7 +194,7 @@ export function filterTasks(input: {
             task.title.toLowerCase().includes(query) ||
             (task.description?.toLowerCase().includes(query) ?? false) ||
             formatTaskNumber(task).toLowerCase() === query ||
-            task.labels.some((label) => label.toLowerCase().includes(query))
+            task.labels.some((label) => label.name.toLowerCase().includes(query))
         );
     });
 }
