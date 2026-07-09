@@ -31,6 +31,7 @@ test('createNewAgentName picks the next available default name', () => {
 
 function createAgent(input: { id: string; name: string }): AgentListOutput['agents'][number] {
     return {
+        autoDispatchEnabled: false,
         character: null,
         defaultCharacter: 'robot',
         defaultPrimaryColor: '#6f7f9b',
@@ -42,6 +43,7 @@ function createAgent(input: { id: string; name: string }): AgentListOutput['agen
         name: input.name,
         primaryColor: null,
         runtimeId: 'runtime-local',
+        taskReviewPolicy: false,
         title: input.name,
         updatedAt: '2026-06-29T00:00:00.000Z',
         userInstructions: '',
