@@ -164,6 +164,51 @@ describe('tasks agent tools', () => {
         expect(listed.tasks[0]?.title).toBe('Mine');
     });
 
+    test('maps blockedBy T-numbers and scheduledFor through create and update', async () => {
+        createTask({ id: createTaskId(), title: 'First dependency' });
+        createTask({ id: createTaskId(), title: 'Second dependency' });
+        const tools = createTavernTaskTools({ agentId: 'agt_primary' });
+
+        const created = await runTool<Record<string, unknown>, { task: ToolTask }>(
+            tools,
+            'tasks_create',
+            {
+                blockedBy: [1],
+                scheduledFor: '2026-07-20',
+                title: 'Ordered follow-up',
+            }
+        );
+        expect(created.task).toMatchObject({
+            blockedBy: ['T-1'],
+            scheduledFor: '2026-07-20',
+        });
+
+        const updated = await runTool<Record<string, unknown>, { task: ToolTask }>(
+            tools,
+            'tasks_update',
+            {
+                blockedBy: [2],
+                number: 3,
+                scheduledFor: null,
+            }
+        );
+        expect(updated.task).toMatchObject({
+            blockedBy: ['T-2'],
+            scheduledFor: null,
+        });
+        expect(getTask(created.task.id)).toMatchObject({
+            scheduledFor: null,
+        });
+    });
+
+    test('rejects unknown blockedBy T-numbers', async () => {
+        const tools = createTavernTaskTools({ agentId: 'agt_primary' });
+
+        await expect(
+            runTool(tools, 'tasks_create', { blockedBy: [7], title: 'Unknown dependency' })
+        ).rejects.toThrow('Unknown blockedBy T-7.');
+    });
+
     test('rejects reads without a task reference and publishes updates that persist', async () => {
         const tools = createTavernTaskTools({ agentId: 'agt_primary' });
         await expect(runTool(tools, 'tasks_get', {})).rejects.toThrow();
@@ -192,11 +237,13 @@ function storeTestAgent(agentId: string) {
 
 interface ToolTask {
     assignee: unknown;
+    blockedBy?: string[];
     blockedReason?: unknown;
     description?: string | null;
     id: string;
     number: string;
     priority: string;
+    scheduledFor?: string | null;
     status: string;
     summary?: string | null;
     title: string;

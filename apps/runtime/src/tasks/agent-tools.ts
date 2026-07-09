@@ -1,5 +1,9 @@
 import type { ToolSet } from '@ai-sdk/provider-utils';
-import type { AgentRuntimeTask, AgentRuntimeUpdateTask } from '@tavern/api';
+import {
+    type AgentRuntimeTask,
+    type AgentRuntimeUpdateTask,
+    agentRuntimeTaskScheduledForSchema,
+} from '@tavern/api';
 import { tool } from 'ai';
 import * as z from 'zod';
 import { publishTaskUpdated } from './events.ts';
@@ -26,7 +30,10 @@ export function createTavernTaskTools(input: { agentId: string }): ToolSet {
                               task.assignee.agentId === input.agentId
                       )
                     : tasks;
-                return Promise.resolve({ tasks: filtered.map((task) => toToolTask(task)) });
+                const numberLookup = createTaskNumberLookup(tasks);
+                return Promise.resolve({
+                    tasks: filtered.map((task) => toToolTask(task, { numberLookup })),
+                });
             },
         }),
         tasks_get: tool({
@@ -41,12 +48,17 @@ export function createTavernTaskTools(input: { agentId: string }): ToolSet {
                 if (!task) {
                     throw new Error('Task not found.');
                 }
-                return Promise.resolve({ task: toToolTask(task, { includeDescription: true }) });
+                return Promise.resolve({
+                    task: toToolTask(task, {
+                        includeDescription: true,
+                        numberLookup: createTaskNumberLookup(listTasks()),
+                    }),
+                });
             },
         }),
         tasks_create: tool({
             description:
-                'File a new task or epic in backlog for user triage. Agents cannot queue tasks into todo.',
+                'File a new task or epic into backlog for user triage. blockedBy T-numbers order work; scheduledFor (YYYY-MM-DD) defers it.',
             inputSchema: createInputSchema,
             execute: (rawInput) => {
                 const parsed = createInputSchema.parse(rawInput);
@@ -54,21 +66,25 @@ export function createTavernTaskTools(input: { agentId: string }): ToolSet {
                     assignee: parsed.assignToMe
                         ? { agentId: input.agentId, kind: 'agent' }
                         : undefined,
+                    blockedBy: resolveBlockedByNumbers(parsed.blockedBy),
                     description: parsed.description,
                     epicId: parsed.epicId,
                     id: createTaskId(),
                     kind: parsed.kind,
                     labels: parsed.labels,
                     priority: parsed.priority,
+                    scheduledFor: parsed.scheduledFor,
                     title: parsed.title,
                 });
                 publishTaskUpdated(task.id);
-                return Promise.resolve({ task: toToolTask(task) });
+                return Promise.resolve({
+                    task: toToolTask(task, { numberLookup: createTaskNumberLookup(listTasks()) }),
+                });
             },
         }),
         tasks_update: tool({
             description:
-                'Update task fields. Do not set todo. Blocked needs a reason; done/review/canceled need a summary.',
+                'Update task fields. Do not set todo. Blocked needs a reason; done/review/canceled need a summary. blockedBy T-numbers order work; scheduledFor defers it.',
             inputSchema: updateInputSchema,
             execute: (rawInput) => {
                 const parsed = updateInputSchema.parse(rawInput);
@@ -86,6 +102,12 @@ export function createTavernTaskTools(input: { agentId: string }): ToolSet {
                     ...(parsed.epicId === undefined ? {} : { epicId: parsed.epicId }),
                     ...(parsed.labels === undefined ? {} : { labels: parsed.labels }),
                     ...(parsed.priority === undefined ? {} : { priority: parsed.priority }),
+                    ...(parsed.blockedBy === undefined
+                        ? {}
+                        : { blockedBy: resolveBlockedByNumbers(parsed.blockedBy) }),
+                    ...(parsed.scheduledFor === undefined
+                        ? {}
+                        : { scheduledFor: parsed.scheduledFor }),
                     ...(parsed.status === undefined ? {} : { status: parsed.status }),
                     ...blockedReasonPatch(parsed),
                     ...(parsed.summary === undefined ? {} : { summary: parsed.summary }),
@@ -98,7 +120,9 @@ export function createTavernTaskTools(input: { agentId: string }): ToolSet {
                     throw new Error('Task not found.');
                 }
                 publishTaskUpdated(task.id);
-                return Promise.resolve({ task: toToolTask(task) });
+                return Promise.resolve({
+                    task: toToolTask(task, { numberLookup: createTaskNumberLookup(listTasks()) }),
+                });
             },
         }),
     };
@@ -116,6 +140,7 @@ const statusSchema = z.enum([
 const blockedReasonKindSchema = z.enum(['needs_input', 'error']);
 const prioritySchema = z.enum(['none', 'urgent', 'high', 'medium', 'low']);
 const kindSchema = z.enum(['task', 'epic']);
+const tNumberSchema = z.number().int().positive();
 
 const listInputSchema = z
     .object({
@@ -139,11 +164,13 @@ const getInputSchema = z
 const createInputSchema = z
     .object({
         assignToMe: z.boolean().optional(),
+        blockedBy: z.array(tNumberSchema).optional(),
         description: z.string().trim().min(1).nullable().optional(),
         epicId: z.string().trim().min(1).nullable().optional(),
         kind: kindSchema.optional(),
         labels: z.array(z.string().trim().min(1)).optional(),
         priority: prioritySchema.optional(),
+        scheduledFor: agentRuntimeTaskScheduledForSchema.nullable().optional(),
         title: z.string().trim().min(1),
     })
     .strict();
@@ -151,6 +178,7 @@ const createInputSchema = z
 const updateInputSchema = z
     .object({
         assignToMe: z.boolean().optional(),
+        blockedBy: z.array(tNumberSchema).optional(),
         blockedReason: z.string().trim().min(1).optional(),
         blockedReasonKind: blockedReasonKindSchema.optional(),
         description: z.string().trim().min(1).nullable().optional(),
@@ -158,6 +186,7 @@ const updateInputSchema = z
         labels: z.array(z.string().trim().min(1)).optional(),
         number: z.number().int().positive().optional(),
         priority: prioritySchema.optional(),
+        scheduledFor: agentRuntimeTaskScheduledForSchema.nullable().optional(),
         status: statusSchema.optional(),
         summary: z.string().trim().min(1).optional(),
         taskId: z.string().trim().min(1).optional(),
@@ -204,9 +233,32 @@ function blockedReasonPatch(input: UpdateInput): Partial<AgentRuntimeUpdateTask>
     };
 }
 
-function toToolTask(task: AgentRuntimeTask, options: { includeDescription?: boolean } = {}) {
+function resolveBlockedByNumbers(numbers: number[] | undefined): string[] | undefined {
+    if (numbers === undefined) {
+        return undefined;
+    }
+
+    const tasksByNumber = new Map(listTasks().map((task) => [task.number, task.id]));
+    return Array.from(new Set(numbers)).map((number) => {
+        const taskId = tasksByNumber.get(number);
+        if (!taskId) {
+            throw new Error(`Unknown blockedBy T-${number}.`);
+        }
+        return taskId;
+    });
+}
+
+function createTaskNumberLookup(tasks: AgentRuntimeTask[]) {
+    return new Map(tasks.map((task) => [task.id, `T-${task.number}`]));
+}
+
+function toToolTask(
+    task: AgentRuntimeTask,
+    options: { includeDescription?: boolean; numberLookup?: Map<string, string> } = {}
+) {
     return {
         assignee: task.assignee,
+        blockedBy: task.blockedBy.map((taskId) => options.numberLookup?.get(taskId) ?? taskId),
         blockedReason: task.blockedReason,
         createdAt: task.createdAt,
         ...(options.includeDescription ? { description: task.description } : {}),
@@ -216,6 +268,7 @@ function toToolTask(task: AgentRuntimeTask, options: { includeDescription?: bool
         labels: task.labels,
         number: `T-${task.number}`,
         priority: task.priority,
+        scheduledFor: task.scheduledFor,
         status: task.status,
         summary: task.summary,
         title: task.title,

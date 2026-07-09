@@ -8,6 +8,7 @@ import type {
 import { getDb } from '../db/connection.ts';
 import type { Database } from '../db/sqlite.ts';
 import { namedParams } from '../db/sqlite.ts';
+import { loadBlockedByMap, replaceTaskDependencies } from './dependencies.ts';
 import { type TaskRow, taskRowToTask } from './rows.ts';
 
 export interface ListTasksFilter {
@@ -22,35 +23,54 @@ export function createTask(input: AgentRuntimeCreateTask, db: Database = getDb()
         assertEpicExists(input.epicId, db);
     }
     const blockedReason = input.status === 'blocked' ? (input.blockedReason ?? null) : null;
-    db.prepare(
-        `INSERT INTO tasks (
-            id, number, kind, title, description, summary, blocked_reason_kind,
-            blocked_reason_message, status, priority,
-            assignee_kind, assignee_agent_id, epic_id, labels_json, created_at, updated_at
-         )
-         VALUES (
-            $id, (SELECT COALESCE(MAX(number), 0) + 1 FROM tasks), $kind, $title, $description,
-            $summary, $blockedReasonKind, $blockedReasonMessage, $status, $priority,
-            $assigneeKind, $assigneeAgentId, $epicId, $labelsJson, $now, $now
-         )`
-    ).run(
-        namedParams({
-            assigneeAgentId: input.assignee?.kind === 'agent' ? input.assignee.agentId : null,
-            assigneeKind: input.assignee?.kind ?? null,
-            blockedReasonKind: blockedReason?.kind ?? null,
-            blockedReasonMessage: blockedReason?.message ?? null,
-            description: input.description ?? null,
-            epicId: input.epicId ?? null,
-            id: input.id,
-            kind: input.kind ?? 'task',
-            labelsJson: JSON.stringify(input.labels ?? []),
-            now,
-            priority: input.priority ?? 'none',
-            status: input.status ?? 'backlog',
-            summary: input.summary ?? null,
-            title: input.title,
-        })
-    );
+    db.exec('BEGIN IMMEDIATE');
+    try {
+        db.prepare(
+            `INSERT INTO tasks (
+                id, number, kind, title, description, summary, blocked_reason_kind,
+                blocked_reason_message, status, priority, assignee_kind, assignee_agent_id,
+                epic_id, scheduled_for, labels_json, created_at, updated_at
+             )
+             VALUES (
+                $id, (SELECT COALESCE(MAX(number), 0) + 1 FROM tasks), $kind, $title,
+                $description, $summary, $blockedReasonKind, $blockedReasonMessage, $status,
+                $priority, $assigneeKind, $assigneeAgentId, $epicId, $scheduledFor,
+                $labelsJson, $now, $now
+             )`
+        ).run(
+            namedParams({
+                assigneeAgentId: input.assignee?.kind === 'agent' ? input.assignee.agentId : null,
+                assigneeKind: input.assignee?.kind ?? null,
+                blockedReasonKind: blockedReason?.kind ?? null,
+                blockedReasonMessage: blockedReason?.message ?? null,
+                description: input.description ?? null,
+                epicId: input.epicId ?? null,
+                id: input.id,
+                kind: input.kind ?? 'task',
+                labelsJson: JSON.stringify(input.labels ?? []),
+                now,
+                priority: input.priority ?? 'none',
+                scheduledFor: input.scheduledFor ?? null,
+                status: input.status ?? 'backlog',
+                summary: input.summary ?? null,
+                title: input.title,
+            })
+        );
+        const created = getTaskOrThrow(input.id, db);
+        replaceTaskDependencies(
+            {
+                blockedBy: input.blockedBy ?? [],
+                taskId: created.id,
+                taskKind: created.kind,
+                taskNumber: created.number,
+            },
+            db
+        );
+        db.exec('COMMIT');
+    } catch (error) {
+        db.exec('ROLLBACK');
+        throw error;
+    }
     return getTaskOrThrow(input.id, db);
 }
 
@@ -70,38 +90,58 @@ export function updateTask(
     if (merged.epicId === id) {
         throw new Error('A task cannot be its own epic.');
     }
-    db.prepare(
-        `UPDATE tasks
-         SET title = $title,
-             description = $description,
-             summary = $summary,
-             blocked_reason_kind = $blockedReasonKind,
-             blocked_reason_message = $blockedReasonMessage,
-             status = $status,
-             priority = $priority,
-             assignee_kind = $assigneeKind,
-             assignee_agent_id = $assigneeAgentId,
-             epic_id = $epicId,
-             labels_json = $labelsJson,
-             updated_at = $now
-         WHERE id = $id`
-    ).run(
-        namedParams({
-            assigneeAgentId: merged.assignee?.kind === 'agent' ? merged.assignee.agentId : null,
-            assigneeKind: merged.assignee?.kind ?? null,
-            blockedReasonKind: merged.blockedReason?.kind ?? null,
-            blockedReasonMessage: merged.blockedReason?.message ?? null,
-            description: merged.description,
-            epicId: merged.epicId,
-            id,
-            labelsJson: JSON.stringify(merged.labels),
-            now: new Date().toISOString(),
-            priority: merged.priority,
-            status: merged.status,
-            summary: merged.summary,
-            title: merged.title,
-        })
-    );
+    db.exec('BEGIN IMMEDIATE');
+    try {
+        db.prepare(
+            `UPDATE tasks
+             SET title = $title,
+                 description = $description,
+                 summary = $summary,
+                 blocked_reason_kind = $blockedReasonKind,
+                 blocked_reason_message = $blockedReasonMessage,
+                 status = $status,
+                 priority = $priority,
+                 assignee_kind = $assigneeKind,
+                 assignee_agent_id = $assigneeAgentId,
+                 epic_id = $epicId,
+                 scheduled_for = $scheduledFor,
+                 labels_json = $labelsJson,
+                 updated_at = $now
+             WHERE id = $id`
+        ).run(
+            namedParams({
+                assigneeAgentId: merged.assignee?.kind === 'agent' ? merged.assignee.agentId : null,
+                assigneeKind: merged.assignee?.kind ?? null,
+                blockedReasonKind: merged.blockedReason?.kind ?? null,
+                blockedReasonMessage: merged.blockedReason?.message ?? null,
+                description: merged.description,
+                epicId: merged.epicId,
+                id,
+                labelsJson: JSON.stringify(merged.labels),
+                now: new Date().toISOString(),
+                priority: merged.priority,
+                scheduledFor: merged.scheduledFor,
+                status: merged.status,
+                summary: merged.summary,
+                title: merged.title,
+            })
+        );
+        if (input.blockedBy !== undefined) {
+            replaceTaskDependencies(
+                {
+                    blockedBy: input.blockedBy,
+                    taskId: existing.id,
+                    taskKind: existing.kind,
+                    taskNumber: existing.number,
+                },
+                db
+            );
+        }
+        db.exec('COMMIT');
+    } catch (error) {
+        db.exec('ROLLBACK');
+        throw error;
+    }
     return getTaskOrThrow(id, db);
 }
 
@@ -129,21 +169,25 @@ export function listTasks(filter: ListTasksFilter = {}, db: Database = getDb()) 
     const rows = db
         .prepare(`SELECT * FROM tasks${where} ORDER BY number DESC`)
         .all(namedParams(params)) as TaskRow[];
-    return rows.map(taskRowToTask);
+    const blockedBy = loadBlockedByMap(
+        rows.map((row) => row.id),
+        db
+    );
+    return rows.map((row) => taskRowToTask(row, blockedBy.get(row.id) ?? []));
 }
 
 export function getTask(id: string, db: Database = getDb()): AgentRuntimeTask | null {
     const row = db
         .prepare('SELECT * FROM tasks WHERE id = $id')
         .get(namedParams({ id })) as TaskRow | null;
-    return row ? taskRowToTask(row) : null;
+    return row ? taskRowToTask(row, loadBlockedByMap([row.id], db).get(row.id) ?? []) : null;
 }
 
 export function getTaskByNumber(number: number, db: Database = getDb()): AgentRuntimeTask | null {
     const row = db
         .prepare('SELECT * FROM tasks WHERE number = $number')
         .get(namedParams({ number })) as TaskRow | null;
-    return row ? taskRowToTask(row) : null;
+    return row ? taskRowToTask(row, loadBlockedByMap([row.id], db).get(row.id) ?? []) : null;
 }
 
 export function getTaskOrThrow(id: string, db: Database = getDb()): AgentRuntimeTask {

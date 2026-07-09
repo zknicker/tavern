@@ -32,6 +32,7 @@ afterEach(() => {
 function buildTask(overrides: Partial<Record<string, unknown>> = {}) {
     return {
         assignee: null,
+        blockedBy: [],
         blockedReason: null,
         createdAt: '2026-07-01T13:00:00.000Z',
         description: 'Fix the invite email link.',
@@ -41,6 +42,7 @@ function buildTask(overrides: Partial<Record<string, unknown>> = {}) {
         labels: ['bug'],
         number: 1,
         priority: 'high' as const,
+        scheduledFor: null,
         status: 'backlog' as const,
         summary: null,
         title: 'Fix invite link',
@@ -55,9 +57,11 @@ test('listTasks returns mirrored tasks ordered by number descending', async () =
     await saveTaskRecord({
         runtimeId: 'runtime-1',
         task: buildTask({
+            blockedBy: ['tsk_1'],
             blockedReason: { kind: 'error', message: 'Runtime failed.' },
             id: 'tsk_2',
             number: 2,
+            scheduledFor: '2026-07-20',
             status: 'blocked',
             summary: 'Stopped after runtime failure.',
             title: 'Second',
@@ -74,7 +78,9 @@ test('listTasks returns mirrored tasks ordered by number descending', async () =
         title: 'Fix invite link',
     });
     expect(result.tasks[0]).toMatchObject({
+        blockedBy: ['tsk_1'],
         blockedReason: { kind: 'error', message: 'Runtime failed.' },
+        scheduledFor: '2026-07-20',
         status: 'blocked',
         summary: 'Stopped after runtime failure.',
     });

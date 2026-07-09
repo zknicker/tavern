@@ -89,6 +89,7 @@ CREATE TABLE tasks (
   assignee_kind     TEXT CHECK (assignee_kind IS NULL OR assignee_kind IN ('user', 'agent')),
   assignee_agent_id TEXT,
   epic_id           TEXT,
+  scheduled_for     TEXT,
   labels_json       TEXT NOT NULL DEFAULT '[]',
   created_at        TEXT NOT NULL,
   updated_at        TEXT NOT NULL,
@@ -275,17 +276,17 @@ CREATE TEMP TABLE tasks_rebuild AS
   SELECT id, number, kind, title, description, NULL AS summary,
          NULL AS blocked_reason_kind, NULL AS blocked_reason_message,
          status, priority, assignee_kind, assignee_agent_id, epic_id,
-         labels_json, created_at, updated_at
+         NULL AS scheduled_for, labels_json, created_at, updated_at
   FROM tasks;
 DROP TABLE tasks;
 ${TASKS_TABLE};
 INSERT INTO tasks
   (id, number, kind, title, description, summary, blocked_reason_kind,
    blocked_reason_message, status, priority, assignee_kind, assignee_agent_id,
-   epic_id, labels_json, created_at, updated_at)
+   epic_id, scheduled_for, labels_json, created_at, updated_at)
   SELECT id, number, kind, title, description, summary, blocked_reason_kind,
          blocked_reason_message, status, priority, assignee_kind,
-         assignee_agent_id, epic_id, labels_json, created_at, updated_at
+         assignee_agent_id, epic_id, scheduled_for, labels_json, created_at, updated_at
   FROM tasks_rebuild;
 DROP TABLE temp.tasks_rebuild;
 ${TASKS_INDEXES}

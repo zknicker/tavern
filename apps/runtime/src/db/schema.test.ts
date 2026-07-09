@@ -148,7 +148,8 @@ describe('Runtime DB schema repairs', () => {
         expect(
             db
                 .prepare(
-                    'SELECT id, status, title, description, labels_json FROM tasks ORDER BY number'
+                    `SELECT id, status, title, description, scheduled_for, labels_json
+                     FROM tasks ORDER BY number`
                 )
                 .all()
         ).toEqual([
@@ -156,6 +157,7 @@ describe('Runtime DB schema repairs', () => {
                 description: 'Keep this row',
                 id: 'tsk_old',
                 labels_json: '["legacy"]',
+                scheduled_for: null,
                 status: 'todo',
                 title: 'Old task',
             },
@@ -163,10 +165,12 @@ describe('Runtime DB schema repairs', () => {
                 description: null,
                 id: 'tsk_blocked',
                 labels_json: '[]',
+                scheduled_for: null,
                 status: 'blocked',
                 title: 'Blocked task',
             },
         ]);
+        expect(tableSql(db, 'task_dependencies')).toContain('depends_on_task_id');
     });
 });
 

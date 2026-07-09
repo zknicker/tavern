@@ -21,15 +21,17 @@ export interface TaskRow {
     labels_json: string;
     number: number;
     priority: AgentRuntimeTaskPriority;
+    scheduled_for: string | null;
     status: AgentRuntimeTaskStatus;
     summary: string | null;
     title: string;
     updated_at: string;
 }
 
-export function taskRowToTask(row: TaskRow): AgentRuntimeTask {
+export function taskRowToTask(row: TaskRow, blockedBy: string[] = []): AgentRuntimeTask {
     return agentRuntimeTaskSchema.parse({
         assignee: taskAssigneeFromRow(row),
+        blockedBy,
         blockedReason: blockedReasonFromRow(row),
         createdAt: row.created_at,
         description: row.description,
@@ -39,6 +41,7 @@ export function taskRowToTask(row: TaskRow): AgentRuntimeTask {
         labels: JSON.parse(row.labels_json),
         number: row.number,
         priority: row.priority,
+        scheduledFor: row.scheduled_for,
         status: row.status,
         summary: row.summary,
         title: row.title,

@@ -1805,6 +1805,17 @@ export const agentRuntimeTaskBlockedReasonSchema = z.object({
     message: z.string(),
 });
 
+export const agentRuntimeTaskScheduledForSchema = z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Expected YYYY-MM-DD.')
+    .refine(
+        (value) => {
+            const date = new Date(`${value}T00:00:00.000Z`);
+            return !Number.isNaN(date.getTime()) && date.toISOString().startsWith(value);
+        },
+        { message: 'Expected a valid YYYY-MM-DD date.' }
+    );
+
 export const agentRuntimeTaskAssigneeSchema = z.union([
     z.object({
         kind: z.literal('user'),
@@ -1817,6 +1828,7 @@ export const agentRuntimeTaskAssigneeSchema = z.union([
 
 export const agentRuntimeTaskSchema = z.object({
     assignee: agentRuntimeTaskAssigneeSchema.nullable(),
+    blockedBy: z.array(z.string().trim().min(1)),
     blockedReason: agentRuntimeTaskBlockedReasonSchema.nullable(),
     createdAt: z.string().datetime(),
     description: z.string().nullable(),
@@ -1826,6 +1838,7 @@ export const agentRuntimeTaskSchema = z.object({
     labels: z.array(z.string().trim().min(1)),
     number: z.number().int().positive(),
     priority: agentRuntimeTaskPrioritySchema,
+    scheduledFor: agentRuntimeTaskScheduledForSchema.nullable(),
     status: agentRuntimeTaskStatusSchema,
     summary: z.string().nullable(),
     title: z.string().trim().min(1),
@@ -1838,6 +1851,7 @@ export const agentRuntimeTaskListSchema = z.object({
 
 export const agentRuntimeCreateTaskSchema = z.object({
     assignee: agentRuntimeTaskAssigneeSchema.nullable().optional(),
+    blockedBy: z.array(z.string().trim().min(1)).optional(),
     blockedReason: agentRuntimeTaskBlockedReasonSchema.nullable().optional(),
     description: z.string().trim().min(1).nullable().optional(),
     epicId: z.string().trim().min(1).nullable().optional(),
@@ -1845,6 +1859,7 @@ export const agentRuntimeCreateTaskSchema = z.object({
     kind: agentRuntimeTaskKindSchema.optional(),
     labels: z.array(z.string().trim().min(1)).optional(),
     priority: agentRuntimeTaskPrioritySchema.optional(),
+    scheduledFor: agentRuntimeTaskScheduledForSchema.nullable().optional(),
     status: agentRuntimeTaskStatusSchema.optional(),
     summary: z.string().nullable().optional(),
     title: z.string().trim().min(1),
@@ -1852,11 +1867,13 @@ export const agentRuntimeCreateTaskSchema = z.object({
 
 export const agentRuntimeUpdateTaskSchema = z.object({
     assignee: agentRuntimeTaskAssigneeSchema.nullable().optional(),
+    blockedBy: z.array(z.string().trim().min(1)).optional(),
     blockedReason: agentRuntimeTaskBlockedReasonSchema.nullable().optional(),
     description: z.string().trim().min(1).nullable().optional(),
     epicId: z.string().trim().min(1).nullable().optional(),
     labels: z.array(z.string().trim().min(1)).optional(),
     priority: agentRuntimeTaskPrioritySchema.optional(),
+    scheduledFor: agentRuntimeTaskScheduledForSchema.nullable().optional(),
     status: agentRuntimeTaskStatusSchema.optional(),
     summary: z.string().nullable().optional(),
     title: z.string().trim().min(1).optional(),

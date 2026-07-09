@@ -310,6 +310,7 @@ CREATE TABLE IF NOT EXISTS tasks (
   assignee_kind     TEXT CHECK (assignee_kind IS NULL OR assignee_kind IN ('user', 'agent')),
   assignee_agent_id TEXT,
   epic_id           TEXT,
+  scheduled_for     TEXT,
   labels_json       TEXT NOT NULL DEFAULT '[]',
   created_at        TEXT NOT NULL,
   updated_at        TEXT NOT NULL,
@@ -322,6 +323,17 @@ CREATE INDEX IF NOT EXISTS idx_tasks_status
 
 CREATE INDEX IF NOT EXISTS idx_tasks_epic
   ON tasks(epic_id);
+
+CREATE TABLE IF NOT EXISTS task_dependencies (
+  task_id            TEXT NOT NULL,
+  depends_on_task_id TEXT NOT NULL,
+  PRIMARY KEY(task_id, depends_on_task_id),
+  FOREIGN KEY(task_id) REFERENCES tasks(id) ON DELETE CASCADE,
+  FOREIGN KEY(depends_on_task_id) REFERENCES tasks(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_task_dependencies_depends_on
+  ON task_dependencies(depends_on_task_id);
 
 CREATE TABLE IF NOT EXISTS memory_extraction_cursors (
   chat_id                  TEXT NOT NULL,
@@ -620,6 +632,11 @@ export function ensureRuntimeSchema(db: Database): void {
     });
     ensureColumn(db, {
         column: 'blocked_reason_message',
+        definition: 'TEXT',
+        table: 'tasks',
+    });
+    ensureColumn(db, {
+        column: 'scheduled_for',
         definition: 'TEXT',
         table: 'tasks',
     });

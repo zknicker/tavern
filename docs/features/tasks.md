@@ -23,6 +23,11 @@ the user and agents.
   live or demanding attention.
 * **Assignees.** A task is unassigned, owned by the user, or assigned to an
   agent.
+* **Dependencies.** `blockedBy` records the tasks a task waits on. Waiting
+  tasks keep their status, dispatch only after dependencies are done, and
+  dependency cycles are rejected.
+* **Scheduling.** `scheduledFor` is a YYYY-MM-DD date for one-shot follow-ups.
+  Scheduled tasks wait until that day before dispatch can claim them.
 * **Labels.** Freeform comma-separated labels for ad-hoc grouping.
 * **Agent task tools.** Agents list, read, file, and update tasks from chat
   with their `tasks_*` tools. Agent-created tasks land in backlog for user

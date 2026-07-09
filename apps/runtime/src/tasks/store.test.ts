@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
-import { closeDb, initTestDb } from '../db/connection.ts';
+import { closeDb, getDb, initTestDb } from '../db/connection.ts';
 import { ensureRuntimeSchema } from '../db/schema.ts';
 import { upsertStoredAgent } from '../tavern/agents-store.ts';
 import { createTaskId } from './ids.ts';
@@ -45,12 +45,14 @@ describe('tasks store', () => {
         const created = createTask({ id: createTaskId(), title: 'Defaults' });
         expect(created).toMatchObject({
             assignee: null,
+            blockedBy: [],
             blockedReason: null,
             description: null,
             epicId: null,
             kind: 'task',
             labels: [],
             priority: 'none',
+            scheduledFor: null,
             status: 'backlog',
             summary: null,
         });
@@ -114,6 +116,114 @@ describe('tasks store', () => {
         );
     });
 
+    test('round-trips and clears scheduled dates', () => {
+        const created = createTask({
+            id: createTaskId(),
+            scheduledFor: '2026-07-20',
+            title: 'Follow up',
+        });
+
+        expect(getTask(created.id)?.scheduledFor).toBe('2026-07-20');
+        expect(updateTask(created.id, { scheduledFor: null })?.scheduledFor).toBeNull();
+    });
+
+    test('replaces blockedBy as a set on update', () => {
+        const first = createTask({ id: createTaskId(), title: 'First dependency' });
+        const second = createTask({ id: createTaskId(), title: 'Second dependency' });
+        const third = createTask({ id: createTaskId(), title: 'Third dependency' });
+        const target = createTask({
+            blockedBy: [first.id, second.id],
+            id: createTaskId(),
+            title: 'Dependent',
+        });
+
+        expect(target.blockedBy).toEqual([first.id, second.id]);
+        expect(updateTask(target.id, { blockedBy: [third.id] })?.blockedBy).toEqual([third.id]);
+    });
+
+    test('rejects self dependencies', () => {
+        const task = createTask({ id: createTaskId(), title: 'Self dependency' });
+
+        expect(() => updateTask(task.id, { blockedBy: [task.id] })).toThrow(
+            'A task cannot depend on itself.'
+        );
+    });
+
+    test('rejects epic dependency endpoints', () => {
+        const epic = createTask({ id: createTaskId(), kind: 'epic', title: 'Epic' });
+        const task = createTask({ id: createTaskId(), title: 'Task' });
+
+        expect(() => updateTask(epic.id, { blockedBy: [task.id] })).toThrow(
+            'is an epic and cannot have dependencies'
+        );
+        expect(() => updateTask(task.id, { blockedBy: [epic.id] })).toThrow(
+            'is an epic and cannot be a dependency'
+        );
+    });
+
+    test('rejects unknown dependency ids', () => {
+        const task = createTask({ id: createTaskId(), title: 'Known task' });
+
+        expect(() => updateTask(task.id, { blockedBy: ['tsk_missing'] })).toThrow(
+            'Missing dependency task tsk_missing.'
+        );
+    });
+
+    test('rejects direct dependency cycles by T-number path', () => {
+        const first = createTask({ id: createTaskId(), title: 'First' });
+        const second = createTask({ blockedBy: [first.id], id: createTaskId(), title: 'Second' });
+
+        expect(() => updateTask(first.id, { blockedBy: [second.id] })).toThrow(
+            'Dependency cycle rejected: T-1 -> T-2 -> T-1.'
+        );
+    });
+
+    test('rejects transitive dependency cycles by T-number path', () => {
+        const first = createTask({ id: createTaskId(), title: 'First' });
+        const second = createTask({ blockedBy: [first.id], id: createTaskId(), title: 'Second' });
+        const third = createTask({ blockedBy: [second.id], id: createTaskId(), title: 'Third' });
+
+        expect(() => updateTask(first.id, { blockedBy: [third.id] })).toThrow(
+            'Dependency cycle rejected: T-1 -> T-3 -> T-2 -> T-1.'
+        );
+    });
+
+    test('cascades deleted dependency edges', () => {
+        const dependency = createTask({ id: createTaskId(), title: 'Dependency' });
+        const dependent = createTask({
+            blockedBy: [dependency.id],
+            id: createTaskId(),
+            title: 'Dependent',
+        });
+        const otherDependency = createTask({ id: createTaskId(), title: 'Other dependency' });
+        const otherDependent = createTask({
+            blockedBy: [otherDependency.id],
+            id: createTaskId(),
+            title: 'Other dependent',
+        });
+
+        deleteTask(dependency.id);
+        deleteTask(otherDependent.id);
+
+        expect(getTask(dependent.id)?.blockedBy).toEqual([]);
+        expect(getDependencyEdgeCount()).toBe(0);
+    });
+
+    test('lists dependency edges for multiple tasks', () => {
+        const first = createTask({ id: createTaskId(), title: 'First dependency' });
+        const second = createTask({ id: createTaskId(), title: 'Second dependency' });
+        const third = createTask({ blockedBy: [first.id], id: createTaskId(), title: 'Third' });
+        const fourth = createTask({
+            blockedBy: [first.id, second.id],
+            id: createTaskId(),
+            title: 'Fourth',
+        });
+
+        const tasks = new Map(listTasks().map((task) => [task.id, task.blockedBy]));
+        expect(tasks.get(third.id)).toEqual([first.id]);
+        expect(tasks.get(fourth.id)).toEqual([first.id, second.id]);
+    });
+
     test('filters by status and kind', () => {
         createTask({ id: createTaskId(), status: 'todo', title: 'Todo item' });
         createTask({ id: createTaskId(), status: 'review', title: 'Review item' });
@@ -142,4 +252,12 @@ function storeTestAgent(agentId: string) {
             workspaceFolder: `/tmp/${agentId}`,
         },
     });
+}
+
+function getDependencyEdgeCount() {
+    return (
+        getDb().prepare('SELECT COUNT(*) AS count FROM task_dependencies').get() as {
+            count: number;
+        }
+    ).count;
 }

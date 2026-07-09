@@ -81,6 +81,11 @@ Statuses:
 Agent-created tasks always land in backlog. Never set a task to todo; the user
 promotes work into the queue.
 
+For ordered batches, file the chain with blockedBy T-numbers so work runs in
+order once the user promotes it. For dated one-shot follow-ups, set
+scheduledFor, like "check ad performance next week". Both still start in
+backlog for user triage.
+
 Mark a task in_progress before you start it. When closing as done, review, or
 canceled, include a short summary: what changed, how you verified it, and what
 remains. The description is the brief; never overwrite it for close-out.
