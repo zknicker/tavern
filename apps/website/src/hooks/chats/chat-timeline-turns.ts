@@ -1,3 +1,4 @@
+import { postMessageIdForRun } from './chat-log-cache.ts';
 import { findActiveReply, removeActiveReply, upsertActiveReply } from './chat-timeline-reply.ts';
 import { applyReplySnapshot, isSameTurnFailure } from './chat-timeline-snapshots.ts';
 import {
@@ -61,12 +62,43 @@ export function updateTimelineReply(
         { authoritative: true }
     );
 
+    // Streamed text edits the turn's post in place once it exists
+    // (specs/chat-timeline.md); until then the live reply overlay carries it.
+    const timeline = patchTimelineRowsWithPostText(nextState.timeline, {
+        runId: update.turn.runId,
+        text: nextText,
+    });
+
     return {
         ...nextState,
         activeTurns: findActiveReply(nextState.activeReplies, update.turn.runId)
             ? upsertActiveTurn(nextState.activeTurns, update.turn)
             : nextState.activeTurns,
+        timeline,
     };
+}
+
+function patchTimelineRowsWithPostText(
+    timeline: ChatTimelineState['timeline'],
+    input: { runId: string; text: string }
+): ChatTimelineState['timeline'] {
+    const id = postMessageIdForRun(input.runId);
+    const content = input.text.trim();
+    const existing = timeline.find((row) => row.id === id);
+
+    if (!(content && existing && existing.kind === 'message')) {
+        return timeline;
+    }
+
+    if (existing.message.content === content) {
+        return timeline;
+    }
+
+    return timeline.map((row) =>
+        row.id === id && row.kind === 'message'
+            ? { ...row, message: { ...row.message, content } }
+            : row
+    );
 }
 
 function resolveLiveReplyText(input: {

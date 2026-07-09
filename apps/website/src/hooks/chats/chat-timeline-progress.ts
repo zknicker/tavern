@@ -4,14 +4,12 @@ import {
     progressStepToChatRows,
     upsertProgressRows,
 } from './chat-log-cache.ts';
-import { findActiveReply, upsertActiveReply } from './chat-timeline-reply.ts';
 import type { ChatTimelineState, ChatTurn, ChatTurnProgressStep } from './chat-timeline-types.ts';
 
 // Progress steps feed two surfaces (specs/chat-timeline.md): every step lands
 // in the run's live evidence (the drawer's source while the turn streams),
-// while only conversation-visible steps — widgets, notices, steered messages
-// — touch the timeline. Narration steps update the live contribution's
-// current text instead of becoming rows.
+// while conversation-visible steps — the turn's post, widgets, notices,
+// steered messages — touch the timeline.
 export function patchTimelineProgress(
     state: ChatTimelineState,
     input: {
@@ -31,18 +29,6 @@ export function patchTimelineProgress(
         },
     };
 
-    if (input.step.kind === 'message') {
-        const narration = input.step.detail?.trim();
-        const reply = findActiveReply(next.activeReplies, runId);
-
-        if (narration && reply) {
-            next.activeReplies = upsertActiveReply(next.activeReplies, {
-                ...reply,
-                narrationText: narration,
-            });
-        }
-    }
-
     const patched = patchChatLogWithProgress(timelineLog(next), input);
 
     return patched ? { ...next, timeline: patched.rows } : next;
@@ -53,7 +39,6 @@ function timelineLog(state: ChatTimelineState): ChatLogOutput {
         activeReplies: state.activeReplies.map((reply) => ({
             ...reply,
             isThinking: reply.isThinking ?? true,
-            narrationText: reply.narrationText ?? null,
             text: reply.text ?? '',
         })),
         failedTurns: state.failedTurns,

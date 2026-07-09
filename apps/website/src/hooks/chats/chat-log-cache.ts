@@ -29,22 +29,127 @@ export function patchChatLogWithProgress(
     }
 
     // The timeline carries conversation units only (specs/chat-timeline.md):
-    // widgets, runtime notices, and steered user messages. Tool, reasoning,
-    // worker, and narration steps are turn evidence and never become rows.
+    // widgets, runtime notices, steered user messages — and the turn's post,
+    // which narration steps create or edit in place. Tool, reasoning, and
+    // worker steps are turn evidence and never become rows.
     const conversationRows = progressStepToChatRows(input).filter(isConversationProgressRow);
+    const postText =
+        input.step.kind === 'message' && !input.step.id.endsWith('runtime_notice_steered')
+            ? input.step.detail?.trim()
+            : undefined;
 
-    if (conversationRows.length === 0) {
+    if (conversationRows.length === 0 && !postText) {
         return undefined;
     }
 
     const sourceLog = normalizeChatLog(log);
-    const rows = upsertProgressRows(sourceLog.rows, conversationRows);
+    let rows = upsertProgressRows(sourceLog.rows, conversationRows);
+
+    if (postText) {
+        rows = upsertPostRow(rows, {
+            content: postText,
+            timestamp: input.timestamp,
+            turn: input.turn,
+        });
+    }
 
     // Live progress only grows the loaded page. Progress rows are never
     // durable chat messages, so the message total is untouched.
     return {
         ...sourceLog,
         rows: rows.sort(compareChatLogRows),
+    };
+}
+
+// The turn's post id — must match the runtime's streaming message id.
+export function postMessageIdForRun(runId: string) {
+    return `msg_${runId.replace(/[^A-Za-z0-9_-]/gu, '_')}_assistant`;
+}
+
+// createPost/editPost (specs/chat-timeline.md): the optimistic twin of the
+// runtime's streaming message. Created at the timeline's end on the turn's
+// first visible content, edited in place after; the durable row merges by id.
+export function upsertPostRow(
+    current: readonly ChatLogRow[],
+    input: { content: string; timestamp: string; turn: ChatTurn }
+): ChatLogRow[] {
+    const id = postMessageIdForRun(input.turn.runId);
+    const existingIndex = current.findIndex((row) => row.id === id);
+
+    if (existingIndex >= 0) {
+        return current.map((row, index) =>
+            index === existingIndex && row.kind === 'message'
+                ? { ...row, message: { ...row.message, content: input.content } }
+                : row
+        );
+    }
+
+    const actor = { id: input.turn.agentId, kind: 'agent' as const };
+
+    return [
+        ...current,
+        {
+            actor,
+            connectsToNext: false,
+            connectsToPrevious: false,
+            id,
+            isFirstInGroup: true,
+            kind: 'message',
+            runId: input.turn.runId,
+            message: {
+                actor,
+                content: input.content,
+                id,
+                metadata: {
+                    runtime: {
+                        runId: input.turn.runId,
+                        sessionKey: input.turn.sessionKey,
+                        source: 'agent-engine',
+                        streaming: true,
+                    },
+                },
+                sender: input.turn.agentId,
+                senderType: 'agent',
+                sourceSessionId: null,
+                sourceSessionKey: input.turn.sessionKey,
+                tavernAgentId: input.turn.agentId,
+                timestamp: input.timestamp,
+            },
+        },
+    ];
+}
+
+// Streamed reply text edits the existing post in place; before the post
+// exists the live reply overlay carries the text.
+export function patchChatLogWithPostText(
+    log: ChatLogInput | undefined,
+    input: { runId: string; text: string }
+): ChatLogOutput | undefined {
+    if (!log) {
+        return undefined;
+    }
+
+    const id = postMessageIdForRun(input.runId);
+    const content = input.text.trim();
+    const existing = log.rows.find((row) => row.id === id);
+
+    if (!(content && existing && existing.kind === 'message')) {
+        return undefined;
+    }
+
+    if (existing.message.content === content) {
+        return undefined;
+    }
+
+    const sourceLog = normalizeChatLog(log);
+
+    return {
+        ...sourceLog,
+        rows: sourceLog.rows.map((row) =>
+            row.id === id && row.kind === 'message'
+                ? { ...row, message: { ...row.message, content } }
+                : row
+        ),
     };
 }
 

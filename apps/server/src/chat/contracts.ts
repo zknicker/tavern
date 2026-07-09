@@ -246,10 +246,6 @@ export const chatLogRowSchema = historyRowSchema;
 export const chatLogActiveReplySchema = z.object({
     agentId: z.string().trim().min(1),
     isThinking: z.boolean(),
-    // The turn's latest intra-turn narration — the live contribution's text
-    // until reply text streams. Narration history is turn evidence; the
-    // timeline only carries this current state.
-    narrationText: z.string().nullable(),
     runId: z.string().trim().min(1),
     sessionKey: z.string().trim().min(1),
     startedAt: z.string().datetime(),

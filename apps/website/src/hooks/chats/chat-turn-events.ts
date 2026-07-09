@@ -1,6 +1,6 @@
 import { debugChatEvent, markChatTiming } from '../../lib/chat-timing.ts';
 import type { ChatLogOutput } from '../../lib/trpc.tsx';
-import { patchChatLogWithProgress } from './chat-log-cache.ts';
+import { patchChatLogWithPostText, patchChatLogWithProgress } from './chat-log-cache.ts';
 import type {
     ChatReplyUpdate,
     ChatTurn,
@@ -180,6 +180,18 @@ export function createChatTurnEventHandlers(utils: ChatTurnEventUtils) {
                 textLength: update.text.length,
             });
             utils.timeline.updateReply(update);
+            // Streamed text edits the turn's post in place once it exists
+            // (specs/chat-timeline.md).
+            if (update.text.trim()) {
+                utils.chat.log.list.patchProgress({
+                    chatId: update.turn.chatId,
+                    updater: (current) =>
+                        patchChatLogWithPostText(current, {
+                            runId: update.turn.runId,
+                            text: update.text,
+                        }),
+                });
+            }
         },
         onTurnStatusUpdated: (update: ChatTurnStatusUpdate) => {
             debugChatEvent('turn.statusUpdated.event', {

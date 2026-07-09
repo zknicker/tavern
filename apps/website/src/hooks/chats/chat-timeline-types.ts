@@ -5,9 +5,6 @@ export interface ChatActiveReply {
     agentId: string;
     completedAt?: string | null;
     isThinking?: boolean;
-    // Latest intra-turn narration: the live contribution's text until reply
-    // text streams. Narration history lives in turn evidence.
-    narrationText?: string | null;
     runId: string;
     sessionKey: string;
     startedAt: string;

@@ -145,8 +145,10 @@ The Tavern app keeps list and detail reads separate:
   narration history) never rides the timeline — see
   [chat-timeline](../../specs/chat-timeline.md). Pages walk backward from the
   newest message with a `beforeSequence` cursor; rows carry their owning
-  `responseId`, and agent contributions carry `runId`. Active replies include
-  `narrationText`, the turn's latest intra-turn narration.
+  `responseId`, and agent contributions carry `runId`. A turn's message row
+  is created at its first visible content and edited in place until its
+  delivery finalizes it (`message.updated` events), so the timeline is
+  append-only from the reader's seat.
 * `chat.turn.evidence` returns one turn's execution record — tool, reasoning,
   narration, and worker rows plus artifacts — by `chatId` + `responseId`. The
   turn drawer queries it on demand; live turns stream evidence through turn
@@ -161,10 +163,10 @@ Channel color and system prompt changes invalidate `chat.list` and the changed
 
 Live turn progress feeds two app surfaces: every step lands in the run's live
 evidence (the drawer's source while a turn streams), and conversation-visible
-steps — widgets, notices, steered messages — update the visible
-`chat.log.list` cache by activity id. Narration steps update the active
-reply's `narrationText`; streamed final reply text stays app-local until the
-final assistant message is persisted.
+steps — the turn's post, widgets, notices, steered messages — update the
+visible `chat.log.list` cache. Narration steps create or edit the turn's post
+row; streamed reply text edits it in place, with the delivery settling the
+durable content.
 
 `chat.stop` and `chat.steer` are turn-control mutations, not message writes.
 `chat.stop` settles a queued or running Runtime turn as cancelled and settles

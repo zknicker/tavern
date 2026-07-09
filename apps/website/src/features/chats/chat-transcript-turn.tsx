@@ -602,6 +602,22 @@ export function filterPaneSegments(
     });
 }
 
+// The runtime flags the turn's message row while it is still being edited.
+function isStreamingPostRow(row: Extract<TranscriptItem, { kind: 'row' }>['row']) {
+    if (row.kind !== 'message' || row.message.senderType !== 'agent') {
+        return false;
+    }
+
+    const runtime = row.message.metadata?.runtime;
+
+    return Boolean(
+        runtime &&
+            typeof runtime === 'object' &&
+            !Array.isArray(runtime) &&
+            (runtime as Record<string, unknown>).streaming === true
+    );
+}
+
 function isNarrationItem(item: TranscriptItem) {
     return (
         isAssistantNarrationItem(item) ||
@@ -661,15 +677,9 @@ function AgentTurnItem({
     revealNarration?: boolean;
 }) {
     if (item.kind === 'activeReply') {
-        // The contribution's current state: streamed reply text once it
-        // exists, the latest narration until then.
-        const liveText = item.reply.text?.trim()
-            ? (item.reply.text ?? '')
-            : (item.reply.narrationText ?? '');
-
         return (
             <AssistantReplyText
-                content={getActiveReplyDisplayText(liveText)}
+                content={getActiveReplyDisplayText(item.reply.text ?? '')}
                 revealKey={item.reply.runId}
                 revealText={isStreamingActiveReply(item.reply)}
                 slotKey={item.reply.runId}
@@ -686,6 +696,22 @@ function AgentTurnItem({
     }
 
     if (item.kind === 'row' && item.row.kind === 'message') {
+        // A streaming post is the turn's contribution mid-edit: reveal its
+        // text like a live reply and keep partial widget fences hidden.
+        const streaming = revealNarration && isStreamingPostRow(item.row);
+
+        if (streaming) {
+            return (
+                <AssistantReplyText
+                    animateEnter
+                    content={getActiveReplyDisplayText(item.row.message.content)}
+                    revealKey={item.row.id}
+                    revealText
+                    slotKey={getItemRunId(item) ?? item.row.id}
+                />
+            );
+        }
+
         const narration = revealNarration && isActivityBackedMessageRow(item.row);
 
         return (

@@ -73,9 +73,7 @@ export async function getRuntimeChatTimelinePage(
     const rows = [...messageRows, ...activityRows, ...artifactRows, ...turnStatusRows];
     // Active and failed turn states describe the newest history; the latest
     // page is the only one whose responses can carry them.
-    const activeReplies = isLatestPage
-        ? activeRepliesFromResponses(responses, latestNarrationByResponse(activity))
-        : [];
+    const activeReplies = isLatestPage ? activeRepliesFromResponses(responses) : [];
     const failedTurns = isLatestPage ? failedTurnsFromResponses(responses) : [];
     const sortedRows = rows.sort((left, right) => {
         const timestampDelta = rowTimestamp(left) - rowTimestamp(right);
@@ -110,26 +108,6 @@ export function isTimelineActivityRow(row: ChatLogPage['rows'][number]) {
         return row.actor?.kind === 'participant';
     }
     return false;
-}
-
-// The latest intra-turn narration per response: the one narration state the
-// timeline exposes while a turn runs. History stays in turn evidence.
-function latestNarrationByResponse(activity: readonly TavernResponseActivity[]) {
-    const latest = new Map<string, string>();
-
-    for (const entry of activity) {
-        if (entry.kind !== 'message' || runtimeNoticeFromActivity(entry)) {
-            continue;
-        }
-
-        const detail = entry.detail?.trim();
-
-        if (detail) {
-            latest.set(entry.response_id, detail);
-        }
-    }
-
-    return latest;
 }
 
 // Soft-deleted rows stay durable in Runtime (sequence slots are stable) but
@@ -685,8 +663,7 @@ export function messageText(message: TavernChatMessage) {
 // Every in-flight run is a live reply: each agent seat runs one turn at a
 // time, so concurrent entries belong to different seats.
 function activeRepliesFromResponses(
-    responses: readonly TavernChatResponse[],
-    narrationByResponseId: ReadonlyMap<string, string> = new Map()
+    responses: readonly TavernChatResponse[]
 ): ChatLogPage['activeReplies'] {
     return responses
         .filter(
@@ -697,7 +674,6 @@ function activeRepliesFromResponses(
         .map((response) => ({
             agentId: runtimeMetadataString(response, 'agentId') ?? response.participant_id,
             isThinking: true,
-            narrationText: narrationByResponseId.get(response.id) ?? null,
             runId: runtimeMetadataString(response, 'runId') ?? response.id,
             sessionKey: responseSessionKey(response),
             startedAt: runtimeMetadataString(response, 'startedAt') ?? response.created_at,
