@@ -7,8 +7,6 @@ import {
     agentRuntimeResetAgentSessionSchema,
     agentRuntimeRoutes,
     agentRuntimeSkillResetResultSchema,
-    agentRuntimeUpdateAgentSessionModelResultSchema,
-    agentRuntimeUpdateAgentSessionModelSchema,
     agentRuntimeUpdateRequestSchema,
     agentRuntimeUpdateSchema,
     runtimeEventListSchema,
@@ -39,7 +37,7 @@ import { handleWikiRequest } from '../wiki/routes.ts';
 import { handleWorkspaceRequest } from '../workspace/routes.ts';
 import { resetAgentSession } from './agent-session-reset.ts';
 import { readAgentSessionStats, readPastAgentSessionSummaries } from './agent-session-stats.ts';
-import { readCurrentAgentSession, updateCurrentAgentSessionModel } from './agent-session-store.ts';
+import { readCurrentAgentSession } from './agent-session-store.ts';
 import { createAgentParticipantId } from './chat-api/ids.ts';
 import { handleTavernApiRequest } from './chat-api-router.ts';
 import { handleDevToolkitRequest } from './development-turn-simulator.ts';
@@ -218,26 +216,6 @@ export async function handleTavernRuntimeRequest(request: Request): Promise<Resp
     }
 
     const segments = url.pathname.split('/').filter(Boolean).map(decodeURIComponent);
-
-    if (
-        request.method === 'PATCH' &&
-        segments[0] === 'agent' &&
-        segments[1] === 'chats' &&
-        segments[2] &&
-        segments[3] === 'agent-sessions' &&
-        segments[4] === 'model'
-    ) {
-        const input = agentRuntimeUpdateAgentSessionModelSchema.parse(await readJson(request));
-        return json(
-            agentRuntimeUpdateAgentSessionModelResultSchema.parse(
-                updateCurrentAgentSessionModel({
-                    agentParticipantId: input.agentParticipantId,
-                    chatId: segments[2],
-                    model: input.model,
-                })
-            )
-        );
-    }
 
     if (
         request.method === 'POST' &&

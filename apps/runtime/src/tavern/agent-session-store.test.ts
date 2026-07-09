@@ -9,7 +9,6 @@ import {
     listAgentSessionsForSeat,
     startNewAgentSession,
     updateAgentSessionRuntimeState,
-    updateCurrentAgentSessionModel,
 } from './agent-session-store';
 import { upsertStoredAgent } from './agents-store';
 import { createChat, upsertResponse } from './chat-api';
@@ -156,78 +155,7 @@ describe('Tavern Runtime agent sessions', () => {
         ]);
     });
 
-    it('changes the effective model for one current session without touching another chat', () => {
-        seedAgentChat({ chatId: 'cht_one', model: 'gpt-4.1-mini' });
-        seedAgentChat({ chatId: 'cht_two', model: 'gpt-4.1-mini' });
-        const firstChatSession = ensureCurrentAgentSession({
-            agentParticipantId: 'agt_primary',
-            chatId: 'cht_one',
-            now: '2026-06-29T12:00:00.000Z',
-        });
-        const secondChatSession = ensureCurrentAgentSession({
-            agentParticipantId: 'agt_primary',
-            chatId: 'cht_two',
-            now: '2026-06-29T12:00:01.000Z',
-        });
-
-        const result = updateCurrentAgentSessionModel({
-            agentParticipantId: 'agt_primary',
-            chatId: 'cht_one',
-            model: { model: 'gpt-4.1', provider: 'openai' },
-            now: '2026-06-29T12:00:02.000Z',
-        });
-
-        expect(result).toMatchObject({
-            rotated: false,
-            session: {
-                effectiveModel: { model: 'gpt-4.1', provider: 'openai' },
-                generation: 1,
-                id: firstChatSession.id,
-            },
-        });
-        expect(
-            listAgentSessionsForSeat({ agentParticipantId: 'agt_primary', chatId: 'cht_two' })
-        ).toMatchObject([
-            {
-                effectiveModel: secondChatSession.effectiveModel,
-                id: secondChatSession.id,
-                status: 'active',
-            },
-        ]);
-    });
-
-    it('changes the effective model across providers without rotating the session', () => {
-        seedAgentChat({ chatId: 'cht_one', model: 'gpt-4.1-mini' });
-        const original = ensureCurrentAgentSession({
-            agentParticipantId: 'agt_primary',
-            chatId: 'cht_one',
-            now: '2026-06-29T12:00:00.000Z',
-        });
-
-        const result = updateCurrentAgentSessionModel({
-            agentParticipantId: 'agt_primary',
-            chatId: 'cht_one',
-            model: { model: 'claude-opus-4-8', provider: 'claude' },
-            now: '2026-06-29T12:00:01.000Z',
-        });
-
-        expect(result).toMatchObject({
-            rotated: false,
-            session: {
-                effectiveModel: { model: 'claude-opus-4-8', provider: 'claude' },
-                generation: 1,
-                id: original.id,
-                status: 'active',
-            },
-        });
-        expect(
-            listAgentSessionsForSeat({ agentParticipantId: 'agt_primary', chatId: 'cht_one' }).map(
-                (session) => [session.id, session.status]
-            )
-        ).toEqual([[original.id, 'active']]);
-    });
-
-    it('reads and changes a chat agent session model through Runtime HTTP routes', async () => {
+    it('reads the current chat agent session through Runtime HTTP routes', async () => {
         seedAgentChat({ chatId: 'cht_one', model: 'gpt-4.1-mini' });
         ensureCurrentAgentSession({
             agentParticipantId: 'agt_primary',
@@ -249,30 +177,6 @@ describe('Tavern Runtime agent sessions', () => {
                 id: 'ags_cht_one_agt_primary_1',
             },
             stats: { contextTokens: null, turnCount: 0 },
-        });
-
-        const updateResponse = await handleTavernRuntimeRequest(
-            new Request(
-                `http://runtime.test${agentRuntimeRoutes.chatAgentSessionModel('cht_one')}`,
-                {
-                    body: JSON.stringify({
-                        agentParticipantId: 'agt_primary',
-                        model: { model: 'gpt-4.1', provider: 'openai' },
-                    }),
-                    headers: { 'content-type': 'application/json' },
-                    method: 'PATCH',
-                }
-            )
-        );
-        const updatePayload = await updateResponse.json();
-
-        expect(updateResponse.status).toBe(200);
-        expect(updatePayload).toMatchObject({
-            rotated: false,
-            session: {
-                effectiveModel: { model: 'gpt-4.1', provider: 'openai' },
-                id: 'ags_cht_one_agt_primary_1',
-            },
         });
     });
 

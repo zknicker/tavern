@@ -87,8 +87,6 @@ export const agentRuntimeRoutes = {
     chatMessages: (chatId: string) => `/agent/chats/${chatId}/messages`,
     chatAgentSessionCurrent: (chatId: string) =>
         `/agent/chats/${encodeURIComponent(chatId)}/agent-sessions/current`,
-    chatAgentSessionModel: (chatId: string) =>
-        `/agent/chats/${encodeURIComponent(chatId)}/agent-sessions/model`,
     chatAgentSessionReset: (chatId: string) =>
         `/agent/chats/${encodeURIComponent(chatId)}/agent-sessions/reset`,
     chatTurnSteer: (chatId: string, runId: string) =>

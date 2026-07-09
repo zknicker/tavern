@@ -84,8 +84,5 @@ never calls the engine directly.
 
 ## Future Work
 
-- Session model switching from the drawer (the Runtime `PATCH
-  /agent/chats/{id}/agent-sessions/model` route exists but has no app
-  surface).
 - Cross-chat agent stats (sessions, chats, memory counts) in the drawer
   header.

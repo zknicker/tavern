@@ -1902,16 +1902,6 @@ export const agentRuntimeCurrentAgentSessionResultSchema = z.object({
     stats: agentRuntimeAgentSessionStatsSchema.nullable(),
 });
 
-export const agentRuntimeUpdateAgentSessionModelSchema = z.object({
-    agentParticipantId: z.string().trim().min(1).optional(),
-    model: agentRuntimeModelNameSchema,
-});
-
-export const agentRuntimeUpdateAgentSessionModelResultSchema = z.object({
-    rotated: z.boolean(),
-    session: agentRuntimeAgentSessionSchema,
-});
-
 // Rotates the agent seat's current session so the chat's next message opens a
 // brand-new engine session. Timeline stays untouched; the reset lands as a
 // durable new-session notice row.
@@ -2909,17 +2899,11 @@ export type AgentRuntimeAgentSessionStatus = z.infer<typeof agentRuntimeAgentSes
 export type AgentRuntimeCurrentAgentSessionResult = z.infer<
     typeof agentRuntimeCurrentAgentSessionResultSchema
 >;
-export type AgentRuntimeUpdateAgentSessionModel = z.infer<
-    typeof agentRuntimeUpdateAgentSessionModelSchema
->;
 export type AgentRuntimeAgentSessionStats = z.infer<typeof agentRuntimeAgentSessionStatsSchema>;
 export type AgentRuntimeAgentSessionSummary = z.infer<typeof agentRuntimeAgentSessionSummarySchema>;
 export type AgentRuntimeResetAgentSession = z.infer<typeof agentRuntimeResetAgentSessionSchema>;
 export type AgentRuntimeResetAgentSessionResult = z.infer<
     typeof agentRuntimeResetAgentSessionResultSchema
->;
-export type AgentRuntimeUpdateAgentSessionModelResult = z.infer<
-    typeof agentRuntimeUpdateAgentSessionModelResultSchema
 >;
 export type AgentRuntimeSession = z.infer<typeof agentRuntimeSessionSchema>;
 export type AgentRuntimeSessionList = z.infer<typeof agentRuntimeSessionListSchema>;

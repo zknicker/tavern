@@ -2,7 +2,6 @@ import {
     type AgentRuntimeAgentSession,
     type AgentRuntimeModelName,
     agentRuntimeAgentSessionSchema,
-    agentRuntimeModelNameSchema,
 } from '@tavern/api';
 import { getDb } from '../db/connection';
 import type { Database } from '../db/sqlite';
@@ -233,45 +232,6 @@ export function listAgentSessionsForSeat(input: {
             })
         ) as AgentSessionRow[];
     return rows.map(rowToAgentSession);
-}
-
-export function updateCurrentAgentSessionModel(input: {
-    agentParticipantId?: string;
-    chatId: string;
-    db?: Database;
-    model: AgentRuntimeModelName;
-    now?: string;
-}) {
-    const db = input.db ?? getDb();
-    const nextModel = agentRuntimeModelNameSchema.parse(input.model);
-    const current = ensureCurrentAgentSession({
-        agentParticipantId: input.agentParticipantId,
-        chatId: input.chatId,
-        db,
-        now: input.now,
-    });
-    const now = input.now ?? new Date().toISOString();
-    db.prepare(
-        `UPDATE agent_sessions
-         SET effective_model_json = $effectiveModelJson,
-             updated_at = $now
-         WHERE id = $id`
-    ).run(
-        namedParams({
-            effectiveModelJson: JSON.stringify(nextModel),
-            id: current.id,
-            now,
-        })
-    );
-
-    const session = readAgentSession(current.id, db);
-    if (!session) {
-        throw new Error(`Agent session ${current.id} was not persisted.`);
-    }
-    return {
-        rotated: false,
-        session,
-    };
 }
 
 export function updateAgentSessionRuntimeState(input: {

@@ -59,7 +59,6 @@ current Agent session:
 ```http
 GET  /agent/chats/{chat_id}/agent-sessions/current?agentId=
 POST /agent/chats/{chat_id}/agent-sessions/reset
-PATCH /agent/chats/{chat_id}/agent-sessions/model
 ```
 
 `GET current` returns the current Agent session for that Chat seat or `null`.
@@ -68,10 +67,9 @@ session action): the active session is archived, the next generation becomes
 current, and the reset lands in the timeline as a durable new-session notice.
 Rotating archives older active sessions for that seat and updates only the
 current chat's agent participant. See
-[Agent Drawer](../../specs/agent-drawer.md). `PATCH model` changes the current
-session's effective model; same execution-kind changes update in place, and
-cross-kind changes rotate to a new Agent session. Other chats using the same
-agent definition keep their own current sessions and models.
+[Agent Drawer](../../specs/agent-drawer.md). Model selection is agent-scoped:
+the agent's configured model applies to new sessions, and a session keeps its
+effective model until the seat rotates.
 
 ## Addressing
 

@@ -126,8 +126,6 @@ import {
     type AgentRuntimeUpdateAgentModel,
     type AgentRuntimeUpdateAgentName,
     type AgentRuntimeUpdateAgentPluginGrant,
-    type AgentRuntimeUpdateAgentSessionModel,
-    type AgentRuntimeUpdateAgentSessionModelResult,
     type AgentRuntimeUpdateAgentThinkingDefault,
     type AgentRuntimeUpdateCron,
     type AgentRuntimeUpdateModelProvider,
@@ -276,8 +274,6 @@ import {
     agentRuntimeUpdateAgentModelSchema,
     agentRuntimeUpdateAgentNameSchema,
     agentRuntimeUpdateAgentPluginGrantSchema,
-    agentRuntimeUpdateAgentSessionModelResultSchema,
-    agentRuntimeUpdateAgentSessionModelSchema,
     agentRuntimeUpdateAgentThinkingDefaultSchema,
     agentRuntimeUpdateCronSchema,
     agentRuntimeUpdateModelProviderSchema,
@@ -567,10 +563,6 @@ export interface TavernAgentRuntimeClient {
         agentId: string,
         input: AgentRuntimeUpdateAgentName
     ): Promise<AgentRuntimeAgentEngineConfigSnapshot>;
-    updateAgentSessionModel(
-        chatId: string,
-        input: AgentRuntimeUpdateAgentSessionModel
-    ): Promise<AgentRuntimeUpdateAgentSessionModelResult>;
     updateAgentThinkingDefault(
         agentId: string,
         input: AgentRuntimeUpdateAgentThinkingDefault
@@ -2583,28 +2575,6 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         }
 
         return agentRuntimeCurrentAgentSessionResultSchema.parse(await response.json());
-    }
-
-    async updateAgentSessionModel(chatId: string, input: AgentRuntimeUpdateAgentSessionModel) {
-        const payload = agentRuntimeUpdateAgentSessionModelSchema.parse(input);
-        const response = await fetch(
-            `${this.#baseUrl}${agentRuntimeRoutes.chatAgentSessionModel(chatId)}`,
-            {
-                body: JSON.stringify(payload),
-                headers: {
-                    ...this.#authHeaders,
-                    'content-type': 'application/json',
-                    [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
-                },
-                method: 'PATCH',
-            }
-        );
-
-        if (!response.ok) {
-            await readErrorResponse(response);
-        }
-
-        return agentRuntimeUpdateAgentSessionModelResultSchema.parse(await response.json());
     }
 
     async stopChatTurn(
