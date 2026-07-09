@@ -4,7 +4,7 @@ import type { Database } from '../../db/sqlite';
 import { namedParams, optionalRow } from '../../db/sqlite';
 import { insertEvent, publish, replaceEventPayload } from './events';
 import { assertOptionalTavernIdPrefix, assertTavernIdPrefix } from './ids';
-import { findExistingMessage, getMessageOrThrow, insertMessage } from './messages';
+import { findExistingMessage, getMessage, getMessageOrThrow, insertMessage } from './messages';
 import type { DeliveryReceipt, DeliveryRow } from './types';
 
 export function createDelivery(
@@ -29,8 +29,10 @@ export function createDelivery(
 
     db.exec('BEGIN IMMEDIATE');
     try {
+        // A streaming post created at first content links here; the delivery
+        // finalizes its text and metadata in place (specs/chat-timeline.md).
         const message =
-            findExistingMessage(chatId, input.message, db) ??
+            finalizeExistingMessage(chatId, input.message, db) ??
             insertMessage(chatId, input.message, input.agent_id, input.id, db);
         const now = new Date().toISOString();
         const event = insertEvent(
@@ -73,6 +75,58 @@ export function createDelivery(
         db.exec('ROLLBACK');
         throw error;
     }
+}
+
+// The delivery's message may already exist as the turn's streaming post
+// (same id): settle its final content and metadata inside the delivery
+// transaction while keeping its sequence — the post never moves.
+function finalizeExistingMessage(
+    chatId: string,
+    input: TavernCreateDeliveryRequest['message'],
+    db: Database
+) {
+    const byId = getMessage(input.id, db);
+
+    if (byId && isStreamingPost(byId, chatId, input)) {
+        if (byId.content === input.content) {
+            return byId;
+        }
+
+        db.prepare(
+            'UPDATE chat_messages SET content = $content, metadata_json = $metadataJson WHERE id = $id'
+        ).run(
+            namedParams({
+                content: input.content,
+                id: byId.id,
+                metadataJson: JSON.stringify(input.metadata ?? {}),
+            })
+        );
+
+        return getMessageOrThrow(byId.id, db);
+    }
+
+    // Not a streaming post: normal idempotency rules apply (same content or
+    // conflict).
+    return findExistingMessage(chatId, input, db);
+}
+
+function isStreamingPost(
+    existing: ReturnType<typeof getMessage> & object,
+    chatId: string,
+    input: TavernCreateDeliveryRequest['message']
+) {
+    const runtime = existing.metadata?.runtime;
+    const streaming =
+        runtime && typeof runtime === 'object' && !Array.isArray(runtime)
+            ? (runtime as Record<string, unknown>).streaming === true
+            : false;
+
+    return (
+        streaming &&
+        existing.chat_id === chatId &&
+        existing.author.id === input.author_id &&
+        existing.role === input.role
+    );
 }
 
 function assertDeliveryInputIds(chatId: string, input: TavernCreateDeliveryRequest) {

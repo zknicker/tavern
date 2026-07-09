@@ -1,5 +1,5 @@
 import type { AgentRuntimeModelName } from '@tavern/api';
-import { upsertResponseActivity } from './chat-api/index.ts';
+import { createMessage, updateStreamingMessage, upsertResponseActivity } from './chat-api/index.ts';
 
 export const assistantCommentaryPhase = 'commentary' as const;
 export const assistantFinalAnswerPhase = 'final_answer' as const;
@@ -9,6 +9,8 @@ export type HarnessAssistantMessagePhase =
     | typeof assistantFinalAnswerPhase;
 
 export interface HarnessTurnStreamTarget {
+    // The agent participant authoring the turn's post.
+    authorId: string;
     chatId: string;
     model: AgentRuntimeModelName;
     responseId: string;
@@ -76,6 +78,7 @@ interface StreamState {
     activityIds: string[];
     contextTokens: number | null;
     pendingText: PendingText | null;
+    postCreated: boolean;
     reasoningBuffers: Map<string, { content: string; startedAt: string }>;
     reasoningIndex: number;
     streamError: unknown;
@@ -89,6 +92,7 @@ function createStreamState(): StreamState {
         aborted: false,
         activityIds: [],
         contextTokens: null,
+        postCreated: false,
         pendingText: null,
         reasoningBuffers: new Map(),
         reasoningIndex: 0,
@@ -190,6 +194,41 @@ function handleTextEnd(
         startedAt: buffer.startedAt,
     };
     state.textIndex += 1;
+    upsertTurnPost(target, state, content);
+}
+
+// createPost/editPost (specs/chat-timeline.md): the turn's message row is
+// created the moment the turn first says something — fixing its timeline
+// position — and each later segment edits it in place. The delivery at turn
+// end finalizes the same row.
+function upsertTurnPost(target: HarnessTurnStreamTarget, state: StreamState, content: string) {
+    const messageId = assistantMessageIdForRun(target.runId);
+    const metadata = {
+        runtime: {
+            ...target.runtime,
+            streaming: true,
+        },
+    };
+
+    try {
+        if (state.postCreated) {
+            updateStreamingMessage(target.chatId, { content, id: messageId, metadata });
+            return;
+        }
+
+        createMessage(target.chatId, {
+            attachments: [],
+            author_id: target.authorId,
+            content,
+            id: messageId,
+            metadata,
+            role: 'assistant',
+        });
+        state.postCreated = true;
+    } catch {
+        // Post upkeep is best-effort while streaming; the delivery at turn
+        // end settles the durable content either way.
+    }
 }
 
 function handleReasoningStart(
@@ -396,6 +435,11 @@ function flushPendingCommentary(target: HarnessTurnStreamTarget, state: StreamSt
         summary: pending.content,
         title: 'Agent commentary',
     });
+}
+
+// The turn's one post: shared by streaming creation and the final delivery.
+export function assistantMessageIdForRun(runId: string) {
+    return `msg_${runId.replace(/[^A-Za-z0-9_-]/gu, '_')}_assistant`;
 }
 
 export function toolActivityIdForRun(runId: string, toolCallId: string) {

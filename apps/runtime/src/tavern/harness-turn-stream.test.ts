@@ -302,6 +302,7 @@ describe('persistHarnessTurnStream', () => {
 
 function target() {
     return {
+        authorId: 'agt_primary',
         chatId,
         model,
         responseId,

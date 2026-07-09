@@ -36,11 +36,21 @@ import type { AgentExecutor, AgentExecutorInput } from './agent-executor.ts';
 import { buildAgentInstructions } from './agent-instructions.ts';
 import { updateAgentSessionRuntimeState } from './agent-session-store.ts';
 import { recordAgentTurnPromptEvidence } from './agent-turn-store.ts';
-import { createDelivery, upsertResponse, upsertResponseActivity } from './chat-api/index.ts';
+import {
+    createDelivery,
+    deleteMessage,
+    getMessage,
+    upsertResponse,
+    upsertResponseActivity,
+} from './chat-api/index.ts';
 import { createTavernChatTools } from './chat-context-tools.ts';
 import { withRuntimeBridgeBootstrap } from './harness-bridge-bootstrap.ts';
 import { harnessPrompt, promptCursorSequence } from './harness-prompt.ts';
-import { assistantFinalAnswerPhase, persistHarnessTurnStream } from './harness-turn-stream.ts';
+import {
+    assistantFinalAnswerPhase,
+    assistantMessageIdForRun,
+    persistHarnessTurnStream,
+} from './harness-turn-stream.ts';
 
 export type { HarnessAssistantMessagePhase } from './harness-turn-stream.ts';
 
@@ -129,6 +139,7 @@ async function executeHarnessTurn(
         });
         turnStream = await persistHarnessTurnStream(
             {
+                authorId: input.agentSession.agentParticipantId,
                 chatId: input.chatId,
                 model: input.agentSession.effectiveModel,
                 responseId: input.responseId,
@@ -169,7 +180,7 @@ async function executeHarnessTurn(
     }
     const parsedWidgets = parseWidgetsFromAssistantContent(responseContent);
     const messageContent = parsedWidgets?.displayContent ?? responseContent;
-    const messageId = assistantMessageId(input.runId);
+    const messageId = assistantMessageIdForRun(input.runId);
     const deliveryId = deliveryIdForRun(input.runId);
     const receipt = createDelivery(input.chatId, {
         agent_id: input.agentSession.agentParticipantId,
@@ -258,6 +269,12 @@ function completeSilentHarnessTurn(
     }
 ) {
     const activityId = silentReplyActivityIdForRun(input.runId);
+    // A silent reply leaves no timeline unit: retract the streaming post if
+    // narration already created one (specs/chat-timeline.md).
+    const postId = assistantMessageIdForRun(input.runId);
+    if (getMessage(postId)) {
+        deleteMessage(postId);
+    }
     upsertResponseActivity(input.chatId, input.responseId, {
         completed_at: turn.completedAt,
         id: activityId,
@@ -553,10 +570,6 @@ function runtimeMetadata(input: AgentExecutorInput) {
         runId: input.runId,
         source: 'agent-engine',
     };
-}
-
-function assistantMessageId(runId: string) {
-    return `msg_${sanitizeId(runId)}_assistant`;
 }
 
 function deliveryIdForRun(runId: string) {

@@ -11,6 +11,7 @@ export {
     listRecentMessagesBefore,
     listRecentMessagesBetween,
     searchMessages,
+    updateStreamingMessage,
 } from './messages';
 export { markRead } from './reads';
 export {

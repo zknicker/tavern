@@ -32,7 +32,7 @@ describe('development turn simulator', () => {
         );
 
         expect(response?.status).toBe('completed');
-        expect(response?.response_message_id).toBe(`msg_${simulation.receipt.run_id}`);
+        expect(response?.response_message_id).toBe(`msg_${simulation.receipt.run_id}_assistant`);
 
         const kinds = page.activity
             .filter((activity) => activity.response_id === simulation.receipt.response_id)
@@ -41,7 +41,7 @@ describe('development turn simulator', () => {
         expect(kinds).toEqual(['message', 'tool_call', 'tool_call', 'tool_call']);
 
         const reply = page.messages.find(
-            (message) => message.id === `msg_${simulation.receipt.run_id}`
+            (message) => message.id === `msg_${simulation.receipt.run_id}_assistant`
         );
         expect(reply?.role).toBe('assistant');
         expect(reply?.content.length).toBeGreaterThan(0);

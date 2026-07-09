@@ -167,6 +167,50 @@ export function getMessage(id: string, db: Database = getDb()): TavernChatMessag
     return row ? rowToMessage(row, db) : null;
 }
 
+// A turn's post evolves in place: created at first visible content and
+// edited as the contribution changes until its delivery finalizes it
+// (specs/chat-timeline.md). Position (sequence) never changes.
+export function updateStreamingMessage(
+    chatId: string,
+    input: { content: string; id: string; metadata?: Record<string, unknown> },
+    db: Database = getDb()
+): TavernChatMessage | null {
+    assertTavernIdPrefix(input.id, 'msg_', 'Message id');
+    const existing = getMessage(input.id, db);
+
+    if (!existing || existing.chat_id !== chatId || existing.deleted_at) {
+        return null;
+    }
+
+    if (existing.content === input.content && input.metadata === undefined) {
+        return existing;
+    }
+
+    db.exec('BEGIN IMMEDIATE');
+    try {
+        db.prepare(
+            `UPDATE chat_messages
+             SET content = $content,
+                 metadata_json = COALESCE($metadataJson, metadata_json)
+             WHERE id = $id`
+        ).run(
+            namedParams({
+                content: input.content,
+                id: input.id,
+                metadataJson: input.metadata === undefined ? null : JSON.stringify(input.metadata),
+            })
+        );
+        const message = getMessageOrThrow(input.id, db);
+        const event = insertEvent({ chatId, event: 'message.updated', payload: { message } }, db);
+        db.exec('COMMIT');
+        publish(event);
+        return message;
+    } catch (error) {
+        db.exec('ROLLBACK');
+        throw error;
+    }
+}
+
 export function deleteMessage(id: string, db: Database = getDb()): DeleteReceipt {
     assertTavernIdPrefix(id, 'msg_', 'Message id');
     const message = getMessageOrThrow(id, db);

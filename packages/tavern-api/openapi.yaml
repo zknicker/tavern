@@ -1338,6 +1338,7 @@ components:
     ChatEvent:
       oneOf:
         - $ref: '#/components/schemas/MessageCreatedEvent'
+        - $ref: '#/components/schemas/MessageUpdatedEvent'
         - $ref: '#/components/schemas/MessageDeliveredEvent'
         - $ref: '#/components/schemas/MessageDeletedEvent'
         - $ref: '#/components/schemas/ChatReadEvent'
@@ -1387,6 +1388,21 @@ components:
             type:
               type: string
               const: message.created
+            message:
+              $ref: '#/components/schemas/ChatMessage'
+    MessageUpdatedEvent:
+      description: >
+        A streaming post edit: the turn's message content evolving in place
+        between its creation at first visible content and its delivery.
+      allOf:
+        - $ref: '#/components/schemas/EventBase'
+        - type: object
+          additionalProperties: false
+          required: [type, message]
+          properties:
+            type:
+              type: string
+              const: message.updated
             message:
               $ref: '#/components/schemas/ChatMessage'
     MessageDeliveredEvent:

@@ -8,8 +8,11 @@ import { getDb } from '../db/connection';
 import type { Database } from '../db/sqlite';
 import {
     createDelivery,
+    createMessage,
     getChat,
+    getMessage,
     listMessages,
+    updateStreamingMessage,
     upsertResponse,
     upsertResponseActivity,
 } from './chat-api';
@@ -344,6 +347,40 @@ function upsertRun(context: SimulationContext, input: { status: 'running'; summa
         },
         context.db
     );
+
+    if (input.summary) {
+        upsertTurnPost(context, input.summary);
+    }
+}
+
+// createPost/editPost, same as the real turn runner: the turn's message row
+// exists from its first visible content and evolves in place until the
+// delivery finalizes it (specs/chat-timeline.md).
+function upsertTurnPost(context: SimulationContext, content: string) {
+    const id = simulatedPostId(context);
+    const metadata = { runtime: { ...context.runtime, streaming: true } };
+
+    if (getMessage(id, context.db)) {
+        updateStreamingMessage(context.chatId, { content, id, metadata }, context.db);
+        return;
+    }
+
+    createMessage(
+        context.chatId,
+        {
+            attachments: [],
+            author_id: context.agentId,
+            content,
+            id,
+            metadata,
+            role: 'assistant',
+        },
+        context.db
+    );
+}
+
+function simulatedPostId(context: SimulationContext) {
+    return `msg_${context.runId}_assistant`;
 }
 
 function completeRun(context: SimulationContext, content: string) {
@@ -356,7 +393,7 @@ function completeRun(context: SimulationContext, content: string) {
                 attachments: [],
                 author_id: context.agentId,
                 content,
-                id: `msg_${context.runId}`,
+                id: simulatedPostId(context),
                 metadata: { runtime: context.runtime },
                 role: 'assistant',
             },
@@ -381,6 +418,7 @@ function completeRun(context: SimulationContext, content: string) {
 }
 
 function narration(context: SimulationContext, text: string, index = 1) {
+    upsertTurnPost(context, text);
     upsertResponseActivity(
         context.chatId,
         context.responseId,

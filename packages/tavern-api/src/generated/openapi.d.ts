@@ -590,7 +590,7 @@ export interface components {
             events: components["schemas"]["ChatEvent"][];
             next_cursor: string | null;
         };
-        ChatEvent: components["schemas"]["MessageCreatedEvent"] | components["schemas"]["MessageDeliveredEvent"] | components["schemas"]["MessageDeletedEvent"] | components["schemas"]["ChatReadEvent"] | components["schemas"]["ChatClearedEvent"] | components["schemas"]["ResponseDeletedEvent"] | components["schemas"]["ResponseCreatedEvent"] | components["schemas"]["ResponseUpdatedEvent"] | components["schemas"]["ResponseCompletedEvent"] | components["schemas"]["ResponseFailedEvent"] | components["schemas"]["ActivityCreatedEvent"] | components["schemas"]["ActivityUpdatedEvent"] | components["schemas"]["ActivityCompletedEvent"] | components["schemas"]["ActivityFailedEvent"] | components["schemas"]["ArtifactCreatedEvent"];
+        ChatEvent: components["schemas"]["MessageCreatedEvent"] | components["schemas"]["MessageUpdatedEvent"] | components["schemas"]["MessageDeliveredEvent"] | components["schemas"]["MessageDeletedEvent"] | components["schemas"]["ChatReadEvent"] | components["schemas"]["ChatClearedEvent"] | components["schemas"]["ResponseDeletedEvent"] | components["schemas"]["ResponseCreatedEvent"] | components["schemas"]["ResponseUpdatedEvent"] | components["schemas"]["ResponseCompletedEvent"] | components["schemas"]["ResponseFailedEvent"] | components["schemas"]["ActivityCreatedEvent"] | components["schemas"]["ActivityUpdatedEvent"] | components["schemas"]["ActivityCompletedEvent"] | components["schemas"]["ActivityFailedEvent"] | components["schemas"]["ArtifactCreatedEvent"];
         EventBase: {
             id: components["schemas"]["EventId"];
             cursor: string;
@@ -602,6 +602,12 @@ export interface components {
         MessageCreatedEvent: components["schemas"]["EventBase"] & {
             /** @constant */
             type: "message.created";
+            message: components["schemas"]["ChatMessage"];
+        };
+        /** @description A streaming post edit: the turn's message content evolving in place between its creation at first visible content and its delivery. */
+        MessageUpdatedEvent: components["schemas"]["EventBase"] & {
+            /** @constant */
+            type: "message.updated";
             message: components["schemas"]["ChatMessage"];
         };
         MessageDeliveredEvent: components["schemas"]["EventBase"] & {

@@ -116,6 +116,7 @@ function chatEventToRuntimeEvents(event: TavernChatEvent, db?: Database): Persis
                 event: runtimeEvent,
             }));
         case 'chat.cleared':
+        case 'message.updated':
         case 'message.deleted':
         case 'response.deleted':
             return [
