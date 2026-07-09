@@ -10,7 +10,7 @@ import { sessionMessageAttachmentSchema } from '../sessions/contracts/messages.t
 import { chatConversationKinds } from './conversation-kind.ts';
 import { chatSourceKinds } from './source.ts';
 
-export const chatScopeSchema = z.enum(['channel', 'dm', 'group', 'topic']).nullable();
+export const chatScopeSchema = z.enum(['channel', 'dm', 'group', 'task', 'topic']).nullable();
 export const chatConversationKindSchema = z.enum(chatConversationKinds);
 
 export const chatBindingSchema = z.object({

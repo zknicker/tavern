@@ -36,7 +36,7 @@ export interface ChatRow {
     active_turn_participant_ids: string | null;
     created_at: string;
     id: string;
-    kind: 'channel' | 'dm';
+    kind: 'channel' | 'dm' | 'task';
     last_activity_at: string | null;
     last_message_sequence: number;
     metadata_json: string;

@@ -101,10 +101,12 @@ Keep one task in_progress per stream of work.
 
 ## Dispatched tasks
 
-A dispatch message names a task (like T-12) and is your work order: read it
-first with \`tasks_get\`, mark it in_progress, do the work in this chat,
-keep the task updated as scope changes, and close it: done when you deliver,
-blocked when you cannot continue, canceled when the work should not happen.
+A dispatch message arrives in the task's own work chat and names a task (like
+T-12). Treat it as your work order: read it first with \`tasks_get\`, mark it
+in_progress, do the work in that work chat, keep the task updated as scope
+changes, and close it: done when you deliver, blocked when you cannot continue,
+canceled when the work should not happen. The work chat archives when the task
+closes and remains reachable from the task page.
 
 ## Epics and hygiene
 

@@ -1,13 +1,21 @@
 import {
     agentRuntimeCreateTaskSchema,
     agentRuntimeRoutes,
+    agentRuntimeSetTaskWorkChatSchema,
     agentRuntimeTaskListSchema,
     agentRuntimeTaskSchema,
     agentRuntimeUpdateTaskSchema,
 } from '@tavern/api';
 import { badRequest, json, notFound, readJson } from '../tavern/http.ts';
 import { publishTaskDeleted, publishTaskUpdated } from './events.ts';
-import { createTask, deleteTask, getTask, listTasks, updateTask } from './store.ts';
+import {
+    createTask,
+    deleteTask,
+    getTask,
+    listTasks,
+    setTaskWorkChat,
+    updateTask,
+} from './store.ts';
 
 export function handleTasksRequest(request: Request): Promise<Response | null> | Response | null {
     const url = new URL(request.url);
@@ -38,11 +46,25 @@ async function respondToTasksRequest(input: {
             publishTaskUpdated(task.id);
             return json(agentRuntimeTaskSchema.parse(task), 201);
         }
-        if (!segments[1] || segments[2]) {
+        if (!segments[1]) {
             return null;
         }
 
         const taskId = segments[1];
+        if (segments[2] === 'work-chat' && !segments[3] && method === 'POST') {
+            const task = setTaskWorkChat(
+                taskId,
+                agentRuntimeSetTaskWorkChatSchema.parse(await readJson(request)).workChatId
+            );
+            if (!task) {
+                return notFound();
+            }
+            publishTaskUpdated(task.id);
+            return json(agentRuntimeTaskSchema.parse(task));
+        }
+        if (segments[2]) {
+            return null;
+        }
         if (method === 'GET') {
             const task = getTask(taskId);
             return task ? json(agentRuntimeTaskSchema.parse(task)) : notFound();

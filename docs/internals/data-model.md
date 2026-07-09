@@ -190,7 +190,7 @@ Durable conversation containers.
 ```text
 chats
   id                    TEXT PRIMARY KEY
-  kind                  TEXT NOT NULL        -- channel, dm
+  kind                  TEXT NOT NULL        -- channel, dm, task
   title                 TEXT
   pinned                INTEGER NOT NULL DEFAULT 0  -- legacy Runtime field; Tavern App ignores it
   metadata_json         TEXT NOT NULL DEFAULT '{}'
@@ -212,6 +212,8 @@ Rules:
   and a seeded channel color.
 - Each Runtime-managed agent has one built-in DM with the local human operator.
 - A DM has exactly two participants: the local human operator and one agent.
+- Dispatched tasks use `kind: task` and keep the local human plus the assigned
+  agent participants in the task's reusable work chat.
 - Chat archival and presentation state currently live in `metadata_json`.
 
 ## `chat_participants`

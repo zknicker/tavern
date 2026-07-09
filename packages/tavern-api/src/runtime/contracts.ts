@@ -1267,7 +1267,9 @@ export const agentRuntimeChatBindingSchema = z.object({
     agentId: z.string().trim().min(1),
 });
 
-export const agentRuntimeChatScopeSchema = z.enum(['channel', 'dm', 'group', 'topic']).nullable();
+export const agentRuntimeChatScopeSchema = z
+    .enum(['channel', 'dm', 'group', 'task', 'topic'])
+    .nullable();
 
 export const agentRuntimeDiscordChatSourceRecordSchema = z.object({
     chatType: z.string().trim().min(1).nullable(),
@@ -1883,6 +1885,7 @@ export const agentRuntimeTaskSchema = z.object({
     summary: z.string().nullable(),
     title: z.string().trim().min(1),
     updatedAt: z.string().datetime(),
+    workChatId: z.string().trim().min(1).nullable(),
 });
 
 export const agentRuntimeTaskListSchema = z.object({
@@ -1917,6 +1920,10 @@ export const agentRuntimeUpdateTaskSchema = z.object({
     status: agentRuntimeTaskStatusSchema.optional(),
     summary: z.string().nullable().optional(),
     title: z.string().trim().min(1).optional(),
+});
+
+export const agentRuntimeSetTaskWorkChatSchema = z.object({
+    workChatId: z.string().trim().min(1),
 });
 
 export const agentRuntimeFrontendSchema = z.enum(['cli', 'discord', 'sdk', 'tavern', 'telegram']);
@@ -3051,6 +3058,7 @@ export type AgentRuntimeTaskLabelList = z.infer<typeof agentRuntimeTaskLabelList
 export type AgentRuntimeTaskLabelWithCount = z.infer<typeof agentRuntimeTaskLabelWithCountSchema>;
 export type AgentRuntimeTaskList = z.infer<typeof agentRuntimeTaskListSchema>;
 export type AgentRuntimeTaskPriority = z.infer<typeof agentRuntimeTaskPrioritySchema>;
+export type AgentRuntimeSetTaskWorkChat = z.infer<typeof agentRuntimeSetTaskWorkChatSchema>;
 export type AgentRuntimeTaskStatus = z.infer<typeof agentRuntimeTaskStatusSchema>;
 export type AgentRuntimeCreateTask = z.infer<typeof agentRuntimeCreateTaskSchema>;
 export type AgentRuntimeUpdateTask = z.infer<typeof agentRuntimeUpdateTaskSchema>;

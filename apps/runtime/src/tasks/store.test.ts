@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { closeDb, getDb, initTestDb } from '../db/connection.ts';
 import { ensureRuntimeSchema } from '../db/schema.ts';
 import { upsertStoredAgent } from '../tavern/agents-store.ts';
+import { createChat, getChat } from '../tavern/chat-api/index.ts';
 import { createTaskId } from './ids.ts';
 import {
     colorForLabelName,
@@ -17,6 +18,7 @@ import {
     getTask,
     getTaskByNumber,
     listTasks,
+    setTaskWorkChat,
     updateTask,
 } from './store.ts';
 
@@ -136,6 +138,41 @@ describe('tasks store', () => {
 
         expect(getTask(created.id)?.scheduledFor).toBe('2026-07-20');
         expect(updateTask(created.id, { scheduledFor: null })?.scheduledFor).toBeNull();
+    });
+
+    test('sets work chat through the narrow store path', () => {
+        createChat({ id: 'cht_task', kind: 'task' });
+        const created = createTask({ id: createTaskId(), title: 'Needs a chat' });
+
+        expect(created.workChatId).toBeNull();
+        expect(setTaskWorkChat(created.id, 'cht_task')?.workChatId).toBe('cht_task');
+        expect(getTask(created.id)?.workChatId).toBe('cht_task');
+    });
+
+    test('archives work chats on terminal transitions only', () => {
+        createChat({
+            id: 'cht_done',
+            kind: 'task',
+            metadata: { tavern: { archived: false } },
+        });
+        createChat({
+            id: 'cht_cancel',
+            kind: 'task',
+            metadata: { tavern: { archived: false } },
+        });
+        const doneTask = createTask({ id: createTaskId(), title: 'Close done' });
+        const cancelTask = createTask({ id: createTaskId(), title: 'Close canceled' });
+        setTaskWorkChat(doneTask.id, 'cht_done');
+        setTaskWorkChat(cancelTask.id, 'cht_cancel');
+
+        updateTask(doneTask.id, { status: 'review' });
+        expect(getChat('cht_done')?.metadata).toEqual({ tavern: { archived: false } });
+
+        updateTask(doneTask.id, { status: 'done' });
+        updateTask(cancelTask.id, { status: 'canceled' });
+
+        expect(getChat('cht_done')?.metadata).toEqual({ tavern: { archived: true } });
+        expect(getChat('cht_cancel')?.metadata).toEqual({ tavern: { archived: true } });
     });
 
     test('replaces blockedBy as a set on update', () => {

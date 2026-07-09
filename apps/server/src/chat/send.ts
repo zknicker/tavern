@@ -164,6 +164,18 @@ function resolveTargetAgentIds(input: {
         return [agentId];
     }
 
+    if (input.chat.scope === 'task') {
+        if (!input.requestedAgentId) {
+            throw new Error(`Task chat "${input.chat.id}" requires an agent target.`);
+        }
+        if (!chatAgentIds.has(input.requestedAgentId)) {
+            throw new Error(
+                `Agent "${input.requestedAgentId}" is not part of chat "${input.chat.id}".`
+            );
+        }
+        return [input.requestedAgentId];
+    }
+
     const generatedAgentChatIds = [...chatAgentIds];
     if (isGeneratedTavernAgentChat(input.chat.metadata) && generatedAgentChatIds.length === 1) {
         return generatedAgentChatIds;

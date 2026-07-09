@@ -1,4 +1,4 @@
-export { createChat, getChat, listChats } from './chats';
+export { assertChatExists, createChat, getChat, listChats, setChatArchived } from './chats';
 export { createDelivery } from './deliveries';
 export { clearChat, deleteResponse } from './dismiss';
 export { listEvents, subscribeToTavernApiEvents } from './events';

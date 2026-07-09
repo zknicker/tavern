@@ -40,6 +40,13 @@ test('buildCronDeliveryTargets returns only configured chats that can send outbo
                 target: `chat:${productChatId}`,
             }),
             createAgentRuntimeChat({
+                id: 'cht_task',
+                metadata: { tavern: { displayName: 'T-1: Task' } },
+                platform: 'tavern',
+                scope: 'task',
+                target: 'task:cht_task',
+            }),
+            createAgentRuntimeChat({
                 bindingId: 'discord:binding:1',
                 id: 'discord:channel:111',
                 platform: 'discord',

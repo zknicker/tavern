@@ -118,6 +118,7 @@ export async function createRuntimeTavernChat(input: {
     displayName: string;
     displayNameSource: TavernChatDisplayNameSource;
     id: string;
+    kind?: TavernChat['kind'];
 }) {
     const { client } = await requireRuntimeChatClient();
     await saveRuntimeChat(client, {
@@ -131,6 +132,7 @@ export async function createRuntimeTavernChat(input: {
             id: input.id,
             tabAppearance: emptyTabAppearance(),
         }),
+        kind: input.kind ?? 'channel',
         participants: buildRuntimeTavernParticipants(input.agentIds),
         title: input.displayName,
     });
@@ -138,16 +140,19 @@ export async function createRuntimeTavernChat(input: {
 
 export async function updateRuntimeTavernChat(input: {
     agentIds: string[];
+    archived?: boolean;
     displayName: string;
     id: string;
+    kind?: TavernChat['kind'];
 }) {
     const { client } = await requireRuntimeChatClient();
     const current = await getTavernChatOrNull(client, input.id);
-    const archived = current ? readTavernChatMetadata(current).archived : false;
+    const archived = input.archived ?? (current ? readTavernChatMetadata(current).archived : false);
     const metadata = current ? readTavernChatMetadata(current) : null;
 
     await saveRuntimeChat(client, {
         id: input.id,
+        kind: input.kind ?? current?.kind ?? 'channel',
         metadata: buildRuntimeTavernChatMetadata({
             agentIds: input.agentIds,
             archived,
@@ -384,7 +389,7 @@ function tavernChatToRuntimeChat(chat: TavernChat): AgentRuntimeChat {
             sourceRecords: [],
         },
         requiresTrigger: false,
-        scope: chat.kind === 'dm' ? 'dm' : 'channel',
+        scope: chat.kind,
         target,
         trigger: null,
     };

@@ -171,7 +171,7 @@ CREATE TABLE IF NOT EXISTS runtime_model_providers (
 
 CREATE TABLE IF NOT EXISTS chats (
   id                    TEXT PRIMARY KEY,
-  kind                  TEXT NOT NULL DEFAULT 'channel' CHECK (kind IN ('channel', 'dm')),
+  kind                  TEXT NOT NULL DEFAULT 'channel' CHECK (kind IN ('channel', 'dm', 'task')),
   title                 TEXT,
   pinned                INTEGER NOT NULL DEFAULT 0 CHECK (pinned IN (0, 1)),
   metadata_json         TEXT NOT NULL DEFAULT '{}',
@@ -311,6 +311,7 @@ CREATE TABLE IF NOT EXISTS tasks (
   assignee_agent_id TEXT,
   epic_id           TEXT,
   scheduled_for     TEXT,
+  work_chat_id      TEXT,
   created_at        TEXT NOT NULL,
   updated_at        TEXT NOT NULL,
   FOREIGN KEY(epic_id) REFERENCES tasks(id) ON DELETE SET NULL,
@@ -592,7 +593,7 @@ export function ensureRuntimeSchema(db: Database): void {
     repairRuntimeSchema(db);
     ensureColumn(db, {
         column: 'kind',
-        definition: "TEXT NOT NULL DEFAULT 'channel' CHECK (kind IN ('channel', 'dm'))",
+        definition: "TEXT NOT NULL DEFAULT 'channel' CHECK (kind IN ('channel', 'dm', 'task'))",
         table: 'chats',
     });
     ensureColumn(db, {
@@ -658,6 +659,11 @@ export function ensureRuntimeSchema(db: Database): void {
     });
     ensureColumn(db, {
         column: 'scheduled_for',
+        definition: 'TEXT',
+        table: 'tasks',
+    });
+    ensureColumn(db, {
+        column: 'work_chat_id',
         definition: 'TEXT',
         table: 'tasks',
     });

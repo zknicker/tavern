@@ -38,9 +38,11 @@ the user and agents.
 * **Managed tasks skill.** A seeded `tasks` skill teaches board etiquette:
   when to file tasks, status hygiene, dispatched-task handling, and epics.
   It is enabled for agents by default and resettable to the Tavern default.
-* **Dispatch to agent.** From a task's detail page, dispatch sends the task
-  into the chosen agent's direct chat and assigns it, so the work happens in
-  the room.
+* **Dispatch to agent.** From a task's detail page, dispatch assigns the task
+  and sends the work order into a dedicated task chat. The work chat is created
+  on first dispatch, reused across later attempts, adds a new assignee on
+  reassignment, auto-archives when the task closes, and remains reachable from
+  the task page.
 
 The Tasks page lives beside Automations in the sidebar. Automations are
 scheduled runs; Tasks are tracked outcomes.

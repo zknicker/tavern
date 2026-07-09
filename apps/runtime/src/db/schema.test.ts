@@ -114,6 +114,19 @@ describe('Runtime DB schema repairs', () => {
         ]);
     });
 
+    it('repairs chat kind constraints to allow task chats', () => {
+        const db = initTestDb();
+        createLegacyChatsTable(db);
+
+        ensureRuntimeSchema(db);
+        createChat({ id: 'cht_task', kind: 'task', title: 'T-1: Fix it' });
+
+        expect(tableSql(db, 'chats')).toContain("'task'");
+        expect(db.prepare("SELECT kind FROM chats WHERE id = 'cht_task'").get()).toEqual({
+            kind: 'task',
+        });
+    });
+
     it('migrates legacy task labels into records and repairs task constraints', () => {
         const db = initTestDb();
         createLegacyTasksTable(db);
@@ -264,6 +277,21 @@ CREATE INDEX IF NOT EXISTS idx_memory_jobs_agent_created
 
 CREATE INDEX IF NOT EXISTS idx_memory_jobs_status_due
   ON memory_jobs(status, created_at);
+`);
+}
+
+function createLegacyChatsTable(db: Database) {
+    db.exec(`
+CREATE TABLE chats (
+  id                    TEXT PRIMARY KEY,
+  kind                  TEXT NOT NULL DEFAULT 'channel' CHECK (kind IN ('channel', 'dm')),
+  title                 TEXT,
+  pinned                INTEGER NOT NULL DEFAULT 0 CHECK (pinned IN (0, 1)),
+  metadata_json         TEXT NOT NULL DEFAULT '{}',
+  created_at            TEXT NOT NULL,
+  updated_at            TEXT NOT NULL,
+  last_message_sequence INTEGER NOT NULL DEFAULT 0
+);
 `);
 }
 

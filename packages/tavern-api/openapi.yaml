@@ -670,7 +670,7 @@ components:
           $ref: '#/components/schemas/ChatId'
         kind:
           type: string
-          enum: [channel, dm]
+          enum: [channel, dm, task]
         title:
           type: [string, 'null']
         created_at:
@@ -704,7 +704,7 @@ components:
           $ref: '#/components/schemas/ChatId'
         kind:
           type: string
-          enum: [channel, dm]
+          enum: [channel, dm, task]
         title:
           type: [string, 'null']
         participants:

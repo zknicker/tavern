@@ -94,6 +94,7 @@ import {
     type AgentRuntimeSessionPreviewList,
     type AgentRuntimeSessionPrompt,
     type AgentRuntimeSessionResync,
+    type AgentRuntimeSetTaskWorkChat,
     type AgentRuntimeSkill,
     type AgentRuntimeSkillHubActionResult,
     type AgentRuntimeSkillHubAvailable,
@@ -247,6 +248,7 @@ import {
     agentRuntimeSessionPreviewListSchema,
     agentRuntimeSessionPromptSchema,
     agentRuntimeSessionResyncSchema,
+    agentRuntimeSetTaskWorkChatSchema,
     agentRuntimeSkillHubActionResultSchema,
     agentRuntimeSkillHubAvailableSchema,
     agentRuntimeSkillHubInstallInputSchema,
@@ -553,6 +555,7 @@ export interface TavernAgentRuntimeClient {
         providerId: string,
         input: AgentRuntimeUpdateModelProvider
     ): Promise<AgentRuntimeModelProviderCatalogEntry>;
+    setTaskWorkChat(taskId: string, input: AgentRuntimeSetTaskWorkChat): Promise<AgentRuntimeTask>;
     startGoogleOAuth(input?: AgentRuntimeStartGoogleOAuth): Promise<AgentRuntimeGoogleOAuthStart>;
     startModelProviderOAuth(input: AgentRuntimeStartModelProviderOAuth): Promise<unknown>;
     startUpdate(input?: { targetVersion?: null | string }): Promise<AgentRuntimeUpdate>;
@@ -1015,6 +1018,25 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
                 [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
             },
             method: 'PATCH',
+        });
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeTaskSchema.parse(await response.json());
+    }
+
+    async setTaskWorkChat(taskId: string, input: AgentRuntimeSetTaskWorkChat) {
+        const payload = agentRuntimeSetTaskWorkChatSchema.parse(input);
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.taskWorkChat(taskId)}`, {
+            body: JSON.stringify(payload),
+            headers: {
+                ...this.#authHeaders,
+                'content-type': 'application/json',
+                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+            },
+            method: 'POST',
         });
 
         if (!response.ok) {

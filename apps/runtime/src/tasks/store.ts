@@ -8,6 +8,7 @@ import type {
 import { getDb } from '../db/connection.ts';
 import type { Database } from '../db/sqlite.ts';
 import { namedParams } from '../db/sqlite.ts';
+import { assertChatExists, setChatArchived } from '../tavern/chat-api/index.ts';
 import { loadBlockedByMap, replaceTaskDependencies } from './dependencies.ts';
 import { loadLabelsForTasks, replaceTaskLabels, resolveLabelNames } from './labels.ts';
 import { type TaskRow, taskRowToTask } from './rows.ts';
@@ -30,13 +31,13 @@ export function createTask(input: AgentRuntimeCreateTask, db: Database = getDb()
             `INSERT INTO tasks (
                 id, number, kind, title, description, summary, blocked_reason_kind,
                 blocked_reason_message, status, priority, assignee_kind, assignee_agent_id,
-                epic_id, scheduled_for, created_at, updated_at
+                epic_id, scheduled_for, work_chat_id, created_at, updated_at
              )
              VALUES (
                 $id, (SELECT COALESCE(MAX(number), 0) + 1 FROM tasks), $kind, $title,
                 $description, $summary, $blockedReasonKind, $blockedReasonMessage, $status,
                 $priority, $assigneeKind, $assigneeAgentId, $epicId, $scheduledFor,
-                $now, $now
+                NULL, $now, $now
              )`
         ).run(
             namedParams({
@@ -144,7 +145,31 @@ export function updateTask(
         db.exec('ROLLBACK');
         throw error;
     }
+    const workChatId = existing.workChatId;
+    if (workChatId && shouldArchiveWorkChat(existing.status, merged.status, workChatId)) {
+        setChatArchived({ archived: true, chatId: workChatId }, db);
+    }
     return getTaskOrThrow(id, db);
+}
+
+export function setTaskWorkChat(
+    taskId: string,
+    chatId: string,
+    db: Database = getDb()
+): AgentRuntimeTask | null {
+    const existing = getTask(taskId, db);
+    if (!existing) {
+        return null;
+    }
+    assertChatExists(chatId, db);
+    db.prepare(
+        `UPDATE tasks
+         SET work_chat_id = $chatId,
+             updated_at = $now
+         WHERE id = $taskId`
+    ).run(namedParams({ chatId, now: new Date().toISOString(), taskId }));
+
+    return getTaskOrThrow(taskId, db);
 }
 
 export function deleteTask(id: string, db: Database = getDb()): boolean {
@@ -221,6 +246,18 @@ export function getTaskOrThrow(id: string, db: Database = getDb()): AgentRuntime
 function mergeTaskUpdate(existing: AgentRuntimeTask, input: AgentRuntimeUpdateTask) {
     const merged = { ...existing, ...input };
     return merged.status === 'blocked' ? merged : { ...merged, blockedReason: null };
+}
+
+function shouldArchiveWorkChat(
+    previous: AgentRuntimeTaskStatus,
+    next: AgentRuntimeTaskStatus,
+    workChatId: string | null
+) {
+    return Boolean(workChatId) && !isTerminalStatus(previous) && isTerminalStatus(next);
+}
+
+function isTerminalStatus(status: AgentRuntimeTaskStatus) {
+    return status === 'done' || status === 'canceled';
 }
 
 function assertEpicExists(epicId: string, db: Database) {

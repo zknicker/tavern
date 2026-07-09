@@ -1,6 +1,6 @@
 import type { ChatActorPresentation } from './shared.ts';
 
-export const chatConversationKinds = ['channel', 'direct', 'group', 'topic'] as const;
+export const chatConversationKinds = ['channel', 'direct', 'group', 'task', 'topic'] as const;
 export type ChatConversationKind = (typeof chatConversationKinds)[number];
 
 const configuredScopeToConversationKind = new Map<string, ChatConversationKind>([
@@ -8,12 +8,13 @@ const configuredScopeToConversationKind = new Map<string, ChatConversationKind>(
     ['dm', 'direct'],
     ['group', 'group'],
     ['guild-channel', 'channel'],
+    ['task', 'task'],
     ['topic', 'topic'],
 ]);
 
-const supportedChatScopes = new Set(['channel', 'dm', 'group', 'topic']);
+const supportedChatScopes = new Set(['channel', 'dm', 'group', 'task', 'topic']);
 
-type ChatScope = 'channel' | 'dm' | 'group' | 'topic';
+type ChatScope = 'channel' | 'dm' | 'group' | 'task' | 'topic';
 
 function countActors(participants: Pick<ChatActorPresentation, 'actorType'>[]) {
     let agentCount = 0;
@@ -77,6 +78,8 @@ export function resolveConversationKindFromTarget(
             return 'direct';
         case 'group':
             return 'group';
+        case 'task':
+            return 'task';
         case 'topic':
             return 'topic';
         default:

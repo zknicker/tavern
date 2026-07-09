@@ -150,6 +150,36 @@ export function assertChatExists(chatId: string, db: Database) {
     }
 }
 
+export function setChatArchived(
+    input: { archived: boolean; chatId: string },
+    db: Database = getDb()
+): TavernChat | null {
+    const chat = getChat(input.chatId, db);
+    if (!chat) {
+        return null;
+    }
+
+    const tavern =
+        typeof chat.metadata.tavern === 'object' && chat.metadata.tavern !== null
+            ? (chat.metadata.tavern as Record<string, unknown>)
+            : {};
+
+    return createChat(
+        {
+            id: input.chatId,
+            metadata: {
+                ...chat.metadata,
+                tavern: {
+                    ...tavern,
+                    archived: input.archived,
+                },
+            },
+            title: chat.title,
+        },
+        db
+    );
+}
+
 export function getChatOrThrow(id: string, db: Database): TavernChat {
     const chat = getChat(id, db);
     if (!chat) {

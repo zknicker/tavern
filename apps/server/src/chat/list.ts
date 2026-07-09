@@ -89,7 +89,7 @@ function presentChatDisplayName(input: {
 }
 
 function presentChatTitle(input: {
-    conversationKind: 'channel' | 'direct' | 'group' | 'topic';
+    conversationKind: 'channel' | 'direct' | 'group' | 'task' | 'topic';
     displayName: string;
     participants: Array<{
         actorId: string;
@@ -129,7 +129,7 @@ function presentChatTitle(input: {
 
 function presentDiscordChatDisplayName(input: {
     metadata: Extract<AgentRuntimeChatPlatformMetadata, { provider: 'discord' }>;
-    scope: 'channel' | 'dm' | 'group' | 'topic' | null;
+    scope: 'channel' | 'dm' | 'group' | 'task' | 'topic' | null;
     target: string | null;
     targetParticipant: ReturnType<typeof toChatTargetParticipant>;
 }) {

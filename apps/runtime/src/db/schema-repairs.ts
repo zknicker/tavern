@@ -53,6 +53,18 @@ CREATE INDEX IF NOT EXISTS idx_chat_response_activity_chat_sequence
   ON chat_response_activity(chat_id, sequence);
 `;
 
+const CHATS_TABLE = `
+CREATE TABLE chats (
+  id                    TEXT PRIMARY KEY,
+  kind                  TEXT NOT NULL DEFAULT 'channel' CHECK (kind IN ('channel', 'dm', 'task')),
+  title                 TEXT,
+  pinned                INTEGER NOT NULL DEFAULT 0 CHECK (pinned IN (0, 1)),
+  metadata_json         TEXT NOT NULL DEFAULT '{}',
+  created_at            TEXT NOT NULL,
+  updated_at            TEXT NOT NULL,
+  last_message_sequence INTEGER NOT NULL DEFAULT 0
+)`;
+
 const MEMORY_JOBS_TABLE = `
 CREATE TABLE memory_jobs (
   id                     TEXT PRIMARY KEY,
@@ -114,6 +126,7 @@ CREATE TABLE tasks (
   assignee_agent_id TEXT,
   epic_id           TEXT,
   scheduled_for     TEXT,
+  work_chat_id      TEXT,
   created_at        TEXT NOT NULL,
   updated_at        TEXT NOT NULL,
   FOREIGN KEY(epic_id) REFERENCES tasks(id) ON DELETE SET NULL,
@@ -130,11 +143,52 @@ CREATE INDEX IF NOT EXISTS idx_tasks_epic
 
 export function repairRuntimeSchema(db: Database): void {
     ensureChatResponseActivityWidgetKind(db);
+    ensureChatsTaskKind(db);
     ensureMemoryJobsSkillReviewKind(db);
     ensureSkillSourcesPluginSource(db);
     ensureTaskLabelRecords(db);
     ensureTasksBlockedAndReviewStatus(db);
     hydrateAgentSkillAssignments(db);
+}
+
+function ensureChatsTaskKind(db: Database): void {
+    const sql = tableSql(db, 'chats');
+
+    if (!sql || sql.includes("'task'")) {
+        return;
+    }
+
+    let transactionOpen = false;
+    db.exec('PRAGMA foreign_keys = OFF');
+    try {
+        db.exec('BEGIN IMMEDIATE');
+        transactionOpen = true;
+        db.exec(`
+DROP TABLE IF EXISTS temp.chats_rebuild;
+CREATE TEMP TABLE chats_rebuild AS
+  SELECT id, kind, title, pinned, metadata_json, created_at, updated_at,
+         last_message_sequence
+  FROM chats;
+DROP TABLE chats;
+${CHATS_TABLE};
+INSERT INTO chats
+  (id, kind, title, pinned, metadata_json, created_at, updated_at,
+   last_message_sequence)
+  SELECT id, kind, title, pinned, metadata_json, created_at, updated_at,
+         last_message_sequence
+  FROM chats_rebuild;
+DROP TABLE temp.chats_rebuild;
+`);
+        db.exec('COMMIT');
+        transactionOpen = false;
+    } catch (error) {
+        if (transactionOpen) {
+            db.exec('ROLLBACK');
+        }
+        throw error;
+    } finally {
+        db.exec('PRAGMA foreign_keys = ON');
+    }
 }
 
 function ensureChatResponseActivityWidgetKind(db: Database): void {
@@ -313,6 +367,7 @@ CREATE TEMP TABLE tasks_rebuild AS
          ${columnExpression(columns, 'assignee_agent_id', 'NULL')} AS assignee_agent_id,
          ${columnExpression(columns, 'epic_id', 'NULL')} AS epic_id,
          ${columnExpression(columns, 'scheduled_for', 'NULL')} AS scheduled_for,
+         ${columnExpression(columns, 'work_chat_id', 'NULL')} AS work_chat_id,
          created_at, updated_at
   FROM tasks;
 DROP TABLE tasks;
@@ -320,10 +375,10 @@ ${TASKS_TABLE};
 INSERT INTO tasks
   (id, number, kind, title, description, summary, blocked_reason_kind,
    blocked_reason_message, status, priority, assignee_kind, assignee_agent_id,
-   epic_id, scheduled_for, created_at, updated_at)
+   epic_id, scheduled_for, work_chat_id, created_at, updated_at)
   SELECT id, number, kind, title, description, summary, blocked_reason_kind,
          blocked_reason_message, status, priority, assignee_kind,
-         assignee_agent_id, epic_id, scheduled_for, created_at, updated_at
+         assignee_agent_id, epic_id, scheduled_for, work_chat_id, created_at, updated_at
   FROM tasks_rebuild;
 DROP TABLE temp.tasks_rebuild;
 ${TASKS_INDEXES}
@@ -394,17 +449,17 @@ CREATE TEMP TABLE tasks_rebuild AS
   SELECT id, number, kind, title, description, NULL AS summary,
          NULL AS blocked_reason_kind, NULL AS blocked_reason_message,
          status, priority, assignee_kind, assignee_agent_id, epic_id,
-         NULL AS scheduled_for, created_at, updated_at
+         NULL AS scheduled_for, NULL AS work_chat_id, created_at, updated_at
   FROM tasks;
 DROP TABLE tasks;
 ${TASKS_TABLE};
 INSERT INTO tasks
   (id, number, kind, title, description, summary, blocked_reason_kind,
    blocked_reason_message, status, priority, assignee_kind, assignee_agent_id,
-   epic_id, scheduled_for, created_at, updated_at)
+   epic_id, scheduled_for, work_chat_id, created_at, updated_at)
   SELECT id, number, kind, title, description, summary, blocked_reason_kind,
          blocked_reason_message, status, priority, assignee_kind,
-         assignee_agent_id, epic_id, scheduled_for, created_at, updated_at
+         assignee_agent_id, epic_id, scheduled_for, work_chat_id, created_at, updated_at
   FROM tasks_rebuild;
 DROP TABLE temp.tasks_rebuild;
 ${TASKS_INDEXES}

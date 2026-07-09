@@ -63,6 +63,7 @@ export function buildCronDeliveryTargets(chats: AgentRuntimeChat[], agentId: str
 
     for (const chat of chats) {
         if (
+            chat.scope === 'task' ||
             !(isDeliverableAgentRuntimeChat(chat) && hasAgentParticipant(chat, agentId)) ||
             targets.has(chat.id)
         ) {

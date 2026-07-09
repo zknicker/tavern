@@ -47,6 +47,7 @@ function buildTask(overrides: Partial<Record<string, unknown>> = {}) {
         summary: null,
         title: 'Fix invite link',
         updatedAt: '2026-07-02T13:00:00.000Z',
+        workChatId: null,
         ...overrides,
     };
 }

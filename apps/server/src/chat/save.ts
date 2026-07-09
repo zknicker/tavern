@@ -67,7 +67,10 @@ async function resolveAgentRuntimeBindings(agentIds: string[] | undefined) {
 }
 
 export async function createTavernChat(
-    input: CreateChatInput & { displayNameSource?: TavernChatDisplayNameSource }
+    input: CreateChatInput & {
+        displayNameSource?: TavernChatDisplayNameSource;
+        kind?: 'channel' | 'task';
+    }
 ) {
     const logTiming = createChatTiming('chat.create');
     const parsed = createChatInputSchema.parse(input);
@@ -81,6 +84,7 @@ export async function createTavernChat(
         displayName: parsed.displayName,
         displayNameSource: input.displayNameSource ?? 'explicit',
         id: chatId,
+        kind: input.kind,
     });
     logTiming('tavern.saveChatRecord', { chatId });
 

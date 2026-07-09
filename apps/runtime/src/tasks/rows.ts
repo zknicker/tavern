@@ -26,6 +26,7 @@ export interface TaskRow {
     summary: string | null;
     title: string;
     updated_at: string;
+    work_chat_id: string | null;
 }
 
 export function taskRowToTask(
@@ -50,6 +51,7 @@ export function taskRowToTask(
         summary: row.summary,
         title: row.title,
         updatedAt: row.updated_at,
+        workChatId: row.work_chat_id,
     });
 }
 

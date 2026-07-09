@@ -370,7 +370,7 @@ export interface components {
         Chat: {
             id: components["schemas"]["ChatId"];
             /** @enum {string} */
-            kind: "channel" | "dm";
+            kind: "channel" | "dm" | "task";
             title: string | null;
             created_at: components["schemas"]["Timestamp"];
             updated_at: components["schemas"]["Timestamp"];
@@ -383,7 +383,7 @@ export interface components {
         CreateChatRequest: {
             id: components["schemas"]["ChatId"];
             /** @enum {string} */
-            kind?: "channel" | "dm";
+            kind?: "channel" | "dm" | "task";
             title?: string | null;
             participants?: components["schemas"]["Participant"][];
             metadata?: components["schemas"]["JsonObject"];

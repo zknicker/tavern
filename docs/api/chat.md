@@ -35,11 +35,12 @@ execution evidence linked to Tavern messages.
 ## Chats And Participants
 
 A `chat` is a Runtime-owned conversation container. Tavern-owned chats use
-`kind: "channel"` for shared room-style conversations and `kind: "dm"` for
-one-to-one direct messages. Runtime does not bootstrap channels in a normal
-workspace. Each Runtime-managed agent has one built-in DM with the local human
-operator. Built-in agent DMs are removed from the app chat list when their agent
-is deleted, and clients must not expose chat deletion controls for them.
+`kind: "channel"` for shared room-style conversations, `kind: "dm"` for
+one-to-one direct messages, and `kind: "task"` for dispatched task work chats.
+Runtime does not bootstrap channels in a normal workspace. Each Runtime-managed
+agent has one built-in DM with the local human operator. Built-in agent DMs are
+removed from the app chat list when their agent is deleted, and clients must not
+expose chat deletion controls for them.
 Development mode additionally seeds the `demo` channel.
 
 `chat.participants` is the membership contract for the chat shell. Participant
