@@ -176,7 +176,9 @@ function TaskRow({
                 <Checkbox
                     aria-label={`Select ${formatTaskNumber(task)}`}
                     checked={selected}
-                    className="size-4"
+                    // The invisible after-box widens the hit target to the row
+                    // height so a near-miss selects instead of opening.
+                    className="relative size-4 after:absolute after:-inset-x-3 after:-inset-y-3.5 after:content-['']"
                     onCheckedChange={() => onToggleSelect(task, 'toggle')}
                 />
             </span>
