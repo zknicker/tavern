@@ -1,4 +1,4 @@
-import { Calendar03Icon } from '@hugeicons-pro/core-stroke-rounded';
+import { Attachment01Icon, Calendar03Icon } from '@hugeicons-pro/core-stroke-rounded';
 import * as React from 'react';
 import { RelativeTime } from '../../components/time/relative-time.tsx';
 import { Badge } from '../../components/ui/badge.tsx';
@@ -145,6 +145,12 @@ function TaskRow({
                 {task.labels.map((label) => (
                     <LabelChip color={label.color} key={label.id} name={label.name} />
                 ))}
+                {task.attachments.length > 0 ? (
+                    <span className="inline-flex shrink-0 items-center gap-0.5 text-muted-foreground/70 text-xs tabular-nums">
+                        <Icon aria-hidden="true" className="size-3.5" icon={Attachment01Icon} />
+                        {task.attachments.length}
+                    </span>
+                ) : null}
             </div>
 
             <div className="pointer-events-none relative z-10 ml-auto flex shrink-0 items-center gap-2">

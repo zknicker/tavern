@@ -19,7 +19,9 @@ import {
     useTaskUpdate,
 } from '../../hooks/tasks/use-task-mutations.ts';
 import { appRoutes } from '../../lib/app-routes.ts';
+import type { TaskRecord } from '../../lib/trpc.tsx';
 import { EmptyState } from '../shell/empty-state.tsx';
+import { TaskAttachments } from './task-attachments.tsx';
 import { TaskBlockedReason } from './task-blocked-reason.tsx';
 import { TaskDependencies } from './task-dependencies.tsx';
 import { TaskDispatchField } from './task-dispatch-field.tsx';
@@ -141,7 +143,7 @@ export function TaskDetail({ taskId }: { taskId: string }) {
         <div className="flex flex-1 flex-col overflow-hidden">
             <div className="px-4 pt-3 lg:hidden">{actions}</div>
             <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
-                <TaskDetailPane key={task.id} onSave={patchTask} task={task} />
+                <TaskDetailPane key={task.id} onSave={patchTask} task={task} taskId={task.id} />
                 <TaskEditorSidebar>
                     <div className="max-lg:hidden">{actions}</div>
                     <TaskFields
@@ -231,9 +233,16 @@ export function TaskDetail({ taskId }: { taskId: string }) {
 function TaskDetailPane({
     onSave,
     task,
+    taskId,
 }: {
     onSave: (patch: { description?: string | null; title?: string }) => void;
-    task: { description: string | null; summary: string | null; title: string };
+    task: {
+        attachments: TaskRecord['attachments'];
+        description: string | null;
+        summary: string | null;
+        title: string;
+    };
+    taskId: string;
 }) {
     const [title, setTitle] = React.useState(task.title);
     const [description, setDescription] = React.useState(task.description ?? '');
@@ -250,7 +259,14 @@ function TaskDetailPane({
     return (
         <TaskEditorPane
             description={description}
-            footer={task.summary ? <TaskSummary summary={task.summary} /> : null}
+            footer={
+                task.summary || task.attachments.length > 0 ? (
+                    <div className="flex shrink-0 flex-col gap-6">
+                        {task.summary ? <TaskSummary summary={task.summary} /> : null}
+                        <TaskAttachments attachments={task.attachments} taskId={taskId} />
+                    </div>
+                ) : null
+            }
             onDescriptionBlur={() => {
                 const trimmed = description.trim();
 
