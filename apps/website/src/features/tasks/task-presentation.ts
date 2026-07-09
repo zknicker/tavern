@@ -1,3 +1,13 @@
+import type { IconSvgElement } from '@hugeicons/react';
+import {
+    AlertCircleIcon,
+    CancelCircleIcon,
+    CheckmarkCircle02Icon,
+    CircleIcon,
+    DashedLineCircleIcon,
+    Loading03Icon,
+    ViewIcon,
+} from '@hugeicons-pro/core-stroke-rounded';
 import type { TaskRecord } from '../../lib/trpc.tsx';
 
 export type TaskView = 'all' | 'active' | 'backlog' | 'mine' | 'epics';
@@ -26,6 +36,16 @@ export const taskStatusLabels: Record<TaskStatus, string> = {
     in_progress: 'In progress',
     review: 'In review',
     todo: 'Todo',
+};
+
+export const taskStatusIcons: Record<TaskStatus, IconSvgElement> = {
+    backlog: DashedLineCircleIcon,
+    blocked: AlertCircleIcon,
+    canceled: CancelCircleIcon,
+    done: CheckmarkCircle02Icon,
+    in_progress: Loading03Icon,
+    review: ViewIcon,
+    todo: CircleIcon,
 };
 
 export const taskStatusBadgeVariants: Record<
@@ -65,6 +85,61 @@ export const taskPriorityLabels: Record<TaskPriority, string> = {
 
 export function formatTaskNumber(task: Pick<TaskRecord, 'number'>) {
     return `T-${task.number}`;
+}
+
+// Today in local YYYY-MM-DD, so scheduledFor comparisons match the calendar
+// day the user sees rather than a UTC boundary.
+export function todayIsoDate(): string {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+// A YYYY-MM-DD date as a short label, e.g. "Jul 20". Parsed at local midnight
+// to avoid a UTC day shift.
+export function formatScheduledForShort(scheduledFor: string): string {
+    return new Date(`${scheduledFor}T00:00:00`).toLocaleDateString(undefined, {
+        day: 'numeric',
+        month: 'short',
+    });
+}
+
+export interface TaskWaiting {
+    // The soonest date the task is held until, when in the future.
+    scheduledLabel: string | null;
+    // The first unmet dependency and how many more remain.
+    waitsOn: { firstNumber: number; more: number } | null;
+}
+
+// A todo task is waiting when a dependency is unfinished or its scheduledFor is
+// still in the future. Informational only — the task keeps its status.
+export function describeTaskWaiting(
+    task: TaskRecord,
+    tasksById: Map<string, TaskRecord>
+): TaskWaiting | null {
+    if (task.kind !== 'task' || task.status !== 'todo') {
+        return null;
+    }
+
+    const unmet = task.blockedBy
+        .map((id) => tasksById.get(id))
+        .filter((dep): dep is TaskRecord => dep != null && dep.status !== 'done');
+
+    const scheduledLabel =
+        task.scheduledFor && task.scheduledFor > todayIsoDate()
+            ? formatScheduledForShort(task.scheduledFor)
+            : null;
+
+    const firstUnmet = unmet[0];
+    const waitsOn = firstUnmet ? { firstNumber: firstUnmet.number, more: unmet.length - 1 } : null;
+
+    if (!(waitsOn || scheduledLabel)) {
+        return null;
+    }
+
+    return { scheduledLabel, waitsOn };
 }
 
 // Active = live or demanding attention: queued, running, stuck, or awaiting

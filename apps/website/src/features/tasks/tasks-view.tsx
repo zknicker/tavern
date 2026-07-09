@@ -7,6 +7,7 @@ import {
     Loading03Icon,
     UserIcon,
 } from '@hugeicons-pro/core-stroke-rounded';
+import * as React from 'react';
 import { Icon } from '../../components/ui/icon.tsx';
 import { Button } from '../../components/ui/primitives/button.tsx';
 import { SearchInput } from '../../components/ui/primitives/search-input.tsx';
@@ -75,6 +76,8 @@ export function TasksView({
     tasks,
     view,
 }: TasksViewProps) {
+    const tasksById = React.useMemo(() => new Map(tasks.map((task) => [task.id, task])), [tasks]);
+
     if (tasks.length === 0 && connectionState !== 'reachable') {
         return (
             <EmptyState
@@ -203,6 +206,7 @@ export function TasksView({
                                         onOpen={onOpen}
                                         status={group.status}
                                         tasks={group.tasks}
+                                        tasksById={tasksById}
                                     />
                                 ))}
                             </div>

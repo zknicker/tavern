@@ -21,11 +21,13 @@ import {
 import { appRoutes } from '../../lib/app-routes.ts';
 import { EmptyState } from '../shell/empty-state.tsx';
 import { TaskBlockedReason } from './task-blocked-reason.tsx';
+import { TaskDependencies } from './task-dependencies.tsx';
 import { TaskDispatchField } from './task-dispatch-field.tsx';
 import { TaskEditorPane } from './task-editor-pane.tsx';
 import { TaskEditorSection, TaskEditorSidebar } from './task-editor-sidebar.tsx';
 import { TaskFields } from './task-fields.tsx';
 import { formatTaskNumber } from './task-presentation.ts';
+import { TaskSchedule } from './task-schedule.tsx';
 import { useTaskAgentOptions } from './use-task-agent-options.ts';
 
 export function TaskDetail({ taskId }: { taskId: string }) {
@@ -40,6 +42,7 @@ export function TaskDetail({ taskId }: { taskId: string }) {
     const [dispatchAgentId, setDispatchAgentId] = React.useState<string | null>(null);
 
     const task = taskQuery.data?.task ?? null;
+    const tasks = tasksQuery.data?.tasks ?? [];
     const agents = useTaskAgentOptions(agentsQuery.data?.agents);
     const epics = React.useMemo(
         () => (tasksQuery.data?.tasks ?? []).filter((candidate) => candidate.kind === 'epic'),
@@ -148,6 +151,26 @@ export function TaskDetail({ taskId }: { taskId: string }) {
                         showEpic={task.kind === 'task'}
                         value={task}
                     />
+                    {task.kind === 'task' ? (
+                        <>
+                            <Separator />
+                            <TaskSchedule
+                                disabled={updateMutation.isPending}
+                                onChange={(scheduledFor) => patchTask({ scheduledFor })}
+                                value={task.scheduledFor}
+                            />
+                            <Separator />
+                            <TaskDependencies
+                                disabled={updateMutation.isPending}
+                                onChange={(blockedBy) => patchTask({ blockedBy })}
+                                onOpenTask={(dependencyId) =>
+                                    navigate(appRoutes.task(dependencyId))
+                                }
+                                task={task}
+                                tasks={tasks}
+                            />
+                        </>
+                    ) : null}
                     {task.status === 'blocked' ? (
                         <>
                             <Separator />

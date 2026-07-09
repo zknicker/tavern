@@ -1,13 +1,4 @@
-import type { IconSvgElement } from '@hugeicons/react';
-import {
-    AlertCircleIcon,
-    CancelCircleIcon,
-    CheckmarkCircle02Icon,
-    CircleIcon,
-    DashedLineCircleIcon,
-    Loading03Icon,
-    ViewIcon,
-} from '@hugeicons-pro/core-stroke-rounded';
+import { Calendar03Icon } from '@hugeicons-pro/core-stroke-rounded';
 import * as React from 'react';
 import { RelativeTime } from '../../components/time/relative-time.tsx';
 import { Badge } from '../../components/ui/badge.tsx';
@@ -16,32 +7,31 @@ import { Icon } from '../../components/ui/icon.tsx';
 import type { TaskRecord } from '../../lib/trpc.tsx';
 import { AgentOptionLabel, type AgentSelectOption } from '../agents/agent-option-label.tsx';
 import {
+    describeTaskWaiting,
     formatTaskNumber,
     type TaskStatus,
     taskBlockedReasonBadgeVariants,
     taskBlockedReasonLabels,
     taskPriorityLabels,
+    taskStatusIcons,
     taskStatusLabels,
 } from './task-presentation.ts';
-
-const taskStatusIcons: Record<TaskStatus, IconSvgElement> = {
-    backlog: DashedLineCircleIcon,
-    blocked: AlertCircleIcon,
-    canceled: CancelCircleIcon,
-    done: CheckmarkCircle02Icon,
-    in_progress: Loading03Icon,
-    review: ViewIcon,
-    todo: CircleIcon,
-};
 
 interface TaskStatusGroupProps {
     agents: AgentSelectOption[];
     onOpen: (task: TaskRecord) => void;
     status: TaskStatus;
     tasks: TaskRecord[];
+    tasksById: Map<string, TaskRecord>;
 }
 
-export function TaskStatusGroup({ agents, onOpen, status, tasks }: TaskStatusGroupProps) {
+export function TaskStatusGroup({
+    agents,
+    onOpen,
+    status,
+    tasks,
+    tasksById,
+}: TaskStatusGroupProps) {
     return (
         <section>
             <div className="mx-2 flex items-center gap-2 rounded-lg bg-muted/40 px-3 py-1.5">
@@ -60,7 +50,12 @@ export function TaskStatusGroup({ agents, onOpen, status, tasks }: TaskStatusGro
             <FluidList className="px-2 py-1" highlightClassName="rounded-lg">
                 {tasks.map((task, index) => (
                     <FluidListItem index={index} key={task.id}>
-                        <TaskRow agents={agents} onOpen={onOpen} task={task} />
+                        <TaskRow
+                            agents={agents}
+                            onOpen={onOpen}
+                            task={task}
+                            tasksById={tasksById}
+                        />
                     </FluidListItem>
                 ))}
             </FluidList>
@@ -100,12 +95,15 @@ function TaskRow({
     agents,
     onOpen,
     task,
+    tasksById,
 }: {
     agents: AgentSelectOption[];
     onOpen: (task: TaskRecord) => void;
     task: TaskRecord;
+    tasksById: Map<string, TaskRecord>;
 }) {
     const openTask = React.useCallback(() => onOpen(task), [onOpen, task]);
+    const waiting = describeTaskWaiting(task, tasksById);
 
     return (
         <div className="group/task-row relative flex min-h-11 w-full items-center gap-3 rounded-lg px-3 py-2 text-sm">
@@ -129,6 +127,18 @@ function TaskRow({
                 {task.status === 'blocked' && task.blockedReason ? (
                     <Badge variant={taskBlockedReasonBadgeVariants[task.blockedReason.kind]}>
                         {taskBlockedReasonLabels[task.blockedReason.kind]}
+                    </Badge>
+                ) : null}
+                {waiting?.waitsOn ? (
+                    <Badge variant="subtle">
+                        Waits on T-{waiting.waitsOn.firstNumber}
+                        {waiting.waitsOn.more > 0 ? ` +${waiting.waitsOn.more}` : ''}
+                    </Badge>
+                ) : null}
+                {waiting?.scheduledLabel ? (
+                    <Badge variant="subtle">
+                        <Icon aria-hidden="true" className="size-3" icon={Calendar03Icon} />
+                        {waiting.scheduledLabel}
                     </Badge>
                 ) : null}
                 {task.labels.map((label) => (
