@@ -163,7 +163,7 @@ test('patchTimelineProgress routes tool steps to live turn evidence, not the tim
     expect(state.activeTurns).toEqual([turn]);
 });
 
-test('patchTimelineProgress narration updates the live contribution text', () => {
+test('patchTimelineProgress narration creates the turn post in place', () => {
     const state = patchTimelineProgress(startTimelineTurn(emptyTimelineState(), turn), {
         step: {
             detail: 'Checking the queue before answering.',
@@ -177,11 +177,15 @@ test('patchTimelineProgress narration updates the live contribution text', () =>
         turn,
     });
 
-    expect(state.timeline).toEqual([]);
-    expect(state.activeReplies[0]).toMatchObject({
-        narrationText: 'Checking the queue before answering.',
-        runId: 'run-1',
-    });
+    // createPost: the turn's message row appends at the timeline's end and
+    // carries the narration as its current content.
+    expect(state.timeline).toMatchObject([
+        {
+            id: 'msg_run-1_assistant',
+            kind: 'message',
+            message: { content: 'Checking the queue before answering.' },
+        },
+    ]);
     expect(state.turnEvidence['run-1']?.map((row) => row.id)).toEqual(['act_run-1_preamble-1']);
 });
 
@@ -398,13 +402,6 @@ test('patchTimelineProgress merges evidence steps in place through completion', 
         'act_run-1_assistant-preamble',
         'act_run-1_call_mock_read_123',
     ]);
-    expect(evidence[0]).toMatchObject({
-        kind: 'message',
-        message: {
-            content: 'I will inspect the workspace before replying.',
-            sourceSessionKey: 'session-1',
-        },
-    });
     expect(evidence[1]).toMatchObject({
         completedAt: '2026-04-21T16:08:48.000Z',
         startedAt: '2026-04-21T16:08:44.000Z',
@@ -413,7 +410,8 @@ test('patchTimelineProgress merges evidence steps in place through completion', 
             name: 'read',
         },
     });
-    expect(completed.timeline).toEqual([]);
+    // The timeline carries only the turn's post; tool steps never become rows.
+    expect(completed.timeline.map((row) => row.id)).toEqual(['msg_run-1_assistant']);
 });
 
 test('applyLogSnapshot keeps evidence for an optimistic run id that matches Runtime', () => {

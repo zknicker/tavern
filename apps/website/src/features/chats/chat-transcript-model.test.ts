@@ -196,20 +196,37 @@ test('buildTranscriptEntries keeps empty non-thinking replies in thinking status
     });
 });
 
-test('a narrating reply renders as the live contribution', () => {
+test('a streaming post anchors the turn and suppresses the live overlay', () => {
+    // createPost/editPost: the runtime writes the turn's message row at first
+    // narration; the pane renders that row, not a live overlay.
+    const post = withRunId(
+        agentMessage('msg_run-1_assistant', 'Checking the queue.', false, false),
+        'run-1'
+    );
+
+    if (post.kind !== 'message') {
+        throw new Error('Expected message row.');
+    }
+
+    const streamingPost: ChatRow = {
+        ...post,
+        message: {
+            ...post.message,
+            metadata: { runtime: { runId: 'run-1', streaming: true } },
+        },
+    };
     const entries = buildTranscriptEntries({
         activeReplies: [
             {
                 agentId: 'agent-1',
                 isThinking: true,
-                narrationText: 'Checking the queue before answering.',
                 runId: 'run-1',
                 sessionKey: 'session-1',
                 startedAt: '2026-05-11T16:00:00.000Z',
-                text: '',
+                text: 'Checking the queue.',
             },
         ],
-        rows: [],
+        rows: [streamingPost],
     });
 
     expect(entries).toHaveLength(1);
@@ -219,7 +236,9 @@ test('a narrating reply renders as the live contribution', () => {
     }
 
     expect(entries[0].id).toBe('turn:run-1');
-    expect(entries[0].items.map((item) => item.kind)).toEqual(['activeReply']);
+    expect(
+        entries[0].items.map((item) => (item.kind === 'row' ? item.row.kind : item.kind))
+    ).toEqual(['message']);
 });
 
 test('an empty reply keeps its own thinking-status entry beside other turns', () => {
@@ -678,11 +697,10 @@ test('a crossing completion never inserts above an earlier live contribution', (
             {
                 agentId: 'agt_otto',
                 isThinking: true,
-                narrationText: 'Still looking around.',
                 runId: 'run_otto',
                 sessionKey: 'ses_otto',
                 startedAt: '2026-05-11T16:00:00.000Z',
-                text: '',
+                text: 'Still looking around.',
             },
         ],
         rows: [wrenReply],

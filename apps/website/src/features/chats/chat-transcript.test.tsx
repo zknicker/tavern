@@ -1875,47 +1875,48 @@ test('ChatTranscript keeps active work headers stable between fast completed too
     assert.doesNotMatch(markup, /Searched code 2 times/);
 });
 
-test('ChatTranscript renders narration as one evolving live contribution', () => {
+test('ChatTranscript renders the streaming post as one evolving contribution', () => {
     const runId = 'run_0198f00d-1111-4222-8333-444455556666_blippy';
-    const liveReply = {
-        agentId: 'blippy',
-        isThinking: true,
-        narrationText: 'Update: halfway there.',
-        runId,
-        sessionKey: 'ses_1',
-        startedAt: '2026-07-07T12:00:00.000Z',
-        text: '',
-    };
-
-    // The turn is one comment evolving in place: narration is the
-    // contribution's current text, rendered through exactly one assistant
-    // bubble. (The paced reveal starts empty in static markup, so assert
-    // structure, not text.)
-    const live = renderActiveTranscript(liveReply, []);
-    assert.equal(live.match(/data-from="assistant"/g)?.length ?? 0, 1);
-
-    // Once the run's final reply lands, only the durable message renders.
-    const done = renderTranscript([
-        {
+    const postId = `msg_${runId}_assistant`;
+    const post = (content: string, streaming: boolean) =>
+        ({
             actor: { id: 'blippy', kind: 'agent' },
             connectsToNext: false,
             connectsToPrevious: false,
-            id: 'msg_final',
+            id: postId,
             isFirstInGroup: true,
             kind: 'message',
+            runId,
             message: {
                 tavernAgentId: 'blippy',
-                content: 'All done.',
-                id: 'msg_final',
-                metadata: { runtime: { runId, sessionKey: 'ses_1' } },
+                content,
+                id: postId,
+                metadata: { runtime: { runId, sessionKey: 'ses_1', streaming } },
                 sender: 'blippy',
                 senderType: 'agent',
                 sourceSessionId: null,
                 sourceSessionKey: 'ses_1',
-                timestamp: '2026-07-07T12:00:05.000Z',
+                timestamp: '2026-07-07T12:00:01.000Z',
             },
+        }) as ChatRow;
+
+    // Mid-turn the post exists as one message and edits in place: exactly one
+    // assistant bubble, no live overlay beside it.
+    const live = renderActiveTranscript(
+        {
+            agentId: 'blippy',
+            isThinking: true,
+            runId,
+            sessionKey: 'ses_1',
+            startedAt: '2026-07-07T12:00:00.000Z',
+            text: 'Update: halfway there.',
         },
-    ] as ChatRow[]);
+        [post('Update: halfway there.', true)]
+    );
+    assert.equal(live.match(/data-from="assistant"/g)?.length ?? 0, 1);
+
+    // The finalized post is the same single message.
+    const done = renderTranscript([post('All done.', false)]);
     assert.match(done, /All done\./);
     assert.equal(done.match(/data-from="assistant"/g)?.length ?? 0, 1);
 });

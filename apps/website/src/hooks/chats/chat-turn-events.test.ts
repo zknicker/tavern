@@ -191,7 +191,7 @@ test('turn status updates live timeline state without patching durable chat acti
     expect(invalidatedQueries).toEqual([]);
 });
 
-test('turn progress keeps evidence steps out of the chat log without refetching', async () => {
+test('turn progress maintains the post and keeps evidence out of the chat log', async () => {
     const invalidatedQueries: string[] = [];
     const patchedProgress: string[] = [];
     let log: ChatLogOutput | undefined = {
@@ -250,9 +250,9 @@ test('turn progress keeps evidence steps out of the chat log without refetching'
     await Promise.resolve();
 
     expect(patchedProgress).toEqual(['chat-1', 'chat-1', 'chat-1']);
-    // Narration and tool steps are turn evidence: the timeline cache stays
-    // untouched and nothing refetches.
-    expect(log?.rows).toEqual([]);
+    // The narration step creates the turn's post; tool steps are evidence
+    // and never become rows. Nothing refetches.
+    expect(log?.rows.map((row) => row.id)).toEqual(['msg_run-1_assistant']);
     expect(invalidatedQueries).toEqual([]);
 });
 

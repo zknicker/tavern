@@ -26,8 +26,8 @@ function emptyLog(): ChatLogOutput {
     };
 }
 
-test('narration steps are evidence: they never patch the timeline', () => {
-    const log = patchChatLogWithProgress(emptyLog(), {
+test('narration steps create and edit the turn post in the timeline', () => {
+    const created = patchChatLogWithProgress(emptyLog(), {
         step: {
             detail: 'I will run a timed shell check before the final reply.',
             id: 'preamble-1',
@@ -40,7 +40,36 @@ test('narration steps are evidence: they never patch the timeline', () => {
         turn,
     });
 
-    expect(log).toBeUndefined();
+    expect(created?.rows).toMatchObject([
+        {
+            id: 'msg_run-1_assistant',
+            kind: 'message',
+            message: {
+                content: 'I will run a timed shell check before the final reply.',
+                senderType: 'agent',
+            },
+        },
+    ]);
+
+    // A later narration edits the same post in place — no second row.
+    const edited = patchChatLogWithProgress(created, {
+        step: {
+            detail: 'Halfway there.',
+            id: 'preamble-2',
+            kind: 'message',
+            label: 'Assistant reply',
+            status: 'active',
+        },
+        timestamp: '2026-05-22T19:00:03.000Z',
+        turn,
+    });
+
+    expect(edited?.rows).toHaveLength(1);
+    expect(edited?.rows[0]).toMatchObject({
+        id: 'msg_run-1_assistant',
+        message: { content: 'Halfway there.' },
+    });
+    expect(edited?.totalMessages).toBe(0);
 });
 
 test('narration steps build prose message rows for turn evidence', () => {
