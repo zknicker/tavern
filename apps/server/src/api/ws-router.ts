@@ -14,6 +14,7 @@ import { onChatTurnStatusUpdated } from './chat/on-turn-status-updated.ts';
 import { onChatUpdate } from './chat/on-update.ts';
 import { onCronUpdate } from './cron/on-update.ts';
 import { onJobsUpdate } from './jobs/on-update.ts';
+import { onLabelsUpdate } from './labels/on-update.ts';
 import { onModelUpdate } from './model/on-update.ts';
 import { onOpenRouterSettingsUpdate } from './openrouter-settings/on-update.ts';
 import { onSessionUpdate } from './session/on-update.ts';
@@ -45,6 +46,9 @@ export const wsRouter = createRouter({
     }),
     jobs: createRouter({
         onUpdate: onJobsUpdate,
+    }),
+    labels: createRouter({
+        onUpdate: onLabelsUpdate,
     }),
     model: createRouter({
         onUpdate: onModelUpdate,

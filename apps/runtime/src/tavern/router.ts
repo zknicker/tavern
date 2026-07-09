@@ -31,6 +31,7 @@ import { handleOpenRouterSettingsRequest } from '../model-access/openrouter-sett
 import { handleModelCategorySettingsRequest } from '../models/category-settings.ts';
 import { handleModelProviderRequest } from '../models/provider-routes.ts';
 import { handlePluginsRequest } from '../plugins/routes.ts';
+import { handleTaskLabelsRequest } from '../tasks/label-routes.ts';
 import { handleTasksRequest } from '../tasks/routes.ts';
 import { handleTimezoneSettingsRequest } from '../timezone-settings.ts';
 import { handleWikiRequest } from '../wiki/routes.ts';
@@ -88,6 +89,11 @@ export async function handleTavernRuntimeRequest(request: Request): Promise<Resp
     const tasksResponse = await handleTasksRequest(request);
     if (tasksResponse) {
         return tasksResponse;
+    }
+
+    const taskLabelsResponse = await handleTaskLabelsRequest(request);
+    if (taskLabelsResponse) {
+        return taskLabelsResponse;
     }
 
     const modelProviderResponse = await handleModelProviderRequest(request);

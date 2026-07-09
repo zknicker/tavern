@@ -105,6 +105,22 @@ test('wiki.changed emits a Wiki invalidation event', async () => {
     });
 });
 
+test('label events emit label and task invalidations', async () => {
+    const labelsInvalidation = nextInvalidation(tavernEventNames.labelsUpdated);
+    const tasksInvalidation = nextInvalidation(tavernEventNames.tasksUpdated);
+
+    await applyObservedAgentRuntimeEvent({
+        labelId: 'lbl_123',
+        timestamp: '2026-07-09T12:00:00.000Z',
+        type: 'label.updated',
+    });
+
+    await assert.doesNotReject(async () => {
+        await labelsInvalidation;
+        await tasksInvalidation;
+    });
+});
+
 test('runtime catch-up ignores historical turn events', () => {
     const turn = {
         agentId: 'agt_primary',
@@ -231,16 +247,19 @@ function buildCapabilitySnapshot(states: Record<string, AgentRuntimeCapabilityHe
 }
 
 async function nextWikiInvalidation() {
+    return await nextInvalidation(tavernEventNames.wikiUpdated);
+}
+
+async function nextInvalidation(
+    eventName: (typeof tavernEventNames)[keyof typeof tavernEventNames]
+) {
     const controller = new AbortController();
     const timeout = setTimeout(() => {
         controller.abort();
     }, 5000);
 
     try {
-        for await (const event of subscribeToTavernEvent(
-            tavernEventNames.wikiUpdated,
-            controller.signal
-        )) {
+        for await (const event of subscribeToTavernEvent(eventName, controller.signal)) {
             clearTimeout(timeout);
             return event;
         }
@@ -248,5 +267,5 @@ async function nextWikiInvalidation() {
         clearTimeout(timeout);
     }
 
-    throw new Error('Timed out waiting for Wiki invalidation.');
+    throw new Error(`Timed out waiting for ${eventName} invalidation.`);
 }

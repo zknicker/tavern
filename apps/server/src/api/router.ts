@@ -4,6 +4,7 @@ import { chatRouter } from './chat/router.ts';
 import { cronRouter } from './cron/router.ts';
 import { devRouter } from './dev/router.ts';
 import { jobsRouter } from './jobs/router.ts';
+import { labelsRouter } from './labels/router.ts';
 import { logRouter } from './log/router.ts';
 import { mcpRouter } from './mcp/router.ts';
 import { memoryRouter } from './memory/router.ts';
@@ -32,6 +33,7 @@ export const appRouter = createRouter({
     cron: cronRouter,
     dev: devRouter,
     jobs: jobsRouter,
+    labels: labelsRouter,
     log: logRouter,
     mention: mentionRouter,
     memory: memoryRouter,

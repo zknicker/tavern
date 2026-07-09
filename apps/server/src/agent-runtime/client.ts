@@ -21,6 +21,7 @@ import {
     type AgentRuntimeCreateCron,
     type AgentRuntimeCreateMessage,
     type AgentRuntimeCreateTask,
+    type AgentRuntimeCreateTaskLabel,
     type AgentRuntimeCron,
     type AgentRuntimeCronList,
     type AgentRuntimeCronRun,
@@ -112,6 +113,8 @@ import {
     type AgentRuntimeStopTurnResult,
     type AgentRuntimeSubmitModelProviderOAuth,
     type AgentRuntimeTask,
+    type AgentRuntimeTaskLabel,
+    type AgentRuntimeTaskLabelList,
     type AgentRuntimeTaskList,
     type AgentRuntimeTimezoneSettings,
     type AgentRuntimeTool,
@@ -131,6 +134,7 @@ import {
     type AgentRuntimeUpdateModelProvider,
     type AgentRuntimeUpdateSkillEnabled,
     type AgentRuntimeUpdateTask,
+    type AgentRuntimeUpdateTaskLabel,
     type AgentRuntimeUpdateToolEnabled,
     type AgentRuntimeUpsertBinding,
     type AgentRuntimeWikiSettings,
@@ -161,6 +165,7 @@ import {
     agentRuntimeCreateAgentSchema,
     agentRuntimeCreateCronSchema,
     agentRuntimeCreateMessageSchema,
+    agentRuntimeCreateTaskLabelSchema,
     agentRuntimeCreateTaskSchema,
     agentRuntimeCronListSchema,
     agentRuntimeCronRunListSchema,
@@ -260,6 +265,8 @@ import {
     agentRuntimeStopTurnResultSchema,
     agentRuntimeStopTurnSchema,
     agentRuntimeSubmitModelProviderOAuthSchema,
+    agentRuntimeTaskLabelListSchema,
+    agentRuntimeTaskLabelSchema,
     agentRuntimeTaskListSchema,
     agentRuntimeTaskSchema,
     agentRuntimeTimezoneSettingsSchema,
@@ -279,6 +286,7 @@ import {
     agentRuntimeUpdateModelProviderSchema,
     agentRuntimeUpdateSchema,
     agentRuntimeUpdateSkillEnabledSchema,
+    agentRuntimeUpdateTaskLabelSchema,
     agentRuntimeUpdateTaskSchema,
     agentRuntimeUpdateToolEnabledSchema,
     agentRuntimeUpsertBindingSchema,
@@ -356,6 +364,7 @@ export interface TavernAgentRuntimeClient {
     ): Promise<AgentRuntimeGoogleOAuthPoll>;
     createCronJob(input: AgentRuntimeCreateCron): Promise<AgentRuntimeCron>;
     createTask(input: AgentRuntimeCreateTask): Promise<AgentRuntimeTask>;
+    createTaskLabel(input: AgentRuntimeCreateTaskLabel): Promise<AgentRuntimeTaskLabel>;
     createWikiFolder(input: WikiPathInput): Promise<WikiPathMutationResult>;
     createWikiPage(input: WikiCreatePage): Promise<WikiPathMutationResult>;
     deleteAgent(agentId: string): Promise<AgentRuntimeArchiveAgent>;
@@ -368,6 +377,7 @@ export interface TavernAgentRuntimeClient {
     deleteOpenAiSettings(): Promise<AgentRuntimeOpenAiSettings>;
     deleteOpenRouterSettings(): Promise<AgentRuntimeOpenRouterSettings>;
     deleteTask(taskId: string): Promise<{ deleted: boolean; id: string }>;
+    deleteTaskLabel(labelId: string): Promise<{ deleted: boolean; id: string }>;
     deleteWikiFolder(input: WikiPathInput): Promise<WikiPathMutationResult>;
     deleteWikiPage(input: WikiPathInput): Promise<WikiPathMutationResult>;
     disconnectGoogleOAuth(): Promise<AgentRuntimeGoogleSettings>;
@@ -442,6 +452,7 @@ export interface TavernAgentRuntimeClient {
     listSkills(
         options?: AgentRuntimeListSkillsOptions
     ): Promise<{ skills: AgentRuntimeSkillSummary[] }>;
+    listTaskLabels(): Promise<AgentRuntimeTaskLabelList>;
     listTasks(): Promise<AgentRuntimeTaskList>;
     listTools(): Promise<AgentRuntimeToolList>;
     listWikiBacklinks(input: { path: string }): Promise<WikiBacklinkList>;
@@ -573,6 +584,10 @@ export interface TavernAgentRuntimeClient {
         input: AgentRuntimeUpdateSkillEnabled
     ): Promise<AgentRuntimeSkill>;
     updateTask(taskId: string, input: AgentRuntimeUpdateTask): Promise<AgentRuntimeTask>;
+    updateTaskLabel(
+        labelId: string,
+        input: AgentRuntimeUpdateTaskLabel
+    ): Promise<AgentRuntimeTaskLabel>;
     updateToolEnabled(
         toolId: string,
         input: AgentRuntimeUpdateToolEnabled
@@ -1011,6 +1026,72 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
 
     async deleteTask(taskId: string) {
         const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.task(taskId)}`, {
+            headers: {
+                ...this.#authHeaders,
+                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+            },
+            method: 'DELETE',
+        });
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return (await response.json()) as { deleted: boolean; id: string };
+    }
+
+    async listTaskLabels() {
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.labels}`, {
+            headers: this.#authHeaders,
+        });
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeTaskLabelListSchema.parse(await response.json());
+    }
+
+    async createTaskLabel(input: AgentRuntimeCreateTaskLabel) {
+        const payload = agentRuntimeCreateTaskLabelSchema.parse(input);
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.labels}`, {
+            body: JSON.stringify(payload),
+            headers: {
+                ...this.#authHeaders,
+                'content-type': 'application/json',
+                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+            },
+            method: 'POST',
+        });
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeTaskLabelSchema.parse(await response.json());
+    }
+
+    async updateTaskLabel(labelId: string, input: AgentRuntimeUpdateTaskLabel) {
+        const payload = agentRuntimeUpdateTaskLabelSchema.parse(input);
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.label(labelId)}`, {
+            body: JSON.stringify(payload),
+            headers: {
+                ...this.#authHeaders,
+                'content-type': 'application/json',
+                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+            },
+            method: 'PATCH',
+        });
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeTaskLabelSchema.parse(await response.json());
+    }
+
+    async deleteTaskLabel(labelId: string) {
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.label(labelId)}`, {
             headers: {
                 ...this.#authHeaders,
                 [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,

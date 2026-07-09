@@ -9,6 +9,7 @@ import { getDb } from '../db/connection.ts';
 import type { Database } from '../db/sqlite.ts';
 import { namedParams } from '../db/sqlite.ts';
 import { loadBlockedByMap, replaceTaskDependencies } from './dependencies.ts';
+import { loadLabelsForTasks, replaceTaskLabels, resolveLabelNames } from './labels.ts';
 import { type TaskRow, taskRowToTask } from './rows.ts';
 
 export interface ListTasksFilter {
@@ -29,13 +30,13 @@ export function createTask(input: AgentRuntimeCreateTask, db: Database = getDb()
             `INSERT INTO tasks (
                 id, number, kind, title, description, summary, blocked_reason_kind,
                 blocked_reason_message, status, priority, assignee_kind, assignee_agent_id,
-                epic_id, scheduled_for, labels_json, created_at, updated_at
+                epic_id, scheduled_for, created_at, updated_at
              )
              VALUES (
                 $id, (SELECT COALESCE(MAX(number), 0) + 1 FROM tasks), $kind, $title,
                 $description, $summary, $blockedReasonKind, $blockedReasonMessage, $status,
                 $priority, $assigneeKind, $assigneeAgentId, $epicId, $scheduledFor,
-                $labelsJson, $now, $now
+                $now, $now
              )`
         ).run(
             namedParams({
@@ -47,7 +48,6 @@ export function createTask(input: AgentRuntimeCreateTask, db: Database = getDb()
                 epicId: input.epicId ?? null,
                 id: input.id,
                 kind: input.kind ?? 'task',
-                labelsJson: JSON.stringify(input.labels ?? []),
                 now,
                 priority: input.priority ?? 'none',
                 scheduledFor: input.scheduledFor ?? null,
@@ -66,6 +66,7 @@ export function createTask(input: AgentRuntimeCreateTask, db: Database = getDb()
             },
             db
         );
+        replaceTaskLabels(created.id, resolveLabelNames(input.labels ?? [], db), db);
         db.exec('COMMIT');
     } catch (error) {
         db.exec('ROLLBACK');
@@ -105,7 +106,6 @@ export function updateTask(
                  assignee_agent_id = $assigneeAgentId,
                  epic_id = $epicId,
                  scheduled_for = $scheduledFor,
-                 labels_json = $labelsJson,
                  updated_at = $now
              WHERE id = $id`
         ).run(
@@ -117,7 +117,6 @@ export function updateTask(
                 description: merged.description,
                 epicId: merged.epicId,
                 id,
-                labelsJson: JSON.stringify(merged.labels),
                 now: new Date().toISOString(),
                 priority: merged.priority,
                 scheduledFor: merged.scheduledFor,
@@ -136,6 +135,9 @@ export function updateTask(
                 },
                 db
             );
+        }
+        if (input.labels !== undefined) {
+            replaceTaskLabels(existing.id, resolveLabelNames(input.labels, db), db);
         }
         db.exec('COMMIT');
     } catch (error) {
@@ -173,21 +175,39 @@ export function listTasks(filter: ListTasksFilter = {}, db: Database = getDb()) 
         rows.map((row) => row.id),
         db
     );
-    return rows.map((row) => taskRowToTask(row, blockedBy.get(row.id) ?? []));
+    const labels = loadLabelsForTasks(
+        rows.map((row) => row.id),
+        db
+    );
+    return rows.map((row) =>
+        taskRowToTask(row, blockedBy.get(row.id) ?? [], labels.get(row.id) ?? [])
+    );
 }
 
 export function getTask(id: string, db: Database = getDb()): AgentRuntimeTask | null {
     const row = db
         .prepare('SELECT * FROM tasks WHERE id = $id')
         .get(namedParams({ id })) as TaskRow | null;
-    return row ? taskRowToTask(row, loadBlockedByMap([row.id], db).get(row.id) ?? []) : null;
+    return row
+        ? taskRowToTask(
+              row,
+              loadBlockedByMap([row.id], db).get(row.id) ?? [],
+              loadLabelsForTasks([row.id], db).get(row.id) ?? []
+          )
+        : null;
 }
 
 export function getTaskByNumber(number: number, db: Database = getDb()): AgentRuntimeTask | null {
     const row = db
         .prepare('SELECT * FROM tasks WHERE number = $number')
         .get(namedParams({ number })) as TaskRow | null;
-    return row ? taskRowToTask(row, loadBlockedByMap([row.id], db).get(row.id) ?? []) : null;
+    return row
+        ? taskRowToTask(
+              row,
+              loadBlockedByMap([row.id], db).get(row.id) ?? [],
+              loadLabelsForTasks([row.id], db).get(row.id) ?? []
+          )
+        : null;
 }
 
 export function getTaskOrThrow(id: string, db: Database = getDb()): AgentRuntimeTask {

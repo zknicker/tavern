@@ -311,7 +311,6 @@ CREATE TABLE IF NOT EXISTS tasks (
   assignee_agent_id TEXT,
   epic_id           TEXT,
   scheduled_for     TEXT,
-  labels_json       TEXT NOT NULL DEFAULT '[]',
   created_at        TEXT NOT NULL,
   updated_at        TEXT NOT NULL,
   FOREIGN KEY(epic_id) REFERENCES tasks(id) ON DELETE SET NULL,
@@ -324,6 +323,17 @@ CREATE INDEX IF NOT EXISTS idx_tasks_status
 CREATE INDEX IF NOT EXISTS idx_tasks_epic
   ON tasks(epic_id);
 
+CREATE TABLE IF NOT EXISTS labels (
+  id         TEXT PRIMARY KEY,
+  name       TEXT NOT NULL,
+  color      TEXT NOT NULL CHECK (color IN ('red', 'orange', 'amber', 'green', 'teal', 'blue', 'purple', 'pink', 'gray')),
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_labels_lower_name
+  ON labels(lower(name));
+
 CREATE TABLE IF NOT EXISTS task_dependencies (
   task_id            TEXT NOT NULL,
   depends_on_task_id TEXT NOT NULL,
@@ -334,6 +344,17 @@ CREATE TABLE IF NOT EXISTS task_dependencies (
 
 CREATE INDEX IF NOT EXISTS idx_task_dependencies_depends_on
   ON task_dependencies(depends_on_task_id);
+
+CREATE TABLE IF NOT EXISTS task_labels (
+  task_id  TEXT NOT NULL,
+  label_id TEXT NOT NULL,
+  PRIMARY KEY(task_id, label_id),
+  FOREIGN KEY(task_id) REFERENCES tasks(id) ON DELETE CASCADE,
+  FOREIGN KEY(label_id) REFERENCES labels(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_task_labels_label
+  ON task_labels(label_id);
 
 CREATE TABLE IF NOT EXISTS memory_extraction_cursors (
   chat_id                  TEXT NOT NULL,

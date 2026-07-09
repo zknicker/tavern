@@ -1800,6 +1800,46 @@ export const agentRuntimeTaskStatusSchema = z.enum([
 
 export const agentRuntimeTaskPrioritySchema = z.enum(['none', 'urgent', 'high', 'medium', 'low']);
 
+export const agentRuntimeTaskLabelColorSchema = z.enum([
+    'red',
+    'orange',
+    'amber',
+    'green',
+    'teal',
+    'blue',
+    'purple',
+    'pink',
+    'gray',
+]);
+
+export const agentRuntimeTaskLabelSchema = z.object({
+    color: agentRuntimeTaskLabelColorSchema,
+    id: z.string().trim().min(1),
+    name: z.string().trim().min(1),
+});
+
+export const agentRuntimeTaskLabelWithCountSchema = agentRuntimeTaskLabelSchema.extend({
+    taskCount: z.number().int().nonnegative(),
+});
+
+export const agentRuntimeTaskLabelListSchema = z.object({
+    labels: z.array(agentRuntimeTaskLabelWithCountSchema),
+});
+
+export const agentRuntimeCreateTaskLabelSchema = z.object({
+    color: agentRuntimeTaskLabelColorSchema.optional(),
+    name: z.string().trim().min(1),
+});
+
+export const agentRuntimeUpdateTaskLabelSchema = z
+    .object({
+        color: agentRuntimeTaskLabelColorSchema.optional(),
+        name: z.string().trim().min(1).optional(),
+    })
+    .refine((value) => value.color !== undefined || value.name !== undefined, {
+        message: 'Provide a label name or color.',
+    });
+
 export const agentRuntimeTaskBlockedReasonSchema = z.object({
     kind: z.enum(['needs_input', 'error']),
     message: z.string(),
@@ -1835,7 +1875,7 @@ export const agentRuntimeTaskSchema = z.object({
     epicId: z.string().trim().min(1).nullable(),
     id: z.string().trim().min(1),
     kind: agentRuntimeTaskKindSchema,
-    labels: z.array(z.string().trim().min(1)),
+    labels: z.array(agentRuntimeTaskLabelSchema),
     number: z.number().int().positive(),
     priority: agentRuntimeTaskPrioritySchema,
     scheduledFor: agentRuntimeTaskScheduledForSchema.nullable(),
@@ -2356,6 +2396,8 @@ export const agentRuntimeEventTypeSchema = z.enum([
     'cron.runFinished',
     'task.updated',
     'task.deleted',
+    'label.updated',
+    'label.deleted',
     'memoryJob.updated',
     'wiki.changed',
     'turn.started',
@@ -2462,6 +2504,18 @@ export const agentRuntimeTaskDeletedEventSchema = z.object({
     taskId: z.string().trim().min(1),
     timestamp: z.string().datetime(),
     type: z.literal('task.deleted'),
+});
+
+export const agentRuntimeLabelUpdatedEventSchema = z.object({
+    labelId: z.string().trim().min(1),
+    timestamp: z.string().datetime(),
+    type: z.literal('label.updated'),
+});
+
+export const agentRuntimeLabelDeletedEventSchema = z.object({
+    labelId: z.string().trim().min(1),
+    timestamp: z.string().datetime(),
+    type: z.literal('label.deleted'),
 });
 
 export const agentRuntimeCronRunStartedEventSchema = z.object({
@@ -2598,6 +2652,8 @@ export const agentRuntimeEventSchema = z.discriminatedUnion('type', [
     agentRuntimeCronRunFinishedEventSchema,
     agentRuntimeTaskUpdatedEventSchema,
     agentRuntimeTaskDeletedEventSchema,
+    agentRuntimeLabelUpdatedEventSchema,
+    agentRuntimeLabelDeletedEventSchema,
     agentRuntimeMemoryJobUpdatedEventSchema,
     agentRuntimeWikiChangedEventSchema,
     agentRuntimeCapabilityUpdatedEventSchema,
@@ -2989,8 +3045,14 @@ export type AgentRuntimeTask = z.infer<typeof agentRuntimeTaskSchema>;
 export type AgentRuntimeTaskAssignee = z.infer<typeof agentRuntimeTaskAssigneeSchema>;
 export type AgentRuntimeTaskBlockedReason = z.infer<typeof agentRuntimeTaskBlockedReasonSchema>;
 export type AgentRuntimeTaskKind = z.infer<typeof agentRuntimeTaskKindSchema>;
+export type AgentRuntimeTaskLabel = z.infer<typeof agentRuntimeTaskLabelSchema>;
+export type AgentRuntimeTaskLabelColor = z.infer<typeof agentRuntimeTaskLabelColorSchema>;
+export type AgentRuntimeTaskLabelList = z.infer<typeof agentRuntimeTaskLabelListSchema>;
+export type AgentRuntimeTaskLabelWithCount = z.infer<typeof agentRuntimeTaskLabelWithCountSchema>;
 export type AgentRuntimeTaskList = z.infer<typeof agentRuntimeTaskListSchema>;
 export type AgentRuntimeTaskPriority = z.infer<typeof agentRuntimeTaskPrioritySchema>;
 export type AgentRuntimeTaskStatus = z.infer<typeof agentRuntimeTaskStatusSchema>;
 export type AgentRuntimeCreateTask = z.infer<typeof agentRuntimeCreateTaskSchema>;
 export type AgentRuntimeUpdateTask = z.infer<typeof agentRuntimeUpdateTaskSchema>;
+export type AgentRuntimeCreateTaskLabel = z.infer<typeof agentRuntimeCreateTaskLabelSchema>;
+export type AgentRuntimeUpdateTaskLabel = z.infer<typeof agentRuntimeUpdateTaskLabelSchema>;

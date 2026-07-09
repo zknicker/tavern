@@ -700,8 +700,10 @@ App tables are cache, presentation, or execution evidence:
 Tracked tasks are canonical in the Runtime `tasks` table: tasks and epics share
 one table and one sequential T-number sequence (`number`), with status,
 priority, assignee (the local owner or an agent), parent epic link, and
-freeform labels. The app cache mirrors full task records per runtime keyed on
-(`runtime_id`, `runtime_task_id`).
+first-class labels. Runtime stores labels in `labels` and task membership in
+`task_labels`; task payloads include full label objects ordered by name. The app
+cache mirrors full task records per runtime keyed on (`runtime_id`,
+`runtime_task_id`).
 
 ## FTS
 

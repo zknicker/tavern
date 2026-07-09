@@ -28,7 +28,10 @@ the user and agents.
   dependency cycles are rejected.
 * **Scheduling.** `scheduledFor` is a YYYY-MM-DD date for one-shot follow-ups.
   Scheduled tasks wait until that day before dispatch can claim them.
-* **Labels.** Freeform comma-separated labels for ad-hoc grouping.
+* **Labels.** Shared label records with palette colors tag domains, products,
+  and SKUs. Tasks carry full label objects, labels can be created inline from
+  the picker, and the labels management surface supports rename, recolor, and
+  delete. Deleting a label removes it from its tasks.
 * **Agent task tools.** Agents list, read, file, and update tasks from chat
   with their `tasks_*` tools. Agent-created tasks land in backlog for user
   triage; only the user promotes tasks into todo.

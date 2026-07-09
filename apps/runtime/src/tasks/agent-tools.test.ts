@@ -25,12 +25,14 @@ describe('tasks agent tools', () => {
             'tasks_create',
             {
                 description: 'Fix the invite email link.',
+                labels: ['Bug'],
                 priority: 'high',
                 title: 'Fix invite link',
             }
         );
         expect(created.task).toMatchObject({
             number: 'T-1',
+            labels: ['Bug'],
             priority: 'high',
             status: 'backlog',
             title: 'Fix invite link',
@@ -55,6 +57,7 @@ describe('tasks agent tools', () => {
             'tasks_update',
             {
                 assignToMe: true,
+                labels: ['Email'],
                 number: 1,
                 status: 'done',
                 summary: 'Fixed invite link. Verified in tests. Nothing remains.',
@@ -62,6 +65,7 @@ describe('tasks agent tools', () => {
         );
         expect(updated.task).toMatchObject({
             assignee: { agentId: 'agt_primary', kind: 'agent' },
+            labels: ['Email'],
             status: 'done',
             summary: 'Fixed invite link. Verified in tests. Nothing remains.',
         });
@@ -241,6 +245,7 @@ interface ToolTask {
     blockedReason?: unknown;
     description?: string | null;
     id: string;
+    labels?: string[];
     number: string;
     priority: string;
     scheduledFor?: string | null;

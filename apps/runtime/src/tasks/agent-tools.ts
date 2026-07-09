@@ -58,7 +58,7 @@ export function createTavernTaskTools(input: { agentId: string }): ToolSet {
         }),
         tasks_create: tool({
             description:
-                'File a new task or epic into backlog for user triage. blockedBy T-numbers order work; scheduledFor (YYYY-MM-DD) defers it.',
+                'File a new task or epic into backlog for user triage. Labels by name, auto-created; blockedBy T-numbers order work; scheduledFor defers it.',
             inputSchema: createInputSchema,
             execute: (rawInput) => {
                 const parsed = createInputSchema.parse(rawInput);
@@ -84,7 +84,7 @@ export function createTavernTaskTools(input: { agentId: string }): ToolSet {
         }),
         tasks_update: tool({
             description:
-                'Update task fields. Do not set todo. Blocked needs a reason; done/review/canceled need a summary. blockedBy T-numbers order work; scheduledFor defers it.',
+                'Update task fields. Do not set todo. Labels by name, auto-created; blocked needs a reason; done/review/canceled need a summary.',
             inputSchema: updateInputSchema,
             execute: (rawInput) => {
                 const parsed = updateInputSchema.parse(rawInput);
@@ -265,7 +265,7 @@ function toToolTask(
         epicId: task.epicId,
         id: task.id,
         kind: task.kind,
-        labels: task.labels,
+        labels: task.labels.map((label) => label.name),
         number: `T-${task.number}`,
         priority: task.priority,
         scheduledFor: task.scheduledFor,

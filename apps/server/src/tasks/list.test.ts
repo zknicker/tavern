@@ -39,7 +39,7 @@ function buildTask(overrides: Partial<Record<string, unknown>> = {}) {
         epicId: null,
         id: 'tsk_1',
         kind: 'task' as const,
-        labels: ['bug'],
+        labels: [{ color: 'red' as const, id: 'lbl_bug', name: 'bug' }],
         number: 1,
         priority: 'high' as const,
         scheduledFor: null,
@@ -73,7 +73,7 @@ test('listTasks returns mirrored tasks ordered by number descending', async () =
     expect(result.tasks.map((task) => task.number)).toEqual([2, 1]);
     expect(result.tasks[1]).toMatchObject({
         id: 'tsk_1',
-        labels: ['bug'],
+        labels: [{ color: 'red', id: 'lbl_bug', name: 'bug' }],
         priority: 'high',
         title: 'Fix invite link',
     });

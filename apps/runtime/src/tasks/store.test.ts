@@ -4,6 +4,14 @@ import { ensureRuntimeSchema } from '../db/schema.ts';
 import { upsertStoredAgent } from '../tavern/agents-store.ts';
 import { createTaskId } from './ids.ts';
 import {
+    colorForLabelName,
+    createLabel,
+    deleteLabel,
+    listLabels,
+    resolveLabelNames,
+    updateLabel,
+} from './labels.ts';
+import {
     createTask,
     deleteTask,
     getTask,
@@ -71,7 +79,10 @@ describe('tasks store', () => {
             assignee: { agentId: 'agt_primary', kind: 'agent' },
             blockedReason: { kind: 'needs_input', message: 'Waiting on copy.' },
             description: 'Longer body',
-            labels: ['bug', 'ui'],
+            labels: [
+                { color: colorForLabelName('bug'), name: 'bug' },
+                { color: colorForLabelName('ui'), name: 'ui' },
+            ],
             priority: 'high',
             status: 'blocked',
             summary: 'Paused until copy arrives.',
@@ -139,6 +150,61 @@ describe('tasks store', () => {
 
         expect(target.blockedBy).toEqual([first.id, second.id]);
         expect(updateTask(target.id, { blockedBy: [third.id] })?.blockedBy).toEqual([third.id]);
+    });
+
+    test('resolves labels by name, dedupes case-insensitively, and replaces as a set', () => {
+        const task = createTask({
+            id: createTaskId(),
+            labels: ['Bug', 'bug', 'UI'],
+            title: 'Labeled work',
+        });
+
+        expect(task.labels.map((label) => label.name)).toEqual(['Bug', 'UI']);
+        expect(listLabels()).toMatchObject([
+            { color: colorForLabelName('Bug'), name: 'Bug', taskCount: 1 },
+            { color: colorForLabelName('UI'), name: 'UI', taskCount: 1 },
+        ]);
+
+        const updated = updateTask(task.id, { labels: ['Docs'] });
+        expect(updated?.labels.map((label) => label.name)).toEqual(['Docs']);
+        expect(listLabels().map((label) => [label.name, label.taskCount])).toEqual([
+            ['Bug', 0],
+            ['Docs', 1],
+            ['UI', 0],
+        ]);
+    });
+
+    test('manages label records and cascades deletes off tasks', () => {
+        const label = createLabel({ color: 'red', name: 'Ops' });
+        const task = createTask({
+            id: createTaskId(),
+            labels: ['ops'],
+            title: 'Operational work',
+        });
+
+        expect(task.labels).toEqual([label]);
+        expect(() => createLabel({ name: ' OPS ' })).toThrow('already exists');
+        expect(updateLabel(label.id, { color: 'blue', name: 'Platform' })).toMatchObject({
+            color: 'blue',
+            id: label.id,
+            name: 'Platform',
+        });
+        expect(getTask(task.id)?.labels).toMatchObject([
+            { color: 'blue', id: label.id, name: 'Platform' },
+        ]);
+
+        expect(deleteLabel(label.id)).toBe(true);
+        expect(getTask(task.id)?.labels).toEqual([]);
+    });
+
+    test('resolveLabelNames creates missing labels once', () => {
+        const ids = resolveLabelNames(['Data', 'data', 'Ops']);
+        const again = resolveLabelNames(['DATA']);
+
+        expect(ids).toHaveLength(2);
+        expect(again).toEqual([ids[0]]);
+        expect(colorForLabelName('Data')).toBe(colorForLabelName('data'));
+        expect(listLabels().map((label) => label.name)).toEqual(['Data', 'Ops']);
     });
 
     test('rejects self dependencies', () => {

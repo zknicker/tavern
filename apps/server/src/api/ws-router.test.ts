@@ -26,3 +26,9 @@ test('wsRouter exposes Wiki event subscriptions used by the app', () => {
         'wiki.onUpdate',
     ]);
 });
+
+test('wsRouter exposes label event subscriptions used by the app', () => {
+    expect(
+        Object.keys(wsRouter._def.procedures).filter((key) => key.startsWith('labels.'))
+    ).toEqual(['labels.onUpdate']);
+});

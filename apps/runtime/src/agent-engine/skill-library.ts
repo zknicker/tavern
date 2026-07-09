@@ -86,6 +86,9 @@ order once the user promotes it. For dated one-shot follow-ups, set
 scheduledFor, like "check ad performance next week". Both still start in
 backlog for user triage.
 
+Labels are shared records. Reuse existing label names from \`tasks_list\` when
+they fit; new label names are created automatically.
+
 Mark a task in_progress before you start it. When closing as done, review, or
 canceled, include a short summary: what changed, how you verified it, and what
 remains. The description is the brief; never overwrite it for close-out.

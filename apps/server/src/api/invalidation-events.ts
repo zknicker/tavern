@@ -15,6 +15,7 @@ export const tavernEventNames = {
     chatLogUpdated: 'chat.log.updated',
     chatUpdated: 'chat.updated',
     cronUpdated: 'cron.updated',
+    labelsUpdated: 'labels.updated',
     tasksUpdated: 'tasks.updated',
     engineRestartUpdated: 'engine-restart.updated',
     jobsUpdated: 'jobs.updated',
@@ -122,6 +123,10 @@ export function emitModelUpdated() {
 
 export function emitCronUpdated() {
     emitTavernEvent(tavernEventNames.cronUpdated);
+}
+
+export function emitLabelsUpdated() {
+    emitTavernEvent(tavernEventNames.labelsUpdated);
 }
 
 export function emitTasksUpdated() {

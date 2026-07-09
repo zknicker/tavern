@@ -3,6 +3,7 @@ import type {
     AgentRuntimeTaskAssignee,
     AgentRuntimeTaskBlockedReason,
     AgentRuntimeTaskKind,
+    AgentRuntimeTaskLabel,
     AgentRuntimeTaskPriority,
     AgentRuntimeTaskStatus,
 } from '@tavern/api';
@@ -18,7 +19,6 @@ export interface TaskRow {
     epic_id: string | null;
     id: string;
     kind: AgentRuntimeTaskKind;
-    labels_json: string;
     number: number;
     priority: AgentRuntimeTaskPriority;
     scheduled_for: string | null;
@@ -28,7 +28,11 @@ export interface TaskRow {
     updated_at: string;
 }
 
-export function taskRowToTask(row: TaskRow, blockedBy: string[] = []): AgentRuntimeTask {
+export function taskRowToTask(
+    row: TaskRow,
+    blockedBy: string[] = [],
+    labels: AgentRuntimeTaskLabel[] = []
+): AgentRuntimeTask {
     return agentRuntimeTaskSchema.parse({
         assignee: taskAssigneeFromRow(row),
         blockedBy,
@@ -38,7 +42,7 @@ export function taskRowToTask(row: TaskRow, blockedBy: string[] = []): AgentRunt
         epicId: row.epic_id,
         id: row.id,
         kind: row.kind,
-        labels: JSON.parse(row.labels_json),
+        labels,
         number: row.number,
         priority: row.priority,
         scheduledFor: row.scheduled_for,

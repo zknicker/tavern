@@ -15,6 +15,7 @@ import {
     emitChatUpdated,
     emitCronUpdated,
     emitEngineRestartUpdated,
+    emitLabelsUpdated,
     emitMemoryJobsUpdated,
     emitModelUpdated,
     emitSessionUpdated,
@@ -125,6 +126,17 @@ export async function applyObservedAgentRuntimeEvent(
             void syncAgentRuntimeTasks().catch((error) => {
                 console.warn('[tavern] failed to sync task event', error);
             });
+            emitTasksUpdated();
+            return;
+        }
+        case 'label.updated':
+        case 'label.deleted': {
+            emitObservedAgentRuntimeEvent(event);
+            debugTurnEvent(event);
+            void syncAgentRuntimeTasks().catch((error) => {
+                console.warn('[tavern] failed to sync label event', error);
+            });
+            emitLabelsUpdated();
             emitTasksUpdated();
             return;
         }

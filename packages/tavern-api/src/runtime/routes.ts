@@ -81,6 +81,8 @@ export const agentRuntimeRoutes = {
     cronJobRuns: (id: string) => `/cron-jobs/${id}/runs`,
     cronRun: (id: string) => `/cron-runs/${id}`,
     cronRuns: '/cron-runs',
+    label: (id: string) => `/labels/${encodeURIComponent(id)}`,
+    labels: '/labels',
     task: (id: string) => `/tasks/${encodeURIComponent(id)}`,
     tasks: '/tasks',
     events: '/events',
