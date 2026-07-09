@@ -61,6 +61,13 @@ export function getTaskByDispatchRun(runId: string, db: Database = getDb()) {
     return row ? getTask(row.id, db) : null;
 }
 
+export function isTaskDispatchRun(runId: string, db: Database = getDb()) {
+    const row = db
+        .prepare('SELECT 1 AS hit FROM tasks WHERE active_dispatch_run_id = $runId LIMIT 1')
+        .get(namedParams({ runId })) as { hit: number } | null;
+    return row !== null;
+}
+
 export function clearTaskDispatchRun(taskId: string, db: Database = getDb()) {
     db.prepare(
         'UPDATE tasks SET active_dispatch_run_id = NULL, updated_at = $now WHERE id = $taskId'

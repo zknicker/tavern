@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { closeDb, initTestDb } from '../db/connection.ts';
 import { ensureRuntimeSchema } from '../db/schema.ts';
 import { upsertStoredAgent } from '../tavern/agents-store.ts';
-import { claimTaskDispatch, recordTaskDispatchRun } from './dispatch-store.ts';
+import { claimTaskDispatch, isTaskDispatchRun, recordTaskDispatchRun } from './dispatch-store.ts';
 import { recoverSettledTaskDispatches, recoverTaskDispatchForTurn } from './recovery.ts';
 import { createTask, getTask, updateTask } from './store.ts';
 
@@ -77,6 +77,15 @@ describe('task dispatch recovery', () => {
         claimAndRecord(task.id, promoted?.updatedAt ?? '', 'run_c');
         recoverTaskDispatchForTurn('run_c', { status: 'completed' });
         expect(getTask(task.id)).toMatchObject({ dispatchAttempts: 1, status: 'todo' });
+    });
+
+    test('identifies live dispatch runs for the longer turn watchdog', () => {
+        const task = createQueuedTask('tsk_watchdog');
+        expect(isTaskDispatchRun('run_watchdog')).toBe(false);
+        claimAndRecord(task.id, task.updatedAt, 'run_watchdog');
+        expect(isTaskDispatchRun('run_watchdog')).toBe(true);
+        recoverTaskDispatchForTurn('run_watchdog', { status: 'completed' });
+        expect(isTaskDispatchRun('run_watchdog')).toBe(false);
     });
 
     test('startup recovery treats a recorded run with no turn as a crash', () => {

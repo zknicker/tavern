@@ -1,5 +1,6 @@
 import { readConfigValue } from '../config.ts';
 import { scheduleMemoryExtractionForTurn } from '../memory/extraction.ts';
+import { isTaskDispatchRun } from '../tasks/dispatch-store.ts';
 import { recoverTaskDispatchForTurn } from '../tasks/recovery.ts';
 import { createAgentEngineExecutor } from './agent-engine-executor.ts';
 import type { AgentExecutor, AgentExecutorInput } from './agent-executor.ts';
@@ -21,6 +22,9 @@ interface ActiveTurn {
 type SettledTurnStatus = 'cancelled' | 'completed' | 'failed';
 
 const defaultAgentTurnTimeoutMs = 5 * 60 * 1000;
+// Dispatched task turns do real multi-minute work; they get a longer watchdog
+// than interactive chat turns, which the user can see and stop directly.
+const defaultTaskTurnTimeoutMs = 30 * 60 * 1000;
 const activeTurns = new Map<string, ActiveTurn>();
 const activeSeatRuns = new Map<string, string>();
 const queuedTurnInputs = new Map<string, AgentExecutorInput>();
@@ -235,7 +239,7 @@ function agentSeatKey(input: { agentSession: { id: string } }) {
 
 function executeAgentTurnWithTimeout(input: AgentExecutorInput) {
     let timer: ReturnType<typeof setTimeout> | undefined;
-    const timeoutMs = resolveAgentTurnTimeoutMs();
+    const timeoutMs = resolveAgentTurnTimeoutMs(input.runId);
     const timeout = new Promise<never>((_, reject) => {
         timer = setTimeout(() => {
             void Promise.resolve(executor.stop?.(input.runId)).catch(() => {});
@@ -251,7 +255,13 @@ function executeAgentTurnWithTimeout(input: AgentExecutorInput) {
     });
 }
 
-function resolveAgentTurnTimeoutMs() {
+function resolveAgentTurnTimeoutMs(runId: string) {
+    if (isTaskDispatchRun(runId)) {
+        const configuredTask = Number(readConfigValue('TAVERN_TASK_TURN_TIMEOUT_MS'));
+        return Number.isFinite(configuredTask) && configuredTask > 0
+            ? configuredTask
+            : defaultTaskTurnTimeoutMs;
+    }
     const configured = Number(readConfigValue('TAVERN_AGENT_TURN_TIMEOUT_MS'));
     return Number.isFinite(configured) && configured > 0 ? configured : defaultAgentTurnTimeoutMs;
 }
