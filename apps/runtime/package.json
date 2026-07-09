@@ -17,6 +17,7 @@
     "lint": "ultracite check src",
     "lint:fix": "ultracite fix src",
     "test": "bunx --bun vitest run",
+    "test:smoke": "TAVERN_SMOKE=1 bunx --bun vitest run --config vitest.smoke.config.ts",
     "test:watch": "bunx --bun vitest"
   },
   "dependencies": {
