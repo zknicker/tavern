@@ -66,7 +66,7 @@ so `docs:list` routes future agents correctly.
     when a domain term exists.
 13. Use kebab-case file names.
 14. Add or update focused tests when behavior changes. Use
-    [Testing](docs/operations/testing.md#verification-lane-selection) to choose the smallest
+    [Testing](docs/operations/testing.md#lane-selection) to choose the smallest
     verification lane that proves the change.
 
 ## API And Events

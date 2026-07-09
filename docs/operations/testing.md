@@ -11,23 +11,55 @@ Use the smallest test lane that can fail for the bug or behavior you changed.
 Prefer tests at the owner of the rule: domain logic, store, service, hook, or
 e2e flow.
 
-## Quick Start
+## Development Cycle
 
-Most changes need a narrow behavior test plus the relevant typecheck or lint
-gate.
+The full suite is huge. Never run it as a default gate — scope every run to
+what the change can actually break.
+
+While iterating, run the single test file:
+
+```sh
+# runtime (vitest; add -t for one case)
+bun run --filter @tavern/runtime test src/tavern/agent-session-store.test.ts
+
+# server and website (bun test; run from the package directory)
+cd apps/server && bun test test/agent-runtime-client.test.ts
+cd apps/website && bun test src/features/shell/sidebar-chat-list.test.ts
+```
+
+Before handoff, gate with the touched packages only:
 
 ```sh
 bun run lint
-bun run --filter @tavern/runtime test
-bun run --filter @tavern/server test
-bun run --filter @tavern/website typecheck
-bun run --filter @tavern/api check
-bun run --filter @tavern/sdk test
-bun run test:e2e
+bun run --filter @tavern/<touched-package> typecheck
+bun run --filter @tavern/<touched-package> test
 ```
 
-Run only the lanes that cover the touched behavior. Before handoff, report the
-commands you ran and anything you did not verify.
+Pick lanes by touched path:
+
+| Touched path | Gate |
+| --- | --- |
+| `apps/runtime` | `@tavern/runtime test` + `typecheck`. The runtime build bundles without tsc, so nothing else typechecks runtime code. |
+| `apps/server` | `@tavern/server test` + `typecheck` |
+| `apps/website` | `@tavern/website test` + `typecheck` |
+| `packages/tavern-api` | `@tavern/api check`, plus typecheck of the consuming apps you touched |
+| `packages/tavern-sdk` | `@tavern/sdk test` |
+| Browser-level contracts (navigation, reload, websocket, chat flows, layout) | `bun run test:e2e`, scoped to the affected spec file when possible |
+| Harness executor, harness adapters, provider auth wiring, `@ai-sdk/harness-*` bumps | `bun run --filter @tavern/runtime test:smoke` (opt-in, real provider calls) |
+
+Rules that keep runs cheap and honest:
+
+* Lint is always part of the handoff gate. Use `bun run lint` / `bun run lint:fix`
+  only — raw `bunx biome check` applies the wrong ruleset.
+* Run runtime tests through the package script (they require Bun; node-run
+  vitest fails on `bun:sqlite`).
+* If a suite fails in code you did not touch, verify against an untouched
+  checkout before chasing it — worktrees have carried baseline failures that
+  are not your regression. Do not rerun whole suites to investigate.
+* Full-package runs are for handoff gates; full-repo runs are for release
+  prep, not development.
+
+Before handoff, report the commands you ran and anything you did not verify.
 
 ## Test Lanes
 
@@ -124,7 +156,10 @@ exact chat ids or titles left behind.
 
 Live provider tests are opt-in. They are not part of normal CI or default local
 test lanes because they spend provider credits and depend on local tools,
-network, and account state.
+network, and account state. Run the lane when a change touches the harness
+executor, a harness adapter, provider auth wiring, or bumps an
+`@ai-sdk/harness-*` dependency — deterministic lanes mock exactly the layer
+this one exercises.
 
 Run the automated smoke lane from `apps/runtime`:
 
