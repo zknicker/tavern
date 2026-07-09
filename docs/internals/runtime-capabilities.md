@@ -226,9 +226,10 @@ and external dependencies.
 | `memoryDreaming` | Background Memory dreaming can run with Standard-category direct model access. |
 | `modelExecution` | Runtime has at least one usable agent execution model for the relevant agent or action. |
 | `skills` | Runtime can reach skill inventory. App-side capability methods under `skills` also track the skill hub (`skill-hub.*`), tool setup, and advanced MCP management (`mcp.*`) surfaces. |
+| `autoDispatch` | Runtime task storage and the auto-dispatch interval are running. |
 | `plugin.merchbase` | Runtime has an enabled MerchBase Plugin, an API key, and can read the configured MerchBase account. |
 
-Plain Tavern CRUD, timeline, mentions, cron, and logging surfaces are not
+Plain Tavern CRUD, timeline, mentions, and logging surfaces are not
 capabilities by themselves. Add a capability only when a user-facing action
 depends on a distinct Runtime-owned service or agent-engine probe.
 

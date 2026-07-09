@@ -24,6 +24,8 @@ import { materializePluginSkills } from './plugins/materialize-skills.ts';
 import { startSkillCuratorScheduler, stopSkillCuratorScheduler } from './skills/curator.ts';
 import { startSkillReviewScheduler, stopSkillReviewScheduler } from './skills/review-queue.ts';
 import { recordSkillSource, sha256 } from './skills/store.ts';
+import { startTaskDispatcher, type TaskDispatcherHandle } from './tasks/dispatcher.ts';
+import { recoverSettledTaskDispatches } from './tasks/recovery.ts';
 import { demoAgentId } from './tavern/development-chat-demo-types.ts';
 import { seedDevelopmentChatDemos } from './tavern/development-chat-demos.ts';
 import { seedDevelopmentWikiDemos } from './tavern/development-memory-demos.ts';
@@ -45,6 +47,7 @@ import { closeAgentNotesWatchers } from './workspace/notes-watcher.ts';
 let runtimeServer: ReturnType<typeof startTavernRuntimeServer> | null = null;
 let runtimeJobs: RuntimeJobsManager | null = null;
 let runtimeCron: RuntimeCronManager | null = null;
+let taskDispatcher: TaskDispatcherHandle | null = null;
 let shuttingDown = false;
 
 async function main(): Promise<void> {
@@ -91,6 +94,10 @@ async function main(): Promise<void> {
             count: recoveredRecords,
         });
     }
+    const recoveredTaskDispatches = recoverSettledTaskDispatches(db);
+    if (recoveredTaskDispatches > 0) {
+        log.info('Recovered interrupted task dispatches', { count: recoveredTaskDispatches });
+    }
     const recoveredMemoryJobs = recoverInterruptedMemoryJobs({ db });
     if (recoveredMemoryJobs > 0) {
         log.info('Recovered interrupted Memory jobs', {
@@ -136,6 +143,8 @@ async function main(): Promise<void> {
     log.info('Runtime jobs ready');
     runtimeCron = await startRuntimeCronManager();
     log.info('Runtime cron ready');
+    taskDispatcher = startTaskDispatcher();
+    log.info('Task dispatcher ready');
     startMemoryExtractionScheduler();
     startSkillReviewScheduler();
     startSkillCuratorScheduler();
@@ -159,6 +168,7 @@ async function main(): Promise<void> {
             'gateway',
             'apiServer',
             'cron',
+            'autoDispatch',
             'modelExecution',
             'skills',
         ],
@@ -204,6 +214,9 @@ async function shutdown(signal: string): Promise<void> {
     log.info('Stopping Runtime cron');
     await runtimeCron?.stop();
     log.info('Runtime cron stopped');
+    log.info('Stopping task dispatcher');
+    taskDispatcher?.stop();
+    log.info('Task dispatcher stopped');
     log.info('Stopping Runtime server');
     runtimeServer?.stop();
     log.info('Runtime server stopped');

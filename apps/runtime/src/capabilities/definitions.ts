@@ -25,6 +25,7 @@ import { createLanguageModelForRuntime } from '../models/language-model.ts';
 import { resolveAgentModelSummary } from '../models/model-access.ts';
 import { checkGoogleCalendarCapability } from '../plugins/google.ts';
 import { checkMerchbaseCapability } from '../plugins/merchbase.ts';
+import { isTaskDispatcherReady } from '../tasks/dispatcher.ts';
 import { listStoredAgents } from '../tavern/agents-store.ts';
 import { isDevToolkitEnabled } from '../tavern/development-turn-simulator.ts';
 import { auditRecallIndex, getRecallProvisioningStatus } from '../wiki/recall/recall-index.ts';
@@ -184,6 +185,17 @@ export const runtimeCapabilityDefinitions: RuntimeCapabilityDefinition[] = [
     },
     {
         check() {
+            return checkAutoDispatchCapability();
+        },
+        displayName: 'Auto-dispatch',
+        id: 'autoDispatch',
+        refresh: {
+            intervalMs: 5 * minuteMs,
+            runOnStart: true,
+        },
+    },
+    {
+        check() {
             return checkDevToolkitCapability();
         },
         displayName: 'Dev toolkit',
@@ -216,6 +228,23 @@ export const runtimeCapabilityDefinitions: RuntimeCapabilityDefinition[] = [
         },
     },
 ];
+
+function checkAutoDispatchCapability(): RuntimeCapabilityCheckResult {
+    try {
+        if (!hasTable(getDb(), 'tasks')) {
+            return { reason: 'Task storage is not ready.', state: 'unavailable' };
+        }
+        return isTaskDispatcherReady()
+            ? { state: 'healthy' }
+            : { reason: 'Task dispatcher is not running.', state: 'unavailable' };
+    } catch (error) {
+        return {
+            reason: 'Auto-dispatch is not ready.',
+            state: 'unavailable',
+            technicalMessage: error instanceof Error ? error.message : String(error),
+        };
+    }
+}
 
 function checkCronCapability(): RuntimeCapabilityCheckResult {
     try {

@@ -10,12 +10,15 @@ import type {
 import { agentRuntimeTaskSchema } from '@tavern/api';
 
 export interface TaskRow {
+    active_dispatch_run_id: string | null;
     assignee_agent_id: string | null;
     assignee_kind: 'agent' | 'user' | null;
     blocked_reason_kind: 'error' | 'needs_input' | null;
     blocked_reason_message: string | null;
     created_at: string;
     description: string | null;
+    dispatch_attempts: number;
+    dispatch_trigger: 'auto' | 'manual' | null;
     epic_id: string | null;
     id: string;
     kind: AgentRuntimeTaskKind;
@@ -35,11 +38,14 @@ export function taskRowToTask(
     labels: AgentRuntimeTaskLabel[] = []
 ): AgentRuntimeTask {
     return agentRuntimeTaskSchema.parse({
+        activeDispatchRunId: row.active_dispatch_run_id,
         assignee: taskAssigneeFromRow(row),
         blockedBy,
         blockedReason: blockedReasonFromRow(row),
         createdAt: row.created_at,
         description: row.description,
+        dispatchAttempts: row.dispatch_attempts,
+        dispatchTrigger: row.dispatch_trigger,
         epicId: row.epic_id,
         id: row.id,
         kind: row.kind,

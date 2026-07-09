@@ -92,6 +92,9 @@ export function updateTask(
     if (merged.epicId === id) {
         throw new Error('A task cannot be its own epic.');
     }
+    // A human requeue into todo grants a fresh set of dispatch attempts; the
+    // two-strike failure ladder counts per promotion, not per task lifetime.
+    const resetAttempts = merged.status === 'todo' && existing.status !== 'todo';
     db.exec('BEGIN IMMEDIATE');
     try {
         db.prepare(
@@ -107,6 +110,7 @@ export function updateTask(
                  assignee_agent_id = $assigneeAgentId,
                  epic_id = $epicId,
                  scheduled_for = $scheduledFor,
+                 dispatch_attempts = CASE WHEN $resetAttempts THEN 0 ELSE dispatch_attempts END,
                  updated_at = $now
              WHERE id = $id`
         ).run(
@@ -120,6 +124,7 @@ export function updateTask(
                 id,
                 now: new Date().toISOString(),
                 priority: merged.priority,
+                resetAttempts: resetAttempts ? 1 : 0,
                 scheduledFor: merged.scheduledFor,
                 status: merged.status,
                 summary: merged.summary,

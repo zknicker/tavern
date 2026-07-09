@@ -106,7 +106,8 @@ T-12). Treat it as your work order: read it first with \`tasks_get\`, mark it
 in_progress, do the work in that work chat, keep the task updated as scope
 changes, and close it: done when you deliver, blocked when you cannot continue,
 canceled when the work should not happen. The work chat archives when the task
-closes and remains reachable from the task page.
+closes and remains reachable from the task page. Close the task before ending
+your reply; a finished turn left in_progress is a failed attempt.
 
 ## Epics and hygiene
 

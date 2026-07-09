@@ -45,6 +45,7 @@ describe('Runtime capabilities store', () => {
 
         expect(capabilities.map((capability) => capability.id)).toEqual([
             'apiServer',
+            'autoDispatch',
             'codexOAuth',
             'cron',
             'dashboardServer',

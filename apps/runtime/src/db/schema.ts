@@ -312,6 +312,9 @@ CREATE TABLE IF NOT EXISTS tasks (
   epic_id           TEXT,
   scheduled_for     TEXT,
   work_chat_id      TEXT,
+  dispatch_trigger  TEXT CHECK (dispatch_trigger IS NULL OR dispatch_trigger IN ('manual', 'auto')),
+  dispatch_attempts INTEGER NOT NULL DEFAULT 0 CHECK (dispatch_attempts >= 0),
+  active_dispatch_run_id TEXT,
   created_at        TEXT NOT NULL,
   updated_at        TEXT NOT NULL,
   FOREIGN KEY(epic_id) REFERENCES tasks(id) ON DELETE SET NULL,
@@ -664,6 +667,22 @@ export function ensureRuntimeSchema(db: Database): void {
     });
     ensureColumn(db, {
         column: 'work_chat_id',
+        definition: 'TEXT',
+        table: 'tasks',
+    });
+    ensureColumn(db, {
+        column: 'dispatch_trigger',
+        definition:
+            "TEXT CHECK (dispatch_trigger IS NULL OR dispatch_trigger IN ('manual', 'auto'))",
+        table: 'tasks',
+    });
+    ensureColumn(db, {
+        column: 'dispatch_attempts',
+        definition: 'INTEGER NOT NULL DEFAULT 0 CHECK (dispatch_attempts >= 0)',
+        table: 'tasks',
+    });
+    ensureColumn(db, {
+        column: 'active_dispatch_run_id',
         definition: 'TEXT',
         table: 'tasks',
     });

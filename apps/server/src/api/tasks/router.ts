@@ -5,6 +5,7 @@ import { dispatchTaskRoute } from './dispatch.ts';
 import { getTaskRoute } from './get.ts';
 import { listTasksRoute } from './list.ts';
 import { onTasksUpdate } from './on-update.ts';
+import { getAutoDispatchSettingsRoute, saveAutoDispatchSettingsRoute } from './settings.ts';
 import { updateTaskRoute } from './update.ts';
 
 export const tasksRouter = createRouter({
@@ -12,7 +13,9 @@ export const tasksRouter = createRouter({
     delete: deleteTaskRoute,
     dispatch: dispatchTaskRoute,
     get: getTaskRoute,
+    autoDispatchSettings: getAutoDispatchSettingsRoute,
     list: listTasksRoute,
     onUpdate: onTasksUpdate,
+    saveAutoDispatchSettings: saveAutoDispatchSettingsRoute,
     update: updateTaskRoute,
 });

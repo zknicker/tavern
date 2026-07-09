@@ -10,6 +10,7 @@ import {
     type AgentRuntimeArchiveAgent,
     type AgentRuntimeArchiveBinding,
     type AgentRuntimeArchiveCron,
+    type AgentRuntimeAutoDispatchSettings,
     type AgentRuntimeBinding,
     type AgentRuntimeCancelModelProviderOAuth,
     type AgentRuntimeCapabilityHealth,
@@ -28,6 +29,7 @@ import {
     type AgentRuntimeCurrentAgentSessionResult,
     type AgentRuntimeDeleteDiscordBinding,
     type AgentRuntimeDiscordBinding,
+    type AgentRuntimeDispatchTaskResult,
     type AgentRuntimeEventList,
     type AgentRuntimeGoogleCalendarEventsList,
     type AgentRuntimeGoogleCalendarEventsListInput,
@@ -73,6 +75,7 @@ import {
     type AgentRuntimeSaveAgentEnv,
     type AgentRuntimeSaveAgentEnvResult,
     type AgentRuntimeSaveAgentFile,
+    type AgentRuntimeSaveAutoDispatchSettings,
     type AgentRuntimeSaveDiscordBinding,
     type AgentRuntimeSaveGoogleSettings,
     type AgentRuntimeSaveMemorySettings,
@@ -130,6 +133,9 @@ import {
     type AgentRuntimeUpdateAgentModel,
     type AgentRuntimeUpdateAgentName,
     type AgentRuntimeUpdateAgentPluginGrant,
+    type AgentRuntimeUpdateAgentSessionModel,
+    type AgentRuntimeUpdateAgentSessionModelResult,
+    type AgentRuntimeUpdateAgentTaskSettings,
     type AgentRuntimeUpdateAgentThinkingDefault,
     type AgentRuntimeUpdateCron,
     type AgentRuntimeUpdateModelProvider,
@@ -155,6 +161,7 @@ import {
     agentRuntimeArchiveAgentSchema,
     agentRuntimeArchiveBindingSchema,
     agentRuntimeArchiveCronSchema,
+    agentRuntimeAutoDispatchSettingsSchema,
     agentRuntimeBindingListSchema,
     agentRuntimeBindingSchema,
     agentRuntimeCancelModelProviderOAuthSchema,
@@ -175,6 +182,7 @@ import {
     agentRuntimeCurrentAgentSessionResultSchema,
     agentRuntimeDeleteDiscordBindingSchema,
     agentRuntimeDiscordBindingListSchema,
+    agentRuntimeDispatchTaskResultSchema,
     agentRuntimeErrorSchema,
     agentRuntimeGoogleCalendarEventsListInputSchema,
     agentRuntimeGoogleCalendarEventsListSchema,
@@ -227,6 +235,7 @@ import {
     agentRuntimeSaveAgentEnvResultSchema,
     agentRuntimeSaveAgentEnvSchema,
     agentRuntimeSaveAgentFileSchema,
+    agentRuntimeSaveAutoDispatchSettingsSchema,
     agentRuntimeSaveDiscordBindingSchema,
     agentRuntimeSaveGoogleSettingsSchema,
     agentRuntimeSaveMemorySettingsResultSchema,
@@ -283,6 +292,7 @@ import {
     agentRuntimeUpdateAgentModelSchema,
     agentRuntimeUpdateAgentNameSchema,
     agentRuntimeUpdateAgentPluginGrantSchema,
+    agentRuntimeUpdateAgentTaskSettingsSchema,
     agentRuntimeUpdateAgentThinkingDefaultSchema,
     agentRuntimeUpdateCronSchema,
     agentRuntimeUpdateModelProviderSchema,
@@ -383,10 +393,12 @@ export interface TavernAgentRuntimeClient {
     deleteWikiFolder(input: WikiPathInput): Promise<WikiPathMutationResult>;
     deleteWikiPage(input: WikiPathInput): Promise<WikiPathMutationResult>;
     disconnectGoogleOAuth(): Promise<AgentRuntimeGoogleSettings>;
+    dispatchTask(taskId: string, agentId: string): Promise<AgentRuntimeDispatchTaskResult>;
     getAgentConfig(agentId: string): Promise<AgentRuntimeAgent>;
     getAgentEngineConfig(): Promise<AgentRuntimeAgentEngineConfigSnapshot>;
     getAgentEnv(): Promise<AgentRuntimeAgentEnv>;
     getAgentFile(agentId: string, path: string): Promise<AgentRuntimeAgentFileContent>;
+    getAutoDispatchSettings(): Promise<AgentRuntimeAutoDispatchSettings>;
     getCapability(id: AgentRuntimeCapabilityHealthId): Promise<AgentRuntimeCapabilityHealth>;
     getCronJob(jobId: string): Promise<AgentRuntimeCron>;
     getCurrentAgentSession(input: {
@@ -506,6 +518,9 @@ export interface TavernAgentRuntimeClient {
         path: string,
         input: AgentRuntimeSaveAgentFile
     ): Promise<AgentRuntimeAgentFileContent>;
+    saveAutoDispatchSettings(
+        input: AgentRuntimeSaveAutoDispatchSettings
+    ): Promise<AgentRuntimeAutoDispatchSettings>;
     saveDiscordBinding(
         input: AgentRuntimeSaveDiscordBinding
     ): Promise<AgentRuntimeAgentEngineConfigSnapshot>;
@@ -577,6 +592,14 @@ export interface TavernAgentRuntimeClient {
         agentId: string,
         input: AgentRuntimeUpdateAgentName
     ): Promise<AgentRuntimeAgentEngineConfigSnapshot>;
+    updateAgentSessionModel(
+        chatId: string,
+        input: AgentRuntimeUpdateAgentSessionModel
+    ): Promise<AgentRuntimeUpdateAgentSessionModelResult>;
+    updateAgentTaskSettings(
+        agentId: string,
+        input: AgentRuntimeUpdateAgentTaskSettings
+    ): Promise<AgentRuntimeAgent>;
     updateAgentThinkingDefault(
         agentId: string,
         input: AgentRuntimeUpdateAgentThinkingDefault
@@ -982,6 +1005,22 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         }
 
         return agentRuntimeTaskSchema.parse(await response.json());
+    }
+
+    async dispatchTask(taskId: string, agentId: string) {
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.taskDispatch(taskId)}`, {
+            body: JSON.stringify({ agentId }),
+            headers: {
+                ...this.#authHeaders,
+                'content-type': 'application/json',
+                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+            },
+            method: 'POST',
+        });
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+        return agentRuntimeDispatchTaskResultSchema.parse(await response.json());
     }
 
     async getTask(taskId: string) {
@@ -1672,6 +1711,26 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         return agentRuntimeAgentEngineConfigSnapshotSchema.parse(await response.json());
     }
 
+    async updateAgentTaskSettings(agentId: string, input: AgentRuntimeUpdateAgentTaskSettings) {
+        const payload = agentRuntimeUpdateAgentTaskSettingsSchema.parse(input);
+        const response = await fetch(
+            `${this.#baseUrl}${agentRuntimeRoutes.agentTaskSettings(agentId)}`,
+            {
+                body: JSON.stringify(payload),
+                headers: {
+                    ...this.#authHeaders,
+                    'content-type': 'application/json',
+                    [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+                },
+                method: 'PATCH',
+            }
+        );
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+        return agentRuntimeAgentSchema.parse(await response.json());
+    }
+
     async getModelAccess() {
         const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.modelAccess}`, {
             headers: this.#authHeaders,
@@ -1951,6 +2010,33 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         }
 
         return agentRuntimeTimezoneSettingsSchema.parse(await response.json());
+    }
+
+    async getAutoDispatchSettings() {
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.taskDispatchSettings}`, {
+            headers: this.#authHeaders,
+        });
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+        return agentRuntimeAutoDispatchSettingsSchema.parse(await response.json());
+    }
+
+    async saveAutoDispatchSettings(input: AgentRuntimeSaveAutoDispatchSettings) {
+        const payload = agentRuntimeSaveAutoDispatchSettingsSchema.parse(input);
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.taskDispatchSettings}`, {
+            body: JSON.stringify(payload),
+            headers: {
+                ...this.#authHeaders,
+                'content-type': 'application/json',
+                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+            },
+            method: 'PUT',
+        });
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+        return agentRuntimeAutoDispatchSettingsSchema.parse(await response.json());
     }
 
     async saveTimezoneSettings(input: AgentRuntimeSaveTimezoneSettings) {

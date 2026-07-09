@@ -1,5 +1,6 @@
 import { readConfigValue } from '../config.ts';
 import { scheduleMemoryExtractionForTurn } from '../memory/extraction.ts';
+import { recoverTaskDispatchForTurn } from '../tasks/recovery.ts';
 import { createAgentEngineExecutor } from './agent-engine-executor.ts';
 import type { AgentExecutor, AgentExecutorInput } from './agent-executor.ts';
 import {
@@ -54,13 +55,12 @@ export async function stopAgentTurn(runId: string) {
     }
 
     const active = activeTurns.get(runId);
-    if (active) {
-        await executor.stop?.(runId);
-    }
-
     const cancelled = cancelAgentTurn({ id: runId });
     if (!cancelled) {
         return false;
+    }
+    if (active) {
+        await Promise.resolve(executor.stop?.(runId)).catch(() => {});
     }
 
     queuedTurnInputs.delete(runId);
@@ -90,6 +90,7 @@ export async function stopAgentTurn(runId: string) {
     } else {
         notifyTurnSettled(runId, { status: 'cancelled' });
     }
+    recoverTaskDispatchForTurn(runId, { status: 'cancelled' });
 
     return true;
 }
@@ -161,6 +162,7 @@ async function drainAgentSeat(input: AgentExecutorInput) {
                 outputMessageIds: result.outputMessageIds,
             });
             notifyTurnSettled(turn.id, { status: 'completed' });
+            recoverTaskDispatchForTurn(turn.id, { status: 'completed' });
             try {
                 scheduleMemoryExtractionForTurn(completedTurn);
             } catch {
@@ -176,6 +178,7 @@ async function drainAgentSeat(input: AgentExecutorInput) {
                 id: turn.id,
             });
             notifyTurnSettled(turn.id, { error: errorMessage, status: 'failed' });
+            recoverTaskDispatchForTurn(turn.id, { error: errorMessage, status: 'failed' });
             upsertResponse(turnInput.chatId, {
                 id: turnInput.responseId,
                 metadata: {

@@ -33,6 +33,7 @@ import { handleModelProviderRequest } from '../models/provider-routes.ts';
 import { handlePluginsRequest } from '../plugins/routes.ts';
 import { handleTaskLabelsRequest } from '../tasks/label-routes.ts';
 import { handleTasksRequest } from '../tasks/routes.ts';
+import { handleAutoDispatchSettingsRequest } from '../tasks/settings.ts';
 import { handleTimezoneSettingsRequest } from '../timezone-settings.ts';
 import { handleWikiRequest } from '../wiki/routes.ts';
 import { handleWorkspaceRequest } from '../workspace/routes.ts';
@@ -84,6 +85,11 @@ export async function handleTavernRuntimeRequest(request: Request): Promise<Resp
     const cronResponse = await handleCronRequest(request);
     if (cronResponse) {
         return cronResponse;
+    }
+
+    const autoDispatchSettingsResponse = await handleAutoDispatchSettingsRequest(request);
+    if (autoDispatchSettingsResponse) {
+        return autoDispatchSettingsResponse;
     }
 
     const tasksResponse = await handleTasksRequest(request);

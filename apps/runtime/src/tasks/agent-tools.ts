@@ -6,6 +6,7 @@ import {
 } from '@tavern/api';
 import { tool } from 'ai';
 import * as z from 'zod';
+import { getStoredAgent } from '../tavern/agents-store.ts';
 import { publishTaskUpdated } from './events.ts';
 import { createTaskId } from './ids.ts';
 import { createTask, getTask, getTaskByNumber, listTasks, updateTask } from './store.ts';
@@ -95,6 +96,9 @@ export function createTavernTaskTools(input: { agentId: string }): ToolSet {
                 if (!existing) {
                     throw new Error('Task not found.');
                 }
+                const reviewPolicyApplied =
+                    parsed.status === 'done' &&
+                    getStoredAgent(input.agentId)?.taskReviewPolicy === true;
                 const task = updateTask(existing.id, {
                     ...(parsed.description === undefined
                         ? {}
@@ -108,7 +112,9 @@ export function createTavernTaskTools(input: { agentId: string }): ToolSet {
                     ...(parsed.scheduledFor === undefined
                         ? {}
                         : { scheduledFor: parsed.scheduledFor }),
-                    ...(parsed.status === undefined ? {} : { status: parsed.status }),
+                    ...(parsed.status === undefined
+                        ? {}
+                        : { status: reviewPolicyApplied ? 'review' : parsed.status }),
                     ...blockedReasonPatch(parsed),
                     ...(parsed.summary === undefined ? {} : { summary: parsed.summary }),
                     ...(parsed.title === undefined ? {} : { title: parsed.title }),
@@ -121,6 +127,9 @@ export function createTavernTaskTools(input: { agentId: string }): ToolSet {
                 }
                 publishTaskUpdated(task.id);
                 return Promise.resolve({
+                    ...(reviewPolicyApplied
+                        ? { note: 'Review policy routed this completion to review.' }
+                        : {}),
                     task: toToolTask(task, { numberLookup: createTaskNumberLookup(listTasks()) }),
                 });
             },

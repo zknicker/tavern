@@ -32,6 +32,7 @@ describe('Runtime agent and agent engine reads', () => {
         await expect(response.json()).resolves.toEqual({
             agents: [
                 {
+                    autoDispatchEnabled: false,
                     enabledPluginIds: [],
                     enabledSkillIds: ['tasks', 'tavern-agent'],
                     modelName: {
@@ -42,6 +43,7 @@ describe('Runtime agent and agent engine reads', () => {
                     isAdmin: true,
                     name: 'Otto',
                     primaryColor: null,
+                    taskReviewPolicy: false,
                     thinkingDefault: null,
                     workspaceFolder: AGENT_WORKSPACE,
                 },

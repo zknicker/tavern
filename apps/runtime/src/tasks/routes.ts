@@ -1,5 +1,6 @@
 import {
     agentRuntimeCreateTaskSchema,
+    agentRuntimeDispatchTaskSchema,
     agentRuntimeRoutes,
     agentRuntimeSetTaskWorkChatSchema,
     agentRuntimeTaskListSchema,
@@ -16,6 +17,7 @@ import {
     setTaskWorkChat,
     updateTask,
 } from './store.ts';
+import { dispatchTaskWorkOrder } from './work-order.ts';
 
 export function handleTasksRequest(request: Request): Promise<Response | null> | Response | null {
     const url = new URL(request.url);
@@ -51,6 +53,16 @@ async function respondToTasksRequest(input: {
         }
 
         const taskId = segments[1];
+        if (segments[2] === 'dispatch' && !segments[3] && method === 'POST') {
+            const input = agentRuntimeDispatchTaskSchema.parse(await readJson(request));
+            return json(
+                await dispatchTaskWorkOrder({
+                    agentId: input.agentId,
+                    taskId,
+                    trigger: 'manual',
+                })
+            );
+        }
         if (segments[2] === 'work-chat' && !segments[3] && method === 'POST') {
             const task = setTaskWorkChat(
                 taskId,

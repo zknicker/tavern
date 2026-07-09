@@ -44,6 +44,15 @@ the user and agents.
   reassignment, auto-archives when the task closes, and remains reachable from
   the task page.
 
+## Auto-dispatch
+
+Auto-dispatch is off by default behind a Runtime-wide kill switch, and each
+agent must opt in separately. A per-agent review policy routes that agent's
+`done` updates to `review`. Runtime permits one auto-dispatched task per agent
+and applies a global concurrency cap, which defaults to one. Failed turns
+requeue once and then block; user-stopped work blocks for input, while a turn
+that ends with its task still `in_progress` is a failed attempt.
+
 The Tasks page lives beside Automations in the sidebar. Automations are
 scheduled runs; Tasks are tracked outcomes.
 

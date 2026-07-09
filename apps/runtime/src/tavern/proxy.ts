@@ -15,6 +15,7 @@ import {
     agentRuntimeUpdateAgentModelSchema,
     agentRuntimeUpdateAgentNameSchema,
     agentRuntimeUpdateAgentPluginGrantSchema,
+    agentRuntimeUpdateAgentTaskSettingsSchema,
     agentRuntimeUpdateAgentThinkingDefaultSchema,
     agentRuntimeUpdateSkillEnabledSchema,
     agentRuntimeUpdateToolEnabledSchema,
@@ -77,12 +78,14 @@ async function dispatchAgentEngineStatic({ request, url }: { request: Request; u
         const input = agentRuntimeCreateAgentSchema.parse(await readJson(request));
         const agent = upsertStoredAgent({
             agent: {
+                autoDispatchEnabled: input.autoDispatchEnabled ?? false,
                 enabledSkillIds: input.enabledSkillIds ?? [tavernAgentSkillId, tasksSkillId],
                 enabledPluginIds: input.enabledPluginIds ?? [],
                 id: input.id,
                 isAdmin: input.isAdmin ?? false,
                 name: input.name,
                 primaryColor: input.primaryColor ?? null,
+                taskReviewPolicy: input.taskReviewPolicy ?? false,
                 workspaceFolder: resolveAgentWorkspaceFolder(input),
             },
         });
@@ -110,6 +113,21 @@ async function dispatchAgentEngineStatic({ request, url }: { request: Request; u
         ensurePrimaryAgent();
         const agent = getStoredAgent(segments[1]);
         return agent ? withResolvedModelName(agent) : undefined;
+    }
+    if (
+        method === 'PATCH' &&
+        segments[0] === 'agents' &&
+        segments[1] &&
+        segments[2] === 'task-settings' &&
+        !segments[3]
+    ) {
+        const payload = agentRuntimeUpdateAgentTaskSettingsSchema.parse(await readJson(request));
+        const updatedAgent = updateStoredAgent({
+            agentId: segments[1],
+            autoDispatchEnabled: payload.autoDispatchEnabled,
+            taskReviewPolicy: payload.taskReviewPolicy,
+        });
+        return updatedAgent ? withResolvedModelName(updatedAgent) : undefined;
     }
     if (
         method === 'PATCH' &&

@@ -18,6 +18,7 @@ const agentRuntimeCoreCapabilityIds = [
     'modelExecution',
     'skills',
     'cron',
+    'autoDispatch',
     'devToolkit',
 ] as const;
 
@@ -1006,6 +1007,7 @@ export const agentRuntimeDiscordBindingListSchema = z.object({
 });
 
 export const agentRuntimeAgentSchema = z.object({
+    autoDispatchEnabled: z.boolean().optional(),
     enabledPluginIds: z.array(agentRuntimePluginIdSchema).optional(),
     enabledSkillIds: z.array(z.string().trim().min(1)),
     id: z.string().trim().min(1),
@@ -1013,6 +1015,7 @@ export const agentRuntimeAgentSchema = z.object({
     name: z.string().trim().min(1),
     modelName: agentRuntimeModelNameSchema.nullable().optional(),
     primaryColor: z.string().trim().min(1).nullable(),
+    taskReviewPolicy: z.boolean().optional(),
     thinkingDefault: agentRuntimeThinkingLevelSchema.nullable().optional(),
     workspaceFolder: z.string().trim().min(1),
 });
@@ -1027,21 +1030,25 @@ export const agentRuntimeArchiveAgentSchema = z.object({
 });
 
 export const agentRuntimeCreateAgentSchema = z.object({
+    autoDispatchEnabled: z.boolean().optional(),
     enabledPluginIds: z.array(agentRuntimePluginIdSchema).optional(),
     enabledSkillIds: z.array(z.string().trim().min(1)).optional(),
     id: z.string().trim().min(1),
     isAdmin: z.boolean().optional(),
     name: z.string().trim().min(1),
     primaryColor: z.string().trim().min(1).nullable().optional(),
+    taskReviewPolicy: z.boolean().optional(),
     workspaceFolder: z.string().trim().min(1).optional(),
 });
 
 export const agentRuntimeUpdateAgentSchema = z.object({
+    autoDispatchEnabled: z.boolean().optional(),
     enabledPluginIds: z.array(agentRuntimePluginIdSchema).optional(),
     enabledSkillIds: z.array(z.string().trim().min(1)).optional(),
     isAdmin: z.boolean().optional(),
     name: z.string().trim().min(1).optional(),
     primaryColor: z.string().trim().min(1).nullable().optional(),
+    taskReviewPolicy: z.boolean().optional(),
     workspaceFolder: z.string().trim().min(1).optional(),
 });
 
@@ -1868,12 +1875,17 @@ export const agentRuntimeTaskAssigneeSchema = z.union([
     }),
 ]);
 
+export const agentRuntimeTaskDispatchTriggerSchema = z.enum(['manual', 'auto']);
+
 export const agentRuntimeTaskSchema = z.object({
+    activeDispatchRunId: z.string().trim().min(1).nullable(),
     assignee: agentRuntimeTaskAssigneeSchema.nullable(),
     blockedBy: z.array(z.string().trim().min(1)),
     blockedReason: agentRuntimeTaskBlockedReasonSchema.nullable(),
     createdAt: z.string().datetime(),
     description: z.string().nullable(),
+    dispatchAttempts: z.number().int().nonnegative(),
+    dispatchTrigger: agentRuntimeTaskDispatchTriggerSchema.nullable(),
     epicId: z.string().trim().min(1).nullable(),
     id: z.string().trim().min(1),
     kind: agentRuntimeTaskKindSchema,
@@ -1925,6 +1937,36 @@ export const agentRuntimeUpdateTaskSchema = z.object({
 export const agentRuntimeSetTaskWorkChatSchema = z.object({
     workChatId: z.string().trim().min(1),
 });
+
+export const agentRuntimeDispatchTaskSchema = z.object({
+    agentId: z.string().trim().min(1),
+});
+
+export const agentRuntimeDispatchTaskResultSchema = z.object({
+    chatId: z.string().trim().min(1),
+    task: agentRuntimeTaskSchema,
+});
+
+export const agentRuntimeAutoDispatchSettingsSchema = z.object({
+    autoDispatchConcurrency: z.number().int().positive(),
+    autoDispatchEnabled: z.boolean(),
+    updatedAt: z.string().datetime().nullable(),
+});
+
+export const agentRuntimeSaveAutoDispatchSettingsSchema = z.object({
+    autoDispatchConcurrency: z.number().int().positive().optional(),
+    autoDispatchEnabled: z.boolean().optional(),
+});
+
+export const agentRuntimeUpdateAgentTaskSettingsSchema = z
+    .object({
+        autoDispatchEnabled: z.boolean().optional(),
+        taskReviewPolicy: z.boolean().optional(),
+    })
+    .refine(
+        (value) => value.autoDispatchEnabled !== undefined || value.taskReviewPolicy !== undefined,
+        { message: 'Provide an auto-dispatch or review-policy setting.' }
+    );
 
 export const agentRuntimeFrontendSchema = z.enum(['cli', 'discord', 'sdk', 'tavern', 'telegram']);
 
@@ -3059,6 +3101,18 @@ export type AgentRuntimeTaskLabelWithCount = z.infer<typeof agentRuntimeTaskLabe
 export type AgentRuntimeTaskList = z.infer<typeof agentRuntimeTaskListSchema>;
 export type AgentRuntimeTaskPriority = z.infer<typeof agentRuntimeTaskPrioritySchema>;
 export type AgentRuntimeSetTaskWorkChat = z.infer<typeof agentRuntimeSetTaskWorkChatSchema>;
+export type AgentRuntimeDispatchTask = z.infer<typeof agentRuntimeDispatchTaskSchema>;
+export type AgentRuntimeDispatchTaskResult = z.infer<typeof agentRuntimeDispatchTaskResultSchema>;
+export type AgentRuntimeAutoDispatchSettings = z.infer<
+    typeof agentRuntimeAutoDispatchSettingsSchema
+>;
+export type AgentRuntimeSaveAutoDispatchSettings = z.infer<
+    typeof agentRuntimeSaveAutoDispatchSettingsSchema
+>;
+export type AgentRuntimeTaskDispatchTrigger = z.infer<typeof agentRuntimeTaskDispatchTriggerSchema>;
+export type AgentRuntimeUpdateAgentTaskSettings = z.infer<
+    typeof agentRuntimeUpdateAgentTaskSettingsSchema
+>;
 export type AgentRuntimeTaskStatus = z.infer<typeof agentRuntimeTaskStatusSchema>;
 export type AgentRuntimeCreateTask = z.infer<typeof agentRuntimeCreateTaskSchema>;
 export type AgentRuntimeUpdateTask = z.infer<typeof agentRuntimeUpdateTaskSchema>;

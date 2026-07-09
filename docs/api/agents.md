@@ -63,6 +63,8 @@ grant policy.
 * Agent settings use narrow domain mutations. Clients update agent
   name, model, thinking default, and messaging bindings through agent and
   messaging APIs instead of editing or saving raw engine config JSON.
+* Task settings store each agent's auto-dispatch opt-in and review policy;
+  both default off.
 * Persisted agent settings mean user intent. Runtime startup can apply Tavern
   defaults to the managed engine, but it must not write those defaults into the
   saved agent settings store.

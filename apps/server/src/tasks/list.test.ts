@@ -31,11 +31,14 @@ afterEach(() => {
 
 function buildTask(overrides: Partial<Record<string, unknown>> = {}) {
     return {
+        activeDispatchRunId: null,
         assignee: null,
         blockedBy: [],
         blockedReason: null,
         createdAt: '2026-07-01T13:00:00.000Z',
         description: 'Fix the invite email link.',
+        dispatchAttempts: 0,
+        dispatchTrigger: null,
         epicId: null,
         id: 'tsk_1',
         kind: 'task' as const,

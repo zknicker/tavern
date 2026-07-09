@@ -65,6 +65,10 @@ Active stream handles, process handles, cancellation controllers, and executor
 promises are transient Runtime memory. Reconnect recovery reads durable Chat
 state and active turn state rather than trusting the browser stream as history.
 
+Runtime starts the task auto-dispatch interval beside the cron scheduler. The
+dispatcher reads Runtime-owned global and per-agent settings, derives liveness
+from durable Agent turn state, and stops with the Runtime process.
+
 ## Ingestion
 
 All frontends create Tavern Chat messages. Agent execution starts only when
