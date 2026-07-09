@@ -183,23 +183,25 @@ function TaskRow({
                 <span className="min-w-0 truncate font-medium text-[15px] text-foreground">
                     {task.title}
                 </span>
-                {task.kind === 'epic' ? <Badge variant="subtle">Epic</Badge> : null}
+                {task.kind === 'epic' ? <TaskStateChip variant="subtle">Epic</TaskStateChip> : null}
                 {task.status === 'blocked' && task.blockedReason ? (
-                    <Badge variant={taskBlockedReasonBadgeVariants[task.blockedReason.kind]}>
+                    <TaskStateChip
+                        variant={taskBlockedReasonBadgeVariants[task.blockedReason.kind]}
+                    >
                         {taskBlockedReasonLabels[task.blockedReason.kind]}
-                    </Badge>
+                    </TaskStateChip>
                 ) : null}
                 {waiting?.waitsOn ? (
-                    <Badge variant="subtle">
+                    <TaskStateChip variant="subtle">
                         Waits on T-{waiting.waitsOn.firstNumber}
                         {waiting.waitsOn.more > 0 ? ` +${waiting.waitsOn.more}` : ''}
-                    </Badge>
+                    </TaskStateChip>
                 ) : null}
                 {waiting?.scheduledLabel ? (
-                    <Badge variant="subtle">
+                    <TaskStateChip variant="subtle">
                         <Icon aria-hidden="true" className="size-3" icon={Calendar03Icon} />
                         {waiting.scheduledLabel}
-                    </Badge>
+                    </TaskStateChip>
                 ) : null}
                 {task.labels.map((label) => (
                     <LabelChip color={label.color} key={label.id} name={label.name} />
@@ -224,5 +226,22 @@ function TaskRow({
                 </span>
             </div>
         </div>
+    );
+}
+
+// State chips (kind, blocked reasons, waiting, dates) speak sentence case so a
+// row reads as one type system: dotted lowercase chips are the label taxonomy,
+// tinted sentence-case chips are task state.
+function TaskStateChip({
+    children,
+    variant,
+}: {
+    children: React.ReactNode;
+    variant: React.ComponentProps<typeof Badge>['variant'];
+}) {
+    return (
+        <Badge className="font-sans normal-case tracking-normal" variant={variant}>
+            {children}
+        </Badge>
     );
 }
