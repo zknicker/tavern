@@ -1,4 +1,10 @@
-import { Attachment01Icon, Calendar03Icon } from '@hugeicons-pro/core-stroke-rounded';
+import type { IconSvgElement } from '@hugeicons/react';
+import {
+    Attachment01Icon,
+    Calendar03Icon,
+    Layers01Icon,
+    Link01Icon,
+} from '@hugeicons-pro/core-stroke-rounded';
 import * as React from 'react';
 import { RelativeTime } from '../../components/time/relative-time.tsx';
 import { Badge } from '../../components/ui/badge.tsx';
@@ -16,6 +22,7 @@ import {
     isTaskRunning,
     type TaskStatus,
     taskBlockedReasonBadgeVariants,
+    taskBlockedReasonIcons,
     taskBlockedReasonLabels,
     taskPriorityLabels,
     taskStatusIcons,
@@ -183,23 +190,27 @@ function TaskRow({
                 <span className="min-w-0 truncate font-medium text-[15px] text-foreground">
                     {task.title}
                 </span>
-                {task.kind === 'epic' ? <TaskStateChip variant="subtle">Epic</TaskStateChip> : null}
+                {task.kind === 'epic' ? (
+                    <TaskStateChip icon={Layers01Icon} variant="subtle">
+                        Epic
+                    </TaskStateChip>
+                ) : null}
                 {task.status === 'blocked' && task.blockedReason ? (
                     <TaskStateChip
+                        icon={taskBlockedReasonIcons[task.blockedReason.kind]}
                         variant={taskBlockedReasonBadgeVariants[task.blockedReason.kind]}
                     >
                         {taskBlockedReasonLabels[task.blockedReason.kind]}
                     </TaskStateChip>
                 ) : null}
                 {waiting?.waitsOn ? (
-                    <TaskStateChip variant="subtle">
+                    <TaskStateChip icon={Link01Icon} variant="subtle">
                         Waits on T-{waiting.waitsOn.firstNumber}
                         {waiting.waitsOn.more > 0 ? ` +${waiting.waitsOn.more}` : ''}
                     </TaskStateChip>
                 ) : null}
                 {waiting?.scheduledLabel ? (
-                    <TaskStateChip variant="subtle">
-                        <Icon aria-hidden="true" className="size-3" icon={Calendar03Icon} />
+                    <TaskStateChip icon={Calendar03Icon} variant="subtle">
                         {waiting.scheduledLabel}
                     </TaskStateChip>
                 ) : null}
@@ -229,18 +240,21 @@ function TaskRow({
     );
 }
 
-// State chips (kind, blocked reasons, waiting, dates) speak sentence case so a
-// row reads as one type system: dotted lowercase chips are the label taxonomy,
-// tinted sentence-case chips are task state.
+// State chips (kind, blocked reasons, waiting, dates) speak sentence case and
+// lead with an icon, so a row reads as one type system: dotted lowercase chips
+// are the label taxonomy, icon-led tinted chips are task state.
 function TaskStateChip({
     children,
+    icon,
     variant,
 }: {
     children: React.ReactNode;
+    icon: IconSvgElement;
     variant: React.ComponentProps<typeof Badge>['variant'];
 }) {
     return (
         <Badge className="font-sans normal-case tracking-normal" variant={variant}>
+            <Icon aria-hidden="true" className="size-3" icon={icon} />
             {children}
         </Badge>
     );

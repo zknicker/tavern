@@ -1,10 +1,12 @@
 import type { IconSvgElement } from '@hugeicons/react';
 import {
+    Alert02Icon,
     AlertCircleIcon,
     CancelCircleIcon,
     CheckmarkCircle02Icon,
     CircleIcon,
     DashedLineCircleIcon,
+    HelpCircleIcon,
     Loading03Icon,
     ViewIcon,
 } from '@hugeicons-pro/core-stroke-rounded';
@@ -68,6 +70,11 @@ export const taskStatusBadgeVariants: Record<
 export const taskBlockedReasonLabels: Record<TaskBlockedReasonKind, string> = {
     error: 'Failed',
     needs_input: 'Needs input',
+};
+
+export const taskBlockedReasonIcons: Record<TaskBlockedReasonKind, IconSvgElement> = {
+    error: Alert02Icon,
+    needs_input: HelpCircleIcon,
 };
 
 export const taskBlockedReasonBadgeVariants: Record<TaskBlockedReasonKind, 'error' | 'warning'> = {
