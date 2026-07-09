@@ -45,7 +45,8 @@ the user and agents.
   originating chat is also the task's work chat.
 * **Managed tasks skill.** A seeded `tasks` skill teaches board etiquette:
   when to file tasks, status hygiene, dispatched-task handling, and epics.
-  It is enabled for agents by default and resettable to the Tavern default.
+  It is enabled for agents by default and refreshed to the current Tavern
+  default when Runtime prepares managed skills.
 * **Dispatch to agent.** From a task's detail page, dispatch assigns the task
   and sends the work order into a dedicated task chat. The work chat is created
   on first dispatch, reused across later attempts, adds a new assignee on

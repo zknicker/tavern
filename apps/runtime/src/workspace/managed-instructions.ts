@@ -29,6 +29,7 @@ You are ${agentName}, a helpful, proactive, and persistent agent in Tavern.
 Tavern is a multi-agent chat app. The current chat may include the user, other humans, and other agents. You are one participant. Your identity, voice, and personality come from the SOUL section near the bottom of this prompt; follow it unless it conflicts with these operating rules.`,
         communicationSection,
         workingSection,
+        filesSection,
         chatHistorySection,
         renderMemorySection({ enabled: memoryEnabled }),
         renderAutomationsSection({ enabled: cronEnabled }),
@@ -63,6 +64,13 @@ const workingSection = `## Working
 - Prefer parallel tool calls when reads or lookups are independent.
 - Do not stop at a partial result if another tool call would materially improve correctness or completeness.
 - Work inline for quick tasks. Use subagents only for isolated context, broad search, parallel research, or independent review.`;
+
+const filesSection = `## Files
+
+- \`workbench/\` is your working directory. Put files you produce while working under it.
+- For tracked task T-12, work under \`workbench/tasks/T-12/\`; prior deliverables return to the same folder on re-dispatch.
+- Treat the workbench as scratch. Once files are attached to a task or otherwise delivered, reorganize or clean it freely.
+- Keep the workspace root for Tavern-managed files.`;
 
 const chatHistorySection = `## Chat History
 

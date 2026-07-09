@@ -70,6 +70,10 @@ describe('generated agent instructions', () => {
         expect(content).toContain(
             'Gather missing context from chat history, Memory, files, and tools'
         );
+        expect(content).toContain('## Files');
+        expect(content).toContain('`workbench/` is your working directory');
+        expect(content).toContain('`workbench/tasks/T-12/`');
+        expect(content).toContain('Keep the workspace root for Tavern-managed files');
         expect(content).toContain('## Chat History');
         expect(content).toContain('`chat_messages_list`');
         expect(content).toContain('`chat_messages_search`');
@@ -123,6 +127,7 @@ describe('generated agent instructions', () => {
         expect(content.indexOf('## Communication')).toBeGreaterThan(-1);
         expect(content.indexOf('## Communication')).toBeLessThan(agentContextHeadChars);
         expect(content.indexOf('## Working')).toBeLessThan(agentContextHeadChars);
+        expect(content.indexOf('## Files')).toBeLessThan(agentContextHeadChars);
         expect(content.indexOf('## Chat History')).toBeLessThan(agentContextHeadChars);
         expect(content.indexOf('## Memory')).toBeLessThan(agentContextHeadChars);
         expect(content.indexOf('## Skills')).toBeLessThan(agentContextHeadChars);

@@ -59,7 +59,8 @@ Every skill package on disk is writable by agents and workers, whether it was
 seeded, hub-installed, agent-created, or operator-placed. Plugin-provided skills
 materialize to disk from the Plugin's current definition and can be edited.
 Managed seeded, hub, and Plugin skills show available-update state and can be
-restored to Tavern's current version.
+restored to Tavern's current version. Seeded skills are managed artifacts:
+Runtime replaces local edits with its current defaults when it prepares them.
 
 Hub-installed skills record the hash Tavern wrote at install time. Reinstalling
 an unedited hub skill replaces it cleanly. Reinstalling a skill whose local
@@ -67,11 +68,11 @@ content differs from that installed hash reports a conflict unless the caller
 forces the reinstall. The hub inventory reports both local edits and whether the
 bundled hub version differs from the installed hash.
 
-The seeded `tavern-agent` and `tasks` skills are created once and are not
-refreshed in the background. Users can reset only seeded skills to the current
-Tavern default; other non-Plugin skills do not have Tavern defaults. The
-`tasks` skill teaches board etiquette for the Tasks tracker and is enabled for
-new agents (and the managed agent) by default.
+The seeded `tavern-agent` and `tasks` skills are created when missing and
+refreshed when their content differs from the current Tavern defaults. Other
+non-Plugin skills do not have Tavern defaults. The `tasks` skill teaches board
+etiquette for the Tasks tracker and is enabled for new agents (and the managed
+agent) by default.
 
 Agent-authored skills have a lifecycle. Runtime marks unused agent-created
 skills stale after 30 days and archives them after 90 days by moving the whole
@@ -86,9 +87,9 @@ SDK `HarnessAgent` `skills` setting. Missing assigned skills are stale settings
 and are ignored instead of failing unrelated chat work. Runtime does not copy
 assigned skill content into `system` instructions.
 
-Skill content updates are explicit agent or user work. Tavern never rewrites
-skill files in the background. Tavern-authored content arrives only through hub
-install/reinstall or the seeded skill reset.
+Agent-authored and hub-installed skill updates are explicit agent or user work.
+Tavern refreshes seeded skills as managed artifacts; durable custom doctrine
+belongs in a separate skill.
 
 Tool exposure is Runtime work. Harness tools come from the selected executor and
 are governed by sandbox and approval policy. Plugin tools come from built-in

@@ -11,6 +11,7 @@ import { materializePluginSkills } from '../plugins/materialize-skills.ts';
 import { writePluginConfig } from '../plugins/store.ts';
 import { createAgentSkill, readSkillSource, sha256 } from '../skills/store.ts';
 import { upsertStoredAgent } from '../tavern/agents-store.ts';
+import { subscribeToRuntimeEvents } from '../tavern/runtime-events.ts';
 import { getSkillHubAvailable, installSkillHubSkill } from './skill-hub-library.ts';
 import {
     defaultTasksSkill,
@@ -216,6 +217,42 @@ describe('Runtime skill library', () => {
         );
         expect(bundles).toHaveLength(1);
         expect(bundles[0]?.content).toContain('Dispatched tasks');
+    });
+
+    it('restores tampered seeded skills and publishes their updates', async () => {
+        await seedManagedSkills({ skillsDir });
+        await fs.writeFile(path.join(skillsDir, tasksSkillId, 'SKILL.md'), '# Tampered\n');
+        const events: unknown[] = [];
+        const unsubscribe = subscribeToRuntimeEvents((event) => events.push(event));
+
+        try {
+            await seedManagedSkills({ skillsDir });
+        } finally {
+            unsubscribe();
+        }
+
+        await expect(
+            fs.readFile(path.join(skillsDir, tasksSkillId, 'SKILL.md'), 'utf8')
+        ).resolves.toBe(defaultTasksSkill);
+        expect(readSkillSource(tasksSkillId)).toMatchObject({
+            installedHash: sha256(defaultTasksSkill),
+            source: 'seeded',
+        });
+        expect(events).toContainEqual(
+            expect.objectContaining({ skillId: tasksSkillId, type: 'skill.updated' })
+        );
+    });
+
+    it('replaces a stale seeded default with the current release content', async () => {
+        const staleDefault = defaultTasksSkill.replace('## Dispatched tasks', '## Old dispatch');
+        expect(staleDefault).not.toBe(defaultTasksSkill);
+        await writeSkill(tasksSkillId, staleDefault);
+
+        await seedManagedSkills({ skillsDir });
+
+        await expect(
+            fs.readFile(path.join(skillsDir, tasksSkillId, 'SKILL.md'), 'utf8')
+        ).resolves.toBe(defaultTasksSkill);
     });
 
     it('reports seeded skill summary edit and managed flags', async () => {

@@ -71,6 +71,7 @@ turn.
 ## Working a task
 
 Statuses:
+
 - backlog: filed for user triage.
 - todo: ready queue; only the user promotes work here.
 - in_progress: actively being worked.
@@ -90,15 +91,17 @@ backlog for user triage.
 Labels are shared records. Reuse existing label names from \`tasks_list\` when
 they fit; new label names are created automatically.
 
-Mark a task in_progress before you start it. When closing as done, review, or
-canceled, include a short summary: what changed, how you verified it, and what
-remains. Do task work under \`workbench/tasks/<T-number>/\`. When the work
+Mark a task in_progress when you begin work outside dispatch. When closing as
+done, review, blocked, or canceled, include a short summary: what changed, how
+you verified it, and what remains. Do task work under
+\`workbench/tasks/<T-number>/\`. When the work
 produces files, attach the key deliverables by workspace path with the
 \`attachments\` field on \`tasks_update\`. Runtime promotes those copies, so you
 may clean the workbench after attaching. The description is the brief; never
 overwrite it for close-out.
 
 If you cannot finish, set the task blocked with a reason kind:
+
 - needs_input: the user must answer or provide something.
 - error: the work failed; include the failure detail.
 
@@ -107,13 +110,15 @@ Keep one task in_progress per stream of work.
 ## Dispatched tasks
 
 A dispatch message arrives in the task's own work chat and names a task (like
-T-12). Treat it as your work order: read it first with \`tasks_get\`, mark it
-in_progress, do the work in that work chat, keep the task updated as scope
-changes, and close it: done when you deliver, blocked when you cannot continue,
-canceled when the work should not happen. The work chat archives when the task
-closes and remains reachable from the task page. Close the task before ending
-your reply; a finished turn left in_progress is a failed attempt. On re-dispatch,
-prior deliverables are placed back under \`workbench/tasks/<T-number>/\` for you.
+T-12). Treat it as your work order. Your first task action is \`tasks_get\`;
+then work in that chat and keep the card current if scope changes. Your last
+task action is exactly one terminal \`tasks_update\`: done when delivered,
+review when the user should check it, blocked when you cannot continue, or
+canceled when the work should not happen. Close the task before your reply
+ends; a finished turn left in_progress is a failed attempt. Name the T-number
+and outcome in that reply. The work chat remains reachable from the task page.
+On re-dispatch, prior deliverables return to
+\`workbench/tasks/<T-number>/\` for you.
 
 ## Epics and hygiene
 
@@ -172,15 +177,22 @@ export async function seedManagedSkills(options: { skillsDir?: string } = {}) {
 
 async function seedSeededSkill(skillId: string, options: { skillsDir?: string } = {}) {
     const skillPath = path.join(options.skillsDir ?? agentEngineSkillsDir, skillId, 'SKILL.md');
+    const defaultContent = seededSkillDefaults[skillId];
+    if (defaultContent === undefined) {
+        throw new Error(`Skill ${skillId} is not a seeded Tavern skill.`);
+    }
     const existing = await fs.readFile(skillPath, 'utf8').catch(() => null);
-    if (existing !== null) {
+    if (existing === defaultContent) {
         recordSeededSkillSource(skillId);
         return;
     }
 
     await fs.mkdir(path.dirname(skillPath), { recursive: true });
-    await fs.writeFile(skillPath, seededSkillDefaults[skillId], { mode: 0o600 });
+    await fs.writeFile(skillPath, defaultContent, { mode: 0o600 });
     recordSeededSkillSource(skillId);
+    if (existing !== null) {
+        publishSkillUpdated(skillId);
+    }
 }
 
 export async function resetSeededSkill(skillId: string, options: { skillsDir?: string } = {}) {

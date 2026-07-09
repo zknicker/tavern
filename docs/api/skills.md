@@ -32,8 +32,9 @@ Plugin or runtime experiment.
 * Hub installs record the installed content hash. Reinstalling an edited hub
   skill returns a conflict unless `force` is set. Available hub entries report
   `edited` and `updateAvailable` from the installed hash.
-* Only the seeded `tavern-agent` skill can be reset to a Tavern default through
-  `POST /skills/:id/reset`.
+* Seeded `tavern-agent` and `tasks` skills can be reset to Tavern defaults
+  through `POST /skills/:id/reset`; Runtime also refreshes changed seeded
+  content when preparing managed skills.
 * Tool ids are Runtime-native tool names.
 * Tool enablement separates the user's choice from whether Runtime reports the
   tool as usable.
@@ -58,7 +59,7 @@ The API covers:
 * replace a disk-backed `SKILL.md` with hash checking through `skill_patch`
 * write disk-backed support files under `references/`, `templates/`,
   `scripts/`, or `assets/` through `skill_write_file`
-* reset the seeded Tavern skill to the current default
+* reset a seeded Tavern skill to its current default
 * read setup requirements
 * list Runtime-visible tools
 * read Runtime tool diagnostics where exposed

@@ -66,6 +66,8 @@ describe('agent instructions', () => {
         expect(instructions).toContain(
             'Do not tell the user to run provider-specific setup commands'
         );
+        expect(instructions).toContain('`workbench/` is your working directory');
+        expect(instructions).toContain('`workbench/tasks/T-12/`');
         expect(instructions).toContain('## Memory');
         expect(instructions).toContain('`USER.md` and `MEMORY.md` live in your workspace');
         expect(instructions).toContain('## Notes');
