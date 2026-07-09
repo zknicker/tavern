@@ -317,7 +317,58 @@ function buildTranscriptItems(input: {
         items.push({ failure, kind: 'failure' });
     }
 
-    return items;
+    // A contribution's position is fixed the moment it appears: agent turns
+    // order by turn start, so a later-started seat's finished reply
+    // materializes below an earlier seat's still-streaming bubble instead of
+    // inserting above it, and completing never moves anything.
+    return items
+        .map((item, index) => ({ index, item }))
+        .sort(
+            (left, right) =>
+                itemOrderTimestamp(left.item) - itemOrderTimestamp(right.item) ||
+                compareItemRunIds(left.item, right.item) ||
+                left.index - right.index
+        )
+        .map(({ item }) => item);
+}
+
+// Same-instant starts (one message fanning out to several seats) tie on the
+// clock; run identity breaks the tie identically for the live bubble and the
+// durable reply, so the order can never flip across the completion swap.
+function compareItemRunIds(left: TranscriptItem, right: TranscriptItem) {
+    const leftRun = getItemRunId(left);
+    const rightRun = getItemRunId(right);
+
+    return leftRun && rightRun ? leftRun.localeCompare(rightRun) : 0;
+}
+
+function itemOrderTimestamp(item: TranscriptItem) {
+    if (item.kind === 'row' && item.row.kind === 'message') {
+        const { message } = item.row;
+
+        if (message.senderType === 'agent' && !isActivityBackedMessageRow(item.row)) {
+            const startedAt = runtimeMetadataStartedAt(message.metadata);
+
+            if (startedAt !== null) {
+                return startedAt;
+            }
+        }
+    }
+
+    return parseTimestamp(getItemTimestamp(item));
+}
+
+function runtimeMetadataStartedAt(metadata: Record<string, unknown> | null | undefined) {
+    const runtime = metadata?.runtime;
+
+    if (!(runtime && typeof runtime === 'object' && !Array.isArray(runtime))) {
+        return null;
+    }
+
+    const startedAt = (runtime as Record<string, unknown>).startedAt;
+    const parsed = typeof startedAt === 'string' ? Date.parse(startedAt) : Number.NaN;
+
+    return Number.isNaN(parsed) ? null : parsed;
 }
 
 function hasDurableReplyRow(rows: TranscriptRow[], runId: string) {

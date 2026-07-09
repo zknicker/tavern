@@ -645,6 +645,55 @@ test('agent turns split by a runtime notice keep unique entry ids', () => {
     expect(new Set(turnIds).size).toBe(turnIds.length);
 });
 
+test('a crossing completion never inserts above an earlier live contribution', () => {
+    // Otto's seat started first and is still streaming; Wren started later
+    // but finished first. Wren's durable reply must land below Otto's live
+    // bubble — where Wren's own bubble already was — not above it.
+    const wrenReply = {
+        actor: { id: 'agt_wren', kind: 'agent' },
+        connectsToNext: false,
+        connectsToPrevious: false,
+        id: 'msg_wren_reply',
+        isFirstInGroup: true,
+        kind: 'message',
+        runId: 'run_wren',
+        message: {
+            content: 'Two items stand out.',
+            id: 'msg_wren_reply',
+            metadata: {
+                runtime: { runId: 'run_wren', startedAt: '2026-05-11T16:00:01.000Z' },
+            },
+            sender: 'Wren',
+            senderType: 'agent',
+            sourceSessionId: null,
+            sourceSessionKey: 'ses_wren',
+            tavernAgentId: 'agt_wren',
+            // Completed while Otto is still streaming.
+            timestamp: '2026-05-11T16:00:12.000Z',
+        },
+    } as ChatRow;
+
+    const entries = buildTranscriptEntries({
+        activeReplies: [
+            {
+                agentId: 'agt_otto',
+                isThinking: true,
+                narrationText: 'Still looking around.',
+                runId: 'run_otto',
+                sessionKey: 'ses_otto',
+                startedAt: '2026-05-11T16:00:00.000Z',
+                text: '',
+            },
+        ],
+        rows: [wrenReply],
+    });
+
+    const agentTurns = entries.filter(
+        (entry) => entry.kind === 'turn' && entry.participant === 'agent'
+    );
+    expect(agentTurns.map((entry) => entry.id)).toEqual(['turn:run_otto', 'turn:run_wren']);
+});
+
 test('interleaved multi-agent rows keep one comment per turn', () => {
     // The original ghost-row bug: two seats streaming at once interleave
     // their rows. Each turn must still map to exactly one entry.
