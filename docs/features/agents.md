@@ -22,9 +22,12 @@ can continue to feel primary-agent-first.
   independent names, enabled skill ids, model choices, and workspace folders.
   Settings -> Agents lists those agents, creates new agents, and routes each
   agent to General, Skills & Plugins, and Channels pages.
-  General edits the selected agent's display name, color, character, model,
-  thinking default, environment variables, and destructive agent deletion.
-  The home timezone lives on the Tavern Runtime settings page.
+  General edits the selected agent's display name, bio, color, character,
+  model, thinking default, environment variables, and destructive agent
+  deletion. The home timezone lives on the Tavern Runtime settings page.
+* **Agent bio.** A short job description stored on the Runtime agent record.
+  Agents sharing a chat see each other's names and bios in their prompt
+  roster, so each agent knows what its co-resident agents are for.
 * **Agent avatar.** Every agent wears a character face (knight, penguin, cat,
   dog, robot, ghost, or cloud) as its avatar; the animated eyes always sit
   inside a character and are never shown alone. Agents with no chosen character

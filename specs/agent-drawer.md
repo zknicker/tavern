@@ -41,6 +41,17 @@ multi-agent chats.
   captures harness usage from the stream's final step and persists it as
   `metadata.runtime.contextTokens` on the completed response. Dismissed
   responses drop out of the stats.
+- **Instructions freshness.** Instructions are delivered to an executor
+  session once, at its first turn; changes land on the next session. Runtime
+  fingerprints the delivered instructions (excluding core memory files, which
+  extraction rewrites constantly) and the session read returns
+  `instructionsFresh`: null when nothing has been delivered yet, false when
+  the live compose no longer matches. When false, a warning notice card
+  ("System prompt updated. This agent's system prompt has changed since this
+  session started. New sessions pick it up. This one refreshes by tomorrow
+  morning.") sits between the session card and the New session button. Fresh
+  sessions render nothing extra. The New session button below is the
+  apply-now action; no dedicated CTA.
 - **New session.** A button that starts fresh context for this agent in this
   chat without clearing the chat.
 - **Past sessions.** The seat's earlier sessions as a high-level list, newest

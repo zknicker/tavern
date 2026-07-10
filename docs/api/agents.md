@@ -25,8 +25,12 @@ grant policy.
 * Agent list and detail reads use synced Runtime records. Mounting an app screen
   must not contact the agent runtime or enqueue a background sync job just to
   discover agents.
-* Agent records expose display name, model policy, memory policy, skill
+* Agent records expose display name, bio, model policy, memory policy, skill
   selections, Plugin grants, workspace folder, and availability.
+* The bio is a short Runtime-owned job description (max 280 characters,
+  nullable). Runtime injects each agent seat's bio into the participant roster
+  of every agent turn prompt in shared chats, so co-resident agents know what
+  each agent is for.
 * Agent appearance is app-owned presentation stored in the agent profile:
   a primary color and a character (`knight`, `penguin`, `cat`, `dog`, `robot`,
   `ghost`, or `cloud`). The catalog returns `character`, `effectiveCharacter`,
@@ -61,10 +65,16 @@ grant policy.
   check Memory before external lookup when durable user, project, or prior
   decision context may already exist.
 * Agent settings use narrow domain mutations. Clients update agent
-  name, model, thinking default, and messaging bindings through agent and
+  name, bio, model, thinking default, and messaging bindings through agent and
   messaging APIs instead of editing or saving raw engine config JSON.
 * Task settings store each agent's auto-dispatch opt-in and review policy;
   both default off.
+* Instruction-affecting settings (name, bio, `SOUL.md`, `NOTES.md`) apply per
+  session: executors receive instructions once at a session's first turn, so
+  changes land when the next session starts. The current-session read returns
+  `instructionsFresh` so clients can flag a live session running on earlier
+  instructions; settings surfaces say "Takes effect on each agent's next
+  session" on save.
 * Persisted agent settings mean user intent. Runtime startup can apply Tavern
   defaults to the managed engine, but it must not write those defaults into the
   saved agent settings store.
