@@ -76,11 +76,17 @@ Runtime addressing rules route a message to an Agent seat:
 
 - one-to-one Agent DMs invoke the Agent implicitly
 - channel messages invoke Agents by mention
+- an Agent's delivered final reply can mention co-resident Agents; each
+  mention dispatches a turn on that seat, bounded by chain limits
+  ([agent-mentions](../../specs/agent-mentions.md))
 - future automations or channel-listener settings may create Agent turns
 
 Runtime writes assistant replies as normal Chat messages authored by the Agent
 participant. Tool calls, thinking, rich responses, and command output are
-execution evidence stored as response activity.
+execution evidence stored as response activity. Agents can also post directly
+into another chat where they hold a seat via the `chat_send` tool
+(`chats_list` enumerates their chats); a cross-chat post is a plain agent
+message and never starts a turn.
 
 ## Boundaries
 

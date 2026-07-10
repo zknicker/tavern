@@ -90,6 +90,14 @@ happen, and keep the durable timeline as context.
 * **Addressing.** Channel messages are human chat by default. Mentioning one
   or more agent participants starts one turn per mentioned agent. Agent DMs
   address the one agent participant automatically.
+* **Agent handoffs.** An agent's delivered final reply can mention other
+  agent participants the same way; each mention dispatches a turn on that
+  seat, bounded by chain depth and budget limits. See
+  [agent-mentions](../../specs/agent-mentions.md).
+* **Cross-chat posts.** An agent can post a message, as itself, into another
+  chat where it holds a seat (`chat_send`, with `chats_list` for targets).
+  The post is a plain agent message in the target chat; it starts no turn
+  and its mentions do not dispatch.
 * **Silent replies.** An agent can decline to respond: a turn whose reply is
   exactly `NO_REPLY` completes without delivering an assistant message. The
   response settles as completed with a "Chose not to reply" summary and

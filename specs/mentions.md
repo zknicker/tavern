@@ -43,7 +43,7 @@ token do nothing unless the user selected or typed explicit link syntax.
 
 | Kind | Target | Projection | Behavior |
 | --- | --- | --- | --- |
-| `agent` | `agent://<encoded-agent-id>` | `agent-reference` | Channel sends start one turn per linked agent participant. Agent DMs address their one agent participant without a link. |
+| `agent` | `agent://<encoded-agent-id>` | `agent-reference` | Channel sends start one turn per linked agent participant. Agent DMs address their one agent participant without a link. Agent-authored final replies dispatch the same way, bounded by chain limits ([agent-mentions](agent-mentions.md)). |
 | `skill` | `skill://<encoded-skill-id>` | `skill-activation` | Runtime adds a compact turn hint only if the addressed Agent already has that skill enabled. |
 | `plugin` | `plugin://<name>@<marketplace>` | `capability-reference` | Preserve the link. Do not enable, install, connect, or authorize the plugin from the reference alone. |
 | `app` | `app://computer-use/<encoded-app-id>` | `capability-reference` | Preserve the link with the selected app label. Computer Use resolves the app when tools are invoked. |
