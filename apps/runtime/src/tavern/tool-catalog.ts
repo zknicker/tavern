@@ -34,6 +34,16 @@ const builtInTools = [
     },
     {
         configured: true,
+        description: 'List your chats and post a message into another chat you participate in.',
+        enabled: true,
+        id: 'chat_actions',
+        label: 'Chat actions',
+        name: 'chat_actions',
+        readOnly: false,
+        tools: ['chats_list', 'chat_send'],
+    },
+    {
+        configured: true,
         description: 'Browse, search, and update shared Wiki pages.',
         enabled: true,
         id: 'wiki',

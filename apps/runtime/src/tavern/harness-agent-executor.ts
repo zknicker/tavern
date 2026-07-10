@@ -39,6 +39,7 @@ import {
     updateAgentSessionRuntimeState,
 } from './agent-session-store.ts';
 import { recordAgentTurnPromptEvidence } from './agent-turn-store.ts';
+import { createTavernChatActionTools } from './chat-actions-tools.ts';
 import {
     createDelivery,
     deleteMessage,
@@ -357,6 +358,11 @@ function createHarnessAgent(
     const tools = {
         ...createTavernChatTools({
             chatId: input.chatId,
+        }),
+        ...createTavernChatActionTools({
+            agentId: input.agent.id,
+            chatId: input.chatId,
+            runId: input.runId,
         }),
         ...createTavernWikiTools(),
         ...(isRuntimeCronReady() ? createTavernCronTools({ agentId: input.agent.id }) : {}),

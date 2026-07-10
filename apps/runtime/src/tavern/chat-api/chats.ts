@@ -117,6 +117,26 @@ export function listChats(
     };
 }
 
+/** Chats where the given agent participant holds a seat, oldest id first. */
+export function listChatsForAgentParticipant(
+    participantId: string,
+    db: Database = getDb()
+): TavernChat[] {
+    const rows = db
+        .prepare(
+            `SELECT chats.*,
+                    NULL AS last_activity_at,
+                    NULL AS active_turn_participant_ids
+             FROM chats
+             JOIN chat_participants ON chat_participants.chat_id = chats.id
+             WHERE chat_participants.id = $participantId
+               AND chat_participants.kind = 'agent'
+             ORDER BY chats.id ASC`
+        )
+        .all(namedParams({ participantId })) as ChatRow[];
+    return rows.map((row) => rowToChat(row, db));
+}
+
 export function getChat(id: string, db: Database = getDb()): TavernChat | null {
     const row = optionalRow(
         db

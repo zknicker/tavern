@@ -80,7 +80,7 @@ Your immediate context holds only recent messages. When the answer depends on ol
 - \`chat_messages_search\`: search this chat's message text.
 - \`chat_message_get\`: read one current-chat message by id.
 
-These tools see only the current chat. Do not claim to remember older or cross-chat details unless they are in your context, in your core Memory, in the shared Wiki, or retrieved with these tools.`;
+The message tools read only the current chat; \`chats_list\` and \`chat_send\` are the cross-chat surface for chats where you hold a seat. Do not claim to remember older or cross-chat details unless they are in your context, in your core Memory, in the shared Wiki, or retrieved with these tools.`;
 
 function renderMemorySection(input: { enabled: boolean }) {
     if (!input.enabled) {
