@@ -59,7 +59,13 @@ function notificationContent(task: AgentRuntimeTask) {
         const kind = reason.kind === 'needs_input' ? 'needs input' : 'error';
         return withDetail(`T-${task.number} is blocked (${kind})`, firstLine(reason.message));
     }
-    return withDetail(`T-${task.number} is ${task.status}`, firstLine(task.summary));
+    const phrase =
+        task.status === 'review'
+            ? 'is ready for review'
+            : task.status === 'canceled'
+              ? 'was canceled'
+              : 'is done';
+    return withDetail(`T-${task.number} ${phrase}`, firstLine(task.summary));
 }
 
 function withDetail(prefix: string, detail: string | null) {
