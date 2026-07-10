@@ -638,6 +638,11 @@ export function ensureRuntimeSchema(db: Database): void {
         table: 'agent_sessions',
     });
     ensureColumn(db, {
+        column: 'instructions_hash',
+        definition: 'TEXT',
+        table: 'agent_sessions',
+    });
+    ensureColumn(db, {
         column: 'usage_json',
         definition: "TEXT NOT NULL DEFAULT '{}'",
         table: 'memory_jobs',

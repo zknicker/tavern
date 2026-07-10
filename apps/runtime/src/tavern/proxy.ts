@@ -12,6 +12,7 @@ import {
     agentRuntimeRoutes,
     agentRuntimeSkillListSchema,
     agentRuntimeSkillSchema,
+    agentRuntimeUpdateAgentBioSchema,
     agentRuntimeUpdateAgentModelSchema,
     agentRuntimeUpdateAgentNameSchema,
     agentRuntimeUpdateAgentPluginGrantSchema,
@@ -79,6 +80,7 @@ async function dispatchAgentEngineStatic({ request, url }: { request: Request; u
         const agent = upsertStoredAgent({
             agent: {
                 autoDispatchEnabled: input.autoDispatchEnabled ?? false,
+                bio: input.bio ?? null,
                 enabledSkillIds: input.enabledSkillIds ?? [tavernAgentSkillId, tasksSkillId],
                 enabledPluginIds: input.enabledPluginIds ?? [],
                 id: input.id,
@@ -134,6 +136,7 @@ async function dispatchAgentEngineStatic({ request, url }: { request: Request; u
         segments[0] === 'agents' &&
         segments[1] &&
         ['model', 'name', 'thinking-default'].includes(segments[2] ?? '')
+        ['bio', 'model', 'name', 'thinking-default'].includes(segments[2] ?? '')
     ) {
         const input = await readJson(request);
         const agentId = segments[1];
@@ -143,6 +146,9 @@ async function dispatchAgentEngineStatic({ request, url }: { request: Request; u
         let updatedAgent: AgentRuntimeAgent | null = null;
         if (segments[2] === 'model') {
             updatedAgent = await savePatchedModel(agentId, input);
+        } else if (segments[2] === 'bio') {
+            const payload = agentRuntimeUpdateAgentBioSchema.parse(input);
+            updatedAgent = updateStoredAgent({ agentId, bio: payload.bio });
         } else if (segments[2] === 'name') {
             const payload = agentRuntimeUpdateAgentNameSchema.parse(input);
             updatedAgent = updateStoredAgent({ agentId, name: payload.name });

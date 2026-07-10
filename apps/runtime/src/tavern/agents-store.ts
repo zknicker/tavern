@@ -50,6 +50,7 @@ export function upsertStoredAgent(input: {
     const existing = getStoredAgent(input.agent.id, db);
     const agent = agentRuntimeAgentSchema.parse({
         ...input.agent,
+        bio: input.agent.bio === undefined ? (existing?.bio ?? undefined) : input.agent.bio,
         thinkingDefault: input.agent.thinkingDefault ?? existing?.thinkingDefault ?? undefined,
     });
 
@@ -83,6 +84,7 @@ export function deleteStoredAgent(agentId: string, db: Database = getDb()) {
 export function updateStoredAgent(input: {
     agentId: string;
     autoDispatchEnabled?: boolean;
+    bio?: string | null;
     db?: Database;
     enabledPluginIds?: AgentRuntimePluginId[];
     enabledSkillIds?: string[];
@@ -102,6 +104,7 @@ export function updateStoredAgent(input: {
             ...(input.autoDispatchEnabled === undefined
                 ? {}
                 : { autoDispatchEnabled: input.autoDispatchEnabled }),
+            ...(input.bio === undefined ? {} : { bio: input.bio }),
             ...(input.enabledSkillIds === undefined
                 ? {}
                 : { enabledSkillIds: input.enabledSkillIds }),
@@ -178,6 +181,7 @@ function rowToAgent(row: AgentRow, db: Database): AgentRuntimeAgent {
 
     return agentRuntimeAgentSchema.parse({
         autoDispatchEnabled: raw?.autoDispatchEnabled ?? false,
+        ...(raw?.bio == null ? {} : { bio: raw.bio }),
         enabledPluginIds: listAgentPluginGrantIds(row.id, db),
         enabledSkillIds: listAssignedSkillIds(row.id, row.enabled_skill_ids_json, db),
         id: row.id,
@@ -291,6 +295,7 @@ function listAgentPluginGrantIds(agentId: string, db: Database = getDb()) {
 function stableAgentJson(agent: AgentRuntimeAgent) {
     return JSON.stringify({
         autoDispatchEnabled: agent.autoDispatchEnabled ?? false,
+        ...(agent.bio == null ? {} : { bio: agent.bio }),
         enabledPluginIds: agent.enabledPluginIds ?? [],
         enabledSkillIds: agent.enabledSkillIds,
         id: agent.id,

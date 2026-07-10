@@ -12,6 +12,7 @@ export const agentRuntimeRoutes = {
     agentConfig: (id: string) => `/agents/${id}/config`,
     agentFile: (agentId: string, path: string) =>
         `/agents/${agentId}/files/${encodeURIComponent(path)}`,
+    agentBio: (id: string) => `/agents/${id}/bio`,
     agentFiles: (agentId: string) => `/agents/${agentId}/files`,
     agentModel: (id: string) => `/agents/${id}/model`,
     agentName: (id: string) => `/agents/${id}/name`,

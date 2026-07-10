@@ -1,9 +1,12 @@
+import { createHash } from 'node:crypto';
+import type { AgentRuntimeAgentSession } from '@tavern/api';
 import { prepareAgentEngineInstructions } from '../agent-engine/instructions.ts';
 import { isRuntimeCronReady } from '../cron/manager-state.ts';
 import { getDb } from '../db/connection.ts';
 import type { Database } from '../db/sqlite.ts';
 import { resolveHomeTimezone } from '../timezone-settings.ts';
 import type { AgentExecutorInput } from './agent-executor.ts';
+import { readAgentSessionInstructionsHash } from './agent-session-store.ts';
 import { getStoredAgent } from './agents-store.ts';
 import { getChat } from './chat-api/index.ts';
 import { modelOperationalInstructions } from './model-instructions.ts';
@@ -14,25 +17,66 @@ export interface BuildAgentInstructionOptions {
     skillsDir?: string;
 }
 
+// The subset of executor input that instruction composition reads.
+export type AgentInstructionContext = Pick<AgentExecutorInput, 'agent' | 'agentSession' | 'chatId'>;
+
 export async function buildAgentInstructions(
-    input: AgentExecutorInput,
+    input: AgentInstructionContext,
+    options: BuildAgentInstructionOptions = {}
+) {
+    return (await buildAgentInstructionBundle(input, options)).instructions;
+}
+
+// Instructions plus a freshness fingerprint. Harness adapters deliver
+// instructions once per session (first prompt), so the fingerprint lets the
+// session read report whether a live session started on current instructions.
+// Core memory files are excluded from the fingerprint (see instructions.ts).
+export async function buildAgentInstructionBundle(
+    input: AgentInstructionContext,
     options: BuildAgentInstructionOptions = {}
 ) {
     const prepared = await prepareAgentEngineInstructions(options.db ?? getDb(), input.agent, {
         seedSkills: options.seedSkills,
         skillsDir: options.skillsDir,
     });
-    const sections = [
-        prepared.content,
+    const dynamicSections = [
         modelOperationalInstructions(input.agentSession.effectiveModel),
         tavernChatInstructions(input),
     ].filter((section): section is string => Boolean(section));
-    return sections.join('\n\n');
+    const instructions = [prepared.content, ...dynamicSections].join('\n\n');
+    const fingerprint = createHash('sha256')
+        .update([prepared.fingerprintContent, ...dynamicSections].join('\n\n'))
+        .digest('hex');
+    return { fingerprint, instructions };
+}
+
+/**
+ * Whether the session's delivered instructions still match a fresh compose.
+ * Null when the session has not delivered instructions yet (fresh by
+ * construction) or the agent record is gone.
+ */
+export async function agentSessionInstructionsFresh(
+    session: AgentRuntimeAgentSession,
+    options: BuildAgentInstructionOptions = {}
+): Promise<boolean | null> {
+    const deliveredHash = readAgentSessionInstructionsHash(session.id, options.db);
+    if (!deliveredHash) {
+        return null;
+    }
+    const agent = getStoredAgent(session.agentId, options.db);
+    if (!agent) {
+        return null;
+    }
+    const bundle = await buildAgentInstructionBundle(
+        { agent, agentSession: session, chatId: session.chatId },
+        { ...options, seedSkills: false }
+    );
+    return bundle.fingerprint === deliveredHash;
 }
 
 // Static per-session guidance lives here instead of the per-turn prompt so a
 // long session carries one copy in its system prompt rather than one per turn.
-function tavernChatInstructions(input: AgentExecutorInput) {
+function tavernChatInstructions(input: AgentInstructionContext) {
     const chat = getChat(input.chatId);
     return [
         'This chat:',
@@ -73,7 +117,8 @@ function tavernChatInstructions(input: AgentExecutorInput) {
 
 // The agent should know where it is speaking: channel vs direct message, the
 // chat's name, and who else holds a seat — including which seat is its own.
-function chatIdentityLines(input: AgentExecutorInput, chat: ReturnType<typeof getChat>) {
+// Agent seats carry their bio so co-resident agents know each other's job.
+function chatIdentityLines(input: AgentInstructionContext, chat: ReturnType<typeof getChat>) {
     if (!chat) {
         return [`- chatId: ${input.chatId}`];
     }
@@ -82,24 +127,25 @@ function chatIdentityLines(input: AgentExecutorInput, chat: ReturnType<typeof ge
         chat.kind === 'dm'
             ? 'a direct message between you and the user'
             : `the "${chat.title}" channel`;
-    const participants = chat.participants
-        .map((participant) => {
-            if (participant.id === input.agentSession.agentParticipantId) {
-                return `${participant.label ?? input.agent.name} (you)`;
-            }
-            if (participant.kind === 'agent') {
-                const agentId = participantAgentId(participant.metadata);
-                const name =
-                    participant.label ??
-                    (agentId ? (getStoredAgent(agentId)?.name ?? null) : null) ??
-                    participant.id;
-                return `${name} (agent)`;
-            }
-            return participant.label ?? participant.id;
-        })
-        .join(', ');
+    const participants = chat.participants.map((participant) => {
+        if (participant.id === input.agentSession.agentParticipantId) {
+            return participantLine(participant.label ?? input.agent.name, '(you)', input.agent.bio);
+        }
+        if (participant.kind === 'agent') {
+            const agentId = participantAgentId(participant.metadata);
+            const agent = agentId ? getStoredAgent(agentId) : null;
+            const name = participant.label ?? agent?.name ?? participant.id;
+            return participantLine(name, '(agent)', agent?.bio);
+        }
+        return participantLine(participant.label ?? participant.id, null, null);
+    });
 
-    return [`- This is ${kind}.`, `- chatId: ${input.chatId}`, `- Participants: ${participants}`];
+    return [`- This is ${kind}.`, `- chatId: ${input.chatId}`, '- Participants:', ...participants];
+}
+
+function participantLine(name: string, tag: string | null, bio: string | null | undefined) {
+    const title = tag ? `${name} ${tag}` : name;
+    return bio ? `  - ${title} — ${bio}` : `  - ${title}`;
 }
 
 function participantAgentId(metadata: Record<string, unknown>) {

@@ -104,6 +104,70 @@ describe('Runtime agent and agent engine reads', () => {
         });
     });
 
+    it('persists the agent bio through create, update, and clear', async () => {
+        const createResponse = await handleTavernRuntimeRequest(
+            new Request('http://runtime.test/agents', {
+                body: JSON.stringify({
+                    bio: 'Runs the Amazon Merch business.',
+                    id: 'agt_merch',
+                    name: 'Merch',
+                    workspaceFolder: '/tmp/tavern-merch-workspace',
+                }),
+                headers: { 'content-type': 'application/json' },
+                method: 'POST',
+            })
+        );
+
+        expect(createResponse.status).toBe(200);
+        await expect(createResponse.json()).resolves.toMatchObject({
+            bio: 'Runs the Amazon Merch business.',
+            id: 'agt_merch',
+        });
+
+        const bioResponse = await handleTavernRuntimeRequest(
+            new Request('http://runtime.test/agents/agt_merch/bio', {
+                body: JSON.stringify({ bio: 'Owns Merch sales and listings.' }),
+                headers: { 'content-type': 'application/json' },
+                method: 'PATCH',
+            })
+        );
+        expect(bioResponse.status).toBe(200);
+
+        const nameResponse = await handleTavernRuntimeRequest(
+            new Request('http://runtime.test/agents/agt_merch/name', {
+                body: JSON.stringify({ name: 'Merchant' }),
+                headers: { 'content-type': 'application/json' },
+                method: 'PATCH',
+            })
+        );
+        expect(nameResponse.status).toBe(200);
+
+        const configResponse = await handleTavernRuntimeRequest(
+            new Request('http://runtime.test/agents/agt_merch/config')
+        );
+        await expect(configResponse.json()).resolves.toMatchObject({
+            bio: 'Owns Merch sales and listings.',
+            id: 'agt_merch',
+            name: 'Merchant',
+        });
+
+        const clearResponse = await handleTavernRuntimeRequest(
+            new Request('http://runtime.test/agents/agt_merch/bio', {
+                body: JSON.stringify({ bio: null }),
+                headers: { 'content-type': 'application/json' },
+                method: 'PATCH',
+            })
+        );
+        expect(clearResponse.status).toBe(200);
+
+        const clearedConfig = (await (
+            await handleTavernRuntimeRequest(
+                new Request('http://runtime.test/agents/agt_merch/config')
+            )
+        ).json()) as { bio?: string | null };
+        expect(clearedConfig.bio ?? null).toBeNull();
+    });
+
     it('archives an agent built-in DM when the agent is deleted', async () => {
         await handleTavernRuntimeRequest(
             new Request('http://runtime.test/agents', {

@@ -4,7 +4,7 @@ import { Card, CardFrame } from '../../../components/ui/card.tsx';
 import { Button } from '../../../components/ui/primitives/button.tsx';
 import { SettingsSection } from '../../../components/ui/settings-row.tsx';
 import { usePrimaryAgent } from '../../../hooks/agents/use-agent-list.ts';
-import { withSavingToast } from '../../../lib/saving-toast.ts';
+import { nextSessionNote, withSavingToast } from '../../../lib/saving-toast.ts';
 import { trpc } from '../../../lib/trpc.tsx';
 import { cn } from '../../../lib/utils.ts';
 import { MissingAgentState } from '../../agents/missing-agent-state.tsx';
@@ -99,12 +99,14 @@ export function AgentWorkspaceFileEditor({
                         disabled={!hasChanges || query.isPending || isSaving}
                         loading={isSaving}
                         onClick={() =>
-                            void withSavingToast(() =>
-                                saveWorkspaceFile.mutateAsync({
-                                    agentId,
-                                    content: draft,
-                                    path,
-                                })
+                            void withSavingToast(
+                                () =>
+                                    saveWorkspaceFile.mutateAsync({
+                                        agentId,
+                                        content: draft,
+                                        path,
+                                    }),
+                                { successNote: nextSessionNote }
                             ).then((saved) => {
                                 savedContentRef.current = saved.content;
                                 setDraft(saved.content);

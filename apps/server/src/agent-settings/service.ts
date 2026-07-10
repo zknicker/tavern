@@ -59,6 +59,19 @@ export async function updateAgentName(input: { agentId: string; name: string }) 
     }
 }
 
+export async function updateAgentBio(input: { agentId: string; bio: string | null }) {
+    const { client, runtimeId } = await createClientForAgent(input.agentId);
+
+    try {
+        const result = await client.updateAgentBio(input.agentId, { bio: input.bio });
+        await refreshAgentSnapshot({ client, runtimeId });
+        emitAgentUpdated();
+        return result;
+    } finally {
+        client.close();
+    }
+}
+
 export async function updateAgentModel(input: { agentId: string; modelRef: string }) {
     const model = parseAgentModelRef(input.modelRef);
     const { client, runtimeId } = await createClientForAgent(input.agentId);

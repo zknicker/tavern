@@ -74,6 +74,7 @@ function createAgent(input: {
 }): AgentListOutput['agents'][number] {
     return {
         autoDispatchEnabled: false,
+        bio: null,
         character: null,
         defaultCharacter: 'robot',
         defaultPrimaryColor: '#6f7f9b',

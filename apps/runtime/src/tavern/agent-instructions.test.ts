@@ -11,7 +11,13 @@ import { closeDb, getDb, initTestDb } from '../db/connection.ts';
 import { ensureRuntimeSchema } from '../db/schema.ts';
 import { handleMemorySettingsRequest } from '../memory/settings.ts';
 import type { AgentExecutorInput } from './agent-executor.ts';
-import { buildAgentInstructions } from './agent-instructions.ts';
+import {
+    agentSessionInstructionsFresh,
+    buildAgentInstructionBundle,
+    buildAgentInstructions,
+} from './agent-instructions.ts';
+import { recordAgentSessionInstructionsHash, startNewAgentSession } from './agent-session-store.ts';
+import { getStoredAgent, updateStoredAgent, upsertStoredAgent } from './agents-store.ts';
 import { createChat } from './chat-api/index.ts';
 
 const now = '2026-06-29T12:00:00.000Z';
@@ -170,7 +176,125 @@ describe('agent instructions', () => {
         );
 
         expect(instructions).toContain('This is the "general" channel.');
-        expect(instructions).toContain('Participants: Blippy (you), Tiny (agent), You');
+        expect(instructions).toContain(
+            '- Participants:\n  - Blippy (you)\n  - Tiny (agent)\n  - You'
+        );
+    });
+
+    it('shows each agent seat with its bio so agents know who does what', async () => {
+        upsertStoredAgent({
+            agent: {
+                bio: 'Runs the Amazon Merch business.',
+                enabledSkillIds: [],
+                id: 'agt_tiny',
+                isAdmin: false,
+                name: 'Tiny',
+                primaryColor: null,
+                workspaceFolder: '.tavern/agents/agt_tiny/workspace',
+            },
+        });
+        createChat({
+            id: 'cht_general',
+            kind: 'channel',
+            participants: [
+                { id: 'usr_tavern', kind: 'user', label: 'You', metadata: {} },
+                {
+                    id: 'agt_primary',
+                    kind: 'agent',
+                    label: 'Blippy',
+                    metadata: { agentId: 'agt_primary' },
+                },
+                {
+                    id: 'agt_tiny',
+                    kind: 'agent',
+                    label: 'Tiny',
+                    metadata: { agentId: 'agt_tiny' },
+                },
+            ],
+            title: 'general',
+        });
+
+        const instructions = await buildAgentInstructions(
+            executorInput({ bio: 'Keeps the household running.', workspaceFolder: workspaceDir }),
+            { db: getDb(), skillsDir }
+        );
+
+        expect(instructions).toContain('- Blippy (you) — Keeps the household running.');
+        expect(instructions).toContain('- Tiny (agent) — Runs the Amazon Merch business.');
+    });
+
+    it('keeps the instructions fingerprint stable across core memory edits', async () => {
+        await writeFile(path.join(workspaceDir, 'MEMORY.md'), '# MEMORY.md\n\nFirst.\n');
+        const first = await buildAgentInstructionBundle(
+            executorInput({ workspaceFolder: workspaceDir }),
+            { db: getDb(), skillsDir }
+        );
+
+        await writeFile(
+            path.join(workspaceDir, 'MEMORY.md'),
+            '# MEMORY.md\n\nRewritten by extraction.\n'
+        );
+        const afterMemoryEdit = await buildAgentInstructionBundle(
+            executorInput({ workspaceFolder: workspaceDir }),
+            { db: getDb(), skillsDir }
+        );
+        expect(afterMemoryEdit.instructions).toContain('Rewritten by extraction.');
+        expect(afterMemoryEdit.fingerprint).toBe(first.fingerprint);
+
+        await writeFile(path.join(workspaceDir, 'SOUL.md'), '# SOUL.md\n\nA new identity.\n');
+        const afterSoulEdit = await buildAgentInstructionBundle(
+            executorInput({ workspaceFolder: workspaceDir }),
+            { db: getDb(), skillsDir }
+        );
+        expect(afterSoulEdit.fingerprint).not.toBe(first.fingerprint);
+    });
+
+    it('reports session instructions freshness against the live compose', async () => {
+        upsertStoredAgent({
+            agent: {
+                enabledSkillIds: [],
+                id: 'agt_primary',
+                isAdmin: true,
+                name: 'Tavern',
+                primaryColor: null,
+                workspaceFolder: workspaceDir,
+            },
+        });
+        createChat({
+            id: 'cht_general',
+            kind: 'channel',
+            participants: [
+                { id: 'usr_tavern', kind: 'user', label: 'You', metadata: {} },
+                {
+                    id: 'agt_primary',
+                    kind: 'agent',
+                    label: 'Tavern',
+                    metadata: { agentId: 'agt_primary' },
+                },
+            ],
+            title: 'general',
+        });
+        const session = startNewAgentSession({
+            agentParticipantId: 'agt_primary',
+            chatId: 'cht_general',
+        });
+
+        // No instructions delivered yet: fresh by construction.
+        expect(await agentSessionInstructionsFresh(session)).toBeNull();
+
+        const agent = getStoredAgent('agt_primary');
+        if (!agent) {
+            throw new Error('Agent was not stored.');
+        }
+        const bundle = await buildAgentInstructionBundle(
+            { agent, agentSession: session, chatId: 'cht_general' },
+            { seedSkills: false }
+        );
+        recordAgentSessionInstructionsHash({ hash: bundle.fingerprint, id: session.id });
+        expect(await agentSessionInstructionsFresh(session)).toBe(true);
+
+        updateStoredAgent({ agentId: 'agt_primary', bio: 'Runs the Amazon Merch business.' });
+        expect(await agentSessionInstructionsFresh(session)).toBe(false);
     });
 
     it('keeps Wiki tool guidance when core Memory is disabled', async () => {

@@ -27,7 +27,8 @@ import {
     SettingsRow,
     SettingsSection,
 } from '../../../components/ui/settings-row.tsx';
-import { withSavingToast } from '../../../lib/saving-toast.ts';
+import { Textarea } from '../../../components/ui/textarea.tsx';
+import { nextSessionNote, withSavingToast } from '../../../lib/saving-toast.ts';
 import { type AgentListOutput, trpc } from '../../../lib/trpc.tsx';
 import { cn } from '../../../lib/utils.ts';
 import { agentColorPresets, resolveAgentInk } from '../../agents/agent-color-presets.ts';
@@ -49,12 +50,19 @@ export function AgentAppearanceSection({
         await Promise.all([utils.agent.list.invalidate(), utils.agent.primary.invalidate()]);
     };
     const updateName = trpc.agent.updateName.useMutation({ onSuccess: invalidateAgents });
+    const updateBio = trpc.agent.updateBio.useMutation({ onSuccess: invalidateAgents });
     const [displayName, setDisplayName] = useState(agent.name);
+    const [bio, setBio] = useState(agent.bio ?? '');
     const isSaving = disabled || updateName.isPending;
+    const isSavingBio = disabled || updateBio.isPending;
 
     useEffect(() => {
         setDisplayName(agent.name);
     }, [agent.name]);
+
+    useEffect(() => {
+        setBio(agent.bio ?? '');
+    }, [agent.bio]);
 
     const selectedColor = agent.effectivePrimaryColor;
     const selectedColorPreset =
@@ -77,11 +85,13 @@ export function AgentAppearanceSection({
                                 return;
                             }
 
-                            void withSavingToast(() =>
-                                updateName.mutateAsync({
-                                    agentId: agent.id,
-                                    name: nextName,
-                                })
+                            void withSavingToast(
+                                () =>
+                                    updateName.mutateAsync({
+                                        agentId: agent.id,
+                                        name: nextName,
+                                    }),
+                                { successNote: nextSessionNote }
                             ).catch(() => undefined);
                         }}
                         onChange={(event) => {
@@ -94,6 +104,42 @@ export function AgentAppearanceSection({
                         }}
                         placeholder={agent.id}
                         value={displayName}
+                    />
+                </SettingsRow>
+
+                <Separator />
+
+                <SettingsRow
+                    description="A short job description. Agents sharing a chat see each other's bios."
+                    title="Bio"
+                >
+                    <Textarea
+                        disabled={isSavingBio}
+                        id="agent-bio"
+                        maxLength={280}
+                        name="agent-bio"
+                        onBlur={() => {
+                            const nextBio = bio.trim() || null;
+
+                            if (nextBio === (agent.bio ?? null)) {
+                                return;
+                            }
+
+                            void withSavingToast(
+                                () =>
+                                    updateBio.mutateAsync({
+                                        agentId: agent.id,
+                                        bio: nextBio,
+                                    }),
+                                { successNote: nextSessionNote }
+                            ).catch(() => undefined);
+                        }}
+                        onChange={(event) => {
+                            setBio(event.target.value);
+                        }}
+                        placeholder="e.g. Runs the Amazon Merch business: sales, listings, and research."
+                        rows={2}
+                        value={bio}
                     />
                 </SettingsRow>
 

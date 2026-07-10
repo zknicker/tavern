@@ -33,8 +33,11 @@ import {
 import { createTavernWikiTools } from '../wiki/agent-tools.ts';
 import { recallTurnWiki } from '../wiki/recall/recall.ts';
 import type { AgentExecutor, AgentExecutorInput } from './agent-executor.ts';
-import { buildAgentInstructions } from './agent-instructions.ts';
-import { updateAgentSessionRuntimeState } from './agent-session-store.ts';
+import { buildAgentInstructionBundle } from './agent-instructions.ts';
+import {
+    recordAgentSessionInstructionsHash,
+    updateAgentSessionRuntimeState,
+} from './agent-session-store.ts';
 import { recordAgentTurnPromptEvidence } from './agent-turn-store.ts';
 import {
     createDelivery,
@@ -98,7 +101,10 @@ async function executeHarnessTurn(
     const startedAt = new Date().toISOString();
     const runtime = runtimeMetadata(input);
 
-    const instructions = await buildAgentInstructions(input);
+    const { fingerprint, instructions } = await buildAgentInstructionBundle(input);
+    // Harness adapters frame instructions into a session's first prompt and
+    // drop them on resumed turns, so only non-resume turns deliver them.
+    const instructionsDelivered = !input.agentSession.resumeState;
     const skills = await readHarnessAgentSkills(input);
     const recall = await recallTurnWiki(input.content);
     const prompt = harnessPrompt(input, recall?.block);
@@ -107,6 +113,7 @@ async function executeHarnessTurn(
             evidence: {
                 capturedAt: startedAt,
                 instructions,
+                instructionsDelivered,
                 prompt,
                 recall: recall?.hits ?? [],
             },
@@ -114,6 +121,9 @@ async function executeHarnessTurn(
         });
     } catch (error) {
         log.warn('Turn prompt evidence was not recorded', { err: error, runId: input.runId });
+    }
+    if (instructionsDelivered) {
+        recordAgentSessionInstructionsHash({ hash: fingerprint, id: input.agentSession.id });
     }
     const agent = harnessAgentFactory(input, createLocalTrustedSandboxProvider, {
         instructions,

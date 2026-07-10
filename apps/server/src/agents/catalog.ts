@@ -46,6 +46,7 @@ const fallbackAgentUpdatedAt = new Date(0).toISOString();
 
 export interface Agent {
     autoDispatchEnabled: boolean;
+    bio: string | null;
     character: AgentCharacter | null;
     enabledPluginIds: NonNullable<AgentRuntimeAgent['enabledPluginIds']>;
     enabledSkillIds: string[] | null;
@@ -91,6 +92,7 @@ export const agentCharacterProfileSchema = agentCharacterSchema.nullable();
 
 export interface AgentCatalogItem {
     autoDispatchEnabled: boolean;
+    bio: string | null;
     character: AgentCharacter | null;
     defaultCharacter: AgentCharacter;
     defaultPrimaryColor: string;
@@ -129,6 +131,7 @@ function toAgent(agent: AgentRecord, profile: AgentProfileLike | null): Agent {
     const runtimeAgent = parseAgentRawJson(agent);
     return {
         autoDispatchEnabled: runtimeAgent.autoDispatchEnabled === true,
+        bio: parseAgentRawJson(agent).bio ?? null,
         character: parseCharacter(profile?.character),
         enabledPluginIds: runtimeAgent.enabledPluginIds ?? [],
         enabledSkillIds: parseEnabledSkillIds(agent),
@@ -186,6 +189,7 @@ export function toAgentCatalogItem(
 
     return {
         autoDispatchEnabled: agent.autoDispatchEnabled,
+        bio: agent.bio,
         character: agent.character,
         defaultCharacter,
         defaultPrimaryColor: resolveAgentDefaultPrimaryColor(agent.id),
@@ -573,6 +577,7 @@ function toAgentFromAgentRuntimeAgent(input: {
 }): Agent {
     return {
         autoDispatchEnabled: input.agent.autoDispatchEnabled === true,
+        bio: input.agent.bio ?? null,
         character: parseCharacter(input.profile?.character),
         enabledPluginIds: input.agent.enabledPluginIds ?? [],
         enabledSkillIds: input.agent.enabledSkillIds,

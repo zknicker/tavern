@@ -54,6 +54,13 @@ export async function prepareAgentEngineInstructions(
         coreMemory,
         soul,
     });
+    // Freshness fingerprint input: identical composition minus core memory,
+    // which extraction rewrites after most turns and would flag every session.
+    const fingerprintContent = composeAgentEngineInstructions({
+        agentInstructions: generated.content,
+        coreMemory: null,
+        soul,
+    });
 
     if (options.seedSkills !== false) {
         await seedManagedSkills({ skillsDir: options.skillsDir });
@@ -61,6 +68,7 @@ export async function prepareAgentEngineInstructions(
 
     return {
         content: instructions,
+        fingerprintContent,
         source,
     };
 }
@@ -130,7 +138,7 @@ function composeAgentEngineInstructions(input: {
               ].join('\n\n')
             : null,
         '## SOUL',
-        'The following content comes from `SOUL.md` in your workspace. To change your identity, voice, or personality, edit `SOUL.md` directly. Changes apply on your next turn.',
+        'The following content comes from `SOUL.md` in your workspace. To change your identity, voice, or personality, edit `SOUL.md` directly. Changes apply when your next session starts.',
         input.soul.trim(),
     ].filter((section): section is string => Boolean(section));
 

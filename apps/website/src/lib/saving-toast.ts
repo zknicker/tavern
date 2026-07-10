@@ -1,6 +1,12 @@
 import { toastManager } from '../components/ui/toast.tsx';
 
-export async function withSavingToast<T>(operation: () => Promise<T>): Promise<T> {
+/** Success note for settings that agents pick up once per session. */
+export const nextSessionNote = "Takes effect on each agent's next session.";
+
+export async function withSavingToast<T>(
+    operation: () => Promise<T>,
+    options: { successNote?: string } = {}
+): Promise<T> {
     const toastId = toastManager.add({
         timeout: 0,
         title: 'Saving…',
@@ -10,6 +16,13 @@ export async function withSavingToast<T>(operation: () => Promise<T>): Promise<T
     try {
         const result = await operation();
         toastManager.close(toastId);
+        if (options.successNote) {
+            toastManager.add({
+                description: options.successNote,
+                title: 'Saved',
+                type: 'success',
+            });
+        }
         return result;
     } catch (error) {
         toastManager.close(toastId);

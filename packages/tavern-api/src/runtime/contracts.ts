@@ -915,6 +915,10 @@ export const agentRuntimeUpdateAgentNameSchema = agentRuntimeAgentEngineConfigMu
     }
 );
 
+export const agentRuntimeUpdateAgentBioSchema = agentRuntimeAgentEngineConfigMutationSchema.extend({
+    bio: z.string().trim().min(1).max(280).nullable(),
+});
+
 export const agentRuntimeUpdateAgentModelSchema =
     agentRuntimeAgentEngineConfigMutationSchema.extend({
         model: agentRuntimeModelNameSchema,
@@ -1008,6 +1012,7 @@ export const agentRuntimeDiscordBindingListSchema = z.object({
 
 export const agentRuntimeAgentSchema = z.object({
     autoDispatchEnabled: z.boolean().optional(),
+    bio: z.string().trim().min(1).nullable().optional(),
     enabledPluginIds: z.array(agentRuntimePluginIdSchema).optional(),
     enabledSkillIds: z.array(z.string().trim().min(1)),
     id: z.string().trim().min(1),
@@ -1031,6 +1036,7 @@ export const agentRuntimeArchiveAgentSchema = z.object({
 
 export const agentRuntimeCreateAgentSchema = z.object({
     autoDispatchEnabled: z.boolean().optional(),
+    bio: z.string().trim().min(1).nullable().optional(),
     enabledPluginIds: z.array(agentRuntimePluginIdSchema).optional(),
     enabledSkillIds: z.array(z.string().trim().min(1)).optional(),
     id: z.string().trim().min(1),
@@ -1043,6 +1049,7 @@ export const agentRuntimeCreateAgentSchema = z.object({
 
 export const agentRuntimeUpdateAgentSchema = z.object({
     autoDispatchEnabled: z.boolean().optional(),
+    bio: z.string().trim().min(1).nullable().optional(),
     enabledPluginIds: z.array(agentRuntimePluginIdSchema).optional(),
     enabledSkillIds: z.array(z.string().trim().min(1)).optional(),
     isAdmin: z.boolean().optional(),
@@ -2032,6 +2039,11 @@ export const agentRuntimeAgentSessionSummarySchema = z.object({
 });
 
 export const agentRuntimeCurrentAgentSessionResultSchema = z.object({
+    // Whether the current session's delivered instructions still match a
+    // fresh compose. Null when there is no session or it has not delivered
+    // instructions yet. Instructions apply per session, so changes land on
+    // the next session.
+    instructionsFresh: z.boolean().nullable().default(null),
     // Newest first, excluding the current session.
     pastSessions: z.array(agentRuntimeAgentSessionSummarySchema),
     session: agentRuntimeAgentSessionSchema.nullable(),
@@ -2995,6 +3007,7 @@ export type AgentRuntimeApplyAgentEngineConfig = z.infer<
     typeof agentRuntimeApplyAgentEngineConfigSchema
 >;
 export type AgentRuntimeUpdateAgentName = z.infer<typeof agentRuntimeUpdateAgentNameSchema>;
+export type AgentRuntimeUpdateAgentBio = z.infer<typeof agentRuntimeUpdateAgentBioSchema>;
 export type AgentRuntimeUpdateAgentModel = z.infer<typeof agentRuntimeUpdateAgentModelSchema>;
 export type AgentRuntimeUpdateAgentThinkingDefault = z.infer<
     typeof agentRuntimeUpdateAgentThinkingDefaultSchema

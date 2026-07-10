@@ -1,7 +1,9 @@
+import { AlertCircleIcon } from '@hugeicons/core-free-icons';
 import { useReducedMotion } from 'framer-motion';
 import type * as React from 'react';
 import { useResolvedThemeOptional } from '../../components/theme-provider.tsx';
 import { RelativeTime } from '../../components/time/relative-time.tsx';
+import { Alert, AlertDescription, AlertTitle } from '../../components/ui/alert.tsx';
 import { Button } from '../../components/ui/button.tsx';
 import {
     Drawer,
@@ -11,6 +13,7 @@ import {
     DrawerPopup,
     DrawerTitle,
 } from '../../components/ui/drawer.tsx';
+import { Icon } from '../../components/ui/icon.tsx';
 import { Spinner } from '../../components/ui/spinner.tsx';
 import { Elevated } from '../../components/ui/surface.tsx';
 import { Table, TableBody, TableCell, TableRow } from '../../components/ui/table.tsx';
@@ -116,6 +119,16 @@ function AgentDrawerBody({ agentId, chatId }: { agentId: string; chatId: string 
                     />
                 )}
             </Elevated>
+            {sessionQuery.data?.instructionsFresh === false ? (
+                <Alert variant="warning">
+                    <Icon icon={AlertCircleIcon} />
+                    <AlertTitle>System prompt updated</AlertTitle>
+                    <AlertDescription>
+                        This agent&apos;s system prompt has changed since this session started. New
+                        sessions pick it up. This one refreshes by tomorrow morning.
+                    </AlertDescription>
+                </Alert>
+            ) : null}
             <div className="flex flex-col gap-1.5">
                 <Button
                     disabled={resetSession.isPending}

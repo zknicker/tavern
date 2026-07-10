@@ -18,6 +18,7 @@ interface AgentSessionRow {
     effective_model_json: string;
     generation: number;
     id: string;
+    instructions_hash: null | string;
     prompt_context_sequence: number;
     resume_state_json: null | string;
     runtime_session_id: null | string;
@@ -234,6 +235,34 @@ export function listAgentSessionsForSeat(input: {
     return rows.map(rowToAgentSession);
 }
 
+/**
+ * Records the fingerprint of the instructions actually delivered to the
+ * executor session. Written on non-resume turns only — harness adapters
+ * drop instructions on resumed turns, so the delivered set is fixed at
+ * session start.
+ */
+export function recordAgentSessionInstructionsHash(input: {
+    db?: Database;
+    hash: string;
+    id: string;
+    now?: string;
+}) {
+    const db = input.db ?? getDb();
+    const now = input.now ?? new Date().toISOString();
+    db.prepare(
+        `UPDATE agent_sessions
+         SET instructions_hash = $hash,
+             updated_at = $now
+         WHERE id = $id`
+    ).run(namedParams({ hash: input.hash, id: input.id, now }));
+}
+
+export function readAgentSessionInstructionsHash(id: string, db: Database = getDb()) {
+    const row = db
+        .prepare('SELECT instructions_hash FROM agent_sessions WHERE id = $id LIMIT 1')
+        .get(namedParams({ id })) as { instructions_hash: null | string } | null;
+    return row?.instructions_hash ?? null;
+}
 export function updateAgentSessionRuntimeState(input: {
     db?: Database;
     id: string;

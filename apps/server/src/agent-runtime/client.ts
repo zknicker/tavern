@@ -131,6 +131,7 @@ import {
     type AgentRuntimeToolProviderSelect,
     type AgentRuntimeToolProviderSelectResult,
     type AgentRuntimeUpdate,
+    type AgentRuntimeUpdateAgentBio,
     type AgentRuntimeUpdateAgentModel,
     type AgentRuntimeUpdateAgentName,
     type AgentRuntimeUpdateAgentPluginGrant,
@@ -289,6 +290,7 @@ import {
     agentRuntimeToolProviderSelectResultSchema,
     agentRuntimeToolProviderSelectSchema,
     agentRuntimeToolSchema,
+    agentRuntimeUpdateAgentBioSchema,
     agentRuntimeUpdateAgentModelSchema,
     agentRuntimeUpdateAgentNameSchema,
     agentRuntimeUpdateAgentPluginGrantSchema,
@@ -592,6 +594,10 @@ export interface TavernAgentRuntimeClient {
     uninstallSkillHubSkill(
         input: AgentRuntimeSkillHubUninstallInput
     ): Promise<AgentRuntimeSkillHubActionResult>;
+    updateAgentBio(
+        agentId: string,
+        input: AgentRuntimeUpdateAgentBio
+    ): Promise<AgentRuntimeAgentEngineConfigSnapshot>;
     updateAgentModel(
         agentId: string,
         input: AgentRuntimeUpdateAgentModel
@@ -1671,6 +1677,25 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
                 [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
             },
             method: 'PUT',
+        });
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeAgentEngineConfigSnapshotSchema.parse(await response.json());
+    }
+
+    async updateAgentBio(agentId: string, input: AgentRuntimeUpdateAgentBio) {
+        const payload = agentRuntimeUpdateAgentBioSchema.parse(input);
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.agentBio(agentId)}`, {
+            body: JSON.stringify(payload),
+            headers: {
+                ...this.#authHeaders,
+                'content-type': 'application/json',
+                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+            },
+            method: 'PATCH',
         });
 
         if (!response.ok) {

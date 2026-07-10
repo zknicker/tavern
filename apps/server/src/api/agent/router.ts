@@ -14,6 +14,7 @@ import { getPrimaryAgentRoute } from './primary.ts';
 import { saveAgentProfile } from './save-profile.ts';
 import { saveAgentSkillsProcedure } from './save-skills.ts';
 import { getAgentSessionProcedure, resetAgentSessionProcedure } from './session.ts';
+import { updateAgentBioProcedure } from './update-bio.ts';
 import { updateAgentModelProcedure } from './update-model.ts';
 import { updateAgentNameProcedure } from './update-name.ts';
 import { updateAgentTaskSettingsProcedure } from './update-task-settings.ts';
@@ -46,6 +47,7 @@ export const agentRouter = createRouter({
     saveSkills: saveAgentSkillsProcedure,
     saveWorkspaceFile: saveAgentWorkspaceFile,
     session: getAgentSessionProcedure,
+    updateBio: updateAgentBioProcedure,
     updateModel: updateAgentModelProcedure,
     updateName: updateAgentNameProcedure,
     updateThinkingDefault: updateAgentThinkingDefaultProcedure,

@@ -37,6 +37,7 @@ import { handleAutoDispatchSettingsRequest } from '../tasks/settings.ts';
 import { handleTimezoneSettingsRequest } from '../timezone-settings.ts';
 import { handleWikiRequest } from '../wiki/routes.ts';
 import { handleWorkspaceRequest } from '../workspace/routes.ts';
+import { agentSessionInstructionsFresh } from './agent-instructions.ts';
 import { resetAgentSession } from './agent-session-reset.ts';
 import { readAgentSessionStats, readPastAgentSessionSummaries } from './agent-session-stats.ts';
 import { readCurrentAgentSession } from './agent-session-store.ts';
@@ -266,6 +267,7 @@ export async function handleTavernRuntimeRequest(request: Request): Promise<Resp
         });
         return json(
             agentRuntimeCurrentAgentSessionResultSchema.parse({
+                instructionsFresh: session ? await agentSessionInstructionsFresh(session) : null,
                 pastSessions: readPastAgentSessionSummaries({
                     agentParticipantId,
                     chatId: segments[2],

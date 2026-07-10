@@ -120,6 +120,9 @@ export function createAgentTurn(
 export interface AgentTurnPromptEvidence {
     capturedAt: string;
     instructions: string;
+    // False on resumed turns: harness adapters deliver instructions only on a
+    // session's first prompt, so the composed text above was not sent.
+    instructionsDelivered?: boolean;
     prompt: string;
     recall: Array<{ path: string; score: number; snippet: string; title: string }>;
 }
