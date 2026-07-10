@@ -177,8 +177,9 @@ describe('agent instructions', () => {
 
         expect(instructions).toContain('This is the "general" channel.');
         expect(instructions).toContain(
-            '- Participants:\n  - Blippy (you)\n  - Tiny (agent)\n  - You'
+            '- Participants:\n  - Blippy (you)\n  - [Tiny](agent://agt_tiny) (agent)\n  - You'
         );
+        expect(instructions).toContain('mention it in your final reply');
     });
 
     it('shows each agent seat with its bio so agents know who does what', async () => {
@@ -220,7 +221,9 @@ describe('agent instructions', () => {
         );
 
         expect(instructions).toContain('- Blippy (you) — Keeps the household running.');
-        expect(instructions).toContain('- Tiny (agent) — Runs the Amazon Merch business.');
+        expect(instructions).toContain(
+            '- [Tiny](agent://agt_tiny) (agent) — Runs the Amazon Merch business.'
+        );
     });
 
     it('keeps the instructions fingerprint stable across core memory edits', async () => {

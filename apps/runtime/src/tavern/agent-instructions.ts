@@ -86,6 +86,7 @@ function tavernChatInstructions(input: AgentInstructionContext) {
         ...(chat?.kind === 'channel'
             ? [
                   '- Not every channel message needs you. Reply with exactly NO_REPLY (nothing else) to stay silent for a turn; nothing is delivered to the chat.',
+                  '- To hand work to another agent in this chat, mention it in your final reply using its link from the participant list, e.g. [Name](agent://agt_id). Each mentioned agent gets its own turn. Mention an agent only when you need it to act; NO_REPLY declines a handoff.',
               ]
             : []),
         '',
@@ -93,6 +94,8 @@ function tavernChatInstructions(input: AgentInstructionContext) {
         '- chat_messages_list: list current-chat messages by sequence cursor',
         '- chat_messages_search: search current-chat messages',
         '- chat_message_get: read one current-chat message by id',
+        '- chats_list: list the chats you participate in',
+        '- chat_send: post a message as yourself into another chat you participate in; confirm with the user before posting outside this chat',
         '',
         'Wiki tools (shared durable knowledge):',
         '- wiki_search: search shared Wiki pages — check before assuming you lack context on something the user references',
@@ -135,7 +138,10 @@ function chatIdentityLines(input: AgentInstructionContext, chat: ReturnType<type
             const agentId = participantAgentId(participant.metadata);
             const agent = agentId ? getStoredAgent(agentId) : null;
             const name = participant.label ?? agent?.name ?? participant.id;
-            return participantLine(name, '(agent)', agent?.bio);
+            // Rendered as a mention link so agents learn the handoff syntax
+            // from the roster itself. See specs/agent-mentions.md.
+            const title = agentId ? `[${name}](agent://${agentId})` : name;
+            return participantLine(title, '(agent)', agent?.bio);
         }
         return participantLine(participant.label ?? participant.id, null, null);
     });

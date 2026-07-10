@@ -1,0 +1,293 @@
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { closeDb, initTestDb } from '../db/connection.ts';
+import { ensureRuntimeSchema } from '../db/schema.ts';
+import { setModelProviderEnabled } from '../models/provider-store.ts';
+import type { AgentExecutor, AgentExecutorInput } from './agent-executor.ts';
+import {
+    collectAgentMentionDispatches,
+    resetAgentMentionChainsForTesting,
+} from './agent-mention-dispatch.ts';
+import { resetAgentExecutorForTesting, setAgentExecutorForTesting } from './agent-turn-runner.ts';
+import { type AgentTurn, listAgentTurnsForSession } from './agent-turn-store.ts';
+import { upsertStoredAgent } from './agents-store.ts';
+import { sendTavernChannelMessage } from './channel-relay.ts';
+import {
+    createChat,
+    createDelivery,
+    createMessage,
+    getResponseActivity,
+    upsertResponse,
+} from './chat-api/index.ts';
+
+describe('agent mention dispatch', () => {
+    const originalClaudeCommand = process.env.TAVERN_AGENT_CLAUDE_CODE_COMMAND;
+
+    beforeEach(async () => {
+        ensureRuntimeSchema(initTestDb());
+        process.env.TAVERN_AGENT_CLAUDE_CODE_COMMAND = process.execPath;
+        await setModelProviderEnabled({ enabled: true, providerId: 'claude' });
+        resetAgentExecutorForTesting();
+        resetAgentMentionChainsForTesting();
+    });
+
+    afterEach(() => {
+        restoreEnv('TAVERN_AGENT_CLAUDE_CODE_COMMAND', originalClaudeCommand);
+        resetAgentExecutorForTesting();
+        resetAgentMentionChainsForTesting();
+        closeDb();
+    });
+
+    it('dispatches a turn to an agent mentioned in the final reply', async () => {
+        createAgentChannel('agt_a', 'agt_b');
+        setAgentExecutorForTesting(
+            createScriptedExecutor({
+                agt_a: '[agt_b](agent://agt_b) please pick this up.',
+                agt_b: 'On it.',
+            })
+        );
+
+        await sendTavernChannelMessage('cht_general', messageInput('agt_a'));
+        await waitFor(() => sessionTurns('agt_b').some((turn) => turn.status === 'completed'));
+
+        const dispatched = sessionTurns('agt_b')[0];
+        expect(dispatched).toMatchObject({
+            agentId: 'agt_b',
+            metadata: {
+                chainOriginMessageId: 'msg_1',
+                mentionHops: 1,
+                trigger: 'agent-mention',
+            },
+            status: 'completed',
+            triggerMessageId: replyMessageId('agt_a', 'msg_1'),
+        });
+    });
+
+    it('ignores self-mentions and mentions of non-participants', async () => {
+        createAgentChannel('agt_a', 'agt_b');
+        setAgentExecutorForTesting(
+            createScriptedExecutor({
+                agt_a: 'Pinging [myself](agent://agt_a) and [ghost](agent://agt_ghost).',
+                agt_b: 'On it.',
+            })
+        );
+
+        await sendTavernChannelMessage('cht_general', messageInput('agt_a'));
+        await waitFor(() => sessionTurns('agt_a').some((turn) => turn.status === 'completed'));
+        await new Promise((resolve) => setTimeout(resolve, 50));
+
+        expect(sessionTurns('agt_a')).toHaveLength(1);
+        expect(sessionTurns('agt_b')).toHaveLength(0);
+    });
+
+    it('stops a ping-pong chain at the hop cap and leaves a notice', async () => {
+        createAgentChannel('agt_a', 'agt_b');
+        setAgentExecutorForTesting(
+            createScriptedExecutor({
+                agt_a: '[agt_b](agent://agt_b) your move.',
+                agt_b: '[agt_a](agent://agt_a) no, yours.',
+            })
+        );
+
+        await sendTavernChannelMessage('cht_general', messageInput('agt_a'));
+        // Chain: A(hops 0) -> B(1) -> A(2) -> B(3) -> A(4, dispatch suppressed).
+        await waitFor(() => {
+            const turns = [...sessionTurns('agt_a'), ...sessionTurns('agt_b')];
+            return turns.length === 5 && turns.every((turn) => turn.status === 'completed');
+        }, 3000);
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        const turns = [...sessionTurns('agt_a'), ...sessionTurns('agt_b')];
+        expect(turns).toHaveLength(5);
+        const cappedTurn = turns.find((turn) => turn.metadata.mentionHops === 4);
+        expect(cappedTurn).toBeDefined();
+        const notice = getResponseActivity(
+            `act_${cappedTurn?.id}_mention_suppressed_agt_b`.replace(/[^A-Za-z0-9_-]/g, '_')
+        );
+        expect(notice).toMatchObject({
+            status: 'completed',
+            title: 'Mention not dispatched',
+        });
+    });
+
+    it('suppresses dispatches once the chain budget is spent', () => {
+        createAgentChannel('agt_a', 'agt_b');
+
+        let dispatched = 0;
+        let suppressedTurn: AgentTurn | null = null;
+        for (let index = 1; index <= 9; index += 1) {
+            const turn = fabricateCompletedTurn(index);
+            const dispatches = collectAgentMentionDispatches(turn);
+            dispatched += dispatches.length;
+            if (dispatches.length === 0) {
+                suppressedTurn = turn;
+            }
+        }
+
+        expect(dispatched).toBe(8);
+        expect(suppressedTurn).not.toBeNull();
+        const notice = getResponseActivity(
+            `act_${suppressedTurn?.id}_mention_suppressed_agt_b`.replace(/[^A-Za-z0-9_-]/g, '_')
+        );
+        expect(notice).toMatchObject({ title: 'Mention not dispatched' });
+    });
+});
+
+function fabricateCompletedTurn(index: number): AgentTurn {
+    const now = new Date().toISOString();
+    const messageId = `msg_reply_${index}`;
+    const responseId = `rsp_fab_${index}`;
+    createMessage('cht_general', {
+        author_id: 'agt_a',
+        content: '[agt_b](agent://agt_b) again.',
+        id: messageId,
+        role: 'assistant',
+    });
+    upsertResponse('cht_general', {
+        id: responseId,
+        participant_id: 'agt_a',
+        request_message_id: messageId,
+        status: 'completed',
+    });
+
+    return {
+        activityIds: [],
+        agentId: 'agt_a',
+        agentParticipantId: 'agt_a',
+        agentSessionId: 'ags_fab_a',
+        attempt: 1,
+        chatId: 'cht_general',
+        completedAt: now,
+        createdAt: now,
+        id: `run_fab_${index}`,
+        metadata: { chainOriginMessageId: 'msg_origin', mentionHops: 1 },
+        outputMessageIds: [messageId],
+        responseId,
+        startedAt: now,
+        status: 'completed',
+        triggerMessageId: messageId,
+        updatedAt: now,
+    };
+}
+
+function sessionTurns(agentId: string) {
+    return listAgentTurnsForSession(`ags_cht_general_${agentId}_1`);
+}
+
+function replyMessageId(agentId: string, triggerMessageId: string) {
+    const runId = `run_${triggerMessageId.replace(/^msg_/, '')}_${agentId.replace(/^agt_/, '')}`;
+    return `msg_${runId}_fake_executor`.replace(/[^A-Za-z0-9_-]/g, '_');
+}
+
+function createAgentChannel(...agentIds: string[]) {
+    for (const agentId of agentIds) {
+        upsertStoredAgent({
+            agent: {
+                enabledSkillIds: [],
+                id: agentId,
+                isAdmin: false,
+                name: agentId,
+                primaryColor: null,
+                workspaceFolder: `/tmp/${agentId}`,
+            },
+        });
+    }
+
+    createChat({
+        id: 'cht_general',
+        kind: 'channel',
+        participants: [
+            { id: 'usr_tavern', kind: 'user', label: 'You', metadata: {} },
+            ...agentIds.map((agentId) => ({
+                id: agentId,
+                kind: 'agent' as const,
+                label: agentId,
+                metadata: { agentId },
+            })),
+        ],
+        title: 'General',
+    });
+}
+
+function createScriptedExecutor(replies: Record<string, string>): AgentExecutor {
+    return {
+        async execute(input: AgentExecutorInput) {
+            const now = new Date().toISOString();
+            const messageId = replyMessageId(input.agent.id, input.requestMessageId);
+            const runtime = {
+                agentId: input.agent.id,
+                agentSessionId: input.agentSession.id,
+                engine: 'agent-engine',
+                messageId: input.requestMessageId,
+                runId: input.runId,
+                source: 'agent-engine',
+            };
+
+            const receipt = createDelivery(input.chatId, {
+                agent_id: input.agentSession.agentParticipantId,
+                id: `del_${input.runId}`.replace(/[^A-Za-z0-9_-]/g, '_'),
+                message: {
+                    attachments: [],
+                    author_id: input.agentSession.agentParticipantId,
+                    content: replies[input.agent.id] ?? 'Done.',
+                    id: messageId,
+                    metadata: { runtime },
+                    role: 'assistant',
+                },
+                metadata: { runtime },
+                turn_id: input.runId,
+            });
+            upsertResponse(input.chatId, {
+                completed_at: now,
+                id: input.responseId,
+                metadata: { runtime },
+                participant_id: input.agentSession.agentParticipantId,
+                request_message_id: input.requestMessageId,
+                response_message_id: receipt.message.id,
+                status: 'completed',
+            });
+
+            return {
+                activityIds: [],
+                outputMessageIds: [receipt.message.id],
+            };
+        },
+        stop() {
+            return true;
+        },
+    };
+}
+
+function messageInput(agentId: string) {
+    return {
+        agent: { agentId },
+        message: {
+            content: `hello [${agentId}](agent://${agentId})`,
+            id: 'msg_1',
+            nonce: 'nonce_1',
+        },
+        target: {
+            externalId: null,
+            target: 'cht_general',
+            type: 'tavern' as const,
+        },
+    };
+}
+
+async function waitFor(assertion: () => boolean, timeoutMs = 1500) {
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+        if (assertion()) {
+            return;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+    throw new Error('Timed out waiting for assertion.');
+}
+
+function restoreEnv(name: string, value: string | undefined) {
+    if (value === undefined) {
+        delete process.env[name];
+        return;
+    }
+    process.env[name] = value;
+}

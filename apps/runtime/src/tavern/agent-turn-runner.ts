@@ -1,9 +1,11 @@
 import { readConfigValue } from '../config.ts';
+import { log } from '../log.ts';
 import { scheduleMemoryExtractionForTurn } from '../memory/extraction.ts';
 import { isTaskDispatchRun } from '../tasks/dispatch-store.ts';
 import { recoverTaskDispatchForTurn } from '../tasks/recovery.ts';
 import { createAgentEngineExecutor } from './agent-engine-executor.ts';
 import type { AgentExecutor, AgentExecutorInput } from './agent-executor.ts';
+import { collectAgentMentionDispatches } from './agent-mention-dispatch.ts';
 import {
     cancelAgentTurn,
     claimNextAgentTurnForSeat,
@@ -34,7 +36,10 @@ const turnWaiters = new Map<
 >();
 let executor: AgentExecutor = createAgentEngineExecutor();
 
-export function enqueueAgentTurn(input: AgentExecutorInput) {
+export function enqueueAgentTurn(
+    input: AgentExecutorInput,
+    options: { turnMetadata?: Record<string, unknown> } = {}
+) {
     queuedTurnInputs.set(input.runId, input);
     createAgentTurn({
         agentId: input.agent.id,
@@ -44,6 +49,7 @@ export function enqueueAgentTurn(input: AgentExecutorInput) {
         id: input.runId,
         metadata: {
             trigger: 'message',
+            ...options.turnMetadata,
         },
         responseId: input.responseId,
         triggerMessageId: input.requestMessageId,
@@ -171,6 +177,15 @@ async function drainAgentSeat(input: AgentExecutorInput) {
                 scheduleMemoryExtractionForTurn(completedTurn);
             } catch {
                 // Memory extraction is a best-effort background side effect.
+            }
+            try {
+                // Agent-mentions in the delivered final reply dispatch turns
+                // on the mentioned seats. See specs/agent-mentions.md.
+                for (const dispatch of collectAgentMentionDispatches(completedTurn)) {
+                    enqueueAgentTurn(dispatch.input, { turnMetadata: dispatch.turnMetadata });
+                }
+            } catch (error) {
+                log.warn('Agent mention dispatch failed', { err: error, runId: turn.id });
             }
         }
     } catch (error) {
