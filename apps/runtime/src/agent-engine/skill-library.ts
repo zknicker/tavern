@@ -68,6 +68,11 @@ Do not mirror your in-conversation working steps onto the board. The board
 tracks outcomes the user cares about, not your scratch plan for the current
 turn.
 
+Filing is not doing. When the user asks you to plan or file work, file the
+tasks and stop: execution happens when a task is dispatched to you or the
+user says to start now. The board is how the user schedules and gates the
+work; racing ahead of it takes that control away.
+
 ## Working a task
 
 Statuses:
