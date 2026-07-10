@@ -85,6 +85,7 @@ export function createTavernTaskTools(input: { agentId: string; chatId?: string 
                 );
                 publishTaskUpdated(task.id);
                 return Promise.resolve({
+                    note: 'Filed to backlog for user triage. Do not start this work now: it runs when the task is dispatched to you or the user says to begin.',
                     task: toToolTask(task, { numberLookup: createTaskNumberLookup(listTasks()) }),
                 });
             },
