@@ -179,7 +179,7 @@ describe('agent instructions', () => {
         expect(instructions).toContain(
             '- Participants:\n  - Blippy (you)\n  - [Tiny](agent://agt_tiny) (agent)\n  - You'
         );
-        expect(instructions).toContain('mention it in your final reply');
+        expect(instructions).toContain('mention its participant-list link in your final reply');
     });
 
     it('shows each agent seat with its bio so agents know who does what', async () => {

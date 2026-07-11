@@ -86,7 +86,7 @@ function tavernChatInstructions(input: AgentInstructionContext) {
         ...(chat?.kind === 'channel'
             ? [
                   '- Not every channel message needs you. Reply with exactly NO_REPLY (nothing else) to stay silent for a turn; nothing is delivered to the chat.',
-                  '- To hand work to another agent in this chat, mention it in your final reply using its link from the participant list, e.g. [Name](agent://agt_id). Each mentioned agent gets its own turn. Mention an agent only when you need it to act; NO_REPLY declines a handoff.',
+                  '- To hand work to another agent, mention its participant-list link in your final reply; each mentioned agent gets its own turn. Do this only when you need that agent to act.',
               ]
             : []),
         '',
@@ -95,7 +95,7 @@ function tavernChatInstructions(input: AgentInstructionContext) {
         '- chat_messages_search: search current-chat messages',
         '- chat_message_get: read one current-chat message by id',
         '- chats_list: list the chats you participate in',
-        '- chat_send: post a message as yourself into another chat you participate in; confirm with the user before posting outside this chat',
+        '- chat_send: post a message into another chat you participate in (confirm with the user first)',
         '',
         'Wiki tools (shared durable knowledge):',
         '- wiki_search: search shared Wiki pages — check before assuming you lack context on something the user references',
