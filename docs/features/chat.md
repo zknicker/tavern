@@ -41,8 +41,12 @@ happen, and keep the durable timeline as context.
   Opening a chat shows a room topbar with the chat name and current
   participants. Users create channels by naming the channel and choosing its
   agent participants, and can edit channel participants from the open channel.
-  Delete channel is an explicit menu action; Runtime stores it as a recoverable
-  archive. New workspaces start with no user channels. Each agent has one
+  Archive channel is an explicit menu action that hides the channel from the
+  sidebar without deleting history. The sidebar's Archived entry opens the
+  archived chats view (`/chats/archived`), grouped by chat kind, where any
+  archived chat can be reopened or restored. An open archived chat shows an
+  Archived badge and a restore bar in place of the composer. New workspaces
+  start with no user channels. Each agent has one
   built-in DM with the local human operator. Agent DMs are not user-deleteable;
   deleting the agent removes its built-in DM from the sidebar. There is no
   separate pinned-chat state.

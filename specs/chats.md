@@ -36,6 +36,8 @@ Chats are Tavern's shared conversation surfaces.
 - Agent engines do not create, name, rename, archive, or delete Tavern-owned chats.
 - Archiving a chat hides it from normal Tavern chat lists without deleting its chat row. Runtime
   session and message records may continue to reference that stable chat id.
+- Archived chats stay listable through an explicit archived chat list, stay readable by id, and
+  can be unarchived. While archived, a chat accepts no new user messages.
 - Runtime may observe agent sessions and messages that belong to a Tavern chat.
   Those observations attach through the Runtime-owned agent participant for that chat.
 - External platform conversations, such as Discord channels or DMs, are separate first-class
