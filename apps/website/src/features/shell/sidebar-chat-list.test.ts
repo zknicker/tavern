@@ -18,6 +18,7 @@ function createChat(overrides: Partial<ChatListItem> = {}): ChatListItem {
     return {
         agentRuntimeSync: null,
         agentRuntimeSyncLabel: null,
+        archived: false,
         boundAgentIds: ['agent-1'],
         canSend: true,
         conversationKind: 'group',

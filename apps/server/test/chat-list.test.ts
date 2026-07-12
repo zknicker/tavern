@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import type { AgentRuntimeChat, TavernChat } from '@tavern/api';
 import { listAgentChats } from '../src/agents/chats.ts';
 import type { ChatList } from '../src/chat/contracts.ts';
-import { getChat, listChats } from '../src/chat/list.ts';
-import { archiveTavernChat } from '../src/chat/save.ts';
+import { getChat, listArchivedChats, listChats } from '../src/chat/list.ts';
+import { archiveTavernChat, unarchiveTavernChat } from '../src/chat/save.ts';
 import { ensureDatabaseSchema } from '../src/db/bootstrap.ts';
 import { databaseClient } from '../src/db/index.ts';
 import { syncChatParticipantsForRuntime } from '../src/participants/chat-participants.ts';
@@ -238,6 +238,25 @@ test('listChats hides archived Runtime-owned Tavern chats while synced sessions 
     );
 });
 
+test('listArchivedChats lists archived chats and unarchive restores them', async () => {
+    await seedPlanningChat({ includeSession: false });
+
+    await archiveTavernChat(planningChatId);
+
+    const archivedResult = await listArchivedChats();
+
+    assert.deepEqual(archivedResult.ids, [planningChatId]);
+    assert.equal(archivedResult.itemsById[planningChatId]?.archived, true);
+
+    await unarchiveTavernChat(planningChatId);
+
+    const activeResult = await listChats();
+
+    assert.deepEqual(activeResult.ids, [planningChatId]);
+    assert.equal(activeResult.itemsById[planningChatId]?.archived, false);
+    assert.deepEqual(await listArchivedChats(), { ids: [], itemsById: {} });
+});
+
 test('agent chat list labels internal runtime sessions by source', async () => {
     await syncAgentsForRuntime({
         agents: [
@@ -346,13 +365,14 @@ test('getChat result matches the corresponding listChatDetails entry for each ac
     assert.equal(allDetails.length, 3);
 });
 
-test('getChat returns null for an archived Tavern chat', async () => {
+test('getChat resolves an archived Tavern chat with its archived state', async () => {
     await seedPlanningChat({ includeSession: false });
     await archiveTavernChat(planningChatId);
 
     const result = await getChat({ chatId: planningChatId });
 
-    assert.equal(result, null);
+    assert.equal(result?.id, planningChatId);
+    assert.equal(result?.archived, true);
 });
 
 test('getChat returns null for an unknown chat id and does not throw', async () => {

@@ -8,6 +8,7 @@ test('ChatCardHeader renders chat labels and omits session link blocks', () => {
     const markup = renderToStaticMarkup(
         <ChatCardHeader
             chat={{
+                archived: false,
                 boundAgentIds: [],
                 canSend: false,
                 conversationKind: 'channel',
@@ -69,6 +70,7 @@ test('ChatCardHeader derives runtime DM titles from chat primitives', () => {
     const markup = renderToStaticMarkup(
         <ChatCardHeader
             chat={{
+                archived: false,
                 boundAgentIds: ['runtime:blippy'],
                 canSend: true,
                 conversationKind: 'direct',
@@ -123,6 +125,7 @@ test('ChatCardHeader badges first-party Tavern chats by provider', () => {
     const markup = renderToStaticMarkup(
         <ChatCardHeader
             chat={{
+                archived: false,
                 boundAgentIds: ['blippy'],
                 canSend: true,
                 conversationKind: 'direct',
@@ -177,6 +180,7 @@ test('ChatCardHeader omits duplicate badges for system sessions', () => {
     const markup = renderToStaticMarkup(
         <ChatCardHeader
             chat={{
+                archived: false,
                 boundAgentIds: ['main'],
                 canSend: false,
                 conversationKind: 'channel',
