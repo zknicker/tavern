@@ -71,6 +71,7 @@ export const chatSourceSchema = z.object({
 
 export const chatSchema = z.object({
     activeTurnParticipantIds: z.array(z.string().trim().min(1)),
+    archived: z.boolean(),
     boundAgentIds: z.array(z.string()),
     canSend: z.boolean(),
     conversationKind: chatConversationKindSchema,
@@ -99,6 +100,7 @@ export const chatSchema = z.object({
 export const chatListItemSchema = chatSchema.pick({
     activeTurnParticipantIds: true,
     agentRuntimeSync: true,
+    archived: true,
     boundAgentIds: true,
     canSend: true,
     conversationKind: true,
@@ -162,6 +164,10 @@ export const archiveChatInputSchema = z.object({
     chatId: z.string().trim().min(1),
 });
 
+export const unarchiveChatInputSchema = z.object({
+    chatId: z.string().trim().min(1),
+});
+
 export const updateChatTabAppearanceInputSchema = z.object({
     chatId: z.string().trim().min(1),
     color: chatTabAppearanceSchema.shape.color,
@@ -174,6 +180,11 @@ export const updateChatSystemPromptInputSchema = z.object({
 
 export const archiveChatResultSchema = z.object({
     archived: z.literal(true),
+    chatId: z.string().trim().min(1),
+});
+
+export const unarchiveChatResultSchema = z.object({
+    archived: z.literal(false),
     chatId: z.string().trim().min(1),
 });
 
@@ -294,6 +305,8 @@ export type StartChatInput = z.infer<typeof startChatInputSchema>;
 export type UpdateChatInput = z.infer<typeof updateChatInputSchema>;
 export type ArchiveChatInput = z.infer<typeof archiveChatInputSchema>;
 export type ArchiveChatResult = z.infer<typeof archiveChatResultSchema>;
+export type UnarchiveChatInput = z.infer<typeof unarchiveChatInputSchema>;
+export type UnarchiveChatResult = z.infer<typeof unarchiveChatResultSchema>;
 export type UpdateChatTabAppearanceInput = z.infer<typeof updateChatTabAppearanceInputSchema>;
 export type UpdateChatTabAppearanceResult = z.infer<typeof updateChatTabAppearanceResultSchema>;
 export type UpdateChatSystemPromptInput = z.infer<typeof updateChatSystemPromptInputSchema>;

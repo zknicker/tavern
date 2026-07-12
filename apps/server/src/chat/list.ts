@@ -19,6 +19,7 @@ import {
     resolveObservedConversationKind,
 } from './conversation-kind.ts';
 import {
+    isArchivedTavernChat,
     listRuntimeChatRecords,
     type RuntimeChatRecord,
     readRuntimeChatDisplayName,
@@ -187,7 +188,18 @@ function formatChatActorNames(actors: Array<{ name: string }>) {
 }
 
 export async function listChats() {
-    const chats = await listChatDetails({ includeExternal: false });
+    return await listChatsWithArchivedFilter('active');
+}
+
+export async function listArchivedChats() {
+    return await listChatsWithArchivedFilter('archived');
+}
+
+async function listChatsWithArchivedFilter(archivedFilter: 'active' | 'archived') {
+    const chats = await listChatDetails({
+        archivedFilter,
+        includeExternal: false,
+    });
     const itemsById = Object.fromEntries(chats.map((chat) => [chat.id, toChatListItem(chat)]));
 
     return chatListSchema.parse({
@@ -197,14 +209,23 @@ export async function listChats() {
 }
 
 export async function getChat(input: { chatId: string }) {
-    const chats = await listChatDetails({ chatId: input.chatId, includeExternal: false });
+    const chats = await listChatDetails({
+        archivedFilter: 'all',
+        chatId: input.chatId,
+        includeExternal: false,
+    });
     const chat = chats.find((entry) => entry.id === input.chatId) ?? null;
 
     return chat ? chatSchema.parse(chat) : null;
 }
 
-export async function listChatDetails(options?: { chatId?: string; includeExternal?: boolean }) {
+export async function listChatDetails(options?: {
+    archivedFilter?: 'active' | 'archived' | 'all';
+    chatId?: string;
+    includeExternal?: boolean;
+}) {
     const includeExternal = options?.includeExternal ?? true;
+    const archivedFilter = options?.archivedFilter ?? 'active';
     const [agents, participants, sessions, chatRecords] = await Promise.all([
         listAgents(),
         listParticipants(),
@@ -221,18 +242,13 @@ export async function listChatDetails(options?: { chatId?: string; includeExtern
     );
     const archivedChatIds = new Set(
         chatRecords
-            .filter((record) => {
-                const tavern =
-                    typeof record.chat.metadata.tavern === 'object' &&
-                    record.chat.metadata.tavern !== null
-                        ? (record.chat.metadata.tavern as Record<string, unknown>)
-                        : null;
-                return tavern?.archived === true;
-            })
+            .filter((record) => isArchivedTavernChat(record.chat))
             .map((record) => record.chat.id)
     );
+    const matchesArchivedFilter = (chatId: string) =>
+        archivedFilter === 'all' || (archivedFilter === 'archived') === archivedChatIds.has(chatId);
     const agentRuntimeChats = chatRecords
-        .filter((record) => !archivedChatIds.has(record.chat.id))
+        .filter((record) => matchesArchivedFilter(record.chat.id))
         .map((record) => ({
             record,
             runtimeChat: record.chat,
@@ -256,9 +272,7 @@ export async function listChatDetails(options?: { chatId?: string; includeExtern
           )
         : [];
     const chatIds = new Set(
-        [...agentRuntimeChatsById.keys(), ...runtimeSessionChatIds].filter(
-            (chatId) => !archivedChatIds.has(chatId)
-        )
+        [...agentRuntimeChatsById.keys(), ...runtimeSessionChatIds].filter(matchesArchivedFilter)
     );
 
     return [...chatIds]
@@ -396,6 +410,7 @@ export async function listChatDetails(options?: { chatId?: string; includeExtern
 
             return {
                 activeTurnParticipantIds: agentRuntimeChat?.activeTurnParticipantIds ?? [],
+                archived: archivedChatIds.has(chatId),
                 boundAgentIds,
                 canSend,
                 conversationKind,
@@ -437,6 +452,7 @@ function toChatListItem(chat: Chat) {
     return {
         activeTurnParticipantIds: chat.activeTurnParticipantIds,
         agentRuntimeSync: chat.agentRuntimeSync,
+        archived: chat.archived,
         boundAgentIds: chat.boundAgentIds,
         canSend: chat.canSend,
         conversationKind: chat.conversationKind,

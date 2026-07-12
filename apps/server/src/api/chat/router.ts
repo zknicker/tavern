@@ -2,7 +2,7 @@ import { createRouter } from '../trpc.ts';
 import { archiveChatRoute } from './archive.ts';
 import { createChatRoute } from './create.ts';
 import { getChatRoute } from './get.ts';
-import { listChatsRoute } from './list.ts';
+import { listArchivedChatsRoute, listChatsRoute } from './list.ts';
 import { dismissChatLogRowRoute } from './log-dismiss.ts';
 import { listChatLogRoute } from './log-list.ts';
 import { onChatLogUpdate } from './log-on-update.ts';
@@ -21,6 +21,7 @@ import { stopChatTurnRoute } from './stop.ts';
 import { getChatToolRoute } from './tool-get.ts';
 import { getChatTurnEvidenceRoute } from './turn-evidence-get.ts';
 import { getChatTurnPromptRoute } from './turn-prompt-get.ts';
+import { unarchiveChatRoute } from './unarchive.ts';
 import { updateChatRoute } from './update.ts';
 import { updateChatSystemPromptRoute } from './update-system-prompt.ts';
 import { updateChatTabAppearanceRoute } from './update-tab-appearance.ts';
@@ -39,6 +40,7 @@ export const chatRouter = createRouter({
         get: getChatTurnPromptRoute,
     }),
     list: listChatsRoute,
+    listArchived: listArchivedChatsRoute,
     log: createRouter({
         dismiss: dismissChatLogRowRoute,
         list: listChatLogRoute,
@@ -56,6 +58,7 @@ export const chatRouter = createRouter({
     start: startChatRoute,
     steer: steerChatTurnRoute,
     stop: stopChatTurnRoute,
+    unarchive: unarchiveChatRoute,
     updateTabAppearance: updateChatTabAppearanceRoute,
     updateSystemPrompt: updateChatSystemPromptRoute,
     update: updateChatRoute,

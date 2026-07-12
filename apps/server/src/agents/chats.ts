@@ -10,6 +10,7 @@ export async function listAgentChats(input: { agentId: string }) {
             {
                 activeTurnParticipantIds: chat.activeTurnParticipantIds,
                 agentRuntimeSync: chat.agentRuntimeSync,
+                archived: chat.archived,
                 boundAgentIds: chat.boundAgentIds,
                 canSend: chat.canSend,
                 conversationKind: chat.conversationKind,

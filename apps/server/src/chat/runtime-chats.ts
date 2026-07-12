@@ -162,7 +162,7 @@ export async function updateRuntimeTavernChat(input: {
     });
 }
 
-export async function archiveRuntimeTavernChat(chatId: string) {
+export async function setRuntimeTavernChatArchived(chatId: string, archived: boolean) {
     const { client } = await requireRuntimeChatClient();
     const current = await getTavernChatOrNull(client, chatId);
 
@@ -175,7 +175,7 @@ export async function archiveRuntimeTavernChat(chatId: string) {
         id: chatId,
         metadata: buildRuntimeTavernChatMetadata({
             agentIds: metadata.agentIds,
-            archived: true,
+            archived,
             displayName: metadata.displayName,
             displayNameSource: metadata.displayNameSource,
             groupSystemPrompt: metadata.groupSystemPrompt,
@@ -544,7 +544,7 @@ function emptyTabAppearance(): TavernChatTabAppearance {
     return { color: null };
 }
 
-function isArchivedTavernChat(chat: AgentRuntimeChat) {
+export function isArchivedTavernChat(chat: AgentRuntimeChat) {
     const tavern =
         typeof chat.metadata.tavern === 'object' && chat.metadata.tavern !== null
             ? (chat.metadata.tavern as Record<string, unknown>)

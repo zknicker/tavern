@@ -9,6 +9,7 @@ import {
     type UpdateChatInput,
     type UpdateChatSystemPromptInput,
     type UpdateChatTabAppearanceInput,
+    unarchiveChatResultSchema,
     updateChatInputSchema,
     updateChatSystemPromptInputSchema,
     updateChatSystemPromptResultSchema,
@@ -16,9 +17,9 @@ import {
     updateChatTabAppearanceResultSchema,
 } from './contracts.ts';
 import {
-    archiveRuntimeTavernChat,
     createRuntimeTavernChat,
     getRuntimeChatRecord,
+    setRuntimeTavernChatArchived,
     type TavernChatDisplayNameSource,
     updateRuntimeTavernChat,
     updateRuntimeTavernChatSystemPrompt,
@@ -119,10 +120,25 @@ export async function archiveTavernChat(chatId: string) {
         throw new Error(`No Tavern chat named "${chatId}" exists.`);
     }
 
-    await archiveRuntimeTavernChat(chat.chat.id);
+    await setRuntimeTavernChatArchived(chat.chat.id, true);
 
     return archiveChatResultSchema.parse({
         archived: true,
+        chatId,
+    });
+}
+
+export async function unarchiveTavernChat(chatId: string) {
+    const chat = await getRuntimeChatRecord(chatId);
+
+    if (!chat) {
+        throw new Error(`No Tavern chat named "${chatId}" exists.`);
+    }
+
+    await setRuntimeTavernChatArchived(chat.chat.id, false);
+
+    return unarchiveChatResultSchema.parse({
+        archived: false,
         chatId,
     });
 }
