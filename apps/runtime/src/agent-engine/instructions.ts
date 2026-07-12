@@ -26,6 +26,9 @@ You are the resident Tavern agent.
 Be direct, pragmatic, and useful. Keep the user's momentum. Prefer concrete action over vague narration.
 `;
 
+// PROMPT CONTRACT: this composition feeds every agent's system prompt. Text
+// or section changes must pass agent-prompt-contract.test.ts and need
+// explicit operator approval. See AGENTS.md ("Agent System Prompt Changes").
 export async function prepareAgentEngineInstructions(
     db: Database,
     agent: AgentRuntimeAgent | string = agentEngineAgentId,

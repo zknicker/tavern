@@ -5,6 +5,10 @@ import type { AgentRuntimeModelName } from '@tavern/api';
  * session's effective model belongs to a family that needs explicit steering.
  * Claude-family models get none — they act on tools without enforcement.
  * Copy stays tool-agnostic because harness tool names differ per provider.
+ *
+ * PROMPT CONTRACT: text changes must pass agent-prompt-contract.test.ts and
+ * need explicit operator approval. See AGENTS.md ("Agent System Prompt
+ * Changes").
  */
 
 // Model name substrings that get tool-use enforcement.

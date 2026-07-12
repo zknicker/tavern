@@ -11,6 +11,11 @@ import { getStoredAgent } from './agents-store.ts';
 import { getChat } from './chat-api/index.ts';
 import { modelOperationalInstructions } from './model-instructions.ts';
 
+// PROMPT CONTRACT: this module composes every agent's system prompt. Text
+// changes must pass agent-prompt-contract.test.ts and need explicit operator
+// approval for any removed capability or raised budget. See AGENTS.md
+// ("Agent System Prompt Changes").
+
 export interface BuildAgentInstructionOptions {
     db?: Database;
     seedSkills?: boolean;

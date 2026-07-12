@@ -171,6 +171,30 @@ so `docs:list` routes future agents correctly.
 - For agent-engine changes, run the normal runtime dev stack or
   `bun run --filter @tavern/runtime build` to verify Runtime startup and adapter code.
 
+## Agent System Prompt Changes
+
+The composed agent system prompt is a guarded contract. Its sources are
+`apps/runtime/src/workspace/managed-instructions.ts`,
+`apps/runtime/src/tavern/agent-instructions.ts`,
+`apps/runtime/src/tavern/model-instructions.ts`, and
+`apps/runtime/src/agent-engine/instructions.ts`; its executable requirements,
+reviewable snapshots, and character budgets live in
+`apps/runtime/src/tavern/agent-prompt-contract.test.ts`.
+
+When changing prompt text or that contract test:
+
+1. Run the contract suite and read the snapshot diff; include the diff in what
+   you show the operator.
+2. Never delete or weaken a requirement, raise a budget, or rewrite a snapshot
+   just to make the suite pass. A failing requirement means a capability left
+   the prompt — stop and get explicit operator confirmation that the removal
+   is intentional.
+3. Adding a prompt-taught capability requires adding its requirement in the
+   same change; removing one requires removing its requirement, named
+   explicitly in your summary to the operator.
+4. Budget raises are deliberate token-spend decisions. Propose the new number
+   and why; do not silently bump.
+
 ## Agent skills
 
 ### Issue tracker

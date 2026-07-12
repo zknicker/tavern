@@ -4,6 +4,10 @@
  *
  * Product language only: the agent reads this as its own operating context,
  * so it must not describe engine plumbing.
+ *
+ * PROMPT CONTRACT: text changes must pass agent-prompt-contract.test.ts and
+ * need explicit operator approval for removed capabilities or budget raises.
+ * See AGENTS.md ("Agent System Prompt Changes").
  */
 
 export const agentNotesFileName = 'NOTES.md';
