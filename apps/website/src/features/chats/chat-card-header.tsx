@@ -54,7 +54,7 @@ export function ChatCardHeader({
                         ) : null}
                         {onArchive ? (
                             <Button onClick={onArchive} size="sm" type="button" variant="ghost">
-                                Delete
+                                Archive
                             </Button>
                         ) : null}
                     </div>

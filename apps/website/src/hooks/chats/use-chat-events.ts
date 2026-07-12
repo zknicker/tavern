@@ -8,6 +8,7 @@ export function useChatEvents() {
             const chatId = readStringField(event, 'chatId');
 
             void utils.chat.list.invalidate();
+            void utils.chat.listArchived.invalidate();
 
             if (chatId) {
                 void utils.chat.get.invalidate({ chatId });

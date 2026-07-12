@@ -12,6 +12,7 @@ import { useModelList } from '../../hooks/models/use-model-list.ts';
 import { useAppLayoutPreference } from '../../hooks/shell/use-app-layout-preference.ts';
 import { appRoutes } from '../../lib/app-routes.ts';
 import { MissingAgentState } from '../agents/missing-agent-state.tsx';
+import { ArchivedChatBar } from './archived-chat-bar.tsx';
 import { ArtifactPanelOpenProvider } from './artifact-panel-context.tsx';
 import { ChatArtifactPanel, useChatArtifactPanelState } from './chat-artifact-panel.tsx';
 import { getChatContextFullness } from './chat-context-fullness.ts';
@@ -194,31 +195,38 @@ function SyncedAgentChatDetail({ chat, chatId }: { chat: ChatListItem; chatId: s
                 failedTurns={timeline.failedTurns}
                 fetchOlderHistory={timeline.fetchOlderHistory}
                 footer={
-                    <ChatDetailFooter
-                        activeReplies={timeline.activeReplies}
-                        agents={agents}
-                        chatId={chat.id}
-                        rows={rows}
-                        turnEvidence={timeline.turnEvidence}
-                    >
-                        <ChatMessageComposer
-                            activeRunIds={getActiveRunIds(timeline)}
-                            agentRuntimeSyncLabel={chat.agentRuntimeSyncLabel}
-                            agents={agents}
-                            boundAgentIds={chat.boundAgentIds}
-                            canSend={chat.canSend}
+                    chat.archived ? (
+                        <ArchivedChatBar
                             chatId={chat.id}
-                            contextFullness={contextFullness}
                             conversationKind={chat.conversationKind}
-                            isDisabled={chat.isDisabled}
-                            isReplyActive={isTurnBlocking}
-                            steerTargets={getSteerableTurnTargets({
-                                activeReplies: timeline.activeReplies,
-                                activeTurns: timeline.activeTurns,
-                                rows,
-                            })}
                         />
-                    </ChatDetailFooter>
+                    ) : (
+                        <ChatDetailFooter
+                            activeReplies={timeline.activeReplies}
+                            agents={agents}
+                            chatId={chat.id}
+                            rows={rows}
+                            turnEvidence={timeline.turnEvidence}
+                        >
+                            <ChatMessageComposer
+                                activeRunIds={getActiveRunIds(timeline)}
+                                agentRuntimeSyncLabel={chat.agentRuntimeSyncLabel}
+                                agents={agents}
+                                boundAgentIds={chat.boundAgentIds}
+                                canSend={chat.canSend}
+                                chatId={chat.id}
+                                contextFullness={contextFullness}
+                                conversationKind={chat.conversationKind}
+                                isDisabled={chat.isDisabled}
+                                isReplyActive={isTurnBlocking}
+                                steerTargets={getSteerableTurnTargets({
+                                    activeReplies: timeline.activeReplies,
+                                    activeTurns: timeline.activeTurns,
+                                    rows,
+                                })}
+                            />
+                        </ChatDetailFooter>
+                    )
                 }
                 hasOlderHistory={timeline.hasOlderHistory}
                 // Sidebar layout keeps the chat topbar (room identity, traffic

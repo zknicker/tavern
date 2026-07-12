@@ -1,6 +1,7 @@
 import { ChannelIconBox } from '../../components/chats/channel-icon-box.tsx';
 import { resolveTavernChatName } from '../../components/chats/chat-display.ts';
 import { useResolvedThemeOptional } from '../../components/theme-provider.tsx';
+import { Badge } from '../../components/ui/badge.tsx';
 import { useAgentAppearanceLookup } from '../../hooks/agents/use-agent-appearance.ts';
 import { resolveAgentInk } from '../agents/agent-color-presets.ts';
 import { getChannelColorStyle } from '../shell/channel-color-options.ts';
@@ -27,6 +28,7 @@ export function ChatRoomTopbar({ chat }: { chat: ChatListItem }) {
             <div className="flex min-w-0 items-center gap-2.5 pr-2 pl-[10px]">
                 <RoomIcon chat={chat} />
                 <h1 className="min-w-0 truncate font-semibold text-foreground text-sm">{title}</h1>
+                {chat.archived ? <Badge variant="secondary">Archived</Badge> : null}
             </div>
             <div className="no-drag flex min-w-0 items-center justify-end gap-1 px-2">
                 <ChatParticipantFacepile chat={chat} />

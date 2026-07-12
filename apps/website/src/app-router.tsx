@@ -90,6 +90,13 @@ export function createAppRouter() {
                                     ),
                                 },
                                 {
+                                    path: 'chats/archived',
+                                    lazy: lazyRoute(
+                                        () => import('./routes/app/archived-chats-page.tsx'),
+                                        'ArchivedChatsPage'
+                                    ),
+                                },
+                                {
                                     path: 'chats/:chatId',
                                     lazy: lazyRoute(
                                         () => import('./routes/app/agent-chat-page.tsx'),

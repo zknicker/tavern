@@ -5,6 +5,7 @@ export const appRoutes = {
         return `/chats/${chatId}`;
     },
     newChatDraft: '/chats/new',
+    archivedChats: '/chats/archived',
     tasks: '/tasks',
     newTask: '/tasks/new',
     task(taskId: string) {

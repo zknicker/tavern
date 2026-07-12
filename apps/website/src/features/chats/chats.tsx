@@ -31,8 +31,8 @@ export function Chats() {
                 agents={agents.agents}
                 chats={chats}
                 onArchive={async (chat) => {
-                    // biome-ignore lint/suspicious/noAlert: Browser confirm is the current delete safeguard.
-                    if (!window.confirm(`Delete chat "${chat.displayName}"?`)) {
+                    // biome-ignore lint/suspicious/noAlert: Browser confirm is the current archive safeguard.
+                    if (!window.confirm(`Archive chat "${chat.displayName}"?`)) {
                         return;
                     }
 

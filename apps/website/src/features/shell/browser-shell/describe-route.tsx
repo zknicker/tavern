@@ -34,6 +34,10 @@ export function describeRoute(route: string, chatById: Map<string, ChatListItem>
         return { kind: 'draft', title: 'New chat' };
     }
 
+    if (path === appRoutes.archivedChats) {
+        return { kind: 'section', title: 'Archived chats' };
+    }
+
     if (getRouteNewTabKey(path)) {
         return { kind: 'home', title: 'New tab' };
     }

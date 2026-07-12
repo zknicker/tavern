@@ -1,6 +1,11 @@
-import { PencilEdit02Icon, Trash2 } from '@hugeicons/core-free-icons';
+import { PencilEdit02Icon } from '@hugeicons/core-free-icons';
 import { ColorsIcon as ColorsSolidIcon } from '@hugeicons-pro/core-solid-rounded';
-import { ArrowUpRight01Icon, Cancel01Icon, ColorsIcon } from '@hugeicons-pro/core-stroke-rounded';
+import {
+    ArchiveIcon,
+    ArrowUpRight01Icon,
+    Cancel01Icon,
+    ColorsIcon,
+} from '@hugeicons-pro/core-stroke-rounded';
 import * as React from 'react';
 import {
     ContextMenu,
@@ -127,9 +132,9 @@ export function SidebarChatContextMenu({
                     </ContextMenuItem>
                 ) : null}
                 {canArchive ? (
-                    <ContextMenuItem onClick={() => onArchive(chat)} variant="destructive">
-                        <Icon className={contextMenuIconClassName} icon={Trash2} />
-                        Delete chat
+                    <ContextMenuItem onClick={() => onArchive(chat)}>
+                        <Icon className={contextMenuIconClassName} icon={ArchiveIcon} />
+                        {chat.conversationKind === 'channel' ? 'Archive channel' : 'Archive chat'}
                     </ContextMenuItem>
                 ) : null}
             </ContextMenuPopup>

@@ -118,7 +118,7 @@ export function getRouteChatId(pathname: string) {
     const match = pathname.match(/^\/chats\/([^/]+)$/u);
     const chatId = match?.[1] ?? null;
 
-    return chatId && chatId !== 'new' ? chatId : null;
+    return chatId && chatId !== 'new' && chatId !== 'archived' ? chatId : null;
 }
 
 /** The app route a tab points at, for seeding a detached window. Drafts can't move. */

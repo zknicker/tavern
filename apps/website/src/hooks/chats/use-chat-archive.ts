@@ -26,7 +26,11 @@ export function useChatArchive() {
                     itemsById,
                 };
             });
-            utils.chat.get.setData({ chatId }, null);
+            // Archived chats stay openable read-only, so mark the cached
+            // record archived instead of dropping it.
+            utils.chat.get.setData({ chatId }, (current) =>
+                current ? { ...current, archived: true } : current
+            );
 
             return { previousChat, previousChatList, removedDrafts };
         },
@@ -47,6 +51,7 @@ export function useChatArchive() {
             await Promise.all([
                 utils.chat.get.invalidate({ chatId }),
                 utils.chat.list.invalidate(),
+                utils.chat.listArchived.invalidate(),
             ]);
         },
     });

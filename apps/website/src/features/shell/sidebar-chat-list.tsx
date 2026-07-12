@@ -1,4 +1,5 @@
 import { Plus } from '@hugeicons/core-free-icons';
+import { ArchiveIcon } from '@hugeicons-pro/core-stroke-rounded';
 import * as React from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { ChannelIconBox } from '../../components/chats/channel-icon-box.tsx';
@@ -250,6 +251,23 @@ export function AppSidebarChatList() {
                                     onRename={openRename}
                                 />
                             ))}
+                        </SidebarMenu>
+                    </SidebarGroupContent>
+                </SidebarGroup>
+                <SidebarGroup className="pt-1 pb-2">
+                    <SidebarGroupContent>
+                        <SidebarMenu>
+                            <SidebarMenuItem>
+                                <SidebarMenuButton
+                                    className="font-normal text-sidebar-muted"
+                                    isActive={location.pathname === appRoutes.archivedChats}
+                                    render={<NavLink to={appRoutes.archivedChats} />}
+                                    tooltip="Archived chats"
+                                >
+                                    <Icon aria-hidden="true" icon={ArchiveIcon} />
+                                    <span>Archived</span>
+                                </SidebarMenuButton>
+                            </SidebarMenuItem>
                         </SidebarMenu>
                     </SidebarGroupContent>
                 </SidebarGroup>
