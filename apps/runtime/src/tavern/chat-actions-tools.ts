@@ -25,7 +25,7 @@ export function createTavernChatActionTools(input: {
     return {
         chat_send: tool({
             description:
-                'Post a message, as yourself, into another Tavern chat you participate in. Mention an agent of that chat as [Name](agent://<agentId>) to give it a turn there — this is how you consult an agent who is not in the current chat. Use chats_list for targets, and confirm with the user before posting outside the current chat.',
+                'Post a message, as yourself, into another Tavern chat you participate in. Mention an agent of that chat as [Name](agent://<agentId>) to give it a turn there — this is how you consult an agent who is not in the current chat. Use chats_list for targets. Post when the user asked or the task requires it; confirm self-initiated posts first.',
             inputSchema: z.object({
                 chatId: z.string().min(1).describe('Target chat id from chats_list.'),
                 message: z

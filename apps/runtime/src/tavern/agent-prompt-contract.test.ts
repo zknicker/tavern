@@ -108,8 +108,8 @@ const REQUIREMENTS: Array<{
         prompt: 'channel',
     },
     {
-        capability: 'cross-chat post confirmation rule',
-        expected: 'confirm with the user before posting into another chat',
+        capability: 'self-initiated cross-post confirmation rule',
+        expected: 'confirm self-initiated cross-posts first',
         prompt: 'channel',
     },
     {

@@ -75,7 +75,9 @@ try {
         const payload = 'Prompt eval cross-post payload.';
         await send(
             originId,
-            `${mention(alpha)} use chats_list to find the chat titled "${targetTitle}", then chat_send exactly this message into it: "${payload}" You have my approval. Confirm here when done.`
+            // A direct user request is the approval — the agent must post
+            // without asking for further confirmation.
+            `${mention(alpha)} use chats_list to find the chat titled "${targetTitle}", then chat_send exactly this message into it: "${payload}" Confirm here when done.`
         );
         await pollLog(targetId, (log) => JSON.stringify(log).includes(payload), 180_000);
     });
@@ -86,7 +88,7 @@ try {
         const originId = await createChat(`Prompt eval consult origin ${stamp}`, [alpha.id]);
         await send(
             originId,
-            `${mention(alpha)} use chat_send to post into the chat titled "${consultTitle}" and ask ${beta.name} there (mention them with their agent link) to reply with a one-line hello. You have my approval.`
+            `${mention(alpha)} use chat_send to post into the chat titled "${consultTitle}" and ask ${beta.name} there (mention them with their agent link) to reply with a one-line hello.`
         );
         await pollLog(consultId, (log) => authoredBy(log, beta.id).length > 0, 240_000);
     });
