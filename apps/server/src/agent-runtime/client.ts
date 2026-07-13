@@ -134,8 +134,6 @@ import {
     type AgentRuntimeUpdateAgentModel,
     type AgentRuntimeUpdateAgentName,
     type AgentRuntimeUpdateAgentPluginGrant,
-    type AgentRuntimeUpdateAgentSessionModel,
-    type AgentRuntimeUpdateAgentSessionModelResult,
     type AgentRuntimeUpdateAgentTaskSettings,
     type AgentRuntimeUpdateAgentThinkingDefault,
     type AgentRuntimeUpdateCron,
@@ -602,10 +600,6 @@ export interface TavernAgentRuntimeClient {
         agentId: string,
         input: AgentRuntimeUpdateAgentName
     ): Promise<AgentRuntimeAgentEngineConfigSnapshot>;
-    updateAgentSessionModel(
-        chatId: string,
-        input: AgentRuntimeUpdateAgentSessionModel
-    ): Promise<AgentRuntimeUpdateAgentSessionModelResult>;
     updateAgentTaskSettings(
         agentId: string,
         input: AgentRuntimeUpdateAgentTaskSettings
