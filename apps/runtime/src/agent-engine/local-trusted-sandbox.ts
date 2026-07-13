@@ -19,6 +19,8 @@ import type {
 interface LocalTrustedSandboxOptions {
     authProfiles?: readonly LocalTrustedSandboxAuthProfile[];
     env?: Record<string, string>;
+    /** Where seeded auth profiles land; defaults to `<rootDir>/.home`. */
+    homeDir?: string;
     hostHomeDir?: string;
     rootDir: string;
 }
@@ -29,6 +31,7 @@ export function createLocalTrustedSandboxProvider(
     options: LocalTrustedSandboxOptions
 ): HarnessV1SandboxProvider {
     const rootDir = path.resolve(options.rootDir);
+    const homeDir = path.resolve(options.homeDir ?? path.join(rootDir, '.home'));
     const hostHomeDir = path.resolve(options.hostHomeDir ?? process.env.HOME ?? os.homedir());
 
     return {
@@ -36,6 +39,7 @@ export function createLocalTrustedSandboxProvider(
             const session = await createLocalTrustedSandboxSession({
                 authProfiles: options.authProfiles ?? [],
                 env: options.env ?? {},
+                homeDir,
                 hostHomeDir,
                 rootDir,
                 sessionId: input.sessionId,
@@ -52,6 +56,7 @@ export function createLocalTrustedSandboxProvider(
             createLocalTrustedSandboxSession({
                 authProfiles: options.authProfiles ?? [],
                 env: options.env ?? {},
+                homeDir,
                 hostHomeDir,
                 rootDir,
                 sessionId: input.sessionId,
@@ -63,6 +68,7 @@ export function createLocalTrustedSandboxProvider(
 async function createLocalTrustedSandboxSession(input: {
     authProfiles: readonly LocalTrustedSandboxAuthProfile[];
     env: Record<string, string>;
+    homeDir: string;
     hostHomeDir: string;
     rootDir: string;
     sessionId?: string;
@@ -71,8 +77,8 @@ async function createLocalTrustedSandboxSession(input: {
     await fs.mkdir(rootDir, { recursive: true });
     await seedAuthProfiles({
         authProfiles: input.authProfiles,
+        homeDir: input.homeDir,
         hostHomeDir: input.hostHomeDir,
-        rootDir,
     });
     const id = input.sessionId ?? `local_${randomUUID()}`;
     const processes = new Set<ChildProcessWithoutNullStreams>();
@@ -213,13 +219,13 @@ function resolveLocalPath(rootDir: string, value: string) {
 
 async function seedAuthProfiles(input: {
     authProfiles: readonly LocalTrustedSandboxAuthProfile[];
+    homeDir: string;
     hostHomeDir: string;
-    rootDir: string;
 }) {
     if (input.authProfiles.includes('codex')) {
         await copyFileIfExists({
             source: path.join(input.hostHomeDir, '.codex', 'auth.json'),
-            target: path.join(input.rootDir, '.home', '.codex', 'auth.json'),
+            target: path.join(input.homeDir, '.codex', 'auth.json'),
         });
     }
 }

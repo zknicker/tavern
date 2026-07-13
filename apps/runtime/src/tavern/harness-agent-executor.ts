@@ -377,11 +377,12 @@ function createHarnessAgent(
         instructions: options.instructions,
         permissionMode: 'allow-all',
         sandbox: sandboxFactory(localTrustedSandboxOptions(input)),
-        // Sessions work at the workspace root itself (patched harness allows
-        // workDir '.'). The default per-session work directories are invisible
-        // to workspace browsing, so files made there dead-end in the artifact
-        // panel and task materialization lands where the agent never looks.
-        sandboxConfig: { workDir: '.' },
+        // Sessions work at the workspace root itself: the sandbox anchors at
+        // the workspace's parent and workDir names the workspace folder, so
+        // the composed session work directory IS the workspace. The harness
+        // default (an invisible per-session directory) hides agent files from
+        // workspace browsing, the artifact panel, and task materialization.
+        sandboxConfig: { workDir: path.basename(input.agent.workspaceFolder) },
         skills: options.skills,
         tools,
     });
@@ -408,9 +409,12 @@ function toHarnessAgentSkill(skill: AssignedSkillBundle): HarnessAgentSkill {
     };
 }
 
+// Anchored one level above the workspace so the session work directory
+// (rootDir + sandboxConfig.workDir) resolves to the workspace root itself.
 function localTrustedSandboxOptions(input: AgentExecutorInput) {
+    const rootDir = path.dirname(input.agent.workspaceFolder);
     if (input.agentSession.effectiveModel.provider !== 'codex') {
-        return { rootDir: input.agent.workspaceFolder };
+        return { rootDir };
     }
     const homeDir = path.join(input.agent.workspaceFolder, '.home');
     return {
@@ -419,7 +423,8 @@ function localTrustedSandboxOptions(input: AgentExecutorInput) {
             CODEX_HOME: path.join(homeDir, '.codex'),
             HOME: homeDir,
         },
-        rootDir: input.agent.workspaceFolder,
+        homeDir,
+        rootDir,
     };
 }
 
