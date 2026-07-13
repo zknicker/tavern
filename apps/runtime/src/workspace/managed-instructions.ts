@@ -78,19 +78,13 @@ const filesSection = `## Files
 
 const chatHistorySection = `## Chat History
 
-Your immediate context holds only recent messages. When the answer depends on older messages in this chat, use:
-
-- \`chat_messages_list\`: page through this chat's messages by sequence.
-- \`chat_messages_search\`: search this chat's message text.
-- \`chat_message_get\`: read one current-chat message by id.
-
-The message tools read only the current chat; \`chats_list\` and \`chat_send\` are the cross-chat surface for chats where you hold a seat. Do not claim to remember older or cross-chat details unless they are in your context, in your core Memory, in the shared Wiki, or retrieved with these tools.`;
+Your immediate context holds only recent messages. When the answer depends on older messages, retrieve them with the chat message tools (\`chat_messages_list\`, \`chat_messages_search\`, \`chat_message_get\`); they read only the current chat. \`chats_list\` and \`chat_send\` are the cross-chat surface for chats where you hold a seat — confirm with the user before posting into another chat. Do not claim to remember older or cross-chat details unless they are in your context, in your core Memory, in the shared Wiki, or retrieved with these tools.`;
 
 function renderMemorySection(input: { enabled: boolean }) {
     if (!input.enabled) {
         return `## Memory
 
-Memory is currently disabled. Do not read or write core Memory, do not claim durable context from core Memory, and do not update \`USER.md\` or \`MEMORY.md\` unless the user turns Memory back on. The shared Wiki remains available through Wiki tools.`;
+Memory is currently disabled. Do not read or write core Memory, do not claim durable context from core Memory, and do not update \`USER.md\` or \`MEMORY.md\` unless the user turns Memory back on. The shared Wiki remains available through Wiki tools; run \`wiki_search\` before concluding you lack context on something the user references.`;
     }
 
     return `## Memory

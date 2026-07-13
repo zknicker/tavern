@@ -88,7 +88,7 @@ describe('agent instructions', () => {
         expect(instructions).toContain('Be terse, concrete, and steady.');
     });
 
-    it('includes the Tavern chat section with chat id, staleness policy, and tool guidance', async () => {
+    it('includes the Tavern chat section with chat id, staleness policy, and recall hygiene', async () => {
         const instructions = await buildAgentInstructions(
             executorInput({ workspaceFolder: workspaceDir }),
             { db: getDb(), skillsDir }
@@ -98,9 +98,7 @@ describe('agent instructions', () => {
         expect(instructions).toContain('- chatId: cht_general');
         expect(instructions).toContain('treat older context and prior data reads as stale');
         expect(instructions).toMatch(/send time in \S+ \(the home timezone\)/);
-        expect(instructions).toContain('Chat tools:');
-        expect(instructions).toContain('- chat_messages_list:');
-        expect(instructions).toContain('Wiki tools (shared durable knowledge)');
+        expect(instructions).toContain('Recalled Wiki blocks are automatic background context');
     });
 
     it('teaches NO_REPLY in channels but not in direct messages', async () => {
@@ -317,9 +315,8 @@ describe('agent instructions', () => {
             { db: getDb(), skillsDir }
         );
 
-        expect(instructions).toContain('Chat tools:');
-        expect(instructions).toContain('Wiki tools (shared durable knowledge)');
-        expect(instructions).toContain('wiki_search');
+        expect(instructions).toContain('The shared Wiki remains available through Wiki tools');
+        expect(instructions).toContain('run `wiki_search` before concluding you lack context');
     });
 
     it('nudges agents to capture and maintain skills', async () => {

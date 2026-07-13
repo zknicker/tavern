@@ -93,27 +93,33 @@ const REQUIREMENTS: Array<{
         prompt: 'channel',
     },
     { absent: true, capability: 'no NO_REPLY teaching in DMs', expected: 'NO_REPLY', prompt: 'dm' },
-    // Tool surfaces taught in the prompt (schemas ship per turn; these lines
-    // teach when to reach for them).
+    // Tool steering taught in the prompt. Names, descriptions, and schemas
+    // ship per turn via the ToolSet; the prompt keeps only when-to-reach-for-it
+    // guidance and behavioral rules.
     {
         capability: 'current-chat history tools',
-        expected: '- chat_messages_search: search current-chat messages',
+        expected:
+            'chat message tools (`chat_messages_list`, `chat_messages_search`, `chat_message_get`)',
         prompt: 'channel',
     },
     {
         capability: 'cross-chat inventory tool',
-        expected: '- chats_list: list the chats you participate in',
+        expected: '`chats_list` and `chat_send` are the cross-chat surface',
         prompt: 'channel',
     },
     {
-        capability: 'cross-chat post tool with confirmation rule',
-        expected:
-            '- chat_send: post a message into another chat you participate in (confirm with the user first)',
+        capability: 'cross-chat post confirmation rule',
+        expected: 'confirm with the user before posting into another chat',
         prompt: 'channel',
     },
     {
         capability: 'wiki tools taught',
-        expected: '- wiki_search: search shared Wiki pages',
+        expected: 'Search it with `wiki_search`, browse it with `wiki_list`',
+        prompt: 'channel',
+    },
+    {
+        capability: 'wiki_search before claiming missing context',
+        expected: 'run `wiki_search` before concluding you lack context',
         prompt: 'channel',
     },
 ];
@@ -121,10 +127,10 @@ const REQUIREMENTS: Array<{
 // Character ceilings for the deterministic fixture (default SOUL, empty core
 // memory). Raising one is a deliberate spend decision — confirm with the
 // operator, do not just bump the number.
-// Current: chat section ~1.6k chars, full fixture prompt ~12.4k chars.
+// Current: chat section ~0.8k chars, full fixture prompt ~11.9k chars.
 const promptBudgets = {
-    channelChatSection: 2000,
-    channelTotal: 13_500,
+    channelChatSection: 900,
+    channelTotal: 12_400,
 };
 
 describe('agent prompt contract', () => {

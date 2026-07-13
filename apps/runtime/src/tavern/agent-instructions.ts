@@ -1,7 +1,6 @@
 import { createHash } from 'node:crypto';
 import type { AgentRuntimeAgentSession } from '@tavern/api';
 import { prepareAgentEngineInstructions } from '../agent-engine/instructions.ts';
-import { isRuntimeCronReady } from '../cron/manager-state.ts';
 import { getDb } from '../db/connection.ts';
 import type { Database } from '../db/sqlite.ts';
 import { resolveHomeTimezone } from '../timezone-settings.ts';
@@ -81,6 +80,8 @@ export async function agentSessionInstructionsFresh(
 
 // Static per-session guidance lives here instead of the per-turn prompt so a
 // long session carries one copy in its system prompt rather than one per turn.
+// Tool schemas and descriptions ship per turn via the ToolSet; this section
+// carries only chat identity and behavioral rules the descriptions cannot.
 function tavernChatInstructions(input: AgentInstructionContext) {
     const chat = getChat(input.chatId);
     return [
@@ -92,32 +93,6 @@ function tavernChatInstructions(input: AgentInstructionContext) {
             ? [
                   '- Not every channel message needs you. Reply with exactly NO_REPLY (nothing else) to stay silent for a turn; nothing is delivered to the chat.',
                   '- To hand work to another agent, mention its participant-list link in your final reply; each mentioned agent gets its own turn. Do this only when you need that agent to act.',
-              ]
-            : []),
-        '',
-        'Chat tools:',
-        '- chat_messages_list: list current-chat messages by sequence cursor',
-        '- chat_messages_search: search current-chat messages',
-        '- chat_message_get: read one current-chat message by id',
-        '- chats_list: list the chats you participate in',
-        '- chat_send: post a message into another chat you participate in (confirm with the user first)',
-        '',
-        'Wiki tools (shared durable knowledge):',
-        '- wiki_search: search shared Wiki pages — check before assuming you lack context on something the user references',
-        '- wiki_list: list shared Wiki pages and folders',
-        '- wiki_read: read one shared Wiki page with its hash',
-        '- wiki_write: write one shared Wiki page (explicit user-requested Wiki work only)',
-        '- wiki_backlinks: list pages that link to a Wiki page',
-        '- wiki_move: move or rename one Wiki page',
-        '- wiki_delete: delete one Wiki page',
-        ...(isRuntimeCronReady()
-            ? [
-                  '',
-                  'Automation tools:',
-                  '- cron_list: list your scheduled automations',
-                  '- cron_create: schedule your message into a chat after confirming schedule and chat with the user',
-                  '- cron_update: update one of your scheduled automations',
-                  '- cron_delete: delete one of your scheduled automations',
               ]
             : []),
     ].join('\n');
