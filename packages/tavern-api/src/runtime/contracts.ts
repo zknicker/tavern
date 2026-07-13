@@ -19,6 +19,7 @@ const agentRuntimeCoreCapabilityIds = [
     'skills',
     'cron',
     'autoDispatch',
+    'webAccess',
     'devToolkit',
 ] as const;
 
@@ -1096,6 +1097,7 @@ export const agentRuntimeDiscordBindingListSchema = z.object({
 
 export const agentRuntimeAgentSchema = z.object({
     autoDispatchEnabled: z.boolean().optional(),
+    webAccessEnabled: z.boolean().optional(),
     bio: z.string().trim().min(1).nullable().optional(),
     enabledPluginIds: z.array(agentRuntimePluginIdSchema).optional(),
     enabledSkillIds: z.array(z.string().trim().min(1)),
@@ -1120,6 +1122,7 @@ export const agentRuntimeArchiveAgentSchema = z.object({
 
 export const agentRuntimeCreateAgentSchema = z.object({
     autoDispatchEnabled: z.boolean().optional(),
+    webAccessEnabled: z.boolean().optional(),
     bio: z.string().trim().min(1).nullable().optional(),
     enabledPluginIds: z.array(agentRuntimePluginIdSchema).optional(),
     enabledSkillIds: z.array(z.string().trim().min(1)).optional(),
@@ -1133,6 +1136,7 @@ export const agentRuntimeCreateAgentSchema = z.object({
 
 export const agentRuntimeUpdateAgentSchema = z.object({
     autoDispatchEnabled: z.boolean().optional(),
+    webAccessEnabled: z.boolean().optional(),
     bio: z.string().trim().min(1).nullable().optional(),
     enabledPluginIds: z.array(agentRuntimePluginIdSchema).optional(),
     enabledSkillIds: z.array(z.string().trim().min(1)).optional(),
@@ -2075,6 +2079,10 @@ export const agentRuntimeUpdateAgentTaskSettingsSchema = z
         (value) => value.autoDispatchEnabled !== undefined || value.taskReviewPolicy !== undefined,
         { message: 'Provide an auto-dispatch or review-policy setting.' }
     );
+
+export const agentRuntimeUpdateAgentWebSettingsSchema = z.object({
+    webAccessEnabled: z.boolean(),
+});
 
 export const agentRuntimeFrontendSchema = z.enum(['cli', 'discord', 'sdk', 'tavern', 'telegram']);
 
@@ -3235,6 +3243,9 @@ export type AgentRuntimeSaveAutoDispatchSettings = z.infer<
 export type AgentRuntimeTaskDispatchTrigger = z.infer<typeof agentRuntimeTaskDispatchTriggerSchema>;
 export type AgentRuntimeUpdateAgentTaskSettings = z.infer<
     typeof agentRuntimeUpdateAgentTaskSettingsSchema
+>;
+export type AgentRuntimeUpdateAgentWebSettings = z.infer<
+    typeof agentRuntimeUpdateAgentWebSettingsSchema
 >;
 export type AgentRuntimeTaskStatus = z.infer<typeof agentRuntimeTaskStatusSchema>;
 export type AgentRuntimeCreateTask = z.infer<typeof agentRuntimeCreateTaskSchema>;

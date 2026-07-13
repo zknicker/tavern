@@ -15,6 +15,7 @@ export const agentRuntimeCapabilities = [
     'skills',
     'cron',
     'autoDispatch',
+    'webAccess',
     'devToolkit',
     'plugin.merchbase',
     'plugin.google.calendar',

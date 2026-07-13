@@ -18,6 +18,7 @@ import {
     agentRuntimeUpdateAgentPluginGrantSchema,
     agentRuntimeUpdateAgentTaskSettingsSchema,
     agentRuntimeUpdateAgentThinkingDefaultSchema,
+    agentRuntimeUpdateAgentWebSettingsSchema,
     agentRuntimeUpdateSkillEnabledSchema,
     agentRuntimeUpdateToolEnabledSchema,
 } from '@tavern/api';
@@ -80,6 +81,7 @@ async function dispatchAgentEngineStatic({ request, url }: { request: Request; u
         const agent = upsertStoredAgent({
             agent: {
                 autoDispatchEnabled: input.autoDispatchEnabled ?? false,
+                webAccessEnabled: input.webAccessEnabled ?? false,
                 bio: input.bio ?? null,
                 enabledSkillIds: input.enabledSkillIds ?? [tavernAgentSkillId, tasksSkillId],
                 enabledPluginIds: input.enabledPluginIds ?? [],
@@ -128,6 +130,20 @@ async function dispatchAgentEngineStatic({ request, url }: { request: Request; u
             agentId: segments[1],
             autoDispatchEnabled: payload.autoDispatchEnabled,
             taskReviewPolicy: payload.taskReviewPolicy,
+        });
+        return updatedAgent ? withResolvedModelName(updatedAgent) : undefined;
+    }
+    if (
+        method === 'PATCH' &&
+        segments[0] === 'agents' &&
+        segments[1] &&
+        segments[2] === 'web-settings' &&
+        !segments[3]
+    ) {
+        const payload = agentRuntimeUpdateAgentWebSettingsSchema.parse(await readJson(request));
+        const updatedAgent = updateStoredAgent({
+            agentId: segments[1],
+            webAccessEnabled: payload.webAccessEnabled,
         });
         return updatedAgent ? withResolvedModelName(updatedAgent) : undefined;
     }

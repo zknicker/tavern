@@ -33,6 +33,7 @@ describe('Runtime agent and agent engine reads', () => {
             agents: [
                 {
                     autoDispatchEnabled: false,
+                    webAccessEnabled: false,
                     enabledPluginIds: [],
                     enabledSkillIds: ['tasks', 'tavern-agent'],
                     modelName: {

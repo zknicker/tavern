@@ -201,6 +201,17 @@ export const runtimeCapabilityDefinitions: RuntimeCapabilityDefinition[] = [
     },
     {
         check() {
+            return checkWebAccessCapability();
+        },
+        displayName: 'Web access',
+        id: 'webAccess',
+        refresh: {
+            intervalMs: 5 * minuteMs,
+            runOnStart: true,
+        },
+    },
+    {
+        check() {
             return checkDevToolkitCapability();
         },
         displayName: 'Dev toolkit',
@@ -260,6 +271,12 @@ function checkAutoDispatchCapability(): RuntimeCapabilityCheckResult {
             technicalMessage: error instanceof Error ? error.message : String(error),
         };
     }
+}
+
+function checkWebAccessCapability(): RuntimeCapabilityCheckResult {
+    // This makes older Runtimes read as unavailable to the app. Web fetch has no external
+    // dependency; provider-native search readiness is a per-model fact.
+    return { state: 'healthy' };
 }
 
 function checkCronCapability(): RuntimeCapabilityCheckResult {

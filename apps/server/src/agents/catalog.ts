@@ -57,6 +57,7 @@ export interface Agent {
     taskReviewPolicy: boolean;
     updatedAt: string;
     userInstructions: string;
+    webAccessEnabled: boolean;
 }
 
 interface AgentProfileLike {
@@ -109,6 +110,7 @@ export interface AgentCatalogItem {
     updatedAt: string;
     userInstructions: string;
     usesAllSkills: boolean;
+    webAccessEnabled: boolean;
 }
 
 interface LiveSessionLike {
@@ -131,6 +133,7 @@ function toAgent(agent: AgentRecord, profile: AgentProfileLike | null): Agent {
     const runtimeAgent = parseAgentRawJson(agent);
     return {
         autoDispatchEnabled: runtimeAgent.autoDispatchEnabled === true,
+        webAccessEnabled: runtimeAgent.webAccessEnabled === true,
         bio: parseAgentRawJson(agent).bio ?? null,
         character: parseCharacter(profile?.character),
         enabledPluginIds: runtimeAgent.enabledPluginIds ?? [],
@@ -189,6 +192,7 @@ export function toAgentCatalogItem(
 
     return {
         autoDispatchEnabled: agent.autoDispatchEnabled,
+        webAccessEnabled: agent.webAccessEnabled,
         bio: agent.bio,
         character: agent.character,
         defaultCharacter,
@@ -577,6 +581,7 @@ function toAgentFromAgentRuntimeAgent(input: {
 }): Agent {
     return {
         autoDispatchEnabled: input.agent.autoDispatchEnabled === true,
+        webAccessEnabled: input.agent.webAccessEnabled === true,
         bio: input.agent.bio ?? null,
         character: parseCharacter(input.profile?.character),
         enabledPluginIds: input.agent.enabledPluginIds ?? [],

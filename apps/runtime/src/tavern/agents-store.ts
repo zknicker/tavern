@@ -84,6 +84,7 @@ export function deleteStoredAgent(agentId: string, db: Database = getDb()) {
 export function updateStoredAgent(input: {
     agentId: string;
     autoDispatchEnabled?: boolean;
+    webAccessEnabled?: boolean;
     bio?: string | null;
     db?: Database;
     enabledPluginIds?: AgentRuntimePluginId[];
@@ -104,6 +105,9 @@ export function updateStoredAgent(input: {
             ...(input.autoDispatchEnabled === undefined
                 ? {}
                 : { autoDispatchEnabled: input.autoDispatchEnabled }),
+            ...(input.webAccessEnabled === undefined
+                ? {}
+                : { webAccessEnabled: input.webAccessEnabled }),
             ...(input.bio === undefined ? {} : { bio: input.bio }),
             ...(input.enabledSkillIds === undefined
                 ? {}
@@ -181,6 +185,7 @@ function rowToAgent(row: AgentRow, db: Database): AgentRuntimeAgent {
 
     return agentRuntimeAgentSchema.parse({
         autoDispatchEnabled: raw?.autoDispatchEnabled ?? false,
+        webAccessEnabled: raw?.webAccessEnabled ?? false,
         ...(raw?.bio == null ? {} : { bio: raw.bio }),
         enabledPluginIds: listAgentPluginGrantIds(row.id, db),
         enabledSkillIds: listAssignedSkillIds(row.id, row.enabled_skill_ids_json, db),
@@ -295,6 +300,7 @@ function listAgentPluginGrantIds(agentId: string, db: Database = getDb()) {
 function stableAgentJson(agent: AgentRuntimeAgent) {
     return JSON.stringify({
         autoDispatchEnabled: agent.autoDispatchEnabled ?? false,
+        webAccessEnabled: agent.webAccessEnabled ?? false,
         ...(agent.bio == null ? {} : { bio: agent.bio }),
         enabledPluginIds: agent.enabledPluginIds ?? [],
         enabledSkillIds: agent.enabledSkillIds,

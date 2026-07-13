@@ -140,6 +140,7 @@ import {
     type AgentRuntimeUpdateAgentPluginGrant,
     type AgentRuntimeUpdateAgentTaskSettings,
     type AgentRuntimeUpdateAgentThinkingDefault,
+    type AgentRuntimeUpdateAgentWebSettings,
     type AgentRuntimeUpdateCron,
     type AgentRuntimeUpdateModelProvider,
     type AgentRuntimeUpdateSkillEnabled,
@@ -302,6 +303,7 @@ import {
     agentRuntimeUpdateAgentPluginGrantSchema,
     agentRuntimeUpdateAgentTaskSettingsSchema,
     agentRuntimeUpdateAgentThinkingDefaultSchema,
+    agentRuntimeUpdateAgentWebSettingsSchema,
     agentRuntimeUpdateCronSchema,
     agentRuntimeUpdateModelProviderSchema,
     agentRuntimeUpdateSchema,
@@ -626,6 +628,10 @@ export interface TavernAgentRuntimeClient {
         agentId: string,
         input: AgentRuntimeUpdateAgentThinkingDefault
     ): Promise<AgentRuntimeAgentEngineConfigSnapshot>;
+    updateAgentWebSettings(
+        agentId: string,
+        input: AgentRuntimeUpdateAgentWebSettings
+    ): Promise<AgentRuntimeAgent>;
     updateCronJob(jobId: string, input: AgentRuntimeUpdateCron): Promise<AgentRuntimeCron>;
     updateSkillEnabled(
         skillId: string,
@@ -1784,6 +1790,26 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         const payload = agentRuntimeUpdateAgentTaskSettingsSchema.parse(input);
         const response = await fetch(
             `${this.#baseUrl}${agentRuntimeRoutes.agentTaskSettings(agentId)}`,
+            {
+                body: JSON.stringify(payload),
+                headers: {
+                    ...this.#authHeaders,
+                    'content-type': 'application/json',
+                    [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+                },
+                method: 'PATCH',
+            }
+        );
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+        return agentRuntimeAgentSchema.parse(await response.json());
+    }
+
+    async updateAgentWebSettings(agentId: string, input: AgentRuntimeUpdateAgentWebSettings) {
+        const payload = agentRuntimeUpdateAgentWebSettingsSchema.parse(input);
+        const response = await fetch(
+            `${this.#baseUrl}${agentRuntimeRoutes.agentWebSettings(agentId)}`,
             {
                 body: JSON.stringify(payload),
                 headers: {

@@ -59,6 +59,7 @@ describe('Runtime capabilities store', () => {
             'plugin.google.calendar',
             'plugin.merchbase',
             'skills',
+            'webAccess',
             'wiki',
             'wikiRecall',
         ]);

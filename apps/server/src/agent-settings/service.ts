@@ -3,6 +3,7 @@ import type {
     AgentRuntimeSaveDiscordBinding,
     AgentRuntimeThinkingLevel,
     AgentRuntimeUpdateAgentTaskSettings,
+    AgentRuntimeUpdateAgentWebSettings,
 } from '@tavern/api';
 import type { TavernAgentRuntimeClient } from '../agent-runtime/client.ts';
 import {
@@ -118,6 +119,22 @@ export async function updateAgentTaskSettings(
         const agent = await client.updateAgentTaskSettings(input.agentId, {
             autoDispatchEnabled: input.autoDispatchEnabled,
             taskReviewPolicy: input.taskReviewPolicy,
+        });
+        await refreshAgentSnapshot({ client, runtimeId });
+        emitAgentUpdated();
+        return agent;
+    } finally {
+        client.close();
+    }
+}
+
+export async function updateAgentWebSettings(
+    input: AgentRuntimeUpdateAgentWebSettings & { agentId: string }
+) {
+    const { client, runtimeId } = await createClientForAgent(input.agentId);
+    try {
+        const agent = await client.updateAgentWebSettings(input.agentId, {
+            webAccessEnabled: input.webAccessEnabled,
         });
         await refreshAgentSnapshot({ client, runtimeId });
         emitAgentUpdated();

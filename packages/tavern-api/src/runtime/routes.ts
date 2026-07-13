@@ -21,6 +21,7 @@ export const agentRuntimeRoutes = {
     agentPluginGrants: (id: string) => `/agents/${encodeURIComponent(id)}/plugins`,
     agentThinkingDefault: (id: string) => `/agents/${id}/thinking-default`,
     agentTaskSettings: (id: string) => `/agents/${id}/task-settings`,
+    agentWebSettings: (id: string) => `/agents/${id}/web-settings`,
     agents: '/agents',
     capabilities: '/capabilities',
     capability: (id: string) => `/capabilities/${encodeURIComponent(id)}`,
