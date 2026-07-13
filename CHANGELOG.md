@@ -2,6 +2,35 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.4.45 - 2026-07-13
+
+- Runtime/API/App: adds the built-in Browser Plugin — Runtime supervises a
+  visible managed Google Chrome with a durable named profile, guarded
+  recovery, and `plugin.browser` health; granted agents drive it through one
+  `browser` tool and a managed skill, and settings expose the detected Chrome,
+  profile name, health, and Open/Restart actions. Requires this Runtime.
+- Runtime/API/App: turns create their message at first visible content and the
+  app streams into the turn's post; the chat timeline projects conversation
+  units with turn-scoped evidence, contributions keep their start order, and
+  live turn state supports concurrent agent runs per chat.
+- Runtime/App: expands Tasks with dependencies and scheduling, blocked/review
+  statuses, shared colored labels, bulk actions, a calendar view, task
+  attachments promoted into a runtime artifacts root, dedicated task work
+  chats, and the runtime auto-dispatch loop with claims, recovery, and
+  settings controls.
+- Runtime: adds agent-to-agent mentions and cross-chat posts via `chats_list`
+  and `chat_send`, agent bios with per-session instruction freshness, session
+  freshness rotation from the reset point, `NO_REPLY` for channels, and
+  home-timezone prompt timestamps.
+- Server/App: archived chats are listable, read-only, and restorable.
+- App: queued drafts steer a mentioned agent's live run, the chat rests
+  against its composer with a per-exchange runway, post edits never move a
+  reader who scrolled up, and thinking indicators end exactly with the turn.
+- Runtime: guards the composed agent system prompt with a contract suite and
+  behavioral evals, self-heals CLI PATH under service environments, resolves
+  OpenAI Pi models by canonical provider reference, and refreshes seeded
+  skills during startup.
+
 ## v1.4.44 - 2026-07-07
 
 - Runtime/App: refreshes the Wiki recall capability during Runtime startup and
