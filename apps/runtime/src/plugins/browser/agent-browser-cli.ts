@@ -21,38 +21,51 @@ export interface AgentBrowserRunner {
     run(cdpPort: number, args: string[]): Promise<AgentBrowserResult>;
 }
 
-// agent-browser ships a native binary behind a thin JS launcher, so it stays
-// outside the single-file Runtime bundle. Dev resolves the workspace
-// dependency; the packaged Runtime resolves the copy staged under
-// `share/tavern/node_modules` by the release artifact build (the same shape
-// as the Wiki recall engine).
-export function resolveAgentBrowserEntrypoint(): string {
+// agent-browser ships prebuilt native binaries in its npm package. Tavern
+// executes the platform binary directly: the compiled Runtime binary cannot
+// host the package's JS launcher (`process.execPath` is the Runtime itself,
+// not a JS engine). Dev resolves the workspace dependency; the packaged
+// Runtime resolves the copy installed under `share/tavern/node_modules` by
+// the Homebrew formula (the same shape as the Wiki recall engine).
+export function resolveAgentBrowserBinary(): string {
+    const binaryName = `agent-browser-${process.platform}-${process.arch}${
+        process.platform === 'win32' ? '.exe' : ''
+    }`;
+    let packageDir: string;
     try {
-        const packageJsonPath = require.resolve('agent-browser/package.json');
-        return path.join(path.dirname(packageJsonPath), 'bin', 'agent-browser.js');
+        packageDir = path.dirname(require.resolve('agent-browser/package.json'));
     } catch {
-        return path.join(
+        packageDir = path.join(
             path.dirname(process.execPath),
             '..',
             'share',
             'tavern',
             'node_modules',
-            'agent-browser',
-            'bin',
-            'agent-browser.js'
+            'agent-browser'
         );
     }
+    const binaryPath = path.join(packageDir, 'bin', binaryName);
+    try {
+        fs.accessSync(binaryPath, fs.constants.X_OK);
+    } catch {
+        try {
+            fs.chmodSync(binaryPath, 0o755);
+        } catch {
+            // A missing binary surfaces as a spawn error with this path.
+        }
+    }
+    return binaryPath;
 }
 
 export class SystemAgentBrowserRunner implements AgentBrowserRunner {
     // Every forwarded command re-attaches to the current CDP endpoint first:
     // the managed Chrome may have restarted since the session last connected.
     async run(cdpPort: number, args: string[]): Promise<AgentBrowserResult> {
-        const entrypoint = resolveAgentBrowserEntrypoint();
+        const binaryPath = resolveAgentBrowserBinary();
         const configPath = writeNeutralAgentBrowserConfig();
         const sessionArgs = ['--session', agentBrowserSession, '--config', configPath];
 
-        const connect = await execAgentBrowser(entrypoint, [
+        const connect = await execAgentBrowser(binaryPath, [
             ...sessionArgs,
             'connect',
             String(cdpPort),
@@ -60,7 +73,7 @@ export class SystemAgentBrowserRunner implements AgentBrowserRunner {
         if (!connect.ok) {
             return connect;
         }
-        return await execAgentBrowser(entrypoint, [...sessionArgs, ...args]);
+        return await execAgentBrowser(binaryPath, [...sessionArgs, ...args]);
     }
 }
 
@@ -73,9 +86,9 @@ function writeNeutralAgentBrowserConfig(): string {
     return configPath;
 }
 
-function execAgentBrowser(entrypoint: string, args: string[]): Promise<AgentBrowserResult> {
+function execAgentBrowser(binaryPath: string, args: string[]): Promise<AgentBrowserResult> {
     return new Promise((resolve) => {
-        const child = spawn(process.execPath, [entrypoint, ...args], {
+        const child = spawn(binaryPath, args, {
             stdio: ['ignore', 'pipe', 'pipe'],
         });
         let stdout = '';

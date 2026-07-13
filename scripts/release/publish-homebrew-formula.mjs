@@ -80,6 +80,7 @@ function renderFormula(input) {
     bin.install "bin/tavern-runtime"
     (share/"tavern").install "share/tavern/runtime-assets"
     (share/"tavern/node_modules/@tavern").install "share/tavern/node_modules/@tavern/sdk"
+    (share/"tavern/node_modules").install "share/tavern/node_modules/agent-browser"
     (etc/"tavern").mkpath
     (var/"log/tavern").mkpath
   end
