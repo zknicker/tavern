@@ -8,6 +8,7 @@ import { ensureRuntimeSchema } from '../db/schema';
 import { runtimeCapabilitiesRefreshJob } from '../jobs/definitions';
 import { ensureRuntimeJobsSchema } from '../jobs/schema';
 import { handleMemorySettingsRequest } from '../memory/settings';
+import { saveModelCapabilitySelections } from '../models/capability-selections';
 import { upsertStoredAgent } from '../tavern/agents-store';
 import { subscribeToRuntimeEvents } from '../tavern/runtime-events';
 import { getRuntimeCapability, listRuntimeCapabilities, refreshRuntimeCapabilities } from './store';
@@ -33,6 +34,7 @@ describe('Runtime capabilities store', () => {
 
     afterEach(async () => {
         vi.restoreAllMocks();
+        vi.unstubAllEnvs();
         closeDb();
         process.env.CODEX_HOME = undefined;
         process.env.PATH = originalPath;
@@ -51,6 +53,7 @@ describe('Runtime capabilities store', () => {
             'dashboardServer',
             'devToolkit',
             'gateway',
+            'imageGeneration',
             'memory',
             'memoryDreaming',
             'memoryExtraction',
@@ -107,6 +110,42 @@ describe('Runtime capabilities store', () => {
             }),
             reason: null,
             state: 'healthy',
+        });
+    });
+
+    test('reports image generation readiness from its selected model and key', async () => {
+        vi.stubEnv('OPENAI_API_KEY', '');
+        vi.stubEnv('TAVERN_AGENT_API_KEY', '');
+
+        const [unselected] = await refreshRuntimeCapabilities({ ids: ['imageGeneration'] });
+        expect(unselected).toMatchObject({
+            healthy: false,
+            reason: 'No image generation model is selected.',
+            state: 'unavailable',
+        });
+
+        saveModelCapabilitySelections({
+            selections: { imageGeneration: { model: 'gpt-image-2', provider: 'openai' } },
+        });
+        const [missingKey] = await refreshRuntimeCapabilities({ ids: ['imageGeneration'] });
+        expect(missingKey).toMatchObject({
+            healthy: false,
+            reason: 'OPENAI_API_KEY or TAVERN_AGENT_API_KEY is required for image generation.',
+            state: 'unavailable',
+        });
+
+        vi.stubEnv('OPENAI_API_KEY', 'sk-test');
+        const [healthy] = await refreshRuntimeCapabilities({ ids: ['imageGeneration'] });
+        expect(healthy).toMatchObject({ healthy: true, reason: null, state: 'healthy' });
+
+        saveModelCapabilitySelections({
+            selections: { imageGeneration: { model: 'example-image', provider: 'custom' } },
+        });
+        const [unsupported] = await refreshRuntimeCapabilities({ ids: ['imageGeneration'] });
+        expect(unsupported).toMatchObject({
+            healthy: false,
+            reason: 'Image generation cannot use provider "custom" without a direct image model adapter.',
+            state: 'unavailable',
         });
     });
 

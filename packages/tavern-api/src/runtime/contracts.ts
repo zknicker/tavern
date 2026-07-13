@@ -16,6 +16,7 @@ const agentRuntimeCoreCapabilityIds = [
     'apiServer',
     'gateway',
     'modelExecution',
+    'imageGeneration',
     'skills',
     'cron',
     'autoDispatch',

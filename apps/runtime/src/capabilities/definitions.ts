@@ -23,6 +23,7 @@ import { isRuntimeCronReady } from '../cron/scheduler.ts';
 import { getDb, hasTable } from '../db/connection.ts';
 import { isMemoryEnabled } from '../memory/settings.ts';
 import { loadVaultBackedCodexCredentials } from '../model-access/codex-settings.ts';
+import { imageGenerationReadiness } from '../models/capability-selections.ts';
 import { listAgentModels } from '../models/catalog-service.ts';
 import { resolveModelCategorySelection } from '../models/category-settings.ts';
 import { createLanguageModelForRuntime } from '../models/language-model.ts';
@@ -167,6 +168,17 @@ export const runtimeCapabilityDefinitions: RuntimeCapabilityDefinition[] = [
         },
     },
     {
+        check() {
+            return checkImageGenerationCapability();
+        },
+        displayName: 'Image generation',
+        id: 'imageGeneration',
+        refresh: {
+            intervalMs: 5 * minuteMs,
+            runOnStart: true,
+        },
+    },
+    {
         async check() {
             return checkAgentEngineCapability({ capability: 'skills' });
         },
@@ -277,6 +289,21 @@ function checkWebAccessCapability(): RuntimeCapabilityCheckResult {
     // This makes older Runtimes read as unavailable to the app. Web fetch has no external
     // dependency; provider-native search readiness is a per-model fact.
     return { state: 'healthy' };
+}
+
+function checkImageGenerationCapability(): RuntimeCapabilityCheckResult {
+    try {
+        const readiness = imageGenerationReadiness();
+        return readiness.ready
+            ? { state: 'healthy' }
+            : { reason: readiness.reason, state: 'unavailable' };
+    } catch (error) {
+        return {
+            reason: 'Image generation is not ready.',
+            state: 'unavailable',
+            technicalMessage: error instanceof Error ? error.message : String(error),
+        };
+    }
 }
 
 function checkCronCapability(): RuntimeCapabilityCheckResult {

@@ -1,4 +1,5 @@
 import type { AgentRuntimeTool } from '@tavern/api';
+import { imageGenerationReadiness } from '../models/capability-selections.ts';
 import { listPluginToolGroups } from '../plugins/agent-capabilities.ts';
 
 const builtInTools = [
@@ -63,12 +64,32 @@ const builtInTools = [
 ] satisfies AgentRuntimeTool[];
 
 export function listRuntimeTools() {
-    return { tools: [...builtInTools.map((tool) => ({ ...tool })), ...listPluginToolGroups()] };
+    return {
+        tools: [
+            ...builtInTools.map((tool) => ({ ...tool })),
+            imageGenerationToolGroup(),
+            ...listPluginToolGroups(),
+        ],
+    };
 }
 
 export function getRuntimeTool(toolId: string) {
-    const tool = [...builtInTools, ...listPluginToolGroups()].find(
+    const tool = [...builtInTools, imageGenerationToolGroup(), ...listPluginToolGroups()].find(
         (candidate) => candidate.id === toolId
     );
     return tool ? { ...tool } : null;
+}
+
+function imageGenerationToolGroup(): AgentRuntimeTool {
+    const ready = imageGenerationReadiness().ready;
+    return {
+        configured: ready,
+        description: 'Generate images with the configured image model into the agent workspace.',
+        enabled: ready,
+        id: 'image_generation',
+        label: 'Image generation',
+        name: 'image_generation',
+        readOnly: false,
+        tools: ['image_generate'],
+    };
 }

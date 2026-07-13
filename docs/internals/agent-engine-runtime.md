@@ -230,6 +230,10 @@ surface a user-facing Tools page or per-agent tool grant editor. Agent-specific
 access is expressed through skill assignments, Plugin grants, sandbox mode, and
 approval policy.
 
+When the `imageGeneration` capability is ready, Runtime adds `image_generate` to
+each harness turn. The tool uses the selected direct image model and writes its
+output into the active agent workspace.
+
 Runtime also exposes read-only Tavern chat tools to harness turns:
 
 - `chat_messages_list` lists current-chat messages by sequence cursor.

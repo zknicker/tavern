@@ -19,7 +19,9 @@ import {
 import { readConfigValue } from '../config.ts';
 import { createTavernCronTools } from '../cron/agent-tools.ts';
 import { isRuntimeCronReady } from '../cron/manager-state.ts';
+import { createImageGenerationTools } from '../images/agent-tools.ts';
 import { log } from '../log.ts';
+import { imageGenerationReadiness } from '../models/capability-selections.ts';
 import { createBrowserToolsForAgent } from '../plugins/browser-tools.ts';
 import { createGoogleToolsForAgent } from '../plugins/google-tools.ts';
 import { createMerchbaseToolsForAgent } from '../plugins/merchbase-tools.ts';
@@ -368,6 +370,9 @@ function createHarnessAgent(
         }),
         ...createTavernWikiTools(),
         ...(isRuntimeCronReady() ? createTavernCronTools({ agentId: input.agent.id }) : {}),
+        ...(imageGenerationReadiness().ready
+            ? createImageGenerationTools({ workspaceFolder: input.agent.workspaceFolder })
+            : {}),
         ...createTavernTaskTools({ agentId: input.agent.id, chatId: input.chatId }),
         ...createTavernSkillTools({ agentId: input.agent.id }),
         ...createGoogleToolsForAgent(input.agent),

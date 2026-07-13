@@ -9,6 +9,12 @@ import {
 import { getDb } from '../db/connection.ts';
 import { namedParams } from '../db/sqlite.ts';
 import { json } from '../tavern/http.ts';
+import {
+    imageGenerationMissingKeyReason,
+    resolveImageGenerationApiKey,
+    supportsImageModelForRuntime,
+    unsupportedImageModelProviderReason,
+} from './image-model.ts';
 import { requireTavernSettingsMutation } from './settings-mutation.ts';
 
 const modelCapabilitySelectionsMetadataKey = 'models:capability-selections';
@@ -102,6 +108,22 @@ export function resolveImageGenerationSelection(): AgentRuntimeModelName | null 
     return getModelCapabilitySelections().selections.imageGeneration;
 }
 
+export function imageGenerationReadiness():
+    | { model: AgentRuntimeModelName; ready: true }
+    | { ready: false; reason: string } {
+    const model = resolveImageGenerationSelection();
+    if (!model) {
+        return { ready: false, reason: 'No image generation model is selected.' };
+    }
+    if (!supportsImageModelForRuntime(model)) {
+        return { ready: false, reason: unsupportedImageModelProviderReason(model.provider) };
+    }
+    if (!resolveImageGenerationApiKey()) {
+        return { ready: false, reason: imageGenerationMissingKeyReason };
+    }
+    return { model, ready: true };
+}
+
 function parseStoredSelections(
     value: string,
     updatedAt: string
@@ -124,21 +146,12 @@ function parseStoredSelections(
 }
 
 function refreshImageGenerationCapability() {
-    // Unknown capability ids throw, so refresh only after the definition is registered.
-    void import('../capabilities/definitions.ts')
-        .then((definitions) => {
-            const definition = definitions.runtimeCapabilityDefinitions.find(
-                (candidate) => candidate.id === ('imageGeneration' as string)
-            );
-            if (!definition) {
-                return undefined;
-            }
-            return import('../capabilities/store.ts').then((store) =>
-                store.refreshRuntimeCapabilities({
-                    ids: [definition.id],
-                    publishUpdated: true,
-                })
-            );
-        })
+    void import('../capabilities/store.ts')
+        .then((store) =>
+            store.refreshRuntimeCapabilities({
+                ids: ['imageGeneration'],
+                publishUpdated: true,
+            })
+        )
         .catch(() => {});
 }
