@@ -37,6 +37,7 @@ const capabilityLabels = {
     'plugin.google.calendar': 'Google Calendar',
     'plugin.merchbase': 'MerchBase',
     skills: 'Skills',
+    webAccess: 'Web access',
     wiki: 'Wiki',
     wikiRecall: 'Wiki recall',
 } satisfies Record<RuntimeCapabilityId, string>;

@@ -74,6 +74,7 @@ function createAgent(input: {
 }): AgentListOutput['agents'][number] {
     return {
         autoDispatchEnabled: false,
+        webAccessEnabled: false,
         bio: null,
         character: null,
         defaultCharacter: 'robot',

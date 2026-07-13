@@ -17,6 +17,7 @@ const preferredArgumentKeys = [
     'file_path',
     'sessionKey',
     'target',
+    'url',
     'query',
     'pattern',
     'command',
@@ -63,6 +64,7 @@ const toolLabelByKey: Partial<Record<string, string>> = {
     runtime: 'Runtime',
     sessionKey: 'Session',
     target: 'Target',
+    url: 'URL',
     transcriptPath: 'Transcript',
     streamLogPath: 'Log',
 };

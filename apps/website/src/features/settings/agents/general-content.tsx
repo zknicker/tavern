@@ -17,6 +17,7 @@ import { AgentModelSection } from './model-section.tsx';
 import { AgentTasksSection } from './tasks-section.tsx';
 import type { AgentModelDraft } from './types.ts';
 import { useAgentEnvSettings } from './use-env-settings.ts';
+import { AgentWebAccessSection } from './web-access-section.tsx';
 import { AgentWorkspaceFileEditor } from './workspace-file-page.tsx';
 
 export function AgentGeneralSettingsContent({
@@ -116,6 +117,8 @@ export function AgentGeneralSettingsContent({
             />
 
             <AgentTasksSection agent={agent} disabled={isSavingAgentConfig} />
+
+            <AgentWebAccessSection agent={agent} disabled={isSavingAgentConfig} />
 
             <AgentDeleteSection agent={agent} deleteRedirectTo={deleteRedirectTo} />
         </SettingsPage>

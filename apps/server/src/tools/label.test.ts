@@ -194,6 +194,55 @@ test('buildToolLabel summarizes read tool paths relative to workspace', () => {
     );
 });
 
+test('buildToolLabel summarizes web search queries across provider names', () => {
+    for (const name of ['web_search', 'webSearch', 'WebSearch']) {
+        assert.equal(
+            getLabel({
+                argumentsValue: {
+                    query: 'best espresso machines 2026',
+                },
+                name,
+            }),
+            'search · best espresso machines 2026'
+        );
+    }
+});
+
+test('buildToolLabel marks unavailable web search', () => {
+    assert.equal(
+        getLabel({
+            argumentsValue: {
+                query: 'weather',
+            },
+            name: 'web_search',
+            status: 'error',
+        }),
+        'search · weather · unavailable'
+    );
+});
+
+test('buildToolLabel summarizes web fetch by host', () => {
+    assert.equal(
+        getLabel({
+            argumentsValue: {
+                url: 'https://example.com/docs/page?ref=1',
+            },
+            name: 'web_fetch',
+        }),
+        'fetch · example.com'
+    );
+});
+
+test('buildToolLabel falls back to fetch without a url', () => {
+    assert.equal(
+        getLabel({
+            argumentsValue: {},
+            name: 'web_fetch',
+        }),
+        'fetch'
+    );
+});
+
 test('buildToolLabel preserves browser error detail', () => {
     assert.equal(
         getLabel({

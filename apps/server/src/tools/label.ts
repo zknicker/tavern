@@ -201,10 +201,16 @@ export function buildToolLabel(input: {
                 null
             );
         }
-        case 'web_search': {
+        case 'web_search':
+        case 'webSearch':
+        case 'WebSearch': {
             const query = summarizeText(getString(argumentsValue?.query));
             const state = isErrorStatus(input.status) ? 'unavailable' : null;
             return joinLabel(['search', query, state]) ?? 'search';
+        }
+        case 'web_fetch': {
+            const host = formatUrlHost(getString(argumentsValue?.url));
+            return joinLabel(['fetch', host]) ?? 'fetch';
         }
         default: {
             if (isErrorStatus(input.status)) {

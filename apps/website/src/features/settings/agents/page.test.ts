@@ -32,6 +32,7 @@ test('createNewAgentName picks the next available default name', () => {
 function createAgent(input: { id: string; name: string }): AgentListOutput['agents'][number] {
     return {
         autoDispatchEnabled: false,
+        webAccessEnabled: false,
         bio: null,
         character: null,
         defaultCharacter: 'robot',
