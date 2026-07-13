@@ -190,11 +190,14 @@ CI by the prompt contract suite
 ledger, reviewable full-prompt snapshots, and character budgets. Behavior loss
 is caught on demand by `bun run eval:prompt`, which drives real model turns
 through a running dev stack (`bun run dev:web:runtime`) across handoffs,
-NO_REPLY discipline, cross-chat posting rules, chain guards, bio awareness,
-and wiki recall. Run it after prompt-text edits and before releases; it
-spends roughly a dozen real turns, archives its temp chats, deletes its temp
-Wiki pages, and restores any temp agent bios. See AGENTS.md ("Agent System
-Prompt Changes").
+NO_REPLY discipline, DM responsiveness, cross-chat posting rules, chain
+guards, bio awareness, wiki recall, injection resistance, widget output
+discipline, and automation confirmation. Run it after prompt-text edits and
+before releases; it spends roughly sixteen real turns, archives its temp
+chats, deletes its temp Wiki pages (including capture-derived strays),
+removes stray automations, and restores any temp agent bios. Use
+`--only <substring>` to rerun a single scenario. See AGENTS.md ("Agent
+System Prompt Changes").
 
 ## Keeping Suites Current
 
