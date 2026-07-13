@@ -20,6 +20,7 @@ export const requiredRuntimeArtifactPaths = [
     'bin/tavern-runtime',
     'share/tavern/node_modules/@tavern/sdk/package.json',
     'share/tavern/node_modules/@tobilu/qmd/package.json',
+    'share/tavern/node_modules/agent-browser/bin/agent-browser.js',
     'share/tavern/runtime-assets/google/oauth-client.json',
 ];
 
@@ -95,17 +96,23 @@ async function stageRuntimePackages(stageRoot) {
     );
 }
 
-// qmd powers Wiki recall search. It carries native modules (better-sqlite3,
-// sqlite-vec, node-llama-cpp) that cannot compile into the single-file Runtime
-// binary, so the Runtime dynamic-imports it from share/tavern/node_modules.
-// npm (not bun) installs it so native postinstall scripts run for the build
-// host platform, matching the per-platform artifact target.
+// qmd powers Wiki recall search and carries native modules (better-sqlite3,
+// sqlite-vec, node-llama-cpp); agent-browser drives the managed Browser and
+// carries a prebuilt native binary. Neither can compile into the single-file
+// Runtime binary, so the Runtime resolves them from
+// share/tavern/node_modules. npm (not bun) installs them so native
+// postinstall scripts run for the build host platform, matching the
+// per-platform artifact target.
 async function stageWikiRecallEngine(stageRoot) {
     const shareRoot = path.join(stageRoot, 'share', 'tavern');
     const runtimePackageJson = await readJson('apps/runtime/package.json');
     const qmdVersion = runtimePackageJson.dependencies['@tobilu/qmd'];
     if (!qmdVersion) {
         fail('apps/runtime/package.json is missing the @tobilu/qmd dependency');
+    }
+    const agentBrowserVersion = runtimePackageJson.dependencies['agent-browser'];
+    if (!agentBrowserVersion) {
+        fail('apps/runtime/package.json is missing the agent-browser dependency');
     }
 
     await fs.mkdir(shareRoot, { recursive: true });
@@ -114,6 +121,7 @@ async function stageWikiRecallEngine(stageRoot) {
         [
             'install',
             `@tobilu/qmd@${qmdVersion}`,
+            `agent-browser@${agentBrowserVersion}`,
             '--prefix',
             shareRoot,
             '--no-package-lock',
