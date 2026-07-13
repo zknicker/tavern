@@ -29,7 +29,7 @@ describe('global help', () => {
             'Server',
             'Status',
             'Maintenance',
-            'Memory',
+            'Wiki',
             'Engine',
             'Environment',
         ];
