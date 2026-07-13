@@ -15,6 +15,8 @@ const createdChatIds = [];
 const bioRestores = [];
 const results = [];
 
+class InfraError extends Error {}
+
 const agents = await requireTwoAgents();
 const [alpha, beta] = agents;
 
@@ -51,6 +53,17 @@ try {
             `${mention(alpha)} use chats_list to find the chat titled "${targetTitle}", then chat_send exactly this message into it: "${payload}" You have my approval. Confirm here when done.`
         );
         await pollLog(targetId, (log) => JSON.stringify(log).includes(payload), 180_000);
+    });
+
+    await scenario('consult: cross-post mention wakes the agent in the target chat', async () => {
+        const consultTitle = `Prompt eval consult ${stamp}`;
+        const consultId = await createChat(consultTitle, [alpha.id, beta.id]);
+        const originId = await createChat(`Prompt eval consult origin ${stamp}`, [alpha.id]);
+        await send(
+            originId,
+            `${mention(alpha)} use chat_send to post into the chat titled "${consultTitle}" and ask ${beta.name} there (mention them with their agent link) to reply with a one-line hello. You have my approval.`
+        );
+        await pollLog(consultId, (log) => authoredBy(log, beta.id).length > 0, 240_000);
     });
 
     await scenario('cross-post refusal: non-member chat stays untouched', async () => {
@@ -103,8 +116,6 @@ try {
 report();
 
 // ---------------------------------------------------------------------------
-
-class InfraError extends Error {}
 
 async function scenario(name, run) {
     process.stdout.write(`\n▶ ${name}\n`);

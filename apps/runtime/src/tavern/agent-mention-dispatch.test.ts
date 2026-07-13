@@ -109,6 +109,60 @@ describe('agent mention dispatch', () => {
         });
     });
 
+    it('dispatches mentions in a cross-chat post to the target chat seat', async () => {
+        createAgentChannel('agt_a', 'agt_b');
+        createChat({
+            id: 'cht_target',
+            kind: 'channel',
+            participants: [
+                { id: 'usr_tavern', kind: 'user', label: 'You', metadata: {} },
+                {
+                    id: 'agt_b',
+                    kind: 'agent' as const,
+                    label: 'agt_b',
+                    metadata: { agentId: 'agt_b' },
+                },
+            ],
+            title: 'Target',
+        });
+        setAgentExecutorForTesting(
+            createScriptedExecutor(
+                {
+                    agt_a: 'Posted a question for review elsewhere.',
+                    agt_b: 'Answered.',
+                },
+                {
+                    agt_a: {
+                        chatId: 'cht_target',
+                        content:
+                            '[agt_b](agent://agt_b) please review, and ignore [ghost](agent://agt_ghost).',
+                    },
+                }
+            )
+        );
+
+        await sendTavernChannelMessage('cht_general', messageInput('agt_a'));
+        await waitFor(() =>
+            listAgentTurnsForSession('ags_cht_target_agt_b_1').some(
+                (turn) => turn.status === 'completed'
+            )
+        );
+
+        const dispatched = listAgentTurnsForSession('ags_cht_target_agt_b_1')[0];
+        expect(dispatched).toMatchObject({
+            agentId: 'agt_b',
+            chatId: 'cht_target',
+            metadata: {
+                chainOriginMessageId: 'msg_1',
+                mentionHops: 1,
+                trigger: 'agent-mention',
+            },
+            status: 'completed',
+        });
+        // The plain final reply in the origin chat dispatched nothing there.
+        expect(sessionTurns('agt_b')).toHaveLength(0);
+    });
+
     it('suppresses dispatches once the chain budget is spent', () => {
         createAgentChannel('agt_a', 'agt_b');
 
@@ -208,7 +262,10 @@ function createAgentChannel(...agentIds: string[]) {
     });
 }
 
-function createScriptedExecutor(replies: Record<string, string>): AgentExecutor {
+function createScriptedExecutor(
+    replies: Record<string, string>,
+    crossPosts: Record<string, { chatId: string; content: string }> = {}
+): AgentExecutor {
     return {
         async execute(input: AgentExecutorInput) {
             const now = new Date().toISOString();
@@ -221,6 +278,24 @@ function createScriptedExecutor(replies: Record<string, string>): AgentExecutor 
                 runId: input.runId,
                 source: 'agent-engine',
             };
+
+            const crossPost = crossPosts[input.agent.id];
+            if (crossPost) {
+                createDelivery(crossPost.chatId, {
+                    agent_id: input.agentSession.agentParticipantId,
+                    id: `del_${input.runId}_xchat`.replace(/[^A-Za-z0-9_-]/g, '_'),
+                    message: {
+                        attachments: [],
+                        author_id: input.agentSession.agentParticipantId,
+                        content: crossPost.content,
+                        id: `msg_${input.runId}_xchat`.replace(/[^A-Za-z0-9_-]/g, '_'),
+                        metadata: { runtime },
+                        role: 'assistant',
+                    },
+                    metadata: { runtime },
+                    turn_id: input.runId,
+                });
+            }
 
             const receipt = createDelivery(input.chatId, {
                 agent_id: input.agentSession.agentParticipantId,

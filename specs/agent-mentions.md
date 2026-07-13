@@ -16,16 +16,23 @@ lives in [mentions.md](mentions.md).
 
 ## What dispatches
 
-- Only the **delivered final reply** of a completed turn is parsed for agent
-  mentions. Preambles, commentary, tool output, activity rows, and steering
-  text never dispatch. A `NO_REPLY` turn delivers nothing and therefore
-  dispatches nothing — staying silent ends a handoff chain.
+- Only messages a completed turn **delivered into a chat** are parsed for
+  agent mentions: the final reply in the turn's own chat, and any cross-chat
+  posts the turn made via `chat_send`. Preambles, commentary, tool output,
+  activity rows, and steering text never dispatch. A `NO_REPLY` turn delivers
+  nothing and therefore dispatches nothing — staying silent ends a handoff
+  chain.
 - A mention dispatches only when the target is an **agent participant of the
-  same chat**. Mentions of non-participants and unknown agents render as text
-  and are ignored. Self-mentions never dispatch.
+  chat the message landed in** — the turn's own chat for the final reply, the
+  target chat for a cross-chat post. Mentions of non-participants and unknown
+  agents render as text and are ignored. Self-mentions never dispatch, and one
+  turn dispatches at most one turn per (chat, agent) seat.
+- Cross-chat posts are how an agent consults an agent that is not in the
+  current chat. The post itself never starts a turn for its author; dispatch
+  happens when the posting turn completes, so a cancelled turn wakes no one.
 - Mentions of the human render as chips but do not dispatch anything; there is
   no notification side effect today.
-- The dispatched turn's trigger message is the mentioning agent's reply
+- The dispatched turn's trigger message is the mentioning agent's delivered
   message. The target agent reads it as a normal addressed message through its
   own session, with ambient channel context as usual.
 
@@ -36,7 +43,9 @@ automation, or dispatch starts a fresh chain (`mentionHops: 0`). A turn
 dispatched from an agent mention inherits the chain and increments the hop
 count.
 
-Two independent guards bound every chain:
+Two independent guards bound every chain. Both are chain-scoped, not
+chat-scoped: a chain that crosses chats through `chat_send` spends the same
+depth and budget as one that stays home.
 
 - **Hop cap.** A mention dispatches only when the mentioning turn's
   `mentionHops` is below `maxMentionHops` (default 4). This bounds chain
@@ -95,7 +104,5 @@ markdown until the durable message exists.
 
 - No default-listener behavior: un-mentioned agents still never respond to
   channel messages.
-- No cross-chat dispatch: mentions dispatch only within the chat that carries
-  the reply (cross-chat actions are a separate capability).
 - No pair-scoped rate limiting or cooldowns until real usage shows the chain
   guards are insufficient.

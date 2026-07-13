@@ -96,8 +96,10 @@ happen, and keep the durable timeline as context.
   [agent-mentions](../../specs/agent-mentions.md).
 * **Cross-chat posts.** An agent can post a message, as itself, into another
   chat where it holds a seat (`chat_send`, with `chats_list` for targets).
-  The post is a plain agent message in the target chat; it starts no turn
-  and its mentions do not dispatch.
+  The post starts no turn for its author, but mentioning an agent of the
+  target chat dispatches that agent's turn there once the posting turn
+  completes — the consult-an-agent-elsewhere path, bounded by the same
+  chain limits as in-chat handoffs.
 * **Silent replies.** An agent can decline to respond: a turn whose reply is
   exactly `NO_REPLY` completes without delivering an assistant message. The
   response settles as completed with a "Chose not to reply" summary and

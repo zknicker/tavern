@@ -5,13 +5,21 @@ import { ensureCurrentAgentSession } from './agent-session-store.ts';
 import type { AgentTurn } from './agent-turn-store.ts';
 import { getStoredAgent } from './agents-store.ts';
 import { createAgentParticipantId, createRunId } from './chat-api/ids.ts';
-import { getChat, getMessage, upsertResponse, upsertResponseActivity } from './chat-api/index.ts';
+import {
+    getChat,
+    getMessage,
+    listDeliveriesForTurn,
+    upsertResponse,
+    upsertResponseActivity,
+} from './chat-api/index.ts';
 import { ensureFreshAgentSession } from './session-freshness.ts';
 
-// See specs/agent-mentions.md. An agent's delivered final reply can mention
-// other agent participants; each mention dispatches a turn on that seat.
-// Two guards bound every chain: a hop cap (depth) and a per-origin budget
-// (total dispatched mention turns from one founding trigger message).
+// See specs/agent-mentions.md. A turn's delivered final reply and its
+// cross-chat posts (chat_send) can mention agent participants of the chat
+// each message landed in; every mention dispatches a turn on that seat.
+// Two guards bound every chain regardless of which chats it crosses: a hop
+// cap (depth) and a per-origin budget (total dispatched mention turns from
+// one founding trigger message).
 const maxMentionHops = 4;
 const mentionChainBudget = 8;
 const maxTrackedChains = 256;
@@ -24,64 +32,86 @@ export interface AgentMentionDispatch {
 const chainSpend = new Map<string, number>();
 
 /**
- * Reads the completed turn's delivered final reply and prepares one dispatch
- * per mentioned co-resident agent, writing running responses for dispatched
- * turns and suppression notices for mentions past the chain limits. The
- * caller enqueues the returned inputs; this module never runs turns itself.
+ * Reads the completed turn's cross-chat posts and delivered final reply, and
+ * prepares one dispatch per mentioned agent participant of the chat each
+ * message landed in — writing running responses for dispatched turns and
+ * suppression notices for mentions past the chain limits. The caller enqueues
+ * the returned inputs; this module never runs turns itself.
  */
 export function collectAgentMentionDispatches(turn: AgentTurn): AgentMentionDispatch[] {
-    const finalMessageId = turn.outputMessageIds.at(-1);
-    if (!finalMessageId) {
-        return [];
-    }
-    const message = getMessage(finalMessageId);
-    if (!message || message.role !== 'assistant' || !message.content) {
-        return [];
-    }
-
-    const mentionedAgentIds = readMentionedAgentIds(message.content).filter(
-        (agentId) => agentId !== turn.agentId
-    );
-    if (mentionedAgentIds.length === 0) {
-        return [];
-    }
-
-    const chatAgentIds = readChatAgentIds(turn.chatId);
-    const targets = mentionedAgentIds.filter((agentId) => chatAgentIds.has(agentId));
-    if (targets.length === 0) {
+    const candidates = dispatchCandidates(turn);
+    if (candidates.length === 0) {
         return [];
     }
 
     const hops = readHops(turn.metadata);
     const origin = readChainOrigin(turn);
-    if (hops >= maxMentionHops) {
-        for (const agentId of targets) {
-            recordSuppressionNotice(turn, agentId, 'chain depth limit reached');
-        }
-        return [];
-    }
-
     const dispatches: AgentMentionDispatch[] = [];
-    for (const agentId of targets) {
-        if ((chainSpend.get(origin) ?? 0) >= mentionChainBudget) {
-            recordSuppressionNotice(turn, agentId, 'chain budget exhausted');
-            continue;
+    const seenSeats = new Set<string>();
+    for (const candidate of candidates) {
+        const chatAgentIds = readChatAgentIds(candidate.chatId);
+        for (const agentId of readMentionedAgentIds(candidate.content)) {
+            const seatKey = `${candidate.chatId}:${agentId}`;
+            if (agentId === turn.agentId || !chatAgentIds.has(agentId) || seenSeats.has(seatKey)) {
+                continue;
+            }
+            seenSeats.add(seatKey);
+            if (hops >= maxMentionHops) {
+                recordSuppressionNotice(turn, agentId, 'chain depth limit reached');
+                continue;
+            }
+            if ((chainSpend.get(origin) ?? 0) >= mentionChainBudget) {
+                recordSuppressionNotice(turn, agentId, 'chain budget exhausted');
+                continue;
+            }
+            const dispatch = prepareDispatch({
+                agentId,
+                chatId: candidate.chatId,
+                content: candidate.content,
+                hops,
+                origin,
+                triggerMessageId: candidate.messageId,
+            });
+            if (!dispatch) {
+                continue;
+            }
+            spendChainBudget(origin);
+            dispatches.push(dispatch);
         }
-        const dispatch = prepareDispatch({
-            agentId,
-            chatId: turn.chatId,
-            content: message.content,
-            hops,
-            origin,
-            triggerMessageId: finalMessageId,
-        });
-        if (!dispatch) {
-            continue;
-        }
-        spendChainBudget(origin);
-        dispatches.push(dispatch);
     }
     return dispatches;
+}
+
+// Messages this turn placed into chats, in the order they landed: cross-chat
+// posts first (they happened mid-turn), then the final reply in the turn's
+// own chat.
+function dispatchCandidates(turn: AgentTurn) {
+    const candidates: Array<{ chatId: string; content: string; messageId: string }> = [];
+    for (const delivery of listDeliveriesForTurn(turn.id)) {
+        if (delivery.chatId === turn.chatId) {
+            continue;
+        }
+        const message = getMessage(delivery.messageId);
+        if (message?.role === 'assistant' && message.content && !message.deleted_at) {
+            candidates.push({
+                chatId: delivery.chatId,
+                content: message.content,
+                messageId: message.id,
+            });
+        }
+    }
+    const finalMessageId = turn.outputMessageIds.at(-1);
+    if (finalMessageId) {
+        const message = getMessage(finalMessageId);
+        if (message?.role === 'assistant' && message.content && !message.deleted_at) {
+            candidates.push({
+                chatId: turn.chatId,
+                content: message.content,
+                messageId: finalMessageId,
+            });
+        }
+    }
+    return candidates;
 }
 
 export function resetAgentMentionChainsForTesting() {

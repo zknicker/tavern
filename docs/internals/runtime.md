@@ -85,8 +85,9 @@ Runtime writes assistant replies as normal Chat messages authored by the Agent
 participant. Tool calls, thinking, rich responses, and command output are
 execution evidence stored as response activity. Agents can also post directly
 into another chat where they hold a seat via the `chat_send` tool
-(`chats_list` enumerates their chats); a cross-chat post is a plain agent
-message and never starts a turn.
+(`chats_list` enumerates their chats); the post starts no turn for its
+author, and its mentions of the target chat's agents dispatch chain-bounded
+turns there when the posting turn completes.
 
 ## Boundaries
 

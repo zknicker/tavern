@@ -5,12 +5,12 @@ import * as z from 'zod';
 import { createAgentParticipantId } from './chat-api/ids.ts';
 import { createDelivery, getChat, listChatsForAgentParticipant } from './chat-api/index.ts';
 
-// Cross-chat surface (PRD-29): an agent can see the chats it participates in
-// and post a message, as itself, into one of them. Posting is gated to chats
-// where the agent already holds a seat — Runtime never invents a target.
-// A cross-chat post is a plain agent message; it never starts a turn and its
-// mentions do not dispatch (specs/agent-mentions.md scopes dispatch to
-// delivered final replies).
+// Cross-chat surface: an agent can see the chats it participates in and post
+// a message, as itself, into one of them. Posting is gated to chats where the
+// agent already holds a seat — Runtime never invents a target. The post
+// itself starts no turn for its author, but agent mentions in it dispatch
+// turns on the target chat's seats once the posting turn completes, bounded
+// by the shared chain guards (specs/agent-mentions.md).
 const maxChatSendLength = 4000;
 
 let sendSequence = 0;
@@ -25,7 +25,7 @@ export function createTavernChatActionTools(input: {
     return {
         chat_send: tool({
             description:
-                'Post a message, as yourself, into another Tavern chat you participate in. Use chats_list for targets, and confirm with the user before posting outside the current chat.',
+                'Post a message, as yourself, into another Tavern chat you participate in. Mention an agent of that chat as [Name](agent://<agentId>) to give it a turn there — this is how you consult an agent who is not in the current chat. Use chats_list for targets, and confirm with the user before posting outside the current chat.',
             inputSchema: z.object({
                 chatId: z.string().min(1).describe('Target chat id from chats_list.'),
                 message: z

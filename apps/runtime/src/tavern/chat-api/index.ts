@@ -6,7 +6,7 @@ export {
     listChatsForAgentParticipant,
     setChatArchived,
 } from './chats';
-export { createDelivery } from './deliveries';
+export { createDelivery, listDeliveriesForTurn } from './deliveries';
 export { clearChat, deleteResponse } from './dismiss';
 export { listEvents, subscribeToTavernApiEvents } from './events';
 export {

@@ -77,6 +77,22 @@ export function createDelivery(
     }
 }
 
+/** Messages a turn delivered, oldest first, with the chat each landed in. */
+export function listDeliveriesForTurn(
+    turnId: string,
+    db: Database = getDb()
+): Array<{ chatId: string; messageId: string }> {
+    const rows = db
+        .prepare(
+            `SELECT chat_id, message_id
+             FROM chat_deliveries
+             WHERE turn_id = $turnId
+             ORDER BY cursor ASC`
+        )
+        .all(namedParams({ turnId })) as Array<{ chat_id: string; message_id: string }>;
+    return rows.map((row) => ({ chatId: row.chat_id, messageId: row.message_id }));
+}
+
 // The delivery's message may already exist as the turn's streaming post
 // (same id): settle its final content and metadata inside the delivery
 // transaction while keeping its sequence — the post never moves.
