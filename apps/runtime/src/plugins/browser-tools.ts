@@ -17,16 +17,18 @@ const browserToolInputSchema = z.object({
 
 const defaultRunner = new SystemAgentBrowserRunner();
 
+export function agentHasBrowserTool(agent: AgentRuntimeAgent): boolean {
+    return (
+        (agent.enabledPluginIds ?? []).includes(browserPluginId) &&
+        getPlugin(browserPluginId).enabled
+    );
+}
+
 export function createBrowserToolsForAgent(
     agent: AgentRuntimeAgent,
     runner: AgentBrowserRunner = defaultRunner
 ): ToolSet {
-    if (
-        !(
-            (agent.enabledPluginIds ?? []).includes(browserPluginId) &&
-            getPlugin(browserPluginId).enabled
-        )
-    ) {
+    if (!agentHasBrowserTool(agent)) {
         return {};
     }
 
