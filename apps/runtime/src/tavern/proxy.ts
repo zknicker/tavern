@@ -135,7 +135,6 @@ async function dispatchAgentEngineStatic({ request, url }: { request: Request; u
         method === 'PATCH' &&
         segments[0] === 'agents' &&
         segments[1] &&
-        ['model', 'name', 'thinking-default'].includes(segments[2] ?? '')
         ['bio', 'model', 'name', 'thinking-default'].includes(segments[2] ?? '')
     ) {
         const input = await readJson(request);
