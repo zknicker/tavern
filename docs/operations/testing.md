@@ -182,6 +182,19 @@ resolution, Markdown reads, search, and backlinks with temporary Memory
 directories. Live Memory maintenance belongs to agent skill tests or operator-run
 Tasks.
 
+## Prompt Behavior Evals
+
+The composed agent system prompt has two guard layers. Text loss is caught in
+CI by the prompt contract suite
+(`apps/runtime/src/tavern/agent-prompt-contract.test.ts`): a requirements
+ledger, reviewable full-prompt snapshots, and character budgets. Behavior loss
+is caught on demand by `bun run eval:prompt`, which drives real model turns
+through a running dev stack (`bun run dev:web:runtime`) across handoffs,
+NO_REPLY discipline, cross-chat posting rules, chain guards, and bio
+awareness. Run it after prompt-text edits and before releases; it spends
+roughly a dozen real turns, archives its temp chats, and restores any temp
+agent bios. See AGENTS.md ("Agent System Prompt Changes").
+
 ## Keeping Suites Current
 
 * Add tests with the feature or bug fix, not in a later cleanup.

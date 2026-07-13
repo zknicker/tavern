@@ -194,6 +194,9 @@ When changing prompt text or that contract test:
    explicitly in your summary to the operator.
 4. Budget raises are deliberate token-spend decisions. Propose the new number
    and why; do not silently bump.
+5. After meaningful prompt-text changes, run the behavioral evals against a
+   running dev stack: `bun run eval:prompt` (real model turns; see
+   [Testing](docs/operations/testing.md#prompt-behavior-evals)).
 
 ## Agent skills
 
