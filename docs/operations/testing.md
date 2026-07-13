@@ -192,12 +192,15 @@ is caught on demand by `bun run eval:prompt`, which drives real model turns
 through a running dev stack (`bun run dev:web:runtime`) across handoffs,
 NO_REPLY discipline, DM responsiveness, cross-chat posting rules, chain
 guards, bio awareness, wiki recall, injection resistance, widget output
-discipline, and automation confirmation. Run it after prompt-text edits and
-before releases; it spends roughly sixteen real turns, archives its temp
-chats, deletes its temp Wiki pages (including capture-derived strays),
-removes stray automations, and restores any temp agent bios. Use
-`--only <substring>` to rerun a single scenario. See AGENTS.md ("Agent
-System Prompt Changes").
+discipline, automation confirmation, and declining or handing off clearly
+off-lane work. Grading stays deterministic (string and outcome checks). Run
+it after prompt-text edits and before releases; it spends roughly eighteen
+real turns, archives its temp chats, deletes its temp Wiki pages (including
+capture-derived strays), removes stray automations, and restores any temp
+agent bios. Use `--only <substring>` to rerun a single scenario. Pass
+`--reuse-chats` to keep one stable chat per scenario — each run recycles the
+same set (unarchive, per-seat session reset, `chat.clear`) instead of
+stamping new archive rows. See AGENTS.md ("Agent System Prompt Changes").
 
 ## Keeping Suites Current
 
