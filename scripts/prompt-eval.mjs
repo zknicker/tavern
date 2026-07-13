@@ -2,7 +2,8 @@
 //
 // Drives real model turns through a RUNNING dev stack (bun run dev:web:runtime)
 // and checks that prompt-taught behaviors still steer the model: handoffs,
-// NO_REPLY discipline, cross-chat posting rules, chain guards, bio awareness.
+// NO_REPLY discipline, cross-chat posting rules, chain guards, bio awareness,
+// wiki recall.
 // Run after prompt-text edits and before releases — not in CI. Costs ~12 real
 // model turns. Temp chats are archived and temp bios restored afterward.
 //
@@ -12,6 +13,7 @@ import { resolveDevPorts } from './dev-ports.mjs';
 const serverUrl = resolveServerUrl();
 const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
 const createdChatIds = [];
+const createdWikiPaths = [];
 const bioRestores = [];
 const results = [];
 
@@ -96,6 +98,30 @@ try {
             `expected 1-6 agent messages bounded by chain guards, got ${agentMessages}`
         );
     });
+
+    await scenario(
+        'wiki recall: unknown subject triggers wiki_search, not "no context"',
+        async () => {
+            const fact = 'The Project Nightjar launch is owned by Priya Raman.';
+            const path = await createWikiPage(
+                `prompt-eval/recall-${stamp}`,
+                `# Project Nightjar\n\nProject Nightjar is the internal codename for the kiosk rollout. ${fact}\n`
+            );
+            // The page must be searchable before the turn, or the model correctly
+            // reports no results and the scenario measures indexing, not steering.
+            await pollWikiSearchable('Nightjar', path, 60_000);
+            const chatId = await createChat(`Prompt eval wiki recall ${stamp}`, [alpha.id]);
+            await send(
+                chatId,
+                `${mention(alpha)} in one short line: who owns the Project Nightjar launch?`
+            );
+            await pollLog(
+                chatId,
+                (log) => authoredBy(log, alpha.id).join(' ').toLowerCase().includes('priya'),
+                180_000
+            );
+        }
+    );
 
     await scenario('bio awareness: roster bio answers who a co-agent is', async () => {
         const chatId = await createChat(`Prompt eval bio ${stamp}`, [alpha.id, beta.id]);
@@ -189,6 +215,24 @@ async function createChat(displayName, agentIds) {
 
 function mention(agent) {
     return `[${agent.name}](agent://${agent.id})`;
+}
+
+async function createWikiPage(path, body) {
+    await trpc('wiki.createPage', { body, path });
+    createdWikiPaths.push(path);
+    return path;
+}
+
+async function pollWikiSearchable(query, path, timeoutMs) {
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+        const data = await trpc('wiki.search', { query });
+        if ((data?.hits ?? []).some((hit) => JSON.stringify(hit).includes(path))) {
+            return;
+        }
+        await sleep(2000);
+    }
+    throw new InfraError(`wiki page ${path} never became searchable`);
 }
 
 async function send(chatId, content) {
@@ -287,6 +331,11 @@ async function cleanup() {
     for (const chatId of createdChatIds) {
         await trpc('chat.archive', { chatId }).catch((error) =>
             process.stdout.write(`cleanup: archive failed for ${chatId}: ${error}\n`)
+        );
+    }
+    for (const path of createdWikiPaths) {
+        await trpc('wiki.deletePage', { path }).catch((error) =>
+            process.stdout.write(`cleanup: wiki delete failed for ${path}: ${error}\n`)
         );
     }
     if (createdChatIds.length > 0) {
