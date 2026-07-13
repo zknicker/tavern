@@ -1,21 +1,27 @@
-// On-demand behavioral evals for the agent system prompt (PRD-34).
+// On-demand behavioral evals for the agent system prompt (PRD-34, PRD-37).
 //
 // Drives real model turns through a RUNNING dev stack (bun run dev:web:runtime)
 // and checks that prompt-taught behaviors still steer the model: handoffs,
 // NO_REPLY discipline, DM responsiveness, cross-chat posting rules, chain
 // guards, bio awareness, wiki recall, injection resistance, widget output
-// discipline, and automation confirmation.
-// Run after prompt-text edits and before releases — not in CI. Costs ~16 real
+// discipline, automation confirmation, and declining off-lane work.
+// Run after prompt-text edits and before releases — not in CI. Costs ~18 real
 // model turns. Temp chats, Wiki pages, and stray automations are cleaned up
 // and temp bios restored afterward.
 //
-// Usage: bun run eval:prompt [--server http://localhost:PORT] [--only substring]
+// --reuse-chats keeps one stable chat per scenario instead of stamping new
+// ones: each run finds it by title (stamp ignored), renames it, rotates every
+// seat's engine session, and clears the timeline, so repeated runs stop
+// piling rows into the archived-chats view.
+//
+// Usage: bun run eval:prompt [--server URL] [--only substring] [--reuse-chats]
 import { resolveDevPorts } from './dev-ports.mjs';
 import { createDevStackEnvironment } from './dev-stack-shared.mjs';
 
 const serverUrl = resolveServerUrl();
 const runtimeUrl = `http://localhost:${resolveDevPorts().runtimePort}`;
 const onlyFilter = resolveOnlyFilter();
+const reuseChats = process.argv.includes('--reuse-chats');
 const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
 const createdChatIds = [];
 const createdWikiPaths = [];
@@ -223,6 +229,31 @@ try {
             180_000
         );
     });
+
+    await scenario('misdirect: off-lane task is handed off or declined', async () => {
+        await withTempBio(
+            alpha,
+            'Handles infrastructure only: CI pipelines, deploys, and server monitoring.'
+        );
+        const chatId = await createChat(`Prompt eval misdirect ${stamp}`, [alpha.id, beta.id]);
+        await send(
+            chatId,
+            `${mention(alpha)} our Amazon Merch t-shirt listings need a refresh — new keywords, pricing tweaks, and seasonal designs. Can you put together the plan?`
+        );
+        await waitForQuiet(chatId, 45_000, 360_000);
+        const log = await readLog(chatId);
+        if (authoredBy(log, beta.id).length > 0) {
+            return; // handed off — the merch agent's seat ran
+        }
+        const alphaReplies = authoredBy(log, alpha.id);
+        if (alphaReplies.length === 0) {
+            return; // declined silently with NO_REPLY
+        }
+        assert(
+            alphaReplies.some((text) => text.includes(`agent://${beta.id}`)),
+            `agent answered an off-lane task itself: ${alphaReplies.join(' | ').slice(0, 200)}`
+        );
+    });
 } finally {
     await cleanup();
 }
@@ -292,22 +323,90 @@ async function requireTwoAgents() {
 }
 
 async function withTempBio(agent, bio) {
-    const data = await trpc('agent.list');
-    const current = (data?.agents ?? []).find((candidate) => candidate.id === agent.id);
-    bioRestores.push({ agentId: agent.id, bio: current?.bio ?? null });
+    // One restore entry per agent: a scenario retry (or a second temp bio)
+    // must still restore the original bio, not an earlier temp one.
+    if (!bioRestores.some((entry) => entry.agentId === agent.id)) {
+        const data = await trpc('agent.list');
+        const current = (data?.agents ?? []).find((candidate) => candidate.id === agent.id);
+        bioRestores.push({ agentId: agent.id, bio: current?.bio ?? null });
+    }
     await trpc('agent.updateBio', { agentId: agent.id, bio });
 }
 
 async function createChat(displayName, agentIds) {
+    const existing = reuseChats ? await findReusableChat(displayName) : null;
+    if (existing) {
+        await recycleChat(existing, agentIds, displayName);
+        return existing.id;
+    }
     const data = await trpc('chat.create', { agentIds, displayName });
-    createdChatIds.push(data.chatId);
+    trackChat(data.chatId);
     return data.chatId;
+}
+
+// Reusable chats are identified by their title with the run stamp stripped,
+// so scenario call sites keep their stamped titles untouched.
+function stripStamp(title) {
+    return title.replace(/ \d{4}-\d{2}-\d{2}-\d{2}-\d{2}$/u, '');
+}
+
+async function findReusableChat(displayName) {
+    const key = stripStamp(displayName);
+    for (const path of ['chat.list', 'chat.listArchived']) {
+        const data = await trpc(path);
+        const match = Object.values(data?.itemsById ?? {}).find(
+            (chat) => stripStamp(chat.displayName) === key
+        );
+        if (match) {
+            return match;
+        }
+    }
+    return null;
+}
+
+// A recycled chat must behave like a fresh one: current stamped title and
+// membership, a fresh engine session per seat (no context carried over from
+// the previous run), and an empty timeline. Reset before clearing so the
+// session-reset notice rows are swept by the clear.
+async function recycleChat(chat, agentIds, displayName, { rename = true } = {}) {
+    if (chat.archived) {
+        await trpc('chat.unarchive', { chatId: chat.id });
+    }
+    if (rename && (chat.displayName !== displayName || !sameMembers(chat, agentIds))) {
+        await trpc('chat.update', { agentIds, chatId: chat.id, displayName });
+    }
+    for (const agentId of agentIds) {
+        await trpc('agent.resetSession', { agentId, chatId: chat.id });
+    }
+    await trpc('chat.clear', { chatId: chat.id });
+    trackChat(chat.id);
+}
+
+function sameMembers(chat, agentIds) {
+    const bound = chat.boundAgentIds ?? [];
+    return (
+        bound.length === agentIds.length &&
+        new Set(bound).size === new Set([...bound, ...agentIds]).size
+    );
+}
+
+function trackChat(chatId) {
+    if (!createdChatIds.includes(chatId)) {
+        createdChatIds.push(chatId);
+    }
 }
 
 // The server API only creates channels; agents get exactly one durable DM at
 // bootstrap. Create a temp dm-kind chat straight on the runtime chat API so
 // the DM scenario never touches the agent's real DM history.
 async function createDmChat(agent, title) {
+    // DM titles are never referenced in scenario prompts, and dm-kind chats
+    // are runtime-created, so recycling skips the server-side rename.
+    const existing = reuseChats ? await findReusableChat(title) : null;
+    if (existing) {
+        await recycleChat(existing, [agent.id], title, { rename: false });
+        return existing.id;
+    }
     const token = resolveRuntimeToken();
     assert(token, 'no runtime API token found (TAVERN_RUNTIME_TOKEN or tavern.json)');
     const chatId = `cht_prompteval_${Date.now()}_dm`;
@@ -340,7 +439,7 @@ async function createDmChat(agent, title) {
         method: 'POST',
     });
     assert(response.ok, `runtime dm chat create failed: ${response.status}`);
-    createdChatIds.push(chatId);
+    trackChat(chatId);
     return chatId;
 }
 
@@ -437,20 +536,23 @@ async function pollUntilSilent(chatId, agentId, timeoutMs) {
     throw new Error('turn never settled');
 }
 
+// Quiet means no timeline rows AND no in-flight turns changing: an agent
+// thinking silently must hold the window open until its turn settles, or a
+// slow turn could be graded before its reply lands.
 async function waitForQuiet(chatId, quietMs, timeoutMs) {
     const deadline = Date.now() + timeoutMs;
-    let lastSize = -1;
+    let lastSignature = null;
     let quietSince = Date.now();
     while (Date.now() < deadline) {
         const page = await readPage(chatId);
         if (page.failedTurns.length > 0) {
             throw new InfraError(page.failedTurns[0]?.error?.slice(0, 200) ?? 'turn failed');
         }
-        const size = JSON.stringify(page.rows).length;
-        if (size !== lastSize) {
-            lastSize = size;
+        const signature = JSON.stringify({ active: page.activeReplies, rows: page.rows });
+        if (signature !== lastSignature) {
+            lastSignature = signature;
             quietSince = Date.now();
-        } else if (Date.now() - quietSince >= quietMs) {
+        } else if (page.activeReplies.length === 0 && Date.now() - quietSince >= quietMs) {
             return;
         }
         await sleep(5000);
@@ -465,6 +567,11 @@ async function cleanup() {
         );
     }
     for (const chatId of createdChatIds) {
+        if (reuseChats) {
+            await trpc('chat.clear', { chatId }).catch((error) =>
+                process.stdout.write(`cleanup: clear failed for ${chatId}: ${error}\n`)
+            );
+        }
         await trpc('chat.archive', { chatId }).catch((error) =>
             process.stdout.write(`cleanup: archive failed for ${chatId}: ${error}\n`)
         );
@@ -481,7 +588,11 @@ async function cleanup() {
     }
     await sweepEvalWikiPages('cleanup');
     if (createdChatIds.length > 0) {
-        process.stdout.write(`\narchived temp chats: ${createdChatIds.join(', ')}\n`);
+        process.stdout.write(
+            reuseChats
+                ? `\ncleared and archived reusable eval chats: ${createdChatIds.join(', ')}\n`
+                : `\narchived temp chats: ${createdChatIds.join(', ')}\n`
+        );
     }
 }
 
