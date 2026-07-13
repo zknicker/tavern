@@ -26,6 +26,7 @@ import { createMerchbaseToolsForAgent } from '../plugins/merchbase-tools.ts';
 import { createTavernSkillTools } from '../skills/agent-tools.ts';
 import { recordInjectedSkillUsage } from '../skills/telemetry.ts';
 import { createTavernTaskTools } from '../tasks/agent-tools.ts';
+import { createWebToolsForAgent } from '../web/agent-tools.ts';
 import {
     parseWidgetsFromAssistantContent,
     widgetActivity,
@@ -372,6 +373,7 @@ function createHarnessAgent(
         ...createGoogleToolsForAgent(input.agent),
         ...createMerchbaseToolsForAgent(input.agent),
         ...createBrowserToolsForAgent(input.agent),
+        ...createWebToolsForAgent(input.agent),
     };
     return new HarnessAgent({
         harness,
@@ -434,18 +436,24 @@ function createHarness(input: AgentExecutorInput): HarnessV1<ToolSet> {
     return createHarnessForModel({
         modelName: input.agentSession.effectiveModel,
         thinkingDefault: input.agent.thinkingDefault,
+        webSearch: input.agent.webAccessEnabled === true,
     });
 }
 
 export function createHarnessForModel(input: {
     modelName: AgentRuntimeModelName;
     thinkingDefault?: AgentRuntimeThinkingLevel | null;
+    webSearch?: boolean;
 }): HarnessV1<ToolSet> {
     const modelName = input.modelName;
     switch (modelName.provider) {
         case 'claude':
             return createClaudeCodeHarnessForRuntime({
                 auth: claudeCodeAuthOptions(),
+                // Native WebFetch stays disallowed even with web access on:
+                // web_fetch is the uniform Tavern fetch tool across providers,
+                // so page reads keep one size-cap and injection posture.
+                disallowedTools: input.webSearch ? ['WebFetch'] : ['WebSearch', 'WebFetch'],
                 maxTurns: 8,
                 model: modelName.model,
                 thinking: claudeThinking(input.thinkingDefault),
@@ -454,6 +462,7 @@ export function createHarnessForModel(input: {
             return createCodexHarnessForRuntime({
                 model: modelName.model,
                 reasoningEffort: codexReasoningEffort(input.thinkingDefault),
+                ...(input.webSearch ? { webSearch: true } : {}),
             }) as HarnessV1<ToolSet>;
         case 'openai':
         case 'openai-compatible': {
