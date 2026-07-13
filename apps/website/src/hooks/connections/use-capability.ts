@@ -33,6 +33,7 @@ const capabilityLabels = {
     memoryDreaming: 'Memory dreaming',
     memoryExtraction: 'Memory extraction',
     modelExecution: 'Model execution',
+    'plugin.browser': 'Browser',
     'plugin.google.calendar': 'Google Calendar',
     'plugin.merchbase': 'MerchBase',
     skills: 'Skills',

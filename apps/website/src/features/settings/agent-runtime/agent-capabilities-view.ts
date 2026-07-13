@@ -34,6 +34,7 @@ const capabilityCategories: Partial<Record<CapabilityId, CapabilityCategoryId>> 
     memoryDreaming: 'knowledge',
     memoryExtraction: 'knowledge',
     modelExecution: 'extensions',
+    'plugin.browser': 'plugins',
     'plugin.google.calendar': 'plugins',
     'plugin.merchbase': 'plugins',
     skills: 'extensions',
@@ -55,6 +56,7 @@ const capabilityDisplayOrder: CapabilityId[] = [
     'skills',
     'plugin.merchbase',
     'plugin.google.calendar',
+    'plugin.browser',
 ];
 
 const capabilityDisplayRank = new Map(
@@ -88,6 +90,7 @@ const capabilityDescriptions: Partial<Record<CapabilityId, string>> = {
     wikiRecall:
         'Your Wiki pages are indexed automatically whenever they change, so agents instantly recall relevant shared knowledge in every conversation. First-time setup downloads a small on-device model.',
     modelExecution: 'At least one AI model is connected and ready to run agent turns.',
+    'plugin.browser': 'Managed Chrome browser for agent web automation.',
     'plugin.google.calendar': 'Google Calendar access for your agents.',
     'plugin.merchbase': 'MerchBase sales and product data tools for your agents.',
     wiki: 'The shared Wiki — durable Markdown pages your agents read, write, and cite.',

@@ -1,3 +1,4 @@
+import { browserPluginManifest } from '@tavern/api/plugins/browser';
 import { googlePluginManifest } from '@tavern/api/plugins/google';
 import { merchbasePluginManifest } from '@tavern/api/plugins/merchbase';
 import * as React from 'react';
@@ -11,6 +12,12 @@ import {
 } from '../../../components/ui/settings-row.tsx';
 import { useRuntimeCapabilityEvents } from '../../../hooks/connections/use-runtime-events.ts';
 import {
+    useBrowserSettings,
+    useOpenBrowser,
+    useRestartBrowser,
+    useSaveBrowserSettings,
+} from '../../../hooks/plugins/use-browser-settings.ts';
+import {
     useDisconnectGoogleOAuth,
     useGoogleSettings,
     usePollGoogleOAuth,
@@ -23,6 +30,7 @@ import {
 } from '../../../hooks/plugins/use-merchbase-settings.ts';
 import { withSavingToast } from '../../../lib/saving-toast.ts';
 import { EmptyState } from '../../shell/empty-state.tsx';
+import { BrowserSettingsCard } from './browser-settings-card.tsx';
 import { GoogleSettingsCard } from './google-settings-card.tsx';
 import { MerchbaseSettingsCard } from './merchbase-settings-card.tsx';
 
@@ -32,11 +40,16 @@ export function PluginsSettingsPage() {
     useRuntimeCapabilityEvents();
     const [search, setSearch] = React.useState('');
     const deferredSearch = React.useDeferredValue(search);
+    const browserSettingsQuery = useBrowserSettings();
+    const saveBrowserSettings = useSaveBrowserSettings();
+    const openBrowser = useOpenBrowser();
+    const restartBrowser = useRestartBrowser();
     const merchbaseSettingsQuery = useMerchbaseSettings();
     const saveMerchbaseSettings = useSaveMerchbaseSettings();
     const googleSettingsQuery = useGoogleSettings();
     const saveGoogleSettings = useSaveGoogleSettings();
     const googleOAuth = useGoogleOAuthState();
+    const showBrowserPlugin = matchesBrowserPlugin(deferredSearch);
     const showMerchbasePlugin = matchesMerchbasePlugin(deferredSearch);
     const showGooglePlugin = matchesGooglePlugin(deferredSearch);
 
@@ -55,8 +68,36 @@ export function PluginsSettingsPage() {
                 />
 
                 <SettingsGroup>
-                    {showMerchbasePlugin || showGooglePlugin ? (
+                    {showBrowserPlugin || showMerchbasePlugin || showGooglePlugin ? (
                         <>
+                            {showBrowserPlugin ? (
+                                <BrowserSettingsCard
+                                    error={
+                                        browserSettingsQuery.error?.message ??
+                                        saveBrowserSettings.error?.message ??
+                                        openBrowser.error?.message ??
+                                        restartBrowser.error?.message ??
+                                        null
+                                    }
+                                    isLoading={browserSettingsQuery.isPending}
+                                    isSaving={saveBrowserSettings.isPending}
+                                    onOpenBrowser={() =>
+                                        openBrowser.mutateAsync().catch(() => undefined)
+                                    }
+                                    onRestartBrowser={() =>
+                                        restartBrowser.mutateAsync().catch(() => undefined)
+                                    }
+                                    onSave={(input) =>
+                                        withSavingToast(() =>
+                                            saveBrowserSettings.mutateAsync(input)
+                                        ).catch(() => undefined)
+                                    }
+                                    settings={browserSettingsQuery.data ?? null}
+                                />
+                            ) : null}
+                            {showBrowserPlugin && (showMerchbasePlugin || showGooglePlugin) ? (
+                                <Separator />
+                            ) : null}
                             {showMerchbasePlugin ? (
                                 <MerchbaseSettingsCard
                                     error={
@@ -158,6 +199,17 @@ function formatGoogleOAuthStatus(status: string | null) {
         default:
             return null;
     }
+}
+
+function matchesBrowserPlugin(search: string) {
+    const normalized = search.trim().toLowerCase();
+    if (normalized.length === 0) {
+        return true;
+    }
+
+    return ['browser', browserPluginManifest.description, 'chrome', 'web', 'automation'].some(
+        (value) => value.toLowerCase().includes(normalized)
+    );
 }
 
 function matchesMerchbasePlugin(search: string) {

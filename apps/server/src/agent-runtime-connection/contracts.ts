@@ -18,6 +18,7 @@ export const agentRuntimeCapabilities = [
     'devToolkit',
     'plugin.merchbase',
     'plugin.google.calendar',
+    'plugin.browser',
 ] as const;
 
 export const agentRuntimeCapabilitySchema = z.enum(agentRuntimeCapabilities);
