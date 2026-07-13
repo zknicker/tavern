@@ -553,7 +553,13 @@ function streamErrorMessage(error: unknown) {
     if (typeof error === 'string') {
         return error;
     }
-    return String(error);
+    try {
+        // Harness bridges surface structured error payloads; keep them
+        // readable instead of collapsing to "[object Object]".
+        return JSON.stringify(error)?.slice(0, 600) ?? String(error);
+    } catch {
+        return String(error);
+    }
 }
 
 function nowIso() {
