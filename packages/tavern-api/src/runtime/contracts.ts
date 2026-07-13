@@ -500,6 +500,90 @@ export const agentRuntimeSaveMerchbaseSettingsSchema = z
     })
     .strict();
 
+export const agentRuntimeBrowserStateSchema = z.enum([
+    'stopped',
+    'starting',
+    'healthy',
+    'pressured',
+    'unresponsive',
+    'recovering',
+    'degraded',
+]);
+
+export const agentRuntimeBrowserProfileNameSchema = z
+    .string()
+    .trim()
+    .regex(
+        /^[a-z0-9][a-z0-9-]{0,63}$/,
+        'Profile name must be a lowercase slug (letters, digits, hyphens).'
+    );
+
+export const agentRuntimeBrowserStatusSchema = z
+    .object({
+        browserVersion: z.string().trim().min(1).nullable(),
+        cdpState: z.enum(['healthy', 'unreachable', 'unknown']),
+        checkedAt: z.string().datetime(),
+        pid: z.number().int().positive().nullable(),
+        pressureSince: z.string().datetime().nullable(),
+        reason: z.string().trim().min(1).nullable(),
+        resources: z
+            .object({
+                browserCpuPercent: z.number().nullable(),
+                browserRssBytes: z.number().int().nullable(),
+                gpuCpuPercent: z.number().nullable(),
+                gpuRssBytes: z.number().int().nullable(),
+            })
+            .strict(),
+        restartBudget: z
+            .object({
+                automaticRestartLimit: z.number().int().min(0),
+                automaticRestartsInWindow: z.number().int().min(0),
+            })
+            .strict(),
+        running: z.boolean(),
+        state: agentRuntimeBrowserStateSchema,
+        uptimeSeconds: z.number().int().min(0).nullable(),
+    })
+    .strict();
+
+export const agentRuntimeBrowserSettingsSchema = z
+    .object({
+        application: z
+            .object({
+                path: z.string().trim().min(1),
+                version: z.string().trim().min(1).nullable(),
+            })
+            .strict()
+            .nullable(),
+        enabled: z.boolean(),
+        profileName: agentRuntimeBrowserProfileNameSchema,
+        skillConflict: z
+            .object({
+                skillName: z.literal('browser'),
+                skillPath: z.string().trim().min(1),
+            })
+            .strict()
+            .nullable(),
+        status: agentRuntimeBrowserStatusSchema.nullable(),
+        updatedAt: z.string().datetime().nullable(),
+    })
+    .strict();
+
+export const agentRuntimeSaveBrowserSettingsSchema = z
+    .object({
+        enabled: z.boolean().optional(),
+        profileName: agentRuntimeBrowserProfileNameSchema.optional(),
+    })
+    .strict();
+
+export const agentRuntimeBrowserActionResultSchema = z
+    .object({
+        message: z.string().trim().min(1).nullable(),
+        ok: z.boolean(),
+        status: agentRuntimeBrowserStatusSchema.nullable(),
+    })
+    .strict();
+
 export const agentRuntimeGoogleSettingsSchema = z
     .object({
         calendarEnabled: z.boolean(),
@@ -2860,6 +2944,11 @@ export type AgentRuntimeMerchbaseSettings = z.infer<typeof agentRuntimeMerchbase
 export type AgentRuntimeSaveMerchbaseSettings = z.infer<
     typeof agentRuntimeSaveMerchbaseSettingsSchema
 >;
+export type AgentRuntimeBrowserState = z.infer<typeof agentRuntimeBrowserStateSchema>;
+export type AgentRuntimeBrowserStatus = z.infer<typeof agentRuntimeBrowserStatusSchema>;
+export type AgentRuntimeBrowserSettings = z.infer<typeof agentRuntimeBrowserSettingsSchema>;
+export type AgentRuntimeSaveBrowserSettings = z.infer<typeof agentRuntimeSaveBrowserSettingsSchema>;
+export type AgentRuntimeBrowserActionResult = z.infer<typeof agentRuntimeBrowserActionResultSchema>;
 export type AgentRuntimeGoogleSettings = z.infer<typeof agentRuntimeGoogleSettingsSchema>;
 export type AgentRuntimeSaveGoogleSettings = z.infer<typeof agentRuntimeSaveGoogleSettingsSchema>;
 export type AgentRuntimeStartGoogleOAuth = z.infer<typeof agentRuntimeStartGoogleOAuthSchema>;

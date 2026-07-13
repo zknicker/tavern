@@ -1,5 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import {
+    browserPluginHealthCapabilityId,
+    browserPluginId,
+    browserPluginManifest,
     googleCalendarEventsScope,
     googleCalendarPluginHealthCapabilityId,
     googlePluginId,
@@ -12,7 +15,7 @@ import {
 
 describe('Plugin manifests', () => {
     test('declares MerchBase service inventory', () => {
-        expect(tavernPluginManifests).toHaveLength(2);
+        expect(tavernPluginManifests).toHaveLength(3);
         expect(merchbasePluginManifest).toMatchObject({
             description: 'Analyze Amazon Merch sales and product data from MerchBase.',
             displayName: 'MerchBase',
@@ -72,5 +75,29 @@ describe('Plugin manifests', () => {
             'google_calendar_events_search',
             'google_calendar_event_create',
         ]);
+    });
+
+    test('declares the Browser service inventory', () => {
+        expect(browserPluginManifest).toMatchObject({
+            displayName: 'Browser',
+            healthCapabilities: [],
+            id: browserPluginId,
+            secrets: [],
+            settings: ['profileName'],
+            version: '1.0.0',
+            widgets: [],
+        });
+        expect(browserPluginManifest.services[0]).toMatchObject({
+            defaultEnabled: true,
+            displayName: 'Browser',
+            healthCapabilities: [browserPluginHealthCapabilityId],
+            id: 'browser',
+            skills: [{ name: 'browser', runtimeSource: 'tavern-plugin:browser' }],
+        });
+        expect(browserPluginManifest.services[0]?.toolGroups[0]).toMatchObject({
+            id: 'browser',
+            label: 'Browser',
+        });
+        expect(browserPluginManifest.services[0]?.toolGroups[0]?.tools).toEqual(['browser']);
     });
 });

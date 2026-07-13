@@ -25,6 +25,7 @@ export const tavernPluginToolGroupManifestSchema = z
         description: z.string().trim().min(1).max(240),
         id: pluginManifestNameSchema,
         label: pluginManifestNameSchema,
+        readOnly: z.boolean().default(true),
         tools: z.array(pluginManifestNameSchema),
     })
     .strict();

@@ -61,6 +61,9 @@ export const agentRuntimeRoutes = {
     agentEnv: '/agent-env',
     timezoneSettings: '/timezone/settings',
     plugin: (id: string) => `/plugins/${encodeURIComponent(id)}`,
+    pluginBrowserOpen: '/plugins/browser/open',
+    pluginBrowserRestart: '/plugins/browser/restart',
+    pluginBrowserSettings: '/plugins/browser/settings',
     pluginGoogleCalendarEvents: '/plugins/google/calendar/events',
     pluginGoogleDisconnect: '/plugins/google/oauth/disconnect',
     pluginGoogleOAuthComplete: (sessionId: string) =>
