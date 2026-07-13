@@ -112,6 +112,10 @@ GET  /plugins/google/oauth/sessions/{sessionId}
 POST /plugins/google/oauth/sessions/{sessionId}/complete
 POST /plugins/google/oauth/disconnect
 POST /plugins/google/calendar/events
+GET  /plugins/browser/settings
+PUT  /plugins/browser/settings
+POST /plugins/browser/open
+POST /plugins/browser/restart
 ```
 
 Settings writes require a Tavern caller. Sales reads require a healthy effective
@@ -119,7 +123,8 @@ MerchBase configuration and use the MerchBase public HTTP client.
 Google OAuth and settings writes also require a Tavern caller. Calendar event
 actions require the Google Plugin to be enabled, the Calendar Service to be
 enabled, an OAuth connection to exist, and the Calendar events scope to be
-granted.
+granted. Browser settings writes and the open/restart actions require a Tavern
+caller; both actions return the resulting browser status.
 
 ## Google
 
@@ -232,6 +237,29 @@ the active day in the selected range. Daily ranges render every selected day,
 including zero-sales days that MerchBase omits from the upstream series.
 Current-day sales requests default to a 10-day trend unless the user explicitly
 asks for a one-day chart.
+
+## Browser
+
+Browser settings are:
+
+* `enabled`
+* `profileName` — a validated slug naming the Tavern-owned Chrome profile
+
+Reads also return the detected Google Chrome application (path and version, or
+null when Chrome is missing) and the current browser status: the supervision
+state, reason, process and CDP detail, resource sample, and restart-budget
+counters. The Plugin stores no secrets; browser credentials remain Chrome
+profile state.
+
+`POST /plugins/browser/open` starts or adopts the managed Chrome and brings it
+to the foreground so users can sign in or install extensions with normal
+Chrome UI. `POST /plugins/browser/restart` performs a guarded operator restart
+that waits for active browser commands. Both require a Tavern caller and
+return `{ ok, message, status }`.
+
+Granted agents receive the single non-read-only `browser` tool and the managed
+`browser` skill. Supervision internals, the launch contract, profiles, and
+recovery policy are documented in [Browser internals](../internals/browser.md).
 
 ## Adding a Plugin
 
