@@ -29,6 +29,7 @@
     "@ai-sdk/provider": "4.0.0",
     "@ai-sdk/provider-utils": "5.0.1",
     "@merchbase/http-client": "4.0.0",
+    "@mozilla/readability": "0.6.0",
     "@tavern/api": "workspace:*",
     "@tavern/codex-usage": "workspace:*",
     "@tobilu/qmd": "2.5.3",
@@ -36,6 +37,8 @@
     "ai": "7.0.6",
     "bunqueue": "2.6.38",
     "chokidar": "4.0.3",
+    "linkedom": "0.18.13",
+    "turndown": "7.2.4",
     "ws": "8.21.0",
     "yaml": "2.9.0",
     "zod": "4.1.11"
