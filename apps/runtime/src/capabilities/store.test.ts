@@ -55,6 +55,7 @@ describe('Runtime capabilities store', () => {
             'memoryDreaming',
             'memoryExtraction',
             'modelExecution',
+            'plugin.browser',
             'plugin.google.calendar',
             'plugin.merchbase',
             'skills',

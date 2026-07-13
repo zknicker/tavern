@@ -1,4 +1,6 @@
 import {
+    agentRuntimeBrowserActionResultSchema,
+    agentRuntimeBrowserSettingsSchema,
     agentRuntimeCompleteGoogleOAuthSchema,
     agentRuntimeGoogleCalendarEventsListInputSchema,
     agentRuntimeGoogleCalendarEventsListSchema,
@@ -16,14 +18,23 @@ import {
     agentRuntimePluginListSchema,
     agentRuntimePluginSchema,
     agentRuntimeRoutes,
+    agentRuntimeSaveBrowserSettingsSchema,
     agentRuntimeSaveGoogleSettingsSchema,
     agentRuntimeSaveMerchbaseSettingsSchema,
     agentRuntimeStartGoogleOAuthSchema,
 } from '@tavern/api';
+import { browserPluginHealthCapabilityId } from '@tavern/api/plugins/browser';
 import { googleCalendarPluginHealthCapabilityId } from '@tavern/api/plugins/google';
 import { merchbasePluginHealthCapabilityId } from '@tavern/api/plugins/merchbase';
 import { refreshRuntimeCapabilities } from '../capabilities/store';
 import { badRequest, forbidden, json, notFound } from '../tavern/http';
+import {
+    getBrowserPlugin,
+    getBrowserSettings,
+    openBrowser,
+    restartBrowser,
+    saveBrowserSettings,
+} from './browser.ts';
 import {
     completeGoogleOAuth,
     disconnectGoogleOAuth,
@@ -60,6 +71,68 @@ export async function handlePluginsRequest(request: Request): Promise<Response |
         return parsedId.success
             ? json(agentRuntimePluginSchema.parse(getRuntimePlugin(parsedId.data)))
             : notFound();
+    }
+
+    if (request.method === 'GET' && url.pathname === agentRuntimeRoutes.pluginBrowserSettings) {
+        return json(agentRuntimeBrowserSettingsSchema.parse(await getBrowserSettings()));
+    }
+
+    if (request.method === 'PUT' && url.pathname === agentRuntimeRoutes.pluginBrowserSettings) {
+        const forbiddenResponse = requireTavernMutation(request, 'Browser settings');
+        if (forbiddenResponse) {
+            return forbiddenResponse;
+        }
+        const input = agentRuntimeSaveBrowserSettingsSchema.parse(await readJson(request));
+        let settings: Awaited<ReturnType<typeof saveBrowserSettings>>;
+        try {
+            settings = await saveBrowserSettings(input);
+        } catch (error) {
+            return badRequest(error instanceof Error ? error.message : String(error));
+        }
+        try {
+            await materializePluginSkills();
+        } catch (error) {
+            return badRequest(error instanceof Error ? error.message : String(error));
+        }
+        await refreshRuntimeCapabilities({
+            ids: [browserPluginHealthCapabilityId],
+            publishUpdated: true,
+        });
+        return json(agentRuntimeBrowserSettingsSchema.parse(settings));
+    }
+
+    if (request.method === 'POST' && url.pathname === agentRuntimeRoutes.pluginBrowserOpen) {
+        const forbiddenResponse = requireTavernMutation(request, 'Browser actions');
+        if (forbiddenResponse) {
+            return forbiddenResponse;
+        }
+        try {
+            const result = await openBrowser();
+            await refreshRuntimeCapabilities({
+                ids: [browserPluginHealthCapabilityId],
+                publishUpdated: true,
+            });
+            return json(agentRuntimeBrowserActionResultSchema.parse(result));
+        } catch (error) {
+            return badRequest(error instanceof Error ? error.message : String(error));
+        }
+    }
+
+    if (request.method === 'POST' && url.pathname === agentRuntimeRoutes.pluginBrowserRestart) {
+        const forbiddenResponse = requireTavernMutation(request, 'Browser actions');
+        if (forbiddenResponse) {
+            return forbiddenResponse;
+        }
+        try {
+            const result = await restartBrowser();
+            await refreshRuntimeCapabilities({
+                ids: [browserPluginHealthCapabilityId],
+                publishUpdated: true,
+            });
+            return json(agentRuntimeBrowserActionResultSchema.parse(result));
+        } catch (error) {
+            return badRequest(error instanceof Error ? error.message : String(error));
+        }
     }
 
     if (request.method === 'GET' && url.pathname === agentRuntimeRoutes.pluginMerchbaseSettings) {
@@ -238,6 +311,8 @@ export async function handlePluginsRequest(request: Request): Promise<Response |
 
 function getRuntimePlugin(id: ReturnType<typeof agentRuntimePluginIdSchema.parse>) {
     switch (id) {
+        case 'browser':
+            return getBrowserPlugin();
         case 'google':
             return getGooglePlugin();
         case 'merchbase':

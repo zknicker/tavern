@@ -20,6 +20,8 @@ import {
     startMemoryExtractionScheduler,
     stopMemoryExtractionScheduler,
 } from './memory/extraction.ts';
+import { setBrowserStatusListener, stopBrowserService } from './plugins/browser/service.ts';
+import { reconcileBrowserService } from './plugins/browser.ts';
 import { materializePluginSkills } from './plugins/materialize-skills.ts';
 import { startSkillCuratorScheduler, stopSkillCuratorScheduler } from './skills/curator.ts';
 import { startSkillReviewScheduler, stopSkillReviewScheduler } from './skills/review-queue.ts';
@@ -155,6 +157,19 @@ async function main(): Promise<void> {
     startSkillCuratorScheduler();
     startMemoryDreamScheduler();
 
+    // Browser supervision never blocks Runtime startup: launch or adoption
+    // failures surface only through `plugin.browser` capability health.
+    setBrowserStatusListener(() => {
+        void refreshRuntimeCapabilities({ ids: ['plugin.browser'], publishUpdated: true }).catch(
+            (err) => {
+                log.warn('Browser capability refresh failed', { err });
+            }
+        );
+    });
+    void reconcileBrowserService().catch((err) => {
+        log.warn('Browser supervision failed to start', { err });
+    });
+
     runtimeServer = startTavernRuntimeServer();
     log.info('Tavern Runtime running', { url: runtimeServer.url.toString() });
 
@@ -222,6 +237,10 @@ async function shutdown(signal: string): Promise<void> {
     log.info('Stopping task dispatcher');
     taskDispatcher?.stop();
     log.info('Task dispatcher stopped');
+    // Chrome stays running across Runtime restarts; only supervision stops.
+    log.info('Stopping browser supervision');
+    stopBrowserService();
+    log.info('Browser supervision stopped');
     log.info('Stopping Runtime server');
     runtimeServer?.stop();
     log.info('Runtime server stopped');

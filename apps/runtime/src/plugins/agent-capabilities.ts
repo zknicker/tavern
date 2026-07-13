@@ -9,6 +9,7 @@ import {
 import { type WidgetName, widgetNameSchema } from '@tavern/api/widgets';
 import { AGENT_HOME } from '../config.ts';
 import { readSkillSource } from '../skills/store.ts';
+import { browserSkillContent } from './browser/browser-skill.generated.ts';
 import { getPlugin } from './store.ts';
 
 const pluginOwnedWidgetNames = new Set<WidgetName>(
@@ -104,13 +105,16 @@ export function listPluginToolGroups(): AgentRuntimeTool[] {
         const plugin = getPlugin(definition.id);
         return enabledPluginServices(definition, plugin.config).flatMap((service) =>
             service.toolGroups.map((toolGroup) => ({
-                configured: plugin.enabled && plugin.secrets.length > 0,
+                // A secretless plugin is configured whenever it is enabled.
+                configured:
+                    plugin.enabled &&
+                    (definition.secrets.length === 0 || plugin.secrets.length > 0),
                 description: toolGroup.description,
                 enabled: plugin.enabled,
                 id: toolGroup.id,
                 label: toolGroup.label,
                 name: toolGroup.id,
-                readOnly: true,
+                readOnly: toolGroup.readOnly,
                 tools: [...toolGroup.tools],
             }))
         );
@@ -157,6 +161,13 @@ function serviceToolNames(service: TavernPluginServiceManifest) {
 }
 
 export function pluginSkillContent(service: TavernPluginServiceManifest) {
+    // The Browser skill is vendored from the upstream agent-browser skill and
+    // kept current with scripts/sync-browser-skill.mjs rather than generated
+    // from the manifest template.
+    if (service.id === 'browser') {
+        return browserSkillContent;
+    }
+
     const tools = serviceToolNames(service)
         .map((toolName) => `- ${toolName}`)
         .join('\n');
