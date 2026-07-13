@@ -235,6 +235,8 @@ The tarball contains:
 bin/tavern-runtime
 bin/tavern
 share/tavern/node_modules/@tavern/sdk/
+share/tavern/node_modules/@tobilu/qmd/
+share/tavern/node_modules/agent-browser/
 share/tavern/runtime-assets/
 share/tavern/runtime-assets/google/oauth-client.json
 ```

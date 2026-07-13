@@ -26,6 +26,11 @@ and repair; agents only get Plugin tools when the Plugin and Service are usable.
 * **Google.** The Google Plugin starts with Google Calendar. Settings manages
   loopback authorization, stored tokens, and the Calendar Service toggle. The
   app ships the Tavern-owned Google OAuth client.
+* **Browser.** The Browser Plugin supervises one visible managed Google Chrome
+  with a durable named profile and gives granted agents one `browser` tool that
+  runs agent-browser commands against it. Settings shows the detected Chrome,
+  the profile name, browser health, and Open/Restart actions. See
+  [Browser internals](../internals/browser.md).
 
 ## Contract
 
@@ -84,9 +89,11 @@ Low-level API, table, and capability ids use Plugin names such as `/plugins`,
 
 ## Boundaries
 
-Agents may read Plugin status and use read-oriented Plugin tools. They do not
-run sync, ripcord, ingestion, account switching, setup repair, or secret-changing
-flows. Those stay user-managed settings or app controls.
+Agents may read Plugin status and use granted Plugin tools. Most Plugin tools
+are read-oriented; the Browser tool drives the managed browser and is the
+deliberate exception. Agents do not run sync, ripcord, ingestion, account
+switching, setup repair, or secret-changing flows. Those stay user-managed
+settings or app controls.
 
 Plugin packages are implementation packaging. Tavern shows the Plugin,
 agent-facing skill, tool, or Widget, not a user-installed
