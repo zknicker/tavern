@@ -15,6 +15,7 @@ import type {
     Experimental_SandboxProcess,
     Experimental_SandboxSession,
 } from '@ai-sdk/provider-utils';
+import { ensureCodexHomeConfig } from './codex-home-config.ts';
 
 interface LocalTrustedSandboxOptions {
     authProfiles?: readonly LocalTrustedSandboxAuthProfile[];
@@ -223,10 +224,12 @@ async function seedAuthProfiles(input: {
     hostHomeDir: string;
 }) {
     if (input.authProfiles.includes('codex')) {
+        const codexHome = path.join(input.homeDir, '.codex');
         await copyFileIfExists({
             source: path.join(input.hostHomeDir, '.codex', 'auth.json'),
-            target: path.join(input.homeDir, '.codex', 'auth.json'),
+            target: path.join(codexHome, 'auth.json'),
         });
+        await ensureCodexHomeConfig(codexHome);
     }
 }
 

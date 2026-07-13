@@ -81,9 +81,10 @@ describe('local trusted sandbox provider', () => {
         await expect(readFile(path.join(homeDir, '.codex', 'auth.json'), 'utf8')).resolves.toBe(
             '{"kind":"test"}'
         );
-        await expect(
-            readFile(path.join(homeDir, '.codex', 'config.toml'), 'utf8')
-        ).rejects.toMatchObject({ code: 'ENOENT' });
+        // The workspace config.toml is Tavern-authored, never the host's.
+        const workspaceConfig = await readFile(path.join(homeDir, '.codex', 'config.toml'), 'utf8');
+        expect(workspaceConfig).not.toContain('service_tier');
+        expect(workspaceConfig).toContain('image_generation = false');
         await session.stop();
     });
 });
