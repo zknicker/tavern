@@ -1,3 +1,4 @@
+import { agentRuntimeModelCapabilitySchema } from '@tavern/api';
 import { z } from 'zod';
 
 export const modelProviderStateSchema = z.enum(['connected', 'not-configured']);
@@ -10,6 +11,7 @@ export const modelCapabilitySchema = z.enum([
 ]);
 
 export const modelInventorySnapshotRecordSchema = z.object({
+    capability: agentRuntimeModelCapabilitySchema,
     capabilities: z.array(modelCapabilitySchema).default(['general']),
     contextWindow: z.number().int().positive().nullable(),
     description: z.string().trim().min(1).nullable(),

@@ -55,6 +55,7 @@ export const agentRuntimeRoutes = {
     memoryActivity: '/memory/activity',
     memoryJob: (jobId: string) => `/memory/jobs/${encodeURIComponent(jobId)}`,
     memoryJobs: '/memory/jobs',
+    modelCapabilitySelections: '/model-capabilities/selections',
     modelCategorySettings: '/model-categories/settings',
     modelProvider: (providerId: string) => `/model-providers/${encodeURIComponent(providerId)}`,
     modelProvidersCatalog: '/model-providers/catalog',

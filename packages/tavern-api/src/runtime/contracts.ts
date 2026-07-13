@@ -250,6 +250,19 @@ export const agentRuntimeSaveModelCategorySettingsResultSchema =
         restartScheduled: z.boolean(),
     });
 
+export const agentRuntimeModelCapabilitySelectionsSchema = z.object({
+    imageGeneration: agentRuntimeModelNameSchema.nullable(),
+});
+
+export const agentRuntimeModelCapabilitySelectionSettingsSchema = z.object({
+    selections: agentRuntimeModelCapabilitySelectionsSchema,
+    updatedAt: z.string().datetime().nullable(),
+});
+
+export const agentRuntimeSaveModelCapabilitySelectionsSchema = z.object({
+    selections: agentRuntimeModelCapabilitySelectionsSchema.partial(),
+});
+
 export const agentRuntimeTimezoneSettingsSchema = z.object({
     resolvedTimezone: z.string().trim().min(1),
     timezone: z.string().nullable(),
@@ -1525,7 +1538,9 @@ export const agentRuntimeArchiveBindingSchema = z.object({
     id: z.string().trim().min(1),
 });
 
-export const agentRuntimeModelExecutionKindSchema = z.literal('harness');
+export const agentRuntimeModelCapabilitySchema = z.enum(['agent', 'imageGeneration']);
+
+export const agentRuntimeModelExecutionKindSchema = z.enum(['harness', 'direct']);
 
 export const agentRuntimeModelAvailabilitySchema = z.enum(['available', 'degraded', 'unavailable']);
 
@@ -1539,6 +1554,7 @@ export const agentRuntimeModelRouteSchema = z.object({
 
 export const agentRuntimeModelCatalogEntrySchema = z.object({
     availability: agentRuntimeModelAvailabilitySchema.default('available'),
+    capability: agentRuntimeModelCapabilitySchema.default('agent'),
     executionKind: agentRuntimeModelExecutionKindSchema.default('harness'),
     id: z.string().trim().min(1),
     label: z.string().trim().min(1).nullable(),
@@ -3069,6 +3085,15 @@ export type AgentRuntimeSaveModelCategorySettings = z.infer<
 export type AgentRuntimeSaveModelCategorySettingsResult = z.infer<
     typeof agentRuntimeSaveModelCategorySettingsResultSchema
 >;
+export type AgentRuntimeModelCapabilitySelections = z.infer<
+    typeof agentRuntimeModelCapabilitySelectionsSchema
+>;
+export type AgentRuntimeModelCapabilitySelectionSettings = z.infer<
+    typeof agentRuntimeModelCapabilitySelectionSettingsSchema
+>;
+export type AgentRuntimeSaveModelCapabilitySelections = z.infer<
+    typeof agentRuntimeSaveModelCapabilitySelectionsSchema
+>;
 export type AgentRuntimeTimezoneSettings = z.infer<typeof agentRuntimeTimezoneSettingsSchema>;
 export type AgentRuntimeSaveTimezoneSettings = z.infer<
     typeof agentRuntimeSaveTimezoneSettingsSchema
@@ -3116,6 +3141,7 @@ export type AgentRuntimeDeleteDiscordBinding = z.infer<
 export type AgentRuntimeDiscordBinding = z.infer<typeof agentRuntimeDiscordBindingSchema>;
 export type AgentRuntimeDiscordBindingList = z.infer<typeof agentRuntimeDiscordBindingListSchema>;
 export type AgentRuntimeModelCatalogEntry = z.infer<typeof agentRuntimeModelCatalogEntrySchema>;
+export type AgentRuntimeModelCapability = z.infer<typeof agentRuntimeModelCapabilitySchema>;
 export type AgentRuntimeModelAvailability = z.infer<typeof agentRuntimeModelAvailabilitySchema>;
 export type AgentRuntimeModelExecutionKind = z.infer<typeof agentRuntimeModelExecutionKindSchema>;
 export type AgentRuntimeModels = z.infer<typeof agentRuntimeModelsSchema>;

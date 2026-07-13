@@ -28,6 +28,7 @@ import { handleMemorySettingsRequest } from '../memory/settings.ts';
 import { handleModelAccessRequest } from '../model-access/model-access.ts';
 import { handleOpenAiSettingsRequest } from '../model-access/openai-settings.ts';
 import { handleOpenRouterSettingsRequest } from '../model-access/openrouter-settings.ts';
+import { handleModelCapabilitySelectionsRequest } from '../models/capability-selections.ts';
 import { handleModelCategorySettingsRequest } from '../models/category-settings.ts';
 import { handleModelProviderRequest } from '../models/provider-routes.ts';
 import { handlePluginsRequest } from '../plugins/routes.ts';
@@ -121,6 +122,11 @@ export async function handleTavernRuntimeRequest(request: Request): Promise<Resp
     const modelCategorySettingsResponse = await handleModelCategorySettingsRequest(request);
     if (modelCategorySettingsResponse) {
         return modelCategorySettingsResponse;
+    }
+
+    const modelCapabilitySelectionsResponse = await handleModelCapabilitySelectionsRequest(request);
+    if (modelCapabilitySelectionsResponse) {
+        return modelCapabilitySelectionsResponse;
     }
 
     const openAiSettingsResponse = await handleOpenAiSettingsRequest(request);

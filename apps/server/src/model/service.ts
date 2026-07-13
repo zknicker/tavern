@@ -1,4 +1,4 @@
-import type { AgentRuntimeAgent } from '@tavern/api';
+import type { AgentRuntimeAgent, AgentRuntimeModelCapability } from '@tavern/api';
 import { createAgentRuntimeClientForConnection } from '../agent-runtime/client-factory.ts';
 import { getAgentRuntimeModels } from '../agent-runtime/models.ts';
 import { listAgentCatalog } from '../agents/catalog.ts';
@@ -32,6 +32,7 @@ async function buildModels() {
                     ref,
                     createAgentModel({
                         availability: model.availability ?? 'available',
+                        capability: model.capability,
                         label: model.label ?? null,
                         model: parsed.model,
                         provider: parsed.provider,
@@ -138,6 +139,7 @@ export async function listModels() {
 
 function createAgentModel(input: {
     availability: 'available' | 'configured' | 'degraded' | 'unavailable';
+    capability: AgentRuntimeModelCapability;
     label: string | null;
     model: string;
     provider: string;
@@ -146,6 +148,7 @@ function createAgentModel(input: {
 
     return {
         availability: input.availability,
+        capability: input.capability,
         contextWindow: null,
         framework: 'agent-engine',
         id: ref,

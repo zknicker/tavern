@@ -10,3 +10,30 @@ export const curatedOpenAiModels = [
     { label: 'GPT-4o', modelId: 'gpt-4o' },
     { label: 'GPT-4o Mini', modelId: 'gpt-4o-mini' },
 ] as const satisfies CuratedModel[];
+
+export const curatedOpenAiImageModels = [
+    {
+        capability: 'imageGeneration',
+        executionKind: 'direct',
+        label: 'GPT Image 2',
+        modelId: 'gpt-image-2',
+    },
+    {
+        capability: 'imageGeneration',
+        executionKind: 'direct',
+        label: 'GPT Image 1.5',
+        modelId: 'gpt-image-1.5',
+    },
+    {
+        capability: 'imageGeneration',
+        executionKind: 'direct',
+        label: 'GPT Image 1',
+        modelId: 'gpt-image-1',
+    },
+    {
+        capability: 'imageGeneration',
+        executionKind: 'direct',
+        label: 'GPT Image 1 Mini',
+        modelId: 'gpt-image-1-mini',
+    },
+] as const satisfies CuratedModel[];

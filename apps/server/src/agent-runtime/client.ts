@@ -57,6 +57,7 @@ import {
     type AgentRuntimeMerchbaseSettings,
     type AgentRuntimeMessageAccepted,
     type AgentRuntimeModelAccess,
+    type AgentRuntimeModelCapabilitySelectionSettings,
     type AgentRuntimeModelCategorySettings,
     type AgentRuntimeModelProviderCatalog,
     type AgentRuntimeModelProviderCatalogEntry,
@@ -84,6 +85,7 @@ import {
     type AgentRuntimeSaveMemorySettings,
     type AgentRuntimeSaveMemorySettingsResult,
     type AgentRuntimeSaveMerchbaseSettings,
+    type AgentRuntimeSaveModelCapabilitySelections,
     type AgentRuntimeSaveModelCategorySettings,
     type AgentRuntimeSaveModelCategorySettingsResult,
     type AgentRuntimeSaveModelProviderApiKey,
@@ -214,6 +216,7 @@ import {
     agentRuntimeMerchbaseSettingsSchema,
     agentRuntimeMessageAcceptedSchema,
     agentRuntimeModelAccessSchema,
+    agentRuntimeModelCapabilitySelectionSettingsSchema,
     agentRuntimeModelCategorySettingsSchema,
     agentRuntimeModelProviderCatalogEntrySchema,
     agentRuntimeModelProviderCatalogSchema,
@@ -248,6 +251,7 @@ import {
     agentRuntimeSaveMemorySettingsResultSchema,
     agentRuntimeSaveMemorySettingsSchema,
     agentRuntimeSaveMerchbaseSettingsSchema,
+    agentRuntimeSaveModelCapabilitySelectionsSchema,
     agentRuntimeSaveModelCategorySettingsResultSchema,
     agentRuntimeSaveModelCategorySettingsSchema,
     agentRuntimeSaveModelProviderApiKeySchema,
@@ -427,6 +431,7 @@ export interface TavernAgentRuntimeClient {
     getMemorySettings(): Promise<AgentRuntimeMemorySettings>;
     getMerchbaseSettings(): Promise<AgentRuntimeMerchbaseSettings>;
     getModelAccess(): Promise<AgentRuntimeModelAccess>;
+    getModelCapabilitySelections(): Promise<AgentRuntimeModelCapabilitySelectionSettings>;
     getModelCategorySettings(): Promise<AgentRuntimeModelCategorySettings>;
     getModelProviderCatalog(): Promise<AgentRuntimeModelProviderCatalog>;
     getModelProvidersEnabled(): Promise<AgentRuntimeModelProviderEnabled>;
@@ -555,6 +560,9 @@ export interface TavernAgentRuntimeClient {
     saveMerchbaseSettings(
         input: AgentRuntimeSaveMerchbaseSettings
     ): Promise<AgentRuntimeMerchbaseSettings>;
+    saveModelCapabilitySelections(
+        input: AgentRuntimeSaveModelCapabilitySelections
+    ): Promise<AgentRuntimeModelCapabilitySelectionSettings>;
     saveModelCategorySettings(
         input: AgentRuntimeSaveModelCategorySettings
     ): Promise<AgentRuntimeSaveModelCategorySettingsResult>;
@@ -2235,6 +2243,21 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         return agentRuntimeModelCategorySettingsSchema.parse(await response.json());
     }
 
+    async getModelCapabilitySelections() {
+        const response = await fetch(
+            `${this.#baseUrl}${agentRuntimeRoutes.modelCapabilitySelections}`,
+            {
+                headers: this.#authHeaders,
+            }
+        );
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeModelCapabilitySelectionSettingsSchema.parse(await response.json());
+    }
+
     async saveModelCategorySettings(input: AgentRuntimeSaveModelCategorySettings) {
         const payload = agentRuntimeSaveModelCategorySettingsSchema.parse(input);
         const response = await fetch(
@@ -2255,6 +2278,28 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         }
 
         return agentRuntimeSaveModelCategorySettingsResultSchema.parse(await response.json());
+    }
+
+    async saveModelCapabilitySelections(input: AgentRuntimeSaveModelCapabilitySelections) {
+        const payload = agentRuntimeSaveModelCapabilitySelectionsSchema.parse(input);
+        const response = await fetch(
+            `${this.#baseUrl}${agentRuntimeRoutes.modelCapabilitySelections}`,
+            {
+                body: JSON.stringify(payload),
+                headers: {
+                    ...this.#authHeaders,
+                    'content-type': 'application/json',
+                    [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+                },
+                method: 'PUT',
+            }
+        );
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeModelCapabilitySelectionSettingsSchema.parse(await response.json());
     }
 
     async getAgentEnv(): Promise<AgentRuntimeAgentEnv> {

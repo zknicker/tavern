@@ -57,6 +57,7 @@ export async function listModelInventory(): Promise<ModelInventory> {
 
         provider.models.push({
             canDelete: false,
+            capability: model.capability,
             capabilities: ['general'],
             contextWindow: null,
             description: null,

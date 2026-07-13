@@ -12,6 +12,8 @@ export interface ModelCatalogProvider {
 }
 
 export interface CuratedModel {
+    capability?: AgentRuntimeModelCatalogEntry['capability'];
+    executionKind?: AgentRuntimeModelCatalogEntry['executionKind'];
     label: string;
     modelId: string;
 }
@@ -38,6 +40,8 @@ export function curatedCatalog(
         models: models.map((model) =>
             modelEntry({
                 availability: input.availability,
+                capability: model.capability,
+                executionKind: model.executionKind,
                 label: model.label,
                 modelId: model.modelId,
                 provider: provider.id,
@@ -96,6 +100,8 @@ export function sortModels(models: AgentRuntimeModelCatalogEntry[]) {
 
 export function modelEntry(input: {
     availability?: AgentRuntimeModelCatalogEntry['availability'];
+    capability?: AgentRuntimeModelCatalogEntry['capability'];
+    executionKind?: AgentRuntimeModelCatalogEntry['executionKind'];
     label: string;
     modelId: string;
     provider: string;
@@ -103,7 +109,8 @@ export function modelEntry(input: {
 }): AgentRuntimeModelCatalogEntry {
     return {
         availability: input.availability ?? 'available',
-        executionKind: 'harness',
+        capability: input.capability ?? 'agent',
+        executionKind: input.executionKind ?? 'harness',
         id: `${input.provider}/${input.modelId}`,
         label: input.label,
         metadata: {},

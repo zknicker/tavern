@@ -1,4 +1,8 @@
-import { agentRuntimeModelProviderIdSchema, parseAgentRuntimeModelRef } from '@tavern/api';
+import {
+    agentRuntimeModelCapabilitySchema,
+    agentRuntimeModelProviderIdSchema,
+    parseAgentRuntimeModelRef,
+} from '@tavern/api';
 import { z } from 'zod';
 
 export const modelAvailabilitySchema = z.enum([
@@ -37,6 +41,7 @@ export const modelRefSchema = z
 
 export const modelSchema = z.object({
     availability: modelAvailabilitySchema,
+    capability: agentRuntimeModelCapabilitySchema,
     contextWindow: z.number().int().positive().nullable(),
     framework: z.string().min(1),
     id: z.string().min(1),

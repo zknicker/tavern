@@ -40,6 +40,7 @@ describe('Agent engine model catalog', () => {
         expect(result.warning).toBeNull();
         expect(result.models.map((model) => model.id)).toContain('claude/claude-opus-4-8');
         expect(result.models.map((model) => model.id)).toContain('claude/claude-sonnet-4-6');
+        expect(result.models.every((model) => model.capability === 'agent')).toBe(true);
         expect(result.models.every((model) => model.executionKind === 'harness')).toBe(true);
     });
 
@@ -52,6 +53,7 @@ describe('Agent engine model catalog', () => {
         expect(result.warning).toBeNull();
         expect(result.models.map((model) => model.id)).toContain('codex/gpt-5.5');
         expect(result.models.map((model) => model.id)).toContain('codex/gpt-5.4');
+        expect(result.models.every((model) => model.capability === 'agent')).toBe(true);
         expect(result.models.every((model) => model.executionKind === 'harness')).toBe(true);
     });
 
@@ -142,6 +144,7 @@ describe('Agent engine model catalog', () => {
         const openai = result.models.find((model) => model.id === 'openai/gpt-4.1-mini');
 
         expect(openai).toMatchObject({
+            capability: 'agent',
             executionKind: 'harness',
             metadata: {
                 authType: 'api_key',
@@ -177,12 +180,14 @@ describe('Agent engine model catalog', () => {
         expect(result.models.map((model) => model.id)).toContain('openai/gpt-4.1-mini');
     });
 
-    it('filters OpenAI live models through the curated agent catalog', async () => {
+    it('filters OpenAI live models through the curated capability catalog', async () => {
         const fetch = vi.fn(async () => ({
             json: async () => ({
                 data: [
                     { id: 'gpt-4.1-mini' },
                     { id: 'gpt-4.1' },
+                    { id: 'gpt-image-2' },
+                    { id: 'gpt-image-1-mini' },
                     { id: 'text-embedding-3-large' },
                     { id: 'whisper-1' },
                 ],
@@ -202,7 +207,24 @@ describe('Agent engine model catalog', () => {
         expect(result.models.map((model) => model.id)).toEqual([
             'openai/gpt-4.1',
             'openai/gpt-4.1-mini',
+            'openai/gpt-image-2',
+            'openai/gpt-image-1-mini',
         ]);
+        expect(result.models.filter((model) => model.capability === 'imageGeneration')).toEqual([
+            expect.objectContaining({
+                executionKind: 'direct',
+                id: 'openai/gpt-image-2',
+            }),
+            expect.objectContaining({
+                executionKind: 'direct',
+                id: 'openai/gpt-image-1-mini',
+            }),
+        ]);
+        expect(
+            result.models
+                .filter((model) => model.capability === 'agent')
+                .every((model) => model.executionKind === 'harness')
+        ).toBe(true);
         expect(fetch).toHaveBeenCalledWith('https://api.openai.com/v1/models', {
             headers: { Authorization: 'Bearer test-key' },
         });
@@ -249,6 +271,13 @@ describe('Agent engine model catalog', () => {
 
         expect(result.warning).toContain('OpenAI model discovery failed: 401 Unauthorized');
         expect(result.models.map((model) => model.id)).toContain('openai/gpt-4.1-mini');
+        expect(result.models).toContainEqual(
+            expect.objectContaining({
+                capability: 'imageGeneration',
+                executionKind: 'direct',
+                id: 'openai/gpt-image-2',
+            })
+        );
     });
 });
 

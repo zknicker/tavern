@@ -13,6 +13,7 @@ test('listModelInventory lists agent providers and keeps curated models for disc
         models: [
             {
                 availability: 'available',
+                capability: 'agent',
                 executionKind: 'harness',
                 id: 'codex/gpt-5.5',
                 label: 'GPT-5.5',
@@ -23,6 +24,7 @@ test('listModelInventory lists agent providers and keeps curated models for disc
             },
             {
                 availability: 'available',
+                capability: 'agent',
                 executionKind: 'harness',
                 id: 'codex/gpt-5.4',
                 label: 'GPT-5.4',
@@ -33,6 +35,7 @@ test('listModelInventory lists agent providers and keeps curated models for disc
             },
             {
                 availability: 'available',
+                capability: 'agent',
                 executionKind: 'harness',
                 id: 'claude/claude-sonnet-4-6',
                 label: 'Claude Sonnet 4.6',
@@ -75,6 +78,10 @@ test('listModelInventory lists agent providers and keeps curated models for disc
     assert.deepEqual(
         codex?.models.map((model) => model.ref),
         ['codex/gpt-5.4', 'codex/gpt-5.5']
+    );
+    assert.equal(
+        codex?.models.every((model) => model.capability === 'agent'),
+        true
     );
     assert.equal(claude?.isConnected, false);
     assert.deepEqual(

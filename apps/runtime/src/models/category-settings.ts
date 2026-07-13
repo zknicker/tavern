@@ -4,16 +4,15 @@ import {
     type AgentRuntimeModelName,
     type AgentRuntimeSaveModelCategorySettings,
     agentRuntimeModelCategorySettingsSchema,
-    agentRuntimeMutationHeaders,
-    agentRuntimeMutationOrigins,
     agentRuntimeRoutes,
     agentRuntimeSaveModelCategorySettingsResultSchema,
     agentRuntimeSaveModelCategorySettingsSchema,
 } from '@tavern/api';
 import { getDb } from '../db/connection.ts';
 import { namedParams } from '../db/sqlite.ts';
-import { forbidden, json } from '../tavern/http.ts';
+import { json } from '../tavern/http.ts';
 import { defaultWorkerModelSelection } from './selection-service.ts';
+import { requireTavernSettingsMutation } from './settings-mutation.ts';
 
 const modelCategorySettingsMetadataKey = 'models:category-settings';
 
@@ -36,7 +35,7 @@ export async function handleModelCategorySettingsRequest(
         return json(agentRuntimeModelCategorySettingsSchema.parse(getModelCategorySettings()));
     }
     if (request.method === 'PUT') {
-        const forbiddenResponse = requireTavernMutation(request, 'Model category settings');
+        const forbiddenResponse = requireTavernSettingsMutation(request, 'Model category settings');
         if (forbiddenResponse) {
             return forbiddenResponse;
         }
@@ -63,17 +62,6 @@ export async function handleModelCategorySettingsRequest(
     }
 
     return null;
-}
-
-function requireTavernMutation(request: Request, label: string) {
-    if (
-        request.headers.get(agentRuntimeMutationHeaders.origin) ===
-        agentRuntimeMutationOrigins.tavern
-    ) {
-        return null;
-    }
-
-    return forbidden(`${label} can only be changed by Tavern.`);
 }
 
 export function getModelCategorySettings(): AgentRuntimeModelCategorySettings {

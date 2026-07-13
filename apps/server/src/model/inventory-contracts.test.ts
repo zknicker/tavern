@@ -10,6 +10,7 @@ test('modelInventorySnapshotSchema accepts provider records without usage labels
         modelInventorySnapshotSchema.parse({
             models: [
                 {
+                    capability: 'agent',
                     contextWindow: null,
                     description: null,
                     displayName: 'GPT-5.5',
@@ -24,6 +25,7 @@ test('modelInventorySnapshotSchema accepts provider records without usage labels
     ).toEqual({
         models: [
             {
+                capability: 'agent',
                 capabilities: ['general'],
                 contextWindow: null,
                 description: null,
@@ -54,6 +56,7 @@ test('modelInventoryProviderSchema still requires usage labels on the live API s
             keyEnv: null,
             models: [
                 {
+                    capability: 'agent',
                     capabilities: ['general'],
                     contextWindow: null,
                     canDelete: false,

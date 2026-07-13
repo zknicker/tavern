@@ -45,7 +45,7 @@ It is not a second product API.
 | Skill hub                       | `/skills/hub/available`, `/skills/hub/preview`, `/skills/hub/scan`, `/skills/hub/install`, `/skills/hub/uninstall`, `/skills/hub/taps`, `/skills/hub/taps/{repo}`                                                                                                                                                                          |
 | Tools                           | `/tools`, `/tools/{id}/enabled`, `/tools/{id}/config`, `/tools/{id}/provider`, `/tools/{id}/env`, `/tools/{id}/post-setup`                                                                                                                                                                                                                 |
 | Advanced MCP servers            | `/mcp/servers`, `/mcp/servers/{name}`, `/mcp/servers/{name}/test`, `/mcp/servers/{name}/enabled`, `/mcp/catalog`, `/mcp/catalog/install`                                                                                                                                                                                                   |
-| Memory, Wiki, models, and access | `/memory/settings`, `/memory/jobs`, `/memory/activity`, `/wiki/status`, `/wiki/settings`, `/wiki/pages`, `/wiki/search`, `/models`, `/model-providers/catalog`, `/model-providers/enabled`, `/model-providers/{providerId}`, `/model-access`, `/model-access/api-key`, `/model-access/oauth/{providerId}/start`, `/model-access/oauth/{providerId}/poll/{sessionId}`, `/model-access/oauth/{providerId}/submit`, `/model-access/oauth/sessions/{sessionId}`, `/model-access/openrouter` |
+| Memory, Wiki, models, and access | `/memory/settings`, `/memory/jobs`, `/memory/activity`, `/wiki/status`, `/wiki/settings`, `/wiki/pages`, `/wiki/search`, `/models`, `/model-categories/settings`, `/model-capabilities/selections`, `/model-providers/catalog`, `/model-providers/enabled`, `/model-providers/{providerId}`, `/model-access`, `/model-access/api-key`, `/model-access/oauth/{providerId}/start`, `/model-access/oauth/{providerId}/poll/{sessionId}`, `/model-access/oauth/{providerId}/submit`, `/model-access/oauth/sessions/{sessionId}`, `/model-access/openrouter` |
 | Platform bindings               | `/bindings`, `/bindings/{id}`                                                                                                                                                                                                                                                                                                              |
 | Runtime chat projections        | `/agent/chats`, `/agent/chats/{chatId}/messages`, `/agent/chats/{chatId}/agent-sessions/current`                                                                                                                                                                                              |
 | Runtime chat relay              | websocket `/chat`                                                                                                                                                                                                                                                                                                                          |
@@ -87,7 +87,11 @@ use the Plugin client.
 `/model-providers/catalog` lists addable providers. `/model-providers/enabled`
 lists the providers this Runtime has enabled. `/model-providers/{providerId}`
 adds or removes one provider from the enabled set. `/models` returns executable
-model inventory for model selection and agent execution.
+model inventory with each model's capability and execution kind.
+
+`/model-categories/settings` (GET/PUT) stores agent model tier selections.
+`/model-capabilities/selections` (GET/PUT) stores capability-scoped model policy;
+an unset `imageGeneration` selection remains unset.
 
 `/model-access/api-key` writes provider API keys through the Runtime model
 access API. `/model-access/oauth/{providerId}/start` starts the provider OAuth

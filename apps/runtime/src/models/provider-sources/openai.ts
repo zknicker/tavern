@@ -4,7 +4,7 @@ import {
     readCachedModelCatalog,
     writeCachedModelCatalog,
 } from '../catalog-store.ts';
-import { curatedOpenAiModels } from '../curated/openai.ts';
+import { curatedOpenAiImageModels, curatedOpenAiModels } from '../curated/openai.ts';
 import {
     curatedCatalog,
     errorMessage,
@@ -14,6 +14,8 @@ import {
     openAiModelsUrl,
     parseOpenAiModelIds,
 } from './shared.ts';
+
+const curatedOpenAiCatalog = [...curatedOpenAiModels, ...curatedOpenAiImageModels];
 
 export async function resolveOpenAiModelCatalog(input: {
     apiKey: null | string;
@@ -43,7 +45,7 @@ export async function resolveOpenAiModelCatalog(input: {
             },
         });
         if (!response.ok) {
-            return mergeCuratedAndLive(input.provider, curatedOpenAiModels, [], {
+            return mergeCuratedAndLive(input.provider, curatedOpenAiCatalog, [], {
                 warning:
                     `OpenAI model discovery failed: ${response.status} ${response.statusText}`.trim(),
             });
@@ -73,7 +75,7 @@ export async function resolveOpenAiModelCatalog(input: {
             );
         }
 
-        return mergeCuratedAndLive(input.provider, curatedOpenAiModels, [], {
+        return mergeCuratedAndLive(input.provider, curatedOpenAiCatalog, [], {
             warning: `OpenAI model discovery failed: ${errorMessage(error)}`,
         });
     }
@@ -85,13 +87,13 @@ function fromOpenAiLiveIds(
     warning: null | string = null
 ) {
     const live = new Set(liveModelIds.map((modelId) => modelId.toLowerCase()));
-    const curatedAvailable = curatedOpenAiModels.filter((model) =>
+    const curatedAvailable = curatedOpenAiCatalog.filter((model) =>
         live.has(model.modelId.toLowerCase())
     );
 
     return curatedAvailable.length > 0
         ? curatedCatalog(provider, curatedAvailable, { warning })
-        : mergeCuratedAndLive(provider, curatedOpenAiModels, [], {
-              warning: warning ?? 'OpenAI did not return any curated agent models.',
+        : mergeCuratedAndLive(provider, curatedOpenAiCatalog, [], {
+              warning: warning ?? 'OpenAI did not return any curated models.',
           });
 }
