@@ -123,13 +123,24 @@ async function executeHarnessTurn(
     let turnStream: Awaited<ReturnType<typeof persistHarnessTurnStream>>;
     let fallbackText = '';
     try {
-        session = await agent.createSession({
-            abortSignal,
-            resumeFrom: input.agentSession.resumeState as
-                | HarnessAgentResumeSessionState
-                | undefined,
-            sessionId: input.agentSession.runtimeSessionId ?? input.agentSession.id,
-        });
+        const sessionId = input.agentSession.runtimeSessionId ?? input.agentSession.id;
+        const resumeFrom = input.agentSession.resumeState as
+            | HarnessAgentResumeSessionState
+            | undefined;
+        try {
+            session = await agent.createSession({ abortSignal, resumeFrom, sessionId });
+        } catch (error) {
+            if (!resumeFrom) {
+                throw error;
+            }
+            // A stored session can predate sandbox or work-directory changes;
+            // continuing fresh beats failing the turn.
+            log.warn('Agent session resume failed; starting a fresh session', {
+                err: error,
+                runId: input.runId,
+            });
+            session = await agent.createSession({ abortSignal, sessionId });
+        }
         activeTurn.session = session;
 
         const turn = await agent.stream({
@@ -350,6 +361,11 @@ function createHarnessAgent(
         instructions: options.instructions,
         permissionMode: 'allow-all',
         sandbox: sandboxFactory(localTrustedSandboxOptions(input)),
+        // Sessions work at the workspace root itself (patched harness allows
+        // workDir '.'). The default per-session work directories are invisible
+        // to workspace browsing, so files made there dead-end in the artifact
+        // panel and task materialization lands where the agent never looks.
+        sandboxConfig: { workDir: '.' },
         skills: options.skills,
         tools,
     });

@@ -121,7 +121,9 @@ export async function readWorkspaceFile(
     const root = await resolveWorkspaceRoot(db, input.agentId);
     const relativePath = normalizeWorkspacePath(input.path, { allowEmpty: false });
     rejectSensitiveWorkspacePath(relativePath);
-    rejectUnbrowseableWorkspacePath(relativePath);
+    // Direct reads may follow links into legacy harness session directories,
+    // which stay hidden from listings; dot directories remain unreadable.
+    rejectUnbrowseableWorkspacePath(relativePath, { allowSkippedDirectories: true });
     const absolutePath = await resolveWorkspaceChild(root, relativePath);
 
     const stat = await fs.stat(absolutePath).catch(() => null);
@@ -227,12 +229,18 @@ function isVisibleEntry(entry: Dirent) {
     return true;
 }
 
-function rejectUnbrowseableWorkspacePath(relativePath: string) {
+function rejectUnbrowseableWorkspacePath(
+    relativePath: string,
+    options: { allowSkippedDirectories?: boolean } = {}
+) {
     if (!relativePath) {
         return;
     }
     for (const segment of relativePath.split('/')) {
-        if (isHiddenWorkspaceName(segment) || isSkippedWorkspaceDirectory(segment)) {
+        if (isHiddenWorkspaceName(segment)) {
+            throw new Error('Workspace path is not browseable.');
+        }
+        if (!options.allowSkippedDirectories && isSkippedWorkspaceDirectory(segment)) {
             throw new Error('Workspace path is not browseable.');
         }
     }

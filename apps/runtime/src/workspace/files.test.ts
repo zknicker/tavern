@@ -121,12 +121,14 @@ describe('workspace files', () => {
                 path: 'codex-ags_cht_general_agt_primary_1',
             })
         ).rejects.toThrow(/not browseable/u);
+        // Legacy session directories stay out of listings, but direct links
+        // into them keep resolving so old chat references still open.
         await expect(
             readWorkspaceFile(getDb(), {
                 agentId: 'planner',
                 path: 'codex-ags_cht_general_agt_primary_1/harness-tool.mjs',
             })
-        ).rejects.toThrow(/not browseable/u);
+        ).resolves.toMatchObject({ content: 'token' });
         await expect(
             listWorkspaceFiles(getDb(), { agentId: 'planner', path: 'node_modules/package' })
         ).rejects.toThrow(/not browseable/u);
