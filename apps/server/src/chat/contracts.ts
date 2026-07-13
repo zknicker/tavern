@@ -168,6 +168,10 @@ export const unarchiveChatInputSchema = z.object({
     chatId: z.string().trim().min(1),
 });
 
+export const clearChatInputSchema = z.object({
+    chatId: z.string().trim().min(1),
+});
+
 export const updateChatTabAppearanceInputSchema = z.object({
     chatId: z.string().trim().min(1),
     color: chatTabAppearanceSchema.shape.color,

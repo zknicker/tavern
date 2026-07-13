@@ -1,5 +1,6 @@
 import { createRouter } from '../trpc.ts';
 import { archiveChatRoute } from './archive.ts';
+import { clearChatRoute } from './clear.ts';
 import { createChatRoute } from './create.ts';
 import { getChatRoute } from './get.ts';
 import { listArchivedChatsRoute, listChatsRoute } from './list.ts';
@@ -28,6 +29,7 @@ import { updateChatTabAppearanceRoute } from './update-tab-appearance.ts';
 
 export const chatRouter = createRouter({
     archive: archiveChatRoute,
+    clear: clearChatRoute,
     create: createChatRoute,
     get: getChatRoute,
     tool: createRouter({

@@ -21,3 +21,27 @@ export async function dismissChatResponse(input: { chatId: string; responseId: s
 
     return { dismissedAt: receipt.deleted_at, responseId: receipt.response_id };
 }
+
+/**
+ * Clearing a chat soft-deletes every message and response in Tavern Runtime:
+ * the timeline empties on every client while the rows stay durable.
+ */
+export async function clearTavernChat(chatId: string) {
+    const connection = await getActiveAgentRuntimeConnection();
+
+    if (!(connection?.enabled && connection.baseUrl)) {
+        throw new Error('Tavern Runtime is not connected.');
+    }
+
+    const client = createTavernClientForConnection(connection);
+    const receipt = await client.chat.clear(chatId);
+    emitChatUpdated({ chatId });
+    emitChatLogUpdated();
+
+    return {
+        chatId: receipt.chat_id,
+        clearedAt: receipt.cleared_at,
+        messagesDeleted: receipt.messages_deleted,
+        responsesDeleted: receipt.responses_deleted,
+    };
+}
