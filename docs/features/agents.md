@@ -47,6 +47,13 @@ can continue to feel primary-agent-first.
   built-in Plugin tools and Plugin-owned guidance the agent receives. Harness
   tools come from the selected executor and are governed by sandbox and approval
   policy.
+* **Web access.** A per-agent opt-in (default off) on the General settings
+  page. When on, the agent can search the web (provider-native search, when the
+  agent's model supports it) and fetch pages with the Runtime `web_fetch` tool,
+  which returns readable, size-capped markdown. Web content is treated as
+  untrusted reference data: the agent is instructed to cite sources and never
+  follow instructions found in fetched pages. When off, the web tools are
+  absent from the agent's turns.
 * **Sessions.** Synced Tavern, system, and external chats are visible from
   Settings -> Sessions with source filters.
 

@@ -239,6 +239,15 @@ Runtime also exposes read-only Tavern chat tools to harness turns:
 These tools are same-chat only. They are the escape hatch for older Tavern
 history that should not be automatically injected into every prompt.
 
+Web access is a per-agent opt-in (`webAccessEnabled`, default off). When on,
+Runtime enables the executor's provider-native web search where the model
+supports it (Claude Code native search, Codex live search; API-key OpenAI
+routes have none) and adds the Runtime-local `web_fetch` tool
+(`apps/runtime/src/web/`), which fetches one URL and returns readable,
+size-capped markdown. Native page-fetch tools stay disabled even when web
+access is on so page reads share one size cap and injection posture. When
+off, no web tools reach the turn.
+
 Runtime writes product facts through Tavern stores:
 
 - `chat_messages`

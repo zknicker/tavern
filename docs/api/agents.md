@@ -69,6 +69,11 @@ grant policy.
   messaging APIs instead of editing or saving raw engine config JSON.
 * Task settings store each agent's auto-dispatch opt-in and review policy;
   both default off.
+* Web settings store each agent's web access opt-in (`webAccessEnabled`,
+  default off) via `PATCH /agents/{id}/web-settings`. With web access on, the
+  agent gets provider-native web search when its model supports it plus the
+  Runtime `web_fetch` tool; off means the tools are absent from its turns. The
+  `webAccess` Runtime capability gates the app surface.
 * Instruction-affecting settings (name, bio, `SOUL.md`, `NOTES.md`) apply per
   session: executors receive instructions once at a session's first turn, so
   changes land when the next session starts. The current-session read returns

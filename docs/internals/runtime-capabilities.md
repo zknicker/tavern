@@ -227,6 +227,7 @@ and external dependencies.
 | `modelExecution` | Runtime has at least one usable agent execution model for the relevant agent or action. |
 | `skills` | Runtime can reach skill inventory. App-side capability methods under `skills` also track the skill hub (`skill-hub.*`), tool setup, and advanced MCP management (`mcp.*`) surfaces. |
 | `autoDispatch` | Runtime task storage and the auto-dispatch interval are running. |
+| `webAccess` | Runtime supports per-agent web access (always healthy on Runtimes that ship it; the id gates the app surface on older Runtimes). |
 | `plugin.merchbase` | Runtime has an enabled MerchBase Plugin, an API key, and can read the configured MerchBase account. |
 
 Plain Tavern CRUD, timeline, mentions, and logging surfaces are not
