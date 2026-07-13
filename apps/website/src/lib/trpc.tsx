@@ -50,6 +50,7 @@ export type MentionInventoryOutput = RouterOutput['mention']['inventory'];
 export type MentionPathOutput = RouterOutput['mention']['paths'];
 export type ModelListOutput = RouterOutput['model']['list'];
 export type ModelInventoryOutput = RouterOutput['model']['inventory'];
+export type BrowserSettingsOutput = RouterOutput['plugin']['browserSettings'];
 export type GoogleSettingsOutput = RouterOutput['plugin']['googleSettings'];
 export type MerchbaseSettingsOutput = RouterOutput['plugin']['merchbaseSettings'];
 export type MerchbaseSalesSeriesOutput = RouterOutput['plugin']['merchbaseSalesSeries'];

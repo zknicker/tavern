@@ -12,6 +12,8 @@ import {
     type AgentRuntimeArchiveCron,
     type AgentRuntimeAutoDispatchSettings,
     type AgentRuntimeBinding,
+    type AgentRuntimeBrowserActionResult,
+    type AgentRuntimeBrowserSettings,
     type AgentRuntimeCancelModelProviderOAuth,
     type AgentRuntimeCapabilityHealth,
     type AgentRuntimeCapabilityHealthId,
@@ -76,6 +78,7 @@ import {
     type AgentRuntimeSaveAgentEnvResult,
     type AgentRuntimeSaveAgentFile,
     type AgentRuntimeSaveAutoDispatchSettings,
+    type AgentRuntimeSaveBrowserSettings,
     type AgentRuntimeSaveDiscordBinding,
     type AgentRuntimeSaveGoogleSettings,
     type AgentRuntimeSaveMemorySettings,
@@ -164,6 +167,8 @@ import {
     agentRuntimeAutoDispatchSettingsSchema,
     agentRuntimeBindingListSchema,
     agentRuntimeBindingSchema,
+    agentRuntimeBrowserActionResultSchema,
+    agentRuntimeBrowserSettingsSchema,
     agentRuntimeCancelModelProviderOAuthSchema,
     agentRuntimeCapabilityHealthIdSchema,
     agentRuntimeCapabilityHealthListSchema,
@@ -236,6 +241,7 @@ import {
     agentRuntimeSaveAgentEnvSchema,
     agentRuntimeSaveAgentFileSchema,
     agentRuntimeSaveAutoDispatchSettingsSchema,
+    agentRuntimeSaveBrowserSettingsSchema,
     agentRuntimeSaveDiscordBindingSchema,
     agentRuntimeSaveGoogleSettingsSchema,
     agentRuntimeSaveMemorySettingsResultSchema,
@@ -405,6 +411,7 @@ export interface TavernAgentRuntimeClient {
     getAgentEnv(): Promise<AgentRuntimeAgentEnv>;
     getAgentFile(agentId: string, path: string): Promise<AgentRuntimeAgentFileContent>;
     getAutoDispatchSettings(): Promise<AgentRuntimeAutoDispatchSettings>;
+    getBrowserSettings(): Promise<AgentRuntimeBrowserSettings>;
     getCapability(id: AgentRuntimeCapabilityHealthId): Promise<AgentRuntimeCapabilityHealth>;
     getCronJob(jobId: string): Promise<AgentRuntimeCron>;
     getCurrentAgentSession(input: {
@@ -486,6 +493,7 @@ export interface TavernAgentRuntimeClient {
         input?: AgentRuntimeWorkspaceFileListInput
     ): Promise<AgentRuntimeWorkspaceFileList>;
     moveWikiPath(input: WikiMovePath): Promise<WikiPathMutationResult>;
+    openBrowser(): Promise<AgentRuntimeBrowserActionResult>;
     pollGoogleOAuth(input: AgentRuntimeGoogleOAuthPollInput): Promise<AgentRuntimeGoogleOAuthPoll>;
     pollModelProviderOAuth(input: AgentRuntimePollModelProviderOAuth): Promise<unknown>;
     postMessage(
@@ -510,6 +518,7 @@ export interface TavernAgentRuntimeClient {
         input: AgentRuntimeResetAgentSession
     ): Promise<AgentRuntimeResetAgentSessionResult>;
     resetSkill(skillId: string): Promise<AgentRuntimeSkillResetResult>;
+    restartBrowser(): Promise<AgentRuntimeBrowserActionResult>;
     restartForUpdate(): Promise<AgentRuntimeUpdate>;
     resyncSession(sessionKey: string): Promise<AgentRuntimeSessionResync>;
     runCronJob(jobId: string, input?: AgentRuntimeRunCron): Promise<AgentRuntimeCronRun>;
@@ -531,6 +540,9 @@ export interface TavernAgentRuntimeClient {
     saveAutoDispatchSettings(
         input: AgentRuntimeSaveAutoDispatchSettings
     ): Promise<AgentRuntimeAutoDispatchSettings>;
+    saveBrowserSettings(
+        input: AgentRuntimeSaveBrowserSettings
+    ): Promise<AgentRuntimeBrowserSettings>;
     saveDiscordBinding(
         input: AgentRuntimeSaveDiscordBinding
     ): Promise<AgentRuntimeAgentEngineConfigSnapshot>;
@@ -2312,6 +2324,79 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         }
 
         return agentRuntimePluginSchema.parse(await response.json());
+    }
+
+    async getBrowserSettings() {
+        const response = await fetch(
+            `${this.#baseUrl}${agentRuntimeRoutes.pluginBrowserSettings}`,
+            {
+                headers: this.#authHeaders,
+            }
+        );
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeBrowserSettingsSchema.parse(await response.json());
+    }
+
+    async saveBrowserSettings(input: AgentRuntimeSaveBrowserSettings) {
+        const payload = agentRuntimeSaveBrowserSettingsSchema.parse(input);
+        const response = await fetch(
+            `${this.#baseUrl}${agentRuntimeRoutes.pluginBrowserSettings}`,
+            {
+                body: JSON.stringify(payload),
+                headers: {
+                    ...this.#authHeaders,
+                    'content-type': 'application/json',
+                    [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+                },
+                method: 'PUT',
+            }
+        );
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeBrowserSettingsSchema.parse(await response.json());
+    }
+
+    async openBrowser() {
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.pluginBrowserOpen}`, {
+            body: JSON.stringify({}),
+            headers: {
+                ...this.#authHeaders,
+                'content-type': 'application/json',
+                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+            },
+            method: 'POST',
+        });
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeBrowserActionResultSchema.parse(await response.json());
+    }
+
+    async restartBrowser() {
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.pluginBrowserRestart}`, {
+            body: JSON.stringify({}),
+            headers: {
+                ...this.#authHeaders,
+                'content-type': 'application/json',
+                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+            },
+            method: 'POST',
+        });
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeBrowserActionResultSchema.parse(await response.json());
     }
 
     async getMerchbaseSettings() {
