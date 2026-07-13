@@ -5,6 +5,7 @@ import type { ImageModel } from 'ai';
 import { generateImage, tool } from 'ai';
 import * as z from 'zod';
 import { imageGenerationReadiness } from '../models/capability-selections.ts';
+import { generateCodexImage } from '../models/codex-image-generation.ts';
 import { createImageModelForRuntime } from '../models/image-model.ts';
 import { parseImageDimensions } from './image-dimensions.ts';
 
@@ -21,13 +22,27 @@ type GenerateImageForTool = (input: {
     size?: `${number}x${number}`;
 }) => Promise<GeneratedImage>;
 
+type GenerateCodexImageForTool = (input: {
+    prompt: string;
+    size?: string;
+}) => Promise<GeneratedImage['image']>;
+
 let generateImageForTool: GenerateImageForTool = generateImage;
+let generateCodexImageForTool: GenerateCodexImageForTool = generateCodexImage;
 
 export function setGenerateImageForTesting(factory: GenerateImageForTool) {
     const previous = generateImageForTool;
     generateImageForTool = factory;
     return () => {
         generateImageForTool = previous;
+    };
+}
+
+export function setCodexImageGenerationForTesting(factory: GenerateCodexImageForTool) {
+    const previous = generateCodexImageForTool;
+    generateCodexImageForTool = factory;
+    return () => {
+        generateCodexImageForTool = previous;
     };
 }
 
@@ -42,26 +57,33 @@ export function createImageGenerationTools(input: { workspaceFolder: string }): 
                     throw new Error(readiness.reason);
                 }
 
-                const model = createImageModelForRuntime(readiness.model);
-                const result = await generateImageForTool({
-                    model,
-                    prompt,
-                    ...(size ? { size: size as `${number}x${number}` } : {}),
-                });
+                const image =
+                    readiness.model.provider === 'codex'
+                        ? await generateCodexImageForTool({
+                              prompt,
+                              ...(size ? { size } : {}),
+                          })
+                        : (
+                              await generateImageForTool({
+                                  model: createImageModelForRuntime(readiness.model),
+                                  prompt,
+                                  ...(size ? { size: size as `${number}x${number}` } : {}),
+                              })
+                          ).image;
                 const workspacePath = outputPath
                     ? normalizeOutputPath(outputPath)
-                    : defaultOutputPath(prompt, result.image.mediaType);
+                    : defaultOutputPath(prompt, image.mediaType);
                 const destination = await resolveWorkspaceDestination(
                     input.workspaceFolder,
                     workspacePath
                 );
-                await fs.writeFile(destination, result.image.uint8Array);
+                await fs.writeFile(destination, image.uint8Array);
 
-                const dimensions = parseImageDimensions(result.image.uint8Array);
+                const dimensions = parseImageDimensions(image.uint8Array);
                 return {
                     height: dimensions?.height ?? null,
                     link: workspaceLink(workspacePath),
-                    mediaType: result.image.mediaType,
+                    mediaType: image.mediaType,
                     model: `${readiness.model.provider}/${readiness.model.model}`,
                     path: workspacePath,
                     width: dimensions?.width ?? null,

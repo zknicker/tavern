@@ -3,15 +3,20 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { deflateSync } from 'node:zlib';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
-import { closeDb, initTestDb } from '../db/connection.ts';
+import { closeDb, getDb, initTestDb } from '../db/connection.ts';
 import { ensureRuntimeSchema } from '../db/schema.ts';
 import { saveModelCapabilitySelections } from '../models/capability-selections.ts';
-import { createImageGenerationTools, setGenerateImageForTesting } from './agent-tools.ts';
+import {
+    createImageGenerationTools,
+    setCodexImageGenerationForTesting,
+    setGenerateImageForTesting,
+} from './agent-tools.ts';
 
 const png = createPng(8, 8);
 
 describe('image generation agent tool', () => {
     let restoreGenerateImage: (() => void) | undefined;
+    let restoreGenerateCodexImage: (() => void) | undefined;
     let workspaceFolder: string;
 
     beforeEach(async () => {
@@ -19,16 +24,22 @@ describe('image generation agent tool', () => {
         ensureRuntimeSchema(initTestDb());
         vi.stubEnv('OPENAI_API_KEY', 'sk-test');
         vi.stubEnv('TAVERN_AGENT_API_KEY', '');
+        vi.stubEnv('CODEX_HOME', path.join(workspaceFolder, '.empty-codex-home'));
         saveModelCapabilitySelections({
             selections: { imageGeneration: { model: 'gpt-image-2', provider: 'openai' } },
         });
         restoreGenerateImage = setGenerateImageForTesting(async () => ({
             image: { mediaType: 'image/png', uint8Array: png },
         }));
+        restoreGenerateCodexImage = setCodexImageGenerationForTesting(async () => ({
+            mediaType: 'image/png',
+            uint8Array: png,
+        }));
     });
 
     afterEach(async () => {
         restoreGenerateImage?.();
+        restoreGenerateCodexImage?.();
         closeDb();
         vi.unstubAllEnvs();
         await fs.rm(workspaceFolder, { force: true, recursive: true });
@@ -109,6 +120,44 @@ describe('image generation agent tool', () => {
         await expect(
             runImageTool(createImageGenerationTools({ workspaceFolder }), { prompt: 'No model' })
         ).rejects.toThrow('No image generation model is selected.');
+    });
+
+    test('routes a Codex selection through subscription image generation', async () => {
+        const generateCodexImage = vi.fn(async () => ({
+            mediaType: 'image/png' as const,
+            uint8Array: png,
+        }));
+        restoreGenerateCodexImage?.();
+        restoreGenerateCodexImage = setCodexImageGenerationForTesting(generateCodexImage);
+        saveModelCapabilitySelections({
+            selections: { imageGeneration: { model: 'gpt-image-2', provider: 'codex' } },
+        });
+        const now = new Date().toISOString();
+        getDb()
+            .prepare(
+                `INSERT INTO tavern_vault_secrets (id, secret_json, created_at, updated_at)
+                 VALUES (?, ?, ?, ?)`
+            )
+            .run('model-access:codex', JSON.stringify({ accessToken: 'token' }), now, now);
+
+        const result = await runImageTool(createImageGenerationTools({ workspaceFolder }), {
+            prompt: 'Subscription moon',
+            size: '1024x1536',
+        });
+
+        expect(generateCodexImage).toHaveBeenCalledWith({
+            prompt: 'Subscription moon',
+            size: '1024x1536',
+        });
+        expect(result).toMatchObject({
+            height: 8,
+            mediaType: 'image/png',
+            model: 'codex/gpt-image-2',
+            width: 8,
+        });
+        await expect(fs.readFile(path.join(workspaceFolder, result.path))).resolves.toEqual(
+            Buffer.from(png)
+        );
     });
 });
 

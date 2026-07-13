@@ -8,6 +8,7 @@ import {
 } from '@tavern/api';
 import { getDb } from '../db/connection.ts';
 import { namedParams } from '../db/sqlite.ts';
+import { hasCodexCredentials } from '../model-access/codex-settings.ts';
 import { json } from '../tavern/http.ts';
 import {
     imageGenerationMissingKeyReason,
@@ -114,6 +115,14 @@ export function imageGenerationReadiness():
     const model = resolveImageGenerationSelection();
     if (!model) {
         return { ready: false, reason: 'No image generation model is selected.' };
+    }
+    if (model.provider === 'codex') {
+        return hasCodexCredentials()
+            ? { model, ready: true }
+            : {
+                  ready: false,
+                  reason: 'Connect Codex in Model access to use subscription image generation.',
+              };
     }
     if (!supportsImageModelForRuntime(model)) {
         return { ready: false, reason: unsupportedImageModelProviderReason(model.provider) };

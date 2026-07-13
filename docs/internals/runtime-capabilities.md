@@ -225,7 +225,7 @@ and external dependencies.
 | `memoryExtraction` | Background Memory extraction can run with Fast-category direct model access. |
 | `memoryDreaming` | Background Memory dreaming can run with Standard-category direct model access. |
 | `modelExecution` | Runtime has at least one usable agent execution model for the relevant agent or action. |
-| `imageGeneration` | A supported image model is selected and its direct provider key is available. |
+| `imageGeneration` | A supported API-key image model or Codex subscription image route is selected and ready. |
 | `skills` | Runtime can reach skill inventory. App-side capability methods under `skills` also track the skill hub (`skill-hub.*`), tool setup, and advanced MCP management (`mcp.*`) surfaces. |
 | `autoDispatch` | Runtime task storage and the auto-dispatch interval are running. |
 | `webAccess` | Runtime supports per-agent web access (always healthy on Runtimes that ship it; the id gates the app surface on older Runtimes). |

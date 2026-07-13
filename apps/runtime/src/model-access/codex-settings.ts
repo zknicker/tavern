@@ -1,10 +1,14 @@
-import { decodeCodexAccessTokenMetadata, loadCodexCredentials } from '@tavern/codex-usage';
+import { existsSync } from 'node:fs';
+import {
+    type CodexLoadedCredentials,
+    decodeCodexAccessTokenMetadata,
+    loadCodexCredentials,
+    resolveCodexAuthPath,
+} from '@tavern/codex-usage';
 import { getDb } from '../db/connection';
 import { namedParams } from '../db/sqlite';
 
 const codexSettingsSecretId = 'model-access:codex';
-
-type LoadedCodexCredentials = NonNullable<Awaited<ReturnType<typeof loadCodexCredentials>>>;
 
 interface TavernVaultSecretRow {
     secret_json: string;
@@ -19,7 +23,7 @@ interface StoredCodexSettings {
     refreshToken: string | null;
 }
 
-export async function loadVaultBackedCodexCredentials(): Promise<LoadedCodexCredentials | null> {
+export async function loadVaultBackedCodexCredentials(): Promise<CodexLoadedCredentials | null> {
     const fileCredentials = await loadCodexCredentials({ environment: process.env });
     if (fileCredentials) {
         saveCodexCredentials(fileCredentials);
@@ -48,6 +52,15 @@ export async function loadVaultBackedCodexCredentials(): Promise<LoadedCodexCred
     };
 }
 
+export function hasCodexCredentials(): boolean {
+    if (existsSync(resolveCodexAuthPath({ environment: process.env }))) {
+        return true;
+    }
+
+    const row = getCodexSettingsRow();
+    return row ? Boolean(parseCodexSettings(row.secret_json).accessToken) : false;
+}
+
 export async function getCodexModelAccessStatus() {
     const credentials = await loadVaultBackedCodexCredentials();
     const label = credentials ? getCodexAccountLabel(credentials) : '~/.codex/auth.json';
@@ -59,7 +72,7 @@ export async function getCodexModelAccessStatus() {
     };
 }
 
-function saveCodexCredentials(input: LoadedCodexCredentials): void {
+export function saveCodexCredentials(input: CodexLoadedCredentials): void {
     const now = new Date().toISOString();
     const metadata = decodeCodexAccessTokenMetadata(input.credentials.accessToken);
     const secret: StoredCodexSettings = {
@@ -119,7 +132,7 @@ function parseCodexSettings(secretJson: string): StoredCodexSettings {
     }
 }
 
-function getCodexAccountLabel(credentials: LoadedCodexCredentials): string {
+function getCodexAccountLabel(credentials: CodexLoadedCredentials): string {
     const metadata = decodeCodexAccessTokenMetadata(credentials.credentials.accessToken);
     return (
         metadata?.email ??

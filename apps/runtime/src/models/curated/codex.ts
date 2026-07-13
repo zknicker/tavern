@@ -7,3 +7,12 @@ export const curatedCodexModels = [
     { label: 'GPT-5.3 Codex', modelId: 'gpt-5.3-codex' },
     { label: 'GPT-5.3 Codex Spark', modelId: 'gpt-5.3-codex-spark' },
 ] as const satisfies CuratedModel[];
+
+export const curatedCodexImageModels = [
+    {
+        capability: 'imageGeneration',
+        executionKind: 'direct',
+        label: 'GPT Image 2',
+        modelId: 'gpt-image-2',
+    },
+] as const satisfies CuratedModel[];

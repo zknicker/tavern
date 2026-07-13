@@ -1,4 +1,4 @@
-import { curatedCodexModels } from '../curated/codex.ts';
+import { curatedCodexImageModels, curatedCodexModels } from '../curated/codex.ts';
 import {
     curatedCatalog,
     type ModelCatalogProvider,
@@ -18,5 +18,5 @@ export function resolveCodexModelCatalog(input: {
         });
     }
 
-    return curatedCatalog(input.provider, curatedCodexModels);
+    return curatedCatalog(input.provider, [...curatedCodexModels, ...curatedCodexImageModels]);
 }

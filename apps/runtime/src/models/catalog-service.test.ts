@@ -53,8 +53,18 @@ describe('Agent engine model catalog', () => {
         expect(result.warning).toBeNull();
         expect(result.models.map((model) => model.id)).toContain('codex/gpt-5.5');
         expect(result.models.map((model) => model.id)).toContain('codex/gpt-5.4');
-        expect(result.models.every((model) => model.capability === 'agent')).toBe(true);
-        expect(result.models.every((model) => model.executionKind === 'harness')).toBe(true);
+        expect(result.models).toContainEqual(
+            expect.objectContaining({
+                capability: 'imageGeneration',
+                executionKind: 'direct',
+                id: 'codex/gpt-image-2',
+            })
+        );
+        expect(
+            result.models
+                .filter((model) => model.capability === 'agent')
+                .every((model) => model.executionKind === 'harness')
+        ).toBe(true);
     });
 
     it('keeps curated OAuth model rows unavailable when the provider CLI is missing', () => {
