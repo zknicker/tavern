@@ -1,7 +1,11 @@
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { agentRuntimeMutationHeaders, agentRuntimeMutationOrigins } from '@tavern/api';
+import {
+    agentRuntimeMutationHeaders,
+    agentRuntimeMutationOrigins,
+    agentRuntimeRoutes,
+} from '@tavern/api';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { closeDb, getDb, initTestDb } from '../db/connection.ts';
 import { ensureRuntimeSchema } from '../db/schema.ts';
@@ -131,8 +135,9 @@ describe('agent prompt contract', () => {
         skillsDir = await mkdtemp(path.join(tmpdir(), 'tavern-prompt-skills-'));
         workspaceDir = await mkdtemp(path.join(tmpdir(), 'tavern-prompt-workspace-'));
         ensureRuntimeSchema(initTestDb());
+        // Pin the home timezone so snapshots never depend on the host machine.
         await handleTimezoneSettingsRequest(
-            new Request('http://runtime.test/timezone-settings', {
+            new Request(`http://runtime.test${agentRuntimeRoutes.timezoneSettings}`, {
                 body: JSON.stringify({ timezone: 'UTC' }),
                 headers: {
                     'content-type': 'application/json',
