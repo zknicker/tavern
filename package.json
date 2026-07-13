@@ -37,6 +37,7 @@
     "typecheck": "bun run --filter @tavern/api typecheck && bun run --filter @tavern/sdk typecheck && bun run --filter @tavern/claude-usage typecheck && bun run --filter @tavern/codex-usage typecheck && bun run --filter @tavern/server typecheck && bun run --filter @tavern/runtime typecheck && bun run --filter @tavern/website typecheck",
     "lint": "ultracite check .",
     "lint:fix": "ultracite fix .",
+    "sync:browser-skill": "node scripts/sync-browser-skill.mjs",
     "docs:list": "docs-list"
   },
   "devDependencies": {

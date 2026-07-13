@@ -20,6 +20,7 @@ import { readConfigValue } from '../config.ts';
 import { createTavernCronTools } from '../cron/agent-tools.ts';
 import { isRuntimeCronReady } from '../cron/manager-state.ts';
 import { log } from '../log.ts';
+import { createBrowserToolsForAgent } from '../plugins/browser-tools.ts';
 import { createGoogleToolsForAgent } from '../plugins/google-tools.ts';
 import { createMerchbaseToolsForAgent } from '../plugins/merchbase-tools.ts';
 import { createTavernSkillTools } from '../skills/agent-tools.ts';
@@ -370,6 +371,7 @@ function createHarnessAgent(
         ...createTavernSkillTools({ agentId: input.agent.id }),
         ...createGoogleToolsForAgent(input.agent),
         ...createMerchbaseToolsForAgent(input.agent),
+        ...createBrowserToolsForAgent(input.agent),
     };
     return new HarnessAgent({
         harness,

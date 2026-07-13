@@ -6,6 +6,10 @@ import type {
     AgentRuntimeCapabilityHealthState,
 } from '@tavern/api';
 import {
+    browserPluginHealthCapabilityId,
+    browserPluginManifest,
+} from '@tavern/api/plugins/browser';
+import {
     googleCalendarPluginHealthCapabilityId,
     googlePluginManifest,
 } from '@tavern/api/plugins/google';
@@ -23,6 +27,7 @@ import { listAgentModels } from '../models/catalog-service.ts';
 import { resolveModelCategorySelection } from '../models/category-settings.ts';
 import { createLanguageModelForRuntime } from '../models/language-model.ts';
 import { resolveAgentModelSummary } from '../models/model-access.ts';
+import { checkBrowserCapability } from '../plugins/browser.ts';
 import { checkGoogleCalendarCapability } from '../plugins/google.ts';
 import { checkMerchbaseCapability } from '../plugins/merchbase.ts';
 import { isTaskDispatcherReady } from '../tasks/dispatcher.ts';
@@ -222,6 +227,17 @@ export const runtimeCapabilityDefinitions: RuntimeCapabilityDefinition[] = [
         },
         displayName: `${googlePluginManifest.displayName} Calendar`,
         id: googleCalendarPluginHealthCapabilityId,
+        refresh: {
+            intervalMs: 5 * minuteMs,
+            runOnStart: true,
+        },
+    },
+    {
+        async check() {
+            return await checkBrowserCapability();
+        },
+        displayName: browserPluginManifest.displayName,
+        id: browserPluginHealthCapabilityId,
         refresh: {
             intervalMs: 5 * minuteMs,
             runOnStart: true,

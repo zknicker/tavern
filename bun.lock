@@ -25,6 +25,7 @@
         "@tavern/api": "workspace:*",
         "@tavern/codex-usage": "workspace:*",
         "@tobilu/qmd": "2.5.3",
+        "agent-browser": "0.31.1",
         "ai": "7.0.6",
         "bunqueue": "2.6.38",
         "chokidar": "4.0.3",
@@ -203,7 +204,11 @@
       },
     },
   },
+  "trustedDependencies": [
+    "agent-browser",
+  ],
   "patchedDependencies": {
+    "@ai-sdk/harness-pi@1.0.8": "patches/@ai-sdk%2Fharness-pi@1.0.8.patch",
     "@shadcn/react@0.1.0": "patches/@shadcn%2Freact@0.1.0.patch",
   },
   "overrides": {
@@ -1214,6 +1219,8 @@
     "acorn-jsx": ["acorn-jsx@5.3.2", "", { "peerDependencies": { "acorn": "^6.0.0 || ^7.0.0 || ^8.0.0" } }, "sha512-rq9s+JNhf0IChjtDXxllJ7g41oZk5SlXtp0LHwyA5cejwn7vKmKp4pPri6YEePv2PU65sAsegbXtIinmDFDXgQ=="],
 
     "agent-base": ["agent-base@7.1.4", "", {}, "sha512-MnA+YT8fwfJPgBx3m60MNqakm30XOkyIoH1y6huTQvC0PwZG7ki8NacLBcrPbNoo8vEZy7Jpuk7+jMO+CUovTQ=="],
+
+    "agent-browser": ["agent-browser@0.31.1", "", { "bin": { "agent-browser": "./bin/agent-browser.js" } }, "sha512-RjgfT0EsHe1oZQbwzUqJTPb7w3sU8DGbbAjMxLNI5dW1y0cc81TbVsqgjqQJmsy3GEbEcKe/ryARwmWGqJAXXQ=="],
 
     "ai": ["ai@7.0.6", "", { "dependencies": { "@ai-sdk/gateway": "4.0.5", "@ai-sdk/provider": "4.0.0", "@ai-sdk/provider-utils": "5.0.1" }, "peerDependencies": { "zod": "^3.25.76 || ^4.1.8" } }, "sha512-RCina0WKhFgHQJHHOq+F11r9eaUo+Npcb84m7FDoYIVdG3IgeUb23fYfmqUTWIekI85c3GjkaTUxThiH3qHfkw=="],
 

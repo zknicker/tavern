@@ -18,6 +18,7 @@ import {
 import { merchbasePluginId } from '@tavern/api/plugins/merchbase';
 import * as z from 'zod';
 import type { RuntimeCapabilityCheckResult } from '../capabilities/definitions';
+import { getBrowserPlugin } from './browser';
 import { getGooglePlugin } from './google';
 import {
     getPlugin,
@@ -50,7 +51,7 @@ interface EffectiveMerchbaseSettings {
 }
 
 export function listRuntimePlugins(): AgentRuntimePlugin[] {
-    return [getMerchbasePlugin(), getGooglePlugin()];
+    return [getMerchbasePlugin(), getGooglePlugin(), getBrowserPlugin()];
 }
 
 export function getMerchbasePlugin(): AgentRuntimePlugin {
