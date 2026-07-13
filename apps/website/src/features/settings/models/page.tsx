@@ -5,6 +5,7 @@ import {
 } from '../../../components/ui/settings-row.tsx';
 import { ModelAccessSettings } from '../connections/model-access.tsx';
 import { BackgroundModelsSection } from './background-models-section.tsx';
+import { ImageGenerationSection } from './image-generation-section.tsx';
 import { ModelInventorySection } from './model-inventory-section.tsx';
 
 export function ModelsSettings() {
@@ -14,6 +15,8 @@ export function ModelsSettings() {
             <ModelAccessSettings />
 
             <BackgroundModelsSection />
+
+            <ImageGenerationSection />
 
             <SettingsSection title="Available Models">
                 <ModelInventorySection />

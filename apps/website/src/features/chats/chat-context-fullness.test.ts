@@ -35,6 +35,7 @@ test('getChatContextFullness reads latest agent usage against model context wind
     const models = [
         {
             availability: 'configured',
+            capability: 'agent',
             contextWindow: 200_000,
             framework: 'tavern',
             id: 'openrouter/gpt-5.5',

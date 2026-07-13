@@ -9,6 +9,7 @@ function createModelList(): ModelListOutput {
         models: [
             {
                 availability: 'configured',
+                capability: 'agent',
                 contextWindow: null,
                 framework: 'tavern',
                 id: 'claude/claude-opus-4-7',
@@ -21,6 +22,7 @@ function createModelList(): ModelListOutput {
             },
             {
                 availability: 'configured',
+                capability: 'agent',
                 contextWindow: null,
                 framework: 'tavern',
                 id: 'openrouter/anthropic/claude-opus-4.7',
@@ -33,6 +35,7 @@ function createModelList(): ModelListOutput {
             },
             {
                 availability: 'configured',
+                capability: 'agent',
                 contextWindow: null,
                 framework: 'tavern',
                 id: 'openai-codex/gpt-5.4',
@@ -75,6 +78,7 @@ test('buildModelOptions only falls back to raw refs when labels would collide', 
     data.models = [
         {
             availability: 'configured',
+            capability: 'agent',
             contextWindow: null,
             framework: 'tavern',
             id: 'claude/claude-sonnet-4-6',
@@ -87,6 +91,7 @@ test('buildModelOptions only falls back to raw refs when labels would collide', 
         },
         {
             availability: 'configured',
+            capability: 'agent',
             contextWindow: null,
             framework: 'tavern',
             id: 'openrouter/anthropic/claude-sonnet-4-6',

@@ -9,6 +9,7 @@ test('InventoryModelCard renders model metadata', () => {
             model={{
                 canDelete: false,
                 capabilities: ['general'],
+                capability: 'agent',
                 contextWindow: 200_000,
                 description: null,
                 displayName: 'GPT 5.5',

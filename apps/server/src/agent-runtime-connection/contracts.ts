@@ -12,6 +12,7 @@ export const agentRuntimeCapabilities = [
     'apiServer',
     'gateway',
     'modelExecution',
+    'imageGeneration',
     'skills',
     'cron',
     'autoDispatch',

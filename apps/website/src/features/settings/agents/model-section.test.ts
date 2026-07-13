@@ -6,6 +6,7 @@ import { listThinkingOptionsForModelChoice, selectModelChoice } from './model-se
 const models = [
     {
         availability: 'available',
+        capability: 'agent',
         contextWindow: 400_000,
         framework: 'agent-engine',
         id: 'codex/gpt-5.5',
@@ -18,6 +19,7 @@ const models = [
     },
     {
         availability: 'available',
+        capability: 'agent',
         contextWindow: 400_000,
         framework: 'agent-engine',
         id: 'codex/gpt-5.4',
@@ -30,6 +32,7 @@ const models = [
     },
     {
         availability: 'available',
+        capability: 'agent',
         contextWindow: 1_000_000,
         framework: 'agent-engine',
         id: 'claude/claude-sonnet-4-6',
@@ -42,6 +45,7 @@ const models = [
     },
     {
         availability: 'available',
+        capability: 'agent',
         contextWindow: 1_000_000,
         framework: 'agent-engine',
         id: 'claude/claude-opus-4-8',
