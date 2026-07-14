@@ -224,7 +224,7 @@ export function buildDraftActiveReply(draft: ChatStartDraft | null): ChatActiveR
     return {
         agentId: draft.agentId,
         isThinking: true,
-        runId: draft.realRunId ?? createChatRunId(draft.clientMessageId),
+        runId: draft.realRunId ?? createChatRunId(draft.clientMessageId, draft.agentId),
         sessionKey: draft.realTurnReference ?? draft.realChatId ?? draft.id,
         startedAt: draft.realAcceptedAt ?? draft.createdAt,
         text: '',

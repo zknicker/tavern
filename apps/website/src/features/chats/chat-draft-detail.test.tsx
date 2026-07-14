@@ -30,7 +30,7 @@ describe('buildDraftActiveReply', () => {
         expect(buildDraftActiveReply(createDraft())).toEqual({
             agentId: 'agent-1',
             isThinking: true,
-            runId: 'run_1',
+            runId: 'run_1_agent-1',
             sessionKey: 'tavern-draft-chat:1',
             startedAt: '2026-05-13T12:00:00.000Z',
             text: '',

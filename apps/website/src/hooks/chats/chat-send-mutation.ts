@@ -3,6 +3,7 @@ import type { ChatMessageAttachmentInput } from '../../lib/trpc.tsx';
 import { createChatRunId } from './chat-run-id.ts';
 
 export interface ChatSendMutationContext {
+    optimisticRunIds: string[];
     timelineMessageId: string;
 }
 
@@ -72,7 +73,6 @@ export function createChatSendMutationHandlers(utils: ChatSendMutationUtils) {
         }) => {
             const timestamp = new Date().toISOString();
             const timelineMessageId = input.clientMessageId ?? `msg_${crypto.randomUUID()}`;
-            const optimisticRunId = createChatRunId(timelineMessageId);
             utils.timelineMessage.add({
                 ...(input.attachments?.length ? { attachments: input.attachments } : {}),
                 chatId: input.chatId,
@@ -81,17 +81,26 @@ export function createChatSendMutationHandlers(utils: ChatSendMutationUtils) {
                 timestamp,
             });
 
-            for (const agentId of inputAgentIds(input)) {
+            // One optimistic run per agent seat, under the run id the runtime
+            // will mint for this (message, agent) pair — the real turn events
+            // then update these replies in place instead of appearing beside
+            // them as duplicates.
+            const optimisticRunIds = inputAgentIds(input).map((agentId) => {
+                const runId = createChatRunId(timelineMessageId, agentId);
+
                 utils.timelineTurn.start({
                     agentId,
                     chatId: input.chatId,
-                    runId: optimisticRunId,
+                    runId,
                     sessionKey: '',
                     startedAt: timestamp,
                 });
-            }
+
+                return runId;
+            });
 
             return {
+                optimisticRunIds,
                 timelineMessageId,
             } satisfies ChatSendMutationContext;
         },
@@ -108,10 +117,13 @@ export function createChatSendMutationHandlers(utils: ChatSendMutationUtils) {
                 chatId: input.chatId,
                 messageId: context.timelineMessageId,
             });
-            utils.timelineTurn.clear({
-                chatId: input.chatId,
-                runId: createChatRunId(context.timelineMessageId),
-            });
+
+            for (const runId of context.optimisticRunIds) {
+                utils.timelineTurn.clear({
+                    chatId: input.chatId,
+                    runId,
+                });
+            }
         },
         onSuccess: async (
             result: {
@@ -134,6 +146,16 @@ export function createChatSendMutationHandlers(utils: ChatSendMutationUtils) {
                     messageId: context.timelineMessageId,
                     sessionKey: turnReference,
                 });
+            }
+
+            // Optimistic runs the server did not accept (or minted under a
+            // different id) must not linger as ghost thinking indicators.
+            const acceptedRunIds = new Set(result.turns.map((turn) => turn.runId));
+
+            for (const runId of context?.optimisticRunIds ?? []) {
+                if (!acceptedRunIds.has(runId)) {
+                    utils.timelineTurn.clear({ chatId: result.chatId, runId });
+                }
             }
 
             for (const turn of result.turns) {
