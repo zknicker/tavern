@@ -2,8 +2,10 @@ import type { TavernChatMessage } from '@tavern/api';
 import { formatLocalTimestampWithWeekday } from '../timezone.ts';
 import { resolveHomeTimezone } from '../timezone-settings.ts';
 import type { AgentExecutorInput } from './agent-executor.ts';
+import { getStoredAgent } from './agents-store.ts';
 import { getChat, getMessage, listRecentMessagesBetween } from './chat-api/index.ts';
 import { projectTavernMessageForAgent } from './mention-projection.ts';
+import { type AgentTurnOutcomeNote, consumeAgentTurnOutcomeNotes } from './turn-outcome-notes.ts';
 
 const maxAmbientContextMessages = 20;
 
@@ -29,6 +31,21 @@ export function harnessPrompt(input: AgentExecutorInput, recallContext?: null | 
 
     if (recallContext) {
         sections.push('', recallContext);
+    }
+
+    // Outcomes of turns this seat dispatched by mention, delivered once and
+    // marked consumed so orchestrators never poll transcripts.
+    const outcomeNotes = consumeAgentTurnOutcomeNotes({
+        agentId: input.agent.id,
+        chatId: input.chatId,
+        runId: input.runId,
+    });
+    if (outcomeNotes.length > 0) {
+        sections.push(
+            '',
+            'Outcomes of turns you dispatched by mention:',
+            ...outcomeNotes.map((note) => formatOutcomeNote(note, input.chatId, timezone))
+        );
     }
 
     if (context.ambientMessages.length > 0) {
@@ -123,6 +140,25 @@ function isAmbientPromptMessage(input: AgentExecutorInput, message: TavernChatMe
         return false;
     }
     return message.author.id !== input.agentSession.agentParticipantId;
+}
+
+// One line per settled dispatched turn: who, where (when cross-chat), how it
+// ended, and the reply message id so the reply is one chat_message_get away.
+function formatOutcomeNote(note: AgentTurnOutcomeNote, currentChatId: string, timezone: string) {
+    const name = getStoredAgent(note.targetAgentId)?.name ?? note.targetAgentId;
+    const where =
+        note.targetChatId === currentChatId
+            ? ''
+            : ` in "${getChat(note.targetChatId)?.title ?? note.targetChatId}"`;
+    const outcome =
+        note.status === 'completed'
+            ? `completed — reply message ${note.replyMessageId}`
+            : note.status === 'no_reply'
+              ? 'completed silently (NO_REPLY)'
+              : note.status === 'stopped'
+                ? 'was stopped before finishing'
+                : `failed: ${note.error ?? 'unknown error'}`;
+    return `- [${promptTimestamp(note.createdAt, timezone)}] ${name}'s turn${where} ${outcome}.`;
 }
 
 function formatPromptMessage(message: TavernChatMessage, timezone: string) {

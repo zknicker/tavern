@@ -246,6 +246,28 @@ CREATE INDEX IF NOT EXISTS idx_agent_turns_session_status
 CREATE INDEX IF NOT EXISTS idx_agent_turns_chat_updated
   ON agent_turns(chat_id, updated_at);
 
+-- Compact outcome signals for mention-dispatched turns: when a turn an agent
+-- dispatched by mention settles, the requesting agent's seat receives one note
+-- in its next prompt instead of polling transcripts.
+CREATE TABLE IF NOT EXISTS agent_turn_outcome_notes (
+  id                 TEXT PRIMARY KEY,
+  turn_id            TEXT NOT NULL,
+  recipient_agent_id TEXT NOT NULL,
+  recipient_chat_id  TEXT NOT NULL,
+  target_agent_id    TEXT NOT NULL,
+  target_chat_id     TEXT NOT NULL,
+  status             TEXT NOT NULL CHECK (status IN ('completed', 'failed', 'stopped', 'no_reply')),
+  reply_message_id   TEXT,
+  error              TEXT,
+  created_at         TEXT NOT NULL,
+  consumed_at        TEXT,
+  consumed_by_run_id TEXT,
+  FOREIGN KEY(turn_id) REFERENCES agent_turns(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_agent_turn_outcome_notes_recipient
+  ON agent_turn_outcome_notes(recipient_agent_id, recipient_chat_id, consumed_at);
+
 CREATE TABLE IF NOT EXISTS cron_jobs (
   id                   TEXT PRIMARY KEY,
   agent_id             TEXT NOT NULL,

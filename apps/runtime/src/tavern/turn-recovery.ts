@@ -2,6 +2,7 @@ import { getDb } from '../db/connection';
 import type { Database } from '../db/sqlite';
 import { failAgentTurn } from './agent-turn-store';
 import { upsertResponse } from './chat-api';
+import { recordAgentTurnOutcomeNote } from './turn-outcome-notes.ts';
 
 const interruptedSummary = 'Interrupted by an agent runtime restart.';
 
@@ -33,7 +34,8 @@ export function recoverInterruptedChatResponses(db: Database = getDb()): number 
         .all() as InterruptedTurnRow[];
 
     for (const row of turnRows) {
-        failAgentTurn({ error: interruptedSummary, id: row.id }, db);
+        const failedTurn = failAgentTurn({ error: interruptedSummary, id: row.id }, db);
+        recordAgentTurnOutcomeNote(failedTurn, { error: interruptedSummary, status: 'failed' }, db);
     }
 
     const rows = db

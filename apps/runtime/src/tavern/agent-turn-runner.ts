@@ -16,6 +16,7 @@ import {
     getAgentTurn,
 } from './agent-turn-store.ts';
 import { upsertResponse } from './chat-api/index.ts';
+import { recordAgentTurnOutcomeNote } from './turn-outcome-notes.ts';
 
 interface ActiveTurn {
     input: AgentExecutorInput;
@@ -102,6 +103,7 @@ export async function stopAgentTurn(runId: string) {
         notifyTurnSettled(runId, { status: 'cancelled' });
     }
     recoverTaskDispatchForTurn(runId, { status: 'cancelled' });
+    recordTurnOutcome(cancelled, { status: 'cancelled' });
 
     return true;
 }
@@ -174,6 +176,7 @@ async function drainAgentSeat(input: AgentExecutorInput) {
             });
             notifyTurnSettled(turn.id, { status: 'completed' });
             recoverTaskDispatchForTurn(turn.id, { status: 'completed' });
+            recordTurnOutcome(completedTurn, { status: 'completed' });
             try {
                 scheduleMemoryExtractionForTurn(completedTurn);
             } catch {
@@ -193,12 +196,13 @@ async function drainAgentSeat(input: AgentExecutorInput) {
         const current = getAgentTurn(turn.id);
         if (current?.status === 'running') {
             const errorMessage = formatTurnError(error);
-            failAgentTurn({
+            const failedTurn = failAgentTurn({
                 error: errorMessage,
                 id: turn.id,
             });
             notifyTurnSettled(turn.id, { error: errorMessage, status: 'failed' });
             recoverTaskDispatchForTurn(turn.id, { error: errorMessage, status: 'failed' });
+            recordTurnOutcome(failedTurn, { error: errorMessage, status: 'failed' });
             upsertResponse(turnInput.chatId, {
                 id: turnInput.responseId,
                 metadata: {
@@ -232,6 +236,19 @@ async function drainAgentSeat(input: AgentExecutorInput) {
 function withCurrentAgentSessionState(input: AgentExecutorInput): AgentExecutorInput {
     const agentSession = readAgentSession(input.agentSession.id);
     return agentSession ? { ...input, agentSession } : input;
+}
+
+// Outcome notes are a best-effort signal back to the seat that dispatched
+// this turn by mention; a write failure must not fail the settle path.
+function recordTurnOutcome(
+    turn: Parameters<typeof recordAgentTurnOutcomeNote>[0],
+    result: Parameters<typeof recordAgentTurnOutcomeNote>[1]
+) {
+    try {
+        recordAgentTurnOutcomeNote(turn, result);
+    } catch (error) {
+        log.warn('Turn outcome note was not recorded', { err: error, runId: turn.id });
+    }
 }
 
 function notifyTurnSettled(
