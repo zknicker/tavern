@@ -19,11 +19,23 @@ progress is activity.
 * Schedules are explicit and inspectable.
 * Delivery targets are required and point to a Tavern chat where the owning
   agent participates.
-* Agent-turn payloads carry only `kind: "agentTurn"` and `message`.
+* Payloads carry one of three kinds. Agent-turn payloads carry
+  `kind: "agentTurn"` and `message`. System-event payloads carry
+  `kind: "systemEvent"` and `text`. Script payloads carry `kind: "script"`,
+  `command`, and an optional `workingDir` resolved under the owning agent's
+  workspace.
+* Summaries expose `mode` (the payload kind) so lists can show it without the
+  full payload.
+* Script runs execute server-side at zero model cost. Exit 0 with empty stdout
+  — or a `{"wakeAgent": false}` JSON sentinel — is a quiet tick: the run is
+  recorded and nothing posts. Any other stdout is delivered as the automation
+  message and dispatches an agent turn exactly like agent-turn payloads.
+  Non-zero exits and timeouts record error runs and post nothing.
 * Runtime computes `state.nextRunAtMs` for enabled jobs.
 * Run history is ordered and durable.
-* Runs expose status, trigger, scheduled/start/finish timestamps,
-  `chatId`, `turnId`, and execution failure detail.
+* Runs expose status, trigger, scheduled/start/finish timestamps, `chatId`,
+  `turnId`, execution failure detail, and for script runs `quiet`,
+  `scriptExitCode`, and `scriptStderr`.
 * Events notify clients that automation records or runs changed; reads recover
   the full state.
 
@@ -42,8 +54,9 @@ The API covers:
 
 Agent turns can use `cron_list`, `cron_create`, `cron_update`, and
 `cron_delete` to manage that agent's own automations. These tools create
-ordinary automation jobs with agent-turn payloads only; the jobs remain fully
-visible and editable in the Automations page.
+ordinary automation jobs with agent-turn or script payloads; the jobs remain
+fully visible and editable in the Automations page. Agents are taught to
+prefer script payloads for watchdogs so quiet ticks cost no model turns.
 
 ## Runtime Boundary
 

@@ -3,8 +3,9 @@
 Cron jobs are user- and agent-authored scheduled automations.
 
 Tavern Runtime owns automation records, schedules, delivery targets, run
-history, and execution. A cron job triggers an Agent turn on schedule and
-delivers the resulting messages into a Tavern Chat.
+history, and execution. A cron job runs one of three payload modes on
+schedule: an agent turn, a server-side script, or a system-event message.
+Deliveries land in a Tavern Chat.
 
 Cron jobs are not system maintenance. Extraction, dreaming, skill review, and
 curation run as Runtime workers, never as managed cron jobs.
@@ -38,10 +39,31 @@ curation run as Runtime workers, never as managed cron jobs.
 - Delivery appears in the destination Chat as the Agent. Runtime writes the
   canonical Tavern message, response, and activity records.
 
+## Script Mode
+
+- A script payload names a shell `command` and an optional `workingDir`.
+  Runtime executes it with `sh -c` in the owning Agent's workspace (relative
+  `workingDir` values resolve under the workspace), at the same local trust
+  level as the Agent's own shell tool. No new permission tier exists.
+- Runtime bounds every script run: a hard runtime cap and capped
+  stdout/stderr capture. Exceeding the runtime cap fails the run.
+- Quiet tick: exit 0 with empty stdout, or with a `{"wakeAgent": false}` JSON
+  object as the whole stdout, records a successful quiet run. Nothing posts
+  and no turn dispatches; the run history marks the run quiet.
+- Escalation: any other stdout on exit 0 is delivered into the delivery chat
+  as the automation message and dispatches an Agent turn exactly like an
+  agent-turn payload.
+- Failure: a non-zero exit or timeout records an error run with the exit code
+  and captured stderr. Nothing posts.
+- Run history records `quiet`, `scriptExitCode`, and `scriptStderr` for
+  script runs.
+
 ## Agent Authoring
 
 - Agents manage cron jobs with cron tools: `cron_create`, `cron_list`,
-  `cron_update`, and `cron_delete`.
+  `cron_update`, and `cron_delete`. Create takes exactly one of `message`
+  (agent mode) or `script` (script mode). The managed prompt teaches agents
+  to prefer script mode for watchdogs.
 - Agent-authored jobs may only target Chats the agent participates in or its
   own DM channel.
 - Agent-created jobs are ordinary cron jobs: fully visible and editable in the
