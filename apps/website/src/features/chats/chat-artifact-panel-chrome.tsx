@@ -56,7 +56,7 @@ export function ArtifactPanelChrome({
                     <ArtifactPanelSourceMenu agentId={agentId} onOpenTarget={onOpenTarget} />
                 </div>
                 <Button
-                    aria-label="Close Artifacts"
+                    aria-label="Hide artifacts"
                     className="text-muted-foreground hover:text-foreground"
                     onClick={onClose}
                     size="icon-xs"

@@ -26,7 +26,7 @@ export function ChatArtifactPanel({
     state: ChatArtifactPanelState;
 }) {
     const shouldReduceMotion = useReducedMotion();
-    const open = state.targets.length > 0 && state.activeKey !== null;
+    const open = state.visible;
     const [resizingArtifactPane, setResizingArtifactPane] = React.useState(false);
     const artifactPaneWidth = useResizablePaneWidth({
         defaultWidth: 560,
@@ -83,12 +83,18 @@ export function ChatArtifactPanel({
                                         getArtifactPanelTargetKey(target) === state.activeKey
                                 )}
                                 agentId={agentId}
-                                onClose={state.close}
+                                onClose={state.toggleVisible}
                                 onCloseTarget={state.closeTarget}
                                 onOpenTarget={state.open}
                                 targets={state.targets}
                             />
                             <div className="min-h-0 flex-1">
+                                {state.targets.length === 0 ? (
+                                    <ArtifactPanelEmpty
+                                        detail="Open a workspace file or Wiki page from the + menu, or click a linked output in chat."
+                                        title="No artifacts open"
+                                    />
+                                ) : null}
                                 {state.targets.map((target) => (
                                     <TabPanel
                                         className="h-full min-h-0"

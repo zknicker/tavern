@@ -7,6 +7,7 @@ import { resolveAgentInk } from '../agents/agent-color-presets.ts';
 import { getChannelColorStyle } from '../shell/channel-color-options.ts';
 import { AgentFace } from './agent-face.tsx';
 import { type ChatListItem, getChatAgentId } from './chat-list-data.ts';
+import { ChatPaneToggleButton } from './chat-pane-toggle-button.tsx';
 import { ChatParticipantFacepile } from './chat-participant-facepile.tsx';
 import { ChatParticipantsEditButton } from './chat-participants-edit-button.tsx';
 
@@ -33,6 +34,7 @@ export function ChatRoomTopbar({ chat }: { chat: ChatListItem }) {
             <div className="no-drag flex min-w-0 items-center justify-end gap-1 px-2">
                 <ChatParticipantFacepile chat={chat} />
                 <ChatParticipantsEditButton chat={chat} />
+                <ChatPaneToggleButton chatId={chat.id} />
             </div>
         </header>
     );

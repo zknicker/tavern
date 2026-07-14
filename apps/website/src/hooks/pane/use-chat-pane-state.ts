@@ -5,15 +5,17 @@ import {
     type TavernResourceTarget,
 } from '../../features/chats/tavern-resource-link.ts';
 import { trpc } from '../../lib/trpc.tsx';
+import { setPaneVisibilityOverride, usePaneVisibilityOverride } from './use-pane-visibility.ts';
 
 export interface ChatArtifactPanelState {
     activeKey: string | null;
-    close: () => void;
     closeActiveTarget: () => void;
     closeTarget: (key: string) => void;
     open: (target: TavernResourceTarget) => void;
     setActiveKey: (key: string) => void;
     targets: TavernResourceTarget[];
+    toggleVisible: () => void;
+    visible: boolean;
 }
 
 // The pane's tab set is a Runtime-owned per-chat record (revision-guarded),
@@ -68,14 +70,11 @@ export function useChatArtifactPanelState(chatId: string): ChatArtifactPanelStat
             const next = targets.some((entry) => getArtifactPanelTargetKey(entry) === key)
                 ? targets
                 : [...targets, target];
+            setPaneVisibilityOverride(chatId, true);
             apply({ activeKey: key, targets: next });
         },
-        [apply, readTargets]
+        [apply, chatId, readTargets]
     );
-
-    const close = React.useCallback(() => {
-        apply({ activeKey: null, targets: [] });
-    }, [apply]);
 
     const closeTarget = React.useCallback(
         (key: string) => {
@@ -118,15 +117,22 @@ export function useChatArtifactPanelState(chatId: string): ChatArtifactPanelStat
     );
 
     const state = query.data ?? emptyPaneState(chatId);
+    const visibilityOverride = usePaneVisibilityOverride(chatId);
+    const visible = visibilityOverride ?? state.targets.length > 0;
+
+    const toggleVisible = React.useCallback(() => {
+        setPaneVisibilityOverride(chatId, !visible);
+    }, [chatId, visible]);
 
     return {
         activeKey: state.activeKey,
-        close,
         closeActiveTarget,
         closeTarget,
         open,
         setActiveKey,
         targets: state.targets,
+        toggleVisible,
+        visible,
     };
 }
 
