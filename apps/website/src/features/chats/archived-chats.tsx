@@ -22,6 +22,15 @@ export function ArchivedChats() {
         ? (unarchiveChat.variables?.chatId ?? null)
         : null;
 
+    if (groups.length === 0) {
+        return (
+            <EmptyState
+                description="Archive a channel from its sidebar menu and it will move here, history intact."
+                title="No archived chats"
+            />
+        );
+    }
+
     return (
         <div className="min-h-0 flex-1 overflow-y-auto">
             <div className="mx-auto w-full max-w-2xl px-6 py-8">
@@ -36,33 +45,26 @@ export function ArchivedChats() {
                         {unarchiveChat.error.message}
                     </div>
                 ) : null}
-                {groups.length === 0 ? (
-                    <EmptyState
-                        description="Archive a channel from its sidebar menu and it will move here, history intact."
-                        title="No archived chats"
-                    />
-                ) : (
-                    <div className="flex flex-col gap-6">
-                        {groups.map((group) => (
-                            <section key={group.key}>
-                                <BadgeDivider className="pb-2">{group.label}</BadgeDivider>
-                                <ul className="flex flex-col">
-                                    {group.chats.map((chat) => (
-                                        <ArchivedChatRow
-                                            chat={chat}
-                                            isRestoring={restoringChatId === chat.id}
-                                            key={chat.id}
-                                            now={relativeNow}
-                                            onRestore={() => {
-                                                unarchiveChat.mutate({ chatId: chat.id });
-                                            }}
-                                        />
-                                    ))}
-                                </ul>
-                            </section>
-                        ))}
-                    </div>
-                )}
+                <div className="flex flex-col gap-6">
+                    {groups.map((group) => (
+                        <section key={group.key}>
+                            <BadgeDivider className="pb-2">{group.label}</BadgeDivider>
+                            <ul className="flex flex-col">
+                                {group.chats.map((chat) => (
+                                    <ArchivedChatRow
+                                        chat={chat}
+                                        isRestoring={restoringChatId === chat.id}
+                                        key={chat.id}
+                                        now={relativeNow}
+                                        onRestore={() => {
+                                            unarchiveChat.mutate({ chatId: chat.id });
+                                        }}
+                                    />
+                                ))}
+                            </ul>
+                        </section>
+                    ))}
+                </div>
             </div>
         </div>
     );
