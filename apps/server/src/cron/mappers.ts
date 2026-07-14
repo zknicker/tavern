@@ -9,6 +9,9 @@ import {
 export function mapCronJob(record: AgentRuntimeCron) {
     return cronJobSchema.parse({
         ...record,
+        // Derive from the payload: cached raw records synced before script
+        // mode shipped have no mode field of their own.
+        mode: record.payload.kind,
         syncedAt: record.updatedAt,
     });
 }
@@ -16,10 +19,21 @@ export function mapCronJob(record: AgentRuntimeCron) {
 export function mapCronJobSummary(
     record: Pick<
         AgentRuntimeCron,
-        'agentId' | 'description' | 'enabled' | 'id' | 'name' | 'schedule' | 'state' | 'updatedAt'
+        | 'agentId'
+        | 'description'
+        | 'enabled'
+        | 'id'
+        | 'name'
+        | 'payload'
+        | 'schedule'
+        | 'state'
+        | 'updatedAt'
     >
 ) {
-    return cronJobSummarySchema.parse(record);
+    return cronJobSummarySchema.parse({
+        ...record,
+        mode: record.payload.kind,
+    });
 }
 
 export function createDefaultCronSyncState() {

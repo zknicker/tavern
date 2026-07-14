@@ -237,6 +237,9 @@ const schemaStatements = [
         status TEXT NOT NULL,
         execution_error_code TEXT,
         execution_error_message TEXT,
+        quiet INTEGER NOT NULL DEFAULT 0,
+        script_exit_code INTEGER,
+        script_stderr TEXT,
         synced_at TEXT NOT NULL,
         trigger TEXT NOT NULL DEFAULT 'schedule'
     );`,
@@ -515,10 +518,28 @@ export function ensureDatabaseSchema() {
     runSchemaStatements(
         (statement) => !(statement.startsWith('PRAGMA') || statement.startsWith('CREATE INDEX'))
     );
+    migrateCronRunScriptColumns();
     repairCronCacheTables(runSchemaStatements);
     runSchemaStatements((statement) => statement.startsWith('CREATE INDEX'));
     migrateAgentProfilesUserInstructions();
     migrateAgentProfilesCharacter();
+}
+
+// Runs before the cron cache repair so an existing current-shape table gains
+// the script-run columns instead of tripping the legacy-shape rebuild.
+function migrateCronRunScriptColumns() {
+    const additions = [
+        'ALTER TABLE cron_runs ADD COLUMN quiet INTEGER NOT NULL DEFAULT 0;',
+        'ALTER TABLE cron_runs ADD COLUMN script_exit_code INTEGER;',
+        'ALTER TABLE cron_runs ADD COLUMN script_stderr TEXT;',
+    ];
+    for (const statement of additions) {
+        try {
+            databaseClient.exec(statement);
+        } catch {
+            /* column already exists or the table is a pre-repair legacy shape */
+        }
+    }
 }
 
 function migrateAgentProfilesCharacter() {

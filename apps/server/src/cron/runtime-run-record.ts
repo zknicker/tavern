@@ -17,8 +17,11 @@ export function toCronRunInsert(input: {
         jobId: buildCronJobId({
             runtimeCronJobId: input.run.jobId,
         }),
+        quiet: input.run.quiet,
         runtimeId: input.runtimeId,
         scheduledFor: input.run.scheduledFor,
+        scriptExitCode: input.run.scriptExitCode,
+        scriptStderr: input.run.scriptStderr,
         startedAt: input.run.startedAt,
         status: input.run.status,
         syncedAt: input.syncedAt,

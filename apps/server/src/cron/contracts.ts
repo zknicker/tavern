@@ -25,6 +25,11 @@ export const cronPayloadSchema = z.union([
         kind: z.literal('agentTurn'),
         message: z.string().min(1),
     }),
+    z.object({
+        command: z.string().min(1),
+        kind: z.literal('script'),
+        workingDir: z.string().min(1).optional(),
+    }),
 ]);
 
 export const cronRunStatusSchema = agentRuntimeExecutionStatusSchema;
@@ -71,11 +76,14 @@ export const runCronJobParamsSchema = z.object({
     mode: z.enum(['force', 'enqueue']).default('enqueue'),
 });
 
+export const cronModeSchema = z.enum(['agentTurn', 'script', 'systemEvent']);
+
 export const cronJobSummarySchema = z.object({
     agentId: z.string(),
     description: z.string().nullable(),
     enabled: z.boolean(),
     id: z.string().min(1),
+    mode: cronModeSchema,
     name: z.string().min(1),
     schedule: cronScheduleSchema,
     state: cronJobStateSchema,
@@ -127,7 +135,10 @@ export const cronJobRunSchema = z.object({
     finishedAt: z.string().datetime().nullable(),
     id: z.string().min(1),
     jobId: z.string().min(1),
+    quiet: z.boolean().default(false),
     scheduledFor: z.string().datetime(),
+    scriptExitCode: z.number().int().nullable().default(null),
+    scriptStderr: z.string().nullable().default(null),
     startedAt: z.string().datetime().nullable(),
     status: cronJobRunStatusSchema,
     trigger: cronJobRunTriggerSchema,
@@ -145,8 +156,11 @@ export const cronRunSchema = z.object({
     finishedAt: z.string().datetime().nullable(),
     id: z.string().min(1),
     jobId: z.string().min(1),
+    quiet: z.boolean().nullable().default(false),
     runtimeId: z.string().min(1).nullable(),
     scheduledFor: z.string().datetime(),
+    scriptExitCode: z.number().int().nullable().default(null),
+    scriptStderr: z.string().nullable().default(null),
     startedAt: z.string().datetime().nullable(),
     status: cronRunStatusSchema,
     syncedAt: z.string().datetime(),
