@@ -18,6 +18,7 @@ import {
     getResponseActivity,
     upsertResponse,
 } from './chat-api/index.ts';
+import { consumeAgentTurnOutcomeNotes } from './turn-outcome-notes.ts';
 
 describe('agent mention dispatch', () => {
     const originalClaudeCommand = process.env.TAVERN_AGENT_CLAUDE_CODE_COMMAND;
@@ -54,12 +55,48 @@ describe('agent mention dispatch', () => {
             agentId: 'agt_b',
             metadata: {
                 chainOriginMessageId: 'msg_1',
+                dispatchedBy: {
+                    agentId: 'agt_a',
+                    chatId: 'cht_general',
+                },
                 mentionHops: 1,
                 trigger: 'agent-mention',
             },
             status: 'completed',
             triggerMessageId: replyMessageId('agt_a', 'msg_1'),
         });
+
+        // The settled dispatched turn leaves one outcome note for the seat
+        // that mentioned it, delivered to that seat's next prompt.
+        const notes = consumeAgentTurnOutcomeNotes({
+            agentId: 'agt_a',
+            chatId: 'cht_general',
+            runId: 'run_next_a',
+        });
+        expect(notes).toHaveLength(1);
+        expect(notes[0]).toMatchObject({
+            replyMessageId: replyMessageId('agt_b', dispatched?.triggerMessageId ?? ''),
+            status: 'completed',
+            targetAgentId: 'agt_b',
+            targetChatId: 'cht_general',
+        });
+    });
+
+    it('skips dispatch for seats steered at send time', async () => {
+        createAgentChannel('agt_a', 'agt_b');
+        const turn = fabricateCompletedTurn(1, {
+            steeredAgentIds: ['agt_b'],
+        });
+
+        const dispatches = collectAgentMentionDispatches(turn);
+
+        expect(dispatches).toEqual([]);
+        // Steered mentions are handled, not suppressed: no notice either.
+        expect(
+            getResponseActivity(
+                `act_${turn.id}_mention_suppressed_agt_b`.replace(/[^A-Za-z0-9_-]/g, '_')
+            )
+        ).toBeNull();
     });
 
     it('ignores self-mentions and mentions of non-participants', async () => {
@@ -186,7 +223,10 @@ describe('agent mention dispatch', () => {
     });
 });
 
-function fabricateCompletedTurn(index: number): AgentTurn {
+function fabricateCompletedTurn(
+    index: number,
+    options: { steeredAgentIds?: string[] } = {}
+): AgentTurn {
     const now = new Date().toISOString();
     const messageId = `msg_reply_${index}`;
     const responseId = `rsp_fab_${index}`;
@@ -194,6 +234,9 @@ function fabricateCompletedTurn(index: number): AgentTurn {
         author_id: 'agt_a',
         content: '[agt_b](agent://agt_b) again.',
         id: messageId,
+        ...(options.steeredAgentIds
+            ? { metadata: { runtime: { steeredAgentIds: options.steeredAgentIds } } }
+            : {}),
         role: 'assistant',
     });
     upsertResponse('cht_general', {
