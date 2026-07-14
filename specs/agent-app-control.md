@@ -90,9 +90,15 @@ state:
   path), the active target, and a monotonically increasing revision.
 - User tab actions (open, close, focus) submit revision-guarded full-state
   writes; a stale write fails with the current state attached so the client
-  converges without a refetch. Agent intents are atomic append-and-focus
-  merge ops — commutative with user gestures, so they never conflict; every
-  write bumps the revision.
+  converges without a refetch. Agent intents are atomic merge ops —
+  commutative with user gestures, so they never conflict; every write bumps
+  the revision.
+- Open semantics are shared by user gestures and agent intents
+  (`mergeChatPaneOpenTarget` in `@tavern/api`): targets append-and-focus by
+  key, except workspace targets, which merge into one workspace tab. That tab
+  renders the workspace tree beside the open file; a file open replaces the
+  tab's target in place (the title follows the file), and a directory or root
+  open focuses it without clobbering the open file.
 - The pane stays chat-scoped per ADR 0004: switching chats switches records;
   nothing carries across chats. Tabs survive app reload because the record is
   Runtime state, not component state.

@@ -26,6 +26,11 @@ The artifact pane should feel like a compact assistant workspace attached to the
 
 - Clicking the same link focuses the existing tab.
 - Clicking a new link opens a new tab and selects it.
+- The workspace is one tab, not a browser tab plus per-file tabs: it renders
+  the open file with the workspace tree on the right (Codex-style). Opening a
+  workspace file — from a link, the tree, or `pane_open` — morphs that tab in
+  place, and the tab title is the open file's name ("Workspace" only when no
+  file is selected).
 - Tabs are scoped to the active chat.
 - The tab set is a Runtime-owned per-chat record (revision-guarded), so tabs
   survive app reloads and reappear when a chat is reopened. Switching chats
