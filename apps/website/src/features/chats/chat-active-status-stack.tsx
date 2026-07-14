@@ -31,8 +31,10 @@ interface ChatActiveStatusStackProps {
     variant?: 'compact' | 'detail';
 }
 
-// One status row per live run: each agent seat runs one turn at a time, so
-// concurrent rows belong to different agents.
+// One status row per agent seat. A seat can briefly hold two live runs — a
+// mention queues the next turn while the current one finishes — but its turns
+// execute serially, so the oldest run represents the seat and the queued run
+// takes over the same row when it starts.
 export function ChatActiveStatusStack({
     activeReplies,
     agents,
@@ -44,6 +46,7 @@ export function ChatActiveStatusStack({
 }: ChatActiveStatusStackProps) {
     const [drawerRunId, setDrawerRunId] = React.useState<string | null>(null);
     const reduceMotion = useReducedMotion() === true;
+    const seatReplies = React.useMemo(() => coalesceRepliesByAgent(activeReplies), [activeReplies]);
     const rowsWithEvidence = React.useMemo(() => {
         const evidence = Object.values(turnEvidence).flat();
 
@@ -89,7 +92,7 @@ export function ChatActiveStatusStack({
     // The detail surface floats this stack over the transcript's reserved
     // bottom padding (ChatDetailFooter), so appearing and disappearing rows
     // never resize the scroller viewport or move the reader.
-    const hasActiveReplies = activeReplies.length > 0;
+    const hasActiveReplies = seatReplies.length > 0;
 
     return (
         <>
@@ -114,7 +117,7 @@ export function ChatActiveStatusStack({
                     >
                         <div className="mx-auto flex w-full max-w-[60rem] flex-col">
                             <AnimatePresence initial={false}>
-                                {activeReplies.map((reply) => (
+                                {seatReplies.map((reply) => (
                                     <motion.div
                                         animate={{ height: 'auto', opacity: 1, y: 0 }}
                                         // Clip while the row's height animates
@@ -129,7 +132,11 @@ export function ChatActiveStatusStack({
                                         initial={
                                             reduceMotion ? false : { height: 0, opacity: 0, y: 8 }
                                         }
-                                        key={reply.runId}
+                                        // Keyed by seat so a queued follow-up
+                                        // run takes over the row in place
+                                        // instead of exit/enter animating a
+                                        // duplicate indicator for the agent.
+                                        key={reply.agentId}
                                         transition={
                                             reduceMotion ? { duration: 0 } : springs.moderate
                                         }
@@ -252,6 +259,22 @@ function ChatActiveStatusItem({
             ) : null}
         </button>
     );
+}
+
+// activeReplies is startedAt-ordered, so the first reply per agent is the run
+// executing now; later ones are queued behind it and inherit the row when the
+// current run settles.
+function coalesceRepliesByAgent(replies: readonly ChatActiveReply[]) {
+    const seen = new Set<string>();
+
+    return replies.filter((reply) => {
+        if (seen.has(reply.agentId)) {
+            return false;
+        }
+
+        seen.add(reply.agentId);
+        return true;
+    });
 }
 
 function formatActiveStatusText({

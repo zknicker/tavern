@@ -114,6 +114,26 @@ test('ChatActiveStatusStack streams a cumulative work summary and offers turn de
     assert.match(markup, /size-3\.5 shrink-0/);
 });
 
+test('ChatActiveStatusStack renders one row per agent when a follow-up run is queued', () => {
+    // A mention can queue an agent's next turn while its current one is still
+    // finishing; the seat keeps a single status row through the handoff.
+    const queuedReply = {
+        ...activeReply,
+        runId: 'run-2',
+        startedAt: '2026-07-01T17:00:05.000Z',
+    } satisfies ChatActiveReply;
+    const markup = renderToStaticMarkup(
+        <ChatActiveStatusStack
+            activeReplies={[activeReply, queuedReply]}
+            agents={agents}
+            rows={[]}
+        />
+    );
+
+    assert.equal(markup.split('thinking-indicator-text').length - 1, 1);
+    assert.match(markup, /Blippy is thinking\.\.\./);
+});
+
 test('ChatActiveStatusStack does not render without an active reply', () => {
     const markup = renderToStaticMarkup(
         <ChatActiveStatusStack activeReplies={[]} agents={agents} rows={[]} />
