@@ -127,6 +127,13 @@ const REQUIREMENTS: Array<{
         expected: "open it in the chat's artifact pane with `pane_open`",
         prompt: 'channel',
     },
+    // Widgets: the sandboxed HTML preview escape valve must stay taught so
+    // agents keep authoring custom inline visuals from workspace files.
+    {
+        capability: 'html-preview widget taught',
+        expected: 'widget:html-preview — ',
+        prompt: 'channel',
+    },
     // Web access (channel fixture opts in; dm fixture stays off, proving the
     // rules are per-agent conditional).
     {
@@ -162,10 +169,12 @@ const REQUIREMENTS: Array<{
 // Character ceilings for the deterministic fixture (default SOUL, empty core
 // memory). Raising one is a deliberate spend decision — confirm with the
 // operator, do not just bump the number.
-// Current: chat section ~1.1k chars, full fixture prompt ~12.2k chars.
+// Current: chat section ~1.1k chars, full fixture prompt ~12.9k chars.
+// 12_700 -> 12_900 (2026-07-15): the html-preview widget entry (~400 chars,
+// PRD-47) landed after the pane_open teaching consumed the prior headroom.
 const promptBudgets = {
     channelChatSection: 1200,
-    channelTotal: 12_700,
+    channelTotal: 12_900,
 };
 
 describe('agent prompt contract', () => {

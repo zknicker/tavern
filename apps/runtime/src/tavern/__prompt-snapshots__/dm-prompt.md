@@ -115,6 +115,10 @@ widget:calendar-day — Single-day agenda with zero or more events.
 {"date":"YYYY-MM-DD","events":[<calendar-event props without date>],"title"?:string,"timezone"?:string}
 Max 12 events.
 
+widget:html-preview — Sandboxed inline preview of a workspace HTML file; for custom visuals no other widget covers.
+{"path":string,"height"?:number,"title"?:string}
+Write a self-contained .html file (inline CSS/JS, no external or sibling assets) under workbench/ first; path is workspace-relative and renders the file's current content. height is px 120-1200 (default 480).
+
 ## USER
 
 The following content comes from `USER.md` in your workspace. Edit this file directly for agent-local stable facts about the user.

@@ -8,6 +8,7 @@ import {
     widgetComposedChartPropsSchema,
     widgetLineChartPropsSchema,
 } from './charts/contracts.ts';
+import { widgetHtmlPreviewPropsSchema } from './html-preview/contracts.ts';
 import { widgetMerchBaseSalesChartPropsSchema } from './merchbase/contracts.ts';
 
 export const widgetNameSchema = z.enum([
@@ -17,6 +18,7 @@ export const widgetNameSchema = z.enum([
     'composed-chart',
     'calendar-event',
     'calendar-day',
+    'html-preview',
     'merchbase-sales-chart',
 ]);
 
@@ -77,6 +79,7 @@ export const widgetPropsSchemasByName = {
     'calendar-day': widgetCalendarDayPropsSchema,
     'calendar-event': widgetCalendarEventPropsSchema,
     'composed-chart': widgetComposedChartPropsSchema,
+    'html-preview': widgetHtmlPreviewPropsSchema,
     'line-chart': widgetLineChartPropsSchema,
     'merchbase-sales-chart': widgetMerchBaseSalesChartPropsSchema,
     table: widgetTablePropsSchema,
@@ -103,6 +106,7 @@ export const widgetRenderInputSchema = z.discriminatedUnion('component', [
     widgetRenderInputEntry('composed-chart'),
     widgetRenderInputEntry('calendar-event'),
     widgetRenderInputEntry('calendar-day'),
+    widgetRenderInputEntry('html-preview'),
     widgetRenderInputEntry('merchbase-sales-chart'),
 ]);
 
@@ -176,6 +180,11 @@ export function widgetFallbackText(name: WidgetName, props: unknown): string {
         return date ? `Agenda for ${date}` : 'Agenda';
     }
 
+    if (name === 'html-preview') {
+        const path = typeof record.path === 'string' ? record.path.trim() : '';
+        return path ? `HTML preview: ${path}`.slice(0, 500) : 'HTML preview';
+    }
+
     return widgetDisplayName(name);
 }
 
@@ -193,6 +202,8 @@ export function widgetDisplayName(name: WidgetName): string {
             return 'Calendar event';
         case 'calendar-day':
             return 'Agenda';
+        case 'html-preview':
+            return 'HTML preview';
         case 'merchbase-sales-chart':
             return 'MerchBase sales chart';
     }

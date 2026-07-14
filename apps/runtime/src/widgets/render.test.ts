@@ -71,6 +71,54 @@ describe('Widget rendering', () => {
         });
     });
 
+    it('parses an html-preview fence with a workspace path', () => {
+        const parsed = parseWidgetsFromAssistantContent(
+            [
+                'Interactive demo below.',
+                '',
+                '```widget:html-preview',
+                '{"path":"workbench/demos/orbit.html","height":600}',
+                '```',
+            ].join('\n')
+        );
+
+        expect(parsed).toMatchObject({
+            displayContent: 'Interactive demo below.',
+            invalid: [],
+            widgets: [
+                {
+                    fallbackText: 'HTML preview: workbench/demos/orbit.html',
+                    name: 'html-preview',
+                    render: {
+                        component: 'tavern.widget.html-preview',
+                        props: { height: 600, path: 'workbench/demos/orbit.html' },
+                        target: 'chat.inline',
+                    },
+                },
+            ],
+        });
+    });
+
+    it('strips html-preview fences with traversal or non-html paths', () => {
+        const parsed = parseWidgetsFromAssistantContent(
+            [
+                'Look:',
+                '',
+                '```widget:html-preview',
+                '{"path":"../outside.html"}',
+                '```',
+                '',
+                '```widget:html-preview',
+                '{"path":"notes.md"}',
+                '```',
+            ].join('\n')
+        );
+
+        expect(parsed?.widgets).toEqual([]);
+        expect(parsed?.invalid).toHaveLength(2);
+        expect(parsed?.displayContent).toBe('Look:');
+    });
+
     it('rejects unknown widget names as invalid fences', () => {
         const parsed = parseWidgetsFromAssistantContent(
             ['```widget:sparkline', '{"values":[1,2]}', '```'].join('\n')

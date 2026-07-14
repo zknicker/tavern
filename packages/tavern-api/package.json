@@ -18,6 +18,7 @@
     "./widgets/prompt": "./src/widgets/prompt.ts",
     "./widgets/calendar": "./src/widgets/calendar/contracts.ts",
     "./widgets/charts": "./src/widgets/charts/contracts.ts",
+    "./widgets/html-preview": "./src/widgets/html-preview/contracts.ts",
     "./widgets/merchbase": "./src/widgets/merchbase/contracts.ts",
     "./openapi.yaml": "./openapi.yaml"
   },
