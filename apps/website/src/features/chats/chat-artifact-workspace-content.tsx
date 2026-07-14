@@ -88,6 +88,9 @@ export function WorkspaceBrowserContent({
         );
     }, [entriesByDirectory]);
 
+    // Keyed on the agent ONLY: an unstable onSelectPath identity must never
+    // wipe the loaded folder cache on ordinary re-renders.
+    const selectionControlsRef = useLatestRef({ setSelectedPath });
     const previousAgentRef = React.useRef(agentId);
     React.useEffect(() => {
         setLoadedEntriesByDirectory({});
@@ -97,9 +100,9 @@ export function WorkspaceBrowserContent({
         // URL-driven (controlled) selection must survive the initial render.
         if (previousAgentRef.current !== agentId) {
             previousAgentRef.current = agentId;
-            setSelectedPath(null);
+            selectionControlsRef.current.setSelectedPath(null);
         }
-    }, [agentId, setSelectedPath]);
+    }, [agentId, selectionControlsRef]);
 
     const loadDirectory = React.useCallback(
         async (nextPath: string) => {
@@ -240,7 +243,11 @@ function WorkspaceFileTree({
     const { model } = useFileTree({
         density: 'compact',
         flattenEmptyDirectories: false,
-        initialExpansion: 'open',
+        // Folders load lazily, so a folder's chevron must not claim "open"
+        // before its children exist; only the open file's chain starts
+        // expanded.
+        initialExpansion: 'closed',
+        initialExpandedPaths: selectedTreePath ? folderAncestors(selectedTreePath) : [],
         initialSelectedPaths: selectedTreePath ? [selectedTreePath] : [],
         itemHeight: 28,
         onSelectionChange(selectedPaths) {
@@ -267,17 +274,24 @@ function WorkspaceFileTree({
         unsafeCSS: treeUnsafeCss,
     });
 
-    // resetPaths is a whole-tree rebuild (expansion resets), so gate it on
-    // path CONTENT — refetches hand us new arrays with identical paths.
+    // resetPaths is a whole-tree rebuild, so gate it on path CONTENT
+    // (refetches hand us new arrays with identical paths) and carry the
+    // current expansion state across — a rebuild must not pop folders open
+    // or shut. Searching shows every match, so all folders open while a
+    // query is active.
     const appliedTreeSignatureRef = React.useRef<string | null>(null);
     React.useEffect(() => {
         const signature = treePaths.join('\n');
         if (appliedTreeSignatureRef.current !== signature) {
             appliedTreeSignatureRef.current = signature;
-            model.resetPaths(treePaths);
+            model.resetPaths(treePaths, {
+                initialExpandedPaths: hasQuery
+                    ? treePaths.filter(isTreeFolderPath)
+                    : expandedTreeFolders(model, treePaths, selectedTreePath),
+            });
         }
         syncTreeSelection(model, selectedPath);
-    }, [model, selectedPath, treePaths]);
+    }, [hasQuery, model, selectedPath, selectedTreePath, treePaths]);
 
     if (treePaths.length === 0) {
         return (
@@ -341,6 +355,35 @@ function addFolderAncestors(paths: Set<string>, path: string) {
     }
 }
 
+function folderAncestors(treePath: string) {
+    const ancestors = new Set<string>();
+    addFolderAncestors(ancestors, treePath);
+    return [...ancestors];
+}
+
+// The expansion set a rebuild should keep: whatever the user has open now,
+// plus the open file's chain.
+function expandedTreeFolders(
+    model: ReturnType<typeof useFileTree>['model'],
+    treePaths: string[],
+    selectedTreePath: string | undefined
+) {
+    const expanded = new Set<string>();
+    for (const path of treePaths) {
+        if (!isTreeFolderPath(path)) {
+            continue;
+        }
+        const item = model.getItem(path);
+        if (item && 'isExpanded' in item && item.isExpanded()) {
+            expanded.add(path);
+        }
+    }
+    if (selectedTreePath) {
+        addFolderAncestors(expanded, selectedTreePath);
+    }
+    return [...expanded];
+}
+
 function toTreeEntryPath(entry: WorkspaceFileEntry) {
     return entry.kind === 'directory' ? toTreeFolderPath(entry.path) : toTreeFilePath(entry.path);
 }
@@ -401,6 +444,13 @@ function syncTreeSelection(
     for (const currentPath of model.getSelectedPaths()) {
         if (currentPath !== nextSelectedPath) {
             model.getItem(currentPath)?.deselect();
+        }
+    }
+    // Reveal the file: a morph can land on a file inside a collapsed folder.
+    for (const ancestorPath of folderAncestors(nextSelectedPath)) {
+        const ancestor = model.getItem(ancestorPath);
+        if (ancestor && 'expand' in ancestor) {
+            ancestor.expand();
         }
     }
     const item = model.getItem(nextSelectedPath);

@@ -133,8 +133,34 @@ export function WikiPageFileTree({
         unsafeCSS: treeUnsafeCss,
     });
 
+    // resetPaths is a whole-tree rebuild, so gate it on path CONTENT
+    // (refetches hand us new arrays with identical paths) and carry the
+    // current expansion state across; folders new to the tree open like the
+    // initial load.
+    const appliedTreeSignatureRef = React.useRef<null | string>(null);
+    const knownTreePathsRef = React.useRef<null | Set<string>>(null);
     React.useEffect(() => {
-        model.resetPaths(treePaths);
+        const signature = treePaths.join('\n');
+        if (appliedTreeSignatureRef.current !== signature) {
+            appliedTreeSignatureRef.current = signature;
+            const known = knownTreePathsRef.current;
+            const expanded = new Set<string>();
+            for (const path of treePaths) {
+                if (!isTreeFolderPath(path)) {
+                    continue;
+                }
+                const item = model.getItem(path);
+                const isNewFolder = known !== null && !known.has(path);
+                if (isNewFolder || (item && 'isExpanded' in item && item.isExpanded())) {
+                    expanded.add(path);
+                }
+            }
+            if (selectedPageKey) {
+                addFolderAncestors(expanded, toTreePagePath(selectedPageKey));
+            }
+            knownTreePathsRef.current = new Set(treePaths);
+            model.resetPaths(treePaths, { initialExpandedPaths: [...expanded] });
+        }
         syncTreeSelection(model, selectedPageKey);
     }, [model, selectedPageKey, treePaths]);
 
@@ -366,6 +392,15 @@ function syncTreeSelection(
     for (const selectedPath of model.getSelectedPaths()) {
         if (selectedPath !== nextSelectedPath) {
             model.getItem(selectedPath)?.deselect();
+        }
+    }
+    // Reveal the page: selection can land inside a collapsed folder.
+    const ancestors = new Set<string>();
+    addFolderAncestors(ancestors, nextSelectedPath);
+    for (const ancestorPath of ancestors) {
+        const ancestor = model.getItem(ancestorPath);
+        if (ancestor && 'expand' in ancestor) {
+            ancestor.expand();
         }
     }
     const item = model.getItem(nextSelectedPath);

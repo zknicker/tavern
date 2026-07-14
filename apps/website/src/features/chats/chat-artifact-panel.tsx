@@ -153,6 +153,16 @@ function ArtifactPanelContent({
     onOpenTarget: (target: TavernResourceTarget) => void;
     target: TavernResourceTarget;
 }) {
+    // Stable identity: browser effects key on this callback.
+    const openWorkspaceFile = React.useCallback(
+        (path: null | string) => {
+            if (path) {
+                onOpenTarget({ kind: 'workspaceFile', path });
+            }
+        },
+        [onOpenTarget]
+    );
+
     if (target.kind === 'wikiPage') {
         return <WikiArtifactContent target={target} />;
     }
@@ -168,11 +178,7 @@ function ArtifactPanelContent({
         <WorkspaceBrowserContent
             agentId={agentId}
             initialDirectoryPath={workspaceInitialDirectory(target)}
-            onSelectPath={(path) => {
-                if (path) {
-                    onOpenTarget({ kind: 'workspaceFile', path });
-                }
-            }}
+            onSelectPath={openWorkspaceFile}
             selectedPath={target.kind === 'workspaceFile' ? target.path : null}
         />
     );
