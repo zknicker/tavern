@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.4.47 - 2026-07-14
+
+- Runtime/API/App: adds durable chat-scoped artifact pane tabs, realtime pane
+  updates, and the `pane_open` tool so agents can open workspace files and Wiki
+  pages in the active chat. Requires this Runtime.
+- App: keeps the artifact pane available at every window width, moves its tabs
+  and visibility control into the chat toolbar, and simplifies pane navigation
+  and search chrome.
+- App: polishes live chat with one optimistic status per mentioned agent,
+  stable send-time scrolling, live-edge-only entrance motion, attached session
+  notices, and day dividers only above visible transcript rows.
+
 ## v1.4.46 - 2026-07-13
 
 - Runtime: the Browser tool executes agent-browser's native binary directly so
