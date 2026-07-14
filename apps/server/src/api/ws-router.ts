@@ -17,6 +17,7 @@ import { onJobsUpdate } from './jobs/on-update.ts';
 import { onLabelsUpdate } from './labels/on-update.ts';
 import { onModelUpdate } from './model/on-update.ts';
 import { onOpenRouterSettingsUpdate } from './openrouter-settings/on-update.ts';
+import { onPaneUpdate } from './pane/on-update.ts';
 import { onSessionUpdate } from './session/on-update.ts';
 import { onSkillUpdate } from './skill/on-update.ts';
 import { onTasksUpdate } from './tasks/on-update.ts';
@@ -58,6 +59,9 @@ export const wsRouter = createRouter({
     }),
     openRouterSettings: createRouter({
         onUpdate: onOpenRouterSettingsUpdate,
+    }),
+    pane: createRouter({
+        onUpdate: onPaneUpdate,
     }),
     session: createRouter({
         onUpdate: onSessionUpdate,

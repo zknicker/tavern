@@ -107,6 +107,7 @@ export const agentRuntimeRoutes = {
         `/agent/chats/${encodeURIComponent(chatId)}/turns/${encodeURIComponent(runId)}/steer`,
     chatTurnStop: (chatId: string, runId: string) =>
         `/agent/chats/${encodeURIComponent(chatId)}/turns/${encodeURIComponent(runId)}/stop`,
+    chatPaneState: (chatId: string) => `/agent/chats/${encodeURIComponent(chatId)}/pane-state`,
     chats: '/agent/chats',
     wikiBacklinks: (pagePath: string) => `/wiki/pages/${encodeURIComponent(pagePath)}/backlinks`,
     wikiFolder: (folderPath: string) => `/wiki/folders/${encodeURIComponent(folderPath)}`,

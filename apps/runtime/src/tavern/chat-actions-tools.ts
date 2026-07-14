@@ -39,7 +39,7 @@ export function createTavernChatActionTools(input: {
                     return { error: 'This is the current chat. Reply normally instead.' };
                 }
                 const chat = getChat(chatId);
-                if (!(chat && isAgentParticipant(chat, input.agentId, participantId))) {
+                if (!(chat && isAgentChatParticipant(chat, input.agentId, participantId))) {
                     return { error: 'You are not a participant of that chat.' };
                 }
                 if (isArchivedChat(chat)) {
@@ -100,7 +100,7 @@ export function createTavernChatActionTools(input: {
     };
 }
 
-function isAgentParticipant(chat: TavernChat, agentId: string, participantId: string) {
+export function isAgentChatParticipant(chat: TavernChat, agentId: string, participantId: string) {
     return chat.participants.some((participant) => {
         if (participant.kind !== 'agent') {
             return false;

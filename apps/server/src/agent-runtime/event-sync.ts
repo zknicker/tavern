@@ -18,6 +18,7 @@ import {
     emitLabelsUpdated,
     emitMemoryJobsUpdated,
     emitModelUpdated,
+    emitPaneUpdated,
     emitSessionUpdated,
     emitTasksUpdated,
     emitWikiUpdated,
@@ -153,6 +154,11 @@ export async function applyObservedAgentRuntimeEvent(
         case 'memoryJob.updated': {
             emitObservedAgentRuntimeEvent(event);
             emitMemoryJobsUpdated();
+            return;
+        }
+        case 'pane.updated': {
+            emitObservedAgentRuntimeEvent(event);
+            emitPaneUpdated({ chatId: event.chatId, revision: event.revision });
             return;
         }
         case 'wiki.changed': {

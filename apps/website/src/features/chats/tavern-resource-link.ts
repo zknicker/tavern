@@ -1,9 +1,8 @@
-export type TavernResourceTarget =
-    | { kind: 'wikiDirectory'; path: string }
-    | { kind: 'wikiPage'; path: string }
-    | { kind: 'workspaceDirectory'; path: string }
-    | { kind: 'workspaceFile'; path: string }
-    | { kind: 'workspaceRoot'; path: '' };
+import type { ChatPaneTarget } from '@tavern/api';
+
+// Pane targets are the Runtime contract's chat pane targets; the app-local
+// alias keeps chat feature imports stable.
+export type TavernResourceTarget = ChatPaneTarget;
 
 const tavernProtocol = 'tavern:';
 

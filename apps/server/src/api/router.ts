@@ -14,6 +14,7 @@ import { modelRouter } from './model/router.ts';
 import { modelAccessRouter } from './model-access/router.ts';
 import { openAiSettingsRouter } from './openai-settings/router.ts';
 import { openRouterSettingsRouter } from './openrouter-settings/router.ts';
+import { paneRouter } from './pane/router.ts';
 import { participantRouter } from './participant/router.ts';
 import { pluginRouter } from './plugin/router.ts';
 import { sessionRouter } from './session/router.ts';
@@ -42,6 +43,7 @@ export const appRouter = createRouter({
     model: modelRouter,
     openAiSettings: openAiSettingsRouter,
     openRouterSettings: openRouterSettingsRouter,
+    pane: paneRouter,
     participant: participantRouter,
     plugin: pluginRouter,
     agentRuntime: agentRuntimeRouter,

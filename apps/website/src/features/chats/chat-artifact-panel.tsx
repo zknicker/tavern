@@ -8,6 +8,7 @@ import {
 } from '../../components/ui/resizable-pane-rail.tsx';
 import { ScrollArea } from '../../components/ui/scroll-area.tsx';
 import { TabPanel, Tabs } from '../../components/ui/tabs.tsx';
+import type { ChatArtifactPanelState } from '../../hooks/pane/use-chat-pane-state.ts';
 import { useWikiPage } from '../../hooks/wiki/use-wiki-page.ts';
 import { cn } from '../../lib/utils.ts';
 import { WikiMarkdownViewer } from '../wiki/wiki-markdown-viewer.tsx';
@@ -16,93 +17,6 @@ import { WikiBrowserContent } from './chat-artifact-wiki-content.tsx';
 import { WorkspaceBrowserContent } from './chat-artifact-workspace-content.tsx';
 import { WorkspaceArtifactContent } from './chat-artifact-workspace-preview.tsx';
 import { getArtifactPanelTargetKey, type TavernResourceTarget } from './tavern-resource-link.ts';
-
-interface ChatArtifactPanelState {
-    activeKey: string | null;
-    close: () => void;
-    closeActiveTarget: () => void;
-    closeTarget: (key: string) => void;
-    open: (target: TavernResourceTarget) => void;
-    setActiveKey: (key: string) => void;
-    targets: TavernResourceTarget[];
-}
-
-export function useChatArtifactPanelState(chatId: string): ChatArtifactPanelState {
-    const [targets, setTargets] = React.useState<TavernResourceTarget[]>([]);
-    const [activeKey, setActiveKey] = React.useState<string | null>(null);
-    const resetForChat = React.useCallback((_chatId: string) => {
-        setTargets([]);
-        setActiveKey(null);
-    }, []);
-
-    React.useEffect(() => {
-        resetForChat(chatId);
-    }, [chatId, resetForChat]);
-
-    const open = React.useCallback((target: TavernResourceTarget) => {
-        const key = getArtifactPanelTargetKey(target);
-        setTargets((current) =>
-            current.some((entry) => getArtifactPanelTargetKey(entry) === key)
-                ? current
-                : [...current, target]
-        );
-        setActiveKey(key);
-    }, []);
-
-    const close = React.useCallback(() => {
-        setTargets([]);
-        setActiveKey(null);
-    }, []);
-
-    const closeActiveTarget = React.useCallback(() => {
-        setTargets((current) => {
-            if (!activeKey) {
-                return current;
-            }
-
-            const activeIndex = current.findIndex(
-                (target) => getArtifactPanelTargetKey(target) === activeKey
-            );
-            const next = current.filter(
-                (target) => getArtifactPanelTargetKey(target) !== activeKey
-            );
-            const nextActive = next.at(Math.min(activeIndex, next.length - 1)) ?? null;
-            setActiveKey(nextActive ? getArtifactPanelTargetKey(nextActive) : null);
-            return next;
-        });
-    }, [activeKey]);
-
-    const closeTarget = React.useCallback(
-        (key: string) => {
-            setTargets((current) => {
-                const closingIndex = current.findIndex(
-                    (target) => getArtifactPanelTargetKey(target) === key
-                );
-                if (closingIndex === -1) {
-                    return current;
-                }
-
-                const next = current.filter((target) => getArtifactPanelTargetKey(target) !== key);
-                if (activeKey === key) {
-                    const nextActive = next.at(Math.min(closingIndex, next.length - 1)) ?? null;
-                    setActiveKey(nextActive ? getArtifactPanelTargetKey(nextActive) : null);
-                }
-                return next;
-            });
-        },
-        [activeKey]
-    );
-
-    return {
-        activeKey,
-        close,
-        closeActiveTarget,
-        closeTarget,
-        open,
-        setActiveKey,
-        targets,
-    };
-}
 
 export function ChatArtifactPanel({
     agentId,

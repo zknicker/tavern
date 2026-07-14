@@ -2568,6 +2568,42 @@ export const agentRuntimeTurnProgressStepSchema = z.object({
     widget: agentRuntimeWidgetProgressSchema.optional(),
 });
 
+// Chat pane state: the Runtime-owned tab set of a chat's artifact pane.
+// Targets mirror the app's tavern:// link scheme; identity is kind + path.
+export const chatPaneTargetSchema = z.discriminatedUnion('kind', [
+    z.object({ kind: z.literal('wikiDirectory'), path: z.string() }),
+    z.object({ kind: z.literal('wikiPage'), path: z.string().trim().min(1) }),
+    z.object({ kind: z.literal('workspaceDirectory'), path: z.string() }),
+    z.object({ kind: z.literal('workspaceFile'), path: z.string().trim().min(1) }),
+    z.object({ kind: z.literal('workspaceRoot'), path: z.literal('') }),
+]);
+
+export function chatPaneTargetKey(target: z.infer<typeof chatPaneTargetSchema>): string {
+    return `${target.kind}:${target.path}`;
+}
+
+const maxChatPaneTargets = 20;
+
+export const agentRuntimeChatPaneStateSchema = z.object({
+    activeKey: z.string().trim().min(1).nullable(),
+    chatId: z.string().trim().min(1),
+    revision: z.number().int().nonnegative(),
+    targets: z.array(chatPaneTargetSchema).max(maxChatPaneTargets),
+    updatedAt: z.string().datetime().nullable(),
+});
+
+export const agentRuntimeSetChatPaneStateRequestSchema = z.object({
+    activeKey: z.string().trim().min(1).nullable(),
+    expectedRevision: z.number().int().nonnegative(),
+    targets: z.array(chatPaneTargetSchema).max(maxChatPaneTargets),
+});
+
+// conflict=true carries the current state so clients can refetch-free rebase.
+export const agentRuntimeSetChatPaneStateResultSchema = z.object({
+    conflict: z.boolean(),
+    state: agentRuntimeChatPaneStateSchema,
+});
+
 export const agentRuntimeEventTypeSchema = z.enum([
     'agent.updated',
     'chat.historyChanged',
@@ -2586,6 +2622,7 @@ export const agentRuntimeEventTypeSchema = z.enum([
     'label.updated',
     'label.deleted',
     'memoryJob.updated',
+    'pane.updated',
     'wiki.changed',
     'turn.started',
     'turn.progress',
@@ -2691,6 +2728,13 @@ export const agentRuntimeTaskDeletedEventSchema = z.object({
     taskId: z.string().trim().min(1),
     timestamp: z.string().datetime(),
     type: z.literal('task.deleted'),
+});
+
+export const agentRuntimePaneUpdatedEventSchema = z.object({
+    chatId: z.string().trim().min(1),
+    revision: z.number().int().nonnegative(),
+    timestamp: z.string().datetime(),
+    type: z.literal('pane.updated'),
 });
 
 export const agentRuntimeLabelUpdatedEventSchema = z.object({
@@ -2842,6 +2886,7 @@ export const agentRuntimeEventSchema = z.discriminatedUnion('type', [
     agentRuntimeLabelUpdatedEventSchema,
     agentRuntimeLabelDeletedEventSchema,
     agentRuntimeMemoryJobUpdatedEventSchema,
+    agentRuntimePaneUpdatedEventSchema,
     agentRuntimeWikiChangedEventSchema,
     agentRuntimeCapabilityUpdatedEventSchema,
     agentRuntimeTurnStartedEventSchema,
@@ -2907,6 +2952,15 @@ export type AgentRuntimeMemoryJobUpdatedEvent = z.infer<
 export type AgentRuntimeExecutionError = z.infer<typeof agentRuntimeExecutionErrorSchema>;
 export type AgentRuntimeExecutionErrorCode = z.infer<typeof agentRuntimeExecutionErrorCodeSchema>;
 export type AgentRuntimeExecutionStatus = z.infer<typeof agentRuntimeExecutionStatusSchema>;
+export type AgentRuntimeChatPaneState = z.infer<typeof agentRuntimeChatPaneStateSchema>;
+export type AgentRuntimeSetChatPaneStateRequest = z.infer<
+    typeof agentRuntimeSetChatPaneStateRequestSchema
+>;
+export type AgentRuntimeSetChatPaneStateResult = z.infer<
+    typeof agentRuntimeSetChatPaneStateResultSchema
+>;
+export type AgentRuntimePaneUpdatedEvent = z.infer<typeof agentRuntimePaneUpdatedEventSchema>;
+export type ChatPaneTarget = z.infer<typeof chatPaneTargetSchema>;
 export type AgentRuntimeEvent = z.infer<typeof agentRuntimeEventSchema>;
 export type AgentRuntimeEngineRestartPhase = z.infer<typeof agentRuntimeEngineRestartPhaseSchema>;
 export type AgentRuntimeEventList = z.infer<typeof agentRuntimeEventListSchema>;

@@ -21,6 +21,7 @@ export const tavernEventNames = {
     jobsUpdated: 'jobs.updated',
     memoryJobsUpdated: 'memoryJobs.updated',
     modelUpdated: 'model.updated',
+    paneUpdated: 'pane.updated',
     openRouterSettingsUpdated: 'open-router-settings.updated',
     agentRuntimeCapabilityUpdated: 'agent-runtime-capability.updated',
     agentRuntimeUpdated: 'agent-runtime.updated',
@@ -147,6 +148,14 @@ export function emitAgentRuntimeCapabilityUpdated() {
 
 export function emitUsageLiveUpdated() {
     emitTavernEvent(tavernEventNames.usageLiveUpdated);
+}
+
+export function emitPaneUpdated(input: { chatId: string; revision?: number }) {
+    emitTavernEvent(tavernEventNames.paneUpdated, {
+        ...createInvalidationEvent(),
+        chatId: input.chatId,
+        ...(input.revision === undefined ? {} : { revision: input.revision }),
+    });
 }
 
 export function emitWikiUpdated(input: {

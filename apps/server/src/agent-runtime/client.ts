@@ -19,6 +19,7 @@ import {
     type AgentRuntimeCapabilityHealthId,
     type AgentRuntimeCapabilityHealthList,
     type AgentRuntimeChat,
+    type AgentRuntimeChatPaneState,
     type AgentRuntimeCompleteGoogleOAuth,
     type AgentRuntimeCreateAgent,
     type AgentRuntimeCreateCron,
@@ -102,6 +103,8 @@ import {
     type AgentRuntimeSessionPreviewList,
     type AgentRuntimeSessionPrompt,
     type AgentRuntimeSessionResync,
+    type AgentRuntimeSetChatPaneStateRequest,
+    type AgentRuntimeSetChatPaneStateResult,
     type AgentRuntimeSetTaskWorkChat,
     type AgentRuntimeSkill,
     type AgentRuntimeSkillHubActionResult,
@@ -177,6 +180,7 @@ import {
     agentRuntimeCapabilityHealthListSchema,
     agentRuntimeCapabilityHealthSchema,
     agentRuntimeChatListSchema,
+    agentRuntimeChatPaneStateSchema,
     agentRuntimeCompleteGoogleOAuthSchema,
     agentRuntimeCreateAgentSchema,
     agentRuntimeCreateCronSchema,
@@ -268,6 +272,8 @@ import {
     agentRuntimeSessionPreviewListSchema,
     agentRuntimeSessionPromptSchema,
     agentRuntimeSessionResyncSchema,
+    agentRuntimeSetChatPaneStateRequestSchema,
+    agentRuntimeSetChatPaneStateResultSchema,
     agentRuntimeSetTaskWorkChatSchema,
     agentRuntimeSkillHubActionResultSchema,
     agentRuntimeSkillHubAvailableSchema,
@@ -419,6 +425,7 @@ export interface TavernAgentRuntimeClient {
     getAutoDispatchSettings(): Promise<AgentRuntimeAutoDispatchSettings>;
     getBrowserSettings(): Promise<AgentRuntimeBrowserSettings>;
     getCapability(id: AgentRuntimeCapabilityHealthId): Promise<AgentRuntimeCapabilityHealth>;
+    getChatPaneState(chatId: string): Promise<AgentRuntimeChatPaneState>;
     getCronJob(jobId: string): Promise<AgentRuntimeCron>;
     getCurrentAgentSession(input: {
         agentId?: string;
@@ -597,6 +604,10 @@ export interface TavernAgentRuntimeClient {
         pluginId: AgentRuntimePluginId,
         input: AgentRuntimeUpdateAgentPluginGrant
     ): Promise<AgentRuntimeAgentPluginGrant>;
+    setChatPaneState(
+        chatId: string,
+        input: AgentRuntimeSetChatPaneStateRequest
+    ): Promise<AgentRuntimeSetChatPaneStateResult>;
     setMcpServerEnabled(name: string, enabled: boolean): Promise<{ ok: boolean }>;
     setModelProviderEnabled(
         providerId: string,
@@ -3037,6 +3048,42 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         }
 
         return agentRuntimeChatListSchema.parse(await response.json());
+    }
+
+    async getChatPaneState(chatId: string) {
+        const response = await fetch(
+            `${this.#baseUrl}${agentRuntimeRoutes.chatPaneState(chatId)}`,
+            { headers: this.#authHeaders }
+        );
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeChatPaneStateSchema.parse(await response.json());
+    }
+
+    async setChatPaneState(chatId: string, input: AgentRuntimeSetChatPaneStateRequest) {
+        const payload = agentRuntimeSetChatPaneStateRequestSchema.parse(input);
+        const response = await fetch(
+            `${this.#baseUrl}${agentRuntimeRoutes.chatPaneState(chatId)}`,
+            {
+                body: JSON.stringify(payload),
+                headers: {
+                    ...this.#authHeaders,
+                    'content-type': 'application/json',
+                    [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+                },
+                method: 'PUT',
+            }
+        );
+
+        // 409 carries the current state so callers can rebase without refetching.
+        if (!(response.ok || response.status === 409)) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeSetChatPaneStateResultSchema.parse(await response.json());
     }
 
     async upsertBinding(input: AgentRuntimeUpsertBinding) {

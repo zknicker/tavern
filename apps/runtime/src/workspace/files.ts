@@ -114,6 +114,29 @@ export async function listWorkspaceFiles(
     };
 }
 
+// Existence probe with the same confinement rules as listing/reading; used to
+// validate pane targets before they are persisted.
+export async function workspacePathExists(
+    db: Database,
+    input: { agentId: string; kind: 'directory' | 'file'; path: string }
+): Promise<boolean> {
+    try {
+        const root = await resolveWorkspaceRoot(db, input.agentId);
+        const relativePath = normalizeWorkspacePath(input.path, {
+            allowEmpty: input.kind === 'directory',
+        });
+        rejectUnbrowseableWorkspacePath(relativePath);
+        if (input.kind === 'file') {
+            rejectSensitiveWorkspacePath(relativePath);
+        }
+        const absolutePath = await resolveWorkspaceChild(root, relativePath);
+        const stat = await fs.stat(absolutePath).catch(() => null);
+        return input.kind === 'file' ? Boolean(stat?.isFile()) : Boolean(stat?.isDirectory());
+    } catch {
+        return false;
+    }
+}
+
 export async function readWorkspaceFile(
     db: Database,
     input: { agentId: string; path: string }

@@ -31,6 +31,7 @@ import { handleOpenRouterSettingsRequest } from '../model-access/openrouter-sett
 import { handleModelCapabilitySelectionsRequest } from '../models/capability-selections.ts';
 import { handleModelCategorySettingsRequest } from '../models/category-settings.ts';
 import { handleModelProviderRequest } from '../models/provider-routes.ts';
+import { handleChatPaneRequest } from '../pane/routes.ts';
 import { handlePluginsRequest } from '../plugins/routes.ts';
 import { handleTaskLabelsRequest } from '../tasks/label-routes.ts';
 import { handleTasksRequest } from '../tasks/routes.ts';
@@ -87,6 +88,11 @@ export async function handleTavernRuntimeRequest(request: Request): Promise<Resp
     const cronResponse = await handleCronRequest(request);
     if (cronResponse) {
         return cronResponse;
+    }
+
+    const chatPaneResponse = await handleChatPaneRequest(request);
+    if (chatPaneResponse) {
+        return chatPaneResponse;
     }
 
     const autoDispatchSettingsResponse = await handleAutoDispatchSettingsRequest(request);

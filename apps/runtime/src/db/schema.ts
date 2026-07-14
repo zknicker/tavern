@@ -593,6 +593,14 @@ CREATE TABLE IF NOT EXISTS chat_artifacts (
 CREATE INDEX IF NOT EXISTS idx_chat_artifacts_chat_updated
   ON chat_artifacts(chat_id, updated_at, id);
 
+CREATE TABLE IF NOT EXISTS chat_pane_states (
+  chat_id      TEXT PRIMARY KEY,
+  revision     INTEGER NOT NULL,
+  targets_json TEXT NOT NULL,
+  active_key   TEXT,
+  updated_at   TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS memory_health_history (
   id                 INTEGER PRIMARY KEY AUTOINCREMENT,
   topic              TEXT NOT NULL,
