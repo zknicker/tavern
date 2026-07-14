@@ -1,4 +1,5 @@
 import type { AgentRuntimeChatPaneState } from '@tavern/api';
+import { mergeChatPaneOpenTarget } from '@tavern/api/pane-links';
 import * as React from 'react';
 import {
     getArtifactPanelTargetKey,
@@ -65,13 +66,9 @@ export function useChatArtifactPanelState(chatId: string): ChatArtifactPanelStat
 
     const open = React.useCallback(
         (target: TavernResourceTarget) => {
-            const key = getArtifactPanelTargetKey(target);
             const { targets } = readTargets();
-            const next = targets.some((entry) => getArtifactPanelTargetKey(entry) === key)
-                ? targets
-                : [...targets, target];
             setPaneVisibilityOverride(chatId, true);
-            apply({ activeKey: key, targets: next });
+            apply(mergeChatPaneOpenTarget(targets, target));
         },
         [apply, chatId, readTargets]
     );

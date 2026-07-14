@@ -1,9 +1,51 @@
-import type { ChatPaneTarget } from './contracts.js';
+import { type ChatPaneTarget, chatPaneTargetKey } from './contracts.js';
 
 // The tavern:// link scheme for chat pane targets. This is the one shared
 // parser for every consumer of the scheme — app link clicks and the Runtime
 // pane_open agent tool must agree on what a link means and what is unsafe.
 const tavernProtocol = 'tavern:';
+
+export function isWorkspaceChatPaneTarget(
+    target: ChatPaneTarget
+): target is Extract<ChatPaneTarget, { kind: `workspace${string}` }> {
+    return (
+        target.kind === 'workspaceFile' ||
+        target.kind === 'workspaceDirectory' ||
+        target.kind === 'workspaceRoot'
+    );
+}
+
+// Open semantics shared by user gestures and agent UI intents. Workspace
+// targets merge into one workspace tab (tree + open file): a file open
+// replaces that tab in place, a directory or root open focuses it without
+// clobbering the open file. Everything else appends-or-focuses by key.
+export function mergeChatPaneOpenTarget(
+    targets: ChatPaneTarget[],
+    target: ChatPaneTarget
+): { activeKey: string; targets: ChatPaneTarget[] } {
+    const key = chatPaneTargetKey(target);
+    if (targets.some((candidate) => chatPaneTargetKey(candidate) === key)) {
+        return { activeKey: key, targets };
+    }
+
+    if (isWorkspaceChatPaneTarget(target)) {
+        const workspaceIndex = targets.findIndex(isWorkspaceChatPaneTarget);
+        const workspaceTarget = targets[workspaceIndex];
+        if (workspaceTarget) {
+            if (target.kind !== 'workspaceFile') {
+                return { activeKey: chatPaneTargetKey(workspaceTarget), targets };
+            }
+            return {
+                activeKey: key,
+                targets: targets.map((candidate, index) =>
+                    index === workspaceIndex ? target : candidate
+                ),
+            };
+        }
+    }
+
+    return { activeKey: key, targets: [...targets, target] };
+}
 
 export function parseChatPaneTargetLink(href: string): ChatPaneTarget | null {
     let url: URL;

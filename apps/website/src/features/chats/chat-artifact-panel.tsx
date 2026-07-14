@@ -16,8 +16,11 @@ import { WikiMarkdownViewer } from '../wiki/wiki-markdown-viewer.tsx';
 import { ArtifactPanelChrome } from './chat-artifact-panel-chrome.tsx';
 import { WikiBrowserContent } from './chat-artifact-wiki-content.tsx';
 import { WorkspaceBrowserContent } from './chat-artifact-workspace-content.tsx';
-import { WorkspaceArtifactContent } from './chat-artifact-workspace-preview.tsx';
-import { getArtifactPanelTargetKey, type TavernResourceTarget } from './tavern-resource-link.ts';
+import {
+    getArtifactPanelTargetKey,
+    isWorkspaceChatPaneTarget,
+    type TavernResourceTarget,
+} from './tavern-resource-link.ts';
 
 export function ChatArtifactPanel({
     agentId,
@@ -121,7 +124,13 @@ function ArtifactPanelBody({
                 {activeTarget ? (
                     <ArtifactPanelContent
                         agentId={agentId}
-                        key={state.activeKey}
+                        // Workspace targets share one tab whose file selection
+                        // morphs the target; a stable key keeps the browser
+                        // (tree state, loaded folders) mounted across morphs.
+                        key={
+                            isWorkspaceChatPaneTarget(activeTarget) ? 'workspace' : state.activeKey
+                        }
+                        onOpenTarget={state.open}
                         target={activeTarget}
                     />
                 ) : (
@@ -137,9 +146,11 @@ function ArtifactPanelBody({
 
 function ArtifactPanelContent({
     agentId,
+    onOpenTarget,
     target,
 }: {
     agentId: string;
+    onOpenTarget: (target: TavernResourceTarget) => void;
     target: TavernResourceTarget;
 }) {
     if (target.kind === 'wikiPage') {
@@ -150,11 +161,28 @@ function ArtifactPanelContent({
         return <WikiBrowserContent initialDirectoryPath={target.path} />;
     }
 
-    if (target.kind === 'workspaceRoot' || target.kind === 'workspaceDirectory') {
-        return <WorkspaceBrowserContent agentId={agentId} initialDirectoryPath={target.path} />;
-    }
+    // The workspace is one unified tab: file content plus the workspace tree.
+    // Picking a file in the tree morphs this tab's target in place, so the
+    // tab title follows the open file.
+    return (
+        <WorkspaceBrowserContent
+            agentId={agentId}
+            initialDirectoryPath={workspaceInitialDirectory(target)}
+            onSelectPath={(path) => {
+                if (path) {
+                    onOpenTarget({ kind: 'workspaceFile', path });
+                }
+            }}
+            selectedPath={target.kind === 'workspaceFile' ? target.path : null}
+        />
+    );
+}
 
-    return <WorkspaceArtifactContent agentId={agentId} target={target} />;
+function workspaceInitialDirectory(target: TavernResourceTarget) {
+    if (target.kind === 'workspaceFile') {
+        return target.path.split('/').slice(0, -1).join('/');
+    }
+    return target.path;
 }
 
 function WikiArtifactContent({

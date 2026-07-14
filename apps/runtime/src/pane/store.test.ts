@@ -102,6 +102,35 @@ describe('chat pane store', () => {
         expect(state.activeKey).toBe('wikiPage:Demos/Panel Brief.md');
     });
 
+    test('open merges workspace files into the one workspace tab', () => {
+        setChatPaneState('cht_1', {
+            activeKey: 'workspaceFile:workbench/out/report.html',
+            expectedRevision: 0,
+            targets: [wikiTarget, fileTarget],
+        });
+
+        const state = openChatPaneTarget('cht_1', {
+            kind: 'workspaceFile',
+            path: 'NOTES.md',
+        });
+
+        expect(state.targets).toEqual([wikiTarget, { kind: 'workspaceFile', path: 'NOTES.md' }]);
+        expect(state.activeKey).toBe('workspaceFile:NOTES.md');
+    });
+
+    test('open keeps the open workspace file on a root open', () => {
+        setChatPaneState('cht_1', {
+            activeKey: 'wikiPage:Demos/Panel Brief.md',
+            expectedRevision: 0,
+            targets: [wikiTarget, fileTarget],
+        });
+
+        const state = openChatPaneTarget('cht_1', { kind: 'workspaceRoot', path: '' });
+
+        expect(state.targets).toEqual([wikiTarget, fileTarget]);
+        expect(state.activeKey).toBe('workspaceFile:workbench/out/report.html');
+    });
+
     test('states are isolated per chat', () => {
         openChatPaneTarget('cht_1', wikiTarget);
 

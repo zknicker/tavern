@@ -105,6 +105,22 @@ describe('pane tools', () => {
         });
     });
 
+    it('merges workspace files into the one workspace tab', async () => {
+        await fs.writeFile(path.join(workspaceDir, 'workbench', 'notes.md'), '# Notes\n');
+        const tools = paneTools();
+        await runTool(tools.pane_open, { target: 'tavern://workspace/workbench/report.md' });
+
+        const result = await runTool(tools.pane_open, {
+            target: 'tavern://workspace/workbench/notes.md',
+        });
+
+        expect(result).toMatchObject({ opened: true, tabCount: 1 });
+        expect(getChatPaneState('cht_dm')).toMatchObject({
+            activeKey: 'workspaceFile:workbench/notes.md',
+            targets: [{ kind: 'workspaceFile', path: 'workbench/notes.md' }],
+        });
+    });
+
     it('rejects links outside the tavern:// pane scheme', async () => {
         const tools = paneTools();
 

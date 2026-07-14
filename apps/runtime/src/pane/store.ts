@@ -4,6 +4,7 @@ import {
     type ChatPaneTarget,
     chatPaneTargetKey,
     chatPaneTargetSchema,
+    mergeChatPaneOpenTarget,
 } from '@tavern/api';
 import * as z from 'zod';
 import { getDb } from '../db/connection.ts';
@@ -56,20 +57,18 @@ export function setChatPaneState(
     return writeState(chatId, current.revision + 1, input.targets, input.activeKey, db);
 }
 
-// Atomic merge used by agent UI intents: append the target if absent, focus
-// it, bump the revision. Never rejects on revision — the op is commutative
-// with user gestures.
+// Atomic merge used by agent UI intents: shared open semantics (append or
+// focus; workspace targets merge into the one workspace tab), bump the
+// revision. Never rejects on revision — the op is commutative with user
+// gestures.
 export function openChatPaneTarget(
     chatId: string,
     target: ChatPaneTarget,
     db: Database = getDb()
 ): AgentRuntimeChatPaneState {
     const current = getChatPaneState(chatId, db);
-    const key = chatPaneTargetKey(target);
-    const targets = current.targets.some((t) => chatPaneTargetKey(t) === key)
-        ? current.targets
-        : [...current.targets, target];
-    return writeState(chatId, current.revision + 1, targets, key, db);
+    const merged = mergeChatPaneOpenTarget(current.targets, target);
+    return writeState(chatId, current.revision + 1, merged.targets, merged.activeKey, db);
 }
 
 function writeState(

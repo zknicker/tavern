@@ -154,18 +154,35 @@ export function WorkspaceBrowserContent({
         ? ({ kind: 'workspaceFile', path: selectedPath } as const)
         : null;
 
+    // File content left, tree right: the tree is a picker beside the open
+    // file, not a navigation rail in front of it.
     return (
         <div
             className="grid h-full min-h-0 overflow-hidden bg-background"
-            style={{ gridTemplateColumns: `${fileSidebarWidth.width}px minmax(0, 1fr)` }}
+            style={{ gridTemplateColumns: `minmax(0, 1fr) ${fileSidebarWidth.width}px` }}
         >
-            <aside className="relative flex min-h-0 flex-col overflow-x-hidden border-border/70 border-r bg-sidebar/35 text-sidebar-foreground">
+            <section className="flex min-h-0 min-w-0 flex-col">
+                <div className="min-h-0 flex-1 overflow-hidden">
+                    {selectedTarget ? (
+                        <WorkspaceArtifactContent agentId={agentId} target={selectedTarget} />
+                    ) : (
+                        <WorkspaceArtifactEmpty
+                            detail={
+                                directoryLoadError ??
+                                'Select a Markdown, HTML, image, or text file from the workspace sidebar.'
+                            }
+                            title="No file selected"
+                        />
+                    )}
+                </div>
+            </section>
+            <aside className="relative flex min-h-0 flex-col overflow-x-hidden border-border/70 border-l bg-sidebar/35 text-sidebar-foreground">
                 <ResizablePaneRail
                     maxWidth={440}
                     minWidth={220}
                     onWidthChange={fileSidebarWidth.setWidth}
                     onWidthCommit={fileSidebarWidth.persistWidth}
-                    side="right"
+                    side="left"
                     width={fileSidebarWidth.width}
                 />
                 <SidebarHeader className="h-12 border-border/70 border-b py-2 pr-2 pl-2">
@@ -194,21 +211,6 @@ export function WorkspaceBrowserContent({
                     </SidebarGroup>
                 </SidebarContent>
             </aside>
-            <section className="flex min-h-0 min-w-0 flex-col">
-                <div className="min-h-0 flex-1 overflow-hidden">
-                    {selectedTarget ? (
-                        <WorkspaceArtifactContent agentId={agentId} target={selectedTarget} />
-                    ) : (
-                        <WorkspaceArtifactEmpty
-                            detail={
-                                directoryLoadError ??
-                                'Select a Markdown, HTML, image, or text file from the workspace sidebar.'
-                            }
-                            title="No file selected"
-                        />
-                    )}
-                </div>
-            </section>
         </div>
     );
 }
