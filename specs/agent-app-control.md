@@ -76,8 +76,10 @@ Semantics:
   schedule; agents get a success result meaning "recorded", not "rendered".
 
 v1 ships one intent kind: **open-pane-target** (open or focus a workspace
-file or Wiki page tab in the chat's artifact pane). The `pane_open` tool that
-raises it is PRD-46.
+file or Wiki page tab in the chat's artifact pane), raised by the `pane_open`
+agent tool. The tool takes a `tavern://workspace/<path>` or
+`tavern://wiki/<path>` link for the current chat and appears in the tool
+catalog as the Artifact pane group.
 
 ## Pane tab state
 

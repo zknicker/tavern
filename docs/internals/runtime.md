@@ -87,7 +87,12 @@ execution evidence stored as response activity. Agents can also post directly
 into another chat where they hold a seat via the `chat_send` tool
 (`chats_list` enumerates their chats); the post starts no turn for its
 author, and its mentions of the target chat's agents dispatch chain-bounded
-turns there when the posting turn completes.
+turns there when the posting turn completes. Agents present reviewable work
+with the `pane_open` tool: it takes a `tavern://workspace/<path>` or
+`tavern://wiki/<path>` link and opens or focuses that tab in the current
+chat's Runtime-owned artifact pane record, seat-gated and target-validated
+([agent-app-control](../../specs/agent-app-control.md)); the call is stored
+as response activity like any other tool.
 
 ## Boundaries
 
