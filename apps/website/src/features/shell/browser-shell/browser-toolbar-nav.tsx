@@ -13,7 +13,6 @@ import { routeTabs } from '../../../hooks/shell/use-route-tab.ts';
 import { cn } from '../../../lib/utils.ts';
 import { ChatArtifactToolbarTabs } from '../../chats/chat-artifact-toolbar-tabs.tsx';
 import type { ChatListItem } from '../../chats/chat-list-data.ts';
-import { ChatPaneToggleButton } from '../../chats/chat-pane-toggle-button.tsx';
 import { ChatParticipantFacepile } from '../../chats/chat-participant-facepile.tsx';
 import { ChatParticipantsEditButton } from '../../chats/chat-participants-edit-button.tsx';
 import { RouteTabIcon } from '../route-tab-presentation.tsx';
@@ -80,8 +79,6 @@ function ToolbarRightActions() {
                     </>
                 ) : null}
                 <ToolbarParticipants chat={chat} />
-                <ToolbarDivider />
-                <ChatPaneToggleButton chatId={chat.id} />
             </div>
             <ChatArtifactToolbarTabs chat={chat} />
         </>

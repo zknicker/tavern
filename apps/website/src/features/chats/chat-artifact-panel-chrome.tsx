@@ -37,6 +37,8 @@ export function ArtifactPanelChrome({
     activeTarget,
     agentId,
     className,
+    // Hidden when a toolbar-hosted toggle button plays the hide role instead.
+    closeButtonHidden = false,
     onClose,
     onCloseTarget,
     onOpenTarget,
@@ -46,6 +48,7 @@ export function ArtifactPanelChrome({
     activeTarget?: TavernResourceTarget;
     agentId: string;
     className?: string;
+    closeButtonHidden?: boolean;
     onClose: () => void;
     onCloseTarget: (key: string) => void;
     onOpenTarget: (target: TavernResourceTarget) => void;
@@ -76,16 +79,18 @@ export function ArtifactPanelChrome({
                 <ArtifactPanelSourceMenu agentId={agentId} onOpenTarget={onOpenTarget} />
             </div>
             {activeTarget ? <ArtifactOptionsMenu target={activeTarget} /> : null}
-            <Button
-                aria-label="Hide artifacts"
-                className="text-muted-foreground hover:text-foreground"
-                onClick={onClose}
-                size="icon-xs"
-                type="button"
-                variant="ghost"
-            >
-                <Icon className="size-3.5" icon={Cancel01Icon} />
-            </Button>
+            {closeButtonHidden ? null : (
+                <Button
+                    aria-label="Hide artifacts"
+                    className="text-muted-foreground hover:text-foreground"
+                    onClick={onClose}
+                    size="icon-xs"
+                    type="button"
+                    variant="ghost"
+                >
+                    <Icon className="size-3.5" icon={Cancel01Icon} />
+                </Button>
+            )}
         </div>
     );
 }
