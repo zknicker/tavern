@@ -344,7 +344,10 @@ function resolveAgentSeat(input: {
     };
 }
 
-function readAgentSession(id: string, db: Database): AgentRuntimeAgentSession | null {
+export function readAgentSession(
+    id: string,
+    db: Database = getDb()
+): AgentRuntimeAgentSession | null {
     const row = db
         .prepare('SELECT * FROM agent_sessions WHERE id = $id LIMIT 1')
         .get(namedParams({ id })) as AgentSessionRow | null;

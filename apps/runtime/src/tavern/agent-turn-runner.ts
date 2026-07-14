@@ -6,6 +6,7 @@ import { recoverTaskDispatchForTurn } from '../tasks/recovery.ts';
 import { createAgentEngineExecutor } from './agent-engine-executor.ts';
 import type { AgentExecutor, AgentExecutorInput } from './agent-executor.ts';
 import { collectAgentMentionDispatches } from './agent-mention-dispatch.ts';
+import { readAgentSession } from './agent-session-store.ts';
 import {
     cancelAgentTurn,
     claimNextAgentTurnForSeat,
@@ -158,7 +159,7 @@ async function drainAgentSeat(input: AgentExecutorInput) {
         return;
     }
 
-    const turnInput = queuedTurnInputs.get(turn.id) ?? input;
+    const turnInput = withCurrentAgentSessionState(queuedTurnInputs.get(turn.id) ?? input);
     activeSeatRuns.set(seatKey, turn.id);
     activeTurns.set(turn.id, { input: turnInput, seatKey });
 
@@ -221,6 +222,16 @@ async function drainAgentSeat(input: AgentExecutorInput) {
         clearActiveTurn(turn.id, seatKey);
         void drainAgentSeat(turnInput);
     }
+}
+
+// Queued inputs are captured at enqueue time, often while the seat's prior
+// turn is still running. The engine-session binding they carry (runtime
+// session id, resume state, prompt cursor) goes stale the moment that turn
+// settles — serialized seats exist to chain turn context, so the claimed
+// turn re-reads its session row before executing.
+function withCurrentAgentSessionState(input: AgentExecutorInput): AgentExecutorInput {
+    const agentSession = readAgentSession(input.agentSession.id);
+    return agentSession ? { ...input, agentSession } : input;
 }
 
 function notifyTurnSettled(
