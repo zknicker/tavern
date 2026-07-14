@@ -284,6 +284,9 @@ CREATE TABLE IF NOT EXISTS cron_runs (
   finished_at             TEXT,
   execution_error_code    TEXT CHECK (execution_error_code IS NULL OR execution_error_code IN ('agent_not_found', 'execution_failed', 'control_plane_restarted')),
   execution_error_message TEXT,
+  quiet                   INTEGER NOT NULL DEFAULT 0 CHECK (quiet IN (0, 1)),
+  script_exit_code        INTEGER,
+  script_stderr           TEXT,
   created_at              TEXT NOT NULL,
   updated_at              TEXT NOT NULL,
   FOREIGN KEY(chat_id) REFERENCES chats(id) ON DELETE SET NULL,
@@ -726,6 +729,21 @@ export function ensureRuntimeSchema(db: Database): void {
         column: 'attempts',
         definition: 'INTEGER NOT NULL DEFAULT 0 CHECK (attempts >= 0)',
         table: 'memory_extraction_debounces',
+    });
+    ensureColumn(db, {
+        column: 'quiet',
+        definition: 'INTEGER NOT NULL DEFAULT 0 CHECK (quiet IN (0, 1))',
+        table: 'cron_runs',
+    });
+    ensureColumn(db, {
+        column: 'script_exit_code',
+        definition: 'INTEGER',
+        table: 'cron_runs',
+    });
+    ensureColumn(db, {
+        column: 'script_stderr',
+        definition: 'TEXT',
+        table: 'cron_runs',
     });
 }
 

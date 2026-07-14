@@ -230,6 +230,9 @@ export function updateCronRun(
             | 'executionErrorCode'
             | 'executionErrorMessage'
             | 'finishedAt'
+            | 'quiet'
+            | 'scriptExitCode'
+            | 'scriptStderr'
             | 'startedAt'
             | 'status'
             | 'turnId'
@@ -243,6 +246,9 @@ export function updateCronRun(
         executionErrorCode: input.executionErrorCode ?? current.executionErrorCode,
         executionErrorMessage: input.executionErrorMessage ?? current.executionErrorMessage,
         finishedAt: input.finishedAt ?? current.finishedAt,
+        quiet: input.quiet ?? current.quiet,
+        scriptExitCode: input.scriptExitCode ?? current.scriptExitCode,
+        scriptStderr: input.scriptStderr ?? current.scriptStderr,
         startedAt: input.startedAt ?? current.startedAt,
         status: input.status ?? current.status,
         turnId: input.turnId ?? current.turnId,
@@ -256,6 +262,9 @@ export function updateCronRun(
              finished_at = $finishedAt,
              execution_error_code = $errorCode,
              execution_error_message = $errorMessage,
+             quiet = $quiet,
+             script_exit_code = $scriptExitCode,
+             script_stderr = $scriptStderr,
              updated_at = $now
          WHERE id = $id`
     ).run(
@@ -266,6 +275,9 @@ export function updateCronRun(
             finishedAt: next.finishedAt,
             id,
             now: new Date().toISOString(),
+            quiet: next.quiet ? 1 : 0,
+            scriptExitCode: next.scriptExitCode,
+            scriptStderr: next.scriptStderr,
             startedAt: next.startedAt,
             status: next.status,
             turnId: next.turnId,

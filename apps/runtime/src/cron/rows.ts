@@ -41,7 +41,10 @@ export interface CronRunRow {
     finished_at: string | null;
     id: string;
     job_id: string;
+    quiet: 0 | 1;
     scheduled_for: string;
+    script_exit_code: number | null;
+    script_stderr: string | null;
     started_at: string | null;
     status: AgentRuntimeCronRunStatus;
     trigger: AgentRuntimeCronRunTrigger;
@@ -64,6 +67,7 @@ export function cronRowToSummary(row: CronJobRow): AgentRuntimeCronSummary {
         description: row.description,
         enabled: Boolean(row.enabled),
         id: row.id,
+        mode: (JSON.parse(row.payload_json) as { kind: string }).kind,
         name: row.name,
         schedule: JSON.parse(row.schedule_json),
         state: cronStateFromRow(row),
@@ -79,7 +83,10 @@ export function cronRunRowToRun(row: CronRunRow): AgentRuntimeCronRun {
         finishedAt: row.finished_at,
         id: row.id,
         jobId: row.job_id,
+        quiet: Boolean(row.quiet),
         scheduledFor: row.scheduled_for,
+        scriptExitCode: row.script_exit_code,
+        scriptStderr: row.script_stderr,
         startedAt: row.started_at,
         status: row.status,
         trigger: row.trigger,

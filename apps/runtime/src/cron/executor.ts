@@ -1,18 +1,15 @@
-import type {
-    AgentRuntimeCronRun,
-    AgentRuntimeCronRunStatus,
-    AgentRuntimeCronRunTrigger,
-} from '@tavern/api';
+import type { AgentRuntimeCronRun, AgentRuntimeCronRunTrigger } from '@tavern/api';
 import { agentRuntimeCronRunSchema } from '@tavern/api';
 import { getDb } from '../db/connection.ts';
 import type { Database } from '../db/sqlite.ts';
 import { log } from '../log.ts';
-import { waitForAgentTurnSettlement } from '../tavern/agent-turn-runner.ts';
-import { sendTavernChannelMessage } from '../tavern/channel-relay.ts';
 import { createAgentParticipantId } from '../tavern/chat-api/ids.ts';
 import { createMessage } from '../tavern/chat-api/index.ts';
 import { publishRuntimeEvent } from '../tavern/runtime-events.ts';
+import { runCronAgentTurn } from './agent-turn-cron.ts';
 import { createCronMessageId } from './ids.ts';
+import { finishCronRun, readErrorMessage } from './run-lifecycle.ts';
+import { runScriptCron } from './script-cron.ts';
 import { validateCronDelivery } from './service.ts';
 import {
     createCronRun,
@@ -20,7 +17,6 @@ import {
     getCronJob,
     getCronRunOrThrow,
     markCronJobRunning,
-    settleCronJobRunState,
     updateCronRun,
 } from './store.ts';
 
@@ -65,12 +61,9 @@ export async function executeCronJob(input: {
     try {
         if (job.enabled) {
             validateCronDelivery({ agentId: job.agentId, delivery: job.delivery, db });
-            finalRun =
-                job.payload.kind === 'agentTurn'
-                    ? await runAgentTurnCron({ db, job, runId: run.id, startedAt })
-                    : runSystemEventCron({ db, job, runId: run.id, startedAt });
+            finalRun = await runCronPayload({ db, job, runId: run.id, startedAt });
         } else {
-            finalRun = finishRun({
+            finalRun = finishCronRun({
                 db,
                 jobId: job.id,
                 message: `Cron job "${job.id}" is disabled.`,
@@ -80,7 +73,7 @@ export async function executeCronJob(input: {
             });
         }
     } catch (error) {
-        finalRun = finishRun({
+        finalRun = finishCronRun({
             db,
             errorCode: 'execution_failed',
             jobId: job.id,
@@ -99,77 +92,29 @@ export async function executeCronJob(input: {
     return agentRuntimeCronRunSchema.parse(finalRun);
 }
 
-async function runAgentTurnCron(input: {
+async function runCronPayload(input: {
     db: Database;
     job: NonNullable<ReturnType<typeof getCronJob>>;
     runId: string;
     startedAt: string;
-}) {
-    const messageId = createCronMessageId(input.runId);
-    const accepted = await sendTavernChannelMessage(input.job.delivery.chatId, {
-        agent: { agentId: input.job.agentId },
-        message: {
-            content: input.job.payload.kind === 'agentTurn' ? input.job.payload.message : '',
-            id: messageId,
-            metadata: {
-                tavern: {
-                    cronJobId: input.job.id,
-                    cronRunId: input.runId,
-                    source: 'cron',
-                },
-            },
-            nonce: `cron:${input.runId}`,
-        },
-        target: {
-            externalId: null,
-            target: input.job.delivery.chatId,
-            type: 'tavern',
-        },
-    });
-    updateCronRun(input.runId, { turnId: accepted.runId }, input.db);
-    const settled = await waitForAgentTurnSettlementBounded(accepted.runId);
-    if (settled.status === 'completed') {
-        return finishRun({
-            db: input.db,
-            jobId: input.job.id,
-            runId: input.runId,
-            startedAt: input.startedAt,
-            status: 'success',
-            turnId: accepted.runId,
-        });
-    }
-    return finishRun({
-        db: input.db,
-        errorCode: 'execution_failed',
-        jobId: input.job.id,
-        message: settled.error ?? `Agent turn ${accepted.runId} ended with ${settled.status}.`,
-        runId: input.runId,
-        startedAt: input.startedAt,
-        status: 'error',
-        turnId: accepted.runId,
-    });
-}
-
-// Turn runner enforces a 5 minute turn timeout; the margin covers settlement
-// bookkeeping. Without a bound, one wedged turn blocks the cron worker forever.
-const turnSettlementTimeoutMs = 6 * 60 * 1000;
-
-async function waitForAgentTurnSettlementBounded(runId: string) {
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    try {
-        return await Promise.race([
-            waitForAgentTurnSettlement(runId),
-            new Promise<{ error: string; status: 'failed' }>((resolve) => {
-                timer = setTimeout(() => {
-                    resolve({
-                        error: `Timed out waiting for agent turn ${runId} to settle.`,
-                        status: 'failed',
-                    });
-                }, turnSettlementTimeoutMs);
-            }),
-        ]);
-    } finally {
-        clearTimeout(timer);
+}): Promise<AgentRuntimeCronRun> {
+    const { db, job, runId, startedAt } = input;
+    switch (job.payload.kind) {
+        case 'agentTurn':
+            return await runCronAgentTurn({
+                db,
+                job,
+                message: job.payload.message,
+                runId,
+                startedAt,
+            });
+        case 'script':
+            return await runScriptCron({ db, job, runId, startedAt });
+        case 'systemEvent':
+            return runSystemEventCron({ db, job, runId, startedAt });
+        default:
+            job.payload satisfies never;
+            throw new Error('Unknown cron payload kind.');
     }
 }
 
@@ -201,50 +146,13 @@ function runSystemEventCron(input: {
         },
         input.db
     );
-    return finishRun({
+    return finishCronRun({
         db: input.db,
         jobId: input.job.id,
         runId: input.runId,
         startedAt: input.startedAt,
         status: 'success',
     });
-}
-
-function finishRun(input: {
-    db: Database;
-    errorCode?: AgentRuntimeCronRun['executionErrorCode'];
-    jobId: string;
-    message?: string;
-    runId: string;
-    startedAt: string;
-    status: AgentRuntimeCronRunStatus;
-    turnId?: string;
-}) {
-    const finishedAt = new Date().toISOString();
-    const startedMs = Date.parse(input.startedAt);
-    const finishedMs = Date.parse(finishedAt);
-    settleCronJobRunState(
-        {
-            durationMs: Math.max(0, finishedMs - startedMs),
-            errorCode: input.errorCode ?? null,
-            errorMessage: input.message ?? null,
-            id: input.jobId,
-            runAtMs: startedMs,
-            status: input.status,
-        },
-        input.db
-    );
-    return updateCronRun(
-        input.runId,
-        {
-            executionErrorCode: input.errorCode ?? null,
-            executionErrorMessage: input.message ?? null,
-            finishedAt,
-            status: input.status,
-            turnId: input.turnId,
-        },
-        input.db
-    );
 }
 
 function publishCronRunStarted(cronJobId: string, runId: string) {
@@ -263,11 +171,4 @@ function publishCronRunFinished(cronJobId: string, runId: string) {
         timestamp: new Date().toISOString(),
         type: 'cron.runFinished',
     });
-}
-
-function readErrorMessage(error: unknown): string {
-    if (error instanceof Error) {
-        return error.message;
-    }
-    return String(error);
 }
