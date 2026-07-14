@@ -25,7 +25,7 @@ export function ChatArtifactToolbarTabs({ chat }: { chat: ChatListItem }) {
 
     return (
         <div
-            className="-mr-2 flex shrink-0 items-center self-stretch border-border/60 border-l pr-2 pl-1"
+            className="-mr-2 flex shrink-0 items-center self-stretch border-border/60 border-l pr-2"
             style={{ width }}
         >
             <Tabs
