@@ -29,11 +29,14 @@ import {
 
 // One chrome row: tabs, the active target's options, add, hide. The pane
 // intentionally has no second path/toolbar row — target navigation lives in
-// the content browsers themselves.
+// the content browsers themselves. In the tabs layout this row renders
+// inside the shell toolbar, aligned over the pane; in the sidebar layout the
+// pane hosts it directly.
 export function ArtifactPanelChrome({
     activeKey,
     activeTarget,
     agentId,
+    className,
     onClose,
     onCloseTarget,
     onOpenTarget,
@@ -42,48 +45,47 @@ export function ArtifactPanelChrome({
     activeKey: string | null;
     activeTarget?: TavernResourceTarget;
     agentId: string;
+    className?: string;
     onClose: () => void;
     onCloseTarget: (key: string) => void;
     onOpenTarget: (target: TavernResourceTarget) => void;
     targets: TavernResourceTarget[];
 }) {
     return (
-        <div className="shrink-0 border-border/70 border-b">
-            <div className="flex h-10 items-center gap-2 px-3">
-                <div className="flex min-w-0 flex-1 items-center gap-1.5">
-                    <ScrollArea className="h-7 min-w-0 flex-1" orientation="horizontal">
-                        <TabsPrimitive.List
-                            aria-label="Open artifacts"
-                            className="flex h-7 w-max min-w-full items-center gap-1"
-                        >
-                            {targets.map((target) => {
-                                const key = getArtifactPanelTargetKey(target);
-                                return (
-                                    <ArtifactPanelTab
-                                        active={key === activeKey}
-                                        key={key}
-                                        onClose={() => onCloseTarget(key)}
-                                        target={target}
-                                        value={key}
-                                    />
-                                );
-                            })}
-                        </TabsPrimitive.List>
-                    </ScrollArea>
-                    <ArtifactPanelSourceMenu agentId={agentId} onOpenTarget={onOpenTarget} />
-                </div>
-                {activeTarget ? <ArtifactOptionsMenu target={activeTarget} /> : null}
-                <Button
-                    aria-label="Hide artifacts"
-                    className="text-muted-foreground hover:text-foreground"
-                    onClick={onClose}
-                    size="icon-xs"
-                    type="button"
-                    variant="ghost"
-                >
-                    <Icon className="size-3.5" icon={Cancel01Icon} />
-                </Button>
+        <div className={cn('flex h-10 min-w-0 flex-1 items-center gap-2 px-3', className)}>
+            <div className="flex min-w-0 flex-1 items-center gap-1.5">
+                <ScrollArea className="h-7 min-w-0 flex-1" orientation="horizontal">
+                    <TabsPrimitive.List
+                        aria-label="Open artifacts"
+                        className="flex h-7 w-max min-w-full items-center gap-1"
+                    >
+                        {targets.map((target) => {
+                            const key = getArtifactPanelTargetKey(target);
+                            return (
+                                <ArtifactPanelTab
+                                    active={key === activeKey}
+                                    key={key}
+                                    onClose={() => onCloseTarget(key)}
+                                    target={target}
+                                    value={key}
+                                />
+                            );
+                        })}
+                    </TabsPrimitive.List>
+                </ScrollArea>
+                <ArtifactPanelSourceMenu agentId={agentId} onOpenTarget={onOpenTarget} />
             </div>
+            {activeTarget ? <ArtifactOptionsMenu target={activeTarget} /> : null}
+            <Button
+                aria-label="Hide artifacts"
+                className="text-muted-foreground hover:text-foreground"
+                onClick={onClose}
+                size="icon-xs"
+                type="button"
+                variant="ghost"
+            >
+                <Icon className="size-3.5" icon={Cancel01Icon} />
+            </Button>
         </div>
     );
 }

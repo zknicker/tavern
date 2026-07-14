@@ -188,7 +188,13 @@ function SyncedAgentChatDetail({ chat, chatId }: { chat: ChatListItem; chatId: s
             <ChatDetailFrame
                 activeReplies={timeline.activeReplies}
                 agentStatusCharacter={agent?.effectiveCharacter ?? null}
-                artifactPanel={<ChatArtifactPanel agentId={agentId} state={artifactPanel} />}
+                artifactPanel={
+                    <ChatArtifactPanel
+                        agentId={agentId}
+                        chromeHidden={layoutMode === 'tabs'}
+                        state={artifactPanel}
+                    />
+                }
                 chatId={chat.id}
                 conversationLayout={conversationLayout}
                 emptyLabel="No synced messages for this chat yet."

@@ -11,6 +11,7 @@ import { useHistoryNav } from '../../../hooks/shell/use-history-nav.ts';
 import type { RouteTab } from '../../../hooks/shell/use-route-tab.ts';
 import { routeTabs } from '../../../hooks/shell/use-route-tab.ts';
 import { cn } from '../../../lib/utils.ts';
+import { ChatArtifactToolbarTabs } from '../../chats/chat-artifact-toolbar-tabs.tsx';
 import type { ChatListItem } from '../../chats/chat-list-data.ts';
 import { ChatPaneToggleButton } from '../../chats/chat-pane-toggle-button.tsx';
 import { ChatParticipantFacepile } from '../../chats/chat-participant-facepile.tsx';
@@ -70,17 +71,20 @@ function ToolbarRightActions() {
     }
 
     return (
-        <div className="flex items-center gap-0.5">
-            {devToolkit.healthy ? (
-                <>
-                    <ToolbarDevMenu chatId={chat.id} />
-                    <ToolbarDivider />
-                </>
-            ) : null}
-            <ToolbarParticipants chat={chat} />
-            <ToolbarDivider />
-            <ChatPaneToggleButton chatId={chat.id} />
-        </div>
+        <>
+            <div className="flex items-center gap-0.5">
+                {devToolkit.healthy ? (
+                    <>
+                        <ToolbarDevMenu chatId={chat.id} />
+                        <ToolbarDivider />
+                    </>
+                ) : null}
+                <ToolbarParticipants chat={chat} />
+                <ToolbarDivider />
+                <ChatPaneToggleButton chatId={chat.id} />
+            </div>
+            <ChatArtifactToolbarTabs chat={chat} />
+        </>
     );
 }
 

@@ -2,12 +2,13 @@ import { File01Icon } from '@hugeicons-pro/core-stroke-rounded';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import * as React from 'react';
 import { Icon } from '../../components/ui/icon.tsx';
-import {
-    ResizablePaneRail,
-    useResizablePaneWidth,
-} from '../../components/ui/resizable-pane-rail.tsx';
+import { ResizablePaneRail } from '../../components/ui/resizable-pane-rail.tsx';
 import { ScrollArea } from '../../components/ui/scroll-area.tsx';
 import { TabPanel, Tabs } from '../../components/ui/tabs.tsx';
+import {
+    artifactPaneWidthLimits,
+    useArtifactPaneWidth,
+} from '../../hooks/pane/use-artifact-pane-width.ts';
 import type { ChatArtifactPanelState } from '../../hooks/pane/use-chat-pane-state.ts';
 import { useWikiPage } from '../../hooks/wiki/use-wiki-page.ts';
 import { cn } from '../../lib/utils.ts';
@@ -20,20 +21,18 @@ import { getArtifactPanelTargetKey, type TavernResourceTarget } from './tavern-r
 
 export function ChatArtifactPanel({
     agentId,
+    chromeHidden = false,
     state,
 }: {
     agentId: string;
+    // True when the shell toolbar hosts the pane chrome (tabs layout).
+    chromeHidden?: boolean;
     state: ChatArtifactPanelState;
 }) {
     const shouldReduceMotion = useReducedMotion();
     const open = state.visible;
     const [resizingArtifactPane, setResizingArtifactPane] = React.useState(false);
-    const artifactPaneWidth = useResizablePaneWidth({
-        defaultWidth: 560,
-        maxWidth: 880,
-        minWidth: 420,
-        storageKey: 'tavern.artifactPane.width',
-    });
+    const artifactPaneWidth = useArtifactPaneWidth();
 
     return (
         <AnimatePresence initial={false}>
@@ -58,8 +57,8 @@ export function ChatArtifactPanel({
                     }
                 >
                     <ResizablePaneRail
-                        maxWidth={880}
-                        minWidth={420}
+                        maxWidth={artifactPaneWidthLimits.max}
+                        minWidth={artifactPaneWidthLimits.min}
                         onResizeEnd={() => setResizingArtifactPane(false)}
                         onResizeStart={() => setResizingArtifactPane(true)}
                         onWidthChange={artifactPaneWidth.setWidth}
@@ -76,18 +75,23 @@ export function ChatArtifactPanel({
                             onValueChange={state.setActiveKey}
                             value={state.activeKey ?? undefined}
                         >
-                            <ArtifactPanelChrome
-                                activeKey={state.activeKey}
-                                activeTarget={state.targets.find(
-                                    (target) =>
-                                        getArtifactPanelTargetKey(target) === state.activeKey
-                                )}
-                                agentId={agentId}
-                                onClose={state.toggleVisible}
-                                onCloseTarget={state.closeTarget}
-                                onOpenTarget={state.open}
-                                targets={state.targets}
-                            />
+                            {chromeHidden ? null : (
+                                <div className="shrink-0 border-border/70 border-b">
+                                    <ArtifactPanelChrome
+                                        activeKey={state.activeKey}
+                                        activeTarget={state.targets.find(
+                                            (target) =>
+                                                getArtifactPanelTargetKey(target) ===
+                                                state.activeKey
+                                        )}
+                                        agentId={agentId}
+                                        onClose={state.toggleVisible}
+                                        onCloseTarget={state.closeTarget}
+                                        onOpenTarget={state.open}
+                                        targets={state.targets}
+                                    />
+                                </div>
+                            )}
                             <div className="min-h-0 flex-1">
                                 {state.targets.length === 0 ? (
                                     <ArtifactPanelEmpty
