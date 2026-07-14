@@ -41,7 +41,7 @@ export function ChatArtifactPanel({
                 <motion.aside
                     animate={{ opacity: 1, width: artifactPaneWidth.width, x: 0 }}
                     aria-label="Artifacts"
-                    className="relative z-[36] hidden h-full min-h-0 shrink-0 overflow-hidden border-border/70 border-l bg-background/96 shadow-2xl shadow-black/8 lg:flex"
+                    className="relative z-[36] flex h-full min-h-0 shrink-0 overflow-hidden border-border/70 border-l bg-background/96 shadow-2xl shadow-black/8"
                     exit={{ opacity: 0, width: 0, x: 36 }}
                     initial={shouldReduceMotion ? false : { opacity: 0, width: 0, x: 36 }}
                     transition={
