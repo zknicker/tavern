@@ -73,11 +73,7 @@ export function ChatDetailFrame({
     };
 
     return (
-        <MessageScrollerProvider
-            autoScroll={hasTimelineContent}
-            defaultScrollPosition="end"
-            scrollPreviousItemPeek={64}
-        >
+        <MessageScrollerProvider autoScroll={hasTimelineContent} defaultScrollPosition="end">
             <div className="flex min-h-0 flex-1 overflow-hidden">
                 <div className="relative flex min-w-0 flex-1 flex-col">
                     {header}
@@ -92,12 +88,12 @@ export function ChatDetailFrame({
                             <MessageScrollerViewport
                                 // Widen the side gutters at lg+ so the turn
                                 // timeline rail has room beside the messages;
-                                // the rail itself hides below lg. At rest the
+                                // the rail itself hides below lg. The
                                 // conversation hugs the composer — the bottom
-                                // padding (96px) is just clearance for a
-                                // two-row floating status stack. The send
-                                // runway comes from the scroller's anchor
-                                // spacer, not static padding.
+                                // padding (96px) is static clearance for a
+                                // two-row floating status stack. New sends
+                                // append here without re-anchoring the
+                                // viewport, so the history above stays put.
                                 className="px-6 pt-4 pb-24 lg:px-16"
                                 onScroll={handleScroll}
                                 ref={viewportRef}

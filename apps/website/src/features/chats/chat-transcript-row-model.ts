@@ -1,6 +1,11 @@
 import { formatDayLabel } from '../../components/ui/day-divider.tsx';
-import type { TranscriptEntry, TranscriptItem } from './chat-transcript-model.ts';
+import type { TranscriptEntry, TranscriptItem, TranscriptRow } from './chat-transcript-model.ts';
 import { findTranscriptEntryActiveReply, getItemSessionKey } from './chat-transcript-model.ts';
+
+export type SessionNoticeRow = Extract<
+    TranscriptRow,
+    { kind: 'system'; systemKind: 'runtimeNotice' }
+>;
 
 export type TranscriptRenderRow =
     | { id: 'hidden-count'; kind: 'hiddenCount' }
@@ -10,6 +15,9 @@ export type TranscriptRenderRow =
           followsRuntimeNotice: boolean;
           id: string;
           kind: 'entry';
+          // The new-session notice this turn opened, surfaced as a hover
+          // affordance on the turn instead of a standalone row.
+          sessionNotice: SessionNoticeRow | null;
           turnStartedAt: string | null;
       };
 
@@ -28,8 +36,19 @@ export function buildTranscriptRenderRows(entries: TranscriptEntry[], hiddenCoun
     }
 
     let previousDayKey: string | null = null;
+    // A new-session notice never renders standalone: it waits here for the
+    // turn it opened — that agent's next rendered turn — and rides along as
+    // that row's hover affordance.
+    const pendingSessionNotices: SessionNoticeRow[] = [];
 
     entries.forEach((entry, index) => {
+        const sessionNoticeRow = getSessionNoticeRow(entry);
+
+        if (sessionNoticeRow) {
+            pendingSessionNotices.push(sessionNoticeRow);
+            return;
+        }
+
         const previousEntry = index > 0 ? entries[index - 1] : null;
         const timestamp = entry.timestamp;
         const dayKey = getDayKey(timestamp);
@@ -50,6 +69,7 @@ export function buildTranscriptRenderRows(entries: TranscriptEntry[], hiddenCoun
                 followsRuntimeNotice: isRuntimeNoticeEntry(previousEntry),
                 id: entry.id,
                 kind: 'entry',
+                sessionNotice: takeSessionNoticeForEntry(pendingSessionNotices, entry),
                 turnStartedAt,
             });
         }
@@ -60,6 +80,42 @@ export function buildTranscriptRenderRows(entries: TranscriptEntry[], hiddenCoun
     });
 
     return rows;
+}
+
+function getSessionNoticeRow(entry: TranscriptEntry): SessionNoticeRow | null {
+    return entry.kind === 'system' &&
+        entry.item.kind === 'row' &&
+        entry.item.row.kind === 'system' &&
+        entry.item.row.systemKind === 'runtimeNotice' &&
+        entry.item.row.runtimeNotice.kind === 'new_session'
+        ? entry.item.row
+        : null;
+}
+
+// Prefer the notice written for this turn's agent; a notice without agent
+// identity attaches to the next agent turn in order.
+function takeSessionNoticeForEntry(
+    pending: SessionNoticeRow[],
+    entry: TranscriptEntry
+): SessionNoticeRow | null {
+    if (pending.length === 0 || entry.kind !== 'turn' || entry.participant !== 'agent') {
+        return null;
+    }
+
+    const agentId = entry.actor?.kind === 'agent' ? entry.actor.id : null;
+    let index = pending.findIndex((notice) => notice.runtimeNotice.agentId === agentId);
+
+    if (index === -1) {
+        index = pending.findIndex((notice) => notice.runtimeNotice.agentId === null);
+    }
+
+    if (index === -1) {
+        return null;
+    }
+
+    const [notice] = pending.splice(index, 1);
+
+    return notice ?? null;
 }
 
 export function computeStableTranscriptRenderRows(
@@ -103,6 +159,7 @@ function isTranscriptRenderRowUnchanged(a: TranscriptRenderRow, b: TranscriptRen
     return (
         a.entry === next.entry &&
         a.followsRuntimeNotice === next.followsRuntimeNotice &&
+        a.sessionNotice === next.sessionNotice &&
         a.turnStartedAt === next.turnStartedAt
     );
 }
@@ -191,12 +248,15 @@ function isActiveStatusOnlyAgentEntry(entry: TranscriptEntry) {
     );
 }
 
+// New-session notices never render standalone (they ride their turn's row),
+// so they don't count as a rendered notice above the next entry.
 function isRuntimeNoticeEntry(entry: TranscriptEntry | null) {
     return (
         entry?.kind === 'system' &&
         entry.item.kind === 'row' &&
         entry.item.row.kind === 'system' &&
-        entry.item.row.systemKind === 'runtimeNotice'
+        entry.item.row.systemKind === 'runtimeNotice' &&
+        entry.item.row.runtimeNotice.kind !== 'new_session'
     );
 }
 

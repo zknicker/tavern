@@ -123,10 +123,11 @@ test('keeps Rich Response table generation pinned to the latest reply', async ({
         expectedReply: /^Here is the table\.\s+QA_RICH_RESPONSE_TABLE_SCROLL_FIRST_OK$/u,
         prompt: 'Rich response progress table scroll qa. Read `QA_KICKOFF_TASK.md`, render a tall table, and reply exactly `QA_RICH_RESPONSE_TABLE_SCROLL_FIRST_OK`.',
     });
-    // Send-anchored turns keep the new message at the top with the reply
-    // growing below the fold; a screen-tall reply offers the jump-to-latest
-    // affordance instead of yanking the viewport down.
-    await expect(page.getByRole('button', { name: 'Jump to latest message' })).toBeVisible();
+    // Sends append at the bottom without re-anchoring: the viewport follows
+    // the streaming reply, so the newest reply text stays in view.
+    await expect(
+        transcriptParagraph(page, /^Here is the table\.\s+QA_RICH_RESPONSE_TABLE_SCROLL_FIRST_OK$/u)
+    ).toBeInViewport({ timeout: 15_000 });
 
     const composer = page.getByRole('textbox', { name: /Chat message/ });
     await expect(composer).toBeEnabled({ timeout: 30_000 });
@@ -135,9 +136,6 @@ test('keeps Rich Response table generation pinned to the latest reply', async ({
         'Second rich response progress table scroll qa. Read `QA_KICKOFF_TASK.md`, render a tall table, and reply exactly `QA_RICH_RESPONSE_TABLE_SCROLL_SECOND_OK`.'
     );
     await composer.press('Enter');
-    // The send anchor is an intended discrete jump (new message scrolls to
-    // the viewport top); the smoothness guard covers the follow behavior
-    // while the reply streams in after it.
     await page.waitForTimeout(400);
 
     const scrollSamples = await collectScrollSamplesDuring(page, async () => {
@@ -162,8 +160,7 @@ test('keeps Rich Response table generation pinned to the latest reply', async ({
         );
     }
 
-    // Jumping to the latest message brings the newest reply into view.
-    await page.getByRole('button', { name: 'Jump to latest message' }).click();
+    // The follow keeps the newest reply in view without a jump affordance.
     await expect(
         transcriptParagraph(
             page,

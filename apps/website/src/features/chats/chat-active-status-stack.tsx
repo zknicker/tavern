@@ -1,7 +1,9 @@
 import type { AgentCharacter } from '@tavern/api/agent-appearance';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import * as React from 'react';
 import { Icon } from '../../components/ui/icon.tsx';
 import type { ChatActiveReply, ChatTimelineState } from '../../hooks/chats/chat-timeline-state.ts';
+import { springs } from '../../lib/springs.ts';
 import type { AgentListOutput } from '../../lib/trpc.tsx';
 import { cn } from '../../lib/utils.ts';
 import { getAgentStatusLabel, resolveAgentStatusExpression } from './agent-status-expression.ts';
@@ -41,6 +43,7 @@ export function ChatActiveStatusStack({
     variant = 'compact',
 }: ChatActiveStatusStackProps) {
     const [drawerRunId, setDrawerRunId] = React.useState<string | null>(null);
+    const reduceMotion = useReducedMotion() === true;
     const rowsWithEvidence = React.useMemo(() => {
         const evidence = Object.values(turnEvidence).flat();
 
@@ -90,33 +93,63 @@ export function ChatActiveStatusStack({
 
     return (
         <>
-            {hasActiveReplies ? (
-                <section
-                    aria-label="Active agent status"
-                    className={cn(
-                        variant === 'compact'
-                            ? 'border-r-[3px] border-r-border/70 bg-card px-5 pt-2 pb-1'
-                            : // Fades toward the transcript so scrolled content
-                              // slides under it without a hard seam above the
-                              // composer.
-                              'bg-gradient-to-t from-background via-background/85 to-transparent px-6 pt-3 pb-1 lg:px-16',
-                        className
-                    )}
-                >
-                    <div className="mx-auto flex w-full max-w-[60rem] flex-col gap-1">
-                        {activeReplies.map((reply) => (
-                            <ChatActiveStatusRow
-                                activeReplies={activeReplies}
-                                agents={agents}
-                                key={reply.runId}
-                                onViewDetails={() => setDrawerRunId(reply.runId)}
-                                reply={reply}
-                                rows={rowsWithEvidence}
-                            />
-                        ))}
-                    </div>
-                </section>
-            ) : null}
+            <AnimatePresence>
+                {hasActiveReplies ? (
+                    <motion.section
+                        animate={{ opacity: 1 }}
+                        aria-label="Active agent status"
+                        className={cn(
+                            variant === 'compact'
+                                ? 'border-r-[3px] border-r-border/70 bg-card px-5 pt-1.5 pb-0.5'
+                                : // Fades toward the transcript so scrolled content
+                                  // slides under it without a hard seam above the
+                                  // composer.
+                                  'bg-gradient-to-t from-background via-background/85 to-transparent px-6 pt-2.5 pb-0.5 lg:px-16',
+                            className
+                        )}
+                        exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 4 }}
+                        initial={false}
+                        key="active-status"
+                        transition={springs.moderate}
+                    >
+                        <div className="mx-auto flex w-full max-w-[60rem] flex-col">
+                            <AnimatePresence initial={false}>
+                                {activeReplies.map((reply) => (
+                                    <motion.div
+                                        animate={{ height: 'auto', opacity: 1, y: 0 }}
+                                        // Clip while the row's height animates
+                                        // open or closed. The wrapper hangs
+                                        // left of the row (with matching inner
+                                        // padding) so the agent face — which
+                                        // overflows its box and sits at -ms-1
+                                        // — never loses its left edge to the
+                                        // clip.
+                                        className="-ms-2 overflow-hidden"
+                                        exit={{ height: 0, opacity: 0, y: -4 }}
+                                        initial={
+                                            reduceMotion ? false : { height: 0, opacity: 0, y: 8 }
+                                        }
+                                        key={reply.runId}
+                                        transition={
+                                            reduceMotion ? { duration: 0 } : springs.moderate
+                                        }
+                                    >
+                                        <div className="py-0.5 ps-2">
+                                            <ChatActiveStatusRow
+                                                activeReplies={activeReplies}
+                                                agents={agents}
+                                                onViewDetails={() => setDrawerRunId(reply.runId)}
+                                                reply={reply}
+                                                rows={rowsWithEvidence}
+                                            />
+                                        </div>
+                                    </motion.div>
+                                ))}
+                            </AnimatePresence>
+                        </div>
+                    </motion.section>
+                ) : null}
+            </AnimatePresence>
             <ChatTurnDrawer
                 agentCharacter={drawerAgentCharacter}
                 agentColor={drawerAgentColor}

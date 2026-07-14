@@ -548,18 +548,33 @@ export function transcriptEntryUsesActiveReply(
         return true;
     }
 
+    // The turn's post replaces the live overlay item the moment it exists,
+    // but while it is still streaming the run is live — only a finalized
+    // reply ends the entry's claim on the active reply.
     if (
         entry.items.some(
             (item) =>
                 item.kind === 'row' &&
                 item.row.kind === 'message' &&
-                !isActivityBackedMessageRow(item.row)
+                !(isActivityBackedMessageRow(item.row) || isStreamingPostMessageRow(item.row))
         )
     ) {
         return false;
     }
 
     return entry.items.some((item) => getItemSessionKey(item) === activeReply.sessionKey);
+}
+
+// The runtime flags the turn's message row while it is still being edited.
+export function isStreamingPostMessageRow(row: Extract<TranscriptRow, { kind: 'message' }>) {
+    const runtime = row.message.metadata?.runtime;
+
+    return Boolean(
+        runtime &&
+            typeof runtime === 'object' &&
+            !Array.isArray(runtime) &&
+            (runtime as Record<string, unknown>).streaming === true
+    );
 }
 
 function getItemResponseId(item: TranscriptItem) {

@@ -9,6 +9,12 @@ export interface TranscriptRenderContextValue {
     hiddenCount: number;
     /** Runs whose final reply is present anywhere in the transcript. */
     repliedRunIds: ReadonlySet<string>;
+    /**
+     * Whether an item mounting now lands at the live edge and should animate
+     * in. False for everything present at first render and for older history
+     * pages loading in.
+     */
+    shouldAnimateItemEnter: (key: string, timestampMs: number | null) => boolean;
 }
 
 const TranscriptRenderContext = React.createContext<TranscriptRenderContextValue | null>(null);
@@ -31,4 +37,10 @@ export function useTranscriptRenderContext() {
     }
 
     return context;
+}
+
+// Turn content also renders outside the transcript pane (the turn drawer),
+// where no render context exists and enter animation never applies.
+export function useTranscriptRenderContextOptional() {
+    return React.useContext(TranscriptRenderContext);
 }

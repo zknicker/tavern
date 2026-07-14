@@ -81,7 +81,6 @@ export function ChatCard({
             <MessageScrollerProvider
                 autoScroll={!isInitialTranscriptPending && hasTimelineContent}
                 defaultScrollPosition="end"
-                scrollPreviousItemPeek={64}
             >
                 <MessageScroller className="border-r-[3px] border-r-border/70">
                     <MessageScrollerViewport className="px-3 py-3" ref={viewportRef}>

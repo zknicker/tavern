@@ -209,6 +209,38 @@ function formatCompactionDescription(count: number | null | undefined) {
     return typeof count === 'number' ? `count ${count}` : undefined;
 }
 
+// Hover affordance for a turn that opened a fresh session: an icon button in
+// the turn's header actions (beside copy and turn details) that opens the
+// notice drawer, instead of a standalone row ahead of the reply.
+export function SessionNoticeAction({
+    className,
+    row,
+}: {
+    className?: string;
+    row: RuntimeNoticeRow;
+}) {
+    const [isOpen, setIsOpen] = React.useState(false);
+    const summary = getRuntimeNoticeSummary(row);
+
+    return (
+        <Drawer onOpenChange={setIsOpen} open={isOpen} position="right">
+            <DrawerTrigger
+                render={
+                    <button
+                        aria-label="Started a fresh session"
+                        className={className}
+                        title="Started a fresh session"
+                        type="button"
+                    />
+                }
+            >
+                <Icon className="size-3.5" icon={summary.icon} strokeWidth={2} />
+            </DrawerTrigger>
+            {isOpen ? <RuntimeNoticeDrawer row={row} summary={summary} /> : null}
+        </Drawer>
+    );
+}
+
 function RuntimeNoticeLabel({
     isOpen,
     onOpenChange,

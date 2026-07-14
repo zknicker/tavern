@@ -52,9 +52,14 @@ import {
     getItemRunId,
     getItemSessionKey,
     isActivityBackedMessageRow,
+    isStreamingPostMessageRow,
 } from './chat-transcript-model.ts';
-import { useTranscriptRenderContext } from './chat-transcript-render-context.tsx';
-import { RuntimeNoticeEntry } from './chat-transcript-system-step.tsx';
+import {
+    useTranscriptRenderContext,
+    useTranscriptRenderContextOptional,
+} from './chat-transcript-render-context.tsx';
+import type { SessionNoticeRow } from './chat-transcript-row-model.ts';
+import { RuntimeNoticeEntry, SessionNoticeAction } from './chat-transcript-system-step.tsx';
 import { ChatTurnDrawer } from './chat-turn-drawer.tsx';
 import { useRevealedText } from './use-revealed-text.ts';
 
@@ -88,6 +93,7 @@ export function TranscriptEntryView({
     defaultOpenWorkGroups = false,
     entry,
     followsRuntimeNotice,
+    sessionNotice = null,
     turnStartedAt,
 }: {
     activeReply: ChatActiveReply | null;
@@ -98,6 +104,7 @@ export function TranscriptEntryView({
     defaultOpenWorkGroups?: boolean;
     entry: TranscriptEntry;
     followsRuntimeNotice?: boolean;
+    sessionNotice?: SessionNoticeRow | null;
     turnStartedAt?: string | null;
 }) {
     if (entry.kind === 'system') {
@@ -134,6 +141,7 @@ export function TranscriptEntryView({
             entry={entry}
             followsRuntimeNotice={Boolean(followsRuntimeNotice)}
             layout={conversationLayout}
+            sessionNotice={sessionNotice}
             turnStartedAt={turnStartedAt}
         />
     );
@@ -364,6 +372,7 @@ function AgentTurn({
     entry,
     followsRuntimeNotice,
     layout,
+    sessionNotice,
     turnStartedAt,
 }: {
     activeReply: ChatActiveReply | null;
@@ -374,6 +383,7 @@ function AgentTurn({
     entry: Extract<TranscriptEntry, { kind: 'turn' }>;
     followsRuntimeNotice: boolean;
     layout: ConversationMessageLayout;
+    sessionNotice?: SessionNoticeRow | null;
     turnStartedAt?: string | null;
 }) {
     const actorProfile = useActorProfile(entry.actor);
@@ -410,6 +420,9 @@ function AgentTurn({
             >
                 <Icon className="size-3.5" icon={ListViewIcon} strokeWidth={2} />
             </button>
+            {sessionNotice ? (
+                <SessionNoticeAction className={messageActionButtonClassName} row={sessionNotice} />
+            ) : null}
         </>
     );
 
@@ -602,19 +615,11 @@ export function filterPaneSegments(
     });
 }
 
-// The runtime flags the turn's message row while it is still being edited.
 function isStreamingPostRow(row: Extract<TranscriptItem, { kind: 'row' }>['row']) {
-    if (row.kind !== 'message' || row.message.senderType !== 'agent') {
-        return false;
-    }
-
-    const runtime = row.message.metadata?.runtime;
-
-    return Boolean(
-        runtime &&
-            typeof runtime === 'object' &&
-            !Array.isArray(runtime) &&
-            (runtime as Record<string, unknown>).streaming === true
+    return (
+        row.kind === 'message' &&
+        row.message.senderType === 'agent' &&
+        isStreamingPostMessageRow(row)
     );
 }
 
@@ -646,6 +651,8 @@ function isClarificationItem(item: TranscriptItem) {
 }
 
 function UserTurnItem({ from, item }: { from: 'assistant' | 'user'; item: TranscriptItem }) {
+    const animateLiveEnter = useLiveEdgeMessageEnter(item);
+
     if (item.kind !== 'row' || item.row.kind !== 'message') {
         return null;
     }
@@ -656,13 +663,31 @@ function UserTurnItem({ from, item }: { from: 'assistant' | 'user'; item: Transc
 
     return body ? (
         <ChatMessage
-            animateEnter={isLocalTimelineMessageMetadata(message.metadata)}
+            animateEnter={isLocalTimelineMessageMetadata(message.metadata) || animateLiveEnter}
             attachments={attachments}
             from={from}
         >
             {body}
         </ChatMessage>
     ) : null;
+}
+
+// Whether this item is a message landing at the transcript's live edge right
+// now; such messages animate in instead of popping. Always false outside the
+// transcript (the turn drawer).
+function useLiveEdgeMessageEnter(item: TranscriptItem) {
+    const context = useTranscriptRenderContextOptional();
+
+    if (!(context && item.kind === 'row' && item.row.kind === 'message')) {
+        return false;
+    }
+
+    const timestampMs = Date.parse(item.row.message.timestamp);
+
+    return context.shouldAnimateItemEnter(
+        getTranscriptItemKey(item),
+        Number.isNaN(timestampMs) ? null : timestampMs
+    );
 }
 
 function AgentTurnItem({
@@ -676,6 +701,8 @@ function AgentTurnItem({
     item: TranscriptItem;
     revealNarration?: boolean;
 }) {
+    const animateLiveEnter = useLiveEdgeMessageEnter(item);
+
     if (item.kind === 'activeReply') {
         return (
             <AssistantReplyText
@@ -724,7 +751,10 @@ function AgentTurnItem({
                           revealText: true,
                           slotKey: getItemRunId(item) ?? item.row.id,
                       }
-                    : {})}
+                    : // A finished reply that never streamed here (fast turn,
+                      // another device's turn) still lands at the live edge —
+                      // it enters like any new message instead of popping.
+                      { animateEnter: animateLiveEnter })}
             />
         );
     }
@@ -1001,15 +1031,29 @@ function isActiveTurn(
     activeReply: ChatActiveReply | null,
     lastMessage: Extract<TranscriptRow, { kind: 'message' }>['message'] | null
 ) {
-    if (
-        !(activeReply && lastMessage === null) ||
-        activeReply.completedAt ||
-        hasStoppedTurn(items, activeReply.runId)
-    ) {
+    if (!activeReply || activeReply.completedAt || hasStoppedTurn(items, activeReply.runId)) {
+        return false;
+    }
+
+    // The turn's post exists from its first streamed content and edits in
+    // place while the run is live; only a finalized last message means the
+    // turn has landed its reply.
+    if (lastMessage !== null && !isStreamingMessageMetadata(lastMessage.metadata)) {
         return false;
     }
 
     return items.some((item) => getItemSessionKey(item) === activeReply.sessionKey);
+}
+
+function isStreamingMessageMetadata(metadata: Record<string, unknown> | null | undefined) {
+    const runtime = metadata?.runtime;
+
+    return Boolean(
+        runtime &&
+            typeof runtime === 'object' &&
+            !Array.isArray(runtime) &&
+            (runtime as Record<string, unknown>).streaming === true
+    );
 }
 
 function hasStoppedTurn(items: TranscriptItem[], runId: string | null | undefined) {

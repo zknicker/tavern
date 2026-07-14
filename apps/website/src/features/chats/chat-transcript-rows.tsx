@@ -68,6 +68,7 @@ const TranscriptRenderRowView = React.memo(
                 defaultOpenWorkGroups={defaultOpenWorkGroups}
                 entry={row.entry}
                 followsRuntimeNotice={row.followsRuntimeNotice}
+                sessionNotice={row.sessionNotice}
                 turnStartedAt={row.turnStartedAt}
             />
         );
@@ -110,6 +111,7 @@ function areRenderRowsEqual(
 
     return (
         previous.followsRuntimeNotice === next.followsRuntimeNotice &&
+        previous.sessionNotice === next.sessionNotice &&
         previous.turnStartedAt === next.turnStartedAt &&
         areEntriesEqual(previous.entry, next.entry)
     );

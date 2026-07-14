@@ -1241,6 +1241,31 @@ test('ChatTranscript renders runtime notices outside the work disclosure', () =>
             id: 'runtime-notice-1',
             kind: 'system',
             runtimeNotice: {
+                agentId: null,
+                detail: 'Compacted the session context.',
+                kind: 'status',
+                sessionId: null,
+                text: 'Compacted the session context.',
+                title: 'Context status',
+            },
+            systemKind: 'runtimeNotice',
+            timestamp: '2026-03-31T15:00:00.000Z',
+        },
+    ]);
+
+    assert.match(markup, /Context status/);
+    assert.match(markup, /data-slot="drawer-trigger"/);
+    assert.doesNotMatch(markup, /Working/);
+    assert.doesNotMatch(markup, /Worked/);
+});
+
+test('ChatTranscript attaches a new-session notice to the turn that opened it', () => {
+    const markup = renderTranscript([
+        {
+            id: 'runtime-notice-1',
+            kind: 'system',
+            runtimeNotice: {
+                agentId: 'tiny',
                 detail: 'd348a369-223c-42a7-8220-67c7340810c2',
                 kind: 'new_session',
                 sessionId: 'd348a369-223c-42a7-8220-67c7340810c2',
@@ -1250,13 +1275,108 @@ test('ChatTranscript renders runtime notices outside the work disclosure', () =>
             systemKind: 'runtimeNotice',
             timestamp: '2026-03-31T15:00:00.000Z',
         },
+        {
+            actor: { id: 'tiny', kind: 'agent' },
+            connectsToNext: false,
+            connectsToPrevious: false,
+            id: 'message-session-open',
+            isFirstInGroup: true,
+            kind: 'message',
+            message: {
+                content: 'Fresh context, ready to go.',
+                id: 'message-session-open',
+                metadata: {},
+                sender: 'Tiny',
+                senderType: 'agent',
+                sourceSessionId: null,
+                sourceSessionKey: 'session-fresh',
+                tavernAgentId: 'tiny',
+                timestamp: '2026-03-31T15:00:05.000Z',
+            },
+        },
     ]);
 
-    assert.match(markup, /Started new session/);
-    assert.doesNotMatch(markup, /d348a369-223c-42a7-8220-67c7340810c2/);
-    assert.match(markup, /data-slot="drawer-trigger"/);
-    assert.doesNotMatch(markup, /Working/);
-    assert.doesNotMatch(markup, /Worked/);
+    // No standalone notice row ahead of the reply — the turn's header carries
+    // the session affordance instead.
+    assert.doesNotMatch(markup, /Started new session/);
+    assert.match(markup, /aria-label="Started a fresh session"/);
+    assert.match(markup, /Fresh context, ready to go\./);
+});
+
+test('ChatTranscript renders nothing for a new-session notice with no turn to attach to', () => {
+    const markup = renderTranscript([
+        {
+            id: 'runtime-notice-1',
+            kind: 'system',
+            runtimeNotice: {
+                agentId: 'tiny',
+                detail: null,
+                kind: 'new_session',
+                sessionId: 'session-fresh',
+                text: 'New session.',
+                title: 'Started new session',
+            },
+            systemKind: 'runtimeNotice',
+            timestamp: '2026-03-31T15:00:00.000Z',
+        },
+    ]);
+
+    assert.doesNotMatch(markup, /Started new session/);
+    assert.doesNotMatch(markup, /aria-label="Started a fresh session"/);
+});
+
+test('ChatTranscript reveals the streaming post from its first chunk', () => {
+    // The live-patch shape: the turn's first message step creates the post
+    // row (streaming metadata), and the run's live overlay item drops the
+    // same render. The post must mount with the paced reveal — enabled means
+    // the first server render shows none of the text yet.
+    const markup = renderTranscript(
+        [
+            {
+                actor: { id: 'tiny', kind: 'agent' },
+                connectsToNext: false,
+                connectsToPrevious: false,
+                id: 'msg_run-live_assistant',
+                isFirstInGroup: true,
+                kind: 'message',
+                runId: 'run-live',
+                message: {
+                    actor: { id: 'tiny', kind: 'agent' },
+                    content: 'First streamed chunk of the preamble.',
+                    id: 'msg_run-live_assistant',
+                    metadata: {
+                        runtime: {
+                            runId: 'run-live',
+                            sessionKey: 'session-live',
+                            source: 'agent-engine',
+                            streaming: true,
+                        },
+                    },
+                    sender: 'tiny',
+                    senderType: 'agent',
+                    sourceSessionId: null,
+                    sourceSessionKey: 'session-live',
+                    tavernAgentId: 'tiny',
+                    timestamp: '2026-03-31T15:00:05.000Z',
+                },
+            },
+        ],
+        {
+            activeReplies: [
+                {
+                    agentId: 'tiny',
+                    isThinking: true,
+                    runId: 'run-live',
+                    sessionKey: 'session-live',
+                    startedAt: '2026-03-31T15:00:00.000Z',
+                    text: '',
+                },
+            ],
+        }
+    );
+
+    assert.doesNotMatch(markup, /First streamed chunk of the preamble\./);
+    assert.match(markup, /min-h-\[1lh\]/);
 });
 
 test('ChatTranscript hides a stopped turn that produced no visible content', () => {
@@ -2134,6 +2254,7 @@ type ChatRow = NonNullable<ChatLogOutput>['rows'][number];
 function renderTranscript(
     rows: ChatRow[],
     options: {
+        activeReplies?: ChatActiveReply[];
         chatId?: string;
         defaultOpenWorkGroups?: boolean;
     } = {}
@@ -2159,7 +2280,7 @@ function renderTranscript(
                 <MemoryRouter>
                     <DevModeProvider>
                         <ChatTranscript
-                            activeReplies={[]}
+                            activeReplies={options.activeReplies ?? []}
                             chatId={options.chatId}
                             defaultOpenWorkGroups={options.defaultOpenWorkGroups}
                             rows={rows}

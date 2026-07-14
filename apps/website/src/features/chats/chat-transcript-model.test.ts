@@ -452,6 +452,7 @@ function runtimeNoticeRow(id: string): ChatRow {
         id,
         kind: 'system',
         runtimeNotice: {
+            agentId: null,
             detail: 'd348a369-223c-42a7-8220-67c7340810c2',
             kind: 'new_session',
             sessionId: 'd348a369-223c-42a7-8220-67c7340810c2',

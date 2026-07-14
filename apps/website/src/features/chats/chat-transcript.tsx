@@ -6,7 +6,6 @@ import {
     MessageScrollerItem,
     MessageScrollerProvider,
     MessageScrollerViewport,
-    useMessageScroller,
 } from '../../components/ui/message-scroller.tsx';
 import type { ChatActiveReply, ChatTurnFailure } from '../../hooks/chats/chat-timeline-state.ts';
 import { markChatTiming } from '../../lib/chat-timing.ts';
@@ -80,25 +79,6 @@ export function ChatTranscript({
         () => buildChatTurnTimelineMarkers(transcriptRows),
         [transcriptRows]
     );
-    const lastUserTurnAnchor = React.useMemo(() => {
-        for (let index = transcriptRows.length - 1; index >= 0; index -= 1) {
-            const row = transcriptRows[index];
-
-            if (row && isTranscriptRenderRowScrollAnchor(row) && row.kind === 'entry') {
-                const lastItem = row.entry.kind === 'turn' ? row.entry.items.at(-1) : null;
-
-                return {
-                    // Consecutive sends group into one turn entry, so the
-                    // change signal must include the newest item, not just
-                    // the entry id.
-                    changeKey: `${row.id}:${lastItem ? getTranscriptItemKey(lastItem) : ''}`,
-                    rowId: row.id,
-                };
-            }
-        }
-
-        return null;
-    }, [transcriptRows]);
     const latestAgentMessage = React.useMemo(() => getLatestAgentMessage(rows), [rows]);
     // Sticky across renders: the completion handoff can clear the live reply
     // a beat before the durable reply row lands, and narration must not flash
@@ -111,6 +91,7 @@ export function ChatTranscript({
 
         return new Set(seenRepliedRunsRef.current);
     }, [rows, activeReplies]);
+    const shouldAnimateItemEnter = useLiveEdgeItemEnter(chatId, transcriptRows);
     const renderContext = React.useMemo(
         () =>
             ({
@@ -120,6 +101,7 @@ export function ChatTranscript({
                 defaultOpenWorkGroups,
                 hiddenCount,
                 repliedRunIds,
+                shouldAnimateItemEnter,
             }) satisfies TranscriptRenderContextValue,
         [
             chatId,
@@ -128,6 +110,7 @@ export function ChatTranscript({
             defaultOpenWorkGroups,
             hiddenCount,
             repliedRunIds,
+            shouldAnimateItemEnter,
         ]
     );
 
@@ -179,7 +162,6 @@ export function ChatTranscript({
                                 className="![content-visibility:visible]"
                                 key={row.id}
                                 messageId={row.id}
-                                scrollAnchor={isTranscriptRenderRowScrollAnchor(row)}
                             >
                                 <TranscriptRenderRowItem
                                     activeReplies={activeReplies}
@@ -190,14 +172,13 @@ export function ChatTranscript({
                         )
                     )}
                 </MessageScrollerContent>
-                <UserTurnAnchorEffect anchor={lastUserTurnAnchor} chatId={chatId} />
             </div>
         </TranscriptRenderProvider>
     );
 
     if (!scrollContentRef) {
         return (
-            <MessageScrollerProvider defaultScrollPosition="end" scrollPreviousItemPeek={64}>
+            <MessageScrollerProvider defaultScrollPosition="end">
                 <MessageScroller>
                     <MessageScrollerViewport>{transcript}</MessageScrollerViewport>
                 </MessageScroller>
@@ -208,63 +189,59 @@ export function ChatTranscript({
     return transcript;
 }
 
-function isTranscriptRenderRowScrollAnchor(
-    row: ReturnType<typeof buildTranscriptRenderRows>[number]
-) {
-    return row.kind === 'entry' && row.entry.kind === 'turn' && row.entry.participant === 'user';
-}
+// Pagination timestamps are minutes-to-months old; live rows land within
+// moments of the client clock. The slack absorbs modest clock skew between
+// the client and a remote runtime host.
+const liveEdgeEnterSlackMs = 60 * 1000;
 
-// Anchors a freshly sent user message to the top of the viewport (spacer
-// below, Claude-style). The scroller primitive only does this on its own when
-// the item count grows; in windowed chats a new message trims older rows at
-// the same time, so the count stays flat and the anchor must be explicit.
-function UserTurnAnchorEffect({
-    anchor,
-    chatId,
-}: {
-    anchor: { changeKey: string; rowId: string } | null;
-    chatId?: string;
-}) {
-    const { scrollToMessage } = useMessageScroller();
-    const changeKey = anchor?.changeKey ?? null;
-    const rowId = anchor?.rowId ?? null;
-    const stateRef = React.useRef({ changeKey, chatId });
-    // Latest-callback ref: the scroller context rebuilds its callbacks across
-    // renders, and a callback dep would re-run this effect (cancelling the
-    // scheduled frame) before it fires.
-    const scrollToMessageRef = React.useRef(scrollToMessage);
-    scrollToMessageRef.current = scrollToMessage;
+// Items present at first render (or restored when switching back to a chat)
+// must not animate; only items that mount afterwards with a live timestamp
+// read as arrivals. Keyed per chat so a chat switch re-seeds the baseline.
+function useLiveEdgeItemEnter(
+    chatId: string | undefined,
+    transcriptRows: ReturnType<typeof buildTranscriptRenderRows>
+) {
+    const stateRef = React.useRef<{
+        chatId: string | undefined;
+        mountedAtMs: number;
+        ready: boolean;
+        seen: Set<string>;
+    }>({ chatId, mountedAtMs: Date.now(), ready: false, seen: new Set() });
+
+    if (stateRef.current.chatId !== chatId) {
+        stateRef.current = {
+            chatId,
+            mountedAtMs: Date.now(),
+            ready: false,
+            seen: new Set(),
+        };
+    }
 
     React.useEffect(() => {
-        const previous = stateRef.current;
-        stateRef.current = { changeKey, chatId };
+        const state = stateRef.current;
 
-        // Never anchor on mount or when switching chats — only when a new
-        // user message lands in the same chat.
-        if (
-            !(changeKey && rowId) ||
-            previous.chatId !== chatId ||
-            previous.changeKey === changeKey
-        ) {
-            return;
+        for (const row of transcriptRows) {
+            if (row.kind !== 'entry' || row.entry.kind === 'system') {
+                continue;
+            }
+
+            for (const item of row.entry.items) {
+                state.seen.add(getTranscriptItemKey(item));
+            }
         }
 
-        // Synchronous on purpose: requestAnimationFrame never fires in
-        // hidden windows, and the target item is already mounted when the
-        // effect runs. The anchor glides — an instant jump reads as a broken
-        // frame — except for hidden windows (smooth never settles there) and
-        // reduced-motion readers.
-        const instant =
-            document.visibilityState === 'hidden' ||
-            window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        state.ready = true;
+    }, [transcriptRows]);
 
-        scrollToMessageRef.current(rowId, {
-            align: 'start',
-            behavior: instant ? 'auto' : 'smooth',
-        });
-    }, [changeKey, chatId, rowId]);
+    return React.useCallback((key: string, timestampMs: number | null) => {
+        const state = stateRef.current;
 
-    return null;
+        return (
+            state.ready &&
+            !state.seen.has(key) &&
+            (timestampMs === null || timestampMs >= state.mountedAtMs - liveEdgeEnterSlackMs)
+        );
+    }, []);
 }
 
 function useStableTranscriptRenderRows(rows: ReturnType<typeof buildTranscriptRenderRows>) {
