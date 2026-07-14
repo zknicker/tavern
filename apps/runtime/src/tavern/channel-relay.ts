@@ -15,14 +15,10 @@ import { ensureCurrentAgentSession } from './agent-session-store.ts';
 import { enqueueAgentTurn, stopAgentTurn } from './agent-turn-runner.ts';
 import { getStoredAgent } from './agents-store.ts';
 import { createAgentParticipantId, createRunId } from './chat-api/ids.ts';
-import {
-    createMessage,
-    getResponse,
-    upsertResponse,
-    upsertResponseActivity,
-} from './chat-api/index.ts';
+import { createMessage, getResponse, upsertResponse } from './chat-api/index.ts';
 import { ensurePrimaryManagedAgent } from './managed-agent.ts';
 import { ensureFreshAgentSession } from './session-freshness.ts';
+import { recordUserSteerNotice } from './turn-steering.ts';
 
 export async function sendTavernChannelMessage(
     chatId: string,
@@ -135,33 +131,14 @@ export async function steerTavernChannelTurn(_chatId: string, input: AgentRuntim
     }
 
     const runtime = readRecord(response.metadata.runtime);
-    const content = payload.content.trim();
-    const now = new Date().toISOString();
-    upsertResponseActivity(response.chat_id, response.id, {
-        completed_at: now,
-        detail: content,
-        id: steerNoticeActivityId(payload.runId),
-        kind: 'custom',
-        metadata: {
-            runtime: {
-                agentId: readString(runtime.agentId) ?? undefined,
-                engine: 'agent-engine',
-                messageId: readString(runtime.messageId) ?? undefined,
-                notice: {
-                    detail: content,
-                    id: 'runtime_notice_steered',
-                    kind: 'status',
-                    sessionId: readString(runtime.agentSessionId),
-                    text: `Steered active turn: ${content}`,
-                    title: 'Steered active turn',
-                },
-                runId: payload.runId,
-                source: 'agent-engine',
-            },
-        },
-        started_at: now,
-        status: 'completed',
-        title: 'Steered active turn',
+    recordUserSteerNotice({
+        agentId: readString(runtime.agentId),
+        agentSessionId: readString(runtime.agentSessionId),
+        chatId: response.chat_id,
+        content: payload.content.trim(),
+        messageId: readString(runtime.messageId),
+        responseId: response.id,
+        runId: payload.runId,
     });
 
     return agentRuntimeSteerTurnResultSchema.parse({
@@ -195,10 +172,6 @@ function requireStoredAgent(agentId: string) {
         throw new Error(`Agent "${agentId}" does not exist.`);
     }
     return agent;
-}
-
-function steerNoticeActivityId(runId: string) {
-    return `act_${runId}_runtime_notice_steered`.replace(/[^A-Za-z0-9_-]/g, '_');
 }
 
 function readRecord(value: unknown): Record<string, unknown> {

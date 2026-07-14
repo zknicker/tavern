@@ -1,4 +1,3 @@
-import { parseAgentReferenceTarget, parseTavernRichReferences } from '@tavern/api';
 import { resolveAgentModelSelection } from '../models/selection-service.ts';
 import type { AgentExecutorInput } from './agent-executor.ts';
 import { ensureCurrentAgentSession } from './agent-session-store.ts';
@@ -12,6 +11,7 @@ import {
     upsertResponse,
     upsertResponseActivity,
 } from './chat-api/index.ts';
+import { readMentionedAgentIds } from './mention-projection.ts';
 import { ensureFreshAgentSession } from './session-freshness.ts';
 
 // See specs/agent-mentions.md. A turn's delivered final reply and its
@@ -55,6 +55,11 @@ export function collectAgentMentionDispatches(turn: AgentTurn): AgentMentionDisp
             if (agentId === turn.agentId || !chatAgentIds.has(agentId) || seenSeats.has(seatKey)) {
                 continue;
             }
+            // Seats steered at send time (chat_send mode "steer") already
+            // received this message into their running turn; no new turn.
+            if (candidate.steeredAgentIds.has(agentId)) {
+                continue;
+            }
             seenSeats.add(seatKey);
             if (hops >= maxMentionHops) {
                 recordSuppressionNotice(turn, agentId, 'chain depth limit reached');
@@ -68,6 +73,7 @@ export function collectAgentMentionDispatches(turn: AgentTurn): AgentMentionDisp
                 agentId,
                 chatId: candidate.chatId,
                 content: candidate.content,
+                dispatchedBy: { agentId: turn.agentId, chatId: turn.chatId, runId: turn.id },
                 hops,
                 origin,
                 triggerMessageId: candidate.messageId,
@@ -86,7 +92,12 @@ export function collectAgentMentionDispatches(turn: AgentTurn): AgentMentionDisp
 // posts first (they happened mid-turn), then the final reply in the turn's
 // own chat.
 function dispatchCandidates(turn: AgentTurn) {
-    const candidates: Array<{ chatId: string; content: string; messageId: string }> = [];
+    const candidates: Array<{
+        chatId: string;
+        content: string;
+        messageId: string;
+        steeredAgentIds: Set<string>;
+    }> = [];
     for (const delivery of listDeliveriesForTurn(turn.id)) {
         if (delivery.chatId === turn.chatId) {
             continue;
@@ -97,6 +108,7 @@ function dispatchCandidates(turn: AgentTurn) {
                 chatId: delivery.chatId,
                 content: message.content,
                 messageId: message.id,
+                steeredAgentIds: readSteeredAgentIds(message.metadata),
             });
         }
     }
@@ -108,10 +120,24 @@ function dispatchCandidates(turn: AgentTurn) {
                 chatId: turn.chatId,
                 content: message.content,
                 messageId: finalMessageId,
+                steeredAgentIds: readSteeredAgentIds(message.metadata),
             });
         }
     }
     return candidates;
+}
+
+function readSteeredAgentIds(metadata: Record<string, unknown>) {
+    const runtime = metadata.runtime;
+    if (!runtime || typeof runtime !== 'object' || Array.isArray(runtime)) {
+        return new Set<string>();
+    }
+    const value = (runtime as Record<string, unknown>).steeredAgentIds;
+    return new Set(
+        Array.isArray(value)
+            ? value.filter((entry): entry is string => typeof entry === 'string')
+            : []
+    );
 }
 
 export function resetAgentMentionChainsForTesting() {
@@ -122,6 +148,7 @@ function prepareDispatch(input: {
     agentId: string;
     chatId: string;
     content: string;
+    dispatchedBy: { agentId: string; chatId: string; runId: string };
     hops: number;
     origin: string;
     triggerMessageId: string;
@@ -177,24 +204,13 @@ function prepareDispatch(input: {
         },
         turnMetadata: {
             chainOriginMessageId: input.origin,
+            // The mentioning agent's seat; its next prompt receives a compact
+            // outcome note when this dispatched turn settles.
+            dispatchedBy: input.dispatchedBy,
             mentionHops: input.hops + 1,
             trigger: 'agent-mention',
         },
     };
-}
-
-function readMentionedAgentIds(content: string) {
-    const ids: string[] = [];
-    for (const reference of parseTavernRichReferences(content)) {
-        if (reference.kind !== 'agent') {
-            continue;
-        }
-        const agentId = parseAgentReferenceTarget(reference.id);
-        if (agentId && !ids.includes(agentId)) {
-            ids.push(agentId);
-        }
-    }
-    return ids;
 }
 
 function readChatAgentIds(chatId: string) {

@@ -192,6 +192,45 @@ export function listAgentTurnsForSession(agentSessionId: string, db: Database = 
     return rows.map(rowToAgentTurn);
 }
 
+// The latest running turn for an agent's seat in a chat, regardless of which
+// session generation holds it. Steering targets this turn.
+export function findRunningAgentTurnForChatAgent(
+    input: { agentId: string; chatId: string },
+    db: Database = getDb()
+) {
+    const row = db
+        .prepare(
+            `SELECT *
+             FROM agent_turns
+             WHERE chat_id = $chatId
+               AND agent_id = $agentId
+               AND status = 'running'
+             ORDER BY started_at DESC, id DESC
+             LIMIT 1`
+        )
+        .get(namedParams(input)) as AgentTurnRow | null;
+    return row ? rowToAgentTurn(row) : null;
+}
+
+// Whether an agent's seat in a chat still has work in flight (queued or
+// running). "Idle" for chat_wait_idle means this returns false.
+export function hasUnsettledAgentTurnsForChatAgent(
+    input: { agentId: string; chatId: string },
+    db: Database = getDb()
+) {
+    const row = db
+        .prepare(
+            `SELECT 1 AS present
+             FROM agent_turns
+             WHERE chat_id = $chatId
+               AND agent_id = $agentId
+               AND status IN ('queued', 'running')
+             LIMIT 1`
+        )
+        .get(namedParams(input)) as { present: number } | null;
+    return Boolean(row);
+}
+
 export function claimNextAgentTurnForSeat(
     input: {
         agentParticipantId: string;
