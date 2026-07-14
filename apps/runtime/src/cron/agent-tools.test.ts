@@ -77,6 +77,59 @@ describe('cron agent tools', () => {
         expect(getCronJob(createdJobId)).toBeNull();
     });
 
+    test('creates script automations and switches modes on update', async () => {
+        createAgentChat('agt_primary');
+        cronTest.setManager(
+            await startRuntimeCronManager({
+                clearQueuesOnStop: true,
+                jobsDatabasePath: cronTest.jobsDbPath(),
+                queueName: cronTest.testQueueName(),
+            })
+        );
+        const tools = createTavernCronTools({ agentId: 'agt_primary' });
+
+        const created = await runTool<Record<string, unknown>, { job: { id: string } }>(
+            tools,
+            'cron_create',
+            {
+                chatId: 'cht_general',
+                name: 'Feed watchdog',
+                schedule: { everyMs: 300_000, kind: 'every' },
+                script: './check-feed.sh',
+                scriptWorkingDir: 'watchdogs',
+            }
+        );
+
+        expect(getCronJob(created.job.id)).toMatchObject({
+            payload: { command: './check-feed.sh', kind: 'script', workingDir: 'watchdogs' },
+        });
+
+        await runTool(tools, 'cron_update', {
+            jobId: created.job.id,
+            message: 'Review the feed manually.',
+        });
+        expect(getCronJob(created.job.id)).toMatchObject({
+            payload: { kind: 'agentTurn', message: 'Review the feed manually.' },
+        });
+
+        await expect(
+            runTool(tools, 'cron_create', {
+                chatId: 'cht_general',
+                message: 'Both modes.',
+                name: 'Invalid',
+                schedule: { everyMs: 60_000, kind: 'every' },
+                script: 'true',
+            })
+        ).rejects.toThrow('exactly one of message');
+        await expect(
+            runTool(tools, 'cron_create', {
+                chatId: 'cht_general',
+                name: 'Neither mode',
+                schedule: { everyMs: 60_000, kind: 'every' },
+            })
+        ).rejects.toThrow('exactly one of message');
+    });
+
     test('keeps other agents jobs hidden and rejects cross-agent mutation', async () => {
         createAgentChat('agt_primary', 'agt_other');
         cronTest.setManager(
