@@ -518,6 +518,7 @@ function runtimeNoticeFromActivity(
             : null;
 
     return {
+        agentId: readString(runtime.agentId),
         compactionCount,
         detail: readString(notice.detail) ?? readString(activity.detail),
         kind,

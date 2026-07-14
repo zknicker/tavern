@@ -354,6 +354,7 @@ function progressStepToNoticeRow(input: {
         id: progressActivityId(input.turn.runId, input.step.id),
         kind: 'system',
         runtimeNotice: {
+            agentId: input.turn.agentId,
             compactionCount: null,
             detail: null,
             kind: 'status',

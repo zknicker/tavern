@@ -101,6 +101,9 @@ export const widgetRowSchema = z.object({
 });
 
 export const runtimeNoticeSchema = z.object({
+    // The agent seat the notice belongs to; the app attaches new-session
+    // notices to that agent's next turn instead of a standalone row.
+    agentId: z.string().nullable(),
     compactionCount: z.number().int().nonnegative().nullable().optional(),
     detail: z.string().nullable(),
     kind: z.enum(['new_session', 'auto_compaction', 'status']),
