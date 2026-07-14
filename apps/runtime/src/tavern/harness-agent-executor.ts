@@ -59,6 +59,7 @@ import {
     assistantMessageIdForRun,
     persistHarnessTurnStream,
 } from './harness-turn-stream.ts';
+import { createTavernPaneTools } from './pane-tools.ts';
 
 export type { HarnessAssistantMessagePhase } from './harness-turn-stream.ts';
 
@@ -369,6 +370,7 @@ function createHarnessAgent(
             runId: input.runId,
         }),
         ...createTavernWikiTools(),
+        ...createTavernPaneTools({ agentId: input.agent.id, chatId: input.chatId }),
         ...(isRuntimeCronReady() ? createTavernCronTools({ agentId: input.agent.id }) : {}),
         ...(imageGenerationReadiness().ready
             ? createImageGenerationTools({ workspaceFolder: input.agent.workspaceFolder })

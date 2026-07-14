@@ -16,6 +16,15 @@ describe('Runtime tool catalog', () => {
         vi.unstubAllEnvs();
     });
 
+    test('lists the artifact pane tool group', () => {
+        expect(getRuntimeTool('pane')).toMatchObject({
+            configured: true,
+            enabled: true,
+            readOnly: false,
+            tools: ['pane_open'],
+        });
+    });
+
     test('lists image generation as unavailable until its model and key are ready', () => {
         expect(getRuntimeTool('image_generation')).toMatchObject({
             configured: false,

@@ -45,6 +45,16 @@ const builtInTools = [
     },
     {
         configured: true,
+        description: "Open workspace files and Wiki pages in the chat's artifact pane.",
+        enabled: true,
+        id: 'pane',
+        label: 'Artifact pane',
+        name: 'pane',
+        readOnly: false,
+        tools: ['pane_open'],
+    },
+    {
+        configured: true,
         description: 'Browse, search, and update shared Wiki pages.',
         enabled: true,
         id: 'wiki',
