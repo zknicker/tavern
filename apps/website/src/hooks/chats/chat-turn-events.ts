@@ -29,7 +29,12 @@ export interface ChatTurnEventUtils {
     };
     timeline: {
         clearTurn: (input: { chatId: string; runId?: string }) => void;
-        completeTurn: (input: { chatId: string; completedAt: string; turn: ChatTurn }) => void;
+        completeTurn: (input: {
+            chatId: string;
+            completedAt: string;
+            hasReply?: boolean | null;
+            turn: ChatTurn;
+        }) => void;
         failTurn: (input: { chatId: string; error: string; turn: ChatTurn }) => void;
         patchProgress: (input: {
             step: ChatTurnProgressStep;
@@ -71,20 +76,22 @@ export function createChatTurnEventHandlers(utils: ChatTurnEventUtils) {
         terminalTurnIds.has(`failed:${runId}`);
 
     return {
-        onTurnCompleted: (_turn: ChatTurn) => {
-            if (!rememberTerminalTurn(terminalTurnIds, `completed:${_turn.runId}`)) {
+        onTurnCompleted: (input: { hasReply?: boolean | null; turn: ChatTurn }) => {
+            if (!rememberTerminalTurn(terminalTurnIds, `completed:${input.turn.runId}`)) {
                 return;
             }
 
             debugChatEvent('turn.completed.event', {
-                chatId: _turn.chatId,
-                runId: _turn.runId,
-                sessionKey: _turn.sessionKey,
+                chatId: input.turn.chatId,
+                hasReply: input.hasReply ?? null,
+                runId: input.turn.runId,
+                sessionKey: input.turn.sessionKey,
             });
             utils.timeline.completeTurn({
-                chatId: _turn.chatId,
+                chatId: input.turn.chatId,
                 completedAt: new Date().toISOString(),
-                turn: _turn,
+                hasReply: input.hasReply,
+                turn: input.turn,
             });
             invalidateCompletedTurn();
         },

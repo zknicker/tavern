@@ -156,6 +156,7 @@ export function completeTimelineTurn(
     state: ChatTimelineState,
     input: {
         completedAt: string;
+        hasReply?: boolean | null;
         turn: ChatTurn;
     }
 ): ChatTimelineState {
@@ -172,13 +173,21 @@ export function completeTimelineTurn(
             : { ...state, activeTurns, timeline, turnEvidence };
     }
 
+    // A completed reply normally outlives the turn so the streamed text can
+    // swap in place with the delivered message. A silent turn delivers no
+    // message: keeping the reply would strand its status row forever.
+    const activeReplies =
+        input.hasReply === false
+            ? removeActiveReply(state.activeReplies, input.turn.runId)
+            : upsertActiveReply(state.activeReplies, {
+                  ...reply,
+                  completedAt: input.completedAt,
+                  isThinking: false,
+              });
+
     return {
         ...state,
-        activeReplies: upsertActiveReply(state.activeReplies, {
-            ...reply,
-            completedAt: input.completedAt,
-            isThinking: false,
-        }),
+        activeReplies,
         activeTurns,
         timeline,
         turnEvidence,

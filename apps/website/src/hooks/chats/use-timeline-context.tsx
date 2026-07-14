@@ -27,7 +27,12 @@ import {
 
 interface TimelineActionsValue {
     clearTurn: (input: { chatId: string; runId?: string }) => void;
-    completeTurn: (input: { chatId: string; completedAt: string; turn: ChatTurn }) => void;
+    completeTurn: (input: {
+        chatId: string;
+        completedAt: string;
+        hasReply?: boolean | null;
+        turn: ChatTurn;
+    }) => void;
     dismissFailure: (input: { chatId: string; responseId: string }) => void;
     failTurn: (input: { chatId: string; error: string; turn: ChatTurn }) => void;
     optimisticallyStopTurn: (input: { chatId: string; runId: string }) => void;
@@ -199,10 +204,16 @@ export function TimelineContextProvider({ children }: PropsWithChildren) {
     );
 
     const completeTurn = React.useCallback(
-        (input: { chatId: string; completedAt: string; turn: ChatTurn }) => {
+        (input: {
+            chatId: string;
+            completedAt: string;
+            hasReply?: boolean | null;
+            turn: ChatTurn;
+        }) => {
             setTimelineState(input.chatId, (state) =>
                 completeTimelineTurn(state, {
                     completedAt: input.completedAt,
+                    hasReply: input.hasReply,
                     turn: input.turn,
                 })
             );

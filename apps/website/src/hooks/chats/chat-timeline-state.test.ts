@@ -595,6 +595,19 @@ test('completeTimelineTurn keeps active reply visible while clearing active work
     expect(completed.activeTurns).toEqual([]);
 });
 
+test('completeTimelineTurn drops the reply when the turn ends without a reply', () => {
+    // A silent turn (sanctioned NO_REPLY) never delivers a message, so
+    // keeping the reply would strand its status row forever.
+    const completed = completeTimelineTurn(startTimelineTurn(emptyTimelineState(), turn), {
+        completedAt: '2026-04-21T16:08:46.000Z',
+        hasReply: false,
+        turn,
+    });
+
+    expect(completed.activeReplies).toEqual([]);
+    expect(completed.activeTurns).toEqual([]);
+});
+
 test('completeTimelineTurn settles the run live evidence', () => {
     const running = patchTimelineProgress(startTimelineTurn(emptyTimelineState(), turn), {
         step: {

@@ -5,7 +5,7 @@ import { createChatTurnEventHandlers } from './chat-turn-events.ts';
 function createHandlers(input?: {
     invalidatedQueries?: string[];
     onClear?: (runId?: string) => void;
-    onComplete?: (runId: string) => void;
+    onComplete?: (value: string) => void;
     onFail?: (value: string) => void;
     onProgress?: (value: string) => void;
     onReply?: (value: string) => void;
@@ -37,7 +37,8 @@ function createHandlers(input?: {
         },
         timeline: {
             clearTurn: (event) => input?.onClear?.(event.runId),
-            completeTurn: (event) => input?.onComplete?.(event.turn.runId),
+            completeTurn: (event) =>
+                input?.onComplete?.(`${event.turn.runId}:${event.hasReply ?? null}`),
             failTurn: (event) => input?.onFail?.(`${event.turn.runId}:${event.error}`),
             patchProgress: (event) =>
                 input?.onProgress?.(`${event.turn.runId}:${event.step.id}:${event.timestamp}`),
@@ -67,14 +68,26 @@ test('turn completion preserves the handoff and refreshes live agent status only
     const completedTurns: string[] = [];
     const handlers = createHandlers({
         invalidatedQueries,
-        onComplete: (runId) => completedTurns.push(runId),
+        onComplete: (value) => completedTurns.push(value),
     });
 
-    handlers.onTurnCompleted(turn);
+    handlers.onTurnCompleted({ hasReply: true, turn });
     await Promise.resolve();
 
-    expect(completedTurns).toEqual(['run-1']);
+    expect(completedTurns).toEqual(['run-1:true']);
     expect(invalidatedQueries).toEqual(['agent.activity']);
+});
+
+test('a silent turn completion forwards hasReply false to the timeline', async () => {
+    const completedTurns: string[] = [];
+    const handlers = createHandlers({
+        onComplete: (value) => completedTurns.push(value),
+    });
+
+    handlers.onTurnCompleted({ hasReply: false, turn });
+    await Promise.resolve();
+
+    expect(completedTurns).toEqual(['run-1:false']);
 });
 
 test('duplicate turn completion events do not refetch live status again', async () => {
@@ -82,14 +95,14 @@ test('duplicate turn completion events do not refetch live status again', async 
     const completedTurns: string[] = [];
     const handlers = createHandlers({
         invalidatedQueries,
-        onComplete: (runId) => completedTurns.push(runId),
+        onComplete: (value) => completedTurns.push(value),
     });
 
-    handlers.onTurnCompleted(turn);
-    handlers.onTurnCompleted(turn);
+    handlers.onTurnCompleted({ hasReply: true, turn });
+    handlers.onTurnCompleted({ hasReply: true, turn });
     await Promise.resolve();
 
-    expect(completedTurns).toEqual(['run-1']);
+    expect(completedTurns).toEqual(['run-1:true']);
     expect(invalidatedQueries).toEqual(['agent.activity']);
 });
 

@@ -55,6 +55,9 @@ function chatEventToRuntimeEvents(event: TavernChatEvent, db?: Database): Persis
                 {
                     cursor: Number(event.cursor),
                     event: {
+                        // A completed response with no response message is a
+                        // silent turn: no assistant reply will ever land.
+                        hasReply: Boolean(event.response.response_message_id),
                         timestamp: event.created_at,
                         turn: responseToTurn(event.response),
                         type: 'turn.completed',
@@ -209,6 +212,7 @@ function messageDeliveredToRuntimeEvents(
 
     return [
         {
+            hasReply: true,
             timestamp: event.created_at,
             turn,
             type: 'turn.completed',

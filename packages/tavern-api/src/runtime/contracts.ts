@@ -2810,6 +2810,10 @@ export const agentRuntimeTurnStatusUpdatedEventSchema = z.object({
 });
 
 export const agentRuntimeTurnCompletedEventSchema = z.object({
+    // False when the turn settled without delivering an assistant message
+    // (a sanctioned silent reply): clients must drop the turn's live reply
+    // instead of holding it for a durable-message swap that never comes.
+    hasReply: z.boolean().optional(),
     timestamp: z.string().datetime(),
     turn: agentRuntimeTurnSchema,
     type: z.literal('turn.completed'),

@@ -47,6 +47,12 @@ projection.
   id; stop and failure settle the post with the last content it showed.
 - Before a turn has content, it appears only in the status stack (`activeReplies` presentation
   state) — thinking is not a timeline unit.
+- The status stack shows one row per agent seat. A mention can queue a seat's next turn while
+  the current one finishes; the queued run inherits the seat's row instead of adding a second
+  indicator for the same agent.
+- `turn.completed` states whether the turn delivered a reply (`hasReply`). A silent completion
+  (`hasReply: false`) removes the seat's live reply immediately — no durable message will ever
+  arrive to settle it, so holding it for the in-place swap would strand the status row.
 - Two agents answering concurrently produce posts ordered by who spoke first, regardless of
   which turn started first or finished first.
 
