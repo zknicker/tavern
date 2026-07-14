@@ -117,6 +117,22 @@ const REQUIREMENTS: Array<{
         expected: 'confirm self-initiated cross-posts first',
         prompt: 'channel',
     },
+    // Agent-to-agent delivery semantics (specs/agent-mentions.md).
+    {
+        capability: 'chat_send queue-vs-steer delivery modes',
+        expected: '`mode: "steer"` folds your message into its running turn',
+        prompt: 'channel',
+    },
+    {
+        capability: 'chat_wait_idle bounded wait taught',
+        expected: "`chat_wait_idle` waits, bounded, for an agent's seat to go idle",
+        prompt: 'channel',
+    },
+    {
+        capability: 'dispatched turn outcomes arrive without polling',
+        expected: 'its outcome arrives in your next prompt',
+        prompt: 'channel',
+    },
     {
         capability: 'wiki tools taught',
         expected: 'Search it with `wiki_search`, browse it with `wiki_list`',
