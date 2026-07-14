@@ -1817,6 +1817,11 @@ export const agentRuntimeCronPayloadSchema = z.union([
         kind: z.literal('agentTurn'),
         message: z.string().trim().min(1),
     }),
+    z.object({
+        command: z.string().trim().min(1),
+        kind: z.literal('script'),
+        workingDir: z.string().trim().min(1).optional(),
+    }),
 ]);
 
 export const agentRuntimeCronScheduleSchema = z.union([
@@ -1835,11 +1840,14 @@ export const agentRuntimeCronScheduleSchema = z.union([
     }),
 ]);
 
+export const agentRuntimeCronModeSchema = z.enum(['agentTurn', 'script', 'systemEvent']);
+
 export const agentRuntimeCronSummarySchema = z.object({
     agentId: z.string().trim().min(1),
     description: z.string().nullable(),
     enabled: z.boolean(),
     id: z.string().trim().min(1),
+    mode: agentRuntimeCronModeSchema,
     name: z.string().trim().min(1),
     schedule: agentRuntimeCronScheduleSchema,
     state: agentRuntimeCronStateSchema,
@@ -1896,7 +1904,11 @@ export const agentRuntimeCronRunSchema = z.object({
     finishedAt: z.string().datetime().nullable(),
     id: z.string().trim().min(1),
     jobId: z.string().trim().min(1),
+    // Script runs only: a quiet run finished without posting into the chat.
+    quiet: z.boolean(),
     scheduledFor: z.string().datetime(),
+    scriptExitCode: z.number().int().nullable(),
+    scriptStderr: z.string().nullable(),
     startedAt: z.string().datetime().nullable(),
     status: agentRuntimeCronRunStatusSchema,
     trigger: agentRuntimeCronRunTriggerSchema,
@@ -2937,6 +2949,7 @@ export type AgentRuntimeChatReadEvent = z.infer<typeof agentRuntimeChatReadEvent
 export type AgentRuntimeCron = z.infer<typeof agentRuntimeCronSchema>;
 export type AgentRuntimeCronDeletedEvent = z.infer<typeof agentRuntimeCronDeletedEventSchema>;
 export type AgentRuntimeCronList = z.infer<typeof agentRuntimeCronListSchema>;
+export type AgentRuntimeCronMode = z.infer<typeof agentRuntimeCronModeSchema>;
 export type AgentRuntimeCronPayload = z.infer<typeof agentRuntimeCronPayloadSchema>;
 export type AgentRuntimeCronRun = z.infer<typeof agentRuntimeCronRunSchema>;
 export type AgentRuntimeCronRunFinishedEvent = z.infer<
