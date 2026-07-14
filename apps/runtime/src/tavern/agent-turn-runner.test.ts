@@ -5,7 +5,11 @@ import { ensureRuntimeSchema } from '../db/schema';
 import { saveAgentModelSelectionIntent } from '../models/selection-service';
 import type { AgentExecutorInput } from './agent-executor';
 import { ensureCurrentAgentSession, updateAgentSessionRuntimeState } from './agent-session-store';
-import { enqueueAgentTurn, setAgentExecutorForTesting, waitForAgentTurnSettlement } from './agent-turn-runner';
+import {
+    enqueueAgentTurn,
+    setAgentExecutorForTesting,
+    waitForAgentTurnSettlement,
+} from './agent-turn-runner';
 import { getStoredAgent, upsertStoredAgent } from './agents-store';
 import { createChat, createMessage, upsertResponse } from './chat-api';
 
@@ -90,7 +94,12 @@ function seedSeat() {
         kind: 'channel',
         participants: [
             { id: 'usr_tavern', kind: 'user', label: 'You', metadata: {} },
-            { id: 'agt_primary', kind: 'agent', label: 'Tavern', metadata: { agentId: 'agt_primary' } },
+            {
+                id: 'agt_primary',
+                kind: 'agent',
+                label: 'Tavern',
+                metadata: { agentId: 'agt_primary' },
+            },
         ],
     });
 
