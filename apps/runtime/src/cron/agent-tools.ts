@@ -26,7 +26,7 @@ export function createTavernCronTools(input: { agentId: string }): ToolSet {
         }),
         cron_create: tool({
             description:
-                'Create a scheduled automation that sends your message into a chat you participate in. Confirm the schedule and chat with the user before creating one.',
+                'Create a scheduled automation that delivers into a chat you participate in. Agent mode (message) sends your message and starts your turn. Script mode (script) runs a shell command in your workspace at zero model cost: non-empty stdout is delivered as the message and wakes you; empty stdout or a `{"wakeAgent": false}` line records a quiet tick and posts nothing. Prefer script mode for watchdogs. Confirm the schedule and chat with the user before creating one.',
             inputSchema: createInputSchema,
             execute: async (rawInput) => {
                 const parsed = createInputSchema.parse(rawInput);
@@ -39,7 +39,7 @@ export function createTavernCronTools(input: { agentId: string }): ToolSet {
                     enabled: parsed.enabled,
                     id: createCronJobId(),
                     name: parsed.name,
-                    payload: { kind: 'agentTurn', message: parsed.message },
+                    payload: toCronPayload(parsed),
                     schedule: parsed.schedule,
                 });
                 await reconcileActiveCronSchedules();
@@ -64,9 +64,7 @@ export function createTavernCronTools(input: { agentId: string }): ToolSet {
                         ? {}
                         : { description: parsed.description }),
                     ...(parsed.enabled === undefined ? {} : { enabled: parsed.enabled }),
-                    ...(parsed.message
-                        ? { payload: { kind: 'agentTurn', message: parsed.message } }
-                        : {}),
+                    ...(parsed.message || parsed.script ? { payload: toCronPayload(parsed) } : {}),
                     ...(parsed.name ? { name: parsed.name } : {}),
                     ...(parsed.schedule ? { schedule: parsed.schedule } : {}),
                     agentId: existing.agentId,
@@ -112,24 +110,85 @@ const scheduleSchema = z.union([
 
 const listInputSchema = z.object({}).strict();
 
+const modeFieldsSchema = z.object({
+    message: z
+        .string()
+        .trim()
+        .min(1)
+        .optional()
+        .describe('Agent mode: the message delivered to you on each run.'),
+    script: z
+        .string()
+        .trim()
+        .min(1)
+        .optional()
+        .describe(
+            'Script mode: shell command run on each tick. Print the alert to stdout only when something needs attention; print nothing (or `{"wakeAgent": false}`) for a quiet tick.'
+        ),
+    scriptWorkingDir: z
+        .string()
+        .trim()
+        .min(1)
+        .optional()
+        .describe('Script working directory; relative paths resolve under your workspace.'),
+});
+
 const createInputSchema = z
     .object({
         chatId: z.string().trim().min(1),
         deleteAfterRun: z.boolean().optional(),
         description: z.string().trim().min(1).nullable().optional(),
         enabled: z.boolean().optional(),
-        message: z.string().trim().min(1),
         name: z.string().trim().min(1),
         schedule: scheduleSchema,
+        ...modeFieldsSchema.shape,
     })
-    .strict();
+    .strict()
+    .superRefine(requireExactlyOneMode);
 
-const updateInputSchema = createInputSchema
-    .partial()
-    .extend({
+const updateInputSchema = z
+    .object({
+        chatId: z.string().trim().min(1).optional(),
+        deleteAfterRun: z.boolean().optional(),
+        description: z.string().trim().min(1).nullable().optional(),
+        enabled: z.boolean().optional(),
         jobId: z.string().trim().min(1),
+        name: z.string().trim().min(1).optional(),
+        schedule: scheduleSchema.optional(),
+        ...modeFieldsSchema.shape,
     })
-    .strict();
+    .strict()
+    .superRefine((value, ctx) => {
+        if (value.message && value.script) {
+            ctx.addIssue({
+                code: 'custom',
+                message: 'Provide either message (agent mode) or script (script mode), not both.',
+            });
+        }
+    });
+
+function requireExactlyOneMode(value: { message?: string; script?: string }, ctx: z.RefinementCtx) {
+    if (Boolean(value.message) === Boolean(value.script)) {
+        ctx.addIssue({
+            code: 'custom',
+            message: 'Provide exactly one of message (agent mode) or script (script mode).',
+        });
+    }
+}
+
+function toCronPayload(input: { message?: string; script?: string; scriptWorkingDir?: string }) {
+    if (input.script) {
+        return {
+            command: input.script,
+            kind: 'script' as const,
+            workingDir: input.scriptWorkingDir,
+        };
+    }
+    if (!input.message) {
+        throw new Error('Cron payload needs a message or script.');
+    }
+    return { kind: 'agentTurn' as const, message: input.message };
+}
 
 const deleteInputSchema = z
     .object({
@@ -157,6 +216,7 @@ function toToolSummary(job: AgentRuntimeCronSummary | AgentRuntimeCreateCron) {
         enabled: job.enabled ?? true,
         id: job.id,
         lastRunStatus: state.lastRunStatus,
+        mode: 'mode' in job ? job.mode : job.payload.kind,
         name: job.name,
         nextRunAtMs: state.nextRunAtMs,
         schedule: job.schedule,
