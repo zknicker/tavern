@@ -23,8 +23,14 @@ The artifact pane should feel like a compact assistant workspace attached to the
 - Clicking the same link focuses the existing tab.
 - Clicking a new link opens a new tab and selects it.
 - Tabs are scoped to the active chat.
-- Switching chats clears the pane.
-- The pane opens manually only. No auto-open heuristics yet.
+- The tab set is a Runtime-owned per-chat record (revision-guarded), so tabs
+  survive app reloads and reappear when a chat is reopened. Switching chats
+  switches records; nothing carries across chats.
+- Agent UI intents can open or focus a tab through the same record (see
+  `specs/agent-app-control.md`); the app applies changes live via the
+  `pane.updated` event.
+- The pane opens manually or by agent intent. No auto-open heuristics beyond
+  that.
 
 ## Renderers
 
