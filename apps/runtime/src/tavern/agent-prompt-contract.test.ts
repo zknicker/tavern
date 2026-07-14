@@ -7,6 +7,11 @@ import {
     agentRuntimeRoutes,
 } from '@tavern/api';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import {
+    clearRuntimeCronManager,
+    type RuntimeCronManager,
+    setRuntimeCronManager,
+} from '../cron/manager-state.ts';
 import { closeDb, getDb, initTestDb } from '../db/connection.ts';
 import { ensureRuntimeSchema } from '../db/schema.ts';
 import { handleTimezoneSettingsRequest } from '../timezone-settings.ts';
@@ -134,6 +139,17 @@ const REQUIREMENTS: Array<{
         expected: 'widget:html-preview — ',
         prompt: 'channel',
     },
+    // Automations: script mode exists and watchdogs should use it.
+    {
+        capability: 'script automations preferred for watchdogs',
+        expected: 'Prefer script automations for watchdogs',
+        prompt: 'channel',
+    },
+    {
+        capability: 'script quiet-tick convention taught',
+        expected: 'empty stdout records a quiet tick',
+        prompt: 'channel',
+    },
     // Web access (channel fixture opts in; dm fixture stays off, proving the
     // rules are per-agent conditional).
     {
@@ -169,12 +185,23 @@ const REQUIREMENTS: Array<{
 // Character ceilings for the deterministic fixture (default SOUL, empty core
 // memory). Raising one is a deliberate spend decision — confirm with the
 // operator, do not just bump the number.
-// Current: chat section ~1.1k chars, full fixture prompt ~12.9k chars.
+// Current: chat section ~1.1k chars, full fixture prompt ~13.8k chars.
 // 12_700 -> 12_900 (2026-07-15): the html-preview widget entry (~400 chars,
 // PRD-47) landed after the pane_open teaching consumed the prior headroom.
+// 12_900 -> 14_100 (2026-07-15): the cron-ready fixture now renders the
+// Automations section, including script-mode watchdog guidance (PRD-49).
 const promptBudgets = {
     channelChatSection: 1200,
-    channelTotal: 12_900,
+    channelTotal: 14_100,
+};
+
+// The fixture renders the cron-ready prompt so the Automations section stays
+// under contract; readiness is a live capability, not fixture-relevant state.
+const contractCronManager: RuntimeCronManager = {
+    enqueue: () => Promise.reject(new Error('Contract fixture cron manager cannot enqueue.')),
+    isHealthy: () => true,
+    reconcile: () => Promise.resolve(),
+    stop: () => Promise.resolve(),
 };
 
 describe('agent prompt contract', () => {
@@ -184,6 +211,7 @@ describe('agent prompt contract', () => {
     beforeEach(async () => {
         skillsDir = await mkdtemp(path.join(tmpdir(), 'tavern-prompt-skills-'));
         workspaceDir = await mkdtemp(path.join(tmpdir(), 'tavern-prompt-workspace-'));
+        setRuntimeCronManager(contractCronManager);
         ensureRuntimeSchema(initTestDb());
         // Pin the home timezone so snapshots never depend on the host machine.
         await handleTimezoneSettingsRequest(
@@ -200,6 +228,7 @@ describe('agent prompt contract', () => {
     });
 
     afterEach(async () => {
+        clearRuntimeCronManager(contractCronManager);
         closeDb();
         await Promise.all([
             rm(skillsDir, { force: true, recursive: true }),

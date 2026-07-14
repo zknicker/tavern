@@ -109,7 +109,9 @@ function renderAutomationsSection(input: { enabled: boolean }) {
 
     return `## Automations
 
-You can schedule recurring work and reminders with \`cron_create\`, \`cron_list\`, \`cron_update\`, and \`cron_delete\`. Automations deliver into a chat where you participate. Confirm the schedule and destination chat with the user before creating one.`;
+You can schedule recurring work and reminders with \`cron_create\`, \`cron_list\`, \`cron_update\`, and \`cron_delete\`. Automations deliver into a chat where you participate. Confirm the schedule and destination chat with the user before creating one.
+
+Automations run in two modes. Agent mode delivers your saved message and starts your turn. Script mode runs a shell command in your workspace at zero model cost: non-empty stdout is delivered as the automation message and wakes you; empty stdout records a quiet tick and posts nothing. Prefer script automations for watchdogs — recurring checks that usually find nothing, like polling a feed, port, page, or count — and print output only when something needs attention. Reserve agent mode for runs that need reasoning every time.`;
 }
 
 const skillsSection = `## Skills
