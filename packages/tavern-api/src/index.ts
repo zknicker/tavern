@@ -42,6 +42,7 @@ export * from './runtime/dev-toolkit.js';
 export * from './runtime/mcp.js';
 export * from './runtime/model-identity.js';
 export * from './runtime/model-providers.js';
+export * from './runtime/pane-links.js';
 export * from './runtime/routes.js';
 export * from './runtime/runtime-aliases.js';
 export * from './runtime/skill-hub.js';

@@ -1,44 +1,12 @@
 import type { ChatPaneTarget } from '@tavern/api';
+import { formatChatPaneTargetLink, parseChatPaneTargetLink } from '@tavern/api';
 
-// Pane targets are the Runtime contract's chat pane targets; the app-local
-// alias keeps chat feature imports stable.
+// Pane targets and the tavern:// link scheme are the Runtime contract's; the
+// app-local aliases keep chat feature imports stable.
 export type TavernResourceTarget = ChatPaneTarget;
 
-const tavernProtocol = 'tavern:';
-
-export function parseTavernResourceLink(href: string): TavernResourceTarget | null {
-    let url: URL;
-
-    if (/[\\/]\.{1,2}(?:[\\/]|$)/u.test(href)) {
-        return null;
-    }
-
-    try {
-        url = new URL(href);
-    } catch {
-        return null;
-    }
-
-    if (url.protocol !== tavernProtocol || url.search || url.hash) {
-        return null;
-    }
-
-    const path = parseResourcePath(url.pathname);
-    if (path === null) {
-        return null;
-    }
-
-    switch (url.hostname) {
-        case 'wiki':
-            return path ? { kind: 'wikiPage', path } : { kind: 'wikiDirectory', path: '' };
-        case 'workspace':
-            return path
-                ? { kind: 'workspaceFile', path }
-                : { kind: 'workspaceDirectory', path: '' };
-        default:
-            return null;
-    }
-}
+export const parseTavernResourceLink = parseChatPaneTargetLink;
+export const formatTavernResourceLink = formatChatPaneTargetLink;
 
 export function getArtifactPanelTargetKey(target: TavernResourceTarget) {
     return `${target.kind}:${target.path}`;
@@ -61,41 +29,4 @@ export function getArtifactPanelTargetLabel(target: TavernResourceTarget) {
 
     const label = target.path.split('/').filter(Boolean).at(-1);
     return label && label.length > 0 ? label : target.path;
-}
-
-export function formatTavernResourceLink(target: TavernResourceTarget) {
-    const host =
-        target.kind === 'wikiPage' || target.kind === 'wikiDirectory' ? 'wiki' : 'workspace';
-    const path = target.path
-        .split('/')
-        .filter(Boolean)
-        .map((segment) => encodeURIComponent(segment))
-        .join('/');
-
-    return `tavern://${host}/${path}`;
-}
-
-function parseResourcePath(pathname: string) {
-    if (!pathname.startsWith('/') || pathname.startsWith('//')) {
-        return null;
-    }
-
-    let path: string;
-
-    try {
-        path = decodeURIComponent(pathname.slice(1));
-    } catch {
-        return null;
-    }
-
-    if (
-        path.startsWith('/') ||
-        path.startsWith('\\') ||
-        (path.length > 0 &&
-            path.split('/').some((segment) => segment === '..' || segment.length === 0))
-    ) {
-        return null;
-    }
-
-    return path;
 }
