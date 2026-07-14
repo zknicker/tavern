@@ -42,6 +42,8 @@ export function buildTranscriptRenderRows(entries: TranscriptEntry[], hiddenCoun
     const pendingSessionNotices: SessionNoticeRow[] = [];
 
     entries.forEach((entry, index) => {
+        // A new-session notice is intercepted before any render check: it
+        // never becomes its own row, it rides along with the turn it opened.
         const sessionNoticeRow = getSessionNoticeRow(entry);
 
         if (sessionNoticeRow) {
@@ -49,13 +51,18 @@ export function buildTranscriptRenderRows(entries: TranscriptEntry[], hiddenCoun
             return;
         }
 
+        // Day dividers key off rendered rows only — a divider with nothing
+        // below it is noise, so hidden entries never open a new day (and a
+        // hidden turn never claims a pending session notice either).
+        if (!shouldRenderTranscriptEntry(entry)) {
+            return;
+        }
+
         const previousEntry = index > 0 ? entries[index - 1] : null;
         const timestamp = entry.timestamp;
         const dayKey = getDayKey(timestamp);
-        const showDayDivider = dayKey !== null && dayKey !== previousDayKey;
-        const turnStartedAt = getAgentTurnStartedAt(previousEntry, entry);
 
-        if (showDayDivider && timestamp) {
+        if (timestamp && dayKey !== null && dayKey !== previousDayKey) {
             rows.push({
                 id: `day:${dayKey}`,
                 kind: 'dayDivider',
@@ -63,16 +70,14 @@ export function buildTranscriptRenderRows(entries: TranscriptEntry[], hiddenCoun
             });
         }
 
-        if (shouldRenderTranscriptEntry(entry)) {
-            rows.push({
-                entry,
-                followsRuntimeNotice: isRuntimeNoticeEntry(previousEntry),
-                id: entry.id,
-                kind: 'entry',
-                sessionNotice: takeSessionNoticeForEntry(pendingSessionNotices, entry),
-                turnStartedAt,
-            });
-        }
+        rows.push({
+            entry,
+            followsRuntimeNotice: isRuntimeNoticeEntry(previousEntry),
+            id: entry.id,
+            kind: 'entry',
+            sessionNotice: takeSessionNoticeForEntry(pendingSessionNotices, entry),
+            turnStartedAt: getAgentTurnStartedAt(previousEntry, entry),
+        });
 
         if (dayKey !== null) {
             previousDayKey = dayKey;
