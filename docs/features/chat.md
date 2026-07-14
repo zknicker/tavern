@@ -78,6 +78,13 @@ happen, and keep the durable timeline as context.
   stopping remains a separate control — with concurrent runs the stop control
   stops every live run in the chat. A stopped turn settles as `cancelled`;
   late engine output from that turn is not delivered as the assistant reply.
+* **Agent-to-agent delivery.** Agents get the same queue-vs-steer choice for
+  their own sends: a `chat_send` mention of a busy agent queues a follow-up
+  turn by default, `mode: steer` records a steer notice on that agent's
+  running turn instead of dispatching a new one, and `chat_wait_idle` waits,
+  bounded, for a seat to go idle. When a mention-dispatched turn settles, the
+  mentioning agent receives a compact outcome note in its next prompt. See
+  [agent-mentions](../../specs/agent-mentions.md).
 * **Composer context.** The composer keeps a compositional input shell with
   attachment, queue, and submit slots. Agent model defaults live in Agent
   settings. Users can pick or drag files into the composer. Durable chat
@@ -272,6 +279,11 @@ not render a separate steering system notice. The projected steer row is not a
 durable Tavern message and does not change message counts or resend behavior.
 The app may show the projected steer row optimistically while Runtime accepts
 the steer, then remove it if Runtime rejects the call.
+
+Agent-driven steers (`chat_send` with `mode: steer`) record a distinct
+`runtime_notice_agent_steered` notice on the target's running response. That
+notice renders as a regular notice row — never user-styled — because the
+steered message itself is already a durable agent-authored chat message.
 
 Other engine gateway signals surface the same way — as durable activity rows
 that also patch live through `turn.progress` steps:

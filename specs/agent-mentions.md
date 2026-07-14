@@ -4,6 +4,7 @@ read_when:
   - changing agent-to-agent mention dispatch, chain limits, or handoff behavior
   - changing how assistant replies trigger other agents' turns
   - changing mention parsing for agent-authored messages
+  - changing chat_send delivery modes, chat_wait_idle, or dispatched turn outcome notes
 ---
 
 # Agent-Authored Mentions
@@ -68,6 +69,48 @@ Existing invariants that also contain chains:
 - A seat serializes its own turns; mention turns queue like any other.
 - `NO_REPLY` breaks a chain by delivering nothing.
 - Turn timeout and per-seat queueing bound concurrent execution.
+
+## Delivery modes and orchestration
+
+Agent-to-agent sends get the same delivery choice users have at a busy seat.
+
+- `chat_send` takes `mode: queue | steer` (default `queue`) for mentioned
+  agents of the target chat.
+- **Queue** is the dispatch path above, guaranteed by contract: the mention
+  dispatches when the posting turn completes, and the target seat's turn
+  serialization runs it after any current turn ends. Nothing is lost to
+  dispatch timing.
+- **Steer** resolves at send time: each mentioned agent with a *running* turn
+  in the target chat gets a steer notice on that running response — the same
+  evidence path user steering writes — the delivered message is marked for
+  those seats, and mention dispatch skips them: the message belongs to the
+  peer's current turn, not a new one. Mentioned agents idle at send time fall
+  back to queue. Steered mentions dispatch nothing, so they spend no chain
+  depth or budget.
+- The engine cannot yet inject text into a live model turn, so a steer's text
+  reaches the peer as durable chat context (next prompt's channel catch-up)
+  plus the steer notice evidence; it does not interrupt the model
+  mid-inference. Both steering entrances write through `turn-steering.ts`, so
+  real mid-turn injection lands in one seam when the engine exposes it.
+
+### Waiting for idle
+
+`chat_wait_idle` blocks, bounded (default 20s, max 55s per call, kept under
+the engine's per-tool-call ceiling), until an agent's seat in a chat has no
+running or queued turn; callers repeat the call for longer waits. Waiting
+dispatches nothing and spends no chain depth or budget — it only spends the
+caller's own turn time, which the turn watchdog already bounds. Each wait
+records a notice activity on the caller's response.
+
+### Turn outcomes
+
+Every mention-dispatched turn carries `dispatchedBy`: the mentioning agent's
+seat. When the dispatched turn settles, Runtime records one compact outcome
+note — completed with the reply message id, completed silently (`NO_REPLY`),
+failed with the error, or stopped — and delivers it in the mentioning seat's
+next prompt, marked consumed on delivery. Restart recovery fails in-flight
+turns and still emits their notes. Orchestrators read outcomes from the
+prompt instead of polling transcripts.
 
 ## Prior art
 
