@@ -31,6 +31,9 @@ const imageExtensions = new Set(['.bmp', '.gif', '.jpeg', '.jpg', '.png', '.svg'
 const dataUrlReadMaxBytes = 16 * 1024 * 1024;
 const textSourceMaxBytes = 64 * 1024 * 1024;
 const textPreviewMaxBytes = 512 * 1024;
+// HTML previews render whole documents in sandboxed iframes (artifact pane and
+// the html-preview widget), so they get a larger complete-read window.
+const htmlPreviewMaxBytes = 5 * 1024 * 1024;
 
 const languageByExtension: Record<string, string> = {
     '.c': 'c',
@@ -180,9 +183,10 @@ export async function readWorkspaceFile(
         throw new Error('Workspace file is too large to preview.');
     }
 
+    const previewMaxBytes = mediaType === 'text/html' ? htmlPreviewMaxBytes : textPreviewMaxBytes;
     const handle = await fs.open(absolutePath, 'r');
     try {
-        const bytesToRead = Math.min(stat.size, textPreviewMaxBytes);
+        const bytesToRead = Math.min(stat.size, previewMaxBytes);
         const buffer = Buffer.alloc(bytesToRead);
         const { bytesRead } = await handle.read(buffer, 0, bytesToRead, 0);
         const data = buffer.subarray(0, bytesRead);
@@ -194,7 +198,7 @@ export async function readWorkspaceFile(
             mediaType,
             path: relativePath,
             sizeBytes: stat.size,
-            truncated: stat.size > textPreviewMaxBytes,
+            truncated: stat.size > previewMaxBytes,
             updatedAt,
             workspaceRoot: root,
         };

@@ -83,6 +83,26 @@ describe('workspace files', () => {
         });
     });
 
+    test('reads html completely past the text preview window, capped at 5 MiB', async () => {
+        const largeHtml = `<html><body>${'x'.repeat(700 * 1024)}</body></html>`;
+        await writeFile(path.join(workspaceDir, 'large.html'), largeHtml);
+        await writeFile(path.join(workspaceDir, 'large.txt'), 'y'.repeat(700 * 1024));
+        await writeFile(
+            path.join(workspaceDir, 'huge.html'),
+            `<html>${'z'.repeat(6 * 1024 * 1024)}`
+        );
+
+        await expect(
+            readWorkspaceFile(getDb(), { agentId: 'planner', path: 'large.html' })
+        ).resolves.toMatchObject({ content: largeHtml, truncated: false });
+        await expect(
+            readWorkspaceFile(getDb(), { agentId: 'planner', path: 'large.txt' })
+        ).resolves.toMatchObject({ truncated: true });
+        await expect(
+            readWorkspaceFile(getDb(), { agentId: 'planner', path: 'huge.html' })
+        ).resolves.toMatchObject({ truncated: true });
+    });
+
     test('rejects traversal, symlinks, and sensitive files', async () => {
         await mkdir(path.join(workspaceDir, '.home', '.codex'), { recursive: true });
         await mkdir(path.join(workspaceDir, 'codex-ags_cht_general_agt_primary_1'));
