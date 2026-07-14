@@ -1,18 +1,35 @@
 import { Tabs as TabsPrimitive } from '@base-ui/react/tabs';
-import { Cancel01Icon, File01Icon } from '@hugeicons-pro/core-stroke-rounded';
+import {
+    Cancel01Icon,
+    Copy01Icon,
+    File01Icon,
+    MoreHorizontalIcon,
+} from '@hugeicons-pro/core-stroke-rounded';
+import { useNavigate } from 'react-router-dom';
 import { CloseableTab } from '../../components/ui/closeable-tab.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
+import {
+    Menu,
+    MenuItem,
+    MenuPopup,
+    MenuSeparator,
+    MenuTrigger,
+} from '../../components/ui/menu.tsx';
 import { Button } from '../../components/ui/primitives/button.tsx';
 import { ScrollArea } from '../../components/ui/scroll-area.tsx';
+import { appRoutes } from '../../lib/app-routes.ts';
 import { cn } from '../../lib/utils.ts';
-import { ArtifactPanelPathBar } from './chat-artifact-panel-path-bar.tsx';
 import { ArtifactPanelSourceMenu } from './chat-artifact-panel-source-menu.tsx';
 import {
+    formatTavernResourceLink,
     getArtifactPanelTargetKey,
     getArtifactPanelTargetLabel,
     type TavernResourceTarget,
 } from './tavern-resource-link.ts';
 
+// One chrome row: tabs, the active target's options, add, hide. The pane
+// intentionally has no second path/toolbar row — target navigation lives in
+// the content browsers themselves.
 export function ArtifactPanelChrome({
     activeKey,
     activeTarget,
@@ -55,6 +72,7 @@ export function ArtifactPanelChrome({
                     </ScrollArea>
                     <ArtifactPanelSourceMenu agentId={agentId} onOpenTarget={onOpenTarget} />
                 </div>
+                {activeTarget ? <ArtifactOptionsMenu target={activeTarget} /> : null}
                 <Button
                     aria-label="Hide artifacts"
                     className="text-muted-foreground hover:text-foreground"
@@ -66,10 +84,38 @@ export function ArtifactPanelChrome({
                     <Icon className="size-3.5" icon={Cancel01Icon} />
                 </Button>
             </div>
-            {activeTarget ? (
-                <ArtifactPanelPathBar onOpenTarget={onOpenTarget} target={activeTarget} />
-            ) : null}
         </div>
+    );
+}
+
+function ArtifactOptionsMenu({ target }: { target: TavernResourceTarget }) {
+    const navigate = useNavigate();
+    const openHref = getArtifactPanelOpenHref(target);
+
+    return (
+        <Menu>
+            <MenuTrigger
+                aria-label="Artifact options"
+                className="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted/45 hover:text-foreground"
+            >
+                <Icon className="size-3.5" icon={MoreHorizontalIcon} />
+            </MenuTrigger>
+            <MenuPopup align="end" className="w-44">
+                <MenuItem
+                    disabled={openHref === null}
+                    onClick={() => openHref && navigate(openHref)}
+                >
+                    <Icon icon={File01Icon} />
+                    Open source
+                </MenuItem>
+                <MenuItem onClick={() => void copyArtifactText(formatTavernResourceLink(target))}>
+                    <Icon icon={Copy01Icon} />
+                    Copy link
+                </MenuItem>
+                <MenuSeparator />
+                <MenuItem onClick={() => void copyArtifactText(target.path)}>Copy path</MenuItem>
+            </MenuPopup>
+        </Menu>
     );
 }
 
@@ -107,4 +153,37 @@ function ArtifactPanelTab({
             </TabsPrimitive.Tab>
         </CloseableTab>
     );
+}
+
+function getArtifactPanelOpenHref(target: TavernResourceTarget) {
+    if (target.kind === 'wikiPage' || target.kind === 'wikiDirectory') {
+        return `${appRoutes.wiki}?path=${encodeURIComponent(target.path)}`;
+    }
+
+    return null;
+}
+
+async function copyArtifactText(value: string) {
+    if (navigator.clipboard) {
+        try {
+            await navigator.clipboard.writeText(value);
+            return;
+        } catch {
+            // Fall through to the textarea copy path for stricter webviews.
+        }
+    }
+
+    const textarea = document.createElement('textarea');
+    textarea.value = value;
+    textarea.setAttribute('readonly', '');
+    textarea.style.position = 'fixed';
+    textarea.style.top = '-9999px';
+    document.body.append(textarea);
+    textarea.select();
+
+    try {
+        document.execCommand('copy');
+    } finally {
+        textarea.remove();
+    }
 }
