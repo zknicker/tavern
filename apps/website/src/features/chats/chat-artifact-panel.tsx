@@ -4,7 +4,7 @@ import * as React from 'react';
 import { Icon } from '../../components/ui/icon.tsx';
 import { ResizablePaneRail } from '../../components/ui/resizable-pane-rail.tsx';
 import { ScrollArea } from '../../components/ui/scroll-area.tsx';
-import { TabPanel, Tabs } from '../../components/ui/tabs.tsx';
+import { Tabs } from '../../components/ui/tabs.tsx';
 import {
     artifactPaneWidthLimits,
     useArtifactPaneWidth,
@@ -66,54 +66,72 @@ export function ChatArtifactPanel({
                         side="left"
                         width={artifactPaneWidth.width}
                     />
-                    <div
-                        className="flex h-full min-h-0 flex-col"
-                        style={{ width: artifactPaneWidth.width }}
-                    >
-                        <Tabs
-                            className="flex min-h-0 flex-1 flex-col"
-                            onValueChange={state.setActiveKey}
-                            value={state.activeKey ?? undefined}
-                        >
-                            {chromeHidden ? null : (
-                                <div className="shrink-0 border-border/70 border-b">
-                                    <ArtifactPanelChrome
-                                        activeKey={state.activeKey}
-                                        activeTarget={state.targets.find(
-                                            (target) =>
-                                                getArtifactPanelTargetKey(target) ===
-                                                state.activeKey
-                                        )}
-                                        agentId={agentId}
-                                        onClose={state.toggleVisible}
-                                        onCloseTarget={state.closeTarget}
-                                        onOpenTarget={state.open}
-                                        targets={state.targets}
-                                    />
-                                </div>
-                            )}
-                            <div className="min-h-0 flex-1">
-                                {state.targets.length === 0 ? (
-                                    <ArtifactPanelEmpty
-                                        detail="Open a workspace file or Wiki page from the + menu, or click a linked output in chat."
-                                        title="No artifacts open"
-                                    />
-                                ) : null}
-                                {state.targets.map((target) => (
-                                    <TabPanel
-                                        className="h-full min-h-0"
-                                        key={getArtifactPanelTargetKey(target)}
-                                        value={getArtifactPanelTargetKey(target)}
-                                    >
-                                        <ArtifactPanelContent agentId={agentId} target={target} />
-                                    </TabPanel>
-                                ))}
-                            </div>
-                        </Tabs>
-                    </div>
+                    <ArtifactPanelBody
+                        agentId={agentId}
+                        chromeHidden={chromeHidden}
+                        state={state}
+                        width={artifactPaneWidth.width}
+                    />
                 </motion.aside>
             ) : null}
         </AnimatePresence>
+    );
+}
+
+// The pane renders only the active target's content; tab selection is
+// controlled state, not Base UI panel matching, because in the tabs layout
+// the tab triggers live in the shell toolbar's own Tabs root.
+function ArtifactPanelBody({
+    agentId,
+    chromeHidden,
+    state,
+    width,
+}: {
+    agentId: string;
+    chromeHidden: boolean;
+    state: ChatArtifactPanelState;
+    width: number;
+}) {
+    const activeTarget = state.targets.find(
+        (target) => getArtifactPanelTargetKey(target) === state.activeKey
+    );
+
+    return (
+        <div className="flex h-full min-h-0 flex-col" style={{ width }}>
+            {chromeHidden ? null : (
+                <div className="shrink-0 border-border/70 border-b">
+                    <Tabs
+                        className="flex items-center"
+                        onValueChange={state.setActiveKey}
+                        value={state.activeKey ?? undefined}
+                    >
+                        <ArtifactPanelChrome
+                            activeKey={state.activeKey}
+                            activeTarget={activeTarget}
+                            agentId={agentId}
+                            onClose={state.toggleVisible}
+                            onCloseTarget={state.closeTarget}
+                            onOpenTarget={state.open}
+                            targets={state.targets}
+                        />
+                    </Tabs>
+                </div>
+            )}
+            <div className="min-h-0 flex-1">
+                {activeTarget ? (
+                    <ArtifactPanelContent
+                        agentId={agentId}
+                        key={state.activeKey}
+                        target={activeTarget}
+                    />
+                ) : (
+                    <ArtifactPanelEmpty
+                        detail="Open a workspace file or Wiki page from the + menu, or click a linked output in chat."
+                        title="No artifacts open"
+                    />
+                )}
+            </div>
+        </div>
     );
 }
 
