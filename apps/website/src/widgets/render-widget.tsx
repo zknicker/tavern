@@ -15,12 +15,13 @@ import type { ChatLogOutput } from '../lib/trpc.tsx';
 import { cn } from '../lib/utils.ts';
 import { WidgetCalendarDay, WidgetCalendarEvent } from './calendar.tsx';
 import { WidgetBarChart, WidgetComposedChart, WidgetLineChart } from './charts.tsx';
+import { WidgetHtmlPreview } from './html-preview.tsx';
 import { WidgetMerchBaseSalesChart } from './merchbase-sales-chart.tsx';
 
 type WidgetRow = Extract<NonNullable<ChatLogOutput>['rows'][number], { kind: 'widget' }>;
 
 export function AgentWidget({ row }: { row: WidgetRow }) {
-    const rendered = renderWidget(row.widget);
+    const rendered = renderWidget(row);
 
     if (!rendered) {
         return (
@@ -34,7 +35,9 @@ export function AgentWidget({ row }: { row: WidgetRow }) {
     return rendered;
 }
 
-function renderWidget(widget: WidgetRow['widget']) {
+function renderWidget(row: WidgetRow) {
+    const widget = row.widget;
+
     if (widget.validationError || widget.target !== 'chat.inline') {
         return null;
     }
@@ -50,10 +53,18 @@ function renderWidget(widget: WidgetRow['widget']) {
         return null;
     }
 
-    return <div className="flex max-w-[46rem] flex-col gap-3">{widgetElement(parsed.data)}</div>;
+    // The sending agent's identity scopes workspace-backed widgets to that
+    // agent's confined workspace reads.
+    const agentId = row.actor?.kind === 'agent' ? row.actor.id : null;
+
+    return (
+        <div className="flex max-w-[46rem] flex-col gap-3">
+            {widgetElement(parsed.data, agentId)}
+        </div>
+    );
 }
 
-function widgetElement(input: WidgetRenderInput) {
+function widgetElement(input: WidgetRenderInput, agentId: string | null) {
     switch (input.component) {
         case 'tavern.widget.table':
             return <WidgetTable props={input.props} />;
@@ -67,6 +78,8 @@ function widgetElement(input: WidgetRenderInput) {
             return <WidgetCalendarEvent props={input.props} />;
         case 'tavern.widget.calendar-day':
             return <WidgetCalendarDay props={input.props} />;
+        case 'tavern.widget.html-preview':
+            return <WidgetHtmlPreview agentId={agentId} props={input.props} />;
         case 'tavern.widget.merchbase-sales-chart':
             return <WidgetMerchBaseSalesChart props={input.props} />;
         default:
