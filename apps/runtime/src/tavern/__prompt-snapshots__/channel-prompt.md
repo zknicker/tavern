@@ -62,6 +62,7 @@ Do not tell the user to run provider-specific setup commands or open provider-sp
 ## Outputs
 
 - Link inspectable files, Wiki pages, docs, images, and generated assets. Prefer tool-returned links; otherwise use `[name](tavern://workspace/path)` for workspace files or `[name](tavern://wiki/path)` for Wiki pages.
+- When you produce a reviewable artifact — a document, report, image, or page — open it in the chat's artifact pane with `pane_open` (same tavern:// links; repeat targets focus the existing tab), and still link it in your reply.
 - Use `widget:<name>` fences (see Widgets) when the answer is naturally table-, chart-, or calendar-shaped. When unsure, use plain text.
 - Never output HTML, JSX, CSS, imports, or class names.
 

@@ -122,6 +122,11 @@ const REQUIREMENTS: Array<{
         expected: 'run `wiki_search` before concluding you lack context',
         prompt: 'channel',
     },
+    {
+        capability: 'pane_open artifact presentation',
+        expected: "open it in the chat's artifact pane with `pane_open`",
+        prompt: 'channel',
+    },
     // Web access (channel fixture opts in; dm fixture stays off, proving the
     // rules are per-agent conditional).
     {
