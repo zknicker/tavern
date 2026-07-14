@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.4.46 - 2026-07-13
+
+- Runtime: the Browser tool executes agent-browser's native binary directly so
+  browser commands work in the packaged Runtime, and the Homebrew formula now
+  installs the bundled agent-browser package.
+- Runtime: adds subscription-billed image generation via the codex OAuth
+  profile.
+
 ## v1.4.45 - 2026-07-13
 
 - Runtime/API/App: adds the built-in Browser Plugin — Runtime supervises a
