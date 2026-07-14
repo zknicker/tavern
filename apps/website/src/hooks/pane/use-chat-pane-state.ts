@@ -66,9 +66,16 @@ export function useChatArtifactPanelState(chatId: string): ChatArtifactPanelStat
 
     const open = React.useCallback(
         (target: TavernResourceTarget) => {
-            const { targets } = readTargets();
+            const { activeKey, targets } = readTargets();
             setPaneVisibilityOverride(chatId, true);
-            apply(mergeChatPaneOpenTarget(targets, target));
+            const merged = mergeChatPaneOpenTarget(targets, target);
+            // Already open and focused: writing anyway would drift the
+            // optimistic revision ahead of the server and echo through the
+            // pane.updated invalidation loop.
+            if (merged.targets === targets && merged.activeKey === activeKey) {
+                return;
+            }
+            apply(merged);
         },
         [apply, chatId, readTargets]
     );

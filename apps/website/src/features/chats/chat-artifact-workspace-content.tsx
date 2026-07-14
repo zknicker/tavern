@@ -234,6 +234,7 @@ function WorkspaceFileTree({
         entriesByTreePath,
         onSelectDirectory,
         onSelectFile,
+        selectedPath,
     });
     const selectedTreePath = selectedPath ? toTreeFilePath(selectedPath) : undefined;
     const { model } = useFileTree({
@@ -255,7 +256,9 @@ function WorkspaceFileTree({
             }
 
             const entry = current.entriesByTreePath.get(nextPath);
-            if (entry?.kind === 'file') {
+            // The model emits for programmatic syncs too; re-reporting the
+            // already-selected file would echo back into the pane record.
+            if (entry?.kind === 'file' && entry.path !== current.selectedPath) {
                 current.onSelectFile(entry.path);
             }
         },
@@ -264,8 +267,15 @@ function WorkspaceFileTree({
         unsafeCSS: treeUnsafeCss,
     });
 
+    // resetPaths is a whole-tree rebuild (expansion resets), so gate it on
+    // path CONTENT — refetches hand us new arrays with identical paths.
+    const appliedTreeSignatureRef = React.useRef<string | null>(null);
     React.useEffect(() => {
-        model.resetPaths(treePaths);
+        const signature = treePaths.join('\n');
+        if (appliedTreeSignatureRef.current !== signature) {
+            appliedTreeSignatureRef.current = signature;
+            model.resetPaths(treePaths);
+        }
         syncTreeSelection(model, selectedPath);
     }, [model, selectedPath, treePaths]);
 
