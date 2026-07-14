@@ -10,6 +10,7 @@ import {
     selfMessagesDemo,
 } from './development-chat-demo-basic-definitions';
 import { chartDemo } from './development-chat-demo-composed-chart-definition';
+import { htmlPreviewDemo } from './development-chat-demo-html-preview-definition';
 import { teamDemo } from './development-chat-demo-team-definition';
 import { toolHeadersDemo } from './development-chat-demo-tool-header-definitions';
 import { turnTimelineDemo } from './development-chat-demo-turn-timeline-definition';
@@ -25,6 +26,7 @@ export const developmentChatDemos: DevelopmentChatDemo[] = [
         chartDemo(),
         merchbaseSalesChartDemo(),
         widgetTableDemo(),
+        htmlPreviewDemo(),
         calendarDayDemo(),
         calendarEventDemo(),
         artifactLinksDemo(),

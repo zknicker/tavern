@@ -12,6 +12,7 @@ export const developmentChatDemoIds = {
     calendarEvent: developmentChatDemoId,
     charts: developmentChatDemoId,
     composedChart: developmentChatDemoId,
+    htmlPreview: developmentChatDemoId,
     lineChart: developmentChatDemoId,
     longContent: developmentChatDemoId,
     merchbaseSalesChart: developmentChatDemoId,

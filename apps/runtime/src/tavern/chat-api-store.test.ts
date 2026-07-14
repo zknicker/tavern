@@ -123,9 +123,9 @@ describe('Tavern Runtime Chat API store', () => {
         });
 
         const demoMessages = listMessages(developmentChatDemoIds.demo).messages;
-        expect(demoMessages).toHaveLength(41);
+        expect(demoMessages).toHaveLength(43);
         expect(demoMessages.slice(0, -1).map((message) => message.role)).toEqual(
-            Array.from({ length: 40 }, (_, index) => (index % 2 === 0 ? 'user' : 'assistant'))
+            Array.from({ length: 42 }, (_, index) => (index % 2 === 0 ? 'user' : 'assistant'))
         );
         expect(demoMessages.at(-1)).toMatchObject({
             id: 'msg_demo_streaming_stack_request',
@@ -137,7 +137,7 @@ describe('Tavern Runtime Chat API store', () => {
             'msg_demo_merchbase_sales_chart_request',
             'msg_demo_merchbase_sales_chart_response',
         ]);
-        expect(listResponses(developmentChatDemoIds.demo).responses).toHaveLength(21);
+        expect(listResponses(developmentChatDemoIds.demo).responses).toHaveLength(22);
         expect(
             listResponses(developmentChatDemoIds.demo).responses.find(
                 (response) => response.id === 'rsp_demo_charts'
