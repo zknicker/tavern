@@ -52,6 +52,7 @@ import {
     upsertResponseActivity,
 } from './chat-api/index.ts';
 import { createTavernChatTools } from './chat-context-tools.ts';
+import { createTavernChatWaitTools } from './chat-wait-idle-tool.ts';
 import { withRuntimeBridgeBootstrap } from './harness-bridge-bootstrap.ts';
 import { harnessPrompt, promptCursorSequence } from './harness-prompt.ts';
 import {
@@ -365,6 +366,11 @@ function createHarnessAgent(
             chatId: input.chatId,
         }),
         ...createTavernChatActionTools({
+            agentId: input.agent.id,
+            chatId: input.chatId,
+            runId: input.runId,
+        }),
+        ...createTavernChatWaitTools({
             agentId: input.agent.id,
             chatId: input.chatId,
             runId: input.runId,
