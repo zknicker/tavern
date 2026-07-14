@@ -57,6 +57,18 @@ stored in the envelope plus the activity `summary`/`detail`.
   `rows: [["California", "39,538,223"]]`.
 - `bar-chart`, `line-chart`, `composed-chart`: chart displays with typed props.
 - `calendar-event`, `calendar-day`: calendar displays with typed props.
+- `html-preview`: sandboxed inline preview of an agent-authored workspace HTML
+  file — the escape valve for custom visuals the closed catalog does not cover.
+  Props are `{ path, height?, title? }`; the path must be workspace-relative
+  with confined segments and an `.html`/`.htm` extension, and the height is
+  clamped to 120–1200px (default 480). The Website fetches the file through the
+  same confined Runtime workspace read the artifact pane uses (realpath
+  confinement to the sending agent's workspace, secret-file blocks, complete
+  reads up to 5 MiB) and renders it in an opaque-origin iframe (`srcDoc`,
+  scripts allowed, never `allow-same-origin`). The file must be self-contained:
+  inline CSS/JS only, no sibling or external asset references. Rendering is
+  live — the widget shows the file's current content at render time, not a
+  snapshot, so later edits or deletion change what historical chats display.
 - `merchbase-sales-chart`: Plugin-backed sales trend display. Fetches live
   MerchBase data, renders sales as bars and royalties as a line, and includes a
   date range selector. Current-day sales requests default to a 10-day trend
