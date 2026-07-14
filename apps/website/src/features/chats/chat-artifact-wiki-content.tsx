@@ -62,7 +62,7 @@ export function WikiBrowserContent({
                         className="w-full"
                         onChange={(event) => setQuery(event.currentTarget.value)}
                         placeholder="Search pages"
-                        size="default"
+                        size="sm"
                         value={query}
                     />
                 </div>

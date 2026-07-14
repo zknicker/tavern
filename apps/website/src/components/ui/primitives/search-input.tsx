@@ -14,10 +14,21 @@ export function SearchInput({
     size = 'lg',
     ...props
 }: SearchInputProps): React.ReactElement {
+    const compact = size === 'sm';
+
     return (
-        <div className={cn('relative select-text [&_[data-slot=input]]:ps-10', className)}>
+        <div
+            className={cn(
+                'relative select-text',
+                compact ? '[&_[data-slot=input]]:ps-8' : '[&_[data-slot=input]]:ps-10',
+                className
+            )}
+        >
             <Icon
-                className="pointer-events-none absolute start-3.5 top-1/2 z-10 size-4 -translate-y-1/2 text-muted-foreground/85"
+                className={cn(
+                    'pointer-events-none absolute top-1/2 z-10 -translate-y-1/2 text-muted-foreground/85',
+                    compact ? 'start-2.5 size-3.5' : 'start-3.5 size-4'
+                )}
                 icon={Search}
             />
             <Input placeholder={placeholder} size={size} type="search" {...props} />

@@ -173,7 +173,7 @@ export function WorkspaceBrowserContent({
                         className="w-full min-w-0"
                         onChange={(event) => setQuery(event.currentTarget.value)}
                         placeholder="Search files"
-                        size="default"
+                        size="sm"
                         value={query}
                     />
                 </SidebarHeader>
