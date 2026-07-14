@@ -129,6 +129,7 @@ export function buildCronList(
             lastErrorMessage: formatCronErrorMessage(job.state.lastErrorMessage),
             lastErrorRaw: job.state.lastErrorMessage ?? null,
             lastRun: formatRelativeTime(lastRunAt, now),
+            mode: job.mode,
             nextRun: formatTimestamp(getNextRunAt(job)),
             name: job.name,
             schedule: formatCronSchedule(job.schedule, true),

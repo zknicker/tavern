@@ -8,13 +8,14 @@ import {
 } from '../../components/ui/drawer.tsx';
 import type { CronRunsOutput } from '../../lib/trpc.tsx';
 import { cn } from '../../lib/utils.ts';
-import { CronRunFacts } from './cron-run-detail-sections.tsx';
+import { CronRunFacts, CronRunScriptStderr } from './cron-run-detail-sections.tsx';
 import {
     formatCronRunDetail,
     formatCronRunFinishedLabel,
-    formatCronRunStatus,
+    formatCronRunOutcome,
     formatCronRunTime,
-    getCronRunStatusDotClassName,
+    getCronRunDotClassName,
+    isQuietCronRun,
 } from './cron-run-view-data.ts';
 
 type CronRun = CronRunsOutput['runs'][number];
@@ -48,6 +49,7 @@ export function CronRunDetailDrawer({
                     </DrawerHeader>
                     <DrawerPanel className="space-y-4">
                         <RunOutcome run={run} />
+                        <CronRunScriptStderr run={run} />
                         <CronRunFacts
                             deliveryDestinationLabel={deliveryDestinationLabel}
                             run={run}
@@ -74,14 +76,9 @@ function RunOutcome({ run }: { run: CronRun }) {
             <div className="flex min-w-0 items-center gap-2 text-sm">
                 <span
                     aria-hidden
-                    className={cn(
-                        'size-2 shrink-0 rounded-full',
-                        getCronRunStatusDotClassName(run.status)
-                    )}
+                    className={cn('size-2 shrink-0 rounded-full', getCronRunDotClassName(run))}
                 />
-                <p className="truncate font-medium text-foreground">
-                    {formatCronRunStatus(run.status)}
-                </p>
+                <p className="truncate font-medium text-foreground">{formatCronRunOutcome(run)}</p>
                 <span aria-hidden className="shrink-0 text-muted-foreground/60">
                     ·
                 </span>
@@ -137,6 +134,10 @@ function RunOutcomeMessage({
 function getRunStatusMessage(run: CronRun) {
     if (run.status === 'queued' || run.status === 'running') {
         return 'Run output has not finished yet.';
+    }
+
+    if (isQuietCronRun(run)) {
+        return 'Quiet tick — the script found nothing to report, so nothing was posted.';
     }
 
     return formatCronRunFinishedLabel(run);

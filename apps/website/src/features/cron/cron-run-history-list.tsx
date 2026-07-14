@@ -4,9 +4,9 @@ import type { CronRunsOutput } from '../../lib/trpc.tsx';
 import { cn } from '../../lib/utils.ts';
 import {
     formatCronRunDetail,
-    formatCronRunStatus,
+    formatCronRunOutcome,
     formatCronRunTime,
-    getCronRunStatusDotClassName,
+    getCronRunDotClassName,
 } from './cron-run-view-data.ts';
 
 type CronRun = CronRunsOutput['runs'][number];
@@ -61,7 +61,7 @@ function RunHistoryRow({
 
     return (
         <TableRow
-            aria-label={`${formatCronRunStatus(run.status)} ${titleCase(run.trigger)} ${formatCronRunTime(run)}`}
+            aria-label={`${formatCronRunOutcome(run)} ${titleCase(run.trigger)} ${formatCronRunTime(run)}`}
             className="cursor-pointer border-border/45 outline-hidden focus-visible:bg-hover"
             index={index}
             onClick={onSelect}
@@ -81,13 +81,10 @@ function RunHistoryRow({
                 <span className="relative z-20 flex min-w-0 items-center gap-2">
                     <span
                         aria-hidden
-                        className={cn(
-                            'size-2 shrink-0 rounded-full',
-                            getCronRunStatusDotClassName(run.status)
-                        )}
+                        className={cn('size-2 shrink-0 rounded-full', getCronRunDotClassName(run))}
                     />
                     <span className="min-w-0 truncate">
-                        <span className="font-medium">{formatCronRunStatus(run.status)}</span>
+                        <span className="font-medium">{formatCronRunOutcome(run)}</span>
                         <span className="text-muted-foreground"> · {titleCase(run.trigger)}</span>
                     </span>
                 </span>

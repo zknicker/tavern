@@ -129,6 +129,8 @@ export function createCronFormState(job: CronJob | null, primaryAgentId = ''): C
         scheduleDayOfWeek: scheduleState.scheduleDayOfWeek,
         scheduleKind: scheduleState.scheduleKind,
         scheduleTime: scheduleState.scheduleTime,
+        scriptCommand: job?.payload.kind === 'script' ? job.payload.command : '',
+        scriptWorkingDir: job?.payload.kind === 'script' ? (job.payload.workingDir ?? '') : '',
         systemEventText: job?.payload.kind === 'systemEvent' ? job.payload.text : '',
     };
 }

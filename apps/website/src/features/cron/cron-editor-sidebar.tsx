@@ -21,6 +21,7 @@ type CronJob = CronGetOutput['job'];
 
 const runTypeOptions = [
     { label: 'Agent turn', value: 'agentTurn' as const },
+    { label: 'Script', value: 'script' as const },
     { label: 'System event', value: 'systemEvent' as const },
 ];
 

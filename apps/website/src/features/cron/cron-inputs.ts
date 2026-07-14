@@ -68,6 +68,14 @@ function buildPayload(state: CronFormState) {
         };
     }
 
+    if (state.runType === 'script') {
+        return {
+            command: requireValue(state.scriptCommand, 'Script'),
+            kind: 'script' as const,
+            workingDir: state.scriptWorkingDir.trim() || undefined,
+        };
+    }
+
     return {
         kind: 'agentTurn' as const,
         message: requireValue(state.message, 'Prompt'),

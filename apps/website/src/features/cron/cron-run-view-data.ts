@@ -44,6 +44,18 @@ export function formatCronRunStatus(status: CronRunRecord['status']): string {
     return titleCase(status);
 }
 
+export function isQuietCronRun(run: CronRunRecord): boolean {
+    return run.quiet === true && run.status === 'success';
+}
+
+export function formatCronRunOutcome(run: CronRunRecord): string {
+    return isQuietCronRun(run) ? 'Quiet' : formatCronRunStatus(run.status);
+}
+
+export function getCronRunDotClassName(run: CronRunRecord) {
+    return isQuietCronRun(run) ? 'bg-emerald-500/40' : getCronRunStatusDotClassName(run.status);
+}
+
 export function formatCronRunDetail(run: CronRunRecord): string | null {
     if (run.status === 'error') {
         return formatCronErrorMessage(run.executionErrorMessage) ?? 'Run failed.';

@@ -27,6 +27,7 @@ function createJob(
         description: overrides?.description ?? 'Post a scheduled joke.',
         enabled: overrides?.enabled ?? true,
         id: 'cron-1',
+        mode: 'agentTurn' as const,
         name: overrides?.name ?? 'Portal Joke',
         payload: {
             kind: 'agentTurn' as const,

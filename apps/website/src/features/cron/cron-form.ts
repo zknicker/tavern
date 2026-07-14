@@ -3,7 +3,7 @@ import { createCronFormState as createFormState } from './cron-form-state.ts';
 
 type CronJob = CronGetOutput['job'];
 
-export type CronRunType = 'agentTurn' | 'systemEvent';
+export type CronRunType = 'agentTurn' | 'script' | 'systemEvent';
 
 export type CronScheduleKind = 'custom' | 'daily' | 'interval' | 'weekdays' | 'weekly';
 
@@ -22,6 +22,8 @@ export interface CronFormState {
     scheduleDayOfWeek: string;
     scheduleKind: CronScheduleKind;
     scheduleTime: string;
+    scriptCommand: string;
+    scriptWorkingDir: string;
     systemEventText: string;
 }
 

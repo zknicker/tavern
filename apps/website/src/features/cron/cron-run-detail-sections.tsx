@@ -53,6 +53,14 @@ export function CronRunFacts({
             />
             <Fact inset={variant === 'panel'} label="Trigger" value={titleCase(run.trigger)} />
             <Fact inset={variant === 'panel'} label="Duration" value={formatCronRunDuration(run)} />
+            {run.scriptExitCode === null ? null : (
+                <Fact
+                    inset={variant === 'panel'}
+                    isCode
+                    label="Exit code"
+                    value={String(run.scriptExitCode)}
+                />
+            )}
             <ChatFact
                 chatId={run.chatId}
                 deliveryDestinationLabel={deliveryDestinationLabel}
@@ -74,6 +82,21 @@ export function CronRunError({ run }: { run: CronRun }) {
         <section className="rounded-md border border-error/30 bg-error-bg/70 px-3 py-2.5">
             <p className="font-medium text-error-foreground text-sm">Error</p>
             <p className="mt-1 text-pretty text-error-foreground/85 text-sm leading-5">{detail}</p>
+        </section>
+    );
+}
+
+export function CronRunScriptStderr({ run }: { run: CronRun }) {
+    if (!run.scriptStderr) {
+        return null;
+    }
+
+    return (
+        <section className="rounded-md border border-border/60 bg-muted/10 px-3 py-2.5">
+            <p className="font-medium text-foreground text-sm">Script stderr</p>
+            <pre className="mt-1 max-h-48 overflow-auto whitespace-pre-wrap break-all font-mono text-muted-foreground text-xs leading-5">
+                {run.scriptStderr}
+            </pre>
         </section>
     );
 }

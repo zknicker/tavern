@@ -17,14 +17,15 @@ import { formatTimestamp, titleCase } from '../../lib/format.ts';
 import type { CronRunsOutput } from '../../lib/trpc.tsx';
 import { cn } from '../../lib/utils.ts';
 import { buildChatPath } from '../chats/chat-path.ts';
-import { CronRunError, CronRunFacts } from './cron-run-detail-sections.tsx';
+import { CronRunError, CronRunFacts, CronRunScriptStderr } from './cron-run-detail-sections.tsx';
 import {
     formatCronRunDetail,
     formatCronRunDuration,
     formatCronRunFinishedLabel,
-    formatCronRunStatus,
-    getCronRunStatusDotClassName,
+    formatCronRunOutcome,
+    getCronRunDotClassName,
     getCronRunStatusVariant,
+    isQuietCronRun,
 } from './cron-run-view-data.ts';
 
 interface CronRunsCardProps {
@@ -120,7 +121,7 @@ export function CronRunsCard({ deliveryDestinationLabel, isPending, runs }: Cron
                                         )}
                                         icon={ArrowDown01Icon}
                                     />
-                                    <StatusDot status={row.status} />
+                                    <StatusDot run={row.run} />
                                     <span className="truncate font-medium">{row.startedLabel}</span>
                                 </div>
                             </TableCell>
@@ -158,6 +159,7 @@ export function CronRunsCard({ deliveryDestinationLabel, isPending, runs }: Cron
                                             variant="bare"
                                         />
                                         <CronRunError run={row.run} />
+                                        <CronRunScriptStderr run={row.run} />
                                     </div>
                                 </td>
                             </tr>
@@ -181,9 +183,7 @@ function RunOutcome({ row }: { row: CronRunRow }) {
 
     return (
         <div className="flex min-w-0 flex-col items-start gap-1">
-            <Badge size="sm" variant={getCronRunStatusVariant(row.status)}>
-                {formatCronRunStatus(row.status)}
-            </Badge>
+            <RunBadge run={row.run} />
             {row.detail ? (
                 <span
                     className="max-w-full truncate text-muted-foreground text-xs"
@@ -200,9 +200,7 @@ function RunStatus({ row }: { row: CronRunRow }) {
     return (
         <div className="flex min-w-0 flex-col items-start gap-1">
             <div className="flex min-w-0 items-center gap-2">
-                <Badge size="sm" variant={getCronRunStatusVariant(row.status)}>
-                    {formatCronRunStatus(row.status)}
-                </Badge>
+                <RunBadge run={row.run} />
                 <span className="truncate text-muted-foreground text-xs">{row.scheduledLabel}</span>
             </div>
             {row.detail ? (
@@ -214,6 +212,17 @@ function RunStatus({ row }: { row: CronRunRow }) {
                 </span>
             ) : null}
         </div>
+    );
+}
+
+function RunBadge({ run }: { run: CronRun }) {
+    return (
+        <Badge
+            size="sm"
+            variant={isQuietCronRun(run) ? 'secondary' : getCronRunStatusVariant(run.status)}
+        >
+            {formatCronRunOutcome(run)}
+        </Badge>
     );
 }
 
@@ -265,11 +274,11 @@ function CronRunsEmpty({ isPending }: { isPending: boolean }) {
     );
 }
 
-function StatusDot({ status }: { status: CronRun['status'] }) {
+function StatusDot({ run }: { run: CronRun }) {
     return (
         <span
             aria-hidden
-            className={cn('size-2 shrink-0 rounded-full', getCronRunStatusDotClassName(status))}
+            className={cn('size-2 shrink-0 rounded-full', getCronRunDotClassName(run))}
         />
     );
 }

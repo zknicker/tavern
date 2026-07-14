@@ -13,7 +13,7 @@ interface CronEditorPromptPaneProps {
 }
 
 export function CronEditorPromptPane({ errorMessage, form }: CronEditorPromptPaneProps) {
-    const isSystemEvent = useStore(form.store, (state) => state.values.runType === 'systemEvent');
+    const runType = useStore(form.store, (state) => state.values.runType);
 
     return (
         <div className="flex min-h-0 min-w-0 flex-1">
@@ -54,7 +54,7 @@ export function CronEditorPromptPane({ errorMessage, form }: CronEditorPromptPan
                     </Alert>
                 ) : null}
 
-                {isSystemEvent ? (
+                {runType === 'systemEvent' ? (
                     <form.Field name="systemEventText">
                         {(field) => (
                             <Field className="min-h-0 flex-1">
@@ -68,6 +68,40 @@ export function CronEditorPromptPane({ errorMessage, form }: CronEditorPromptPan
                             </Field>
                         )}
                     </form.Field>
+                ) : runType === 'script' ? (
+                    <div className="flex min-h-0 flex-1 flex-col gap-4">
+                        <form.Field name="scriptCommand">
+                            {(field) => (
+                                <Field className="min-h-0 flex-1">
+                                    <FieldLabel>Script</FieldLabel>
+                                    <SimpleCodeEditor
+                                        className="min-h-40 rounded-lg border"
+                                        filePath="watchdog.sh"
+                                        onChange={(value) => field.handleChange(value)}
+                                        value={field.state.value}
+                                    />
+                                    <p className="text-muted-foreground text-sm">
+                                        Runs without the agent. Anything the script prints is
+                                        delivered into the chat and wakes the agent; print nothing
+                                        for a quiet tick that only shows up in run history.
+                                    </p>
+                                </Field>
+                            )}
+                        </form.Field>
+                        <form.Field name="scriptWorkingDir">
+                            {(field) => (
+                                <Field className="shrink-0">
+                                    <FieldLabel>Working directory</FieldLabel>
+                                    <Input
+                                        onBlur={field.handleBlur}
+                                        onChange={(event) => field.handleChange(event.target.value)}
+                                        placeholder="Agent workspace (default)"
+                                        value={field.state.value}
+                                    />
+                                </Field>
+                            )}
+                        </form.Field>
+                    </div>
                 ) : (
                     <form.Field name="message">
                         {(field) => (

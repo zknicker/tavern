@@ -64,6 +64,11 @@ function CronJobRow({
                     <span className="min-w-0 truncate font-medium text-[15px] text-foreground">
                         {job.name}
                     </span>
+                    {job.mode === 'script' ? (
+                        <span className="shrink-0 rounded-md bg-muted/60 px-1.5 py-0.5 font-medium text-[11px] text-muted-foreground">
+                            Script
+                        </span>
+                    ) : null}
                     <span className="hidden text-muted-foreground sm:inline">·</span>
                     <span className="hidden min-w-0 truncate text-muted-foreground sm:inline">
                         {job.schedule}

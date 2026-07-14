@@ -18,6 +18,8 @@ function createBaseState(): CronFormState {
         runType: 'agentTurn',
         scheduleDayOfWeek: '1',
         scheduleKind: 'daily',
+        scriptCommand: '',
+        scriptWorkingDir: '',
         scheduleTime: '07:00',
         systemEventText: '',
     };
@@ -45,6 +47,33 @@ test('buildCronCreateInput maps agent turns to isolated cron sessions', () => {
             tz: 'America/New_York',
         },
     });
+});
+
+test('buildCronCreateInput maps script watchdogs to script payloads', () => {
+    const input = buildCronCreateInput({
+        ...createBaseState(),
+        message: '',
+        runType: 'script',
+        scriptCommand: './check-feed.sh',
+        scriptWorkingDir: 'watchdogs',
+    });
+
+    assert.deepEqual(input.payload, {
+        command: './check-feed.sh',
+        kind: 'script',
+        workingDir: 'watchdogs',
+    });
+
+    const defaultWorkingDir = buildCronCreateInput({
+        ...createBaseState(),
+        message: '',
+        runType: 'script',
+        scriptCommand: 'curl -fsS localhost:8080/health >/dev/null || echo down',
+        scriptWorkingDir: '',
+    });
+
+    assert.equal(defaultWorkingDir.payload.kind, 'script');
+    assert.ok(!('workingDir' in defaultWorkingDir.payload && defaultWorkingDir.payload.workingDir));
 });
 
 test('buildCronCreateInput maps system events to agent-owned delivery jobs', () => {
