@@ -94,6 +94,9 @@ state:
 - The pane stays chat-scoped per ADR 0004: switching chats switches records;
   nothing carries across chats. Tabs survive app reload because the record is
   Runtime state, not component state.
+- Pane visibility is app-local presentation: the app may show the pane empty
+  or hide it without touching the record. By default the pane shows whenever
+  the chat has tabs.
 - Workspace targets are confined to the owning agent's workspace; wiki
   targets must resolve to an existing page at write time. Invalid targets are
   rejected at the write, never rendered as broken tabs.

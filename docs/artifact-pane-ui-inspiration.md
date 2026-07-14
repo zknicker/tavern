@@ -15,8 +15,12 @@ The artifact pane should feel like a compact assistant workspace attached to the
 - Tabs sit in the top row.
 - The selected tab uses a soft rounded pill.
 - Inactive tabs stay low-contrast.
-- One close button closes the pane.
+- One button hides the pane; hiding never clears tabs. Individual tab close
+  buttons remove tabs.
 - A plus icon can suggest that more artifacts arrive from chat links, but it should not look like a primary action.
+- The chat toolbar carries a sidebar-style toggle that shows or hides the
+  pane; showing it with no tabs renders an empty state with the + menu as the
+  entry point.
 
 ## Behaviors
 
