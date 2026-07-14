@@ -1,5 +1,8 @@
 import type { ChatPaneTarget } from '@tavern/api';
-import { formatChatPaneTargetLink, parseChatPaneTargetLink } from '@tavern/api';
+// Value imports must use the pane-links subpath: the @tavern/api root index
+// reaches node:crypto via runtime config helpers and cannot evaluate in the
+// browser.
+import { formatChatPaneTargetLink, parseChatPaneTargetLink } from '@tavern/api/pane-links';
 
 // Pane targets and the tavern:// link scheme are the Runtime contract's; the
 // app-local aliases keep chat feature imports stable.
