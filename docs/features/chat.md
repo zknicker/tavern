@@ -108,8 +108,10 @@ happen, and keep the durable timeline as context.
 * **Agent drawer.** Clicking an agent avatar opens a drawer with the seat's
   current Agent session (model, status, timing) and a New session action that
   starts fresh context without clearing the chat. The reset lands as a
-  durable new-session notice row. See
-  [agent-drawer](../../specs/agent-drawer.md).
+  durable new-session notice row; in the chat pane that notice never renders
+  standalone — it attaches to the agent's next turn as a hover affordance in
+  the turn's header actions (beside copy and turn details) that opens the
+  notice drawer. See [agent-drawer](../../specs/agent-drawer.md).
 * **Dismissal.** Failed-turn banners can be dismissed with a hover X. The
   dismissal soft-deletes the durable row in Tavern Runtime — sequence slots
   and history records are retained, and the result syncs to every client.
@@ -193,10 +195,16 @@ transcript only grows:
   existing drawers so detailed tool output stays available on demand.
 * Active agent status renders as a compact stack at the bottom of the chat
   window, above the composer. Each row uses the agent's configured color and
-  current expression, and stays out of the durable transcript.
-* Normal transcript loads mount durable history without entrance motion. Local
-  optimistic user messages keep the chat bubble entrance animation; live tool
-  step inserts keep their insertion-only step motion.
+  current expression, and stays out of the durable transcript. Rows animate in
+  when a run starts and collapse out when it settles (reduced motion disables
+  both); one send that targets several agents starts one optimistic row per
+  agent under the run id the runtime will mint (`run_<message>_<agent>`), so
+  the accepted turn updates the same row instead of duplicating it.
+* Normal transcript loads mount durable history without entrance motion, and
+  older pages loading in stay motionless. Messages that land at the live edge
+  — local optimistic sends, other participants' messages, and agent replies
+  that arrive without having streamed — use the chat bubble entrance
+  animation; live tool step inserts keep their insertion-only step motion.
 * While live, active status text sits next to the presence eyes in the bottom
   stack. The engine's status text is ignored. Completed turns remove the bottom
   status row.
@@ -205,6 +213,11 @@ transcript only grows:
 * Step enter animations are tied to DOM insertion during a live turn
   (`@starting-style`), not to step status, so fast tools still animate and
   history never replays.
+* Sends append at the bottom of the transcript and never re-anchor the
+  viewport: history above the new message stays where the reader left it, and
+  the static bottom padding (clearance for the floating status stack) is the
+  only reserved space. There is no send-time scroll-to-top or per-exchange
+  runway.
 * The detail transcript uses the shadcn Base UI chat components directly:
   `MessageScroller` owns pinned-end autoscroll, prepend preservation, scroll
   fades, and the latest-message button; transcript rows render as
