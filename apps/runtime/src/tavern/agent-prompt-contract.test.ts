@@ -90,6 +90,11 @@ const REQUIREMENTS: Array<{
         prompt: 'channel',
     },
     {
+        capability: 'DM responsiveness: every DM message gets a reply',
+        expected: 'never use NO_REPLY in a DM',
+        prompt: 'dm',
+    },
+    {
         capability: 'mention sets expectation to act',
         expected: 'A mention of you means you specifically are expected to act or answer.',
         prompt: 'channel',
@@ -224,9 +229,13 @@ const REQUIREMENTS: Array<{
 // chat section 1500 -> 1700, total 14_400 -> 14_600 (2026-07-15, ADR
 // 0011): rosters and chat identity moved to the per-turn prompt; the
 // global-session framing and DM-discretion teachings joined the section.
+// chat section 1700 -> 1850, total 14_600 -> 14_750 (2026-07-15): DM
+// responsiveness — the global silence teaching needed an explicit DM
+// carve-out the eval caught (a DM FYI saying "no response needed" must
+// still get a brief acknowledgement; specs/addressing.md).
 const promptBudgets = {
-    channelChatSection: 1700,
-    channelTotal: 14_600,
+    channelChatSection: 1850,
+    channelTotal: 14_750,
 };
 
 // The fixture renders the cron-ready prompt so the Automations section stays

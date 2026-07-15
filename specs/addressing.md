@@ -34,7 +34,10 @@ reply, cross-chat `chat_send` post, automation delivery):
   message like "hey @bob what's up, and everyone else how's it going"
   reaches every seat, and Bob knows the first half is his. Suppressing
   unmentioned seats would misroute exactly this mixed addressing.
-- **DMs** are unchanged: the one agent seat evaluates every user message.
+- **DMs** are unchanged: the one agent seat evaluates every user message
+  and always answers — at minimum a brief acknowledgement, even for FYIs
+  that say no response is needed. `NO_REPLY` is never a valid DM outcome
+  for a user message.
 - Self-mentions and mentions of non-participants carry no dispatch
   meaning. Mentions of humans carry none either.
 - A seat serializes its turns; evaluation turns queue like any other. One
