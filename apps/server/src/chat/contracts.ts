@@ -240,19 +240,6 @@ export const stopChatTurnResultSchema = z.object({
     stopped: z.boolean(),
 });
 
-export const steerChatTurnInputSchema = z
-    .object({
-        chatId: z.string().trim().min(1),
-        content: z.string().trim().min(1),
-        runId: z.string().trim().min(1),
-    })
-    .strict();
-
-export const steerChatTurnResultSchema = z.object({
-    runId: z.string().trim().min(1),
-    steered: z.boolean(),
-});
-
 export const chatLogMessageRowSchema = messageRowSchema;
 export const chatLogToolRowSchema = toolRowSchema;
 export const chatLogWorkerRowSchema = workerRowSchema;
@@ -323,5 +310,3 @@ export type SendChatMessageInput = z.infer<typeof sendChatMessageInputSchema>;
 export type SendChatMessageResult = z.infer<typeof sendChatMessageResultSchema>;
 export type StopChatTurnInput = z.infer<typeof stopChatTurnInputSchema>;
 export type StopChatTurnResult = z.infer<typeof stopChatTurnResultSchema>;
-export type SteerChatTurnInput = z.infer<typeof steerChatTurnInputSchema>;
-export type SteerChatTurnResult = z.infer<typeof steerChatTurnResultSchema>;

@@ -94,9 +94,8 @@ export async function getRuntimeChatTimelinePage(
 }
 
 // Conversation-visible activity projections: widgets and runtime notices are
-// part of the contribution, steered messages are user speech, clarifications
-// are conversational questions. Everything else an activity produces is
-// execution evidence.
+// part of the contribution, and clarifications are conversational questions.
+// Everything else an activity produces is execution evidence.
 export function isTimelineActivityRow(row: ChatLogPage['rows'][number]) {
     if (row.kind === 'widget') {
         return true;
@@ -282,12 +281,6 @@ export function activityToChatRows(
     const runtimeNotice = runtimeNoticeFromActivity(activity);
 
     if (runtimeNotice) {
-        const steerMessage = steerMessageRowFromNotice(activity, runtimeNotice, response);
-
-        if (steerMessage) {
-            return [steerMessage];
-        }
-
         return [
             {
                 id: activity.id,
@@ -374,55 +367,6 @@ export function activityToChatRows(
             toolCall: titledToolCall,
         },
     ];
-}
-
-function steerMessageRowFromNotice(
-    activity: TavernResponseActivity,
-    notice: NonNullable<ReturnType<typeof runtimeNoticeFromActivity>>,
-    response: TavernChatResponse | null
-): ChatLogPage['rows'][number] | null {
-    const runtime = readRecord(activity.metadata.runtime);
-    const noticeRecord = readRecord(runtime.notice);
-
-    if (noticeRecord.id !== 'runtime_notice_steered') {
-        return null;
-    }
-
-    const content = notice.detail?.trim();
-
-    if (!content) {
-        return null;
-    }
-
-    const actor = { id: 'usr_tavern', kind: 'participant' as const };
-    const id = `${activity.id}_message`;
-
-    return {
-        actor,
-        connectsToNext: false,
-        connectsToPrevious: false,
-        id,
-        isFirstInGroup: true,
-        kind: 'message' as const,
-        responseId: activity.response_id,
-        message: {
-            actor,
-            content,
-            id,
-            metadata: activity.metadata,
-            sender: 'You',
-            senderType: 'user' as const,
-            sourceSessionId: runtimeMetadataString(response, 'sessionId'),
-            sourceSessionKey:
-                readString(runtime.agentSessionId) ??
-                readString(runtime.sessionKey) ??
-                runtimeMetadataString(response, 'agentSessionId') ??
-                runtimeMetadataString(response, 'sessionKey') ??
-                '',
-            tavernAgentId: null,
-            timestamp: activity.started_at,
-        },
-    };
 }
 
 function activityToMessageRows(
@@ -790,9 +734,6 @@ function rowTimestamp(row: ChatLogPage['rows'][number]) {
 
 function rowSortRank(row: ChatLogPage['rows'][number]) {
     if (row.kind === 'message') {
-        if (isSteerMessageRow(row)) {
-            return 2;
-        }
         if (isActivityMessageRow(row)) {
             return 1;
         }
@@ -806,6 +747,3 @@ function isActivityMessageRow(row: Extract<ChatLogPage['rows'][number], { kind: 
     return row.id.startsWith('act_');
 }
 
-function isSteerMessageRow(row: Extract<ChatLogPage['rows'][number], { kind: 'message' }>) {
-    return row.id.endsWith('_runtime_notice_steered_message');
-}

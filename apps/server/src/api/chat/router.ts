@@ -17,7 +17,6 @@ import { onChatTurnStatusUpdated } from './on-turn-status-updated.ts';
 import { onChatUpdate } from './on-update.ts';
 import { sendChatMessageRoute } from './send.ts';
 import { startChatRoute } from './start.ts';
-import { steerChatTurnRoute } from './steer.ts';
 import { stopChatTurnRoute } from './stop.ts';
 import { getChatToolRoute } from './tool-get.ts';
 import { getChatTurnEvidenceRoute } from './turn-evidence-get.ts';
@@ -58,7 +57,6 @@ export const chatRouter = createRouter({
     onTurnStatusUpdated: onChatTurnStatusUpdated,
     send: sendChatMessageRoute,
     start: startChatRoute,
-    steer: steerChatTurnRoute,
     stop: stopChatTurnRoute,
     unarchive: unarchiveChatRoute,
     updateTabAppearance: updateChatTabAppearanceRoute,
