@@ -71,13 +71,24 @@ const silentReplyToken = 'NO_REPLY';
 
 interface ActiveHarnessTurn {
     controller: AbortController;
-    session?: { destroy(): Promise<void> };
+    session?: HarnessAgentSession;
 }
 
 export function createHarnessAgentExecutor(): AgentExecutor {
     const active = new Map<string, ActiveHarnessTurn>();
 
     return {
+        async deliverUserMessage(runId, text) {
+            const session = active.get(runId)?.session;
+            if (!session) {
+                return false;
+            }
+            try {
+                return await session.sendUserMessage(text);
+            } catch {
+                return false;
+            }
+        },
         async execute(input) {
             const controller = new AbortController();
             const activeTurn: ActiveHarnessTurn = { controller };

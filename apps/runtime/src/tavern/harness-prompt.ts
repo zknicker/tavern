@@ -161,7 +161,9 @@ function formatOutcomeNote(note: AgentTurnOutcomeNote, currentChatId: string, ti
     return `- [${promptTimestamp(note.createdAt, timezone)}] ${name}'s turn${where} ${outcome}.`;
 }
 
-function formatPromptMessage(message: TavernChatMessage, timezone: string) {
+// Exported for busy delivery: mid-turn notices reuse the exact catch-up
+// line format so the model reads one message shape everywhere.
+export function formatPromptMessage(message: TavernChatMessage, timezone: string) {
     const label = message.author.label ?? message.author.id;
     return `[seq:${message.sequence} ${promptTimestamp(message.created_at, timezone)}] ${label}: ${message.content}`;
 }

@@ -212,6 +212,21 @@ export function findRunningAgentTurnForChatAgent(
     return row ? rowToAgentTurn(row) : null;
 }
 
+// Every running turn in a chat, across all seats. Busy delivery fans a new
+// message out to these turns (specs/steering.md).
+export function listRunningAgentTurnsForChat(chatId: string, db: Database = getDb()) {
+    const rows = db
+        .prepare(
+            `SELECT *
+             FROM agent_turns
+             WHERE chat_id = $chatId
+               AND status = 'running'
+             ORDER BY started_at ASC, id ASC`
+        )
+        .all(namedParams({ chatId })) as AgentTurnRow[];
+    return rows.map(rowToAgentTurn);
+}
+
 // Whether an agent's seat in a chat still has work in flight (queued or
 // running). "Idle" for chat_wait_idle means this returns false.
 export function hasUnsettledAgentTurnsForChatAgent(

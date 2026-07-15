@@ -28,6 +28,7 @@ import { startSkillReviewScheduler, stopSkillReviewScheduler } from './skills/re
 import { recordSkillSource, sha256 } from './skills/store.ts';
 import { startTaskDispatcher, type TaskDispatcherHandle } from './tasks/dispatcher.ts';
 import { recoverSettledTaskDispatches } from './tasks/recovery.ts';
+import { installBusyDelivery } from './tavern/busy-delivery.ts';
 import { demoAgentId } from './tavern/development-chat-demo-types.ts';
 import { seedDevelopmentChatDemos } from './tavern/development-chat-demos.ts';
 import { seedDevelopmentWikiDemos } from './tavern/development-memory-demos.ts';
@@ -152,6 +153,8 @@ async function main(): Promise<void> {
     log.info('Runtime cron ready');
     taskDispatcher = startTaskDispatcher();
     log.info('Task dispatcher ready');
+    installBusyDelivery();
+    log.info('Busy delivery ready');
     startMemoryExtractionScheduler();
     startSkillReviewScheduler();
     startSkillCuratorScheduler();

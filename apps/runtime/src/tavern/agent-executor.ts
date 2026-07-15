@@ -17,6 +17,13 @@ export interface AgentExecutorResult {
 }
 
 export interface AgentExecutor {
+    /**
+     * Deliver a user-visible text into a running turn's engine session.
+     * Resolves true only when the engine accepted it; false means the turn
+     * is not running or the engine has no mid-turn input, and the message
+     * waits for the seat's context cursor (specs/steering.md).
+     */
+    deliverUserMessage?(runId: string, text: string): Promise<boolean> | boolean;
     execute(input: AgentExecutorInput): Promise<AgentExecutorResult>;
     stop?(runId: string): Promise<boolean> | boolean;
 }

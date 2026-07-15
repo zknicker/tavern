@@ -108,6 +108,19 @@ export async function stopAgentTurn(runId: string) {
     return true;
 }
 
+/**
+ * Attempt busy delivery of text into a running turn's engine session.
+ * False means not running or unsupported — never an error; the durable
+ * message reaches the seat through its context cursor instead.
+ */
+export async function deliverToActiveTurn(runId: string, text: string): Promise<boolean> {
+    try {
+        return Boolean(await executor.deliverUserMessage?.(runId, text));
+    } catch {
+        return false;
+    }
+}
+
 export function waitForAgentTurnSettlement(runId: string): Promise<{
     error?: string;
     status: SettledTurnStatus;
