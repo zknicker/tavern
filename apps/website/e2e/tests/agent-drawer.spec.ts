@@ -2,7 +2,7 @@ import type { Page } from '@playwright/test';
 import { fillComposer } from '../support/composer.ts';
 import { expect, test } from '../support/test.ts';
 
-test('agent avatar opens the drawer and New session lands a durable notice', async ({ page }) => {
+test('agent avatar opens a read-only session drawer', async ({ page }) => {
     test.setTimeout(150_000);
 
     await startChat(page, {
@@ -20,23 +20,13 @@ test('agent avatar opens the drawer and New session lands a durable notice', asy
     await expect(drawer.getByText('Session', { exact: true })).toBeVisible();
     await expect(drawer.getByText('Model', { exact: true })).toBeVisible({ timeout: 30_000 });
 
-    await drawer.getByRole('button', { name: 'New session' }).click();
-
-    // The reset lands as a durable new-session notice row while the timeline
-    // keeps its history, and both survive a reload.
-    const noticeRow = page.locator('main').getByText('New session', { exact: true });
-    await expect(noticeRow).toBeVisible({ timeout: 90_000 });
+    // Session status is read-only here; resets live in agent settings
+    // (specs/sessions.md).
+    await expect(drawer.getByRole('button', { name: 'New session' })).toHaveCount(0);
 
     await page.keyboard.press('Escape');
     await expect(drawer).toHaveCount(0);
     await expect(page.locator('main p').filter({ hasText: /^QA_AGENT_DRAWER_OK$/ })).toBeVisible();
-
-    await page.reload();
-
-    await expect(noticeRow).toBeVisible({ timeout: 30_000 });
-    await expect(page.locator('main p').filter({ hasText: /^QA_AGENT_DRAWER_OK$/ })).toBeVisible({
-        timeout: 30_000,
-    });
 });
 
 test('leading slash is plain composer text, not a palette', async ({ page }) => {

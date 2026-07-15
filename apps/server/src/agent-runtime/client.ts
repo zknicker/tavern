@@ -524,7 +524,7 @@ export interface TavernAgentRuntimeClient {
     removeMcpServer(name: string): Promise<{ ok: boolean }>;
     removeSkillHubTap(repo: string): Promise<AgentRuntimeSkillHubTapList>;
     resetAgentSession(
-        chatId: string,
+        agentId: string,
         input: AgentRuntimeResetAgentSession
     ): Promise<AgentRuntimeResetAgentSessionResult>;
     resetSkill(skillId: string): Promise<AgentRuntimeSkillResetResult>;
@@ -1318,10 +1318,10 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         return parseAgentRuntimeCapabilityHealthList(await response.json());
     }
 
-    async resetAgentSession(chatId: string, input: AgentRuntimeResetAgentSession) {
+    async resetAgentSession(agentId: string, input: AgentRuntimeResetAgentSession) {
         const payload = agentRuntimeResetAgentSessionSchema.parse(input);
         const response = await fetch(
-            `${this.#baseUrl}${agentRuntimeRoutes.chatAgentSessionReset(chatId)}`,
+            `${this.#baseUrl}${agentRuntimeRoutes.agentSessionReset(agentId)}`,
             {
                 body: JSON.stringify(payload),
                 headers: {

@@ -4,7 +4,6 @@ import type * as React from 'react';
 import { useResolvedThemeOptional } from '../../components/theme-provider.tsx';
 import { RelativeTime } from '../../components/time/relative-time.tsx';
 import { Alert, AlertDescription, AlertTitle } from '../../components/ui/alert.tsx';
-import { Button } from '../../components/ui/button.tsx';
 import {
     Drawer,
     DrawerDescription,
@@ -18,7 +17,7 @@ import { Spinner } from '../../components/ui/spinner.tsx';
 import { Elevated } from '../../components/ui/surface.tsx';
 import { Table, TableBody, TableCell, TableRow } from '../../components/ui/table.tsx';
 import { useAgentAppearanceLookup } from '../../hooks/agents/use-agent-appearance.ts';
-import { useAgentSession, useAgentSessionReset } from '../../hooks/agents/use-agent-session.ts';
+import { useAgentSession } from '../../hooks/agents/use-agent-session.ts';
 import { useModelList } from '../../hooks/models/use-model-list.ts';
 import { getModelProviderConfig } from '../../lib/model-provider-config.ts';
 import type { AgentSessionOutput, ModelListOutput } from '../../lib/trpc.tsx';
@@ -30,10 +29,10 @@ import { normalizeModelId } from './chat-context-fullness.ts';
 const faceStyle = { flexShrink: 0, overflow: 'visible' } as const;
 
 /**
- * Agent details for one chat: identity, the seat's current Agent session
- * (model, context, turns, timing), and the New session action. Opened by
- * clicking the agent's avatar, so session actions always name their target —
- * no ambiguity in shared channels. See specs/agent-drawer.md.
+ * Agent details for one chat: identity plus a read-only view of the agent's
+ * global session (model, context, turns, timing). Opened by clicking the
+ * agent's avatar. Session resets live in agent settings, not here
+ * (specs/sessions.md). See specs/agent-drawer.md.
  */
 export function AgentDrawer({
     agentId,
@@ -95,7 +94,6 @@ function AgentDrawerHeader({ agentId, agentName }: { agentId: string; agentName:
 
 function AgentDrawerBody({ agentId, chatId }: { agentId: string; chatId: string }) {
     const sessionQuery = useAgentSession({ agentId, chatId });
-    const resetSession = useAgentSessionReset();
     const modelList = useModelList();
 
     return (
@@ -124,27 +122,11 @@ function AgentDrawerBody({ agentId, chatId }: { agentId: string; chatId: string 
                     <Icon icon={AlertCircleIcon} />
                     <AlertTitle>System prompt updated</AlertTitle>
                     <AlertDescription>
-                        This agent&apos;s system prompt has changed since this session started. New
-                        sessions pick it up. This one refreshes by tomorrow morning.
+                        This agent&apos;s system prompt has changed since this session started. The
+                        session picks it up after the next session reset or model change.
                     </AlertDescription>
                 </Alert>
             ) : null}
-            <div className="flex flex-col gap-1.5">
-                <Button
-                    disabled={resetSession.isPending}
-                    onClick={() => resetSession.mutate({ agentId, chatId })}
-                    variant="secondary"
-                >
-                    {resetSession.isPending ? <Spinner className="size-3.5" /> : null}
-                    New session
-                </Button>
-                <p className="text-muted-foreground text-xs">
-                    Starts fresh context without clearing the chat.
-                </p>
-                {resetSession.error ? (
-                    <p className="text-destructive text-xs">{resetSession.error.message}</p>
-                ) : null}
-            </div>
             {sessionQuery.data && sessionQuery.data.pastSessions.length > 0 ? (
                 <PastSessionList sessions={sessionQuery.data.pastSessions} />
             ) : null}

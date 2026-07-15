@@ -14,6 +14,7 @@ import { DeleteAgentDialog } from '../../agents/delete-agent-dialog.tsx';
 import { AgentAppearanceSection } from './appearance-section.tsx';
 import { AgentEnvSection } from './env-section.tsx';
 import { AgentModelSection } from './model-section.tsx';
+import { AgentSessionSection } from './session-section.tsx';
 import { AgentTasksSection } from './tasks-section.tsx';
 import type { AgentModelDraft } from './types.ts';
 import { useAgentEnvSettings } from './use-env-settings.ts';
@@ -119,6 +120,8 @@ export function AgentGeneralSettingsContent({
             <AgentTasksSection agent={agent} disabled={isSavingAgentConfig} />
 
             <AgentWebAccessSection agent={agent} disabled={isSavingAgentConfig} />
+
+            <AgentSessionSection agent={agent} />
 
             <AgentDeleteSection agent={agent} deleteRedirectTo={deleteRedirectTo} />
         </SettingsPage>

@@ -1,7 +1,7 @@
 import { queryPolicy } from '../../lib/query-policy.ts';
 import { trpc } from '../../lib/trpc.tsx';
 
-/** The agent seat's current Agent session in one chat. */
+/** The agent's current global session, as seen from one chat. */
 export function useAgentSession({
     agentId,
     chatId,
@@ -21,9 +21,10 @@ export function useAgentSession({
 }
 
 /**
- * Starts a fresh Agent session for the seat. The chat timeline is untouched;
- * the reset lands as a durable new-session notice row, so the chat log and
- * session snapshot both refetch.
+ * Resets the agent's global session (specs/sessions.md): 'session' starts
+ * fresh context, 'full' also wipes the workspace. Chat timelines are
+ * untouched; the reset lands as a durable new-session notice row, so chat
+ * logs and session snapshots both refetch.
  */
 export function useAgentSessionReset() {
     const utils = trpc.useUtils();

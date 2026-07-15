@@ -2,11 +2,19 @@ import { z } from 'zod';
 import { createConfiguredAgentRuntimeClient } from '../../agent-runtime/configured-client.ts';
 import { publicProcedure } from '../trpc.ts';
 
-// The agent drawer's session surface: read the seat's current Agent session
-// in a chat, and start a fresh one. See specs/agent-drawer.md.
+// The agent drawer's read-only session view: the agent's current global
+// session as seen from one chat. See specs/agent-drawer.md.
 const agentSessionInputSchema = z.object({
     agentId: z.string().trim().min(1),
     chatId: z.string().trim().min(1),
+});
+
+// Manual reset contract (specs/sessions.md): agent-scoped, human-initiated,
+// lives in agent settings. 'session' starts fresh context (workspace and
+// memory persist); 'full' also wipes the workspace.
+const agentSessionResetInputSchema = z.object({
+    agentId: z.string().trim().min(1),
+    kind: z.enum(['full', 'session']).default('session'),
 });
 
 export const getAgentSessionProcedure = publicProcedure
@@ -28,7 +36,7 @@ export const getAgentSessionProcedure = publicProcedure
     });
 
 export const resetAgentSessionProcedure = publicProcedure
-    .input(agentSessionInputSchema)
+    .input(agentSessionResetInputSchema)
     .mutation(async ({ input }) => {
         const client = createConfiguredAgentRuntimeClient();
         if (!client) {
@@ -36,7 +44,9 @@ export const resetAgentSessionProcedure = publicProcedure
         }
 
         try {
-            return await client.resetAgentSession(input.chatId, { agentId: input.agentId });
+            // Sessions are agent-global (specs/sessions.md): the reset
+            // applies to the agent everywhere, not one chat.
+            return await client.resetAgentSession(input.agentId, { kind: input.kind });
         } finally {
             client.close();
         }
