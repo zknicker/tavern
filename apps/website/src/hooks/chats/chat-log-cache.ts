@@ -12,7 +12,6 @@ type NoticeRow = Extract<ChatLogRow, { kind: 'system'; systemKind: 'runtimeNotic
 type WidgetRow = Extract<ChatLogRow, { kind: 'widget' }>;
 type WorkerRow = Extract<ChatLogRow, { kind: 'worker' }>;
 type ProgressRow = MessageRow | NoticeRow | ThinkingRow | ToolRow | WidgetRow | WorkerRow;
-export type ChatLogSteerNoticeSnapshot = MessageRow;
 
 export const defaultLiveChatLogLimit = 100;
 
@@ -29,14 +28,11 @@ export function patchChatLogWithProgress(
     }
 
     // The timeline carries conversation units only (specs/chat-timeline.md):
-    // widgets, runtime notices, steered user messages — and the turn's post,
-    // which narration steps create or edit in place. Tool, reasoning, and
-    // worker steps are turn evidence and never become rows.
+    // widgets, runtime notices — and the turn's post, which narration steps
+    // create or edit in place. Tool, reasoning, and worker steps are turn
+    // evidence and never become rows.
     const conversationRows = progressStepToChatRows(input).filter(isConversationProgressRow);
-    const postText =
-        input.step.kind === 'message' && !input.step.id.endsWith('runtime_notice_steered')
-            ? input.step.detail?.trim()
-            : undefined;
+    const postText = input.step.kind === 'message' ? input.step.detail?.trim() : undefined;
 
     if (conversationRows.length === 0 && !postText) {
         return undefined;
@@ -164,85 +160,8 @@ function isConversationProgressRow(row: ProgressRow) {
     if (row.kind === 'tool') {
         return Boolean(row.clarification);
     }
-    // Steer notices project as user messages; agent narration is evidence.
-    return row.kind === 'message' && row.message.senderType === 'user';
-}
-
-export function patchChatLogWithSteerNotice(
-    log: ChatLogInput | undefined,
-    input: {
-        content: string;
-        runId: string;
-        timestamp: string;
-    }
-): ChatLogOutput | undefined {
-    if (!log) {
-        return undefined;
-    }
-
-    const sourceLog = normalizeChatLog(log);
-    const rows = upsertRows(sourceLog.rows, steerNoticeToChatRows(input));
-
-    return {
-        ...sourceLog,
-        rows: rows.sort(compareChatLogRows),
-    };
-}
-
-export function readChatLogSteerNotice(
-    log: ChatLogInput | undefined,
-    input: {
-        runId: string;
-    }
-): ChatLogSteerNoticeSnapshot | null {
-    if (!log) {
-        return null;
-    }
-
-    const messageId = `${steerNoticeActivityId(input.runId)}_message`;
-    const row = log.rows.find((entry) => entry.id === messageId);
-
-    return row?.kind === 'message' ? row : null;
-}
-
-export function rollbackChatLogSteerNotice(
-    log: ChatLogInput | undefined,
-    input: {
-        content: string;
-        previousNotice: ChatLogSteerNoticeSnapshot | null;
-        runId: string;
-    }
-): ChatLogOutput | undefined {
-    if (!log) {
-        return undefined;
-    }
-
-    const sourceLog = normalizeChatLog(log);
-    const messageId = `${steerNoticeActivityId(input.runId)}_message`;
-    const trimmedContent = input.content.trim();
-    let foundAnyNotice = false;
-    const rows = sourceLog.rows.flatMap((row) => {
-        if (row.id !== messageId) {
-            return [row];
-        }
-
-        foundAnyNotice = true;
-
-        if (row.kind !== 'message' || row.message.content !== trimmedContent) {
-            return [row];
-        }
-
-        return input.previousNotice ? [input.previousNotice] : [];
-    });
-
-    if (!foundAnyNotice && input.previousNotice) {
-        rows.push(input.previousNotice);
-    }
-
-    return {
-        ...sourceLog,
-        rows: rows.sort(compareChatLogRows),
-    };
+    // Agent narration is evidence; the post path owns visible message text.
+    return false;
 }
 
 function normalizeChatLog(log: ChatLogInput): ChatLogPage {
@@ -255,75 +174,6 @@ function normalizeChatLog(log: ChatLogInput): ChatLogPage {
         settledRunIds: log.settledRunIds ?? [],
         totalMessages: log.totalMessages,
     };
-}
-
-function steerNoticeToChatRows(input: {
-    content: string;
-    runId: string;
-    timestamp: string;
-}): MessageRow[] {
-    const content = input.content.trim();
-
-    if (!content) {
-        return [];
-    }
-
-    const text = `Steered active turn: ${content}`;
-    const messageId = `${steerNoticeActivityId(input.runId)}_message`;
-
-    return [
-        {
-            actor: { id: 'usr_tavern', kind: 'participant' },
-            connectsToNext: false,
-            connectsToPrevious: false,
-            id: messageId,
-            isFirstInGroup: true,
-            kind: 'message',
-            message: {
-                actor: { id: 'usr_tavern', kind: 'participant' },
-                content,
-                id: messageId,
-                metadata: {
-                    runtime: {
-                        notice: {
-                            detail: content,
-                            id: 'runtime_notice_steered',
-                            kind: 'status',
-                            sessionId: null,
-                            text,
-                            title: 'Steered active turn',
-                        },
-                        runId: input.runId,
-                        source: 'agent-engine',
-                    },
-                },
-                sender: 'You',
-                senderType: 'user',
-                sourceSessionId: null,
-                sourceSessionKey: '',
-                tavernAgentId: null,
-                timestamp: input.timestamp,
-            },
-            responseId: undefined,
-        },
-    ];
-}
-
-function upsertRows(current: readonly ChatLogRow[], nextRows: readonly ProgressRow[]) {
-    const rows = [...current];
-
-    for (const row of nextRows) {
-        const existingIndex = rows.findIndex((entry) => entry.id === row.id);
-
-        if (existingIndex === -1) {
-            rows.push(row);
-            continue;
-        }
-
-        rows[existingIndex] = row;
-    }
-
-    return rows;
 }
 
 export function upsertProgressRows(
@@ -373,14 +223,6 @@ export function progressStepToChatRows(input: {
     timestamp: string;
     turn: ChatTurn;
 }): ProgressRow[] {
-    if (input.step.kind === 'notice' && input.step.id.endsWith('runtime_notice_steered')) {
-        return steerNoticeToChatRows({
-            content: input.step.detail ?? '',
-            runId: input.turn.runId,
-            timestamp: input.timestamp,
-        });
-    }
-
     if (input.step.kind === 'message') {
         return [progressStepToMessageRow(input)];
     }
@@ -776,10 +618,6 @@ function progressActivityId(runId: string, stepId: string) {
     const scopedActivity = activity.startsWith(`${runId}_`) ? activity : `${runId}_${activity}`;
 
     return activityId(scopedActivity);
-}
-
-function steerNoticeActivityId(runId: string) {
-    return activityId(`${runId}_runtime_notice_steered`);
 }
 
 function stripActivityPrefix(id: string) {

@@ -345,8 +345,7 @@ function mergeActiveProgressRows(input: {
         (row) =>
             (isOptimisticStopRow(row)
                 ? !loggedStoppedRunIds.has(row.turnStatus.runId)
-                : isLiveProgressRow(row, input.runIds) ||
-                  isLiveSteerNoticeRow(row, input.runIds)) && !loggedIds.has(row.id)
+                : isLiveProgressRow(row, input.runIds)) && !loggedIds.has(row.id)
     );
 
     if (missingLiveRows.length === 0) {
@@ -366,18 +365,6 @@ function isLiveProgressRow(row: ChatTimeline[number], runIds: string[]) {
     }
 
     return runIds.some((runId) => row.id.startsWith(`act_${runId}_`));
-}
-
-function isLiveSteerNoticeRow(row: ChatTimeline[number], runIds: string[]) {
-    if (
-        row.kind !== 'message' ||
-        !row.id.startsWith('act_') ||
-        !row.id.endsWith('_runtime_notice_steered_message')
-    ) {
-        return false;
-    }
-
-    return runIds.some((runId) => row.id === `act_${runId}_runtime_notice_steered_message`);
 }
 
 function compareTimelineRows(left: ChatTimeline[number], right: ChatTimeline[number]) {

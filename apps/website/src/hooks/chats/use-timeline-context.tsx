@@ -1,7 +1,6 @@
 import type { PropsWithChildren } from 'react';
 import * as React from 'react';
 import type { ChatLogOutput } from '../../lib/trpc.tsx';
-import type { ChatLogSteerNoticeSnapshot } from './chat-log-cache.ts';
 import {
     applyLogSnapshot,
     type ChatReplyUpdate,
@@ -16,10 +15,7 @@ import {
     failTimelineTurn,
     optimisticallyStopTimelineTurn,
     patchTimelineProgress,
-    patchTimelineWithSteerNotice,
-    readTimelineSteerNotice,
     removeOptimisticStoppedTurn,
-    rollbackTimelineSteerNotice,
     startTimelineTurn,
     updateTimelineReply,
     updateTimelineTurnStatus,
@@ -42,19 +38,7 @@ interface TimelineActionsValue {
         turn: ChatTurn;
     }) => void;
     removeOptimisticStop: (input: { chatId: string; runId: string }) => void;
-    rollbackSteerNotice: (input: {
-        chatId: string;
-        content: string;
-        previousNotice: ChatLogSteerNoticeSnapshot | null;
-        runId: string;
-    }) => void;
     setLog: (chatId: string, log: ChatLogOutput | undefined) => void;
-    showSteerNotice: (input: {
-        chatId: string;
-        content: string;
-        runId: string;
-        timestamp: string;
-    }) => ChatLogSteerNoticeSnapshot | null;
     startTurn: (turn: ChatTurn) => void;
     updateReply: (update: ChatReplyUpdate) => void;
     updateTurnStatus: (update: ChatTurnStatusUpdate) => void;
@@ -124,32 +108,6 @@ export function TimelineContextProvider({ children }: PropsWithChildren) {
     const updateReply = React.useCallback(
         (update: ChatReplyUpdate) => {
             setTimelineState(update.turn.chatId, (state) => updateTimelineReply(state, update));
-        },
-        [setTimelineState]
-    );
-
-    const showSteerNotice = React.useCallback(
-        (input: { chatId: string; content: string; runId: string; timestamp: string }) => {
-            const state = timelineStatesRef.current[input.chatId] ?? emptyTimelineState();
-            const previousNotice = readTimelineSteerNotice(state, { runId: input.runId });
-
-            setTimelineState(input.chatId, (current) =>
-                patchTimelineWithSteerNotice(current, input)
-            );
-
-            return previousNotice;
-        },
-        [setTimelineState]
-    );
-
-    const rollbackSteerNotice = React.useCallback(
-        (input: {
-            chatId: string;
-            content: string;
-            previousNotice: ChatLogSteerNoticeSnapshot | null;
-            runId: string;
-        }) => {
-            setTimelineState(input.chatId, (state) => rollbackTimelineSteerNotice(state, input));
         },
         [setTimelineState]
     );
@@ -251,9 +209,7 @@ export function TimelineContextProvider({ children }: PropsWithChildren) {
             optimisticallyStopTurn,
             patchProgress,
             removeOptimisticStop,
-            rollbackSteerNotice,
             setLog,
-            showSteerNotice,
             startTurn,
             updateReply,
             updateTurnStatus,
@@ -266,9 +222,7 @@ export function TimelineContextProvider({ children }: PropsWithChildren) {
             optimisticallyStopTurn,
             patchProgress,
             removeOptimisticStop,
-            rollbackSteerNotice,
             setLog,
-            showSteerNotice,
             startTurn,
             updateReply,
             updateTurnStatus,

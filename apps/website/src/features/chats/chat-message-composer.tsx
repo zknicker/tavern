@@ -13,7 +13,6 @@ import {
 } from '../../components/ui/prompt-input.tsx';
 import { Spinner } from '../../components/ui/spinner.tsx';
 import { useChatSend } from '../../hooks/chats/use-chat-send.ts';
-import { useChatSteer } from '../../hooks/chats/use-chat-steer.ts';
 import { useChatStop } from '../../hooks/chats/use-chat-stop.ts';
 import { runtimeUnhealthyTooltip, useCapability } from '../../hooks/connections/use-capability.ts';
 import { getDesktopBridge } from '../../lib/desktop-bridge.ts';
@@ -34,22 +33,10 @@ import { useChatComposerDraftState } from './chat-composer-draft-state.ts';
 import { useComposerFileDrop } from './chat-composer-file-drop.ts';
 import { ChatComposerMainDropOverlay } from './chat-composer-main-drop-overlay.tsx';
 import {
-    type ChatComposerQueuedMessage,
-    canStartQueuedSteer,
-    hasPendingSteerAtQueueHead,
-    isQueuedMessageSteerable,
-    removeStoredQueuedMessage,
-    reorderVisibleQueuedMessages,
-    shouldInterruptActiveTurnForQueuedMessage,
-    useChatComposerQueue,
-} from './chat-composer-queue.ts';
-import { ChatComposerQueuePanel } from './chat-composer-queue-panel.tsx';
-import {
     ChatComposerAttachmentButton,
     ChatComposerContextFullness,
 } from './chat-composer-tools.tsx';
 import type { ChatContextFullness } from './chat-context-fullness.ts';
-import { resolveSteerRunId, type SteerableTurnTarget } from './chat-steering.ts';
 
 export type ChatMessageComposerVariant = 'compact' | 'detail';
 const CHAT_COMPOSER_PLACEHOLDER = "Let's go on an adventure...";
@@ -66,7 +53,6 @@ export function ChatMessageComposer({
     contextFullness = null,
     isDisabled,
     isReplyActive,
-    steerTargets = [],
     variant = 'detail',
 }: {
     agentRuntimeSyncLabel?: string | null;
@@ -80,52 +66,32 @@ export function ChatMessageComposer({
     contextFullness?: ChatContextFullness | null;
     isDisabled: boolean;
     isReplyActive: boolean;
-    steerTargets?: readonly SteerableTurnTarget[];
     variant?: ChatMessageComposerVariant;
 }) {
     const sendMessage = useChatSend();
-    const steerTurn = useChatSteer();
     const stopTurn = useChatStop();
     const gatewayCapability = useCapability('gateway');
-    const composerQueue = useChatComposerQueue(chatId);
     const composerDraft = useChatComposerDraftState({ boundAgentIds, chatId });
-    const drainingQueueRef = React.useRef(false);
-    const failedQueuedDispatchIdsRef = React.useRef(new Set<string>());
-    const pendingSteerQueuedIdsRef = React.useRef(new Set<string>());
     const fileInputRef = React.useRef<HTMLInputElement | null>(null);
     const [attachmentError, setAttachmentError] = React.useState<string | null>(null);
-    const [pendingSteerQueuedIds, setPendingSteerQueuedIds] = React.useState<ReadonlySet<string>>(
-        () => new Set()
-    );
-    const { agentId, attachments, content, editingQueuedMessageId, mentions } = composerDraft.draft;
-    const { setAgentId, setAttachments, setContent, setEditingQueuedMessageId, setMentions } =
-        composerDraft;
+    const { agentId, attachments, content, mentions } = composerDraft.draft;
+    const { setAttachments, setContent, setMentions } = composerDraft;
     const isCompact = variant === 'compact';
     const isAgentDm = conversationKind === 'direct';
     const trimmedContent = content.trim();
     const hasPayload = trimmedContent.length > 0 || attachments.length > 0;
     const canSendToRuntime = gatewayCapability.healthy;
     const runtimeDisabledReason = runtimeUnhealthyTooltip;
-    const isSendBlocked = sendMessage.isPending || isReplyActive;
     const isComposerBlocked = isDisabled || blockReason !== null;
-    const canQueue =
+    // Sending while a turn is live is a normal send: the message is durable
+    // and Runtime handles mid-turn delivery. Only an in-flight send blocks.
+    const canSubmit =
         chatCanSend &&
         canSendToRuntime &&
         !isComposerBlocked &&
         (!isAgentDm || agentId.length > 0) &&
-        hasPayload;
-    const canSend = canQueue && !isSendBlocked;
-    const canSubmit = isSendBlocked ? canQueue : canSend;
-    const canDispatchQueued =
-        chatCanSend && canSendToRuntime && !isComposerBlocked && !isSendBlocked;
-    const visibleQueuedMessages = React.useMemo(
-        () => composerQueue.queue.filter((entry) => !pendingSteerQueuedIds.has(entry.id)),
-        [composerQueue.queue, pendingSteerQueuedIds]
-    );
-    const isQueueDrainBlockedByPendingSteer = hasPendingSteerAtQueueHead(
-        composerQueue.queue,
-        pendingSteerQueuedIds
-    );
+        hasPayload &&
+        !sendMessage.isPending;
     const primaryAction = getComposerPrimaryAction({
         hasActiveRun: activeRunIds.length > 0,
         hasDraftPayload: hasPayload,
@@ -137,44 +103,6 @@ export function ChatMessageComposer({
         onFiles: addSelectedAttachments,
         target: useMainDropTarget ? 'main' : 'self',
     });
-
-    // biome-ignore lint/correctness/useExhaustiveDependencies: Dispatch is ref-gated; visible queue head and blocked state drive this effect.
-    React.useEffect(() => {
-        if (!canDispatchQueued || drainingQueueRef.current || isQueueDrainBlockedByPendingSteer) {
-            return;
-        }
-
-        const entry = visibleQueuedMessages[0];
-
-        if (!entry || failedQueuedDispatchIdsRef.current.has(entry.id)) {
-            return;
-        }
-
-        dispatchQueuedEntry(entry);
-    }, [canDispatchQueued, isQueueDrainBlockedByPendingSteer, visibleQueuedMessages]);
-
-    React.useEffect(() => {
-        const queuedIds = new Set(composerQueue.queue.map((entry) => entry.id));
-
-        for (const id of failedQueuedDispatchIdsRef.current) {
-            if (!queuedIds.has(id)) {
-                failedQueuedDispatchIdsRef.current.delete(id);
-            }
-        }
-
-        const nextPendingSteerQueuedIds = new Set<string>();
-
-        for (const id of pendingSteerQueuedIdsRef.current) {
-            if (queuedIds.has(id)) {
-                nextPendingSteerQueuedIds.add(id);
-            }
-        }
-
-        if (nextPendingSteerQueuedIds.size !== pendingSteerQueuedIdsRef.current.size) {
-            pendingSteerQueuedIdsRef.current = nextPendingSteerQueuedIds;
-            setPendingSteerQueuedIds(nextPendingSteerQueuedIds);
-        }
-    }, [composerQueue.queue]);
 
     const mentionComposer = useMentionComposer({
         agentId,
@@ -226,21 +154,6 @@ export function ChatMessageComposer({
         setAttachments([]);
         setAttachmentError(null);
 
-        if (editingQueuedMessageId || isSendBlocked) {
-            const mentionAgentIds = mentions
-                .filter((mention) => mention.kind === 'agent')
-                .map((mention) => mention.id);
-
-            composerQueue.enqueue({
-                agentId,
-                ...(submittedAttachments.length ? { attachments: submittedAttachments } : {}),
-                content: submission.content,
-                ...(mentionAgentIds.length > 0 ? { mentionAgentIds } : {}),
-            });
-            setEditingQueuedMessageId(null);
-            return;
-        }
-
         await sendMessage.mutateAsync({
             ...(isAgentDm ? { agentId } : {}),
             ...(submittedAttachments.length ? { attachments: submittedAttachments } : {}),
@@ -250,144 +163,10 @@ export function ChatMessageComposer({
         });
     }
 
-    function handlePromoteQueuedMessage(id: string) {
-        const queueIndex = composerQueue.queue.findIndex((queued) => queued.id === id);
-        const entry = composerQueue.queue[queueIndex];
-
-        if (!entry) {
-            return;
-        }
-
-        if (isSendBlocked || sendMessage.isPending) {
-            const steerRunId = resolveSteerRunId(steerTargets, {
-                mentionAgentIds: entry.mentionAgentIds,
-            });
-
-            if (steerRunId && isQueuedMessageSteerable(entry)) {
-                void steerQueuedEntry(entry, steerRunId);
-                return;
-            }
-
-            composerQueue.promote(id);
-            if (
-                shouldInterruptActiveTurnForQueuedMessage(entry) &&
-                activeRunIds.length > 0 &&
-                !stopTurn.isPending
-            ) {
-                stopActiveRuns();
-            }
-            return;
-        }
-
-        dispatchQueuedEntry(entry);
-    }
-
     function stopActiveRuns() {
         for (const runId of activeRunIds) {
             stopTurn.mutate({ chatId, runId });
         }
-    }
-
-    async function steerQueuedEntry(entry: ChatComposerQueuedMessage, runId: string) {
-        if (
-            !canStartQueuedSteer({
-                pendingSteerIds: pendingSteerQueuedIdsRef.current,
-                steerPending: steerTurn.isPending,
-            })
-        ) {
-            return;
-        }
-
-        setQueuedSteerPending(entry.id, true);
-
-        try {
-            const result = await steerTurn.mutateAsync({
-                chatId,
-                content: entry.content,
-                runId,
-            });
-
-            if (result.steered) {
-                removeStoredQueuedMessage(chatId, entry.id);
-                composerQueue.remove(entry.id);
-                setQueuedSteerPending(entry.id, false);
-                return;
-            }
-        } catch {
-            setQueuedSteerPending(entry.id, false);
-            return;
-        }
-
-        setQueuedSteerPending(entry.id, false);
-    }
-
-    function dispatchQueuedEntry(entry: ChatComposerQueuedMessage) {
-        if (drainingQueueRef.current) {
-            return;
-        }
-
-        failedQueuedDispatchIdsRef.current.delete(entry.id);
-        drainingQueueRef.current = true;
-        sendMessage.mutate(
-            {
-                ...(isAgentDm ? { agentId: entry.agentId } : {}),
-                ...(entry.attachments?.length ? { attachments: entry.attachments } : {}),
-                chatId,
-                clientMessageId: `msg_${crypto.randomUUID()}`,
-                content: entry.content,
-            },
-            {
-                onError: () => {
-                    failedQueuedDispatchIdsRef.current.add(entry.id);
-                },
-                onSuccess: () => {
-                    composerQueue.remove(entry.id);
-                },
-                onSettled: () => {
-                    drainingQueueRef.current = false;
-                },
-            }
-        );
-    }
-
-    function handleEditQueuedMessage(id: string) {
-        const entry = composerQueue.queue.find((queued) => queued.id === id);
-
-        if (!entry) {
-            return;
-        }
-
-        composerQueue.remove(entry.id);
-        setEditingQueuedMessageId(entry.id);
-        setAgentId(entry.agentId);
-        setContent(entry.content);
-        setMentions([]);
-        setAttachments(entry.attachments ?? []);
-        setAttachmentError(null);
-        mentionComposer.focusTextEditor();
-    }
-
-    function handleReorderQueuedMessages(nextQueue: readonly ChatComposerQueuedMessage[]) {
-        composerQueue.reorder(
-            reorderVisibleQueuedMessages(composerQueue.queue, nextQueue, pendingSteerQueuedIds)
-        );
-    }
-
-    function setQueuedSteerPending(id: string, pending: boolean) {
-        if (pendingSteerQueuedIdsRef.current.has(id) === pending) {
-            return;
-        }
-
-        const nextIds = new Set(pendingSteerQueuedIdsRef.current);
-
-        if (pending) {
-            nextIds.add(id);
-        } else {
-            nextIds.delete(id);
-        }
-
-        pendingSteerQueuedIdsRef.current = nextIds;
-        setPendingSteerQueuedIds(nextIds);
     }
 
     async function handleAttachmentInputChange(event: React.ChangeEvent<HTMLInputElement>) {
@@ -446,7 +225,7 @@ export function ChatMessageComposer({
                       'lg:px-16'
             )}
             contentClassName={isCompact ? 'max-w-none' : undefined}
-            error={attachmentError ?? steerTurn.error?.message ?? sendMessage.error?.message}
+            error={attachmentError ?? sendMessage.error?.message}
             onDragEnter={useMainDropTarget ? undefined : attachmentDrop.onDragEnter}
             onDragLeave={useMainDropTarget ? undefined : attachmentDrop.onDragLeave}
             onDragOver={useMainDropTarget ? undefined : attachmentDrop.onDragOver}
@@ -463,16 +242,6 @@ export function ChatMessageComposer({
         >
             <ChatComposerMainDropOverlay
                 active={useMainDropTarget && attachmentDrop.isFileDropActive}
-            />
-            <ChatComposerQueuePanel
-                canSteerBlockedMessages={steerTargets.length > 0}
-                isBlocked={isSendBlocked}
-                onEdit={handleEditQueuedMessage}
-                onMove={composerQueue.move}
-                onPromote={handlePromoteQueuedMessage}
-                onRemove={composerQueue.remove}
-                onReorder={handleReorderQueuedMessages}
-                queue={visibleQueuedMessages}
             />
             <ChatComposerAttachmentList
                 attachments={attachments}
@@ -532,13 +301,7 @@ export function ChatMessageComposer({
                     ) : (
                         <PromptInputSubmit
                             canSubmit={canSubmit}
-                            label={
-                                !isComposerBlocked &&
-                                (editingQueuedMessageId || isSendBlocked) &&
-                                hasPayload
-                                    ? 'Queue message'
-                                    : 'Send message'
-                            }
+                            label="Send message"
                             tooltip={getSendDisabledTooltip({
                                 agentRuntimeSyncLabel,
                                 boundAgentCount: boundAgentIds.length,
@@ -546,7 +309,6 @@ export function ChatMessageComposer({
                                 canSend: chatCanSend,
                                 isDisabled,
                                 isPending: sendMessage.isPending,
-                                isReplyActive,
                                 runtimeReady: canSendToRuntime,
                                 runtimeReason: runtimeDisabledReason,
                             })}
@@ -573,7 +335,6 @@ function getSendDisabledTooltip({
     canSend,
     isDisabled,
     isPending,
-    isReplyActive,
     runtimeReady,
     runtimeReason,
 }: {
@@ -583,7 +344,6 @@ function getSendDisabledTooltip({
     canSend: boolean;
     isDisabled: boolean;
     isPending: boolean;
-    isReplyActive: boolean;
     runtimeReady: boolean;
     runtimeReason: string;
 }) {
@@ -593,10 +353,6 @@ function getSendDisabledTooltip({
 
     if (blockReason) {
         return blockReason;
-    }
-
-    if (isReplyActive) {
-        return undefined;
     }
 
     if (boundAgentCount === 0) {

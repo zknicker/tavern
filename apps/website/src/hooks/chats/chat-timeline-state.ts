@@ -5,11 +5,6 @@ export {
     emptyTimelineState,
 } from './chat-timeline-snapshots.ts';
 export {
-    patchTimelineWithSteerNotice,
-    readTimelineSteerNotice,
-    rollbackTimelineSteerNotice,
-} from './chat-timeline-steer.ts';
-export {
     clearTimelineTurn,
     completeTimelineTurn,
     dismissTimelineFailure,

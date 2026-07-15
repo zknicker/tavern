@@ -15,6 +15,7 @@ import { appRoutes } from '../../lib/app-routes.ts';
 import { MissingAgentState } from '../agents/missing-agent-state.tsx';
 import { ArchivedChatBar } from './archived-chat-bar.tsx';
 import { ArtifactPanelOpenProvider } from './artifact-panel-context.tsx';
+import { getActiveRunIds } from './chat-active-runs.ts';
 import { ChatArtifactPanel } from './chat-artifact-panel.tsx';
 import { getChatContextFullness } from './chat-context-fullness.ts';
 import { ChatDetailFooter } from './chat-detail-footer.tsx';
@@ -25,7 +26,6 @@ import { ChatMessageComposer } from './chat-message-composer.tsx';
 import { getChatMessageLayout } from './chat-message-layout.ts';
 import { buildChatPath } from './chat-path.ts';
 import { ChatRoomTopbar } from './chat-room-topbar.tsx';
-import { getActiveRunIds, getSteerableTurnTargets } from './chat-steering.ts';
 
 export const chatDetailLogLimit = 24;
 export const demoChannelLogLimit = 48;
@@ -226,11 +226,6 @@ function SyncedAgentChatDetail({ chat, chatId }: { chat: ChatListItem; chatId: s
                                 conversationKind={chat.conversationKind}
                                 isDisabled={chat.isDisabled}
                                 isReplyActive={isTurnBlocking}
-                                steerTargets={getSteerableTurnTargets({
-                                    activeReplies: timeline.activeReplies,
-                                    activeTurns: timeline.activeTurns,
-                                    rows,
-                                })}
                             />
                         </ChatDetailFooter>
                     )

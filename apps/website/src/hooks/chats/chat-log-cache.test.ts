@@ -2,7 +2,6 @@ import { expect, test } from 'bun:test';
 import type { ChatLogOutput } from '../../lib/trpc.tsx';
 import {
     patchChatLogWithProgress,
-    patchChatLogWithSteerNotice,
     progressStepToChatRows,
     upsertProgressRows,
 } from './chat-log-cache.ts';
@@ -340,51 +339,6 @@ test('progress patch inserts a widget row for live widget progress', () => {
             validationError: null,
         },
         sessionKey: turn.sessionKey,
-    });
-});
-
-test('steer patch inserts the accepted steer as a user message row', () => {
-    const log = patchChatLogWithSteerNotice(emptyLog(), {
-        content: 'nvm do LA',
-        runId: 'run-1',
-        timestamp: '2026-05-22T19:00:03.000Z',
-    });
-
-    expect(log?.totalMessages).toBe(0);
-    expect(log?.rows).toHaveLength(1);
-    expect(log?.rows[0]).toMatchObject({
-        id: 'act_run-1_runtime_notice_steered_message',
-        kind: 'message',
-        message: {
-            content: 'nvm do LA',
-            sender: 'You',
-            senderType: 'user',
-            timestamp: '2026-05-22T19:00:03.000Z',
-        },
-    });
-});
-
-test('progress patch inserts a visible steer message without a system notice', () => {
-    const log = patchChatLogWithProgress(emptyLog(), {
-        step: {
-            detail: 'actually la',
-            id: 'act_run-1_runtime_notice_steered',
-            kind: 'notice',
-            label: 'Steered active turn',
-            status: 'completed',
-        },
-        timestamp: '2026-05-22T19:00:03.000Z',
-        turn,
-    });
-
-    expect(log?.rows.map((row) => row.id)).toEqual(['act_run-1_runtime_notice_steered_message']);
-    expect(log?.rows[0]).toMatchObject({
-        kind: 'message',
-        message: {
-            content: 'actually la',
-            sender: 'You',
-            senderType: 'user',
-        },
     });
 });
 

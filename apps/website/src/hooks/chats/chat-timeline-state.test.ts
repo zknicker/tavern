@@ -8,10 +8,7 @@ import {
     failTimelineTurn,
     optimisticallyStopTimelineTurn,
     patchTimelineProgress,
-    patchTimelineWithSteerNotice,
-    readTimelineSteerNotice,
     removeOptimisticStoppedTurn,
-    rollbackTimelineSteerNotice,
     startTimelineTurn,
     updateTimelineReply,
 } from './chat-timeline-state.ts';
@@ -220,81 +217,6 @@ test('patchTimelineProgress narration creates the turn post in place', () => {
         },
     ]);
     expect(state.turnEvidence['run-1']?.map((row) => row.id)).toEqual(['act_run-1_preamble-1']);
-});
-
-test('patchTimelineWithSteerNotice inserts a visible user row before durable log data arrives', () => {
-    const state = patchTimelineWithSteerNotice(startTimelineTurn(emptyTimelineState(), turn), {
-        content: 'use the shorter summary',
-        runId: 'run-1',
-        timestamp: '2026-04-21T16:08:44.000Z',
-    });
-
-    expect(state.activeTurns).toEqual([turn]);
-    expect(state.timeline).toHaveLength(1);
-    expect(state.timeline[0]).toMatchObject({
-        id: 'act_run-1_runtime_notice_steered_message',
-        kind: 'message',
-        message: {
-            content: 'use the shorter summary',
-            sender: 'You',
-            senderType: 'user',
-        },
-    });
-    expect(readTimelineSteerNotice(state, { runId: 'run-1' })).toMatchObject({
-        message: {
-            content: 'use the shorter summary',
-        },
-    });
-});
-
-test('applyLogSnapshot preserves optimistic steer rows during stale live refetches', () => {
-    const live = patchTimelineWithSteerNotice(startTimelineTurn(emptyTimelineState(), turn), {
-        content: 'use the shorter summary',
-        runId: 'run-1',
-        timestamp: '2026-04-21T16:08:44.000Z',
-    });
-    const next = applyLogSnapshot(live, {
-        limit: 100,
-        nextBeforeSequence: null,
-        rows: [],
-        totalMessages: 0,
-    });
-
-    expect(next.timeline.map((row) => row.id)).toEqual([
-        'act_run-1_runtime_notice_steered_message',
-    ]);
-    expect(next.activeTurns).toEqual([turn]);
-    expect(readTimelineSteerNotice(next, { runId: 'run-1' })).toMatchObject({
-        message: {
-            content: 'use the shorter summary',
-        },
-    });
-});
-
-test('rollbackTimelineSteerNotice restores the previous visible steer row', () => {
-    const accepted = patchTimelineWithSteerNotice(startTimelineTurn(emptyTimelineState(), turn), {
-        content: 'first steer',
-        runId: 'run-1',
-        timestamp: '2026-04-21T16:08:44.000Z',
-    });
-    const previousNotice = readTimelineSteerNotice(accepted, { runId: 'run-1' });
-    const failed = patchTimelineWithSteerNotice(accepted, {
-        content: 'failed steer',
-        runId: 'run-1',
-        timestamp: '2026-04-21T16:08:46.000Z',
-    });
-    const rolledBack = rollbackTimelineSteerNotice(failed, {
-        content: 'failed steer',
-        previousNotice,
-        runId: 'run-1',
-    });
-
-    expect(rolledBack.timeline).toHaveLength(1);
-    expect(rolledBack.timeline[0]).toMatchObject({
-        message: {
-            content: 'first steer',
-        },
-    });
 });
 
 test('applyLogSnapshot keeps live turn evidence while the run is active', () => {

@@ -11,7 +11,6 @@ import {
 } from './agent-chat-detail.tsx';
 import { AgentStatusIndicator } from './agent-status-indicator.tsx';
 import { resolveDraftHandoffFrame } from './chat-draft-detail.tsx';
-import { getSteerableTurnTargets, resolveSteerRunId } from './chat-steering.ts';
 
 test('chat detail cold-open loads a narrow transcript tail', () => {
     expect(chatDetailLogLimit).toBeLessThanOrEqual(30);
@@ -275,7 +274,7 @@ test('visible non-thinking fallback replies do not keep the composer blocked', (
     ).toBe(true);
 });
 
-test('active tool-only turns keep the composer in queue mode', () => {
+test('active tool-only turns keep the reply marked active', () => {
     expect(
         isBlockingActiveTurn({
             activeReplies: [],
@@ -291,119 +290,4 @@ test('active tool-only turns keep the composer in queue mode', () => {
             agentsPending: false,
         })
     ).toBe(true);
-});
-
-test('steering with several live runs needs a single mentioned running agent', () => {
-    const turnFor = (runId: string, agentId: string) => ({
-        agentId,
-        chatId: 'chat-1',
-        runId,
-        sessionKey: `session-${runId}`,
-        startedAt: '2026-05-13T12:00:00.000Z',
-    });
-    const targets = getSteerableTurnTargets({
-        activeReplies: [
-            { agentId: 'agent-a', runId: 'run-1' },
-            { agentId: 'agent-b', runId: 'run-2' },
-        ],
-        activeTurns: [turnFor('run-1', 'agent-a'), turnFor('run-2', 'agent-b')],
-    });
-
-    expect(targets).toHaveLength(2);
-    // No mentions: ambiguous, stays queued.
-    expect(resolveSteerRunId(targets)).toBeNull();
-    // Exactly one running agent mentioned: steer that run.
-    expect(resolveSteerRunId(targets, { mentionAgentIds: ['agent-b'] })).toBe('run-2');
-    // Mentioning both running agents is still ambiguous.
-    expect(resolveSteerRunId(targets, { mentionAgentIds: ['agent-a', 'agent-b'] })).toBeNull();
-    // Mentioning an idle agent resolves nothing.
-    expect(resolveSteerRunId(targets, { mentionAgentIds: ['agent-idle'] })).toBeNull();
-});
-
-test('steering is available while the active run is still live', () => {
-    const activeTurn = {
-        agentId: 'agent-1',
-        chatId: 'chat-1',
-        runId: 'run-1',
-        sessionKey: 'session-1',
-        startedAt: '2026-05-13T12:00:00.000Z',
-    };
-    const steerRunId = (input: Parameters<typeof getSteerableTurnTargets>[0]) =>
-        resolveSteerRunId(getSteerableTurnTargets(input));
-
-    expect(steerRunId({ activeReplies: [], activeTurns: [activeTurn] })).toBe('run-1');
-    expect(
-        steerRunId({
-            activeReplies: [{ agentId: 'agent-1', runId: 'run-1' }],
-            activeTurns: [activeTurn],
-        })
-    ).toBe('run-1');
-    expect(
-        steerRunId({
-            activeReplies: [
-                {
-                    agentId: 'agent-1',
-                    completedAt: '2026-05-13T12:00:03.000Z',
-                    runId: 'run-1',
-                },
-            ],
-            activeTurns: [],
-        })
-    ).toBeNull();
-    expect(
-        steerRunId({
-            activeReplies: [{ agentId: 'agent-1', runId: 'run-1' }],
-            activeTurns: [activeTurn],
-            rows: [
-                {
-                    actor: { id: 'agent-1', kind: 'agent' },
-                    connectsToNext: false,
-                    connectsToPrevious: false,
-                    id: 'act_run-1_message_1',
-                    isFirstInGroup: true,
-                    kind: 'message',
-                    message: {
-                        actor: { id: 'agent-1', kind: 'agent' },
-                        content: 'Checking the weather source.',
-                        id: 'act_run-1_message_1',
-                        metadata: { runtime: { runId: 'run-1' } },
-                        sender: 'agent-1',
-                        senderType: 'agent',
-                        sourceSessionId: null,
-                        sourceSessionKey: 'session-1',
-                        tavernAgentId: 'agent-1',
-                        timestamp: '2026-05-13T12:00:01.000Z',
-                    },
-                },
-            ],
-        })
-    ).toBe('run-1');
-    expect(
-        steerRunId({
-            activeReplies: [{ agentId: 'agent-1', runId: 'run-1' }],
-            activeTurns: [activeTurn],
-            rows: [
-                {
-                    actor: { id: 'agent-1', kind: 'agent' },
-                    connectsToNext: false,
-                    connectsToPrevious: false,
-                    id: 'msg_agent_1',
-                    isFirstInGroup: true,
-                    kind: 'message',
-                    message: {
-                        actor: { id: 'agent-1', kind: 'agent' },
-                        content: 'Canada is too broad.',
-                        id: 'msg_agent_1',
-                        metadata: { runtime: { runId: 'run-1' } },
-                        sender: 'agent-1',
-                        senderType: 'agent',
-                        sourceSessionId: null,
-                        sourceSessionKey: 'session-1',
-                        tavernAgentId: 'agent-1',
-                        timestamp: '2026-05-13T12:00:01.000Z',
-                    },
-                },
-            ],
-        })
-    ).toBeNull();
 });

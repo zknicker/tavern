@@ -8,8 +8,8 @@ import type { ChatTimelineState, ChatTurn, ChatTurnProgressStep } from './chat-t
 
 // Progress steps feed two surfaces (specs/chat-timeline.md): every step lands
 // in the run's live evidence (the drawer's source while the turn streams),
-// while conversation-visible steps — the turn's post, widgets, notices,
-// steered messages — touch the timeline.
+// while conversation-visible steps — the turn's post, widgets, notices —
+// touch the timeline.
 export function patchTimelineProgress(
     state: ChatTimelineState,
     input: {

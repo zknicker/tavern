@@ -6,7 +6,6 @@ export interface ChatComposerDraftState {
     agentId: string;
     attachments: ChatComposerAttachment[];
     content: string;
-    editingQueuedMessageId: string | null;
     mentions: Mention[];
 }
 
@@ -60,16 +59,6 @@ export function useChatComposerDraftState({
         [boundAgentIds, chatId]
     );
 
-    const setAgentId = React.useCallback(
-        (value: DraftValue<string>) => {
-            updateDraft((current) => ({
-                ...current,
-                agentId: resolveDraftValue(value, current.agentId),
-            }));
-        },
-        [updateDraft]
-    );
-
     const setAttachments = React.useCallback(
         (value: DraftValue<ChatComposerAttachment[]>) => {
             updateDraft((current) => ({
@@ -90,16 +79,6 @@ export function useChatComposerDraftState({
         [updateDraft]
     );
 
-    const setEditingQueuedMessageId = React.useCallback(
-        (value: DraftValue<string | null>) => {
-            updateDraft((current) => ({
-                ...current,
-                editingQueuedMessageId: resolveDraftValue(value, current.editingQueuedMessageId),
-            }));
-        },
-        [updateDraft]
-    );
-
     const setMentions = React.useCallback(
         (value: DraftValue<Mention[]>) => {
             updateDraft((current) => ({
@@ -112,10 +91,8 @@ export function useChatComposerDraftState({
 
     return {
         draft,
-        setAgentId,
         setAttachments,
         setContent,
-        setEditingQueuedMessageId,
         setMentions,
     };
 }
@@ -127,7 +104,6 @@ export function createChatComposerDraftState(
         agentId: boundAgentIds[0] ?? '',
         attachments: [],
         content: '',
-        editingQueuedMessageId: null,
         mentions: [],
     };
 }
