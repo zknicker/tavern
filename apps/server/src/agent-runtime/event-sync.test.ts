@@ -160,15 +160,6 @@ test('runtime catch-up ignores historical turn events', () => {
         false
     );
     assert.equal(
-        shouldApplyCatchUpRuntimeEvent({
-            message: 'extra context',
-            timestamp,
-            turn,
-            type: 'turn.steered',
-        }),
-        false
-    );
-    assert.equal(
         shouldApplyCatchUpRuntimeEvent({ timestamp, turn, type: 'turn.completed' }),
         false
     );

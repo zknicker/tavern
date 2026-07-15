@@ -213,12 +213,6 @@ export async function applyObservedAgentRuntimeEvent(
             debugTurnEvent(event);
             return;
         }
-        case 'turn.steered': {
-            markTurnSessionActive(event.turn.sessionKey);
-            emitObservedAgentRuntimeEvent(event);
-            debugTurnEvent(event);
-            return;
-        }
         case 'turn.completed':
         case 'turn.cancelled':
         case 'turn.failed': {
@@ -259,7 +253,6 @@ function debugTurnEvent(event: AgentRuntimeEvent) {
         case 'turn.progress':
         case 'turn.replyUpdated':
         case 'turn.statusUpdated':
-        case 'turn.steered':
         case 'turn.started':
             console.info('[tavern:chat:server]', event.type, {
                 runId: event.turn.runId,
@@ -424,7 +417,6 @@ export function shouldApplyCatchUpRuntimeEvent(event: AgentRuntimeEvent) {
         case 'turn.replyUpdated':
         case 'turn.started':
         case 'turn.statusUpdated':
-        case 'turn.steered':
             return false;
         default:
             return true;

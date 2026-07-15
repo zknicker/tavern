@@ -510,45 +510,6 @@ test('applyObservedAgentRuntimeEvent does not sync history for live reply update
     });
 });
 
-test('applyObservedAgentRuntimeEvent observes steered turns without writing Runtime rows', async () => {
-    await applyObservedAgentRuntimeEvent(
-        {
-            message: 'Use the smaller fix.',
-            requestMessageId: 'msg_steer_1',
-            timestamp: '2026-05-12T19:00:00.000Z',
-            turn: {
-                agentId: 'agent:test',
-                chatId: tavernChatId,
-                runId: 'run-1',
-                sessionKey: 'session-1',
-                startedAt: '2026-05-12T18:59:00.000Z',
-            },
-            type: 'turn.steered',
-        },
-        {
-            baseUrl: 'http://runtime.test',
-            id: 'runtime-1',
-        } as never
-    );
-    await flushAsyncEventSync();
-
-    expect(emitObservedAgentRuntimeEvent).toHaveBeenCalledWith({
-        message: 'Use the smaller fix.',
-        requestMessageId: 'msg_steer_1',
-        timestamp: '2026-05-12T19:00:00.000Z',
-        turn: {
-            agentId: 'agent:test',
-            chatId: tavernChatId,
-            runId: 'run-1',
-            sessionKey: 'session-1',
-            startedAt: '2026-05-12T18:59:00.000Z',
-        },
-        type: 'turn.steered',
-    });
-    expect(tavernApiRequests).toEqual([]);
-    expect(emitChatLogUpdated).not.toHaveBeenCalled();
-});
-
 test('applyObservedAgentRuntimeEvent defers invalidated session sync while a turn is active', async () => {
     const listSessions = mock(async () => ({
         sessions: [
