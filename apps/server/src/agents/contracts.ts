@@ -4,8 +4,8 @@ import {
     agentRuntimeConnectionStatusSchema,
 } from '../agent-runtime-connection/contracts.ts';
 import {
-    agentActivityStateSchema,
     agentKindSchema,
+    agentPresenceStateSchema,
     cronStateSchema,
     logLevelSchema,
     sessionStateSchema,
@@ -96,10 +96,12 @@ export const globalSubAgentSchema = subAgentSchema.extend({
     parentId: z.string(),
 });
 
-export const agentActivitySchema = z.object({
+export const agentPresenceSchema = z.object({
     agentId: z.string(),
-    state: agentActivityStateSchema,
-    updatedAt: z.string().nullable(),
+    chatId: z.string().nullable(),
+    chatTitle: z.string().nullable(),
+    since: z.string().nullable(),
+    state: agentPresenceStateSchema,
 });
 
 export const globalDashboardSchema = z.object({
@@ -122,7 +124,7 @@ export const dashboardSchema = z.object({
 
 export type DashboardData = z.infer<typeof dashboardSchema>;
 export type AgentDetail = z.infer<typeof agentDetailSchema>;
-export type AgentActivity = z.infer<typeof agentActivitySchema>;
+export type AgentPresence = z.infer<typeof agentPresenceSchema>;
 export type GlobalDashboardData = z.infer<typeof globalDashboardSchema>;
 export type GlobalSubAgent = z.infer<typeof globalSubAgentSchema>;
 export type LogEntry = z.infer<typeof logEntrySchema>;

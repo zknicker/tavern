@@ -1,5 +1,4 @@
 import { createRouter } from '../trpc.ts';
-import { listAgentActivityRoute } from './activity.ts';
 import { listAgentChatsRoute } from './chats-list.ts';
 import { createAgentProcedure } from './create.ts';
 import { deleteAgent } from './delete.ts';
@@ -10,6 +9,7 @@ import { listAgents } from './list.ts';
 import { onEngineRestart } from './on-engine-restart.ts';
 import { onAgentInstructionsUpdate } from './on-instructions-update.ts';
 import { onAgentUpdate } from './on-update.ts';
+import { listAgentPresenceRoute } from './presence.ts';
 import { getPrimaryAgentRoute } from './primary.ts';
 import { saveAgentProfile } from './save-profile.ts';
 import { saveAgentSkillsProcedure } from './save-skills.ts';
@@ -28,7 +28,7 @@ import {
 } from './workspace-file.ts';
 
 export const agentRouter = createRouter({
-    activity: listAgentActivityRoute,
+    presence: listAgentPresenceRoute,
     chats: createRouter({
         list: listAgentChatsRoute,
     }),
