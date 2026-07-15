@@ -3,7 +3,6 @@ import path from 'node:path';
 import {
     type AgentRuntimeAgent,
     type AgentRuntimeCreateMessage,
-    type AgentRuntimeSteerTurn,
     agentRuntimeAgentPluginGrantListSchema,
     agentRuntimeAgentPluginGrantSchema,
     agentRuntimeArchiveAgentSchema,
@@ -52,11 +51,7 @@ import {
     updateStoredAgent,
     upsertStoredAgent,
 } from './agents-store.ts';
-import {
-    sendTavernChannelMessage,
-    steerTavernChannelTurn,
-    stopTavernChannelTurn,
-} from './channel-relay.ts';
+import { sendTavernChannelMessage, stopTavernChannelTurn } from './channel-relay.ts';
 import { json } from './http.ts';
 import { primaryManagedAgent } from './managed-agent.ts';
 import { getRuntimeTool, listRuntimeTools } from './tool-catalog.ts';
@@ -309,13 +304,6 @@ async function dispatchAgentEngineStatic({ request, url }: { request: Request; u
                 return await sendTavernChannelMessage(chatId, input);
             }
             return unsupportedPayload('Non-Tavern agent chat messages');
-        }
-        if (chatId && segments[3] === 'turns' && segments[4] && segments[5] === 'steer') {
-            const input = (await readJson(request)) as AgentRuntimeSteerTurn;
-            return await steerTavernChannelTurn(chatId, {
-                ...input,
-                runId: segments[4],
-            });
         }
         if (chatId && segments[3] === 'turns' && segments[4] && segments[5] === 'stop') {
             return await stopTavernChannelTurn({ runId: segments[4] });

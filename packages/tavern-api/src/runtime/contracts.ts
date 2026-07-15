@@ -2500,17 +2500,6 @@ export const agentRuntimeStopTurnResultSchema = z.object({
     stopped: z.boolean(),
 });
 
-export const agentRuntimeSteerTurnSchema = z.object({
-    content: z.string().trim().min(1),
-    metadata: agentRuntimeMessageMetadataSchema.optional(),
-    runId: z.string().trim().min(1),
-});
-
-export const agentRuntimeSteerTurnResultSchema = z.object({
-    runId: z.string().trim().min(1),
-    steered: z.boolean(),
-});
-
 export const agentRuntimeClarificationDispositionSchema = z.enum([
     'answered',
     'skipped',
@@ -3290,8 +3279,6 @@ export type AgentRuntimeCreateMessage = z.infer<typeof agentRuntimeCreateMessage
 export type AgentRuntimeMessageAccepted = z.infer<typeof agentRuntimeMessageAcceptedSchema>;
 export type AgentRuntimeStopTurn = z.infer<typeof agentRuntimeStopTurnSchema>;
 export type AgentRuntimeStopTurnResult = z.infer<typeof agentRuntimeStopTurnResultSchema>;
-export type AgentRuntimeSteerTurn = z.infer<typeof agentRuntimeSteerTurnSchema>;
-export type AgentRuntimeSteerTurnResult = z.infer<typeof agentRuntimeSteerTurnResultSchema>;
 export type AgentRuntimeClarificationDisposition = z.infer<
     typeof agentRuntimeClarificationDispositionSchema
 >;

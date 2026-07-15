@@ -1,11 +1,8 @@
 import {
     type AgentRuntimeCreateMessage,
     type AgentRuntimeMessageAccepted,
-    type AgentRuntimeSteerTurn,
     agentRuntimeCreateMessageSchema,
     agentRuntimeMessageAcceptedSchema,
-    agentRuntimeSteerTurnResultSchema,
-    agentRuntimeSteerTurnSchema,
     agentRuntimeStopTurnResultSchema,
     agentRuntimeStopTurnSchema,
 } from '@tavern/api';
@@ -15,10 +12,9 @@ import { ensureCurrentAgentSession } from './agent-session-store.ts';
 import { enqueueAgentTurn, stopAgentTurn } from './agent-turn-runner.ts';
 import { getStoredAgent } from './agents-store.ts';
 import { createAgentParticipantId, createRunId } from './chat-api/ids.ts';
-import { createMessage, getResponse, upsertResponse } from './chat-api/index.ts';
+import { createMessage, upsertResponse } from './chat-api/index.ts';
 import { ensurePrimaryManagedAgent } from './managed-agent.ts';
 import { ensureFreshAgentSession } from './session-freshness.ts';
-import { recordUserSteerNotice } from './turn-steering.ts';
 
 export async function sendTavernChannelMessage(
     chatId: string,
@@ -119,34 +115,6 @@ export async function stopTavernChannelTurn(input: { runId: string }) {
     });
 }
 
-export async function steerTavernChannelTurn(_chatId: string, input: AgentRuntimeSteerTurn) {
-    const payload = agentRuntimeSteerTurnSchema.parse(input);
-    const responseId = createResponseId(payload.runId);
-    const response = getResponse(responseId);
-    if (!response) {
-        return agentRuntimeSteerTurnResultSchema.parse({
-            runId: payload.runId,
-            steered: false,
-        });
-    }
-
-    const runtime = readRecord(response.metadata.runtime);
-    recordUserSteerNotice({
-        agentId: readString(runtime.agentId),
-        agentSessionId: readString(runtime.agentSessionId),
-        chatId: response.chat_id,
-        content: payload.content.trim(),
-        messageId: readString(runtime.messageId),
-        responseId: response.id,
-        runId: payload.runId,
-    });
-
-    return agentRuntimeSteerTurnResultSchema.parse({
-        runId: payload.runId,
-        steered: true,
-    });
-}
-
 function createResponseId(runId: string) {
     return runId.startsWith('rsp_') ? runId : `rsp_${runId.replace(/[^A-Za-z0-9_-]/g, '_')}`;
 }
@@ -174,12 +142,3 @@ function requireStoredAgent(agentId: string) {
     return agent;
 }
 
-function readRecord(value: unknown): Record<string, unknown> {
-    return value && typeof value === 'object' && !Array.isArray(value)
-        ? (value as Record<string, unknown>)
-        : {};
-}
-
-function readString(value: unknown) {
-    return typeof value === 'string' && value.trim() ? value : null;
-}
