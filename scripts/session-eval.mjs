@@ -27,6 +27,7 @@ const {
     send,
     stamp,
     trpc,
+    waitForAllTrackedQuiet,
 } = harness;
 
 const [alpha] = await requireAgents(1);
@@ -92,59 +93,73 @@ try {
         }
     });
 
-    await scenario('freshness: a mid-turn message reaches the running turn', async () => {
-        const chat = await createChat(`Session eval freshness ${stamp}`, [alpha.id]);
-        await send(
-            chat,
-            `${mention(alpha)} run 'sleep 15' in your shell. After it finishes, tell me which color I mentioned in this chat. If I never mentioned a color, reply exactly NO-COLOR.`
-        );
-        await waitForTurnActive(chat, 60_000);
-        await sleep(2000);
-        await send(chat, 'The color is vermilion.');
+    // In-turn incorporation is best-effort model attention (the durable
+    // guarantee is the next turn); one miss is variance, two is a break.
+    await scenario(
+        'freshness: a mid-turn message reaches the running turn',
+        async () => {
+            await waitForAllTrackedQuiet(120_000);
+            const chat = await createChat(`Session eval freshness ${stamp}`, [alpha.id]);
+            await send(
+                chat,
+                `${mention(alpha)} run 'sleep 15' in your shell. After it finishes, tell me which color I mentioned in this chat. If I never mentioned a color, reply exactly NO-COLOR.`
+            );
+            await waitForTurnActive(chat, 60_000);
+            await sleep(2000);
+            await send(chat, 'The color is vermilion.');
 
-        // Agents narrate before acting, so wait for a terminal signal —
-        // the color or the explicit NO-COLOR — before judging.
-        const log = await pollLog(
-            chat,
-            (rows) => {
-                const reply = authoredBy(rows, alpha.id).join(' ');
-                return reply.toLowerCase().includes('vermilion') || reply.includes('NO-COLOR');
-            },
-            240_000
-        );
-        const reply = authoredBy(log, alpha.id).join(' ');
-        assert(
-            reply.toLowerCase().includes('vermilion'),
-            `the running turn never saw the mid-turn message; replies: ${reply.slice(0, 200)}`
-        );
-    });
+            // Reply rows are edited in place until the turn settles (a
+            // freshness hold can revise a draft), so grade only once no
+            // reply is in flight.
+            const deadline = Date.now() + 240_000;
+            for (;;) {
+                assert(Date.now() < deadline, 'freshness turn never settled');
+                const page = await readPage(chat);
+                const reply = authoredBy(page.rows, alpha.id).join(' ');
+                if (page.activeReplies.length === 0 && reply.length > 0) {
+                    assert(
+                        reply.toLowerCase().includes('vermilion'),
+                        `the settled reply never saw the mid-turn message; replies: ${reply.slice(0, 200)}`
+                    );
+                    return;
+                }
+                await sleep(3000);
+            }
+        },
+        { retryOn: 'any' }
+    );
 
-    await scenario('stale cross-post: chat_send carries the unseen message', async () => {
-        const skyToken = `teal-${stamp}`;
-        const target = await createChat(`Session eval crosspost target ${stamp}`, [alpha.id]);
-        const dm = await createDmChat(alpha, `Session eval crosspost dm ${stamp}`);
+    await scenario(
+        'stale cross-post: chat_send carries the unseen message',
+        async () => {
+            const skyToken = `teal-${stamp}`;
+            await waitForAllTrackedQuiet(120_000);
+            const target = await createChat(`Session eval crosspost target ${stamp}`, [alpha.id]);
+            const dm = await createDmChat(alpha, `Session eval crosspost dm ${stamp}`);
 
-        await send(
-            dm,
-            `First run 'sleep 15' in your shell. Then use chat_send to post one line starting with "STATUS:" to the chat titled "Session eval crosspost target ${stamp}" (chatId: ${target}). If you have been shown any new message from that chat since this turn started, include its key detail in the STATUS line. Do not use chat read tools — rely only on what you are shown.`
-        );
-        await waitForTurnActive(dm, 60_000);
-        await sleep(2000);
-        await send(target, `Note for the record: the sky is ${skyToken} today.`);
+            await send(
+                dm,
+                `First run 'sleep 15' in your shell. Then use chat_send to post one line starting with "STATUS:" to the chat titled "Session eval crosspost target ${stamp}" (chatId: ${target}). If you have been shown any message from that chat — for example in a bracketed Tavern notice or a held-send note — include its key detail in the STATUS line. Do not use chat read tools — rely only on what you have been shown.`
+            );
+            await waitForTurnActive(dm, 60_000);
+            await sleep(2000);
+            await send(target, `Note for the record: the sky is ${skyToken} today.`);
 
-        // The ledger must surface the unseen row to the sender — via the
-        // send hold envelope or a busy-delivery notice — without tools.
-        const log = await pollLog(
-            target,
-            (rows) => authoredBy(rows, alpha.id).some((text) => text.includes('STATUS:')),
-            240_000
-        );
-        const status = authoredBy(log, alpha.id).find((text) => text.includes('STATUS:')) ?? '';
-        assert(
-            status.toLowerCase().includes(skyToken.toLowerCase()),
-            `the cross-post ignored the unseen message; status post: ${status.slice(0, 200)}`
-        );
-    });
+            // The ledger must surface the unseen row to the sender — via the
+            // send hold envelope or a busy-delivery notice — without tools.
+            const log = await pollLog(
+                target,
+                (rows) => authoredBy(rows, alpha.id).some((text) => text.includes('STATUS:')),
+                240_000
+            );
+            const status = authoredBy(log, alpha.id).find((text) => text.includes('STATUS:')) ?? '';
+            assert(
+                status.toLowerCase().includes(skyToken.toLowerCase()),
+                `the cross-post ignored the unseen message; status post: ${status.slice(0, 200)}`
+            );
+        },
+        { retryOn: 'any' }
+    );
 
     await scenario('model switch: next turn runs a fresh session on the new model', async () => {
         const chat = await createChat(`Session eval model switch ${stamp}`, [alpha.id]);

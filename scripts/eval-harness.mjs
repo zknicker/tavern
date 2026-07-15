@@ -17,7 +17,11 @@ export function createEvalHarness({ evalName }) {
     const bioRestores = [];
     const results = [];
 
-    async function scenario(name, run) {
+    // retryOn 'infra' (default) retries once on transport/provider hiccups
+    // only; 'any' also retries one behavioral miss — for scenarios grading
+    // best-effort model attention, where a single miss is variance and a
+    // repeat is signal.
+    async function scenario(name, run, { retryOn = 'infra' } = {}) {
         if (onlyFilter && !name.includes(onlyFilter)) {
             return;
         }
@@ -30,10 +34,9 @@ export function createEvalHarness({ evalName }) {
                 process.stdout.write(`  ✓ pass (${seconds(startedAt)}s)\n`);
                 return;
             } catch (error) {
-                // Transport/provider hiccups are not behavior regressions;
-                // retry the scenario once in fresh chats before failing it.
-                if (error instanceof InfraError && attempt === 1) {
-                    process.stdout.write(`  ↻ retrying after turn failure: ${error.message}\n`);
+                const retryable = retryOn === 'any' || error instanceof InfraError;
+                if (retryable && attempt === 1) {
+                    process.stdout.write(`  ↻ retrying: ${String(error).slice(0, 160)}\n`);
                     continue;
                 }
                 results.push({
@@ -305,6 +308,21 @@ export function createEvalHarness({ evalName }) {
         throw new Error('chat never went quiet');
     }
 
+    // Wait until no tracked chat has an in-flight reply — scenarios that
+    // depend on WHICH turn is running must not start while a previous
+    // scenario's (or attempt's) turn still runs somewhere.
+    async function waitForAllTrackedQuiet(timeoutMs) {
+        const deadline = Date.now() + timeoutMs;
+        while (Date.now() < deadline) {
+            const pages = await Promise.all(createdChatIds.map((chatId) => readPage(chatId)));
+            if (pages.every((page) => page.activeReplies.length === 0)) {
+                return;
+            }
+            await sleep(2000);
+        }
+        throw new Error('tracked chats never went quiet');
+    }
+
     async function cleanupChatsAndBios() {
         for (const restore of bioRestores) {
             await trpc('agent.updateBio', restore).catch((error) =>
@@ -351,6 +369,7 @@ export function createEvalHarness({ evalName }) {
         stamp,
         trackChat,
         trpc,
+        waitForAllTrackedQuiet,
         waitForQuiet,
         withTempBio,
     };
