@@ -383,6 +383,46 @@ describe('harness agent executor', () => {
         expect(prompt.match(/current channel ask/g)).toHaveLength(1);
     });
 
+    it('bounds ambient channel context at the triggering message', async () => {
+        // A queued turn answers the chat as of its trigger: messages that
+        // land while it waits are not injected — they ride the next turn's
+        // ambient window (or their own turn) instead.
+        seedPromptChat({ chatId: 'cht_bound', kind: 'channel' });
+        createPromptMessage('cht_bound', {
+            authorId: 'usr_alice',
+            content: 'before trigger note',
+            id: 'msg_bound_before',
+            role: 'user',
+        });
+        createPromptMessage('cht_bound', {
+            authorId: 'usr_bob',
+            content: 'current bounded ask',
+            id: 'msg_bound_current',
+            role: 'user',
+        });
+        createPromptMessage('cht_bound', {
+            authorId: 'usr_alice',
+            content: 'after trigger note',
+            id: 'msg_bound_after',
+            role: 'user',
+        });
+
+        const prompt = await harnessPrompt(
+            executorInput(
+                { model: 'gpt-4.1-mini', provider: 'openai' },
+                {
+                    chatId: 'cht_bound',
+                    content: 'current bounded ask',
+                    requestMessageId: 'msg_bound_current',
+                }
+            )
+        );
+
+        expect(prompt).toContain('before trigger note');
+        expect(prompt).not.toContain('after trigger note');
+        expect(prompt.match(/current bounded ask/g)).toHaveLength(1);
+    });
+
     it('marks the first turn of a rotated session as fresh context', async () => {
         seedPromptChat({ chatId: 'cht_fresh_note', kind: 'channel' });
         createPromptMessage('cht_fresh_note', {
