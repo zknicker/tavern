@@ -8,7 +8,6 @@ import { modelProviderHasWebSearch } from '../web/agent-tools.ts';
 import type { AgentExecutorInput } from './agent-executor.ts';
 import { readAgentSessionInstructionsHash } from './agent-session-store.ts';
 import { getStoredAgent } from './agents-store.ts';
-import { getChat } from './chat-api/index.ts';
 import { modelOperationalInstructions } from './model-instructions.ts';
 
 // PROMPT CONTRACT: this module composes every agent's system prompt. Text
@@ -22,8 +21,10 @@ export interface BuildAgentInstructionOptions {
     skillsDir?: string;
 }
 
-// The subset of executor input that instruction composition reads.
-export type AgentInstructionContext = Pick<AgentExecutorInput, 'agent' | 'agentSession' | 'chatId'>;
+// The subset of executor input that instruction composition reads. One
+// global session spans chats, so instructions are agent-scoped: chat
+// identity and rosters live in the per-turn prompt (harness-prompt.ts).
+export type AgentInstructionContext = Pick<AgentExecutorInput, 'agent' | 'agentSession'>;
 
 export async function buildAgentInstructions(
     input: AgentInstructionContext,
@@ -46,7 +47,7 @@ export async function buildAgentInstructionBundle(
     });
     const dynamicSections = [
         modelOperationalInstructions(input.agentSession.effectiveModel),
-        tavernChatInstructions(input),
+        tavernChatsInstructions(input),
     ].filter((section): section is string => Boolean(section));
     const instructions = [prepared.content, ...dynamicSections].join('\n\n');
     const fingerprint = createHash('sha256')
@@ -73,7 +74,7 @@ export async function agentSessionInstructionsFresh(
         return null;
     }
     const bundle = await buildAgentInstructionBundle(
-        { agent, agentSession: session, chatId: session.chatId },
+        { agent, agentSession: session },
         { ...options, seedSkills: false }
     );
     return bundle.fingerprint === deliveredHash;
@@ -81,22 +82,19 @@ export async function agentSessionInstructionsFresh(
 
 // Static per-session guidance lives here instead of the per-turn prompt so a
 // long session carries one copy in its system prompt rather than one per turn.
-// Tool schemas and descriptions ship per turn via the ToolSet; this section
-// carries only chat identity and behavioral rules the descriptions cannot.
-function tavernChatInstructions(input: AgentInstructionContext) {
-    const chat = getChat(input.chatId);
+// One global session spans every chat the agent sits in, so nothing here may
+// be chat-specific: each turn's prompt says where the agent is speaking and
+// who holds seats there (specs/sessions.md).
+function tavernChatsInstructions(input: AgentInstructionContext) {
     return [
-        'This chat:',
-        ...chatIdentityLines(input, chat),
+        'Your chats:',
+        '- You hold seats in several chats — channels and DMs — and one conversation spans them all: this session. Every turn tells you which chat you are speaking in and who is there; your reply goes to that chat.',
         `- Every prompt message carries its send time in ${resolveHomeTimezone()} (the home timezone). Weigh timestamps against the current time; treat older context and prior data reads as stale until re-checked.`,
         '- Recalled Wiki blocks are automatic background context, not user input; verify with wiki_read before relying on details.',
-        ...(chat?.kind === 'channel'
-            ? [
-                  '- You see every channel message and choose whether to speak. Reply with exactly NO_REPLY (nothing else) to stay silent for a turn; nothing is delivered to the chat. Silence is the normal outcome when a message is not for you, a peer is better placed, or someone already answered.',
-                  '- A mention of you means you specifically are expected to act or answer. Mention another agent (its participant-list link) only when you need that agent to act.',
-                  "- Respect ongoing exchanges: when someone is in a back-and-forth with one participant, stay out unless mentioned. Only the agent doing a piece of work reports on it; never echo a peer's answer.",
-              ]
-            : []),
+        '- You see every message in your chats and choose whether to speak. Reply with exactly NO_REPLY (nothing else) to stay silent for a turn; nothing is delivered to the chat. Silence is the normal outcome when a message is not for you, a peer is better placed, or someone already answered.',
+        '- A mention of you means you specifically are expected to act or answer. Mention another agent (its participant-list link) only when you need that agent to act.',
+        "- Respect ongoing exchanges: when someone is in a back-and-forth with one participant, stay out unless mentioned. Only the agent doing a piece of work reports on it; never echo a peer's answer.",
+        '- What someone shares in a DM was shared with you, not with every room. Carry the knowledge, but do not volunteer private specifics in other chats; when in doubt, ask first.',
         ...(input.agent.webAccessEnabled === true
             ? [
                   modelProviderHasWebSearch(input.agentSession.effectiveModel.provider)
@@ -106,45 +104,4 @@ function tavernChatInstructions(input: AgentInstructionContext) {
               ]
             : []),
     ].join('\n');
-}
-
-// The agent should know where it is speaking: channel vs direct message, the
-// chat's name, and who else holds a seat — including which seat is its own.
-// Agent seats carry their bio so co-resident agents know each other's job.
-function chatIdentityLines(input: AgentInstructionContext, chat: ReturnType<typeof getChat>) {
-    if (!chat) {
-        return [`- chatId: ${input.chatId}`];
-    }
-
-    const kind =
-        chat.kind === 'dm'
-            ? 'a direct message between you and the user'
-            : `the "${chat.title}" channel`;
-    const participants = chat.participants.map((participant) => {
-        if (participant.id === input.agentSession.agentParticipantId) {
-            return participantLine(participant.label ?? input.agent.name, '(you)', input.agent.bio);
-        }
-        if (participant.kind === 'agent') {
-            const agentId = participantAgentId(participant.metadata);
-            const agent = agentId ? getStoredAgent(agentId) : null;
-            const name = participant.label ?? agent?.name ?? participant.id;
-            // Rendered as a mention link so agents learn the handoff syntax
-            // from the roster itself. See specs/agent-mentions.md.
-            const title = agentId ? `[${name}](agent://${agentId})` : name;
-            return participantLine(title, '(agent)', agent?.bio);
-        }
-        return participantLine(participant.label ?? participant.id, null, null);
-    });
-
-    return [`- This is ${kind}.`, `- chatId: ${input.chatId}`, '- Participants:', ...participants];
-}
-
-function participantLine(name: string, tag: string | null, bio: string | null | undefined) {
-    const title = tag ? `${name} ${tag}` : name;
-    return bio ? `  - ${title} — ${bio}` : `  - ${title}`;
-}
-
-function participantAgentId(metadata: Record<string, unknown>) {
-    const agentId = metadata.agentId;
-    return typeof agentId === 'string' && agentId.length > 0 ? agentId : null;
 }

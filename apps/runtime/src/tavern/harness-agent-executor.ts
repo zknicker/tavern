@@ -62,6 +62,7 @@ import {
     persistHarnessTurnStream,
 } from './harness-turn-stream.ts';
 import { createTavernPaneTools } from './pane-tools.ts';
+import { advanceSeenCursor } from './seen-ledger.ts';
 
 export type { HarnessAssistantMessagePhase } from './harness-turn-stream.ts';
 
@@ -173,7 +174,7 @@ async function executeHarnessTurn(
         activeTurn.session = session;
 
         const streamTarget = {
-            authorId: input.agentSession.agentParticipantId,
+            authorId: input.agentParticipantId,
             chatId: input.chatId,
             model: input.agentSession.effectiveModel,
             responseId: input.responseId,
@@ -213,12 +214,17 @@ async function executeHarnessTurn(
         }
         const resumeState = await session.stop();
         activeTurn.session = undefined;
-        const promptContextSequence = promptCursorSequence(input);
         updateAgentSessionRuntimeState({
             id: input.agentSession.id,
-            promptContextSequence,
             resumeState: resumeState as Record<string, unknown>,
             runtimeSessionId: session.sessionId,
+        });
+        // The prompt's catch-up and trigger are now model-visible: advance
+        // the trigger chat's seen cursor (specs/sessions.md).
+        advanceSeenCursor({
+            chatId: input.chatId,
+            seq: promptCursorSequence(input),
+            sessionId: input.agentSession.id,
         });
     } catch (error) {
         activeTurn.session = undefined;
@@ -243,11 +249,11 @@ async function executeHarnessTurn(
     const messageId = assistantMessageIdForRun(input.runId);
     const deliveryId = deliveryIdForRun(input.runId);
     const receipt = createDelivery(input.chatId, {
-        agent_id: input.agentSession.agentParticipantId,
+        agent_id: input.agentParticipantId,
         id: deliveryId,
         message: {
             attachments: [],
-            author_id: input.agentSession.agentParticipantId,
+            author_id: input.agentParticipantId,
             content: messageContent,
             id: messageId,
             metadata: {
@@ -302,7 +308,7 @@ async function executeHarnessTurn(
                 model: input.agentSession.effectiveModel,
             },
         },
-        participant_id: input.agentSession.agentParticipantId,
+        participant_id: input.agentParticipantId,
         request_message_id: input.requestMessageId,
         response_message_id: receipt.message.id,
         status: 'completed',
@@ -358,7 +364,7 @@ function completeSilentHarnessTurn(
                 model: input.agentSession.effectiveModel,
             },
         },
-        participant_id: input.agentSession.agentParticipantId,
+        participant_id: input.agentParticipantId,
         request_message_id: input.requestMessageId,
         status: 'completed',
         summary: 'Chose not to reply.',
@@ -395,12 +401,14 @@ function createHarnessAgent(
     const harness = createHarness(input);
     const tools = {
         ...createTavernChatTools({
+            agentId: input.agent.id,
             chatId: input.chatId,
         }),
         ...createTavernChatActionTools({
             agentId: input.agent.id,
             chatId: input.chatId,
             runId: input.runId,
+            sessionId: input.agentSession.id,
         }),
         ...createTavernChatWaitTools({
             agentId: input.agent.id,

@@ -150,8 +150,7 @@ function smokeExecutorInput(input: {
 }) {
     const workspaceFolder = mkdtempSync(path.join(os.tmpdir(), 'tavern-smoke-'));
     const agentSession = ensureCurrentAgentSession({
-        agentParticipantId: 'agt_primary',
-        chatId: input.chatId,
+        agentId: 'agt_primary',
     }) satisfies AgentRuntimeAgentSession;
     return {
         agent: {
@@ -162,6 +161,7 @@ function smokeExecutorInput(input: {
             primaryColor: null,
             workspaceFolder,
         } satisfies AgentRuntimeAgent,
+        agentParticipantId: 'agt_primary',
         agentSession,
         attachments: [],
         chatId: input.chatId,

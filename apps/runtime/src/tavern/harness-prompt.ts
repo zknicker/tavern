@@ -3,11 +3,19 @@ import { formatLocalTimestampWithWeekday } from '../timezone.ts';
 import { resolveHomeTimezone } from '../timezone-settings.ts';
 import type { AgentExecutorInput } from './agent-executor.ts';
 import { getStoredAgent } from './agents-store.ts';
-import { getChat, getMessage, listRecentMessagesBetween } from './chat-api/index.ts';
+import {
+    getChat,
+    getMessage,
+    latestMessageSequence,
+    listChatsForAgentParticipant,
+    listRecentMessagesBetween,
+} from './chat-api/index.ts';
 import { projectTavernMessageForAgent } from './mention-projection.ts';
+import { readSeenCursor } from './seen-ledger.ts';
 import { type AgentTurnOutcomeNote, consumeAgentTurnOutcomeNotes } from './turn-outcome-notes.ts';
 
 const maxAmbientContextMessages = 20;
+const maxPendingChatLines = 8;
 
 export function harnessPrompt(input: AgentExecutorInput, recallContext?: null | string) {
     const timezone = resolveHomeTimezone();
@@ -18,11 +26,14 @@ export function harnessPrompt(input: AgentExecutorInput, recallContext?: null | 
         context.currentMessage
             ? `- triggering message: ${input.requestMessageId} (seq ${context.currentMessage.sequence})`
             : `- triggering message: ${input.requestMessageId}`,
+        // The session spans every chat; each turn re-anchors it to the chat
+        // it is speaking in (specs/sessions.md).
+        ...chatIdentityLines(input, timezone),
     ];
 
     // First turn of a rotated session: no engine session exists yet, so prior
     // conversation is genuinely absent — say so instead of letting the model
-    // guess. New seats (generation 1) get channel catch-up instead.
+    // guess.
     if (!input.agentSession.runtimeSessionId && input.agentSession.generation > 1) {
         sections.push(
             '- This session just started fresh; earlier conversation is not in context. Use the chat tools or Memory if you need it.'
@@ -65,6 +76,13 @@ export function harnessPrompt(input: AgentExecutorInput, recallContext?: null | 
         sections.push('', 'Reply context:', formatPromptMessage(context.replyContext, timezone));
     }
 
+    // Pending traffic elsewhere: unread counts per other chat, never bodies.
+    // The agent reads with the chat tools; auto-drain brings dedicated turns.
+    const pendingLines = pendingChatLines(input);
+    if (pendingLines.length > 0) {
+        sections.push('', 'Unread elsewhere (read with chat tools if relevant):', ...pendingLines);
+    }
+
     sections.push(
         '',
         `New message for ${input.agent.name}:`,
@@ -76,7 +94,7 @@ export function harnessPrompt(input: AgentExecutorInput, recallContext?: null | 
 
 export function promptCursorSequence(input: AgentExecutorInput) {
     const request = getMessage(input.requestMessageId);
-    return request?.sequence ?? input.agentSession.promptContextSequence;
+    return request?.sequence ?? readSeenCursor(input.agentSession.id, input.chatId);
 }
 
 function buildHarnessPromptContext(input: AgentExecutorInput) {
@@ -85,7 +103,7 @@ function buildHarnessPromptContext(input: AgentExecutorInput) {
     const ambientCandidates =
         request && chat?.kind === 'channel'
             ? listRecentMessagesBetween(input.chatId, {
-                  afterSequence: input.agentSession.promptContextSequence,
+                  afterSequence: readSeenCursor(input.agentSession.id, input.chatId),
                   beforeSequence: request.sequence,
                   limit: maxAmbientContextMessages + 1,
               })
@@ -139,7 +157,79 @@ function isAmbientPromptMessage(input: AgentExecutorInput, message: TavernChatMe
     if (message.role !== 'assistant' && message.role !== 'user') {
         return false;
     }
-    return message.author.id !== input.agentSession.agentParticipantId;
+    return message.author.id !== input.agentParticipantId;
+}
+
+// Where the agent is speaking: chat kind, id, and roster with mention links
+// so the handoff syntax is always in view. Moved here from the system prompt
+// because one global session spans chats with different rosters.
+function chatIdentityLines(input: AgentExecutorInput, _timezone: string) {
+    const chat = getChat(input.chatId);
+    if (!chat) {
+        return [`- chatId: ${input.chatId}`];
+    }
+    const kind =
+        chat.kind === 'dm'
+            ? 'a direct message between you and the user'
+            : `the "${chat.title}" channel`;
+    const participants = chat.participants.map((participant) => {
+        if (participant.id === input.agentParticipantId) {
+            return participantLine(participant.label ?? input.agent.name, '(you)', input.agent.bio);
+        }
+        if (participant.kind === 'agent') {
+            const agentId = participantAgentId(participant.metadata);
+            const agent = agentId ? getStoredAgent(agentId) : null;
+            const name = participant.label ?? agent?.name ?? participant.id;
+            const title = agentId ? `[${name}](agent://${agentId})` : name;
+            return participantLine(title, '(agent)', agent?.bio);
+        }
+        return participantLine(participant.label ?? participant.id, null, null);
+    });
+    return [`- this is ${kind} (chatId: ${input.chatId})`, '- participants:', ...participants];
+}
+
+function participantLine(name: string, tag: string | null, bio: string | null | undefined) {
+    const title = tag ? `${name} ${tag}` : name;
+    return bio ? `  - ${title} — ${bio}` : `  - ${title}`;
+}
+
+function participantAgentId(metadata: Record<string, unknown>) {
+    const agentId = metadata.agentId;
+    return typeof agentId === 'string' && agentId.length > 0 ? agentId : null;
+}
+
+// Unread counts for the agent's other chats, from the seen ledger. Counts
+// only — bodies stay pull-based, and a count line never advances a cursor.
+function pendingChatLines(input: AgentExecutorInput) {
+    const lines: string[] = [];
+    for (const chat of listChatsForAgentParticipant(input.agentParticipantId)) {
+        if (chat.id === input.chatId || lines.length >= maxPendingChatLines) {
+            continue;
+        }
+        const cursor = readSeenCursor(input.agentSession.id, chat.id);
+        const latest = latestMessageSequence(chat.id);
+        if (latest <= cursor) {
+            continue;
+        }
+        const unseen = listRecentMessagesBetween(chat.id, {
+            afterSequence: cursor,
+            beforeSequence: latest + 1,
+            limit: maxAmbientContextMessages + 1,
+        }).filter((message) => isAmbientPromptMessage(input, message));
+        if (unseen.length === 0) {
+            continue;
+        }
+        const latestSender = unseen.at(-1)?.author.label ?? unseen.at(-1)?.author.id ?? 'unknown';
+        const count =
+            unseen.length > maxAmbientContextMessages
+                ? `${maxAmbientContextMessages}+`
+                : String(unseen.length);
+        const title = chat.title ?? chat.id;
+        lines.push(
+            `- "${title}" (chatId: ${chat.id}): ${count} unread, latest from ${latestSender}`
+        );
+    }
+    return lines;
 }
 
 // One line per settled dispatched turn: who, where (when cross-chat), how it

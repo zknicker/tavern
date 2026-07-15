@@ -57,24 +57,14 @@ const REQUIREMENTS: Array<{
         expected: '`USER.md` and `MEMORY.md` live in your workspace',
         prompt: 'channel',
     },
-    // Chat identity: where the agent is, who else holds a seat.
+    // Chat identity and rosters moved to the per-turn prompt with the
+    // agent-global session (ADR 0011): each turn says where the agent is
+    // speaking. Guarded by the harness-prompt suite, not here.
     {
-        capability: 'chat identity (channel)',
-        expected: 'This is the "contract" channel.',
+        capability: 'global session framing',
+        expected: 'one conversation spans them all: this session',
         prompt: 'channel',
     },
-    {
-        capability: 'chat identity (dm)',
-        expected: 'a direct message between you and the user',
-        prompt: 'dm',
-    },
-    { capability: 'chat id exposed', expected: '- chatId: cht_contract', prompt: 'channel' },
-    {
-        capability: 'co-agent roster with mention link and bio',
-        expected: '- [Wren](agent://agt_wren) (agent) — Runs the Amazon Merch business.',
-        prompt: 'channel',
-    },
-    { capability: 'own seat marked', expected: 'Otto (you)', prompt: 'channel' },
     // Timestamps and recall hygiene.
     {
         capability: 'timestamp staleness policy',
@@ -86,11 +76,12 @@ const REQUIREMENTS: Array<{
         expected: 'Recalled Wiki blocks are automatic background context',
         prompt: 'channel',
     },
-    // Channel discipline: default-evaluate, silence, and handoffs
-    // (channel-only teachings; specs/addressing.md).
+    // Chat discipline: default-evaluate, silence, handoffs, and discretion —
+    // taught unconditionally, since one session spans channels and DMs
+    // (specs/addressing.md, specs/sessions.md).
     {
-        capability: 'default-evaluate: every channel message is evaluated',
-        expected: 'You see every channel message and choose whether to speak',
+        capability: 'default-evaluate: every message is evaluated',
+        expected: 'You see every message in your chats and choose whether to speak',
         prompt: 'channel',
     },
     {
@@ -114,7 +105,11 @@ const REQUIREMENTS: Array<{
         expected: "Only the agent doing a piece of work reports on it; never echo a peer's answer.",
         prompt: 'channel',
     },
-    { absent: true, capability: 'no NO_REPLY teaching in DMs', expected: 'NO_REPLY', prompt: 'dm' },
+    {
+        capability: 'DM discretion taught',
+        expected: 'What someone shares in a DM was shared with you, not with every room.',
+        prompt: 'channel',
+    },
     // Tool steering taught in the prompt. Names, descriptions, and schemas
     // ship per turn via the ToolSet; the prompt keeps only when-to-reach-for-it
     // guidance and behavioral rules.
@@ -226,9 +221,12 @@ const REQUIREMENTS: Array<{
 // chat section 1200 -> 1500, total 14_100 -> 14_400 (2026-07-15):
 // default-evaluate addressing teachings — evaluate/silence, mention
 // expectation, reply etiquette (specs/addressing.md).
+// chat section 1500 -> 1700, total 14_400 -> 14_600 (2026-07-15, ADR
+// 0011): rosters and chat identity moved to the per-turn prompt; the
+// global-session framing and DM-discretion teachings joined the section.
 const promptBudgets = {
-    channelChatSection: 1500,
-    channelTotal: 14_400,
+    channelChatSection: 1700,
+    channelTotal: 14_600,
 };
 
 // The fixture renders the cron-ready prompt so the Automations section stays
@@ -302,7 +300,7 @@ describe('agent prompt contract', () => {
 
     it('stays inside the prompt character budgets', async () => {
         const prompt = await renderPrompt('cht_contract');
-        const chatSection = prompt.slice(prompt.indexOf('This chat:'));
+        const chatSection = prompt.slice(prompt.indexOf('Your chats:'));
 
         expect(chatSection.length).toBeLessThanOrEqual(promptBudgets.channelChatSection);
         expect(prompt.length).toBeLessThanOrEqual(promptBudgets.channelTotal);
@@ -382,16 +380,15 @@ function executorInput(chatId: string, workspaceFolder: string): AgentExecutorIn
             webAccessEnabled: chatId === 'cht_contract',
             workspaceFolder,
         },
+        agentParticipantId: 'agt_primary',
         agentSession: {
             agentId: 'agt_primary',
-            agentParticipantId: 'agt_primary',
             archivedAt: null,
-            chatId,
             createdAt: now,
             effectiveModel: { model: 'gpt-4.1-mini', provider: 'openai' },
             generation: 1,
-            id: `ags_${chatId}_agt_primary_1`,
-            promptContextSequence: 0,
+            id: 'ags_agt_primary_1',
+            lastTurnAt: null,
             resumeState: null,
             runtimeSessionId: null,
             status: 'active',

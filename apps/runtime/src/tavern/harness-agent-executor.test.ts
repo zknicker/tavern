@@ -11,6 +11,7 @@ import { closeDb, getDb, initTestDb } from '../db/connection.ts';
 import { ensureRuntimeSchema } from '../db/schema.ts';
 import { namedParams } from '../db/sqlite.ts';
 import { formatLocalTimestampWithWeekday } from '../timezone.ts';
+import { upsertStoredAgent } from './agents-store.ts';
 import {
     createChat,
     createMessage,
@@ -29,6 +30,7 @@ import {
 } from './harness-agent-executor.ts';
 import { harnessPrompt } from './harness-prompt.ts';
 import { messageActivityIdForRun, toolActivityIdForRun } from './harness-turn-stream.ts';
+import { advanceSeenCursor } from './seen-ledger.ts';
 
 const now = '2026-06-29T12:00:00.000Z';
 const originalClaudeToken = process.env.TAVERN_AGENT_CLAUDE_CODE_AUTH_TOKEN;
@@ -338,6 +340,82 @@ describe('harness agent executor', () => {
         expect(prompt.match(/current dm question/g)).toHaveLength(1);
     });
 
+    it('anchors each turn with chat identity, roster, and cross-chat pending counts', async () => {
+        upsertStoredAgent({
+            agent: {
+                bio: 'Runs the Amazon Merch business.',
+                enabledSkillIds: [],
+                id: 'agt_wren',
+                isAdmin: false,
+                name: 'Wren',
+                primaryColor: null,
+                workspaceFolder: '/tmp/agt_wren',
+            },
+        });
+        createChat({
+            id: 'cht_anchor',
+            kind: 'channel',
+            participants: [
+                { id: 'usr_alice', kind: 'user', label: 'Alice', metadata: {} },
+                {
+                    id: 'agt_primary',
+                    kind: 'agent',
+                    label: 'Tavern',
+                    metadata: { agentId: 'agt_primary' },
+                },
+                { id: 'agt_wren', kind: 'agent', label: 'Wren', metadata: { agentId: 'agt_wren' } },
+            ],
+            title: 'anchor',
+        });
+        createChat({
+            id: 'cht_elsewhere',
+            kind: 'channel',
+            participants: [
+                { id: 'usr_alice', kind: 'user', label: 'Alice', metadata: {} },
+                {
+                    id: 'agt_primary',
+                    kind: 'agent',
+                    label: 'Tavern',
+                    metadata: { agentId: 'agt_primary' },
+                },
+            ],
+            title: 'elsewhere',
+        });
+        createPromptMessage('cht_anchor', {
+            authorId: 'usr_alice',
+            content: 'anchor ask',
+            id: 'msg_anchor',
+            role: 'user',
+        });
+        createPromptMessage('cht_elsewhere', {
+            authorId: 'usr_alice',
+            content: 'pending elsewhere',
+            id: 'msg_elsewhere',
+            role: 'user',
+        });
+
+        const prompt = await harnessPrompt(
+            executorInput(
+                { model: 'gpt-4.1-mini', provider: 'openai' },
+                { chatId: 'cht_anchor', content: 'anchor ask', requestMessageId: 'msg_anchor' }
+            )
+        );
+
+        // Chat identity and roster with mention links live in the per-turn
+        // prompt under agent-global sessions (specs/sessions.md).
+        expect(prompt).toContain('this is the "anchor" channel (chatId: cht_anchor)');
+        expect(prompt).toContain('Tavern (you)');
+        expect(prompt).toContain(
+            '[Wren](agent://agt_wren) (agent) — Runs the Amazon Merch business.'
+        );
+        // Pending traffic elsewhere appears as counts, never bodies.
+        expect(prompt).toContain('Unread elsewhere');
+        expect(prompt).toContain(
+            '"elsewhere" (chatId: cht_elsewhere): 1 unread, latest from Alice'
+        );
+        expect(prompt).not.toContain('pending elsewhere');
+    });
+
     it('includes only channel messages after the session prompt cursor', async () => {
         seedPromptChat({ chatId: 'cht_channel', kind: 'channel' });
         createPromptMessage('cht_channel', {
@@ -365,13 +443,13 @@ describe('harness agent executor', () => {
             role: 'user',
         });
 
+        advanceSeenCursor({ chatId: 'cht_channel', seq: 1, sessionId: 'ags_agt_primary_1' });
         const prompt = await harnessPrompt(
             executorInput(
                 { model: 'gpt-4.1-mini', provider: 'openai' },
                 {
                     chatId: 'cht_channel',
                     content: 'current channel ask',
-                    promptContextSequence: 1,
                     requestMessageId: 'msg_channel_current',
                 }
             )
@@ -549,13 +627,13 @@ describe('harness agent executor', () => {
             role: 'user',
         });
 
+        advanceSeenCursor({ chatId: 'cht_reply', seq: 2, sessionId: 'ags_agt_primary_1' });
         const prompt = await harnessPrompt(
             executorInput(
                 { model: 'gpt-4.1-mini', provider: 'openai' },
                 {
                     chatId: 'cht_reply',
                     content: 'current follow-up',
-                    promptContextSequence: 2,
                     requestMessageId: 'msg_reply_current',
                 }
             )
@@ -629,7 +707,6 @@ function executorInput(
         content?: string;
         enabledSkillIds?: string[];
         generation?: number;
-        promptContextSequence?: number;
         runtimeSessionId?: null | string;
         requestMessageId?: string;
         workspaceFolder?: string;
@@ -645,16 +722,15 @@ function executorInput(
             primaryColor: null,
             workspaceFolder: input.workspaceFolder ?? '.tavern/agents/agt_primary/workspace',
         } satisfies AgentRuntimeAgent,
+        agentParticipantId: 'agt_primary',
         agentSession: {
             agentId: 'agt_primary',
-            agentParticipantId: 'agt_primary',
             archivedAt: null,
-            chatId,
             createdAt: now,
             effectiveModel: model,
             generation: input.generation ?? 1,
-            id: `ags_${chatId}_agt_primary_1`,
-            promptContextSequence: input.promptContextSequence ?? 0,
+            id: 'ags_agt_primary_1',
+            lastTurnAt: null,
             resumeState: null,
             runtimeSessionId: input.runtimeSessionId ?? null,
             status: 'active',

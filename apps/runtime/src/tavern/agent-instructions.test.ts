@@ -88,166 +88,35 @@ describe('agent instructions', () => {
         expect(instructions).toContain('Be terse, concrete, and steady.');
     });
 
-    it('includes the Tavern chat section with chat id, staleness policy, and recall hygiene', async () => {
+    it('includes the chats section with staleness policy and recall hygiene', async () => {
         const instructions = await buildAgentInstructions(
             executorInput({ workspaceFolder: workspaceDir }),
             { db: getDb(), skillsDir }
         );
 
-        expect(instructions).toContain('This chat:');
-        expect(instructions).toContain('- chatId: cht_general');
+        expect(instructions).toContain('Your chats:');
+        expect(instructions).toContain('one conversation spans them all: this session');
         expect(instructions).toContain('treat older context and prior data reads as stale');
         expect(instructions).toMatch(/send time in \S+ \(the home timezone\)/);
         expect(instructions).toContain('Recalled Wiki blocks are automatic background context');
+        // Chat identity and rosters are per-turn prompt content, never here.
+        expect(instructions).not.toContain('chatId: cht_general');
     });
 
-    it('teaches NO_REPLY in channels but not in direct messages', async () => {
-        createChat({
-            id: 'cht_general',
-            kind: 'channel',
-            participants: [
-                { id: 'usr_tavern', kind: 'user', label: 'You', metadata: {} },
-                {
-                    id: 'agt_primary',
-                    kind: 'agent',
-                    label: 'Blippy',
-                    metadata: { agentId: 'agt_primary' },
-                },
-            ],
-            title: 'general',
-        });
-        const channelInstructions = await buildAgentInstructions(
-            executorInput({ workspaceFolder: workspaceDir }),
-            { db: getDb(), skillsDir }
-        );
-        expect(channelInstructions).toContain('Reply with exactly NO_REPLY');
-
-        createChat({
-            id: 'cht_dm',
-            kind: 'dm',
-            participants: [
-                { id: 'usr_tavern', kind: 'user', label: 'You', metadata: {} },
-                {
-                    id: 'agt_primary',
-                    kind: 'agent',
-                    label: 'Blippy',
-                    metadata: { agentId: 'agt_primary' },
-                },
-            ],
-            title: 'Blippy',
-        });
-        const dmInput = executorInput({ workspaceFolder: workspaceDir });
-        dmInput.chatId = 'cht_dm';
-        dmInput.agentSession.chatId = 'cht_dm';
-        const dmInstructions = await buildAgentInstructions(dmInput, {
-            db: getDb(),
-            skillsDir,
-        });
-        expect(dmInstructions).not.toContain('NO_REPLY');
-    });
-
-    it('describes the chat kind and participant roster with the agent marked', async () => {
-        createChat({
-            id: 'cht_general',
-            kind: 'channel',
-            participants: [
-                { id: 'usr_tavern', kind: 'user', label: 'You', metadata: {} },
-                {
-                    id: 'agt_primary',
-                    kind: 'agent',
-                    label: 'Blippy',
-                    metadata: { agentId: 'agt_primary' },
-                },
-                {
-                    id: 'agt_tiny',
-                    kind: 'agent',
-                    label: 'Tiny',
-                    metadata: { agentId: 'agt_tiny' },
-                },
-            ],
-            title: 'general',
-        });
-
+    it('teaches NO_REPLY, mention expectation, etiquette, and DM discretion unconditionally', async () => {
         const instructions = await buildAgentInstructions(
             executorInput({ workspaceFolder: workspaceDir }),
             { db: getDb(), skillsDir }
         );
 
-        expect(instructions).toContain('This is the "general" channel.');
+        expect(instructions).toContain('Reply with exactly NO_REPLY');
         expect(instructions).toContain(
-            '- Participants:\n  - Blippy (you)\n  - [Tiny](agent://agt_tiny) (agent)\n  - You'
+            'A mention of you means you specifically are expected to act or answer.'
         );
-        expect(instructions).toContain('You see every channel message and choose whether to speak');
-    });
-
-    it('shows each agent seat with its bio so agents know who does what', async () => {
-        upsertStoredAgent({
-            agent: {
-                bio: 'Runs the Amazon Merch business.',
-                enabledSkillIds: [],
-                id: 'agt_tiny',
-                isAdmin: false,
-                name: 'Tiny',
-                primaryColor: null,
-                workspaceFolder: '.tavern/agents/agt_tiny/workspace',
-            },
-        });
-        createChat({
-            id: 'cht_general',
-            kind: 'channel',
-            participants: [
-                { id: 'usr_tavern', kind: 'user', label: 'You', metadata: {} },
-                {
-                    id: 'agt_primary',
-                    kind: 'agent',
-                    label: 'Blippy',
-                    metadata: { agentId: 'agt_primary' },
-                },
-                {
-                    id: 'agt_tiny',
-                    kind: 'agent',
-                    label: 'Tiny',
-                    metadata: { agentId: 'agt_tiny' },
-                },
-            ],
-            title: 'general',
-        });
-
-        const instructions = await buildAgentInstructions(
-            executorInput({ bio: 'Keeps the household running.', workspaceFolder: workspaceDir }),
-            { db: getDb(), skillsDir }
-        );
-
-        expect(instructions).toContain('- Blippy (you) — Keeps the household running.');
+        expect(instructions).toContain("never echo a peer's answer");
         expect(instructions).toContain(
-            '- [Tiny](agent://agt_tiny) (agent) — Runs the Amazon Merch business.'
+            'What someone shares in a DM was shared with you, not with every room.'
         );
-    });
-
-    it('keeps the instructions fingerprint stable across core memory edits', async () => {
-        await writeFile(path.join(workspaceDir, 'MEMORY.md'), '# MEMORY.md\n\nFirst.\n');
-        const first = await buildAgentInstructionBundle(
-            executorInput({ workspaceFolder: workspaceDir }),
-            { db: getDb(), skillsDir }
-        );
-
-        await writeFile(
-            path.join(workspaceDir, 'MEMORY.md'),
-            '# MEMORY.md\n\nRewritten by extraction.\n'
-        );
-        const afterMemoryEdit = await buildAgentInstructionBundle(
-            executorInput({ workspaceFolder: workspaceDir }),
-            { db: getDb(), skillsDir }
-        );
-        expect(afterMemoryEdit.instructions).toContain('Rewritten by extraction.');
-        expect(afterMemoryEdit.fingerprint).toBe(first.fingerprint);
-
-        await writeFile(path.join(workspaceDir, 'SOUL.md'), '# SOUL.md\n\nA new identity.\n');
-        const afterSoulEdit = await buildAgentInstructionBundle(
-            executorInput({ workspaceFolder: workspaceDir }),
-            { db: getDb(), skillsDir }
-        );
-        expect(afterSoulEdit.fingerprint).not.toBe(first.fingerprint);
     });
 
     it('reports session instructions freshness against the live compose', async () => {
@@ -275,10 +144,7 @@ describe('agent instructions', () => {
             ],
             title: 'general',
         });
-        const session = startNewAgentSession({
-            agentParticipantId: 'agt_primary',
-            chatId: 'cht_general',
-        });
+        const session = startNewAgentSession({ agentId: 'agt_primary' });
 
         // No instructions delivered yet: fresh by construction.
         expect(await agentSessionInstructionsFresh(session)).toBeNull();
@@ -288,13 +154,13 @@ describe('agent instructions', () => {
             throw new Error('Agent was not stored.');
         }
         const bundle = await buildAgentInstructionBundle(
-            { agent, agentSession: session, chatId: 'cht_general' },
+            { agent, agentSession: session },
             { seedSkills: false }
         );
         recordAgentSessionInstructionsHash({ hash: bundle.fingerprint, id: session.id });
         expect(await agentSessionInstructionsFresh(session)).toBe(true);
 
-        updateStoredAgent({ agentId: 'agt_primary', bio: 'Runs the Amazon Merch business.' });
+        updateStoredAgent({ agentId: 'agt_primary', webAccessEnabled: true });
         expect(await agentSessionInstructionsFresh(session)).toBe(false);
     });
 
@@ -415,16 +281,15 @@ function executorInput(
             workspaceFolder: '.tavern/agents/agt_primary/workspace',
             ...agentOverrides,
         } satisfies AgentRuntimeAgent,
+        agentParticipantId: 'agt_primary',
         agentSession: {
             agentId: 'agt_primary',
-            agentParticipantId: 'agt_primary',
             archivedAt: null,
-            chatId: 'cht_general',
             createdAt: now,
             effectiveModel: { model, provider: 'openai' },
             generation: 1,
-            id: 'ags_cht_general_agt_primary_1',
-            promptContextSequence: 0,
+            id: 'ags_agt_primary_1',
+            lastTurnAt: null,
             resumeState: null,
             runtimeSessionId: null,
             status: 'active',
