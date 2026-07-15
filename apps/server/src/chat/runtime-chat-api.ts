@@ -93,15 +93,21 @@ export async function getRuntimeChatTimelinePage(
     };
 }
 
-// Conversation-visible activity projections: widgets and runtime notices are
-// part of the contribution, and clarifications are conversational questions.
-// Everything else an activity produces is execution evidence.
+// Conversation-visible activity projections: widgets are part of the
+// contribution, clarifications are conversational questions, and only
+// durable context-boundary notices (new session, compaction) ride the
+// timeline. Status notices — busy delivery, holds, wait-idle — are
+// execution evidence for the turn drawer, like everything else.
 export function isTimelineActivityRow(row: ChatLogPage['rows'][number]) {
     if (row.kind === 'widget') {
         return true;
     }
     if (row.kind === 'system') {
-        return row.systemKind === 'runtimeNotice';
+        return (
+            row.systemKind === 'runtimeNotice' &&
+            row.runtimeNotice != null &&
+            row.runtimeNotice.kind !== 'status'
+        );
     }
     if (row.kind === 'tool') {
         return Boolean(row.clarification);

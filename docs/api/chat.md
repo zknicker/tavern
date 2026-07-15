@@ -137,8 +137,10 @@ The Tavern app keeps list and detail reads separate:
 * `chat.updateSystemPrompt` changes trusted chat-specific agent instructions
   for a Tavern chat. Empty text clears the prompt.
 * `chat.log.list` returns turn-aligned pages of conversation rows for one
-  chat: participant messages, widgets, artifacts, runtime notices, stop notes,
-  and clarifications. Execution evidence (tool calls, reasoning, workers,
+  chat: participant messages, widgets, artifacts, context-boundary runtime
+  notices (new session, compaction), stop notes, and clarifications. Status
+  notices (busy delivery, holds, wait-idle) are turn evidence, not timeline
+  rows. Execution evidence (tool calls, reasoning, workers,
   narration history) never rides the timeline — see
   [chat-timeline](../../specs/chat-timeline.md). Pages walk backward from the
   newest message with a `beforeSequence` cursor; rows carry their owning

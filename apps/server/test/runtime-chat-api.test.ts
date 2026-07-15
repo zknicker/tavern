@@ -558,6 +558,74 @@ test('listRuntimeChatRows maps runtime notice activity into system rows', async 
     ]);
 });
 
+test('listRuntimeChatRows keeps status notices off the timeline', async () => {
+    await saveAgentRuntimeConnection({
+        baseUrl: 'http://runtime.test',
+        enabled: true,
+        id: 'runtime-1',
+        isActive: true,
+        lastCheckedAt: '2026-05-18T12:00:00.000Z',
+        lastError: null,
+        name: 'Runtime',
+    });
+
+    globalThis.fetch = (async (input, init) => {
+        const request = new Request(input, init);
+        const url = new URL(request.url);
+
+        if (url.pathname === '/api/chats/cht_1/timeline') {
+            return Response.json({
+                messages: [],
+                activity: [
+                    responseActivity({
+                        detail: 'New message from You was delivered into the running turn.',
+                        id: 'act_busy_1',
+                        kind: 'custom',
+                        metadata: {
+                            runtime: {
+                                notice: {
+                                    detail: 'delivered',
+                                    kind: 'status',
+                                    text: 'Delivered mid-turn',
+                                    title: 'Delivered mid-turn',
+                                },
+                            },
+                        },
+                        responseId: 'rsp_run_1',
+                        title: 'Delivered mid-turn',
+                    }),
+                ],
+                artifacts: [],
+                next_before_sequence: null,
+                total_messages: 0,
+                responses: [
+                    {
+                        chat_id: 'cht_1',
+                        completed_at: '2026-05-18T12:00:03.000Z',
+                        created_at: '2026-05-18T12:00:01.500Z',
+                        id: 'rsp_run_1',
+                        metadata: {},
+                        participant_id: 'agt_main',
+                        request_message_id: null,
+                        response_message_id: null,
+                        status: 'completed',
+                        summary: null,
+                        updated_at: '2026-05-18T12:00:03.000Z',
+                    },
+                ],
+            });
+        }
+
+        throw new Error(`Unexpected Tavern API request: ${url.pathname}`);
+    }) as typeof fetch;
+
+    const rows = (await getRuntimeChatTimelinePage('cht_1'))?.rows ?? null;
+
+    // Busy-delivery/hold/wait-idle notices are turn evidence for the
+    // drawer, not conversation rows (specs/chat-timeline.md).
+    expect(rows).toEqual([]);
+});
+
 test('listRuntimeChatRows keeps tool evidence off the timeline', async () => {
     await saveAgentRuntimeConnection({
         baseUrl: 'http://runtime.test',
