@@ -1,6 +1,9 @@
 import type { AgentRuntimeAgent, AgentRuntimeAgentSession } from '@tavern/api';
 export interface AgentExecutorInput {
     agent: AgentRuntimeAgent;
+    /** The agent's seat in the trigger chat: authorship for this turn. */
+    agentParticipantId: string;
+    /** The agent's global session (specs/sessions.md). */
     agentSession: AgentRuntimeAgentSession;
     attachments: Record<string, unknown>[];
     chatId: string;

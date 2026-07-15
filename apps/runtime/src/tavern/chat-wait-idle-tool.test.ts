@@ -4,7 +4,7 @@ import { closeDb, getDb, initTestDb } from '../db/connection.ts';
 import { ensureRuntimeSchema } from '../db/schema.ts';
 import { ensureCurrentAgentSession } from './agent-session-store.ts';
 import {
-    claimNextAgentTurnForSeat,
+    claimNextAgentTurnForAgent,
     completeAgentTurn,
     createAgentTurn,
 } from './agent-turn-store.ts';
@@ -39,7 +39,7 @@ describe('chat_wait_idle', () => {
         await expect(
             runTool(tools.chat_wait_idle, { agentId: 'agt_otto', chatId: 'cht_general' })
         ).resolves.toMatchObject({
-            error: 'That is your own seat in the current chat; your running turn is this one.',
+            error: 'That is yourself; your running turn is this one.',
         });
     });
 
@@ -185,24 +185,17 @@ function seedTurn(input: {
         request_message_id: input.messageId,
         status: 'running',
     });
-    const session = ensureCurrentAgentSession({
-        agentParticipantId: input.agentId,
-        chatId: 'cht_general',
-    });
+    const session = ensureCurrentAgentSession({ agentId: input.agentId });
     createAgentTurn({
         agentId: input.agentId,
-        agentParticipantId: session.agentParticipantId,
+        agentParticipantId: input.agentId,
         agentSessionId: session.id,
         chatId: 'cht_general',
         id: input.runId,
         responseId: input.responseId,
         triggerMessageId: input.messageId,
     });
-    claimNextAgentTurnForSeat({
-        agentParticipantId: session.agentParticipantId,
-        agentSessionId: session.id,
-        chatId: 'cht_general',
-    });
+    claimNextAgentTurnForAgent({ agentId: input.agentId });
     return input.runId;
 }
 

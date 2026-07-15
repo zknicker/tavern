@@ -53,7 +53,7 @@ describe('Tavern channel relay', () => {
             status: 'accepted',
         });
 
-        const sessionId = 'ags_cht_general_agt_primary_1';
+        const sessionId = 'ags_agt_primary_1';
         await waitFor(
             () =>
                 getResponse('rsp_run_1_primary')?.status === 'completed' &&
@@ -112,7 +112,7 @@ describe('Tavern channel relay', () => {
         );
 
         expect(executor.startedRunIds()).toEqual(['run_1_primary']);
-        expect(listAgentTurnsForSession('ags_cht_general_agt_primary_1')).toMatchObject([
+        expect(listAgentTurnsForSession('ags_agt_primary_1')).toMatchObject([
             { id: 'run_1_primary', status: 'running' },
             { id: 'run_2_primary', status: 'queued' },
         ]);
@@ -120,7 +120,7 @@ describe('Tavern channel relay', () => {
         executor.resolveRun('run_1_primary', { activityIds: [], outputMessageIds: [] });
         await waitFor(() => executor.startedRunIds().includes('run_2_primary'));
 
-        expect(listAgentTurnsForSession('ags_cht_general_agt_primary_1')).toMatchObject([
+        expect(listAgentTurnsForSession('ags_agt_primary_1')).toMatchObject([
             { id: 'run_1_primary', status: 'completed' },
             { id: 'run_2_primary', status: 'running' },
         ]);
@@ -189,10 +189,10 @@ describe('Tavern channel relay', () => {
 
         await waitFor(() => executor.startedRunIds().length === 2);
 
-        expect(listAgentTurnsForSession('ags_cht_general_agt_alpha_1')).toMatchObject([
+        expect(listAgentTurnsForSession('ags_agt_alpha_1')).toMatchObject([
             { id: 'run_1_alpha', status: 'running', triggerMessageId: 'msg_1' },
         ]);
-        expect(listAgentTurnsForSession('ags_cht_general_agt_beta_1')).toMatchObject([
+        expect(listAgentTurnsForSession('ags_agt_beta_1')).toMatchObject([
             { id: 'run_1_beta', status: 'running', triggerMessageId: 'msg_1' },
         ]);
         expect(getResponse('rsp_run_1_alpha')).toMatchObject({ participant_id: 'agt_alpha' });
@@ -219,10 +219,10 @@ describe('Tavern channel relay', () => {
         await waitFor(() => executor.startedRunIds().length === 2);
 
         expect(executor.startedRunIds().sort()).toEqual(['run_alpha_alpha', 'run_beta_beta']);
-        expect(listAgentTurnsForSession('ags_cht_general_agt_alpha_1')).toMatchObject([
+        expect(listAgentTurnsForSession('ags_agt_alpha_1')).toMatchObject([
             { id: 'run_alpha_alpha', status: 'running' },
         ]);
-        expect(listAgentTurnsForSession('ags_cht_general_agt_beta_1')).toMatchObject([
+        expect(listAgentTurnsForSession('ags_agt_beta_1')).toMatchObject([
             { id: 'run_beta_beta', status: 'running' },
         ]);
     });
@@ -239,7 +239,7 @@ describe('Tavern channel relay', () => {
 
         expect(result).toEqual({ runId: 'run_1_primary', stopped: true });
         expect(executor.stoppedRunIds()).toEqual(['run_1_primary']);
-        expect(listAgentTurnsForSession('ags_cht_general_agt_primary_1')).toMatchObject([
+        expect(listAgentTurnsForSession('ags_agt_primary_1')).toMatchObject([
             { id: 'run_1_primary', status: 'cancelled' },
         ]);
         expect(getResponse('rsp_run_1_primary')).toMatchObject({
@@ -259,7 +259,7 @@ describe('Tavern channel relay', () => {
         executor.rejectRun('run_1_primary', new Error('model call failed'));
 
         await waitFor(() => getResponse('rsp_run_1_primary')?.status === 'failed');
-        expect(listAgentTurnsForSession('ags_cht_general_agt_primary_1')).toMatchObject([
+        expect(listAgentTurnsForSession('ags_agt_primary_1')).toMatchObject([
             { id: 'run_1_primary', metadata: { error: 'model call failed' }, status: 'failed' },
         ]);
         expect(getResponse('rsp_run_1_primary')).toMatchObject({
@@ -283,7 +283,7 @@ describe('Tavern channel relay', () => {
         });
 
         await waitFor(() => getResponse('rsp_run_1_primary')?.status === 'failed');
-        expect(listAgentTurnsForSession('ags_cht_general_agt_primary_1')).toMatchObject([
+        expect(listAgentTurnsForSession('ags_agt_primary_1')).toMatchObject([
             {
                 id: 'run_1_primary',
                 metadata: {
@@ -310,7 +310,7 @@ describe('Tavern channel relay', () => {
         await waitFor(() => getResponse('rsp_run_1_primary')?.status === 'failed');
 
         expect(executor.stoppedRunIds()).toEqual(['run_1_primary']);
-        expect(listAgentTurnsForSession('ags_cht_general_agt_primary_1')).toMatchObject([
+        expect(listAgentTurnsForSession('ags_agt_primary_1')).toMatchObject([
             {
                 id: 'run_1_primary',
                 metadata: { error: 'Agent turn timed out after 25ms.' },
@@ -464,11 +464,11 @@ function createFakeAgentExecutor(): AgentExecutor {
             });
 
             const receipt = createDelivery(input.chatId, {
-                agent_id: input.agentSession.agentParticipantId,
+                agent_id: input.agentParticipantId,
                 id: deliveryId,
                 message: {
                     attachments: [],
-                    author_id: input.agentSession.agentParticipantId,
+                    author_id: input.agentParticipantId,
                     content: fakeResponseContent(input),
                     id: messageId,
                     metadata: { runtime },
@@ -487,7 +487,7 @@ function createFakeAgentExecutor(): AgentExecutor {
                         completedAt: now,
                     },
                 },
-                participant_id: input.agentSession.agentParticipantId,
+                participant_id: input.agentParticipantId,
                 request_message_id: input.requestMessageId,
                 response_message_id: receipt.message.id,
                 status: 'completed',

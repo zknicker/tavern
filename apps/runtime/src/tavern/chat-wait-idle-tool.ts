@@ -1,7 +1,7 @@
 import type { ToolSet } from '@ai-sdk/provider-utils';
 import { tool } from 'ai';
 import * as z from 'zod';
-import { getAgentTurn, hasUnsettledAgentTurnsForChatAgent } from './agent-turn-store.ts';
+import { getAgentTurn, hasUnsettledAgentTurnsForAgent } from './agent-turn-store.ts';
 import { getStoredAgent } from './agents-store.ts';
 import { isAgentChatParticipant } from './chat-actions-tools.ts';
 import { createAgentParticipantId } from './chat-api/ids.ts';
@@ -58,9 +58,9 @@ export function createTavernChatWaitTools(
                 if (!(chat && isAgentChatParticipant(chat, input.agentId, participantId))) {
                     return { error: 'You are not a participant of that chat.' };
                 }
-                if (agentId === input.agentId && targetChatId === input.chatId) {
+                if (agentId === input.agentId) {
                     return {
-                        error: 'That is your own seat in the current chat; your running turn is this one.',
+                        error: 'That is yourself; your running turn is this one.',
                     };
                 }
                 if (!isAgentChatParticipant(chat, agentId, createAgentParticipantId(agentId))) {
@@ -69,13 +69,12 @@ export function createTavernChatWaitTools(
 
                 const timeoutMs = (timeoutSeconds ?? defaultTimeoutSeconds) * 1000;
                 const startedAt = Date.now();
-                let idle = !hasUnsettledAgentTurnsForChatAgent({
-                    agentId,
-                    chatId: targetChatId,
-                });
+                // A seat is busy exactly when its agent is busy anywhere
+                // (specs/sessions.md).
+                let idle = !hasUnsettledAgentTurnsForAgent(agentId);
                 while (!idle && Date.now() - startedAt < timeoutMs) {
                     await sleep(pollIntervalMs);
-                    idle = !hasUnsettledAgentTurnsForChatAgent({ agentId, chatId: targetChatId });
+                    idle = !hasUnsettledAgentTurnsForAgent(agentId);
                 }
                 const waitedMs = Date.now() - startedAt;
 

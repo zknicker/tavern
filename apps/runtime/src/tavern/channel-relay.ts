@@ -36,10 +36,9 @@ export async function sendTavernChannelMessage(
     const runId = createRunId(payload.message.id, payload.agent.agentId);
     const responseId = createResponseId(runId);
     const storedAgent = requireStoredAgent(payload.agent.agentId);
-    ensureFreshAgentSession({ agentId: payload.agent.agentId, chatId });
+    ensureFreshAgentSession({ agentId: payload.agent.agentId });
     const agentSession = ensureCurrentAgentSession({
-        agentParticipantId: payload.agent.agentId,
-        chatId,
+        agentId: payload.agent.agentId,
         now: acceptedAt,
     });
     const agent = withSelectedModel(storedAgent, agentSession.effectiveModel);
@@ -84,6 +83,7 @@ export async function sendTavernChannelMessage(
 
     enqueueAgentTurn({
         agent,
+        agentParticipantId: createAgentParticipantId(payload.agent.agentId),
         agentSession,
         attachments: payload.message.attachments ?? [],
         chatId,
@@ -141,4 +141,3 @@ function requireStoredAgent(agentId: string) {
     }
     return agent;
 }
-

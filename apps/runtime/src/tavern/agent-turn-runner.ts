@@ -5,10 +5,10 @@ import { isTaskDispatchRun } from '../tasks/dispatch-store.ts';
 import { recoverTaskDispatchForTurn } from '../tasks/recovery.ts';
 import { createAgentEngineExecutor } from './agent-engine-executor.ts';
 import type { AgentExecutor, AgentExecutorInput } from './agent-executor.ts';
-import { readAgentSession } from './agent-session-store.ts';
+import { ensureCurrentAgentSession } from './agent-session-store.ts';
 import {
     cancelAgentTurn,
-    claimNextAgentTurnForSeat,
+    claimNextAgentTurnForAgent,
     completeAgentTurn,
     createAgentTurn,
     failAgentTurn,
@@ -20,8 +20,8 @@ import { registerTurnDelivery } from './turn-delivery.ts';
 import { recordAgentTurnOutcomeNote } from './turn-outcome-notes.ts';
 
 interface ActiveTurn {
+    agentId: string;
     input: AgentExecutorInput;
-    seatKey: string;
 }
 
 type SettledTurnStatus = 'cancelled' | 'completed' | 'failed';
@@ -31,7 +31,7 @@ const defaultAgentTurnTimeoutMs = 5 * 60 * 1000;
 // than interactive chat turns, which the user can see and stop directly.
 const defaultTaskTurnTimeoutMs = 30 * 60 * 1000;
 const activeTurns = new Map<string, ActiveTurn>();
-const activeSeatRuns = new Map<string, string>();
+const activeAgentRuns = new Map<string, string>();
 const queuedTurnInputs = new Map<string, AgentExecutorInput>();
 const turnWaiters = new Map<
     string,
@@ -46,7 +46,7 @@ export function enqueueAgentTurn(
     queuedTurnInputs.set(input.runId, input);
     createAgentTurn({
         agentId: input.agent.id,
-        agentParticipantId: input.agentSession.agentParticipantId,
+        agentParticipantId: input.agentParticipantId,
         agentSessionId: input.agentSession.id,
         chatId: input.chatId,
         id: input.runId,
@@ -58,7 +58,7 @@ export function enqueueAgentTurn(
         triggerMessageId: input.requestMessageId,
     });
 
-    void drainAgentSeat(input);
+    void drainAgent(input);
 }
 
 export async function stopAgentTurn(runId: string) {
@@ -97,9 +97,9 @@ export async function stopAgentTurn(runId: string) {
     });
 
     if (active) {
-        clearActiveTurn(runId, active.seatKey);
+        clearActiveTurn(runId, active.agentId);
         notifyTurnSettled(runId, { status: 'cancelled' });
-        void drainAgentSeat(active.input);
+        void drainAgent(active.input);
     } else {
         notifyTurnSettled(runId, { status: 'cancelled' });
     }
@@ -136,7 +136,7 @@ export function waitForAgentTurnSettlement(runId: string): Promise<{
 export function resetAgentExecutorForTesting(nextExecutor?: AgentExecutor) {
     executor = nextExecutor ?? createAgentEngineExecutor();
     activeTurns.clear();
-    activeSeatRuns.clear();
+    activeAgentRuns.clear();
     queuedTurnInputs.clear();
 }
 
@@ -146,29 +146,28 @@ export function setAgentExecutorForTesting(nextExecutor: AgentExecutor) {
     return () => {
         executor = previous;
         activeTurns.clear();
-        activeSeatRuns.clear();
+        activeAgentRuns.clear();
         queuedTurnInputs.clear();
     };
 }
 
-async function drainAgentSeat(input: AgentExecutorInput) {
-    const seatKey = agentSeatKey(input);
-    if (activeSeatRuns.has(seatKey)) {
+// One turn at a time per agent, across all chats. Claiming again after every
+// settle is the auto-drain loop: the queued-turn backlog is the inbox
+// (specs/sessions.md).
+async function drainAgent(input: AgentExecutorInput) {
+    const agentId = input.agent.id;
+    if (activeAgentRuns.has(agentId)) {
         return;
     }
 
-    const turn = claimNextAgentTurnForSeat({
-        agentParticipantId: input.agentSession.agentParticipantId,
-        agentSessionId: input.agentSession.id,
-        chatId: input.chatId,
-    });
+    const turn = claimNextAgentTurnForAgent({ agentId });
     if (!turn) {
         return;
     }
 
     const turnInput = withCurrentAgentSessionState(queuedTurnInputs.get(turn.id) ?? input);
-    activeSeatRuns.set(seatKey, turn.id);
-    activeTurns.set(turn.id, { input: turnInput, seatKey });
+    activeAgentRuns.set(agentId, turn.id);
+    activeTurns.set(turn.id, { agentId, input: turnInput });
 
     try {
         const result = await executeAgentTurnWithTimeout(turnInput);
@@ -220,7 +219,7 @@ async function drainAgentSeat(input: AgentExecutorInput) {
                         source: 'agent-engine',
                     },
                 },
-                participant_id: turnInput.agentSession.agentParticipantId,
+                participant_id: turnInput.agentParticipantId,
                 request_message_id: turnInput.requestMessageId,
                 status: 'failed',
                 summary: errorMessage,
@@ -228,19 +227,22 @@ async function drainAgentSeat(input: AgentExecutorInput) {
         }
     } finally {
         queuedTurnInputs.delete(turn.id);
-        clearActiveTurn(turn.id, seatKey);
-        void drainAgentSeat(turnInput);
+        clearActiveTurn(turn.id, agentId);
+        void drainAgent(turnInput);
     }
 }
 
-// Queued inputs are captured at enqueue time, often while the seat's prior
-// turn is still running. The engine-session binding they carry (runtime
-// session id, resume state, prompt cursor) goes stale the moment that turn
-// settles — serialized seats exist to chain turn context, so the claimed
-// turn re-reads its session row before executing.
+// Queued inputs are captured at enqueue time, often while the agent's prior
+// turn is still running. The session binding they carry (resume state, and
+// possibly the session itself after a reset or model switch) goes stale the
+// moment that turn settles, so the claimed turn re-resolves the agent's
+// current session before executing.
 function withCurrentAgentSessionState(input: AgentExecutorInput): AgentExecutorInput {
-    const agentSession = readAgentSession(input.agentSession.id);
-    return agentSession ? { ...input, agentSession } : input;
+    try {
+        return { ...input, agentSession: ensureCurrentAgentSession({ agentId: input.agent.id }) };
+    } catch {
+        return input;
+    }
 }
 
 // Outcome notes are a best-effort signal back to the seat that dispatched
@@ -274,15 +276,11 @@ function isSettledTurnStatus(status: string): status is SettledTurnStatus {
     return status === 'cancelled' || status === 'completed' || status === 'failed';
 }
 
-function clearActiveTurn(runId: string, seatKey: string) {
+function clearActiveTurn(runId: string, agentId: string) {
     activeTurns.delete(runId);
-    if (activeSeatRuns.get(seatKey) === runId) {
-        activeSeatRuns.delete(seatKey);
+    if (activeAgentRuns.get(agentId) === runId) {
+        activeAgentRuns.delete(agentId);
     }
-}
-
-function agentSeatKey(input: { agentSession: { id: string } }) {
-    return input.agentSession.id;
 }
 
 function executeAgentTurnWithTimeout(input: AgentExecutorInput) {

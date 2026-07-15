@@ -46,7 +46,6 @@ describe('Tavern Runtime agent turn runner', () => {
                     await firstTurnGate;
                     updateAgentSessionRuntimeState({
                         id: input.agentSession.id,
-                        promptContextSequence: 41,
                         resumeState: { harness: 'state-from-turn-1' },
                         runtimeSessionId: 'ses_engine_1',
                     });
@@ -66,7 +65,6 @@ describe('Tavern Runtime agent turn runner', () => {
         expect(executedSessions[0]?.runtimeSessionId).toBeNull();
         expect(executedSessions[1]).toMatchObject({
             id: staleSession.id,
-            promptContextSequence: 41,
             resumeState: { harness: 'state-from-turn-1' },
             runtimeSessionId: 'ses_engine_1',
         });
@@ -103,11 +101,7 @@ function seedSeat() {
         ],
     });
 
-    return ensureCurrentAgentSession({
-        agentParticipantId: 'agt_primary',
-        chatId: 'cht_1',
-        now: '2026-07-14T12:00:00.000Z',
-    });
+    return ensureCurrentAgentSession({ agentId: 'agt_primary', now: '2026-07-14T12:00:00.000Z' });
 }
 
 function turnInput(input: {
@@ -127,13 +121,14 @@ function turnInput(input: {
     });
     upsertResponse('cht_1', {
         id: `rsp_${input.index}`,
-        participant_id: input.session.agentParticipantId,
+        participant_id: 'agt_primary',
         request_message_id: `msg_${input.index}`,
         status: 'running',
     });
 
     return {
         agent,
+        agentParticipantId: 'agt_primary',
         agentSession: input.session,
         attachments: [],
         chatId: 'cht_1',

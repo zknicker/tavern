@@ -192,65 +192,43 @@ export function listAgentTurnsForSession(agentSessionId: string, db: Database = 
     return rows.map(rowToAgentTurn);
 }
 
-// The latest running turn for an agent's seat in a chat, regardless of which
-// session generation holds it. Steering targets this turn.
-export function findRunningAgentTurnForChatAgent(
-    input: { agentId: string; chatId: string },
-    db: Database = getDb()
-) {
+// The agent's currently running turn, wherever it is anchored. Busy
+// delivery targets this turn (specs/steering.md).
+export function findRunningAgentTurnForAgent(agentId: string, db: Database = getDb()) {
     const row = db
         .prepare(
             `SELECT *
              FROM agent_turns
-             WHERE chat_id = $chatId
-               AND agent_id = $agentId
+             WHERE agent_id = $agentId
                AND status = 'running'
              ORDER BY started_at DESC, id DESC
              LIMIT 1`
         )
-        .get(namedParams(input)) as AgentTurnRow | null;
+        .get(namedParams({ agentId })) as AgentTurnRow | null;
     return row ? rowToAgentTurn(row) : null;
 }
 
-// Every running turn in a chat, across all seats. Busy delivery fans a new
-// message out to these turns (specs/steering.md).
-export function listRunningAgentTurnsForChat(chatId: string, db: Database = getDb()) {
-    const rows = db
-        .prepare(
-            `SELECT *
-             FROM agent_turns
-             WHERE chat_id = $chatId
-               AND status = 'running'
-             ORDER BY started_at ASC, id ASC`
-        )
-        .all(namedParams({ chatId })) as AgentTurnRow[];
-    return rows.map(rowToAgentTurn);
-}
-
-// Whether an agent's seat in a chat still has work in flight (queued or
-// running). "Idle" for chat_wait_idle means this returns false.
-export function hasUnsettledAgentTurnsForChatAgent(
-    input: { agentId: string; chatId: string },
-    db: Database = getDb()
-) {
+// Whether the agent has any work in flight anywhere (queued or running).
+// A seat is busy exactly when its agent is busy (specs/sessions.md).
+export function hasUnsettledAgentTurnsForAgent(agentId: string, db: Database = getDb()) {
     const row = db
         .prepare(
             `SELECT 1 AS present
              FROM agent_turns
-             WHERE chat_id = $chatId
-               AND agent_id = $agentId
+             WHERE agent_id = $agentId
                AND status IN ('queued', 'running')
              LIMIT 1`
         )
-        .get(namedParams(input)) as { present: number } | null;
+        .get(namedParams({ agentId })) as { present: number } | null;
     return Boolean(row);
 }
 
-export function claimNextAgentTurnForSeat(
+// One turn at a time per agent, across all chats (specs/sessions.md). The
+// queue drains oldest-first regardless of chat — auto-drain is the runner
+// re-claiming after every settle.
+export function claimNextAgentTurnForAgent(
     input: {
-        agentParticipantId: string;
-        agentSessionId: string;
-        chatId: string;
+        agentId: string;
         now?: string;
     },
     db: Database = getDb()
@@ -259,14 +237,12 @@ export function claimNextAgentTurnForSeat(
         .prepare(
             `SELECT *
              FROM agent_turns
-             WHERE chat_id = $chatId
-               AND agent_participant_id = $agentParticipantId
-               AND agent_session_id = $agentSessionId
+             WHERE agent_id = $agentId
                AND status = 'running'
              ORDER BY started_at ASC, id ASC
              LIMIT 1`
         )
-        .get(namedParams(input)) as AgentTurnRow | null;
+        .get(namedParams({ agentId: input.agentId })) as AgentTurnRow | null;
     if (running) {
         return null;
     }
@@ -275,14 +251,12 @@ export function claimNextAgentTurnForSeat(
         .prepare(
             `SELECT *
              FROM agent_turns
-             WHERE chat_id = $chatId
-               AND agent_participant_id = $agentParticipantId
-               AND agent_session_id = $agentSessionId
+             WHERE agent_id = $agentId
                AND status = 'queued'
              ORDER BY created_at ASC, id ASC
              LIMIT 1`
         )
-        .get(namedParams(input)) as AgentTurnRow | null;
+        .get(namedParams({ agentId: input.agentId })) as AgentTurnRow | null;
     if (!next) {
         return null;
     }

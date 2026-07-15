@@ -135,10 +135,9 @@ function prepareDispatch(input: {
     }
 
     const acceptedAt = new Date().toISOString();
-    ensureFreshAgentSession({ agentId: input.agentId, chatId: input.chatId });
+    ensureFreshAgentSession({ agentId: input.agentId });
     const agentSession = ensureCurrentAgentSession({
-        agentParticipantId: input.agentId,
-        chatId: input.chatId,
+        agentId: input.agentId,
         now: acceptedAt,
     });
     const runId = createRunId(input.triggerMessageId, input.agentId);
@@ -170,6 +169,7 @@ function prepareDispatch(input: {
                     agentSession.effectiveModel ??
                     resolveAgentModelSelection({ agentId: input.agentId }),
             },
+            agentParticipantId: createAgentParticipantId(input.agentId),
             agentSession,
             attachments: [],
             chatId: input.chatId,

@@ -163,12 +163,10 @@ describe('agent evaluation dispatch', () => {
 
         await sendTavernChannelMessage('cht_general', messageInput('agt_a'));
         await waitFor(() =>
-            listAgentTurnsForSession('ags_cht_target_agt_b_1').some(
-                (turn) => turn.status === 'completed'
-            )
+            listAgentTurnsForSession('ags_agt_b_1').some((turn) => turn.status === 'completed')
         );
 
-        const dispatched = listAgentTurnsForSession('ags_cht_target_agt_b_1')[0];
+        const dispatched = listAgentTurnsForSession('ags_agt_b_1')[0];
         expect(dispatched).toMatchObject({
             agentId: 'agt_b',
             chatId: 'cht_target',
@@ -180,8 +178,11 @@ describe('agent evaluation dispatch', () => {
             status: 'completed',
         });
         // A's own-chat reply was NO_REPLY, which delivers nothing home, so
-        // B's seat in the origin chat dispatched nothing.
-        expect(sessionTurns('agt_b')).toHaveLength(0);
+        // no turn was dispatched for B in the origin chat. The session is
+        // agent-global, so filter its turns by anchor chat.
+        expect(sessionTurns('agt_b').filter((turn) => turn.chatId === 'cht_general')).toHaveLength(
+            0
+        );
     });
 
     it('suppresses dispatches once the chain budget is spent', () => {
@@ -245,7 +246,7 @@ function fabricateCompletedTurn(index: number): AgentTurn {
 }
 
 function sessionTurns(agentId: string) {
-    return listAgentTurnsForSession(`ags_cht_general_${agentId}_1`);
+    return listAgentTurnsForSession(`ags_${agentId}_1`);
 }
 
 function replyMessageId(agentId: string, triggerMessageId: string) {
@@ -303,11 +304,11 @@ function createScriptedExecutor(
             const crossPost = crossPosts[input.agent.id];
             if (crossPost) {
                 createDelivery(crossPost.chatId, {
-                    agent_id: input.agentSession.agentParticipantId,
+                    agent_id: input.agentParticipantId,
                     id: `del_${input.runId}_xchat`.replace(/[^A-Za-z0-9_-]/g, '_'),
                     message: {
                         attachments: [],
-                        author_id: input.agentSession.agentParticipantId,
+                        author_id: input.agentParticipantId,
                         content: crossPost.content,
                         id: `msg_${input.runId}_xchat`.replace(/[^A-Za-z0-9_-]/g, '_'),
                         metadata: { runtime },
@@ -324,7 +325,7 @@ function createScriptedExecutor(
                     completed_at: now,
                     id: input.responseId,
                     metadata: { runtime },
-                    participant_id: input.agentSession.agentParticipantId,
+                    participant_id: input.agentParticipantId,
                     request_message_id: input.requestMessageId,
                     status: 'completed',
                 });
@@ -332,11 +333,11 @@ function createScriptedExecutor(
             }
 
             const receipt = createDelivery(input.chatId, {
-                agent_id: input.agentSession.agentParticipantId,
+                agent_id: input.agentParticipantId,
                 id: `del_${input.runId}`.replace(/[^A-Za-z0-9_-]/g, '_'),
                 message: {
                     attachments: [],
-                    author_id: input.agentSession.agentParticipantId,
+                    author_id: input.agentParticipantId,
                     content: reply,
                     id: messageId,
                     metadata: { runtime },
@@ -349,7 +350,7 @@ function createScriptedExecutor(
                 completed_at: now,
                 id: input.responseId,
                 metadata: { runtime },
-                participant_id: input.agentSession.agentParticipantId,
+                participant_id: input.agentParticipantId,
                 request_message_id: input.requestMessageId,
                 response_message_id: receipt.message.id,
                 status: 'completed',
