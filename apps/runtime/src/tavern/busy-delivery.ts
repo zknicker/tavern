@@ -1,10 +1,10 @@
 import type { TavernChatEvent, TavernChatMessage } from '@tavern/api';
 import { log } from '../log.ts';
 import { resolveHomeTimezone } from '../timezone-settings.ts';
-import { deliverToActiveTurn } from './agent-turn-runner.ts';
 import { type AgentTurn, listRunningAgentTurnsForChat } from './agent-turn-store.ts';
 import { subscribeToTavernApiEvents, upsertResponseActivity } from './chat-api/index.ts';
 import { formatPromptMessage } from './harness-prompt.ts';
+import { deliverToActiveTurn } from './turn-delivery.ts';
 
 // Busy delivery (specs/steering.md): when a durable message lands in a chat,
 // every running turn in that chat gets a compact notice through its engine

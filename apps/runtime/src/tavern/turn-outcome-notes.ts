@@ -3,8 +3,8 @@ import type { Database } from '../db/sqlite.ts';
 import { namedParams } from '../db/sqlite.ts';
 import type { AgentTurn } from './agent-turn-store.ts';
 
-// Turn-outcome signal for agent-to-agent dispatch (specs/agent-mentions.md):
-// when a mention-dispatched turn settles, the requesting agent's seat gets one
+// Turn-outcome signal for agent-to-agent dispatch (specs/addressing.md):
+// when an evaluation turn settles, the dispatching agent's seat gets one
 // compact note — succeeded / failed / stopped / silent, plus the reply message
 // id — delivered in its next prompt instead of via transcript polling.
 

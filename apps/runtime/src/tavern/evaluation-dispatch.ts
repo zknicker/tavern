@@ -11,20 +11,22 @@ import {
     upsertResponse,
     upsertResponseActivity,
 } from './chat-api/index.ts';
-import { readMentionedAgentIds } from './mention-projection.ts';
 import { ensureFreshAgentSession } from './session-freshness.ts';
 
-// See specs/agent-mentions.md. A turn's delivered final reply and its
-// cross-chat posts (chat_send) can mention agent participants of the chat
-// each message landed in; every mention dispatches a turn on that seat.
+// Default-evaluate addressing (specs/addressing.md): every message a
+// completed turn delivered into a chat — the final reply in its own chat and
+// any cross-chat posts — dispatches an evaluation turn to every other agent
+// seat of that chat. Mentions set expectation in the prompt, never routing.
 // Two guards bound every chain regardless of which chats it crosses: a hop
-// cap (depth) and a per-origin budget (total dispatched mention turns from
-// one founding trigger message).
-const maxMentionHops = 4;
-const mentionChainBudget = 8;
+// cap (depth) and a per-origin budget (total dispatched evaluation turns
+// from one founding trigger message).
+const maxChainHops = 4;
+// Tuned for small channels: any agent reply in an N-agent chat spends N-1
+// budget at once, so chatter exhausts chains in a few rounds by design.
+const evaluationChainBudget = 16;
 const maxTrackedChains = 256;
 
-export interface AgentMentionDispatch {
+export interface AgentEvaluationDispatch {
     input: AgentExecutorInput;
     turnMetadata: Record<string, unknown>;
 }
@@ -33,12 +35,12 @@ const chainSpend = new Map<string, number>();
 
 /**
  * Reads the completed turn's cross-chat posts and delivered final reply, and
- * prepares one dispatch per mentioned agent participant of the chat each
+ * prepares one evaluation dispatch per other agent seat of the chat each
  * message landed in — writing running responses for dispatched turns and
- * suppression notices for mentions past the chain limits. The caller enqueues
- * the returned inputs; this module never runs turns itself.
+ * suppression notices past the chain limits. The caller enqueues the
+ * returned inputs; this module never runs turns itself.
  */
-export function collectAgentMentionDispatches(turn: AgentTurn): AgentMentionDispatch[] {
+export function collectAgentEvaluationDispatches(turn: AgentTurn): AgentEvaluationDispatch[] {
     const candidates = dispatchCandidates(turn);
     if (candidates.length === 0) {
         return [];
@@ -46,26 +48,20 @@ export function collectAgentMentionDispatches(turn: AgentTurn): AgentMentionDisp
 
     const hops = readHops(turn.metadata);
     const origin = readChainOrigin(turn);
-    const dispatches: AgentMentionDispatch[] = [];
+    const dispatches: AgentEvaluationDispatch[] = [];
     const seenSeats = new Set<string>();
     for (const candidate of candidates) {
-        const chatAgentIds = readChatAgentIds(candidate.chatId);
-        for (const agentId of readMentionedAgentIds(candidate.content)) {
+        for (const agentId of readChatAgentIds(candidate.chatId)) {
             const seatKey = `${candidate.chatId}:${agentId}`;
-            if (agentId === turn.agentId || !chatAgentIds.has(agentId) || seenSeats.has(seatKey)) {
-                continue;
-            }
-            // Seats steered at send time (chat_send mode "steer") already
-            // received this message into their running turn; no new turn.
-            if (candidate.steeredAgentIds.has(agentId)) {
+            if (agentId === turn.agentId || seenSeats.has(seatKey)) {
                 continue;
             }
             seenSeats.add(seatKey);
-            if (hops >= maxMentionHops) {
+            if (hops >= maxChainHops) {
                 recordSuppressionNotice(turn, agentId, 'chain depth limit reached');
                 continue;
             }
-            if ((chainSpend.get(origin) ?? 0) >= mentionChainBudget) {
+            if ((chainSpend.get(origin) ?? 0) >= evaluationChainBudget) {
                 recordSuppressionNotice(turn, agentId, 'chain budget exhausted');
                 continue;
             }
@@ -92,12 +88,7 @@ export function collectAgentMentionDispatches(turn: AgentTurn): AgentMentionDisp
 // posts first (they happened mid-turn), then the final reply in the turn's
 // own chat.
 function dispatchCandidates(turn: AgentTurn) {
-    const candidates: Array<{
-        chatId: string;
-        content: string;
-        messageId: string;
-        steeredAgentIds: Set<string>;
-    }> = [];
+    const candidates: Array<{ chatId: string; content: string; messageId: string }> = [];
     for (const delivery of listDeliveriesForTurn(turn.id)) {
         if (delivery.chatId === turn.chatId) {
             continue;
@@ -108,7 +99,6 @@ function dispatchCandidates(turn: AgentTurn) {
                 chatId: delivery.chatId,
                 content: message.content,
                 messageId: message.id,
-                steeredAgentIds: readSteeredAgentIds(message.metadata),
             });
         }
     }
@@ -120,27 +110,13 @@ function dispatchCandidates(turn: AgentTurn) {
                 chatId: turn.chatId,
                 content: message.content,
                 messageId: finalMessageId,
-                steeredAgentIds: readSteeredAgentIds(message.metadata),
             });
         }
     }
     return candidates;
 }
 
-function readSteeredAgentIds(metadata: Record<string, unknown>) {
-    const runtime = metadata.runtime;
-    if (!runtime || typeof runtime !== 'object' || Array.isArray(runtime)) {
-        return new Set<string>();
-    }
-    const value = (runtime as Record<string, unknown>).steeredAgentIds;
-    return new Set(
-        Array.isArray(value)
-            ? value.filter((entry): entry is string => typeof entry === 'string')
-            : []
-    );
-}
-
-export function resetAgentMentionChainsForTesting() {
+export function resetEvaluationChainsForTesting() {
     chainSpend.clear();
 }
 
@@ -152,7 +128,7 @@ function prepareDispatch(input: {
     hops: number;
     origin: string;
     triggerMessageId: string;
-}): AgentMentionDispatch | null {
+}): AgentEvaluationDispatch | null {
     const storedAgent = getStoredAgent(input.agentId);
     if (!storedAgent) {
         return null;
@@ -203,12 +179,12 @@ function prepareDispatch(input: {
             runId,
         },
         turnMetadata: {
+            chainHops: input.hops + 1,
             chainOriginMessageId: input.origin,
-            // The mentioning agent's seat; its next prompt receives a compact
-            // outcome note when this dispatched turn settles.
+            // The dispatching agent's seat; its next prompt receives a
+            // compact outcome note when this evaluation turn settles.
             dispatchedBy: input.dispatchedBy,
-            mentionHops: input.hops + 1,
-            trigger: 'agent-mention',
+            trigger: 'evaluation',
         },
     };
 }
@@ -227,7 +203,7 @@ function readChatAgentIds(chatId: string) {
 }
 
 function readHops(metadata: Record<string, unknown>) {
-    const hops = metadata.mentionHops;
+    const hops = metadata.chainHops;
     return typeof hops === 'number' && Number.isFinite(hops) && hops > 0 ? Math.floor(hops) : 0;
 }
 
@@ -250,7 +226,7 @@ function spendChainBudget(origin: string) {
 function recordSuppressionNotice(turn: AgentTurn, agentId: string, reason: string) {
     const targetName = getStoredAgent(agentId)?.name ?? agentId;
     const now = new Date().toISOString();
-    const text = `Mention of ${targetName} was not dispatched: ${reason}.`;
+    const text = `Evaluation by ${targetName} was not dispatched: ${reason}.`;
     upsertResponseActivity(turn.chatId, turn.responseId, {
         completed_at: now,
         detail: text,
@@ -263,11 +239,11 @@ function recordSuppressionNotice(turn: AgentTurn, agentId: string, reason: strin
                 messageId: turn.triggerMessageId,
                 notice: {
                     detail: text,
-                    id: 'runtime_notice_mention_suppressed',
+                    id: 'runtime_notice_evaluation_suppressed',
                     kind: 'status',
                     sessionId: turn.agentSessionId,
                     text,
-                    title: 'Mention not dispatched',
+                    title: 'Evaluation not dispatched',
                 },
                 runId: turn.id,
                 source: 'agent-engine',
@@ -275,10 +251,10 @@ function recordSuppressionNotice(turn: AgentTurn, agentId: string, reason: strin
         },
         started_at: now,
         status: 'completed',
-        title: 'Mention not dispatched',
+        title: 'Evaluation not dispatched',
     });
 }
 
 function suppressionActivityId(runId: string, agentId: string) {
-    return `act_${runId}_mention_suppressed_${agentId}`.replace(/[^A-Za-z0-9_-]/g, '_');
+    return `act_${runId}_evaluation_suppressed_${agentId}`.replace(/[^A-Za-z0-9_-]/g, '_');
 }

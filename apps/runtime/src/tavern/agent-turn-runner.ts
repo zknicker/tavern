@@ -5,7 +5,6 @@ import { isTaskDispatchRun } from '../tasks/dispatch-store.ts';
 import { recoverTaskDispatchForTurn } from '../tasks/recovery.ts';
 import { createAgentEngineExecutor } from './agent-engine-executor.ts';
 import type { AgentExecutor, AgentExecutorInput } from './agent-executor.ts';
-import { collectAgentMentionDispatches } from './agent-mention-dispatch.ts';
 import { readAgentSession } from './agent-session-store.ts';
 import {
     cancelAgentTurn,
@@ -16,6 +15,8 @@ import {
     getAgentTurn,
 } from './agent-turn-store.ts';
 import { upsertResponse } from './chat-api/index.ts';
+import { collectAgentEvaluationDispatches } from './evaluation-dispatch.ts';
+import { registerTurnDelivery } from './turn-delivery.ts';
 import { recordAgentTurnOutcomeNote } from './turn-outcome-notes.ts';
 
 interface ActiveTurn {
@@ -108,18 +109,9 @@ export async function stopAgentTurn(runId: string) {
     return true;
 }
 
-/**
- * Attempt busy delivery of text into a running turn's engine session.
- * False means not running or unsupported — never an error; the durable
- * message reaches the seat through its context cursor instead.
- */
-export async function deliverToActiveTurn(runId: string, text: string): Promise<boolean> {
-    try {
-        return Boolean(await executor.deliverUserMessage?.(runId, text));
-    } catch {
-        return false;
-    }
-}
+// Busy delivery reaches the current executor through the registry so the
+// message fan-out module never imports the runner (specs/steering.md).
+registerTurnDelivery((runId, text) => executor.deliverUserMessage?.(runId, text) ?? false);
 
 export function waitForAgentTurnSettlement(runId: string): Promise<{
     error?: string;
@@ -196,13 +188,13 @@ async function drainAgentSeat(input: AgentExecutorInput) {
                 // Memory extraction is a best-effort background side effect.
             }
             try {
-                // Agent-mentions in the delivered final reply dispatch turns
-                // on the mentioned seats. See specs/agent-mentions.md.
-                for (const dispatch of collectAgentMentionDispatches(completedTurn)) {
+                // Every message this turn delivered dispatches evaluation
+                // turns on the other agent seats. See specs/addressing.md.
+                for (const dispatch of collectAgentEvaluationDispatches(completedTurn)) {
                     enqueueAgentTurn(dispatch.input, { turnMetadata: dispatch.turnMetadata });
                 }
             } catch (error) {
-                log.warn('Agent mention dispatch failed', { err: error, runId: turn.id });
+                log.warn('Agent evaluation dispatch failed', { err: error, runId: turn.id });
             }
         }
     } catch (error) {

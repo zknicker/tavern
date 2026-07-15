@@ -31,43 +31,8 @@ export function recordUserSteerNotice(input: {
     });
 }
 
-export function recordAgentSteerNotice(input: {
-    content: string;
-    messageId: string;
-    steeredBy: { agentId: string; name: string };
-    targetTurn: {
-        agentId: string;
-        agentSessionId: string;
-        chatId: string;
-        id: string;
-        responseId: string;
-    };
-    // Unique per steer so repeated steers at one turn never overwrite.
-    suffix: string;
-}) {
-    const activityId = agentSteerNoticeActivityId(input.targetTurn.id, input.suffix);
-    writeSteerActivity({
-        activityId,
-        agentId: input.targetTurn.agentId,
-        agentSessionId: input.targetTurn.agentSessionId,
-        chatId: input.targetTurn.chatId,
-        content: input.content,
-        messageId: input.messageId,
-        noticeId: 'runtime_notice_agent_steered',
-        responseId: input.targetTurn.responseId,
-        runId: input.targetTurn.id,
-        steeredBy: input.steeredBy,
-        text: `${input.steeredBy.name} steered the active turn: ${input.content}`,
-    });
-    return activityId;
-}
-
 export function userSteerNoticeActivityId(runId: string) {
     return sanitizeActivityId(`act_${runId}_runtime_notice_steered`);
-}
-
-function agentSteerNoticeActivityId(targetRunId: string, suffix: string) {
-    return sanitizeActivityId(`act_${targetRunId}_agent_steered_${suffix}`);
 }
 
 function writeSteerActivity(input: {

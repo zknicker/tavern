@@ -9,8 +9,8 @@ import { getChat, upsertResponseActivity } from './chat-api/index.ts';
 
 // chat_wait_idle lets an orchestrating agent sequence work: block, bounded,
 // until another agent's seat in a chat has no running or queued turn. Waiting
-// dispatches nothing and spends no mention-chain budget; it only spends the
-// caller's own turn time (specs/agent-mentions.md).
+// dispatches nothing and spends no chain budget; it only spends the
+// caller's own turn time (specs/addressing.md).
 //
 // The cap stays under the agent engine's per-tool-call ceiling (~60s on MCP
 // transports); longer orchestration waits by calling the tool again.

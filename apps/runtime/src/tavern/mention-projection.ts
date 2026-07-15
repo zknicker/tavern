@@ -1,24 +1,4 @@
-import {
-    parseAgentReferenceTarget,
-    parseSkillReferenceTarget,
-    parseTavernRichReferences,
-} from '@tavern/api/rich-references';
-
-// Agent ids mentioned as [Name](agent://<agentId>) references, in order of
-// first appearance. Shared by mention dispatch and chat_send steering.
-export function readMentionedAgentIds(content: string) {
-    const ids: string[] = [];
-    for (const reference of parseTavernRichReferences(content)) {
-        if (reference.kind !== 'agent') {
-            continue;
-        }
-        const agentId = parseAgentReferenceTarget(reference.id);
-        if (agentId && !ids.includes(agentId)) {
-            ids.push(agentId);
-        }
-    }
-    return ids;
-}
+import { parseSkillReferenceTarget, parseTavernRichReferences } from '@tavern/api/rich-references';
 
 export function projectTavernMessageForAgent(input: {
     content: string;

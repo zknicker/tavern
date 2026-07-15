@@ -90,11 +90,11 @@ describe('agent turn outcome notes', () => {
         recordAgentTurnOutcomeNote(turn, { status: 'completed' });
 
         const prompt = harnessPrompt(ottoExecutorInput());
-        expect(prompt).toContain('Outcomes of turns you dispatched by mention:');
+        expect(prompt).toContain('Outcomes of turns your messages dispatched:');
         expect(prompt).toContain('Wren\'s turn in "Target" completed — reply message msg_reply.');
 
         const second = harnessPrompt(ottoExecutorInput());
-        expect(second).not.toContain('Outcomes of turns you dispatched by mention:');
+        expect(second).not.toContain('Outcomes of turns your messages dispatched:');
     });
 });
 

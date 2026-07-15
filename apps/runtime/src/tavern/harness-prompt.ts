@@ -33,7 +33,7 @@ export function harnessPrompt(input: AgentExecutorInput, recallContext?: null | 
         sections.push('', recallContext);
     }
 
-    // Outcomes of turns this seat dispatched by mention, delivered once and
+    // Outcomes of evaluation turns this seat's messages dispatched, once and
     // marked consumed so orchestrators never poll transcripts.
     const outcomeNotes = consumeAgentTurnOutcomeNotes({
         agentId: input.agent.id,
@@ -43,7 +43,7 @@ export function harnessPrompt(input: AgentExecutorInput, recallContext?: null | 
     if (outcomeNotes.length > 0) {
         sections.push(
             '',
-            'Outcomes of turns you dispatched by mention:',
+            'Outcomes of turns your messages dispatched:',
             ...outcomeNotes.map((note) => formatOutcomeNote(note, input.chatId, timezone))
         );
     }
