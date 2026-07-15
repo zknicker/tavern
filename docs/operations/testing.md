@@ -199,7 +199,7 @@ real turns, archives its temp chats, deletes its temp Wiki pages (including
 capture-derived strays), removes stray automations, and restores any temp
 agent bios. Use `--only <substring>` to rerun a single scenario. Pass
 `--reuse-chats` to keep one stable chat per scenario — each run recycles the
-same set (unarchive, per-seat session reset, `chat.clear`) instead of
+same set (unarchive, agent session reset, `chat.clear`) instead of
 stamping new archive rows. See AGENTS.md ("Agent System Prompt Changes").
 
 ## Keeping Suites Current

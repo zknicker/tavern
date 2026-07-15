@@ -29,35 +29,36 @@ chat participant and Agent session decision.
 ## Agent Seats And Sessions
 
 An Agent's participation in a Chat is an Agent seat: an agent participant row
-inside that Chat. Each Agent seat owns exactly one current Agent session.
+inside that Chat. Seats route messages; the agent itself owns exactly one
+current global Agent session.
 
 ```text
 ChatParticipant
   chatId
   participantId
   agentId
-  currentAgentSessionId
 
 AgentSession
   id
-  chatId
-  agentParticipantId
+  agentId
   effectiveModel
-  promptContextSequence
   runtimeSessionId
   resumeState
   generation
   status
+  lastTurnAt
 ```
 
-The Agent seat is stable Tavern product state. The Agent session can rotate
-when the user starts fresh context for that Agent in that Chat. Rotating
-archives older active sessions and updates only that seat's current session
-pointer.
+The Agent seat is stable Tavern product state. The Agent session is
+agent-global (ADR 0011, `specs/sessions.md`): one ongoing session per agent
+backs every chat that agent sits in, with a per-(session, chat) seen ledger
+tracking what has been model-visible in each chat. A fresh session starts
+only on a model switch, a manual reset from agent settings, or after ~7
+fully idle days; starting one archives the previous active session.
 
-A channel with multiple agents is not one engine session. Each Agent seat gets
-its own Agent session. Human-only channel messages are valid chat messages and
-do not invoke an agent unless addressing rules route them to an Agent seat.
+A channel with multiple agents is not one engine session. Each agent runs
+its own global session. Human-only channel messages are valid chat messages
+and do not invoke an agent unless addressing rules route them to an agent.
 
 ## Execution
 
@@ -84,9 +85,13 @@ final answer. The last text segment becomes the assistant reply. After
 the turn settles it stores the opaque harness resume state on the Agent session
 and stops the session handle. The chat response row must already exist when the
 turn starts; mid-turn activity rows reference it.
-The prompt contains the current Tavern message plus bounded ambient channel
-context since the Agent session's `promptContextSequence`; it does not replay
-the prior user-agent transcript because the harness session owns that history.
+The prompt contains the current Tavern message plus catch-up context since
+the session's seen-ledger cursor for that chat
+(`agent_session_chat_cursors`); it does not replay the prior user-agent
+transcript because the harness session owns that history. Each turn's prompt
+also anchors the chat: its kind, id, and participant roster with mention
+links and bios, plus counts-only "Unread elsewhere" lines for other chats
+with unseen rows.
 When Wiki recall is provisioned, the prompt also carries a recalled-Wiki block:
 the triggering message runs a vector search over the qmd-backed recall index
 (`apps/runtime/src/wiki/recall/`), and up to
@@ -98,22 +103,21 @@ and the artifact-staged copy under `share/tavern/node_modules` when packaged
 Each turn prompt is time-anchored with the current time, and every included
 message carries its send time — weekday-prefixed home-timezone wall clock,
 e.g. `Sun 2026-07-05T13:22:42-04:00` (`apps/runtime/src/tavern/harness-prompt.ts`,
-timezone from `resolveHomeTimezone()`). Static per-session guidance — the
-chat id, the home timezone, the staleness policy, and Tavern
-chat/Memory/automation tool guidance — lives in the composed agent
-instructions, not the per-turn prompt, so long sessions carry one copy instead
-of one per turn. Channel instructions also teach the silent reply: a turn
+timezone from `resolveHomeTimezone()`). Static per-session guidance — the home timezone, the staleness policy, and
+Tavern chat/Memory/automation tool guidance — lives in the composed agent
+instructions, not the per-turn prompt, so long sessions carry one copy
+instead of one per turn. Chat-specific facts (kind, id, roster) ride each
+turn's prompt because one global session spans many chats. Channel instructions also teach the silent reply: a turn
 whose final text is exactly `NO_REPLY` completes without delivering an
 assistant message; the response row and a "Chose not to reply" activity remain
 as evidence. The token is honored in every chat kind but taught only in
 channels.
-The composed instructions also state the chat's kind, title, and participant
-roster (the agent's own seat marked), and append model-family operational
-guidance (`apps/runtime/src/tavern/model-instructions.ts`): tool-use
+The composed instructions are agent-global — no chat-specific content — and
+append model-family operational guidance (`apps/runtime/src/tavern/model-instructions.ts`): tool-use
 enforcement and execution discipline for gpt/codex-class models, Google
 directives for gemini/gemma, nothing for Claude models.
-After a turn settles, Runtime advances `promptContextSequence` to the
-triggering message sequence.
+When the prompt shows catch-up rows, Runtime advances that chat's
+seen-ledger cursor to the highest sequence shown.
 Each turn also records prompt evidence — the composed instructions, the
 per-turn prompt, and the Wiki recall hits — in `agent_turns` metadata at
 turn start, served on demand at `GET /api/turns/{run_id}/prompt`. The app's
@@ -190,15 +194,13 @@ When a saved default model is invalid or unavailable, Runtime Doctor repairs the
 Agent default to the highest-ranked executable model. If no executable model
 exists, Runtime leaves the Agent unresolved and surfaces provider setup.
 
-Each Agent session stores its own `effectiveModel`; that is the model actually
-used by turns in that Chat.
+Each Agent session stores its own `effectiveModel`; that is the model
+actually used by the session's turns.
 
-Changing a model in Settings updates the Agent runtime profile default used for
-new sessions. It must not read or mutate a random Chat's current session.
-
-Chat-scoped model commands target the current Agent seat session in that Chat.
-Model changes update that session in place. Starting fresh context explicitly
-rotates to a new Agent session for that seat.
+Changing a model in Settings updates the Agent runtime profile default. The
+change takes effect lazily: the agent's next turn notices the mismatch,
+archives the active session, and starts a fresh session on the new model.
+Sessions are never mutated to a different model in place.
 
 ## Instructions And Tools
 

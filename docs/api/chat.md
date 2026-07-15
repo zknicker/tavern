@@ -59,18 +59,16 @@ current Agent session:
 
 ```http
 GET  /agent/chats/{chat_id}/agent-sessions/current?agentId=
-POST /agent/chats/{chat_id}/agent-sessions/reset
+POST /agents/{agent_id}/session/reset
 ```
 
-`GET current` returns the current Agent session for that Chat seat or `null`.
-`POST reset` rotates the seat to a fresh session (the app's agent-drawer New
-session action): the active session is archived, the next generation becomes
-current, and the reset lands in the timeline as a durable new-session notice.
-Rotating archives older active sessions for that seat and updates only the
-current chat's agent participant. See
-[Agent Drawer](../../specs/agent-drawer.md). Model selection is agent-scoped:
-the agent's configured model applies to new sessions, and a session keeps its
-effective model until the seat rotates.
+`GET current` returns the agent's global session (or `null`); the chat path
+segment only resolves which agent when `agentId` is omitted. `POST reset`
+takes `{ kind: 'session' | 'full' }` and is agent-wide: the active session
+is archived, the next generation becomes current, `full` also wipes the
+workspace, and the reset lands a durable new-session notice in the agent's
+DM (specs/sessions.md). Model selection is agent-scoped: a model change
+takes effect on the agent's next turn with a fresh session.
 
 ## Addressing
 

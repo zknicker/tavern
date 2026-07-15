@@ -1,28 +1,29 @@
 ---
-summary: Agent drawer — per-chat agent details, current Agent session facts, and the New session action.
+summary: Agent drawer — read-only view of an agent's global session facts and past sessions.
 read_when:
-  - changing the agent drawer, agent avatar click targets, or per-chat agent session UI
-  - changing session reset behavior or the new-session timeline notice
+  - changing the agent drawer, agent avatar click targets, or agent session UI
+  - changing session reset behavior or the new-session notice
   - considering a new per-agent chat action (model switch, stats, controls)
 ---
 
 # Agent Drawer
 
 Clicking an agent's avatar in a chat opens a right-side drawer with that
-agent's identity, the seat's current Agent session, and session actions.
-Actions on an agent always name their target by construction — the drawer is
-scoped to one agent in one chat — so shared channels have no ambiguity about
-which agent an action affects. This surface replaced composer slash commands
-(`/new`, `/clear`, `/status`), which could not express a target in
-multi-agent chats.
+agent's identity and its global Agent session. The drawer is read-only:
+agents own one ongoing session across all chats
+([sessions](sessions.md), ADR 0011), so session actions are agent-wide and
+live in Agent settings, not on a chat surface. This surface replaced
+composer slash commands (`/new`, `/clear`, `/status`), which could not
+express a target in multi-agent chats.
 
 ## Opening
 
 - Every agent avatar in the chat participant facepile (room topbar and
   browser toolbar) is a button labeled `Agent details: <name>`.
 - Human participants are not clickable; the drawer is an agent surface.
-- The drawer is chat-scoped: it shows the `(agent, chat)` seat, not global
-  agent settings. Global configuration stays in Agent settings.
+- The drawer shows the agent's global session — the same session backs every
+  chat the agent sits in. Global configuration and session resets stay in
+  Agent settings.
 
 ## Content
 
@@ -37,10 +38,10 @@ multi-agent chats.
   never renders. No session yet reads "No session yet. The next message
   starts one."
 - **Session stats.** Runtime aggregates `stats` (`contextTokens`,
-  `turnCount`) from the session's durable turn evidence: the turn executor
-  captures harness usage from the stream's final step and persists it as
-  `metadata.runtime.contextTokens` on the completed response. Dismissed
-  responses drop out of the stats.
+  `turnCount`) from the session's durable turn evidence across all chats: the
+  turn executor captures harness usage from the stream's final step and
+  persists it as `metadata.runtime.contextTokens` on the completed response.
+  Dismissed responses drop out of the stats.
 - **Instructions freshness.** Instructions are delivered to an executor
   session once, at its first turn; changes land on the next session. Runtime
   fingerprints the delivered instructions (excluding core memory files, which
@@ -48,47 +49,37 @@ multi-agent chats.
   `instructionsFresh`: null when nothing has been delivered yet, false when
   the live compose no longer matches. When false, a warning notice card
   ("System prompt updated. This agent's system prompt has changed since this
-  session started. New sessions pick it up. This one refreshes by tomorrow
-  morning.") sits between the session card and the New session button. Fresh
-  sessions render nothing extra. The New session button below is the
-  apply-now action; no dedicated CTA.
-- **New session.** A button that starts fresh context for this agent in this
-  chat without clearing the chat.
-- **Past sessions.** The seat's earlier sessions as a high-level list, newest
-  first: model, turn count, and when each ended ("ended 2h ago"; stopped
-  sessions say "stopped"). Served as `pastSessions` summaries on the same
-  read — never the sessions' resume state. Hidden when the seat has no
+  session started. The session picks it up after the next session reset or
+  model change.") sits below the session card. Fresh sessions render nothing
+  extra.
+- **Past sessions.** The agent's earlier sessions as a high-level list,
+  newest first: model, turn count, and when each ended ("ended 2h ago";
+  stopped sessions say "stopped"). Served as `pastSessions` summaries on the
+  same read — never the sessions' resume state. Hidden when the agent has no
   history.
 
-## New session
+## Session resets
 
-1. The app calls `agent.resetSession` with the agent id and chat id.
-2. The server proxies to Runtime `POST
-   /agent/chats/{id}/agent-sessions/reset`.
-3. Runtime rotates the seat's current Agent session: the active session is
-   archived and a fresh session (next generation) becomes current, so the
-   chat's next message opens a brand-new engine session. The timeline is
-   untouched.
-4. Runtime records the reset as durable chat evidence: one completed response
-   holding a `new_session` runtime notice (`metadata.runtime.notice`) with the
-   fresh session id, `source: 'session-reset'`. The app renders it through the
-   existing runtime-notice row — the same row auto-rotation uses — so every
-   client sees when fresh context started, durably.
-5. The app invalidates the chat log and session snapshot; there is no toast.
-   Failures surface inline in the drawer.
+Resets are agent-wide and live in Agent settings (Session section), not the
+drawer: **Start fresh session** archives the current session and the next
+generation becomes current on the agent's next turn; **Full reset** also
+wipes the agent's workspace behind a destructive confirm. Both proxy to
+Runtime `POST /agents/{agent_id}/session/reset` with
+`{ kind: 'session' | 'full' }` and land a durable `new_session` runtime
+notice (`metadata.runtime.notice`, `source: 'session-reset'`) in the agent's
+DM. See [sessions](sessions.md) for the full reset contract.
 
 Session identity stays Runtime-owned: the app never invents session ids and
 never calls the engine directly.
 
 ## Contract
 
-- Agent-scoped session actions live on the agent object (the drawer), not in
-  the composer. There is no composer command palette; a leading `/` is plain
-  message text.
+- The drawer is read-only. Reads must not mutate: showing the drawer never
+  creates, resumes, or rotates a session.
+- Session actions are agent-scoped and live in Agent settings. There is no
+  composer command palette; a leading `/` is plain message text.
 - The reset notice is durable evidence, keyed like any response: it survives
   reloads and offline catch-up.
-- Reads must not mutate: showing the drawer never creates, resumes, or
-  rotates a session.
 - Historical composer-command evidence (activity kind `command`, response
   source `command`) may exist in stored chats. It is no longer rendered and
   never drives failed-turn banners; it stays durable.

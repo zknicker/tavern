@@ -40,18 +40,18 @@ Managed Tavern context does not use Lossless Claw. Runtime strips stale
   assistant messages are excluded.
 * Reply turns include the parent message when the cursor delta did not already
   include it.
-* Agent sessions store a prompt context cursor. Runtime advances it to the
-  triggering message sequence after the turn, never to the assistant response
-  sequence, so messages created while the Agent is working are still eligible
-  next time.
-* Session resets (the agent drawer's new-session action, automatic rotation)
-  snapshot the cursor at the chat's newest message, so fresh context starts at
-  the reset point instead of replaying pre-reset history. Brand-new seats keep
-  cursor 0 for join catch-up.
-* Agent sessions rotate automatically for freshness: daily at 4am in the home
-  timezone, or after 24 hours of inactivity, whichever comes first — evaluated
-  when a turn is about to start. The rotated session's first turn states that
-  earlier conversation is not in context; continuity comes from Memory.
+* Agent sessions store a per-chat seen-ledger cursor
+  (`agent_session_chat_cursors`). It advances only when rows are provably
+  model-visible — prompt catch-up, busy deliveries, hold envelopes — never
+  for notices or chat tool reads, so messages created while the Agent is
+  working are still eligible next time.
+* A fresh session starts with empty seen cursors, so its first turn catches
+  up from durable chat history rather than replaying engine context. The
+  fresh session's first turn states that earlier conversation is not in
+  context; continuity comes from Memory.
+* Sessions never rotate on a schedule. A new session starts only on a model
+  switch, a manual reset from agent settings, or after ~7 fully idle days
+  (specs/sessions.md).
 * Agents can read same-chat history through read-only Tavern chat tools when
   bounded prompt context is insufficient.
 * Context management does not create a separate long-term source of truth.

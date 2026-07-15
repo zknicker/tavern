@@ -23,7 +23,7 @@ the product timeline.
 | Runtime schema           | `apps/runtime/src/db/schema.ts`                     | Runtime SQLite schema and fresh setup                                                       |
 | Runtime chat store       | `apps/runtime/src/tavern/chat-api/`                 | OpenAPI-backed chat, message, response, activity, artifact, delivery, read, and event store |
 | Runtime channel relay    | `apps/runtime/src/tavern/channel-relay.ts`          | Durable message acceptance and agent turn startup                                           |
-| Runtime agent sessions   | `apps/runtime/src/tavern/agent-session-store.ts`    | Agent seat current session state, rotation, and repair                                      |
+| Runtime agent sessions   | `apps/runtime/src/tavern/agent-session-store.ts`    | Agent global session state and lazy model-switch rotation                                  |
 | Runtime model profiles   | `apps/runtime/src/models/runtime-profile-store.ts`  | Per-agent default execution model for new Agent sessions                                     |
 | Wiki store               | `apps/runtime/src/wiki/`                 | Runtime read API over the user's Wiki Markdown files                                         |
 | Runtime chat tests       | `apps/runtime/src/tavern/chat-api-store.test.ts`    | Contract, identity, sequence, event, read, and route behavior                               |
@@ -48,8 +48,8 @@ Agent transcripts are execution evidence linked to Tavern messages and stored
 through Tavern Runtime.
 
 The channel relay writes durable chat records and dispatches through the
-agent seat's current Agent session. It does not keep a private outbox, duplicate
-message history, or invent chat metadata.
+agent's current global Agent session. It does not keep a private outbox,
+duplicate message history, or invent chat metadata.
 
 ## IDs
 
@@ -222,12 +222,11 @@ Actors that can author messages or receive private events.
 
 ```text
 chat_participants
-  chat_id                  TEXT NOT NULL
-  id                       TEXT NOT NULL
-  kind                     TEXT NOT NULL        -- user, agent, system, external, plugin
-  label                    TEXT
-  metadata_json            TEXT NOT NULL DEFAULT '{}'
-  current_agent_session_id TEXT
+  chat_id        TEXT NOT NULL
+  id             TEXT NOT NULL
+  kind           TEXT NOT NULL        -- user, agent, system, external, plugin
+  label          TEXT
+  metadata_json  TEXT NOT NULL DEFAULT '{}'
 ```
 
 Indexes:
@@ -535,44 +534,59 @@ instead of creating another message row.
 
 ## `agent_sessions`
 
-Stable execution context for one agent seat in one Chat. Rotating the current
-session starts a fresh context for that agent in that Chat without removing the
-agent participant or changing other chats that use the same agent definition.
+One global execution context per agent (ADR 0011, `specs/sessions.md`).
+Chats, threads, and tasks are routing surfaces, never session boundaries: the
+same session backs every chat the agent sits in. Session ids follow
+`ags_<agentId>_<generation>`.
 
 ```text
 agent_sessions
   id                     TEXT PRIMARY KEY
-  chat_id                TEXT NOT NULL
-  agent_participant_id   TEXT NOT NULL
   agent_id               TEXT NOT NULL
   generation             INTEGER NOT NULL
   effective_model_json   TEXT NOT NULL
   runtime_session_id     TEXT
   resume_state_json      TEXT
+  instructions_hash      TEXT
   status                 TEXT NOT NULL        -- active, archived, stopped
   created_at             TEXT NOT NULL
   updated_at             TEXT NOT NULL
   archived_at            TEXT
+  last_turn_at           TEXT
 ```
 
 Rules:
 
-- One agent seat points at one current Agent session through
-  `chat_participants.current_agent_session_id`.
-- Starting a new session archives previous active sessions for that seat and
-  updates only that seat's current pointer.
-- `effective_model_json` stores the model used by that session. Same
-  execution-kind model changes update the current session in place.
-- Switching to a model with a different execution kind starts a new Agent
-  session for that seat and archives the previous active session.
-- Runtime repair chooses the latest active session when the current pointer is
-  missing and archives extra active sessions. If none exists, Runtime creates a
-  new session.
+- An agent has at most one `active` session; the current session is the
+  active row, not a participant pointer.
+- Sessions never rotate on a schedule. A fresh session starts only on a
+  model switch (lazy rotation at the next turn when the active session's
+  `effective_model_json` no longer matches the agent's configured model), a
+  manual reset from agent settings, or after ~7 fully idle days
+  (`last_turn_at`).
+- Starting a new session archives previous active sessions for that agent.
+- Sessions are archived, never deleted.
 
 Uniqueness:
 
 ```text
-UNIQUE(chat_id, agent_participant_id, generation)
+UNIQUE(agent_id, generation)
+```
+
+## `agent_session_chat_cursors`
+
+The seen ledger: one durable cursor per `(session, chat)` recording the
+highest message sequence provably model-visible in that chat. Prompt
+catch-up, busy deliveries, and hold envelopes advance it; notices and chat
+tool reads never do. Advancement is monotonic (`MAX`).
+
+```text
+agent_session_chat_cursors
+  session_id      TEXT NOT NULL
+  chat_id         TEXT NOT NULL
+  seen_up_to_seq  INTEGER NOT NULL DEFAULT 0
+  updated_at      TEXT NOT NULL
+  PRIMARY KEY (session_id, chat_id)
 ```
 
 ## Runtime Execution Evidence
@@ -727,7 +741,8 @@ transactional writes. Search indexes are derived state, not the source of truth.
 - Channels and DMs are durable chat rooms; Tavern App does not model pinned
   chats.
 - The agent Chat participant is the stable Agent seat for an agent in a Chat.
-- Agent sessions can rotate without changing the Agent seat.
+- Agent sessions are agent-global; a reset or model switch starts a new
+  session without changing any Agent seat.
 - Agent transcript history is runtime-owned execution evidence.
 - Runtime adapters preserve source ids and metadata without authoring final
   Tavern presentation.

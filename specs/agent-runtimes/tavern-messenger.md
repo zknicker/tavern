@@ -36,15 +36,13 @@ ChatParticipant
   chatId
   id
   kind: agent
-  currentAgentSessionId
 ```
 
-An `AgentSession` is the current execution context for that Agent seat:
+An `AgentSession` is the agent's one global execution context:
 
 ```text
 AgentSession
-  chatId
-  agentParticipantId
+  id
   agentId
   generation
   effectiveModel
@@ -53,11 +51,11 @@ AgentSession
   status: active | archived | stopped
 ```
 
-The Agent seat is stable product state. The Agent session can rotate when the
-user starts fresh context for the same Agent seat or when Runtime must cross an
-incompatible execution boundary. Rotating the session archives older active
-sessions and updates the seat's `currentAgentSessionId`; it does not remove the
-agent from the chat.
+The Agent seat is stable product state. The Agent session is agent-global
+(`specs/sessions.md`): one ongoing session per agent spans every chat. A
+fresh session starts only on a model switch, a manual reset from agent
+settings, or a long fully idle gap; starting one archives the previous
+active session and does not remove the agent from any chat.
 
 ## Send Flow
 
@@ -118,9 +116,10 @@ mention routing, command routing, or automation.
 
 ## Commands
 
-`/new` and `/clear` rotate the current Agent session for the selected Agent
-seat. `/clear` also clears the Tavern chat timeline. Both commands operate
-through Runtime, not through app-local state.
+Session resets are agent-wide and live in agent settings
+(`specs/sessions.md`); frontends do not expose per-chat session commands.
+Clearing a chat timeline is a chat operation and does not touch the agent's
+session.
 
 Stop and steering controls target the active Runtime turn. Runtime maps those
 controls to engine APIs when available and reports unsupported controls as

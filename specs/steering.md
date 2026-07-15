@@ -23,11 +23,12 @@ with a delivery model that fits Tavern's data spine:
    lands as an ordinary durable chat message. It renders normally in the
    timeline with real authorship. Nothing user- or agent-authored is ever
    notice-only.
-2. **Cursor (correctness).** A seat's `promptContextSequence` advances only
-   at turn end. Any message a running turn did not see is, by construction,
-   in the next prompt's channel catch-up. Mid-turn delivery is therefore
-   at-least-once and idempotent by sequence: a delivered-and-lost hint costs
-   nothing, a missed hint delays nothing past the next turn.
+2. **Cursor (correctness).** The session's per-chat seen-ledger cursor
+   (`agent_session_chat_cursors`, specs/sessions.md) advances only when rows
+   are provably model-visible. Any message a running turn did not see is, by
+   construction, in the next prompt's catch-up. Mid-turn delivery is
+   therefore at-least-once and idempotent by sequence: a delivered-and-lost
+   hint costs nothing, a missed hint delays nothing past the next turn.
 3. **Busy delivery (optimization).** When the engine supports it, Runtime
    pushes a compact notice into the running turn so the agent can
    incorporate new messages before finishing. When it does not, the message

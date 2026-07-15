@@ -93,10 +93,9 @@ happen, and keep the durable timeline as context.
   settings. Users can pick or drag files into the composer. Durable chat
   messages store attachment arrays.
 * **Triggers.** `@` autocompletes Agents in the current chat; `$`
-  autocompletes skills. A leading `/` is plain message text — agent session
-  actions live in the agent drawer instead. See
-  [mentions](../../specs/mentions.md) and
-  [agent-drawer](../../specs/agent-drawer.md).
+  autocompletes skills. A leading `/` is plain message text — session reset
+  actions live in agent settings. See [mentions](../../specs/mentions.md)
+  and [agent-drawer](../../specs/agent-drawer.md).
 * **Addressing.** Every agent participant evaluates every channel message —
   each seat gets its own turn and chooses whether to speak. Mentions set
   who is expected to answer; they never gate who evaluates or who can read.
@@ -116,13 +115,13 @@ happen, and keep the durable timeline as context.
   response settles as completed with a "Chose not to reply" summary and
   activity row, so the turn drawer still shows the agent saw the message.
   Channel agents are taught this; the token is honored in every chat kind.
-* **Agent drawer.** Clicking an agent avatar opens a drawer with the seat's
-  current Agent session (model, status, timing) and a New session action that
-  starts fresh context without clearing the chat. The reset lands as a
-  durable new-session notice row; in the chat pane that notice never renders
-  standalone — it attaches to the agent's next turn as a hover affordance in
-  the turn's header actions (beside copy and turn details) that opens the
-  notice drawer. See [agent-drawer](../../specs/agent-drawer.md).
+* **Agent drawer.** Clicking an agent avatar opens a read-only drawer with
+  the agent's global session (model, status, timing) and past sessions.
+  Session resets live in agent settings and are agent-wide
+  (specs/sessions.md); a reset lands a durable new-session notice row in the
+  agent's DM. In chat panes that notice never renders standalone — it
+  attaches to the agent's next turn as a hover affordance in the turn's
+  header actions. See [agent-drawer](../../specs/agent-drawer.md).
 * **Dismissal.** Failed-turn banners can be dismissed with a hover X. The
   dismissal soft-deletes the durable row in Tavern Runtime — sequence slots
   and history records are retained, and the result syncs to every client.

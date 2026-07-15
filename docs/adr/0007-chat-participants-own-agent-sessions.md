@@ -11,7 +11,10 @@ read_when:
 
 ## Status
 
-Accepted.
+Partially superseded by
+[ADR 0011](0011-agents-own-one-global-session.md): session ownership moved
+from the Agent seat to the agent (one global session per agent). The
+chat/participant/turn-evidence contracts below remain in force.
 
 ## Context
 

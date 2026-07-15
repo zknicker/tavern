@@ -16,13 +16,13 @@ and execution.
 
 - **Chats.** Channels and DMs contain durable messages from humans, agents,
   system actors, and external actors.
-- **Agents.** Agents are chat participants. Each Agent seat in a Chat owns one
-  current Agent session.
+- **Agents.** Agents are chat participants. Each agent owns one ongoing
+  global session across all of its chats.
 - **Agent execution.** Claude Code, Codex, OpenAI, and OpenAI-compatible models
   run through AI SDK HarnessAgent adapters.
 - **Models.** Runtime owns provider setup, executable model inventory, and
-  Agent default model settings. Settings changes affect new sessions;
-  Chat-scoped model changes affect that Agent seat's current session.
+  Agent default model settings. A model change takes effect on the agent's
+  next turn with a fresh session.
 - **Tools, skills, and Plugins.** Runtime owns the tool/skill inventory and
   built-in Plugin integrations. Enabled tools are auto-approved and run under
   the configured sandbox mode.
