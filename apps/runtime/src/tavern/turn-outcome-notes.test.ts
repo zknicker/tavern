@@ -132,13 +132,10 @@ function seedSettledTurn(input: {
         request_message_id: messageId,
         status: 'completed',
     });
-    const session = ensureCurrentAgentSession({
-        agentParticipantId: 'agt_wren',
-        chatId: 'cht_target',
-    });
+    const session = ensureCurrentAgentSession({ agentId: 'agt_wren' });
     const turn = createAgentTurn({
         agentId: 'agt_wren',
-        agentParticipantId: session.agentParticipantId,
+        agentParticipantId: 'agt_wren',
         agentSessionId: session.id,
         chatId: 'cht_target',
         id: runId,
@@ -206,16 +203,15 @@ function ottoExecutorInput(): AgentExecutorInput {
             primaryColor: null,
             workspaceFolder: '/tmp/agt_otto',
         },
+        agentParticipantId: 'agt_otto',
         agentSession: {
             agentId: 'agt_otto',
-            agentParticipantId: 'agt_otto',
             archivedAt: null,
-            chatId: 'cht_home',
             createdAt: now,
             effectiveModel: { model: 'gpt-4.1-mini', provider: 'openai' },
             generation: 1,
             id: 'ags_cht_home_agt_otto_1',
-            promptContextSequence: 0,
+            lastTurnAt: null,
             resumeState: null,
             runtimeSessionId: 'existing-session',
             status: 'active',

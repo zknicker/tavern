@@ -7,7 +7,7 @@ import { closeDb, initTestDb } from '../db/connection.ts';
 import { ensureRuntimeSchema } from '../db/schema.ts';
 import { ensureCurrentAgentSession } from './agent-session-store.ts';
 import { resetAgentExecutorForTesting, setAgentExecutorForTesting } from './agent-turn-runner.ts';
-import { claimNextAgentTurnForSeat, createAgentTurn } from './agent-turn-store.ts';
+import { claimNextAgentTurnForAgent, createAgentTurn } from './agent-turn-store.ts';
 import { upsertStoredAgent } from './agents-store.ts';
 import { deliverToBusySeats, resetBusyDeliveryForTesting } from './busy-delivery.ts';
 import {
@@ -247,24 +247,17 @@ function seedRunningTurn(chatId: string, triggerMessageId: string) {
         request_message_id: triggerMessageId,
         status: 'running',
     });
-    const session = ensureCurrentAgentSession({
-        agentParticipantId: 'agt_primary',
-        chatId,
-    });
+    const session = ensureCurrentAgentSession({ agentId: 'agt_primary' });
     createAgentTurn({
         agentId: 'agt_primary',
-        agentParticipantId: session.agentParticipantId,
+        agentParticipantId: 'agt_primary',
         agentSessionId: session.id,
         chatId,
         id: 'run_1',
         responseId: 'rsp_run_1',
         triggerMessageId,
     });
-    claimNextAgentTurnForSeat({
-        agentParticipantId: session.agentParticipantId,
-        agentSessionId: session.id,
-        chatId,
-    });
+    claimNextAgentTurnForAgent({ agentId: 'agt_primary' });
 }
 
 function gateInput(chatId: string, requestMessageId: string) {
@@ -281,16 +274,15 @@ function executorInput(chatId: string, requestMessageId: string) {
             primaryColor: null,
             workspaceFolder: mkdtempSync(path.join(os.tmpdir(), 'tavern-gate-test-')),
         } satisfies AgentRuntimeAgent,
+        agentParticipantId: 'agt_primary',
         agentSession: {
             agentId: 'agt_primary',
-            agentParticipantId: 'agt_primary',
             archivedAt: null,
-            chatId,
             createdAt: now,
             effectiveModel: { model: 'gpt-4.1-mini', provider: 'openai' as const },
             generation: 1,
-            id: `ags_${chatId}_agt_primary_1`,
-            promptContextSequence: 0,
+            id: 'ags_agt_primary_1',
+            lastTurnAt: null,
             resumeState: null,
             runtimeSessionId: null,
             status: 'active' as const,

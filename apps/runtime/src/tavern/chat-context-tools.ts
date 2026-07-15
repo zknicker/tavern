@@ -2,29 +2,60 @@ import type { ToolSet } from '@ai-sdk/provider-utils';
 import type { TavernChatMessage } from '@tavern/api';
 import { tool } from 'ai';
 import * as z from 'zod';
-import { getMessage, listMessages, searchMessages } from './chat-api/index.ts';
+import { isAgentChatParticipant } from './chat-actions-tools.ts';
+import { createAgentParticipantId } from './chat-api/ids.ts';
+import { getChat, getMessage, listMessages, searchMessages } from './chat-api/index.ts';
+
+// Target-scoped history reads for the agent's global session
+// (specs/sessions.md): every chat where the agent holds a seat is readable,
+// defaulting to the current chat. Reads never advance the seen ledger — the
+// ledger tracks Runtime-delivered content (catch-up, busy delivery, holds),
+// so a pulled row may appear again in a hold; that duplication is bounded
+// and honest.
 
 const toolLimit = z.number().int().positive().max(50).optional();
 
-export function createTavernChatTools(input: { chatId: string }): ToolSet {
+const chatIdInput = z
+    .string()
+    .min(1)
+    .optional()
+    .describe('Chat to read. Defaults to the current chat; any chat where you hold a seat works.');
+
+export function createTavernChatTools(input: { agentId: string; chatId: string }): ToolSet {
+    const participantId = createAgentParticipantId(input.agentId);
+
+    const resolveChat = (chatId: string | undefined) => {
+        const targetChatId = chatId ?? input.chatId;
+        const chat = getChat(targetChatId);
+        if (!(chat && isAgentChatParticipant(chat, input.agentId, participantId))) {
+            return null;
+        }
+        return targetChatId;
+    };
+
     return {
         chat_message_get: tool({
             description:
-                'Read one message from the current Tavern chat by message id. Use this for explicit reply or quote context.',
+                'Read one message by id from a Tavern chat you participate in. Use this for explicit reply or quote context.',
             inputSchema: z.object({
+                chatId: chatIdInput,
                 messageId: z.string().min(1).describe('Tavern message id to read.'),
             }),
-            execute: ({ messageId }) => {
+            execute: ({ chatId, messageId }) => {
+                const targetChatId = resolveChat(chatId);
+                if (!targetChatId) {
+                    return { error: 'You are not a participant of that chat.' };
+                }
                 const message = getMessage(messageId);
-                if (!message || message.chat_id !== input.chatId) {
-                    return { error: 'Message is not available in the current chat.' };
+                if (!message || message.chat_id !== targetChatId) {
+                    return { error: 'Message is not available in that chat.' };
                 }
                 return { message: toolMessage(message) };
             },
         }),
         chat_messages_list: tool({
             description:
-                'List messages from the current Tavern chat by sequence cursor. Use this when more local chat history is needed.',
+                'List messages from a Tavern chat you participate in, by sequence cursor. Use this to read chat history — including chats flagged as unread elsewhere.',
             inputSchema: z.object({
                 afterSequence: z
                     .number()
@@ -38,18 +69,15 @@ export function createTavernChatTools(input: { chatId: string }): ToolSet {
                     .positive()
                     .optional()
                     .describe('Only return messages before this Tavern sequence.'),
-                chatId: z
-                    .string()
-                    .min(1)
-                    .optional()
-                    .describe('Optional chat id. Only the current chat is readable.'),
+                chatId: chatIdInput,
                 limit: toolLimit.describe('Maximum messages to return. Default 20, max 50.'),
             }),
             execute: ({ afterSequence, beforeSequence, chatId, limit }) => {
-                if (chatId && chatId !== input.chatId) {
-                    return { error: 'Only the current chat is readable by this tool.' };
+                const targetChatId = resolveChat(chatId);
+                if (!targetChatId) {
+                    return { error: 'You are not a participant of that chat.' };
                 }
-                const result = listMessages(input.chatId, {
+                const result = listMessages(targetChatId, {
                     afterSequence,
                     beforeSequence,
                     limit: limit ?? 20,
@@ -62,21 +90,18 @@ export function createTavernChatTools(input: { chatId: string }): ToolSet {
         }),
         chat_messages_search: tool({
             description:
-                'Search messages in the current Tavern chat. Use this when the user refers to earlier channel context not already present.',
+                'Search messages in a Tavern chat you participate in. Use this when someone refers to earlier context not already present.',
             inputSchema: z.object({
-                chatId: z
-                    .string()
-                    .min(1)
-                    .optional()
-                    .describe('Optional chat id. Only the current chat is searchable.'),
+                chatId: chatIdInput,
                 limit: toolLimit.describe('Maximum messages to return. Default 10, max 50.'),
                 query: z.string().min(1).describe('Text to search for in message content.'),
             }),
             execute: ({ chatId, limit, query }) => {
-                if (chatId && chatId !== input.chatId) {
-                    return { error: 'Only the current chat is searchable by this tool.' };
+                const targetChatId = resolveChat(chatId);
+                if (!targetChatId) {
+                    return { error: 'You are not a participant of that chat.' };
                 }
-                const result = searchMessages(input.chatId, {
+                const result = searchMessages(targetChatId, {
                     limit: limit ?? 10,
                     query,
                 });

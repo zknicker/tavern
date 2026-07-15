@@ -3,13 +3,12 @@ import { closeDb, getDb, initTestDb } from '../db/connection.ts';
 import { ensureRuntimeSchema } from '../db/schema.ts';
 import { ensureCurrentAgentSession } from './agent-session-store.ts';
 import { resetAgentExecutorForTesting, setAgentExecutorForTesting } from './agent-turn-runner.ts';
-import { claimNextAgentTurnForSeat, createAgentTurn } from './agent-turn-store.ts';
+import { claimNextAgentTurnForAgent, createAgentTurn } from './agent-turn-store.ts';
 import { upsertStoredAgent } from './agents-store.ts';
 import {
     deliverToBusySeats,
     installBusyDelivery,
     resetBusyDeliveryForTesting,
-    takeDeliveredSequences,
 } from './busy-delivery.ts';
 import {
     createChat,
@@ -18,6 +17,7 @@ import {
     listActivityForResponses,
     upsertResponse,
 } from './chat-api/index.ts';
+import { readSeenCursor } from './seen-ledger.ts';
 
 describe('busy delivery', () => {
     let deliveries: Array<{ runId: string; text: string }>;
@@ -61,8 +61,8 @@ describe('busy delivery', () => {
         expect(activities).toHaveLength(1);
         expect(activities[0]).toMatchObject({ status: 'completed', title: 'Delivered mid-turn' });
 
-        expect(takeDeliveredSequences('run_wren')).toEqual([message.sequence]);
-        expect(takeDeliveredSequences('run_wren')).toEqual([]);
+        // The durable ledger recorded the delivery.
+        expect(readSeenCursor('ags_agt_wren_1', 'cht_general')).toBe(message.sequence);
     });
 
     it('skips the author turn, dedupes repeats, and tolerates refusal', async () => {
@@ -77,11 +77,11 @@ describe('busy delivery', () => {
         await deliverToBusySeats('cht_general', fromWren);
         expect(deliveries).toHaveLength(1);
 
-        // Refused delivery leaves no tracking and no evidence.
+        // Refused delivery leaves no ledger advance and no evidence.
         accept = false;
         const second = seedUserMessage('msg_two', 'another');
         expect(await deliverToBusySeats('cht_general', second)).toEqual([]);
-        expect(takeDeliveredSequences('run_wren')).toEqual([]);
+        expect(readSeenCursor('ags_agt_wren_1', 'cht_general')).toBeLessThan(second.sequence);
     });
 
     it('installs on the chat-api event bus for creates and deliveries', async () => {
@@ -169,24 +169,18 @@ function seedRunningTurn(agentId: string, runId: string) {
         request_message_id: `msg_trigger_${runId}`,
         status: 'running',
     });
-    const session = ensureCurrentAgentSession({
-        agentParticipantId: agentId,
-        chatId: 'cht_general',
-    });
+    const session = ensureCurrentAgentSession({ agentId });
     createAgentTurn({
         agentId,
-        agentParticipantId: session.agentParticipantId,
+        agentParticipantId: agentId,
         agentSessionId: session.id,
         chatId: 'cht_general',
         id: runId,
         responseId: `rsp_${runId}`,
         triggerMessageId: `msg_trigger_${runId}`,
     });
-    claimNextAgentTurnForSeat({
-        agentParticipantId: session.agentParticipantId,
-        agentSessionId: session.id,
-        chatId: 'cht_general',
-    });
+    claimNextAgentTurnForAgent({ agentId });
+    return session;
 }
 
 function settle() {

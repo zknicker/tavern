@@ -71,10 +71,7 @@ describe('turn recovery', () => {
             status: 'failed',
             summary: 'Interrupted by an agent runtime restart.',
         });
-        const session = ensureCurrentAgentSession({
-            agentParticipantId: agent.id,
-            chatId: 'cht_1',
-        });
+        const session = ensureCurrentAgentSession({ agentId: agent.id });
         createAgentTurn({
             agentId: agent.id,
             agentParticipantId: agent.id,

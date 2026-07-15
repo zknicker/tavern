@@ -81,6 +81,7 @@ function actionTools() {
         agentId: 'agt_otto',
         chatId: 'cht_dm',
         runId: 'run_test',
+        sessionId: 'ags_agt_otto_1',
     });
 }
 
