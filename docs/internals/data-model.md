@@ -577,7 +577,7 @@ UNIQUE(agent_id, generation)
 
 The seen ledger: one durable cursor per `(session, chat)` recording the
 highest message sequence provably model-visible in that chat. Prompt
-catch-up, busy deliveries, and hold envelopes advance it; notices and chat
+catch-up and hold envelopes advance it; notices, busy deliveries, and chat
 tool reads never do. Advancement is monotonic (`MAX`).
 
 ```text

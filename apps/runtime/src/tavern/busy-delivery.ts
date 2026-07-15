@@ -2,15 +2,8 @@ import type { TavernChatEvent, TavernChatMessage } from '@tavern/api';
 import { log } from '../log.ts';
 import { resolveHomeTimezone } from '../timezone-settings.ts';
 import { type AgentTurn, findRunningAgentTurnForAgent } from './agent-turn-store.ts';
-import {
-    getChat,
-    getMessage,
-    listRecentMessagesBetween,
-    subscribeToTavernApiEvents,
-    upsertResponseActivity,
-} from './chat-api/index.ts';
+import { getChat, subscribeToTavernApiEvents, upsertResponseActivity } from './chat-api/index.ts';
 import { formatPromptMessage } from './harness-prompt.ts';
-import { advanceSeenCursor, readSeenCursor } from './seen-ledger.ts';
 import { deliverToActiveTurn } from './turn-delivery.ts';
 
 // Busy delivery (specs/steering.md): when a durable message lands in a chat,
@@ -24,8 +17,10 @@ const maxTrackedRuns = 512;
 // Per-chat sequences delivered into each running turn, for repeat-notice
 // dedupe. Keyed by (runId, chatId) because one running turn receives busy
 // deliveries from every chat the agent sits in and sequences are per-chat
-// counters. The durable record is the seen ledger, advanced on every
-// accepted delivery that leaves no unseen gap behind it.
+// counters. Deliveries never advance the seen ledger: engines apply
+// injected input at their own boundary — sometimes only on the next turn —
+// so an accepted delivery is not provably visible to the current reply.
+// The freshness gate and send hold stay the provable paths.
 const deliveredSequences = new Map<string, Set<number>>();
 
 function deliveryKey(runId: string, chatId: string) {
@@ -67,17 +62,6 @@ export async function deliverToBusySeats(chatId: string, message: TavernChatMess
             continue;
         }
         trackDelivered(turn.id, chatId, message.sequence);
-        // Delivered content is model-visible — but the ledger may only
-        // advance past rows that were provably visible too. If an earlier
-        // row in this chat was never delivered (a lost or failed send),
-        // hold the cursor so that row still rides the next prompt.
-        if (provablySeenUpTo(turn, chatId, message.sequence)) {
-            advanceSeenCursor({
-                chatId,
-                seq: message.sequence,
-                sessionId: turn.agentSessionId,
-            });
-        }
         recordBusyDeliveryEvidence(turn, message);
         delivered.push(turn.id);
     }
@@ -97,7 +81,7 @@ function busyDeliveryNotice(message: TavernChatMessage, chatId: string, turnChat
     return [
         `[Tavern: ${where}`,
         line,
-        'Incorporate what matters before finishing; your reply still answers the original message.]',
+        'Read it now and account for it before you finish — do not answer as if you had not seen it. Your reply still answers the original message.]',
     ].join('\n');
 }
 
@@ -133,37 +117,6 @@ function trackDelivered(runId: string, chatId: string, sequence: number) {
     if (oldest !== undefined) {
         deliveredSequences.delete(oldest);
     }
-}
-
-// Every row between what the turn has provably seen and the accepted
-// delivery must itself be model-visible before the cursor may jump;
-// otherwise a lost delivery would be skipped forever. In the turn's own
-// chat, everything up to the trigger message rode the prompt (the executor
-// advances the cursor there on settle); elsewhere only the ledger counts.
-function provablySeenUpTo(turn: AgentTurn, chatId: string, sequence: number) {
-    const cursor = readSeenCursor(turn.agentSessionId, chatId);
-    const promptHorizon =
-        chatId === turn.chatId ? (getMessage(turn.triggerMessageId)?.sequence ?? cursor) : cursor;
-    const seenUpTo = Math.max(cursor, promptHorizon);
-    if (sequence <= seenUpTo + 1) {
-        return true;
-    }
-    const gapWidth = sequence - seenUpTo - 1;
-    if (gapWidth > 500) {
-        return false;
-    }
-    const gapRows = listRecentMessagesBetween(chatId, {
-        afterSequence: seenUpTo,
-        beforeSequence: sequence,
-        limit: gapWidth,
-    });
-    const deliveredHere = deliveredSequences.get(deliveryKey(turn.id, chatId));
-    return gapRows.every(
-        (row) =>
-            row.deleted_at !== null ||
-            isTurnAuthor(turn, row) ||
-            deliveredHere?.has(row.sequence) === true
-    );
 }
 
 function messageFromEvent(event: TavernChatEvent): TavernChatMessage | null {

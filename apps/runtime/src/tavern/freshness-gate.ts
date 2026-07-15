@@ -26,9 +26,10 @@ export interface FreshnessHold {
 
 /**
  * Decides whether a drafted reply is stale against the seen ledger: any
- * peer rows in the trigger chat past the cursor (prompt catch-up and busy
- * deliveries both advance it). Showing the held rows advances the cursor —
- * the hold envelope makes them model-visible (specs/sessions.md).
+ * peer rows in the trigger chat past the cursor (prompt catch-up advances
+ * it; busy deliveries are hints and do not). Showing the held rows
+ * advances the cursor — the hold envelope makes them model-visible
+ * (specs/sessions.md).
  */
 export function resolveFreshnessHold(
     input: AgentExecutorInput,

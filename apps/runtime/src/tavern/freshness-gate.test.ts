@@ -83,7 +83,7 @@ describe('freshness gate', () => {
             ).toBeNull();
         });
 
-        it('treats busy-delivered sequences as seen', async () => {
+        it('still holds after a busy delivery — deliveries are hints, not proof', async () => {
             seedChat('cht_seen', 'channel');
             seedMessage('cht_seen', 'msg_seen_trigger', 'usr_alice', 'question?');
             const peer = seedMessage('cht_seen', 'msg_seen_peer', 'usr_bob', 'covered already');
@@ -94,9 +94,10 @@ describe('freshness gate', () => {
             });
             await deliverToBusySeats('cht_seen', peer);
 
-            expect(
-                resolveFreshnessHold(gateInput('cht_seen', 'msg_seen_trigger'), 'Draft.')
-            ).toBeNull();
+            // Engines apply injected input at their own boundary, sometimes
+            // only next turn — so the reply is still gated on the row.
+            const hold = resolveFreshnessHold(gateInput('cht_seen', 'msg_seen_trigger'), 'Draft.');
+            expect(hold?.unseen.map((message) => message.id)).toEqual(['msg_seen_peer']);
         });
     });
 

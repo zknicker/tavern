@@ -61,8 +61,9 @@ describe('busy delivery', () => {
         expect(activities).toHaveLength(1);
         expect(activities[0]).toMatchObject({ status: 'completed', title: 'Delivered mid-turn' });
 
-        // The durable ledger recorded the delivery.
-        expect(readSeenCursor('ags_agt_wren_1', 'cht_general')).toBe(message.sequence);
+        // Deliveries are hints: the durable ledger never advances on them
+        // (specs/sessions.md) — the freshness gate stays armed.
+        expect(readSeenCursor('ags_agt_wren_1', 'cht_general')).toBe(0);
     });
 
     it('skips the author turn, dedupes repeats, and tolerates refusal', async () => {
@@ -94,9 +95,7 @@ describe('busy delivery', () => {
         expect(delivered).toEqual(['run_wren']);
         expect(deliveries[0]?.text).toContain('"Side" (chatId: cht_side)');
         expect(deliveries[0]?.text).toContain('side news one');
-        // Cross-chat rows are model-visible too: the side chat's cursor
-        // advances on the same session (specs/sessions.md).
-        expect(readSeenCursor('ags_agt_wren_1', 'cht_side')).toBe(message.sequence);
+        expect(readSeenCursor('ags_agt_wren_1', 'cht_side')).toBe(0);
     });
 
     it('dedupes per chat, not per bare sequence number', async () => {
@@ -113,25 +112,6 @@ describe('busy delivery', () => {
         await deliverToBusySeats('cht_side', inSide);
 
         expect(deliveries).toHaveLength(2);
-    });
-
-    it('holds the cursor when an earlier row was never delivered', async () => {
-        seedSideChat();
-        seedRunningTurn('agt_wren', 'run_wren');
-        const missed = seedSideChatMessage('msg_side_missed', 'missed row');
-        const later = seedSideChatMessage('msg_side_later', 'later row');
-
-        // Only the later row is delivered; the missed one must still ride
-        // the next prompt, so the ledger may not jump past it.
-        const delivered = await deliverToBusySeats('cht_side', later);
-
-        expect(delivered).toEqual(['run_wren']);
-        expect(readSeenCursor('ags_agt_wren_1', 'cht_side')).toBe(0);
-
-        // Delivering the gap row afterwards proves the full range and the
-        // cursor catches up to it.
-        await deliverToBusySeats('cht_side', missed);
-        expect(readSeenCursor('ags_agt_wren_1', 'cht_side')).toBe(missed.sequence);
     });
 
     it('installs on the chat-api event bus for creates and deliveries', async () => {

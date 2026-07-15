@@ -42,9 +42,9 @@ Managed Tavern context does not use Lossless Claw. Runtime strips stale
   include it.
 * Agent sessions store a per-chat seen-ledger cursor
   (`agent_session_chat_cursors`). It advances only when rows are provably
-  model-visible — prompt catch-up, busy deliveries, hold envelopes — never
-  for notices or chat tool reads, so messages created while the Agent is
-  working are still eligible next time.
+  model-visible — prompt catch-up and hold envelopes — never for notices,
+  busy deliveries, or chat tool reads, so messages created while the Agent
+  is working are still eligible next time.
 * A fresh session starts with empty seen cursors, so its first turn catches
   up from durable chat history rather than replaying engine context. The
   fresh session's first turn states that earlier conversation is not in

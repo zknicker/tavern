@@ -33,8 +33,10 @@ delivery mechanics in [steering.md](steering.md), dispatch in
 ## Seen ledger
 
 Runtime keeps a durable per-(session, chat) cursor of what has provably been
-model-visible: prompt catch-up, busy deliveries, and hold envelopes advance
-it; notices never do. The ledger feeds:
+model-visible: prompt catch-up and hold envelopes advance it; notices and
+busy deliveries never do. A busy delivery is a hint — engines apply
+injected input at their own boundary, sometimes only on the next turn — so
+acceptance is not proof the current reply saw it. The ledger feeds:
 
 - **Turn intake (push):** a turn's prompt carries the trigger chat's unseen
   rows since the cursor, plus a compact cross-chat pending section (counts +

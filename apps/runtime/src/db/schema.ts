@@ -218,8 +218,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_agent_sessions_one_active
   ON agent_sessions(agent_id) WHERE status = 'active';
 
 -- Seen ledger (specs/sessions.md): per-(session, chat) cursor of the highest
--- message sequence provably model-visible. Prompt catch-up, busy deliveries,
--- and hold envelopes advance it; notices never do.
+-- message sequence provably model-visible. Prompt catch-up and hold
+-- envelopes advance it; notices and busy deliveries never do.
 CREATE TABLE IF NOT EXISTS agent_session_chat_cursors (
   session_id     TEXT NOT NULL,
   chat_id        TEXT NOT NULL,
