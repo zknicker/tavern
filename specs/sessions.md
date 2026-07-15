@@ -39,10 +39,12 @@ it; notices never do. The ledger feeds:
 - **Turn intake (push):** a turn's prompt carries the trigger chat's unseen
   rows since the cursor, plus a compact cross-chat pending section (counts +
   latest, with chat tools to read more).
-- **Action gating:** any outbound action against a chat with unseen rows —
-  final reply delivery, `chat_send`, task actions — is held once with the
+- **Action gating:** any chat-outbound action against a chat with unseen
+  rows — final reply delivery and `chat_send` — is held once with the
   unseen rows embedded; the agent delivers, revises, or declines. This is
-  the freshness gate generalized from replies to actions.
+  the freshness gate generalized from replies to actions. Task tools mutate
+  task records, not chats, so they are not gated today; if a task action
+  ever posts into a chat, it takes the same hold.
 
 ## Rotation and reset
 
@@ -52,9 +54,11 @@ Sessions never rotate on a schedule. A new session starts only on:
    effect on the next turn with a fresh session. Workspace, memory, and
    identity persist.
 2. **Manual reset** — human-initiated, agent-scoped, in agent settings:
-   - *Restart:* resume the existing session as-is.
    - *Session reset:* fresh context; workspace and memory persist.
    - *Full reset:* fresh context and wiped workspace.
+   Raft's third level (*restart*: resume as-is) has no Tavern equivalent:
+   agents are not persistent processes, so every turn already resumes the
+   session from durable state.
 3. **Idle safety valve** — a session untouched for ~7 days starts fresh on
    its next turn (stale-resume guard), identical to a session reset.
 

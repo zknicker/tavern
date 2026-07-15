@@ -61,10 +61,12 @@ likely multi-human future.
   model switch (fresh session on next turn; workspace, memory, and identity
   persist), or a ~7-day fully-idle safety valve. Engine-native compaction
   plus Memory carry long-horizon continuity.
-- **Reset is a 3-level, human-initiated, agent-scoped contract** living in
-  agent settings: restart (resume as-is), session reset (fresh context;
-  workspace and memory persist), full reset (context and workspace wiped).
-  The chat drawer shows session status read-only.
+- **Reset is a human-initiated, agent-scoped contract** living in agent
+  settings: session reset (fresh context; workspace and memory persist) and
+  full reset (context and workspace wiped). Raft's restart level (resume
+  as-is) is a no-op here — turns already resume the session from durable
+  state — so it has no surface. The chat drawer shows session status
+  read-only.
 - **Model selection is agent-scoped.** Per-chat model overrides are removed.
 
 ## Consequences

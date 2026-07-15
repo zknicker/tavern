@@ -26,7 +26,8 @@ the engine's abilities as the assistant's abilities, never its plumbing.
 Use product nouns directly:
 
 - A `chat` is the durable conversation container.
-- A `session` is one runtime agent's durable conversation or execution record inside a chat.
+- A `session` is one agent's single ongoing global execution context spanning
+  every chat it participates in (specs/sessions.md).
 - A `turn` is one execution inside a session.
 - Tavern chat history is canonical Tavern Runtime state.
 - Agent execution traces are execution evidence, not the product timeline.
