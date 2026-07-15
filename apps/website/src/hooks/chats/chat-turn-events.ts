@@ -10,7 +10,7 @@ import type {
 
 export interface ChatTurnEventUtils {
     agent: {
-        activity: {
+        presence: {
             invalidate: () => Promise<unknown>;
         };
     };
@@ -56,7 +56,7 @@ export function createChatTurnEventHandlers(utils: ChatTurnEventUtils) {
     const terminalTurnIds = new Set<string>();
 
     const invalidateLiveTurnStatus = () => {
-        Promise.all([utils.agent.activity.invalidate(), utils.worker.list.invalidate()]).catch(
+        Promise.all([utils.agent.presence.invalidate(), utils.worker.list.invalidate()]).catch(
             () => undefined
         );
     };
@@ -67,7 +67,7 @@ export function createChatTurnEventHandlers(utils: ChatTurnEventUtils) {
     // burst right as the final message swaps in. Live agent status is the one
     // signal with no named event.
     const invalidateCompletedTurn = () => {
-        utils.agent.activity.invalidate().catch(() => undefined);
+        utils.agent.presence.invalidate().catch(() => undefined);
     };
 
     const isTerminalRun = (runId: string) =>

@@ -19,7 +19,7 @@ export function useAgentProfileUpdate() {
             });
             await utils.agent.list.invalidate();
             await utils.agent.primary.invalidate();
-            await utils.agent.activity.invalidate();
+            await utils.agent.presence.invalidate();
         },
     });
 }

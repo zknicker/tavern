@@ -11,10 +11,8 @@ import type { AgentRailItem } from '../../hooks/agents/use-agent-rail.ts';
 import { appRoutes } from '../../lib/app-routes.ts';
 import { buildAgentPath, getActiveAgentPage } from '../agents/agent-path.ts';
 
-const supportsLiveSidebarAgentActivity = false;
-
 export function resolveSidebarAgentActive(agent: AgentRailItem) {
-    return supportsLiveSidebarAgentActivity ? agent.isThinking : false;
+    return agent.isThinking;
 }
 
 export function AppSidebarAgentList({ sidebarAgents }: { sidebarAgents: AgentRailItem[] }) {

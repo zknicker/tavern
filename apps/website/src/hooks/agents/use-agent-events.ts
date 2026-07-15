@@ -28,7 +28,7 @@ export function createAgentEventHandlers(utils: AgentEventUtils) {
             void utils.agent.instructions.invalidate({ agentId });
         },
         onAgentUpdate: () => {
-            void utils.agent.activity.invalidate();
+            void utils.agent.presence.invalidate();
             void utils.agent.get.invalidate(undefined, { exact: false });
             void utils.agent.list.invalidate();
             void utils.agent.primary.invalidate();

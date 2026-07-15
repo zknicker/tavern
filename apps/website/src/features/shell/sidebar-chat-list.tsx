@@ -36,6 +36,7 @@ import { appRoutes } from '../../lib/app-routes.ts';
 import { markChatTiming } from '../../lib/chat-timing.ts';
 import { resolveAgentInk } from '../agents/agent-color-presets.ts';
 import { AgentFace } from '../chats/agent-face.tsx';
+import { SidebarAgentPresenceDot } from '../chats/agent-presence.tsx';
 import { ChannelDialog } from '../chats/channel-dialog.tsx';
 import {
     buildChatList,
@@ -527,7 +528,7 @@ function SidebarChatIcon({
         return (
             <span
                 aria-hidden="true"
-                className="flex size-5 shrink-0 items-center justify-center overflow-visible"
+                className="relative flex size-5 shrink-0 items-center justify-center overflow-visible"
             >
                 <AgentFace
                     animate={false}
@@ -537,6 +538,7 @@ function SidebarChatIcon({
                     size={24}
                     style={faceStyle}
                 />
+                <SidebarAgentPresenceDot chat={chat} />
             </span>
         );
     }

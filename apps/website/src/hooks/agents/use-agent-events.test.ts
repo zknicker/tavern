@@ -5,8 +5,8 @@ function createHandlers() {
     const invalidatedQueries: string[] = [];
     const handlers = createAgentEventHandlers({
         agent: {
-            activity: {
-                invalidate: async () => invalidatedQueries.push('agent.activity'),
+            presence: {
+                invalidate: async () => invalidatedQueries.push('agent.presence'),
             },
             get: {
                 invalidate: async () => invalidatedQueries.push('agent.get'),
@@ -38,7 +38,7 @@ test('agent updates refresh agent caches and the Tavern chat sidebar list', asyn
     await Promise.resolve();
 
     expect(invalidatedQueries).toEqual([
-        'agent.activity',
+        'agent.presence',
         'agent.get',
         'agent.list',
         'agent.primary',

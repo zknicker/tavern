@@ -211,6 +211,7 @@ function SyncedAgentChatDetail({ chat, chatId }: { chat: ChatListItem; chatId: s
                         <ChatDetailFooter
                             activeReplies={timeline.activeReplies}
                             agents={agents}
+                            chat={chat}
                             chatId={chat.id}
                             rows={rows}
                             turnEvidence={timeline.turnEvidence}

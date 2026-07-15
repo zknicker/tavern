@@ -17,8 +17,8 @@ function createAgentRailItem(overrides: Partial<AgentRailItem> = {}): AgentRailI
 }
 
 describe('resolveSidebarAgentActive', () => {
-    test('keeps sidebar agent rows idle when an agent rail item is marked thinking', () => {
-        expect(resolveSidebarAgentActive(createAgentRailItem({ isThinking: true }))).toBe(false);
+    test('marks sidebar agent rows active while the agent is busy (presence)', () => {
+        expect(resolveSidebarAgentActive(createAgentRailItem({ isThinking: true }))).toBe(true);
     });
 
     test('keeps idle agent rail items idle', () => {

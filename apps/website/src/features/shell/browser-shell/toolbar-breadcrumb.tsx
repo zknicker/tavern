@@ -4,6 +4,7 @@ import { Icon } from '../../../components/ui/icon.tsx';
 import { appRoutes } from '../../../lib/app-routes.ts';
 import { queryPolicy } from '../../../lib/query-policy.ts';
 import { trpc } from '../../../lib/trpc.tsx';
+import { AgentPresenceBadge } from '../../chats/agent-presence.tsx';
 import { getChatAgentId } from '../../chats/chat-list-data.ts';
 import { formatTaskNumber } from '../../tasks/task-presentation.ts';
 import { TavernTabFavicon } from './tavern-tab-favicon.tsx';
@@ -68,6 +69,7 @@ export function ToolbarBreadcrumb() {
                         />
                     ) : null}
                     <span className="truncate">{descriptor.title}</span>
+                    {chat ? <AgentPresenceBadge chat={chat} /> : null}
                 </span>
             )}
         </nav>

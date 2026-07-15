@@ -6,6 +6,7 @@ import { useAgentAppearanceLookup } from '../../hooks/agents/use-agent-appearanc
 import { resolveAgentInk } from '../agents/agent-color-presets.ts';
 import { getChannelColorStyle } from '../shell/channel-color-options.ts';
 import { AgentFace } from './agent-face.tsx';
+import { AgentPresenceBadge } from './agent-presence.tsx';
 import { type ChatListItem, getChatAgentId } from './chat-list-data.ts';
 import { ChatPaneToggleButton } from './chat-pane-toggle-button.tsx';
 import { ChatParticipantFacepile } from './chat-participant-facepile.tsx';
@@ -29,6 +30,7 @@ export function ChatRoomTopbar({ chat }: { chat: ChatListItem }) {
             <div className="flex min-w-0 items-center gap-2.5 pr-2 pl-[10px]">
                 <RoomIcon chat={chat} />
                 <h1 className="min-w-0 truncate font-semibold text-foreground text-sm">{title}</h1>
+                <AgentPresenceBadge chat={chat} />
                 {chat.archived ? <Badge variant="secondary">Archived</Badge> : null}
             </div>
             <div className="no-drag flex min-w-0 items-center justify-end gap-1 px-2">

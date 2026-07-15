@@ -17,7 +17,7 @@ export function useAgentDelete() {
             });
             await utils.agent.list.invalidate();
             await utils.agent.primary.invalidate();
-            await utils.agent.activity.invalidate();
+            await utils.agent.presence.invalidate();
             await utils.model.list.invalidate();
         },
     });

@@ -1,19 +1,19 @@
 import { useMemo } from 'react';
-import type { AgentActivityOutput, AgentListOutput } from '../../lib/trpc.tsx';
+import type { AgentListOutput, AgentPresenceOutput } from '../../lib/trpc.tsx';
 
 export function useAgentRail(
     agents: AgentListOutput['agents'],
-    activity: AgentActivityOutput['activity']
+    presence: AgentPresenceOutput['presence']
 ) {
     return useMemo(() => {
-        const activityByAgentId = new Map(activity.map((entry) => [entry.agentId, entry]));
+        const presenceByAgentId = new Map(presence.map((entry) => [entry.agentId, entry]));
 
         return agents.map((agent) => ({
             id: agent.id,
-            isThinking: activityByAgentId.get(agent.id)?.state === 'thinking',
+            isThinking: presenceByAgentId.get(agent.id)?.state === 'busy',
             name: agent.name,
         }));
-    }, [activity, agents]);
+    }, [agents, presence]);
 }
 
 export type AgentRailItem = ReturnType<typeof useAgentRail>[number];
