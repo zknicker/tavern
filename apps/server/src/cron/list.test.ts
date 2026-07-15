@@ -43,6 +43,7 @@ test('listCronJobs promotes latest failed run state for list badges', async () =
             description: null,
             enabled: true,
             id: 'cron:morning',
+            mode: 'agentTurn' as const,
             name: 'Morning briefing',
             payload: {
                 kind: 'agentTurn',
