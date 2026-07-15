@@ -1,0 +1,97 @@
+diff --git a/dist/agent/index.d.ts b/dist/agent/index.d.ts
+index a4fc5b2337a72bb2b60b4040873fd6931e48ae3c..21cf1594a9a30c1452f794a0ab38a189904885dd 100644
+--- a/dist/agent/index.d.ts
++++ b/dist/agent/index.d.ts
+@@ -1264,6 +1264,13 @@ declare class HarnessAgentSession {
+         telemetry: TelemetryOptions | undefined;
+         toolApprovalContinuations?: readonly HarnessAgentToolApprovalContinuation[] | undefined;
+     }): HarnessAgentTurnResult<TOOLS, RUNTIME_CONTEXT>;
++    /**
++     * Deliver a user message into the turn currently in flight. Resolves true
++     * when the adapter accepted the message; false when no turn is running or
++     * the adapter does not support mid-turn input. The engine applies the
++     * message at its own safe boundary.
++     */
++    sendUserMessage(text: string): Promise<boolean>;
+     /**
+      * Ask the underlying runtime to compact its context. The runtime performs
+      * the compaction itself; when it completes, a `compaction` part appears on
+diff --git a/dist/agent/index.js b/dist/agent/index.js
+index 4835d21dd7fef42a0617e76f7458cd235ce03b7d..b88d982ba4c44baee65a6f142fc6af21a7a6d746 100644
+--- a/dist/agent/index.js
++++ b/dist/agent/index.js
+@@ -1214,6 +1214,7 @@ function runPrompt(input) {
+       return;
+     }
+     const { stream, control } = bridge;
++    if (input.onTurnControl) input.onTurnControl(control);
+     const reader = stream.getReader();
+     const toolCallsByToolCallId = /* @__PURE__ */ new Map();
+     const rawToolCallsByToolCallId = /* @__PURE__ */ new Map();
+@@ -1718,6 +1719,7 @@ var HarnessAgentSession = class {
+     this.sessionState = "active";
+     this.turnSequence = 0;
+     this.activeTurnSequence = 0;
++    this.activeTurnControl = null;
+     var _a3, _b3;
+     this.sessionId = options.sessionId;
+     this.harness = options.harness;
+@@ -1782,13 +1784,18 @@ var HarnessAgentSession = class {
+         onToolApprovalSettled: (approvalId) => {
+           this.pendingToolApprovals.delete(approvalId);
+         },
++        onTurnControl: (control) => {
++          this.activeTurnControl = control;
++        },
+         onTurnFinished: () => {
++          this.activeTurnControl = null;
+           this.finishTrackedTurn({ turnId });
+         }
+       });
+       this.trackTurnCompletion({ done: turn.done, turnId });
+       return turn;
+     } catch (error) {
++      this.activeTurnControl = null;
+       this.finishTrackedTurn({ turnId });
+       throw error;
+     }
+@@ -1821,17 +1828,39 @@ var HarnessAgentSession = class {
+         onToolApprovalSettled: (approvalId) => {
+           this.pendingToolApprovals.delete(approvalId);
+         },
++        onTurnControl: (control) => {
++          this.activeTurnControl = control;
++        },
+         onTurnFinished: () => {
++          this.activeTurnControl = null;
+           this.finishTrackedTurn({ turnId });
+         }
+       });
+       this.trackTurnCompletion({ done: turn.done, turnId });
+       return turn;
+     } catch (error) {
++      this.activeTurnControl = null;
+       this.finishTrackedTurn({ turnId });
+       throw error;
+     }
+   }
++  /**
++   * Deliver a user message into the turn currently in flight. Resolves true
++   * when the adapter accepted the message; false when no turn is running or
++   * the adapter does not support mid-turn input. The engine applies the
++   * message at its own safe boundary.
++   */
++  async sendUserMessage(text) {
++    const control = this.activeTurnControl;
++    if (!control || typeof control.submitUserMessage !== "function") {
++      return false;
++    }
++    if (this.turnState !== "running") {
++      return false;
++    }
++    await control.submitUserMessage(text);
++    return true;
++  }
+   /**
+    * Ask the underlying runtime to compact its context. The runtime performs
+    * the compaction itself; when it completes, a `compaction` part appears on
