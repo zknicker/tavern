@@ -15,6 +15,8 @@ const emitChatUpdated = mock(() => undefined);
 const emitCronUpdated = mock(() => undefined);
 const emitEngineRestartUpdated = mock(() => undefined);
 const emitJobsUpdated = mock(() => undefined);
+const emitLabelsUpdated = mock(() => undefined);
+const emitPaneUpdated = mock(() => undefined);
 const emitMemoryJobsUpdated = mock(() => undefined);
 const emitModelUpdated = mock(() => undefined);
 const emitAgentEngineConfigUpdated = mock(() => undefined);
@@ -68,7 +70,9 @@ mock.module('../src/api/invalidation-events.ts', () => ({
     emitCronUpdated,
     emitEngineRestartUpdated,
     emitJobsUpdated,
+    emitLabelsUpdated,
     emitMemoryJobsUpdated,
+    emitPaneUpdated,
     emitModelUpdated,
     emitAgentEngineConfigUpdated,
     emitOpenRouterSettingsInvalidationCascade,

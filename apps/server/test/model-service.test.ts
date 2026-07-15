@@ -44,18 +44,21 @@ test('listModels exposes agent model options from the runtime', async () => {
     spyOn(runtimeModels, 'getAgentRuntimeModels').mockImplementation(async () => ({
         models: [
             {
+                capability: 'agent',
                 id: 'codex/gpt-5.5',
                 label: 'GPT-5.5',
                 provider: 'codex',
                 route: { baseUrl: null, model: 'gpt-5.5', provider: 'codex' },
             },
             {
+                capability: 'agent',
                 id: 'codex/gpt-5.4',
                 label: 'GPT-5.4',
                 provider: 'codex',
                 route: { baseUrl: null, model: 'gpt-5.4', provider: 'codex' },
             },
             {
+                capability: 'agent',
                 id: 'claude/claude-sonnet-4-6',
                 label: 'Claude Sonnet 4.6',
                 provider: 'claude',

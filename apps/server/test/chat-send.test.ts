@@ -19,7 +19,7 @@ afterEach(() => {
     );
 });
 
-test('sendTavernChatMessage writes human-only channel messages without invoking an agent', async () => {
+test('sendTavernChatMessage dispatches evaluation turns to seated channel agents', async () => {
     await seedPlanningChat();
     const calls: unknown[] = [];
     const tavernApiCalls: Array<{ body: unknown; method: string; path: string }> = [];
@@ -92,14 +92,16 @@ test('sendTavernChatMessage writes human-only channel messages without invoking 
         agentRuntimeClient as never
     );
 
+    // Default-evaluate addressing (specs/addressing.md): every seated agent
+    // evaluates every channel message, mentioned or not.
     assert.deepEqual(result, {
         acceptedAt: '2026-04-06T12:10:00.000Z',
         chatId: planningChatId,
         clientMessageId: result.clientMessageId,
         status: 'accepted',
-        turns: [],
+        turns: [{ agentId: 'agent:planner', runId: 'run-agent_planner' }],
     });
-    assert.deepEqual(calls, []);
+    assert.equal(calls.length, 1);
     assert.match(result.clientMessageId, /^msg_/u);
     assert.equal(
         tavernApiCalls.some((call) => call.path === `/api/chats/${planningChatId}/messages`),
@@ -172,7 +174,7 @@ test('sendTavernChatMessage rejects legacy metadata addressing', async () => {
     assert.deepEqual(calls, []);
 });
 
-test('sendTavernChatMessage keeps bare mention-looking text human-only in channels', async () => {
+test('sendTavernChatMessage treats bare mention-looking text as an unaddressed evaluation', async () => {
     await seedPlanningChat();
     const calls: unknown[] = [];
     globalThis.fetch = runtimeTavernApiFetch();
@@ -186,8 +188,10 @@ test('sendTavernChatMessage keeps bare mention-looking text human-only in channe
         agentRuntimeClient as never
     );
 
-    assert.deepEqual(result.turns, []);
-    assert.deepEqual(calls, []);
+    // Bare @text is not a rich agent:// mention, so it addresses no one —
+    // but the seated agent still gets its evaluation turn.
+    assert.deepEqual(result.turns, [{ agentId: 'agent:planner', runId: 'run-agent_planner' }]);
+    assert.equal(calls.length, 1);
 });
 
 test('sendTavernChatMessage rejects channel mentions for agents outside the chat', async () => {

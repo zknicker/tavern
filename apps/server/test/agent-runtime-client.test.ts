@@ -163,7 +163,7 @@ test('getMemoryActivity reads the Memory activity rollup', async () => {
     assert.equal(result.activities[0]?.nextRun?.kind, 'waiting');
 });
 
-test('getCurrentAgentSession reads the current chat-scoped agent session', async () => {
+test('getCurrentAgentSession reads the current global agent session via a chat', async () => {
     const fetchMock = mock(async (input: RequestInfo | URL) => {
         const url = new URL(String(input));
         assert.equal(url.pathname, agentRuntimeRoutes.chatAgentSessionCurrent('cht_general'));
@@ -172,13 +172,12 @@ test('getCurrentAgentSession reads the current chat-scoped agent session', async
             pastSessions: [],
             session: {
                 agentId: 'agt_primary',
-                agentParticipantId: 'agt_primary',
                 archivedAt: null,
-                chatId: 'cht_general',
                 createdAt: '2026-06-29T12:00:00.000Z',
                 effectiveModel: { model: 'gpt-4.1-mini', provider: 'openai' },
                 generation: 1,
-                id: 'ags_cht_general_agt_primary_1',
+                id: 'ags_agt_primary_1',
+                lastTurnAt: null,
                 resumeState: null,
                 runtimeSessionId: null,
                 status: 'active',

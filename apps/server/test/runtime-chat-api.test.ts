@@ -29,7 +29,7 @@ afterEach(() => {
     databaseClient.exec('DELETE FROM agent_runtime_connections;');
 });
 
-test('listRuntimeChatRows maps Tavern API messages and keeps preamble/reasoning activity', async () => {
+test('listRuntimeChatRows maps Tavern API messages and keeps execution activity off the timeline', async () => {
     await saveAgentRuntimeConnection({
         baseUrl: 'http://runtime.test',
         enabled: true,
@@ -133,13 +133,9 @@ test('listRuntimeChatRows maps Tavern API messages and keeps preamble/reasoning 
     const rows = (await getRuntimeChatTimelinePage('cht_1'))?.rows ?? null;
 
     expect(requests).toEqual(['GET /api/chats/cht_1/timeline']);
-    expect(rows?.map((row) => row.id)).toEqual([
-        'msg_user',
-        'act_assistant_reply_1',
-        'act_reasoning_1',
-        'msg_final',
-    ]);
-    expect(rows?.find((row) => row.id === 'act_assistant_reply_2')).toBeUndefined();
+    // Narration and reasoning are execution evidence (specs/chat-timeline.md);
+    // only conversation units ride the timeline.
+    expect(rows?.map((row) => row.id)).toEqual(['msg_user', 'msg_final']);
     expect(rows?.find((row) => row.id === 'msg_final')).toMatchObject({
         actor: { id: 'main', kind: 'agent' },
         message: {
@@ -395,7 +391,7 @@ test('listRuntimeChatRows maps Tavern API artifacts into chat timeline rows', as
     ]);
 });
 
-test('listRuntimeChatRows keeps response artifacts after producing activity', async () => {
+test('listRuntimeChatRows keeps response artifacts while filtering their producing activity', async () => {
     await saveAgentRuntimeConnection({
         baseUrl: 'http://runtime.test',
         enabled: true,
@@ -475,7 +471,7 @@ test('listRuntimeChatRows keeps response artifacts after producing activity', as
 
     const rows = (await getRuntimeChatTimelinePage('cht_1'))?.rows ?? [];
 
-    expect(rows.map((row) => row.id)).toEqual(['msg_user', 'act_tool_1', 'art_report_1']);
+    expect(rows.map((row) => row.id)).toEqual(['msg_user', 'art_report_1']);
 });
 
 test('listRuntimeChatRows maps runtime notice activity into system rows', async () => {
@@ -548,6 +544,7 @@ test('listRuntimeChatRows maps runtime notice activity into system rows', async 
             kind: 'system',
             responseId: 'rsp_run_1',
             runtimeNotice: {
+                agentId: null,
                 compactionCount: null,
                 detail: 'd348a369-223c-42a7-8220-67c7340810c2',
                 kind: 'new_session',
@@ -561,7 +558,7 @@ test('listRuntimeChatRows maps runtime notice activity into system rows', async 
     ]);
 });
 
-test('listRuntimeChatRows preserves durable activity titles for tool rows', async () => {
+test('listRuntimeChatRows keeps tool evidence off the timeline', async () => {
     await saveAgentRuntimeConnection({
         baseUrl: 'http://runtime.test',
         enabled: true,
@@ -632,20 +629,12 @@ test('listRuntimeChatRows preserves durable activity titles for tool rows', asyn
 
     const rows = (await getRuntimeChatTimelinePage('cht_1'))?.rows ?? null;
 
-    expect(rows).toMatchObject([
-        {
-            id: 'act_tool_call_1',
-            kind: 'tool',
-            toolCall: {
-                label: 'read from QA_KICKOFF_TASK.md',
-                name: 'tool',
-                summaryParts: ['read from QA_KICKOFF_TASK.md'],
-            },
-        },
-    ]);
+    // Tool rows are turn evidence served by chat.turn.evidence; the durable
+    // title mapping is covered by the activityToChatRows unit suite.
+    expect(rows).toEqual([]);
 });
 
-test('listRuntimeChatRows includes running assistant message activity as prose rows', async () => {
+test('listRuntimeChatRows keeps running narration activity off the timeline', async () => {
     await saveAgentRuntimeConnection({
         baseUrl: 'http://runtime.test',
         enabled: true,
@@ -705,20 +694,10 @@ test('listRuntimeChatRows includes running assistant message activity as prose r
 
     const rows = (await getRuntimeChatTimelinePage('cht_1'))?.rows ?? null;
 
-    expect(rows).toMatchObject([
-        {
-            id: 'act_assistant_reply_1',
-            kind: 'message',
-            message: {
-                content: 'I will run a timed shell check before the final reply.',
-                senderType: 'agent',
-                sourceSessionKey: 'session_1',
-            },
-        },
-    ]);
+    expect(rows).toEqual([]);
 });
 
-test('listRuntimeChatRows keeps response activity after its request message while a turn is running', async () => {
+test('listRuntimeChatRows keeps only the request message while a turn narrates', async () => {
     await saveAgentRuntimeConnection({
         baseUrl: 'http://runtime.test',
         enabled: true,
@@ -788,7 +767,7 @@ test('listRuntimeChatRows keeps response activity after its request message whil
 
     const rows = (await getRuntimeChatTimelinePage('cht_1'))?.rows ?? null;
 
-    expect(rows?.map((row) => row.id)).toEqual(['msg_user', 'act_assistant_reply_1']);
+    expect(rows?.map((row) => row.id)).toEqual(['msg_user']);
 });
 
 test('listRuntimeChatTimeline exposes running responses as active replies after reload', async () => {

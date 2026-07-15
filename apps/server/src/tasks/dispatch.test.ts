@@ -14,6 +14,7 @@ test('manual dispatch delegates claim, work chat, and send to Runtime', async ()
     const task = {
         activeDispatchRunId: 'run_1',
         assignee: { agentId: 'agt_primary', kind: 'agent' as const },
+        attachments: [],
         blockedBy: [],
         blockedReason: null,
         createdAt: '2026-07-09T12:00:00.000Z',
@@ -25,6 +26,7 @@ test('manual dispatch delegates claim, work chat, and send to Runtime', async ()
         kind: 'task' as const,
         labels: [],
         number: 12,
+        originChatId: 'cht_origin',
         priority: 'high' as const,
         scheduledFor: null,
         status: 'in_progress' as const,

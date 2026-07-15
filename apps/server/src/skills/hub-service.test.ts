@@ -37,7 +37,7 @@ test('installSkillHubSkill returns conflicts without refreshing inventory', asyn
         refreshed: 0,
     });
     const enqueueSpy = spyOn(inventoryJob, 'enqueueRuntimeSkillInventoryRefresh').mockResolvedValue(
-        undefined
+        null
     );
     const emitSpy = spyOn(invalidationEvents, 'emitSkillInvalidationCascade').mockImplementation(
         () => undefined

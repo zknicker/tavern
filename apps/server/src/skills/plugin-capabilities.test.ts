@@ -119,7 +119,8 @@ describe('Plugin capability ownership', () => {
     });
 
     test('provides a placeholder when a Plugin tool is not reported yet', () => {
-        expect(listMissingPluginTools(plugins, new Set())).toEqual(
+        const missing = listMissingPluginTools(plugins, new Set());
+        expect(missing).toEqual(
             expect.arrayContaining([
                 expect.objectContaining({
                     enabled: true,
@@ -135,8 +136,9 @@ describe('Plugin capability ownership', () => {
                 }),
             ])
         );
-        expect(listMissingPluginTools(plugins, new Set(['merchbase', 'google-calendar']))).toEqual(
-            []
-        );
+        // Once every enabled tool group is reported, nothing is missing.
+        expect(
+            listMissingPluginTools(plugins, new Set(missing.map((placeholder) => placeholder.id)))
+        ).toEqual([]);
     });
 });
