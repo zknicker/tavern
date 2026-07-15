@@ -17,8 +17,8 @@ machinery carries over adapted.
 ## Principle
 
 > **Every agent participant evaluates every message delivered into its
-> chats. A mention narrows who evaluates; it never widens who can read.
-> Silence is a first-class outcome.**
+> chats. A mention targets — it changes who is expected to answer, never
+> who evaluates or who can read. Silence is a first-class outcome.**
 
 Agents behave like teammates in the room, not like bots waiting for their
 name. Whether to speak is the agent's judgment, bounded by chain guards
@@ -29,15 +29,14 @@ and deduped by the freshness gate ([steering.md](steering.md)).
 For every durable message delivered into a chat (human send, agent final
 reply, cross-chat `chat_send` post, automation delivery):
 
-- **No agent mentions in the message** → every agent seat in that chat
-  except the author gets an evaluation turn.
-- **One or more agent participants mentioned** → only the mentioned seats
-  get evaluation turns. Unmentioned seats get no turn; the message reaches
-  them as ambient catch-up context on their next turn, exactly like any
-  message they were present for. Mentioning is targeting, not secrecy.
+- **Every agent seat in that chat except the author gets an evaluation
+  turn — mentioned or not.** Mentions set expectation, never routing: a
+  message like "hey @bob what's up, and everyone else how's it going"
+  reaches every seat, and Bob knows the first half is his. Suppressing
+  unmentioned seats would misroute exactly this mixed addressing.
 - **DMs** are unchanged: the one agent seat evaluates every user message.
-- Self-mentions and mentions of non-participants dispatch nothing.
-  Mentions of humans dispatch nothing.
+- Self-mentions and mentions of non-participants carry no dispatch
+  meaning. Mentions of humans carry none either.
 - A seat serializes its turns; evaluation turns queue like any other. One
   message dispatches at most one turn per seat.
 
@@ -50,13 +49,14 @@ outcome for most evaluations ("this isn't for me", "someone answered",
 ### What a mention means
 
 - **Targeting.** The mentioned agent is expected to act or answer; other
-  agents are expected to leave it to them (taught, and reinforced by not
-  dispatching their evaluation).
+  agents are expected to leave the mentioned part to them. This is a
+  prompt-taught expectation enforced by etiquette and the freshness gate,
+  not by dispatch.
 - **Legibility.** Ownership is visible to humans and agents in the
   transcript as a chip.
 - Future (not in this spec): attention controls such as per-agent chat
   muting, where mentions pierce the mute. Until muting exists, targeting
-  and evaluation-narrowing are the whole contract.
+  and legibility are the whole contract.
 
 ## Chain limits
 
@@ -71,9 +71,12 @@ mention dispatches to **all agent-triggered evaluations**:
 - **Chain budget** (default 8 dispatched turns per chain origin): once
   spent, further evaluations in that chain are suppressed with the
   existing visible suppression notice.
-- Budget accounting is per dispatched turn, so an unmentioned agent reply
-  into a four-agent channel spends three budget units at once — broad
-  chatter exhausts chains fast by design. Mentioned handoffs spend one.
+- Budget accounting is per dispatched turn, so any agent reply into a
+  four-agent channel spends three budget units at once — chatter exhausts
+  chains fast by design. The defaults (4 hops, 8-turn budget) were tuned
+  for mention-only dispatch and must be retuned against channel size at
+  implementation; the hop cap stays the depth bound, the budget the spend
+  bound.
 - `NO_REPLY` delivers nothing, so it dispatches nothing: silence still
   ends chains. The freshness gate's held-then-declined outcome is the
   common chain terminator in practice.
@@ -108,10 +111,11 @@ layered, matching what each layer can see:
 
 `chat_send` posts a durable message into another chat the sender holds a
 seat in. Under default-evaluate its dispatch rule is the same as any
-message: mentions target specific seats; no mentions means every agent
-seat in the target chat evaluates. The post still never starts a turn for
-its author, dispatch still happens when the posting turn completes, and
-cross-chat chains spend the same hops and budget as local ones.
+message: every agent seat in the target chat evaluates, mentioned or not,
+with mentions setting who is expected to act. The post still never starts
+a turn for its author, dispatch still happens when the posting turn
+completes, and cross-chat chains spend the same hops and budget as local
+ones.
 
 The `mode` parameter is removed (see [steering.md](steering.md) — busy
 delivery is automatic and dispatch is addressing).
@@ -146,9 +150,9 @@ change that lands the prompt text.
   above; generalize chain metadata (`mentionHops` → `chainHops`,
   origin-scoped budget unchanged in shape).
 - Human messages: today only mentioned agents (or the DM agent) get
-  turns; under this spec an unmentioned channel message dispatches every
-  agent seat. This is the headline behavior change and should ship with
-  the freshness gate, not before it.
+  turns; under this spec every channel message dispatches every agent
+  seat. This is the headline behavior change and should ship with the
+  freshness gate, not before it.
 - `specs/agent-mentions.md` gains a superseded-by pointer when this
   lands; its rendering and reference-grammar sections remain valid (see
   [mentions.md](mentions.md)).
@@ -163,6 +167,6 @@ visibility ("channels are the isolation boundary"); duplicate replies are
 contained by etiquette prompts, task claims, and send-side freshness
 holds (SMR-006). Tavern adapts this to its push-based turn model:
 evaluation turns replace wake-and-pull, `NO_REPLY` replaces
-don't-send-anything, the freshness gate moves to reply delivery, and
-mention-narrowed evaluation stands in for mute-plus-pierce until real
-attention controls exist.
+don't-send-anything, and the freshness gate moves to reply delivery.
+Mute-plus-pierce attention controls are future work; until then every
+seat evaluates everything, as in an unmuted Raft channel.
