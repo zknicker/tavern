@@ -93,12 +93,31 @@ export function listChats(
                           AND chat_messages.deleted_at IS NULL
                     ) AS last_activity_at,
                     (
-                        SELECT json_group_array(DISTINCT chat_responses.participant_id)
-                        FROM chat_responses
-                        WHERE chat_responses.chat_id = chats.id
-                          AND chat_responses.deleted_at IS NULL
-                          AND chat_responses.status IN ('queued', 'running')
-                          AND chat_responses.response_message_id IS NULL
+                        SELECT json_group_array(DISTINCT busy.participant_id)
+                        FROM (
+                            SELECT chat_responses.participant_id AS participant_id
+                            FROM chat_responses
+                            WHERE chat_responses.chat_id = chats.id
+                              AND chat_responses.deleted_at IS NULL
+                              AND chat_responses.status IN ('queued', 'running')
+                              AND chat_responses.response_message_id IS NULL
+                            UNION
+                            -- A seat is busy exactly when its agent is busy
+                            -- (specs/sessions.md): one turn anywhere marks
+                            -- the agent active in every chat it sits in.
+                            SELECT chat_participants.id AS participant_id
+                            FROM chat_participants
+                            WHERE chat_participants.chat_id = chats.id
+                              AND chat_participants.kind = 'agent'
+                              AND EXISTS (
+                                SELECT 1 FROM agent_turns
+                                WHERE agent_turns.status IN ('queued', 'running')
+                                  AND agent_turns.agent_id = COALESCE(
+                                    json_extract(chat_participants.metadata_json, '$.agentId'),
+                                    chat_participants.id
+                                  )
+                              )
+                        ) AS busy
                     ) AS active_turn_participant_ids
              FROM chats
              WHERE id > $cursor
@@ -149,12 +168,31 @@ export function getChat(id: string, db: Database = getDb()): TavernChat | null {
                           AND chat_messages.deleted_at IS NULL
                     ) AS last_activity_at,
                     (
-                        SELECT json_group_array(DISTINCT chat_responses.participant_id)
-                        FROM chat_responses
-                        WHERE chat_responses.chat_id = chats.id
-                          AND chat_responses.deleted_at IS NULL
-                          AND chat_responses.status IN ('queued', 'running')
-                          AND chat_responses.response_message_id IS NULL
+                        SELECT json_group_array(DISTINCT busy.participant_id)
+                        FROM (
+                            SELECT chat_responses.participant_id AS participant_id
+                            FROM chat_responses
+                            WHERE chat_responses.chat_id = chats.id
+                              AND chat_responses.deleted_at IS NULL
+                              AND chat_responses.status IN ('queued', 'running')
+                              AND chat_responses.response_message_id IS NULL
+                            UNION
+                            -- A seat is busy exactly when its agent is busy
+                            -- (specs/sessions.md): one turn anywhere marks
+                            -- the agent active in every chat it sits in.
+                            SELECT chat_participants.id AS participant_id
+                            FROM chat_participants
+                            WHERE chat_participants.chat_id = chats.id
+                              AND chat_participants.kind = 'agent'
+                              AND EXISTS (
+                                SELECT 1 FROM agent_turns
+                                WHERE agent_turns.status IN ('queued', 'running')
+                                  AND agent_turns.agent_id = COALESCE(
+                                    json_extract(chat_participants.metadata_json, '$.agentId'),
+                                    chat_participants.id
+                                  )
+                              )
+                        ) AS busy
                     ) AS active_turn_participant_ids
              FROM chats
              WHERE id = $id`

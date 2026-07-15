@@ -62,7 +62,7 @@ export function harnessPrompt(input: AgentExecutorInput, recallContext?: null | 
     if (context.ambientMessages.length > 0) {
         sections.push(
             '',
-            'Channel messages since your last turn:',
+            'Messages in this chat since your last turn:',
             ...context.ambientMessages.map((message) => formatPromptMessage(message, timezone))
         );
         if (context.ambientMessagesOmitted) {
@@ -99,15 +99,17 @@ export function promptCursorSequence(input: AgentExecutorInput) {
 
 function buildHarnessPromptContext(input: AgentExecutorInput) {
     const request = getMessage(input.requestMessageId);
-    const chat = getChat(input.chatId);
-    const ambientCandidates =
-        request && chat?.kind === 'channel'
-            ? listRecentMessagesBetween(input.chatId, {
-                  afterSequence: readSeenCursor(input.agentSession.id, input.chatId),
-                  beforeSequence: request.sequence,
-                  limit: maxAmbientContextMessages + 1,
-              })
-            : [];
+    // Catch-up applies to every chat kind (specs/sessions.md seen ledger):
+    // the prompt carries the trigger chat's unseen rows since the cursor.
+    // DMs usually have none — each message triggers its own turn — but a
+    // failed or stopped turn must not lose its row.
+    const ambientCandidates = request
+        ? listRecentMessagesBetween(input.chatId, {
+              afterSequence: readSeenCursor(input.agentSession.id, input.chatId),
+              beforeSequence: request.sequence,
+              limit: maxAmbientContextMessages + 1,
+          })
+        : [];
     const filteredAmbientMessages = ambientCandidates.filter((message) =>
         isAmbientPromptMessage(input, message)
     );

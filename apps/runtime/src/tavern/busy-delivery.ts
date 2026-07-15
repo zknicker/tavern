@@ -2,9 +2,15 @@ import type { TavernChatEvent, TavernChatMessage } from '@tavern/api';
 import { log } from '../log.ts';
 import { resolveHomeTimezone } from '../timezone-settings.ts';
 import { type AgentTurn, findRunningAgentTurnForAgent } from './agent-turn-store.ts';
-import { getChat, subscribeToTavernApiEvents, upsertResponseActivity } from './chat-api/index.ts';
+import {
+    getChat,
+    getMessage,
+    listRecentMessagesBetween,
+    subscribeToTavernApiEvents,
+    upsertResponseActivity,
+} from './chat-api/index.ts';
 import { formatPromptMessage } from './harness-prompt.ts';
-import { advanceSeenCursor } from './seen-ledger.ts';
+import { advanceSeenCursor, readSeenCursor } from './seen-ledger.ts';
 import { deliverToActiveTurn } from './turn-delivery.ts';
 
 // Busy delivery (specs/steering.md): when a durable message lands in a chat,
@@ -15,9 +21,16 @@ import { deliverToActiveTurn } from './turn-delivery.ts';
 
 const maxTrackedRuns = 512;
 
-// Sequences delivered into each running turn, for repeat-notice dedupe. The
-// durable record is the seen ledger, advanced on every accepted delivery.
+// Per-chat sequences delivered into each running turn, for repeat-notice
+// dedupe. Keyed by (runId, chatId) because one running turn receives busy
+// deliveries from every chat the agent sits in and sequences are per-chat
+// counters. The durable record is the seen ledger, advanced on every
+// accepted delivery that leaves no unseen gap behind it.
 const deliveredSequences = new Map<string, Set<number>>();
+
+function deliveryKey(runId: string, chatId: string) {
+    return `${runId}\u0000${chatId}`;
+}
 
 export function installBusyDelivery() {
     return subscribeToTavernApiEvents((event) => {
@@ -39,7 +52,11 @@ export async function deliverToBusySeats(chatId: string, message: TavernChatMess
     const delivered: string[] = [];
     for (const agentId of chatAgentIds(chatId)) {
         const turn = findRunningAgentTurnForAgent(agentId);
-        if (!turn || isTurnAuthor(turn, message) || hasDelivered(turn.id, message.sequence)) {
+        if (
+            !turn ||
+            isTurnAuthor(turn, message) ||
+            hasDelivered(turn.id, chatId, message.sequence)
+        ) {
             continue;
         }
         const accepted = await deliverToActiveTurn(
@@ -49,14 +66,18 @@ export async function deliverToBusySeats(chatId: string, message: TavernChatMess
         if (!accepted) {
             continue;
         }
-        trackDelivered(turn.id, message.sequence);
-        // Delivered content is model-visible: advance the durable ledger
-        // (specs/sessions.md).
-        advanceSeenCursor({
-            chatId,
-            seq: message.sequence,
-            sessionId: turn.agentSessionId,
-        });
+        trackDelivered(turn.id, chatId, message.sequence);
+        // Delivered content is model-visible — but the ledger may only
+        // advance past rows that were provably visible too. If an earlier
+        // row in this chat was never delivered (a lost or failed send),
+        // hold the cursor so that row still rides the next prompt.
+        if (provablySeenUpTo(turn, chatId, message.sequence)) {
+            advanceSeenCursor({
+                chatId,
+                seq: message.sequence,
+                sessionId: turn.agentSessionId,
+            });
+        }
         recordBusyDeliveryEvidence(turn, message);
         delivered.push(turn.id);
     }
@@ -96,14 +117,15 @@ function isTurnAuthor(turn: AgentTurn, message: TavernChatMessage) {
     return message.author.id === turn.agentParticipantId || message.author.id === turn.agentId;
 }
 
-function hasDelivered(runId: string, sequence: number) {
-    return deliveredSequences.get(runId)?.has(sequence) === true;
+function hasDelivered(runId: string, chatId: string, sequence: number) {
+    return deliveredSequences.get(deliveryKey(runId, chatId))?.has(sequence) === true;
 }
 
-function trackDelivered(runId: string, sequence: number) {
-    const sequences = deliveredSequences.get(runId) ?? new Set<number>();
+function trackDelivered(runId: string, chatId: string, sequence: number) {
+    const key = deliveryKey(runId, chatId);
+    const sequences = deliveredSequences.get(key) ?? new Set<number>();
     sequences.add(sequence);
-    deliveredSequences.set(runId, sequences);
+    deliveredSequences.set(key, sequences);
     if (deliveredSequences.size <= maxTrackedRuns) {
         return;
     }
@@ -111,6 +133,37 @@ function trackDelivered(runId: string, sequence: number) {
     if (oldest !== undefined) {
         deliveredSequences.delete(oldest);
     }
+}
+
+// Every row between what the turn has provably seen and the accepted
+// delivery must itself be model-visible before the cursor may jump;
+// otherwise a lost delivery would be skipped forever. In the turn's own
+// chat, everything up to the trigger message rode the prompt (the executor
+// advances the cursor there on settle); elsewhere only the ledger counts.
+function provablySeenUpTo(turn: AgentTurn, chatId: string, sequence: number) {
+    const cursor = readSeenCursor(turn.agentSessionId, chatId);
+    const promptHorizon =
+        chatId === turn.chatId ? (getMessage(turn.triggerMessageId)?.sequence ?? cursor) : cursor;
+    const seenUpTo = Math.max(cursor, promptHorizon);
+    if (sequence <= seenUpTo + 1) {
+        return true;
+    }
+    const gapWidth = sequence - seenUpTo - 1;
+    if (gapWidth > 500) {
+        return false;
+    }
+    const gapRows = listRecentMessagesBetween(chatId, {
+        afterSequence: seenUpTo,
+        beforeSequence: sequence,
+        limit: gapWidth,
+    });
+    const deliveredHere = deliveredSequences.get(deliveryKey(turn.id, chatId));
+    return gapRows.every(
+        (row) =>
+            row.deleted_at !== null ||
+            isTurnAuthor(turn, row) ||
+            deliveredHere?.has(row.sequence) === true
+    );
 }
 
 function messageFromEvent(event: TavernChatEvent): TavernChatMessage | null {

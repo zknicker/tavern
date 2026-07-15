@@ -212,6 +212,11 @@ CREATE TABLE IF NOT EXISTS agent_sessions (
 CREATE INDEX IF NOT EXISTS idx_agent_sessions_agent
   ON agent_sessions(agent_id, status, generation DESC);
 
+-- One active session per agent is a schema invariant, not just a
+-- transaction discipline (specs/sessions.md).
+CREATE UNIQUE INDEX IF NOT EXISTS idx_agent_sessions_one_active
+  ON agent_sessions(agent_id) WHERE status = 'active';
+
 -- Seen ledger (specs/sessions.md): per-(session, chat) cursor of the highest
 -- message sequence provably model-visible. Prompt catch-up, busy deliveries,
 -- and hold envelopes advance it; notices never do.
