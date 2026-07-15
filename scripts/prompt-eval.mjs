@@ -15,6 +15,9 @@
 // piling rows into the archived-chats view.
 //
 // Usage: bun run eval:prompt [--server URL] [--only substring] [--reuse-chats]
+import { rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import { resolveDevPorts } from './dev-ports.mjs';
 import { createDevStackEnvironment } from './dev-stack-shared.mjs';
 
@@ -215,6 +218,50 @@ try {
             created.length === 0,
             'agent created an automation without confirming schedule and destination'
         );
+    });
+
+    await scenario('script watchdog: agent reaches for zero-cost script mode', async () => {
+        const flagPath = path.join(tmpdir(), `tavern-eval-watchdog-${stamp}.flag`);
+        await rm(flagPath, { force: true });
+        const before = await listCronJobIds();
+        const chatId = await createChat(`Prompt eval watchdog ${stamp}`, [alpha.id]);
+        await send(
+            chatId,
+            `${mention(alpha)} yes, confirmed — no need to double-check with me: create an automation in this chat, running every 10 minutes, that checks whether the file ${flagPath} exists. When the file is missing nothing should be posted here; when it exists, alert this chat. Set it up so the checks that find nothing cost nothing.`
+        );
+        const jobId = await pollNewCronJob(before, 180_000);
+        strayCronJobIds.push(jobId);
+        const job = (await trpc('cron.get', { jobId }))?.job;
+        assert(
+            job?.payload?.kind === 'script',
+            `expected a script automation, got payload kind "${job?.payload?.kind}"`
+        );
+
+        // Quiet tick: the flag file is absent, so the run must record quiet
+        // and deliver nothing.
+        await trpc('cron.run', { jobId, mode: 'force' });
+        const quietRun = await pollFinishedRun(jobId, null, 120_000);
+        assert(
+            quietRun.status === 'success' && quietRun.quiet === true,
+            `expected a quiet run, got status=${quietRun.status} quiet=${quietRun.quiet} stderr=${quietRun.scriptStderr ?? ''}`
+        );
+
+        // Alert: the flag file exists, so stdout must escalate into the chat
+        // and dispatch a real agent turn.
+        await writeFile(flagPath, 'eval flag');
+        try {
+            await trpc('cron.run', { jobId, mode: 'force' });
+            const alertRun = await pollFinishedRun(jobId, quietRun.id, 240_000);
+            // turnId proves the stdout alert was delivered into the chat and
+            // dispatched a real agent turn; the agent may still answer the
+            // alert with NO_REPLY, so no reply assertion here.
+            assert(
+                alertRun.status === 'success' && alertRun.quiet === false && alertRun.turnId,
+                `expected an alerting run with a turn, got status=${alertRun.status} quiet=${alertRun.quiet} turnId=${alertRun.turnId}`
+            );
+        } finally {
+            await rm(flagPath, { force: true });
+        }
     });
 
     await scenario('bio awareness: roster bio answers who a co-agent is', async () => {
@@ -446,6 +493,33 @@ async function createDmChat(agent, title) {
 async function listCronJobIds() {
     const data = await trpc('cron.list');
     return (data?.jobs ?? []).map((job) => job.id);
+}
+
+async function pollNewCronJob(beforeIds, timeoutMs) {
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+        const created = (await listCronJobIds()).filter((id) => !beforeIds.includes(id));
+        if (created.length > 0) {
+            return created[0];
+        }
+        await sleep(2000);
+    }
+    throw new Error('agent never created the watchdog automation');
+}
+
+async function pollFinishedRun(jobId, excludeRunId, timeoutMs) {
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+        const data = await trpc('cron.runs', { jobId });
+        const run = (data?.runs ?? []).find(
+            (candidate) => candidate.finishedAt && candidate.id !== excludeRunId
+        );
+        if (run) {
+            return run;
+        }
+        await sleep(2000);
+    }
+    throw new Error(`no finished run appeared for ${jobId}`);
 }
 
 function mention(agent) {
