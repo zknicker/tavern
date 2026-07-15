@@ -303,7 +303,7 @@ describe('harness agent executor', () => {
         }
     });
 
-    it('does not replay prior DM transcript messages into the harness prompt', async () => {
+    it('does not replay seen DM rows, but catches up unseen ones', async () => {
         seedPromptChat({ chatId: 'cht_dm', kind: 'dm' });
         createPromptMessage('cht_dm', {
             authorId: 'usr_alice',
@@ -319,10 +319,21 @@ describe('harness agent executor', () => {
         });
         createPromptMessage('cht_dm', {
             authorId: 'usr_alice',
+            content: 'missed dm question',
+            id: 'msg_dm_missed',
+            role: 'user',
+        });
+        createPromptMessage('cht_dm', {
+            authorId: 'usr_alice',
             content: 'current dm question',
             id: 'msg_dm_current',
             role: 'user',
         });
+        // The continuing session has seen the first exchange (seq 1-2); the
+        // missed row (seq 3, e.g. its turn failed before the cursor advance)
+        // must ride catch-up — DMs get the same window as channels
+        // (specs/sessions.md seen ledger).
+        advanceSeenCursor({ chatId: 'cht_dm', seq: 2, sessionId: 'ags_agt_primary_1' });
 
         const prompt = await harnessPrompt(
             executorInput(
@@ -337,6 +348,8 @@ describe('harness agent executor', () => {
 
         expect(prompt).not.toContain('older dm question');
         expect(prompt).not.toContain('older dm answer');
+        expect(prompt).toContain('Messages in this chat since your last turn:');
+        expect(prompt).toContain('missed dm question');
         expect(prompt.match(/current dm question/g)).toHaveLength(1);
     });
 

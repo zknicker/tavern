@@ -3,7 +3,8 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { closeDb, initTestDb } from '../db/connection.ts';
 import { ensureRuntimeSchema } from '../db/schema.ts';
 import { createTavernChatActionTools } from './chat-actions-tools.ts';
-import { createChat, listMessages } from './chat-api/index.ts';
+import { createChat, createMessage, listMessages } from './chat-api/index.ts';
+import { readSeenCursor } from './seen-ledger.ts';
 
 describe('chat action tools', () => {
     beforeEach(() => {
@@ -73,6 +74,61 @@ describe('chat action tools', () => {
             error: 'That chat is archived.',
         });
         expect(listMessages('cht_general', { limit: 10 }).messages).toHaveLength(0);
+    });
+
+    it('holds a send into a stale chat once, embedding the unseen rows', async () => {
+        seedChats();
+        const tools = actionTools();
+        createMessage('cht_general', {
+            author_id: 'usr_tavern',
+            content: 'Vendor call moved to 3pm.',
+            id: 'msg_unseen_1',
+            role: 'user',
+        });
+        createMessage('cht_general', {
+            author_id: 'agt_wren',
+            content: 'Noted, updating the calendar.',
+            id: 'msg_unseen_2',
+            role: 'assistant',
+        });
+
+        // First send is held with the unseen rows embedded; embedding
+        // advances the ledger (specs/sessions.md action gating).
+        const held = await runTool(tools.chat_send, {
+            chatId: 'cht_general',
+            message: 'Weekly summary.',
+        });
+        expect(held).toMatchObject({ held: true });
+        const unseen = (held as { unseen: string[] }).unseen.join('\n');
+        expect(unseen).toContain('Vendor call moved to 3pm.');
+        expect(unseen).toContain('Noted, updating the calendar.');
+        expect(listMessages('cht_general', { limit: 10 }).messages).toHaveLength(2);
+        expect(readSeenCursor('ags_agt_otto_1', 'cht_general')).toBe(2);
+
+        // The retry sends: a hold cannot loop.
+        const retried = await runTool(tools.chat_send, {
+            chatId: 'cht_general',
+            message: 'Weekly summary.',
+        });
+        expect(retried).toMatchObject({ chatId: 'cht_general', sent: true });
+        expect(listMessages('cht_general', { limit: 10 }).messages).toHaveLength(3);
+    });
+
+    it("never holds on the agent's own rows", async () => {
+        seedChats();
+        const tools = actionTools();
+        createMessage('cht_general', {
+            author_id: 'agt_otto',
+            content: 'my own earlier post',
+            id: 'msg_self',
+            role: 'assistant',
+        });
+
+        const result = await runTool(tools.chat_send, {
+            chatId: 'cht_general',
+            message: 'follow-up',
+        });
+        expect(result).toMatchObject({ sent: true });
     });
 });
 

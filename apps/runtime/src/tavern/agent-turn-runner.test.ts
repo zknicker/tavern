@@ -10,6 +10,7 @@ import {
     setAgentExecutorForTesting,
     waitForAgentTurnSettlement,
 } from './agent-turn-runner';
+import { claimNextAgentTurnForAgent, createAgentTurn } from './agent-turn-store';
 import { getStoredAgent, upsertStoredAgent } from './agents-store';
 import { createChat, createMessage, upsertResponse } from './chat-api';
 
@@ -68,6 +69,70 @@ describe('Tavern Runtime agent turn runner', () => {
             resumeState: { harness: 'state-from-turn-1' },
             runtimeSessionId: 'ses_engine_1',
         });
+    });
+
+    it('claims the oldest queued turn across chats, one at a time (auto-drain order)', () => {
+        upsertStoredAgent({
+            agent: {
+                enabledSkillIds: [],
+                id: 'agt_drain',
+                isAdmin: false,
+                name: 'Drain',
+                primaryColor: null,
+                workspaceFolder: '/tmp/agt_drain',
+            },
+        });
+        const session = ensureCurrentAgentSession({ agentId: 'agt_drain' });
+        for (const chatId of ['cht_drain_a', 'cht_drain_b']) {
+            createChat({
+                id: chatId,
+                kind: 'channel',
+                participants: [
+                    { id: 'usr_tavern', kind: 'user', label: 'You', metadata: {} },
+                    {
+                        id: 'agt_drain',
+                        kind: 'agent',
+                        label: 'Drain',
+                        metadata: { agentId: 'agt_drain' },
+                    },
+                ],
+                title: chatId,
+            });
+        }
+        const seed = (runId: string, chatId: string) => {
+            createMessage(chatId, {
+                author_id: 'usr_tavern',
+                content: `work ${runId}`,
+                id: `msg_${runId}`,
+                role: 'user',
+            });
+            upsertResponse(chatId, {
+                id: `rsp_${runId}`,
+                participant_id: 'agt_drain',
+                request_message_id: `msg_${runId}`,
+                status: 'queued',
+            });
+            createAgentTurn({
+                agentId: 'agt_drain',
+                agentParticipantId: 'agt_drain',
+                agentSessionId: session.id,
+                chatId,
+                id: runId,
+                responseId: `rsp_${runId}`,
+                triggerMessageId: `msg_${runId}`,
+            });
+        };
+        // Enqueued in b, a, b order: the claim must walk strictly oldest
+        // first across chats — no chat priority, no preemption
+        // (specs/sessions.md attention).
+        seed('run_1', 'cht_drain_b');
+        seed('run_2', 'cht_drain_a');
+        seed('run_3', 'cht_drain_b');
+
+        const first = claimNextAgentTurnForAgent({ agentId: 'agt_drain' });
+        expect(first?.id).toBe('run_1');
+        // One turn at a time: nothing else claims while run_1 runs.
+        expect(claimNextAgentTurnForAgent({ agentId: 'agt_drain' })).toBeNull();
     });
 });
 

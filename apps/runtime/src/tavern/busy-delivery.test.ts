@@ -84,6 +84,56 @@ describe('busy delivery', () => {
         expect(readSeenCursor('ags_agt_wren_1', 'cht_general')).toBeLessThan(second.sequence);
     });
 
+    it('reaches a turn running in another chat and names the source chat', async () => {
+        seedSideChat();
+        seedRunningTurn('agt_wren', 'run_wren');
+        const message = seedSideChatMessage('msg_side_1', 'side news one');
+
+        const delivered = await deliverToBusySeats('cht_side', message);
+
+        expect(delivered).toEqual(['run_wren']);
+        expect(deliveries[0]?.text).toContain('"Side" (chatId: cht_side)');
+        expect(deliveries[0]?.text).toContain('side news one');
+        // Cross-chat rows are model-visible too: the side chat's cursor
+        // advances on the same session (specs/sessions.md).
+        expect(readSeenCursor('ags_agt_wren_1', 'cht_side')).toBe(message.sequence);
+    });
+
+    it('dedupes per chat, not per bare sequence number', async () => {
+        seedSideChat();
+        seedRunningTurn('agt_wren', 'run_wren');
+        seedSideChatMessage('msg_side_pad', 'pad');
+        const inGeneral = seedUserMessage('msg_here', 'general news');
+        const inSide = seedSideChatMessage('msg_side_dup', 'side news');
+        // Same per-chat sequence number in two different chats: sequences
+        // are per-chat counters, so both must deliver.
+        expect(inSide.sequence).toBe(inGeneral.sequence);
+
+        await deliverToBusySeats('cht_general', inGeneral);
+        await deliverToBusySeats('cht_side', inSide);
+
+        expect(deliveries).toHaveLength(2);
+    });
+
+    it('holds the cursor when an earlier row was never delivered', async () => {
+        seedSideChat();
+        seedRunningTurn('agt_wren', 'run_wren');
+        const missed = seedSideChatMessage('msg_side_missed', 'missed row');
+        const later = seedSideChatMessage('msg_side_later', 'later row');
+
+        // Only the later row is delivered; the missed one must still ride
+        // the next prompt, so the ledger may not jump past it.
+        const delivered = await deliverToBusySeats('cht_side', later);
+
+        expect(delivered).toEqual(['run_wren']);
+        expect(readSeenCursor('ags_agt_wren_1', 'cht_side')).toBe(0);
+
+        // Delivering the gap row afterwards proves the full range and the
+        // cursor catches up to it.
+        await deliverToBusySeats('cht_side', missed);
+        expect(readSeenCursor('ags_agt_wren_1', 'cht_side')).toBe(missed.sequence);
+    });
+
     it('installs on the chat-api event bus for creates and deliveries', async () => {
         seedRunningTurn('agt_wren', 'run_wren');
         const unsubscribe = installBusyDelivery();
@@ -101,6 +151,32 @@ describe('busy delivery', () => {
             unsubscribe();
         }
     });
+
+    function seedSideChat() {
+        createChat({
+            id: 'cht_side',
+            kind: 'channel',
+            participants: [
+                { id: 'usr_tavern', kind: 'user', label: 'You', metadata: {} },
+                { id: 'agt_wren', kind: 'agent', label: 'Wren', metadata: { agentId: 'agt_wren' } },
+            ],
+            title: 'Side',
+        });
+    }
+
+    function seedSideChatMessage(id: string, content: string) {
+        createMessage('cht_side', {
+            author_id: 'usr_tavern',
+            content,
+            id,
+            role: 'user',
+        });
+        const message = getMessage(id);
+        if (!message) {
+            throw new Error('seed message missing');
+        }
+        return message;
+    }
 
     function seedUserMessage(id: string, content: string) {
         createMessage('cht_general', {

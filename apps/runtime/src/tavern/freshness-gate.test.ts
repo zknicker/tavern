@@ -23,6 +23,7 @@ import {
     createHarnessAgentExecutor,
     setHarnessAgentFactoryForTesting,
 } from './harness-agent-executor.ts';
+import { readSeenCursor } from './seen-ledger.ts';
 
 const now = '2026-06-29T12:00:00.000Z';
 
@@ -48,6 +49,10 @@ describe('freshness gate', () => {
 
             expect(hold).not.toBeNull();
             expect(hold?.unseen.map((message) => message.id)).toEqual(['msg_peer']);
+            // The hold envelope makes the rows model-visible: the ledger
+            // advances to the last embedded row (specs/sessions.md), so the
+            // continuation cannot be held again for the same rows.
+            expect(readSeenCursor('ags_agt_primary_1', 'cht_gate')).toBe(2);
             expect(hold?.prompt).toContain('held for freshness');
             expect(hold?.prompt).toContain('Bob already answered.');
             expect(hold?.prompt).toContain('Draft.');
