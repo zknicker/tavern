@@ -57,16 +57,18 @@ export function AgentBusyElsewhereHint({
         return null;
     }
 
+    // Mirror the composer's gutters and centered column (PromptInput's
+    // form px-6 lg:px-16 + max-w-[60rem]) so the hint sits flush with the
+    // prompt bar's left edge.
     return (
-        <div
-            className="flex items-center gap-1.5 px-3 pb-1.5 text-muted-foreground text-xs"
-            data-slot="agent-busy-elsewhere"
-        >
-            <Icon aria-hidden="true" className="size-3.5 shrink-0" icon={Clock} />
-            <span className="min-w-0 truncate">
-                {agentName} is busy{formatWhere(busyElsewhere)} — your message is queued and answers
-                next
-            </span>
+        <div className="px-6 lg:px-16" data-slot="agent-busy-elsewhere">
+            <div className="mx-auto flex w-full max-w-[60rem] items-center gap-1.5 px-1 pb-1.5 text-muted-foreground text-xs">
+                <Icon aria-hidden="true" className="size-3.5 shrink-0" icon={Clock} />
+                <span className="min-w-0 truncate">
+                    {agentName} is busy{formatWhere(busyElsewhere)} — your message is queued and
+                    answers next
+                </span>
+            </div>
         </div>
     );
 }
