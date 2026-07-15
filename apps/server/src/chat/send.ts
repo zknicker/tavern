@@ -143,7 +143,7 @@ export async function sendTavernChatMessage(
     });
 }
 
-function resolveTargetAgentIds(input: {
+export function resolveTargetAgentIds(input: {
     chat: NonNullable<Awaited<ReturnType<typeof getRuntimeChatRecord>>>['chat'];
     content: string;
     requestedAgentId?: string;
@@ -188,7 +188,10 @@ function resolveTargetAgentIds(input: {
         }
     }
 
-    return mentionedAgentIds;
+    // Default-evaluate addressing (specs/addressing.md): every agent seat
+    // evaluates every channel message; mentions set who is expected to
+    // answer, never who gets a turn.
+    return [...chatAgentIds];
 }
 
 function isGeneratedTavernAgentChat(metadata: Record<string, unknown>) {
