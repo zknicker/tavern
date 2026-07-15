@@ -53,6 +53,10 @@ projection.
 - `turn.completed` states whether the turn delivered a reply (`hasReply`). A silent completion
   (`hasReply: false`) removes the seat's live reply immediately — no durable message will ever
   arrive to settle it, so holding it for the in-place swap would strand the status row.
+- The latest `chat.log.list` page also states which of its runs have settled (`settledRunIds`).
+  A client that missed the live completion clears its retained reply from this signal on the
+  next refetch; absence from the page is never settlement, since an optimistic run can be ahead
+  of the server.
 - Two agents answering concurrently produce posts ordered by who spoke first, regardless of
   which turn started first or finished first.
 

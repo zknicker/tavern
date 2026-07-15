@@ -18,6 +18,7 @@ export interface RuntimeChatTimelinePage {
     failedTurns: ChatLogPage['failedTurns'];
     nextBeforeSequence: number | null;
     rows: ChatLogPage['rows'];
+    settledRunIds: ChatLogPage['settledRunIds'];
     totalMessages: number;
 }
 
@@ -71,10 +72,11 @@ export async function getRuntimeChatTimelinePage(
     const artifactRows = artifacts.map(artifactToChatRow);
     const turnStatusRows = responses.flatMap(cancelledResponseToChatRow);
     const rows = [...messageRows, ...activityRows, ...artifactRows, ...turnStatusRows];
-    // Active and failed turn states describe the newest history; the latest
-    // page is the only one whose responses can carry them.
+    // Active, failed, and settled turn states describe the newest history;
+    // the latest page is the only one whose responses can carry them.
     const activeReplies = isLatestPage ? activeRepliesFromResponses(responses) : [];
     const failedTurns = isLatestPage ? failedTurnsFromResponses(responses) : [];
+    const settledRunIds = isLatestPage ? settledRunIdsFromResponses(responses) : [];
     const sortedRows = rows.sort((left, right) => {
         const timestampDelta = rowTimestamp(left) - rowTimestamp(right);
 
@@ -86,6 +88,7 @@ export async function getRuntimeChatTimelinePage(
         failedTurns,
         nextBeforeSequence: page.next_before_sequence,
         rows: sortedRows,
+        settledRunIds,
         totalMessages: page.total_messages,
     };
 }
@@ -727,6 +730,26 @@ export function failedTurnsFromResponses(
             },
         }))
         .sort((left, right) => Date.parse(left.turn.startedAt) - Date.parse(right.turn.startedAt));
+}
+
+// Runs whose responses reached a terminal status. Clients retain a live
+// reply they saw start until something terminal shows up for it; a silent
+// turn leaves no durable reply or failure to match, so the page states
+// settlement directly. Responses without runtime run identity (session
+// resets, command evidence) are not turns and carry no signal.
+export function settledRunIdsFromResponses(responses: readonly TavernChatResponse[]): string[] {
+    return responses.flatMap((response) => {
+        if (
+            response.status !== 'completed' &&
+            response.status !== 'cancelled' &&
+            response.status !== 'failed'
+        ) {
+            return [];
+        }
+
+        const runId = runtimeMetadataString(response, 'runId');
+        return runId ? [runId] : [];
+    });
 }
 
 function responseSessionKey(response: TavernChatResponse) {

@@ -89,6 +89,39 @@ test('applyLogSnapshot clears the active reply when the assistant message lands'
     expect(next.timeline).toHaveLength(1);
 });
 
+test('applyLogSnapshot drops a retained reply for a run the server states settled', () => {
+    // A silent turn whose live completion event this client missed: no
+    // durable reply or failure row will ever land, so the page's settlement
+    // signal is the only thing that can retire the indicator.
+    const state = startTimelineTurn(emptyTimelineState(), turn);
+    const next = applyLogSnapshot(state, {
+        limit: 100,
+        nextBeforeSequence: null,
+        rows: [],
+        settledRunIds: ['run-1'],
+        totalMessages: 0,
+    });
+
+    expect(next.activeReplies).toEqual([]);
+    expect(next.activeTurns).toEqual([]);
+});
+
+test('applyLogSnapshot keeps a live reply the snapshot merely does not know yet', () => {
+    // Absence is not settlement: an optimistic run can be ahead of the
+    // server, so only the positive settled signal may drop a retained reply.
+    const state = startTimelineTurn(emptyTimelineState(), turn);
+    const next = applyLogSnapshot(state, {
+        limit: 100,
+        nextBeforeSequence: null,
+        rows: [],
+        settledRunIds: [],
+        totalMessages: 0,
+    });
+
+    expect(next.activeReplies).toHaveLength(1);
+    expect(next.activeReplies[0]?.runId).toBe('run-1');
+});
+
 test('clearTimelineTurn clears a matching active turn after active reply is gone', () => {
     const state = {
         ...emptyTimelineState(),

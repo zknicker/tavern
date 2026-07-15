@@ -4,8 +4,8 @@ const sessionRailMaxGapMs = 5 * 60 * 1000;
 
 type ChatLogRow = NonNullable<ChatLogOutput>['rows'][number];
 type ChatLogPage = NonNullable<ChatLogOutput>;
-type ChatLogInput = Omit<ChatLogPage, 'activeReplies' | 'failedTurns'> &
-    Partial<Pick<ChatLogPage, 'activeReplies' | 'failedTurns'>>;
+type ChatLogInput = Omit<ChatLogPage, 'activeReplies' | 'failedTurns' | 'settledRunIds'> &
+    Partial<Pick<ChatLogPage, 'activeReplies' | 'failedTurns' | 'settledRunIds'>>;
 type ChatMessageRow = Extract<ChatLogRow, { kind: 'message' }>;
 
 const localTimelineMessageMetadataKey = '__tavernLocalTimelineMessage';
@@ -146,6 +146,7 @@ function createEmptyLog(limit: number): ChatLogPage {
         limit,
         nextBeforeSequence: null,
         rows: [],
+        settledRunIds: [],
         totalMessages: 0,
     };
 }
@@ -251,6 +252,7 @@ function normalizeChatLog(log: ChatLogInput): ChatLogPage {
         limit: log.limit,
         nextBeforeSequence: log.nextBeforeSequence,
         rows: log.rows,
+        settledRunIds: log.settledRunIds ?? [],
         totalMessages: log.totalMessages,
     };
 }

@@ -295,6 +295,10 @@ export const chatLogPageSchema = z.object({
     // Cursor for the next older turn-aligned page; null at history start.
     nextBeforeSequence: z.number().int().positive().nullable(),
     rows: z.array(chatLogRowSchema),
+    // Runs on this page whose responses have settled. A silent turn leaves
+    // no durable reply or failure row to match, so a client that missed the
+    // live completion clears its retained reply from this signal instead.
+    settledRunIds: z.array(z.string().trim().min(1)),
     totalMessages: z.number().int().nonnegative(),
 });
 

@@ -86,6 +86,7 @@ function chatLogPage(nextBeforeSequence: number | null, ids: string[]): ChatLogP
         limit: 2,
         nextBeforeSequence,
         rows: ids.map(messageRow),
+        settledRunIds: [],
         totalMessages: 4,
     };
 }

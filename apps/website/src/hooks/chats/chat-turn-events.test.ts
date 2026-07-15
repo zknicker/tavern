@@ -213,6 +213,7 @@ test('turn progress maintains the post and keeps evidence out of the chat log', 
         limit: 100,
         nextBeforeSequence: null,
         rows: [],
+        settledRunIds: [],
         totalMessages: 0,
     };
     const handlers = createHandlers({
@@ -277,6 +278,7 @@ test('turn progress preserves clarification prompt data in live chat rows', asyn
         limit: 100,
         nextBeforeSequence: null,
         rows: [],
+        settledRunIds: [],
         totalMessages: 0,
     };
     const handlers = createHandlers({

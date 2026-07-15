@@ -23,8 +23,8 @@ import type {
 } from './chat-timeline-types.ts';
 
 type ChatLogPage = NonNullable<ChatLogOutput>;
-type ChatLogInput = Omit<ChatLogPage, 'activeReplies' | 'failedTurns'> &
-    Partial<Pick<ChatLogPage, 'activeReplies' | 'failedTurns'>>;
+type ChatLogInput = Omit<ChatLogPage, 'activeReplies' | 'failedTurns' | 'settledRunIds'> &
+    Partial<Pick<ChatLogPage, 'activeReplies' | 'failedTurns' | 'settledRunIds'>>;
 
 export function emptyTimelineState(): ChatTimelineState {
     return {
@@ -47,7 +47,11 @@ export function applyLogSnapshot(
     }
 
     const snapshot = normalizeChatLog(log);
+    // Server-stated settlement covers runs with no terminal row to match —
+    // a silent turn whose live completion event this client missed.
+    const settledRunIds = new Set(snapshot.settledRunIds);
     const isTerminalRun = (runId: string) =>
+        settledRunIds.has(runId) ||
         hasTurnStatusRow(snapshot.rows, runId) ||
         snapshot.failedTurns.some((failure) => failure.turn.runId === runId);
     const survivingReplies = state.activeReplies.filter(
@@ -189,6 +193,7 @@ function normalizeChatLog(log: ChatLogInput): ChatLogPage {
         limit: log.limit,
         nextBeforeSequence: log.nextBeforeSequence,
         rows: log.rows,
+        settledRunIds: log.settledRunIds ?? [],
         totalMessages: log.totalMessages,
     };
 }

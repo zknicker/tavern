@@ -51,6 +51,7 @@ function timelineLog(state: ChatTimelineState): ChatLogOutput {
         limit: Math.max(state.timeline.length + 1, 100),
         nextBeforeSequence: null,
         rows: state.timeline,
+        settledRunIds: [],
         totalMessages: state.totalMessages,
     };
 }

@@ -7,6 +7,7 @@ import {
     failedTurnsFromResponses,
     isTimelineActivityRow,
     mapResponseIdsByMessageId,
+    settledRunIdsFromResponses,
     visibleTimelineSources,
 } from './runtime-chat-api.ts';
 
@@ -309,6 +310,40 @@ function message(input: { id: string }): TavernChatMessage {
         thread_root_id: null,
     } as TavernChatMessage;
 }
+
+test('settled run ids cover terminal responses with run identity only', () => {
+    const silentCompleted = response({
+        id: 'rsp_silent',
+        metadata: { runtime: { runId: 'run-silent' } },
+        status: 'completed',
+        updatedAt: '2026-06-08T12:00:01.000Z',
+    });
+    const running = response({
+        id: 'rsp_running',
+        metadata: { runtime: { runId: 'run-live' } },
+        status: 'running',
+        updatedAt: '2026-06-08T12:00:02.000Z',
+    });
+    const cancelled = response({
+        id: 'rsp_cancelled',
+        metadata: { runtime: { runId: 'run-cancelled' } },
+        status: 'cancelled',
+        updatedAt: '2026-06-08T12:00:03.000Z',
+    });
+    // Session resets and other non-turn evidence carry no run identity and
+    // must not leak into the settlement signal.
+    const sessionReset = response({
+        id: 'rsp_session_reset',
+        metadata: { runtime: { source: 'session-reset' } },
+        status: 'completed',
+        updatedAt: '2026-06-08T12:00:04.000Z',
+    });
+
+    assert.deepEqual(
+        settledRunIdsFromResponses([silentCompleted, running, cancelled, sessionReset]),
+        ['run-silent', 'run-cancelled']
+    );
+});
 
 function response(input: {
     id: string;

@@ -3,8 +3,8 @@ import type { ChatTurn, ChatTurnProgressStep } from './chat-timeline-state.ts';
 
 type ChatLogRow = NonNullable<ChatLogOutput>['rows'][number];
 type ChatLogPage = NonNullable<ChatLogOutput>;
-type ChatLogInput = Omit<ChatLogPage, 'activeReplies' | 'failedTurns'> &
-    Partial<Pick<ChatLogPage, 'activeReplies' | 'failedTurns'>>;
+type ChatLogInput = Omit<ChatLogPage, 'activeReplies' | 'failedTurns' | 'settledRunIds'> &
+    Partial<Pick<ChatLogPage, 'activeReplies' | 'failedTurns' | 'settledRunIds'>>;
 type MessageRow = Extract<ChatLogRow, { kind: 'message' }>;
 type ToolRow = Extract<ChatLogRow, { kind: 'tool' }>;
 type ThinkingRow = Extract<ChatLogRow, { kind: 'system'; systemKind: 'thinking' }>;
@@ -252,6 +252,7 @@ function normalizeChatLog(log: ChatLogInput): ChatLogPage {
         limit: log.limit,
         nextBeforeSequence: log.nextBeforeSequence,
         rows: log.rows,
+        settledRunIds: log.settledRunIds ?? [],
         totalMessages: log.totalMessages,
     };
 }

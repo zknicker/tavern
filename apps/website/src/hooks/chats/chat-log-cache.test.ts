@@ -22,6 +22,7 @@ function emptyLog(): ChatLogOutput {
         limit: 100,
         nextBeforeSequence: null,
         rows: [],
+        settledRunIds: [],
         totalMessages: 0,
     };
 }

@@ -196,6 +196,7 @@ export function buildDraftHandoffLog(
         limit: Math.max(handoffState.timeline.length, draftTimelineLimit),
         nextBeforeSequence: null,
         rows: handoffState.timeline,
+        settledRunIds: [],
         totalMessages: handoffState.totalMessages,
     };
 }

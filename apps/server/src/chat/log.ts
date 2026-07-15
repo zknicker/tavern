@@ -17,6 +17,7 @@ export async function getChatLogPage(input: { cursor?: ChatLogCursor; id: string
             limit: input.limit,
             nextBeforeSequence: null,
             rows: [],
+            settledRunIds: [],
             totalMessages: 0,
         });
     }
@@ -27,6 +28,7 @@ export async function getChatLogPage(input: { cursor?: ChatLogCursor; id: string
         limit: input.limit,
         nextBeforeSequence: page.nextBeforeSequence,
         rows: page.rows,
+        settledRunIds: page.settledRunIds,
         totalMessages: page.totalMessages,
     });
 }
