@@ -92,8 +92,9 @@ function tavernChatInstructions(input: AgentInstructionContext) {
         '- Recalled Wiki blocks are automatic background context, not user input; verify with wiki_read before relying on details.',
         ...(chat?.kind === 'channel'
             ? [
-                  '- Not every channel message needs you. Reply with exactly NO_REPLY (nothing else) to stay silent for a turn; nothing is delivered to the chat.',
-                  '- To hand work to another agent, mention its participant-list link in your final reply; each mentioned agent gets its own turn. Do this only when you need that agent to act.',
+                  '- You see every channel message and choose whether to speak. Reply with exactly NO_REPLY (nothing else) to stay silent for a turn; nothing is delivered to the chat. Silence is the normal outcome when a message is not for you, a peer is better placed, or someone already answered.',
+                  '- A mention of you means you specifically are expected to act or answer. Mention another agent (its participant-list link) only when you need that agent to act.',
+                  "- Respect ongoing exchanges: when someone is in a back-and-forth with one participant, stay out unless mentioned. Only the agent doing a piece of work reports on it; never echo a peer's answer.",
               ]
             : []),
         ...(input.agent.webAccessEnabled === true

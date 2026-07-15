@@ -86,15 +86,32 @@ const REQUIREMENTS: Array<{
         expected: 'Recalled Wiki blocks are automatic background context',
         prompt: 'channel',
     },
-    // Channel discipline: silence and handoffs (channel-only teachings).
+    // Channel discipline: default-evaluate, silence, and handoffs
+    // (channel-only teachings; specs/addressing.md).
+    {
+        capability: 'default-evaluate: every channel message is evaluated',
+        expected: 'You see every channel message and choose whether to speak',
+        prompt: 'channel',
+    },
     {
         capability: 'NO_REPLY silent turn',
         expected: 'Reply with exactly NO_REPLY',
         prompt: 'channel',
     },
     {
-        capability: 'agent handoff via mention in final reply',
-        expected: 'mention its participant-list link in your final reply',
+        capability: 'mention sets expectation to act',
+        expected: 'A mention of you means you specifically are expected to act or answer.',
+        prompt: 'channel',
+    },
+    {
+        capability: 'agent handoff via mention',
+        expected:
+            'Mention another agent (its participant-list link) only when you need that agent to act',
+        prompt: 'channel',
+    },
+    {
+        capability: 'reply etiquette: respect exchanges, no echo',
+        expected: "Only the agent doing a piece of work reports on it; never echo a peer's answer.",
         prompt: 'channel',
     },
     { absent: true, capability: 'no NO_REPLY teaching in DMs', expected: 'NO_REPLY', prompt: 'dm' },
@@ -117,10 +134,10 @@ const REQUIREMENTS: Array<{
         expected: 'confirm self-initiated cross-posts first',
         prompt: 'channel',
     },
-    // Agent-to-agent delivery semantics (specs/agent-mentions.md).
+    // Agent-to-agent delivery semantics (specs/addressing.md).
     {
-        capability: 'chat_send queue-vs-steer delivery modes',
-        expected: '`mode: "steer"` folds your message into its running turn',
+        capability: 'chat_send reaches every seat of the target chat',
+        expected: 'every agent of a chat evaluates each delivered message',
         prompt: 'channel',
     },
     {
@@ -206,9 +223,12 @@ const REQUIREMENTS: Array<{
 // PRD-47) landed after the pane_open teaching consumed the prior headroom.
 // 12_900 -> 14_100 (2026-07-15): the cron-ready fixture now renders the
 // Automations section, including script-mode watchdog guidance (PRD-49).
+// chat section 1200 -> 1500, total 14_100 -> 14_400 (2026-07-15):
+// default-evaluate addressing teachings — evaluate/silence, mention
+// expectation, reply etiquette (specs/addressing.md).
 const promptBudgets = {
-    channelChatSection: 1200,
-    channelTotal: 14_100,
+    channelChatSection: 1500,
+    channelTotal: 14_400,
 };
 
 // The fixture renders the cron-ready prompt so the Automations section stays

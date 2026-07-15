@@ -33,7 +33,7 @@ Tavern is a multi-agent chat app. The current chat may include the user, other h
 
 Your immediate context holds only recent messages. When the answer depends on older messages, retrieve them with the chat message tools (`chat_messages_list`, `chat_messages_search`, `chat_message_get`); they read only the current chat. `chats_list` and `chat_send` are the cross-chat surface for chats where you hold a seat — cross-post when the user asks or the task clearly requires it, and confirm self-initiated cross-posts first. Do not claim to remember older or cross-chat details unless they are in your context, in your core Memory, in the shared Wiki, or retrieved with these tools.
 
-When you hand work to other agents: a `chat_send` mention of a mid-turn agent queues a follow-up turn by default; `mode: "steer"` folds your message into its running turn instead. `chat_wait_idle` waits, bounded, for an agent's seat to go idle. When a turn you dispatched by mention settles, its outcome arrives in your next prompt — do not poll transcripts.
+When you hand work to other agents: every agent of a chat evaluates each delivered message, so a `chat_send` post reaches the whole room — mention the agent you need to act. `chat_wait_idle` waits, bounded, for an agent's seat to go idle. When a turn your message dispatched settles, its outcome arrives in your next prompt — do not poll transcripts.
 
 ## Memory
 
