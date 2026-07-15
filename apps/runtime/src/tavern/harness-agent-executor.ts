@@ -53,6 +53,7 @@ import {
 } from './chat-api/index.ts';
 import { createTavernChatTools } from './chat-context-tools.ts';
 import { createTavernChatWaitTools } from './chat-wait-idle-tool.ts';
+import { recordFreshnessHoldNotice, resolveFreshnessHold } from './freshness-gate.ts';
 import { withRuntimeBridgeBootstrap } from './harness-bridge-bootstrap.ts';
 import { harnessPrompt, promptCursorSequence } from './harness-prompt.ts';
 import {
@@ -171,24 +172,44 @@ async function executeHarnessTurn(
         }
         activeTurn.session = session;
 
+        const streamTarget = {
+            authorId: input.agentSession.agentParticipantId,
+            chatId: input.chatId,
+            model: input.agentSession.effectiveModel,
+            responseId: input.responseId,
+            runId: input.runId,
+            runtime,
+        };
         const turn = await agent.stream({
             abortSignal,
             prompt,
             session,
         });
-        turnStream = await persistHarnessTurnStream(
-            {
-                authorId: input.agentSession.agentParticipantId,
-                chatId: input.chatId,
-                model: input.agentSession.effectiveModel,
-                responseId: input.responseId,
-                runId: input.runId,
-                runtime,
-            },
-            turn.fullStream
-        );
+        turnStream = await persistHarnessTurnStream(streamTarget, turn.fullStream);
         if (!turnStream.finalText) {
             fallbackText = (await turn.text).trim();
+        }
+        // Freshness gate (specs/steering.md): hold a stale channel reply
+        // once, show the rows that landed mid-turn, and let the agent
+        // deliver, revise, or decline before anything durable ships.
+        const draft = turnStream.finalText || fallbackText;
+        const hold =
+            draft && draft !== silentReplyToken ? resolveFreshnessHold(input, draft) : null;
+        if (hold) {
+            recordFreshnessHoldNotice(input, hold);
+            const heldTurn = await agent.stream({
+                abortSignal,
+                prompt: hold.prompt,
+                session,
+            });
+            const heldStream = await persistHarnessTurnStream(streamTarget, heldTurn.fullStream);
+            const revised = heldStream.finalText || (await heldTurn.text).trim();
+            turnStream = {
+                activityIds: [...turnStream.activityIds, ...heldStream.activityIds],
+                contextTokens: heldStream.contextTokens ?? turnStream.contextTokens,
+                finalText: revised || draft,
+            };
+            fallbackText = '';
         }
         const resumeState = await session.stop();
         activeTurn.session = undefined;
