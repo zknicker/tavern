@@ -1,4 +1,5 @@
 import {
+    agentRuntimeAgentPresenceListSchema,
     agentRuntimeCurrentAgentSessionResultSchema,
     agentRuntimeMacAppListSchema,
     agentRuntimeMutationHeaders,
@@ -40,6 +41,7 @@ import { handleTimezoneSettingsRequest } from '../timezone-settings.ts';
 import { handleWikiRequest } from '../wiki/routes.ts';
 import { handleWorkspaceRequest } from '../workspace/routes.ts';
 import { agentSessionInstructionsFresh } from './agent-instructions.ts';
+import { listAgentPresence } from './agent-presence.ts';
 import { resetAgentSession } from './agent-session-reset.ts';
 import { readAgentSessionStats, readPastAgentSessionSummaries } from './agent-session-stats.ts';
 import { readCurrentAgentSession } from './agent-session-store.ts';
@@ -242,6 +244,10 @@ export async function handleTavernRuntimeRequest(request: Request): Promise<Resp
     }
 
     const segments = url.pathname.split('/').filter(Boolean).map(decodeURIComponent);
+
+    if (request.method === 'GET' && url.pathname === agentRuntimeRoutes.agentPresence) {
+        return json(agentRuntimeAgentPresenceListSchema.parse({ presence: listAgentPresence() }));
+    }
 
     if (
         request.method === 'POST' &&

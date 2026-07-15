@@ -102,6 +102,7 @@ export const agentRuntimeRoutes = {
     chatAgentSessionCurrent: (chatId: string) =>
         `/agent/chats/${encodeURIComponent(chatId)}/agent-sessions/current`,
     agentSessionReset: (agentId: string) => `/agents/${encodeURIComponent(agentId)}/session/reset`,
+    agentPresence: '/agents/presence',
     chatTurnStop: (chatId: string, runId: string) =>
         `/agent/chats/${encodeURIComponent(chatId)}/turns/${encodeURIComponent(runId)}/stop`,
     chatPaneState: (chatId: string) => `/agent/chats/${encodeURIComponent(chatId)}/pane-state`,

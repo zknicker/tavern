@@ -2185,6 +2185,22 @@ export const agentRuntimeResetAgentSessionResultSchema = z.object({
     session: agentRuntimeAgentSessionSchema,
 });
 
+// Agent presence (specs/presence.md): one agent-scoped busy/idle fact,
+// projected from the turn queue. Busy anchors to the running turn's chat
+// (or the oldest queued chat mid-drain); chatTitle is presentation sugar so
+// clients never join chats to render a status line.
+export const agentRuntimeAgentPresenceSchema = z.object({
+    agentId: z.string().trim().min(1),
+    chatId: z.string().trim().min(1).nullable(),
+    chatTitle: z.string().nullable(),
+    since: z.string().datetime().nullable(),
+    state: z.enum(['busy', 'idle']),
+});
+
+export const agentRuntimeAgentPresenceListSchema = z.object({
+    presence: z.array(agentRuntimeAgentPresenceSchema),
+});
+
 export const agentRuntimeRunCronSchema = z.object({
     // 'force' executes inline and holds the request open for the whole agent
     // turn; manual runs default to the queue so the app gets its run row fast.
@@ -3235,6 +3251,8 @@ export type AgentRuntimeSaveOpenRouterSettings = z.infer<
     typeof agentRuntimeSaveOpenRouterSettingsSchema
 >;
 export type AgentRuntimeFrontend = z.infer<typeof agentRuntimeFrontendSchema>;
+export type AgentRuntimeAgentPresence = z.infer<typeof agentRuntimeAgentPresenceSchema>;
+export type AgentRuntimeAgentPresenceList = z.infer<typeof agentRuntimeAgentPresenceListSchema>;
 export type AgentRuntimeAgentSession = z.infer<typeof agentRuntimeAgentSessionSchema>;
 export type AgentRuntimeAgentSessionStatus = z.infer<typeof agentRuntimeAgentSessionStatusSchema>;
 export type AgentRuntimeCurrentAgentSessionResult = z.infer<

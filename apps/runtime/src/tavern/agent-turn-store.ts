@@ -223,6 +223,20 @@ export function hasUnsettledAgentTurnsForAgent(agentId: string, db: Database = g
     return Boolean(row);
 }
 
+// Every in-flight turn across all agents, running first then oldest
+// queued: the source for agent presence (specs/presence.md).
+export function listUnsettledAgentTurns(db: Database = getDb()) {
+    const rows = db
+        .prepare(
+            `SELECT *
+             FROM agent_turns
+             WHERE status IN ('queued', 'running')
+             ORDER BY CASE status WHEN 'running' THEN 0 ELSE 1 END, created_at ASC, id ASC`
+        )
+        .all() as AgentTurnRow[];
+    return rows.map(rowToAgentTurn);
+}
+
 // One turn at a time per agent, across all chats (specs/sessions.md). The
 // queue drains oldest-first regardless of chat — auto-drain is the runner
 // re-claiming after every settle.
