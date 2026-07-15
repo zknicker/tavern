@@ -77,13 +77,11 @@ export function seedDevelopmentRecallEvidence(db: Database) {
     const session = db
         .prepare(
             `SELECT id FROM agent_sessions
-             WHERE chat_id = $chatId AND agent_participant_id = $agentParticipantId
+             WHERE agent_id = $agentId
              ORDER BY generation DESC
              LIMIT 1`
         )
-        .get(namedParams({ agentParticipantId: demoAgentId, chatId: developmentChatDemoId })) as
-        | { id: string }
-        | undefined;
+        .get(namedParams({ agentId: demoAgentId })) as { id: string } | undefined;
     if (!session) {
         return;
     }

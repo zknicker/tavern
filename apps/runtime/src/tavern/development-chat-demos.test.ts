@@ -26,8 +26,7 @@ describe('development chat demo sessions', () => {
         seedDevelopmentChatDemos({ db: getDb(), enabled: true });
 
         const pastSessions = readPastAgentSessionSummaries({
-            agentParticipantId: 'agt_primary',
-            chatId: developmentChatDemoId,
+            agentId: 'agt_primary',
             currentSessionId: null,
         });
 
@@ -46,17 +45,14 @@ describe('development chat demo sessions', () => {
 
     it('never rewrites a live session row or ties demo turns to it', () => {
         seedDevelopmentChatDemos({ db: getDb(), enabled: true });
-        // A live rotation claims generation 3; wipe the demo gen-1 row and
-        // fake a live active session at that id to simulate the collision.
-        getDb()
-            .prepare('DELETE FROM agent_sessions WHERE chat_id = $chatId')
-            .run(namedParams({ chatId: developmentChatDemoId }));
+        // A real live session coexists with the seeded demo lineage; the
+        // seeder must never touch it.
         const live = startNewAgentSession({
-            agentParticipantId: 'agt_primary',
-            chatId: developmentChatDemoId,
+            agentId: 'agt_primary',
             now: '2026-07-06T12:00:00.000Z',
         });
-        expect(live.id).toBe(`ags_${developmentChatDemoId}_agt_primary_1`);
+        // Real sessions continue after the seeded demo lineage.
+        expect(live.id).toBe('ags_agt_primary_5');
 
         seedDevelopmentChatDemos({ db: getDb(), enabled: true });
 
@@ -70,14 +66,14 @@ describe('development chat demo sessions', () => {
 
         // Demo turn lineage lands only on the seeder-authored archived rows.
         const pastSessions = readPastAgentSessionSummaries({
-            agentParticipantId: 'agt_primary',
-            chatId: developmentChatDemoId,
+            agentId: 'agt_primary',
             currentSessionId: live.id,
         });
         expect(pastSessions.map((session) => session.id)).toEqual([
-            `ags_${developmentChatDemoId}_agt_primary_4`,
-            `ags_${developmentChatDemoId}_agt_primary_3`,
-            `ags_${developmentChatDemoId}_agt_primary_2`,
+            'ags_agt_primary_demo_4',
+            'ags_agt_primary_demo_3',
+            'ags_agt_primary_demo_2',
+            'ags_agt_primary_demo_1',
         ]);
         for (const session of pastSessions) {
             expect(session.turnCount).toBeGreaterThan(0);

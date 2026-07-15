@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { closeDb, getDb, initTestDb } from '../db/connection.ts';
 import { ensureRuntimeSchema } from '../db/schema.ts';
 import { ensureCurrentAgentSession } from '../tavern/agent-session-store.ts';
-import { claimNextAgentTurnForSeat, createAgentTurn } from '../tavern/agent-turn-store.ts';
+import { claimNextAgentTurnForAgent, createAgentTurn } from '../tavern/agent-turn-store.ts';
 import { upsertStoredAgent } from '../tavern/agents-store.ts';
 import { createChat, createMessage, upsertResponse } from '../tavern/chat-api/index.ts';
 import {
@@ -246,10 +246,7 @@ describe('skill curator', () => {
             request_message_id: 'msg_curator',
             status: 'running',
         });
-        const session = ensureCurrentAgentSession({
-            agentParticipantId: 'agt_primary',
-            chatId: 'cht_curator',
-        });
+        const session = ensureCurrentAgentSession({ agentId: 'agt_primary' });
         createAgentTurn({
             agentId: 'agt_primary',
             agentParticipantId: 'agt_primary',
@@ -259,10 +256,6 @@ describe('skill curator', () => {
             responseId: 'rsp_curator',
             triggerMessageId: 'msg_curator',
         });
-        claimNextAgentTurnForSeat({
-            agentParticipantId: 'agt_primary',
-            agentSessionId: session.id,
-            chatId: 'cht_curator',
-        });
+        claimNextAgentTurnForAgent({ agentId: 'agt_primary' });
     }
 });

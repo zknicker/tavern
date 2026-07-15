@@ -123,11 +123,11 @@ export function createFakeAgentExecutor(): AgentExecutor {
                 title: 'Fake executor',
             });
             const receipt = createDelivery(input.chatId, {
-                agent_id: input.agentSession.agentParticipantId,
+                agent_id: input.agentParticipantId,
                 id: deliveryId,
                 message: {
                     attachments: [],
-                    author_id: input.agentSession.agentParticipantId,
+                    author_id: input.agentParticipantId,
                     content: fakeResponseContent(input),
                     id: messageId,
                     metadata: { runtime },
@@ -140,7 +140,7 @@ export function createFakeAgentExecutor(): AgentExecutor {
                 completed_at: now,
                 id: input.responseId,
                 metadata: { runtime: { ...runtime, completedAt: now } },
-                participant_id: input.agentSession.agentParticipantId,
+                participant_id: input.agentParticipantId,
                 request_message_id: input.requestMessageId,
                 response_message_id: receipt.message.id,
                 status: 'completed',

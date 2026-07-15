@@ -169,24 +169,21 @@ function seedDemoAgentSessionsForAgent(chatId: string, agentId: string, db: Data
              WHERE id = $id
                AND status = 'archived'
                AND runtime_session_id IS NULL
-               AND resume_state_json IS NULL
-               AND prompt_context_sequence = 0`
+               AND resume_state_json IS NULL`
         ).run(namedParams({ id }));
         db.prepare(
             `INSERT INTO agent_sessions (
-                id, chat_id, agent_participant_id, agent_id, generation,
-                effective_model_json, runtime_session_id, resume_state_json,
-                prompt_context_sequence, status, created_at, updated_at, archived_at
+                id, agent_id, generation, effective_model_json,
+                runtime_session_id, resume_state_json, instructions_hash,
+                status, created_at, updated_at, archived_at, last_turn_at
              )
-             VALUES ($id, $chatId, $agentParticipantId, $agentId, $generation,
-              $effectiveModelJson, NULL, NULL, 0, 'archived', $createdAt, $archivedAt, $archivedAt)
+             VALUES ($id, $agentId, $generation, $effectiveModelJson,
+              NULL, NULL, NULL, 'archived', $createdAt, $archivedAt, $archivedAt, NULL)
              ON CONFLICT(id) DO NOTHING`
         ).run(
             namedParams({
                 agentId,
-                agentParticipantId: agentId,
                 archivedAt: session.archivedAt,
-                chatId,
                 createdAt: session.createdAt,
                 effectiveModelJson: JSON.stringify(session.model),
                 generation: session.generation,
@@ -233,8 +230,10 @@ function seedDemoAgentSessionsForAgent(chatId: string, agentId: string, db: Data
     }
 }
 
-function demoSessionId(chatId: string, agentId: string, generation: number) {
-    return `ags_${chatId}_${agentId}_${generation}`;
+// Demo generations use a high offset so they never collide with the agent's
+// real global session generations.
+function demoSessionId(_chatId: string, agentId: string, generation: number) {
+    return `ags_${agentId}_demo_${generation}`;
 }
 
 function pruneObsoleteDevelopmentDemoChats(db: Database) {
@@ -249,7 +248,6 @@ function pruneObsoleteDevelopmentDemoChats(db: Database) {
             db.prepare('DELETE FROM chat_deliveries WHERE chat_id = $chatId').run(params);
             db.prepare('DELETE FROM chat_reads WHERE chat_id = $chatId').run(params);
             db.prepare('DELETE FROM chat_events WHERE chat_id = $chatId').run(params);
-            db.prepare('DELETE FROM agent_sessions WHERE chat_id = $chatId').run(params);
             db.prepare('DELETE FROM chat_messages WHERE chat_id = $chatId').run(params);
             db.prepare('DELETE FROM chat_participants WHERE chat_id = $chatId').run(params);
             db.prepare('DELETE FROM chats WHERE id = $chatId').run(params);

@@ -799,8 +799,7 @@ function seedAgentChat(workspace: string) {
         title: 'Memory',
     });
     startNewAgentSession({
-        agentParticipantId: 'agt_primary',
-        chatId: 'cht_memory',
+        agentId: 'agt_primary',
         effectiveModel: { model: 'gpt-4.1', provider: 'openai' },
         now: '2026-07-02T19:00:00.000Z',
     });
@@ -840,15 +839,17 @@ function createCompletedTurn(input: {
 function readCurrentSessionId() {
     const row = getDb()
         .prepare(
-            `SELECT current_agent_session_id
-             FROM chat_participants
-             WHERE chat_id = 'cht_memory' AND id = 'agt_primary'`
+            `SELECT id
+             FROM agent_sessions
+             WHERE agent_id = 'agt_primary' AND status = 'active'
+             ORDER BY generation DESC
+             LIMIT 1`
         )
-        .get() as { current_agent_session_id: string } | null;
-    if (!row?.current_agent_session_id) {
+        .get() as { id: string } | null;
+    if (!row?.id) {
         throw new Error('Missing current test agent session.');
     }
-    return row.current_agent_session_id;
+    return row.id;
 }
 
 function readDebounce() {

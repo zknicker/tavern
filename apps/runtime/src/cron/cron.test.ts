@@ -203,7 +203,7 @@ describe('Runtime cron', () => {
             consecutiveErrors: 0,
             lastRunStatus: 'success',
         });
-        expect(listAgentTurnsForSession('ags_cht_general_agt_primary_1')[0]).toMatchObject({
+        expect(listAgentTurnsForSession('ags_agt_primary_1')[0]).toMatchObject({
             id: run.turnId,
             status: 'completed',
         });
