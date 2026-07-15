@@ -2148,8 +2148,8 @@ export const agentRuntimeAgentSessionStatsSchema = z.object({
     turnCount: z.number().int().nonnegative(),
 });
 
-// High-level history entry for a seat's earlier sessions: enough for a list
-// row, never the session's resume state.
+// High-level history entry for an agent's earlier sessions: enough for a
+// list row, never the session's resume state.
 export const agentRuntimeAgentSessionSummarySchema = z.object({
     archivedAt: z.string().datetime().nullable(),
     createdAt: z.string().datetime(),
@@ -2172,12 +2172,11 @@ export const agentRuntimeCurrentAgentSessionResultSchema = z.object({
     stats: agentRuntimeAgentSessionStatsSchema.nullable(),
 });
 
-// Rotates the agent seat's current session so the chat's next message opens a
-// brand-new engine session. Timeline stays untouched; the reset lands as a
-// durable new-session notice row.
 // Manual reset contract (specs/sessions.md): agent-scoped, human-initiated.
-// 'session' starts fresh context (workspace and memory persist); 'full'
-// also wipes the workspace.
+// Archives the agent's global session; the next turn anywhere opens a fresh
+// one. Timelines stay untouched; the reset lands as a durable new-session
+// notice in the agent's DM. 'session' starts fresh context (workspace and
+// memory persist); 'full' also wipes the workspace.
 export const agentRuntimeResetAgentSessionSchema = z.object({
     kind: z.enum(['full', 'session']).default('session'),
 });
@@ -2470,7 +2469,6 @@ export const agentRuntimeCreateMessageSchema = z.object({
             content: z.string().trim(),
             id: z.string().trim().min(1),
             metadata: agentRuntimeMessageMetadataSchema.optional(),
-            modelRef: z.string().trim().min(1).optional(),
             nonce: z.string().trim().min(1).optional(),
             parentMessageId: z.string().trim().min(1).nullable().optional(),
             threadRootId: z.string().trim().min(1).nullable().optional(),

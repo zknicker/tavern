@@ -50,7 +50,6 @@ export const modelSchema = z.object({
     provider: agentRuntimeModelProviderIdSchema,
     ref: modelRefSchema,
     reasoning: z.boolean().nullable(),
-    supportsChatRouting: z.boolean(),
 });
 
 export const agentModelSettingSchema = z.object({

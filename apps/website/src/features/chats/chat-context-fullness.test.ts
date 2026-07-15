@@ -44,7 +44,6 @@ test('getChatContextFullness reads latest agent usage against model context wind
             provider: 'openrouter',
             reasoning: null,
             ref: 'openrouter/gpt-5.5',
-            supportsChatRouting: true,
         },
     ] satisfies ModelListOutput['models'];
 

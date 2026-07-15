@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import type { ModelListOutput } from '../../lib/trpc.tsx';
-import { buildChatRoutingConfiguredModelOptions, buildModelOptions } from './model-route-shared.ts';
+import { buildModelOptions } from './model-route-shared.ts';
 
 function createModelList(): ModelListOutput {
     return {
@@ -18,7 +18,6 @@ function createModelList(): ModelListOutput {
                 provider: 'claude',
                 ref: 'claude/claude-opus-4-7',
                 reasoning: null,
-                supportsChatRouting: true,
             },
             {
                 availability: 'configured',
@@ -31,7 +30,6 @@ function createModelList(): ModelListOutput {
                 provider: 'openrouter',
                 ref: 'openrouter/anthropic/claude-opus-4.7',
                 reasoning: null,
-                supportsChatRouting: false,
             },
             {
                 availability: 'configured',
@@ -44,7 +42,6 @@ function createModelList(): ModelListOutput {
                 provider: 'openai-codex',
                 ref: 'openai-codex/gpt-5.4',
                 reasoning: null,
-                supportsChatRouting: true,
             },
         ],
         openRouter: {
@@ -54,23 +51,6 @@ function createModelList(): ModelListOutput {
         subAgentThinkingLevel: null,
     };
 }
-
-test('buildChatRoutingConfiguredModelOptions keeps enabled routing providers only', () => {
-    expect(buildChatRoutingConfiguredModelOptions(createModelList())).toEqual([
-        {
-            availability: 'configured',
-            label: 'Claude Opus 4.7',
-            provider: 'claude',
-            value: 'claude/claude-opus-4-7',
-        },
-        {
-            availability: 'configured',
-            label: 'GPT-5.4',
-            provider: 'openai-codex',
-            value: 'openai-codex/gpt-5.4',
-        },
-    ]);
-});
 
 test('buildModelOptions only falls back to raw refs when labels would collide', () => {
     const data = createModelList();
@@ -87,7 +67,6 @@ test('buildModelOptions only falls back to raw refs when labels would collide', 
             provider: 'claude',
             ref: 'claude/claude-sonnet-4-6',
             reasoning: null,
-            supportsChatRouting: true,
         },
         {
             availability: 'configured',
@@ -100,7 +79,6 @@ test('buildModelOptions only falls back to raw refs when labels would collide', 
             provider: 'openrouter',
             ref: 'openrouter/anthropic/claude-sonnet-4-6',
             reasoning: null,
-            supportsChatRouting: false,
         },
     ];
 

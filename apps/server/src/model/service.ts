@@ -157,6 +157,5 @@ function createAgentModel(input: {
         provider: input.provider,
         reasoning: null,
         ref,
-        supportsChatRouting: true,
     };
 }

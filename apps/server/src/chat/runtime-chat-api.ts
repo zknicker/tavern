@@ -608,8 +608,8 @@ export function messageText(message: TavernChatMessage) {
     return message.content;
 }
 
-// Every in-flight run is a live reply: each agent seat runs one turn at a
-// time, so concurrent entries belong to different seats.
+// Every in-flight run is a live reply: each agent runs one turn at a time
+// across all chats, so concurrent entries belong to different agents.
 function activeRepliesFromResponses(
     responses: readonly TavernChatResponse[]
 ): ChatLogPage['activeReplies'] {

@@ -109,23 +109,3 @@ export function buildModelOptions(data: ModelListOutput | undefined): ModelOptio
 export function buildConfiguredModelOptions(data: ModelListOutput | undefined): ModelOptionItem[] {
     return buildModelOptionItems(data, (model) => model.availability === 'configured');
 }
-
-export function buildChatRoutingConfiguredModelOptions(
-    data: ModelListOutput | undefined
-): ModelOptionItem[] {
-    return buildModelOptionItems(
-        data,
-        (model) => model.availability === 'configured' && model.supportsChatRouting,
-        (modelRef) =>
-            Boolean(data?.models.find((model) => model.ref === modelRef)?.supportsChatRouting)
-    );
-}
-
-export function buildChatRoutingModelOptions(data: ModelListOutput | undefined): ModelOptionItem[] {
-    return buildModelOptionItems(
-        data,
-        (model) => model.supportsChatRouting,
-        (modelRef) =>
-            Boolean(data?.models.find((model) => model.ref === modelRef)?.supportsChatRouting)
-    );
-}

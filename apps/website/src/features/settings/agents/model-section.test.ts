@@ -15,7 +15,6 @@ const models = [
         provider: 'codex',
         reasoning: null,
         ref: 'codex/gpt-5.5',
-        supportsChatRouting: true,
     },
     {
         availability: 'available',
@@ -28,7 +27,6 @@ const models = [
         provider: 'codex',
         reasoning: null,
         ref: 'codex/gpt-5.4',
-        supportsChatRouting: true,
     },
     {
         availability: 'available',
@@ -41,7 +39,6 @@ const models = [
         provider: 'claude',
         reasoning: null,
         ref: 'claude/claude-sonnet-4-6',
-        supportsChatRouting: true,
     },
     {
         availability: 'available',
@@ -54,7 +51,6 @@ const models = [
         provider: 'claude',
         reasoning: null,
         ref: 'claude/claude-opus-4-8',
-        supportsChatRouting: true,
     },
 ] satisfies ModelListOutput['models'];
 

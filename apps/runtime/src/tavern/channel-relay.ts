@@ -51,7 +51,6 @@ export async function sendTavernChannelMessage(
                 agentId: payload.agent.agentId,
                 engine: 'agent-engine',
                 agentSessionId: agentSession.id,
-                ...(payload.message.modelRef ? { modelRef: payload.message.modelRef } : {}),
                 runId,
                 source: 'agent-engine',
             },

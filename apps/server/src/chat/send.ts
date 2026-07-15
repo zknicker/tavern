@@ -72,7 +72,6 @@ export async function sendTavernChatMessage(
         id: clientMessageId,
         metadata: {
             runtime: {
-                ...(parsed.modelRef ? { modelRef: parsed.modelRef } : {}),
                 runtimeId: chatRecord.runtimeId,
                 source: targetAgentIds.length > 0 ? 'agent-engine' : 'tavern',
             },
@@ -122,7 +121,6 @@ export async function sendTavernChatMessage(
                                 : {}),
                             content: parsed.content,
                             id: clientMessageId,
-                            ...(parsed.modelRef ? { modelRef: parsed.modelRef } : {}),
                             nonce: clientMessageId,
                         },
                         target: buildAgentRuntimeMessageTarget(chat),

@@ -2,10 +2,6 @@ import type { AgentRuntimeChat } from '@tavern/api';
 import type { TavernAgentRuntimeClient } from './client.ts';
 import { createConfiguredAgentRuntimeClient } from './configured-client.ts';
 
-export function buildTavernChatSessionKey(agentId: string, chatId: string) {
-    return `agent:${agentId}:tavern:channel:${chatId}`;
-}
-
 export async function listAgentRuntimeChats(
     client: TavernAgentRuntimeClient | null = createConfiguredAgentRuntimeClient()
 ): Promise<AgentRuntimeChat[] | null> {

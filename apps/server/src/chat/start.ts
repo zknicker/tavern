@@ -34,7 +34,6 @@ export async function startTavernChat(input: StartChatInput) {
         chatId: created.chatId,
         ...(parsed.clientMessageId ? { clientMessageId: parsed.clientMessageId } : {}),
         content: parsed.content,
-        ...(parsed.modelRef ? { modelRef: parsed.modelRef } : {}),
     });
 
     return sendChatMessageResultSchema.parse(accepted);

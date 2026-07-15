@@ -146,7 +146,6 @@ export const startChatInputSchema = z
         attachments: z.array(sessionMessageAttachmentSchema).optional(),
         clientMessageId: z.string().trim().min(1).optional(),
         content: z.string().trim(),
-        modelRef: z.string().trim().min(1).optional(),
     })
     .strict()
     .refine((input) => input.content.trim().length > 0 || Boolean(input.attachments?.length), {
@@ -209,7 +208,6 @@ export const sendChatMessageInputSchema = z
         chatId: z.string().trim().min(1),
         clientMessageId: z.string().trim().min(1).optional(),
         content: z.string().trim(),
-        modelRef: z.string().trim().min(1).optional(),
     })
     .strict()
     .refine((input) => input.content.trim().length > 0 || Boolean(input.attachments?.length), {
