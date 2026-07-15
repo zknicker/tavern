@@ -186,7 +186,6 @@ CREATE TABLE IF NOT EXISTS chat_participants (
   kind                     TEXT NOT NULL CHECK (kind IN ('user', 'agent', 'system', 'external', 'plugin')),
   label                    TEXT,
   metadata_json            TEXT NOT NULL DEFAULT '{}',
-  current_agent_session_id TEXT,
   PRIMARY KEY(chat_id, id),
   FOREIGN KEY(chat_id) REFERENCES chats(id) ON DELETE CASCADE
 );
@@ -667,11 +666,6 @@ export function ensureRuntimeSchema(db: Database): void {
         column: 'deleted_at',
         definition: 'TEXT',
         table: 'chat_responses',
-    });
-    ensureColumn(db, {
-        column: 'current_agent_session_id',
-        definition: 'TEXT',
-        table: 'chat_participants',
     });
     ensureColumn(db, {
         column: 'usage_json',

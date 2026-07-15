@@ -242,7 +242,7 @@ function parseActiveTurnParticipantIds(value: string | null): string[] {
 function listChatParticipants(chatId: string, db: Database = getDb()): ChatParticipant[] {
     const rows = db
         .prepare(
-            `SELECT chat_id, current_agent_session_id, id, kind, label, metadata_json
+            `SELECT chat_id, id, kind, label, metadata_json
              FROM chat_participants
              WHERE chat_id = $chatId
              ORDER BY id ASC`
@@ -270,29 +270,22 @@ function replaceChatParticipants(chatId: string, participants: ChatParticipant[]
                 id,
                 kind,
                 label,
-                metadata_json,
-                current_agent_session_id
+                metadata_json
              )
              VALUES (
                 $chatId,
                 $id,
                 $kind,
                 $label,
-                $metadataJson,
-                $currentAgentSessionId
+                $metadataJson
              )` +
                 ` ON CONFLICT(chat_id, id) DO UPDATE SET
                 kind = excluded.kind,
                 label = excluded.label,
-                metadata_json = excluded.metadata_json,
-                current_agent_session_id = CASE
-                    WHEN excluded.kind = 'agent' THEN chat_participants.current_agent_session_id
-                    ELSE NULL
-                END`
+                metadata_json = excluded.metadata_json`
         ).run(
             namedParams({
                 chatId,
-                currentAgentSessionId: null,
                 id: participant.id,
                 kind: participant.kind,
                 label: participant.label,

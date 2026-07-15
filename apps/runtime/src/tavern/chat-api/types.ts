@@ -47,7 +47,6 @@ export interface ChatRow {
 
 export interface ParticipantRow {
     chat_id: string;
-    current_agent_session_id: string | null;
     id: string;
     kind: TavernApiSchema<'Participant'>['kind'];
     label: string | null;
