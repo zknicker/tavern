@@ -45,9 +45,12 @@ is no per-token churn.
   per-chat turn spinner (driven by `activeTurnParticipantIds`, which is
   agent-global) stays the busy affordance on chat rows.
 
-## Non-goals (phase 2 candidates)
+## Non-goals
 
 - Micro-states ("Running tools", "Reading files") — coarse busy/idle only;
   the live turn narration already exists for the active chat.
-- A global sidebar presence ticker — redundant until multi-agent crews.
+- A separate agent presence rail or ticker: agents and built-in DMs are
+  one-to-one, so the DM list already is the presence roster. A dedicated
+  strip only earns its place if presence must stay visible in sections
+  without the chat sidebar.
 - Presence for external/observed participants.
