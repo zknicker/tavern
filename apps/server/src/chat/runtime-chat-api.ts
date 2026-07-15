@@ -746,4 +746,3 @@ function rowSortRank(row: ChatLogPage['rows'][number]) {
 function isActivityMessageRow(row: Extract<ChatLogPage['rows'][number], { kind: 'message' }>) {
     return row.id.startsWith('act_');
 }
-
