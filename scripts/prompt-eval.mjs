@@ -412,9 +412,9 @@ async function findReusableChat(displayName) {
 }
 
 // A recycled chat must behave like a fresh one: current stamped title and
-// membership, a fresh engine session per seat (no context carried over from
-// the previous run), and an empty timeline. Reset before clearing so the
-// session-reset notice rows are swept by the clear.
+// membership, a fresh agent session (no context carried over from the
+// previous run), and an empty timeline. Resets are agent-global
+// (specs/sessions.md); their notice rows land in each agent's DM, not here.
 async function recycleChat(chat, agentIds, displayName, { rename = true } = {}) {
     if (chat.archived) {
         await trpc('chat.unarchive', { chatId: chat.id });
@@ -422,8 +422,8 @@ async function recycleChat(chat, agentIds, displayName, { rename = true } = {}) 
     if (rename && (chat.displayName !== displayName || !sameMembers(chat, agentIds))) {
         await trpc('chat.update', { agentIds, chatId: chat.id, displayName });
     }
-    for (const agentId of agentIds) {
-        await trpc('agent.resetSession', { agentId, chatId: chat.id });
+    for (const agentId of new Set(agentIds)) {
+        await trpc('agent.resetSession', { agentId });
     }
     await trpc('chat.clear', { chatId: chat.id });
     trackChat(chat.id);
