@@ -2117,16 +2117,17 @@ export const agentRuntimeFrontendSchema = z.enum(['cli', 'discord', 'sdk', 'tave
 
 export const agentRuntimeAgentSessionStatusSchema = z.enum(['active', 'archived', 'stopped']);
 
+// One global session per agent spanning all its chats (specs/sessions.md,
+// ADR 0011). Per-chat seen cursors live in the Runtime seen ledger, not on
+// the session record.
 export const agentRuntimeAgentSessionSchema = z.object({
     agentId: z.string().trim().min(1),
-    agentParticipantId: z.string().trim().min(1),
     archivedAt: z.string().datetime().nullable(),
-    chatId: z.string().trim().min(1),
     createdAt: z.string().datetime(),
     effectiveModel: agentRuntimeModelNameSchema,
     generation: z.number().int().positive(),
     id: z.string().trim().min(1),
-    promptContextSequence: z.number().int().nonnegative().default(0),
+    lastTurnAt: z.string().datetime().nullable(),
     resumeState: agentRuntimeJsonRecordSchema.nullable(),
     runtimeSessionId: z.string().trim().min(1).nullable(),
     status: agentRuntimeAgentSessionStatusSchema,
@@ -2174,8 +2175,11 @@ export const agentRuntimeCurrentAgentSessionResultSchema = z.object({
 // Rotates the agent seat's current session so the chat's next message opens a
 // brand-new engine session. Timeline stays untouched; the reset lands as a
 // durable new-session notice row.
+// Manual reset contract (specs/sessions.md): agent-scoped, human-initiated.
+// 'session' starts fresh context (workspace and memory persist); 'full'
+// also wipes the workspace.
 export const agentRuntimeResetAgentSessionSchema = z.object({
-    agentId: z.string().trim().min(1),
+    kind: z.enum(['full', 'session']).default('session'),
 });
 
 export const agentRuntimeResetAgentSessionResultSchema = z.object({

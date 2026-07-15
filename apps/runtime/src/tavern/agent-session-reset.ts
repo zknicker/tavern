@@ -1,49 +1,76 @@
+import fs from 'node:fs/promises';
+import { getDb } from '../db/connection.ts';
+import { registerAgentWorkspace } from '../workspace/instructions.ts';
 import { startNewAgentSession } from './agent-session-store.ts';
+import { getStoredAgent } from './agents-store.ts';
 import { createAgentParticipantId } from './chat-api/ids.ts';
-import { latestMessageSequence, upsertResponse, upsertResponseActivity } from './chat-api/index.ts';
+import {
+    listChatsForAgentParticipant,
+    upsertResponse,
+    upsertResponseActivity,
+} from './chat-api/index.ts';
 
-/**
- * Rotates the agent seat's current Agent session so the chat's next message
- * opens a brand-new engine session. The timeline stays untouched; the reset
- * lands as a durable new-session notice row so every client can see when
- * fresh context started. See specs/agent-drawer.md.
- */
-export function resetAgentSession(input: { agentId: string; chatId: string; noticeText?: string }) {
-    // Fresh context starts at the reset point: snapshot the cursor so the new
-    // session's first turn does not replay pre-reset channel history.
-    const session = startNewAgentSession({
-        agentParticipantId: createAgentParticipantId(input.agentId),
-        chatId: input.chatId,
-        promptContextSequence: latestMessageSequence(input.chatId),
-    });
+// Manual reset contract (specs/sessions.md): human-initiated, agent-scoped.
+// "Session reset" starts a fresh global session; workspace and memory
+// persist. "Full reset" also wipes the workspace. Restart needs no Runtime
+// action — turns already resume the stored session as-is.
+
+export type AgentResetKind = 'full' | 'session';
+
+export async function resetAgentSession(input: {
+    agentId: string;
+    kind?: AgentResetKind;
+    noticeText?: string;
+}) {
+    const kind = input.kind ?? 'session';
+    if (kind === 'full') {
+        await wipeAgentWorkspace(input.agentId);
+    }
+    const session = startNewAgentSession({ agentId: input.agentId });
     recordSessionResetNotice({
         agentId: input.agentId,
-        chatId: input.chatId,
         sessionId: session.id,
-        text: input.noticeText ?? 'Started a fresh session. New messages start with fresh context.',
+        text:
+            input.noticeText ??
+            (kind === 'full'
+                ? 'Started completely fresh: new session and an empty workspace.'
+                : 'Started a fresh session. New messages start with fresh context.'),
     });
     return { session };
 }
 
-// Evidence is written after the reset settles so the timeline never shows an
-// in-flight row for it.
-function recordSessionResetNotice(input: {
-    agentId: string;
-    chatId: string;
-    sessionId: string;
-    text: string;
-}) {
-    const responseId = `rsp_session_${crypto.randomUUID()}`;
+async function wipeAgentWorkspace(agentId: string) {
+    const agent = getStoredAgent(agentId);
+    if (!agent?.workspaceFolder) {
+        return;
+    }
+    await fs.rm(agent.workspaceFolder, { force: true, recursive: true });
+    await fs.mkdir(agent.workspaceFolder, { recursive: true });
+    registerAgentWorkspace(getDb(), {
+        agentId: agent.id,
+        agentName: agent.name,
+        workspaceDir: agent.workspaceFolder,
+    });
+}
+
+// Evidence lands in the agent's built-in DM — the agent's home surface —
+// since the reset is agent-scoped, not chat-scoped.
+function recordSessionResetNotice(input: { agentId: string; sessionId: string; text: string }) {
     const participantId = createAgentParticipantId(input.agentId);
+    const dm = listChatsForAgentParticipant(participantId).find((chat) => chat.kind === 'dm');
+    if (!dm) {
+        return;
+    }
+    const responseId = `rsp_session_${crypto.randomUUID()}`;
     const text = input.text;
 
-    upsertResponse(input.chatId, {
+    upsertResponse(dm.id, {
         id: responseId,
         metadata: { runtime: { agentId: input.agentId, source: 'session-reset' } },
         participant_id: participantId,
         status: 'completed',
     });
-    upsertResponseActivity(input.chatId, responseId, {
+    upsertResponseActivity(dm.id, responseId, {
         detail: text,
         id: `act_${responseId}`,
         kind: 'custom',

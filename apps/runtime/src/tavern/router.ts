@@ -43,7 +43,8 @@ import { agentSessionInstructionsFresh } from './agent-instructions.ts';
 import { resetAgentSession } from './agent-session-reset.ts';
 import { readAgentSessionStats, readPastAgentSessionSummaries } from './agent-session-stats.ts';
 import { readCurrentAgentSession } from './agent-session-store.ts';
-import { createAgentParticipantId } from './chat-api/ids.ts';
+import { getChat } from './chat-api/index.ts';
+
 import { handleTavernApiRequest } from './chat-api-router.ts';
 import { handleDevToolkitRequest } from './development-turn-simulator.ts';
 import { badRequest, forbidden, json, notFound, readJson } from './http.ts';
@@ -244,18 +245,17 @@ export async function handleTavernRuntimeRequest(request: Request): Promise<Resp
 
     if (
         request.method === 'POST' &&
-        segments[0] === 'agent' &&
-        segments[1] === 'chats' &&
-        segments[2] &&
-        segments[3] === 'agent-sessions' &&
-        segments[4] === 'reset'
+        segments[0] === 'agents' &&
+        segments[1] &&
+        segments[2] === 'session' &&
+        segments[3] === 'reset'
     ) {
         const input = agentRuntimeResetAgentSessionSchema.parse(await readJson(request));
         return json(
             agentRuntimeResetAgentSessionResultSchema.parse(
-                resetAgentSession({
-                    agentId: input.agentId,
-                    chatId: segments[2],
+                await resetAgentSession({
+                    agentId: segments[1],
+                    kind: input.kind,
                 })
             )
         );
@@ -269,26 +269,23 @@ export async function handleTavernRuntimeRequest(request: Request): Promise<Resp
         segments[3] === 'agent-sessions' &&
         segments[4] === 'current'
     ) {
-        // Clients address agents by agent id; the seat's participant id is a
-        // Runtime detail derived from it.
-        const agentId = url.searchParams.get('agentId');
-        const agentParticipantId = agentId ? createAgentParticipantId(agentId) : undefined;
-        const session = readCurrentAgentSession({
-            agentParticipantId,
-            chatId: segments[2],
-        });
+        // Sessions are agent-global; the chat path segment only helps the
+        // app resolve which agent's session to show. Clients pass agentId
+        // explicitly, or the chat's single agent seat resolves it.
+        const agentId = url.searchParams.get('agentId') ?? resolveChatAgentId(segments[2]);
+        if (!agentId) {
+            return notFound();
+        }
+        const session = readCurrentAgentSession({ agentId });
         return json(
             agentRuntimeCurrentAgentSessionResultSchema.parse({
                 instructionsFresh: session ? await agentSessionInstructionsFresh(session) : null,
                 pastSessions: readPastAgentSessionSummaries({
-                    agentParticipantId,
-                    chatId: segments[2],
+                    agentId,
                     currentSessionId: session?.id ?? null,
                 }),
                 session,
-                stats: session
-                    ? readAgentSessionStats({ chatId: segments[2], sessionId: session.id })
-                    : null,
+                stats: session ? readAgentSessionStats({ sessionId: session.id }) : null,
             })
         );
     }
@@ -392,4 +389,22 @@ export async function handleTavernRuntimeRequest(request: Request): Promise<Resp
     const proxyResponse = await handleAgentProxyRequest(request);
 
     return proxyResponse ?? notFound();
+}
+
+// The chat's single agent seat, when unambiguous. Sessions are agent-global
+// (specs/sessions.md); this only resolves which agent a chat-scoped session
+// view is about.
+function resolveChatAgentId(chatId: string) {
+    const agents = (getChat(chatId)?.participants ?? []).filter(
+        (participant) => participant.kind === 'agent'
+    );
+    if (agents.length !== 1) {
+        return null;
+    }
+    const participant = agents[0];
+    if (!participant) {
+        return null;
+    }
+    const agentId = (participant.metadata as Record<string, unknown>).agentId;
+    return typeof agentId === 'string' && agentId.length > 0 ? agentId : participant.id;
 }

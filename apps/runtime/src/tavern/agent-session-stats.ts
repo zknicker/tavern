@@ -2,7 +2,7 @@ import type { AgentRuntimeAgentSessionSummary } from '@tavern/api';
 import { getDb } from '../db/connection';
 import type { Database } from '../db/sqlite';
 import { namedParams } from '../db/sqlite';
-import { listAgentSessionsForSeat } from './agent-session-store.ts';
+import { listAgentSessionsForAgent } from './agent-session-store.ts';
 
 export interface AgentSessionStats {
     /**
@@ -15,9 +15,11 @@ export interface AgentSessionStats {
     turnCount: number;
 }
 
-/** Aggregates the session's durable turn evidence for the agent drawer. */
+/**
+ * Aggregates the session's durable turn evidence for the agent drawer. The
+ * session is agent-global, so stats span every chat it worked in.
+ */
 export function readAgentSessionStats(input: {
-    chatId: string;
     db?: Database;
     sessionId: string;
 }): AgentSessionStats {
@@ -28,18 +30,16 @@ export function readAgentSessionStats(input: {
                 COUNT(*) AS turn_count,
                 (SELECT json_extract(metadata_json, '$.runtime.contextTokens')
                  FROM chat_responses
-                 WHERE chat_id = $chatId
-                   AND deleted_at IS NULL
+                 WHERE deleted_at IS NULL
                    AND json_extract(metadata_json, '$.runtime.agentSessionId') = $sessionId
                    AND json_extract(metadata_json, '$.runtime.contextTokens') IS NOT NULL
                  ORDER BY updated_at DESC, id DESC
                  LIMIT 1) AS context_tokens
              FROM chat_responses
-             WHERE chat_id = $chatId
-               AND deleted_at IS NULL
+             WHERE deleted_at IS NULL
                AND json_extract(metadata_json, '$.runtime.agentSessionId') = $sessionId`
         )
-        .get(namedParams({ chatId: input.chatId, sessionId: input.sessionId })) as {
+        .get(namedParams({ sessionId: input.sessionId })) as {
         context_tokens: number | null;
         turn_count: number;
     };
@@ -51,23 +51,18 @@ export function readAgentSessionStats(input: {
 }
 
 /**
- * The seat's earlier sessions as list-row summaries, newest first. Excludes
+ * The agent's earlier sessions as list-row summaries, newest first. Excludes
  * the current session and never exposes resume state.
  */
 export function readPastAgentSessionSummaries(input: {
-    agentParticipantId?: string;
-    chatId: string;
+    agentId: string;
     currentSessionId: string | null;
     db?: Database;
 }): AgentRuntimeAgentSessionSummary[] {
     const db = input.db ?? getDb();
-    const turnCounts = readSeatTurnCounts(input.chatId, db);
+    const turnCounts = readAgentTurnCounts(db);
 
-    return listAgentSessionsForSeat({
-        agentParticipantId: input.agentParticipantId,
-        chatId: input.chatId,
-        db,
-    })
+    return listAgentSessionsForAgent(input.agentId, db)
         .filter((session) => session.id !== input.currentSessionId)
         .sort((left, right) => right.generation - left.generation)
         .map((session) => ({
@@ -81,18 +76,17 @@ export function readPastAgentSessionSummaries(input: {
         }));
 }
 
-function readSeatTurnCounts(chatId: string, db: Database): Map<string, number> {
+function readAgentTurnCounts(db: Database): Map<string, number> {
     const rows = db
         .prepare(
             `SELECT json_extract(metadata_json, '$.runtime.agentSessionId') AS session_id,
                     COUNT(*) AS turn_count
              FROM chat_responses
-             WHERE chat_id = $chatId
-               AND deleted_at IS NULL
+             WHERE deleted_at IS NULL
                AND json_extract(metadata_json, '$.runtime.agentSessionId') IS NOT NULL
              GROUP BY session_id`
         )
-        .all(namedParams({ chatId })) as { session_id: string; turn_count: number }[];
+        .all() as { session_id: string; turn_count: number }[];
 
     return new Map(rows.map((row) => [row.session_id, row.turn_count]));
 }

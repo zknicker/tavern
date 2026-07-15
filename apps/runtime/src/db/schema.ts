@@ -191,31 +191,39 @@ CREATE TABLE IF NOT EXISTS chat_participants (
   FOREIGN KEY(chat_id) REFERENCES chats(id) ON DELETE CASCADE
 );
 
+-- One global session per agent spanning all its chats (specs/sessions.md,
+-- ADR 0011). Chat-scoped state lives in agent_session_chat_cursors.
 CREATE TABLE IF NOT EXISTS agent_sessions (
   id                     TEXT PRIMARY KEY,
-  chat_id                TEXT NOT NULL,
-  agent_participant_id   TEXT NOT NULL,
   agent_id               TEXT NOT NULL,
   generation             INTEGER NOT NULL CHECK (generation > 0),
   effective_model_json   TEXT NOT NULL,
   runtime_session_id     TEXT,
   resume_state_json      TEXT,
-  prompt_context_sequence INTEGER NOT NULL DEFAULT 0 CHECK (prompt_context_sequence >= 0),
+  instructions_hash      TEXT,
   status                 TEXT NOT NULL CHECK (status IN ('active', 'archived', 'stopped')),
   created_at             TEXT NOT NULL,
   updated_at             TEXT NOT NULL,
   archived_at            TEXT,
-  UNIQUE(chat_id, agent_participant_id, generation),
-  FOREIGN KEY(chat_id) REFERENCES chats(id) ON DELETE CASCADE,
-  FOREIGN KEY(chat_id, agent_participant_id) REFERENCES chat_participants(chat_id, id) ON DELETE CASCADE,
+  last_turn_at           TEXT,
+  UNIQUE(agent_id, generation),
   FOREIGN KEY(agent_id) REFERENCES agents(id) ON DELETE CASCADE
 );
 
-CREATE INDEX IF NOT EXISTS idx_agent_sessions_seat_generation
-  ON agent_sessions(chat_id, agent_participant_id, generation DESC);
-
 CREATE INDEX IF NOT EXISTS idx_agent_sessions_agent
-  ON agent_sessions(agent_id, status, updated_at);
+  ON agent_sessions(agent_id, status, generation DESC);
+
+-- Seen ledger (specs/sessions.md): per-(session, chat) cursor of the highest
+-- message sequence provably model-visible. Prompt catch-up, busy deliveries,
+-- and hold envelopes advance it; notices never do.
+CREATE TABLE IF NOT EXISTS agent_session_chat_cursors (
+  session_id     TEXT NOT NULL,
+  chat_id        TEXT NOT NULL,
+  seen_up_to_seq INTEGER NOT NULL DEFAULT 0 CHECK (seen_up_to_seq >= 0),
+  updated_at     TEXT NOT NULL,
+  PRIMARY KEY (session_id, chat_id),
+  FOREIGN KEY(chat_id) REFERENCES chats(id) ON DELETE CASCADE
+);
 
 CREATE TABLE IF NOT EXISTS agent_turns (
   id                      TEXT PRIMARY KEY,
@@ -664,16 +672,6 @@ export function ensureRuntimeSchema(db: Database): void {
         column: 'current_agent_session_id',
         definition: 'TEXT',
         table: 'chat_participants',
-    });
-    ensureColumn(db, {
-        column: 'prompt_context_sequence',
-        definition: 'INTEGER NOT NULL DEFAULT 0 CHECK (prompt_context_sequence >= 0)',
-        table: 'agent_sessions',
-    });
-    ensureColumn(db, {
-        column: 'instructions_hash',
-        definition: 'TEXT',
-        table: 'agent_sessions',
     });
     ensureColumn(db, {
         column: 'usage_json',
