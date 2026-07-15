@@ -68,15 +68,14 @@ mention dispatches to **all agent-triggered evaluations**:
   agent-authored message inherits the author's chain and increments hops.
 - **Hop cap** (default 4): an agent-authored message dispatches
   evaluations only while its turn's hops are below the cap.
-- **Chain budget** (default 8 dispatched turns per chain origin): once
+- **Chain budget** (default 16 dispatched turns per chain origin): once
   spent, further evaluations in that chain are suppressed with the
   existing visible suppression notice.
 - Budget accounting is per dispatched turn, so any agent reply into a
   four-agent channel spends three budget units at once — chatter exhausts
-  chains fast by design. The defaults (4 hops, 8-turn budget) were tuned
-  for mention-only dispatch and must be retuned against channel size at
-  implementation; the hop cap stays the depth bound, the budget the spend
-  bound.
+  chains fast by design. Defaults: 4 hops, 16-turn budget per origin —
+  the hop cap is the depth bound, the budget the spend bound; retune
+  against real channel sizes as usage shows.
 - `NO_REPLY` delivers nothing, so it dispatches nothing: silence still
   ends chains. The freshness gate's held-then-declined outcome is the
   common chain terminator in practice.

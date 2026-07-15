@@ -3,7 +3,7 @@ summary: Durable chat API for messages, responses, activity, artifacts, receipts
 read_when:
   - changing chat messages, responses, activity, artifacts, receipts, history, or timeline recovery
   - changing how agent runtimes, bots, webhooks, or local tools send chat work into Tavern
-  - changing chat turn stop or steering contracts
+  - changing chat turn stop contracts or busy-delivery evidence
 ---
 
 # Chat API
@@ -162,29 +162,22 @@ Channel color and system prompt changes invalidate `chat.list` and the changed
 
 Live turn progress feeds two app surfaces: every step lands in the run's live
 evidence (the drawer's source while a turn streams), and conversation-visible
-steps — the turn's post, widgets, notices, steered messages — update the
-visible `chat.log.list` cache. Narration steps create or edit the turn's post
-row; streamed reply text edits it in place, with the delivery settling the
-durable content.
+steps — the turn's post, widgets, notices — update the visible
+`chat.log.list` cache. Narration steps create or edit the turn's post row;
+streamed reply text edits it in place, with the delivery settling the durable
+content.
 
-`chat.stop` and `chat.steer` are turn-control mutations, not message writes.
-`chat.stop` settles a queued or running Runtime turn as cancelled and settles
-the linked response as cancelled. It does not delete the triggering message or
-any previously delivered output.
-`chat.steer` accepts `chatId`, active `runId`, text `content`, and optional
-message metadata. It forwards text into the live agent turn and returns
-`steered: true` only after Runtime accepts and records the steer. Steering does
-not create a durable user message; accepted steers are represented as response
-activity. Clients may project that activity as a visible user-style transcript
-row without rendering a separate system notice, and may do that optimistically
-while the mutation is pending. If Runtime rejects the steer or the call fails,
-clients should remove the optimistic row and restore any local queued draft.
-Message totals and durable message search remain unchanged. Messages with
-attachments must use the normal message send path. Model changes are Runtime
-session controls, not message composer payloads. App clients should offer
-steering while the turn is still active. Progress, narration, and tool activity
-do not close the steering window; a completed turn or durable assistant reply
-does.
+`chat.stop` is the turn-control mutation, not a message write. It settles a
+queued or running Runtime turn as cancelled and settles the linked response
+as cancelled. It does not delete the triggering message or any previously
+delivered output.
+
+There is no steer mutation: sending while a turn runs is a normal message
+send. Runtime attempts busy delivery of the new message into running turns
+and records notice activity when the engine accepts it; the seat's context
+cursor guarantees delivery either way (see
+[steering](../../specs/steering.md)). Model changes are Runtime session
+controls, not message composer payloads.
 
 ## Messages
 

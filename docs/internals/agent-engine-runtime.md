@@ -3,7 +3,7 @@ summary: Tavern Runtime's agent-engine contract for chats, Agent sessions, AI SD
 read_when:
   - changing Tavern Runtime agent execution
   - changing AI SDK HarnessAgent execution
-  - changing agent instructions, SOUL, runtime skills, tools, steering, or turn activity
+  - changing agent instructions, SOUL, runtime skills, tools, busy delivery, or turn activity
   - changing model provider setup, model defaults, or Agent session model selection
   - changing deterministic e2e executor behavior
 ---
@@ -18,8 +18,8 @@ exposure, Memory reads, and turn routing.
 Tavern App and Tavern Server are clients. They may proxy Runtime data and shape
 it for the UI, but they must not own executable agent state. A direct Runtime
 API client should be able to list executable models, update an Agent default
-model, send a chat message, inspect activity, start a new Agent session, stop a
-turn, and steer a turn without the Tavern App process.
+model, send a chat message, inspect activity, start a new Agent session, and
+stop a turn without the Tavern App process.
 
 Runtime does not depend on Vercel managed infrastructure for local execution.
 

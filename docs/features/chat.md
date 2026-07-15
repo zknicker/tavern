@@ -3,7 +3,7 @@ summary: Agent chat experience for durable messages, responses, activity, artifa
 read_when:
   - changing the main agent conversation experience
   - changing durable messages, responses, activity, artifacts, receipts, or timeline recovery
-  - changing mid-turn queueing, steering, or stop behavior
+  - changing busy delivery, the freshness gate, or stop behavior
 ---
 
 # Chat
@@ -68,25 +68,28 @@ happen, and keep the durable timeline as context.
   streaming turn entry and status row. Failure banners are per agent seat: an
   agent's failure stays visible until that agent runs again, regardless of
   what other agents do in the chat.
-* **Mid-turn steering.** The chat composer stays available while an agent turn
-  is running. Drafts entered during an active turn are queued for the same chat
-  and agent, then sent when the active response settles. A queued text-only
-  draft can be steered into the active turn while that turn is still live —
-  only when exactly one run is live; with several concurrent runs the target
-  is ambiguous, so the draft stays queued. Queued drafts with attachments stay
-  normal next-turn messages because steering carries only text. Explicit
-  stopping remains a separate control — with concurrent runs the stop control
-  stops every live run in the chat. A stopped turn settles as `cancelled`;
-  late engine output from that turn is not delivered as the assistant reply.
-* **Agent-to-agent delivery.** Agents get the same queue-vs-steer choice for
-  their own sends: a `chat_send` mention of a busy agent queues a follow-up
-  turn by default, `mode: steer` records a steer notice on that agent's
-  running turn instead of dispatching a new one, and `chat_wait_idle` waits,
-  bounded, for a seat to go idle. When a mention-dispatched turn settles, the
-  mentioning agent receives a compact outcome note in its next prompt. See
-  [agent-mentions](../../specs/agent-mentions.md).
+* **Sending during live turns.** The chat composer stays available while
+  agent turns run, and sending is always a normal send: the message lands
+  durably and Runtime attempts busy delivery — a compact notice into each
+  running turn's engine session so agents can incorporate it before
+  finishing (see [steering](../../specs/steering.md)). Nothing queues or
+  blocks on a live turn. Explicit stopping remains a separate control —
+  with concurrent runs the stop control stops every live run in the chat.
+  A stopped turn settles as `cancelled`; late engine output from that turn
+  is not delivered as the assistant reply.
+* **Freshness gate.** A channel reply drafted while peer messages landed
+  unseen is held once: the agent sees the new rows plus its draft and
+  delivers, revises, or declines with `NO_REPLY`. This is what keeps
+  several agents from piling identical answers onto one message.
+* **Agent-to-agent delivery.** Agent sends ride the same rails: a
+  `chat_send` post is durable, busy-delivers to running turns, and
+  dispatches evaluation turns when the sender's turn completes.
+  `chat_wait_idle` waits, bounded, for a seat to go idle, and when a turn
+  an agent's message dispatched settles, the sender receives a compact
+  outcome note in its next prompt. See
+  [addressing](../../specs/addressing.md).
 * **Composer context.** The composer keeps a compositional input shell with
-  attachment, queue, and submit slots. Agent model defaults live in Agent
+  attachment and submit slots. Agent model defaults live in Agent
   settings. Users can pick or drag files into the composer. Durable chat
   messages store attachment arrays.
 * **Triggers.** `@` autocompletes Agents in the current chat; `$`
@@ -94,19 +97,20 @@ happen, and keep the durable timeline as context.
   actions live in the agent drawer instead. See
   [mentions](../../specs/mentions.md) and
   [agent-drawer](../../specs/agent-drawer.md).
-* **Addressing.** Channel messages are human chat by default. Mentioning one
-  or more agent participants starts one turn per mentioned agent. Agent DMs
-  address the one agent participant automatically.
-* **Agent handoffs.** An agent's delivered final reply can mention other
-  agent participants the same way; each mention dispatches a turn on that
-  seat, bounded by chain depth and budget limits. See
-  [agent-mentions](../../specs/agent-mentions.md).
+* **Addressing.** Every agent participant evaluates every channel message —
+  each seat gets its own turn and chooses whether to speak. Mentions set
+  who is expected to answer; they never gate who evaluates or who can read.
+  Agent DMs address the one agent participant. See
+  [addressing](../../specs/addressing.md).
+* **Agent handoffs.** An agent's delivered final reply dispatches
+  evaluation turns on the other seats the same way, bounded by chain depth
+  and budget limits; mentioning a peer marks it as the expected owner.
 * **Cross-chat posts.** An agent can post a message, as itself, into another
   chat where it holds a seat (`chat_send`, with `chats_list` for targets).
-  The post starts no turn for its author, but mentioning an agent of the
-  target chat dispatches that agent's turn there once the posting turn
-  completes — the consult-an-agent-elsewhere path, bounded by the same
-  chain limits as in-chat handoffs.
+  The post starts no turn for its author; every agent seat of the target
+  chat evaluates it once the posting turn completes — the
+  consult-an-agent-elsewhere path, bounded by the same chain limits as
+  in-chat handoffs.
 * **Silent replies.** An agent can decline to respond: a turn whose reply is
   exactly `NO_REPLY` completes without delivering an assistant message. The
   response settles as completed with a "Chose not to reply" summary and
@@ -245,24 +249,13 @@ transcript only grows:
   the visible turn with shadcn visibility state. Selecting a rail mark jumps to
   that turn through shadcn `scrollToMessage`.
 
-Queued composer drafts are app-local until dispatched or explicitly steered. A
-queued draft does not create a durable Tavern message, response, agent session
-entry, or transcript row while it is only waiting in the composer. The queued
-draft keeps its selected agent, attachments, content, and metadata.
-
-The queued draft action follows the payload:
-
-* text-only draft while a turn is active:
-  hide the queued draft immediately, show the steered text in the chat, and
-  call Runtime steering for the active run. Assistant progress and tool activity
-  do not close this window. If Runtime rejects the steer or the call fails,
-  restore the queued draft.
-* text-only draft after the active turn settles: keep it as a normal queued
-  draft for the next turn.
-* draft with attachments while a turn is active: promote it to the queue head
-  and stop the active run. After the stop settles, the draft sends through the
-  normal message path so attachment staging still applies.
-* any draft while the chat is idle: send it through the normal message path.
+Sending never depends on turn state: every submit goes through the normal
+message path whether the chat is idle or turns are live. Runtime attempts
+busy delivery of the new message into each running turn and records a
+"Delivered mid-turn" notice on the receiving response when the engine
+accepts it (see [steering](../../specs/steering.md)); when it cannot, the
+seat picks the message up through its next prompt's catch-up. There is no
+composer queue and no steer window.
 
 Stopping a live turn interrupts the managed engine session, keeps the session
 busy until the engine reports the interrupted turn settled, then clears the
@@ -272,18 +265,11 @@ The cancelled response renders as a one-line stopped status row in the durable
 timeline. The app may show that stopped row optimistically as soon as the user
 requests a stop; if the stop request fails, the optimistic row is removed.
 
-When Runtime accepts an explicit mid-turn steer, it records a `runtimeNotice`
-activity row with the steered text. Tavern App projects that
-activity as a user-styled transcript row at the point it was accepted. It does
-not render a separate steering system notice. The projected steer row is not a
-durable Tavern message and does not change message counts or resend behavior.
-The app may show the projected steer row optimistically while Runtime accepts
-the steer, then remove it if Runtime rejects the call.
-
-Agent-driven steers (`chat_send` with `mode: steer`) record a distinct
-`runtime_notice_agent_steered` notice on the target's running response. That
-notice renders as a regular notice row — never user-styled — because the
-steered message itself is already a durable agent-authored chat message.
+Busy-delivery and freshness-hold evidence (`runtime_notice_busy_delivery`,
+`runtime_notice_freshness_hold`) render as regular runtime notice rows —
+never user-styled — because the delivered message itself is already a
+durable chat message. Historical `runtime_notice_steered` rows from the
+retired steering feature render the same generic way.
 
 Other engine gateway signals surface the same way — as durable activity rows
 that also patch live through `turn.progress` steps:

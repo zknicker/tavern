@@ -1,13 +1,18 @@
 ---
-summary: Agent-authored mentions — agents address other agents in shared chats, with chain limits that prevent runaway loops.
+summary: Superseded by addressing.md and steering.md — kept for mention rendering notes and prior art.
 read_when:
-  - changing agent-to-agent mention dispatch, chain limits, or handoff behavior
-  - changing how assistant replies trigger other agents' turns
-  - changing mention parsing for agent-authored messages
-  - changing chat_send delivery modes, chat_wait_idle, or dispatched turn outcome notes
+  - changing mention rendering for agent-authored messages
+  - reading the history behind default-evaluate addressing (see addressing.md)
 ---
 
 # Agent-Authored Mentions
+
+> **Superseded.** Dispatch semantics now live in
+> [addressing.md](addressing.md) (default-evaluate: every seat evaluates
+> every message; mentions set expectation, never routing) and delivery
+> semantics in [steering.md](steering.md). The reference grammar remains in
+> [mentions.md](mentions.md). This file is kept for the rendering notes and
+> prior-art history below.
 
 Agents in a shared chat can hand work to each other by mentioning another
 agent in a reply, exactly the way a human does: a rich reference

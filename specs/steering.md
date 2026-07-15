@@ -37,21 +37,23 @@ with a delivery model that fits Tavern's data spine:
 
 ### Capability ladder
 
-Each harness declares a busy-delivery capability, resolved per session:
+Each harness adapter either accepts mid-turn input (`direct`) or does not
+(`none`), resolved per attempt through the engine session's
+`sendUserMessage`:
 
 | Mode | Meaning | Current adapters |
 | --- | --- | --- |
-| `direct` | Runtime may deliver a notice into the running turn at any time; the engine applies it at its own safe boundary. | claude-code (bridge `user-message` frame feeds the CLI's streaming input, which queues to its next step boundary) |
-| `none` | No mid-turn delivery. Messages wait for the cursor. | codex, pi (until their bridges expose an equivalent) |
+| `direct` | Runtime may deliver a notice into the running turn at any time; the engine applies it at its own safe boundary. | claude-code and codex (bridge `user-message` frame feeds the CLI's streaming input), pi (native session steer) |
+| `none` | No mid-turn delivery. Messages wait for the cursor. | any adapter without `submitUserMessage` |
 
 There is no Tavern-side "gated" mode: engines that need boundary gating
 (Claude thinking blocks) gate internally, which is why the frame is safe to
 send whenever. If an engine later exposes raw injection without internal
 gating, the gate lives in the adapter, not in product code.
 
-Capability detection is per-adapter and explicit. An adapter without the
-frame is `none`; nothing probes or retries. Delivery into a `none` session
-is not an error — it is the ladder working.
+Capability detection is dynamic and silent: a refused or unsupported
+delivery is not an error — it is the ladder working, and the cursor
+guarantees the message still arrives.
 
 ### Payload: an inbox notice, not a text splice
 
@@ -93,8 +95,9 @@ The composer's steer-vs-queue distinction collapses to **send now**:
 - Runtime then attempts busy delivery to the live run. Whether that
   attempt succeeds changes nothing durable — only whether the agent can
   react within the current turn.
-- Queued drafts remain an app-local composer affordance (hold a draft,
-  release it later); releasing a draft is just a send.
+- The automatic composer queue is removed with it: nothing about a live
+  turn blocks sending. (A deliberate hold-this-draft affordance would be a
+  fresh feature, not a survivor of the queue subsystem.)
 - With several concurrent live runs there is no ambiguity anymore: the
   message is chat-scoped, every busy seat in the chat gets the notice, and
   addressing (specs/addressing.md) decides who acts.
