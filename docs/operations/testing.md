@@ -202,6 +202,20 @@ agent bios. Use `--only <substring>` to rerun a single scenario. Pass
 same set (unarchive, agent session reset, `chat.clear`) instead of
 stamping new archive rows. See AGENTS.md ("Agent System Prompt Changes").
 
+## Session Behavior Evals
+
+`bun run eval:sessions` drives real model turns through the same running dev
+stack and checks the agent-global session contract end-to-end
+(`specs/sessions.md`): cross-chat continuity (a DM fact answered in a
+channel without tools), full serialization with auto-drain (a busy agent
+queues a second chat and answers both in order), mid-turn freshness, the
+ledger-backed stale cross-post, model-switch rotation (fresh generation on
+the new model), and the agent-scoped reset (generation bump plus the durable
+DM notice). Grading stays deterministic; temp chats are archived and the
+agent's model restored afterward. Run it after session, ledger, delivery,
+or turn-runner changes. Both eval scripts share
+`scripts/eval-harness.mjs`; `--only <substring>` reruns one scenario.
+
 ## Keeping Suites Current
 
 * Add tests with the feature or bug fix, not in a later cleanup.
