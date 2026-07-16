@@ -89,7 +89,7 @@ function AgentHoverCardBody({
 
     return (
         <div className="flex min-w-0 flex-col">
-            <div className="flex min-w-0 items-center gap-3 px-4 pt-3.5 pb-3">
+            <div className="flex min-w-0 items-center gap-2.5 px-3 pt-2.5 pb-2">
                 {appearance.character !== 'none' ? (
                     <span aria-hidden="true" className="flex size-11 shrink-0 items-center">
                         <AgentFace
@@ -121,12 +121,12 @@ function AgentHoverCardBody({
                 </div>
             </div>
             {bio ? (
-                <p className="line-clamp-2 border-border/60 border-t px-4 py-2.5 text-muted-foreground text-sm">
+                <p className="line-clamp-2 border-border/60 border-t px-3 py-2 text-muted-foreground text-sm">
                     {bio}
                 </p>
             ) : null}
             {session ? (
-                <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-0.5 border-border/60 border-t px-4 py-2.5 text-meta">
+                <dl className="grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-0.5 border-border/60 border-t px-3 py-2 text-meta">
                     <dt className="text-muted-foreground">Model</dt>
                     <dd className="min-w-0 truncate text-foreground">
                         {session.effectiveModel.model} ·{' '}
@@ -134,7 +134,7 @@ function AgentHoverCardBody({
                     </dd>
                 </dl>
             ) : null}
-            <div className="border-border/60 border-t px-4 pt-2.5 pb-3">
+            <div className="border-border/60 border-t px-3 pt-2 pb-2.5">
                 <span className="font-medium text-caption text-muted-foreground uppercase tracking-wider">
                     Recent activity
                 </span>
@@ -146,7 +146,7 @@ function AgentHoverCardBody({
                 ) : entries.length === 0 ? (
                     <p className="pt-2 text-meta text-muted-foreground">No recent activity.</p>
                 ) : (
-                    <ul className="flex flex-col gap-1.5 pt-2">
+                    <ul className="flex flex-col gap-1 pt-1.5">
                         {entries.map((entry) => (
                             <li
                                 className="flex min-w-0 items-center gap-2 text-meta"
