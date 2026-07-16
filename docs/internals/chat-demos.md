@@ -57,4 +57,4 @@ app-local UI state, not durable Runtime chat rows.
 | --- | --- |
 | `cht_demo` | A representative colored channel named `demo` covering chart Widgets, MerchBase chart rendering, the table Widget, calendar displays, artifact links, long-token wrapping, attachments, completed progress/tool work, stable tool drawer headers, sampled multi-turn history, and one stopped turn with thinking/progress/tool rows. |
 | `cht_demo_team` | A multi-agent channel named `team` with two agent seats and per-seat turns. |
-| `cht_demo_widgets` | A widget gallery channel named `widgets`: one turn per rendered widget in catalog order (table keyed and matrix shorthand, bar/line/composed charts, calendar event/day, HTML preview, MerchBase sales chart) plus one intentionally invalid payload showing the fallback state. |
+| `cht_demo_widgets` | A widget gallery channel named `widgets`: one turn per rendered widget in catalog order (table keyed and matrix shorthand, bar/line/composed charts, calendar event/day, HTML preview, TSX page, MerchBase sales chart) plus one intentionally invalid payload showing the fallback state. |

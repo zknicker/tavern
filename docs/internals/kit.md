@@ -73,3 +73,9 @@ props onto kit components (`WidgetBarChart` = fence props → `Card` +
 `BarChart`), and keep widget-only concerns (fallback rows, workspace file
 queries, plugin queries) outside the kit. See [widgets.md](widgets.md) for the
 fence contract and [frontend.md](frontend.md) for folder ownership.
+
+Sandboxed agent TSX pages consume the kit through the page-runtime bundle:
+`scripts/build-page-runtime.ts` compiles the kit sources (plus the tokens in
+`src/styles/tokens.css`) into the self-contained script and stylesheet the
+`widget:page` iframe runs. That build is why kit components must stay
+props-in/render-out with token-only colors. See [kit-pages.md](kit-pages.md).

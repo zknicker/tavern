@@ -65,10 +65,26 @@ stored in the envelope plus the activity `summary`/`detail`.
   same confined Runtime workspace read the artifact pane uses (realpath
   confinement to the sending agent's workspace, secret-file blocks, complete
   reads up to 5 MiB) and renders it in an opaque-origin iframe (`srcDoc`,
-  scripts allowed, never `allow-same-origin`). The file must be self-contained:
+  scripts allowed, never `allow-same-origin`). The iframe background is
+  transparent — the document owns its own styling over the app surface. The
+  file must be self-contained:
   inline CSS/JS only, no sibling or external asset references. Rendering is
   live — the widget shows the file's current content at render time, not a
   snapshot, so later edits or deletion change what historical chats display.
+- `page`: sandboxed inline render of an agent-authored single-file TSX page —
+  the interactive escape valve above `html-preview` in the ladder. Props are
+  `{ path, height?, title? }` with the same confinement shape as
+  `html-preview`, except the path must end in `.tsx` and the complete-read cap
+  is the 512 KiB workspace text-read window. The Website fetches the file
+  through the same confined Runtime workspace read, then renders it in the
+  same opaque-origin iframe; inside the iframe the bundled page runtime
+  compiles the TSX with sucrase and mounts it with React. Exactly two import
+  sources resolve — `react` and `@tavern/kit` (the kit bundle built from
+  `apps/website/src/kit`) — and any other specifier, URLs above all, fails the
+  compile and renders the error plus the fenced source instead of a partial
+  page. Tavern tokens ride into the iframe (light and dark, following the app
+  scheme). Rendering is live file state, same replay caveat as `html-preview`.
+  See [kit-pages.md](kit-pages.md) for the authoring contract.
 - `merchbase-sales-chart`: Plugin-backed sales trend display. Fetches live
   MerchBase data, renders sales as bars and royalties as a line, and includes a
   date range selector. Current-day sales requests default to a 10-day trend
@@ -139,4 +155,8 @@ assistant content and writing `widget` activity
 (`apps/website/src/widgets`), including Plugin-owned renderers imported from
 first-party Plugin folders. Renderers are thin wrappers that map fence props
 onto the shared Tavern component kit (`apps/website/src/kit`, see
-[kit.md](kit.md)), which owns the visual components.
+[kit.md](kit.md)), which owns the visual components. The `page` widget's
+in-iframe compiler and kit bundle live under
+`apps/website/src/widgets/page-runtime/` and are built from the kit sources by
+`apps/website/scripts/build-page-runtime.ts` (see
+[kit-pages.md](kit-pages.md)).
