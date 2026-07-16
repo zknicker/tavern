@@ -19,7 +19,7 @@ import { useChatDismiss } from '../../hooks/chats/use-chat-dismiss.ts';
 import { formatShortTime } from '../../lib/format.ts';
 import { cn } from '../../lib/utils.ts';
 import { AgentWidget } from '../../widgets/render-widget.tsx';
-import { resolveAgentInk, resolveCharacterSeatColor } from '../agents/agent-color-presets.ts';
+import { resolveAgentInk } from '../agents/agent-color-presets.ts';
 import { AgentFace, type HeadName } from './agent-face.tsx';
 import { AgentHoverCard } from './agent-hover-card.tsx';
 import { ChatMarkdownText } from './chat-markdown-text.tsx';
@@ -81,10 +81,9 @@ const newTurnGapClassName = '';
 // footer; our roster layout keeps it aligned with the name header instead.
 const turnAvatarBaseClassName =
     'size-10 min-w-10 self-start ring-1 ring-border/50 group-has-data-[slot=message-footer]/message:translate-y-0';
-// The character face renders slightly larger than its 40px seat tile — a
-// tight frame where the head fills the tile and crests its top edge, on a
-// dark shade of the character's own shell color.
-const tileFaceStyle = { flexShrink: 0, height: 42, overflow: 'visible', width: 42 } as const;
+// The character head is the avatar: a square-ish little character at the
+// same footprint and roundedness as the people avatars beside it.
+const faceStyle = { flexShrink: 0, height: 40, overflow: 'visible', width: 40 } as const;
 const hoverGroupClassName = 'group';
 
 export function TranscriptEntryView({
@@ -255,34 +254,22 @@ function TurnAvatar({
     const variant = resolveTurnAvatarVariant(actorKind, avatarUrl);
 
     if (variant === 'eyes') {
-        // A tight squircle seat in a dark shade of the character's own shell
-        // color; the head fills the tile and crests its top edge so heads of
-        // any shape keep their full size.
+        // The character head is its own avatar shape — no chrome behind it.
         return (
             <MessageAvatar
                 className={cn(
                     turnAvatarBaseClassName,
-                    'relative overflow-visible rounded-lg bg-transparent ring-0'
+                    'overflow-visible rounded-none bg-transparent ring-0'
                 )}
-                style={
-                    {
-                        background: `color-mix(in oklab, ${resolveCharacterSeatColor(character)} 50%, var(--background))`,
-                    } as React.CSSProperties
-                }
             >
-                {/* The 42px frame centers on the 40px tile (the head art has
-                    its own internal padding); tufts and antennae crest the
-                    top edge via the art's authored overflow. */}
-                <span className="absolute inset-x-0 -top-0.5 flex justify-center overflow-visible">
-                    <AgentFace
-                        animate={false}
-                        dark={dark}
-                        head={character}
-                        ink={resolveAgentInk(dark, color)}
-                        size={42}
-                        style={tileFaceStyle}
-                    />
-                </span>
+                <AgentFace
+                    animate={false}
+                    dark={dark}
+                    head={character}
+                    ink={resolveAgentInk(dark, color)}
+                    size={40}
+                    style={faceStyle}
+                />
             </MessageAvatar>
         );
     }
