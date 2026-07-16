@@ -32,10 +32,24 @@ export function emptyTimelineState(): ChatTimelineState {
         activeTurns: [],
         failedTurns: [],
         historyLoaded: false,
+        terminalRunIds: [],
         timeline: [],
         totalMessages: 0,
         turnEvidence: {},
     };
+}
+
+const terminalRunMemoryLimit = 200;
+
+/** Remember a run this client saw end, so stale snapshots cannot revive it. */
+export function rememberTerminalRunId(ids: readonly string[], runId: string): readonly string[] {
+    if (ids.includes(runId)) {
+        return ids;
+    }
+    const next = [...ids, runId];
+    return next.length > terminalRunMemoryLimit
+        ? next.slice(next.length - terminalRunMemoryLimit)
+        : next;
 }
 
 export function applyLogSnapshot(
@@ -48,8 +62,10 @@ export function applyLogSnapshot(
 
     const snapshot = normalizeChatLog(log);
     // Server-stated settlement covers runs with no terminal row to match —
-    // a silent turn whose live completion event this client missed.
-    const settledRunIds = new Set(snapshot.settledRunIds);
+    // a silent turn whose live completion event this client missed. The
+    // client's own terminal memory covers the inverse: a snapshot served
+    // before a run settled landing after its live terminal event.
+    const settledRunIds = new Set([...snapshot.settledRunIds, ...state.terminalRunIds]);
     const isTerminalRun = (runId: string) =>
         settledRunIds.has(runId) ||
         hasTurnStatusRow(snapshot.rows, runId) ||
@@ -111,6 +127,7 @@ export function applyLogSnapshot(
         activeTurns: nextActiveTurns,
         failedTurns: nextFailedTurns,
         historyLoaded,
+        terminalRunIds: state.terminalRunIds,
         timeline: nextTimeline,
         totalMessages: nextTotal,
         // Live evidence only serves running turns; ended runs read the

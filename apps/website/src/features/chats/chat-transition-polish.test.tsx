@@ -128,6 +128,7 @@ test('draft handoff waits while the accepted turn is still blank thinking', () =
             historyLoaded: true,
             timeline: [],
             totalMessages: 0,
+            terminalRunIds: [],
             turnEvidence: {},
         })
     ).toBe(false);
@@ -159,6 +160,7 @@ test('draft handoff forwards the real active reply once the turn starts', () => 
             historyLoaded: true,
             timeline: [],
             totalMessages: 0,
+            terminalRunIds: [],
             turnEvidence: {},
         },
     });
@@ -184,6 +186,7 @@ test('draft handoff releases when the active reply has visible text', () => {
             historyLoaded: true,
             timeline: [],
             totalMessages: 0,
+            terminalRunIds: [],
             turnEvidence: {},
         })
     ).toBe(true);
@@ -218,6 +221,7 @@ test('draft handoff waits when the loaded real chat only has the user message', 
                 },
             ],
             totalMessages: 1,
+            terminalRunIds: [],
             turnEvidence: {},
         })
     ).toBe(false);
@@ -252,6 +256,7 @@ test('draft handoff releases when no active reply remains after terminal history
                 },
             ],
             totalMessages: 1,
+            terminalRunIds: [],
             turnEvidence: {},
         })
     ).toBe(true);

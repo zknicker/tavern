@@ -102,6 +102,7 @@ describe('buildDraftHandoffLog', () => {
                 },
             ],
             totalMessages: 1,
+            terminalRunIds: [],
             turnEvidence: {},
         });
 

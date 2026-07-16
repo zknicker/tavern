@@ -1,6 +1,10 @@
 import { postMessageIdForRun } from './chat-log-cache.ts';
 import { findActiveReply, removeActiveReply, upsertActiveReply } from './chat-timeline-reply.ts';
-import { applyReplySnapshot, isSameTurnFailure } from './chat-timeline-snapshots.ts';
+import {
+    applyReplySnapshot,
+    isSameTurnFailure,
+    rememberTerminalRunId,
+} from './chat-timeline-snapshots.ts';
 import {
     createOptimisticStopRow,
     hasTurnStatusRow,
@@ -141,8 +145,15 @@ export function clearTimelineTurn(
         : state.activeTurns.length > 0
           ? []
           : state.activeTurns;
+    const terminalRunIds = input.runId
+        ? rememberTerminalRunId(state.terminalRunIds, input.runId)
+        : state.terminalRunIds;
 
-    if (activeReplies === state.activeReplies && activeTurns === state.activeTurns) {
+    if (
+        activeReplies === state.activeReplies &&
+        activeTurns === state.activeTurns &&
+        terminalRunIds === state.terminalRunIds
+    ) {
         return state;
     }
 
@@ -150,6 +161,7 @@ export function clearTimelineTurn(
         ...state,
         activeReplies,
         activeTurns,
+        terminalRunIds,
     };
 }
 
@@ -164,14 +176,16 @@ export function completeTimelineTurn(
     const timeline = completeLiveProgressRows(state.timeline, input);
     const turnEvidence = completeRunEvidence(state.turnEvidence, input);
     const activeTurns = removeActiveTurn(state.activeTurns, input.turn.runId);
+    const terminalRunIds = rememberTerminalRunId(state.terminalRunIds, input.turn.runId);
     const reply = findActiveReply(state.activeReplies, input.turn.runId);
 
     if (!reply) {
         return activeTurns === state.activeTurns &&
             timeline === state.timeline &&
-            turnEvidence === state.turnEvidence
+            turnEvidence === state.turnEvidence &&
+            terminalRunIds === state.terminalRunIds
             ? state
-            : { ...state, activeTurns, timeline, turnEvidence };
+            : { ...state, activeTurns, terminalRunIds, timeline, turnEvidence };
     }
 
     // A completed reply normally outlives the turn so the streamed text can
@@ -190,6 +204,7 @@ export function completeTimelineTurn(
         ...state,
         activeReplies,
         activeTurns,
+        terminalRunIds,
         timeline,
         turnEvidence,
     };
@@ -354,6 +369,7 @@ export function failTimelineTurn(
             ...state.failedTurns.filter((failure) => failure.turn.runId !== input.turn.runId),
             failedTurn,
         ],
+        terminalRunIds: rememberTerminalRunId(state.terminalRunIds, input.turn.runId),
     };
 }
 

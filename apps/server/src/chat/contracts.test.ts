@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import {
+    chatLogActiveReplySchema,
     createChatInputSchema,
     sendChatMessageInputSchema,
     startChatInputSchema,
@@ -7,6 +8,21 @@ import {
 } from './contracts.ts';
 
 describe('chat contracts', () => {
+    test('active replies keep the quiet-evaluation stamp through parsing', () => {
+        // chatLogPageSchema.parse strips unknown keys; if the stamp is not in
+        // the schema, every log snapshot un-hides quiet evaluation turns.
+        const reply = chatLogActiveReplySchema.parse({
+            agentId: 'agt_wren',
+            isThinking: true,
+            runId: 'run_1',
+            sessionKey: 'ags_agt_wren_1',
+            startedAt: '2026-07-16T15:43:01.481Z',
+            text: '',
+            trigger: 'evaluation',
+        });
+        expect(reply.trigger).toBe('evaluation');
+    });
+
     test('accepts multiple channel agent participants', () => {
         expect(
             createChatInputSchema.parse({

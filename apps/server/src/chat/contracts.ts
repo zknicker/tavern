@@ -250,6 +250,10 @@ export const chatLogActiveReplySchema = z.object({
     sessionKey: z.string().trim().min(1),
     startedAt: z.string().datetime(),
     text: z.string(),
+    // Quiet peer-evaluation turns render no thinking row until text streams
+    // (specs/addressing.md). Snapshots must carry the stamp or a refetch
+    // un-hides the turn the live event stream is keeping quiet.
+    trigger: z.literal('evaluation').optional(),
 });
 
 export const chatLogTurnFailureSchema = z.object({
