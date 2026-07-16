@@ -11,6 +11,7 @@
       "!apps/website/dist",
       "!apps/website/src-tauri/gen/schemas",
       "!apps/website/src/components/charts",
+      "!apps/website/src/widgets/page-runtime/generated",
       "!**/*.css"
     ]
   },

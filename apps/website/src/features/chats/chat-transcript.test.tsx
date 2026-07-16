@@ -579,6 +579,36 @@ test('ChatTranscript renders html preview widgets inside a sandboxed frame shell
     assert.doesNotMatch(markup, /Widget unavailable/);
 });
 
+test('ChatTranscript renders page widgets inside a sandboxed frame shell', () => {
+    const row = widgetRow('ui-page');
+
+    if (row.kind !== 'widget') {
+        throw new Error('Expected widget row.');
+    }
+
+    const markup = renderTranscript([
+        {
+            ...row,
+            widget: {
+                ...row.widget,
+                component: 'tavern.widget.page',
+                fallbackText: 'Page: workbench/pages/fleet.tsx',
+                props: {
+                    height: 600,
+                    path: 'workbench/pages/fleet.tsx',
+                },
+            },
+        },
+    ]);
+
+    // Static render never resolves the workspace file query: the widget frame
+    // and loading note must render, and no iframe may appear yet.
+    assert.match(markup, /workbench\/pages\/fleet\.tsx/);
+    assert.match(markup, /Loading page/);
+    assert.doesNotMatch(markup, /<iframe/);
+    assert.doesNotMatch(markup, /Widget unavailable/);
+});
+
 test('ChatTranscript renders calendar event description fallback', () => {
     const row = widgetRow('ui-calendar-event');
 

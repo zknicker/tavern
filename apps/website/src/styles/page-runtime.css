@@ -1,0 +1,30 @@
+/*
+ * Input stylesheet for the sandboxed page-runtime bundle, compiled standalone
+ * by scripts/build-page-runtime.ts. Tavern tokens ride in via tokens.css (the
+ * same file global.css imports), and utilities are scanned from the kit
+ * sources plus the primitives the kit composes — never from app feature code.
+ */
+@import 'tailwindcss' source(none);
+@import './tokens.css';
+
+@source '../kit';
+@source '../components/charts';
+@source '../components/ui';
+@source '../widgets/page-runtime';
+
+@layer base {
+    * {
+        border-color: var(--border);
+    }
+
+    body {
+        margin: 0;
+        background: transparent;
+        color: var(--foreground);
+        font-family: var(--font-sans);
+        font-size: var(--app-ui-font-size);
+        line-height: 1.5;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+}

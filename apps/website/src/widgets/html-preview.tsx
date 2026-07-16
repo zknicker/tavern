@@ -4,11 +4,7 @@ import {
 } from '@tavern/api/widgets/html-preview';
 import { Card } from '../kit/index.ts';
 import { trpc } from '../lib/trpc.tsx';
-
-// Opaque-origin sandbox, matching the artifact pane's HTML preview. Never add
-// allow-same-origin: the agent-authored document must not reach the app
-// origin's cookies, storage, or DOM.
-const htmlPreviewSandbox = 'allow-forms allow-modals allow-pointer-lock allow-popups allow-scripts';
+import { workspaceIframeSandbox } from './sandbox.ts';
 
 export function WidgetHtmlPreview({
     agentId,
@@ -79,8 +75,8 @@ export function WidgetHtmlPreviewBody({
 
     return (
         <iframe
-            className="block w-full border-0 bg-white"
-            sandbox={htmlPreviewSandbox}
+            className="block w-full border-0"
+            sandbox={workspaceIframeSandbox}
             srcDoc={file.content}
             style={{ height }}
             title={path}
