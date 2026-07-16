@@ -14,7 +14,7 @@ type AgentPresenceEntry = AgentPresenceOutput['presence'][number];
 
 /** Topbar presence for agent DMs: a quiet dot, plus text only when busy. */
 export function AgentPresenceBadge({ chat }: { chat: ChatListItem }) {
-    const presence = usePresenceForAgent(getChatAgentId(chat));
+    const presence = useAgentPresenceEntry(getChatAgentId(chat));
     if (chat.conversationKind === 'channel' || !presence) {
         return null;
     }
@@ -75,7 +75,7 @@ export function AgentBusyElsewhereHint({
 
 /** Presence dot for sidebar DM rows, anchored to the agent face. */
 export function SidebarAgentPresenceDot({ chat }: { chat: ChatListItem }) {
-    const presence = usePresenceForAgent(
+    const presence = useAgentPresenceEntry(
         chat.conversationKind === 'channel' ? null : getChatAgentId(chat)
     );
     if (!presence) {
@@ -143,7 +143,7 @@ function AgentPresenceDot({
 
 /** Generic presence line: dot always, label only while busy. */
 export function AgentPresenceStatusLine({ agentId }: { agentId: string }) {
-    const presence = usePresenceForAgent(agentId);
+    const presence = useAgentPresenceEntry(agentId);
     if (!presence) {
         return null;
     }
@@ -160,7 +160,8 @@ export function AgentPresenceStatusLine({ agentId }: { agentId: string }) {
     );
 }
 
-function usePresenceForAgent(agentId: string | null) {
+/** The agent's presence entry, or null while unknown. */
+export function useAgentPresenceEntry(agentId: string | null) {
     const { data } = useAgentPresence();
     if (!agentId) {
         return null;
