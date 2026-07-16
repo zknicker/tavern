@@ -1,11 +1,28 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { httpLink } from '@trpc/client';
+import type * as React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import type { ChatActiveReply } from '../../hooks/chats/chat-timeline-state.ts';
-import type { AgentListOutput } from '../../lib/trpc.tsx';
-import { ChatActiveStatusStack } from './chat-active-status-stack.tsx';
+import { type AgentListOutput, trpc } from '../../lib/trpc.tsx';
+import { ChatActiveStatusStack, formatActiveStatusText } from './chat-active-status-stack.tsx';
 import { ChatDetailFooter } from './chat-detail-footer.tsx';
 import type { TranscriptRow } from './chat-transcript-model.ts';
+
+// The stack reads live presence, so tests render inside inert tRPC/query
+// providers (no requests are issued during static render).
+function renderStack(children: React.ReactElement) {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const client = trpc.createClient({
+        links: [httpLink({ url: 'http://127.0.0.1:1/trpc' })],
+    });
+    return renderToStaticMarkup(
+        <trpc.Provider client={client} queryClient={queryClient}>
+            <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+        </trpc.Provider>
+    );
+}
 
 const activeReply = {
     agentId: 'agent-1',
@@ -25,7 +42,7 @@ const agents = [
 ] as AgentListOutput['agents'];
 
 test('ChatActiveStatusStack renders active agent status above the composer', () => {
-    const markup = renderToStaticMarkup(
+    const markup = renderStack(
         <ChatActiveStatusStack activeReplies={[activeReply]} agents={agents} rows={[]} />
     );
 
@@ -35,7 +52,7 @@ test('ChatActiveStatusStack renders active agent status above the composer', () 
 });
 
 test('ChatActiveStatusStack follows current work state from active progress rows', () => {
-    const markup = renderToStaticMarkup(
+    const markup = renderStack(
         <ChatActiveStatusStack
             activeReplies={[activeReply]}
             agents={agents}
@@ -91,7 +108,7 @@ test('ChatActiveStatusStack streams a cumulative work summary and offers turn de
                 summaryParts: [summary],
             },
         }) satisfies TranscriptRow;
-    const markup = renderToStaticMarkup(
+    const markup = renderStack(
         <ChatActiveStatusStack
             activeReplies={[activeReply]}
             agents={agents}
@@ -122,7 +139,7 @@ test('ChatActiveStatusStack renders one row per agent when a follow-up run is qu
         runId: 'run-2',
         startedAt: '2026-07-01T17:00:05.000Z',
     } satisfies ChatActiveReply;
-    const markup = renderToStaticMarkup(
+    const markup = renderStack(
         <ChatActiveStatusStack
             activeReplies={[activeReply, queuedReply]}
             agents={agents}
@@ -140,13 +157,13 @@ test('ChatActiveStatusStack keeps quiet peer-evaluation turns invisible until te
         text: '',
         trigger: 'evaluation',
     } satisfies ChatActiveReply;
-    const quietMarkup = renderToStaticMarkup(
+    const quietMarkup = renderStack(
         <ChatActiveStatusStack activeReplies={[quietReply]} agents={agents} rows={[]} />
     );
     assert.equal(quietMarkup, '');
 
     // The moment reply text streams, the row appears like any other turn.
-    const speakingMarkup = renderToStaticMarkup(
+    const speakingMarkup = renderStack(
         <ChatActiveStatusStack
             activeReplies={[{ ...quietReply, text: 'On it —' }]}
             agents={agents}
@@ -157,7 +174,7 @@ test('ChatActiveStatusStack keeps quiet peer-evaluation turns invisible until te
 });
 
 test('ChatActiveStatusStack does not render without an active reply', () => {
-    const markup = renderToStaticMarkup(
+    const markup = renderStack(
         <ChatActiveStatusStack activeReplies={[]} agents={agents} rows={[]} />
     );
 
@@ -165,7 +182,7 @@ test('ChatActiveStatusStack does not render without an active reply', () => {
 });
 
 test('ChatActiveStatusStack renders nothing while idle', () => {
-    const markup = renderToStaticMarkup(
+    const markup = renderStack(
         <ChatActiveStatusStack activeReplies={[]} agents={agents} rows={[]} variant="detail" />
     );
 
@@ -176,7 +193,7 @@ test('ChatActiveStatusStack renders nothing while idle', () => {
 });
 
 test('ChatDetailFooter renders active status before the detail composer', () => {
-    const markup = renderToStaticMarkup(
+    const markup = renderStack(
         <ChatDetailFooter activeReplies={[activeReply]} agents={agents} rows={[]}>
             <div data-slot="composer">Composer</div>
         </ChatDetailFooter>
@@ -185,4 +202,43 @@ test('ChatDetailFooter renders active status before the detail composer', () => 
     assert.ok(markup.indexOf('Blippy is thinking...') < markup.indexOf('Composer'));
     assert.match(markup, /lg:px-16/);
     assert.match(markup, /max-w-\[60rem\]/);
+});
+
+test('status text: queued elsewhere is cute, streaming is typing, default thinks', () => {
+    assert.equal(
+        formatActiveStatusText({
+            activeReply,
+            agentName: 'Blippy',
+            queuedElsewhere: { chatTitle: 'Launch prep' },
+            rows: [],
+        }),
+        "Blippy is wrapping up in Launch prep — you're next"
+    );
+    assert.equal(
+        formatActiveStatusText({
+            activeReply,
+            agentName: 'Blippy',
+            queuedElsewhere: { chatTitle: null },
+            rows: [],
+        }),
+        "Blippy is wrapping up — you're next"
+    );
+    assert.equal(
+        formatActiveStatusText({
+            activeReply: { ...activeReply, isThinking: false, text: 'On it —' },
+            agentName: 'Blippy',
+            queuedElsewhere: null,
+            rows: [],
+        }),
+        'Blippy is typing...'
+    );
+    assert.equal(
+        formatActiveStatusText({
+            activeReply,
+            agentName: 'Blippy',
+            queuedElsewhere: null,
+            rows: [],
+        }),
+        'Blippy is thinking...'
+    );
 });

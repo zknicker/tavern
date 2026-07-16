@@ -38,7 +38,7 @@ export function getAgentStatusLabel(emotion: Emotion) {
             return 'Agent is working';
         case 'happy':
         case 'laughing':
-            return 'Agent is replying';
+            return 'Agent is typing';
         case 'sweat':
             return 'Agent needs attention';
         case 'thinking':
