@@ -15,7 +15,7 @@ const riseOut = { bounce: 0, duration: 0.2, type: 'spring' } as const;
 const clip = { bounce: 0, duration: 0.25, type: 'spring' } as const;
 
 /** Minimum time a status row stays visible once shown. */
-export const statusMinimumDwellMs = 600;
+export const statusMinimumDwellMs = 1200;
 
 /**
  * One animated status row. Render inside an `AnimatePresence` with a stable
