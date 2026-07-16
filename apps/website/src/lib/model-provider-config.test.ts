@@ -82,6 +82,7 @@ test('provider config resolves discovered runtime providers to brand logos', () 
 
 test('provider config preserves provider labels when vendors share a brand mark', () => {
     expect(getModelProviderConfig('anthropic')).toMatchObject({
+        accessId: 'anthropic',
         configName: 'anthropic',
         displayName: 'Anthropic',
         logo: {
@@ -89,9 +90,9 @@ test('provider config preserves provider labels when vendors share a brand mark'
         },
     });
     expect(getModelProviderConfig('claude')).toMatchObject({
-        accessId: null,
+        accessId: 'claude',
         configName: 'claude',
-        displayName: 'Claude',
+        displayName: 'Claude Code',
         logo: {
             light: 'https://svgl.app/library/anthropic_black.svg',
         },

@@ -1,10 +1,10 @@
 import { getDb } from '../db/connection';
 import { namedParams } from '../db/sqlite';
 
-// Runtime-owned Claude credentials (specs/model-access.md): the vault is the
-// single store — never the macOS keychain, which a headless service cannot
-// read. OAuth sign-in and a plain API key are the two shapes; OAuth wins
-// when both exist because it carries the user's subscription.
+// Runtime-owned Claude sign-in credentials (specs/model-access.md): the
+// vault is the single store — never the macOS keychain, which a headless
+// service cannot read. Plain Anthropic API keys are a separate provider
+// (anthropic-settings.ts), the way OpenAI is separate from Codex.
 
 const claudeSettingsSecretId = 'model-access:claude';
 
@@ -14,8 +14,7 @@ export const claudeSignInExpiredReason =
 export interface StoredClaudeSettings {
     accessToken: string;
     accountEmail: string | null;
-    apiKey: string;
-    // Access-token expiry in epoch milliseconds; null for API keys.
+    // Access-token expiry in epoch milliseconds.
     expiresAt: number | null;
     refreshToken: string | null;
 }
@@ -31,7 +30,7 @@ export function loadClaudeSettings(): StoredClaudeSettings | null {
         return null;
     }
     const settings = parseClaudeSettings(row.secret_json);
-    return settings.accessToken || settings.apiKey ? settings : null;
+    return settings.accessToken ? settings : null;
 }
 
 export function hasClaudeCredentials(): boolean {
@@ -48,20 +47,8 @@ export function saveClaudeOAuthCredentials(input: {
     writeClaudeSettings({
         accessToken: input.accessToken,
         accountEmail: input.accountEmail ?? existing?.accountEmail ?? null,
-        apiKey: existing?.apiKey ?? '',
         expiresAt: input.expiresAt,
         refreshToken: input.refreshToken,
-    });
-}
-
-export function saveClaudeApiKey(apiKey: string): void {
-    const existing = loadClaudeSettings();
-    writeClaudeSettings({
-        accessToken: existing?.accessToken ?? '',
-        accountEmail: existing?.accountEmail ?? null,
-        apiKey,
-        expiresAt: existing?.expiresAt ?? null,
-        refreshToken: existing?.refreshToken ?? null,
     });
 }
 
@@ -72,31 +59,20 @@ export function clearClaudeCredentials(): void {
 }
 
 /**
- * The credential the Claude Code harness should use right now. OAuth access
- * tokens take precedence over an API key; freshness is the caller's job via
- * `ensureFreshClaudeCredentials` before the turn starts.
+ * The sign-in credential the Claude Code harness should use right now.
+ * Freshness is the caller's job via `ensureFreshClaudeCredentials` before
+ * the turn starts.
  */
-export function getClaudeHarnessAuth(): { apiKey?: string; authToken?: string } | null {
+export function getClaudeHarnessAuth(): { authToken: string } | null {
     const settings = loadClaudeSettings();
-    if (!settings) {
-        return null;
-    }
-    if (settings.accessToken) {
-        return { authToken: settings.accessToken };
-    }
-    return settings.apiKey ? { apiKey: settings.apiKey } : null;
+    return settings ? { authToken: settings.accessToken } : null;
 }
 
 export function getClaudeModelAccessStatus() {
     const settings = loadClaudeSettings();
-    const signedIn = Boolean(settings?.accessToken);
-    const label = signedIn
-        ? (settings?.accountEmail ?? 'Claude account')
-        : settings?.apiKey
-          ? 'Anthropic API key'
-          : null;
+    const label = settings ? (settings.accountEmail ?? 'Claude account') : null;
     return {
-        description: label ?? 'Connect Claude to run Claude-powered agents.',
+        description: label ?? 'Sign in with Claude to run Claude-powered agents.',
         id: 'claude',
         source: label ? 'secure-storage' : null,
         state: label ? 'live' : 'needs-auth',
@@ -114,7 +90,7 @@ export async function ensureFreshClaudeCredentials(input?: {
     now?: Date;
 }): Promise<void> {
     const settings = loadClaudeSettings();
-    if (!settings?.accessToken) {
+    if (!settings) {
         return;
     }
     const now = (input?.now ?? new Date()).getTime();
@@ -168,7 +144,6 @@ function parseClaudeSettings(secretJson: string): StoredClaudeSettings {
         return {
             accessToken: typeof parsed.accessToken === 'string' ? parsed.accessToken : '',
             accountEmail: typeof parsed.accountEmail === 'string' ? parsed.accountEmail : null,
-            apiKey: typeof parsed.apiKey === 'string' ? parsed.apiKey : '',
             expiresAt: typeof parsed.expiresAt === 'number' ? parsed.expiresAt : null,
             refreshToken: typeof parsed.refreshToken === 'string' ? parsed.refreshToken : null,
         };
@@ -176,7 +151,6 @@ function parseClaudeSettings(secretJson: string): StoredClaudeSettings {
         return {
             accessToken: '',
             accountEmail: null,
-            apiKey: '',
             expiresAt: null,
             refreshToken: null,
         };

@@ -2,6 +2,12 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { closeDb, initTestDb } from '../db/connection.ts';
 import { ensureRuntimeSchema } from '../db/schema.ts';
 import {
+    clearAnthropicApiKey,
+    getAnthropicApiKey,
+    getAnthropicModelAccessStatus,
+    saveAnthropicApiKey,
+} from './anthropic-settings.ts';
+import {
     cancelClaudeOAuth,
     pollClaudeOAuth,
     startClaudeOAuth,
@@ -13,7 +19,6 @@ import {
     getClaudeHarnessAuth,
     getClaudeModelAccessStatus,
     loadClaudeSettings,
-    saveClaudeApiKey,
     saveClaudeOAuthCredentials,
 } from './claude-settings.ts';
 
@@ -89,10 +94,7 @@ describe('Claude model access', () => {
         expect(result.status).toBe('expired');
     });
 
-    it('prefers OAuth over an API key and refreshes near expiry', async () => {
-        saveClaudeApiKey('sk-ant-api-key');
-        expect(getClaudeHarnessAuth()).toEqual({ apiKey: 'sk-ant-api-key' });
-
+    it('refreshes sign-in tokens near expiry', async () => {
         saveClaudeOAuthCredentials({
             accessToken: 'stale-token',
             expiresAt: Date.now() + 60 * 1000,
@@ -114,9 +116,21 @@ describe('Claude model access', () => {
         const settings = loadClaudeSettings();
         expect(settings?.accessToken).toBe('fresh-token');
         expect(settings?.refreshToken).toBe('refresh-2');
-        // The API key survives as fallback; clearing removes everything.
-        expect(settings?.apiKey).toBe('sk-ant-api-key');
         clearClaudeCredentials();
         expect(loadClaudeSettings()).toBeNull();
+    });
+
+    it('stores the Anthropic API key as its own provider credential', () => {
+        expect(getAnthropicModelAccessStatus().state).toBe('needs-auth');
+
+        saveAnthropicApiKey('sk-ant-api-key');
+        expect(getAnthropicApiKey()).toBe('sk-ant-api-key');
+        expect(getAnthropicModelAccessStatus().state).toBe('live');
+        // The claude provider stays sign-in only.
+        expect(getClaudeHarnessAuth()).toBeNull();
+        expect(getClaudeModelAccessStatus().state).toBe('needs-auth');
+
+        clearAnthropicApiKey();
+        expect(getAnthropicApiKey()).toBeNull();
     });
 });

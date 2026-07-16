@@ -104,7 +104,13 @@ export const agentRuntimeAgentBindingSchema = z.object({
     agentId: z.string().trim().min(1),
 });
 
-export const agentRuntimeModelAccessIdSchema = z.enum(['claude', 'codex', 'openai', 'openrouter']);
+export const agentRuntimeModelAccessIdSchema = z.enum([
+    'anthropic',
+    'claude',
+    'codex',
+    'openai',
+    'openrouter',
+]);
 export const agentRuntimeModelAccessStateSchema = z.enum(['error', 'live', 'needs-auth']);
 
 export const agentRuntimeModelAccessStatusSchema = z.object({

@@ -130,6 +130,7 @@ function modelForProvider(provider: AgentModelProvider) {
 
 function defaultModelForProvider(provider: AgentModelProvider) {
     switch (provider) {
+        case 'anthropic':
         case 'claude':
             return defaultClaudeModel;
         case 'codex':

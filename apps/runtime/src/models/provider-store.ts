@@ -17,7 +17,11 @@ import { namedParams } from '../db/sqlite.ts';
 import { loadClaudeSettings } from '../model-access/claude-settings.ts';
 import { loadVaultBackedCodexCredentials } from '../model-access/codex-settings.ts';
 import { getOpenAiApiKey } from '../model-access/openai-settings.ts';
-import { type ModelCatalogProviderSpec, modelCatalogProviderSpecs } from './provider-registry.ts';
+import {
+    type ModelCatalogProviderSpec,
+    modelCatalogProviderSpecs,
+    readAnthropicApiKey,
+} from './provider-registry.ts';
 
 interface RuntimeModelProviderRow {
     enabled: 0 | 1;
@@ -174,7 +178,7 @@ async function providerAccess(spec: ModelCatalogProviderSpec): Promise<{
 
     if (spec.provider.id === 'claude') {
         const settings = loadClaudeSettings();
-        if (settings?.accessToken) {
+        if (settings) {
             return {
                 description: settings.accountEmail
                     ? `Signed in as ${settings.accountEmail}.`
@@ -182,10 +186,13 @@ async function providerAccess(spec: ModelCatalogProviderSpec): Promise<{
                 state: 'live',
             };
         }
-        if (settings?.apiKey) {
-            return { description: 'Anthropic API key is configured.', state: 'live' };
-        }
-        return { description: 'Connect Claude or add an Anthropic API key.', state: 'needs-auth' };
+        return { description: 'Sign in with Claude.', state: 'needs-auth' };
+    }
+
+    if (spec.provider.id === 'anthropic') {
+        return readAnthropicApiKey()
+            ? { description: 'Anthropic API key is configured.', state: 'live' }
+            : { description: 'Add an Anthropic API key.', state: 'needs-auth' };
     }
 
     return spec.authenticated()

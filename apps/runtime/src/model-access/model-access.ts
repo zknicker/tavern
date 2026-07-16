@@ -11,13 +11,14 @@ import {
 import { runRuntimeDoctor } from '../doctor/runtime-doctor';
 import { setModelProviderEnabled } from '../models/provider-store';
 import { forbidden, json } from '../tavern/http';
+import { getAnthropicModelAccessStatus, saveAnthropicApiKey } from './anthropic-settings';
 import {
     cancelClaudeOAuth,
     pollClaudeOAuth,
     startClaudeOAuth,
     submitClaudeOAuthCode,
 } from './claude-oauth';
-import { getClaudeModelAccessStatus, saveClaudeApiKey } from './claude-settings';
+import { getClaudeModelAccessStatus } from './claude-settings';
 import { getCodexModelAccessStatus } from './codex-settings';
 import { getOpenAiSettings, saveOpenAiSettings } from './openai-settings';
 import { getOpenRouterSettings } from './openrouter-settings';
@@ -131,13 +132,14 @@ async function handleClaudeOAuthRequest(request: Request, url: URL): Promise<Res
 }
 
 async function listModelAccessStatuses() {
-    const [claude, codex, openai, openrouter] = await Promise.all([
-        Promise.resolve(readClaudeStatus()),
-        readCodexStatus(),
-        Promise.resolve(readOpenAiStatus()),
-        Promise.resolve(readOpenRouterStatus()),
-    ]);
-    return [claude, codex, openai, openrouter];
+    const codex = await readCodexStatus();
+    return [
+        readClaudeStatus(),
+        readAnthropicStatus(),
+        codex,
+        readOpenAiStatus(),
+        readOpenRouterStatus(),
+    ];
 }
 
 function readClaudeStatus() {
@@ -145,8 +147,21 @@ function readClaudeStatus() {
         return getClaudeModelAccessStatus();
     } catch {
         return {
-            description: 'Connect Claude to run Claude-powered agents.',
+            description: 'Sign in with Claude to run Claude-powered agents.',
             id: 'claude',
+            source: null,
+            state: 'needs-auth',
+        };
+    }
+}
+
+function readAnthropicStatus() {
+    try {
+        return getAnthropicModelAccessStatus();
+    } catch {
+        return {
+            description: 'Add an Anthropic API key.',
+            id: 'anthropic',
             source: null,
             state: 'needs-auth',
         };
@@ -199,8 +214,8 @@ function saveProviderApiKey(input: { apiKey: string; keyEnv: string }) {
         return 'openai';
     }
     if (input.keyEnv === 'ANTHROPIC_API_KEY') {
-        saveClaudeApiKey(input.apiKey);
-        return 'claude';
+        saveAnthropicApiKey(input.apiKey);
+        return 'anthropic';
     }
     throw new Error(`Unsupported model provider API key "${input.keyEnv}".`);
 }

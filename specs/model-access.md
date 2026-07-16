@@ -14,36 +14,42 @@ a headless Runtime cannot answer keychain prompts, and engine credential
 stores do not survive upgrades. The app configures access through Model
 access in Settings; agents never see raw credentials in prompts or tools.
 
-## Claude
+## Claude Code and Anthropic
 
-Two credential shapes, stored together under `model-access:claude`:
+Two providers, one per credential — the same split as Codex (sign-in)
+versus OpenAI (API key). Both execute through the Claude Code harness and
+expose the same curated Claude models under their own provider ids.
 
-- **Sign-in (preferred).** The runtime executes a code-paste PKCE OAuth flow
-  against the public Claude Code client: `start` returns an authorize URL
+- **Claude Code (`claude`) — sign-in.** Stored under `model-access:claude`.
+  The runtime executes a code-paste PKCE OAuth flow against the public
+  Claude Code client: `start` returns an authorize URL
   (`claude.ai/oauth/authorize`, `code=true`), the user approves in any
   browser and pastes the displayed `code#state` back, and the runtime
   exchanges it at `platform.claude.com/v1/oauth/token`. Code-paste is
   deliberate: the approving browser can be anywhere, so the flow works for
   remote Runtimes (a Mac mini reached over Tailscale) exactly like local
-  ones.
-- **API key.** A plain Anthropic key (`ANTHROPIC_API_KEY` option in Model
-  access) as the escape hatch. Sign-in wins when both exist.
+  ones. Uses the account's Claude subscription.
+- **Anthropic (`anthropic`) — API key.** Stored under
+  `model-access:anthropic` (`ANTHROPIC_API_KEY` option in Model access).
+  Pay-per-token API billing.
 
-Turn-time contract: before every Claude-provider turn the runtime refreshes
-the access token when it is within five minutes of expiry (refresh grant,
-rotated refresh tokens written back), then injects the credential into the
-Claude Code harness (`authToken` for sign-in, `apiKey` for keys). The
-engine's own credential discovery (keychain, `~/.claude`) is never relied
-on. Environment overrides (`TAVERN_AGENT_CLAUDE_CODE_AUTH_TOKEN`,
-`ANTHROPIC_AUTH_TOKEN`, base URL variants) remain operator-level escape
-hatches and lose to stored credentials.
+Turn-time contract: before every `claude`-provider turn the runtime
+refreshes the access token when it is within five minutes of expiry
+(refresh grant, rotated refresh tokens written back). Each turn injects
+its provider's credential into the Claude Code harness (`authToken` for
+`claude`, `apiKey` for `anthropic`). The engine's own credential discovery
+(keychain, `~/.claude`) is never relied on. Environment overrides
+(`TAVERN_AGENT_CLAUDE_CODE_AUTH_TOKEN`, `ANTHROPIC_AUTH_TOKEN`, base URL
+variants) remain operator-level escape hatches and lose to stored
+credentials.
 
-Provider catalog: Claude's access state is credential-driven — `needs-auth`
-until connected, regardless of CLI presence on the host. The `claudeAuth`
-capability mirrors this (healthy with account metadata when connected,
-unauthorized with a connect pointer otherwise). Turn failures caused by
-Claude auth surface as "Claude is not connected. Connect Claude in
-Settings → Connections → Model access." — never CLI instructions.
+Provider catalog: both providers' access states are credential-driven —
+`needs-auth` until connected, regardless of CLI presence on the host. The
+`claudeAuth` capability tracks sign-in only (healthy with account metadata
+when connected, unauthorized with a connect pointer otherwise). Turn
+failures caused by auth name the fix: "Claude is not connected. Connect
+Claude in Settings → Connections → Model access." for sign-in, the
+API-key equivalent for `anthropic` — never CLI instructions.
 
 ## Codex, OpenAI, OpenRouter
 

@@ -26,6 +26,7 @@ import {
     getClaudeHarnessAuth,
 } from '../model-access/claude-settings.ts';
 import { imageGenerationReadiness } from '../models/capability-selections.ts';
+import { readAnthropicApiKey } from '../models/provider-registry.ts';
 import { createBrowserToolsForAgent } from '../plugins/browser-tools.ts';
 import { createGoogleToolsForAgent } from '../plugins/google-tools.ts';
 import { createMerchbaseToolsForAgent } from '../plugins/merchbase-tools.ts';
@@ -507,9 +508,12 @@ export function createHarnessForModel(input: {
 }): HarnessV1<ToolSet> {
     const modelName = input.modelName;
     switch (modelName.provider) {
+        // Both run the Claude Code harness; they differ only in credential —
+        // claude carries the sign-in token, anthropic a plain API key.
+        case 'anthropic':
         case 'claude':
             return createClaudeCodeHarnessForRuntime({
-                auth: claudeCodeAuthOptions(),
+                auth: claudeCodeAuthOptions(modelName.provider),
                 // Native WebFetch stays disallowed even with web access on:
                 // web_fetch is the uniform Tavern fetch tool across providers,
                 // so page reads keep one size-cap and injection posture.
@@ -549,10 +553,24 @@ export function createCodexHarnessForRuntime(settings: Parameters<typeof createC
     return withRuntimeBridgeBootstrap(createCodex(settings), 'codex');
 }
 
-export function claudeCodeAuthOptions(): ClaudeCodeAuthOptions | undefined {
+export function claudeCodeAuthOptions(
+    provider: 'anthropic' | 'claude' = 'claude'
+): ClaudeCodeAuthOptions | undefined {
     const baseUrl =
         readConfigValue('TAVERN_AGENT_CLAUDE_CODE_BASE_URL') ??
         readConfigValue('ANTHROPIC_BASE_URL');
+    if (provider === 'anthropic') {
+        const apiKey = readAnthropicApiKey();
+        if (!(apiKey || baseUrl)) {
+            return undefined;
+        }
+        return {
+            anthropic: {
+                ...(apiKey ? { apiKey } : {}),
+                ...(baseUrl ? { baseUrl } : {}),
+            },
+        };
+    }
     // Runtime-owned credentials (Model access) win: they survive upgrades
     // and headless hosts, unlike engine-side keychain auth. Env overrides
     // remain the operator escape hatch.
@@ -613,6 +631,18 @@ export function formatHarnessExecutionError(input: AgentExecutorInput, error: un
             [
                 'Claude is not connected.',
                 'Connect Claude in Settings → Connections → Model access.',
+                `Original error: ${message}`,
+            ].join(' ')
+        );
+    }
+    if (
+        input.agentSession.effectiveModel.provider === 'anthropic' &&
+        /401|authenticat|credential|api key/iu.test(message)
+    ) {
+        return new Error(
+            [
+                'The Anthropic API key is missing or invalid.',
+                'Update it in Settings → Connections → Model access.',
                 `Original error: ${message}`,
             ].join(' ')
         );

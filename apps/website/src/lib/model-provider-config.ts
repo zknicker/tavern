@@ -8,7 +8,7 @@ import {
     providerConfigAliasIds,
 } from './model-provider-presets.ts';
 
-export type ModelAccessId = 'claude' | 'codex' | 'openai' | 'openrouter';
+export type ModelAccessId = 'anthropic' | 'claude' | 'codex' | 'openai' | 'openrouter';
 
 export interface ModelProviderConfig {
     accessDisplayName: string;

@@ -2,7 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AGENT_WORKSPACE } from '../config.ts';
 import { closeDb, initTestDb } from '../db/connection.ts';
 import { ensureRuntimeSchema } from '../db/schema.ts';
-import { clearClaudeCredentials, saveClaudeApiKey } from '../model-access/claude-settings.ts';
+import {
+    clearClaudeCredentials,
+    saveClaudeOAuthCredentials,
+} from '../model-access/claude-settings.ts';
 import { setModelProviderEnabled } from '../models/provider-store.ts';
 import { materializePluginSkills } from '../plugins/materialize-skills.ts';
 import { saveMerchbaseSettings } from '../plugins/merchbase.ts';
@@ -16,7 +19,11 @@ describe('Runtime agent and agent engine reads', () => {
     beforeEach(() => {
         ensureRuntimeSchema(initTestDb());
         // Claude models are executable only with stored credentials now.
-        saveClaudeApiKey('sk-ant-test');
+        saveClaudeOAuthCredentials({
+            accessToken: 'sk-ant-test',
+            expiresAt: null,
+            refreshToken: null,
+        });
         globalThis.fetch = vi.fn(handleAgentEngineFetch) as unknown as typeof fetch;
     });
 

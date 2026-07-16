@@ -637,10 +637,7 @@ function checkClaudeModelAccessCapability(): RuntimeCapabilityCheckResult {
             };
         }
         return {
-            metadata: {
-                account: settings.accountEmail,
-                method: settings.accessToken ? 'oauth' : 'api-key',
-            },
+            metadata: { account: settings.accountEmail },
             state: 'healthy',
         };
     } catch (error) {

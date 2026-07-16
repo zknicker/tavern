@@ -1,5 +1,6 @@
 import { isCliCommandAvailable } from '../agent-engine/cli-command.ts';
 import { readConfigValue } from '../config.ts';
+import { getAnthropicApiKey } from '../model-access/anthropic-settings.ts';
 import { hasClaudeCredentials } from '../model-access/claude-settings.ts';
 import { getOpenAiApiKey } from '../model-access/openai-settings.ts';
 import { resolveClaudeModelCatalog } from './provider-sources/claude.ts';
@@ -28,6 +29,11 @@ export const codexProvider = {
 export const claudeProvider = {
     id: 'claude',
     label: 'Claude Code',
+} as const satisfies ModelCatalogProvider;
+
+export const anthropicProvider = {
+    id: 'anthropic',
+    label: 'Anthropic',
 } as const satisfies ModelCatalogProvider;
 
 export const openAiProvider = {
@@ -65,11 +71,12 @@ export function modelCatalogProviderSpecs(): ModelCatalogProviderSpec[] {
                 }),
         },
         {
-            // Claude signs in through the runtime's own code-paste PKCE flow
-            // (Model access); an Anthropic API key is the fallback.
+            // Claude Code signs in through the runtime's own code-paste PKCE
+            // flow (Model access). API-key access is the separate anthropic
+            // provider, the way OpenAI is separate from Codex.
             authenticated: () => hasClaudeCredentials(),
             authType: 'oauth_device_code',
-            keyEnv: 'ANTHROPIC_API_KEY',
+            keyEnv: null,
             oauthFlow: 'pkce',
             provider: claudeProvider,
             resolveCatalog: () =>
@@ -78,7 +85,23 @@ export function modelCatalogProviderSpecs(): ModelCatalogProviderSpec[] {
                     provider: claudeProvider,
                 }),
         },
+        {
+            authenticated: () => Boolean(readAnthropicApiKey()),
+            authType: 'api_key',
+            keyEnv: 'ANTHROPIC_API_KEY',
+            oauthFlow: null,
+            provider: anthropicProvider,
+            resolveCatalog: () =>
+                resolveClaudeModelCatalog({
+                    command: claudeCommand,
+                    provider: anthropicProvider,
+                }),
+        },
     ];
+}
+
+export function readAnthropicApiKey() {
+    return readConfigValue('ANTHROPIC_API_KEY') ?? getAnthropicApiKey();
 }
 
 function readOpenAiApiKey() {

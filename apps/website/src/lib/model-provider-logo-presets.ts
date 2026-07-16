@@ -49,7 +49,6 @@ export const logoModelProviderPresets = [
         '#01A88D',
         { light: 'https://thesvg.org/icons/aws-amazon-bedrock/default.svg' },
     ],
-    ['claude', 'Claude', '#D97757', anthropicLogo],
     ['claude-code', 'Claude Code', '#D97757', anthropicLogo],
     ['claude-code-oauth', 'Claude Code OAuth', '#D97757', anthropicLogo],
     ['deepseek', 'DeepSeek', '#4D6BFE', { light: 'https://svgl.app/library/deepseek.svg' }],
