@@ -2,6 +2,7 @@ import { isCliCommandAvailable } from '../agent-engine/cli-command.ts';
 import { readConfigValue } from '../config.ts';
 import { getAnthropicApiKey } from '../model-access/anthropic-settings.ts';
 import { hasClaudeCredentials } from '../model-access/claude-settings.ts';
+import { hasHostClaudeLogin } from '../model-access/host-claude-login.ts';
 import { getOpenAiApiKey } from '../model-access/openai-settings.ts';
 import { resolveClaudeModelCatalog } from './provider-sources/claude.ts';
 import { resolveCodexModelCatalog } from './provider-sources/codex.ts';
@@ -72,9 +73,10 @@ export function modelCatalogProviderSpecs(): ModelCatalogProviderSpec[] {
         },
         {
             // Claude Code signs in through the runtime's own code-paste PKCE
-            // flow (Model access). API-key access is the separate anthropic
+            // flow (Model access), or rides a detected host Claude Code login
+            // with zero setup. API-key access is the separate anthropic
             // provider, the way OpenAI is separate from Codex.
-            authenticated: () => hasClaudeCredentials(),
+            authenticated: () => hasClaudeCredentials() || hasHostClaudeLogin(),
             authType: 'oauth_device_code',
             keyEnv: null,
             oauthFlow: 'pkce',

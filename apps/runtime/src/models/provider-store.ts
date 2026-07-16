@@ -16,6 +16,7 @@ import type { Database } from '../db/sqlite.ts';
 import { namedParams } from '../db/sqlite.ts';
 import { loadClaudeSettings } from '../model-access/claude-settings.ts';
 import { loadVaultBackedCodexCredentials } from '../model-access/codex-settings.ts';
+import { hasHostClaudeLogin } from '../model-access/host-claude-login.ts';
 import { getOpenAiApiKey } from '../model-access/openai-settings.ts';
 import {
     type ModelCatalogProviderSpec,
@@ -185,6 +186,9 @@ async function providerAccess(spec: ModelCatalogProviderSpec): Promise<{
                     : 'Claude sign-in is configured.',
                 state: 'live',
             };
+        }
+        if (hasHostClaudeLogin()) {
+            return { description: 'Using your Claude Code login.', state: 'live' };
         }
         return { description: 'Sign in with Claude.', state: 'needs-auth' };
     }

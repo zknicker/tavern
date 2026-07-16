@@ -24,6 +24,7 @@ import { getDb, hasTable } from '../db/connection.ts';
 import { isMemoryEnabled } from '../memory/settings.ts';
 import { loadClaudeSettings } from '../model-access/claude-settings.ts';
 import { loadVaultBackedCodexCredentials } from '../model-access/codex-settings.ts';
+import { hasHostClaudeLogin } from '../model-access/host-claude-login.ts';
 import { imageGenerationReadiness } from '../models/capability-selections.ts';
 import { listAgentModels } from '../models/catalog-service.ts';
 import { resolveModelCategorySelection } from '../models/category-settings.ts';
@@ -630,15 +631,21 @@ export function getExpectedRuntimeCapability(
 function checkClaudeModelAccessCapability(): RuntimeCapabilityCheckResult {
     try {
         const settings = loadClaudeSettings();
-        if (!settings) {
+        if (settings) {
             return {
-                reason: 'Claude is not connected. Connect Claude in Model access.',
-                state: 'unauthorized',
+                metadata: { account: settings.accountEmail, method: 'sign-in' },
+                state: 'healthy',
+            };
+        }
+        if (hasHostClaudeLogin()) {
+            return {
+                metadata: { method: 'Claude Code login' },
+                state: 'healthy',
             };
         }
         return {
-            metadata: { account: settings.accountEmail },
-            state: 'healthy',
+            reason: 'Claude is not connected. Connect Claude in Model access.',
+            state: 'unauthorized',
         };
     } catch (error) {
         return {

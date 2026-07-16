@@ -1,5 +1,6 @@
 import { getDb } from '../db/connection';
 import { namedParams } from '../db/sqlite';
+import { hasHostClaudeLogin } from './host-claude-login';
 
 // Runtime-owned Claude sign-in credentials (specs/model-access.md): the
 // vault is the single store — never the macOS keychain, which a headless
@@ -70,12 +71,27 @@ export function getClaudeHarnessAuth(): { authToken: string } | null {
 
 export function getClaudeModelAccessStatus() {
     const settings = loadClaudeSettings();
-    const label = settings ? (settings.accountEmail ?? 'Claude account') : null;
+    if (settings) {
+        return {
+            description: settings.accountEmail ?? 'Claude account',
+            id: 'claude',
+            source: 'secure-storage',
+            state: 'live',
+        };
+    }
+    if (hasHostClaudeLogin()) {
+        return {
+            description: 'Using your Claude Code login.',
+            id: 'claude',
+            source: 'host-claude-login',
+            state: 'live',
+        };
+    }
     return {
-        description: label ?? 'Sign in with Claude to run Claude-powered agents.',
+        description: 'Sign in with Claude to run Claude-powered agents.',
         id: 'claude',
-        source: label ? 'secure-storage' : null,
-        state: label ? 'live' : 'needs-auth',
+        source: null,
+        state: 'needs-auth',
     };
 }
 

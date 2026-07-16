@@ -33,6 +33,18 @@ expose the same curated Claude models under their own provider ids.
   `model-access:anthropic` (`ANTHROPIC_API_KEY` option in Model access).
   Pay-per-token API billing.
 
+The `claude` provider also rides a **detected host Claude Code login**
+(mirroring Raft's default "host login" mode): when the machine's operator
+is already signed in to Claude Code — keychain item on macOS,
+`~/.claude/.credentials.json` elsewhere — the provider reads `live`
+("Using your Claude Code login.") with zero setup and the engine discovers
+that credential itself. Detection checks presence only, never credential
+values, and `TAVERN_AGENT_CLAUDE_CODE_HOST_LOGIN=0` disables it. Host
+login is convenient but fragile on servers (keychain ACLs bind to binary
+identity and headless sessions cannot answer prompts — the v1.5.0 mini
+outage); runtime-owned sign-in always wins when both exist and is the
+recommended setup for deployed hosts.
+
 Turn-time contract: before every `claude`-provider turn the runtime
 refreshes the access token when it is within five minutes of expiry
 (refresh grant, rotated refresh tokens written back). Each turn injects
