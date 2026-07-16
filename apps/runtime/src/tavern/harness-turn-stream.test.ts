@@ -5,13 +5,16 @@ import { ensureRuntimeSchema } from '../db/schema.ts';
 import {
     createChat,
     createMessage,
+    getMessage,
     getResponseActivity,
     upsertResponse,
 } from './chat-api/index.ts';
 import {
+    assistantMessageIdForRun,
     messageActivityIdForRun,
     persistHarnessTurnStream,
     reasoningActivityIdForRun,
+    silentReplyToken,
     toolActivityIdForRun,
 } from './harness-turn-stream.ts';
 
@@ -123,6 +126,39 @@ describe('persistHarnessTurnStream', () => {
         expect(result.activityIds).toEqual([]);
         expect(result.contextTokens).toBeNull();
         expect(getResponseActivity(messageActivityIdForRun(runId, 0))).toBeNull();
+        expect(getMessage(assistantMessageIdForRun(runId))?.content).toBe('Done.');
+    });
+
+    it('never posts the silent-reply sentinel as a streaming message', async () => {
+        async function* parts() {
+            yield* textSegment('txt_only', silentReplyToken);
+        }
+
+        const result = await persistHarnessTurnStream(target(), parts());
+
+        // The executor still sees the sentinel and settles the turn silently,
+        // but no streaming post ever exists for the app to flash.
+        expect(result.finalText).toBe(silentReplyToken);
+        expect(getMessage(assistantMessageIdForRun(runId))).toBeNull();
+        expect(getResponseActivity(messageActivityIdForRun(runId, 0))).toBeNull();
+    });
+
+    it('drops a sentinel segment from commentary when later parts follow it', async () => {
+        async function* parts() {
+            yield* textSegment('txt_1', silentReplyToken);
+            yield toolCallPart('tool_1', 'bash', { command: 'ls' });
+            yield toolResultPart('tool_1', 'bash', { command: 'ls' }, 'file.txt');
+            yield* textSegment('txt_2', 'Changed my mind: here is the answer.');
+        }
+
+        const result = await persistHarnessTurnStream(target(), parts());
+
+        expect(result.finalText).toBe('Changed my mind: here is the answer.');
+        expect(getResponseActivity(messageActivityIdForRun(runId, 0))).toBeNull();
+        expect(result.activityIds).toEqual([toolActivityIdForRun(runId, 'tool_1')]);
+        expect(getMessage(assistantMessageIdForRun(runId))?.content).toBe(
+            'Changed my mind: here is the answer.'
+        );
     });
 
     it('reads context tokens from the final step usage, not the turn total', async () => {

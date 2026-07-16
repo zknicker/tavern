@@ -4,6 +4,14 @@ import { createMessage, updateStreamingMessage, upsertResponseActivity } from '.
 export const assistantCommentaryPhase = 'commentary' as const;
 export const assistantFinalAnswerPhase = 'final_answer' as const;
 
+/**
+ * The decline sentinel (specs/addressing.md): a turn whose reply is exactly
+ * this token settles silently. It is control flow, never chat content — the
+ * stream keeps it out of posts and commentary so a declining turn stays
+ * invisible instead of flashing the sentinel as streamed text.
+ */
+export const silentReplyToken = 'NO_REPLY';
+
 export type HarnessAssistantMessagePhase =
     | typeof assistantCommentaryPhase
     | typeof assistantFinalAnswerPhase;
@@ -194,7 +202,9 @@ function handleTextEnd(
         startedAt: buffer.startedAt,
     };
     state.textIndex += 1;
-    upsertTurnPost(target, state, content);
+    if (content !== silentReplyToken) {
+        upsertTurnPost(target, state, content);
+    }
 }
 
 // createPost/editPost (specs/chat-timeline.md): the turn's message row is
@@ -415,6 +425,9 @@ function flushPendingCommentary(target: HarnessTurnStreamTarget, state: StreamSt
         return;
     }
     state.pendingText = null;
+    if (pending.content === silentReplyToken) {
+        return;
+    }
     const activityId = messageActivityIdForRun(target.runId, pending.contentIndex);
     state.activityIds.push(activityId);
     upsertResponseActivity(target.chatId, target.responseId, {
