@@ -33,13 +33,13 @@ import {
 } from '../../hooks/connections/use-capability.ts';
 import { appRoutes } from '../../lib/app-routes.ts';
 import { markChatTiming } from '../../lib/chat-timing.ts';
+import { cn } from '../../lib/utils.ts';
 import { resolveAgentInk } from '../agents/agent-color-presets.ts';
 import { AgentFace } from '../chats/agent-face.tsx';
 import { useAgentPresenceEntry } from '../chats/agent-presence.tsx';
 import { ChannelDialog } from '../chats/channel-dialog.tsx';
 import { buildChatList, type ChatListItem, getChatAgentId } from '../chats/chat-list-data.ts';
 import { buildChatPath } from '../chats/chat-path.ts';
-import { StatusSwap } from '../chats/chat-status-motion.tsx';
 import { getChannelColorStyle } from './channel-color-options.ts';
 import {
     canRenameSidebarChat,
@@ -506,18 +506,16 @@ function SidebarChatIndicators({ chat }: { chat: ChatListItem }) {
         <span className="flex shrink-0 items-center gap-1.5">
             {chat.unreadCount > 0 ? <SidebarUnreadPill count={chat.unreadCount} /> : null}
             {agentId !== null && (presence || busy) ? (
-                <StatusSwap className="size-4 place-items-center" swapKey={busy ? 'busy' : 'idle'}>
-                    {busy ? (
-                        <span className="flex" title="Agent turn in progress">
-                            <Spinner className="size-3.5" />
-                        </span>
-                    ) : (
-                        <span
-                            aria-hidden="true"
-                            className="block size-2.5 rounded-full bg-success"
-                        />
+                // A calm color shift, not a spinner: green idle, amber busy
+                // (matching the presence dots elsewhere).
+                <span
+                    aria-hidden="true"
+                    className={cn(
+                        'block size-2.5 rounded-full transition-colors duration-300',
+                        busy ? 'bg-warning' : 'bg-success'
                     )}
-                </StatusSwap>
+                    title={busy ? 'Agent turn in progress' : undefined}
+                />
             ) : null}
         </span>
     );
