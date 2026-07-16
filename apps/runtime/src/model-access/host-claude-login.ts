@@ -39,13 +39,16 @@ function detectHostClaudeLogin(): boolean {
         return false;
     }
     try {
-        // Presence check only — stdio is discarded so no credential material
-        // ever reaches logs or output.
-        execFileSync('security', ['find-generic-password', '-s', 'Claude Code-credentials'], {
-            stdio: 'ignore',
-            timeout: 3000,
-        });
-        return true;
+        // Read the item to prove it is actually usable: a keychain item whose
+        // ACL no longer matches the reader returns empty in headless sessions
+        // (the v1.5.0 mini outage). The value stays in-process — only its
+        // non-emptiness is used, and it is never logged or returned.
+        const secret = execFileSync(
+            'security',
+            ['find-generic-password', '-s', 'Claude Code-credentials', '-w'],
+            { stdio: ['ignore', 'pipe', 'ignore'], timeout: 3000 }
+        );
+        return secret.toString().trim().length > 0;
     } catch {
         return false;
     }
