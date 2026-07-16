@@ -7,7 +7,7 @@ import type {
 import { getDb } from '../../db/connection.ts';
 import type { Database } from '../../db/sqlite.ts';
 import { namedParams, optionalRow } from '../../db/sqlite.ts';
-import { assertTavernIdPrefix } from './ids.ts';
+import { assertTavernIdPrefix, localHumanParticipantId } from './ids.ts';
 import { clampLimit } from './limits.ts';
 import type { ChatRow, ParticipantRow } from './types.ts';
 
@@ -78,32 +78,21 @@ export function createChat(input: TavernCreateChatRequest, db: Database = getDb(
     return getChatOrThrow(input.id, db);
 }
 
-// Unread for the chat's human seat: messages past that reader's read
-// receipt, excluding the reader's own messages. The read receipt lives in
-// chat_reads (specs/presence.md); a chat with no receipt counts everything
-// the human did not author.
+// Unread for the operator seat ($readerId = localHumanParticipantId):
+// messages past the operator's read receipt (chat_reads,
+// specs/presence.md), excluding the operator's own messages. Chats can
+// carry additional seeded or observed user participants; their receipts
+// never drive the count.
 const unreadCountSelect = `(
     SELECT COUNT(*)
     FROM chat_messages
     WHERE chat_messages.chat_id = chats.id
       AND chat_messages.deleted_at IS NULL
-      AND chat_messages.author_id != COALESCE((
-          SELECT id FROM chat_participants
-          WHERE chat_participants.chat_id = chats.id
-            AND chat_participants.kind = 'user'
-          ORDER BY chat_participants.id ASC
-          LIMIT 1
-      ), '')
+      AND chat_messages.author_id != $readerId
       AND chat_messages.sequence > COALESCE((
           SELECT last_read_sequence FROM chat_reads
           WHERE chat_reads.chat_id = chats.id
-            AND chat_reads.reader_id = (
-                SELECT id FROM chat_participants
-                WHERE chat_participants.chat_id = chats.id
-                  AND chat_participants.kind = 'user'
-                ORDER BY chat_participants.id ASC
-                LIMIT 1
-            )
+            AND chat_reads.reader_id = $readerId
       ), 0)
 ) AS unread_count`;
 
@@ -158,6 +147,7 @@ export function listChats(
             namedParams({
                 cursor: input.cursor ?? '',
                 limit,
+                readerId: localHumanParticipantId,
             })
         ) as ChatRow[];
     return {
@@ -229,7 +219,7 @@ export function getChat(id: string, db: Database = getDb()): TavernChat | null {
              FROM chats
              WHERE id = $id`
             )
-            .get(namedParams({ id })) as ChatRow | null
+            .get(namedParams({ id, readerId: localHumanParticipantId })) as ChatRow | null
     );
     return row ? rowToChat(row, db) : null;
 }

@@ -1,9 +1,9 @@
 import { defaultAgentDisplayName, defaultAgentEngineAgentId } from '../agent-engine/constants';
 import type { Database } from '../db/sqlite';
-import { createChat, getChat } from './chat-api';
+import { createChat, getChat, localHumanParticipantId } from './chat-api';
 
 export const defaultAgentDmChatId = 'cht_tavern_agent_dm';
-export const localHumanParticipantId = 'usr_tavern';
+export { localHumanParticipantId } from './chat-api';
 
 export function seedWorkspaceChats(input: {
     agents?: Array<{ id: string; name: string }>;

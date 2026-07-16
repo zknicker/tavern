@@ -1,3 +1,11 @@
+/**
+ * The operator's participant id. Tavern is single-operator: the app always
+ * authors and reads as this seat, and per-chat state that belongs to the
+ * human (read receipts, unread counts) is keyed by it — chats may carry
+ * additional seeded or observed user participants.
+ */
+export const localHumanParticipantId = 'usr_tavern';
+
 export function createEventId(cursor: number) {
     return `evt_${cursor}`;
 }

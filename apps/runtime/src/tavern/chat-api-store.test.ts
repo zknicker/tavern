@@ -769,34 +769,43 @@ describe('Tavern Runtime Chat API store', () => {
         ]);
     });
 
-    it('counts unread for the human seat and clears via read-to-latest', () => {
+    it('counts unread for the operator seat and clears via read-to-latest', () => {
         createChat({
             id: 'cht_1',
             participants: [
-                { id: 'usr_1', kind: 'user', label: 'Zach', metadata: {} },
+                // A seeded persona sorts before the operator; the count must
+                // still follow the operator's receipt, or a demo chat's pill
+                // resurrects after every refetch.
+                { id: 'usr_demo', kind: 'user', label: 'Demo', metadata: {} },
+                { id: localHumanParticipantId, kind: 'user', label: 'Zach', metadata: {} },
                 { id: 'agt_a', kind: 'agent', label: 'Otto', metadata: {} },
             ],
             title: 'Test',
         });
-        createMessage('cht_1', { author_id: 'usr_1', content: 'hi', id: 'msg_1', role: 'user' });
         createMessage('cht_1', {
-            author_id: 'agt_a',
-            content: 'hello',
+            author_id: localHumanParticipantId,
+            content: 'hi',
+            id: 'msg_1',
+            role: 'user',
+        });
+        createMessage('cht_1', {
+            author_id: 'usr_demo',
+            content: 'seeded line',
             id: 'msg_2',
-            role: 'assistant',
+            role: 'user',
         });
         createMessage('cht_1', {
             author_id: 'agt_a',
-            content: 'again',
+            content: 'hello',
             id: 'msg_3',
             role: 'assistant',
         });
 
-        // The reader's own message never counts; both agent replies do.
+        // The operator's own message never counts; everyone else's do.
         expect(getChat('cht_1')?.unread_count).toBe(2);
 
         // Omitted sequence reads to the latest message.
-        const receipt = markRead('cht_1', { reader_id: 'usr_1' });
+        const receipt = markRead('cht_1', { reader_id: localHumanParticipantId });
         expect(receipt.last_read_sequence).toBe(3);
         expect(getChat('cht_1')?.unread_count).toBe(0);
 

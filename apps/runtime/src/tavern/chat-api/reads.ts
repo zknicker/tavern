@@ -4,6 +4,7 @@ import type { Database } from '../../db/sqlite';
 import { namedParams, optionalRow } from '../../db/sqlite';
 import { insertEvent, publish, replaceEventPayload } from './events';
 import { assertTavernIdPrefix } from './ids';
+import { latestMessageSequence } from './messages';
 import type { ReadReceipt, ReadRow } from './types';
 
 export function markRead(
@@ -71,17 +72,6 @@ export function markRead(
         db.exec('ROLLBACK');
         throw error;
     }
-}
-
-function latestMessageSequence(chatId: string, db: Database): number {
-    const row = db
-        .prepare(
-            `SELECT COALESCE(MAX(sequence), 0) AS sequence
-             FROM chat_messages
-             WHERE chat_id = $chatId AND deleted_at IS NULL`
-        )
-        .get(namedParams({ chatId })) as { sequence: number };
-    return row.sequence;
 }
 
 function getReadReceiptOrThrow(chatId: string, readerId: string, db: Database): ReadReceipt {
