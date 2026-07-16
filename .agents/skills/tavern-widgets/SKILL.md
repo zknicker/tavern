@@ -56,8 +56,9 @@ For each new Widget:
    only when the Plugin is enabled and granted (via the manifest `widgets`
    field), so no gating code is needed per widget.
 5. Add the Website renderer:
-   - a component under `apps/website/src/widgets/` using app-owned components,
-     tokens, and `WidgetFrame` where card framing fits,
+   - a thin wrapper in `apps/website/src/widgets/` mapping fence props onto
+     Tavern component kit components from `apps/website/src/kit/`
+     (`KitFrame` for card framing; see `docs/internals/kit.md`),
    - a case in the `widgetElement` switch in
      `apps/website/src/widgets/render-widget.tsx`.
    - Never render model-provided HTML, JSX, CSS, class names, or component

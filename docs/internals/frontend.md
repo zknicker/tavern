@@ -18,6 +18,7 @@ capability lives; keep route and feature folders for page assembly.
 | `features/` | Page and workflow composition |
 | `commands/` | Global command menu definitions grouped by product capability |
 | `components/` | Reusable UI owned by a capability |
+| `kit/` | Tavern component kit: shared presentational components behind widgets, dashboards, and sandboxed agent pages ([kit.md](kit.md)) |
 | `hooks/` | App-level data and event hooks owned by a capability |
 | `lib/` | Non-React formatting, view models, and adapters |
 

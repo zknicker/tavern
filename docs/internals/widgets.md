@@ -135,6 +135,8 @@ Canonical widget names, props schemas, the render envelope, and the prompt live
 in `packages/tavern-api/src/widgets`. Runtime owns fence parsing of final
 assistant content and writing `widget` activity
 (`apps/runtime/src/widgets/render.ts`). Server owns row projection
-(`apps/server/src/widgets/widgets.ts`). Website owns the renderer and visual
-components (`apps/website/src/widgets`), including Plugin-owned renderers
-imported from first-party Plugin folders.
+(`apps/server/src/widgets/widgets.ts`). Website owns the renderers
+(`apps/website/src/widgets`), including Plugin-owned renderers imported from
+first-party Plugin folders. Renderers are thin wrappers that map fence props
+onto the shared Tavern component kit (`apps/website/src/kit`, see
+[kit.md](kit.md)), which owns the visual components.

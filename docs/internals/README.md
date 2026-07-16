@@ -22,4 +22,5 @@ Internals docs explain how Tavern is built. Product-facing behavior belongs in
 | Chat demos | [Chat Demos](chat-demos.md) |
 | Tool presentation | [Tool Presentation](tool-presentation.md) |
 | Widgets | [Widgets](widgets.md) |
+| Component kit | [Component Kit](kit.md) |
 | Agent engine runtime | [Agent Engine Runtime](agent-engine-runtime.md) |
