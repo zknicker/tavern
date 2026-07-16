@@ -21,6 +21,7 @@ import { cn } from '../../lib/utils.ts';
 import { AgentWidget } from '../../widgets/render-widget.tsx';
 import { resolveAgentInk } from '../agents/agent-color-presets.ts';
 import { AgentFace, type HeadName } from './agent-face.tsx';
+import { AgentHoverCard } from './agent-hover-card.tsx';
 import { ChatMarkdownText } from './chat-markdown-text.tsx';
 import { useStreamingTextRanges } from './chat-streaming-text-ranges.ts';
 import {
@@ -446,12 +447,28 @@ function AgentTurn({
                 showIdentity ? newTurnGapClassName : followsRuntimeNotice ? 'mt-0' : null
             )}
         >
-            <TurnAvatar
-                actorKind="agent"
-                character={actorProfile?.character ?? agentStatusCharacter ?? 'none'}
-                color={actorProfile?.primaryColor}
-                name={displayName}
-            />
+            {chatId && entry.actor?.id ? (
+                <AgentHoverCard
+                    agentId={entry.actor.id}
+                    agentName={displayName}
+                    chatId={chatId}
+                    triggerClassName="shrink-0 cursor-pointer rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                >
+                    <TurnAvatar
+                        actorKind="agent"
+                        character={actorProfile?.character ?? agentStatusCharacter ?? 'none'}
+                        color={actorProfile?.primaryColor}
+                        name={displayName}
+                    />
+                </AgentHoverCard>
+            ) : (
+                <TurnAvatar
+                    actorKind="agent"
+                    character={actorProfile?.character ?? agentStatusCharacter ?? 'none'}
+                    color={actorProfile?.primaryColor}
+                    name={displayName}
+                />
+            )}
             <MessageContent className="gap-0.5 pt-0.5">
                 {showIdentity ? (
                     <TurnHeader

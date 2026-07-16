@@ -141,6 +141,25 @@ function AgentPresenceDot({
     );
 }
 
+/** Generic presence line: dot always, label only while busy. */
+export function AgentPresenceStatusLine({ agentId }: { agentId: string }) {
+    const presence = usePresenceForAgent(agentId);
+    if (!presence) {
+        return null;
+    }
+
+    return (
+        <span className="flex min-w-0 items-center gap-1.5">
+            <AgentPresenceDot state={presence.state} />
+            {presence.state === 'busy' ? (
+                <span className="truncate text-muted-foreground text-xs">
+                    {`Working in ${presence.chatTitle ?? 'another chat'}…`}
+                </span>
+            ) : null}
+        </span>
+    );
+}
+
 function usePresenceForAgent(agentId: string | null) {
     const { data } = useAgentPresence();
     if (!agentId) {

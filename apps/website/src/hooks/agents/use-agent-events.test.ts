@@ -5,6 +5,9 @@ function createHandlers() {
     const invalidatedQueries: string[] = [];
     const handlers = createAgentEventHandlers({
         agent: {
+            activity: {
+                invalidate: async () => invalidatedQueries.push('agent.activity'),
+            },
             presence: {
                 invalidate: async () => invalidatedQueries.push('agent.presence'),
             },

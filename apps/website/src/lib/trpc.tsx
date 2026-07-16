@@ -23,6 +23,7 @@ type RouterInput = inferRouterInputs<AppRouter>;
 export type AppRouterOutputs = RouterOutput;
 export type AppRouterInputs = RouterInput;
 export type AgentOutput = RouterOutput['agent']['get'];
+export type AgentActivityOutput = RouterOutput['agent']['activity'];
 export type AgentPresenceOutput = RouterOutput['agent']['presence'];
 export type AgentChatListOutput = RouterOutput['agent']['chats']['list'];
 export type AgentListOutput = RouterOutput['agent']['list'];

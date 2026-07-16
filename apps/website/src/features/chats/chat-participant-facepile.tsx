@@ -1,5 +1,5 @@
 import { UserIcon } from '@hugeicons-pro/core-solid-rounded';
-import * as React from 'react';
+import type * as React from 'react';
 import { useResolvedThemeOptional } from '../../components/theme-provider.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import { localHumanParticipantId } from '../../hooks/actors/use-actor.ts';
@@ -8,8 +8,8 @@ import { useAgentAppearanceLookup } from '../../hooks/agents/use-agent-appearanc
 import { useUserProfilePreference } from '../../hooks/shell/use-user-profile-preference.ts';
 import { cn } from '../../lib/utils.ts';
 import { resolveAgentInk } from '../agents/agent-color-presets.ts';
-import { AgentDrawer } from './agent-drawer.tsx';
 import { AgentFace } from './agent-face.tsx';
+import { AgentHoverCard } from './agent-hover-card.tsx';
 import type { ChatListItem } from './chat-list-data.ts';
 
 // The face sits on the same circular coin as human avatars, slightly inset so
@@ -26,10 +26,6 @@ const participantAvatarClassName =
 export function ChatParticipantFacepile({ chat }: { chat: ChatListItem }) {
     const participants = getVisibleParticipants(chat);
     const lookupAppearance = useAgentAppearanceLookup();
-    const [openAgentId, setOpenAgentId] = React.useState<string | null>(null);
-    const openAgent = participants.find(
-        (participant) => participant.actorType === 'agent' && participant.actorId === openAgentId
-    );
 
     if (participants.length === 0) {
         return null;
@@ -48,12 +44,8 @@ export function ChatParticipantFacepile({ chat }: { chat: ChatListItem }) {
                                 ? lookupAppearance(participant.actorId)
                                 : null
                         }
+                        chatId={chat.id}
                         key={participant.actorId}
-                        onOpenAgent={
-                            participant.actorType === 'agent'
-                                ? () => setOpenAgentId(participant.actorId)
-                                : undefined
-                        }
                         participant={participant}
                     />
                 ))}
@@ -63,28 +55,17 @@ export function ChatParticipantFacepile({ chat }: { chat: ChatListItem }) {
                     +{participants.length - 5}
                 </span>
             ) : null}
-            <AgentDrawer
-                agentId={openAgent?.actorId ?? ''}
-                agentName={openAgent?.name ?? ''}
-                chatId={chat.id}
-                onOpenChange={(open) => {
-                    if (!open) {
-                        setOpenAgentId(null);
-                    }
-                }}
-                open={Boolean(openAgent)}
-            />
         </div>
     );
 }
 
 function ParticipantAvatar({
     appearance,
-    onOpenAgent,
+    chatId,
     participant,
 }: {
     appearance: AgentFaceAppearance | null;
-    onOpenAgent?: () => void;
+    chatId: string;
     participant: ChatListItem['participants'][number];
 }) {
     const dark = useResolvedThemeOptional() === 'dark';
@@ -92,15 +73,14 @@ function ParticipantAvatar({
     if (appearance && appearance.character !== 'none') {
         return (
             <li className="contents">
-                <button
-                    aria-label={`Agent details: ${participant.name}`}
-                    className={cn(
+                <AgentHoverCard
+                    agentId={participant.actorId}
+                    agentName={participant.name}
+                    chatId={chatId}
+                    triggerClassName={cn(
                         participantAvatarClassName,
                         'cursor-pointer outline-none transition-transform hover:z-10 hover:scale-110 focus-visible:ring-2 focus-visible:ring-ring/50'
                     )}
-                    onClick={onOpenAgent}
-                    title={participant.name}
-                    type="button"
                 >
                     <AgentFace
                         animate={false}
@@ -110,7 +90,7 @@ function ParticipantAvatar({
                         size={20}
                         style={faceStyle}
                     />
-                </button>
+                </AgentHoverCard>
             </li>
         );
     }

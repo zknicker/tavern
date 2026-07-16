@@ -10,6 +10,7 @@ import type { ChatActiveReply } from '../../hooks/chats/chat-timeline-state.ts';
 import { type ChatLogOutput, trpc } from '../../lib/trpc.tsx';
 import { ArtifactLogEntry } from '../sessions/log/event-entry/artifact-entry.tsx';
 import { ToolDrawerBody } from '../sessions/tools/tool-drawer-body.tsx';
+import { AgentDrawerProvider } from './agent-drawer-context.tsx';
 import { ChatTranscript } from './chat-transcript.tsx';
 import { groupAgentItems } from './chat-transcript-item-utils.ts';
 import type { TranscriptItem } from './chat-transcript-model.ts';
@@ -2309,12 +2310,14 @@ function renderTranscript(
             <QueryClientProvider client={queryClient}>
                 <MemoryRouter>
                     <DevModeProvider>
-                        <ChatTranscript
-                            activeReplies={options.activeReplies ?? []}
-                            chatId={options.chatId}
-                            defaultOpenWorkGroups={options.defaultOpenWorkGroups}
-                            rows={rows}
-                        />
+                        <AgentDrawerProvider>
+                            <ChatTranscript
+                                activeReplies={options.activeReplies ?? []}
+                                chatId={options.chatId}
+                                defaultOpenWorkGroups={options.defaultOpenWorkGroups}
+                                rows={rows}
+                            />
+                        </AgentDrawerProvider>
                     </DevModeProvider>
                 </MemoryRouter>
             </QueryClientProvider>
@@ -2353,11 +2356,13 @@ function renderTurnBody(rows: ChatRow[], activeReply: ChatActiveReply | null = n
             <QueryClientProvider client={queryClient}>
                 <MemoryRouter>
                     <DevModeProvider>
-                        <ChatTurnItems
-                            chatId="cht_test"
-                            items={items}
-                            turnActive={Boolean(activeReply)}
-                        />
+                        <AgentDrawerProvider>
+                            <ChatTurnItems
+                                chatId="cht_test"
+                                items={items}
+                                turnActive={Boolean(activeReply)}
+                            />
+                        </AgentDrawerProvider>
                     </DevModeProvider>
                 </MemoryRouter>
             </QueryClientProvider>
@@ -2394,12 +2399,14 @@ function renderActiveTranscript(
             <QueryClientProvider client={queryClient}>
                 <MemoryRouter>
                     <DevModeProvider>
-                        <ChatTranscript
-                            activeReplies={[activeReply]}
-                            chatId="cht_test"
-                            conversationLayout={conversationLayout}
-                            rows={rows}
-                        />
+                        <AgentDrawerProvider>
+                            <ChatTranscript
+                                activeReplies={[activeReply]}
+                                chatId="cht_test"
+                                conversationLayout={conversationLayout}
+                                rows={rows}
+                            />
+                        </AgentDrawerProvider>
                     </DevModeProvider>
                 </MemoryRouter>
             </QueryClientProvider>

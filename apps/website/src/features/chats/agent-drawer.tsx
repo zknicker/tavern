@@ -16,12 +16,14 @@ import { Icon } from '../../components/ui/icon.tsx';
 import { Spinner } from '../../components/ui/spinner.tsx';
 import { Elevated } from '../../components/ui/surface.tsx';
 import { Table, TableBody, TableCell, TableRow } from '../../components/ui/table.tsx';
+import { useAgentActivity } from '../../hooks/agents/use-agent-activity.ts';
 import { useAgentAppearanceLookup } from '../../hooks/agents/use-agent-appearance.ts';
 import { useAgentSession } from '../../hooks/agents/use-agent-session.ts';
 import { useModelList } from '../../hooks/models/use-model-list.ts';
 import { getModelProviderConfig } from '../../lib/model-provider-config.ts';
 import type { AgentSessionOutput, ModelListOutput } from '../../lib/trpc.tsx';
 import { resolveAgentInk } from '../agents/agent-color-presets.ts';
+import { formatAgentActivityEntry, formatAgentActivityTime } from './agent-activity-labels.ts';
 import { AgentFace } from './agent-face.tsx';
 import { ChatComposerContextFullness } from './chat-composer-tools.tsx';
 import { normalizeModelId } from './chat-context-fullness.ts';
@@ -127,10 +129,51 @@ function AgentDrawerBody({ agentId, chatId }: { agentId: string; chatId: string 
                     </AlertDescription>
                 </Alert>
             ) : null}
+            <AgentActivityList agentId={agentId} />
             {sessionQuery.data && sessionQuery.data.pastSessions.length > 0 ? (
                 <PastSessionList sessions={sessionQuery.data.pastSessions} />
             ) : null}
         </div>
+    );
+}
+
+// Recent activity (specs/agent-activity.md): the turn-grained feed, newest
+// first. Entries are not links in v1.
+function AgentActivityList({ agentId }: { agentId: string }) {
+    const activity = useAgentActivity({ agentId });
+
+    return (
+        <Elevated className="flex flex-col gap-2 rounded-lg px-3 py-2.5" offset={1}>
+            <span className="font-medium text-foreground text-sm">Recent activity</span>
+            {activity.isPending ? (
+                <span className="flex items-center gap-2 text-muted-foreground text-sm">
+                    <Spinner className="size-3.5" />
+                    Loading activity...
+                </span>
+            ) : activity.isError ? (
+                <span className="text-destructive text-sm">
+                    Could not load activity: {activity.error.message}
+                </span>
+            ) : activity.data.entries.length === 0 ? (
+                <span className="text-muted-foreground text-sm">No recent activity.</span>
+            ) : (
+                <ul className="flex flex-col gap-1.5 pb-0.5">
+                    {activity.data.entries.map((entry) => (
+                        <li
+                            className="flex min-w-0 items-baseline gap-2 text-sm"
+                            key={`${entry.turnId ?? entry.at}-${entry.kind}`}
+                        >
+                            <span className="shrink-0 text-muted-foreground/70 text-xs tabular-nums">
+                                {formatAgentActivityTime(entry.at)}
+                            </span>
+                            <span className="min-w-0 truncate text-foreground/90">
+                                {formatAgentActivityEntry(entry)}
+                            </span>
+                        </li>
+                    ))}
+                </ul>
+            )}
+        </Elevated>
     );
 }
 

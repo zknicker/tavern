@@ -18,6 +18,9 @@ function createHandlers(input?: {
 
     return createChatTurnEventHandlers({
         agent: {
+            activity: {
+                invalidate: async () => invalidatedQueries.push('agent.activity'),
+            },
             presence: {
                 invalidate: async () => invalidatedQueries.push('agent.presence'),
             },
@@ -75,7 +78,7 @@ test('turn completion preserves the handoff and refreshes live agent status only
     await Promise.resolve();
 
     expect(completedTurns).toEqual(['run-1:true']);
-    expect(invalidatedQueries).toEqual(['agent.presence']);
+    expect(invalidatedQueries).toEqual(['agent.activity', 'agent.presence']);
 });
 
 test('a silent turn completion forwards hasReply false to the timeline', async () => {
@@ -103,7 +106,7 @@ test('duplicate turn completion events do not refetch live status again', async 
     await Promise.resolve();
 
     expect(completedTurns).toEqual(['run-1:true']);
-    expect(invalidatedQueries).toEqual(['agent.presence']);
+    expect(invalidatedQueries).toEqual(['agent.activity', 'agent.presence']);
 });
 
 test('turn cancellation clears the active turn without failing it', async () => {
@@ -121,7 +124,7 @@ test('turn cancellation clears the active turn without failing it', async () => 
 
     expect(clearedTurns).toEqual(['run-1']);
     expect(failures).toEqual([]);
-    expect(invalidatedQueries).toEqual(['agent.presence']);
+    expect(invalidatedQueries).toEqual(['agent.activity', 'agent.presence']);
 });
 
 test('duplicate turn cancellation events do not refetch live status again', async () => {
@@ -137,7 +140,7 @@ test('duplicate turn cancellation events do not refetch live status again', asyn
     await Promise.resolve();
 
     expect(clearedTurns).toEqual(['run-1']);
-    expect(invalidatedQueries).toEqual(['agent.presence']);
+    expect(invalidatedQueries).toEqual(['agent.activity', 'agent.presence']);
 });
 
 test('turn start refreshes live status without refetching durable chat activity', async () => {
@@ -152,7 +155,12 @@ test('turn start refreshes live status without refetching durable chat activity'
     await Promise.resolve();
 
     expect(startedTurns).toEqual(['run-1']);
-    expect(invalidatedQueries).toEqual(['agent.presence', 'worker.list', 'chat.list']);
+    expect(invalidatedQueries).toEqual([
+        'agent.activity',
+        'agent.presence',
+        'worker.list',
+        'chat.list',
+    ]);
 });
 
 test('turn progress patches durable chat activity without refetching live status', async () => {
@@ -378,5 +386,5 @@ test('turn failure marks the local timeline failed and refreshes live agent stat
     await Promise.resolve();
 
     expect(failedTurns).toEqual(['run-1:Docker is not running']);
-    expect(invalidatedQueries).toEqual(['agent.presence']);
+    expect(invalidatedQueries).toEqual(['agent.activity', 'agent.presence']);
 });
