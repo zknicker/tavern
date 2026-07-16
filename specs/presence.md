@@ -48,7 +48,9 @@ is no per-token churn.
 ## Non-goals
 
 - Micro-states ("Running tools", "Reading files") — coarse busy/idle only;
-  the live turn narration already exists for the active chat.
+  the live turn narration already exists for the active chat, and the
+  [activity feed](agent-activity.md) covers "what has it been doing" at
+  turn granularity.
 - A separate agent presence rail or ticker: agents and built-in DMs are
   one-to-one, so the DM list already is the presence roster. A dedicated
   strip only earns its place if presence must stay visible in sections
