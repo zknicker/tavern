@@ -125,4 +125,25 @@ describe('Tavern runtime event projection', () => {
             .filter((event) => event.type === 'turn.progress');
         expect(steps.map((step) => ('step' in step ? step.step.kind : null))).toEqual(['notice']);
     });
+
+    it('never publishes terminal outcome summaries as streamed reply text', () => {
+        upsertResponse('cht_1', {
+            id: 'rsp_1',
+            metadata: runtimeMetadata,
+            participant_id: 'agt_1',
+            status: 'running',
+        });
+        upsertResponse('cht_1', {
+            id: 'rsp_1',
+            metadata: runtimeMetadata,
+            participant_id: 'agt_1',
+            status: 'completed',
+            summary: 'Chose not to reply.',
+        });
+
+        const events = listProjectedTavernRuntimeEvents({}).map((entry) => entry.event);
+        const replyUpdates = events.filter((event) => event.type === 'turn.replyUpdated');
+        expect(replyUpdates).toHaveLength(0);
+        expect(events.some((event) => event.type === 'turn.completed')).toBe(true);
+    });
 });

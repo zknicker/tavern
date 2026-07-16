@@ -81,7 +81,12 @@ function chatEventToRuntimeEvents(event: TavernChatEvent, db?: Database): Persis
                 },
             ];
         case 'response.updated':
-            return event.response.summary
+            // Terminal responses never publish reply-text updates: their
+            // summary is an outcome note ('Chose not to reply.'), and
+            // surfacing it as streamed text un-quiets silent turns for a
+            // frame right before the completion event removes them.
+            return event.response.summary &&
+                (event.response.status === 'queued' || event.response.status === 'running')
                 ? [
                       {
                           cursor: Number(event.cursor),
@@ -324,12 +329,19 @@ function activityToTurn(
     const metadataAgentId = metadataRuntimeString(activity.metadata, 'agentId');
 
     if (metadataAgentId) {
+        // The quiet-evaluation stamp lives on the owning response; progress
+        // events must carry it too or a re-upserted turn loses it.
+        const owningTrigger = metadataRuntimeString(
+            getResponse(activity.response_id, db)?.metadata ?? {},
+            'trigger'
+        );
         return {
             agentId: metadataAgentId,
             chatId: activity.chat_id,
             runId: metadataRuntimeString(activity.metadata, 'runId') ?? activity.response_id,
             sessionKey: runtimeTurnReference(activity.metadata) ?? activity.response_id,
             startedAt: metadataRuntimeString(activity.metadata, 'startedAt') ?? activity.started_at,
+            ...(owningTrigger === 'evaluation' ? { trigger: owningTrigger } : {}),
         };
     }
 
