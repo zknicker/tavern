@@ -166,11 +166,23 @@ const REQUIREMENTS: Array<{
         expected: "open it in the chat's artifact pane with `pane_open`",
         prompt: 'channel',
     },
-    // Widgets: the sandboxed HTML preview escape valve must stay taught so
-    // agents keep authoring custom inline visuals from workspace files.
+    // Widgets: the sandboxed escape valves must stay taught so agents keep
+    // authoring custom inline visuals from workspace files, and the ladder
+    // (typed widget -> html-preview -> page) keeps escalation deliberate.
     {
         capability: 'html-preview widget taught',
         expected: 'widget:html-preview — ',
+        prompt: 'channel',
+    },
+    {
+        capability: 'page widget taught',
+        expected: 'widget:page — ',
+        prompt: 'channel',
+    },
+    {
+        capability: 'widget escalation ladder taught',
+        expected:
+            'widget:html-preview for a static HTML file, widget:page for an interactive single-file React page composing @tavern/kit',
         prompt: 'channel',
     },
     // Automations: script mode exists and watchdogs should use it.
@@ -243,9 +255,12 @@ const REQUIREMENTS: Array<{
 // responsiveness — the global silence teaching needed an explicit DM
 // carve-out the eval caught (a DM FYI saying "no response needed" must
 // still get a brief acknowledgement; specs/addressing.md).
+// total 14_750 -> 15_450 (2026-07-16): the page widget entry (~470 chars)
+// plus the escalation-ladder rule (~230 chars, typed widget -> html-preview
+// -> page) landed for the TSX page escape valve (PRD-74).
 const promptBudgets = {
     channelChatSection: 1850,
-    channelTotal: 14_750,
+    channelTotal: 15_450,
 };
 
 // The fixture renders the cron-ready prompt so the Automations section stays

@@ -30,6 +30,10 @@ import {
  * for eyeballing every kit-rendered widget without the mixed demo content in
  * the main demo channel.
  */
+
+// Renders live from the seeded workspace file (see development-demos.ts in
+// workspace/), exercising the sandboxed TSX compile-and-render path.
+export const pageDemoWorkspacePath = 'workbench/demos/page.tsx';
 export function widgetsChannelDemo(): DevelopmentChatDemo {
     const chatId = developmentChatDemoIds.widgets;
     const turns = widgetTurns().map((turn) => widgetTurn(chatId, turn));
@@ -193,6 +197,22 @@ function widgetTurns(): WidgetTurnSpec[] {
                         height: 360,
                         path: htmlPreviewDemoWorkspacePath,
                         title: 'Starfield demo',
+                    }),
+                },
+            ],
+        },
+        {
+            reply: 'Wrote a single-file React page in my workbench; rendered below.',
+            request: 'Build an interactive fleet dashboard page with kit components.',
+            slug: 'page',
+            widgets: [
+                {
+                    fallbackText: 'Fleet status',
+                    title: 'Page',
+                    widget: widgetDemoRenderInput('page', 'Fleet status', {
+                        height: 620,
+                        path: pageDemoWorkspacePath,
+                        title: 'Fleet status',
                     }),
                 },
             ],

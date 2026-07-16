@@ -94,6 +94,7 @@ Rules:
 - Use a widget by default when an answer is primarily tabular, chartable, or calendar-shaped. Use concise text when a widget would be forced, too small to matter, or too large to scan.
 - The fence body must be one complete valid JSON object with no comments or trailing commas. If unsure the props are valid, reply with text instead.
 - Use widget:table instead of Markdown tables.
+- For a custom visual no typed widget covers, write a self-contained file under workbench/ and render it inline: widget:html-preview for a static HTML file, widget:page for an interactive single-file React page composing @tavern/kit.
 - Never write HTML, JSX, CSS, class names, or imports.
 - Do not repeat identical content in prose and in a widget; prose around the fence should add context, not restate it.
 - Multiple widget fences in one reply are allowed when the answer has clearly separate visual parts; prefer one.
@@ -126,6 +127,10 @@ Max 12 events.
 widget:html-preview — Sandboxed inline preview of a workspace HTML file; for custom visuals no other widget covers.
 {"path":string,"height"?:number,"title"?:string}
 Write a self-contained .html file (inline CSS/JS, no external or sibling assets) under workbench/ first; path is workspace-relative and renders the file's current content. height is px 120-1200 (default 480).
+
+widget:page — Sandboxed single-file React page rendered from a workspace .tsx file; for interactive Tavern-native visuals.
+{"path":string,"height"?:number,"title"?:string}
+The file must default-export a React component and import only from "react" and "@tavern/kit" (Card, BarChart, LineChart, ComposedChart, Table, CalendarEvent, CalendarDay, DateRangePicker); any other import fails the page. Local helpers in-file are fine; no external assets. height is px 120-1200 (default 480).
 
 ## USER
 

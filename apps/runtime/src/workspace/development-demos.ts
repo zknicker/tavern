@@ -2,7 +2,7 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import type { AgentWorkspaceSource } from './instructions';
 
-const demoWorkspaceFiles = [
+export const demoWorkspaceFiles = [
     {
         content: [
             '<!doctype html>',
@@ -86,6 +86,66 @@ const demoWorkspaceFiles = [
             '</html>',
         ].join('\n'),
         path: 'workbench/demos/html-preview.html',
+    },
+    {
+        // Backs the page widget gallery demo: one self-contained TSX file
+        // composing @tavern/kit, compiled and rendered inside the sandboxed
+        // iframe through the confined workspace file read.
+        content: [
+            "import { useState } from 'react';",
+            "import { BarChart, Card, Table } from '@tavern/kit';",
+            '',
+            'const sorties = [',
+            "    { losses: 1, ship: 'Erebos', sortie: 12 },",
+            "    { losses: 0, ship: 'Halcyon', sortie: 9 },",
+            "    { losses: 2, ship: 'Vireo', sortie: 15 },",
+            '];',
+            '',
+            'function Summary({ shown }: { shown: number }) {',
+            '    return (',
+            '        <p style={{ margin: "4px 0 0", opacity: 0.7 }}>',
+            '            {shown} of {sorties.length} ships shown',
+            '        </p>',
+            '    );',
+            '}',
+            '',
+            'export default function FleetStatus() {',
+            '    const [activeOnly, setActiveOnly] = useState(false);',
+            '    const rows = activeOnly ? sorties.filter((row) => row.losses === 0) : sorties;',
+            '',
+            '    return (',
+            '        <div style={{ display: "flex", flexDirection: "column", gap: 16, padding: 16 }}>',
+            '            <Card',
+            '                size="full"',
+            '                title="Sorties by ship"',
+            '                titleAction={',
+            '                    <button onClick={() => setActiveOnly((value) => !value)} type="button">',
+            "                        {activeOnly ? 'Show all' : 'Loss-free only'}",
+            '                    </button>',
+            '                }',
+            '            >',
+            '                <BarChart',
+            '                    data={rows}',
+            "                    series={[{ key: 'sortie', label: 'Sorties' }]}",
+            '                    xKey="ship"',
+            '                />',
+            '            </Card>',
+            '            <Card size="full" title="Fleet roster">',
+            '                <Table',
+            '                    columns={[',
+            "                        { key: 'ship', label: 'Ship' },",
+            "                        { align: 'right', key: 'sortie', label: 'Sorties' },",
+            "                        { align: 'right', key: 'losses', label: 'Losses' },",
+            '                    ]}',
+            '                    rows={rows}',
+            '                />',
+            '                <Summary shown={rows.length} />',
+            '            </Card>',
+            '        </div>',
+            '    );',
+            '}',
+        ].join('\n'),
+        path: 'workbench/demos/page.tsx',
     },
 ] as const;
 
