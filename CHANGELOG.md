@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.5.1 - 2026-07-16
+
+- Runtime/API/App: Claude sign-in lives in Model access — connect Claude
+  from Settings with a code-paste browser flow (works for remote Runtimes)
+  or add an Anthropic API key. Credentials are Runtime-owned: stored in the
+  runtime vault, refreshed automatically, and injected into every
+  Claude-powered turn, so agents no longer depend on host keychains or CLI
+  logins that break across upgrades. A new "Claude sign-in" capability shows
+  connection health, and Claude auth failures now point at Model access
+  instead of failing opaquely. Requires this Runtime.
+
 ## v1.5.0 - 2026-07-16
 
 - Runtime: every agent now holds one persistent session spanning all its
