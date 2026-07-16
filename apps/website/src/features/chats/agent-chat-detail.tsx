@@ -137,19 +137,29 @@ function hasTerminalChatRow(state: ChatTimelineState) {
 }
 
 export function isBlockingActiveTurn(input: {
-    activeReplies: readonly { isThinking?: boolean | null }[];
-    activeTurns: readonly unknown[];
+    activeReplies: readonly {
+        isThinking?: boolean | null;
+        text?: string;
+        trigger?: 'evaluation';
+    }[];
+    activeTurns: readonly { trigger?: 'evaluation' | undefined }[];
     agentsPending: boolean;
 }) {
     if (input.agentsPending) {
         return true;
     }
 
-    if (input.activeTurns.length > 0) {
+    // Quiet peer-evaluation turns never block the composer: most end in
+    // NO_REPLY and the user should keep talking (specs/addressing.md).
+    if (input.activeTurns.some((turn) => turn.trigger !== 'evaluation')) {
         return true;
     }
 
-    return input.activeReplies.some((reply) => reply.isThinking !== false);
+    return input.activeReplies.some(
+        (reply) =>
+            reply.isThinking !== false &&
+            !(reply.trigger === 'evaluation' && (reply.text ?? '').trim().length === 0)
+    );
 }
 
 function SyncedAgentChatDetail({ chat, chatId }: { chat: ChatListItem; chatId: string }) {

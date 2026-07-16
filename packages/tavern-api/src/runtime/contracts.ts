@@ -2579,6 +2579,9 @@ export const agentRuntimeTurnSchema = z.object({
     runId: z.string().trim().min(1),
     sessionKey: z.string().trim().min(1),
     startedAt: z.string().datetime(),
+    // Present on peer-evaluation turns (agent-authored trigger): clients
+    // keep these quiet until reply text streams (specs/addressing.md).
+    trigger: z.literal('evaluation').optional(),
 });
 
 export const agentRuntimeTurnProgressStatusSchema = z.enum(['active', 'completed', 'failed']);

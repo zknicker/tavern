@@ -10,6 +10,9 @@ export interface ChatActiveReply {
     startedAt: string;
     statusSequence?: number | null;
     text?: string;
+    // Peer-evaluation turns stay quiet until reply text streams
+    // (specs/addressing.md).
+    trigger?: 'evaluation';
 }
 export type ChatTimelineMessageRow = Extract<ChatTimeline[number], { kind: 'message' }>;
 
@@ -76,6 +79,7 @@ export interface ChatTurn {
     runId: string;
     sessionKey: string;
     startedAt: string;
+    trigger?: 'evaluation';
 }
 
 export interface ChatReplyUpdate {

@@ -134,6 +134,28 @@ test('ChatActiveStatusStack renders one row per agent when a follow-up run is qu
     assert.match(markup, /Blippy is thinking\.\.\./);
 });
 
+test('ChatActiveStatusStack keeps quiet peer-evaluation turns invisible until text streams', () => {
+    const quietReply = {
+        ...activeReply,
+        text: '',
+        trigger: 'evaluation',
+    } satisfies ChatActiveReply;
+    const quietMarkup = renderToStaticMarkup(
+        <ChatActiveStatusStack activeReplies={[quietReply]} agents={agents} rows={[]} />
+    );
+    assert.equal(quietMarkup, '');
+
+    // The moment reply text streams, the row appears like any other turn.
+    const speakingMarkup = renderToStaticMarkup(
+        <ChatActiveStatusStack
+            activeReplies={[{ ...quietReply, text: 'On it —' }]}
+            agents={agents}
+            rows={[]}
+        />
+    );
+    assert.match(speakingMarkup, /Blippy/);
+});
+
 test('ChatActiveStatusStack does not render without an active reply', () => {
     const markup = renderToStaticMarkup(
         <ChatActiveStatusStack activeReplies={[]} agents={agents} rows={[]} />

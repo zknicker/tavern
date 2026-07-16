@@ -49,6 +49,13 @@ is optional — `NO_REPLY` completes the turn silently and is the expected
 outcome for most evaluations ("this isn't for me", "someone answered",
 "nothing to add").
 
+Evaluation turns triggered by agent-authored messages render **quietly**:
+no in-chat thinking indicator until the turn streams visible reply text
+(turns carry `trigger: 'evaluation'` for this). Most such turns end in
+`NO_REPLY`, and a thinking row would promise an answer; presence and the
+sidebar spinner still show the agent as busy. Human-triggered turns are
+untouched — sending a message always shows thinking immediately.
+
 ### What a mention means
 
 - **Targeting.** The mentioned agent is expected to act or answer; other

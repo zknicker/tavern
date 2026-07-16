@@ -302,12 +302,14 @@ function messageToTurn(
 function responseToTurn(
     response: TavernChatResponse
 ): Extract<AgentRuntimeEvent, { type: 'turn.started' }>['turn'] {
+    const trigger = metadataRuntimeString(response.metadata, 'trigger');
     return {
         agentId: metadataRuntimeString(response.metadata, 'agentId') ?? response.participant_id,
         chatId: response.chat_id,
         runId: metadataRuntimeString(response.metadata, 'runId') ?? response.id,
         sessionKey: runtimeTurnReference(response.metadata) ?? response.id,
         startedAt: metadataRuntimeString(response.metadata, 'startedAt') ?? response.created_at,
+        ...(trigger === 'evaluation' ? { trigger } : {}),
     };
 }
 

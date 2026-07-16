@@ -154,6 +154,9 @@ function prepareDispatch(input: {
                 runId,
                 source: 'agent-engine',
                 startedAt: acceptedAt,
+                // Peer-evaluation turns render quietly until they stream
+                // reply text (specs/addressing.md).
+                trigger: 'evaluation',
             },
         },
         participant_id: createAgentParticipantId(input.agentId),

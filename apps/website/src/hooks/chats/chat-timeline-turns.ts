@@ -23,6 +23,7 @@ export function startTimelineTurn(state: ChatTimelineState, turn: ChatTurn): Cha
             sessionKey: turn.sessionKey,
             startedAt: turn.startedAt,
             text: '',
+            ...(turn.trigger === 'evaluation' ? { trigger: turn.trigger } : {}),
         }),
         activeTurns: upsertActiveTurn(state.activeTurns, turn),
         // A new turn by this agent supersedes its failure banner; other

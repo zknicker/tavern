@@ -262,12 +262,22 @@ function ChatActiveStatusItem({
 }
 
 // activeReplies is startedAt-ordered, so the first reply per agent is the run
+export function isQuietEvaluationReply(reply: ChatActiveReply) {
+    return reply.trigger === 'evaluation' && (reply.text ?? '').trim().length === 0;
+}
+
 // executing now; later ones are queued behind it and inherit the row when the
 // current run settles.
 function coalesceRepliesByAgent(replies: readonly ChatActiveReply[]) {
     const seen = new Set<string>();
 
     return replies.filter((reply) => {
+        // Peer-evaluation turns stay quiet until they stream reply text —
+        // most end in NO_REPLY, and a thinking row would promise an answer
+        // (specs/addressing.md). Presence still shows the agent as busy.
+        if (isQuietEvaluationReply(reply)) {
+            return false;
+        }
         if (seen.has(reply.agentId)) {
             return false;
         }

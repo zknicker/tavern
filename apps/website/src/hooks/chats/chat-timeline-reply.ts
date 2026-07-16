@@ -91,6 +91,7 @@ export function mergeActiveReplySnapshot(
             ...incoming,
             completedAt: incoming.completedAt ?? current.completedAt ?? null,
             statusSequence: incoming.statusSequence ?? current.statusSequence ?? null,
+            trigger: incoming.trigger ?? current.trigger,
         };
     }
 
@@ -106,6 +107,7 @@ export function mergeActiveReplySnapshot(
         completedAt: incoming.completedAt ?? current.completedAt ?? null,
         statusSequence: incoming.statusSequence ?? current.statusSequence ?? null,
         text: incomingText.length >= currentText.length ? incomingText : currentText,
+        trigger: incoming.trigger ?? current.trigger,
     };
 }
 

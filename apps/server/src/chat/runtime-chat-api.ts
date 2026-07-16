@@ -632,6 +632,9 @@ function activeRepliesFromResponses(
             sessionKey: responseSessionKey(response),
             startedAt: runtimeMetadataString(response, 'startedAt') ?? response.created_at,
             text: response.summary ?? '',
+            ...(runtimeMetadataString(response, 'trigger') === 'evaluation'
+                ? { trigger: 'evaluation' as const }
+                : {}),
         }))
         .sort((left, right) => Date.parse(left.startedAt) - Date.parse(right.startedAt));
 }
