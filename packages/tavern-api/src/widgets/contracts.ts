@@ -10,6 +10,7 @@ import {
 } from './charts/contracts.ts';
 import { widgetHtmlPreviewPropsSchema } from './html-preview/contracts.ts';
 import { widgetMerchBaseSalesChartPropsSchema } from './merchbase/contracts.ts';
+import { widgetPagePropsSchema } from './page/contracts.ts';
 
 export const widgetNameSchema = z.enum([
     'table',
@@ -19,6 +20,7 @@ export const widgetNameSchema = z.enum([
     'calendar-event',
     'calendar-day',
     'html-preview',
+    'page',
     'merchbase-sales-chart',
 ]);
 
@@ -82,6 +84,7 @@ export const widgetPropsSchemasByName = {
     'html-preview': widgetHtmlPreviewPropsSchema,
     'line-chart': widgetLineChartPropsSchema,
     'merchbase-sales-chart': widgetMerchBaseSalesChartPropsSchema,
+    page: widgetPagePropsSchema,
     table: widgetTablePropsSchema,
 } satisfies Record<WidgetName, z.ZodType>;
 
@@ -107,6 +110,7 @@ export const widgetRenderInputSchema = z.discriminatedUnion('component', [
     widgetRenderInputEntry('calendar-event'),
     widgetRenderInputEntry('calendar-day'),
     widgetRenderInputEntry('html-preview'),
+    widgetRenderInputEntry('page'),
     widgetRenderInputEntry('merchbase-sales-chart'),
 ]);
 
@@ -185,6 +189,11 @@ export function widgetFallbackText(name: WidgetName, props: unknown): string {
         return path ? `HTML preview: ${path}`.slice(0, 500) : 'HTML preview';
     }
 
+    if (name === 'page') {
+        const path = typeof record.path === 'string' ? record.path.trim() : '';
+        return path ? `Page: ${path}`.slice(0, 500) : 'Page';
+    }
+
     return widgetDisplayName(name);
 }
 
@@ -204,6 +213,8 @@ export function widgetDisplayName(name: WidgetName): string {
             return 'Agenda';
         case 'html-preview':
             return 'HTML preview';
+        case 'page':
+            return 'Page';
         case 'merchbase-sales-chart':
             return 'MerchBase sales chart';
     }
