@@ -2,7 +2,7 @@ import {
     type WidgetHtmlPreviewProps,
     widgetHtmlPreviewHeight,
 } from '@tavern/api/widgets/html-preview';
-import { KitFrame } from '../kit/index.ts';
+import { Card } from '../kit/index.ts';
 import { trpc } from '../lib/trpc.tsx';
 
 // Opaque-origin sandbox, matching the artifact pane's HTML preview. Never add
@@ -23,11 +23,7 @@ export function WidgetHtmlPreview({
     );
 
     return (
-        <KitFrame
-            contentClassName="overflow-hidden p-0"
-            size="full"
-            title={props.title ?? props.path}
-        >
+        <Card contentClassName="overflow-hidden p-0" size="full" title={props.title ?? props.path}>
             {agentId ? (
                 <WidgetHtmlPreviewBody
                     file={fileQuery.data}
@@ -38,7 +34,7 @@ export function WidgetHtmlPreview({
             ) : (
                 <HtmlPreviewNote text="This preview is only available for agent-authored replies." />
             )}
-        </KitFrame>
+        </Card>
     );
 }
 

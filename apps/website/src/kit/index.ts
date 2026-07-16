@@ -3,29 +3,30 @@
  * inline-UI surface (catalog widgets, plugin widgets, dashboards, sandboxed
  * agent pages). Kit components are props-in/render-out — no data fetching, no
  * tRPC, no app state — and consume global.css tokens only, so the module can
- * also compile into a standalone sandbox bundle.
+ * also compile into a standalone sandbox bundle. Bare-noun vocabulary:
+ * `<Card title="Sales"><BarChart data={...} /></Card>`.
  */
 export {
-    KitCalendarDay,
-    type KitCalendarDayEvent,
-    type KitCalendarDayProps,
-    KitCalendarEvent,
-    type KitCalendarEventProps,
+    CalendarDay,
+    type CalendarDayEvent,
+    type CalendarDayProps,
+    CalendarEvent,
+    type CalendarEventProps,
 } from './calendar.tsx';
-export { KitChartLegend } from './chart-legend.tsx';
-export { KitChartStatus } from './chart-status.tsx';
+export { Card } from './card.tsx';
+export { ChartLegend } from './chart-legend.tsx';
+export { ChartStatus } from './chart-status.tsx';
 export {
+    type BarChartProps,
+    type ChartDatum,
+    type ChartLegendItemData,
+    type ChartSeries,
+    type ComposedChartProps,
     chartStyleVars,
-    type KitBarChartProps,
-    type KitChartDatum,
-    type KitChartLegendItemData,
-    type KitChartSeries,
-    type KitComposedChartProps,
-    type KitLineChartProps,
+    type LineChartProps,
 } from './chart-view-model.ts';
-export { KitBarChart, KitComposedChart, KitComposedChartBody, KitLineChart } from './charts.tsx';
-export { KitDateRangeSelector } from './date-range-selector.tsx';
-export { KitFrame } from './frame.tsx';
+export { BarChart, ComposedChart, LineChart } from './charts.tsx';
+export { DateRangePicker } from './date-range-picker.tsx';
 export {
     addDays,
     endOfMonth,
@@ -35,4 +36,4 @@ export {
     shiftIsoDate,
     startOfMonth,
 } from './iso-date.ts';
-export { KitTable, type KitTableColumn, type KitTableValue } from './table.tsx';
+export { Table, type TableColumn, type TableValue } from './table.tsx';

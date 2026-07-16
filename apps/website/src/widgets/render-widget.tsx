@@ -1,11 +1,25 @@
-import { type WidgetRenderInput, widgetRenderInputSchema } from '@tavern/api/widgets';
 import {
-    KitBarChart,
-    KitCalendarDay,
-    KitCalendarEvent,
-    KitComposedChart,
-    KitLineChart,
-    KitTable,
+    type WidgetRenderInput,
+    type WidgetTableProps,
+    widgetRenderInputSchema,
+} from '@tavern/api/widgets';
+import type {
+    WidgetCalendarDayProps,
+    WidgetCalendarEventProps,
+} from '@tavern/api/widgets/calendar';
+import type {
+    WidgetBarChartProps,
+    WidgetComposedChartProps,
+    WidgetLineChartProps,
+} from '@tavern/api/widgets/charts';
+import {
+    BarChart,
+    CalendarDay,
+    CalendarEvent,
+    Card,
+    ComposedChart,
+    LineChart,
+    Table,
 } from '../kit/index.ts';
 import type { ChatLogOutput } from '../lib/trpc.tsx';
 import { cn } from '../lib/utils.ts';
@@ -61,17 +75,17 @@ function renderWidget(row: WidgetRow) {
 function widgetElement(input: WidgetRenderInput, agentId: string | null) {
     switch (input.component) {
         case 'tavern.widget.table':
-            return <KitTable columns={input.props.columns} rows={input.props.rows} />;
+            return <WidgetTable props={input.props} />;
         case 'tavern.widget.bar-chart':
-            return <KitBarChart {...input.props} />;
+            return <WidgetBarChart props={input.props} />;
         case 'tavern.widget.line-chart':
-            return <KitLineChart {...input.props} />;
+            return <WidgetLineChart props={input.props} />;
         case 'tavern.widget.composed-chart':
-            return <KitComposedChart {...input.props} />;
+            return <WidgetComposedChart props={input.props} />;
         case 'tavern.widget.calendar-event':
-            return <KitCalendarEvent {...input.props} />;
+            return <WidgetCalendarEvent props={input.props} />;
         case 'tavern.widget.calendar-day':
-            return <KitCalendarDay {...input.props} />;
+            return <WidgetCalendarDay props={input.props} />;
         case 'tavern.widget.html-preview':
             return <WidgetHtmlPreview agentId={agentId} props={input.props} />;
         case 'tavern.widget.merchbase-sales-chart':
@@ -79,6 +93,50 @@ function widgetElement(input: WidgetRenderInput, agentId: string | null) {
         default:
             return null;
     }
+}
+
+// Each catalog widget is a thin wrapper: fence props in, kit components out.
+
+function WidgetTable({ props }: { props: WidgetTableProps }) {
+    return <Table columns={props.columns} rows={props.rows} />;
+}
+
+function WidgetBarChart({ props }: { props: WidgetBarChartProps }) {
+    const { title, ...chart } = props;
+
+    return (
+        <Card size="full" title={title}>
+            <BarChart {...chart} />
+        </Card>
+    );
+}
+
+function WidgetLineChart({ props }: { props: WidgetLineChartProps }) {
+    const { title, ...chart } = props;
+
+    return (
+        <Card size="full" title={title}>
+            <LineChart {...chart} />
+        </Card>
+    );
+}
+
+function WidgetComposedChart({ props }: { props: WidgetComposedChartProps }) {
+    const { title, ...chart } = props;
+
+    return (
+        <Card size="full" title={title}>
+            <ComposedChart {...chart} />
+        </Card>
+    );
+}
+
+function WidgetCalendarEvent({ props }: { props: WidgetCalendarEventProps }) {
+    return <CalendarEvent {...props} />;
+}
+
+function WidgetCalendarDay({ props }: { props: WidgetCalendarDayProps }) {
+    return <CalendarDay {...props} />;
 }
 
 function WidgetFallback({ error, text }: { error: string | null; text: string }) {

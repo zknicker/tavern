@@ -15,7 +15,7 @@ import {
     startOfMonth,
 } from './iso-date.ts';
 
-export function KitDateRangeSelector({
+export function DateRangePicker({
     disabled = false,
     endDate,
     onRangeChange,

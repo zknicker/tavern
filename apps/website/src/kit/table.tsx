@@ -1,31 +1,31 @@
 import {
-    Table,
     TableBody,
     TableCell,
     TableHead,
     TableHeader,
+    Table as TableRoot,
     TableRow,
 } from '../components/ui/table.tsx';
 import { cn } from '../lib/utils.ts';
 
-export type KitTableValue = string | number | boolean | null;
+export type TableValue = string | number | boolean | null;
 
-export interface KitTableColumn {
+export interface TableColumn {
     align?: 'left' | 'right';
     key: string;
     label: string;
 }
 
-export function KitTable({
+export function Table({
     columns,
     rows,
 }: {
-    columns: KitTableColumn[];
-    rows: Record<string, KitTableValue>[];
+    columns: TableColumn[];
+    rows: Record<string, TableValue>[];
 }) {
     return (
         <div className="max-w-[46rem] rounded-lg border border-border bg-surface-2/65">
-            <Table>
+            <TableRoot>
                 <TableHeader>
                     <TableRow>
                         {columns.map((column) => (
@@ -55,12 +55,12 @@ export function KitTable({
                         </TableRow>
                     ))}
                 </TableBody>
-            </Table>
+            </TableRoot>
         </div>
     );
 }
 
-function formatTableValue(value: KitTableValue | undefined) {
+function formatTableValue(value: TableValue | undefined) {
     if (value === null || value === undefined) {
         return '';
     }
@@ -72,7 +72,7 @@ function formatTableValue(value: KitTableValue | undefined) {
     return value;
 }
 
-function tableRowKey(row: Record<string, KitTableValue>, index: number) {
+function tableRowKey(row: Record<string, TableValue>, index: number) {
     const firstValue = Object.values(row)
         .map((value) => String(value ?? ''))
         .find((value) => value.length > 0);

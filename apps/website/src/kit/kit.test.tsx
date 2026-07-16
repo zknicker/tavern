@@ -1,16 +1,16 @@
 import { expect, test } from 'bun:test';
 import { renderToStaticMarkup } from 'react-dom/server';
-import { KitCalendarDay, KitCalendarEvent } from './calendar.tsx';
-import { KitChartStatus } from './chart-status.tsx';
-import { KitBarChart } from './charts.tsx';
-import { KitFrame } from './frame.tsx';
-import { KitTable } from './table.tsx';
+import { CalendarDay, CalendarEvent } from './calendar.tsx';
+import { Card } from './card.tsx';
+import { ChartStatus } from './chart-status.tsx';
+import { BarChart } from './charts.tsx';
+import { Table } from './table.tsx';
 
-test('KitFrame renders the title header and framed content', () => {
+test('Card renders the title header and framed content', () => {
     const markup = renderToStaticMarkup(
-        <KitFrame size="full" title="Quarterly Revenue" titleAction={<button type="button" />}>
+        <Card size="full" title="Quarterly Revenue" titleAction={<button type="button" />}>
             body
-        </KitFrame>
+        </Card>
     );
 
     expect(markup).toContain('Quarterly Revenue');
@@ -18,16 +18,16 @@ test('KitFrame renders the title header and framed content', () => {
     expect(markup).toContain('body');
 });
 
-test('KitFrame omits the header row without a title or action', () => {
-    const markup = renderToStaticMarkup(<KitFrame>body</KitFrame>);
+test('Card omits the header row without a title or action', () => {
+    const markup = renderToStaticMarkup(<Card>body</Card>);
 
     expect(markup).toContain('max-w-[28rem]');
     expect(markup).not.toContain('<h3');
 });
 
-test('KitTable renders aligned columns and formatted cells', () => {
+test('Table renders aligned columns and formatted cells', () => {
     const markup = renderToStaticMarkup(
-        <KitTable
+        <Table
             columns={[
                 { key: 'state', label: 'State' },
                 { align: 'right', key: 'population', label: 'Population' },
@@ -45,18 +45,19 @@ test('KitTable renders aligned columns and formatted cells', () => {
     expect(markup).toContain('Yes');
 });
 
-test('KitBarChart renders a framed chart with legend values', () => {
+test('Card composes with BarChart into a framed chart with legend values', () => {
     const markup = renderToStaticMarkup(
-        <KitBarChart
-            data={[
-                { revenue: 12_000, quarter: 'Q1' },
-                { revenue: 15_500, quarter: 'Q2' },
-            ]}
-            series={[{ key: 'revenue', label: 'Revenue' }]}
-            title="Quarterly Revenue"
-            unit="USD"
-            xKey="quarter"
-        />
+        <Card size="full" title="Quarterly Revenue">
+            <BarChart
+                data={[
+                    { quarter: 'Q1', revenue: 12_000 },
+                    { quarter: 'Q2', revenue: 15_500 },
+                ]}
+                series={[{ key: 'revenue', label: 'Revenue' }]}
+                unit="USD"
+                xKey="quarter"
+            />
+        </Card>
     );
 
     expect(markup).toContain('Quarterly Revenue');
@@ -64,9 +65,9 @@ test('KitBarChart renders a framed chart with legend values', () => {
     expect(markup).toContain('aspect-ratio:21 / 9');
 });
 
-test('KitCalendarEvent renders the date tile and time range', () => {
+test('CalendarEvent renders the date tile and time range', () => {
     const markup = renderToStaticMarkup(
-        <KitCalendarEvent
+        <CalendarEvent
             date="2026-07-04"
             endTime="10:30"
             location="Dock 3"
@@ -80,20 +81,20 @@ test('KitCalendarEvent renders the date tile and time range', () => {
     expect(markup).toContain('Dock 3');
 });
 
-test('KitCalendarDay renders event cards and the empty state', () => {
+test('CalendarDay renders event cards and the empty state', () => {
     const withEvents = renderToStaticMarkup(
-        <KitCalendarDay date="2026-07-04" events={[{ allDay: true, title: 'Independence Day' }]} />
+        <CalendarDay date="2026-07-04" events={[{ allDay: true, title: 'Independence Day' }]} />
     );
-    const empty = renderToStaticMarkup(<KitCalendarDay date="2026-07-04" events={[]} />);
+    const empty = renderToStaticMarkup(<CalendarDay date="2026-07-04" events={[]} />);
 
     expect(withEvents).toContain('Independence Day');
     expect(withEvents).toContain('All day');
     expect(empty).toContain('No events scheduled.');
 });
 
-test('KitChartStatus styles the muted and error tones', () => {
-    const muted = renderToStaticMarkup(<KitChartStatus text="Loading sales..." />);
-    const error = renderToStaticMarkup(<KitChartStatus text="Request failed" tone="error" />);
+test('ChartStatus styles the muted and error tones', () => {
+    const muted = renderToStaticMarkup(<ChartStatus text="Loading sales..." />);
+    const error = renderToStaticMarkup(<ChartStatus text="Request failed" tone="error" />);
 
     expect(muted).toContain('Loading sales...');
     expect(muted).toContain('text-muted-foreground');

@@ -1,7 +1,7 @@
 import { cn } from '../lib/utils.ts';
 
 /** Loading, error, or empty text panel sized to sit in place of a chart body. */
-export function KitChartStatus({
+export function ChartStatus({
     framed = true,
     text,
     tone = 'muted',

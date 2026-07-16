@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { Elevated } from '../components/ui/surface.tsx';
 import { cn } from '../lib/utils.ts';
 
-export function KitFrame({
+export function Card({
     children,
     className,
     contentClassName,

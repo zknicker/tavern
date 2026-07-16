@@ -6,15 +6,15 @@ import {
     LegendValue,
     useLegendItem,
 } from '../components/charts/legend/index.ts';
-import { formatChartValue, type KitChartLegendItemData } from './chart-view-model.ts';
+import { type ChartLegendItemData, formatChartValue } from './chart-view-model.ts';
 
-export function KitChartLegend({
+export function ChartLegend({
     hoveredIndex,
     items,
     onHoverChange,
 }: {
     hoveredIndex: null | number;
-    items: KitChartLegendItemData[];
+    items: ChartLegendItemData[];
     onHoverChange: (index: null | number) => void;
 }) {
     return (
@@ -27,15 +27,15 @@ export function KitChartLegend({
             <LegendItem className="group flex min-w-0 items-center gap-2 hover:bg-muted data-[hovered]:bg-muted">
                 <LegendMarker className="size-2.5" />
                 <LegendLabel className="min-w-0 truncate font-medium text-sm" />
-                <KitChartLegendValue />
+                <ChartLegendValueCell />
             </LegendItem>
         </Legend>
     );
 }
 
-function KitChartLegendValue() {
+function ChartLegendValueCell() {
     const { item } = useLegendItem();
-    const unit = (item as KitChartLegendItemData).unit;
+    const unit = (item as ChartLegendItemData).unit;
 
     return (
         <LegendValue

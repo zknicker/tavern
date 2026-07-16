@@ -14,12 +14,12 @@ import { Icon } from '../components/ui/icon.tsx';
 import { useMerchbaseSettings } from '../hooks/plugins/use-merchbase-settings.ts';
 import { usePluginList } from '../hooks/plugins/use-plugin-list.ts';
 import {
+    Card,
+    ChartStatus,
+    ComposedChart,
     chartStyleVars,
+    DateRangePicker,
     formatIsoDate,
-    KitChartStatus,
-    KitComposedChartBody,
-    KitDateRangeSelector,
-    KitFrame,
     shiftIsoDate,
 } from '../kit/index.ts';
 import { queryPolicy } from '../lib/query-policy.ts';
@@ -66,7 +66,7 @@ export function WidgetMerchBaseSalesChart({ props }: { props: WidgetMerchBaseSal
     );
 
     const rangeControl = (
-        <KitDateRangeSelector
+        <DateRangePicker
             disabled={!pluginEnabled}
             endDate={endDate}
             onRangeChange={handleRangeChange}
@@ -75,7 +75,7 @@ export function WidgetMerchBaseSalesChart({ props }: { props: WidgetMerchBaseSal
     );
 
     return (
-        <KitFrame
+        <Card
             contentClassName="p-6"
             size="full"
             title={<MerchBaseTitle />}
@@ -94,7 +94,7 @@ export function WidgetMerchBaseSalesChart({ props }: { props: WidgetMerchBaseSal
                     title={props.title}
                 />
             </div>
-        </KitFrame>
+        </Card>
     );
 }
 
@@ -131,15 +131,15 @@ function MerchBaseSalesChartBody({
     }
 
     if (loading) {
-        return <KitChartStatus text="Loading MerchBase sales..." />;
+        return <ChartStatus text="Loading MerchBase sales..." />;
     }
 
     if (error) {
-        return <KitChartStatus text={error.message} tone="error" />;
+        return <ChartStatus text={error.message} tone="error" />;
     }
 
     if (!chartView) {
-        return <KitChartStatus text="No MerchBase sales found for this range." />;
+        return <ChartStatus text="No MerchBase sales found for this range." />;
     }
 
     const activePoint =
@@ -153,7 +153,7 @@ function MerchBaseSalesChartBody({
     return (
         <>
             {activePoint ? <PointSummary point={activePoint} /> : null}
-            <MemoizedComposedChartBody
+            <MemoizedComposedChart
                 chartMargin={merchBaseChartMargin}
                 datePillBottom={merchBaseDatePillBottom}
                 onActiveIndexChange={handleActiveIndexChange}
@@ -220,7 +220,7 @@ function PointSummary({ point }: { point: MerchbaseSalesSeriesOutput['series'][n
     );
 }
 
-const MemoizedComposedChartBody = memo(KitComposedChartBody);
+const MemoizedComposedChart = memo(ComposedChart);
 
 function SummaryMetric({ color, label, value }: { color?: string; label: string; value: string }) {
     return (

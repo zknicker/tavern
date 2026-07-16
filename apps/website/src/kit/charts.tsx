@@ -1,43 +1,42 @@
 import { type ReactNode, useEffect, useState } from 'react';
 import { Area, AreaChart } from '../components/charts/area-chart.tsx';
 import { Bar } from '../components/charts/bar.tsx';
-import { BarChart } from '../components/charts/bar-chart.tsx';
+import { BarChart as BarChartPrimitive } from '../components/charts/bar-chart.tsx';
 import { BarXAxis } from '../components/charts/bar-x-axis.tsx';
 import { type Margin, useChartHover } from '../components/charts/chart-context.tsx';
 import { ChartLegendHoverProvider } from '../components/charts/chart-legend-hover.tsx';
-import { ComposedChart } from '../components/charts/composed-chart.tsx';
+import { ComposedChart as ComposedChartPrimitive } from '../components/charts/composed-chart.tsx';
 import { Grid } from '../components/charts/grid.tsx';
 import { Line } from '../components/charts/line.tsx';
 import { SeriesBar } from '../components/charts/series-bar.tsx';
 import { ChartTooltip } from '../components/charts/tooltip/index.ts';
 import { XAxis } from '../components/charts/x-axis.tsx';
 import { YAxis } from '../components/charts/y-axis.tsx';
-import { KitChartLegend } from './chart-legend.tsx';
+import { ChartLegend } from './chart-legend.tsx';
 import {
+    type BarChartProps,
     buildBarChartMargin,
     buildComposedChartMargin,
     buildComposedSeries,
     buildLegendItems,
     buildLineChartMargin,
     buildTooltipRows,
+    type ComposedChartProps,
     chartStyleVars,
     composedBarUnit,
     composedLineMarkerStyle,
     composedLineUnit,
     composedSeriesUnit,
     formatChartValue,
-    type KitBarChartProps,
-    type KitComposedChartProps,
-    type KitLineChartProps,
+    type LineChartProps,
     lineYAxisId,
     normalizeLineChartData,
     seriesColor,
 } from './chart-view-model.ts';
-import { KitFrame } from './frame.tsx';
 
-const kitChartAspectRatio = '21 / 9';
+const chartAspectRatio = '21 / 9';
 
-export function KitBarChart(props: KitBarChartProps) {
+export function BarChart(props: BarChartProps) {
     const [hoveredSeriesIndex, setHoveredSeriesIndex] = useState<null | number>(null);
     const legendItems = buildLegendItems(props);
     const margin = buildBarChartMargin(props);
@@ -47,9 +46,9 @@ export function KitBarChart(props: KitBarChartProps) {
             hoveredIndex={hoveredSeriesIndex}
             onHoverChange={setHoveredSeriesIndex}
         >
-            <KitChartFrame title={props.title}>
-                <BarChart
-                    aspectRatio={kitChartAspectRatio}
+            <ChartScope>
+                <BarChartPrimitive
+                    aspectRatio={chartAspectRatio}
                     barGap={0.2}
                     barOuterGap={0.06}
                     data={props.data}
@@ -73,18 +72,18 @@ export function KitBarChart(props: KitBarChartProps) {
                         rows={(point) => buildTooltipRows(props.series, point, props.unit)}
                     />
                     <BarXAxis maxLabels={8} />
-                </BarChart>
-                <KitChartLegend
+                </BarChartPrimitive>
+                <ChartLegend
                     hoveredIndex={hoveredSeriesIndex}
                     items={legendItems}
                     onHoverChange={setHoveredSeriesIndex}
                 />
-            </KitChartFrame>
+            </ChartScope>
         </ChartLegendHoverProvider>
     );
 }
 
-export function KitLineChart(props: KitLineChartProps) {
+export function LineChart(props: LineChartProps) {
     const [hoveredSeriesIndex, setHoveredSeriesIndex] = useState<null | number>(null);
     const chartData = normalizeLineChartData(props);
     const legendItems = buildLegendItems(props);
@@ -95,9 +94,9 @@ export function KitLineChart(props: KitLineChartProps) {
             hoveredIndex={hoveredSeriesIndex}
             onHoverChange={setHoveredSeriesIndex}
         >
-            <KitChartFrame title={props.title}>
+            <ChartScope>
                 <AreaChart
-                    aspectRatio={kitChartAspectRatio}
+                    aspectRatio={chartAspectRatio}
                     data={chartData}
                     margin={margin}
                     xDataKey={props.xKey}
@@ -123,25 +122,17 @@ export function KitLineChart(props: KitLineChartProps) {
                         rows={(point) => buildTooltipRows(props.series, point, props.unit)}
                     />
                 </AreaChart>
-                <KitChartLegend
+                <ChartLegend
                     hoveredIndex={hoveredSeriesIndex}
                     items={legendItems}
                     onHoverChange={setHoveredSeriesIndex}
                 />
-            </KitChartFrame>
+            </ChartScope>
         </ChartLegendHoverProvider>
     );
 }
 
-export function KitComposedChart(props: KitComposedChartProps) {
-    return (
-        <KitChartFrame title={props.title}>
-            <KitComposedChartBody {...props} />
-        </KitChartFrame>
-    );
-}
-
-export function KitComposedChartBody({
+export function ComposedChart({
     chartMargin,
     datePillBottom,
     onActiveIndexChange,
@@ -149,7 +140,7 @@ export function KitComposedChartBody({
     xAxisLabelBottom,
     xAxisTickCount,
     ...props
-}: KitComposedChartProps & {
+}: ComposedChartProps & {
     chartMargin?: Partial<Margin>;
     datePillBottom?: number;
     onActiveIndexChange?: (index: null | number) => void;
@@ -172,68 +163,75 @@ export function KitComposedChartBody({
             hoveredIndex={hoveredSeriesIndex}
             onHoverChange={setHoveredSeriesIndex}
         >
-            <ComposedChart
-                aspectRatio={kitChartAspectRatio}
-                barGap={6}
-                data={chartData}
-                margin={margin}
-                maxBarSize={52}
-                xDataKey={props.xKey}
-            >
-                <Grid horizontal={true} />
-                {props.barSeries.map((series, index) => (
-                    <SeriesBar
-                        dataKey={series.key}
-                        fadedOpacity={0.18}
-                        fill={seriesColor(index)}
-                        key={series.key}
-                        radius={10}
-                    />
-                ))}
-                {props.lineSeries.map((series, index) => {
-                    const colorIndex = props.barSeries.length + index;
-
-                    return (
-                        <Line
+            <ChartScope>
+                <ComposedChartPrimitive
+                    aspectRatio={chartAspectRatio}
+                    barGap={6}
+                    data={chartData}
+                    margin={margin}
+                    maxBarSize={52}
+                    xDataKey={props.xKey}
+                >
+                    <Grid horizontal={true} />
+                    {props.barSeries.map((series, index) => (
+                        <SeriesBar
                             dataKey={series.key}
-                            fadeEdges={true}
+                            fadedOpacity={0.18}
+                            fill={seriesColor(index)}
                             key={series.key}
-                            markers={composedLineMarkerStyle(seriesColor(colorIndex))}
-                            showMarkers={true}
-                            stroke={seriesColor(colorIndex)}
-                            strokeWidth={2.5}
-                            yAxisId="right"
+                            radius={10}
                         />
-                    );
-                })}
-                <YAxis formatValue={(value) => formatChartValue(value, barUnit)} yAxisId="left" />
-                <YAxis
-                    formatValue={(value) => formatChartValue(value, lineUnit)}
-                    orientation="right"
-                    yAxisId="right"
-                />
-                <XAxis labelBottom={xAxisLabelBottom} numTicks={xAxisTickCount} />
-                <ChartTooltip
-                    datePillBottom={datePillBottom}
-                    indicatorColor={seriesColor(0)}
-                    rows={(point) =>
-                        buildTooltipRows(chartSeries, point, (_series, index) =>
-                            composedSeriesUnit(props, index)
-                        )
-                    }
-                    showCrosshair={false}
-                />
-                {onActiveIndexChange ? (
-                    <ComposedChartActiveIndexObserver onActiveIndexChange={onActiveIndexChange} />
+                    ))}
+                    {props.lineSeries.map((series, index) => {
+                        const colorIndex = props.barSeries.length + index;
+
+                        return (
+                            <Line
+                                dataKey={series.key}
+                                fadeEdges={true}
+                                key={series.key}
+                                markers={composedLineMarkerStyle(seriesColor(colorIndex))}
+                                showMarkers={true}
+                                stroke={seriesColor(colorIndex)}
+                                strokeWidth={2.5}
+                                yAxisId="right"
+                            />
+                        );
+                    })}
+                    <YAxis
+                        formatValue={(value) => formatChartValue(value, barUnit)}
+                        yAxisId="left"
+                    />
+                    <YAxis
+                        formatValue={(value) => formatChartValue(value, lineUnit)}
+                        orientation="right"
+                        yAxisId="right"
+                    />
+                    <XAxis labelBottom={xAxisLabelBottom} numTicks={xAxisTickCount} />
+                    <ChartTooltip
+                        datePillBottom={datePillBottom}
+                        indicatorColor={seriesColor(0)}
+                        rows={(point) =>
+                            buildTooltipRows(chartSeries, point, (_series, index) =>
+                                composedSeriesUnit(props, index)
+                            )
+                        }
+                        showCrosshair={false}
+                    />
+                    {onActiveIndexChange ? (
+                        <ComposedChartActiveIndexObserver
+                            onActiveIndexChange={onActiveIndexChange}
+                        />
+                    ) : null}
+                </ComposedChartPrimitive>
+                {showLegend ? (
+                    <ChartLegend
+                        hoveredIndex={hoveredSeriesIndex}
+                        items={legendItems}
+                        onHoverChange={setHoveredSeriesIndex}
+                    />
                 ) : null}
-            </ComposedChart>
-            {showLegend ? (
-                <KitChartLegend
-                    hoveredIndex={hoveredSeriesIndex}
-                    items={legendItems}
-                    onHoverChange={setHoveredSeriesIndex}
-                />
-            ) : null}
+            </ChartScope>
         </ChartLegendHoverProvider>
     );
 }
@@ -253,12 +251,11 @@ function ComposedChartActiveIndexObserver({
     return null;
 }
 
-function KitChartFrame({ children, title }: { children: ReactNode; title: string }) {
+/** Scopes the chart token vars so a kit chart renders correctly in any host. */
+function ChartScope({ children }: { children: ReactNode }) {
     return (
-        <KitFrame size="full" title={title}>
-            <div className="min-w-0" style={chartStyleVars}>
-                {children}
-            </div>
-        </KitFrame>
+        <div className="min-w-0" style={chartStyleVars}>
+            {children}
+        </div>
     );
 }

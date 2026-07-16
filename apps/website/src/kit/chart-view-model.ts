@@ -4,45 +4,42 @@ import { intFmt } from '../components/charts/chart-formatters.ts';
 import type { LegendItemData } from '../components/charts/legend/index.ts';
 import type { TooltipRow } from '../components/charts/tooltip/index.ts';
 
-export type KitChartDatum = Record<string, string | number | boolean | null>;
+export type ChartDatum = Record<string, string | number | boolean | null>;
 
-export interface KitChartSeries {
+export interface ChartSeries {
     key: string;
     label: string;
 }
 
-export interface KitBarChartProps {
-    data: KitChartDatum[];
-    series: KitChartSeries[];
-    title: string;
+export interface BarChartProps {
+    data: ChartDatum[];
+    series: ChartSeries[];
     unit?: string;
     xKey: string;
 }
 
-export type KitLineChartProps = KitBarChartProps;
+export type LineChartProps = BarChartProps;
 
-export interface KitComposedChartProps {
-    barSeries: KitChartSeries[];
+export interface ComposedChartProps {
+    barSeries: ChartSeries[];
     barUnit?: string;
-    data: KitChartDatum[];
-    lineSeries: KitChartSeries[];
+    data: ChartDatum[];
+    lineSeries: ChartSeries[];
     lineUnit?: string;
-    title: string;
     unit?: string;
     xKey: string;
 }
 
-export type KitChartLegendItemData = LegendItemData & { unit?: string };
+export type ChartLegendItemData = LegendItemData & { unit?: string };
 
 type ChartUnitResolver =
     | string
-    | ((series: KitChartSeries, index: number) => string | undefined)
+    | ((series: ChartSeries, index: number) => string | undefined)
     | undefined;
 
 interface ChartValueProps {
-    data: KitChartDatum[];
-    series: KitChartSeries[];
-    title: string;
+    data: ChartDatum[];
+    series: ChartSeries[];
     unit?: string;
     xKey: string;
 }
@@ -50,7 +47,7 @@ interface ChartValueProps {
 export function buildLegendItems(
     props: ChartValueProps,
     unit: ChartUnitResolver = props.unit
-): KitChartLegendItemData[] {
+): ChartLegendItemData[] {
     const lastPoint = props.data.at(-1) ?? {};
 
     return props.series.map((series, index) => ({
@@ -63,7 +60,7 @@ export function buildLegendItems(
 }
 
 export function buildTooltipRows(
-    series: KitChartSeries[],
+    series: ChartSeries[],
     point: Record<string, unknown>,
     unit?: ChartUnitResolver
 ): TooltipRow[] {
@@ -120,7 +117,7 @@ export function composedLineMarkerStyle(color: string) {
     };
 }
 
-export function buildBarChartMargin(props: KitBarChartProps) {
+export function buildBarChartMargin(props: BarChartProps) {
     return buildPackedChartMargin({
         base: { bottom: 44, left: 30, right: 18, top: 24 },
         data: props.data,
@@ -135,7 +132,7 @@ export function buildBarChartMargin(props: KitBarChartProps) {
     });
 }
 
-export function buildLineChartMargin(data: Record<string, unknown>[], series: KitChartSeries[]) {
+export function buildLineChartMargin(data: Record<string, unknown>[], series: ChartSeries[]) {
     const leftSeriesKeys = series
         .filter((_, index) => lineYAxisId(index) === 'left')
         .map((series) => series.key);
@@ -156,7 +153,7 @@ export function buildLineChartMargin(data: Record<string, unknown>[], series: Ki
 
 export function buildComposedChartMargin(
     data: Record<string, unknown>[],
-    props: KitComposedChartProps
+    props: ComposedChartProps
 ) {
     const barUnit = composedBarUnit(props);
     const lineUnit = composedLineUnit(props);
@@ -183,19 +180,19 @@ export function buildComposedChartMargin(
     });
 }
 
-export function buildComposedSeries(props: KitComposedChartProps): KitChartSeries[] {
+export function buildComposedSeries(props: ComposedChartProps): ChartSeries[] {
     return [...props.barSeries, ...props.lineSeries];
 }
 
-export function composedBarUnit(props: KitComposedChartProps) {
+export function composedBarUnit(props: ComposedChartProps) {
     return props.barUnit ?? props.unit;
 }
 
-export function composedLineUnit(props: KitComposedChartProps) {
+export function composedLineUnit(props: ComposedChartProps) {
     return props.lineUnit ?? props.unit;
 }
 
-export function composedSeriesUnit(props: KitComposedChartProps, index: number) {
+export function composedSeriesUnit(props: ComposedChartProps, index: number) {
     return index < props.barSeries.length ? composedBarUnit(props) : composedLineUnit(props);
 }
 
@@ -234,7 +231,7 @@ export const chartStyleVars = {
     '--legend-track': 'var(--border)',
 } as CSSProperties;
 
-function maxSeriesValue(data: KitChartDatum[], key: string) {
+function maxSeriesValue(data: ChartDatum[], key: string) {
     return data.reduce((max, point) => Math.max(max, numericValue(point[key])), 0);
 }
 
@@ -246,7 +243,7 @@ function formatNumericChartValue(value: number) {
     return Number.isInteger(value) ? intFmt(value) : decimalFmt.format(value);
 }
 
-function chartUnitForSeries(unit: ChartUnitResolver, series: KitChartSeries, index: number) {
+function chartUnitForSeries(unit: ChartUnitResolver, series: ChartSeries, index: number) {
     return typeof unit === 'function' ? unit(series, index) : unit;
 }
 

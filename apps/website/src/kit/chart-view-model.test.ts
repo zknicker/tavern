@@ -14,7 +14,6 @@ test('formats composed chart legend and tooltip values with split units', () => 
         data: [{ month: '2026-06-01', royalties: 54.91, units: 19 }],
         lineSeries: [{ key: 'royalties', label: 'Royalties' }],
         lineUnit: 'USD',
-        title: 'Units and Royalties',
         xKey: 'month',
     };
     const series = [...props.barSeries, ...props.lineSeries];
@@ -45,7 +44,6 @@ test('normalizeLineChartData parses date-only x values as local dates', () => {
     const [point] = normalizeLineChartData({
         data: [{ bucket: '2026-06-14', sales: 58 }],
         series: [{ key: 'sales', label: 'Sales' }],
-        title: 'Sales',
         xKey: 'bucket',
     });
 

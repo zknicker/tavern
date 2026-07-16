@@ -1,8 +1,8 @@
 import { Elevated } from '../components/ui/surface.tsx';
 import { cn } from '../lib/utils.ts';
-import { KitFrame } from './frame.tsx';
+import { Card } from './card.tsx';
 
-export interface KitCalendarDayEvent {
+export interface CalendarDayEvent {
     allDay?: boolean;
     endTime?: string;
     location?: string;
@@ -11,26 +11,26 @@ export interface KitCalendarDayEvent {
     title: string;
 }
 
-export interface KitCalendarEventProps extends KitCalendarDayEvent {
+export interface CalendarEventProps extends CalendarDayEvent {
     date: string;
     timezone?: string;
 }
 
-export interface KitCalendarDayProps {
+export interface CalendarDayProps {
     date: string;
-    events: KitCalendarDayEvent[];
+    events: CalendarDayEvent[];
     timezone?: string;
     title?: string;
 }
 
-export function KitCalendarEvent(props: KitCalendarEventProps) {
+export function CalendarEvent(props: CalendarEventProps) {
     const date = dateFromCalendarValue(props.date);
     const timeLabel = formatEventTime(props);
     const detailText = [props.location, props.notes].filter(Boolean).join(' - ');
     const descriptionText = detailText || 'No description.';
 
     return (
-        <KitFrame>
+        <Card>
             <div className="flex items-start gap-3">
                 <CalendarTile date={date} />
                 <div className="flex min-h-[72px] min-w-0 flex-1 flex-col gap-1">
@@ -47,7 +47,7 @@ export function KitCalendarEvent(props: KitCalendarEventProps) {
                     </p>
                 </div>
             </div>
-        </KitFrame>
+        </Card>
     );
 }
 
@@ -75,12 +75,12 @@ function CalendarTile({ date }: { date: Date }) {
     );
 }
 
-export function KitCalendarDay(props: KitCalendarDayProps) {
+export function CalendarDay(props: CalendarDayProps) {
     const date = dateFromCalendarValue(props.date);
     const timezone = timezoneDisplayNameForDate(date, props.timezone);
 
     return (
-        <KitFrame className="max-w-[30rem]">
+        <Card className="max-w-[30rem]">
             <section
                 aria-label={props.title ?? formatFullDate(date)}
                 className="flex min-w-0 gap-3 max-[420px]:flex-col"
@@ -109,11 +109,11 @@ export function KitCalendarDay(props: KitCalendarDayProps) {
                     )}
                 </div>
             </section>
-        </KitFrame>
+        </Card>
     );
 }
 
-function CalendarDayEventCard({ event }: { event: KitCalendarDayEvent }) {
+function CalendarDayEventCard({ event }: { event: CalendarDayEvent }) {
     const detailText = [event.location, event.notes].filter(Boolean).join(' - ');
     const descriptionText = detailText || 'No description.';
 
@@ -154,7 +154,7 @@ function formatFullDate(date: Date) {
     return fullDateFormatter.format(date);
 }
 
-function formatEventTime(props: KitCalendarEventProps) {
+function formatEventTime(props: CalendarEventProps) {
     const timezoneLabel = timezoneDisplayNameForDate(
         dateFromCalendarValue(props.date),
         props.timezone
@@ -171,7 +171,7 @@ function formatEventTime(props: KitCalendarEventProps) {
     return joinTimeLabel(formatTimeRange(props.startTime, props.endTime), timezoneLabel);
 }
 
-function formatDayEventTime(event: KitCalendarDayEvent) {
+function formatDayEventTime(event: CalendarDayEvent) {
     if (event.allDay) {
         return 'All day';
     }
@@ -241,7 +241,7 @@ function dateFromCalendarValue(value: string) {
     return new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
 }
 
-function dayEventKey(event: KitCalendarDayEvent, index: number) {
+function dayEventKey(event: CalendarDayEvent, index: number) {
     return `${event.startTime ?? 'all-day'}-${event.endTime ?? 'open'}-${event.title}-${index}`;
 }
 
