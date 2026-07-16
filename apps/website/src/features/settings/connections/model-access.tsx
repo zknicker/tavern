@@ -381,7 +381,7 @@ function EnabledAgentProviderRow({
                     type="button"
                     variant="secondary"
                 >
-                    {provider.isConnected ? 'Re-connect' : 'Connect'}
+                    Connect
                 </Button>
             ) : null}
             {onConfigure ? (
