@@ -290,6 +290,7 @@ test('agent chat list labels internal runtime sessions by source', async () => {
             scope: null,
             target: null,
             trigger: null,
+            unreadCount: 0,
         },
     ];
     await syncSessionsForRuntime({
@@ -476,6 +477,7 @@ test('agent chat list titles runtime DMs from participants and platform metadata
             scope: 'dm',
             target: 'dm:user:778786269458464829',
             trigger: null,
+            unreadCount: 0,
         },
     ];
     runtimeChats = chats;
@@ -567,6 +569,7 @@ test('agent chat list resolves DM targets through participant identities', async
             scope: 'dm' as const,
             target: 'dm:user:778786269458464829',
             trigger: null,
+            unreadCount: 0,
         },
         {
             bindingId: null,
@@ -603,6 +606,7 @@ test('agent chat list resolves DM targets through participant identities', async
             scope: 'dm' as const,
             target: 'dm:user:778786269458464829',
             trigger: null,
+            unreadCount: 0,
         },
     ];
 

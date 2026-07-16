@@ -30,6 +30,7 @@ export async function listAgentChats(input: { agentId: string }) {
                 targetParticipant: chat.targetParticipant,
                 title: chat.title,
                 type: chat.type,
+                unreadCount: chat.unreadCount,
             },
         ])
     );
