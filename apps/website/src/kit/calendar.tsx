@@ -1,20 +1,36 @@
-import type {
-    WidgetCalendarDayEventProps,
-    WidgetCalendarDayProps,
-    WidgetCalendarEventProps,
-} from '@tavern/api/widgets/calendar';
 import { Elevated } from '../components/ui/surface.tsx';
-import { WidgetFrame } from '../components/widgets/widget-frame.tsx';
 import { cn } from '../lib/utils.ts';
+import { KitFrame } from './frame.tsx';
 
-export function WidgetCalendarEvent({ props }: { props: WidgetCalendarEventProps }) {
+export interface KitCalendarDayEvent {
+    allDay?: boolean;
+    endTime?: string;
+    location?: string;
+    notes?: string;
+    startTime?: string;
+    title: string;
+}
+
+export interface KitCalendarEventProps extends KitCalendarDayEvent {
+    date: string;
+    timezone?: string;
+}
+
+export interface KitCalendarDayProps {
+    date: string;
+    events: KitCalendarDayEvent[];
+    timezone?: string;
+    title?: string;
+}
+
+export function KitCalendarEvent(props: KitCalendarEventProps) {
     const date = dateFromCalendarValue(props.date);
     const timeLabel = formatEventTime(props);
     const detailText = [props.location, props.notes].filter(Boolean).join(' - ');
     const descriptionText = detailText || 'No description.';
 
     return (
-        <WidgetFrame>
+        <KitFrame>
             <div className="flex items-start gap-3">
                 <CalendarTile date={date} />
                 <div className="flex min-h-[72px] min-w-0 flex-1 flex-col gap-1">
@@ -31,7 +47,7 @@ export function WidgetCalendarEvent({ props }: { props: WidgetCalendarEventProps
                     </p>
                 </div>
             </div>
-        </WidgetFrame>
+        </KitFrame>
     );
 }
 
@@ -59,12 +75,12 @@ function CalendarTile({ date }: { date: Date }) {
     );
 }
 
-export function WidgetCalendarDay({ props }: { props: WidgetCalendarDayProps }) {
+export function KitCalendarDay(props: KitCalendarDayProps) {
     const date = dateFromCalendarValue(props.date);
     const timezone = timezoneDisplayNameForDate(date, props.timezone);
 
     return (
-        <WidgetFrame className="max-w-[30rem]">
+        <KitFrame className="max-w-[30rem]">
             <section
                 aria-label={props.title ?? formatFullDate(date)}
                 className="flex min-w-0 gap-3 max-[420px]:flex-col"
@@ -93,11 +109,11 @@ export function WidgetCalendarDay({ props }: { props: WidgetCalendarDayProps }) 
                     )}
                 </div>
             </section>
-        </WidgetFrame>
+        </KitFrame>
     );
 }
 
-function CalendarDayEventCard({ event }: { event: WidgetCalendarDayEventProps }) {
+function CalendarDayEventCard({ event }: { event: KitCalendarDayEvent }) {
     const detailText = [event.location, event.notes].filter(Boolean).join(' - ');
     const descriptionText = detailText || 'No description.';
 
@@ -138,7 +154,7 @@ function formatFullDate(date: Date) {
     return fullDateFormatter.format(date);
 }
 
-function formatEventTime(props: WidgetCalendarEventProps) {
+function formatEventTime(props: KitCalendarEventProps) {
     const timezoneLabel = timezoneDisplayNameForDate(
         dateFromCalendarValue(props.date),
         props.timezone
@@ -155,7 +171,7 @@ function formatEventTime(props: WidgetCalendarEventProps) {
     return joinTimeLabel(formatTimeRange(props.startTime, props.endTime), timezoneLabel);
 }
 
-function formatDayEventTime(event: WidgetCalendarDayEventProps) {
+function formatDayEventTime(event: KitCalendarDayEvent) {
     if (event.allDay) {
         return 'All day';
     }
@@ -225,7 +241,7 @@ function dateFromCalendarValue(value: string) {
     return new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
 }
 
-function dayEventKey(event: WidgetCalendarDayEventProps, index: number) {
+function dayEventKey(event: KitCalendarDayEvent, index: number) {
     return `${event.startTime ?? 'all-day'}-${event.endTime ?? 'open'}-${event.title}-${index}`;
 }
 

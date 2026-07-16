@@ -13,9 +13,9 @@ import {
     formatIsoDate,
     parseIsoDate,
     startOfMonth,
-} from './merchbase-date.ts';
+} from './iso-date.ts';
 
-export function DateRangeSelector({
+export function KitDateRangeSelector({
     disabled = false,
     endDate,
     onRangeChange,

@@ -11,17 +11,23 @@ import {
     EmptyTitle,
 } from '../components/ui/empty.tsx';
 import { Icon } from '../components/ui/icon.tsx';
-import { WidgetFrame } from '../components/widgets/widget-frame.tsx';
 import { useMerchbaseSettings } from '../hooks/plugins/use-merchbase-settings.ts';
 import { usePluginList } from '../hooks/plugins/use-plugin-list.ts';
+import {
+    chartStyleVars,
+    formatIsoDate,
+    KitChartStatus,
+    KitComposedChartBody,
+    KitDateRangeSelector,
+    KitFrame,
+    shiftIsoDate,
+} from '../kit/index.ts';
 import { queryPolicy } from '../lib/query-policy.ts';
 import { type MerchbaseSalesSeriesOutput, trpc } from '../lib/trpc.tsx';
-import { cn } from '../lib/utils.ts';
-import { chartStyleVars } from './chart-view-model.ts';
-import { WidgetComposedChartBody } from './charts.tsx';
-import { dateKeyFromBucketStart, formatIsoDate, shiftIsoDate } from './merchbase-date.ts';
-import { DateRangeSelector } from './merchbase-date-range-selector.tsx';
-import { buildMerchBaseSalesChartView } from './merchbase-sales-chart-model.ts';
+import {
+    buildMerchBaseSalesChartView,
+    dateKeyFromBucketStart,
+} from './merchbase-sales-chart-model.ts';
 
 export function WidgetMerchBaseSalesChart({ props }: { props: WidgetMerchBaseSalesChartProps }) {
     const initialEndDate = props.endDate ?? formatIsoDate(new Date());
@@ -60,7 +66,7 @@ export function WidgetMerchBaseSalesChart({ props }: { props: WidgetMerchBaseSal
     );
 
     const rangeControl = (
-        <DateRangeSelector
+        <KitDateRangeSelector
             disabled={!pluginEnabled}
             endDate={endDate}
             onRangeChange={handleRangeChange}
@@ -69,7 +75,7 @@ export function WidgetMerchBaseSalesChart({ props }: { props: WidgetMerchBaseSal
     );
 
     return (
-        <WidgetFrame
+        <KitFrame
             contentClassName="p-6"
             size="full"
             title={<MerchBaseTitle />}
@@ -88,7 +94,7 @@ export function WidgetMerchBaseSalesChart({ props }: { props: WidgetMerchBaseSal
                     title={props.title}
                 />
             </div>
-        </WidgetFrame>
+        </KitFrame>
     );
 }
 
@@ -125,15 +131,15 @@ function MerchBaseSalesChartBody({
     }
 
     if (loading) {
-        return <ChartState text="Loading MerchBase sales..." />;
+        return <KitChartStatus text="Loading MerchBase sales..." />;
     }
 
     if (error) {
-        return <ChartState text={error.message} tone="error" />;
+        return <KitChartStatus text={error.message} tone="error" />;
     }
 
     if (!chartView) {
-        return <ChartState text="No MerchBase sales found for this range." />;
+        return <KitChartStatus text="No MerchBase sales found for this range." />;
     }
 
     const activePoint =
@@ -151,8 +157,8 @@ function MerchBaseSalesChartBody({
                 chartMargin={merchBaseChartMargin}
                 datePillBottom={merchBaseDatePillBottom}
                 onActiveIndexChange={handleActiveIndexChange}
-                props={chartView.chartProps}
                 showLegend={false}
+                {...chartView.chartProps}
                 xAxisLabelBottom={merchBaseXAxisLabelBottom}
                 xAxisTickCount={xAxisTickCount}
             />
@@ -195,28 +201,6 @@ function DisabledPluginState() {
     );
 }
 
-function ChartState({
-    framed = true,
-    text,
-    tone = 'muted',
-}: {
-    framed?: boolean;
-    text: string;
-    tone?: 'error' | 'muted';
-}) {
-    return (
-        <div
-            className={cn(
-                'flex min-h-36 items-center justify-center px-3 text-center text-sm',
-                framed && 'rounded-lg border border-border/70',
-                tone === 'error' ? 'text-destructive-foreground' : 'text-muted-foreground'
-            )}
-        >
-            {text}
-        </div>
-    );
-}
-
 function PointSummary({ point }: { point: MerchbaseSalesSeriesOutput['series'][number] }) {
     return (
         <section className="mb-3 flex w-fit max-w-full flex-wrap items-start justify-start gap-x-8 gap-y-3 sm:gap-x-10">
@@ -236,7 +220,7 @@ function PointSummary({ point }: { point: MerchbaseSalesSeriesOutput['series'][n
     );
 }
 
-const MemoizedComposedChartBody = memo(WidgetComposedChartBody);
+const MemoizedComposedChartBody = memo(KitComposedChartBody);
 
 function SummaryMetric({ color, label, value }: { color?: string; label: string; value: string }) {
     return (

@@ -1,20 +1,14 @@
+import { type WidgetRenderInput, widgetRenderInputSchema } from '@tavern/api/widgets';
 import {
-    type WidgetRenderInput,
-    type WidgetTableProps,
-    widgetRenderInputSchema,
-} from '@tavern/api/widgets';
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '../components/ui/table.tsx';
+    KitBarChart,
+    KitCalendarDay,
+    KitCalendarEvent,
+    KitComposedChart,
+    KitLineChart,
+    KitTable,
+} from '../kit/index.ts';
 import type { ChatLogOutput } from '../lib/trpc.tsx';
 import { cn } from '../lib/utils.ts';
-import { WidgetCalendarDay, WidgetCalendarEvent } from './calendar.tsx';
-import { WidgetBarChart, WidgetComposedChart, WidgetLineChart } from './charts.tsx';
 import { WidgetHtmlPreview } from './html-preview.tsx';
 import { WidgetMerchBaseSalesChart } from './merchbase-sales-chart.tsx';
 
@@ -67,17 +61,17 @@ function renderWidget(row: WidgetRow) {
 function widgetElement(input: WidgetRenderInput, agentId: string | null) {
     switch (input.component) {
         case 'tavern.widget.table':
-            return <WidgetTable props={input.props} />;
+            return <KitTable columns={input.props.columns} rows={input.props.rows} />;
         case 'tavern.widget.bar-chart':
-            return <WidgetBarChart props={input.props} />;
+            return <KitBarChart {...input.props} />;
         case 'tavern.widget.line-chart':
-            return <WidgetLineChart props={input.props} />;
+            return <KitLineChart {...input.props} />;
         case 'tavern.widget.composed-chart':
-            return <WidgetComposedChart props={input.props} />;
+            return <KitComposedChart {...input.props} />;
         case 'tavern.widget.calendar-event':
-            return <WidgetCalendarEvent props={input.props} />;
+            return <KitCalendarEvent {...input.props} />;
         case 'tavern.widget.calendar-day':
-            return <WidgetCalendarDay props={input.props} />;
+            return <KitCalendarDay {...input.props} />;
         case 'tavern.widget.html-preview':
             return <WidgetHtmlPreview agentId={agentId} props={input.props} />;
         case 'tavern.widget.merchbase-sales-chart':
@@ -85,48 +79,6 @@ function widgetElement(input: WidgetRenderInput, agentId: string | null) {
         default:
             return null;
     }
-}
-
-function WidgetTable({ props }: { props: WidgetTableProps }) {
-    return (
-        <div className="max-w-[46rem] rounded-lg border border-border bg-surface-2/65">
-            <Table>
-                <TableHeader>
-                    <TableRow>
-                        {props.columns.map((column) => (
-                            <TableHead
-                                className={
-                                    tableColumnAlign(column) === 'right' ? 'text-right' : undefined
-                                }
-                                key={column.key}
-                            >
-                                {column.label}
-                            </TableHead>
-                        ))}
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {props.rows.map((row, index) => (
-                        <TableRow key={tableRowKey(row, index)}>
-                            {props.columns.map((column) => (
-                                <TableCell
-                                    className={cn(
-                                        'max-w-[16rem] whitespace-normal break-words align-top [overflow-wrap:anywhere]',
-                                        tableColumnAlign(column) === 'right'
-                                            ? 'text-right tabular-nums'
-                                            : null
-                                    )}
-                                    key={column.key}
-                                >
-                                    {formatTableValue(row[column.key])}
-                                </TableCell>
-                            ))}
-                        </TableRow>
-                    ))}
-                </TableBody>
-            </Table>
-        </div>
-    );
 }
 
 function WidgetFallback({ error, text }: { error: string | null; text: string }) {
@@ -146,28 +98,4 @@ function WidgetFallback({ error, text }: { error: string | null; text: string })
             ) : null}
         </div>
     );
-}
-
-function formatTableValue(value: string | number | boolean | null | undefined) {
-    if (value === null || value === undefined) {
-        return '';
-    }
-
-    if (typeof value === 'boolean') {
-        return value ? 'Yes' : 'No';
-    }
-
-    return value;
-}
-
-function tableRowKey(row: Record<string, string | number | boolean | null>, index: number) {
-    const firstValue = Object.values(row)
-        .map((value) => String(value ?? ''))
-        .find((value) => value.length > 0);
-
-    return `${index}:${firstValue ?? 'row'}`;
-}
-
-function tableColumnAlign(column: WidgetTableProps['columns'][number]) {
-    return 'align' in column ? column.align : undefined;
 }

@@ -1,8 +1,3 @@
-import type {
-    WidgetBarChartProps,
-    WidgetComposedChartProps,
-    WidgetLineChartProps,
-} from '@tavern/api/widgets/charts';
 import { type ReactNode, useEffect, useState } from 'react';
 import { Area, AreaChart } from '../components/charts/area-chart.tsx';
 import { Bar } from '../components/charts/bar.tsx';
@@ -17,8 +12,7 @@ import { SeriesBar } from '../components/charts/series-bar.tsx';
 import { ChartTooltip } from '../components/charts/tooltip/index.ts';
 import { XAxis } from '../components/charts/x-axis.tsx';
 import { YAxis } from '../components/charts/y-axis.tsx';
-import { WidgetFrame } from '../components/widgets/widget-frame.tsx';
-import { ChartLegend } from './chart-legend.tsx';
+import { KitChartLegend } from './chart-legend.tsx';
 import {
     buildBarChartMargin,
     buildComposedChartMargin,
@@ -32,14 +26,18 @@ import {
     composedLineUnit,
     composedSeriesUnit,
     formatChartValue,
+    type KitBarChartProps,
+    type KitComposedChartProps,
+    type KitLineChartProps,
     lineYAxisId,
     normalizeLineChartData,
     seriesColor,
 } from './chart-view-model.ts';
+import { KitFrame } from './frame.tsx';
 
-const widgetChartAspectRatio = '21 / 9';
+const kitChartAspectRatio = '21 / 9';
 
-export function WidgetBarChart({ props }: { props: WidgetBarChartProps }) {
+export function KitBarChart(props: KitBarChartProps) {
     const [hoveredSeriesIndex, setHoveredSeriesIndex] = useState<null | number>(null);
     const legendItems = buildLegendItems(props);
     const margin = buildBarChartMargin(props);
@@ -49,9 +47,9 @@ export function WidgetBarChart({ props }: { props: WidgetBarChartProps }) {
             hoveredIndex={hoveredSeriesIndex}
             onHoverChange={setHoveredSeriesIndex}
         >
-            <ChartFrame title={props.title}>
+            <KitChartFrame title={props.title}>
                 <BarChart
-                    aspectRatio={widgetChartAspectRatio}
+                    aspectRatio={kitChartAspectRatio}
                     barGap={0.2}
                     barOuterGap={0.06}
                     data={props.data}
@@ -76,17 +74,17 @@ export function WidgetBarChart({ props }: { props: WidgetBarChartProps }) {
                     />
                     <BarXAxis maxLabels={8} />
                 </BarChart>
-                <ChartLegend
+                <KitChartLegend
                     hoveredIndex={hoveredSeriesIndex}
                     items={legendItems}
                     onHoverChange={setHoveredSeriesIndex}
                 />
-            </ChartFrame>
+            </KitChartFrame>
         </ChartLegendHoverProvider>
     );
 }
 
-export function WidgetLineChart({ props }: { props: WidgetLineChartProps }) {
+export function KitLineChart(props: KitLineChartProps) {
     const [hoveredSeriesIndex, setHoveredSeriesIndex] = useState<null | number>(null);
     const chartData = normalizeLineChartData(props);
     const legendItems = buildLegendItems(props);
@@ -97,9 +95,9 @@ export function WidgetLineChart({ props }: { props: WidgetLineChartProps }) {
             hoveredIndex={hoveredSeriesIndex}
             onHoverChange={setHoveredSeriesIndex}
         >
-            <ChartFrame title={props.title}>
+            <KitChartFrame title={props.title}>
                 <AreaChart
-                    aspectRatio={widgetChartAspectRatio}
+                    aspectRatio={kitChartAspectRatio}
                     data={chartData}
                     margin={margin}
                     xDataKey={props.xKey}
@@ -125,37 +123,36 @@ export function WidgetLineChart({ props }: { props: WidgetLineChartProps }) {
                         rows={(point) => buildTooltipRows(props.series, point, props.unit)}
                     />
                 </AreaChart>
-                <ChartLegend
+                <KitChartLegend
                     hoveredIndex={hoveredSeriesIndex}
                     items={legendItems}
                     onHoverChange={setHoveredSeriesIndex}
                 />
-            </ChartFrame>
+            </KitChartFrame>
         </ChartLegendHoverProvider>
     );
 }
 
-export function WidgetComposedChart({ props }: { props: WidgetComposedChartProps }) {
+export function KitComposedChart(props: KitComposedChartProps) {
     return (
-        <ChartFrame title={props.title}>
-            <WidgetComposedChartBody props={props} />
-        </ChartFrame>
+        <KitChartFrame title={props.title}>
+            <KitComposedChartBody {...props} />
+        </KitChartFrame>
     );
 }
 
-export function WidgetComposedChartBody({
+export function KitComposedChartBody({
     chartMargin,
     datePillBottom,
     onActiveIndexChange,
-    props,
     showLegend = true,
     xAxisLabelBottom,
     xAxisTickCount,
-}: {
+    ...props
+}: KitComposedChartProps & {
     chartMargin?: Partial<Margin>;
     datePillBottom?: number;
     onActiveIndexChange?: (index: null | number) => void;
-    props: WidgetComposedChartProps;
     showLegend?: boolean;
     xAxisLabelBottom?: number;
     xAxisTickCount?: number;
@@ -176,7 +173,7 @@ export function WidgetComposedChartBody({
             onHoverChange={setHoveredSeriesIndex}
         >
             <ComposedChart
-                aspectRatio={widgetChartAspectRatio}
+                aspectRatio={kitChartAspectRatio}
                 barGap={6}
                 data={chartData}
                 margin={margin}
@@ -231,7 +228,7 @@ export function WidgetComposedChartBody({
                 ) : null}
             </ComposedChart>
             {showLegend ? (
-                <ChartLegend
+                <KitChartLegend
                     hoveredIndex={hoveredSeriesIndex}
                     items={legendItems}
                     onHoverChange={setHoveredSeriesIndex}
@@ -256,12 +253,12 @@ function ComposedChartActiveIndexObserver({
     return null;
 }
 
-function ChartFrame({ children, title }: { children: ReactNode; title: string }) {
+function KitChartFrame({ children, title }: { children: ReactNode; title: string }) {
     return (
-        <WidgetFrame size="full" title={title}>
+        <KitFrame size="full" title={title}>
             <div className="min-w-0" style={chartStyleVars}>
                 {children}
             </div>
-        </WidgetFrame>
+        </KitFrame>
     );
 }

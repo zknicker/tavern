@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react';
-import { cn } from '../../lib/utils.ts';
-import { Elevated } from '../ui/surface.tsx';
+import { Elevated } from '../components/ui/surface.tsx';
+import { cn } from '../lib/utils.ts';
 
-export function WidgetFrame({
+export function KitFrame({
     children,
     className,
     contentClassName,

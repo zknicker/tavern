@@ -1,7 +1,24 @@
 import type { AgentRuntimeMerchbaseSalesSeries, WidgetComposedChartProps } from '@tavern/api';
-import { dateKeyFromBucketStart, shiftIsoDate } from './merchbase-date.ts';
+import { formatIsoDate, shiftIsoDate } from '../kit/index.ts';
 
 type MerchBaseSalesPoint = AgentRuntimeMerchbaseSalesSeries['series'][number];
+
+/** Normalizes a MerchBase bucketStart (date-only or ISO datetime) to YYYY-MM-DD. */
+export function dateKeyFromBucketStart(value: string) {
+    const datePart = value.slice(0, 10);
+    if (isoDatePattern.test(datePart)) {
+        return datePart;
+    }
+
+    const parsedDate = new Date(value);
+    if (Number.isFinite(parsedDate.getTime())) {
+        return formatIsoDate(parsedDate);
+    }
+
+    return value;
+}
+
+const isoDatePattern = /^\d{4}-\d{2}-\d{2}$/u;
 
 export function buildMerchBaseSalesChartView(input: {
     data: AgentRuntimeMerchbaseSalesSeries;
