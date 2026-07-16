@@ -80,11 +80,11 @@ const newTurnGapClassName = '';
 // defaults to self-end and lifts by -translate-y-8 when the message has a
 // footer; our roster layout keeps it aligned with the name header instead.
 const turnAvatarBaseClassName =
-    'size-[2.125rem] min-w-[2.125rem] self-start ring-1 ring-border/50 group-has-data-[slot=message-footer]/message:translate-y-0';
-// The character face renders larger than its 34px seat tile — a tight frame
-// where the head fills the tile and crests its top edge, on a dark shade of
-// the character's own shell color.
-const tileFaceStyle = { flexShrink: 0, height: 38, overflow: 'visible', width: 38 } as const;
+    'size-10 min-w-10 self-start ring-1 ring-border/50 group-has-data-[slot=message-footer]/message:translate-y-0';
+// The character face renders slightly larger than its 40px seat tile — a
+// tight frame where the head fills the tile and crests its top edge, on a
+// dark shade of the character's own shell color.
+const tileFaceStyle = { flexShrink: 0, height: 42, overflow: 'visible', width: 42 } as const;
 const hoverGroupClassName = 'group';
 
 export function TranscriptEntryView({
@@ -270,7 +270,7 @@ function TurnAvatar({
                     } as React.CSSProperties
                 }
             >
-                {/* The 38px frame centers on the 34px tile (the head art has
+                {/* The 42px frame centers on the 40px tile (the head art has
                     its own internal padding); tufts and antennae crest the
                     top edge via the art's authored overflow. */}
                 <span className="absolute inset-x-0 -top-0.5 flex justify-center overflow-visible">
@@ -279,7 +279,7 @@ function TurnAvatar({
                         dark={dark}
                         head={character}
                         ink={resolveAgentInk(dark, color)}
-                        size={38}
+                        size={42}
                         style={tileFaceStyle}
                     />
                 </span>
