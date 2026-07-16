@@ -14,6 +14,7 @@ import {
     findLastAgentTurnEntry,
     formatTurnWorkSummary,
 } from './chat-active-turn.ts';
+import { StatusRiseRow, useMinimumDwell } from './chat-status-motion.tsx';
 import { getWorkGroupIcon, isActivityItem } from './chat-transcript-activity-utils.ts';
 import type { TranscriptRow } from './chat-transcript-model.ts';
 import { ChatTurnDrawer } from './chat-turn-drawer.tsx';
@@ -47,7 +48,13 @@ export function ChatActiveStatusStack({
 }: ChatActiveStatusStackProps) {
     const [drawerRunId, setDrawerRunId] = React.useState<string | null>(null);
     const reduceMotion = useReducedMotion() === true;
-    const seatReplies = React.useMemo(() => coalesceRepliesByAgent(activeReplies), [activeReplies]);
+    const liveSeatReplies = React.useMemo(
+        () => coalesceRepliesByAgent(activeReplies),
+        [activeReplies]
+    );
+    // Hold each seat row for a minimum dwell so its enter animation always
+    // completes and near-instant turns never flash in and out.
+    const seatReplies = useMinimumDwell(liveSeatReplies, seatReplyKey);
     const rowsWithEvidence = React.useMemo(() => {
         const evidence = Object.values(turnEvidence).flat();
 
@@ -112,47 +119,35 @@ export function ChatActiveStatusStack({
                             className
                         )}
                         exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 4 }}
-                        initial={false}
+                        initial={{ opacity: 0 }}
                         key="active-status"
                         transition={springs.moderate}
                     >
                         <div className="mx-auto flex w-full max-w-[60rem] flex-col">
                             <AnimatePresence initial={false}>
                                 {seatReplies.map((reply) => (
-                                    <motion.div
-                                        animate={{ height: 'auto', opacity: 1, y: 0 }}
-                                        // Clip while the row's height animates
-                                        // open or closed. The wrapper hangs
-                                        // left of the row (with matching inner
-                                        // padding) so the agent face — which
-                                        // overflows its box and sits at -ms-1
-                                        // — never loses its left edge to the
-                                        // clip.
-                                        className="-ms-2 overflow-hidden"
-                                        exit={{ height: 0, opacity: 0, y: -4 }}
-                                        initial={
-                                            reduceMotion ? false : { height: 0, opacity: 0, y: 8 }
-                                        }
-                                        // Keyed by seat so a queued follow-up
-                                        // run takes over the row in place
-                                        // instead of exit/enter animating a
-                                        // duplicate indicator for the agent.
+                                    // The clip wrapper hangs left of the row
+                                    // (with matching inner padding) so the
+                                    // agent face — which overflows its box
+                                    // and sits at -ms-1 — never loses its
+                                    // left edge to the clip. Keyed by seat so
+                                    // a queued follow-up run takes over the
+                                    // row in place instead of exit/enter
+                                    // animating a duplicate indicator.
+                                    <StatusRiseRow
+                                        className="-ms-2"
+                                        innerClassName="py-0.5 ps-2"
                                         key={reply.agentId}
-                                        transition={
-                                            reduceMotion ? { duration: 0 } : springs.moderate
-                                        }
                                     >
-                                        <div className="py-0.5 ps-2">
-                                            <ChatActiveStatusRow
-                                                activeReplies={activeReplies}
-                                                agents={agents}
-                                                chatId={chatId}
-                                                onViewDetails={() => setDrawerRunId(reply.runId)}
-                                                reply={reply}
-                                                rows={rowsWithEvidence}
-                                            />
-                                        </div>
-                                    </motion.div>
+                                        <ChatActiveStatusRow
+                                            activeReplies={activeReplies}
+                                            agents={agents}
+                                            chatId={chatId}
+                                            onViewDetails={() => setDrawerRunId(reply.runId)}
+                                            reply={reply}
+                                            rows={rowsWithEvidence}
+                                        />
+                                    </StatusRiseRow>
                                 ))}
                             </AnimatePresence>
                         </div>
@@ -286,6 +281,11 @@ function ChatActiveStatusItem({
 // activeReplies is startedAt-ordered, so the first reply per agent is the run
 export function isQuietEvaluationReply(reply: ChatActiveReply) {
     return reply.trigger === 'evaluation' && (reply.text ?? '').trim().length === 0;
+}
+
+// Seat rows are keyed (and dwell-held) per agent.
+function seatReplyKey(reply: ChatActiveReply) {
+    return reply.agentId;
 }
 
 // executing now; later ones are queued behind it and inherit the row when the
