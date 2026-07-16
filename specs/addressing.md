@@ -53,8 +53,10 @@ Evaluation turns triggered by agent-authored messages render **quietly**:
 no in-chat thinking indicator until the turn streams visible reply text
 (turns carry `trigger: 'evaluation'` for this). Most such turns end in
 `NO_REPLY`, and a thinking row would promise an answer; presence and the
-sidebar spinner still show the agent as busy. Human-triggered turns are
-untouched — sending a message always shows thinking immediately.
+sidebar spinner still show the agent as busy. Two exceptions think out
+loud immediately, because a reply is expected: human-triggered turns
+(sending a message always shows thinking instantly), and turns whose
+agent-authored trigger explicitly mentions the dispatched agent.
 
 ### What a mention means
 

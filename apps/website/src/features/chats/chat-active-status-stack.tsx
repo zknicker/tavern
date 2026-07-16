@@ -206,7 +206,11 @@ function ChatActiveStatusRow({
         presence.chatId !== null &&
         chatId !== undefined &&
         presence.chatId !== chatId
-            ? { chatTitle: presence.chatTitle }
+            ? {
+                  chatTitle: presence.chatTitle,
+                  // Beyond the anchoring turn and this chat's own turn.
+                  others: Math.max(presence.pendingTurns - 2, 0),
+              }
             : null;
 
     return (
@@ -240,7 +244,7 @@ function ChatActiveStatusItem({
     agentName: string;
     agentPrimaryColor: string | null;
     onViewDetails: () => void;
-    queuedElsewhere: { chatTitle: string | null } | null;
+    queuedElsewhere: { chatTitle: string | null; others: number } | null;
     rows: TranscriptRow[];
     workIcon: React.ComponentProps<typeof Icon>['icon'] | null;
     workSummary: string | null;
@@ -313,12 +317,16 @@ export function formatActiveStatusText({
 }: {
     activeReply: ChatActiveReply;
     agentName: string;
-    queuedElsewhere: { chatTitle: string | null } | null;
+    queuedElsewhere: { chatTitle: string | null; others: number } | null;
     rows: TranscriptRow[];
 }) {
     if (queuedElsewhere) {
         const where = queuedElsewhere.chatTitle ? ` in ${queuedElsewhere.chatTitle}` : '';
-        return `${agentName} is wrapping up${where} — you're next`;
+        const others =
+            queuedElsewhere.others > 0
+                ? `, and ${queuedElsewhere.others} other${queuedElsewhere.others === 1 ? '' : 's'}`
+                : '';
+        return `${agentName} is wrapping up${where}${others}`;
     }
 
     const emotion = resolveAgentStatusExpression({

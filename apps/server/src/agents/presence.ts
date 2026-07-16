@@ -22,6 +22,7 @@ export async function listAgentPresence(): Promise<AgentPresence[]> {
             agentId: agent.id,
             chatId: null,
             chatTitle: null,
+            pendingTurns: 0,
             since: null,
             state: 'idle' as const,
         }))

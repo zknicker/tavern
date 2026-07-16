@@ -1,3 +1,4 @@
+import { parseAgentReferenceTarget, parseTavernRichReferences } from '@tavern/api/rich-references';
 import { resolveAgentModelSelection } from '../models/selection-service.ts';
 import type { AgentExecutorInput } from './agent-executor.ts';
 import { ensureCurrentAgentSession } from './agent-session-store.ts';
@@ -87,6 +88,13 @@ export function collectAgentEvaluationDispatches(turn: AgentTurn): AgentEvaluati
 // Messages this turn placed into chats, in the order they landed: cross-chat
 // posts first (they happened mid-turn), then the final reply in the turn's
 // own chat.
+function isAgentMentioned(content: string, agentId: string) {
+    return parseTavernRichReferences(content).some(
+        (reference) =>
+            reference.kind === 'agent' && parseAgentReferenceTarget(reference.id) === agentId
+    );
+}
+
 function dispatchCandidates(turn: AgentTurn) {
     const candidates: Array<{ chatId: string; content: string; messageId: string }> = [];
     for (const delivery of listDeliveriesForTurn(turn.id)) {
@@ -154,9 +162,13 @@ function prepareDispatch(input: {
                 runId,
                 source: 'agent-engine',
                 startedAt: acceptedAt,
-                // Peer-evaluation turns render quietly until they stream
-                // reply text (specs/addressing.md).
-                trigger: 'evaluation',
+                // Unmentioned peer-evaluation turns render quietly until
+                // they stream reply text; an explicit mention promises an
+                // answer, so it thinks out loud like a human-triggered turn
+                // (specs/addressing.md).
+                ...(isAgentMentioned(input.content, input.agentId)
+                    ? {}
+                    : { trigger: 'evaluation' }),
             },
         },
         participant_id: createAgentParticipantId(input.agentId),

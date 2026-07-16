@@ -23,6 +23,8 @@ invented:
 - `chatId`/`chatTitle`: the running turn's anchor chat, or the oldest
   queued chat while nothing runs. Title is presentation sugar so clients
   never join chats to render a status line.
+- `pendingTurns`: total unsettled turns across all chats — the queue-depth
+  hint behind "wrapping up in <chat>, and N others".
 - `since`: when the anchoring turn started (or was created, if queued).
 
 Served at Runtime `GET /agents/presence` for every stored agent; the server

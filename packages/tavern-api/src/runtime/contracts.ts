@@ -2193,6 +2193,8 @@ export const agentRuntimeAgentPresenceSchema = z.object({
     agentId: z.string().trim().min(1),
     chatId: z.string().trim().min(1).nullable(),
     chatTitle: z.string().nullable(),
+    // Total unsettled turns (running + queued) across all chats.
+    pendingTurns: z.number().int().nonnegative(),
     since: z.string().datetime().nullable(),
     state: z.enum(['busy', 'idle']),
 });

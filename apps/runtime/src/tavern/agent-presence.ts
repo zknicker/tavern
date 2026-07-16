@@ -11,11 +11,18 @@ import { getChat } from './chat-api/index.ts';
 // idle. The anchor chat is the running turn's chat, or the oldest queued
 // chat while nothing runs.
 export function listAgentPresence(db: Database = getDb()): AgentRuntimeAgentPresence[] {
-    const anchorByAgentId = new Map<string, { chatId: string; since: string }>();
+    const anchorByAgentId = new Map<
+        string,
+        { chatId: string; pendingTurns: number; since: string }
+    >();
     for (const turn of listUnsettledAgentTurns(db)) {
-        if (!anchorByAgentId.has(turn.agentId)) {
+        const anchor = anchorByAgentId.get(turn.agentId);
+        if (anchor) {
+            anchor.pendingTurns += 1;
+        } else {
             anchorByAgentId.set(turn.agentId, {
                 chatId: turn.chatId,
+                pendingTurns: 1,
                 since: turn.startedAt ?? turn.createdAt,
             });
         }
@@ -28,6 +35,7 @@ export function listAgentPresence(db: Database = getDb()): AgentRuntimeAgentPres
                 agentId: agent.id,
                 chatId: null,
                 chatTitle: null,
+                pendingTurns: 0,
                 since: null,
                 state: 'idle' as const,
             };
@@ -36,6 +44,7 @@ export function listAgentPresence(db: Database = getDb()): AgentRuntimeAgentPres
             agentId: agent.id,
             chatId: anchor.chatId,
             chatTitle: getChat(anchor.chatId, db)?.title ?? null,
+            pendingTurns: anchor.pendingTurns,
             since: anchor.since,
             state: 'busy' as const,
         };

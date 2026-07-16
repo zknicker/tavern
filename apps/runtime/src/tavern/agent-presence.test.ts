@@ -39,8 +39,22 @@ describe('agent presence', () => {
 
     it('reports every stored agent, idle without unsettled turns', () => {
         expect(listAgentPresence()).toEqual([
-            { agentId: 'agt_otto', chatId: null, chatTitle: null, since: null, state: 'idle' },
-            { agentId: 'agt_wren', chatId: null, chatTitle: null, since: null, state: 'idle' },
+            {
+                agentId: 'agt_otto',
+                chatId: null,
+                chatTitle: null,
+                pendingTurns: 0,
+                since: null,
+                state: 'idle',
+            },
+            {
+                agentId: 'agt_wren',
+                chatId: null,
+                chatTitle: null,
+                pendingTurns: 0,
+                since: null,
+                state: 'idle',
+            },
         ]);
     });
 
@@ -54,6 +68,7 @@ describe('agent presence', () => {
         expect(presence.find((entry) => entry.agentId === 'agt_otto')).toMatchObject({
             chatId: 'cht_room',
             chatTitle: 'Launch prep',
+            pendingTurns: 2,
             state: 'busy',
         });
         // Queued-only (mid-drain gap): still busy, anchored to the oldest

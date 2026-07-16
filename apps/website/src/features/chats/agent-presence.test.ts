@@ -5,6 +5,7 @@ const busyInRoom = {
     agentId: 'agt_otto',
     chatId: 'cht_room',
     chatTitle: 'Launch prep',
+    pendingTurns: 1,
     since: '2026-07-15T12:00:00.000Z',
     state: 'busy' as const,
 };

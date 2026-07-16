@@ -100,6 +100,7 @@ export const agentPresenceSchema = z.object({
     agentId: z.string(),
     chatId: z.string().nullable(),
     chatTitle: z.string().nullable(),
+    pendingTurns: z.number(),
     since: z.string().nullable(),
     state: agentPresenceStateSchema,
 });
