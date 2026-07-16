@@ -359,11 +359,14 @@ function EnabledAgentProviderRow({
     provider: ModelInventoryProvider;
 }) {
     const providerConfig = getModelProviderConfig(provider.provider);
+    // The action buttons already say what to do; only keep the setup hint
+    // when the row has no button to offer.
+    const description = onConnect || onConfigure ? '' : (provider.connectionDetail ?? '');
 
     return (
         <ModelAccessProviderRow
             color={providerConfig.color}
-            description={provider.connectionDetail ?? ''}
+            description={description}
             error={error}
             icon={providerConfig.icon}
             label={provider.displayName}
