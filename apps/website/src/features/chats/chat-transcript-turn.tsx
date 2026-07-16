@@ -270,7 +270,10 @@ function TurnAvatar({
                     } as React.CSSProperties
                 }
             >
-                <span className="absolute inset-x-0 -top-1.5 flex justify-center overflow-visible">
+                {/* The 38px frame centers on the 34px tile (the head art has
+                    its own internal padding); tufts and antennae crest the
+                    top edge via the art's authored overflow. */}
+                <span className="absolute inset-x-0 -top-0.5 flex justify-center overflow-visible">
                     <AgentFace
                         animate={false}
                         dark={dark}
