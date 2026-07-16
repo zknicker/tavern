@@ -2201,6 +2201,34 @@ export const agentRuntimeAgentPresenceListSchema = z.object({
     presence: z.array(agentRuntimeAgentPresenceSchema),
 });
 
+// Agent activity feed (specs/agent-activity.md): a turn-grained projection
+// over durable turn rows and session notices. The entry catalog is the
+// rendering contract; `detail` carries the per-kind context (sender label,
+// automation name, task title, or fresh-session reason).
+export const agentRuntimeAgentActivityKindSchema = z.enum([
+    'automation_fired',
+    'declined',
+    'failed',
+    'message_received',
+    'new_session',
+    'replied',
+    'stopped',
+    'task_dispatched',
+]);
+
+export const agentRuntimeAgentActivityEntrySchema = z.object({
+    at: z.string().datetime(),
+    chatId: z.string().nullable(),
+    chatTitle: z.string().nullable(),
+    detail: z.string().nullable(),
+    kind: agentRuntimeAgentActivityKindSchema,
+    turnId: z.string().nullable(),
+});
+
+export const agentRuntimeAgentActivityListSchema = z.object({
+    entries: z.array(agentRuntimeAgentActivityEntrySchema),
+});
+
 export const agentRuntimeRunCronSchema = z.object({
     // 'force' executes inline and holds the request open for the whole agent
     // turn; manual runs default to the queue so the app gets its run row fast.
@@ -3251,6 +3279,9 @@ export type AgentRuntimeSaveOpenRouterSettings = z.infer<
     typeof agentRuntimeSaveOpenRouterSettingsSchema
 >;
 export type AgentRuntimeFrontend = z.infer<typeof agentRuntimeFrontendSchema>;
+export type AgentRuntimeAgentActivityEntry = z.infer<typeof agentRuntimeAgentActivityEntrySchema>;
+export type AgentRuntimeAgentActivityKind = z.infer<typeof agentRuntimeAgentActivityKindSchema>;
+export type AgentRuntimeAgentActivityList = z.infer<typeof agentRuntimeAgentActivityListSchema>;
 export type AgentRuntimeAgentPresence = z.infer<typeof agentRuntimeAgentPresenceSchema>;
 export type AgentRuntimeAgentPresenceList = z.infer<typeof agentRuntimeAgentPresenceListSchema>;
 export type AgentRuntimeAgentSession = z.infer<typeof agentRuntimeAgentSessionSchema>;

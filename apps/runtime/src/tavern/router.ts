@@ -1,4 +1,5 @@
 import {
+    agentRuntimeAgentActivityListSchema,
     agentRuntimeAgentPresenceListSchema,
     agentRuntimeCurrentAgentSessionResultSchema,
     agentRuntimeMacAppListSchema,
@@ -40,6 +41,7 @@ import { handleAutoDispatchSettingsRequest } from '../tasks/settings.ts';
 import { handleTimezoneSettingsRequest } from '../timezone-settings.ts';
 import { handleWikiRequest } from '../wiki/routes.ts';
 import { handleWorkspaceRequest } from '../workspace/routes.ts';
+import { listAgentActivity } from './agent-activity.ts';
 import { agentSessionInstructionsFresh } from './agent-instructions.ts';
 import { listAgentPresence } from './agent-presence.ts';
 import { resetAgentSession } from './agent-session-reset.ts';
@@ -244,6 +246,23 @@ export async function handleTavernRuntimeRequest(request: Request): Promise<Resp
     }
 
     const segments = url.pathname.split('/').filter(Boolean).map(decodeURIComponent);
+
+    if (
+        request.method === 'GET' &&
+        segments[0] === 'agents' &&
+        segments[1] &&
+        segments[2] === 'activity'
+    ) {
+        const limitParam = url.searchParams.get('limit');
+        return json(
+            agentRuntimeAgentActivityListSchema.parse({
+                entries: listAgentActivity({
+                    agentId: segments[1],
+                    ...(limitParam ? { limit: Number(limitParam) } : {}),
+                }),
+            })
+        );
+    }
 
     if (request.method === 'GET' && url.pathname === agentRuntimeRoutes.agentPresence) {
         return json(agentRuntimeAgentPresenceListSchema.parse({ presence: listAgentPresence() }));

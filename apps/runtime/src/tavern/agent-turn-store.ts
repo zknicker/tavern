@@ -223,6 +223,24 @@ export function hasUnsettledAgentTurnsForAgent(agentId: string, db: Database = g
     return Boolean(row);
 }
 
+// The agent's most recent turns across all chats, newest first: the source
+// for the activity feed (specs/agent-activity.md).
+export function listRecentAgentTurns(
+    input: { agentId: string; limit: number },
+    db: Database = getDb()
+) {
+    const rows = db
+        .prepare(
+            `SELECT *
+             FROM agent_turns
+             WHERE agent_id = $agentId
+             ORDER BY created_at DESC, id DESC
+             LIMIT $limit`
+        )
+        .all(namedParams({ agentId: input.agentId, limit: input.limit })) as AgentTurnRow[];
+    return rows.map(rowToAgentTurn);
+}
+
 // Every in-flight turn across all agents, running first then oldest
 // queued: the source for agent presence (specs/presence.md).
 export function listUnsettledAgentTurns(db: Database = getDb()) {
