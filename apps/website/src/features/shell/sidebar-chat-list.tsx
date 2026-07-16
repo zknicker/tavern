@@ -489,35 +489,37 @@ function SidebarRecentChatItem({
     );
 }
 
-/**
- * Right-edge row indicators: an unread-count pill for every chat kind, plus
- * a presence slot on agent DMs — a quiet dot while the agent is idle that
- * swaps to the turn spinner while it works (anywhere, per specs/presence.md).
- * Channels get no presence slot: the DM list already shows who is busy.
- */
+// The right edge belongs to the unread pill alone; presence rides the
+// agent face (specs/presence.md).
 function SidebarChatIndicators({ chat }: { chat: ChatListItem }) {
+    return chat.unreadCount > 0 ? <SidebarUnreadPill count={chat.unreadCount} /> : null;
+}
+
+/**
+ * Presence dot anchored to the DM row's agent face — green idle, easing to
+ * amber while the agent is busy anywhere — so the unread pill keeps the
+ * right edge to itself.
+ */
+function SidebarAgentPresenceDot({ chat }: { chat: ChatListItem }) {
     const timelineState = useChatRuntimeTimelineState(chat.id);
     const agentId = chat.conversationKind === 'channel' ? null : getChatAgentId(chat);
     const presence = useAgentPresenceEntry(agentId);
     const busy =
         agentId !== null && (presence?.state === 'busy' || hasLocalActiveTurn(timelineState));
 
+    if (agentId === null || !(presence || busy)) {
+        return null;
+    }
+
     return (
-        <span className="flex shrink-0 items-center gap-1.5">
-            {chat.unreadCount > 0 ? <SidebarUnreadPill count={chat.unreadCount} /> : null}
-            {agentId !== null && (presence || busy) ? (
-                // A calm color shift, not a spinner: green idle, amber busy
-                // (matching the presence dots elsewhere).
-                <span
-                    aria-hidden="true"
-                    className={cn(
-                        'block size-2.5 rounded-full transition-colors duration-300',
-                        busy ? 'bg-warning' : 'bg-success'
-                    )}
-                    title={busy ? 'Agent turn in progress' : undefined}
-                />
-            ) : null}
-        </span>
+        <span
+            aria-hidden="true"
+            className={cn(
+                'absolute -right-1 -bottom-0.5 size-2.5 rounded-full ring-2 ring-sidebar transition-colors duration-300',
+                busy ? 'bg-warning' : 'bg-success'
+            )}
+            title={busy ? 'Agent turn in progress' : undefined}
+        />
     );
 }
 
@@ -559,6 +561,7 @@ function SidebarChatIcon({
                     size={24}
                     style={faceStyle}
                 />
+                <SidebarAgentPresenceDot chat={chat} />
             </span>
         );
     }

@@ -50,10 +50,11 @@ is no per-token churn.
     the operator did not author. Viewing a chat marks it read — on open and
     on each new message while open — via `chat.markRead`, which the runtime
     resolves read-to-latest at write time.
-  - Agent DM rows add a presence dot after the pill: green while the agent
-    is idle, easing to amber while it is busy anywhere (agent presence,
-    plus this chat's local optimistic turn). No spinner — motion at rest
-    in the sidebar reads as distraction.
+  - Agent DM rows anchor a presence dot to the agent face: green while the
+    agent is idle, easing to amber while it is busy anywhere (agent
+    presence, plus this chat's local optimistic turn). No spinner — motion
+    at rest in the sidebar reads as distraction — and the dot stays off
+    the right edge so it never crowds the unread pill.
   - Channel rows never show a presence indicator: agent-global busy
     lighting every channel the agent sits in reads as noise, and the DM
     list already is the busy roster.
