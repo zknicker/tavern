@@ -56,7 +56,12 @@ no in-chat thinking indicator until the turn streams visible reply text
 sidebar spinner still show the agent as busy. The `NO_REPLY` sentinel
 itself is control flow, never visible reply text: the runtime keeps a
 sentinel-only text segment out of streaming posts and commentary, so a
-declining turn stays quiet end to end. Two exceptions think out
+declining turn stays quiet end to end. Prompts teach exactly `NO_REPLY`,
+but the runtime forgives near-misses the way the agent engine's own
+gateway does — whole-message matching, case-insensitive, whitespace
+normalized, accepting `NO_REPLY` / `NO REPLY` / `SILENT` / `[SILENT]`.
+A reply that merely mentions a token (or adds any other content, e.g.
+`NO_REPLY.`) delivers normally. Two exceptions think out
 loud immediately, because a reply is expected: human-triggered turns
 (sending a message always shows thinking instantly), and turns whose
 agent-authored trigger explicitly mentions the dispatched agent.

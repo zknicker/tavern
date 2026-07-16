@@ -59,8 +59,8 @@ import { harnessPrompt, promptCursorSequence } from './harness-prompt.ts';
 import {
     assistantFinalAnswerPhase,
     assistantMessageIdForRun,
+    isSilentReplyText,
     persistHarnessTurnStream,
-    silentReplyToken,
 } from './harness-turn-stream.ts';
 import { createTavernPaneTools } from './pane-tools.ts';
 import { advanceSeenCursor } from './seen-ledger.ts';
@@ -192,8 +192,7 @@ async function executeHarnessTurn(
         // once, show the rows that landed mid-turn, and let the agent
         // deliver, revise, or decline before anything durable ships.
         const draft = turnStream.finalText || fallbackText;
-        const hold =
-            draft && draft !== silentReplyToken ? resolveFreshnessHold(input, draft) : null;
+        const hold = draft && !isSilentReplyText(draft) ? resolveFreshnessHold(input, draft) : null;
         if (hold) {
             recordFreshnessHoldNotice(input, hold);
             const heldTurn = await agent.stream({
@@ -233,7 +232,7 @@ async function executeHarnessTurn(
     const completedAt = new Date().toISOString();
     const activityIds = turnStream.activityIds;
     const responseContent = turnStream.finalText || fallbackText || emptyAssistantMessageDiagnostic;
-    if (responseContent === silentReplyToken) {
+    if (isSilentReplyText(responseContent)) {
         return completeSilentHarnessTurn(input, {
             activityIds,
             completedAt,

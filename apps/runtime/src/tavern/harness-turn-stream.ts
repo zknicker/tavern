@@ -12,6 +12,20 @@ export const assistantFinalAnswerPhase = 'final_answer' as const;
  */
 export const silentReplyToken = 'NO_REPLY';
 
+// Prompts teach exactly NO_REPLY, but the runtime forgives near-misses the
+// way the upstream engine's gateway does: case-insensitive, whitespace
+// normalized, and common synonym spellings. Matching is whole-message only —
+// a sentence that merely mentions the token is a real reply.
+const silentReplyMarkers = new Set(['NO_REPLY', 'NO REPLY', 'SILENT', '[SILENT]']);
+
+/** True when reply text is a decline sentinel (whole-message, normalized). */
+export function isSilentReplyText(text: string) {
+    if (!text || text.length > 64) {
+        return false;
+    }
+    return silentReplyMarkers.has(text.trim().toUpperCase().split(/\s+/u).join(' '));
+}
+
 export type HarnessAssistantMessagePhase =
     | typeof assistantCommentaryPhase
     | typeof assistantFinalAnswerPhase;
@@ -202,7 +216,7 @@ function handleTextEnd(
         startedAt: buffer.startedAt,
     };
     state.textIndex += 1;
-    if (content !== silentReplyToken) {
+    if (!isSilentReplyText(content)) {
         upsertTurnPost(target, state, content);
     }
 }
@@ -425,7 +439,7 @@ function flushPendingCommentary(target: HarnessTurnStreamTarget, state: StreamSt
         return;
     }
     state.pendingText = null;
-    if (pending.content === silentReplyToken) {
+    if (isSilentReplyText(pending.content)) {
         return;
     }
     const activityId = messageActivityIdForRun(target.runId, pending.contentIndex);

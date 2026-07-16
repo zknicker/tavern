@@ -11,6 +11,7 @@ import {
 } from './chat-api/index.ts';
 import {
     assistantMessageIdForRun,
+    isSilentReplyText,
     messageActivityIdForRun,
     persistHarnessTurnStream,
     reasoningActivityIdForRun,
@@ -141,6 +142,17 @@ describe('persistHarnessTurnStream', () => {
         expect(result.finalText).toBe(silentReplyToken);
         expect(getMessage(assistantMessageIdForRun(runId))).toBeNull();
         expect(getResponseActivity(messageActivityIdForRun(runId, 0))).toBeNull();
+    });
+
+    it('holds sentinel near-misses out of streaming posts too', async () => {
+        async function* parts() {
+            yield* textSegment('txt_only', 'no_reply');
+        }
+
+        const result = await persistHarnessTurnStream(target(), parts());
+
+        expect(result.finalText).toBe('no_reply');
+        expect(getMessage(assistantMessageIdForRun(runId))).toBeNull();
     });
 
     it('drops a sentinel segment from commentary when later parts follow it', async () => {
@@ -333,6 +345,22 @@ describe('persistHarnessTurnStream', () => {
 
         expect(result.finalText).toBe('Answer.');
         expect(result.activityIds).toEqual([]);
+    });
+});
+
+describe('isSilentReplyText', () => {
+    it('matches the taught token and forgiving near-misses, whole-message only', () => {
+        expect(isSilentReplyText('NO_REPLY')).toBe(true);
+        expect(isSilentReplyText('  no_reply\n')).toBe(true);
+        expect(isSilentReplyText('No  Reply')).toBe(true);
+        expect(isSilentReplyText('[SILENT]')).toBe(true);
+        expect(isSilentReplyText('silent')).toBe(true);
+
+        // A reply that merely mentions the token is a real reply.
+        expect(isSilentReplyText('Use NO_REPLY when a peer already answered.')).toBe(false);
+        expect(isSilentReplyText('NO_REPLY.')).toBe(false);
+        expect(isSilentReplyText('')).toBe(false);
+        expect(isSilentReplyText(`${'x'.repeat(70)} NO_REPLY`)).toBe(false);
     });
 });
 
