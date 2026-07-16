@@ -1,5 +1,6 @@
 import { isCliCommandAvailable } from '../agent-engine/cli-command.ts';
 import { readConfigValue } from '../config.ts';
+import { hasClaudeCredentials } from '../model-access/claude-settings.ts';
 import { getOpenAiApiKey } from '../model-access/openai-settings.ts';
 import { resolveClaudeModelCatalog } from './provider-sources/claude.ts';
 import { resolveCodexModelCatalog } from './provider-sources/codex.ts';
@@ -64,10 +65,12 @@ export function modelCatalogProviderSpecs(): ModelCatalogProviderSpec[] {
                 }),
         },
         {
-            authenticated: () => isCliCommandAvailable(claudeCommand),
-            authType: 'oauth_external',
-            keyEnv: null,
-            oauthFlow: 'external',
+            // Claude signs in through the runtime's own code-paste PKCE flow
+            // (Model access); an Anthropic API key is the fallback.
+            authenticated: () => hasClaudeCredentials(),
+            authType: 'oauth_device_code',
+            keyEnv: 'ANTHROPIC_API_KEY',
+            oauthFlow: 'pkce',
             provider: claudeProvider,
             resolveCatalog: () =>
                 resolveClaudeModelCatalog({

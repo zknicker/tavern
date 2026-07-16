@@ -1,12 +1,23 @@
 import {
     agentRuntimeModelAccessSchema,
     agentRuntimeModelProviderApiKeyResultSchema,
+    agentRuntimeModelProviderOAuthPollSchema,
+    agentRuntimeModelProviderOAuthStartSchema,
+    agentRuntimeModelProviderOAuthSubmitSchema,
     agentRuntimeRoutes,
     agentRuntimeSaveModelProviderApiKeySchema,
+    agentRuntimeSubmitModelProviderOAuthSchema,
 } from '@tavern/api';
 import { runRuntimeDoctor } from '../doctor/runtime-doctor';
 import { setModelProviderEnabled } from '../models/provider-store';
 import { forbidden, json } from '../tavern/http';
+import {
+    cancelClaudeOAuth,
+    pollClaudeOAuth,
+    startClaudeOAuth,
+    submitClaudeOAuthCode,
+} from './claude-oauth';
+import { getClaudeModelAccessStatus, saveClaudeApiKey } from './claude-settings';
 import { getCodexModelAccessStatus } from './codex-settings';
 import { getOpenAiSettings, saveOpenAiSettings } from './openai-settings';
 import { getOpenRouterSettings } from './openrouter-settings';
@@ -47,16 +58,99 @@ export async function handleModelAccessRequest(request: Request): Promise<Respon
         return json(agentRuntimeModelProviderApiKeyResultSchema.parse({ ok: true }));
     }
 
+    const oauthResponse = await handleClaudeOAuthRequest(request, url);
+    if (oauthResponse) {
+        return oauthResponse;
+    }
+
+    return null;
+}
+
+// Claude sign-in (code-paste PKCE): the only provider whose OAuth the
+// runtime executes itself; codex and friends authenticate externally.
+async function handleClaudeOAuthRequest(request: Request, url: URL): Promise<Response | null> {
+    if (
+        request.method === 'POST' &&
+        url.pathname === agentRuntimeRoutes.modelAccessOAuthStart('claude')
+    ) {
+        const forbiddenResponse = requireTavernMutation(request, 'Claude sign-in');
+        if (forbiddenResponse) {
+            return forbiddenResponse;
+        }
+        return json(agentRuntimeModelProviderOAuthStartSchema.parse(startClaudeOAuth()));
+    }
+
+    if (
+        request.method === 'POST' &&
+        url.pathname === agentRuntimeRoutes.modelAccessOAuthSubmit('claude')
+    ) {
+        const forbiddenResponse = requireTavernMutation(request, 'Claude sign-in');
+        if (forbiddenResponse) {
+            return forbiddenResponse;
+        }
+        const input = agentRuntimeSubmitModelProviderOAuthSchema.parse({
+            ...((await readJson(request)) as Record<string, unknown>),
+            providerId: 'claude',
+        });
+        const result = await submitClaudeOAuthCode(input);
+        if (result.ok) {
+            await setModelProviderEnabled({ enabled: true, providerId: 'claude' });
+            await runRuntimeDoctor({
+                modules: ['models', 'agents'],
+                reason: 'provider_changed',
+                scope: { kind: 'provider', providerId: 'claude' },
+            });
+            void import('../capabilities/store.ts')
+                .then((store) =>
+                    store.refreshRuntimeCapabilities({
+                        ids: ['claudeAuth'],
+                        publishUpdated: true,
+                    })
+                )
+                .catch(() => {});
+        }
+        return json(agentRuntimeModelProviderOAuthSubmitSchema.parse(result));
+    }
+
+    const pollMatch = url.pathname.match(/^\/model-access\/oauth\/claude\/poll\/([^/]+)$/u);
+    if (request.method === 'GET' && pollMatch?.[1]) {
+        return json(
+            agentRuntimeModelProviderOAuthPollSchema.parse(
+                pollClaudeOAuth(decodeURIComponent(pollMatch[1]))
+            )
+        );
+    }
+
+    const cancelMatch = url.pathname.match(/^\/model-access\/oauth\/sessions\/([^/]+)$/u);
+    if (request.method === 'DELETE' && cancelMatch?.[1]) {
+        cancelClaudeOAuth(decodeURIComponent(cancelMatch[1]));
+        return json({ ok: true });
+    }
+
     return null;
 }
 
 async function listModelAccessStatuses() {
-    const [codex, openai, openrouter] = await Promise.all([
+    const [claude, codex, openai, openrouter] = await Promise.all([
+        Promise.resolve(readClaudeStatus()),
         readCodexStatus(),
         Promise.resolve(readOpenAiStatus()),
         Promise.resolve(readOpenRouterStatus()),
     ]);
-    return [codex, openai, openrouter];
+    return [claude, codex, openai, openrouter];
+}
+
+function readClaudeStatus() {
+    try {
+        return getClaudeModelAccessStatus();
+    } catch {
+        return {
+            description: 'Connect Claude to run Claude-powered agents.',
+            id: 'claude',
+            source: null,
+            state: 'needs-auth',
+        };
+    }
 }
 
 async function readCodexStatus() {
@@ -103,6 +197,10 @@ function saveProviderApiKey(input: { apiKey: string; keyEnv: string }) {
     if (input.keyEnv === 'OPENAI_API_KEY' || input.keyEnv === 'TAVERN_AGENT_API_KEY') {
         saveOpenAiSettings({ apiKey: input.apiKey });
         return 'openai';
+    }
+    if (input.keyEnv === 'ANTHROPIC_API_KEY') {
+        saveClaudeApiKey(input.apiKey);
+        return 'claude';
     }
     throw new Error(`Unsupported model provider API key "${input.keyEnv}".`);
 }

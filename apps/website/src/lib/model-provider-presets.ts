@@ -28,8 +28,8 @@ export const configuredModelProviders = [
         logo: openAiLogo,
     },
     {
-        accessDisplayName: 'Anthropic',
-        accessId: null,
+        accessDisplayName: 'Claude',
+        accessId: 'claude',
         color: '#D97757',
         configName: 'anthropic',
         displayName: 'Anthropic',

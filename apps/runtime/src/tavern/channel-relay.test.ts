@@ -2,6 +2,7 @@ import type { AgentRuntimeCreateMessage } from '@tavern/api';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { closeDb, initTestDb } from '../db/connection.ts';
 import { ensureRuntimeSchema } from '../db/schema.ts';
+import { saveClaudeApiKey } from '../model-access/claude-settings.ts';
 import { setModelProviderEnabled } from '../models/provider-store.ts';
 import type { AgentExecutor, AgentExecutorInput, AgentExecutorResult } from './agent-executor';
 import { resetAgentExecutorForTesting, setAgentExecutorForTesting } from './agent-turn-runner.ts';
@@ -30,6 +31,8 @@ describe('Tavern channel relay', () => {
 
     beforeEach(async () => {
         ensureRuntimeSchema(initTestDb());
+        // Claude models are executable only with stored credentials now.
+        saveClaudeApiKey('sk-ant-test');
         process.env.TAVERN_AGENT_CLAUDE_CODE_COMMAND = process.execPath;
         await setModelProviderEnabled({ enabled: true, providerId: 'claude' });
         resetAgentExecutorForTesting();

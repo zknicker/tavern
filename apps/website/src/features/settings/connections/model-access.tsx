@@ -156,14 +156,47 @@ export function ModelAccessSettings() {
                         <div key={provider.provider}>
                             {index > 0 ? <Separator /> : null}
                             <EnabledAgentProviderRow
+                                connectPending={pendingOAuthProviderId === provider.provider}
                                 error={
                                     removeErrorProviderId === provider.provider
                                         ? setProviderEnabledMutation.error?.message
                                         : null
                                 }
                                 onConfigure={
-                                    isApiKeyProvider(provider)
+                                    isApiKeyProvider(provider) ||
+                                    (provider.authAction === 'oauth' && provider.keyEnv)
                                         ? () => setApiKeyOption(toProviderApiKeyOption(provider))
+                                        : null
+                                }
+                                onConnect={
+                                    provider.authAction === 'oauth'
+                                        ? () =>
+                                              handleStartProviderOAuth({
+                                                  mutate: startOAuthMutation.mutate,
+                                                  onSettled: () => setPendingOAuthProviderId(null),
+                                                  onSuccess: (result) => {
+                                                      setOAuthProviderId(provider.provider);
+                                                      setOAuthProviderLabel(provider.displayName);
+                                                      setOAuthPollStatus(null);
+                                                      setOAuthSubmitMessage(null);
+                                                      setOAuthStart(result);
+                                                      if ('authUrl' in result) {
+                                                          globalThis.open(
+                                                              result.authUrl,
+                                                              '_blank',
+                                                              'noopener'
+                                                          );
+                                                      } else {
+                                                          globalThis.open(
+                                                              result.verificationUrl,
+                                                              '_blank',
+                                                              'noopener'
+                                                          );
+                                                      }
+                                                  },
+                                                  provider,
+                                                  setPendingProviderId: setPendingOAuthProviderId,
+                                              })
                                         : null
                                 }
                                 onRemove={() => {
@@ -309,14 +342,18 @@ function handleStartProviderOAuth({
 }
 
 function EnabledAgentProviderRow({
+    connectPending = false,
     error,
     onConfigure,
+    onConnect,
     onRemove,
     pending,
     provider,
 }: {
+    connectPending?: boolean;
     error?: string | null;
     onConfigure: (() => void) | null;
+    onConnect?: (() => void) | null;
     onRemove: () => void;
     pending: boolean;
     provider: ModelInventoryProvider;
@@ -333,9 +370,20 @@ function EnabledAgentProviderRow({
             logo={providerConfig.logo}
             state={provider.isConnected ? 'live' : 'needs-auth'}
         >
+            {onConnect ? (
+                <Button
+                    loading={connectPending}
+                    onClick={onConnect}
+                    size="sm"
+                    type="button"
+                    variant="secondary"
+                >
+                    {provider.isConnected ? 'Re-connect' : 'Connect'}
+                </Button>
+            ) : null}
             {onConfigure ? (
                 <Button onClick={onConfigure} size="sm" type="button" variant="ghost">
-                    {provider.isConnected ? 'Edit key' : 'Configure'}
+                    {provider.isConnected ? 'Edit key' : 'Add key'}
                 </Button>
             ) : null}
             <Button loading={pending} onClick={onRemove} size="sm" type="button" variant="ghost">

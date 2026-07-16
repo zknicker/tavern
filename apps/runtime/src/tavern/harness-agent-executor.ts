@@ -21,6 +21,10 @@ import { createTavernCronTools } from '../cron/agent-tools.ts';
 import { isRuntimeCronReady } from '../cron/manager-state.ts';
 import { createImageGenerationTools } from '../images/agent-tools.ts';
 import { log } from '../log.ts';
+import {
+    ensureFreshClaudeCredentials,
+    getClaudeHarnessAuth,
+} from '../model-access/claude-settings.ts';
 import { imageGenerationReadiness } from '../models/capability-selections.ts';
 import { createBrowserToolsForAgent } from '../plugins/browser-tools.ts';
 import { createGoogleToolsForAgent } from '../plugins/google-tools.ts';
@@ -118,6 +122,12 @@ async function executeHarnessTurn(
 ) {
     const startedAt = new Date().toISOString();
     const runtime = runtimeMetadata(input);
+
+    // Claude sign-in tokens refresh before the turn so the harness always
+    // receives a live credential (specs/model-access.md).
+    if (input.agentSession.effectiveModel.provider === 'claude') {
+        await ensureFreshClaudeCredentials();
+    }
 
     const { fingerprint, instructions } = await buildAgentInstructionBundle(input);
     // Harness adapters frame instructions into a session's first prompt and
@@ -540,12 +550,19 @@ export function createCodexHarnessForRuntime(settings: Parameters<typeof createC
 }
 
 export function claudeCodeAuthOptions(): ClaudeCodeAuthOptions | undefined {
-    const authToken =
-        readConfigValue('TAVERN_AGENT_CLAUDE_CODE_AUTH_TOKEN') ??
-        readConfigValue('ANTHROPIC_AUTH_TOKEN');
     const baseUrl =
         readConfigValue('TAVERN_AGENT_CLAUDE_CODE_BASE_URL') ??
         readConfigValue('ANTHROPIC_BASE_URL');
+    // Runtime-owned credentials (Model access) win: they survive upgrades
+    // and headless hosts, unlike engine-side keychain auth. Env overrides
+    // remain the operator escape hatch.
+    const stored = getClaudeHarnessAuth();
+    if (stored) {
+        return { anthropic: { ...stored, ...(baseUrl ? { baseUrl } : {}) } };
+    }
+    const authToken =
+        readConfigValue('TAVERN_AGENT_CLAUDE_CODE_AUTH_TOKEN') ??
+        readConfigValue('ANTHROPIC_AUTH_TOKEN');
     if (!(authToken || baseUrl)) {
         return undefined;
     }
@@ -594,8 +611,8 @@ export function formatHarnessExecutionError(input: AgentExecutorInput, error: un
     ) {
         return new Error(
             [
-                'Claude Code failed to authenticate for Tavern agent execution.',
-                'Verify `claude -p "hello"` works in this shell, or run `claude setup-token` and set TAVERN_AGENT_CLAUDE_CODE_AUTH_TOKEN for the Runtime.',
+                'Claude is not connected.',
+                'Connect Claude in Settings → Connections → Model access.',
                 `Original error: ${message}`,
             ].join(' ')
         );

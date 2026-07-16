@@ -4,6 +4,7 @@ import { AGENT_WORKSPACE } from '../config.ts';
 import { closeDb, initTestDb } from '../db/connection.ts';
 import { ensureRuntimeSchema } from '../db/schema.ts';
 import { runRuntimeDoctor } from '../doctor/runtime-doctor.ts';
+import { saveClaudeApiKey } from '../model-access/claude-settings.ts';
 import { upsertStoredAgent } from '../tavern/agents-store.ts';
 import { setModelProviderEnabled } from './provider-store.ts';
 import { readAgentRuntimeProfile } from './runtime-profile-store.ts';
@@ -17,6 +18,8 @@ describe('Runtime agent model selection', () => {
 
     beforeEach(() => {
         ensureRuntimeSchema(initTestDb());
+        // Claude models are executable only with stored credentials now.
+        saveClaudeApiKey('sk-ant-test');
         upsertStoredAgent({
             agent: {
                 enabledSkillIds: [],

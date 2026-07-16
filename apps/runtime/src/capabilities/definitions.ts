@@ -22,6 +22,7 @@ import { AGENT_WORKSPACE } from '../config.ts';
 import { isRuntimeCronReady } from '../cron/scheduler.ts';
 import { getDb, hasTable } from '../db/connection.ts';
 import { isMemoryEnabled } from '../memory/settings.ts';
+import { loadClaudeSettings } from '../model-access/claude-settings.ts';
 import { loadVaultBackedCodexCredentials } from '../model-access/codex-settings.ts';
 import { imageGenerationReadiness } from '../models/capability-selections.ts';
 import { listAgentModels } from '../models/catalog-service.ts';
@@ -57,6 +58,17 @@ export interface RuntimeCapabilityDefinition {
 const minuteMs = 60 * 1000;
 
 export const runtimeCapabilityDefinitions: RuntimeCapabilityDefinition[] = [
+    {
+        async check() {
+            return checkClaudeModelAccessCapability();
+        },
+        displayName: 'Claude sign-in',
+        id: 'claudeAuth',
+        refresh: {
+            intervalMs: 15 * minuteMs,
+            runOnStart: true,
+        },
+    },
     {
         async check() {
             return await checkCodexModelAccessCapability();
@@ -613,6 +625,31 @@ export function getExpectedRuntimeCapability(
         technicalMessage: null,
         updatedAt: null,
     };
+}
+
+function checkClaudeModelAccessCapability(): RuntimeCapabilityCheckResult {
+    try {
+        const settings = loadClaudeSettings();
+        if (!settings) {
+            return {
+                reason: 'Claude is not connected. Connect Claude in Model access.',
+                state: 'unauthorized',
+            };
+        }
+        return {
+            metadata: {
+                account: settings.accountEmail,
+                method: settings.accessToken ? 'oauth' : 'api-key',
+            },
+            state: 'healthy',
+        };
+    } catch (error) {
+        return {
+            reason: 'Claude credentials could not be loaded.',
+            state: 'unauthorized',
+            technicalMessage: error instanceof Error ? error.message : String(error),
+        };
+    }
 }
 
 async function checkCodexModelAccessCapability(): Promise<RuntimeCapabilityCheckResult> {

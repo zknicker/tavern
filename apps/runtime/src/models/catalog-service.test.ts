@@ -4,6 +4,7 @@ import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { closeDb, initTestDb } from '../db/connection.ts';
 import { ensureRuntimeSchema } from '../db/schema.ts';
+import { saveClaudeApiKey } from '../model-access/claude-settings.ts';
 import { saveOpenAiSettings } from '../model-access/openai-settings.ts';
 import { listAgentModels } from './catalog-service.ts';
 import { resolveClaudeModelCatalog } from './provider-sources/claude.ts';
@@ -88,16 +89,19 @@ describe('Agent engine model catalog', () => {
         const claude = catalog.providers.find((provider) => provider.id === 'claude');
 
         expect(claude).toMatchObject({
-            accessState: 'unavailable',
+            // Claude access is credential-driven now: no stored sign-in or
+            // API key means needs-auth, regardless of CLI presence.
+            accessState: 'needs-auth',
             enabled: false,
         });
         expect(result.providers.some((provider) => provider.id === 'claude')).toBe(false);
         expect(result.models.some((model) => model.provider === 'claude')).toBe(false);
     });
 
-    it('keeps Claude authenticated and exposes curated rows when the CLI is available', async () => {
+    it('keeps Claude authenticated and exposes curated rows when connected', async () => {
         process.env.TAVERN_AGENT_CLAUDE_CODE_COMMAND = process.execPath;
         process.env.OPENAI_API_KEY = '';
+        saveClaudeApiKey('sk-ant-test');
         await setModelProviderEnabled({ enabled: true, providerId: 'claude' });
 
         const result = await listAgentModels();

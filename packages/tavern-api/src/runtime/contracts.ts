@@ -6,6 +6,7 @@ import { agentRuntimeModelProviderIdSchema } from './model-providers.ts';
 export const agentRuntimeProtocolVersion = 1 as const;
 
 const agentRuntimeCoreCapabilityIds = [
+    'claudeAuth',
     'codexOAuth',
     'memory',
     'wiki',
@@ -103,7 +104,7 @@ export const agentRuntimeAgentBindingSchema = z.object({
     agentId: z.string().trim().min(1),
 });
 
-export const agentRuntimeModelAccessIdSchema = z.enum(['codex', 'openai', 'openrouter']);
+export const agentRuntimeModelAccessIdSchema = z.enum(['claude', 'codex', 'openai', 'openrouter']);
 export const agentRuntimeModelAccessStateSchema = z.enum(['error', 'live', 'needs-auth']);
 
 export const agentRuntimeModelAccessStatusSchema = z.object({

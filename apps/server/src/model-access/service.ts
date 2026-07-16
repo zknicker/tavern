@@ -13,7 +13,7 @@ import {
 } from '@tavern/codex-usage';
 import { createConfiguredAgentRuntimeClient } from '../agent-runtime/configured-client.ts';
 
-export const modelAccessIds = ['codex', 'openai', 'openrouter'] as const;
+export const modelAccessIds = ['claude', 'codex', 'openai', 'openrouter'] as const;
 
 export type ModelAccessId = (typeof modelAccessIds)[number];
 export type ModelAccessStatus = AgentRuntimeModelAccessStatus;

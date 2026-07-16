@@ -4,6 +4,7 @@ import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { closeDb, initTestDb } from '../db/connection.ts';
 import { ensureRuntimeSchema } from '../db/schema.ts';
+import { saveClaudeApiKey } from '../model-access/claude-settings.ts';
 import { setModelProviderEnabled } from '../models/provider-store.ts';
 import type { AgentExecutor } from '../tavern/agent-executor.ts';
 import {
@@ -26,6 +27,8 @@ describe('task work orders', () => {
         tempRoot = await fs.mkdtemp(path.join(tmpdir(), 'tavern-work-orders-'));
         process.env.TAVERN_TASK_ARTIFACTS_DIR = path.join(tempRoot, 'artifacts');
         ensureRuntimeSchema(initTestDb());
+        // Claude models are executable only with stored credentials now.
+        saveClaudeApiKey('sk-ant-test');
         process.env.TAVERN_AGENT_CLAUDE_CODE_COMMAND = process.execPath;
         await setModelProviderEnabled({ enabled: true, providerId: 'claude' });
         await storeAgent('agt_first', path.join(tempRoot, 'agt_first'));

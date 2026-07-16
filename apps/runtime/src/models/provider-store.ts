@@ -14,6 +14,7 @@ import { readConfigValue } from '../config.ts';
 import { getDb } from '../db/connection.ts';
 import type { Database } from '../db/sqlite.ts';
 import { namedParams } from '../db/sqlite.ts';
+import { loadClaudeSettings } from '../model-access/claude-settings.ts';
 import { loadVaultBackedCodexCredentials } from '../model-access/codex-settings.ts';
 import { getOpenAiApiKey } from '../model-access/openai-settings.ts';
 import { type ModelCatalogProviderSpec, modelCatalogProviderSpecs } from './provider-registry.ts';
@@ -172,10 +173,19 @@ async function providerAccess(spec: ModelCatalogProviderSpec): Promise<{
     }
 
     if (spec.provider.id === 'claude') {
-        const command = readConfigValue('TAVERN_AGENT_CLAUDE_CODE_COMMAND') ?? 'claude';
-        return isCliCommandAvailable(command)
-            ? { description: 'Claude Code CLI is available.', state: 'live' }
-            : { description: `Run ${command} on the Runtime host.`, state: 'unavailable' };
+        const settings = loadClaudeSettings();
+        if (settings?.accessToken) {
+            return {
+                description: settings.accountEmail
+                    ? `Signed in as ${settings.accountEmail}.`
+                    : 'Claude sign-in is configured.',
+                state: 'live',
+            };
+        }
+        if (settings?.apiKey) {
+            return { description: 'Anthropic API key is configured.', state: 'live' };
+        }
+        return { description: 'Connect Claude or add an Anthropic API key.', state: 'needs-auth' };
     }
 
     return spec.authenticated()
@@ -199,9 +209,6 @@ function setupAction(spec: ModelCatalogProviderSpec): AgentRuntimeModelProviderS
 function setupCommand(spec: ModelCatalogProviderSpec): string | null {
     if (spec.provider.id === 'codex') {
         return `${readConfigValue('TAVERN_AGENT_CODEX_CLI_COMMAND') ?? 'codex'} login`;
-    }
-    if (spec.provider.id === 'claude') {
-        return `${readConfigValue('TAVERN_AGENT_CLAUDE_CODE_COMMAND') ?? 'claude'}`;
     }
     return null;
 }

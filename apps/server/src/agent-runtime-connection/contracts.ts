@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { connectionStateSchema } from '../contracts/shared.ts';
 
 export const agentRuntimeCapabilities = [
+    'claudeAuth',
     'codexOAuth',
     'memory',
     'wiki',

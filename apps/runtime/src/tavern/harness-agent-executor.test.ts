@@ -104,8 +104,8 @@ describe('harness agent executor', () => {
             new Error('Failed to authenticate. API Error: 401 Invalid authentication credentials')
         );
 
-        expect(error.message).toContain('Claude Code failed to authenticate');
-        expect(error.message).toContain('claude setup-token');
+        expect(error.message).toContain('Claude is not connected');
+        expect(error.message).toContain('Model access');
         expect(error.message).toContain('Original error: Failed to authenticate');
     });
 

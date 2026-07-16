@@ -27,6 +27,7 @@ const categories: CapabilityCategory[] = [
 
 const capabilityCategories: Partial<Record<CapabilityId, CapabilityCategoryId>> = {
     apiServer: 'runtimeCore',
+    claudeAuth: 'runtimeCore',
     codexOAuth: 'runtimeCore',
     dashboardServer: 'runtimeCore',
     gateway: 'runtimeCore',
@@ -43,6 +44,7 @@ const capabilityCategories: Partial<Record<CapabilityId, CapabilityCategoryId>> 
 };
 
 const capabilityDisplayOrder: CapabilityId[] = [
+    'claudeAuth',
     'codexOAuth',
     'apiServer',
     'dashboardServer',
@@ -71,12 +73,13 @@ const requiredCapabilities = new Set<CapabilityId>([
     'skills',
 ]);
 
-const supportingCapabilities = new Set<CapabilityId>(['codexOAuth']);
+const supportingCapabilities = new Set<CapabilityId>(['claudeAuth', 'codexOAuth']);
 
 // Customer-facing explainers shown in each capability's hover card. Plain
 // product language: what the user gets when this is healthy.
 const capabilityDescriptions: Partial<Record<CapabilityId, string>> = {
     apiServer: 'The control surface the app uses to manage and inspect agent execution.',
+    claudeAuth: 'Claude account access, so agents can run on your Claude subscription models.',
     codexOAuth: 'Codex account access, so agents can run on your Codex subscription models.',
     cron: 'Scheduled automations, so agents can check in, remind, and report on a timer.',
     dashboardServer: 'The engine that executes your agents’ turns.',

@@ -24,6 +24,7 @@ const runtimeDisconnectedReason = 'Tavern Runtime is disconnected.';
 const capabilityLabels = {
     apiServer: 'Agent engine API',
     autoDispatch: 'Auto-dispatch',
+    claudeAuth: 'Claude sign-in',
     codexOAuth: 'Codex OAuth',
     cron: 'Automations',
     dashboardServer: 'Agent engine',

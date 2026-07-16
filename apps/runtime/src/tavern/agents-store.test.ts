@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AGENT_WORKSPACE } from '../config.ts';
 import { closeDb, initTestDb } from '../db/connection.ts';
 import { ensureRuntimeSchema } from '../db/schema.ts';
+import { clearClaudeCredentials, saveClaudeApiKey } from '../model-access/claude-settings.ts';
 import { setModelProviderEnabled } from '../models/provider-store.ts';
 import { materializePluginSkills } from '../plugins/materialize-skills.ts';
 import { saveMerchbaseSettings } from '../plugins/merchbase.ts';
@@ -14,6 +15,8 @@ describe('Runtime agent and agent engine reads', () => {
 
     beforeEach(() => {
         ensureRuntimeSchema(initTestDb());
+        // Claude models are executable only with stored credentials now.
+        saveClaudeApiKey('sk-ant-test');
         globalThis.fetch = vi.fn(handleAgentEngineFetch) as unknown as typeof fetch;
     });
 
@@ -485,6 +488,8 @@ describe('Runtime agent and agent engine reads', () => {
         const previousClaudeCommand = process.env.TAVERN_AGENT_CLAUDE_CODE_COMMAND;
         process.env.TAVERN_AGENT_CODEX_CLI_COMMAND = 'tavern-missing-codex';
         process.env.TAVERN_AGENT_CLAUDE_CODE_COMMAND = 'tavern-missing-claude';
+        // This scenario needs Claude disconnected despite the suite seed.
+        clearClaudeCredentials();
 
         const modelsResponse = await handleTavernRuntimeRequest(
             new Request('http://runtime.test/models')
@@ -503,7 +508,9 @@ describe('Runtime agent and agent engine reads', () => {
             await expect(catalogResponse.json()).resolves.toMatchObject({
                 providers: expect.arrayContaining([
                     expect.objectContaining({ accessState: 'unavailable', id: 'codex' }),
-                    expect.objectContaining({ accessState: 'unavailable', id: 'claude' }),
+                    // Claude access is credential-driven: disconnected reads
+                    // needs-auth regardless of CLI presence.
+                    expect.objectContaining({ accessState: 'needs-auth', id: 'claude' }),
                 ]),
             });
         } finally {
