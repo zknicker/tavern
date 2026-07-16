@@ -1,6 +1,17 @@
 import { expect, test } from 'bun:test';
 import type { AgentRuntimeMerchbaseSalesSeries } from '@tavern/api';
-import { buildMerchBaseSalesChartView } from './merchbase-sales-chart-model.ts';
+import {
+    buildMerchBaseSalesChartView,
+    dateKeyFromBucketStart,
+} from './merchbase-sales-chart-model.ts';
+
+test('dateKeyFromBucketStart normalizes MerchBase ISO datetime buckets', () => {
+    expect(dateKeyFromBucketStart('2026-06-23T07:00:00.000Z')).toBe('2026-06-23');
+});
+
+test('dateKeyFromBucketStart preserves date-only buckets', () => {
+    expect(dateKeyFromBucketStart('2026-06-23')).toBe('2026-06-23');
+});
 
 test('MerchBase sales chart fills missing daily buckets through the selected end date', () => {
     const view = buildMerchBaseSalesChartView({
