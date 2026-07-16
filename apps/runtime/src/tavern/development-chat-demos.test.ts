@@ -1,6 +1,7 @@
 import {
     developmentChatDemoId,
     developmentChatTeamDemoId,
+    developmentChatWidgetsDemoId,
 } from '@tavern/api/development-chat-demos';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { closeDb, getDb, initTestDb } from '../db/connection';
@@ -121,5 +122,42 @@ describe('development chat demo sessions', () => {
         for (const row of responses) {
             expect(row.session_id).toContain(row.participant_id);
         }
+    });
+
+    it('seeds the widgets gallery channel with one widget activity per catalog entry', () => {
+        seedDevelopmentChatDemos({ db: getDb(), enabled: true });
+        // Idempotent across restarts: reseeding leaves the same stable rows.
+        seedDevelopmentChatDemos({ db: getDb(), enabled: true });
+
+        expect(getChat(developmentChatWidgetsDemoId)?.title).toBe('widgets');
+
+        const activities = getDb()
+            .prepare(
+                `SELECT id, json_extract(metadata_json, '$.widget.component') AS component
+                 FROM chat_response_activity
+                 WHERE chat_id = $chatId AND kind = 'widget'
+                 ORDER BY id ASC`
+            )
+            .all(namedParams({ chatId: developmentChatWidgetsDemoId })) as {
+            component: string;
+            id: string;
+        }[];
+
+        // Every catalog widget renders once, the table twice (keyed + matrix
+        // shorthand), plus the intentionally invalid fallback payload.
+        expect(activities.map((row) => row.component).sort()).toEqual(
+            [
+                'tavern.widget.bar-chart',
+                'tavern.widget.calendar-day',
+                'tavern.widget.calendar-event',
+                'tavern.widget.composed-chart',
+                'tavern.widget.html-preview',
+                'tavern.widget.line-chart',
+                'tavern.widget.merchbase-sales-chart',
+                'tavern.widget.orbit-map',
+                'tavern.widget.table',
+                'tavern.widget.table',
+            ].sort()
+        );
     });
 });
