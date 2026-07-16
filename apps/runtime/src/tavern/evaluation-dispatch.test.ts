@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { closeDb, initTestDb } from '../db/connection.ts';
+import { closeDb, getDb, initTestDb } from '../db/connection.ts';
 import { ensureRuntimeSchema } from '../db/schema.ts';
+import { namedParams } from '../db/sqlite.ts';
 import { setModelProviderEnabled } from '../models/provider-store.ts';
 import type { AgentExecutor, AgentExecutorInput } from './agent-executor.ts';
 import { resetAgentExecutorForTesting, setAgentExecutorForTesting } from './agent-turn-runner.ts';
@@ -67,6 +68,11 @@ describe('agent evaluation dispatch', () => {
             status: 'completed',
             triggerMessageId: replyMessageId('agt_a', 'msg_1'),
         });
+        // While the dispatched turn is open, its response carries the
+        // trigger — clients keep evaluation turns quiet until they stream
+        // reply text (specs/addressing.md). The completion rewrite may drop
+        // it, so the capture happens inside the executor, mid-turn.
+        expect(openResponseTriggers.get(dispatched?.responseId ?? '')).toBe('evaluation');
 
         // Each settled dispatched turn leaves an outcome note for the seat
         // whose message triggered it.
@@ -284,12 +290,28 @@ function createAgentChannel(...agentIds: string[]) {
     });
 }
 
+// Response-metadata trigger observed while each turn was still open,
+// keyed by response id.
+const openResponseTriggers = new Map<string, string | undefined>();
+
 function createScriptedExecutor(
     replies: Record<string, string>,
     crossPosts: Record<string, { chatId: string; content: string }> = {}
 ): AgentExecutor {
     return {
         async execute(input: AgentExecutorInput) {
+            const openRow = getDb()
+                .prepare('SELECT metadata_json FROM chat_responses WHERE id = $id')
+                .get(namedParams({ id: input.responseId })) as
+                | { metadata_json: string }
+                | undefined;
+            openResponseTriggers.set(
+                input.responseId,
+                openRow
+                    ? (JSON.parse(openRow.metadata_json) as { runtime?: { trigger?: string } })
+                          .runtime?.trigger
+                    : undefined
+            );
             const now = new Date().toISOString();
             const messageId = replyMessageId(input.agent.id, input.requestMessageId);
             const runtime = {
