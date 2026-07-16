@@ -515,7 +515,7 @@ function SidebarAgentPresenceDot({ chat }: { chat: ChatListItem }) {
         <span
             aria-hidden="true"
             className={cn(
-                'absolute -right-1 -bottom-0.5 size-2.5 rounded-full ring-2 ring-sidebar transition-colors duration-300',
+                'absolute -right-1.5 -bottom-1 size-[9px] rounded-full ring-2 ring-sidebar transition-colors duration-300',
                 busy ? 'bg-warning' : 'bg-success'
             )}
             title={busy ? 'Agent turn in progress' : undefined}

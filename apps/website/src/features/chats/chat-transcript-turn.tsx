@@ -68,8 +68,9 @@ import { useRevealedText } from './use-revealed-text.ts';
 // its actions (the copy button next to the timestamp, or above the owner's own
 // bubble). Spacing is intentionally tight — the row's own `py` padding carries
 // most of the room between messages, with only a small gap between scroller
-// items (see chat-transcript.tsx).
-const rowClassName = 'group/turn w-full py-1.5';
+// items (see chat-transcript.tsx). gap-3 widens the avatar gutter past the
+// Message default so the roster breathes.
+const rowClassName = 'group/turn w-full gap-3 py-1.5';
 // Message actions stay hidden until the row is hovered or focused. No
 // transition — the affordance tracks the pointer instantly.
 const hoverActionsClassName =
@@ -80,9 +81,9 @@ const newTurnGapClassName = '';
 // footer; our roster layout keeps it aligned with the name header instead.
 const turnAvatarBaseClassName =
     'size-8 min-w-8 self-start ring-1 ring-border/50 group-has-data-[slot=message-footer]/message:translate-y-0';
-// Agent faces render at natural divisors of the 480px art frame (480/32 = 15)
-// so paths scale at an integer factor; 32 also matches the people avatars.
-const faceStyle = { flexShrink: 0, height: 32, overflow: 'visible', width: 32 } as const;
+// The character face renders larger than its 32px seat tile and hangs over
+// the tile's top edge — the tile anchors the roster without boxing the art.
+const tileFaceStyle = { flexShrink: 0, height: 36, overflow: 'visible', width: 36 } as const;
 const hoverGroupClassName = 'group';
 
 export function TranscriptEntryView({
@@ -253,29 +254,45 @@ function TurnAvatar({
     const variant = resolveTurnAvatarVariant(actorKind, avatarUrl);
 
     if (variant === 'eyes') {
-        // The character face is its own shape — no avatar chrome behind it.
+        // A low-contrast squircle seat tinted with the agent's color anchors
+        // the roster; the character head overflows its top edge so heads of
+        // any shape keep their full size (the tile is an anchor, not a
+        // frame).
         return (
             <MessageAvatar
                 className={cn(
                     turnAvatarBaseClassName,
-                    'overflow-visible rounded-none bg-transparent ring-0'
+                    'relative overflow-visible rounded-lg ring-0',
+                    color ? 'bg-transparent' : 'bg-muted/60'
                 )}
+                style={
+                    color
+                        ? ({
+                              // A neutral gray seat disappears on the dark
+                              // theme; the agent's own color at low alpha
+                              // anchors the roster and doubles as identity.
+                              background: `color-mix(in oklab, ${color} 20%, transparent)`,
+                          } as React.CSSProperties)
+                        : undefined
+                }
             >
-                <AgentFace
-                    animate={false}
-                    dark={dark}
-                    head={character}
-                    ink={resolveAgentInk(dark, color)}
-                    size={32}
-                    style={faceStyle}
-                />
+                <span className="absolute inset-x-0 -top-1.5 flex justify-center overflow-visible">
+                    <AgentFace
+                        animate={false}
+                        dark={dark}
+                        head={character}
+                        ink={resolveAgentInk(dark, color)}
+                        size={36}
+                        style={tileFaceStyle}
+                    />
+                </span>
             </MessageAvatar>
         );
     }
 
     if (variant === 'image') {
         return (
-            <MessageAvatar className={turnAvatarBaseClassName}>
+            <MessageAvatar className={cn(turnAvatarBaseClassName, 'rounded-lg')}>
                 <img
                     alt={`${name} avatar`}
                     className="size-full object-cover"
@@ -297,7 +314,7 @@ function TurnAvatar({
         <MessageAvatar
             className={cn(
                 turnAvatarBaseClassName,
-                'rounded-full font-semibold text-xs shadow-xs',
+                'rounded-lg font-semibold text-xs shadow-xs',
                 color
                     ? 'bg-[var(--chat-avatar-color)] text-white'
                     : 'bg-muted text-muted-foreground'
@@ -452,7 +469,9 @@ function AgentTurn({
                     agentId={entry.actor.id}
                     agentName={displayName}
                     chatId={chatId}
-                    triggerClassName="shrink-0 cursor-pointer rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
+                    // self-start keeps the trigger button from stretching to
+                    // the row height and re-centering the avatar it wraps.
+                    triggerClassName="shrink-0 cursor-pointer self-start rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
                 >
                     <TurnAvatar
                         actorKind="agent"

@@ -201,7 +201,7 @@ test('ChatTranscript renders active replies through the chat message shell', () 
 
     assert.match(markup, /data-slot="message"/);
     assert.match(markup, /data-slot="bubble"/);
-    assert.match(markup, /group\/turn w-full py-1\.5/);
+    assert.match(markup, /group\/turn w-full gap-3 py-1\.5/);
     assert.doesNotMatch(markup, /group\/turn w-full px-3 py-1\.5/);
     assert.match(markup, /gap-0\.5 pt-0\.5/);
     assert.match(markup, /transform-origin:bottom left/);
