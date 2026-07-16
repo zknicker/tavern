@@ -1,4 +1,4 @@
-import { motion, useReducedMotion } from 'framer-motion';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import * as React from 'react';
 import { cn } from '../../lib/utils.ts';
 
@@ -10,7 +10,7 @@ import { cn } from '../../lib/utils.ts';
 /** Enter: springy rise with a hint of overshoot — alive, game-like. */
 const riseIn = { bounce: 0.2, duration: 0.3, type: 'spring' } as const;
 /** Exit: quicker settle, no bounce — the system responding, not performing. */
-const riseOut = { bounce: 0, duration: 0.2, type: 'spring' } as const;
+export const statusRiseOut = { bounce: 0, duration: 0.2, type: 'spring' } as const;
 /** Height clip: never bounces, or neighbors would jitter. */
 const clip = { bounce: 0, duration: 0.25, type: 'spring' } as const;
 
@@ -25,10 +25,13 @@ export const statusMinimumDwellMs = 1200;
 export function StatusRiseRow({
     children,
     className,
+    enterDelaySeconds = 0,
     innerClassName,
 }: {
     children: React.ReactNode;
     className?: string;
+    /** Enter-only cascade offset for sibling rows mounting together. */
+    enterDelaySeconds?: number;
     innerClassName?: string;
 }) {
     const reduceMotion = useReducedMotion() === true;
@@ -42,23 +45,90 @@ export function StatusRiseRow({
                 opacity: 0,
                 transition: reduceMotion
                     ? { duration: 0.15 }
-                    : { height: riseOut, opacity: riseOut },
+                    : { height: statusRiseOut, opacity: statusRiseOut },
             }}
             initial={reduceMotion ? false : { height: 0, opacity: 0 }}
-            transition={{ height: clip, opacity: { duration: 0.18, ease: 'easeOut' } }}
+            transition={{
+                height: { ...clip, delay: enterDelaySeconds },
+                opacity: { delay: enterDelaySeconds, duration: 0.18, ease: 'easeOut' },
+            }}
         >
+            {/* The full transform string keeps the rise hardware-accelerated;
+                Framer's scale/y shorthands run on the main thread, which is
+                busiest exactly while a turn streams. */}
             <motion.div
-                animate={{ scale: 1, y: 0 }}
+                animate={{ transform: 'translateY(0px) scale(1)' }}
                 className={innerClassName}
-                exit={reduceMotion ? undefined : { scale: 0.97, transition: riseOut, y: -6 }}
-                initial={reduceMotion ? false : { scale: 0.96, y: 10 }}
+                exit={
+                    reduceMotion
+                        ? undefined
+                        : {
+                              transform: 'translateY(-6px) scale(0.97)',
+                              transition: statusRiseOut,
+                          }
+                }
+                initial={reduceMotion ? false : { transform: 'translateY(10px) scale(0.96)' }}
                 style={{ transformOrigin: 'left center' }}
-                transition={riseIn}
+                transition={{ ...riseIn, delay: enterDelaySeconds }}
             >
                 {children}
             </motion.div>
         </motion.div>
     );
+}
+
+/**
+ * Blur-masked crossfade for small status content (the primary label, the
+ * work icon): old and new overlap in one grid cell so nothing reflows, and
+ * a 2px blur melts the double exposure into a single impression. Exit is
+ * quicker than enter, matching the surface's asymmetric timing.
+ */
+export function StatusSwap({
+    children,
+    className,
+    swapKey,
+}: {
+    children: React.ReactNode;
+    className?: string;
+    swapKey: string;
+}) {
+    const reduceMotion = useReducedMotion() === true;
+
+    return (
+        <span className={cn('grid', className)}>
+            <AnimatePresence initial={false}>
+                <motion.span
+                    animate={{ filter: 'blur(0px)', opacity: 1 }}
+                    className="col-start-1 row-start-1"
+                    exit={{
+                        filter: 'blur(2px)',
+                        opacity: 0,
+                        transition: { duration: 0.12, ease: 'easeOut' },
+                    }}
+                    initial={reduceMotion ? false : { filter: 'blur(2px)', opacity: 0 }}
+                    key={swapKey}
+                    transition={{ duration: 0.15, ease: 'easeOut' }}
+                >
+                    {children}
+                </motion.span>
+            </AnimatePresence>
+        </span>
+    );
+}
+
+const swapKeys = new WeakMap<object, string>();
+let swapKeyCounter = 0;
+
+/** Stable swap key for module-constant content values (e.g. icon objects). */
+export function statusSwapKeyFor(value: object) {
+    const known = swapKeys.get(value);
+    if (known) {
+        return known;
+    }
+    swapKeyCounter += 1;
+    const key = `swap_${swapKeyCounter}`;
+    swapKeys.set(value, key);
+    return key;
 }
 
 /**

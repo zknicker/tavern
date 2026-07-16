@@ -113,7 +113,7 @@ function AgentHoverCardBody({
                         </span>
                         <span
                             className={cn(
-                                'size-2 shrink-0 rounded-full',
+                                'size-2 shrink-0 rounded-full transition-colors duration-300',
                                 presence?.state === 'busy' ? 'bg-warning' : 'bg-success'
                             )}
                         />

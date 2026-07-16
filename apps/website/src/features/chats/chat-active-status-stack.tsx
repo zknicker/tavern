@@ -1,9 +1,8 @@
 import type { AgentCharacter } from '@tavern/api/agent-appearance';
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import * as React from 'react';
 import { Icon } from '../../components/ui/icon.tsx';
 import type { ChatActiveReply, ChatTimelineState } from '../../hooks/chats/chat-timeline-state.ts';
-import { springs } from '../../lib/springs.ts';
 import type { AgentListOutput } from '../../lib/trpc.tsx';
 import { cn } from '../../lib/utils.ts';
 import { useAgentPresenceEntry } from './agent-presence.tsx';
@@ -14,7 +13,13 @@ import {
     findLastAgentTurnEntry,
     formatTurnWorkSummary,
 } from './chat-active-turn.ts';
-import { StatusRiseRow, useMinimumDwell } from './chat-status-motion.tsx';
+import {
+    StatusRiseRow,
+    StatusSwap,
+    statusRiseOut,
+    statusSwapKeyFor,
+    useMinimumDwell,
+} from './chat-status-motion.tsx';
 import { getWorkGroupIcon, isActivityItem } from './chat-transcript-activity-utils.ts';
 import type { TranscriptRow } from './chat-transcript-model.ts';
 import { ChatTurnDrawer } from './chat-turn-drawer.tsx';
@@ -47,7 +52,6 @@ export function ChatActiveStatusStack({
     variant = 'compact',
 }: ChatActiveStatusStackProps) {
     const [drawerRunId, setDrawerRunId] = React.useState<string | null>(null);
-    const reduceMotion = useReducedMotion() === true;
     const liveSeatReplies = React.useMemo(
         () => coalesceRepliesByAgent(activeReplies),
         [activeReplies]
@@ -118,14 +122,16 @@ export function ChatActiveStatusStack({
                                   'bg-gradient-to-t from-background via-background/85 to-transparent px-6 pt-2.5 pb-0.5 lg:px-16',
                             className
                         )}
-                        exit={reduceMotion ? { opacity: 0 } : { opacity: 0, y: 4 }}
+                        // Fade only: the last row's own exit carries the
+                        // direction; a drifting section would fight it.
+                        exit={{ opacity: 0 }}
                         initial={{ opacity: 0 }}
                         key="active-status"
-                        transition={springs.moderate}
+                        transition={statusRiseOut}
                     >
                         <div className="mx-auto flex w-full max-w-[60rem] flex-col">
                             <AnimatePresence initial={false}>
-                                {seatReplies.map((reply) => (
+                                {seatReplies.map((reply, index) => (
                                     // The clip wrapper hangs left of the row
                                     // (with matching inner padding) so the
                                     // agent face — which overflows its box
@@ -136,6 +142,10 @@ export function ChatActiveStatusStack({
                                     // animating a duplicate indicator.
                                     <StatusRiseRow
                                         className="-ms-2"
+                                        // Simultaneous dispatches cascade one
+                                        // beat apart instead of landing as a
+                                        // block.
+                                        enterDelaySeconds={index * 0.05}
                                         innerClassName="py-0.5 ps-2"
                                         key={reply.agentId}
                                     >
@@ -247,6 +257,7 @@ function ChatActiveStatusItem({
     // Dwell between summary changes so fast tool bursts read as discrete
     // updates; label changes roll in with the drawers' slot-text treatment.
     const stableSummary = useStableWorkGroupLabel(workSummary, true);
+    const statusText = formatActiveStatusText({ activeReply, agentName, queuedElsewhere, rows });
 
     return (
         <button
@@ -263,13 +274,18 @@ function ChatActiveStatusItem({
                 rows={rows}
                 size={24}
             />
-            <span className="thinking-indicator-text min-w-0 shrink-0 leading-5">
-                {formatActiveStatusText({ activeReply, agentName, queuedElsewhere, rows })}
-            </span>
+            <StatusSwap className="min-w-0 shrink-0 leading-5" swapKey={statusText}>
+                <span className="thinking-indicator-text whitespace-nowrap">{statusText}</span>
+            </StatusSwap>
             {stableSummary ? (
                 <span className="flex h-5 min-w-0 items-center gap-1.5 text-muted-foreground/60 leading-5 transition-colors group-hover/status:text-muted-foreground/80">
                     {workIcon ? (
-                        <Icon className="size-3.5 shrink-0" icon={workIcon} strokeWidth={1.5} />
+                        <StatusSwap
+                            className="size-3.5 shrink-0"
+                            swapKey={statusSwapKeyFor(workIcon)}
+                        >
+                            <Icon className="size-3.5" icon={workIcon} strokeWidth={1.5} />
+                        </StatusSwap>
                     ) : null}
                     <WorkGroupHeaderText isActive label={stableSummary} />
                 </span>
