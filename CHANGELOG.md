@@ -2,6 +2,37 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.5.0 - 2026-07-16
+
+- Runtime: every agent now holds one persistent session spanning all its
+  chats — turns run one at a time per agent with cross-chat catch-up, a
+  durable seen ledger, freshness-gated sends, and an auto-drain loop for
+  messages that land mid-turn. Sessions rotate only on model switch, manual
+  reset, or a long-idle safety valve; per-chat model overrides are removed in
+  favor of agent-scoped model selection. Requires this Runtime. **Breaking:**
+  existing per-chat agent sessions become inert history; each agent starts a
+  fresh global session after the update (deployed hosts need a one-time
+  operator step to drop the old session tables).
+- Runtime: agents quietly evaluate peer replies and speak only when they have
+  something to add — silent declines never appear in chat, while human
+  messages and explicit @mentions still get an instant thinking indicator.
+  Sends during a running turn steer it, `chat_wait_idle` and queued sends let
+  agents coordinate, and settled turns leave compact outcome notes.
+- Runtime/API/App: per-chat read receipts power unread tracking — sidebar
+  rows show unread-count pills for every chat, viewing a chat marks it read,
+  and channel rows drop the busy spinner (agent DM rows carry a green/amber
+  presence dot instead).
+- App: agent presence everywhere — DM topbar status, sidebar presence dots,
+  a busy-elsewhere composer hint, a recent-activity feed in the agent drawer,
+  and a profile hover card on every agent avatar.
+- App: the prompt-bar status indicators are rebuilt as a polished motion
+  system — rows rise in and out with springs, always complete their
+  animation, crossfade label changes ("thinking" → "typing" →
+  "wrapping up in <chat>"), and never flash on silently settled turns.
+- App: transcript avatars anchor to the message header line at a larger size,
+  with the character heads serving as the avatars and people avatars matched
+  to the same footprint and rounding.
+
 ## v1.4.47 - 2026-07-14
 
 - Runtime/API/App: adds durable chat-scoped artifact pane tabs, realtime pane
