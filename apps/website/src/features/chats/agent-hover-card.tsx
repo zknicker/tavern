@@ -56,7 +56,12 @@ export function AgentHoverCard({
             >
                 {children}
             </PopoverTrigger>
-            <PopoverPopup align="start" className="w-76 p-0" side="bottom" sideOffset={6}>
+            <PopoverPopup
+                align="start"
+                className="w-76 rounded-2xl p-0 before:rounded-[calc(var(--radius-2xl)-1px)]"
+                side="bottom"
+                sideOffset={6}
+            >
                 <AgentHoverCardBody
                     agentId={agentId}
                     agentName={agentName}
