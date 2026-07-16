@@ -97,8 +97,8 @@ describe('Tavern Runtime Chat API store', () => {
         const first = seedDevelopmentChatDemos({ db: getDb(), enabled: true });
         const second = seedDevelopmentChatDemos({ db: getDb(), enabled: true });
 
-        expect(first.seeded).toBe(2);
-        expect(second.seeded).toBe(2);
+        expect(first.seeded).toBe(3);
+        expect(second.seeded).toBe(3);
         // Seeding ensures both demo agents, which carry their built-in DMs —
         // the same invariant every real boot has.
         expect(
@@ -109,6 +109,7 @@ describe('Tavern Runtime Chat API store', () => {
             'cht_agt_wren_dm',
             developmentChatDemoIds.demo,
             developmentChatDemoIds.team,
+            developmentChatDemoIds.widgets,
             'cht_tavern_agent_dm',
         ]);
         expect(getChat(developmentChatDemoIds.demo)).toMatchObject({
