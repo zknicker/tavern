@@ -12,6 +12,23 @@ export const agentColorPresets = [
     { color: '#22c55e', label: 'Green' },
 ] as const;
 
+// Each character's dominant shell color, sampled from the authored head art.
+// Seat tiles behind transcript avatars derive from these — the art carries
+// the identity color, not the agent's configured accent (which defaults to
+// the same slate for everyone).
+export const characterSeatColors: Record<string, string> = {
+    alien: '#6d941f',
+    bird: '#0265e3',
+    knight: '#4e3e84',
+    none: '#64748b',
+    owl: '#573aa5',
+    robot: '#04abc5',
+};
+
+export function resolveCharacterSeatColor(character: string) {
+    return characterSeatColors[character] ?? characterSeatColors.none ?? '#64748b';
+}
+
 // AgentFace ink for the current theme. Light mode keeps the art's authored
 // ink (undefined → AgentFace default). Dark mode drops the agent's configured
 // color to a low-contrast dark-surface tone: hue kept, saturation capped,

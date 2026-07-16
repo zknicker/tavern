@@ -19,7 +19,7 @@ import { useChatDismiss } from '../../hooks/chats/use-chat-dismiss.ts';
 import { formatShortTime } from '../../lib/format.ts';
 import { cn } from '../../lib/utils.ts';
 import { AgentWidget } from '../../widgets/render-widget.tsx';
-import { resolveAgentInk } from '../agents/agent-color-presets.ts';
+import { resolveAgentInk, resolveCharacterSeatColor } from '../agents/agent-color-presets.ts';
 import { AgentFace, type HeadName } from './agent-face.tsx';
 import { AgentHoverCard } from './agent-hover-card.tsx';
 import { ChatMarkdownText } from './chat-markdown-text.tsx';
@@ -80,10 +80,11 @@ const newTurnGapClassName = '';
 // defaults to self-end and lifts by -translate-y-8 when the message has a
 // footer; our roster layout keeps it aligned with the name header instead.
 const turnAvatarBaseClassName =
-    'size-8 min-w-8 self-start ring-1 ring-border/50 group-has-data-[slot=message-footer]/message:translate-y-0';
-// The character face renders larger than its 32px seat tile and hangs over
-// the tile's top edge — the tile anchors the roster without boxing the art.
-const tileFaceStyle = { flexShrink: 0, height: 36, overflow: 'visible', width: 36 } as const;
+    'size-[2.125rem] min-w-[2.125rem] self-start ring-1 ring-border/50 group-has-data-[slot=message-footer]/message:translate-y-0';
+// The character face renders larger than its 34px seat tile — a tight frame
+// where the head fills the tile and crests its top edge, on a dark shade of
+// the character's own shell color.
+const tileFaceStyle = { flexShrink: 0, height: 38, overflow: 'visible', width: 38 } as const;
 const hoverGroupClassName = 'group';
 
 export function TranscriptEntryView({
@@ -254,26 +255,19 @@ function TurnAvatar({
     const variant = resolveTurnAvatarVariant(actorKind, avatarUrl);
 
     if (variant === 'eyes') {
-        // A low-contrast squircle seat tinted with the agent's color anchors
-        // the roster; the character head overflows its top edge so heads of
-        // any shape keep their full size (the tile is an anchor, not a
-        // frame).
+        // A tight squircle seat in a dark shade of the character's own shell
+        // color; the head fills the tile and crests its top edge so heads of
+        // any shape keep their full size.
         return (
             <MessageAvatar
                 className={cn(
                     turnAvatarBaseClassName,
-                    'relative overflow-visible rounded-lg ring-0',
-                    color ? 'bg-transparent' : 'bg-muted/60'
+                    'relative overflow-visible rounded-lg bg-transparent ring-0'
                 )}
                 style={
-                    color
-                        ? ({
-                              // A neutral gray seat disappears on the dark
-                              // theme; the agent's own color at low alpha
-                              // anchors the roster and doubles as identity.
-                              background: `color-mix(in oklab, ${color} 20%, transparent)`,
-                          } as React.CSSProperties)
-                        : undefined
+                    {
+                        background: `color-mix(in oklab, ${resolveCharacterSeatColor(character)} 50%, var(--background))`,
+                    } as React.CSSProperties
                 }
             >
                 <span className="absolute inset-x-0 -top-1.5 flex justify-center overflow-visible">
@@ -282,7 +276,7 @@ function TurnAvatar({
                         dark={dark}
                         head={character}
                         ink={resolveAgentInk(dark, color)}
-                        size={36}
+                        size={38}
                         style={tileFaceStyle}
                     />
                 </span>
