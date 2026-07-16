@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { closeDb, initTestDb } from '../db/connection';
 import { ensureRuntimeSchema } from '../db/schema';
-import { createChat, createMessage, upsertResponse } from './chat-api';
+import { createChat, createMessage, upsertResponse, upsertResponseActivity } from './chat-api';
 import { listProjectedTavernRuntimeEvents } from './runtime-event-projection';
 
 const runtimeMetadata = {
@@ -66,5 +66,63 @@ describe('Tavern runtime event projection', () => {
             hasReply: false,
             turn: { runId: 'run_1_agent' },
         });
+    });
+
+    it('keeps status notices out of the live step stream, evidence only', () => {
+        upsertResponse('cht_1', {
+            id: 'rsp_1',
+            metadata: runtimeMetadata,
+            participant_id: 'agt_1',
+            status: 'running',
+        });
+        upsertResponseActivity('cht_1', 'rsp_1', {
+            detail: 'Reply held for freshness review: 1 new message landed during the turn.',
+            id: 'act_hold_1',
+            kind: 'custom',
+            metadata: {
+                runtime: {
+                    ...runtimeMetadata.runtime,
+                    notice: { id: 'runtime_notice_freshness_hold', kind: 'status', text: 'held' },
+                },
+            },
+            status: 'completed',
+            title: 'Reply held for freshness review',
+        });
+
+        const steps = listProjectedTavernRuntimeEvents({})
+            .map((entry) => entry.event)
+            .filter((event) => event.type === 'turn.progress');
+        expect(steps).toHaveLength(0);
+    });
+
+    it('keeps new-session notices flowing as live notice steps', () => {
+        upsertResponse('cht_1', {
+            id: 'rsp_1',
+            metadata: runtimeMetadata,
+            participant_id: 'agt_1',
+            status: 'completed',
+        });
+        upsertResponseActivity('cht_1', 'rsp_1', {
+            detail: 'Started a fresh session.',
+            id: 'act_new_session_1',
+            kind: 'custom',
+            metadata: {
+                runtime: {
+                    ...runtimeMetadata.runtime,
+                    notice: {
+                        id: 'runtime_notice_session_reset',
+                        kind: 'new_session',
+                        text: 'New session',
+                    },
+                },
+            },
+            status: 'completed',
+            title: 'New session',
+        });
+
+        const steps = listProjectedTavernRuntimeEvents({})
+            .map((entry) => entry.event)
+            .filter((event) => event.type === 'turn.progress');
+        expect(steps.map((step) => ('step' in step ? step.step.kind : null))).toEqual(['notice']);
     });
 });

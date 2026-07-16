@@ -245,6 +245,14 @@ function activityEventToRuntimeEvents(
         return [];
     }
 
+    // Status-kind notices (freshness holds, busy deliveries, wait-idle,
+    // suppressed evaluations) are turn evidence, never conversation rows
+    // (specs/chat-timeline.md) — the agent just keeps thinking. Only
+    // context-boundary notices (new session, compaction) ride live.
+    if (isStatusNoticeActivity(event.activity)) {
+        return [];
+    }
+
     const detail = activityStepDetail(event.activity);
     const widget = widgetProgressFromActivity(event.activity) ?? undefined;
     const runtimeEvent: AgentRuntimeEvent = {
@@ -337,6 +345,14 @@ function activityToTurn(
         sessionKey: runtimeTurnReference(activity.metadata) ?? base.sessionKey,
         startedAt: metadataRuntimeString(activity.metadata, 'startedAt') ?? base.startedAt,
     };
+}
+
+function isStatusNoticeActivity(activity: TavernResponseActivity) {
+    const runtime = activity.metadata.runtime;
+    if (!(isRecord(runtime) && isRecord(runtime.notice))) {
+        return false;
+    }
+    return runtime.notice.kind === 'status';
 }
 
 function activityKind(activity: TavernResponseActivity) {
