@@ -1,5 +1,6 @@
 import {
     type AgentRuntimeAgent,
+    type AgentRuntimeAgentActivityList,
     type AgentRuntimeAgentEngineConfigSnapshot,
     type AgentRuntimeAgentEnv,
     type AgentRuntimeAgentFileContent,
@@ -157,6 +158,7 @@ import {
     type AgentRuntimeWorkspaceFileList,
     type AgentRuntimeWorkspaceFileListInput,
     type AgentRuntimeWorkspaceInstructions,
+    agentRuntimeAgentActivityListSchema,
     agentRuntimeAgentEngineConfigSnapshotSchema,
     agentRuntimeAgentEnvSchema,
     agentRuntimeAgentFileContentSchema,
@@ -468,6 +470,7 @@ export interface TavernAgentRuntimeClient {
     installSkillHubSkill(
         input: AgentRuntimeSkillHubInstallInput
     ): Promise<AgentRuntimeSkillHubActionResult>;
+    listAgentActivity(agentId: string): Promise<AgentRuntimeAgentActivityList>;
     listAgentFiles(agentId: string): Promise<AgentRuntimeAgentFileList>;
     listAgentPluginGrants(agentId: string): Promise<AgentRuntimeAgentPluginGrantList>;
     listAgentPresence(): Promise<AgentRuntimeAgentPresenceList>;
@@ -764,6 +767,19 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         }
 
         return agentRuntimeAgentSchema.parse(await response.json());
+    }
+
+    async listAgentActivity(agentId: string) {
+        const response = await fetch(
+            `${this.#baseUrl}${agentRuntimeRoutes.agentActivity(agentId)}`,
+            { headers: this.#authHeaders }
+        );
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return agentRuntimeAgentActivityListSchema.parse(await response.json());
     }
 
     async listAgentPresence() {

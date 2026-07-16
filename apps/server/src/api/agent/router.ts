@@ -1,4 +1,5 @@
 import { createRouter } from '../trpc.ts';
+import { agentActivityFeedRoute } from './activity-feed.ts';
 import { listAgentChatsRoute } from './chats-list.ts';
 import { createAgentProcedure } from './create.ts';
 import { deleteAgent } from './delete.ts';
@@ -28,6 +29,7 @@ import {
 } from './workspace-file.ts';
 
 export const agentRouter = createRouter({
+    activity: agentActivityFeedRoute,
     presence: listAgentPresenceRoute,
     chats: createRouter({
         list: listAgentChatsRoute,
