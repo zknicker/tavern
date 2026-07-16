@@ -42,6 +42,7 @@ export interface ChatRow {
     metadata_json: string;
     pinned: number;
     title: string | null;
+    unread_count: number | null;
     updated_at: string;
 }
 

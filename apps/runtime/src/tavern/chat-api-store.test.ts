@@ -769,6 +769,47 @@ describe('Tavern Runtime Chat API store', () => {
         ]);
     });
 
+    it('counts unread for the human seat and clears via read-to-latest', () => {
+        createChat({
+            id: 'cht_1',
+            participants: [
+                { id: 'usr_1', kind: 'user', label: 'Zach', metadata: {} },
+                { id: 'agt_a', kind: 'agent', label: 'Otto', metadata: {} },
+            ],
+            title: 'Test',
+        });
+        createMessage('cht_1', { author_id: 'usr_1', content: 'hi', id: 'msg_1', role: 'user' });
+        createMessage('cht_1', {
+            author_id: 'agt_a',
+            content: 'hello',
+            id: 'msg_2',
+            role: 'assistant',
+        });
+        createMessage('cht_1', {
+            author_id: 'agt_a',
+            content: 'again',
+            id: 'msg_3',
+            role: 'assistant',
+        });
+
+        // The reader's own message never counts; both agent replies do.
+        expect(getChat('cht_1')?.unread_count).toBe(2);
+
+        // Omitted sequence reads to the latest message.
+        const receipt = markRead('cht_1', { reader_id: 'usr_1' });
+        expect(receipt.last_read_sequence).toBe(3);
+        expect(getChat('cht_1')?.unread_count).toBe(0);
+
+        createMessage('cht_1', {
+            author_id: 'agt_a',
+            content: 'more',
+            id: 'msg_4',
+            role: 'assistant',
+        });
+        expect(getChat('cht_1')?.unread_count).toBe(1);
+        expect(listChats().chats.find((chat) => chat.id === 'cht_1')?.unread_count).toBe(1);
+    });
+
     it('stores terminal response activity in place', () => {
         createChat({ id: 'cht_1' });
         upsertResponse('cht_1', {

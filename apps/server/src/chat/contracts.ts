@@ -95,6 +95,8 @@ export const chatSchema = z.object({
     targetParticipant: chatTargetParticipantSchema,
     title: z.string(),
     type: z.string(),
+    // Messages the operator has not read yet (runtime read receipts).
+    unreadCount: z.number().int().nonnegative(),
 });
 
 export const chatListItemSchema = chatSchema.pick({
@@ -120,6 +122,7 @@ export const chatListItemSchema = chatSchema.pick({
     targetParticipant: true,
     title: true,
     type: true,
+    unreadCount: true,
 });
 
 export const chatListSchema = z.object({

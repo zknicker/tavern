@@ -662,6 +662,7 @@ components:
         - updated_at
         - last_activity_at
         - last_message_sequence
+        - unread_count
         - active_turn_participant_ids
         - participants
         - metadata
@@ -683,6 +684,11 @@ components:
             - type: 'null'
         last_message_sequence:
           type: integer
+          minimum: 0
+        # Messages past the chat's human reader's read receipt, excluding the
+        # reader's own messages. Null on projections that skip the count.
+        unread_count:
+          type: [integer, 'null']
           minimum: 0
         active_turn_participant_ids:
           type: array
@@ -1265,10 +1271,11 @@ components:
       additionalProperties: false
       required:
         - reader_id
-        - last_read_sequence
       properties:
         reader_id:
           $ref: '#/components/schemas/UserParticipantId'
+        # Omitted means read-to-latest: the runtime resolves the chat's
+        # newest message sequence at write time.
         last_read_sequence:
           type: integer
           minimum: 0

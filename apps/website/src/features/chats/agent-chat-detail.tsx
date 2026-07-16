@@ -6,6 +6,7 @@ import type { ChatTimelineState } from '../../hooks/chats/chat-timeline-state.ts
 import { getChatDraftRouteState } from '../../hooks/chats/use-chat-draft-launch.ts';
 import { useChatDraftStart } from '../../hooks/chats/use-chat-draft-start.ts';
 import { useChatGet } from '../../hooks/chats/use-chat-list.ts';
+import { useMarkChatReadOnView } from '../../hooks/chats/use-chat-mark-read.ts';
 import { useChatStartDrafts } from '../../hooks/chats/use-chat-start-drafts.tsx';
 import { useChatTimeline } from '../../hooks/chats/use-chat-timeline.ts';
 import { useModelList } from '../../hooks/models/use-model-list.ts';
@@ -166,6 +167,8 @@ function SyncedAgentChatDetail({ chat, chatId }: { chat: ChatListItem; chatId: s
     const { mode: layoutMode } = useAppLayoutPreference();
     const agentsQuery = useAgentList();
     const modelsQuery = useModelList();
+    // Viewing the chat reads it: receipt on open and on each new message.
+    useMarkChatReadOnView(chatId);
     const agentId = resolveChatAgentId(chat);
     const agents = agentsQuery.data?.agents ?? [];
     const agent = agents.find((entry) => entry.id === agentId) ?? null;

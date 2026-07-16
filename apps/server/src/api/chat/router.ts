@@ -7,6 +7,7 @@ import { listArchivedChatsRoute, listChatsRoute } from './list.ts';
 import { dismissChatLogRowRoute } from './log-dismiss.ts';
 import { listChatLogRoute } from './log-list.ts';
 import { onChatLogUpdate } from './log-on-update.ts';
+import { markChatReadRoute } from './mark-read.ts';
 import { onChatTurnCancelled } from './on-turn-cancelled.ts';
 import { onChatTurnCompleted } from './on-turn-completed.ts';
 import { onChatTurnFailed } from './on-turn-failed.ts';
@@ -47,6 +48,7 @@ export const chatRouter = createRouter({
         list: listChatLogRoute,
         onUpdate: onChatLogUpdate,
     }),
+    markRead: markChatReadRoute,
     onUpdate: onChatUpdate,
     onTurnCancelled: onChatTurnCancelled,
     onTurnCompleted: onChatTurnCompleted,

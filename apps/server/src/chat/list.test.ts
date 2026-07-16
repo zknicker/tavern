@@ -84,6 +84,7 @@ function buildTavernRuntimeChatRecord(input: { archived: boolean; id: string }) 
             scope: 'channel',
             target: `channel:${input.id}`,
             trigger: null,
+            unreadCount: 0,
         },
         createdAt: '2026-07-01T00:00:00.000Z',
         lastActivityAt: '2026-07-02T00:00:00.000Z',

@@ -25,6 +25,7 @@ function createAgentRuntimeChat(
         scope: 'channel',
         target: null,
         trigger: null,
+        unreadCount: 0,
         ...overrides,
     };
 }

@@ -43,9 +43,20 @@ is no per-token churn.
   in <chat> — your message is queued and answers next." Hidden the moment a
   turn runs in this chat; the active status stack ("thinking…") owns that
   state and is unchanged by presence.
-- **Sidebar DM rows**: the presence dot rides the agent face; the existing
-  per-chat turn spinner (driven by `activeTurnParticipantIds`, which is
-  agent-global) stays the busy affordance on chat rows.
+- **Sidebar rows**: each row's right edge carries its indicators; rows show
+  no relative-time or "no activity yet" text.
+  - Every chat kind shows an unread pill when the operator's read receipt
+    (runtime `chat_reads`, reader `usr_tavern`) trails the newest message
+    the operator did not author. Viewing a chat marks it read — on open and
+    on each new message while open — via `chat.markRead`, which the runtime
+    resolves read-to-latest at write time.
+  - Agent DM rows add a presence slot after the pill: a quiet green dot
+    while the agent is idle that swaps to the turn spinner while the agent
+    is busy anywhere (agent presence, plus this chat's local optimistic
+    turn).
+  - Channel rows never show a spinner or presence dot: agent-global busy
+    lighting every channel the agent sits in reads as noise, and the DM
+    list already is the busy roster.
 
 ## Non-goals
 

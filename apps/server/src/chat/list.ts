@@ -438,6 +438,7 @@ export async function listChatDetails(options?: {
                 targetParticipant,
                 title,
                 type: identity.type,
+                unreadCount: agentRuntimeChat?.unreadCount ?? 0,
             } satisfies Chat;
         })
         .flatMap((chat) => (chat ? [chatSchema.parse(chat)] : []))
@@ -452,6 +453,7 @@ function toChatListItem(chat: Chat) {
     return {
         activeTurnParticipantIds: chat.activeTurnParticipantIds,
         agentRuntimeSync: chat.agentRuntimeSync,
+        unreadCount: chat.unreadCount,
         archived: chat.archived,
         boundAgentIds: chat.boundAgentIds,
         canSend: chat.canSend,

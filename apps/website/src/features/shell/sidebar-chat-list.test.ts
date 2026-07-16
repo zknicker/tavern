@@ -26,6 +26,7 @@ function createChat(overrides: Partial<ChatListItem> = {}): ChatListItem {
         displayName: 'Tavern chat',
         framework: 'tavern',
         activeTurnParticipantIds: [],
+        unreadCount: 0,
         hasActivity: true,
         id: 'chat-1',
         isDisabled: false,

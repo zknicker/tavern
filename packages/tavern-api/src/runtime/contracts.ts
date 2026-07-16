@@ -1488,6 +1488,9 @@ export const agentRuntimeChatSchema = z.object({
     scope: agentRuntimeChatScopeSchema,
     target: z.string().trim().min(1).nullable(),
     trigger: z.string().trim().min(1).nullable(),
+    // Unread messages for the chat's human seat; null when the projection
+    // skipped the count.
+    unreadCount: z.number().int().nonnegative().nullable(),
 });
 
 export const agentRuntimeChatListSchema = z.object({

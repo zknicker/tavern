@@ -4,7 +4,6 @@ import * as React from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { ChannelIconBox } from '../../components/chats/channel-icon-box.tsx';
 import { useResolvedThemeOptional } from '../../components/theme-provider.tsx';
-import { useRelativeNow } from '../../components/time/relative-time.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import { Button } from '../../components/ui/primitives/button.tsx';
 import {
@@ -36,15 +35,11 @@ import { appRoutes } from '../../lib/app-routes.ts';
 import { markChatTiming } from '../../lib/chat-timing.ts';
 import { resolveAgentInk } from '../agents/agent-color-presets.ts';
 import { AgentFace } from '../chats/agent-face.tsx';
-import { SidebarAgentPresenceDot } from '../chats/agent-presence.tsx';
+import { useAgentPresenceEntry } from '../chats/agent-presence.tsx';
 import { ChannelDialog } from '../chats/channel-dialog.tsx';
-import {
-    buildChatList,
-    type ChatListItem,
-    getChatAgentId,
-    getChatLastActivityLabel,
-} from '../chats/chat-list-data.ts';
+import { buildChatList, type ChatListItem, getChatAgentId } from '../chats/chat-list-data.ts';
 import { buildChatPath } from '../chats/chat-path.ts';
+import { StatusSwap } from '../chats/chat-status-motion.tsx';
 import { getChannelColorStyle } from './channel-color-options.ts';
 import {
     canRenameSidebarChat,
@@ -56,7 +51,6 @@ import {
 import {
     buildSidebarChatGroups,
     buildSidebarDraftChatList,
-    formatSidebarActivityLabel,
     getSidebarChatTitle,
     getSidebarDraftActivityLabel,
     getSidebarDraftPath,
@@ -80,7 +74,6 @@ export function AppSidebarChatList() {
     const archiveChat = useChatArchive();
     const systemPrompt = useChatSystemPrompt();
     const tabAppearance = useChatTabAppearance();
-    const relativeNow = useRelativeNow();
     const [renamingChat, setRenamingChat] = React.useState<ChatListItem | null>(null);
     const [creatingChannel, setCreatingChannel] = React.useState(false);
     const [editingParticipantsChat, setEditingParticipantsChat] =
@@ -182,7 +175,6 @@ export function AppSidebarChatList() {
                                     chat={chat}
                                     isActive={location.pathname === buildChatPath(chat.id)}
                                     key={chat.id}
-                                    now={relativeNow}
                                     onArchive={(selectedChat) => {
                                         void archiveSidebarChat(selectedChat);
                                     }}
@@ -233,7 +225,6 @@ export function AppSidebarChatList() {
                                     chat={chat}
                                     isActive={location.pathname === buildChatPath(chat.id)}
                                     key={chat.id}
-                                    now={relativeNow}
                                     onArchive={(selectedChat) => {
                                         void archiveSidebarChat(selectedChat);
                                     }}
@@ -269,7 +260,6 @@ export function AppSidebarChatList() {
                                         chat={chat}
                                         isActive={location.pathname === buildChatPath(chat.id)}
                                         key={chat.id}
-                                        now={relativeNow}
                                         onArchive={(selectedChat) => {
                                             void archiveSidebarChat(selectedChat);
                                         }}
@@ -459,11 +449,9 @@ function SidebarRecentChatItem({
     onEditSystemPrompt,
     onEditParticipants,
     onRename,
-    now,
 }: {
     chat: ChatListItem;
     isActive: boolean;
-    now: number;
     onArchive: (chat: ChatListItem) => void;
     onCustomizeColor: (chat: ChatListItem, color: string | null) => void;
     onEditParticipants: (chat: ChatListItem) => void;
@@ -472,9 +460,6 @@ function SidebarRecentChatItem({
 }) {
     const title = getSidebarChatTitle(chat);
     const path = buildChatPath(chat.id);
-    const timelineState = useChatRuntimeTimelineState(chat.id);
-    const hasActiveTurn =
-        chat.activeTurnParticipantIds.length > 0 || hasLocalActiveTurn(timelineState);
     const channelColorStyle = getChannelColorStyle(chat.tabAppearance.color);
 
     return (
@@ -496,15 +481,53 @@ function SidebarRecentChatItem({
                     <div className="flex min-w-0 flex-1 items-center gap-2.5 overflow-visible">
                         <SidebarChatIcon chat={chat} style={channelColorStyle} />
                         <span className="min-w-0 flex-1 truncate">{title}</span>
-                        <SidebarChatActivity chat={chat} hidden={hasActiveTurn} now={now} />
-                        {hasActiveTurn ? (
-                            <span aria-hidden="true" className="w-6 shrink-0" />
-                        ) : null}
+                        <SidebarChatIndicators chat={chat} />
                     </div>
                 </SidebarMenuButton>
-                <SidebarChatActiveTurnIndicator hidden={!hasActiveTurn} />
             </SidebarChatContextMenu>
         </SidebarMenuItem>
+    );
+}
+
+/**
+ * Right-edge row indicators: an unread-count pill for every chat kind, plus
+ * a presence slot on agent DMs — a quiet dot while the agent is idle that
+ * swaps to the turn spinner while it works (anywhere, per specs/presence.md).
+ * Channels get no presence slot: the DM list already shows who is busy.
+ */
+function SidebarChatIndicators({ chat }: { chat: ChatListItem }) {
+    const timelineState = useChatRuntimeTimelineState(chat.id);
+    const agentId = chat.conversationKind === 'channel' ? null : getChatAgentId(chat);
+    const presence = useAgentPresenceEntry(agentId);
+    const busy =
+        agentId !== null && (presence?.state === 'busy' || hasLocalActiveTurn(timelineState));
+
+    return (
+        <span className="flex shrink-0 items-center gap-1.5">
+            {chat.unreadCount > 0 ? <SidebarUnreadPill count={chat.unreadCount} /> : null}
+            {agentId !== null && (presence || busy) ? (
+                <StatusSwap className="size-4 place-items-center" swapKey={busy ? 'busy' : 'idle'}>
+                    {busy ? (
+                        <span className="flex" title="Agent turn in progress">
+                            <Spinner className="size-3.5" />
+                        </span>
+                    ) : (
+                        <span
+                            aria-hidden="true"
+                            className="block size-2.5 rounded-full bg-success"
+                        />
+                    )}
+                </StatusSwap>
+            ) : null}
+        </span>
+    );
+}
+
+function SidebarUnreadPill({ count }: { count: number }) {
+    return (
+        <span className="flex h-4 min-w-4 shrink-0 items-center justify-center rounded-full bg-primary px-1 font-medium text-[0.625rem] text-primary-foreground tabular-nums leading-none">
+            {count > 99 ? '99+' : count}
+        </span>
     );
 }
 
@@ -538,7 +561,6 @@ function SidebarChatIcon({
                     size={24}
                     style={faceStyle}
                 />
-                <SidebarAgentPresenceDot chat={chat} />
             </span>
         );
     }
@@ -558,26 +580,6 @@ function getSidebarParticipantInitial(chat: ChatListItem) {
     const normalized = name.trim();
 
     return (normalized[0] ?? '?').toUpperCase();
-}
-
-function SidebarChatActivity({
-    chat,
-    hidden,
-    now,
-}: {
-    chat: ChatListItem;
-    hidden: boolean;
-    now: number;
-}) {
-    if (hidden) {
-        return null;
-    }
-
-    return (
-        <span className="shrink-0 text-sidebar-muted text-xs group-focus-within/menu-item:text-sidebar-accent-foreground/70 group-hover/menu-item:text-sidebar-accent-foreground/70">
-            {formatSidebarActivityLabel(getChatLastActivityLabel(chat, now))}
-        </span>
-    );
 }
 
 function SidebarChatActiveTurnIndicator({ hidden }: { hidden: boolean }) {

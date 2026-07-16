@@ -367,6 +367,7 @@ function tavernChatToRuntimeChat(chat: TavernChat): AgentRuntimeChat {
         bindingId: null,
         bindings: agentIds.map((agentId) => ({ agentId })),
         id: chat.id,
+        unreadCount: chat.unread_count,
         inboundMode: 'active',
         metadata: {
             ...chat.metadata,

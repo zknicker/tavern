@@ -89,23 +89,6 @@ export function AgentBusyElsewhereHint({
     );
 }
 
-/** Presence dot for sidebar DM rows, anchored to the agent face. */
-export function SidebarAgentPresenceDot({ chat }: { chat: ChatListItem }) {
-    const presence = useAgentPresenceEntry(
-        chat.conversationKind === 'channel' ? null : getChatAgentId(chat)
-    );
-    if (!presence) {
-        return null;
-    }
-
-    return (
-        <AgentPresenceDot
-            className="absolute -right-0.5 -bottom-0.5 border-2 border-sidebar"
-            state={presence.state}
-        />
-    );
-}
-
 export function resolveDmPresenceLabel(presence: AgentPresenceEntry, chatId: string) {
     if (presence.state !== 'busy') {
         return null;

@@ -135,6 +135,7 @@ function createChat(overrides: Partial<ChatListItem> = {}): ChatListItem {
         displayName: 'demo',
         framework: 'tavern',
         activeTurnParticipantIds: [],
+        unreadCount: 0,
         hasActivity: true,
         id: 'cht_demo',
         isDisabled: false,

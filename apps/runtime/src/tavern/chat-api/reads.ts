@@ -13,12 +13,15 @@ export function markRead(
 ): ReadReceipt {
     assertTavernIdPrefix(chatId, 'cht_', 'Chat id');
     assertTavernIdPrefix(input.reader_id, 'usr_', 'Read reader id');
+    // Omitted sequence means read-to-latest, resolved at write time so the
+    // caller cannot race a message that lands while the request is in flight.
+    const lastReadSequence = input.last_read_sequence ?? latestMessageSequence(chatId, db);
     const existing = optionalRow(
         db
             .prepare('SELECT * FROM chat_reads WHERE chat_id = $chatId AND reader_id = $readerId')
             .get(namedParams({ chatId, readerId: input.reader_id })) as ReadRow | null
     );
-    if (existing && existing.last_read_sequence >= input.last_read_sequence) {
+    if (existing && existing.last_read_sequence >= lastReadSequence) {
         return rowToReadReceipt(existing);
     }
 
@@ -35,7 +38,7 @@ export function markRead(
                     read: {
                         chat_id: chatId,
                         cursor: '0',
-                        last_read_sequence: input.last_read_sequence,
+                        last_read_sequence: lastReadSequence,
                         read_at: readAt,
                         reader_id: input.reader_id,
                     },
@@ -54,7 +57,7 @@ export function markRead(
             namedParams({
                 chatId,
                 cursor: Number(event.cursor),
-                lastReadSequence: input.last_read_sequence,
+                lastReadSequence,
                 readAt,
                 readerId: input.reader_id,
             })
@@ -68,6 +71,17 @@ export function markRead(
         db.exec('ROLLBACK');
         throw error;
     }
+}
+
+function latestMessageSequence(chatId: string, db: Database): number {
+    const row = db
+        .prepare(
+            `SELECT COALESCE(MAX(sequence), 0) AS sequence
+             FROM chat_messages
+             WHERE chat_id = $chatId AND deleted_at IS NULL`
+        )
+        .get(namedParams({ chatId })) as { sequence: number };
+    return row.sequence;
 }
 
 function getReadReceiptOrThrow(chatId: string, readerId: string, db: Database): ReadReceipt {

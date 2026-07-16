@@ -376,6 +376,7 @@ export interface components {
             updated_at: components["schemas"]["Timestamp"];
             last_activity_at: components["schemas"]["Timestamp"] | null;
             last_message_sequence: number;
+            unread_count: number | null;
             active_turn_participant_ids: string[];
             participants: components["schemas"]["Participant"][];
             metadata: components["schemas"]["JsonObject"];
@@ -567,7 +568,7 @@ export interface components {
         };
         MarkReadRequest: {
             reader_id: components["schemas"]["UserParticipantId"];
-            last_read_sequence: number;
+            last_read_sequence?: number;
         };
         DeleteMessageReceipt: {
             message_id: components["schemas"]["MessageId"];

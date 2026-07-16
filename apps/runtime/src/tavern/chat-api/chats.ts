@@ -78,6 +78,35 @@ export function createChat(input: TavernCreateChatRequest, db: Database = getDb(
     return getChatOrThrow(input.id, db);
 }
 
+// Unread for the chat's human seat: messages past that reader's read
+// receipt, excluding the reader's own messages. The read receipt lives in
+// chat_reads (specs/presence.md); a chat with no receipt counts everything
+// the human did not author.
+const unreadCountSelect = `(
+    SELECT COUNT(*)
+    FROM chat_messages
+    WHERE chat_messages.chat_id = chats.id
+      AND chat_messages.deleted_at IS NULL
+      AND chat_messages.author_id != COALESCE((
+          SELECT id FROM chat_participants
+          WHERE chat_participants.chat_id = chats.id
+            AND chat_participants.kind = 'user'
+          ORDER BY chat_participants.id ASC
+          LIMIT 1
+      ), '')
+      AND chat_messages.sequence > COALESCE((
+          SELECT last_read_sequence FROM chat_reads
+          WHERE chat_reads.chat_id = chats.id
+            AND chat_reads.reader_id = (
+                SELECT id FROM chat_participants
+                WHERE chat_participants.chat_id = chats.id
+                  AND chat_participants.kind = 'user'
+                ORDER BY chat_participants.id ASC
+                LIMIT 1
+            )
+      ), 0)
+) AS unread_count`;
+
 export function listChats(
     input: { cursor?: string | null; limit?: number } = {},
     db: Database = getDb()
@@ -92,6 +121,7 @@ export function listChats(
                         WHERE chat_messages.chat_id = chats.id
                           AND chat_messages.deleted_at IS NULL
                     ) AS last_activity_at,
+                    ${unreadCountSelect},
                     (
                         SELECT json_group_array(DISTINCT busy.participant_id)
                         FROM (
@@ -145,6 +175,7 @@ export function listChatsForAgentParticipant(
         .prepare(
             `SELECT chats.*,
                     NULL AS last_activity_at,
+                    NULL AS unread_count,
                     NULL AS active_turn_participant_ids
              FROM chats
              JOIN chat_participants ON chat_participants.chat_id = chats.id
@@ -167,6 +198,7 @@ export function getChat(id: string, db: Database = getDb()): TavernChat | null {
                         WHERE chat_messages.chat_id = chats.id
                           AND chat_messages.deleted_at IS NULL
                     ) AS last_activity_at,
+                    ${unreadCountSelect},
                     (
                         SELECT json_group_array(DISTINCT busy.participant_id)
                         FROM (
@@ -257,6 +289,7 @@ function rowToChat(row: ChatRow, db: Database): TavernChat {
         metadata: JSON.parse(row.metadata_json) as Record<string, unknown>,
         participants: listChatParticipants(row.id, db),
         title: row.title,
+        unread_count: row.unread_count,
         updated_at: row.updated_at,
     };
 }
