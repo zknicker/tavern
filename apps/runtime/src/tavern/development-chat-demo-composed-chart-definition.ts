@@ -175,7 +175,7 @@ export function chartDemo(): DevelopmentChatDemo {
     };
 }
 
-function composedChartDemoProps(): WidgetComposedChartProps {
+export function composedChartDemoProps(): WidgetComposedChartProps {
     return {
         barUnit: 'units',
         barSeries: [{ key: 'units', label: 'Units' }],

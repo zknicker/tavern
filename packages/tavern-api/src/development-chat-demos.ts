@@ -1,10 +1,13 @@
 export const developmentChatDemoId = 'cht_demo';
 // Multi-agent demo chat: two agent seats sharing one channel.
 export const developmentChatTeamDemoId = 'cht_demo_team';
+// Widget gallery: one turn per rendered widget, plus the fallback state.
+export const developmentChatWidgetsDemoId = 'cht_demo_widgets';
 
 export const developmentChatDemoIds = {
     demo: developmentChatDemoId,
     team: developmentChatTeamDemoId,
+    widgets: developmentChatWidgetsDemoId,
     activityTurn: developmentChatDemoId,
     artifactLinks: developmentChatDemoId,
     attachment: developmentChatDemoId,

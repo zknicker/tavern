@@ -20,6 +20,7 @@ import {
     demoTime,
 } from './development-chat-demo-types';
 import { widgetTableDemo } from './development-chat-demo-widget-table-definition';
+import { widgetsChannelDemo } from './development-chat-demo-widgets-channel-definition';
 
 export const developmentChatDemos: DevelopmentChatDemo[] = [
     demoChannel([
@@ -39,6 +40,7 @@ export const developmentChatDemos: DevelopmentChatDemo[] = [
         streamingStackDemo(),
     ]),
     teamDemo(),
+    widgetsChannelDemo(),
 ];
 
 function demoChannel(demos: DevelopmentChatDemo[]): DevelopmentChatDemo {

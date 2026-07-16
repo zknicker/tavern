@@ -58,15 +58,7 @@ export function merchbaseSalesChartDemo(): DevelopmentChatDemo {
                                 sequence: 1,
                                 source: 'demo.merchbase',
                             }),
-                            widget: widgetDemoRenderInput(
-                                'merchbase-sales-chart',
-                                'MerchBase sales',
-                                {
-                                    endDate: '2026-06-23',
-                                    rangeDays: 10,
-                                    title: 'MerchBase sales',
-                                }
-                            ),
+                            widget: merchbaseSalesChartDemoRenderInput(),
                         },
                         sequence: 1,
                         started_at: demoTime,
@@ -79,4 +71,14 @@ export function merchbaseSalesChartDemo(): DevelopmentChatDemo {
         ],
         title: 'Demo: MerchBase Sales Chart',
     };
+}
+
+// The seeded widget payload, shared with the core widgets demo channel so the
+// MerchBase chart data stays owned by the Plugin dev module.
+export function merchbaseSalesChartDemoRenderInput() {
+    return widgetDemoRenderInput('merchbase-sales-chart', 'MerchBase sales', {
+        endDate: '2026-06-23',
+        rangeDays: 10,
+        title: 'MerchBase sales',
+    });
 }

@@ -389,7 +389,7 @@ export function chartDemoProps(): WidgetBarChartProps {
     };
 }
 
-function calendarEventDemoProps(): WidgetCalendarEventProps {
+export function calendarEventDemoProps(): WidgetCalendarEventProps {
     return {
         calendar: 'Product',
         date: '2026-06-20',
@@ -402,7 +402,7 @@ function calendarEventDemoProps(): WidgetCalendarEventProps {
     };
 }
 
-function calendarDayDemoProps(): WidgetCalendarDayProps {
+export function calendarDayDemoProps(): WidgetCalendarDayProps {
     return {
         date: '2026-06-20',
         events: [
