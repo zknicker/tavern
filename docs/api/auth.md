@@ -24,12 +24,18 @@ workspace files, and model-provider credentials.
 
 Model provider credentials belong to their provider integration:
 
-- Claude Code and Codex use the local OAuth sessions owned by their CLIs.
-  Claude Code Runtime turns may also use `TAVERN_AGENT_CLAUDE_CODE_AUTH_TOKEN`
-  from `claude setup-token` when non-interactive `claude -p` cannot use the
-  local Claude.ai login.
-- OpenAI/API-key routes use Runtime-stored provider secrets or explicit
-  environment overrides such as `OPENAI_API_KEY` or `TAVERN_AGENT_API_KEY`.
+- Claude Code sign-in is a Runtime-owned OAuth credential created from
+  Model access (code-paste flow) and stored in the runtime vault. When no
+  sign-in exists, a detected host Claude Code login is used instead — this
+  works on desktop Macs (a GUI session can grant keychain reads) but not on
+  headless hosts, where keychain prompts cannot be answered; see
+  [specs/model-access.md](../../specs/model-access.md).
+  `TAVERN_AGENT_CLAUDE_CODE_AUTH_TOKEN` (`claude setup-token`) remains an
+  operator env escape hatch.
+- Codex uses vault-backed OAuth credentials refreshed by the Runtime.
+- Anthropic, OpenAI, and OpenRouter API-key routes use Runtime-stored
+  provider secrets or explicit environment overrides such as
+  `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, or `TAVERN_AGENT_API_KEY`.
 - Plugin credentials live in Plugin-specific secret storage.
 
 Do not put secrets in:

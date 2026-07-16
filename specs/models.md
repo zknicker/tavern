@@ -50,7 +50,7 @@ Providers move through explicit product states:
 | Disabled | Provider is enabled but intentionally unavailable for execution. | Re-enable or remove. |
 
 Adding a provider creates an enabled-provider record. It does not require access to succeed in the
-same step. This lets users add Claude Code and then follow a host command, or add OpenAI and then
+same step. This lets users add Claude Code and then run its sign-in, or add OpenAI and then
 paste an API key.
 
 Removing a provider removes it from the executable catalog and hides its models from pickers.
@@ -65,10 +65,11 @@ Provider setup is provider-specific but has one product shape:
 - **API-key providers.** The Add provider dialog asks for the key. Runtime stores the secret and
   marks the provider executable after validation.
 - **External OAuth CLI providers.** The dialog enables the provider and shows a copyable command to
-  run on the Runtime host, such as a Claude Code or Codex login/setup-token command. Runtime marks
-  the provider executable only after host access is observable.
-- **Runtime-managed OAuth providers.** The dialog starts the OAuth flow through Runtime and polls
-  until approved, denied, expired, or errored.
+  run on the Runtime host, such as a Codex login command. Runtime marks the provider executable
+  only after host access is observable.
+- **Runtime-managed OAuth providers.** The dialog starts the OAuth flow through Runtime — Claude
+  Code uses the code-paste sign-in from [model-access.md](model-access.md) — and resolves as
+  approved, denied, expired, or errored.
 - **Local endpoint providers.** The dialog collects endpoint configuration and optional key material.
   Runtime marks the provider executable after it can construct the model route.
 

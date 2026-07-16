@@ -137,11 +137,15 @@ It must not inherit arbitrary host configuration files such as Codex
 `config.toml`, because host CLI versions and bundled harness SDK versions can
 parse different config vocabularies.
 
-Claude Code harness turns run through the same non-interactive Claude Code path
-as `claude -p`. If that local path cannot authenticate with a Claude.ai login,
-operators can create a subscription-backed long-lived token with
-`claude setup-token` and expose it to Runtime as
-`TAVERN_AGENT_CLAUDE_CODE_AUTH_TOKEN`.
+Claude Code harness turns receive their credential from the Runtime: a
+vault-stored Claude sign-in (`authToken`, refreshed before the turn) for the
+`claude` provider, or the vault Anthropic API key (`apiKey`) for the
+`anthropic` provider. When the `claude` provider has no stored sign-in, the
+harness falls back to its own discovery of a detected host Claude Code login —
+reliable on desktop Macs, not on headless hosts (see
+[specs/model-access.md](../../specs/model-access.md)).
+`TAVERN_AGENT_CLAUDE_CODE_AUTH_TOKEN` (`claude setup-token`) remains an
+operator env escape hatch and loses to stored credentials.
 
 Executor failures settle the Agent turn and linked response as failed Tavern
 state. They must not crash the Runtime process.

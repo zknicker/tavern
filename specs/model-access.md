@@ -33,17 +33,32 @@ expose the same curated Claude models under their own provider ids.
   `model-access:anthropic` (`ANTHROPIC_API_KEY` option in Model access).
   Pay-per-token API billing.
 
-The `claude` provider also rides a **detected host Claude Code login**
-(mirroring Raft's default "host login" mode): when the machine's operator
-is already signed in to Claude Code — keychain item on macOS,
-`~/.claude/.credentials.json` elsewhere — the provider reads `live`
-("Using your Claude Code login.") with zero setup and the engine discovers
-that credential itself. Detection checks presence only, never credential
-values, and `TAVERN_AGENT_CLAUDE_CODE_HOST_LOGIN=0` disables it. Host
-login is convenient but fragile on servers (keychain ACLs bind to binary
-identity and headless sessions cannot answer prompts — the v1.5.0 mini
-outage); runtime-owned sign-in always wins when both exist and is the
-recommended setup for deployed hosts.
+### Detected host Claude Code login
+
+The `claude` provider also rides a **detected host Claude Code login**:
+when the machine's operator is already signed in to Claude Code — keychain
+item on macOS, `~/.claude/.credentials.json` elsewhere — the provider reads
+`live` ("Using your Claude Code login.") with zero setup and the engine
+discovers that credential itself. Detection verifies the credential is
+actually readable (an unreadable keychain item counts as not signed in);
+the value stays in-process and is never logged.
+`TAVERN_AGENT_CLAUDE_CODE_HOST_LOGIN=0` disables detection. Runtime-owned
+sign-in always wins when both exist.
+
+**Why host login works on a desktop but not a server.** macOS keychain
+items carry an ACL naming which binaries may read them. A read from an
+unlisted binary triggers a user-consent prompt — fine in a GUI session,
+where the prompt appears and gets approved. A headless Runtime (launchd
+service on a Mac mini, SSH session) has no screen to show the prompt on,
+so the same read silently returns nothing. Upgrades make this worse: the
+Runtime re-stages its bundled engine, changing the binary identity the ACL
+was granted to, and with no GUI to re-approve, reads fail permanently
+(this was the v1.5.0 mini outage). So:
+
+- **Desktop Mac** — host login just works; Connect is optional.
+- **Headless / deployed host** — use Connect (runtime-owned sign-in) or an
+  Anthropic API key. The vault does not care about keychain ACLs or binary
+  identity, so it survives upgrades and headless sessions.
 
 Turn-time contract: before every `claude`-provider turn the runtime
 refreshes the access token when it is within five minutes of expiry
