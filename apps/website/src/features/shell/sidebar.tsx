@@ -11,6 +11,7 @@ import {
 } from '../../components/ui/sidebar.tsx';
 import type { RouteTab } from '../../hooks/shell/use-route-tab.ts';
 import { SettingsSidebarNav } from '../settings/layout/sidebar-nav.tsx';
+import { SidebarAuthItems } from './sidebar-auth-items.tsx';
 import { AppSidebarChatList } from './sidebar-chat-list.tsx';
 import { AppSidebarNav } from './sidebar-nav.tsx';
 import { SidebarUpdateMenuItem } from './sidebar-update-menu-item.tsx';
@@ -55,6 +56,7 @@ export function AppSidebar({
                 <SidebarFooter>
                     <SidebarMenu>
                         <SidebarUpdateMenuItem />
+                        <SidebarAuthItems />
                         <SidebarMenuItem>
                             <SidebarMenuButton onClick={onNavigateToSettings}>
                                 <Icon

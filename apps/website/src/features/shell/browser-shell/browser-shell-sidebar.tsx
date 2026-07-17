@@ -1,4 +1,5 @@
-import { SidebarProvider } from '../../../components/ui/sidebar.tsx';
+import { SidebarFooter, SidebarMenu, SidebarProvider } from '../../../components/ui/sidebar.tsx';
+import { SidebarAuthItems } from '../sidebar-auth-items.tsx';
 import { AppSidebarChatList } from '../sidebar-chat-list.tsx';
 
 /**
@@ -19,6 +20,11 @@ export function BrowserShellSidebar() {
             <div className="flex min-h-0 flex-1 flex-col overflow-hidden pt-1">
                 <AppSidebarChatList />
             </div>
+            <SidebarFooter>
+                <SidebarMenu>
+                    <SidebarAuthItems />
+                </SidebarMenu>
+            </SidebarFooter>
         </SidebarProvider>
     );
 }

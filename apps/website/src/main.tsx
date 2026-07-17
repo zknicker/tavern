@@ -6,6 +6,7 @@ import { ThemeProvider } from './components/theme-provider.tsx';
 import { DesktopEditContextMenuProvider } from './components/ui/edit-context-menu.tsx';
 import { ToastProvider } from './components/ui/toast.tsx';
 import { ChromeApp } from './features/shell/browser-shell/chrome-app.tsx';
+import { TavernClerkProvider } from './lib/clerk.tsx';
 import { getDesktopSurface, isElectronDesktopApp } from './lib/desktop-bridge.ts';
 import { TavernProviders } from './lib/trpc.tsx';
 import './styles/global.css';
@@ -26,16 +27,18 @@ const isChromeSurface = getDesktopSurface() === 'chrome';
 
 createRoot(rootElement).render(
     <StrictMode>
-        <ThemeProvider>
-            <DevModeProvider>
-                <ToastProvider>
-                    <TavernProviders>
-                        <DesktopEditContextMenuProvider>
-                            {isChromeSurface ? <ChromeApp /> : <App />}
-                        </DesktopEditContextMenuProvider>
-                    </TavernProviders>
-                </ToastProvider>
-            </DevModeProvider>
-        </ThemeProvider>
+        <TavernClerkProvider>
+            <ThemeProvider>
+                <DevModeProvider>
+                    <ToastProvider>
+                        <TavernProviders>
+                            <DesktopEditContextMenuProvider>
+                                {isChromeSurface ? <ChromeApp /> : <App />}
+                            </DesktopEditContextMenuProvider>
+                        </TavernProviders>
+                    </ToastProvider>
+                </DevModeProvider>
+            </ThemeProvider>
+        </TavernClerkProvider>
     </StrictMode>
 );
