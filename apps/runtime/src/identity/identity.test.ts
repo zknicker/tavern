@@ -2,6 +2,7 @@ import { exportJWK, generateKeyPair, SignJWT } from 'jose';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { closeDb, initTestDb } from '../db/connection';
 import { ensureRuntimeSchema } from '../db/schema';
+import { claimRuntimeForClerkUser } from './claim';
 import { clerkFrontendOrigin, createClerkVerifier } from './clerk-session';
 import { createInvite, listInvites, redeemInvite } from './invites';
 import {
@@ -87,6 +88,40 @@ describe('identity invites', () => {
             reason: 'already-member',
         });
         expect(listInvites()[0]?.redeemedBy).toBe(joiner.id);
+    });
+});
+
+describe('runtime claim', () => {
+    beforeEach(() => {
+        ensureRuntimeSchema(initTestDb());
+    });
+
+    afterEach(() => {
+        closeDb();
+    });
+
+    const validKey = `pk_test_${Buffer.from('foo.clerk.accounts.dev$').toString('base64')}`;
+
+    it('claims for one clerk user, idempotently, and refuses others', () => {
+        expect(claimRuntimeForClerkUser({ clerkUserId: 'user_a', publishableKey: 'junk' })).toEqual(
+            { ok: false, reason: 'invalid-key' }
+        );
+
+        const first = claimRuntimeForClerkUser({
+            clerkUserId: 'user_a',
+            publishableKey: validKey,
+        });
+        expect(first).toMatchObject({ alreadyOwner: false, ok: true });
+
+        const again = claimRuntimeForClerkUser({
+            clerkUserId: 'user_a',
+            publishableKey: validKey,
+        });
+        expect(again).toMatchObject({ alreadyOwner: true, ok: true });
+
+        expect(
+            claimRuntimeForClerkUser({ clerkUserId: 'user_b', publishableKey: validKey })
+        ).toEqual({ ok: false, reason: 'claimed-by-other' });
     });
 });
 

@@ -165,6 +165,26 @@ const engineCommand: CliCommand = {
     },
 };
 
+const claimCommand: CliCommand = {
+    name: 'claim',
+    section: 'Server',
+    summary: 'Bind this runtime to a Tavern account (run on the runtime host)',
+    usage: 'tavern claim --clerk-key <key> --user <clerk-user-id>',
+    flags: [
+        {
+            name: '--clerk-key',
+            description: 'Clerk publishable key used to verify sign-ins',
+            valueName: '<key>',
+        },
+        { name: '--user', description: 'Clerk user id that owns this runtime', valueName: '<id>' },
+    ],
+    examples: ['tavern claim --clerk-key pk_test_abc --user user_2abc'],
+    async run(args) {
+        const { runClaimCommand } = await import('./commands/claim');
+        return await runClaimCommand(args);
+    },
+};
+
 const tokenCommand: CliCommand = {
     name: 'token',
     section: 'Status',
@@ -194,6 +214,7 @@ const helpCommand: CliCommand = {
 /** Every registered command, in registration order. */
 export const COMMANDS: CliCommand[] = [
     serveCommand,
+    claimCommand,
     statusCommand,
     versionCommand,
     tokenCommand,

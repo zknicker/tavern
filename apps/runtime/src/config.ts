@@ -174,6 +174,11 @@ export function getClerkPublishableKey(): string | null {
     return fromFile || null;
 }
 
+export function saveClerkPublishableKey(key: string): void {
+    const config = readTavernConfig();
+    writeTavernConfig({ ...config, clerkPublishableKey: key });
+}
+
 export function getRuntimePort(): string {
     return readConfigValue('TAVERN_RUNTIME_PORT') ?? '18790';
 }
