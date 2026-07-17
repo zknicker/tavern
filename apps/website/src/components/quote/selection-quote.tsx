@@ -28,6 +28,7 @@ export function SelectionQuoteContainer({
     source: SelectionQuoteSource | (() => SelectionQuoteSource);
 }) {
     const containerRef = React.useRef<HTMLDivElement | null>(null);
+    const lastPointerRef = React.useRef<null | { x: number; y: number }>(null);
     const [anchor, setAnchor] = React.useState<null | { text: string; x: number; y: number }>(null);
     const composerPresent = useChatComposerInsertTarget();
 
@@ -38,8 +39,40 @@ export function SelectionQuoteContainer({
 
         const readSelection = () => {
             const container = containerRef.current;
+            if (!container) {
+                setAnchor(null);
+                return;
+            }
+            const containerRect = container.getBoundingClientRect();
+
+            // Text controls (the workspace file editor is a textarea over a
+            // highlighted pre) keep their selection on the element, not in
+            // window.getSelection(). Anchor near the pointer release.
+            const active = document.activeElement;
+            if (active instanceof HTMLTextAreaElement && container.contains(active)) {
+                const start = Math.min(active.selectionStart ?? 0, active.selectionEnd ?? 0);
+                const end = Math.max(active.selectionStart ?? 0, active.selectionEnd ?? 0);
+                const text = active.value.slice(start, end).trim();
+                if (!text) {
+                    setAnchor(null);
+                    return;
+                }
+                const pointer = lastPointerRef.current;
+                setAnchor({
+                    text,
+                    x: clamp(
+                        (pointer?.x ?? containerRect.left + containerRect.width / 2) -
+                            containerRect.left,
+                        24,
+                        containerRect.width - 24
+                    ),
+                    y: Math.max((pointer?.y ?? containerRect.top + 40) - containerRect.top, 30),
+                });
+                return;
+            }
+
             const selection = window.getSelection();
-            if (!(container && selection) || selection.isCollapsed) {
+            if (!selection || selection.isCollapsed) {
                 setAnchor(null);
                 return;
             }
@@ -54,7 +87,6 @@ export function SelectionQuoteContainer({
                 return;
             }
             const rect = range.getBoundingClientRect();
-            const containerRect = container.getBoundingClientRect();
             setAnchor({
                 text,
                 x: clamp(
@@ -84,7 +116,14 @@ export function SelectionQuoteContainer({
     };
 
     return (
-        <div className={cn('relative', className)} ref={containerRef}>
+        // biome-ignore lint/a11y/noStaticElementInteractions: pointer tracking only, not an interactive control.
+        <div
+            className={cn('relative', className)}
+            onPointerUpCapture={(event) => {
+                lastPointerRef.current = { x: event.clientX, y: event.clientY };
+            }}
+            ref={containerRef}
+        >
             {children}
             {anchor && composerPresent ? (
                 <button
