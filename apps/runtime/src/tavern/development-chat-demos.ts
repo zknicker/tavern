@@ -12,6 +12,7 @@ import {
     upsertResponse,
     upsertResponseActivity,
 } from './chat-api';
+import { seedDevelopmentActivityDemos } from './development-activity-demos';
 import { developmentChatDemos } from './development-chat-demo-definitions';
 import {
     type DevelopmentDemoMessage,
@@ -79,6 +80,7 @@ export function seedDevelopmentChatDemos({
     }
 
     seedDevelopmentRecallEvidence(db);
+    seedDevelopmentActivityDemos(db);
 
     return { seeded: developmentChatDemos.length };
 }
