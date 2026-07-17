@@ -289,7 +289,10 @@ const REQUIREMENTS: Array<{
 // total 15_450 -> 16_500 (2026-07-17, PRD-80/81): the Visuals section —
 // generative ```visual fence, design-skill routing, visual-vs-artifact
 // ladder, self-containment — plus the visual carve-outs in the Outputs and
-// Widgets HTML bans (~1,020 chars).
+// Widgets HTML bans (~1,020 chars). Partly offset by slimming the artifact
+// and html-preview entries to invocation contract + page-design skill
+// routing (quality guidance, incl. the token enumeration, moved to skills);
+// actual total ~16,280.
 const promptBudgets = {
     channelChatSection: 1850,
     channelTotal: 16_500,

@@ -89,7 +89,7 @@ Draw an inline visual by writing a fenced code block whose language is `visual`.
 <svg viewBox="0 0 640 220">...</svg>
 ```
 
-- Draw a visual when in-conversation data deserves a bespoke picture — comparisons, trends, structures — and no catalog widget fits. For anything the user will keep or iterate on, build a workspace file and open it with `pane_open` instead.
+- Draw a visual when in-conversation data deserves a bespoke picture — comparisons, trends, structures — and no catalog widget fits. For anything the user will keep or iterate on, build an `artifact` page instead (see Widgets rules).
 - Before drawing, load the matching design skill and follow it: visuals-charts for charts and data graphics, visuals-diagrams for diagrams and structures.
 - Embed all data inline; the frame has no network access beyond what the design skill allows. Write the body top-down — title, content, scripts last — so the visual renders while it streams.
 
@@ -143,7 +143,7 @@ Self-contained inline CSS/JS only; load the page-design skill before authoring. 
 
 artifact — Durable self-contained single-file HTML page rendered in the artifact pane; the chat shows a compact card.
 {"path":string,"title"?:string}
-Inline CSS/JS only, no external or sibling assets. Tavern theme tokens are injected as CSS variables (--background, --foreground, --surface-2, --border, ...) — style with them so the page matches the app in light and dark.
+Self-contained inline CSS/JS only; load the page-design skill before authoring. Write the file under workbench/ first; path is workspace-relative.
 
 ## USER
 

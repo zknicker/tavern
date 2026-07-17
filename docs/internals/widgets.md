@@ -9,11 +9,14 @@ read_when:
 
 # Widgets and Visuals
 
-Agent-drawn chat UI has two tiers. **Visuals** are the growth surface: the
-assistant draws bespoke HTML/SVG in a ```` ```visual ```` fence and Tavern
-renders it in a sandboxed iframe (see [Visuals](#visuals)). **Widgets** are the
-closed catalog of typed, app-rendered components below; the catalog keeps
-working but no longer grows for things that merely *show* data.
+Agents draw **visuals** in chat and build **artifacts** in the pane; the
+**widget** catalog is the closed set of typed transactional components.
+Visuals are the growth surface: the assistant draws bespoke HTML/SVG in a
+```` ```visual ```` fence and Tavern renders it in a sandboxed iframe (see
+[Visuals](#visuals)). Artifacts are durable self-contained pages carded in
+chat and rendered in the artifact pane ([artifacts.md](artifacts.md)). The
+widget catalog below keeps working but no longer grows for things that
+merely *show* data.
 
 ## Visuals
 

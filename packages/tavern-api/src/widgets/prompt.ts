@@ -87,7 +87,7 @@ const widgetPromptEntries = {
             'Durable self-contained single-file HTML page rendered in the artifact pane; the chat shows a compact card.',
         signature: '{"path":string,"title"?:string}',
         constraints:
-            'Inline CSS/JS only, no external or sibling assets. Tavern theme tokens are injected as CSS variables (--background, --foreground, --surface-2, --border, ...) — style with them so the page matches the app in light and dark.',
+            'Self-contained inline CSS/JS only; load the page-design skill before authoring. Write the file under workbench/ first; path is workspace-relative.',
     },
     'merchbase-sales-chart': widgetMerchBaseSalesChartPromptEntry,
 } satisfies Record<CatalogWidgetName, WidgetPromptEntry>;

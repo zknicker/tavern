@@ -38,12 +38,18 @@ sibling asset references, no network requests.
 - Status (semantic only): \`var(--success)\`, \`var(--warning)\`,
   \`var(--error)\`, \`var(--info)\`, each with \`-foreground\` and \`-bg\`
   variants for chips and callouts.
+- Form surfaces: \`var(--input)\`, focus \`var(--ring)\`; overlays
+  \`var(--popover)\` + \`var(--popover-foreground)\`; subtle fills
+  \`var(--subtle)\`; elevation \`var(--surface-shadow-1)\` .. \`var(--surface-shadow-4)\`.
 - Radii: \`var(--radius-md)\` controls, \`var(--radius-lg)\` panels,
   \`var(--radius-xl)\` large cards. Fonts: \`var(--font-sans)\` UI,
   \`var(--font-mono)\` code and compact metadata; base size
   \`var(--app-ui-font-size)\` (14px).
 - Charts or diagrams inside a page follow the visuals-charts and
-  visuals-diagrams skills (series palette \`var(--chart-1)\` .. \`var(--chart-5)\`).
+  visuals-diagrams skills for chrome and composition. Pages do not receive
+  the \`--chart-N\` series variables (those exist only in \`visual\` fences);
+  pick series colors from \`var(--brand)\`, \`var(--info)\`, and the status
+  tokens instead.
 
 ## Layout and typography
 
