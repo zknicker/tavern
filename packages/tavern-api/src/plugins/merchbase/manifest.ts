@@ -6,6 +6,16 @@ export const merchbasePluginId = 'merchbase' as const;
 export const merchbasePluginHealthCapabilityId =
     'plugin.merchbase' satisfies AgentRuntimeCapabilityHealthId;
 
+/**
+ * Plugin-owned prompt guidance for the MerchBase sales series tool. Lives
+ * beside the manifest so the MerchBase Plugin owns both its data contract and
+ * the guidance the agent sees; the runtime gates it into the prompt only when
+ * the Plugin is enabled and granted (the same gate as the Plugin's tools).
+ */
+export const merchbaseSalesSeriesToolPromptEntry = `## MerchBase
+
+When someone asks about MerchBase sales, fetch live data with \`merchbase_sales_series\` — a range like "30d" or "2026-06-01..2026-06-30", a day/week/month bucket, and optional product filters (asin, color, facet, facetName, fit, marketplace, productType) — then present the result. Daily rows include explicit zero-sales days: a zero means no sales, not missing data.`;
+
 export const merchbasePluginManifest = tavernPluginManifestSchema.parse({
     description: 'Analyze Amazon Merch sales and product data from MerchBase.',
     displayName: 'MerchBase',

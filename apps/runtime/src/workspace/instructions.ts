@@ -5,6 +5,7 @@ import type { Database } from '../db/sqlite.ts';
 import { namedParams } from '../db/sqlite.ts';
 import { isMemoryEnabled } from '../memory/settings.ts';
 import { availableWidgetNamesForAgent } from '../plugins/agent-capabilities.ts';
+import { merchbaseToolsGrantedForAgent } from '../plugins/merchbase-tools.ts';
 import { getStoredAgent } from '../tavern/agents-store.ts';
 import { publishRuntimeEvent } from '../tavern/runtime-events.ts';
 import {
@@ -130,6 +131,7 @@ export async function generateAgentInstructions(db: Database, agentId = defaultA
         availableWidgetNames: availableWidgetNamesForAgent(agent),
         cronEnabled: isRuntimeCronReady(),
         memoryEnabled: isMemoryEnabled(),
+        merchbaseSalesToolAvailable: merchbaseToolsGrantedForAgent(agent),
     });
     const previousHash = readRenderedInstructionHash(db, source.agentId);
     const renderedAt = new Date().toISOString();

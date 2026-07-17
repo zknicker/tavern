@@ -1,9 +1,20 @@
 import type { ToolSet } from '@ai-sdk/provider-utils';
-import type { AgentRuntimeAgent, AgentRuntimeMerchbaseActionInput } from '@tavern/api';
+import type {
+    AgentRuntimeAgent,
+    AgentRuntimeMerchbaseActionInput,
+    AgentRuntimeMerchbaseSalesSeriesInput,
+} from '@tavern/api';
+import { agentRuntimeMerchbaseSalesSeriesInputSchema } from '@tavern/api';
 import { merchbasePluginId } from '@tavern/api/plugins/merchbase';
 import { tool } from 'ai';
 import * as z from 'zod';
-import { getMerchbasePlugin, queryMerchbaseAction } from './merchbase.ts';
+import { resolveHomeTimezone } from '../timezone-settings.ts';
+import {
+    getMerchbasePlugin,
+    queryMerchbaseAction,
+    queryMerchbaseSalesSeries,
+} from './merchbase.ts';
+import { shapeMerchbaseSalesSeriesForModel, todayIsoInTimezone } from './merchbase-sales-series.ts';
 
 const merchbaseToolInputSchema = z.object({}).passthrough().default({});
 
@@ -11,7 +22,6 @@ const merchbaseTools = [
     ['merchbase_status', 'accounts.get', 'Read the configured MerchBase account and marketplace.'],
     ['merchbase_sales_summary', 'sales.summary', 'Read MerchBase sales totals for a date range.'],
     ['merchbase_sales_records', 'sales.records', 'List MerchBase sales records.'],
-    ['merchbase_sales_series', 'sales.series', 'Read MerchBase daily sales and royalty series.'],
     [
         'merchbase_sales_breakdown',
         'sales.breakdown',
@@ -43,26 +53,55 @@ const merchbaseTools = [
     readonly [string, AgentRuntimeMerchbaseActionInput['action'], string]
 >;
 
-export function createMerchbaseToolsForAgent(agent: AgentRuntimeAgent): ToolSet {
-    if (
-        !(
+/**
+ * The MerchBase tool gate: the agent holds the Plugin grant and the Plugin is
+ * enabled. The prompt guidance for these tools uses the same gate.
+ */
+export function merchbaseToolsGrantedForAgent(agent: AgentRuntimeAgent | null = null): boolean {
+    return Boolean(
+        agent &&
             (agent.enabledPluginIds ?? []).includes(merchbasePluginId) &&
             getMerchbasePlugin().enabled
-        )
-    ) {
+    );
+}
+
+export function createMerchbaseToolsForAgent(agent: AgentRuntimeAgent): ToolSet {
+    if (!merchbaseToolsGrantedForAgent(agent)) {
         return {};
     }
 
-    return Object.fromEntries(
-        merchbaseTools.map(([name, action, description]) => [
-            name,
-            tool({
-                description,
-                inputSchema: merchbaseToolInputSchema,
-                execute: async (input) => await executeMerchbaseTool(action, input),
-            }),
-        ])
-    );
+    return {
+        ...Object.fromEntries(
+            merchbaseTools.map(([name, action, description]) => [
+                name,
+                tool({
+                    description,
+                    inputSchema: merchbaseToolInputSchema,
+                    execute: async (input) => await executeMerchbaseTool(action, input),
+                }),
+            ])
+        ),
+        merchbase_sales_series: tool({
+            description:
+                'Read MerchBase sales as a bucketed series with totals. Rows are ISO-dated; daily ranges include explicit zero-sales days. Range accepts "30d" or "YYYY-MM-DD..YYYY-MM-DD".',
+            inputSchema: agentRuntimeMerchbaseSalesSeriesInputSchema,
+            execute: async (input) => await executeMerchbaseSalesSeriesTool(input),
+        }),
+    };
+}
+
+async function executeMerchbaseSalesSeriesTool(input: AgentRuntimeMerchbaseSalesSeriesInput) {
+    try {
+        const series = await queryMerchbaseSalesSeries(input);
+        return shapeMerchbaseSalesSeriesForModel(series, {
+            today: todayIsoInTimezone(resolveHomeTimezone()),
+        });
+    } catch (error) {
+        return {
+            action: 'sales.series',
+            error: error instanceof Error ? error.message : String(error),
+        };
+    }
 }
 
 async function executeMerchbaseTool(

@@ -20,6 +20,7 @@ export function renderAgentInstructions(
         availableWidgetNames?: readonly WidgetName[];
         cronEnabled?: boolean;
         memoryEnabled?: boolean;
+        merchbaseSalesToolAvailable?: boolean;
     } = {}
 ) {
     const cronEnabled = options.cronEnabled ?? true;
@@ -41,6 +42,7 @@ Tavern is a multi-agent chat app. The current chat may include the user, other h
         outputSection,
         securitySection,
         renderWidgetsSection(availableWidgetNames),
+        options.merchbaseSalesToolAvailable === true ? merchbaseSalesSeriesToolPromptEntry : null,
         renderNotesSection(notes),
     ].filter((section): section is string => Boolean(section));
 
@@ -152,5 +154,6 @@ function renderNotesSection(notes: string) {
     return normalized.length > 0 ? `## Notes\n\n${normalized}` : null;
 }
 
+import { merchbaseSalesSeriesToolPromptEntry } from '@tavern/api/plugins/merchbase';
 import { type WidgetName, widgetNameSchema } from '@tavern/api/widgets';
 import { renderWidgetsPrompt } from '@tavern/api/widgets/prompt';
