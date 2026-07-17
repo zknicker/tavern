@@ -23,6 +23,7 @@ const agentRuntimeCoreCapabilityIds = [
     'autoDispatch',
     'webAccess',
     'devToolkit',
+    'identity',
 ] as const;
 
 export const agentRuntimeCapabilitySchema = z.enum([

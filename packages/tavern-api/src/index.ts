@@ -39,6 +39,7 @@ export * from './plugins/index.js';
 export * from './rich-references.js';
 export * from './runtime/contracts.js';
 export * from './runtime/dev-toolkit.js';
+export * from './runtime/identity.js';
 export * from './runtime/mcp.js';
 export * from './runtime/model-identity.js';
 export * from './runtime/model-providers.js';
