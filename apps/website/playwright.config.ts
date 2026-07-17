@@ -52,7 +52,9 @@ function buildWebServers() {
             url: `http://127.0.0.1:${serverPort}/healthz`,
         },
         {
-            command: `VITE_SERVER_ORIGIN=http://127.0.0.1:${serverPort} TAVERN_WEBSITE_PORT=${websitePort} TAVERN_SERVER_PORT=${serverPort} bun run dev -- --host 127.0.0.1 --port ${websitePort}`,
+            // VITE_CLERK_PUBLISHABLE_KEY is forced empty so e2e always runs the
+            // keyless signed-out dev mode, even when .env.local has a key.
+            command: `VITE_CLERK_PUBLISHABLE_KEY= VITE_SERVER_ORIGIN=http://127.0.0.1:${serverPort} TAVERN_WEBSITE_PORT=${websitePort} TAVERN_SERVER_PORT=${serverPort} bun run dev -- --host 127.0.0.1 --port ${websitePort}`,
             reuseExistingServer: false,
             stderr: 'pipe',
             stdout: 'pipe',

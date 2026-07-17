@@ -13,6 +13,7 @@ import {
     getConfiguredServerOrigin,
     isPackagedDesktopApp,
 } from './agent-runtime.ts';
+import { getClerkSessionToken } from './clerk.tsx';
 import { queryClientDefaultOptions } from './query-policy.ts';
 
 export const trpc = createTRPCReact<AppRouter>();
@@ -148,6 +149,10 @@ function getTrpcWebSocketUrl(serverOrigin: string | null) {
 function createTrpcClient(serverOrigin: string | null, queryClient: QueryClient) {
     let hasOpened = false;
     const wsClient = createWSClient({
+        connectionParams: async () => {
+            const token = await getClerkSessionToken();
+            return token ? { clerkSessionToken: token } : {};
+        },
         onOpen: () => {
             if (hasOpened) {
                 void queryClient.invalidateQueries({ refetchType: 'active' });
@@ -176,6 +181,10 @@ function createTrpcClient(serverOrigin: string | null, queryClient: QueryClient)
                 splitLink({
                     condition: (operation) => operation.type === 'subscription',
                     false: httpLink({
+                        headers: async () => {
+                            const token = await getClerkSessionToken();
+                            return token ? { authorization: `Bearer ${token}` } : {};
+                        },
                         methodOverride: 'POST',
                         url: trpcUrl,
                     }),

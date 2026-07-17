@@ -5,6 +5,7 @@ import { DevModeProvider } from './components/dev-mode-provider.tsx';
 import { ThemeProvider } from './components/theme-provider.tsx';
 import { DesktopEditContextMenuProvider } from './components/ui/edit-context-menu.tsx';
 import { ToastProvider } from './components/ui/toast.tsx';
+import { SignInGate } from './features/auth/sign-in-gate.tsx';
 import { ChromeApp } from './features/shell/browser-shell/chrome-app.tsx';
 import { TavernClerkProvider } from './lib/clerk.tsx';
 import { getDesktopSurface, isElectronDesktopApp } from './lib/desktop-bridge.ts';
@@ -33,7 +34,7 @@ createRoot(rootElement).render(
                     <ToastProvider>
                         <TavernProviders>
                             <DesktopEditContextMenuProvider>
-                                {isChromeSurface ? <ChromeApp /> : <App />}
+                                <SignInGate>{isChromeSurface ? <ChromeApp /> : <App />}</SignInGate>
                             </DesktopEditContextMenuProvider>
                         </TavernProviders>
                     </ToastProvider>

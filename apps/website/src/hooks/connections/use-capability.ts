@@ -30,6 +30,7 @@ const capabilityLabels = {
     dashboardServer: 'Agent engine',
     devToolkit: 'Dev toolkit',
     gateway: 'Agent connection',
+    identity: 'Identity',
     imageGeneration: 'Image generation',
     memory: 'Memory',
     memoryDreaming: 'Memory dreaming',
