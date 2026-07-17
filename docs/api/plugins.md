@@ -214,6 +214,17 @@ tools for status, sales summary, sales records, sales series, sales breakdown,
 products, product catalog, designs, and design facets. Agents should use those
 tools rather than raw Runtime HTTP routes.
 
+`merchbase_sales_series` is the typed sales data primitive for agents. It takes
+the same query surface as the `plugin.merchbaseSalesSeries` tRPC endpoint —
+`range` ("30d" or "YYYY-MM-DD..YYYY-MM-DD"), day/week/month `bucket`, and the
+asin/color/facet/facetName/fit/marketplace/productType filters — and returns
+model-shaped output: compact ISO-dated rows, summed totals, a `rowCount`, and
+the resolved currency code. Daily ranges include explicit zero-sales days that
+MerchBase omits upstream, so a zero row means no sales, not missing data.
+Plugin-gated prompt guidance (the same enabled-plus-granted gate as the
+Plugin's tools and the `merchbase-sales-chart` Widget entry) teaches agents to
+fetch sales data with this tool and present the result themselves.
+
 Settings -> Plugins owns MerchBase enablement. Agent Plugin grants decide which
 agents receive the `merchbase` tools and Plugin-owned guidance. When Runtime
 owns the flat `skills/merchbase` copy, Settings -> Skills may show that

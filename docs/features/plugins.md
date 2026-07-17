@@ -22,7 +22,11 @@ and repair; agents only get Plugin tools when the Plugin and Service are usable.
 * **Plugin skills and tools.** Enabled Plugin Services expose their agent-facing
   skills and tools through Plugin grants.
 * **MerchBase.** The first Plugin provides read-only sales, product, catalog,
-  and design tools plus the `merchbase-sales-chart` Widget.
+  and design tools plus the `merchbase-sales-chart` Widget. The
+  `merchbase_sales_series` tool is the typed sales primitive: granted agents
+  fetch ISO-dated rows and totals (daily ranges include explicit zero-sales
+  days) and present the data themselves; plugin-gated prompt guidance teaches
+  that flow.
 * **Google.** The Google Plugin starts with Google Calendar. Settings manages
   loopback authorization, stored tokens, and the Calendar Service toggle. The
   app ships the Tavern-owned Google OAuth client.
