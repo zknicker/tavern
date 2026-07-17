@@ -41,11 +41,9 @@ describe('AppSidebar', () => {
         const markup = renderToStaticMarkup(
             <SidebarProvider>
                 <AppSidebar
-                    activeTab={null}
                     isSettingsRoute={false}
                     onBackToApp={() => undefined}
                     onNavigateToSettings={() => undefined}
-                    onSelectTab={() => undefined}
                 />
             </SidebarProvider>
         );

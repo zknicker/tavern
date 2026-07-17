@@ -1,5 +1,6 @@
 import { SidebarProvider } from '../../../components/ui/sidebar.tsx';
 import { AppSidebarChatList } from '../sidebar-chat-list.tsx';
+import { AppSidebarNav } from '../sidebar-nav.tsx';
 
 /**
  * The static channels + direct-messages rail for the browser (tabs) shell. Renders the same
@@ -17,6 +18,7 @@ export function BrowserShellSidebar() {
             open
         >
             <div className="flex min-h-0 flex-1 flex-col overflow-hidden pt-1">
+                <AppSidebarNav />
                 <AppSidebarChatList />
             </div>
         </SidebarProvider>

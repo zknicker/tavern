@@ -1,6 +1,5 @@
 import * as React from 'react';
 import { MemoryRouter, useLocation, useNavigate } from 'react-router-dom';
-import { getRouteTab, routeTabs } from '../../../hooks/shell/use-route-tab.ts';
 import { appRoutes } from '../../../lib/app-routes.ts';
 import { getDesktopBridge } from '../../../lib/desktop-bridge.ts';
 import { ChromeTabsProvider } from './chrome-tabs-provider.tsx';
@@ -49,16 +48,8 @@ function ChromeShellFrame() {
 
     return (
         <TavernBrowserShellFrame
-            activeRouteTab={getRouteTab(pathname)}
             isSettingsRoute={pathname.startsWith(appRoutes.settings)}
             onNavigateToSettings={() => void bridge?.navigateActiveView(appRoutes.settings)}
-            onSelectRouteTab={(tab) => {
-                const path = routeTabs.find((entry) => entry.id === tab)?.path;
-
-                if (path) {
-                    void bridge?.navigateActiveView(path);
-                }
-            }}
         >
             <ContentViewPlaceholder />
         </TavernBrowserShellFrame>

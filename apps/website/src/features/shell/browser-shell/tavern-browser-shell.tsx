@@ -5,7 +5,6 @@ import { DesktopUpdateIndicator } from '../../../components/desktop-update-indic
 import { AppShell, AppShellDragRegion } from '../../../components/ui/app-shell.tsx';
 import { Icon } from '../../../components/ui/icon.tsx';
 import { Button } from '../../../components/ui/primitives/button.tsx';
-import type { RouteTab } from '../../../hooks/shell/use-route-tab.ts';
 import { BrowserAllChatsMenu } from './browser-all-chats-menu.tsx';
 import { BrowserShellSidebar } from './browser-shell-sidebar.tsx';
 import { BrowserToolbarNav } from './browser-toolbar-nav.tsx';
@@ -16,11 +15,9 @@ import { TabList, TabStrip } from './tab-strip.tsx';
 import { TavernBrowserTabsProvider } from './tavern-browser-tabs-provider.tsx';
 
 interface TavernBrowserShellProps {
-    activeRouteTab: RouteTab | null;
     children: ReactNode;
     isSettingsRoute: boolean;
     onNavigateToSettings: () => void;
-    onSelectRouteTab: (tab: RouteTab) => void;
 }
 
 /**
@@ -37,11 +34,9 @@ export function TavernBrowserShell(props: TavernBrowserShellProps) {
 }
 
 export function TavernBrowserShellFrame({
-    activeRouteTab,
     children,
     isSettingsRoute,
     onNavigateToSettings,
-    onSelectRouteTab,
 }: TavernBrowserShellProps) {
     const { meta } = useShell();
     const location = useLocation();
@@ -65,7 +60,7 @@ export function TavernBrowserShellFrame({
                         onClick={onNavigateToSettings}
                         size="icon-sm"
                         title="Settings"
-                        variant={isSettingsRoute ? 'secondary' : 'ghost'}
+                        variant="ghost"
                     >
                         <Icon
                             aria-hidden="true"
@@ -78,11 +73,7 @@ export function TavernBrowserShellFrame({
                 </div>
             </TabStrip>
             <div className="relative z-0 flex min-h-0 flex-1 flex-col overflow-hidden rounded-t-[16px] bg-[var(--browser-card)]">
-                <BrowserToolbarNav
-                    activeRouteTab={activeRouteTab}
-                    isSettingsRoute={isSettingsRoute}
-                    onSelectRouteTab={onSelectRouteTab}
-                />
+                <BrowserToolbarNav />
                 <div className="flex min-h-0 flex-1 overflow-hidden">
                     {showChannelRail ? <BrowserShellSidebar /> : null}
                     {/* A real <main> landmark, matching the sidebar layout's

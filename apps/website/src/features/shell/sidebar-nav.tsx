@@ -11,22 +11,27 @@ import {
     useCapability,
 } from '../../hooks/connections/use-capability.ts';
 import type { RouteTab } from '../../hooks/shell/use-route-tab.ts';
-import { routeTabs } from '../../hooks/shell/use-route-tab.ts';
+import { routeTabs, useRouteTab } from '../../hooks/shell/use-route-tab.ts';
 import { RouteTabIcon } from './route-tab-presentation.tsx';
 
-interface AppSidebarNavProps {
-    activeTab: RouteTab | null;
-    onSelectTab: (tab: RouteTab) => void;
-}
+// The sidebar surfaces only the tool sections. Overview is the new-tab/home
+// page (reached by tabs and breadcrumbs, not a nav row) and Workspace is
+// intentionally unlisted — its files are reachable from the chat artifact
+// pane.
+const sidebarNavTabIds = ['tasks', 'automations', 'wiki'] satisfies RouteTab[];
+const sidebarNavTabs = routeTabs.filter((tab) =>
+    (sidebarNavTabIds as readonly string[]).includes(tab.id)
+);
 
-export function AppSidebarNav({ activeTab, onSelectTab }: AppSidebarNavProps) {
+export function AppSidebarNav() {
+    const { activeTab, setActiveTab } = useRouteTab();
     const capability = useCapability();
 
     return (
         <SidebarGroup className="shrink-0 pt-2">
             <SidebarGroupContent>
                 <SidebarMenu>
-                    {routeTabs.map((tab) => {
+                    {sidebarNavTabs.map((tab) => {
                         const isActive = activeTab === tab.id;
                         const gate = capability(routeTabCapabilityRequirements[tab.id]);
                         const disabledReason = gate.healthy
@@ -41,7 +46,7 @@ export function AppSidebarNav({ activeTab, onSelectTab }: AppSidebarNavProps) {
                                     isActive={isActive}
                                     onClick={() => {
                                         if (gate.healthy) {
-                                            onSelectTab(tab.id);
+                                            setActiveTab(tab.id);
                                         }
                                     }}
                                     tooltip={disabledReason ?? undefined}

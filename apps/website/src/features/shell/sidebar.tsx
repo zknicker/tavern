@@ -9,30 +9,25 @@ import {
     SidebarMenuItem,
     SidebarRail,
 } from '../../components/ui/sidebar.tsx';
-import type { RouteTab } from '../../hooks/shell/use-route-tab.ts';
 import { SettingsSidebarNav } from '../settings/layout/sidebar-nav.tsx';
 import { AppSidebarChatList } from './sidebar-chat-list.tsx';
 import { AppSidebarNav } from './sidebar-nav.tsx';
 import { SidebarUpdateMenuItem } from './sidebar-update-menu-item.tsx';
 
 interface AppSidebarProps {
-    activeTab: RouteTab | null;
     isSettingsRoute: boolean;
     onBackToApp: () => void;
     onMouseEnter?: () => void;
     onMouseLeave?: () => void;
     onNavigateToSettings: () => void;
-    onSelectTab: (tab: RouteTab) => void;
 }
 
 export function AppSidebar({
-    activeTab,
     isSettingsRoute,
     onBackToApp,
     onMouseEnter,
     onMouseLeave,
     onNavigateToSettings,
-    onSelectTab,
 }: AppSidebarProps) {
     return (
         <Sidebar
@@ -46,7 +41,7 @@ export function AppSidebar({
                     <SettingsSidebarNav onBackToApp={onBackToApp} />
                 ) : (
                     <>
-                        <AppSidebarNav activeTab={activeTab} onSelectTab={onSelectTab} />
+                        <AppSidebarNav />
                         <AppSidebarChatList />
                     </>
                 )}

@@ -175,11 +175,11 @@ export function createAppRouter() {
                                     element: <Navigate replace to={appRoutes.wiki} />,
                                 },
                                 {
+                                    // The workspace page is retired from
+                                    // navigation; workspace files are reached
+                                    // through the chat artifact pane instead.
                                     path: 'workspace',
-                                    lazy: lazyRoute(
-                                        () => import('./routes/app/workspace-page.tsx'),
-                                        'WorkspacePage'
-                                    ),
+                                    element: <Navigate replace to={appRoutes.overview} />,
                                 },
                                 {
                                     path: 'wiki',
