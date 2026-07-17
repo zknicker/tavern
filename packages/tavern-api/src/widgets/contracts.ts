@@ -11,6 +11,7 @@ import {
 } from './charts/contracts.ts';
 import { widgetHtmlPreviewPropsSchema } from './html-preview/contracts.ts';
 import { widgetMerchBaseSalesChartPropsSchema } from './merchbase/contracts.ts';
+import { visualFallbackText, widgetVisualPropsSchema } from './visual/contracts.ts';
 
 export const widgetNameSchema = z.enum([
     'table',
@@ -22,6 +23,7 @@ export const widgetNameSchema = z.enum([
     'html-preview',
     'artifact',
     'merchbase-sales-chart',
+    'visual',
 ]);
 
 export type WidgetName = z.infer<typeof widgetNameSchema>;
@@ -86,6 +88,7 @@ export const widgetPropsSchemasByName = {
     'merchbase-sales-chart': widgetMerchBaseSalesChartPropsSchema,
     artifact: widgetArtifactPropsSchema,
     table: widgetTablePropsSchema,
+    visual: widgetVisualPropsSchema,
 } satisfies Record<WidgetName, z.ZodType>;
 
 export function widgetComponentId<Name extends WidgetName>(name: Name): `tavern.widget.${Name}` {
@@ -112,6 +115,7 @@ export const widgetRenderInputSchema = z.discriminatedUnion('component', [
     widgetRenderInputEntry('html-preview'),
     widgetRenderInputEntry('artifact'),
     widgetRenderInputEntry('merchbase-sales-chart'),
+    widgetRenderInputEntry('visual'),
 ]);
 
 export type WidgetRenderInput = z.infer<typeof widgetRenderInputSchema>;
@@ -194,6 +198,10 @@ export function widgetFallbackText(name: WidgetName, props: unknown): string {
         return path ? `Artifact: ${path}`.slice(0, 500) : 'Artifact';
     }
 
+    if (name === 'visual') {
+        return visualFallbackText(record);
+    }
+
     return widgetDisplayName(name);
 }
 
@@ -217,6 +225,8 @@ export function widgetDisplayName(name: WidgetName): string {
             return 'Artifact';
         case 'merchbase-sales-chart':
             return 'MerchBase sales chart';
+        case 'visual':
+            return 'Visual';
     }
 }
 

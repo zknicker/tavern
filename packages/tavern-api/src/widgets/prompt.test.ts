@@ -12,16 +12,25 @@ describe('renderWidgetsPrompt', () => {
         expect(prompt).not.toContain('widget:merchbase-sales-chart');
     });
 
-    test('renders every widget with a fence example and the shared rules', () => {
+    test('renders every catalog widget with a fence example and the shared rules', () => {
         const prompt = renderWidgetsPrompt(widgetNameSchema.options);
 
         for (const name of widgetNameSchema.options) {
+            if (name === 'visual') {
+                continue;
+            }
             expect(prompt).toContain(`${widgetFenceLabel(name)} —`);
         }
         expect(prompt).toContain('\nartifact — ');
         expect(prompt).not.toContain('widget:artifact');
         expect(prompt).toContain('```widget:bar-chart');
         expect(prompt).toContain('Available widgets:');
+    });
+
+    test('never renders a catalog entry for the visual fence', () => {
+        const prompt = renderWidgetsPrompt(widgetNameSchema.options);
+
+        expect(prompt).not.toContain('widget:visual');
     });
 
     test('omits the widget list when no widgets are available', () => {
