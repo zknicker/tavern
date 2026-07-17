@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { widgetNameSchema } from './contracts.ts';
+import { widgetFenceLabel, widgetNameSchema } from './contracts.ts';
 import { renderWidgetsPrompt } from './prompt.ts';
 
 describe('renderWidgetsPrompt', () => {
@@ -16,8 +16,10 @@ describe('renderWidgetsPrompt', () => {
         const prompt = renderWidgetsPrompt(widgetNameSchema.options);
 
         for (const name of widgetNameSchema.options) {
-            expect(prompt).toContain(`widget:${name} —`);
+            expect(prompt).toContain(`${widgetFenceLabel(name)} —`);
         }
+        expect(prompt).toContain('\nartifact — ');
+        expect(prompt).not.toContain('widget:artifact');
         expect(prompt).toContain('```widget:bar-chart');
         expect(prompt).toContain('Available widgets:');
     });

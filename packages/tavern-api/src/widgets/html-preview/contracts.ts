@@ -7,7 +7,7 @@ import {
 
 /**
  * Inline sandboxed preview of an agent-authored workspace HTML file.
- * Path confinement is shared with the page widget (see workspace-path.ts).
+ * Path confinement is shared with the artifact fence (see workspace-path.ts).
  */
 
 export const widgetHtmlPreviewHeight = workspaceWidgetHeight;

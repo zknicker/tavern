@@ -2,7 +2,7 @@ import * as z from 'zod';
 
 /**
  * Shared path shape for widgets that render an agent-authored workspace file
- * (html-preview, page). Fence props are attacker-controlled: this schema
+ * (html-preview, artifact). Fence props are attacker-controlled: this schema
  * enforces shape only (workspace-relative path, confined segments, extension
  * allowlist). Real confinement happens where the file is read — the Runtime
  * workspace file read resolves the path against the sending agent's workspace

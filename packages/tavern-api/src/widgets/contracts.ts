@@ -1,4 +1,5 @@
 import * as z from 'zod';
+import { widgetArtifactPropsSchema } from './artifact/contracts.ts';
 import {
     widgetCalendarDayPropsSchema,
     widgetCalendarEventPropsSchema,
@@ -10,7 +11,6 @@ import {
 } from './charts/contracts.ts';
 import { widgetHtmlPreviewPropsSchema } from './html-preview/contracts.ts';
 import { widgetMerchBaseSalesChartPropsSchema } from './merchbase/contracts.ts';
-import { widgetPagePropsSchema } from './page/contracts.ts';
 
 export const widgetNameSchema = z.enum([
     'table',
@@ -20,7 +20,7 @@ export const widgetNameSchema = z.enum([
     'calendar-event',
     'calendar-day',
     'html-preview',
-    'page',
+    'artifact',
     'merchbase-sales-chart',
 ]);
 
@@ -84,7 +84,7 @@ export const widgetPropsSchemasByName = {
     'html-preview': widgetHtmlPreviewPropsSchema,
     'line-chart': widgetLineChartPropsSchema,
     'merchbase-sales-chart': widgetMerchBaseSalesChartPropsSchema,
-    page: widgetPagePropsSchema,
+    artifact: widgetArtifactPropsSchema,
     table: widgetTablePropsSchema,
 } satisfies Record<WidgetName, z.ZodType>;
 
@@ -110,7 +110,7 @@ export const widgetRenderInputSchema = z.discriminatedUnion('component', [
     widgetRenderInputEntry('calendar-event'),
     widgetRenderInputEntry('calendar-day'),
     widgetRenderInputEntry('html-preview'),
-    widgetRenderInputEntry('page'),
+    widgetRenderInputEntry('artifact'),
     widgetRenderInputEntry('merchbase-sales-chart'),
 ]);
 
@@ -141,7 +141,7 @@ export function parseWidgetPayload(name: string, payload: unknown): ParsedWidget
         const issue = props.error.issues[0];
         const path = issue?.path.join('.') ?? '';
         throw new Error(
-            `Invalid widget:${parsedName.data} props${path ? ` at ${path}` : ''}: ${issue?.message ?? 'invalid payload.'}`
+            `Invalid ${widgetFenceLabel(parsedName.data)} props${path ? ` at ${path}` : ''}: ${issue?.message ?? 'invalid payload.'}`
         );
     }
 
@@ -189,9 +189,9 @@ export function widgetFallbackText(name: WidgetName, props: unknown): string {
         return path ? `HTML preview: ${path}`.slice(0, 500) : 'HTML preview';
     }
 
-    if (name === 'page') {
+    if (name === 'artifact') {
         const path = typeof record.path === 'string' ? record.path.trim() : '';
-        return path ? `Page: ${path}`.slice(0, 500) : 'Page';
+        return path ? `Artifact: ${path}`.slice(0, 500) : 'Artifact';
     }
 
     return widgetDisplayName(name);
@@ -213,9 +213,18 @@ export function widgetDisplayName(name: WidgetName): string {
             return 'Agenda';
         case 'html-preview':
             return 'HTML preview';
-        case 'page':
-            return 'Page';
+        case 'artifact':
+            return 'Artifact';
         case 'merchbase-sales-chart':
             return 'MerchBase sales chart';
     }
+}
+
+/**
+ * The fence language an agent writes for a widget. Widgets use the legacy
+ * `widget:<name>` prefix; the artifact tier reads in the visuals-vs-artifacts
+ * vocabulary as a bare `artifact` fence.
+ */
+export function widgetFenceLabel(name: WidgetName): string {
+    return name === 'artifact' ? 'artifact' : `widget:${name}`;
 }

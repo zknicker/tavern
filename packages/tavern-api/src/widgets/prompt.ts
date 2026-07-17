@@ -9,7 +9,7 @@
  * the prompt by the caller, not here.
  */
 
-import type { WidgetName } from './contracts.ts';
+import { type WidgetName, widgetFenceLabel } from './contracts.ts';
 import { widgetMerchBaseSalesChartPromptEntry } from './merchbase/contracts.ts';
 
 export interface WidgetPromptEntry {
@@ -33,7 +33,7 @@ Rules:
 - Use a widget by default when an answer is primarily tabular, chartable, or calendar-shaped. Use concise text when a widget would be forced, too small to matter, or too large to scan.
 - The fence body must be one complete valid JSON object with no comments or trailing commas. If unsure the props are valid, reply with text instead.
 - Use widget:table instead of Markdown tables.
-- For a custom visual no typed widget covers, write a self-contained file under workbench/ and render it inline: widget:html-preview for a static HTML file, widget:page for an interactive single-file React page composing @tavern/kit.
+- Build an artifact for anything the user will keep or iterate on: write one self-contained .tsx file under workbench/ composing @tavern/kit, then reference it with a bare \`artifact\` fence. The chat shows a compact card that opens the page in the artifact pane.
 - Never write HTML, JSX, CSS, class names, or imports.
 - Do not repeat identical content in prose and in a widget; prose around the fence should add context, not restate it.
 - Multiple widget fences in one reply are allowed when the answer has clearly separate visual parts; prefer one.`;
@@ -82,12 +82,12 @@ const widgetPromptEntries = {
         constraints:
             "Write a self-contained .html file (inline CSS/JS, no external or sibling assets) under workbench/ first; path is workspace-relative and renders the file's current content. height is px 120-1200 (default 480).",
     },
-    page: {
+    artifact: {
         description:
-            'Sandboxed single-file React page rendered from a workspace .tsx file; for interactive Tavern-native visuals.',
-        signature: '{"path":string,"height"?:number,"title"?:string}',
+            'Durable single-file React page rendered in the artifact pane; the chat shows a compact card.',
+        signature: '{"path":string,"title"?:string}',
         constraints:
-            'The file must default-export a React component and import only from "react" and "@tavern/kit" (Card, BarChart, LineChart, ComposedChart, Table, CalendarEvent, CalendarDay, DateRangePicker); any other import fails the page. Local helpers in-file are fine; no external assets. height is px 120-1200 (default 480).',
+            'The .tsx file must default-export a React component and import only from "react" and "@tavern/kit" (Card, BarChart, LineChart, ComposedChart, Table, CalendarEvent, CalendarDay, DateRangePicker); any other import fails the page. Local helpers in-file are fine; no external assets.',
     },
     'merchbase-sales-chart': widgetMerchBaseSalesChartPromptEntry,
 } satisfies Record<WidgetName, WidgetPromptEntry>;
@@ -107,6 +107,6 @@ export function renderWidgetsPrompt(names: readonly WidgetName[]): string {
 }
 
 function renderWidgetEntry(name: WidgetName, entry: WidgetPromptEntry): string {
-    const head = `widget:${name} — ${entry.description}\n${entry.signature}`;
+    const head = `${widgetFenceLabel(name)} — ${entry.description}\n${entry.signature}`;
     return entry.constraints ? `${head}\n${entry.constraints}` : head;
 }
