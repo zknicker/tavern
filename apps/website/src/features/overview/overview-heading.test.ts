@@ -1,5 +1,9 @@
 import { describe, expect, test } from 'bun:test';
-import { buildOverviewHeading, overviewIdleHourPhrases } from './overview-heading.ts';
+import {
+    buildOverviewGreeting,
+    buildOverviewHeading,
+    overviewIdleHourPhrases,
+} from './overview-heading.ts';
 
 function containsPhrase(phrases: readonly string[], phrase: string) {
     return phrases.includes(phrase);
@@ -66,5 +70,50 @@ describe('buildOverviewHeading', () => {
             expect(wordCount).toBeGreaterThanOrEqual(4);
             expect(wordCount).toBeLessThanOrEqual(8);
         }
+    });
+});
+
+describe('buildOverviewGreeting', () => {
+    test('matches the time of day', () => {
+        expect(buildOverviewGreeting({ now: new Date('2026-06-03T09:00:00') })).toEqual({
+            lead: 'Good',
+            accent: 'morning',
+            name: null,
+        });
+        expect(buildOverviewGreeting({ now: new Date('2026-06-03T14:00:00') })).toEqual({
+            lead: 'Good',
+            accent: 'afternoon',
+            name: null,
+        });
+        expect(buildOverviewGreeting({ now: new Date('2026-06-03T19:00:00') })).toEqual({
+            lead: 'Good',
+            accent: 'evening',
+            name: null,
+        });
+        expect(buildOverviewGreeting({ now: new Date('2026-06-03T23:30:00') })).toEqual({
+            lead: 'Up',
+            accent: 'late',
+            name: null,
+        });
+        expect(buildOverviewGreeting({ now: new Date('2026-06-03T02:00:00') })).toEqual({
+            lead: 'Up',
+            accent: 'late',
+            name: null,
+        });
+    });
+
+    test('greets by first name only', () => {
+        expect(
+            buildOverviewGreeting({
+                name: 'Zach Knickerbocker',
+                now: new Date('2026-06-03T09:00:00'),
+            })
+        ).toEqual({ lead: 'Good', accent: 'morning', name: 'Zach' });
+    });
+
+    test('ignores blank names', () => {
+        expect(
+            buildOverviewGreeting({ name: '   ', now: new Date('2026-06-03T09:00:00') })
+        ).toEqual({ lead: 'Good', accent: 'morning', name: null });
     });
 });

@@ -6,14 +6,19 @@ import { publicProcedure } from '../trpc.ts';
 // proxied from Runtime's projection. Absent without a reachable Runtime,
 // like presence.
 export const agentActivityFeedRoute = publicProcedure
-    .input(z.object({ agentId: z.string().trim().min(1) }))
+    .input(
+        z.object({
+            agentId: z.string().trim().min(1),
+            limit: z.number().int().min(1).max(50).optional(),
+        })
+    )
     .query(async ({ input }) => {
         const client = createConfiguredAgentRuntimeClient();
         if (!client) {
             return { entries: [] };
         }
         try {
-            return await client.listAgentActivity(input.agentId);
+            return await client.listAgentActivity(input.agentId, input.limit);
         } finally {
             client.close();
         }

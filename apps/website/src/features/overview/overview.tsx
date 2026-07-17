@@ -1,31 +1,52 @@
 import * as React from 'react';
-import { usePrimaryAgent } from '../../hooks/agents/use-agent-list.ts';
-import { useCronList } from '../../hooks/cron/use-cron-list.ts';
-import { useSessionList } from '../../hooks/sessions/use-session-list.ts';
-import { useWorkerList } from '../../hooks/workers/use-worker-list.ts';
-import { buildOverviewHeading } from './overview-heading.ts';
+import { useRelativeNow } from '../../components/time/relative-time.tsx';
+import { useAgentList } from '../../hooks/agents/use-agent-list.ts';
+import { useAgentPresence } from '../../hooks/agents/use-agent-presence.ts';
+import { useModelList } from '../../hooks/models/use-model-list.ts';
+import { useUserProfilePreference } from '../../hooks/shell/use-user-profile-preference.ts';
+import { queryPolicy } from '../../lib/query-policy.ts';
+import { trpc } from '../../lib/trpc.tsx';
+import { buildOverviewActivityFeed } from './overview-activity.ts';
+import { buildOverviewGreeting, buildOverviewHeading } from './overview-heading.ts';
 import { OverviewView } from './overview-view.tsx';
 
 export function Overview() {
-    const primaryAgentQuery = usePrimaryAgent();
-    const agent = primaryAgentQuery.data?.agent ?? null;
-    const sessionsQuery = useSessionList();
-    const workersQuery = useWorkerList();
-    const cronJobsQuery = useCronList();
-    const jobs = cronJobsQuery.data?.jobs ?? [];
-    const sessions = sessionsQuery.data?.sessions ?? [];
-    const workers = workersQuery.data?.workers ?? [];
-    const memoryCount = 0;
+    const agentsQuery = useAgentList();
+    const presenceQuery = useAgentPresence();
+    const modelsQuery = useModelList();
+    const relativeNow = useRelativeNow();
+    const { displayName } = useUserProfilePreference();
+    const agents = agentsQuery.data?.agents ?? [];
     const phraseSeed = React.useMemo(() => Math.random(), []);
+
+    // One bounded activity read per agent (specs/agent-activity.md); the page
+    // merges them into a single workspace feed plus per-agent sparklines.
+    const activityQueries = trpc.useQueries((query) =>
+        agents.map((agent) =>
+            query.agent.activity({ agentId: agent.id, limit: 50 }, queryPolicy.volatileState)
+        )
+    );
+    const feed = buildOverviewActivityFeed(
+        agents.map((agent, index) => ({
+            agentId: agent.id,
+            entries: activityQueries[index]?.data?.entries ?? [],
+        })),
+        relativeNow
+    );
+    const modelRefByAgentId = new Map<string, string | null>(
+        (modelsQuery.data?.agents ?? []).map((entry) => [entry.agentId, entry.modelRef ?? null])
+    );
 
     return (
         <OverviewView
-            agent={agent}
+            activity={feed.items}
+            activitySeriesByAgentId={feed.seriesByAgentId}
+            agents={agents}
+            greeting={buildOverviewGreeting({ name: displayName })}
             heading={buildOverviewHeading({ phraseSeed })}
-            jobCount={jobs.length}
-            memoryCount={memoryCount}
-            sessionsCount={sessions.length}
-            workerCount={workers.length}
+            modelRefByAgentId={modelRefByAgentId}
+            now={relativeNow}
+            presence={presenceQuery.data?.presence ?? []}
         />
     );
 }

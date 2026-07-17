@@ -5,124 +5,124 @@ interface BuildOverviewHeadingInput {
 
 export const overviewIdleHourPhrases = [
     [
-        "Midnight's struck; the hearth keeps you.",
-        'The witching hour finds you waking.',
-        'Twelve slow bells; embers still glow.',
+        'Midnight, and the ideas are still coming.',
+        'Up late? Your agents are too.',
+        'The quietest hour gets the best work.',
     ],
     [
-        'One bell tolls through the dark.',
-        'The night runs deep and quiet.',
-        'Only you and the dying fire.',
+        'One in the morning, zero judgment.',
+        'The night is young and so productive.',
+        'Still up? We kept things warm.',
     ],
     [
-        'The small hours guard your secrets.',
-        'Two bells; the world sleeps on.',
-        'Shadows lengthen across the empty floor.',
+        'Two a.m. thoughts are secretly brilliant.',
+        "Everyone's asleep except your best ideas.",
+        "The world is quiet. You're not.",
     ],
     [
-        'Deepest dark; even ghosts sleep.',
-        "The fire's low; the road's far.",
-        'Three bells toll for the sleepless.',
+        'Three a.m.? Respect, honestly.',
+        'Even the moon is winding down.',
+        'Deep night, deep focus, no distractions.',
     ],
     [
-        'Dream on; dawn is still distant.',
-        'The longest dark thins toward grey.',
-        "Rest now; morning isn't ready.",
+        'Four a.m. is serious commitment.',
+        'The darkest hour before coffee.',
+        'Almost dawn. You absolute machine.',
     ],
     [
-        'First grey light, fresh bread baking.',
-        'The hearth wakes before the sun.',
-        'Dawn stirs; the ovens are warm.',
+        'Five a.m. club, meeting in session.',
+        "You're up before the birds. Impressive.",
+        'Early bird? The agents noticed.',
     ],
     [
-        'Dawn bells ring; the road waits.',
-        'Sunrise gilds the windowpanes for you.',
-        'First light; the day unfolds.',
+        'Good morning, early riser. Coffee first.',
+        'The day is fresh, and so are you.',
+        'Six a.m. Already winning.',
     ],
     [
-        'Early sun; shoulder your pack.',
-        "Morning's here; the road calls.",
-        'Birdsong and bread greet the traveler.',
+        "Good morning. Let's ease into it.",
+        "Seven o'clock and full of promise.",
+        'Morning! Your agents are warmed up.',
     ],
     [
-        'Morning light warms the tables.',
-        'The sun climbs; tankards are filled.',
-        'Eight bells; the hall stirs awake.',
+        'Good morning. Ready when you are.',
+        'Eight a.m. looks good on you.',
+        'Rise, shine, and ship something.',
     ],
     [
-        "The day's new maps await you.",
-        'Mid morning sun spills across parchment.',
-        'Quests gather as the day brightens.',
+        "Good morning. What's the plan today?",
+        "Peak morning energy detected. Let's go.",
+        "Nine o'clock and raring to go.",
     ],
     [
-        'Mid morning quests hang by the door.',
-        "The hall hums; the sun's high.",
-        'Fresh rumors ride the morning air.',
+        'Ten a.m. and fully in motion.',
+        'The morning is yours. Spend it well.',
+        'Good morning, right on schedule.',
     ],
     [
-        'Lean in before noon; rumors stir.',
-        'The sun nears its peak overhead.',
-        'Late morning; the crowd thickens.',
+        'Eleven and picking up steam.',
+        'Almost lunchtime. Stay strong out there.',
+        'Late morning, full momentum.',
     ],
     [
-        'Midday stew is ladled hot.',
-        'Noon bells; the hall is full.',
-        'The sun stands high; eat well.',
+        "High noon. How's your day treating you?",
+        'Midday already? Time flies with friends.',
+        "Lunch o'clock. You've earned it.",
     ],
     [
-        'Afternoon tales over shared bread.',
-        'The day leans past its peak.',
-        'Warm light; the meal lingers on.',
+        'Good afternoon. Back at it?',
+        'One p.m. and the day is young.',
+        'Afternoon! The agents kept things moving.',
     ],
     [
-        'A bard tunes in the sun.',
-        'Afternoon drowses; the fire murmurs.',
-        'The day stretches long and golden.',
+        'Two p.m. is perfect focus weather.',
+        'The afternoon is wide open.',
+        'After lunch comes the good stuff.',
     ],
     [
-        'Trace your road while light holds.',
-        'The sun begins its slow descent.',
-        'Afternoon gold pools on the maps.',
+        "Three o'clock slump? Not on our watch.",
+        'Mid afternoon and still golden.',
+        'Snack break? Fully endorsed around here.',
     ],
     [
-        'Long shadows lean toward evening.',
-        'The light turns amber and low.',
-        'Late afternoon; the road quiets.',
+        'Four p.m., home stretch incoming.',
+        'The afternoon light says keep going.',
+        'Still going strong at four.',
     ],
     [
-        'Dusk gathers; lanterns are kindled.',
-        'The sun sinks; the hall warms.',
-        'Evening creeps in; candles are lit.',
+        "Five o'clock somewhere, focused right here.",
+        'Good evening soon. Finish strong.',
+        "The workday winds down, you don't.",
     ],
     [
-        "Evening's first song lifts everyone.",
-        'Twilight falls; the hearth roars bright.',
-        'Day ends; the music begins.',
+        'Good evening. Time to slow down?',
+        'Six p.m., golden hour for ideas.',
+        'Evening! The agents had a day.',
     ],
     [
-        'Night falls; raise your tankard.',
-        'Lamplight glows; the hall fills.',
-        'Evening deepens; the songs grow louder.',
+        'Seven and the lights stay cozy.',
+        "Good evening. What's left on your plate?",
+        "Dinner first? We'll hold the fort.",
     ],
     [
-        'Late now; mind the stranger.',
-        'Full dark outside; warmth within.',
-        'The night quickens; secrets stir.',
+        'Eight p.m. Cozy mode activated.',
+        'The evening is yours entirely.',
+        'Winding down or winding up?',
     ],
     [
-        'Deep evening, whispers, coins, secrets.',
-        'The hour grows old and strange.',
-        'Lanterns flicker; the crowd leans close.',
+        'Nine p.m. Easy does it now.',
+        'Good evening. Low stakes, high comfort.',
+        'The night begins gently around here.',
     ],
     [
-        'The fire sinks; rest soon.',
-        'Late bells; the hall thins out.',
-        'Night settles heavy on the rafters.',
+        'Ten p.m.? Gentle productivity only.',
+        'Late evening, warm lights, good company.',
+        'The agents are getting sleepy. Maybe.',
     ],
     [
-        'Near midnight; last call sounds.',
-        "The day's nearly spent; linger here.",
-        'Eleven bells; the embers fade.',
+        'Eleven. Tomorrow is already jealous.',
+        "Last call for today's brilliant ideas.",
+        'Almost midnight. Make it count gently.',
     ],
 ] as const;
 
@@ -131,6 +131,61 @@ export function buildOverviewHeading({
     phraseSeed = Math.random(),
 }: BuildOverviewHeadingInput = {}) {
     return getIdleTimePhrase(now, phraseSeed);
+}
+
+interface BuildOverviewGreetingInput {
+    name?: string | null;
+    now?: Date;
+}
+
+export interface OverviewGreetingParts {
+    accent: string;
+    lead: string;
+    name: string | null;
+}
+
+// Small time-aware greeting line rendered above the heading, split so the UI
+// can color the accent word (morning/afternoon/evening/late) to match the
+// time-of-day icon. Uses the first name only, so "Zach Knickerbocker" greets
+// as "Good morning, Zach".
+export function buildOverviewGreeting({
+    name,
+    now = new Date(),
+}: BuildOverviewGreetingInput = {}): OverviewGreetingParts {
+    const hour = now.getHours();
+    const [lead, accent]: [string, string] =
+        hour >= 5 && hour < 12
+            ? ['Good', 'morning']
+            : hour >= 12 && hour < 18
+              ? ['Good', 'afternoon']
+              : hour >= 18 && hour < 22
+                ? ['Good', 'evening']
+                : ['Up', 'late'];
+    const firstName = name?.trim().split(/\s+/u)[0];
+
+    return { lead, accent, name: firstName || null };
+}
+
+export type OverviewTimeTone = 'day' | 'night' | 'sunrise' | 'sunset';
+
+// Buckets the day into four visual moods. Drives the overview's icon, sky
+// tint, and any other time-of-day dressing so they always agree.
+export function getOverviewTimeTone(now: Date = new Date()): OverviewTimeTone {
+    const hour = now.getHours();
+
+    if (hour >= 5 && hour < 9) {
+        return 'sunrise';
+    }
+
+    if (hour >= 9 && hour < 17) {
+        return 'day';
+    }
+
+    if (hour >= 17 && hour < 20) {
+        return 'sunset';
+    }
+
+    return 'night';
 }
 
 function getIdleTimePhrase(now: Date, phraseSeed: number) {

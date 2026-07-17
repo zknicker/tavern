@@ -476,7 +476,7 @@ export interface TavernAgentRuntimeClient {
     installSkillHubSkill(
         input: AgentRuntimeSkillHubInstallInput
     ): Promise<AgentRuntimeSkillHubActionResult>;
-    listAgentActivity(agentId: string): Promise<AgentRuntimeAgentActivityList>;
+    listAgentActivity(agentId: string, limit?: number): Promise<AgentRuntimeAgentActivityList>;
     listAgentFiles(agentId: string): Promise<AgentRuntimeAgentFileList>;
     listAgentPluginGrants(agentId: string): Promise<AgentRuntimeAgentPluginGrantList>;
     listAgentPresence(): Promise<AgentRuntimeAgentPresenceList>;
@@ -775,9 +775,10 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         return agentRuntimeAgentSchema.parse(await response.json());
     }
 
-    async listAgentActivity(agentId: string) {
+    async listAgentActivity(agentId: string, limit?: number) {
+        const query = limit ? `?limit=${limit}` : '';
         const response = await fetch(
-            `${this.#baseUrl}${agentRuntimeRoutes.agentActivity(agentId)}`,
+            `${this.#baseUrl}${agentRuntimeRoutes.agentActivity(agentId)}${query}`,
             { headers: this.#authHeaders }
         );
 
