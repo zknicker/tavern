@@ -7,6 +7,7 @@ import {
     widgetDisplayName,
     widgetRenderInputSchema,
 } from '@tavern/api';
+import { closedVisualFencePattern, openVisualFencePattern } from '@tavern/api/widgets/visual';
 
 interface WidgetActivitySource {
     detail?: string | null;
@@ -46,13 +47,29 @@ export interface ParsedAssistantWidgets {
 }
 
 /**
- * Extract every closed `widget:<name>` fence from final assistant content.
- * Returns null when the content has no widget fences at all. Invalid fences
- * are stripped from the display content but produce no renderable widget.
+ * Extract every closed `widget:<name>` JSON fence and every closed ```visual
+ * body fence from final assistant content, in fence order. Returns null when
+ * the content has no fences at all. Invalid fences are stripped from the
+ * display content but produce no renderable widget.
  */
 export function parseWidgetsFromAssistantContent(content: string): ParsedAssistantWidgets | null {
-    const matches = [...content.matchAll(widgetFencePattern)];
-    const hasOpenFence = openWidgetFencePattern.test(stripClosedWidgetFences(content));
+    const matches = [
+        ...[...content.matchAll(widgetFencePattern)].map((match) => ({
+            body: match[2] ?? '',
+            index: match.index ?? 0,
+            kind: 'widget' as const,
+            language: match[1] ?? '',
+        })),
+        ...[...content.matchAll(closedVisualFencePattern)].map((match) => ({
+            body: match[2] ?? '',
+            index: match.index ?? 0,
+            kind: 'visual' as const,
+            title: match[1]?.trim() ?? '',
+        })),
+    ].sort((a, b) => a.index - b.index);
+    const strippedClosed = stripClosedVisualFences(stripClosedWidgetFences(content));
+    const hasOpenFence =
+        openWidgetFencePattern.test(strippedClosed) || openVisualFencePattern.test(strippedClosed);
 
     if (matches.length === 0 && !hasOpenFence) {
         return null;
@@ -62,13 +79,24 @@ export function parseWidgetsFromAssistantContent(content: string): ParsedAssista
     const invalid: InvalidWidgetFence[] = [];
 
     for (const match of matches) {
-        const [, language = '', body = ''] = match;
-        const name = widgetNameFromFenceLanguage(language);
-
         try {
-            widgets.push(parseWidgetFenceBody(language, name, body));
+            widgets.push(
+                match.kind === 'visual'
+                    ? parseVisualFenceBody(match.title, match.body)
+                    : parseWidgetFenceBody(
+                          match.language,
+                          widgetNameFromFenceLanguage(match.language),
+                          match.body
+                      )
+            );
         } catch (error) {
-            invalid.push({ error: errorMessage(error), name });
+            invalid.push({
+                error: errorMessage(error),
+                name:
+                    match.kind === 'visual'
+                        ? 'visual'
+                        : widgetNameFromFenceLanguage(match.language),
+            });
         }
     }
 
@@ -80,12 +108,13 @@ export function parseWidgetsFromAssistantContent(content: string): ParsedAssista
 }
 
 /**
- * Assistant content with widget fences removed: closed fences are stripped
- * everywhere, and a trailing unclosed fence (mid-stream) is hidden.
+ * Assistant content with widget and visual fences removed: closed fences are
+ * stripped everywhere, and a trailing unclosed fence (mid-stream) is hidden.
  */
 export function widgetDisplayContent(content: string): string {
-    return stripClosedWidgetFences(content)
+    return stripClosedVisualFences(stripClosedWidgetFences(content))
         .replace(openWidgetFencePattern, '')
+        .replace(openVisualFencePattern, '')
         .replace(/\n{3,}/gu, '\n\n')
         .trim();
 }
@@ -195,8 +224,24 @@ function parseWidgetFenceBody(language: string, name: string, body: string): Par
     return parseWidgetPayload(name, payload);
 }
 
+// The visual fence body is raw HTML, not JSON: size and shape validation
+// happen in the visual props schema via the shared payload parser.
+function parseVisualFenceBody(title: string, body: string): ParsedWidget {
+    const html = body.trim();
+
+    if (!html) {
+        throw new Error('visual fence is empty.');
+    }
+
+    return parseWidgetPayload('visual', { html, ...(title ? { title } : {}) });
+}
+
 function stripClosedWidgetFences(content: string): string {
     return content.replace(widgetFencePattern, '');
+}
+
+function stripClosedVisualFences(content: string): string {
+    return content.replace(closedVisualFencePattern, '');
 }
 
 function invalidWidgetProgress(

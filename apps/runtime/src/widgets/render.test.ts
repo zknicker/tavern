@@ -57,6 +57,74 @@ describe('Widget rendering', () => {
         expect(parsed?.displayContent).toBe('Schedule and stats:');
     });
 
+    it('parses a visual body fence into the visual render envelope', () => {
+        const parsed = parseWidgetsFromAssistantContent(
+            [
+                'Here is the layout.',
+                '',
+                '```visual Weekly sales',
+                '<div><h1>Weekly sales</h1><svg viewBox="0 0 10 10"></svg></div>',
+                '```',
+                '',
+                'Done.',
+            ].join('\n')
+        );
+
+        expect(parsed).toMatchObject({
+            displayContent: 'Here is the layout.\n\nDone.',
+            invalid: [],
+            widgets: [
+                {
+                    fallbackText: 'Weekly sales',
+                    name: 'visual',
+                    render: {
+                        component: 'tavern.widget.visual',
+                        fallback: { text: 'Weekly sales' },
+                        props: {
+                            html: '<div><h1>Weekly sales</h1><svg viewBox="0 0 10 10"></svg></div>',
+                            title: 'Weekly sales',
+                        },
+                        target: 'chat.inline',
+                    },
+                },
+            ],
+        });
+    });
+
+    it('keeps widget and visual fences in document order', () => {
+        const parsed = parseWidgetsFromAssistantContent(
+            [
+                '```visual',
+                '<h2>Flow</h2>',
+                '```',
+                '',
+                '```widget:table',
+                '{"columns":["State"],"rows":[["California"]]}',
+                '```',
+            ].join('\n')
+        );
+
+        expect(parsed?.widgets.map((widget) => widget.name)).toEqual(['visual', 'table']);
+    });
+
+    it('strips an empty visual fence as invalid', () => {
+        const parsed = parseWidgetsFromAssistantContent(
+            ['Before.', '', '```visual', '   ', '```', '', 'After.'].join('\n')
+        );
+
+        expect(parsed).toMatchObject({
+            displayContent: 'Before.\n\nAfter.',
+            invalid: [{ error: 'visual fence is empty.', name: 'visual' }],
+            widgets: [],
+        });
+    });
+
+    it('hides an in-flight visual fence from visible reply text', () => {
+        expect(widgetDisplayContent('Drawing now.\n\n```visual\n<div><h1>Part')).toBe(
+            'Drawing now.'
+        );
+    });
+
     it('strips invalid widget fences without creating a render payload', () => {
         const parsed = parseWidgetsFromAssistantContent(
             ['Here is the chart.', '', '```widget:bar-chart', 'not json', '```', '', 'Done.'].join(
