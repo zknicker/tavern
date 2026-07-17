@@ -15,8 +15,13 @@ is simply unclaimed.
 - The Runtime is the tenant. There is no separate workspace/tenant record in
   v1: membership, chats, agents, and settings all belong to the runtime.
 - A `member` is one user's standing on a runtime: role `owner` or `member`.
-  Exactly one owner exists; the first verified user to connect to an
-  unclaimed runtime becomes it.
+  Exactly one owner exists. The explicit bind is `tavern claim --clerk-key
+  <key> --user <clerk-user-id>` run on the runtime host — it configures
+  Clerk verification and records the owner in one step; the app's
+  connect-runtime page generates this command for the signed-in user. As a
+  convenience, a runtime that already has a Clerk key configured is also
+  claimed by the first verified user to connect. Ownership never transfers;
+  resetting means deleting the runtime database (greenfield).
 - Agents, model credentials, plugins, skills, secrets, and runtime settings
   are owner-administered. Members converse; the owner runs the house.
 
@@ -49,7 +54,8 @@ never under a member's credentials.
 
 - The owner creates invites (single-use code or link) from settings.
 - A user signs in with Clerk, redeems an invite against the runtime, and
-  becomes a `member`.
+  becomes a `member`. A signed-in non-member sees an invite-entry gate
+  instead of the app.
 - The owner can revoke membership; revocation closes that user's access
   immediately. Their authored history remains.
 - The runtime token remains the owner's transport/bootstrap credential and
