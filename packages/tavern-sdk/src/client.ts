@@ -21,6 +21,7 @@ import type {
     TavernResponseEvidence,
     TavernSimulateTurnReceipt,
     TavernSimulateTurnRequest,
+    TavernTurnFileChangeEvidence,
     TavernTurnPromptEvidence,
     TavernUpsertArtifactRequest,
     TavernUpsertResponseActivityRequest,
@@ -236,6 +237,12 @@ class TavernChatClient {
     turnPrompt(runId: string) {
         return this.#client.request<TavernTurnPromptEvidence>(
             `/api/turns/${encodeURIComponent(runId)}/prompt`
+        );
+    }
+
+    turnFileChanges(runId: string) {
+        return this.#client.request<TavernTurnFileChangeEvidence>(
+            `/api/turns/${encodeURIComponent(runId)}/file-changes`
         );
     }
 

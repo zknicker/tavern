@@ -471,6 +471,22 @@ paths:
                 $ref: '#/components/schemas/TurnPromptEvidence'
         default:
           $ref: '#/components/responses/Error'
+  /api/turns/{run_id}/file-changes:
+    get:
+      operationId: getTurnFileChanges
+      tags: [Chats]
+      summary: Get the workspace file-change evidence captured for one agent turn.
+      parameters:
+        - $ref: '#/components/parameters/RunId'
+      responses:
+        '200':
+          description: Turn file-change evidence.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TurnFileChangeEvidence'
+        default:
+          $ref: '#/components/responses/Error'
   /api/events:
     get:
       operationId: listEvents
@@ -621,6 +637,60 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/TurnPromptRecallHit'
+    TurnFileChange:
+      type: object
+      additionalProperties: false
+      required:
+        - path
+        - change
+        - additions
+        - deletions
+        - omitted
+        - before_text
+        - after_text
+        - before_size
+        - after_size
+      properties:
+        path:
+          type: string
+        change:
+          type: string
+          enum: [created, modified, deleted]
+        additions:
+          type: integer
+        deletions:
+          type: integer
+        omitted:
+          type: [string, 'null']
+          enum: [binary, too-large, null]
+        before_text:
+          type: [string, 'null']
+        after_text:
+          type: [string, 'null']
+        before_size:
+          type: [integer, 'null']
+        after_size:
+          type: [integer, 'null']
+    TurnFileChangeEvidence:
+      type: object
+      additionalProperties: false
+      required:
+        - run_id
+        - captured_at
+        - truncated
+        - changes
+      properties:
+        run_id:
+          $ref: '#/components/schemas/RunId'
+        captured_at:
+          type: string
+          format: date-time
+        truncated:
+          type: boolean
+        changes:
+          type: array
+          items:
+            $ref: '#/components/schemas/TurnFileChange'
     ActivityId:
       type: string
       pattern: '^act_[A-Za-z0-9_-]+$'
