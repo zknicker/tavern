@@ -68,13 +68,17 @@ registration), with optional info-string text as the title:
   No pane promotion in v1, and no bridge of any kind (no sendPrompt, no
   postMessage API for model content) — interactivity is within-iframe over
   embedded data.
-- **Taste layer.** Design-guidance skills — seeded `visuals-charts` and
-  `visuals-diagrams` (`apps/runtime/src/agent-engine/visuals-*-skill.ts`) —
-  encode DESIGN.md-derived rules (categorical palette with stable roles, two
-  font weights, sentence case, hairline borders, no gradients, "text never
-  wears the series color", streaming order, sandbox constraints). The managed
+- **Taste layer.** Design-guidance skills — seeded `visuals-charts`,
+  `visuals-diagrams`, and `page-design` for full self-contained pages
+  (artifact pane pages, html-preview files) — encode DESIGN.md-derived rules
+  (theme token contract, categorical palette with stable roles, two font
+  weights, sentence case, hairline borders, no gradients, "text never wears
+  the series color", streaming order, sandbox constraints). The managed
   prompt teaches the fence and routes: load the matching design skill before
-  drawing. Skills load on demand, not as permanent prompt budget.
+  drawing or authoring. Always-on prompt entries carry only capability
+  discovery and the invocation contract; all quality guidance, including the
+  token enumeration, lives in the skills. Skills load on demand, not as
+  permanent prompt budget.
 
 ## Widgets
 

@@ -26,6 +26,7 @@ import { unsupportedAgentEngineSurface } from '../agent-engine/errors.ts';
 import {
     getRuntimeSkill,
     listRuntimeSkills,
+    pageDesignSkillId,
     tasksSkillId,
     tavernAgentSkillId,
     visualsChartsSkillId,
@@ -85,6 +86,7 @@ async function dispatchAgentEngineStatic({ request, url }: { request: Request; u
                     tasksSkillId,
                     visualsChartsSkillId,
                     visualsDiagramsSkillId,
+                    pageDesignSkillId,
                 ],
                 enabledPluginIds: input.enabledPluginIds ?? [],
                 id: input.id,

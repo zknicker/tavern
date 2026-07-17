@@ -80,7 +80,7 @@ const widgetPromptEntries = {
             'Sandboxed inline preview of a workspace HTML file; for custom visuals no other widget covers.',
         signature: '{"path":string,"height"?:number,"title"?:string}',
         constraints:
-            "Write a self-contained .html file (inline CSS/JS, no external or sibling assets) under workbench/ first; path is workspace-relative and renders the file's current content. height is px 120-1200 (default 480).",
+            'Self-contained inline CSS/JS only; load the page-design skill before authoring. Write the file under workbench/ first; path is workspace-relative.',
     },
     artifact: {
         description:

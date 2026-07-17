@@ -139,7 +139,7 @@ Max 12 events.
 
 widget:html-preview — Sandboxed inline preview of a workspace HTML file; for custom visuals no other widget covers.
 {"path":string,"height"?:number,"title"?:string}
-Write a self-contained .html file (inline CSS/JS, no external or sibling assets) under workbench/ first; path is workspace-relative and renders the file's current content. height is px 120-1200 (default 480).
+Self-contained inline CSS/JS only; load the page-design skill before authoring. Write the file under workbench/ first; path is workspace-relative.
 
 artifact — Durable self-contained single-file HTML page rendered in the artifact pane; the chat shows a compact card.
 {"path":string,"title"?:string}

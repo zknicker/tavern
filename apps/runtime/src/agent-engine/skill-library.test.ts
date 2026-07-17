@@ -18,6 +18,7 @@ import {
     defaultTavernSkill,
     getRuntimeSkill,
     listRuntimeSkills,
+    pageDesignSkillId,
     readAssignedSkillBundles,
     resetRuntimeSkillToDefault,
     resetSeededSkill,
@@ -224,7 +225,7 @@ describe('Runtime skill library', () => {
     it('seeds the visuals design-guidance skills for on-demand loading', async () => {
         await seedManagedSkills({ skillsDir });
 
-        for (const skillId of [visualsChartsSkillId, visualsDiagramsSkillId]) {
+        for (const skillId of [visualsChartsSkillId, visualsDiagramsSkillId, pageDesignSkillId]) {
             expect(readSkillSource(skillId)?.source).toBe('seeded');
         }
 
@@ -239,6 +240,15 @@ describe('Runtime skill library', () => {
         for (const bundle of bundles) {
             expect(bundle.description.length).toBeGreaterThan(0);
         }
+
+        // The page-level token contract lives once, in the page-design skill;
+        // always-on prompt entries only route to it.
+        const pageBundles = await readAssignedSkillBundles(
+            { enabledSkillIds: [pageDesignSkillId] },
+            { skillsDir }
+        );
+        expect(pageBundles[0]?.content).toContain('var(--background)');
+        expect(pageBundles[0]?.content).toContain('self-contained');
     });
 
     it('restores tampered seeded skills and publishes their updates', async () => {

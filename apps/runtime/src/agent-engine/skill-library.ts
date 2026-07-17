@@ -22,10 +22,11 @@ import {
     tryReadSkillSummarySource,
     tryResolveSkillSource,
 } from './managed-skill-summary.ts';
+import { defaultPageDesignSkill, pageDesignSkillId } from './page-design-skill.ts';
 import { defaultVisualsChartsSkill, visualsChartsSkillId } from './visuals-charts-skill.ts';
 import { defaultVisualsDiagramsSkill, visualsDiagramsSkillId } from './visuals-diagrams-skill.ts';
 
-export { visualsChartsSkillId, visualsDiagramsSkillId };
+export { pageDesignSkillId, visualsChartsSkillId, visualsDiagramsSkillId };
 
 export const agentEngineSkillsDir = path.join(AGENT_HOME, 'skills');
 export const tavernAgentSkillId = 'tavern-agent';
@@ -138,6 +139,7 @@ them.
 `;
 
 const seededSkillDefaults: Record<string, string> = {
+    [pageDesignSkillId]: defaultPageDesignSkill,
     [tasksSkillId]: defaultTasksSkill,
     [tavernAgentSkillId]: defaultTavernSkill,
     [visualsChartsSkillId]: defaultVisualsChartsSkill,

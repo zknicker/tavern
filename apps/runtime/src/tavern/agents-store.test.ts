@@ -46,6 +46,7 @@ describe('Runtime agent and agent engine reads', () => {
                     webAccessEnabled: false,
                     enabledPluginIds: [],
                     enabledSkillIds: [
+                        'page-design',
                         'tasks',
                         'tavern-agent',
                         'visuals-charts',

@@ -1,6 +1,7 @@
 import type { AgentRuntimeAgent } from '@tavern/api';
 import { defaultAgentDisplayName, defaultAgentEngineAgentId } from '../agent-engine/constants.ts';
 import {
+    pageDesignSkillId,
     tasksSkillId,
     tavernAgentSkillId,
     visualsChartsSkillId,
@@ -19,6 +20,7 @@ const defaultSeededSkillIds = [
     tasksSkillId,
     visualsChartsSkillId,
     visualsDiagramsSkillId,
+    pageDesignSkillId,
 ];
 
 export function primaryManagedAgent(): AgentRuntimeAgent {
