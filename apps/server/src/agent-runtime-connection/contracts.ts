@@ -19,6 +19,7 @@ export const agentRuntimeCapabilities = [
     'autoDispatch',
     'webAccess',
     'devToolkit',
+    'identity',
     'plugin.merchbase',
     'plugin.google.calendar',
     'plugin.browser',

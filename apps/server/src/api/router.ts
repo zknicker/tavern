@@ -3,6 +3,7 @@ import { agentRuntimeRouter } from './agent-runtime/router.ts';
 import { chatRouter } from './chat/router.ts';
 import { cronRouter } from './cron/router.ts';
 import { devRouter } from './dev/router.ts';
+import { identityRouter } from './identity/router.ts';
 import { jobsRouter } from './jobs/router.ts';
 import { labelsRouter } from './labels/router.ts';
 import { logRouter } from './log/router.ts';
@@ -29,6 +30,7 @@ import { workerRouter } from './worker/router.ts';
 
 export const appRouter = createRouter({
     agent: agentRouter,
+    identity: identityRouter,
     chat: chatRouter,
     mcp: mcpRouter,
     cron: cronRouter,

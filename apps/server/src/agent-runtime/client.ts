@@ -337,7 +337,9 @@ import {
     memoryDreamResultSchema,
     memoryJobDetailSchema,
     memoryJobListSchema,
+    type RuntimeIdentityMe,
     runtimeEventListSchema,
+    runtimeIdentityMeSchema,
     type WikiBacklinkList,
     type WikiCreatePage,
     type WikiMovePath,
@@ -432,6 +434,7 @@ export interface TavernAgentRuntimeClient {
         chatId: string;
     }): Promise<AgentRuntimeCurrentAgentSessionResult>;
     getGoogleSettings(): Promise<AgentRuntimeGoogleSettings>;
+    getIdentityMe(userSessionToken: string): Promise<RuntimeIdentityMe>;
     getMcpCatalog(): Promise<AgentRuntimeMcpCatalog>;
     getMemoryActivity(): Promise<MemoryActivityList>;
     getMemoryJob(jobId: string): Promise<MemoryJobDetail | null>;
@@ -2135,6 +2138,19 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         }
 
         return agentRuntimeOpenRouterSettingsSchema.parse(await response.json());
+    }
+
+    // Identity requests act as the signed-in user, not the runtime token: the
+    // runtime resolves membership (and first-connect ownership claim) from the
+    // forwarded Clerk session token.
+    async getIdentityMe(userSessionToken: string) {
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.identityMe}`, {
+            headers: { authorization: `Bearer ${userSessionToken}` },
+        });
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+        return runtimeIdentityMeSchema.parse(await response.json());
     }
 
     async getTimezoneSettings() {
