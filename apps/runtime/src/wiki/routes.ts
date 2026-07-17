@@ -8,7 +8,9 @@ import {
     wikiBacklinkListSchema,
     wikiCreatePageSchema,
     wikiMovePathSchema,
+    wikiPageHistorySchema,
     wikiPageListSchema,
+    wikiPageRevisionSchema,
     wikiPageSchema,
     wikiPathInputSchema,
     wikiPathMutationResultSchema,
@@ -19,6 +21,7 @@ import {
 } from '@tavern/api';
 import { signalAgentSettingsApplied } from '../agent-engine/settings-apply';
 import { forbidden, json, notFound } from '../tavern/http';
+import { getWikiPageHistory, getWikiPageRevision } from './page-history';
 import {
     createWikiFolder,
     createWikiPage,
@@ -99,6 +102,32 @@ export async function handleWikiRequest(request: Request): Promise<Response | nu
     if (request.method === 'POST' && url.pathname === agentRuntimeRoutes.wikiSearch) {
         const input = wikiSearchInputSchema.parse(await readJson(request));
         return json(wikiSearchResultSchema.parse(await searchWiki(input)));
+    }
+
+    const revisionMatch = url.pathname.match(/^\/wiki\/pages\/(.+)\/history\/([^/]+)$/u);
+    if (request.method === 'GET' && revisionMatch?.[1] && revisionMatch[2]) {
+        return json(
+            wikiPageRevisionSchema.parse(
+                await getWikiPageRevision({
+                    commit: decodeURIComponent(revisionMatch[2]),
+                    path: decodeURIComponent(revisionMatch[1]),
+                })
+            )
+        );
+    }
+
+    const historyMatch = url.pathname.match(/^\/wiki\/pages\/(.+)\/history$/u);
+    if (request.method === 'GET' && historyMatch?.[1]) {
+        const limitParam = url.searchParams.get('limit');
+        const limit = limitParam ? Number(limitParam) : undefined;
+        return json(
+            wikiPageHistorySchema.parse(
+                await getWikiPageHistory({
+                    limit: Number.isFinite(limit) ? limit : undefined,
+                    path: decodeURIComponent(historyMatch[1]),
+                })
+            )
+        );
     }
 
     const backlinksMatch = url.pathname.match(/^\/wiki\/pages\/(.+)\/backlinks$/u);

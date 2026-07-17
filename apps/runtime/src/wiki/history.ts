@@ -121,7 +121,7 @@ async function hasStagedChanges(wikiPath: string) {
     }
 }
 
-async function runGit(wikiPath: string, args: string[]) {
+export async function runGit(wikiPath: string, args: string[]) {
     return await execFile('git', ['-C', wikiPath, ...args], {
         encoding: 'utf8',
         maxBuffer: 1024 * 1024,
