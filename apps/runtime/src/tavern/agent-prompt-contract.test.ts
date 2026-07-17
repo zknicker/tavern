@@ -14,6 +14,7 @@ import {
 } from '../cron/manager-state.ts';
 import { closeDb, getDb, initTestDb } from '../db/connection.ts';
 import { ensureRuntimeSchema } from '../db/schema.ts';
+import { saveMerchbaseSettings } from '../plugins/merchbase.ts';
 import { handleTimezoneSettingsRequest } from '../timezone-settings.ts';
 import type { AgentExecutorInput } from './agent-executor.ts';
 import { buildAgentInstructions } from './agent-instructions.ts';
@@ -213,6 +214,15 @@ const REQUIREMENTS: Array<{
         expected: 'web_fetch',
         prompt: 'dm',
     },
+    // MerchBase sales tool guidance is plugin-gated like the merchbase widget
+    // entry: taught only with the Plugin grant (dedicated test below), absent
+    // from the ungranted base fixtures.
+    {
+        absent: true,
+        capability: 'no MerchBase tool teaching without the plugin grant',
+        expected: 'merchbase_sales_series',
+        prompt: 'channel',
+    },
 ];
 
 // Character ceilings for the deterministic fixture (default SOUL, empty core
@@ -324,6 +334,30 @@ describe('agent prompt contract', () => {
 
         expect(prompt).toContain('search the live web with your web search tool');
         expect(prompt).not.toContain('Your current model has no web search tool');
+    });
+
+    // MerchBase guidance follows the merchbase widget gate: an enabled Plugin
+    // plus a per-agent grant teaches the sales series tool; the base fixtures
+    // above stay ungranted, keeping the reviewed snapshots plugin-free.
+    it('teaches the MerchBase sales tool when the plugin is granted', async () => {
+        saveMerchbaseSettings({ apiKey: 'contract-key', enabled: true });
+        upsertStoredAgent({
+            agent: {
+                enabledPluginIds: ['merchbase'],
+                enabledSkillIds: [],
+                id: 'agt_primary',
+                isAdmin: true,
+                name: 'Otto',
+                primaryColor: null,
+                workspaceFolder: workspaceDir,
+            },
+        });
+
+        const prompt = await renderPrompt('cht_contract');
+
+        expect(prompt).toContain('## MerchBase');
+        expect(prompt).toContain('fetch live data with `merchbase_sales_series`');
+        expect(prompt).toContain('explicit zero-sales days');
     });
 
     async function renderPrompt(chatId: string) {

@@ -12,6 +12,7 @@ import { getPlugin } from './store';
 const merchbaseClientMock = vi.hoisted(() => ({
     accountsGetQuery: vi.fn(),
     createClient: vi.fn(),
+    salesSeriesQuery: vi.fn(),
     salesSummaryQuery: vi.fn(),
 }));
 
@@ -28,6 +29,7 @@ describe('MerchBase Plugin settings', () => {
         }
         merchbaseClientMock.createClient.mockReset();
         merchbaseClientMock.accountsGetQuery.mockReset();
+        merchbaseClientMock.salesSeriesQuery.mockReset();
         merchbaseClientMock.salesSummaryQuery.mockReset();
         merchbaseClientMock.createClient.mockReturnValue({
             accounts: {
@@ -36,6 +38,9 @@ describe('MerchBase Plugin settings', () => {
                 },
             },
             sales: {
+                series: {
+                    query: merchbaseClientMock.salesSeriesQuery,
+                },
                 summary: {
                     query: merchbaseClientMock.salesSummaryQuery,
                 },
@@ -173,6 +178,67 @@ describe('MerchBase Plugin settings', () => {
                 workspaceFolder: '/tmp/tavern-agent',
             })
         ).toEqual({});
+    });
+
+    test('runs the typed sales series tool through the shared series logic', async () => {
+        saveMerchbaseSettings({
+            apiKey: 'secret-key',
+            defaultMarketplace: 'US',
+            enabled: true,
+        });
+        merchbaseClientMock.salesSeriesQuery.mockResolvedValue({
+            chartData: { data: [], title: 'MerchBase sales', unit: 'USD', x: 'date', y: 'units' },
+            series: [
+                {
+                    bucketEnd: '2026-07-01',
+                    bucketStart: '2026-07-01',
+                    currencyCode: 'USD',
+                    netUnits: 2,
+                    revenue: 39.98,
+                    royalties: 5.54,
+                    unitsCancelled: 0,
+                    unitsReturned: 0,
+                    unitsSold: 2,
+                },
+            ],
+        });
+
+        const tools = createMerchbaseToolsForAgent({
+            enabledPluginIds: ['merchbase'],
+            enabledSkillIds: [],
+            id: 'agt_primary',
+            isAdmin: true,
+            name: 'Tavern',
+            primaryColor: null,
+            workspaceFolder: '/tmp/tavern-agent',
+        });
+        const result = await tools.merchbase_sales_series?.execute?.(
+            { range: '2026-07-01..2026-07-03' },
+            { context: undefined, messages: [], toolCallId: 'call_series' }
+        );
+
+        expect(merchbaseClientMock.salesSeriesQuery).toHaveBeenCalledWith({
+            bucket: 'day',
+            marketplace: 'US',
+            range: '2026-07-01..2026-07-03',
+        });
+        expect(result).toMatchObject({
+            bucket: 'day',
+            currencyCode: 'USD',
+            range: '2026-07-01..2026-07-03',
+            rowCount: 3,
+            totals: { net: 2, revenue: 39.98, royalties: 5.54, sold: 2 },
+        });
+        expect(
+            (result as { rows: Array<{ date: string; sold: number }> }).rows.map((row) => [
+                row.date,
+                row.sold,
+            ])
+        ).toEqual([
+            ['2026-07-01', 2],
+            ['2026-07-02', 0],
+            ['2026-07-03', 0],
+        ]);
     });
 
     test('refreshes and publishes MerchBase capability after settings saves', async () => {
