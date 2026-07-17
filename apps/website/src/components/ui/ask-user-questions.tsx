@@ -237,7 +237,7 @@ export function AskUserQuestions({
             {question.skippable && onSkip ? (
                 <div className="flex justify-end px-5 pt-1 pb-3">
                     <button
-                        className="inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-[13px] text-muted-foreground transition-colors hover:bg-clarification-row-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
+                        className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1 text-[13px] text-muted-foreground transition-colors hover:bg-clarification-row-hover hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
                         disabled={disabled}
                         onClick={() => onSkip(question)}
                         type="button"
@@ -276,7 +276,7 @@ function HoverBackground({
                         height: activeRect.height,
                     }}
                     aria-hidden="true"
-                    className="pointer-events-none absolute rounded-full bg-clarification-row-hover"
+                    className="pointer-events-none absolute rounded-lg bg-clarification-row-hover"
                     exit={{ opacity: 0, transition: { duration: 0.06 } }}
                     initial={{
                         opacity: 0,
@@ -330,7 +330,7 @@ function OptionButton({
     return (
         <button
             className={cn(
-                'relative z-10 flex min-h-10 w-full min-w-0 select-none items-center gap-3 rounded-full py-1.5 pr-1.5 pl-3 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring',
+                'relative z-10 flex min-h-10 w-full min-w-0 select-none items-center gap-3 rounded-lg py-1.5 pr-1.5 pl-3 text-left outline-none focus-visible:ring-2 focus-visible:ring-ring',
                 disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
             )}
             data-proximity-index={index}
@@ -402,7 +402,7 @@ function OtherRow({
     return (
         <div
             className={cn(
-                'relative z-10 flex min-h-10 w-full min-w-0 items-center gap-3 rounded-full py-1.5 pr-1.5 pl-3 outline-none',
+                'relative z-10 flex min-h-10 w-full min-w-0 items-center gap-3 rounded-lg py-1.5 pr-1.5 pl-3 outline-none',
                 disabled && 'opacity-60'
             )}
             data-proximity-index={index}

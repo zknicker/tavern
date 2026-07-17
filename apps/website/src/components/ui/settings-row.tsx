@@ -48,7 +48,7 @@ export function SettingsPageHeader({
             {...props}
         >
             <div className="min-w-0 space-y-1">
-                <h1 className="font-semibold text-2xl text-foreground">{title}</h1>
+                <h1 className="font-bold text-2xl text-foreground">{title}</h1>
                 {description ? (
                     <p className="text-muted-foreground text-sm leading-tight">{description}</p>
                 ) : null}
@@ -85,7 +85,9 @@ export function SettingsSection({
     return (
         <section className={cn('space-y-2', className)} {...props}>
             <div className="flex min-w-0 items-center justify-between gap-4 px-3">
-                <h2 className="min-w-0 font-medium text-base text-muted-foreground">{title}</h2>
+                <h2 className="min-w-0 font-medium font-mono text-muted-foreground text-sm uppercase tracking-wider">
+                    {title}
+                </h2>
                 {action ? <div className="shrink-0">{action}</div> : null}
             </div>
             {children}

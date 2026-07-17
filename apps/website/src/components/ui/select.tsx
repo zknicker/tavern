@@ -263,7 +263,7 @@ export function SelectContent({
                     {...props}
                 >
                     <Elevated
-                        className="relative h-full min-w-(--anchor-width) overflow-hidden rounded-xl border border-border/70"
+                        className="relative h-full min-w-(--anchor-width) overflow-hidden rounded-xl"
                         offset={2}
                         shadowLevel={3}
                     >

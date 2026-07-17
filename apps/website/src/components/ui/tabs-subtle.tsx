@@ -217,7 +217,7 @@ export function TabsSubtleList({
                             'pointer-events-none absolute',
                             variant === 'underline'
                                 ? 'z-10 rounded-full bg-primary'
-                                : 'rounded-full bg-active'
+                                : 'rounded-lg bg-active'
                         )}
                         data-slot="tabs-indicator"
                         initial={false}
@@ -238,7 +238,7 @@ export function TabsSubtleList({
                                 top: hoverRect.top,
                                 width: hoverRect.width,
                             }}
-                            className="pointer-events-none absolute rounded-full bg-hover"
+                            className="pointer-events-none absolute rounded-lg bg-hover"
                             data-slot="tabs-hover-indicator"
                             exit={
                                 isMouseInside.current
@@ -276,7 +276,7 @@ export function TabsSubtleList({
                                 top: focusRect.top - 2,
                                 width: focusRect.width + 4,
                             }}
-                            className="pointer-events-none absolute z-20 rounded-full border border-ring"
+                            className="pointer-events-none absolute z-20 rounded-lg border border-ring"
                             data-slot="tabs-focus-indicator"
                             exit={{ opacity: 0, transition: springs.fast }}
                             initial={false}
@@ -317,7 +317,7 @@ export function TabsSubtleItem({
             aria-label={iconOnly ? label : props['aria-label']}
             className={cn(
                 'no-drag group relative z-10 flex shrink-0 cursor-pointer items-center justify-center gap-2 bg-transparent text-muted-foreground outline-none transition-colors duration-80 hover:text-foreground data-disabled:pointer-events-none data-disabled:cursor-default data-active:text-foreground data-disabled:opacity-50 [&>*]:relative [&>*]:z-10 [&_svg]:pointer-events-none [&_svg]:shrink-0',
-                'rounded-full',
+                'rounded-lg',
                 size === 'sm' && 'h-8 px-3 text-sm',
                 size === 'default' && 'h-9 px-3.5 text-sm',
                 size === 'lg' && 'h-10 px-4 text-sm',

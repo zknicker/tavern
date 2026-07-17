@@ -29,7 +29,7 @@ export function NavSectionLabel({
 }: useRender.ComponentProps<'div'>): React.ReactElement {
     const defaultProps = {
         className: cn(
-            'px-2 pt-4 pb-1 font-medium text-[var(--nav-section-label)] text-caption tracking-normal',
+            'px-2 pt-4 pb-1 font-medium font-mono text-[var(--nav-section-label)] text-xs uppercase tracking-wider',
             className
         ),
         'data-slot': 'nav-section-label',
@@ -58,7 +58,7 @@ export function NavItem({
         className: cn(
             'no-drag group relative flex w-full items-center gap-2 rounded-md px-2 py-1 text-left font-medium text-meta transition-colors duration-150 ease-out',
             active
-                ? 'bg-[var(--nav-active)] text-foreground duration-0'
+                ? 'bg-secondary text-foreground shadow-[inset_0_0_0_1px_var(--input),0_2px_0_0_var(--hard-shadow)] duration-0'
                 : 'text-foreground/75 hover:bg-[var(--nav-hover)] hover:text-foreground hover:duration-0',
             className
         ),
