@@ -1,5 +1,6 @@
 import { AlertCircleIcon, Cancel01Icon, ListViewIcon } from '@hugeicons/core-free-icons';
 import type { AgentCharacter } from '@tavern/api/agent-appearance';
+import { splitVisualFences } from '@tavern/api/widgets/visual';
 import { useReducedMotion } from 'framer-motion';
 import * as React from 'react';
 import { ChatMessage } from '../../components/chats/chat-message.tsx';
@@ -19,6 +20,7 @@ import { useChatDismiss } from '../../hooks/chats/use-chat-dismiss.ts';
 import { formatShortTime } from '../../lib/format.ts';
 import { cn } from '../../lib/utils.ts';
 import { AgentWidget } from '../../widgets/render-widget.tsx';
+import { VisualCard } from '../../widgets/visual.tsx';
 import { resolveAgentInk } from '../agents/agent-color-presets.ts';
 import { AgentFace, type HeadName } from './agent-face.tsx';
 import { AgentHoverCard } from './agent-hover-card.tsx';
@@ -746,7 +748,7 @@ function AgentTurnItem({
 
     if (item.kind === 'activeReply') {
         return (
-            <AssistantReplyText
+            <AssistantReplyBody
                 content={getActiveReplyDisplayText(item.reply.text ?? '')}
                 revealKey={item.reply.runId}
                 revealText={isStreamingActiveReply(item.reply)}
@@ -770,7 +772,7 @@ function AgentTurnItem({
 
         if (streaming) {
             return (
-                <AssistantReplyText
+                <AssistantReplyBody
                     animateEnter
                     content={getActiveReplyDisplayText(item.row.message.content)}
                     revealKey={item.row.id}
@@ -891,6 +893,50 @@ function AssistantReplyText({
                 body
             )}
         </ChatMessage>
+    );
+}
+
+// A live reply may carry ```visual fences: fence bodies render as streaming
+// visual cards below the prose — matching the durable layout, where widget
+// rows follow the post — and never as raw fence text. An unclosed trailing
+// fence is an in-progress visual whose body grows as content arrives.
+function AssistantReplyBody(props: {
+    animateEnter?: boolean;
+    content: string;
+    revealKey?: string;
+    revealText?: boolean;
+    slotKey?: string | null;
+}) {
+    const segments = splitVisualFences(props.content);
+    const slot = props.slotKey ?? props.revealKey ?? 'visual';
+    // The Nth fence in the reply is that visual's stable identity: content
+    // only appends while streaming, so ordinals never reorder.
+    const cards: React.ReactNode[] = [];
+    for (const segment of segments) {
+        if (segment.kind === 'visual') {
+            cards.push(
+                <div className="max-w-[46rem]" key={`${slot}:visual:${cards.length + 1}`}>
+                    <VisualCard html={segment.html} open={segment.open} title={segment.title} />
+                </div>
+            );
+        }
+    }
+
+    if (cards.length === 0) {
+        return <AssistantReplyText {...props} />;
+    }
+
+    const prose = segments
+        .filter((segment) => segment.kind === 'text')
+        .map((segment) => segment.text)
+        .join('')
+        .trim();
+
+    return (
+        <>
+            {prose ? <AssistantReplyText {...props} content={prose} /> : null}
+            {cards}
+        </>
     );
 }
 

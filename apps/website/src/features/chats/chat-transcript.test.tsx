@@ -405,6 +405,74 @@ test('ChatTranscript renders chart widgets inline', () => {
     assert.doesNotMatch(markup, /Expand chart/);
 });
 
+test('ChatTranscript renders visual widget rows in a sandboxed iframe', () => {
+    const row = widgetRow('ui-visual');
+
+    if (row.kind !== 'widget') {
+        throw new Error('Expected widget row.');
+    }
+
+    const markup = renderTranscript([
+        {
+            ...row,
+            widget: {
+                ...row.widget,
+                component: 'tavern.widget.visual',
+                fallbackText: 'Weekly sales',
+                props: {
+                    html: '<h1>Weekly sales</h1><svg viewBox="0 0 10 10"></svg>',
+                    title: 'Weekly sales',
+                },
+            },
+        },
+    ]);
+
+    assert.match(markup, /<iframe/);
+    assert.match(
+        markup,
+        /sandbox="allow-forms allow-modals allow-pointer-lock allow-popups allow-scripts"/
+    );
+    assert.doesNotMatch(markup, /allow-same-origin/);
+    assert.match(markup, /Content-Security-Policy/);
+    assert.doesNotMatch(markup, /Widget unavailable/);
+});
+
+test('ChatTranscript streams an open visual fence as a live visual card', () => {
+    const markup = renderActiveTranscript({
+        agentId: 'tiny',
+        completedAt: null,
+        isThinking: false,
+        runId: 'run-visual',
+        sessionKey: 'agent:tiny:session-1',
+        startedAt: '2026-03-31T15:00:00.000Z',
+        text: 'Drawing the chart now.\n```visual Weekly sales\n<div><h1>Weekly sa',
+    });
+
+    // Prose reveals client-side; statically the partial body must already be
+    // inside the sandbox and the raw fence must never show as text.
+    assert.match(markup, /<iframe/);
+    assert.match(markup, /Weekly sa/);
+    assert.doesNotMatch(markup, /```visual/);
+    assert.doesNotMatch(markup, /allow-same-origin/);
+});
+
+test('ChatTranscript renders a completed reply with a closed visual fence as prose plus card', () => {
+    const markup = renderActiveTranscript({
+        agentId: 'tiny',
+        completedAt: '2026-03-31T15:00:03.000Z',
+        isThinking: false,
+        runId: 'run-visual-done',
+        sessionKey: 'agent:tiny:session-1',
+        startedAt: '2026-03-31T15:00:00.000Z',
+        text: 'Here is the chart.\n```visual Weekly sales\n<h1>Weekly sales</h1>\n```\nDone.',
+    });
+
+    assert.match(markup, /Here is the chart\./);
+    assert.match(markup, /Done\./);
+    assert.match(markup, /<iframe/);
+    assert.doesNotMatch(markup, /```visual/);
+});
+
 test('ChatTranscript renders table widget matrix shorthand', () => {
     const row = widgetRow('ui-table-matrix');
 
