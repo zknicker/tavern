@@ -72,12 +72,15 @@ describe('workspace snapshot', () => {
         });
     });
 
-    it('never snapshots hidden, skipped, or sensitive paths', async () => {
+    it('never snapshots hidden, skipped, sensitive, or engine-managed paths', async () => {
         await mkdir(path.join(root, '.claude'));
         await writeFile(path.join(root, '.claude', 'credentials.json'), 'secret');
         await mkdir(path.join(root, 'node_modules'));
         await writeFile(path.join(root, 'node_modules', 'dep.js'), 'x');
         await writeFile(path.join(root, '.env'), 'KEY=1');
+        // The harness CLI tool-relay shim is rewritten with a fresh port and
+        // token around turns; it must never read as agent file work.
+        await writeFile(path.join(root, 'harness-tool.mjs'), 'const token = "rotates";\n');
         await writeFile(path.join(root, 'visible.md'), 'hello\n');
 
         const snapshot = await captureWorkspaceSnapshot(root);

@@ -407,7 +407,9 @@ Rules:
 - Runtime captures a bounded workspace snapshot before a turn executes and
   compares it when the turn settles; the diff fills these rows. Snapshots skip
   hidden names, skipped directories, and secret-shaped files with the same
-  visibility rules as workspace browsing.
+  visibility rules as workspace browsing, plus engine-managed plumbing files
+  (the harness CLI tool-relay shim) that are rewritten around turns and are
+  not agent work.
 - A turn with changes also records one `workspace_changes` tool activity row
   carrying the summary (paths and line counts); before/after text stays here
   and is served on demand at `GET /api/turns/{run_id}/file-changes`.

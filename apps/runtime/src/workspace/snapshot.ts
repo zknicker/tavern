@@ -40,6 +40,11 @@ export interface WorkspaceFileChange {
     path: string;
 }
 
+// Engine-managed plumbing rewritten around turns (the harness CLI tool-relay
+// shim carries a fresh local port and token per session). Not agent work, so
+// never file-change evidence.
+const engineManagedFileNames = new Set(['harness-tool.mjs']);
+
 // Diffable text is retained up to this size per side; larger or binary files
 // still detect as changed but carry no content.
 const textRetainMaxBytes = 256 * 1024;
@@ -93,7 +98,11 @@ async function walkDirectory(root: string, relativePath: string, snapshot: Works
             }
             continue;
         }
-        if (!entry.isFile() || isSensitiveWorkspacePath(childPath)) {
+        if (
+            !entry.isFile() ||
+            engineManagedFileNames.has(entry.name) ||
+            isSensitiveWorkspacePath(childPath)
+        ) {
             continue;
         }
         if (snapshot.entries.size >= snapshotMaxFiles) {
