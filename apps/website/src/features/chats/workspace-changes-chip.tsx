@@ -1,4 +1,4 @@
-import { FileEditIcon } from '@hugeicons-pro/core-stroke-rounded';
+import { ArrowRight01Icon, FileEditIcon } from '@hugeicons-pro/core-stroke-rounded';
 import * as React from 'react';
 import { Drawer, DrawerTrigger } from '../../components/ui/drawer.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
@@ -21,8 +21,11 @@ export function WorkspaceChangesChip({ chatId, row }: { chatId?: string; row: To
                         <button
                             aria-label={`${label} — view diffs`}
                             className={cn(
-                                'group/files-chip flex w-full min-w-0 cursor-default items-center gap-2.5 rounded-xl border border-border/60 bg-card px-3 py-2 text-left outline-none transition-colors',
-                                'hover:border-border focus-visible:ring-2 focus-visible:ring-ring'
+                                // p-2 keeps the icon square evenly inset on
+                                // every side; the trailing chevron gets a
+                                // touch more room.
+                                'group/files-chip flex w-full min-w-0 cursor-default items-center gap-2.5 rounded-xl border border-border/60 bg-card p-2 pr-3 text-left outline-none transition-colors',
+                                'hover:border-border hover:bg-hover focus-visible:ring-2 focus-visible:ring-ring'
                             )}
                             type="button"
                         />
@@ -38,9 +41,11 @@ export function WorkspaceChangesChip({ chatId, row }: { chatId?: string; row: To
                     <span className="min-w-0 flex-1 truncate font-medium text-foreground/90 text-sm">
                         {label}
                     </span>
-                    <span className="shrink-0 rounded-full border border-border/60 px-2.5 py-1 text-muted-foreground text-xs transition-colors group-hover/files-chip:border-border group-hover/files-chip:text-foreground/80">
-                        View changes
-                    </span>
+                    <Icon
+                        className="size-4 shrink-0 text-muted-foreground/60 transition-[color,translate] group-hover/files-chip:translate-x-0.5 group-hover/files-chip:text-foreground/75"
+                        icon={ArrowRight01Icon}
+                        strokeWidth={1.7}
+                    />
                 </DrawerTrigger>
                 {chatId ? (
                     <ToolDrawer activityId={row.id} chatId={chatId} isOpen={open} source="chat" />
