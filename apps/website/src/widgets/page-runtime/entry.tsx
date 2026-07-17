@@ -1,7 +1,7 @@
 /**
  * Sandboxed page runtime: the entry point bundled by
  * `scripts/build-page-runtime.ts` into the self-contained script that runs
- * inside the widget:page iframe. It exposes `window.tavernPageRuntime.render`,
+ * inside the artifact page iframe. It exposes `window.tavernPageRuntime.render`,
  * which compiles the agent's TSX source with sucrase, resolves only React and
  * `@tavern/kit`, and mounts the page — or renders the compile/render error
  * with the fenced source, never a partial page.

@@ -1,5 +1,5 @@
 /**
- * Build the widget:page iframe runtime from the kit sources (one source of
+ * Build the artifact page iframe runtime from the kit sources (one source of
  * truth — never fork the kit). Emits src/widgets/page-runtime/generated/
  * page-runtime.ts, a plain module exporting the bundled runtime script and
  * compiled stylesheet as strings so vite, tsc, and bun test all load it with

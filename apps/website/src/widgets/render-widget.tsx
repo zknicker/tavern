@@ -23,9 +23,9 @@ import {
 } from '../kit/index.ts';
 import type { ChatLogOutput } from '../lib/trpc.tsx';
 import { cn } from '../lib/utils.ts';
+import { WidgetArtifactCard } from './artifact-card.tsx';
 import { WidgetHtmlPreview } from './html-preview.tsx';
 import { WidgetMerchBaseSalesChart } from './merchbase-sales-chart.tsx';
-import { WidgetPage } from './page.tsx';
 
 type WidgetRow = Extract<NonNullable<ChatLogOutput>['rows'][number], { kind: 'widget' }>;
 
@@ -89,8 +89,8 @@ function widgetElement(input: WidgetRenderInput, agentId: string | null) {
             return <WidgetCalendarDay props={input.props} />;
         case 'tavern.widget.html-preview':
             return <WidgetHtmlPreview agentId={agentId} props={input.props} />;
-        case 'tavern.widget.page':
-            return <WidgetPage agentId={agentId} props={input.props} />;
+        case 'tavern.widget.artifact':
+            return <WidgetArtifactCard props={input.props} />;
         case 'tavern.widget.merchbase-sales-chart':
             return <WidgetMerchBaseSalesChart props={input.props} />;
         default:

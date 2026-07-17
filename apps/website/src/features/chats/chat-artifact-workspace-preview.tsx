@@ -2,6 +2,7 @@ import { File01Icon } from '@hugeicons-pro/core-stroke-rounded';
 import { SimpleCodeEditor } from '../../components/code-editor/simple-code-editor.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import { trpc } from '../../lib/trpc.tsx';
+import { WorkspacePagePreview } from './chat-artifact-page-preview.tsx';
 import type { TavernResourceTarget } from './tavern-resource-link.ts';
 
 export function WorkspaceArtifactContent({
@@ -70,6 +71,16 @@ export function WorkspaceArtifactContent({
                 sandbox="allow-forms allow-modals allow-pointer-lock allow-popups allow-scripts"
                 srcDoc={file.content}
                 title={target.path}
+            />
+        );
+    }
+
+    if (file.language === 'tsx') {
+        return (
+            <WorkspacePagePreview
+                content={file.content}
+                path={target.path}
+                truncated={file.truncated}
             />
         );
     }

@@ -579,8 +579,8 @@ test('ChatTranscript renders html preview widgets inside a sandboxed frame shell
     assert.doesNotMatch(markup, /Widget unavailable/);
 });
 
-test('ChatTranscript renders page widgets inside a sandboxed frame shell', () => {
-    const row = widgetRow('ui-page');
+test('ChatTranscript renders artifact widgets as compact open-in-pane cards', () => {
+    const row = widgetRow('ui-artifact');
 
     if (row.kind !== 'widget') {
         throw new Error('Expected widget row.');
@@ -591,20 +591,21 @@ test('ChatTranscript renders page widgets inside a sandboxed frame shell', () =>
             ...row,
             widget: {
                 ...row.widget,
-                component: 'tavern.widget.page',
-                fallbackText: 'Page: workbench/pages/fleet.tsx',
+                component: 'tavern.widget.artifact',
+                fallbackText: 'Fleet status',
                 props: {
-                    height: 600,
                     path: 'workbench/pages/fleet.tsx',
+                    title: 'Fleet status',
                 },
             },
         },
     ]);
 
-    // Static render never resolves the workspace file query: the widget frame
-    // and loading note must render, and no iframe may appear yet.
-    assert.match(markup, /workbench\/pages\/fleet\.tsx/);
-    assert.match(markup, /Loading page/);
+    // The card never renders the page inline: no iframe, no workspace read —
+    // just the title, kind line, and the open affordance.
+    assert.match(markup, /Fleet status/);
+    assert.match(markup, /TSX page · workbench\/pages\/fleet\.tsx/);
+    assert.match(markup, /Open/);
     assert.doesNotMatch(markup, /<iframe/);
     assert.doesNotMatch(markup, /Widget unavailable/);
 });

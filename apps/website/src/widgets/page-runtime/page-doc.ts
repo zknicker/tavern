@@ -1,5 +1,5 @@
 /**
- * Build the srcDoc for a widget:page iframe: Tavern tokens ride in via the
+ * Build the srcDoc for an artifact page iframe: Tavern tokens ride in via the
  * compiled page-runtime stylesheet, the theme follows the app scheme through
  * the html class/data-theme pair, and the page-runtime script compiles and
  * mounts the agent's TSX source entirely inside the opaque-origin sandbox.

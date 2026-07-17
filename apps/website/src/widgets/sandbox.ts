@@ -1,6 +1,7 @@
 /**
- * Opaque-origin sandbox shared by the workspace-file widgets (html-preview,
- * page), matching the artifact pane's HTML preview. Never add
+ * Opaque-origin sandbox shared by the workspace-file surfaces (the
+ * html-preview widget and the artifact-pane page renderer), matching the
+ * artifact pane's HTML preview. Never add
  * allow-same-origin: the agent-authored document must not reach the app
  * origin's cookies, storage, or DOM.
  */
