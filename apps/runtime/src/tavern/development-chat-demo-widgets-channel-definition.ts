@@ -23,6 +23,7 @@ import {
     demoTime,
     userMessage,
 } from './development-chat-demo-types';
+import { visualDemoTurns } from './development-chat-demo-visuals-definition';
 
 /**
  * Widget gallery channel: one completed turn per rendered widget, in catalog
@@ -229,6 +230,7 @@ function widgetTurns(): WidgetTurnSpec[] {
                 },
             ],
         },
+        ...visualDemoTurns(),
         {
             reply: 'This widget kind is unknown, so the fallback row renders instead.',
             request: 'Render a widget the catalog does not know.',
