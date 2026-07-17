@@ -98,7 +98,7 @@ export function TaskBulkActions({
                     transition={{ bounce: 0, duration: 0.18, type: 'spring' }}
                 >
                     <Elevated
-                        className="flex items-center gap-1 rounded-full border px-2 py-1.5"
+                        className="flex items-center gap-1 rounded-lg border px-2 py-1.5"
                         offset={2}
                         shadowLevel={3}
                     >
@@ -125,7 +125,7 @@ export function TaskBulkActions({
 
                         <span aria-hidden="true" className="mx-0.5 h-5 w-px bg-border" />
                         <Button
-                            className="rounded-full text-destructive-foreground"
+                            className="text-destructive-foreground"
                             onClick={() => applyPatch({ status: 'canceled' }, 'cancel')}
                             size="sm"
                             type="button"
@@ -136,7 +136,6 @@ export function TaskBulkActions({
                         </Button>
                         <Button
                             aria-label="Clear selection"
-                            className="rounded-full"
                             onClick={onClear}
                             size="icon-sm"
                             type="button"
@@ -155,7 +154,7 @@ function BulkMenuButton({ children, label }: { children: React.ReactNode; label:
     return (
         <MenuTrigger
             render={
-                <Button className="rounded-full" size="sm" type="button" variant="ghost">
+                <Button size="sm" type="button" variant="ghost">
                     {children}
                     {label}
                 </Button>

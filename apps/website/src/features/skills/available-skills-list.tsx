@@ -113,7 +113,7 @@ function SourceSkillRows({
                                 />
                             ) : (
                                 <Button
-                                    className="shrink-0 rounded-full"
+                                    className="shrink-0"
                                     onClick={() => onSelect(item)}
                                     size="sm"
                                     variant="secondary"

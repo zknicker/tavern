@@ -32,7 +32,7 @@ export function InstalledSkillsList({
         <div className="grid gap-2">
             <SearchInput
                 aria-label="Search installed skills"
-                className="w-full [&_[data-slot=input-control]]:h-11 [&_[data-slot=input-control]]:rounded-full"
+                className="w-full [&_[data-slot=input-control]]:h-11"
                 name="skill-search"
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder={searchPlaceholder}
