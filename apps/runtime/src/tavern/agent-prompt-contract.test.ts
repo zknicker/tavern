@@ -176,7 +176,8 @@ const REQUIREMENTS: Array<{
     },
     {
         capability: 'artifact fence taught',
-        expected: 'artifact — Durable single-file React page rendered in the artifact pane',
+        expected:
+            'artifact — Durable self-contained single-file HTML page rendered in the artifact pane',
         prompt: 'channel',
     },
     {

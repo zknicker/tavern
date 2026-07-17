@@ -119,13 +119,13 @@ describe('Widget rendering', () => {
         expect(parsed?.displayContent).toBe('Look:');
     });
 
-    it('parses a bare artifact fence with a workspace tsx path', () => {
+    it('parses a bare artifact fence with a workspace html path', () => {
         const parsed = parseWidgetsFromAssistantContent(
             [
                 'Built the report page.',
                 '',
                 '```artifact',
-                '{"path":"workbench/pages/report.tsx","title":"Q3 report"}',
+                '{"path":"workbench/pages/report.html","title":"Q3 report"}',
                 '```',
             ].join('\n')
         );
@@ -139,7 +139,7 @@ describe('Widget rendering', () => {
                     name: 'artifact',
                     render: {
                         component: 'tavern.widget.artifact',
-                        props: { path: 'workbench/pages/report.tsx', title: 'Q3 report' },
+                        props: { path: 'workbench/pages/report.html', title: 'Q3 report' },
                         target: 'chat.inline',
                     },
                 },

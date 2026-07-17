@@ -32,9 +32,9 @@ import {
  */
 
 // The artifact card opens this seeded workspace file (see development-demos.ts
-// in workspace/) in the artifact pane, exercising the sandboxed TSX
-// compile-and-render path.
-export const pageDemoWorkspacePath = 'workbench/demos/page.tsx';
+// in workspace/) in the artifact pane's sandboxed HTML preview with host
+// tokens injected.
+export const artifactDemoWorkspacePath = 'workbench/demos/artifact.html';
 export function widgetsChannelDemo(): DevelopmentChatDemo {
     const chatId = developmentChatDemoIds.widgets;
     const turns = widgetTurns().map((turn) => widgetTurn(chatId, turn));
@@ -211,7 +211,7 @@ function widgetTurns(): WidgetTurnSpec[] {
                     fallbackText: 'Fleet status',
                     title: 'Artifact',
                     widget: widgetDemoRenderInput('artifact', 'Fleet status', {
-                        path: pageDemoWorkspacePath,
+                        path: artifactDemoWorkspacePath,
                         title: 'Fleet status',
                     }),
                 },
