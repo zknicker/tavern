@@ -1,16 +1,30 @@
 import type { AgentRuntimeAgent } from '@tavern/api';
 import { defaultAgentDisplayName, defaultAgentEngineAgentId } from '../agent-engine/constants.ts';
-import { tasksSkillId, tavernAgentSkillId } from '../agent-engine/skill-library.ts';
+import {
+    tasksSkillId,
+    tavernAgentSkillId,
+    visualsChartsSkillId,
+    visualsDiagramsSkillId,
+} from '../agent-engine/skill-library.ts';
 import { AGENT_WORKSPACE } from '../config.ts';
 import { getDb } from '../db/connection.ts';
 import type { Database } from '../db/sqlite.ts';
 import { registerAgentWorkspace } from '../workspace/instructions.ts';
 import { getStoredAgent, upsertStoredAgent } from './agents-store.ts';
 
+// Seeded skills every agent starts with; the upgrade below appends newly
+// seeded ids to agents stored before those skills existed.
+const defaultSeededSkillIds = [
+    tavernAgentSkillId,
+    tasksSkillId,
+    visualsChartsSkillId,
+    visualsDiagramsSkillId,
+];
+
 export function primaryManagedAgent(): AgentRuntimeAgent {
     return {
         autoDispatchEnabled: false,
-        enabledSkillIds: [tavernAgentSkillId, tasksSkillId],
+        enabledSkillIds: [...defaultSeededSkillIds],
         id: defaultAgentEngineAgentId,
         isAdmin: true,
         name: defaultAgentDisplayName,
@@ -28,16 +42,16 @@ export function ensurePrimaryManagedAgent(db?: Database) {
         // it was stored before a new seeded skill existed. Agents stored under
         // the retired "Tavern" default pick up the current default name; a
         // user-chosen name stays put.
-        const needsSkill = !existing.enabledSkillIds.includes(tasksSkillId);
+        const missingSkillIds = defaultSeededSkillIds.filter(
+            (skillId) => !existing.enabledSkillIds.includes(skillId)
+        );
         const needsRename = existing.name === 'Tavern';
         const upgraded =
-            needsSkill || needsRename
+            missingSkillIds.length > 0 || needsRename
                 ? upsertStoredAgent({
                       agent: {
                           ...existing,
-                          enabledSkillIds: needsSkill
-                              ? [...existing.enabledSkillIds, tasksSkillId]
-                              : existing.enabledSkillIds,
+                          enabledSkillIds: [...existing.enabledSkillIds, ...missingSkillIds],
                           name: needsRename ? defaultAgentDisplayName : existing.name,
                       },
                       db: targetDb,

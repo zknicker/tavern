@@ -24,6 +24,8 @@ import {
     seedManagedSkills,
     tasksSkillId,
     tavernAgentSkillId,
+    visualsChartsSkillId,
+    visualsDiagramsSkillId,
 } from './skill-library.ts';
 
 describe('Runtime skill library', () => {
@@ -217,6 +219,26 @@ describe('Runtime skill library', () => {
         );
         expect(bundles).toHaveLength(1);
         expect(bundles[0]?.content).toContain('Dispatched tasks');
+    });
+
+    it('seeds the visuals design-guidance skills for on-demand loading', async () => {
+        await seedManagedSkills({ skillsDir });
+
+        for (const skillId of [visualsChartsSkillId, visualsDiagramsSkillId]) {
+            expect(readSkillSource(skillId)?.source).toBe('seeded');
+        }
+
+        const bundles = await readAssignedSkillBundles(
+            { enabledSkillIds: [visualsChartsSkillId, visualsDiagramsSkillId] },
+            { skillsDir }
+        );
+        expect(bundles).toHaveLength(2);
+        expect(bundles[0]?.content).toContain('chart.js@4.5.1');
+        expect(bundles[0]?.content).toContain('Text never wears the series color');
+        expect(bundles[1]?.content).toContain('no diagram library');
+        for (const bundle of bundles) {
+            expect(bundle.description.length).toBeGreaterThan(0);
+        }
     });
 
     it('restores tampered seeded skills and publishes their updates', async () => {

@@ -22,6 +22,10 @@ import {
     tryReadSkillSummarySource,
     tryResolveSkillSource,
 } from './managed-skill-summary.ts';
+import { defaultVisualsChartsSkill, visualsChartsSkillId } from './visuals-charts-skill.ts';
+import { defaultVisualsDiagramsSkill, visualsDiagramsSkillId } from './visuals-diagrams-skill.ts';
+
+export { visualsChartsSkillId, visualsDiagramsSkillId };
 
 export const agentEngineSkillsDir = path.join(AGENT_HOME, 'skills');
 export const tavernAgentSkillId = 'tavern-agent';
@@ -136,6 +140,8 @@ them.
 const seededSkillDefaults: Record<string, string> = {
     [tasksSkillId]: defaultTasksSkill,
     [tavernAgentSkillId]: defaultTavernSkill,
+    [visualsChartsSkillId]: defaultVisualsChartsSkill,
+    [visualsDiagramsSkillId]: defaultVisualsDiagramsSkill,
 };
 
 export function isSeededSkillId(skillId: string): boolean {
