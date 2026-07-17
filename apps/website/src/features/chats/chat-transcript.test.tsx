@@ -2197,6 +2197,44 @@ test('the pane narration slot keeps only the latest update while the turn runs',
     assert.equal(item.row.message.content, 'The layout matches the map.');
 });
 
+test('the pane keeps changed-files chips standalone while other tool work stays in the drawer', () => {
+    const toolRow = (id: string, name: string): ChatRow => ({
+        actor: { id: 'tiny', kind: 'agent' },
+        completedAt: '2026-03-31T15:00:01.000Z',
+        connectsToNext: false,
+        connectsToPrevious: false,
+        id,
+        isFirstInGroup: true,
+        kind: 'tool',
+        sessionKey: 'agent:tiny:session-1',
+        spawnedRelationships: [],
+        startedAt: '2026-03-31T15:00:00.000Z',
+        toolCall: {
+            callId: null,
+            facts: [],
+            label: name === 'workspace_changes' ? 'Changed 2 files' : name,
+            name,
+            status: 'completed',
+            summaryParts: ['2 files'],
+        },
+    });
+
+    const segments = filterPaneSegments(
+        groupAgentItems([
+            { kind: 'row', row: toolRow('act_run-1_tool_1', 'bash') },
+            { kind: 'row', row: toolRow('act_run-1_files', 'workspace_changes') },
+        ])
+    );
+
+    assert.equal(segments.length, 1);
+    const segment = segments[0];
+    assert.ok(segment?.kind === 'item');
+    const item = segment.item;
+    assert.ok(item.kind === 'row' && item.row.kind === 'tool');
+    assert.equal(item.row.toolCall.name, 'workspace_changes');
+    assert.equal(segment.key, 'act_run-1_files');
+});
+
 test('the pane drops narration when the run replied in a sibling turn entry', () => {
     const now = Date.now();
     const segments = filterPaneSegments(

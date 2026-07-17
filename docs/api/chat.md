@@ -138,7 +138,9 @@ The Tavern app keeps list and detail reads separate:
   for a Tavern chat. Empty text clears the prompt.
 * `chat.log.list` returns turn-aligned pages of conversation rows for one
   chat: participant messages, widgets, artifacts, context-boundary runtime
-  notices (new session, compaction), stop notes, and clarifications. Status
+  notices (new session, compaction), stop notes, clarifications, and the
+  changed-files summary row (`workspace_changes`) — contribution outcome,
+  rendered as a chip under the agent's reply. Status
   notices (busy delivery, holds, wait-idle) are turn evidence, not timeline
   rows. Execution evidence (tool calls, reasoning, workers,
   narration history) never rides the timeline — see

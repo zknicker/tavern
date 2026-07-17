@@ -63,6 +63,7 @@ import type { SessionNoticeRow } from './chat-transcript-row-model.ts';
 import { RuntimeNoticeEntry, SessionNoticeAction } from './chat-transcript-system-step.tsx';
 import { ChatTurnDrawer } from './chat-turn-drawer.tsx';
 import { useRevealedText } from './use-revealed-text.ts';
+import { WorkspaceChangesChip } from './workspace-changes-chip.tsx';
 
 // `group/turn` is the hover unit for a whole message: hovering the row reveals
 // its actions (the copy button next to the timestamp, or above the owner's own
@@ -628,10 +629,22 @@ export function filterPaneSegments(
         }
 
         const clarifications = segment.items.filter(isClarificationItem);
+        // Changed-files chips are contribution outcome and render standalone
+        // (item segments), never inside a collapsed work group.
+        const fileChangeSegments = segment.items
+            .filter(isWorkspaceChangesItem)
+            .map((item, index): AgentItemSegment => {
+                const key =
+                    item.kind === 'row' ? item.row.id : `${segment.key}:files:${String(index)}`;
+                return { item, key, kind: 'item' };
+            });
 
-        return clarifications.length > 0
-            ? [{ ...segment, items: clarifications, key: `${segment.key}:clarify` }]
-            : [];
+        return [
+            ...(clarifications.length > 0
+                ? [{ ...segment, items: clarifications, key: `${segment.key}:clarify` }]
+                : []),
+            ...fileChangeSegments,
+        ];
     });
 }
 
@@ -668,6 +681,14 @@ function isFinalReplyItem(item: TranscriptItem) {
 
 function isClarificationItem(item: TranscriptItem) {
     return item.kind === 'row' && item.row.kind === 'tool' && Boolean(item.row.clarification);
+}
+
+function isWorkspaceChangesItem(item: TranscriptItem) {
+    return (
+        item.kind === 'row' &&
+        item.row.kind === 'tool' &&
+        item.row.toolCall.name === 'workspace_changes'
+    );
 }
 
 function UserTurnItem({ from, item }: { from: 'assistant' | 'user'; item: TranscriptItem }) {
@@ -781,6 +802,10 @@ function AgentTurnItem({
 
     if (item.kind === 'row' && item.row.kind === 'widget') {
         return <AgentWidget row={item.row} />;
+    }
+
+    if (item.kind === 'row' && item.row.kind === 'tool' && isWorkspaceChangesItem(item)) {
+        return <WorkspaceChangesChip chatId={chatId} row={item.row} />;
     }
 
     if (item.kind === 'failure') {

@@ -152,6 +152,25 @@ test('the timeline keeps conversation units and routes execution to evidence', (
     // Execution evidence never reaches the timeline.
     assert.deepEqual(timelineKinds(activity({ id: 'act_tool', kind: 'tool_call' })), []);
     assert.deepEqual(timelineKinds(activity({ id: 'act_think', kind: 'reasoning' })), []);
+
+    // The changed-files summary is contribution outcome: its chip rides the
+    // timeline while the file contents stay turn evidence.
+    assert.deepEqual(
+        timelineKinds(
+            activity({
+                id: 'act_files',
+                kind: 'tool_call',
+                metadata: {
+                    tool: {
+                        arguments: { changes: [], runId: 'run_live', truncated: false },
+                        name: 'workspace_changes',
+                    },
+                    toolName: 'workspace_changes',
+                },
+            })
+        ),
+        ['tool']
+    );
     assert.deepEqual(
         timelineKinds(activity({ detail: 'Narrating...', id: 'act_msg', kind: 'message' })),
         []
