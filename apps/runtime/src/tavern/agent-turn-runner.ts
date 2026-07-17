@@ -17,6 +17,7 @@ import {
 import { upsertResponse } from './chat-api/index.ts';
 import { collectAgentEvaluationDispatches } from './evaluation-dispatch.ts';
 import { registerTurnDelivery } from './turn-delivery.ts';
+import { captureTurnWorkspaceBaseline, settleTurnFileEvidence } from './turn-file-evidence.ts';
 import { recordAgentTurnOutcomeNote } from './turn-outcome-notes.ts';
 
 interface ActiveTurn {
@@ -38,6 +39,10 @@ const turnWaiters = new Map<
     Array<(result: { error?: string; status: SettledTurnStatus }) => void>
 >();
 let executor: AgentExecutor = createAgentEngineExecutor();
+// Bumped when tests swap the executor or database. A drain suspended across
+// the swap (awaiting its workspace baseline) must abort instead of executing
+// a stale turn against the new world. Never changes in production.
+let executorEpoch = 0;
 
 export function enqueueAgentTurn(
     input: AgentExecutorInput,
@@ -135,6 +140,7 @@ export function waitForAgentTurnSettlement(runId: string): Promise<{
 
 export function resetAgentExecutorForTesting(nextExecutor?: AgentExecutor) {
     executor = nextExecutor ?? createAgentEngineExecutor();
+    executorEpoch += 1;
     activeTurns.clear();
     activeAgentRuns.clear();
     queuedTurnInputs.clear();
@@ -143,8 +149,10 @@ export function resetAgentExecutorForTesting(nextExecutor?: AgentExecutor) {
 export function setAgentExecutorForTesting(nextExecutor: AgentExecutor) {
     const previous = executor;
     executor = nextExecutor;
+    executorEpoch += 1;
     return () => {
         executor = previous;
+        executorEpoch += 1;
         activeTurns.clear();
         activeAgentRuns.clear();
         queuedTurnInputs.clear();
@@ -169,12 +177,37 @@ async function drainAgent(input: AgentExecutorInput) {
     activeAgentRuns.set(agentId, turn.id);
     activeTurns.set(turn.id, { agentId, input: turnInput });
 
+    // Workspace snapshots bracket the turn: the baseline strictly precedes
+    // execution so the compared pair is exact file-change evidence.
+    const drainEpoch = executorEpoch;
+    const workspaceBaseline = await captureTurnWorkspaceBaseline(agentId);
+    if (drainEpoch !== executorEpoch) {
+        clearActiveTurn(turn.id, agentId);
+        return;
+    }
+    let fileEvidencePromise: Promise<null | string> | undefined;
+    const settleFileEvidence = () => {
+        fileEvidencePromise ??= settleTurnFileEvidence({
+            agentId,
+            agentSessionId: turnInput.agentSession.id,
+            baseline: workspaceBaseline,
+            chatId: turnInput.chatId,
+            requestMessageId: turnInput.requestMessageId,
+            responseId: turnInput.responseId,
+            runId: turnInput.runId,
+        });
+        return fileEvidencePromise;
+    };
+
     try {
         const result = await executeAgentTurnWithTimeout(turnInput);
+        const fileActivityId = await settleFileEvidence();
         const current = getAgentTurn(turn.id);
         if (current?.status === 'running') {
             const completedTurn = completeAgentTurn({
-                activityIds: result.activityIds,
+                activityIds: fileActivityId
+                    ? [...result.activityIds, fileActivityId]
+                    : result.activityIds,
                 id: turn.id,
                 outputMessageIds: result.outputMessageIds,
             });
@@ -197,10 +230,12 @@ async function drainAgent(input: AgentExecutorInput) {
             }
         }
     } catch (error) {
+        const fileActivityId = await settleFileEvidence();
         const current = getAgentTurn(turn.id);
         if (current?.status === 'running') {
             const errorMessage = formatTurnError(error);
             const failedTurn = failAgentTurn({
+                activityIds: fileActivityId ? [...current.activityIds, fileActivityId] : undefined,
                 error: errorMessage,
                 id: turn.id,
             });
@@ -226,6 +261,9 @@ async function drainAgent(input: AgentExecutorInput) {
             });
         }
     } finally {
+        // Stopped turns skip both settle branches above; evidence still lands
+        // before the next turn's baseline is captured.
+        await settleFileEvidence();
         queuedTurnInputs.delete(turn.id);
         clearActiveTurn(turn.id, agentId);
         void drainAgent(turnInput);

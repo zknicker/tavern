@@ -34,6 +34,7 @@ import {
     upsertResponseActivity,
 } from './chat-api';
 import { badRequest, json, notFound, readJson } from './http';
+import { getAgentTurnFileEvidence } from './turn-file-changes';
 
 export async function handleTavernApiRequest(request: Request): Promise<Response | null> {
     const url = new URL(request.url);
@@ -229,6 +230,30 @@ async function route(request: Request, url: URL): Promise<Response> {
                   prompt: evidence.prompt,
                   recall: evidence.recall,
                   run_id: runId,
+              })
+            : notFound();
+    }
+
+    const turnFileChangesMatch = url.pathname.match(/^\/api\/turns\/([^/]+)\/file-changes$/u);
+    if (turnFileChangesMatch && request.method === 'GET') {
+        const runId = decodeURIComponent(turnFileChangesMatch[1]);
+        const evidence = getAgentTurnFileEvidence(runId);
+        return evidence
+            ? json({
+                  captured_at: evidence.capturedAt,
+                  changes: evidence.changes.map((change) => ({
+                      additions: change.additions,
+                      after_size: change.afterSize,
+                      after_text: change.afterText,
+                      before_size: change.beforeSize,
+                      before_text: change.beforeText,
+                      change: change.change,
+                      deletions: change.deletions,
+                      omitted: change.omitted,
+                      path: change.path,
+                  })),
+                  run_id: runId,
+                  truncated: evidence.truncated,
               })
             : notFound();
     }
