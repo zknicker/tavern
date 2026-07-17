@@ -10,7 +10,8 @@ read_when:
 
 Widgets let the assistant include app-rendered UI blocks in a final chat reply.
 The assistant writes normal Markdown plus one fenced code block per widget whose
-language is `widget:<name>`, containing exactly one JSON object of props:
+language is `widget:<name>` — or the bare `artifact` language for the durable
+artifact tier — containing exactly one JSON object of props:
 
 ````markdown
 ```widget:bar-chart
@@ -71,20 +72,24 @@ stored in the envelope plus the activity `summary`/`detail`.
   inline CSS/JS only, no sibling or external asset references. Rendering is
   live — the widget shows the file's current content at render time, not a
   snapshot, so later edits or deletion change what historical chats display.
-- `page`: sandboxed inline render of an agent-authored single-file TSX page —
-  the interactive escape valve above `html-preview` in the ladder. Props are
-  `{ path, height?, title? }` with the same confinement shape as
-  `html-preview`, except the path must end in `.tsx` and the complete-read cap
-  is the 512 KiB workspace text-read window. The Website fetches the file
-  through the same confined Runtime workspace read, then renders it in the
-  same opaque-origin iframe; inside the iframe the bundled page runtime
-  compiles the TSX with sucrase and mounts it with React. Exactly two import
-  sources resolve — `react` and `@tavern/kit` (the kit bundle built from
-  `apps/website/src/kit`) — and any other specifier, URLs above all, fails the
-  compile and renders the error plus the fenced source instead of a partial
-  page. Tavern tokens ride into the iframe (light and dark, following the app
-  scheme). Rendering is live file state, same replay caveat as `html-preview`.
-  See [kit-pages.md](kit-pages.md) for the authoring contract.
+- `artifact`: the durable artifact tier — an agent-authored single-file TSX
+  page that opens in the artifact pane. Authored as a bare ```` ```artifact ````
+  fence (not `widget:`-prefixed; the name reads in the visuals-vs-artifacts
+  vocabulary, and the fence funnels into the same widget machinery as
+  `tavern.widget.artifact`). Props are `{ path, title? }` with the same
+  confinement shape as `html-preview`, except the path must end in `.tsx` and
+  the complete-read cap is the 512 KiB workspace text-read window; there is no
+  height — the pane owns sizing. The transcript renders a compact card (title,
+  kind, open affordance) and never the page itself; opening the card focuses
+  the pane's workspace tab, where the `.tsx` pane renderer compiles the file
+  inside the same opaque-origin iframe (page runtime: sucrase compile, React
+  plus the `@tavern/kit` bundle built from `apps/website/src/kit`). Exactly
+  two import sources resolve — `react` and `@tavern/kit` — and any other
+  specifier, URLs above all, fails the compile and renders the error plus the
+  fenced source instead of a partial page. Tavern tokens ride into the iframe
+  (light and dark, following the app scheme). Rendering is live file state,
+  same replay caveat as `html-preview`. See [kit-pages.md](kit-pages.md) for
+  the authoring contract.
 - `merchbase-sales-chart`: Plugin-backed sales trend display. Fetches live
   MerchBase data, renders sales as bars and royalties as a line, and includes a
   date range selector. Current-day sales requests default to a 10-day trend
@@ -155,8 +160,9 @@ assistant content and writing `widget` activity
 (`apps/website/src/widgets`), including Plugin-owned renderers imported from
 first-party Plugin folders. Renderers are thin wrappers that map fence props
 onto the shared Tavern component kit (`apps/website/src/kit`, see
-[kit.md](kit.md)), which owns the visual components. The `page` widget's
+[kit.md](kit.md)), which owns the visual components. The artifact tier's
 in-iframe compiler and kit bundle live under
 `apps/website/src/widgets/page-runtime/` and are built from the kit sources by
-`apps/website/scripts/build-page-runtime.ts` (see
-[kit-pages.md](kit-pages.md)).
+`apps/website/scripts/build-page-runtime.ts`; the pane renderer for `.tsx`
+files lives with the other pane renderers in
+`apps/website/src/features/chats/` (see [kit-pages.md](kit-pages.md)).

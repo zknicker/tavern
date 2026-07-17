@@ -1,19 +1,20 @@
 ---
-summary: Sandboxed agent TSX pages — the widget:page authoring contract, the kit-for-agents reference, and the page-runtime bundle build.
+summary: Agent TSX artifacts — the artifact fence authoring contract, the kit-for-agents reference, the pane renderer, and the page-runtime bundle build.
 read_when:
-  - changing the page widget, its in-iframe compiler, or the page-runtime bundle build
+  - changing the artifact fence, its transcript card, the .tsx pane renderer, or the page-runtime bundle build
   - changing what agent pages can import from @tavern/kit
-  - writing or reviewing agent guidance for authoring TSX pages
+  - writing or reviewing agent guidance for authoring TSX artifacts
 ---
 
-# Agent TSX Pages
+# Agent TSX Artifacts
 
-`widget:page` renders an agent-authored single-file React page inside the
-same opaque-origin iframe boundary as `html-preview`. The agent writes one
-`.tsx` in its workspace; the app compiles it inside the sandboxed iframe and
-renders it with React plus the Tavern component kit, so agent pages get
-within-page interactivity and the native Tavern look while the security
-boundary stays exactly where `html-preview` put it.
+Agents build durable artifacts as single-file TSX pages: the chat transcript
+shows a compact card, and opening it renders the compiled page in the artifact
+pane inside the same opaque-origin iframe boundary as `html-preview`. The
+agent authors one `.tsx` in its workspace and references it with a bare
+`artifact` fence; the pane compiles it with React plus the Tavern component
+kit, so artifacts get within-page interactivity and the native Tavern look
+while big surfaces stay out of the chat column.
 
 ## Authoring contract (the kit-for-agents reference)
 
@@ -43,9 +44,10 @@ compressed form of it.
   `--muted-foreground`, `--surface-2`, `--border`, `--error-bg`, ...), and
   Tailwind utility classes used by the kit graph are compiled in. Prefer kit
   components; reach for tokens only for small glue styling.
-- Render it with a `widget:page` fence: `{"path": "workbench/...", "height"?:
-  120-1200, "title"?: string}`. Rendering is live file state — later edits or
-  deletion change what historical chats display.
+- Reference it with a bare `artifact` fence: `{"path": "workbench/...",
+  "title"?: string}`. The chat shows a compact card; the page renders in the
+  artifact pane, which owns sizing (no height prop). Rendering is live file
+  state — later edits or deletion change what the card opens.
 
 ## Security boundary
 
@@ -53,12 +55,26 @@ Identical to `html-preview`: the confined Runtime workspace read (realpath
 confinement, secret-file blocks, complete reads only — here the 512 KiB text
 window) fetches the file, and the document renders via `srcDoc` in a sandboxed
 iframe with scripts allowed and never `allow-same-origin`. TSX changes the
-authoring language, not the sandbox. Compilation itself happens inside the
+authoring language, not the sandbox; moving the render into the artifact pane
+changes the venue, not the boundary. Compilation itself happens inside the
 iframe, so hostile source never executes — or even parses — in the app origin.
 The import allowlist is mechanical: the compiled module's `require` resolves
 only the two vendored namespaces and throws on anything else before the page
 mounts, so a failing page renders the error plus its fenced source, never a
 partial page.
+
+## Card and pane flow
+
+The `artifact` fence funnels into the widget machinery (component id
+`tavern.widget.artifact`; see [widgets.md](widgets.md)). The transcript
+renderer (`apps/website/src/widgets/artifact-card.tsx`) draws the compact card
+— title, kind line, open affordance — and performs no workspace read.
+Clicking calls the artifact-panel open path with a `workspaceFile` target, the
+same merge-or-focus flow `tavern://workspace` links and the agent `pane_open`
+tool use. In the pane, the workspace file preview
+(`apps/website/src/features/chats/chat-artifact-page-preview.tsx`) renders
+`.tsx` files through the page runtime, sibling to the existing image, HTML,
+and code renderers.
 
 ## Page runtime bundle
 
@@ -78,9 +94,9 @@ builds the runtime from the kit sources — one source of truth, never a fork:
   (gitignored) as two exported strings, so vite, tsc, and bun test all load it
   with no loaders or virtual modules.
 
-The widget renderer (`src/widgets/page.tsx`) embeds both strings plus the file
-content into the srcDoc and stamps the app's resolved scheme onto the iframe
-document (`class="dark"` + `data-theme`), so pages follow the app theme. The
-compile/evaluate pipeline (`page-runtime/compile.ts`) is shared between the
-iframe entry and the website tests, which exercise the real
-compile-and-render path against the actual kit exports.
+The pane renderer embeds both strings plus the file content into the srcDoc
+and stamps the app's resolved scheme onto the iframe document (`class="dark"`
++ `data-theme`), so pages follow the app theme. The compile/evaluate pipeline
+(`page-runtime/compile.ts`) is shared between the iframe entry and the website
+tests, which exercise the real compile-and-render path against the actual kit
+exports.
