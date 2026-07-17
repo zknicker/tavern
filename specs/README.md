@@ -34,6 +34,8 @@ agent-engine implementation choices directly.
   primitives as Tavern presents them.
 - `chat-timeline.md`: the chat timeline vs agent turn evidence boundary — conversation units,
   live turn presentation, and turn-scoped evidence queries.
+- `identity.md`: authenticated users, Clerk mapping, runtime ownership, and
+  membership.
 - `participants.md`: observed participants, labels, and self actor presentation.
 - `mentions.md`: `@` references in composers, their metadata, and their runtime effects.
 - `jobs.md`, `workers.md`, `models.md`, `skills.md`, `tools.md`, `plugins.md`, `catalog.md`,
