@@ -1,6 +1,10 @@
 import { StopIcon } from '@hugeicons-pro/core-solid-rounded';
 import * as React from 'react';
 import { useChatComposerFocusRequest } from '../../commands/chat-composer-focus.ts';
+import {
+    appendComposerInsert,
+    useChatComposerInsertRequest,
+} from '../../commands/chat-composer-insert.ts';
 import { Icon } from '../../components/ui/icon.tsx';
 import {
     PromptInput,
@@ -139,6 +143,14 @@ export function ChatMessageComposer({
         });
     }, [canAutoFocusComposer]);
     useChatComposerFocusRequest(canAutoFocusComposer, mentionComposer.focusTextEditor);
+    const handleComposerInsert = React.useCallback(
+        (text: string) => {
+            setContent((current) => appendComposerInsert(current, text));
+            requestAnimationFrame(() => focusTextEditorRef.current());
+        },
+        [setContent]
+    );
+    useChatComposerInsertRequest(canAutoFocusComposer, handleComposerInsert);
 
     async function handleSubmit(event?: React.FormEvent<HTMLFormElement>) {
         event?.preventDefault();
