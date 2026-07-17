@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.5.2 - 2026-07-17
+
+- Runtime/API/App: Claude works with zero setup on desktop Macs — a detected
+  host Claude Code login now powers the Claude Code provider automatically
+  ("Using your Claude Code login"), with runtime-owned sign-in still the
+  durable path for headless or deployed Runtimes. Detection verifies the
+  credential is actually readable, so hosts where the keychain is unusable
+  correctly show "Not connected" instead of failing turns. Requires this
+  Runtime.
+- Runtime/API/App: the Anthropic API key is its own provider, matching the
+  Codex/OpenAI split — the Claude Code row is sign-in only, and pay-per-token
+  API access lives on a separate Anthropic provider row.
+- App: unauthenticated provider rows stay two lines; setup hints only appear
+  when a row has no action button.
+- Runtime: seeds a widgets gallery demo channel on development stacks.
+
 ## v1.5.1 - 2026-07-16
 
 - Runtime/API/App: Claude sign-in lives in Model access — connect Claude
