@@ -20,6 +20,7 @@ import {
 } from '../../hooks/tasks/use-task-mutations.ts';
 import { appRoutes } from '../../lib/app-routes.ts';
 import type { TaskRecord } from '../../lib/trpc.tsx';
+import { useAgentSelectOptions } from '../agents/use-agent-select-options.ts';
 import { EmptyState } from '../shell/empty-state.tsx';
 import { TaskAttachments } from './task-attachments.tsx';
 import { TaskBlockedReason } from './task-blocked-reason.tsx';
@@ -30,7 +31,6 @@ import { TaskEditorSection, TaskEditorSidebar } from './task-editor-sidebar.tsx'
 import { TaskFields } from './task-fields.tsx';
 import { formatTaskNumber } from './task-presentation.ts';
 import { TaskSchedule } from './task-schedule.tsx';
-import { useTaskAgentOptions } from './use-task-agent-options.ts';
 
 export function TaskDetail({ taskId }: { taskId: string }) {
     const navigate = useNavigate();
@@ -45,7 +45,7 @@ export function TaskDetail({ taskId }: { taskId: string }) {
 
     const task = taskQuery.data?.task ?? null;
     const tasks = tasksQuery.data?.tasks ?? [];
-    const agents = useTaskAgentOptions(agentsQuery.data?.agents);
+    const agents = useAgentSelectOptions(agentsQuery.data?.agents);
     const epics = React.useMemo(
         () => (tasksQuery.data?.tasks ?? []).filter((candidate) => candidate.kind === 'epic'),
         [tasksQuery.data?.tasks]
