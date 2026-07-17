@@ -232,11 +232,11 @@ export function ChatMessageComposer({
             className={cn(
                 isCompact
                     ? 'border-t border-r-[3px] border-r-border/70 bg-chrome/40 px-3 py-3'
-                    : // Match the transcript's lg gutter so the composer stays
+                    : // Match the transcript's gutter so the composer stays
                       // aligned with the messages.
-                      'lg:px-16'
+                      'px-5'
             )}
-            contentClassName={isCompact ? 'max-w-none' : undefined}
+            contentClassName="max-w-none"
             error={attachmentError ?? sendMessage.error?.message}
             onDragEnter={useMainDropTarget ? undefined : attachmentDrop.onDragEnter}
             onDragLeave={useMainDropTarget ? undefined : attachmentDrop.onDragLeave}

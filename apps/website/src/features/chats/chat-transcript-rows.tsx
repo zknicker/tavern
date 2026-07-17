@@ -55,7 +55,7 @@ const TranscriptRenderRowView = React.memo(
         }
 
         if (row.kind === 'dayDivider') {
-            return <DayDivider className="mx-3 mt-3 mb-1" label={row.label} />;
+            return <DayDivider className="mx-3 mt-2" label={row.label} />;
         }
 
         return (

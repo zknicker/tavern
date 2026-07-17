@@ -16,7 +16,7 @@ export function ArchivedChatBar({
     const noun = conversationKind === 'channel' ? 'channel' : 'chat';
 
     return (
-        <div className="px-4 pb-4 lg:px-16">
+        <div className="px-5 pb-4">
             <div className="flex items-center gap-2.5 rounded-xl border border-border bg-muted px-3 py-2.5">
                 <Icon
                     aria-hidden="true"

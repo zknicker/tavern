@@ -59,14 +59,13 @@ export function AgentBusyElsewhereHint({
         busyElsewhere !== null &&
         !activeReplies.some((reply) => reply.agentId === busyElsewhere.agentId);
 
-    // Mirror the composer's gutters and centered column (PromptInput's
-    // form px-6 lg:px-16 + max-w-[60rem]) so the hint sits flush with the
-    // prompt bar's left edge. The gutters stay static (zero height while
+    // Mirror the composer's full-width gutter so the hint sits flush with
+    // the prompt bar's left edge. The gutters stay static (zero height while
     // hidden); only the content row rises, so its scale anchors at the
     // column's left edge instead of lurching from the viewport edge.
     return (
-        <div className="px-6 lg:px-16" data-slot="agent-busy-elsewhere">
-            <div className="mx-auto w-full max-w-[60rem]">
+        <div className="px-5" data-slot="agent-busy-elsewhere">
+            <div className="w-full">
                 <AnimatePresence initial={false}>
                     {visible ? (
                         <StatusRiseRow key={busyElsewhere.agentId}>

@@ -65,7 +65,7 @@ test('ChatTranscript renders hover time and copy action without session or usage
     assert.doesNotMatch(markup, /session 9f83ac/);
 });
 
-test('ChatTranscript keeps the detail lane capped', () => {
+test('ChatTranscript fills the detail lane full width', () => {
     const markup = renderTranscript([
         {
             actor: { id: 'tiny', kind: 'agent' },
@@ -87,7 +87,7 @@ test('ChatTranscript keeps the detail lane capped', () => {
         },
     ]);
 
-    assert.match(markup, /relative mx-auto min-h-full w-full max-w-\[60rem\]/);
+    assert.match(markup, /relative min-h-full w-full/);
 });
 
 test('ChatTranscript animates only local optimistic user messages', () => {
@@ -106,8 +106,8 @@ test('ChatTranscript animates only local optimistic user messages', () => {
 
     assert.match(markup, /Can you check this\?/);
     assert.match(markup, /data-slot="message"/);
-    // The owner's own optimistic message anchors right (secondary bubble).
-    assert.match(markup, /style="transform-origin:bottom right;opacity:0;transform/);
+    // Every message shares the left roster; the optimistic row still animates.
+    assert.match(markup, /style="transform-origin:bottom left;opacity:0;transform/);
 });
 
 test('ChatTranscript renders chat markdown headings and inline markup in message text', () => {
@@ -201,9 +201,9 @@ test('ChatTranscript renders active replies through the chat message shell', () 
 
     assert.match(markup, /data-slot="message"/);
     assert.match(markup, /data-slot="bubble"/);
-    assert.match(markup, /group\/turn w-full gap-3 py-1\.5/);
+    assert.match(markup, /group\/turn w-full gap-3 py-1/);
     assert.doesNotMatch(markup, /group\/turn w-full px-3 py-1\.5/);
-    assert.match(markup, /gap-0\.5 pt-0\.5/);
+    assert.match(markup, /gap-0 pt-0\.5/);
     assert.match(markup, /transform-origin:bottom left/);
     assert.doesNotMatch(markup, /pb-6/);
     assert.doesNotMatch(markup, /style="transform-origin:bottom left;opacity:0;transform/);

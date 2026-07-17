@@ -119,7 +119,7 @@ export function ChatActiveStatusStack({
                                 : // Fades toward the transcript so scrolled content
                                   // slides under it without a hard seam above the
                                   // composer.
-                                  'bg-gradient-to-t from-background via-background/85 to-transparent px-6 pt-2.5 pb-0.5 lg:px-16',
+                                  'bg-gradient-to-t from-background via-background/85 to-transparent px-5 pt-2.5 pb-0.5',
                             className
                         )}
                         // Fade only: the last row's own exit carries the
@@ -129,7 +129,7 @@ export function ChatActiveStatusStack({
                         key="active-status"
                         transition={statusRiseOut}
                     >
-                        <div className="mx-auto flex w-full max-w-[60rem] flex-col">
+                        <div className="flex w-full flex-col">
                             <AnimatePresence initial={false}>
                                 {seatReplies.map((reply, index) => (
                                     // The clip wrapper hangs left of the row

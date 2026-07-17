@@ -86,14 +86,14 @@ test('chat message prose uses the shadcn bubble content styling', () => {
         expect(markup).toContain('leading-relaxed');
     }
 
-    // The agent reply keeps the default bubble radius and reads as left-aligned
-    // ghost text; the owner's own message is a right-anchored secondary pill.
-    expect(assistant).toContain('rounded-xl');
-    expect(assistant).toContain('data-variant="ghost"');
-    // The owner bubble matches the prompt input's surface radius so long
-    // multi-line sends don't balloon into pill shapes.
-    expect(user).toContain('rounded-3xl');
-    expect(user).toContain('data-variant="secondary"');
+    // Every message — the owner's included — reads as left-aligned ghost text
+    // in one Slack-style roster; only data-from tells the senders apart.
+    for (const markup of [assistant, user]) {
+        expect(markup).toContain('rounded-xl');
+        expect(markup).toContain('data-variant="ghost"');
+    }
+    expect(assistant).toContain('data-from="assistant"');
+    expect(user).toContain('data-from="user"');
 });
 
 test('chat message wraps long pasted tokens inside the bubble', () => {

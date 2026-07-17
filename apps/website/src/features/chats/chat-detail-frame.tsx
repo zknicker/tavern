@@ -13,7 +13,6 @@ import { ChatScrollPositionMemory } from './chat-scroll-position-memory.tsx';
 import { ChatTimeline } from './chat-timeline.tsx';
 import { ChatTranscriptLoadingIndicator } from './chat-transcript-loading-indicator.tsx';
 import type { ConversationMessageLayout } from './chat-transcript-model.ts';
-import { ChatTurnTimeline, type ChatTurnTimelineMarker } from './chat-turn-timeline.tsx';
 
 export function ChatDetailFrame({
     activeReplies,
@@ -56,9 +55,6 @@ export function ChatDetailFrame({
 }) {
     const viewportRef = React.useRef<HTMLDivElement | null>(null);
     const contentRef = React.useRef<HTMLDivElement | null>(null);
-    const [turnTimelineMarkers, setTurnTimelineMarkers] = React.useState<ChatTurnTimelineMarker[]>(
-        []
-    );
     const hasActiveReply = activeReplies.length > 0;
     const hasTimelineContent = rows.length > 0 || hasActiveReply || (failedTurns?.length ?? 0) > 0;
     const isInitialTranscriptPending = isPending && !historyLoaded && !hasActiveReply;
@@ -86,20 +82,17 @@ export function ChatDetailFrame({
                         </div>
                         <MessageScroller>
                             <MessageScrollerViewport
-                                // Widen the side gutters at lg+ so the turn
-                                // timeline rail has room beside the messages;
-                                // the rail itself hides below lg. The
-                                // conversation hugs the composer — the bottom
-                                // padding (96px) is static clearance for a
-                                // two-row floating status stack. New sends
-                                // append here without re-anchoring the
+                                // The conversation hugs the composer — the
+                                // bottom padding (96px) is static clearance
+                                // for a two-row floating status stack. New
+                                // sends append here without re-anchoring the
                                 // viewport, so the history above stays put.
-                                className="px-6 pt-4 pb-24 lg:px-16"
+                                className="px-5 pt-4 pb-24"
                                 onScroll={handleScroll}
                                 ref={viewportRef}
                             >
                                 {isInitialTranscriptPending ? null : error ? (
-                                    <MessageScrollerContent className="mx-auto w-full max-w-[60rem]">
+                                    <MessageScrollerContent className="w-full">
                                         <div className="px-2 py-4 text-muted-foreground text-sm">
                                             Unable to load this chat transcript right now.
                                         </div>
@@ -112,27 +105,18 @@ export function ChatDetailFrame({
                                         conversationLayout={conversationLayout}
                                         defaultOpenWorkGroups={defaultOpenWorkGroups}
                                         failedTurns={failedTurns}
-                                        onTurnTimelineMarkersChange={setTurnTimelineMarkers}
                                         rows={rows}
                                         scrollContentRef={contentRef}
                                         totalMessages={totalMessages}
                                     />
                                 ) : (
-                                    <MessageScrollerContent className="mx-auto w-full max-w-[60rem]">
+                                    <MessageScrollerContent className="w-full">
                                         <div className="px-2 py-4 text-muted-foreground text-sm">
                                             {emptyLabel}
                                         </div>
                                     </MessageScrollerContent>
                                 )}
                             </MessageScrollerViewport>
-                            <ChatTurnTimeline
-                                anchorRef={viewportRef}
-                                markers={
-                                    hasTimelineContent && !isInitialTranscriptPending
-                                        ? turnTimelineMarkers
-                                        : []
-                                }
-                            />
                             <ChatScrollPositionMemory
                                 chatId={chatId}
                                 enabled={hasTimelineContent && !isInitialTranscriptPending}
