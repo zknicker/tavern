@@ -88,7 +88,7 @@ export const demoWorkspaceFiles = [
         path: 'workbench/demos/html-preview.html',
     },
     {
-        // Backs the page widget gallery demo: one self-contained TSX file
+        // Backs the artifact gallery demo: one self-contained TSX file
         // composing @tavern/kit, compiled and rendered inside the sandboxed
         // iframe through the confined workspace file read.
         content: [

@@ -155,7 +155,7 @@ describe('development chat demo sessions', () => {
                 'tavern.widget.line-chart',
                 'tavern.widget.merchbase-sales-chart',
                 'tavern.widget.orbit-map',
-                'tavern.widget.page',
+                'tavern.widget.artifact',
                 'tavern.widget.table',
                 'tavern.widget.table',
             ].sort()

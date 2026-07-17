@@ -31,8 +31,9 @@ import {
  * the main demo channel.
  */
 
-// Renders live from the seeded workspace file (see development-demos.ts in
-// workspace/), exercising the sandboxed TSX compile-and-render path.
+// The artifact card opens this seeded workspace file (see development-demos.ts
+// in workspace/) in the artifact pane, exercising the sandboxed TSX
+// compile-and-render path.
 export const pageDemoWorkspacePath = 'workbench/demos/page.tsx';
 export function widgetsChannelDemo(): DevelopmentChatDemo {
     const chatId = developmentChatDemoIds.widgets;
@@ -202,15 +203,14 @@ function widgetTurns(): WidgetTurnSpec[] {
             ],
         },
         {
-            reply: 'Wrote a single-file React page in my workbench; rendered below.',
+            reply: 'Built the fleet page as an artifact — open the card to view it in the pane.',
             request: 'Build an interactive fleet dashboard page with kit components.',
-            slug: 'page',
+            slug: 'artifact',
             widgets: [
                 {
                     fallbackText: 'Fleet status',
-                    title: 'Page',
-                    widget: widgetDemoRenderInput('page', 'Fleet status', {
-                        height: 620,
+                    title: 'Artifact',
+                    widget: widgetDemoRenderInput('artifact', 'Fleet status', {
                         path: pageDemoWorkspacePath,
                         title: 'Fleet status',
                     }),

@@ -166,23 +166,22 @@ const REQUIREMENTS: Array<{
         expected: "open it in the chat's artifact pane with `pane_open`",
         prompt: 'channel',
     },
-    // Widgets: the sandboxed escape valves must stay taught so agents keep
-    // authoring custom inline visuals from workspace files, and the ladder
-    // (typed widget -> html-preview -> page) keeps escalation deliberate.
+    // Widgets and artifacts: the sandboxed html-preview escape valve and the
+    // durable artifact tier must stay taught, and the two-tier ladder
+    // (in-chat visuals vs pane artifacts) keeps the venue choice deliberate.
     {
         capability: 'html-preview widget taught',
         expected: 'widget:html-preview — ',
         prompt: 'channel',
     },
     {
-        capability: 'page widget taught',
-        expected: 'widget:page — ',
+        capability: 'artifact fence taught',
+        expected: 'artifact — Durable single-file React page rendered in the artifact pane',
         prompt: 'channel',
     },
     {
-        capability: 'widget escalation ladder taught',
-        expected:
-            'widget:html-preview for a static HTML file, widget:page for an interactive single-file React page composing @tavern/kit',
+        capability: 'visual vs artifact ladder taught',
+        expected: 'Build an artifact for anything the user will keep or iterate on',
         prompt: 'channel',
     },
     // Automations: script mode exists and watchdogs should use it.
@@ -255,9 +254,10 @@ const REQUIREMENTS: Array<{
 // responsiveness — the global silence teaching needed an explicit DM
 // carve-out the eval caught (a DM FYI saying "no response needed" must
 // still get a brief acknowledgement; specs/addressing.md).
-// total 14_750 -> 15_450 (2026-07-16): the page widget entry (~470 chars)
-// plus the escalation-ladder rule (~230 chars, typed widget -> html-preview
-// -> page) landed for the TSX page escape valve (PRD-74).
+// total 14_750 -> 15_450 (2026-07-16): the artifact entry (~440 chars) plus
+// the visuals-vs-artifacts ladder rule (~250 chars) landed for the TSX
+// artifact tier (PRD-74; re-scoped from an inline page widget to the
+// artifact pane on 2026-07-17 inside the same budget).
 const promptBudgets = {
     channelChatSection: 1850,
     channelTotal: 15_450,

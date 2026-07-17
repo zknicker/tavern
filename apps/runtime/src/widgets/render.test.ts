@@ -119,6 +119,50 @@ describe('Widget rendering', () => {
         expect(parsed?.displayContent).toBe('Look:');
     });
 
+    it('parses a bare artifact fence with a workspace tsx path', () => {
+        const parsed = parseWidgetsFromAssistantContent(
+            [
+                'Built the report page.',
+                '',
+                '```artifact',
+                '{"path":"workbench/pages/report.tsx","title":"Q3 report"}',
+                '```',
+            ].join('\n')
+        );
+
+        expect(parsed).toMatchObject({
+            displayContent: 'Built the report page.',
+            invalid: [],
+            widgets: [
+                {
+                    fallbackText: 'Q3 report',
+                    name: 'artifact',
+                    render: {
+                        component: 'tavern.widget.artifact',
+                        props: { path: 'workbench/pages/report.tsx', title: 'Q3 report' },
+                        target: 'chat.inline',
+                    },
+                },
+            ],
+        });
+    });
+
+    it('strips invalid artifact fences and hides an in-flight one', () => {
+        const parsed = parseWidgetsFromAssistantContent(
+            ['Look:', '', '```artifact', '{"path":"notes.md"}', '```'].join('\n')
+        );
+
+        expect(parsed?.widgets).toEqual([]);
+        expect(parsed?.invalid).toMatchObject([{ name: 'artifact' }]);
+        expect(parsed?.displayContent).toBe('Look:');
+
+        expect(
+            widgetDisplayContent(
+                ['Building it now.', '', '```artifact', '{"path":"work'].join('\n')
+            )
+        ).toBe('Building it now.');
+    });
+
     it('rejects unknown widget names as invalid fences', () => {
         const parsed = parseWidgetsFromAssistantContent(
             ['```widget:sparkline', '{"values":[1,2]}', '```'].join('\n')

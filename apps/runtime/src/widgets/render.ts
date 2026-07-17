@@ -17,9 +17,16 @@ interface WidgetActivitySource {
     title: string;
 }
 
-const widgetFencePattern = /```widget:([a-z][a-z0-9-]*)[ \t]*\n([\s\S]*?)\n```/gu;
-const openWidgetFencePattern = /```widget:[a-z][a-z0-9-]*[ \t]*(?:\n[\s\S]*)?$/u;
+// Two fence languages funnel into the widget machinery: `widget:<name>` for
+// inline widgets and the bare `artifact` language for the durable artifact
+// tier (its widget name is also `artifact`).
+const widgetFencePattern = /```(widget:[a-z][a-z0-9-]*|artifact)[ \t]*\n([\s\S]*?)\n```/gu;
+const openWidgetFencePattern = /```(?:widget:[a-z][a-z0-9-]*|artifact)[ \t]*(?:\n[\s\S]*)?$/u;
 const maxWidgetBodyChars = 20_000;
+
+function widgetNameFromFenceLanguage(language: string): string {
+    return language === 'artifact' ? 'artifact' : language.slice('widget:'.length);
+}
 
 export interface ParsedWidget {
     fallbackText: string;
@@ -55,10 +62,11 @@ export function parseWidgetsFromAssistantContent(content: string): ParsedAssista
     const invalid: InvalidWidgetFence[] = [];
 
     for (const match of matches) {
-        const [, name = '', body = ''] = match;
+        const [, language = '', body = ''] = match;
+        const name = widgetNameFromFenceLanguage(language);
 
         try {
-            widgets.push(parseWidgetFenceBody(name, body));
+            widgets.push(parseWidgetFenceBody(language, name, body));
         } catch (error) {
             invalid.push({ error: errorMessage(error), name });
         }
@@ -162,26 +170,26 @@ export function widgetProgressFromActivity(
     );
 }
 
-function parseWidgetFenceBody(name: string, body: string): ParsedWidget {
+function parseWidgetFenceBody(language: string, name: string, body: string): ParsedWidget {
     const trimmed = body.trim();
 
     if (!trimmed) {
-        throw new Error(`widget:${name} fence is empty.`);
+        throw new Error(`${language} fence is empty.`);
     }
 
     if (trimmed.length > maxWidgetBodyChars) {
-        throw new Error(`widget:${name} props exceed ${maxWidgetBodyChars} characters.`);
+        throw new Error(`${language} props exceed ${maxWidgetBodyChars} characters.`);
     }
 
     let payload: unknown;
     try {
         payload = JSON.parse(trimmed);
     } catch {
-        throw new Error(`widget:${name} props are not valid JSON.`);
+        throw new Error(`${language} props are not valid JSON.`);
     }
 
     if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
-        throw new Error(`widget:${name} props must be one JSON object.`);
+        throw new Error(`${language} props must be one JSON object.`);
     }
 
     return parseWidgetPayload(name, payload);
