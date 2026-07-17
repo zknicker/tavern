@@ -13,6 +13,7 @@ import { Input } from '../../components/ui/primitives/input.tsx';
 import { useConnectAgentRuntime } from '../../hooks/connections/use-connect-agent-runtime.ts';
 import { useRuntimeConnection } from '../../hooks/connections/use-runtime-connection.ts';
 import { appRoutes } from '../../lib/app-routes.ts';
+import { ClaimCommand } from './claim-command.tsx';
 
 const tavernRuntimeUrlPlaceholder = 'http://127.0.0.1:18790';
 
@@ -160,6 +161,8 @@ function TavernRuntimeOnboardingForm({
                     tasks. Once you have it up and running, connect to it here.
                 </p>
             </div>
+
+            <ClaimCommand />
 
             <Field>
                 <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
