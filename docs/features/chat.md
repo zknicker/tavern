@@ -33,6 +33,12 @@ happen, and keep the durable timeline as context.
   [Tool Presentation](../internals/tool-presentation.md)). Model thinking text
   lives in the turn details drawer alongside tool rows — its group header
   carries an icon like tool groups — and never renders in the chat pane.
+* **Changed files.** A turn that creates, modifies, or deletes workspace files
+  ends its work group with a "Changed N files" row. Opening it lists the files
+  with per-file diffs (before/after text, bounded; binary files show a changed
+  badge). Selecting text in a diff, workspace file preview, or Wiki page in
+  the artifact pane offers "Quote in chat", inserting the quoted lines plus a
+  `tavern://` source link into the composer — the universal review gesture.
 * **Artifacts.** Code, images, files, diffs, documents, and charts render as
   durable outputs attached to messages or response activity.
 * **Receipts.** Message creation and assistant delivery are acknowledged by id.

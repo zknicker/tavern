@@ -91,6 +91,21 @@ Tool activity is chat evidence, not a second control surface:
 5. The transcript renders the row as evidence. Users control future tool access
    through settings, not through per-call prompts in the chat footer.
 
+## Worked example: turn file-change evidence
+
+The changed-files row (`tool-steps/workspace-changes-tool-step.tsx`,
+registered as `workspace_changes`) is a Runtime-synthesized tool activity:
+
+1. When a turn settles, Runtime compares its pre/post workspace snapshots and
+   records a `workspace_changes` tool activity whose arguments carry the
+   change summary (paths, line counts, `runId`) — never file contents.
+2. The row renders "Changed N files"; the drawer body
+   (`sessions/tools/workspace-changes-drawer-body.tsx`) lists the files and
+   fetches before/after text on demand through `chat.turn.fileChanges`,
+   rendering diffs with the shared `components/diff/diff-view.tsx`.
+3. Selecting text in a diff quotes it into the composer with a `tavern://`
+   source link (`components/quote/selection-quote.tsx`).
+
 ## Worked example: clarifications
 
 The clarification row (`tool-steps/clarification-tool-step.tsx`, registered as

@@ -380,6 +380,42 @@ Rules:
 - Stop transitions a queued or running turn to `cancelled` and settles the
   linked response as `cancelled`.
 
+## `agent_turn_file_changes`
+
+Per-turn workspace file-change evidence: the files a turn created, modified,
+or deleted in the agent workspace, with bounded before/after text for diff
+rendering.
+
+```text
+agent_turn_file_changes
+  run_id      TEXT NOT NULL
+  path        TEXT NOT NULL
+  change      TEXT NOT NULL        -- created, modified, deleted
+  before_text TEXT
+  after_text  TEXT
+  omitted     TEXT                 -- NULL, binary, too-large
+  before_size INTEGER
+  after_size  INTEGER
+  additions   INTEGER NOT NULL DEFAULT 0
+  deletions   INTEGER NOT NULL DEFAULT 0
+  created_at  TEXT NOT NULL
+  PRIMARY KEY (run_id, path)
+```
+
+Rules:
+
+- Runtime captures a bounded workspace snapshot before a turn executes and
+  compares it when the turn settles; the diff fills these rows. Snapshots skip
+  hidden names, skipped directories, and secret-shaped files with the same
+  visibility rules as workspace browsing.
+- A turn with changes also records one `workspace_changes` tool activity row
+  carrying the summary (paths and line counts); before/after text stays here
+  and is served on demand at `GET /api/turns/{run_id}/file-changes`.
+- Text is retained up to a per-file cap; binary or oversized files persist as
+  changed rows with `omitted` set and no content. The turn's
+  `metadata.fileEvidence` marker records `capturedAt` and whether the change
+  set was truncated.
+
 ## `chat_response_activity`
 
 Ordered durable work rows inside a response.

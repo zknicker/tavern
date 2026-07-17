@@ -152,6 +152,12 @@ The Tavern app keeps list and detail reads separate:
   narration, and worker rows plus artifacts — by `chatId` + `responseId`. The
   turn drawer queries it on demand; live turns stream evidence through turn
   progress events instead.
+* `chat.turn.fileChanges` returns one turn's workspace file-change evidence by
+  `runId` (Runtime `GET /api/turns/{run_id}/file-changes`): the files the turn
+  created, modified, or deleted, with bounded before/after text for diff
+  rendering. The transcript's "Changed N files" row carries only the summary;
+  the drawer fetches contents through this query on demand. Null when no
+  Runtime is connected or the turn recorded no changes.
 
 Invalidate `chat.list` when membership or list ordering can change. Invalidate
 `chat.get` when one chat's detail fields can change. Response and activity
