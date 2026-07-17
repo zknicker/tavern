@@ -62,3 +62,16 @@ pairing token, then save that token in the App settings.
 
 Clients use Tavern API or TypeScript SDK surfaces instead of reading local
 SQLite files, runtime stores, or executor state directly.
+
+## App Sign-In
+
+Tavern App supports optional Clerk sign-in. The app reads
+`VITE_CLERK_PUBLISHABLE_KEY` (dev: `apps/website/.env.local`, pulled with
+`clerk env pull`); when the key is absent the app runs signed-out with no auth
+UI, so local dev and e2e work without Clerk. Sign-in, sign-up, and the account
+row live in the sidebar footer (`sidebar-auth-items.tsx`); the provider gate is
+`apps/website/src/lib/clerk.tsx`.
+
+Clerk identity is app-surface only today: it does not gate Runtime access,
+which stays on the Runtime token above. `CLERK_SECRET_KEY` is CLI/dev-only and
+must never ship in client code or version control.
