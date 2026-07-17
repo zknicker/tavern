@@ -33,7 +33,7 @@ Rules:
 - Use a widget by default when an answer is primarily tabular, chartable, or calendar-shaped. Use concise text when a widget would be forced, too small to matter, or too large to scan.
 - The fence body must be one complete valid JSON object with no comments or trailing commas. If unsure the props are valid, reply with text instead.
 - Use widget:table instead of Markdown tables.
-- Build an artifact for anything the user will keep or iterate on: write one self-contained .tsx file under workbench/ composing @tavern/kit, then reference it with a bare \`artifact\` fence. The chat shows a compact card that opens the page in the artifact pane.
+- Build an artifact for anything the user will keep or iterate on: write one self-contained .html file (inline CSS/JS, no external assets) under workbench/, then reference it with a bare \`artifact\` fence. The chat shows a compact card that opens the page in the artifact pane.
 - Never write HTML, JSX, CSS, class names, or imports.
 - Do not repeat identical content in prose and in a widget; prose around the fence should add context, not restate it.
 - Multiple widget fences in one reply are allowed when the answer has clearly separate visual parts; prefer one.`;
@@ -84,10 +84,10 @@ const widgetPromptEntries = {
     },
     artifact: {
         description:
-            'Durable single-file React page rendered in the artifact pane; the chat shows a compact card.',
+            'Durable self-contained single-file HTML page rendered in the artifact pane; the chat shows a compact card.',
         signature: '{"path":string,"title"?:string}',
         constraints:
-            'The .tsx file must default-export a React component and import only from "react" and "@tavern/kit" (Card, BarChart, LineChart, ComposedChart, Table, CalendarEvent, CalendarDay, DateRangePicker); any other import fails the page. Local helpers in-file are fine; no external assets.',
+            'Inline CSS/JS only, no external or sibling assets. Tavern theme tokens are injected as CSS variables (--background, --foreground, --surface-2, --border, ...) — style with them so the page matches the app in light and dark.',
     },
     'merchbase-sales-chart': widgetMerchBaseSalesChartPromptEntry,
 } satisfies Record<WidgetName, WidgetPromptEntry>;

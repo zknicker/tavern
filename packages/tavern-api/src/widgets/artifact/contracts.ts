@@ -2,17 +2,18 @@ import * as z from 'zod';
 import { workspaceFilePathSchema } from '../workspace-path.ts';
 
 /**
- * Durable agent artifact: a single-file TSX page authored in the agent
- * workspace. The chat transcript renders a compact card; opening it renders
- * the compiled page in the artifact pane's sandboxed iframe (React plus the
- * Tavern component kit; only those two import sources resolve). Authored as
- * a bare `artifact` fence — see widgetFenceLabel in ../contracts.ts. Path
- * confinement mirrors html-preview (see workspace-path.ts).
+ * Durable agent artifact: a self-contained single-file HTML page authored in
+ * the agent workspace (inline CSS/JS, no external assets). The chat
+ * transcript renders a compact card; opening it renders the page in the
+ * artifact pane's sandboxed HTML preview with the app's theme tokens injected.
+ * Authored as a bare `artifact` fence — see widgetFenceLabel in
+ * ../contracts.ts. Path confinement mirrors html-preview
+ * (see workspace-path.ts).
  */
 
 export const widgetArtifactPropsSchema = z
     .object({
-        path: workspaceFilePathSchema(/\.tsx$/iu, 'Path must point at a .tsx file.'),
+        path: workspaceFilePathSchema(/\.html?$/iu, 'Path must point at an .html or .htm file.'),
         title: z.string().trim().min(1).max(120).optional(),
     })
     .strict();
