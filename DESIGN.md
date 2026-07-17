@@ -3,22 +3,22 @@ version: alpha
 name: Tavern
 description: Quiet desktop control-plane UI for agents, runtime state, memory, jobs, chats, and settings.
 colors:
-  background: "#ffffff"
-  foreground: "#262626"
-  chrome: "#fafafa"
-  brand: "#7658b8"
+  background: "#fef9f9"
+  foreground: "#292524"
+  chrome: "#fbf9f6"
+  brand: "#7b51cc"
   brand-foreground: "#f7f4ff"
   card: "#ffffff"
   popover: "#ffffff"
-  primary: "#262626"
-  primary-foreground: "#fafafa"
-  secondary: "#f5f5f5"
-  secondary-foreground: "#262626"
-  muted: "#f5f5f5"
-  muted-foreground: "#525252"
-  accent: "#f5f5f5"
-  border: "#ebebeb"
-  input: "#e6e6e6"
+  primary: "#1b1b1b"
+  primary-foreground: "#fafaf9"
+  secondary: "#f0efec"
+  secondary-foreground: "#292524"
+  muted: "#f1efec"
+  muted-foreground: "#6b6660"
+  accent: "#f1efec"
+  border: "#dcdad7"
+  input: "#cdcac8"
   success: "#10b981"
   warning: "#f59e0b"
   error: "#ef4444"
@@ -118,6 +118,18 @@ Use `apps/website/src/styles/global.css` tokens for all app colors. Do not hardc
 Tailwind palette classes, or opacity mixes in feature components unless the value is a product
 brand color or provider badge treatment.
 
+The palette is flat and near-white: one tinted-white ground (`#fef9f9`) that every light surface
+derives from, with a warm charcoal dark theme. The UI itself stays quiet and gets out of the way;
+color arrives through accents — the brand pill, status colors, and the agents' single-color
+thick-outline avatars. Borders and secondary surfaces are solid opaque values, not alpha washes —
+they should read like drawn lines and flat fills, matching the avatar doodle style (avatar ink is
+`#1b1b1b`, which is also `--primary` in light mode).
+`--brand` (`#7b51cc`) is reserved for primary emphasis and accents. Selected nav rows — sidebar
+sections, channels, DMs, and settings nav alike — use the inked outline + press-slab treatment
+(solid `--secondary` fill, inset `--input` ring, 2px `--hard-shadow` offset), matching the button
+language. Generic selection highlights (tabs, tables, select items) use the subtle `--active`
+tint; tree rows (file trees) use the `--sidebar-accent-active` tint.
+
 The token palette is neutral-first:
 
 - `background`, `foreground`, `card`, `popover`, `border`, `muted`, `input`, and `secondary` carry
@@ -152,7 +164,11 @@ level; light mode flattens to white after level 2 and lets the shadow recipes ca
 
 ## Typography
 
-The app uses Geist for UI and Geist Mono for compact metadata. The typography scale is
+The app uses Geist for UI, Geist Mono for compact metadata, and Reel Medium Bold (Jamie Clarke
+Type, `font-display`) for the logo and page-level display headings only: the home greeting,
+settings page titles, and onboarding. The display face never appears below `text-2xl`; body and
+section text stay Geist. The vendored Reel is the trial cut (no V/v, minimal punctuation — missing
+glyphs fall back to Geist); license the full family before shipping. The typography scale is
 defined in `global.css`; `--app-ui-font-size` owns UI text and `--app-code-font-size` owns code
 surfaces. Tavern's default UI text is 14px through `--app-ui-font-size`; do not assume browser
 defaults, Tailwind defaults, or upstream COSS defaults define Tavern's body size.
@@ -168,11 +184,25 @@ inconsistent.
 Badges use mono, uppercase, and slight positive tracking. This is a primitive-level decision in
 `components/ui/badge.tsx`; do not recreate it with local classes.
 
+Section labels share that voice: sidebar group labels are mono, uppercase, `text-xs` with
+`tracking-wider`; content-area section titles (settings sections, dividers) step up to `text-sm`
+so the hierarchy reads nav label < section title. Row titles, descriptions, and body content stay
+Geist sentence case — the mono-uppercase treatment marks structure, never content.
+
 Use short plain product language. Settings descriptions should usually be one line and disposable:
 "Capture memories.", "Build knowledge.", "Maintain memory." If the description wraps or explains
 the obvious, shorten it or remove it.
 
 ## Layout
+
+Section navigation (Tasks, Automations, Wiki) lives at the top of the sidebar rail, above
+channels and DMs — the shell toolbar carries only history controls and the breadcrumb. Those
+sections are full-page tools: they replace the rail with their own layouts, and back/forward and
+tabs are the way back to chat surfaces. Every tool page keeps a left sidebar at the rail's 240px
+width built from the sidebar menu primitives, so the left panel never appears to vanish — only
+its contents swap. The overview route is the new-tab/home page and needs no
+nav row; the Workspace page is retired from navigation (workspace files are reached through the
+chat artifact pane).
 
 Tavern screens should be operational, not editorial:
 
@@ -182,6 +212,10 @@ Tavern screens should be operational, not editorial:
 - Leave more vertical space between settings sections than between rows inside a section.
 - Keep settings rows aligned to a fixed value column so controls line up.
 - Prefer dense lists and tables for status, logs, schedules, and repeated operational entities.
+- Chat transcripts are Slack-style: every message — the owner's included — renders in one dense
+  left-aligned roster (avatar, name header, plain text). No right-anchored self bubbles. The lane
+  is full width on a shared `px-5` gutter — transcript, composer, and status stack align to it;
+  there is no centered max-width column and no turn-timeline rail.
 
 Settings pages should mostly use:
 
@@ -195,9 +229,12 @@ primitives are enough.
 
 ## Elevation & Depth
 
-Use minimal depth. In light mode, cards generally should not have visible shadows; clean borders and
-spacing are preferred. In dark mode, a very subtle shadow or inset highlight is acceptable when it
-improves separation.
+Use minimal depth. The surface ladder is flat: levels 1-4 draw only a solid hairline ring (no drop
+shadows); real overlays (5+) add one soft ambient drop. The hard offset slab is reserved for
+buttons alone: solid variants carry a 2px press slab (`--hard-shadow`) that collapses while the
+button translates down on press; ghost, link, soft, and chrome variants stay flush. That press slab
+is the app's only neo-brutalist shadow — do not spread it to cards, popovers, or panels. No gloss
+inset highlights or colored shadows anywhere.
 
 Tables and settings groups can sit inside subtle card surfaces when they are a contained tool, but
 avoid nested cards. A control inside a card should look like a control, not like another card.
@@ -208,6 +245,9 @@ List rows and card-like buttons should change state immediately. Do not add tran
 basic hover, focus, or selected surface changes unless motion communicates a workflow transition.
 
 ## Shapes
+
+Corners are squarer than the COSS default: `--corner-radius-scale` is 0.75 (0.9 with superellipse
+support), applied on top of the base radii below.
 
 Default interactive controls use modest radii:
 
