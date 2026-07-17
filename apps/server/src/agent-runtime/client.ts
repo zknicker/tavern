@@ -529,6 +529,7 @@ export interface TavernAgentRuntimeClient {
     queryMerchbaseSalesSeries(
         input: AgentRuntimeMerchbaseSalesSeriesInput
     ): Promise<AgentRuntimeMerchbaseSalesSeries>;
+    redeemIdentityInvite(userSessionToken: string, code: string): Promise<void>;
     refreshCapability(id: AgentRuntimeCapabilityHealthId): Promise<AgentRuntimeCapabilityHealth>;
     removeMcpServer(name: string): Promise<{ ok: boolean }>;
     removeSkillHubTap(repo: string): Promise<AgentRuntimeSkillHubTapList>;
@@ -2151,6 +2152,20 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
             await readErrorResponse(response);
         }
         return runtimeIdentityMeSchema.parse(await response.json());
+    }
+
+    async redeemIdentityInvite(userSessionToken: string, code: string) {
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.identityInviteRedeem}`, {
+            body: JSON.stringify({ code }),
+            headers: {
+                authorization: `Bearer ${userSessionToken}`,
+                'content-type': 'application/json',
+            },
+            method: 'POST',
+        });
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
     }
 
     async getTimezoneSettings() {
