@@ -1,10 +1,16 @@
 import type { HugeiconsIconProps } from '@hugeicons/react';
-import { CommandLineIcon, FileSearchIcon, ToolsIcon } from '@hugeicons-pro/core-stroke-rounded';
+import {
+    CommandLineIcon,
+    FileEditIcon,
+    FileSearchIcon,
+    ToolsIcon,
+} from '@hugeicons-pro/core-stroke-rounded';
 import type { ReactNode } from 'react';
 import { FileToolDrawerBody } from './file-tool-drawer-body.tsx';
 import { GenericToolDrawerBody } from './generic-tool-drawer-body.tsx';
 import { TerminalToolDrawerBody } from './terminal-tool-drawer-body.tsx';
 import type { ToolDrawerCall } from './tool-drawer-call.ts';
+import { WorkspaceChangesDrawerBody } from './workspace-changes-drawer-body.tsx';
 
 export type ToolDrawerBodyRenderer = (props: { call: ToolDrawerCall }) => ReactNode;
 
@@ -21,6 +27,7 @@ const toolDrawerBodyRenderers = {
     search: FileToolDrawerBody,
     shell: TerminalToolDrawerBody,
     terminal: TerminalToolDrawerBody,
+    workspace_changes: WorkspaceChangesDrawerBody,
     zsh: TerminalToolDrawerBody,
 } satisfies Record<string, ToolDrawerBodyRenderer>;
 
@@ -50,6 +57,10 @@ export function resolveToolDrawerIcon(name: string): HugeiconsIconProps['icon'] 
 
     if (renderer === FileToolDrawerBody) {
         return FileSearchIcon;
+    }
+
+    if (renderer === WorkspaceChangesDrawerBody) {
+        return FileEditIcon;
     }
 
     return ToolsIcon;

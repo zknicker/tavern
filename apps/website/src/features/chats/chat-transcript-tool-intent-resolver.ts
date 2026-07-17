@@ -205,6 +205,7 @@ function isFileEditToolName(normalizedName: string) {
         'file_edit',
         'file_write',
         'replace',
+        'workspace_changes',
     ]);
 }
 

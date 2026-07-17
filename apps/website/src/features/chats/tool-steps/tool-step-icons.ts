@@ -26,7 +26,7 @@ export function resolveToolStepIcon(name: string): ToolStepIcon {
         return BubbleChatQuestionIcon;
     }
 
-    if (isEditTool(normalized)) {
+    if (normalized === 'workspace_changes' || isEditTool(normalized)) {
         return FileEditIcon;
     }
 
