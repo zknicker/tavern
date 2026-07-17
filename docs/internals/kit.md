@@ -1,19 +1,21 @@
 ---
-summary: Tavern component kit reference for the shared presentational library behind widgets, dashboards, and sandboxed agent pages.
+summary: Tavern component kit reference for the shared presentational library behind widgets and dashboards.
 read_when:
   - adding or changing shared inline-UI components such as cards, charts, tables, or calendar cards
-  - building a widget renderer, dashboard tile, or sandboxed agent page on kit components
+  - building a widget renderer or dashboard tile on kit components
   - deciding whether presentation code belongs in the kit or in a widget wrapper
 ---
 
 # Component Kit
 
 `apps/website/src/kit/` is the Tavern component kit: the single presentational
-library behind every inline-UI surface. Catalog widget renderers, plugin widget
-renderers, the dashboard grid, and sandboxed agent TSX pages all compose these
-components. The kit owns the "make it look nice" problem — axes, ticks,
-tooltips, chart composition, calendar cards, tables, cards, empty states,
-tokens, dark mode, responsive width — solved once, consumed everywhere.
+library behind every app-internal inline-UI surface. Catalog widget renderers,
+plugin widget renderers, and the dashboard grid compose these components. The
+kit owns the "make it look nice" problem — axes, ticks, tooltips, chart
+composition, calendar cards, tables, cards, empty states, tokens, dark mode,
+responsive width — solved once, consumed everywhere. Agent artifacts do not
+consume the kit: they are self-contained HTML themed via injected tokens (see
+[artifacts.md](artifacts.md)).
 
 `src/kit/index.ts` is the public entrypoint and the module's contract. The
 vocabulary is bare nouns that read as a small design system and can be guessed
@@ -28,8 +30,7 @@ cold by an author who has only seen a short reference:
 ## Rules
 
 - Kit components are props-in/render-out. No data fetching, no tRPC, no hooks
-  from `src/hooks`, no app or runtime state. Anything under `src/kit/` must
-  stay importable into a standalone sandboxed-iframe bundle.
+  from `src/hooks`, no app or runtime state.
 - Colors come from `src/styles/global.css` tokens only (directly or via
   `chartStyleVars`, which every kit chart scopes onto its own root), so every
   component is theme-clean in light and dark.
@@ -63,7 +64,7 @@ Also exported: `chartStyleVars` (the chart token mapping), chart prop types
 `parseIsoDate`, `shiftIsoDate`, ...).
 
 Layout components (`Stack`, `Grid`, `Row`) and stat/empty containers are
-reserved vocabulary for the dashboard grid and sandboxed agent pages; add them
+reserved vocabulary for the dashboard grid; add them
 with those features, not speculatively.
 
 ## Consumers
@@ -74,8 +75,7 @@ props onto kit components (`WidgetBarChart` = fence props → `Card` +
 queries, plugin queries) outside the kit. See [widgets.md](widgets.md) for the
 fence contract and [frontend.md](frontend.md) for folder ownership.
 
-Sandboxed agent TSX pages consume the kit through the page-runtime bundle:
-`scripts/build-page-runtime.ts` compiles the kit sources (plus the tokens in
-`src/styles/tokens.css`) into the self-contained script and stylesheet the
-artifact-pane page iframe runs. That build is why kit components must stay
-props-in/render-out with token-only colors. See [kit-pages.md](kit-pages.md).
+The kit is app-internal only. Agent artifacts render as self-contained HTML
+with the `src/styles/tokens.css` variables injected into their sandboxed frame
+— they share Tavern's theme through tokens, never through kit code (see
+[artifacts.md](artifacts.md)).
