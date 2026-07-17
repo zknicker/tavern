@@ -21,6 +21,8 @@ import { fallbackBinDirectories, findExecutable } from '../cli-path.ts';
 import { AGENT_WORKSPACE } from '../config.ts';
 import { isRuntimeCronReady } from '../cron/scheduler.ts';
 import { getDb, hasTable } from '../db/connection.ts';
+import { isClerkConfigured } from '../identity/clerk-session.ts';
+import { getOwner } from '../identity/members.ts';
 import { isMemoryEnabled } from '../memory/settings.ts';
 import { loadClaudeSettings } from '../model-access/claude-settings.ts';
 import { loadVaultBackedCodexCredentials } from '../model-access/codex-settings.ts';
@@ -237,6 +239,17 @@ export const runtimeCapabilityDefinitions: RuntimeCapabilityDefinition[] = [
     },
     {
         check() {
+            return checkIdentityCapability();
+        },
+        displayName: 'Identity',
+        id: 'identity',
+        refresh: {
+            intervalMs: 5 * minuteMs,
+            runOnStart: true,
+        },
+    },
+    {
+        check() {
             return checkDevToolkitCapability();
         },
         displayName: 'Dev toolkit',
@@ -292,6 +305,29 @@ function checkAutoDispatchCapability(): RuntimeCapabilityCheckResult {
     } catch (error) {
         return {
             reason: 'Auto-dispatch is not ready.',
+            state: 'unavailable',
+            technicalMessage: error instanceof Error ? error.message : String(error),
+        };
+    }
+}
+
+function checkIdentityCapability(): RuntimeCapabilityCheckResult {
+    try {
+        if (!isClerkConfigured()) {
+            return {
+                reason: 'Sign-in is not configured on this runtime.',
+                state: 'unavailable',
+            };
+        }
+        return getOwner()
+            ? { state: 'healthy' }
+            : {
+                  reason: 'This runtime is unclaimed. The first sign-in claims it.',
+                  state: 'degraded',
+              };
+    } catch (error) {
+        return {
+            reason: 'Identity is not ready.',
             state: 'unavailable',
             technicalMessage: error instanceof Error ? error.message : String(error),
         };

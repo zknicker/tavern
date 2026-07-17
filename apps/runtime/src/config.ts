@@ -32,6 +32,7 @@ const envConfig = readEnvFile([
     'TAVERN_RUNTIME_PORT',
     'TAVERN_RUNTIME_ROOT',
     'TAVERN_RUNTIME_TOKEN',
+    'TAVERN_CLERK_PUBLISHABLE_KEY',
     'TAVERN_WIKI_PATH',
     'CODEX_MODEL',
     'OPENAI_API_KEY',
@@ -160,6 +161,17 @@ export function getRuntimeHost(): string {
 export function getRuntimeApiToken(): string {
     // Re-resolve on each call so test env overrides take effect after module import.
     return resolveRuntimeApiToken();
+}
+
+export function getClerkPublishableKey(): string | null {
+    const configured = readConfigValue('TAVERN_CLERK_PUBLISHABLE_KEY');
+    if (configured) {
+        return configured;
+    }
+    const config = readTavernConfig();
+    const fromFile =
+        typeof config.clerkPublishableKey === 'string' ? config.clerkPublishableKey.trim() : '';
+    return fromFile || null;
 }
 
 export function getRuntimePort(): string {

@@ -23,6 +23,8 @@ import { resetRuntimeSkillToDefault } from '../agent-engine/skill-library.ts';
 import { handleToolSetupRequest } from '../agent-engine/tool-setup-routes.ts';
 import { handleRuntimeCapabilitiesRequest } from '../capabilities/routes.ts';
 import { handleCronRequest } from '../cron/routes.ts';
+import type { RuntimeRequestAuth } from '../identity/auth.ts';
+import { handleIdentityRequest } from '../identity/routes.ts';
 import { handleRuntimeJobsRequest } from '../jobs/routes.ts';
 import { listMacApps } from '../mac-apps/inventory.ts';
 import { handleMemoryRequest } from '../memory/routes.ts';
@@ -57,8 +59,15 @@ import { listProjectedTavernRuntimeEvents } from './runtime-event-projection.ts'
 import { getRuntimeHealth } from './status.ts';
 import { getRuntimeUpdateStatus, restartRuntimeForUpdate, startRuntimeUpdate } from './update.ts';
 
-export async function handleTavernRuntimeRequest(request: Request): Promise<Response> {
+export async function handleTavernRuntimeRequest(
+    request: Request,
+    auth: RuntimeRequestAuth = { kind: 'runtime-token' }
+): Promise<Response> {
     const url = new URL(request.url);
+    const identityResponse = await handleIdentityRequest(request, auth);
+    if (identityResponse) {
+        return identityResponse;
+    }
     const apiResponse = await handleTavernApiRequest(request);
     if (apiResponse) {
         return apiResponse;

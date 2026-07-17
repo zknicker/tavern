@@ -638,6 +638,35 @@ CREATE TABLE IF NOT EXISTS chat_pane_states (
   updated_at   TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS identity_users (
+  id            TEXT PRIMARY KEY,
+  clerk_user_id TEXT NOT NULL UNIQUE,
+  name          TEXT,
+  email         TEXT,
+  avatar_url    TEXT,
+  created_at    TEXT NOT NULL,
+  updated_at    TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS identity_members (
+  user_id    TEXT PRIMARY KEY REFERENCES identity_users(id),
+  role       TEXT NOT NULL CHECK (role IN ('owner', 'member')),
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_identity_members_single_owner
+  ON identity_members(role) WHERE role = 'owner';
+
+CREATE TABLE IF NOT EXISTS identity_invites (
+  id          TEXT PRIMARY KEY,
+  code        TEXT NOT NULL UNIQUE,
+  created_by  TEXT NOT NULL REFERENCES identity_users(id),
+  created_at  TEXT NOT NULL,
+  redeemed_by TEXT REFERENCES identity_users(id),
+  redeemed_at TEXT
+);
+
 CREATE TABLE IF NOT EXISTS memory_health_history (
   id                 INTEGER PRIMARY KEY AUTOINCREMENT,
   topic              TEXT NOT NULL,

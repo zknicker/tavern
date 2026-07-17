@@ -5,8 +5,19 @@ import type { Duplex } from 'node:stream';
 import { runtimeEventSchema, runtimeRoutes } from '@tavern/api';
 import { type WebSocket, WebSocketServer } from 'ws';
 import { getRuntimeApiToken, getRuntimeHost, getRuntimePort } from '../config.ts';
+import {
+    isRouteAllowedForAuth,
+    type RuntimeRequestAuth,
+    resolveClerkRequestAuth,
+} from '../identity/auth.ts';
 import { subscribeToTavernApiEvents } from './chat-api/index.ts';
-import { internalError, toFetchRequest, unauthorized, writeFetchResponse } from './http.ts';
+import {
+    forbidden,
+    internalError,
+    toFetchRequest,
+    unauthorized,
+    writeFetchResponse,
+} from './http.ts';
 import { handleTavernRuntimeRequest } from './router.ts';
 import { listProjectedTavernRuntimeEvents } from './runtime-event-projection.ts';
 import { subscribeToRuntimeEvents } from './runtime-events.ts';
@@ -74,28 +85,32 @@ export function startTavernRuntimeServer(): TavernRuntimeServerHandle {
     const server = http.createServer(async (request, response) => {
         try {
             const fetchRequest = await toFetchRequest(request, `http://127.0.0.1:${port}`);
+            const pathname = new URL(fetchRequest.url).pathname;
             // Health route is unauthenticated so the app can probe reachability before pairing.
-            const isHealth =
-                new URL(fetchRequest.url).pathname === runtimeRoutes.health &&
-                fetchRequest.method === 'GET';
-            if (
-                !(
-                    isHealth ||
-                    isBearerTokenValid(
-                        fetchRequest.headers.get('authorization') ?? undefined,
-                        token
-                    )
-                )
-            ) {
+            const isHealth = pathname === runtimeRoutes.health && fetchRequest.method === 'GET';
+            const authorizationHeader = fetchRequest.headers.get('authorization') ?? undefined;
+            let auth: RuntimeRequestAuth | null = null;
+            if (isBearerTokenValid(authorizationHeader, token)) {
+                auth = { kind: 'runtime-token' };
+            } else if (authorizationHeader?.startsWith('Bearer ')) {
+                // Not the runtime token: try it as a Clerk session token.
+                auth = await resolveClerkRequestAuth(authorizationHeader.slice(7));
+            }
+            if (!(isHealth || auth)) {
                 await writeFetchResponse(
-                    unauthorized(
-                        authFailureMessage(fetchRequest.headers.get('authorization') ?? undefined)
-                    ),
+                    unauthorized(authFailureMessage(authorizationHeader)),
                     response
                 );
                 return;
             }
-            const fetchResponse = await handleTavernRuntimeRequest(fetchRequest);
+            if (auth && !isRouteAllowedForAuth(auth, pathname)) {
+                await writeFetchResponse(
+                    forbidden('Runtime membership required. Redeem an invite first.'),
+                    response
+                );
+                return;
+            }
+            const fetchResponse = await handleTavernRuntimeRequest(fetchRequest, auth ?? undefined);
             await writeFetchResponse(fetchResponse, response);
         } catch (error) {
             const fallback = internalError(
