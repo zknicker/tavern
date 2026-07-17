@@ -48,6 +48,7 @@ export function WorkspaceChangesDrawerBody({ call }: { call: ToolDrawerCall }) {
                 return (
                     <Collapsible
                         className="rounded-lg border border-border/40 bg-background/60"
+                        defaultOpen={change.omitted === null}
                         key={change.path}
                     >
                         <CollapsibleTrigger className="group flex w-full min-w-0 items-center gap-2 rounded-lg px-3 py-2 text-left hover:bg-hover">
