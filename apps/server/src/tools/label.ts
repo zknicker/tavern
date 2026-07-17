@@ -201,6 +201,22 @@ export function buildToolLabel(input: {
                 null
             );
         }
+        case 'workspace_changes': {
+            const changes = Array.isArray(argumentsValue?.changes)
+                ? argumentsValue.changes.filter((entry) => isRecord(entry))
+                : [];
+            let additions = 0;
+            let deletions = 0;
+            for (const change of changes) {
+                additions += getNumber(change.additions) ?? 0;
+                deletions += getNumber(change.deletions) ?? 0;
+            }
+            return joinLabel([
+                formatCountLabel(changes.length, 'file'),
+                additions > 0 ? `+${additions}` : null,
+                deletions > 0 ? `−${deletions}` : null,
+            ]);
+        }
         case 'web_search':
         case 'webSearch':
         case 'WebSearch': {

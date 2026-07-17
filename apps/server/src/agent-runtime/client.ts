@@ -342,7 +342,9 @@ import {
     type WikiCreatePage,
     type WikiMovePath,
     type WikiPage,
+    type WikiPageHistory,
     type WikiPageList,
+    type WikiPageRevision,
     type WikiPathInput,
     type WikiPathMutationResult,
     type WikiSavePage,
@@ -352,7 +354,9 @@ import {
     wikiBacklinkListSchema,
     wikiCreatePageSchema,
     wikiMovePathSchema,
+    wikiPageHistorySchema,
     wikiPageListSchema,
+    wikiPageRevisionSchema,
     wikiPageSchema,
     wikiPathInputSchema,
     wikiPathMutationResultSchema,
@@ -460,6 +464,8 @@ export interface TavernAgentRuntimeClient {
     getToolConfig(toolId: string): Promise<AgentRuntimeToolConfig>;
     getUpdateStatus(): Promise<AgentRuntimeUpdate>;
     getWikiPage(input: { path: string }): Promise<WikiPage | null>;
+    getWikiPageHistory(input: { limit?: number; path: string }): Promise<WikiPageHistory>;
+    getWikiPageRevision(input: { commit: string; path: string }): Promise<WikiPageRevision>;
     getWikiSettings(): Promise<AgentRuntimeWikiSettings>;
     getWikiStatus(): Promise<WikiStatus>;
     getWorkspaceFile(agentId: string, path: string): Promise<AgentRuntimeWorkspaceFileContent>;
@@ -1619,6 +1625,33 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         }
 
         return wikiPageSchema.parse(await response.json());
+    }
+
+    async getWikiPageHistory(input: { limit?: number; path: string }) {
+        const url = new URL(`${this.#baseUrl}${agentRuntimeRoutes.wikiPageHistory(input.path)}`);
+        if (input.limit !== undefined) {
+            url.searchParams.set('limit', String(input.limit));
+        }
+        const response = await fetch(url, { headers: this.#authHeaders });
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return wikiPageHistorySchema.parse(await response.json());
+    }
+
+    async getWikiPageRevision(input: { commit: string; path: string }) {
+        const response = await fetch(
+            `${this.#baseUrl}${agentRuntimeRoutes.wikiPageRevision(input.path, input.commit)}`,
+            { headers: this.#authHeaders }
+        );
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return wikiPageRevisionSchema.parse(await response.json());
     }
 
     async deleteWikiPage(input: WikiPathInput) {

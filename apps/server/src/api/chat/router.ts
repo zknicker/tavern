@@ -21,6 +21,7 @@ import { startChatRoute } from './start.ts';
 import { stopChatTurnRoute } from './stop.ts';
 import { getChatToolRoute } from './tool-get.ts';
 import { getChatTurnEvidenceRoute } from './turn-evidence-get.ts';
+import { getChatTurnFileChangesRoute } from './turn-file-changes-get.ts';
 import { getChatTurnPromptRoute } from './turn-prompt-get.ts';
 import { unarchiveChatRoute } from './unarchive.ts';
 import { updateChatRoute } from './update.ts';
@@ -37,6 +38,7 @@ export const chatRouter = createRouter({
     }),
     turn: createRouter({
         evidence: getChatTurnEvidenceRoute,
+        fileChanges: getChatTurnFileChangesRoute,
     }),
     turnPrompt: createRouter({
         get: getChatTurnPromptRoute,

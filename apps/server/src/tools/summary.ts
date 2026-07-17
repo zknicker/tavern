@@ -190,6 +190,13 @@ function buildSummaryParts(input: {
         }
     }
 
+    if (normalizedName === 'workspace_changes') {
+        const count = Array.isArray(input.argumentsValue?.changes)
+            ? input.argumentsValue.changes.length
+            : 0;
+        return [count === 1 ? '1 file' : `${count} files`];
+    }
+
     const salient = getArgumentString(input.argumentsValue, preferredArgumentKeys);
 
     if (salient) {
