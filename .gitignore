@@ -10,7 +10,6 @@ apps/server/data
 apps/server/dist-sidecar
 apps/website/electron-dist
 apps/website/electron/generated-icons
-apps/website/src/widgets/page-runtime/generated
 apps/website/electron/icons
 apps/website/electron/resources/bin
 apps/website/test-results

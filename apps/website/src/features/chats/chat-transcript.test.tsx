@@ -594,7 +594,7 @@ test('ChatTranscript renders artifact widgets as compact open-in-pane cards', ()
                 component: 'tavern.widget.artifact',
                 fallbackText: 'Fleet status',
                 props: {
-                    path: 'workbench/pages/fleet.tsx',
+                    path: 'workbench/pages/fleet.html',
                     title: 'Fleet status',
                 },
             },
@@ -604,7 +604,7 @@ test('ChatTranscript renders artifact widgets as compact open-in-pane cards', ()
     // The card never renders the page inline: no iframe, no workspace read —
     // just the title, kind line, and the open affordance.
     assert.match(markup, /Fleet status/);
-    assert.match(markup, /TSX page · workbench\/pages\/fleet\.tsx/);
+    assert.match(markup, /Page · workbench\/pages\/fleet\.html/);
     assert.match(markup, /Open/);
     assert.doesNotMatch(markup, /<iframe/);
     assert.doesNotMatch(markup, /Widget unavailable/);

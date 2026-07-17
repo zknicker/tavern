@@ -6,9 +6,9 @@ import { cn } from '../lib/utils.ts';
 
 /**
  * Compact transcript card for an agent artifact. The card itself reads
- * nothing — clicking opens the workspace .tsx in the artifact pane, where the
- * page renderer compiles and mounts it. Outside a pane context (static
- * render, tests) the card is inert.
+ * nothing — clicking opens the workspace HTML page in the artifact pane's
+ * sandboxed preview with host tokens injected. Outside a pane context
+ * (static render, tests) the card is inert.
  */
 export function WidgetArtifactCard({ props }: { props: WidgetArtifactProps }) {
     const openArtifactPanel = useArtifactPanelOpen();
@@ -35,7 +35,7 @@ export function WidgetArtifactCard({ props }: { props: WidgetArtifactProps }) {
                     {title}
                 </span>
                 <span className="block truncate text-muted-foreground text-xs leading-5">
-                    TSX page · {props.path}
+                    Page · {props.path}
                 </span>
             </span>
             <span className="shrink-0 text-muted-foreground text-xs group-hover:text-foreground">

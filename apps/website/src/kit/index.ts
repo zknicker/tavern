@@ -1,9 +1,9 @@
 /**
  * Tavern component kit: the shared presentational library behind every
- * inline-UI surface (catalog widgets, plugin widgets, dashboards, sandboxed
- * agent pages). Kit components are props-in/render-out — no data fetching, no
- * tRPC, no app state — and consume global.css tokens only, so the module can
- * also compile into a standalone sandbox bundle. Bare-noun vocabulary:
+ * app-internal inline-UI surface (catalog widgets, plugin widgets,
+ * dashboards). Kit components are props-in/render-out — no data fetching, no
+ * tRPC, no app state — and consume global.css tokens only, so every component
+ * is theme-clean in light and dark. Bare-noun vocabulary:
  * `<Card title="Sales"><BarChart data={...} /></Card>`.
  */
 export {

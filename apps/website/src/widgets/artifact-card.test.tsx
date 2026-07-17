@@ -4,26 +4,26 @@ import { WidgetArtifactCard } from './artifact-card.tsx';
 
 test('renders a compact card with title, kind, and open affordance', () => {
     const markup = renderToStaticMarkup(
-        <WidgetArtifactCard props={{ path: 'workbench/pages/fleet.tsx', title: 'Fleet status' }} />
+        <WidgetArtifactCard props={{ path: 'workbench/pages/fleet.html', title: 'Fleet status' }} />
     );
 
     expect(markup).toContain('Fleet status');
-    expect(markup).toContain('TSX page · workbench/pages/fleet.tsx');
+    expect(markup).toContain('Page · workbench/pages/fleet.html');
     expect(markup).toContain('Open');
     expect(markup).not.toContain('<iframe');
 });
 
 test('falls back to the file name when no title is given', () => {
     const markup = renderToStaticMarkup(
-        <WidgetArtifactCard props={{ path: 'workbench/pages/fleet.tsx' }} />
+        <WidgetArtifactCard props={{ path: 'workbench/pages/fleet.html' }} />
     );
 
-    expect(markup).toContain('fleet.tsx');
+    expect(markup).toContain('fleet.html');
 });
 
 test('is inert outside an artifact pane context', () => {
     const markup = renderToStaticMarkup(
-        <WidgetArtifactCard props={{ path: 'workbench/pages/fleet.tsx' }} />
+        <WidgetArtifactCard props={{ path: 'workbench/pages/fleet.html' }} />
     );
 
     expect(markup).toContain('cursor-default');

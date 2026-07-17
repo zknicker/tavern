@@ -1,8 +1,10 @@
 import { File01Icon } from '@hugeicons-pro/core-stroke-rounded';
+import { useMemo } from 'react';
 import { SimpleCodeEditor } from '../../components/code-editor/simple-code-editor.tsx';
+import { useResolvedThemeOptional } from '../../components/theme-provider.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import { trpc } from '../../lib/trpc.tsx';
-import { WorkspacePagePreview } from './chat-artifact-page-preview.tsx';
+import { injectHostTokenStyle, readHostTokenCss } from './host-token-style.ts';
 import type { TavernResourceTarget } from './tavern-resource-link.ts';
 
 export function WorkspaceArtifactContent({
@@ -65,28 +67,35 @@ export function WorkspaceArtifactContent({
     }
 
     if (file.mediaType === 'text/html') {
-        return (
-            <iframe
-                className="h-full min-h-0 w-full bg-white"
-                sandbox="allow-forms allow-modals allow-pointer-lock allow-popups allow-scripts"
-                srcDoc={file.content}
-                title={target.path}
-            />
-        );
-    }
-
-    if (file.language === 'tsx') {
-        return (
-            <WorkspacePagePreview
-                content={file.content}
-                path={target.path}
-                truncated={file.truncated}
-            />
-        );
+        return <WorkspaceHtmlPreview content={file.content} path={target.path} />;
     }
 
     return (
         <SimpleCodeEditor className="h-full" filePath={target.path} readOnly value={file.content} />
+    );
+}
+
+/**
+ * Sandboxed HTML preview with host tokens riding in: artifacts (and any
+ * workspace HTML file) get the app's resolved theme variables injected, so a
+ * page styled with tokens wears the Tavern look and follows the app scheme.
+ * Opaque origin, never allow-same-origin.
+ */
+function WorkspaceHtmlPreview({ content, path }: { content: string; path: string }) {
+    const scheme = useResolvedThemeOptional();
+    const srcDoc = useMemo(
+        () => injectHostTokenStyle(content, readHostTokenCss(scheme)),
+        [content, scheme]
+    );
+
+    return (
+        <iframe
+            className="h-full min-h-0 w-full"
+            sandbox="allow-forms allow-modals allow-pointer-lock allow-popups allow-scripts"
+            srcDoc={srcDoc}
+            style={{ colorScheme: scheme }}
+            title={path}
+        />
     );
 }
 
