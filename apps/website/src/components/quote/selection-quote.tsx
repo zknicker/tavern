@@ -116,7 +116,6 @@ export function SelectionQuoteContainer({
     };
 
     return (
-        // biome-ignore lint/a11y/noStaticElementInteractions: pointer tracking only, not an interactive control.
         <div
             className={cn('relative', className)}
             onPointerUpCapture={(event) => {
