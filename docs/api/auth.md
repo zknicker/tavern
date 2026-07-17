@@ -63,15 +63,25 @@ pairing token, then save that token in the App settings.
 Clients use Tavern API or TypeScript SDK surfaces instead of reading local
 SQLite files, runtime stores, or executor state directly.
 
-## App Sign-In
+## Identity And Sign-In
 
-Tavern App supports optional Clerk sign-in. The app reads
-`VITE_CLERK_PUBLISHABLE_KEY` (dev: `apps/website/.env.local`, pulled with
-`clerk env pull`); when the key is absent the app runs signed-out with no auth
-UI, so local dev and e2e work without Clerk. Sign-in, sign-up, and the account
-row live in the sidebar footer (`sidebar-auth-items.tsx`); the provider gate is
-`apps/website/src/lib/clerk.tsx`.
+Normative model: [specs/identity.md](../../specs/identity.md). Summary of the
+implemented surface:
 
-Clerk identity is app-surface only today: it does not gate Runtime access,
-which stays on the Runtime token above. `CLERK_SECRET_KEY` is CLI/dev-only and
-must never ship in client code or version control.
+- Tavern App requires Clerk sign-in when `VITE_CLERK_PUBLISHABLE_KEY` is set
+  (dev: `apps/website/.env.local`, pulled with `clerk env pull`). Keyless
+  builds run a signed-out dev mode with no gate; e2e forces keyless. If
+  clerk-js cannot load (offline), the app renders local data on the cached
+  identity instead of locking the user out.
+- The app attaches the Clerk session token to server requests
+  (`Authorization: Bearer`, websocket `connectionParams.clerkSessionToken`);
+  the server exposes it as `ctx.clerkSessionToken`.
+- The Runtime verifies forwarded Clerk tokens against the instance JWKS when
+  `TAVERN_CLERK_PUBLISHABLE_KEY` (or `clerkPublishableKey` in `tavern.json`)
+  is set. Verified users are minted `identity_users` rows keyed by tavern
+  user id; the first verified user to connect claims an unclaimed runtime as
+  `owner`. Non-members can only introspect `/identity/me` and redeem
+  invites. The `identity` capability reports this state.
+- The runtime token remains the owner transport credential and bypasses
+  membership. `CLERK_SECRET_KEY` is CLI/dev-only and must never ship in
+  client code or version control.
