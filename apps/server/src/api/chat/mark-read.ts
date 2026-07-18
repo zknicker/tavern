@@ -3,4 +3,4 @@ import { publicProcedure } from '../trpc.ts';
 
 export const markChatReadRoute = publicProcedure
     .input(markChatReadInputSchema)
-    .mutation(async ({ input }) => await markTavernChatRead(input));
+    .mutation(async ({ ctx, input }) => await markTavernChatRead(input, ctx));

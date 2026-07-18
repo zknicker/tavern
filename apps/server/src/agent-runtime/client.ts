@@ -338,8 +338,16 @@ import {
     memoryJobDetailSchema,
     memoryJobListSchema,
     type RuntimeIdentityMe,
+    type RuntimeIdentityMutationResult,
+    type RuntimeInviteCreateResult,
+    type RuntimeInviteList,
+    type RuntimeMemberList,
     runtimeEventListSchema,
     runtimeIdentityMeSchema,
+    runtimeIdentityMutationResultSchema,
+    runtimeInviteCreateResultSchema,
+    runtimeInviteListSchema,
+    runtimeMemberListSchema,
     type WikiBacklinkList,
     type WikiCreatePage,
     type WikiMovePath,
@@ -397,6 +405,7 @@ export interface TavernAgentRuntimeClient {
         input: AgentRuntimeCompleteGoogleOAuth
     ): Promise<AgentRuntimeGoogleOAuthPoll>;
     createCronJob(input: AgentRuntimeCreateCron): Promise<AgentRuntimeCron>;
+    createIdentityInvite(): Promise<RuntimeInviteCreateResult>;
     createTask(input: AgentRuntimeCreateTask): Promise<AgentRuntimeTask>;
     createTaskLabel(input: AgentRuntimeCreateTaskLabel): Promise<AgentRuntimeTaskLabel>;
     createWikiFolder(input: WikiPathInput): Promise<WikiPathMutationResult>;
@@ -408,6 +417,7 @@ export interface TavernAgentRuntimeClient {
         bindingId: string,
         input: AgentRuntimeDeleteDiscordBinding
     ): Promise<AgentRuntimeAgentEngineConfigSnapshot>;
+    deleteIdentityInvite(inviteId: string): Promise<RuntimeIdentityMutationResult>;
     deleteOpenAiSettings(): Promise<AgentRuntimeOpenAiSettings>;
     deleteOpenRouterSettings(): Promise<AgentRuntimeOpenRouterSettings>;
     deleteTask(taskId: string): Promise<{ deleted: boolean; id: string }>;
@@ -485,6 +495,8 @@ export interface TavernAgentRuntimeClient {
     listCronRuns(jobId?: string): Promise<{ runs: AgentRuntimeCronRun[] }>;
     listDiscordBindings(): Promise<{ bindings: AgentRuntimeDiscordBinding[] }>;
     listEvents(input?: AgentRuntimeListEventsInput): Promise<AgentRuntimeEventList>;
+    listIdentityInvites(): Promise<RuntimeInviteList>;
+    listIdentityMembers(): Promise<RuntimeMemberList>;
     listMacApps(options?: { limit?: number; query?: string }): Promise<AgentRuntimeMacAppList>;
     listMcpServers(): Promise<AgentRuntimeMcpServerList>;
     listMemoryJobs(input?: AgentRuntimeListMemoryJobsInput): Promise<MemoryJobList>;
@@ -531,6 +543,7 @@ export interface TavernAgentRuntimeClient {
     ): Promise<AgentRuntimeMerchbaseSalesSeries>;
     redeemIdentityInvite(userSessionToken: string, code: string): Promise<void>;
     refreshCapability(id: AgentRuntimeCapabilityHealthId): Promise<AgentRuntimeCapabilityHealth>;
+    removeIdentityMember(userId: string): Promise<RuntimeIdentityMutationResult>;
     removeMcpServer(name: string): Promise<{ ok: boolean }>;
     removeSkillHubTap(repo: string): Promise<AgentRuntimeSkillHubTapList>;
     resetAgentSession(
@@ -2166,6 +2179,59 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         if (!response.ok) {
             await readErrorResponse(response);
         }
+    }
+
+    async listIdentityMembers() {
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.identityMembers}`, {
+            headers: this.#authHeaders,
+        });
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+        return runtimeMemberListSchema.parse(await response.json());
+    }
+
+    async listIdentityInvites() {
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.identityInvites}`, {
+            headers: this.#authHeaders,
+        });
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+        return runtimeInviteListSchema.parse(await response.json());
+    }
+
+    async createIdentityInvite() {
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.identityInvites}`, {
+            headers: this.#authHeaders,
+            method: 'POST',
+        });
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+        return runtimeInviteCreateResultSchema.parse(await response.json());
+    }
+
+    async deleteIdentityInvite(inviteId: string) {
+        const response = await fetch(
+            `${this.#baseUrl}${agentRuntimeRoutes.identityInvite(inviteId)}`,
+            { headers: this.#authHeaders, method: 'DELETE' }
+        );
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+        return runtimeIdentityMutationResultSchema.parse(await response.json());
+    }
+
+    async removeIdentityMember(userId: string) {
+        const response = await fetch(
+            `${this.#baseUrl}${agentRuntimeRoutes.identityMember(userId)}`,
+            { headers: this.#authHeaders, method: 'DELETE' }
+        );
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+        return runtimeIdentityMutationResultSchema.parse(await response.json());
     }
 
     async getTimezoneSettings() {

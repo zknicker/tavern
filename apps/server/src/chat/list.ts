@@ -1,6 +1,7 @@
 import type { AgentRuntimeChatParticipant, AgentRuntimeChatPlatformMetadata } from '@tavern/api';
 import { listAgents } from '../agents/catalog.ts';
 import { buildAgentPalette, resolveAgentName } from '../agents/palette.ts';
+import { keylessActingUserId } from '../identity/acting-user.ts';
 import {
     resolveParticipantAvatar,
     resolveParticipantColor,
@@ -187,16 +188,20 @@ function formatChatActorNames(actors: Array<{ name: string }>) {
     return actors.map((actor) => actor.name).join(', ');
 }
 
-export async function listChats() {
-    return await listChatsWithArchivedFilter('active');
+export async function listChats(actingUserId: string = keylessActingUserId) {
+    return await listChatsWithArchivedFilter('active', actingUserId);
 }
 
-export async function listArchivedChats() {
-    return await listChatsWithArchivedFilter('archived');
+export async function listArchivedChats(actingUserId: string = keylessActingUserId) {
+    return await listChatsWithArchivedFilter('archived', actingUserId);
 }
 
-async function listChatsWithArchivedFilter(archivedFilter: 'active' | 'archived') {
+async function listChatsWithArchivedFilter(
+    archivedFilter: 'active' | 'archived',
+    actingUserId: string
+) {
     const chats = await listChatDetails({
+        actingUserId,
         archivedFilter,
         includeExternal: false,
     });
@@ -208,8 +213,12 @@ async function listChatsWithArchivedFilter(archivedFilter: 'active' | 'archived'
     });
 }
 
-export async function getChat(input: { chatId: string }) {
+export async function getChat(
+    input: { chatId: string },
+    actingUserId: string = keylessActingUserId
+) {
     const chats = await listChatDetails({
+        actingUserId,
         archivedFilter: 'all',
         chatId: input.chatId,
         includeExternal: false,
@@ -220,6 +229,7 @@ export async function getChat(input: { chatId: string }) {
 }
 
 export async function listChatDetails(options?: {
+    actingUserId?: string;
     archivedFilter?: 'active' | 'archived' | 'all';
     chatId?: string;
     includeExternal?: boolean;
@@ -231,9 +241,11 @@ export async function listChatDetails(options?: {
         listParticipants(),
         listRuntimeSessions(),
         listRuntimeChatRecords({
+            actingUserId: options?.actingUserId,
             chatId: options?.chatId,
             includeArchived: true,
             includeExternal,
+            readerId: options?.actingUserId,
         }),
     ]);
     const agentById = new Map(agents.map((agent) => [agent.id, agent]));

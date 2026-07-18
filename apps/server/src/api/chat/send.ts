@@ -4,4 +4,4 @@ import { publicProcedure } from '../trpc.ts';
 
 export const sendChatMessageRoute = publicProcedure
     .input(sendChatMessageInputSchema)
-    .mutation(async ({ input }) => await sendTavernChatMessage(input));
+    .mutation(async ({ ctx, input }) => await sendTavernChatMessage(input, undefined, ctx));

@@ -5,8 +5,8 @@ import { publicProcedure } from '../trpc.ts';
 
 export const startChatRoute = publicProcedure
     .input(startChatInputSchema)
-    .mutation(async ({ input }) => {
-        const result = await startTavernChat(input);
+    .mutation(async ({ ctx, input }) => {
+        const result = await startTavernChat(input, ctx);
         emitChatUpdated({ chatId: result.chatId });
         return result;
     });

@@ -1,3 +1,5 @@
+import type { ApiContext } from '../api/context.ts';
+import { resolveActingUserId } from '../identity/acting-user.ts';
 import {
     type StartChatInput,
     sendChatMessageResultSchema,
@@ -21,20 +23,31 @@ function buildChatDisplayName(input: StartChatInput) {
     return `${normalized.slice(0, maxChatDisplayNameLength - 3).trimEnd()}...`;
 }
 
-export async function startTavernChat(input: StartChatInput) {
+export async function startTavernChat(
+    input: StartChatInput,
+    ctx: Pick<ApiContext, 'clerkSessionToken'> = { clerkSessionToken: null }
+) {
     const parsed = startChatInputSchema.parse(input);
-    const created = await createTavernChat({
-        agentIds: parsed.agentId ? [parsed.agentId] : undefined,
-        displayName: buildChatDisplayName(parsed),
-        displayNameSource: 'generated',
-    });
-    const accepted = await sendTavernChatMessage({
-        agentId: parsed.agentId,
-        ...(parsed.attachments?.length ? { attachments: parsed.attachments } : {}),
-        chatId: created.chatId,
-        ...(parsed.clientMessageId ? { clientMessageId: parsed.clientMessageId } : {}),
-        content: parsed.content,
-    });
+    const actingUserId = await resolveActingUserId(ctx);
+    const created = await createTavernChat(
+        {
+            agentIds: parsed.agentId ? [parsed.agentId] : undefined,
+            displayName: buildChatDisplayName(parsed),
+            displayNameSource: 'generated',
+        },
+        actingUserId
+    );
+    const accepted = await sendTavernChatMessage(
+        {
+            agentId: parsed.agentId,
+            ...(parsed.attachments?.length ? { attachments: parsed.attachments } : {}),
+            chatId: created.chatId,
+            ...(parsed.clientMessageId ? { clientMessageId: parsed.clientMessageId } : {}),
+            content: parsed.content,
+        },
+        undefined,
+        ctx
+    );
 
     return sendChatMessageResultSchema.parse(accepted);
 }

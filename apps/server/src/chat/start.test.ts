@@ -49,6 +49,7 @@ test('startTavernChat stores the deterministic Tavern chat name', async () => {
                 displayName: 'Hey!',
                 displayNameSource: 'generated',
             },
+            'usr_tavern',
         ],
     ]);
     assert.deepEqual(sendTavernChatMessage.mock.calls, [
@@ -58,6 +59,8 @@ test('startTavernChat stores the deterministic Tavern chat name', async () => {
                 chatId: '220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
                 content: 'Hey!',
             },
+            undefined,
+            { clerkSessionToken: null },
         ],
     ]);
 });
@@ -90,6 +93,7 @@ test('startTavernChat can defer agent resolution to chat creation', async () => 
                 displayName: 'Hey!',
                 displayNameSource: 'generated',
             },
+            'usr_tavern',
         ],
     ]);
     assert.deepEqual(sendTavernChatMessage.mock.calls, [
@@ -99,6 +103,8 @@ test('startTavernChat can defer agent resolution to chat creation', async () => 
                 chatId: '220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
                 content: 'Hey!',
             },
+            undefined,
+            { clerkSessionToken: null },
         ],
     ]);
 });
@@ -134,6 +140,8 @@ test('startTavernChat preserves the optimistic first message identity', async ()
                 clientMessageId: 'msg_draft_1',
                 content: 'Hey!',
             },
+            undefined,
+            { clerkSessionToken: null },
         ],
     ]);
 });

@@ -8,6 +8,8 @@ import {
 import type { TavernAgentRuntimeClient } from '../agent-runtime/client.ts';
 import { createTavernClientForConnection } from '../agent-runtime/client-factory.ts';
 import { createConfiguredAgentRuntimeClientForRuntimeId } from '../agent-runtime/configured-client.ts';
+import type { ApiContext } from '../api/context.ts';
+import { resolveActingUserId } from '../identity/acting-user.ts';
 import { getAgentRuntimeConnection } from '../storage/agent-runtime-connections.ts';
 import { getAgent as getAgentRecord } from '../storage/agents.ts';
 import {
@@ -29,10 +31,15 @@ function buildAgentRuntimeMessageTarget(
 
 export async function sendTavernChatMessage(
     input: SendChatMessageInput,
-    client?: TavernAgentRuntimeClient | null
+    client?: TavernAgentRuntimeClient | null,
+    ctx: Pick<ApiContext, 'clerkSessionToken'> = { clerkSessionToken: null }
 ) {
     const parsed = sendChatMessageInputSchema.parse(input);
-    const chatRecord = await getRuntimeChatRecord(parsed.chatId);
+    const actingUserId = await resolveActingUserId(ctx);
+    const chatRecord = await getRuntimeChatRecord(parsed.chatId, {
+        actingUserId,
+        readerId: actingUserId,
+    });
 
     if (!chatRecord) {
         throw new Error(`No Tavern chat named "${parsed.chatId}" exists.`);
@@ -68,7 +75,7 @@ export async function sendTavernChatMessage(
                 : undefined,
     });
     const messageReceipt = await tavernApi.chat.createMessage(parsed.chatId, {
-        author_id: 'usr_tavern',
+        author_id: actingUserId,
         id: clientMessageId,
         metadata: {
             runtime: {

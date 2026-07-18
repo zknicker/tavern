@@ -48,4 +48,25 @@ describe('runtime Tavern chat participants', () => {
             },
         ]);
     });
+
+    test('injects the acting user seat and preserves other human participants', () => {
+        const participants = buildRuntimeTavernParticipants(
+            ['agt_primary'],
+            [{ id: 'usr_other', kind: 'user', label: 'Other', metadata: {} }],
+            'usr_current'
+        );
+
+        expect(participants).toContainEqual({
+            id: 'usr_current',
+            kind: 'user',
+            label: 'You',
+            metadata: { source: 'tavern' },
+        });
+        expect(participants).toContainEqual({
+            id: 'usr_other',
+            kind: 'user',
+            label: 'Other',
+            metadata: {},
+        });
+    });
 });

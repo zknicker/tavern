@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { z } from 'zod';
 import { listAgents, requirePrimaryAgent } from '../agents/catalog.ts';
+import { keylessActingUserId } from '../identity/acting-user.ts';
 import {
     archiveChatResultSchema,
     type CreateChatInput,
@@ -70,7 +71,8 @@ export async function createTavernChat(
     input: CreateChatInput & {
         displayNameSource?: TavernChatDisplayNameSource;
         kind?: 'channel' | 'task';
-    }
+    },
+    actingUserId: string = keylessActingUserId
 ) {
     const logTiming = createChatTiming('chat.create');
     const parsed = createChatInputSchema.parse(input);
@@ -80,6 +82,7 @@ export async function createTavernChat(
 
     const chatId = buildChatId();
     await createRuntimeTavernChat({
+        actingUserId,
         agentIds: binding.agentIds,
         displayName: parsed.displayName,
         displayNameSource: input.displayNameSource ?? 'explicit',
@@ -96,17 +99,21 @@ export async function createTavernChat(
     return result;
 }
 
-export async function updateTavernChat(input: UpdateChatInput) {
+export async function updateTavernChat(
+    input: UpdateChatInput,
+    actingUserId: string = keylessActingUserId
+) {
     const parsed = updateChatInputSchema.parse(input);
     const agentIds = uniqueAgentIdsSchema.parse(parsed.agentIds);
     const binding = await resolveAgentRuntimeBindings(agentIds);
-    const existing = await getRuntimeChatRecord(parsed.chatId);
+    const existing = await getRuntimeChatRecord(parsed.chatId, { actingUserId });
 
     if (existing && existing.runtimeId !== binding.runtimeId) {
         throw new Error('Tavern chats cannot move between runtime namespaces.');
     }
 
     await updateRuntimeTavernChat({
+        actingUserId,
         agentIds: binding.agentIds,
         displayName: parsed.displayName,
         id: parsed.chatId,

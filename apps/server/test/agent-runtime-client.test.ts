@@ -55,6 +55,73 @@ test('client sends no Authorization header when constructed without a token', as
     assert.equal(capturedAuthorization, undefined);
 });
 
+test('identity admin methods use runtime-token routes', async () => {
+    const requests: Array<{ authorization: string | null; method: string; path: string }> = [];
+    const now = '2026-07-18T12:00:00.000Z';
+    const invite = {
+        code: 'invite-code',
+        createdAt: now,
+        createdBy: 'usr_owner',
+        id: 'inv_test',
+        redeemedAt: null,
+        redeemedBy: null,
+    };
+    globalThis.fetch = mock(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = new URL(String(input));
+        const headers = new Headers(init?.headers);
+        requests.push({
+            authorization: headers.get('authorization'),
+            method: init?.method ?? 'GET',
+            path: url.pathname,
+        });
+        if (url.pathname === agentRuntimeRoutes.identityMembers) {
+            return Response.json({ members: [] });
+        }
+        if (url.pathname === agentRuntimeRoutes.identityInvites && !init?.method) {
+            return Response.json({ invites: [invite] });
+        }
+        if (url.pathname === agentRuntimeRoutes.identityInvites) {
+            return Response.json({ invite });
+        }
+        return Response.json({ ok: true });
+    }) as typeof fetch;
+
+    const client = createAgentRuntimeClient('http://runtime.test', { token: 'runtime-token' });
+    await client.listIdentityMembers();
+    await client.listIdentityInvites();
+    await client.createIdentityInvite();
+    await client.deleteIdentityInvite('inv_test');
+    await client.removeIdentityMember('usr_member');
+
+    assert.deepEqual(requests, [
+        {
+            authorization: 'Bearer runtime-token',
+            method: 'GET',
+            path: agentRuntimeRoutes.identityMembers,
+        },
+        {
+            authorization: 'Bearer runtime-token',
+            method: 'GET',
+            path: agentRuntimeRoutes.identityInvites,
+        },
+        {
+            authorization: 'Bearer runtime-token',
+            method: 'POST',
+            path: agentRuntimeRoutes.identityInvites,
+        },
+        {
+            authorization: 'Bearer runtime-token',
+            method: 'DELETE',
+            path: agentRuntimeRoutes.identityInvite('inv_test'),
+        },
+        {
+            authorization: 'Bearer runtime-token',
+            method: 'DELETE',
+            path: agentRuntimeRoutes.identityMember('usr_member'),
+        },
+    ]);
+});
+
 test('listCapabilities parses Wiki capability rows', async () => {
     const now = new Date().toISOString();
     const fetchMock = mock(async (input: RequestInfo | URL) => {

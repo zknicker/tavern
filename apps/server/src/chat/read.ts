@@ -1,5 +1,7 @@
 import { z } from 'zod';
 import { createTavernClientForConnection } from '../agent-runtime/client-factory.ts';
+import type { ApiContext } from '../api/context.ts';
+import { resolveActingUserId } from '../identity/acting-user.ts';
 import { getAgentRuntimeConnection } from '../storage/agent-runtime-connections.ts';
 import { getRuntimeChatRecord } from './runtime-chats.ts';
 
@@ -12,8 +14,15 @@ export const markChatReadInputSchema = z.object({
  * runtime resolves the latest sequence at write time, so a message landing
  * mid-request still counts as unread afterwards.
  */
-export async function markTavernChatRead(input: { chatId: string }) {
-    const chatRecord = await getRuntimeChatRecord(input.chatId);
+export async function markTavernChatRead(
+    input: { chatId: string },
+    ctx: Pick<ApiContext, 'clerkSessionToken'> = { clerkSessionToken: null }
+) {
+    const actingUserId = await resolveActingUserId(ctx);
+    const chatRecord = await getRuntimeChatRecord(input.chatId, {
+        actingUserId,
+        readerId: actingUserId,
+    });
 
     if (!chatRecord) {
         throw new Error(`No Tavern chat named "${input.chatId}" exists.`);
@@ -26,7 +35,7 @@ export async function markTavernChatRead(input: { chatId: string }) {
     }
 
     const receipt = await createTavernClientForConnection(connection).chat.markRead(input.chatId, {
-        reader_id: 'usr_tavern',
+        reader_id: actingUserId,
     });
 
     return {
