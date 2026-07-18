@@ -23,6 +23,10 @@ export interface DesktopTabsState {
 export interface TavernDesktopBridge {
     /** Chrome → main: make a tab the active (visible) one. */
     activateTab: (tabId: string) => Promise<void>;
+    /** Read Clerk's native client JWT from main-process storage. */
+    authTokenGet: () => Promise<string | null>;
+    /** Persist or clear Clerk's native client JWT in main-process storage. */
+    authTokenSet: (token: string | null) => Promise<void>;
     checkForUpdate: () => Promise<void>;
     /** Chrome → main: close a tab (closes the window if it was the last). */
     closeTab: (tabId: string) => Promise<void>;
@@ -50,11 +54,15 @@ export interface TavernDesktopBridge {
     onNavigateTo: (listener: (route: string) => void) => () => void;
     /** A tab was re-attached to this window (dropped on its strip): open the route here. */
     onOpenTab: (listener: (route: string) => void) => () => void;
+    /** Main → renderer: the system browser returned Clerk's OAuth callback. */
+    onSsoCallback: (listener: (url: string) => void) => () => void;
     /** Main → chrome: the tab list or active tab changed. */
     onTabsChanged: (listener: (state: DesktopTabsState) => void) => () => void;
     onUpdateStatus: (listener: (status: DesktopUpdateBridgeStatus) => void) => () => void;
     /** Main → content: this already-loaded tab became the active visible tab. */
     onViewActivated: (listener: () => void) => () => void;
+    /** Open an HTTP(S) URL in the operating system's default browser. */
+    openExternal: (url: string) => Promise<void>;
     openWindow: (route: string) => Promise<void>;
     /** Chrome → main: set the tab order. */
     reorderTabs: (orderedIds: string[]) => Promise<void>;

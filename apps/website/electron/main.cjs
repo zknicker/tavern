@@ -6,6 +6,7 @@ const {
     ipcMain,
     Menu,
     nativeTheme,
+    safeStorage,
     screen,
     shell,
     WebContentsView,
@@ -15,6 +16,7 @@ const path = require('node:path');
 const { spawn, execFile, spawnSync } = require('node:child_process');
 const { existsSync } = require('node:fs');
 const electronUpdater = require('electron-updater');
+const { registerClerkAuth } = require('./clerk-auth.cjs');
 const { registerEditContextMenuHandlers } = require('./edit-context-menu.cjs');
 const { registerExternalLinkHandlers } = require('./external-link-handlers.cjs');
 const {
@@ -78,6 +80,8 @@ const windowContent = new Map();
 
 app.setName('Tavern');
 app.setAppUserModelId('build.tavern.desktop');
+
+registerClerkAuth({ app, BrowserWindow, ipcMain, safeStorage, shell, webContents });
 
 autoUpdater.autoDownload = false;
 autoUpdater.autoInstallOnAppQuit = false;

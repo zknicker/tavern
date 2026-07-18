@@ -5,11 +5,18 @@ const releaseBaseUrl = process.env.TAVERN_RELEASE_BASE_URL?.replace(/\/+$/u, '')
 module.exports = {
     appId: 'build.tavern.desktop',
     productName: 'Tavern',
+    protocols: [
+        {
+            name: 'Tavern',
+            schemes: ['tavern'],
+        },
+    ],
     directories: {
         output: 'electron-dist',
     },
     files: [
         'dist/**',
+        'electron/clerk-auth.cjs',
         'electron/edit-context-menu.cjs',
         'electron/external-link-handlers.cjs',
         'electron/main.cjs',

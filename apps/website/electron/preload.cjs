@@ -10,6 +10,14 @@ const surface = surfaceArg ? surfaceArg.slice('--tavern-surface='.length) : null
 
 contextBridge.exposeInMainWorld('tavernDesktop', {
     surface,
+    authTokenGet: () => ipcRenderer.invoke('desktop:auth:token-get'),
+    authTokenSet: (token) => ipcRenderer.invoke('desktop:auth:token-set', token),
+    onSsoCallback: (listener) => {
+        const handler = (_event, url) => listener(url);
+        ipcRenderer.on('desktop:auth:sso-callback', handler);
+        return () => ipcRenderer.off('desktop:auth:sso-callback', handler);
+    },
+    openExternal: (url) => ipcRenderer.invoke('desktop:open-external', url),
     // Chrome → main: the live bounds (CSS px, relative to the window) of the content card
     // where the active tab's WebContentsView should be positioned.
     setContentBounds: (bounds) => ipcRenderer.invoke('desktop:view:set-content-bounds', bounds),
