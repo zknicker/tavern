@@ -97,9 +97,9 @@ read model for chat history.
 ## Endpoints
 
 ```http
-GET    /api/chats?cursor=&limit=
+GET    /api/chats?cursor=&limit=&reader_id=
 POST   /api/chats
-GET    /api/chats/{chat_id}
+GET    /api/chats/{chat_id}?reader_id=
 GET    /api/chats/{chat_id}/messages?after_sequence=&before_sequence=&limit=
 GET    /api/chats/{chat_id}/messages/search?query=&limit=
 GET    /api/chats/{chat_id}/timeline?before_sequence=&limit=
@@ -119,6 +119,10 @@ GET    /api/events/ws
 
 The transport can be local HTTP, tRPC wrapping, or a TypeScript SDK method. The
 contract stays the same.
+
+Chat list and detail reads accept an optional `reader_id`. Their `unread_count`
+is scoped to that Tavern user and excludes messages authored by that user.
+Keyless clients may omit it to use the synthetic `usr_tavern` operator.
 
 ## Tavern App Reads
 

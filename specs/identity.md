@@ -64,9 +64,15 @@ never under a member's credentials.
 ## Data keying
 
 - Human authorship: messages, reads, receipts, reactions, and app
-  preferences key on `tavern user id`. The legacy single-operator self actor
-  (`profile:self`) is replaced by per-user actors — a breaking change with
-  no back-compat path.
+  preferences key on `tavern user id`. A user's tavern id is their chat
+  participant id (`usr_…`). The server stamps the acting user resolved from
+  the request's Clerk session token.
+- Keyless dev/e2e builds act as the synthetic local operator `usr_tavern`;
+  that id is the fallback only when sign-in is disabled, never a real user.
+- Owner-scoped surfaces keep single-operator actors for now: session
+  evidence views (`profile:self`), task work-order seeding, and
+  channel-relay ingress. They key per-user when those surfaces gain
+  member-facing semantics.
 - Externally observed identities (Discord, iMessage, …) remain
   `participants` per [participants.md](participants.md). A member is not a
   participant; no automatic linking between members and observed identities.
