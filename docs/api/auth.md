@@ -91,3 +91,9 @@ implemented surface:
 - The runtime token remains the owner transport credential and bypasses
   membership. `CLERK_SECRET_KEY` is CLI/dev-only and must never ship in
   client code or version control.
+- Production runs on the Clerk instance at `clerk.grotto.sh` (Google OAuth
+  via the Grotto Clerk client in the Tavern Google Cloud project). Desktop
+  release builds bake the pk_live publishable key via the
+  `desktop:build:release` script; dev and unsigned builds stay on the dev
+  instance. The `tavern://sso-callback` redirect is whitelisted on both
+  instances and must be re-registered when the URL scheme is rebranded.
