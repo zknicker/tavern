@@ -25,11 +25,11 @@ function SignedInClaimCommand() {
     }
     return (
         <div className="grid gap-1.5">
-            <p className="text-neutral-700 text-sm">
+            <p className="text-muted-foreground text-sm">
                 New runtime? Run this on the runtime host to link it to your account:
             </p>
             <div className="flex items-center gap-2">
-                <code className="min-w-0 flex-1 select-text overflow-x-auto whitespace-nowrap rounded-md border border-white/60 bg-white/64 px-3 py-2 font-mono text-neutral-900 text-xs shadow-inner shadow-neutral-900/5">
+                <code className="min-w-0 flex-1 select-text overflow-x-auto whitespace-nowrap rounded-md border border-border bg-muted px-3 py-2 font-mono text-foreground text-xs">
                     {command}
                 </code>
                 <Button

@@ -1,7 +1,6 @@
 import { AlertCircleIcon } from '@hugeicons/core-free-icons';
 import * as React from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
-import onboardingBackground from '../../assets/tavern-onboarding-background.webp';
 import { DesktopUpdateIndicator } from '../../components/desktop-update-indicator.tsx';
 import { Alert, AlertDescription, AlertTitle } from '../../components/ui/alert.tsx';
 import { AppShell, AppShellDragRegion } from '../../components/ui/app-shell.tsx';
@@ -36,65 +35,30 @@ export function OnboardingPage() {
         <AppShell className="app-reference-theme select-none overflow-hidden bg-background text-foreground">
             <AppShellDragRegion />
             <DesktopUpdateIndicator placement="floating" />
-            <OnboardingBackground />
-            <div className="relative z-10 flex min-h-screen flex-col items-center justify-center px-6 py-8 md:px-10">
-                <div className="grid w-full justify-items-center">
-                    <div className="mb-7 grid max-w-[1040px] gap-4 text-center text-white">
-                        <h1 className="max-w-full justify-self-center text-nowrap text-balance font-display font-semibold text-4xl text-white drop-shadow-[0_10px_28px_rgb(49_25_11_/_0.34)] [font-kerning:normal] [text-rendering:optimizeLegibility] sm:text-5xl">
-                            Welcome in, traveler!
+            <div className="flex min-h-screen flex-col items-center justify-center px-6 py-8">
+                <div className="grid w-full max-w-lg gap-6">
+                    <div className="grid gap-1.5 text-center">
+                        <h1 className="font-semibold text-2xl text-foreground">
+                            Connect your runtime
                         </h1>
+                        <p className="text-muted-foreground text-sm">
+                            The Tavern Runtime is where your agents live, store their memories, and
+                            work on tasks.
+                        </p>
                     </div>
-                    <RuntimeConnectionCard
-                        connection={connection}
-                        onConnect={() => {
-                            navigate(appRoutes.overview);
-                        }}
-                    />
+                    <Card>
+                        <CardContent className="p-6 sm:p-8">
+                            <TavernRuntimeOnboardingForm
+                                connection={connection}
+                                onConnect={() => {
+                                    navigate(appRoutes.overview);
+                                }}
+                            />
+                        </CardContent>
+                    </Card>
                 </div>
             </div>
         </AppShell>
-    );
-}
-
-function OnboardingBackground() {
-    return (
-        <div className="absolute inset-0 z-0 overflow-hidden">
-            <img
-                alt=""
-                aria-hidden="true"
-                className="absolute inset-0 h-full w-full scale-[1.02] object-cover brightness-[1.08] saturate-[1.08]"
-                height={941}
-                src={onboardingBackground}
-                width={1672}
-            />
-            <img
-                alt=""
-                aria-hidden="true"
-                className="absolute inset-0 h-full w-full scale-[1.12] object-cover blur-[16px] brightness-[1.05] saturate-[1.05] [mask-image:radial-gradient(ellipse_490px_350px_at_50%_50%,black_0%,black_46%,rgb(0_0_0_/_0.72)_68%,transparent_100%)]"
-                height={941}
-                src={onboardingBackground}
-                width={1672}
-            />
-            <div className="absolute inset-0 bg-[linear-gradient(to_bottom,rgb(255_248_232_/_0.2),rgb(255_255_255_/_0.04)_42%,rgb(67_38_20_/_0.12)_100%)]" />
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_510px_360px_at_50%_50%,rgb(36_19_13_/_0.34)_0%,rgb(33_20_15_/_0.22)_60%,transparent_100%)]" />
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_460px_315px_at_50%_45%,rgb(0_0_0_/_0.16)_0%,transparent_74%)]" />
-        </div>
-    );
-}
-
-function RuntimeConnectionCard({
-    connection,
-    onConnect,
-}: {
-    connection: RuntimeConnection;
-    onConnect: () => void;
-}) {
-    return (
-        <Card className="w-full max-w-[620px] rounded-[8px] border-white/42 bg-white/72 text-neutral-900 shadow-[0_26px_80px_rgb(17_24_39_/_0.24),inset_0_1px_rgb(255_255_255_/_0.72)] backdrop-blur-2xl">
-            <CardContent className="px-8 py-7 sm:px-10 sm:py-9">
-                <TavernRuntimeOnboardingForm connection={connection} onConnect={onConnect} />
-            </CardContent>
-        </Card>
     );
 }
 
@@ -155,22 +119,15 @@ function TavernRuntimeOnboardingForm({
                 });
             }}
         >
-            <div className="grid gap-1.5">
-                <p className="max-w-[54ch] text-pretty text-base text-neutral-700 leading-7">
-                    The Tavern Runtime is where your agents live, store their memories, and work on
-                    tasks. Once you have it up and running, connect to it here.
-                </p>
-            </div>
-
             <ClaimCommand />
 
             <Field>
+                <FieldLabel htmlFor={runtimeUrlInputId}>Runtime URL</FieldLabel>
                 <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto]">
                     <Input
                         aria-describedby={runtimeConnectionError ? runtimeUrlErrorId : undefined}
                         aria-invalid={Boolean(runtimeConnectionError)}
-                        aria-label="Tavern Runtime URL"
-                        className="select-text border-white/60 bg-white/64 font-mono text-neutral-900 shadow-inner shadow-neutral-900/5 hover:border-white/80 hover:bg-white/82"
+                        className="select-text font-mono"
                         id={runtimeUrlInputId}
                         name="runtime-url"
                         onChange={(event) => setBaseUrl(event.currentTarget.value)}
@@ -179,7 +136,6 @@ function TavernRuntimeOnboardingForm({
                         value={baseUrl}
                     />
                     <Button
-                        className="border-brand bg-brand text-brand-foreground shadow-brand/20 hover:bg-brand/90"
                         disabled={!baseUrl.trim()}
                         loading={connectMutation.isPending}
                         size="lg"
@@ -191,11 +147,9 @@ function TavernRuntimeOnboardingForm({
             </Field>
 
             <Field>
-                <FieldLabel className="text-neutral-700" htmlFor={runtimeTokenInputId}>
-                    Runtime token
-                </FieldLabel>
+                <FieldLabel htmlFor={runtimeTokenInputId}>Runtime token</FieldLabel>
                 <Input
-                    className="select-text border-white/60 bg-white/64 text-neutral-900 shadow-inner shadow-neutral-900/5 hover:border-white/80 hover:bg-white/82"
+                    className="select-text"
                     id={runtimeTokenInputId}
                     name="runtime-token"
                     onChange={(event) => setToken(event.currentTarget.value)}
@@ -203,7 +157,7 @@ function TavernRuntimeOnboardingForm({
                     type="password"
                     value={token}
                 />
-                <FieldDescription className="text-neutral-500">
+                <FieldDescription>
                     Run <code>tavern token</code> on the runtime host to get this.
                 </FieldDescription>
             </Field>
@@ -229,14 +183,10 @@ function RuntimeConnectionError({
     title: string;
 }) {
     return (
-        <Alert
-            className="border-error-border/70 bg-error-bg/70 shadow-none"
-            id={id}
-            variant="error"
-        >
+        <Alert id={id} variant="error">
             <Icon className="size-4 text-error" icon={AlertCircleIcon} />
-            <AlertTitle className="text-error-foreground">{title}</AlertTitle>
-            <AlertDescription className="text-error-foreground/82">{message}</AlertDescription>
+            <AlertTitle>{title}</AlertTitle>
+            <AlertDescription>{message}</AlertDescription>
         </Alert>
     );
 }
