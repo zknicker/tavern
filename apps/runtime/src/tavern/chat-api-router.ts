@@ -54,6 +54,7 @@ async function route(request: Request, url: URL): Promise<Response> {
             listChats({
                 cursor: url.searchParams.get('cursor'),
                 limit: numberParam(url, 'limit'),
+                readerId: url.searchParams.get('reader_id') ?? undefined,
             })
         );
     }
@@ -209,7 +210,11 @@ async function route(request: Request, url: URL): Promise<Response> {
 
     const chatMatch = url.pathname.match(/^\/api\/chats\/([^/]+)$/u);
     if (chatMatch && request.method === 'GET') {
-        const chat = getChat(decodeURIComponent(chatMatch[1]));
+        const chat = getChat(
+            decodeURIComponent(chatMatch[1]),
+            getDb(),
+            url.searchParams.get('reader_id') ?? undefined
+        );
         return chat ? json(chat) : notFound();
     }
 

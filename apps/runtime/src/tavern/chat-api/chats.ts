@@ -78,11 +78,9 @@ export function createChat(input: TavernCreateChatRequest, db: Database = getDb(
     return getChatOrThrow(input.id, db);
 }
 
-// Unread for the operator seat ($readerId = localHumanParticipantId):
-// messages past the operator's read receipt (chat_reads,
-// specs/presence.md), excluding the operator's own messages. Chats can
-// carry additional seeded or observed user participants; their receipts
-// never drive the count.
+// Unread for the requested reader: messages past that user's receipt,
+// excluding their own messages. Keyless callers default to the synthetic
+// local operator.
 const unreadCountSelect = `(
     SELECT COUNT(*)
     FROM chat_messages
@@ -97,10 +95,12 @@ const unreadCountSelect = `(
 ) AS unread_count`;
 
 export function listChats(
-    input: { cursor?: string | null; limit?: number } = {},
+    input: { cursor?: string | null; limit?: number; readerId?: string } = {},
     db: Database = getDb()
 ): TavernListChatsResponse {
     const limit = clampLimit(input.limit);
+    const readerId = input.readerId ?? localHumanParticipantId;
+    assertTavernIdPrefix(readerId, 'usr_', 'Chat reader id');
     const rows = db
         .prepare(
             `SELECT chats.*,
@@ -147,7 +147,7 @@ export function listChats(
             namedParams({
                 cursor: input.cursor ?? '',
                 limit,
-                readerId: localHumanParticipantId,
+                readerId,
             })
         ) as ChatRow[];
     return {
@@ -177,7 +177,12 @@ export function listChatsForAgentParticipant(
     return rows.map((row) => rowToChat(row, db));
 }
 
-export function getChat(id: string, db: Database = getDb()): TavernChat | null {
+export function getChat(
+    id: string,
+    db: Database = getDb(),
+    readerId: string = localHumanParticipantId
+): TavernChat | null {
+    assertTavernIdPrefix(readerId, 'usr_', 'Chat reader id');
     const row = optionalRow(
         db
             .prepare(
@@ -219,7 +224,7 @@ export function getChat(id: string, db: Database = getDb()): TavernChat | null {
              FROM chats
              WHERE id = $id`
             )
-            .get(namedParams({ id, readerId: localHumanParticipantId })) as ChatRow | null
+            .get(namedParams({ id, readerId })) as ChatRow | null
     );
     return row ? rowToChat(row, db) : null;
 }

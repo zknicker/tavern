@@ -820,6 +820,40 @@ describe('Tavern Runtime Chat API store', () => {
         expect(listChats().chats.find((chat) => chat.id === 'cht_1')?.unread_count).toBe(1);
     });
 
+    it('scopes unread counts and read receipts to each reader', () => {
+        createChat({
+            id: 'cht_1',
+            participants: [
+                { id: 'usr_A', kind: 'user', label: 'A', metadata: {} },
+                { id: 'usr_B', kind: 'user', label: 'B', metadata: {} },
+                { id: 'agt_a', kind: 'agent', label: 'Otto', metadata: {} },
+            ],
+        });
+        createMessage('cht_1', {
+            author_id: 'agt_a',
+            content: 'first',
+            id: 'msg_1',
+            role: 'assistant',
+        });
+        markRead('cht_1', { reader_id: 'usr_A' });
+        createMessage('cht_1', {
+            author_id: 'agt_a',
+            content: 'second',
+            id: 'msg_2',
+            role: 'assistant',
+        });
+
+        expect(listChats({ readerId: 'usr_A' }).chats[0]?.unread_count).toBe(1);
+        expect(listChats({ readerId: 'usr_B' }).chats[0]?.unread_count).toBe(2);
+        expect(getChat('cht_1', getDb(), 'usr_A')?.unread_count).toBe(1);
+        expect(getChat('cht_1', getDb(), 'usr_B')?.unread_count).toBe(2);
+
+        markRead('cht_1', { reader_id: 'usr_A' });
+
+        expect(listChats({ readerId: 'usr_A' }).chats[0]?.unread_count).toBe(0);
+        expect(listChats({ readerId: 'usr_B' }).chats[0]?.unread_count).toBe(2);
+    });
+
     it('stores terminal response activity in place', () => {
         createChat({ id: 'cht_1' });
         upsertResponse('cht_1', {
@@ -1197,6 +1231,32 @@ describe('Tavern Runtime Chat API routes', () => {
                 id: 'msg_1',
                 sequence: 1,
             },
+        });
+    });
+
+    it('reads list and detail unread counts for the requested reader', async () => {
+        createChat({ id: 'cht_1' });
+        createMessage('cht_1', {
+            author_id: 'agt_1',
+            content: 'hello',
+            id: 'msg_1',
+            role: 'assistant',
+        });
+        markRead('cht_1', { reader_id: 'usr_A' });
+
+        const listResponse = await handleTavernRuntimeRequest(
+            getRequest('/api/chats?reader_id=usr_A')
+        );
+        const detailResponse = await handleTavernRuntimeRequest(
+            getRequest('/api/chats/cht_1?reader_id=usr_B')
+        );
+
+        await expect(listResponse.json()).resolves.toMatchObject({
+            chats: [{ id: 'cht_1', unread_count: 0 }],
+        });
+        await expect(detailResponse.json()).resolves.toMatchObject({
+            id: 'cht_1',
+            unread_count: 1,
         });
     });
 
