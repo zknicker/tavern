@@ -73,6 +73,9 @@ implemented surface:
   builds run a signed-out dev mode with no gate; e2e forces keyless. If
   clerk-js cannot load (offline), the app renders local data on the cached
   identity instead of locking the user out.
+- Dev builds automatically sign in as the configured dev user when
+  `CLERK_SECRET_KEY` and `DEV_CLERK_SIGN_IN_USER_ID` are set in the
+  machine-local root `.env`. E2e remains keyless and does not use this flow.
 - The app attaches the Clerk session token to server requests
   (`Authorization: Bearer`, websocket `connectionParams.clerkSessionToken`);
   the server exposes it as `ctx.clerkSessionToken`.
