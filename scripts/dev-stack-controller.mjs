@@ -26,11 +26,12 @@ const processGroupShutdownPollMs = 50;
 const serverDependencyPrebuildCommand = 'bun run --filter @tavern/sdk build';
 
 export class DevStackController extends EventEmitter {
-    constructor({ mode, ports, repositoryRoot }) {
+    constructor({ mode, ports, repositoryRoot, runtimeEnvironmentOverrides = {} }) {
         super();
         this.mode = mode;
         this.ports = ports;
         this.repositoryRoot = repositoryRoot;
+        this.runtimeEnvironmentOverrides = runtimeEnvironmentOverrides;
         this.processes = new Map();
         this.backgroundProcesses = new Set();
         this.expectedProcessStops = new Set();
@@ -343,11 +344,10 @@ export class DevStackController extends EventEmitter {
                 ].filter(Boolean);
                 this.addLog('tavern', `MerchBase Plugin preseeded ${parts.join(' and ')}`);
             }
-            this.spawnProcess(
-                'runtime',
-                'cd apps/runtime && bun --watch src/index.ts serve',
-                startupUiEnv
-            );
+            this.spawnProcess('runtime', 'cd apps/runtime && bun --watch src/index.ts serve', {
+                ...startupUiEnv,
+                ...this.runtimeEnvironmentOverrides,
+            });
             startWebsite();
             startServerDependencyPrebuild();
             startDesktopPrebuild();

@@ -5,6 +5,8 @@ export interface ApiContext {
      * connectionParams. Null in keyless dev mode.
      */
     clerkSessionToken: string | null;
+    /** Incoming Host header used to restrict local-only development routes. */
+    requestHost: string | null;
 }
 
 interface ContextCarrier {
@@ -13,14 +15,16 @@ interface ContextCarrier {
 }
 
 export function createApiContext(opts?: ContextCarrier): ApiContext {
+    const hostHeader = opts?.req?.headers?.host;
+    const requestHost = Array.isArray(hostHeader) ? (hostHeader[0] ?? null) : (hostHeader ?? null);
     const fromConnection = opts?.info?.connectionParams?.clerkSessionToken;
     if (typeof fromConnection === 'string' && fromConnection.length > 0) {
-        return { clerkSessionToken: fromConnection };
+        return { clerkSessionToken: fromConnection, requestHost };
     }
     const header = opts?.req?.headers?.authorization;
     const value = Array.isArray(header) ? header[0] : header;
     if (typeof value === 'string' && value.startsWith('Bearer ')) {
-        return { clerkSessionToken: value.slice(7) };
+        return { clerkSessionToken: value.slice(7), requestHost };
     }
-    return { clerkSessionToken: null };
+    return { clerkSessionToken: null, requestHost };
 }

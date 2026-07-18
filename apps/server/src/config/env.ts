@@ -113,7 +113,9 @@ applyCliOverrides(process.argv.slice(2));
 
 const envSchema = z.object({
     APP_ORIGIN: z.string().url().default(getDefaultAppOrigin()),
+    CLERK_SECRET_KEY: z.string().min(1).optional(),
     DATABASE_PATH: z.string().min(1).default(getDefaultDatabasePath()).transform(resolveHomePath),
+    DEV_CLERK_SIGN_IN_USER_ID: z.string().min(1).optional(),
     TAVERN_RUNTIME_URL: z.string().url().optional(),
     SERVER_PORT: z.coerce.number().int().positive().default(getDefaultServerPort()),
 });
