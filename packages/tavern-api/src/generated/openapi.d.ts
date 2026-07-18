@@ -719,6 +719,7 @@ export interface operations {
             query?: {
                 cursor?: components["parameters"]["Cursor"];
                 limit?: components["parameters"]["Limit"];
+                reader_id?: components["schemas"]["UserParticipantId"];
             };
             header?: never;
             path?: never;
@@ -774,7 +775,9 @@ export interface operations {
     };
     getChat: {
         parameters: {
-            query?: never;
+            query?: {
+                reader_id?: components["schemas"]["UserParticipantId"];
+            };
             header?: never;
             path: {
                 chat_id: components["parameters"]["ChatId"];

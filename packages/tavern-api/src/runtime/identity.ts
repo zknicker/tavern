@@ -43,8 +43,28 @@ export const runtimeInviteRedeemRequestSchema = z.object({
     code: z.string().trim().min(1),
 });
 
+export const runtimeMemberListSchema = z.object({
+    members: z.array(runtimeMemberSchema),
+});
+
+export const runtimeInviteListSchema = z.object({
+    invites: z.array(runtimeInviteSchema),
+});
+
+export const runtimeInviteCreateResultSchema = z.object({
+    invite: runtimeInviteSchema,
+});
+
+export const runtimeIdentityMutationResultSchema = z.object({
+    ok: z.literal(true),
+});
+
 export type RuntimeUser = z.infer<typeof runtimeUserSchema>;
 export type RuntimeMemberRole = z.infer<typeof runtimeMemberRoleSchema>;
 export type RuntimeMember = z.infer<typeof runtimeMemberSchema>;
 export type RuntimeIdentityMe = z.infer<typeof runtimeIdentityMeSchema>;
 export type RuntimeInvite = z.infer<typeof runtimeInviteSchema>;
+export type RuntimeMemberList = z.infer<typeof runtimeMemberListSchema>;
+export type RuntimeInviteList = z.infer<typeof runtimeInviteListSchema>;
+export type RuntimeInviteCreateResult = z.infer<typeof runtimeInviteCreateResultSchema>;
+export type RuntimeIdentityMutationResult = z.infer<typeof runtimeIdentityMutationResultSchema>;

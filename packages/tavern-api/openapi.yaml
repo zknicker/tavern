@@ -23,6 +23,10 @@ paths:
       parameters:
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
+        - name: reader_id
+          in: query
+          schema:
+            $ref: '#/components/schemas/UserParticipantId'
       responses:
         '200':
           description: Chats ordered by recent activity.
@@ -64,6 +68,10 @@ paths:
       summary: Get a chat.
       parameters:
         - $ref: '#/components/parameters/ChatId'
+        - name: reader_id
+          in: query
+          schema:
+            $ref: '#/components/schemas/UserParticipantId'
       responses:
         '200':
           description: Chat.

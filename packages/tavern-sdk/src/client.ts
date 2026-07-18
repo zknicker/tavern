@@ -149,11 +149,12 @@ class TavernChatClient {
         this.#client = client;
     }
 
-    list(input: { cursor?: string | null; limit?: number } = {}) {
+    list(input: { cursor?: string | null; limit?: number; readerId?: string } = {}) {
         return this.#client.request<TavernListChatsResponse>('/api/chats', {
             query: {
                 cursor: input.cursor,
                 limit: input.limit,
+                reader_id: input.readerId,
             },
         });
     }
@@ -165,8 +166,10 @@ class TavernChatClient {
         });
     }
 
-    get(chatId: string) {
-        return this.#client.request<TavernChat>(`/api/chats/${encodeURIComponent(chatId)}`);
+    get(chatId: string, input: { readerId?: string } = {}) {
+        return this.#client.request<TavernChat>(`/api/chats/${encodeURIComponent(chatId)}`, {
+            query: { reader_id: input.readerId },
+        });
     }
 
     messages(
