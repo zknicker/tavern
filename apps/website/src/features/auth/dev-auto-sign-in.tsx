@@ -1,5 +1,4 @@
-import { useAuth } from '@clerk/react';
-import { useSignIn } from '@clerk/react/legacy';
+import { useAuth, useSignIn } from '@clerk/clerk-react';
 import { useEffect, useRef } from 'react';
 import { isClerkEnabled } from '../../lib/clerk.tsx';
 import { trpc } from '../../lib/trpc.tsx';

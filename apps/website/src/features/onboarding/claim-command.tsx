@@ -1,4 +1,4 @@
-import { useUser } from '@clerk/react';
+import { useUser } from '@clerk/clerk-react';
 import * as React from 'react';
 import { Button } from '../../components/ui/primitives/button.tsx';
 import { clerkPublishableKey, isClerkEnabled } from '../../lib/clerk.tsx';

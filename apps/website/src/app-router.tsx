@@ -1,3 +1,4 @@
+import { AuthenticateWithRedirectCallback } from '@clerk/clerk-react';
 import type { ComponentType } from 'react';
 import {
     createBrowserRouter,
@@ -43,6 +44,10 @@ export function createAppRouter() {
                 {
                     path: '/onboarding',
                     lazy: lazyRoute(() => import('./routes/onboarding-page.tsx'), 'OnboardingPage'),
+                },
+                {
+                    path: '/sso-callback',
+                    element: <AuthenticateWithRedirectCallback />,
                 },
                 {
                     path: 'dashboard',

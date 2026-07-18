@@ -1,5 +1,7 @@
-import { ClerkProvider } from '@clerk/react';
+import { ClerkProvider } from '@clerk/clerk-react';
 import type { ReactNode } from 'react';
+import { getNativeClerk, getNativeClerkSessionToken } from './clerk-native.ts';
+import { isElectronDesktopApp } from './desktop-bridge.ts';
 
 export const clerkPublishableKey: string | null =
     import.meta.env.VITE_CLERK_PUBLISHABLE_KEY || null;
@@ -19,8 +21,12 @@ export async function getClerkSessionToken(): Promise<string | null> {
     if (!isClerkEnabled) {
         return null;
     }
-    const clerk = (window as { Clerk?: ClerkGlobal }).Clerk;
     try {
+        if (isElectronDesktopApp()) {
+            return await getNativeClerkSessionToken();
+        }
+
+        const clerk = (window as { Clerk?: ClerkGlobal }).Clerk;
         return (await clerk?.session?.getToken()) ?? null;
     } catch {
         return null;
@@ -31,6 +37,19 @@ export function TavernClerkProvider({ children }: { children: ReactNode }) {
     if (!clerkPublishableKey) {
         return children;
     }
+
+    if (isElectronDesktopApp()) {
+        return (
+            <ClerkProvider
+                afterSignOutUrl="/"
+                Clerk={getNativeClerk(clerkPublishableKey)}
+                publishableKey={clerkPublishableKey}
+            >
+                {children}
+            </ClerkProvider>
+        );
+    }
+
     return (
         <ClerkProvider afterSignOutUrl="/" publishableKey={clerkPublishableKey}>
             {children}
