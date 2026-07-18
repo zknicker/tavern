@@ -12,6 +12,7 @@ test('settings navigation uses current agent configuration vocabulary', () => {
 
     assert.deepEqual(agentLabels, ['General', 'Skills & Plugins', 'Channels']);
     assert.ok(labels.includes('Memory'));
+    assert.ok(labels.includes('Members'));
     assert.ok(!labels.includes('Tools'));
     assert.ok(labels.includes('Channels'));
     assert.ok(!labels.includes('MCP'));

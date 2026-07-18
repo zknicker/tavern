@@ -1,6 +1,7 @@
 import type { PropsWithChildren } from 'react';
 import * as React from 'react';
 import type { ChatLogOutput } from '../../lib/trpc.tsx';
+import { useCurrentUser } from '../identity/use-current-user.ts';
 import {
     addChatTimelineMessage,
     type ChatTimelineLocalMessagesState,
@@ -135,6 +136,7 @@ export function useChatTimelineRows(input: {
     logged: ChatLogOutput | undefined;
     offset?: number;
 }) {
+    const { tavernUserId } = useCurrentUser();
     const { messages, removeMessages } = useChatTimelineMessages(input.chatId);
     const confirmedIds = React.useMemo(
         () =>
@@ -168,6 +170,7 @@ export function useChatTimelineRows(input: {
             limit: input.limit,
             logged: input.logged,
             messages: localMessages,
+            tavernUserId,
         });
-    }, [input.limit, input.logged, input.offset, localMessages]);
+    }, [input.limit, input.logged, input.offset, localMessages, tavernUserId]);
 }

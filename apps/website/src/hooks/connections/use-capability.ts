@@ -59,6 +59,7 @@ export const settingsCapabilityRequirements = {
     plugins: ['apiServer'],
     jobs: [],
     memories: [],
+    members: [],
     models: ['apiServer'],
     sessions: ['apiServer'],
     skills: ['apiServer', 'skills'],

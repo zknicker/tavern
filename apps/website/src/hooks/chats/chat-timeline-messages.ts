@@ -99,20 +99,21 @@ function canConnectSessionRail(currentRow: ChatLogRow, adjacentRow: ChatLogRow |
     );
 }
 
-function buildUserMessageRow(input: {
-    attachments?: ChatMessageRow['message']['attachments'];
-    content: string;
-    id: string;
-    metadata?: Record<string, unknown>;
-    sessionKey?: string | null;
-    timestamp: string;
-}): ChatMessageRow {
+function buildUserMessageRow(
+    input: {
+        attachments?: ChatMessageRow['message']['attachments'];
+        content: string;
+        id: string;
+        metadata?: Record<string, unknown>;
+        sessionKey?: string | null;
+        timestamp: string;
+    },
+    tavernUserId: string | null
+): ChatMessageRow {
     const sourceSessionKey = input.sessionKey?.trim() ?? '';
-    // Optimistic rows are the owner's own send, so stamp the local human
-    // participant actor (the server's `usr_tavern`, see use-actor's
-    // `localHumanParticipantId`) to match the durable row and render
-    // right-anchored immediately — no left→right flip when the server row lands.
-    const ownerActor = { id: 'usr_tavern', kind: 'participant' as const };
+    // Match the acting user's durable author id so the optimistic row stays
+    // right-anchored when the server row lands. Keyless uses usr_tavern.
+    const ownerActor = { id: tavernUserId ?? 'usr_tavern', kind: 'participant' as const };
 
     return {
         actor: ownerActor,
@@ -176,7 +177,8 @@ function recomputeRowConnections(rows: ChatLogRow[]): ChatLogRow[] {
 
 export function appendTimelineMessage(
     current: ChatLogInput | undefined,
-    input: ChatTimelineMessage
+    input: ChatTimelineMessage,
+    tavernUserId: string | null = null
 ): ChatLogPage | undefined {
     if (!current || current.rows.some((row) => row.id === input.id)) {
         return current ? normalizeChatLog(current) : undefined;
@@ -184,7 +186,7 @@ export function appendTimelineMessage(
 
     const source = normalizeChatLog(current);
     const nextRows = recomputeRowConnections(
-        [...source.rows, buildUserMessageRow(input)].sort(compareChatLogRows)
+        [...source.rows, buildUserMessageRow(input, tavernUserId)].sort(compareChatLogRows)
     );
 
     return {
@@ -198,6 +200,7 @@ export function mergeTimelineMessages(input: {
     limit: number;
     logged: ChatLogInput | undefined;
     messages: readonly ChatTimelineMessage[];
+    tavernUserId?: string | null;
 }): ChatLogPage | undefined {
     if (!input.logged && input.messages.length === 0) {
         return undefined;
@@ -206,7 +209,8 @@ export function mergeTimelineMessages(input: {
     const initial = input.logged ? normalizeChatLog(input.logged) : createEmptyLog(input.limit);
 
     const merged = input.messages.reduce(
-        (current, message) => appendTimelineMessage(current, message) ?? current,
+        (current, message) =>
+            appendTimelineMessage(current, message, input.tavernUserId ?? null) ?? current,
         initial
     );
 

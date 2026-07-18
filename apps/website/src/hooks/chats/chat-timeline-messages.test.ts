@@ -52,6 +52,28 @@ test('appendTimelineMessage appends a user message row', () => {
     });
 });
 
+test('appendTimelineMessage stamps the current Tavern user on optimistic rows', () => {
+    const next = appendTimelineMessage(
+        {
+            limit: 20,
+            nextBeforeSequence: null,
+            rows: [],
+            totalMessages: 0,
+        },
+        {
+            content: 'hello',
+            id: 'timeline:current-user',
+            timestamp: '2026-04-20T18:15:00.000Z',
+        },
+        'usr_current'
+    );
+
+    expect(next?.rows[0]).toMatchObject({
+        actor: { id: 'usr_current', kind: 'participant' },
+        message: { actor: { id: 'usr_current', kind: 'participant' } },
+    });
+});
+
 test('appendTimelineMessage keeps loaded rows visible past the page limit', () => {
     const current = {
         limit: 2,

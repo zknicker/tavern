@@ -266,6 +266,16 @@ export function createAppRouter() {
                                                     ),
                                                 },
                                                 {
+                                                    path: 'members',
+                                                    lazy: lazyRoute(
+                                                        () =>
+                                                            import(
+                                                                './routes/app/settings-members-page.tsx'
+                                                            ),
+                                                        'SettingsMembersPage'
+                                                    ),
+                                                },
+                                                {
                                                     path: 'updates',
                                                     lazy: lazyRoute(
                                                         () =>

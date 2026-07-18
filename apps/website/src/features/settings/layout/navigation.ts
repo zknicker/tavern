@@ -11,6 +11,7 @@ import {
     PuzzleIcon,
     SystemUpdate01Icon,
     UserCircleIcon,
+    UserMultiple02Icon,
     ZapIcon,
 } from '@hugeicons-pro/core-stroke-rounded';
 import { appRoutes } from '../../../lib/app-routes.ts';
@@ -34,6 +35,12 @@ export const staticSettingsNavItems = [
         id: 'profile',
         label: 'Profile',
         to: appRoutes.settingsProfile,
+    },
+    {
+        icon: UserMultiple02Icon,
+        id: 'members',
+        label: 'Members',
+        to: appRoutes.settingsMembers,
     },
     {
         icon: SystemUpdate01Icon,
@@ -125,6 +132,7 @@ export const settingsNavSections = [
             'agent-runtime',
             'appearance',
             'profile',
+            'members',
             'updates',
             'models',
             'memories',

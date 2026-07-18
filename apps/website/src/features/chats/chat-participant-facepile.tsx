@@ -5,6 +5,7 @@ import { Icon } from '../../components/ui/icon.tsx';
 import { localHumanParticipantId } from '../../hooks/actors/use-actor.ts';
 import type { AgentFaceAppearance } from '../../hooks/agents/use-agent-appearance.ts';
 import { useAgentAppearanceLookup } from '../../hooks/agents/use-agent-appearance.ts';
+import { useCurrentUser } from '../../hooks/identity/use-current-user.ts';
 import { useUserProfilePreference } from '../../hooks/shell/use-user-profile-preference.ts';
 import { cn } from '../../lib/utils.ts';
 import { resolveAgentInk } from '../agents/agent-color-presets.ts';
@@ -26,6 +27,7 @@ const participantAvatarClassName =
 export function ChatParticipantFacepile({ chat }: { chat: ChatListItem }) {
     const participants = getVisibleParticipants(chat);
     const lookupAppearance = useAgentAppearanceLookup();
+    const { tavernUserId } = useCurrentUser();
 
     if (participants.length === 0) {
         return null;
@@ -47,6 +49,7 @@ export function ChatParticipantFacepile({ chat }: { chat: ChatListItem }) {
                         chatId={chat.id}
                         key={participant.actorId}
                         participant={participant}
+                        tavernUserId={tavernUserId}
                     />
                 ))}
             </ul>
@@ -63,10 +66,12 @@ function ParticipantAvatar({
     appearance,
     chatId,
     participant,
+    tavernUserId,
 }: {
     appearance: AgentFaceAppearance | null;
     chatId: string;
     participant: ChatListItem['participants'][number];
+    tavernUserId: string | null;
 }) {
     const dark = useResolvedThemeOptional() === 'dark';
 
@@ -97,7 +102,7 @@ function ParticipantAvatar({
 
     if (
         participant.actorType === 'participant' &&
-        participant.actorId === localHumanParticipantId
+        (participant.actorId === localHumanParticipantId || participant.actorId === tavernUserId)
     ) {
         return <LocalUserAvatar participant={participant} />;
     }

@@ -2,6 +2,7 @@ import type { AgentCharacter } from '@tavern/api/agent-appearance';
 import { useMemo } from 'react';
 import type { HistoryActorOutput } from '../../lib/trpc.tsx';
 import { useAgentList } from '../agents/use-agent-list.ts';
+import { useCurrentUser } from '../identity/use-current-user.ts';
 import { useParticipantList } from '../participants/use-participant-list.ts';
 import { useUserProfilePreference } from '../shell/use-user-profile-preference.ts';
 
@@ -16,21 +17,22 @@ interface ActorProfile {
 }
 
 const selfProfileActorId = 'profile:self';
-// The app owner is a chat participant with this stable id (see the server's
-// `localHumanParticipantId`). The session view also represents the owner with
-// the `profile:self` profile actor; both resolve to `isSelf`.
+// Keyless chat uses this synthetic participant. Owner-scoped session evidence
+// keeps profile:self; both remain self alongside the signed-in Tavern user id.
 export const localHumanParticipantId = 'usr_tavern';
 
-// True when the actor is the local app owner — either the `profile:self`
-// session actor or the `usr_tavern` chat participant.
-export function isLocalOwnerActor(actor: HistoryActorOutput | null): boolean {
+export function isLocalOwnerActor(
+    actor: HistoryActorOutput | null,
+    currentUserId: string | null
+): boolean {
     if (!actor) {
         return false;
     }
 
     return (
         (actor.kind === 'profile' && actor.id === selfProfileActorId) ||
-        (actor.kind === 'participant' && actor.id === localHumanParticipantId)
+        (actor.kind === 'participant' &&
+            (actor.id === localHumanParticipantId || actor.id === currentUserId))
     );
 }
 
@@ -38,6 +40,7 @@ export function useActorProfile(actor: HistoryActorOutput | null) {
     const agentsQuery = useAgentList();
     const participantsQuery = useParticipantList();
     const userProfile = useUserProfilePreference();
+    const { tavernUserId } = useCurrentUser();
 
     return useMemo(() => {
         if (!actor) {
@@ -60,9 +63,9 @@ export function useActorProfile(actor: HistoryActorOutput | null) {
                 : null;
         }
 
-        // The owner — the `profile:self` session actor or the `usr_tavern`
-        // chat participant — uses the locally configured name and avatar.
-        if (isLocalOwnerActor(actor)) {
+        // The current user and legacy owner-scoped actors use the locally
+        // configured name and avatar.
+        if (isLocalOwnerActor(actor, tavernUserId)) {
             return {
                 avatarUrl: userProfile.avatarUrl,
                 character: null,
@@ -97,6 +100,7 @@ export function useActorProfile(actor: HistoryActorOutput | null) {
         actor,
         agentsQuery.data?.agents,
         participantsQuery.data?.participants,
+        tavernUserId,
         userProfile.avatarUrl,
         userProfile.displayName,
     ]);

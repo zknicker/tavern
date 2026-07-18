@@ -41,6 +41,10 @@ describe('Runtime capability gates', () => {
         expect(settingsCapabilityRequirements.memories).toEqual([]);
     });
 
+    test('keeps Members settings reachable in keyless mode', () => {
+        expect(settingsCapabilityRequirements.members).toEqual([]);
+    });
+
     test('gates Plugins settings on Runtime API access', () => {
         expect(settingsCapabilityRequirements.plugins).toEqual(['apiServer']);
     });
