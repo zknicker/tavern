@@ -3,6 +3,8 @@ import { useResolvedThemeOptional } from '../../components/theme-provider.tsx';
 import type { AgentListOutput } from '../../lib/trpc.tsx';
 import { trpc } from '../../lib/trpc.tsx';
 import { workspaceIframeSandbox } from '../../widgets/sandbox.ts';
+import { resolveAgentInk } from '../agents/agent-color-presets.ts';
+import { AgentFace } from '../chats/agent-face.tsx';
 import {
     injectHostTokenStyle,
     readHostFontFaceCss,
@@ -36,8 +38,38 @@ export function parseCanvasHeight(html: string): number {
     return Math.min(maxCanvasHeight, Math.max(minCanvasHeight, height));
 }
 
+/** Sprite key for a face: the agent's name, lowercased and slug-safe. */
+export function agentFaceSlug(name: string): string {
+    return name
+        .trim()
+        .toLowerCase()
+        .replaceAll(/[^a-z0-9-]+/gu, '-');
+}
+
+/**
+ * CSS the bridge injects so a generated page can seat real doodle faces:
+ * `<span class="tavern-face" data-agent="otto"></span>`. Sprites are the
+ * live AgentFace render serialized to data URIs, so the roster's current
+ * characters, colors, and theme ink always win over generation-time state.
+ */
+export function buildFaceSpriteCss(sprites: { slug: string; svg: string }[]): string {
+    if (sprites.length === 0) {
+        return '';
+    }
+
+    const base =
+        '.tavern-face{display:inline-block;width:1.15em;height:1.15em;background-size:contain;background-repeat:no-repeat;background-position:center;vertical-align:-0.18em}';
+    const rules = sprites.map(
+        (sprite) =>
+            `.tavern-face[data-agent="${sprite.slug}"]{background-image:url("data:image/svg+xml,${encodeURIComponent(sprite.svg)}")}`
+    );
+
+    return `${base}${rules.join('')}`;
+}
+
 export function HomeCanvas({ agents }: { agents: Agent[] }) {
     const scheme = useResolvedThemeOptional() === 'dark' ? 'dark' : 'light';
+    const dark = scheme === 'dark';
 
     // One bounded read per agent; the freshest authored copy wins. Polling
     // stands in for a file-change subscription until one exists.
@@ -58,19 +90,74 @@ export function HomeCanvas({ agents }: { agents: Agent[] }) {
         .sort((a, b) => ((a.updatedAt ?? '') < (b.updatedAt ?? '') ? 1 : -1))[0];
     const html = authored?.content ?? starterHtml;
 
+    // Face sprites come from the hidden roster mount below: AgentFace sets
+    // its pose in effects, so the snapshot must read the live DOM. Children's
+    // effects run before this one within the same commit.
+    const [faceCss, setFaceCss] = React.useState<string | null>(null);
+    const spritesRef = React.useRef<HTMLDivElement>(null);
+    // biome-ignore lint/correctness/useExhaustiveDependencies: the effect snapshots child DOM that is rendered from these inputs
+    React.useEffect(() => {
+        const container = spritesRef.current;
+
+        if (!container) {
+            setFaceCss('');
+            return;
+        }
+
+        // XMLSerializer (not outerHTML) so the markup carries the SVG
+        // namespace a standalone data-URI image requires.
+        const serializer = new XMLSerializer();
+        const sprites = [...container.querySelectorAll('[data-face-slug]')].flatMap((holder) => {
+            const svg = holder.querySelector('svg');
+            const slug = holder.getAttribute('data-face-slug');
+
+            return svg && slug ? [{ slug, svg: serializer.serializeToString(svg) }] : [];
+        });
+        setFaceCss(buildFaceSpriteCss(sprites));
+    }, [agents, scheme]);
+
     const srcDoc = React.useMemo(
-        () => injectHostTokenStyle(html, `${readHostTokenCss(scheme)}${readHostFontFaceCss()}`),
-        [html, scheme]
+        () =>
+            injectHostTokenStyle(
+                html,
+                `${readHostTokenCss(scheme)}${readHostFontFaceCss()}${faceCss ?? ''}`
+            ),
+        [html, scheme, faceCss]
     );
     const height = parseCanvasHeight(html);
 
     return (
-        <iframe
-            className="w-full"
-            sandbox={workspaceIframeSandbox}
-            srcDoc={srcDoc}
-            style={{ border: 0, colorScheme: scheme, height }}
-            title="Home"
-        />
+        <>
+            <div
+                aria-hidden="true"
+                className="pointer-events-none fixed top-0 left-[-9999px] opacity-0"
+                ref={spritesRef}
+            >
+                {agents.map((agent) => (
+                    <div data-face-slug={agentFaceSlug(agent.name)} key={agent.id}>
+                        <AgentFace
+                            animate={false}
+                            dark={dark}
+                            head={agent.effectiveCharacter}
+                            ink={resolveAgentInk(dark, agent.effectivePrimaryColor)}
+                            size={64}
+                        />
+                    </div>
+                ))}
+            </div>
+
+            {/* Mount the frame only once sprites are snapshotted: srcDoc must
+                be stable at mount (effect-time updates race the initial
+                navigation and drop silently). */}
+            {faceCss === null ? null : (
+                <iframe
+                    className="w-full"
+                    sandbox={workspaceIframeSandbox}
+                    srcDoc={srcDoc}
+                    style={{ border: 0, colorScheme: scheme, height }}
+                    title="Home"
+                />
+            )}
+        </>
     );
 }

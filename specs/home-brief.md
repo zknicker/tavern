@@ -40,9 +40,11 @@ for chips, the wordmark, and the pattern examples.
   automation deliberately differs from it (never the same sentence
   structure twice in a row). Content the operator added or asked for is
   sacred; content the automation authored is freely rewritten.
-- Asset gaps to close: agent face SVGs shipped and indexed for in-frame
-  use; the Reel wordmark loading inside the sandbox; a height contract for
-  the canvas region.
+- Agent faces render in-frame via injected sprites: the app serializes the
+  live AgentFace roster to data-URI CSS at render time, and the page seats
+  a face with `<span class="tavern-face" data-agent="<name>"></span>`
+  (name lowercased). Injection-time resolution keeps characters, colors,
+  and theme ink current even when the page is stale.
 
 ## Voice
 

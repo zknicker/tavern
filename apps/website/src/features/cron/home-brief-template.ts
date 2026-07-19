@@ -22,7 +22,7 @@ CHIPS
 Data renders as chips: bold colored words with a small same-color inline SVG glyph, upright (not italic), no backgrounds or borders ever.
 - Action chips carry their verb: "closed 3 tasks", "tuned 24 ad bids". Tasks are "closed".
 - Marketplace figures wear the marketplace tone: Amazon amber (var(--label-amber-fg)), Etsy orange (var(--label-orange-fg)). Green (var(--success-foreground)) only for money aggregated across sources. Agent work blue (var(--info-foreground)), ads pink (var(--label-pink-fg)), time and automations purple (var(--brand-muted-foreground)), holidays red (var(--label-red-fg)), weather blue by night and amber by day.
-- Agent names are bold in that agent's color. Weekdays and holidays can be chips too.
+- Agent mentions pair the doodle face with the bold colored name: put <span class="tavern-face" data-agent="otto"></span> immediately before the name, where data-agent is the agent's name lowercased. The app injects the face sprites; never draw your own face art. Weekdays and holidays can be chips too.
 - At most ~6 chips, a word or two of grey minimum between chips (agent + its action chip is the one allowed adjacency).
 
 THE WORDMARK
