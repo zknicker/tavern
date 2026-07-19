@@ -19,7 +19,6 @@ export function SubNav({
             style={
                 {
                     '--nav-hover': 'var(--subnav-hover)',
-                    '--nav-active': 'var(--subnav-active)',
                 } as React.CSSProperties
             }
         >

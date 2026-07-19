@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Skeleton } from '../../components/ui/skeleton.tsx';
 import { useCronCreate } from '../../hooks/cron/use-cron-create.ts';
 import { useCronDelete } from '../../hooks/cron/use-cron-delete.ts';
@@ -19,6 +19,7 @@ import type { CronFormState } from './cron-form.ts';
 import { buildCronCreateInput, buildCronUpdateInput } from './cron-inputs.ts';
 import { CronRunDetailDrawer } from './cron-run-detail-drawer.tsx';
 import { MissingCronJobCard } from './missing-cron-job-card.tsx';
+import { getSuggestedAutomation } from './suggested-automations.ts';
 
 type CronJob = CronGetOutput['job'];
 type CronDeliveryTarget = CronDeliveryTargetsOutput['targets'][number];
@@ -41,8 +42,20 @@ export function shouldRenderCronEditorPageForm(input: {
 
 export function CronEditor() {
     const navigate = useNavigate();
+    const location = useLocation();
     const { jobId } = useParams<{ jobId?: string }>();
     const isNew = !jobId;
+    // Suggested-automation prefill: the catalog card navigates here with the
+    // suggestion id in router state; the template only applies to creates.
+    const suggestedId =
+        isNew &&
+        location.state &&
+        typeof location.state === 'object' &&
+        'suggestedAutomationId' in location.state &&
+        typeof location.state.suggestedAutomationId === 'string'
+            ? location.state.suggestedAutomationId
+            : null;
+    const suggested = suggestedId ? getSuggestedAutomation(suggestedId) : null;
     const cronJobQuery = useCronGet(jobId ?? null);
     const createMutation = useCronCreate();
     const deleteMutation = useCronDelete();
@@ -137,6 +150,8 @@ export function CronEditor() {
                         navigate(appRoutes.automations);
                     }}
                     runs={optimisticCronRuns.runs}
+                    template={suggested?.template}
+                    templateId={suggested?.id}
                 />
             ) : (
                 <CronEditorSkeleton />

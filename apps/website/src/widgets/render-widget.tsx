@@ -26,6 +26,7 @@ import { cn } from '../lib/utils.ts';
 import { WidgetArtifactCard } from './artifact-card.tsx';
 import { WidgetHtmlPreview } from './html-preview.tsx';
 import { WidgetMerchBaseSalesChart } from './merchbase-sales-chart.tsx';
+import { VisualCard } from './visual.tsx';
 
 type WidgetRow = Extract<NonNullable<ChatLogOutput>['rows'][number], { kind: 'widget' }>;
 
@@ -93,6 +94,8 @@ function widgetElement(input: WidgetRenderInput, agentId: string | null) {
             return <WidgetArtifactCard props={input.props} />;
         case 'tavern.widget.merchbase-sales-chart':
             return <WidgetMerchBaseSalesChart props={input.props} />;
+        case 'tavern.widget.visual':
+            return <VisualCard html={input.props.html} title={input.props.title} />;
         default:
             return null;
     }

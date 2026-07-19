@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { SelectionQuoteContainer } from '../../components/quote/selection-quote.tsx';
 import { SearchInput } from '../../components/ui/primitives/search-input.tsx';
 import {
     ResizablePaneRail,
@@ -12,6 +13,7 @@ import { resolveWikiLinkTarget } from '../wiki/utils.ts';
 import { WikiMarkdownViewer } from '../wiki/wiki-markdown-viewer.tsx';
 import { WikiPageFileTree } from '../wiki/wiki-page-sidebar-file-tree.tsx';
 import { WorkspaceArtifactEmpty } from './chat-artifact-workspace-preview.tsx';
+import { formatTavernResourceLink } from './tavern-resource-link.ts';
 
 export function WikiBrowserContent({
     initialDirectoryPath = '',
@@ -133,9 +135,16 @@ function WikiBrowserPreview({
 
     return (
         <ScrollArea className="h-full min-h-0" scrollFade>
-            <article className="mx-auto max-w-[42rem] px-7 pt-7 pb-12">
-                <WikiMarkdownViewer onNavigate={onNavigate} value={pageBody} />
-            </article>
+            <SelectionQuoteContainer
+                source={{
+                    href: formatTavernResourceLink({ kind: 'wikiPage', path: pagePath }),
+                    label: pagePath,
+                }}
+            >
+                <article className="mx-auto max-w-[42rem] px-7 pt-7 pb-12">
+                    <WikiMarkdownViewer onNavigate={onNavigate} value={pageBody} />
+                </article>
+            </SelectionQuoteContainer>
         </ScrollArea>
     );
 }

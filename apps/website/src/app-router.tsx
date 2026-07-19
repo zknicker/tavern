@@ -87,6 +87,17 @@ export function createAppRouter() {
                                             ),
                                         },
                                         {
+                                            // Dev hack page for home-brief header treatments.
+                                            path: 'design/brief',
+                                            lazy: lazyRoute(
+                                                () =>
+                                                    import(
+                                                        './routes/app/brief-variations-page.tsx'
+                                                    ),
+                                                'BriefVariationsPage'
+                                            ),
+                                        },
+                                        {
                                             path: 'stats',
                                             element: (
                                                 <Navigate replace to={appRoutes.settingsStats} />
@@ -197,11 +208,11 @@ export function createAppRouter() {
                                             element: <Navigate replace to={appRoutes.wiki} />,
                                         },
                                         {
+                                            // The workspace page is retired from
+                                            // navigation; workspace files are reached
+                                            // through the chat artifact pane instead.
                                             path: 'workspace',
-                                            lazy: lazyRoute(
-                                                () => import('./routes/app/workspace-page.tsx'),
-                                                'WorkspacePage'
-                                            ),
+                                            element: <Navigate replace to={appRoutes.overview} />,
                                         },
                                         {
                                             path: 'wiki',
@@ -263,16 +274,6 @@ export function createAppRouter() {
                                                                 './routes/app/settings-profile-page.tsx'
                                                             ),
                                                         'SettingsProfilePage'
-                                                    ),
-                                                },
-                                                {
-                                                    path: 'members',
-                                                    lazy: lazyRoute(
-                                                        () =>
-                                                            import(
-                                                                './routes/app/settings-members-page.tsx'
-                                                            ),
-                                                        'SettingsMembersPage'
                                                     ),
                                                 },
                                                 {

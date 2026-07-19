@@ -1687,6 +1687,34 @@ export const wikiPageListSchema = z.object({
     pages: z.array(wikiPageSummarySchema),
 });
 
+export const wikiPageCommitSchema = z.object({
+    committedAt: z.string(),
+    hash: z.string().trim().min(4),
+    subject: z.string(),
+});
+
+// Read-only Git history for one Wiki page: the commits that touched it,
+// newest first. `ready: false` mirrors WikiHistoryResult — Git missing or the
+// root not initialized — and carries the reason.
+export const wikiPageHistorySchema = z.object({
+    commits: z.array(wikiPageCommitSchema),
+    path: z.string().trim().min(1),
+    ready: z.boolean(),
+    reason: z.string().nullable(),
+});
+
+// One commit's before/after content for a page. Null text means the page did
+// not exist on that side of the commit, or the content is unavailable
+// (binary or oversized).
+export const wikiPageRevisionSchema = z.object({
+    afterText: z.string().nullable(),
+    beforeText: z.string().nullable(),
+    commit: wikiPageCommitSchema.nullable(),
+    path: z.string().trim().min(1),
+    ready: z.boolean(),
+    reason: z.string().nullable(),
+});
+
 export const wikiPathKindSchema = z.enum(['folder', 'page']);
 
 export const wikiCreatePageSchema = z.object({
@@ -3121,6 +3149,9 @@ export type WikiMovePath = z.infer<typeof wikiMovePathSchema>;
 export type WikiPage = z.infer<typeof wikiPageSchema>;
 export type WikiPageList = z.infer<typeof wikiPageListSchema>;
 export type WikiPageSummary = z.infer<typeof wikiPageSummarySchema>;
+export type WikiPageCommit = z.infer<typeof wikiPageCommitSchema>;
+export type WikiPageHistory = z.infer<typeof wikiPageHistorySchema>;
+export type WikiPageRevision = z.infer<typeof wikiPageRevisionSchema>;
 export type WikiPathInput = z.infer<typeof wikiPathInputSchema>;
 export type WikiPathKind = z.infer<typeof wikiPathKindSchema>;
 export type WikiPathMutationResult = z.infer<typeof wikiPathMutationResultSchema>;

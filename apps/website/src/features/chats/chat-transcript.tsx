@@ -26,10 +26,6 @@ import {
     type StableTranscriptRenderRowsState,
 } from './chat-transcript-row-model.ts';
 import { TranscriptRenderRowItem } from './chat-transcript-rows.tsx';
-import {
-    buildChatTurnTimelineMarkers,
-    type ChatTurnTimelineMarker,
-} from './chat-turn-timeline.tsx';
 
 const directConversationMessageLayout: ConversationMessageLayout = {
     showAgentIdentity: true,
@@ -46,7 +42,6 @@ export function ChatTranscript({
     failedTurns = [],
     hiddenCount = 0,
     rows,
-    onTurnTimelineMarkersChange,
     scrollContentRef,
 }: {
     activeReplies: readonly ChatActiveReply[];
@@ -57,7 +52,6 @@ export function ChatTranscript({
     defaultOpenWorkGroups?: boolean;
     failedTurns?: readonly ChatTurnFailure[];
     hiddenCount?: number;
-    onTurnTimelineMarkersChange?: (markers: ChatTurnTimelineMarker[]) => void;
     rows: TranscriptRow[];
     scrollContentRef?: React.RefObject<HTMLDivElement | null>;
 }) {
@@ -75,10 +69,6 @@ export function ChatTranscript({
         [entries, hiddenCount]
     );
     const transcriptRows = useStableTranscriptRenderRows(rawTranscriptRows);
-    const turnTimelineMarkers = React.useMemo(
-        () => buildChatTurnTimelineMarkers(transcriptRows),
-        [transcriptRows]
-    );
     const latestAgentMessage = React.useMemo(() => getLatestAgentMessage(rows), [rows]);
     // Sticky across renders: the completion handoff can clear the live reply
     // a beat before the durable reply row lands, and narration must not flash
@@ -145,14 +135,10 @@ export function ChatTranscript({
         });
     }, [latestAgentMessage]);
 
-    React.useEffect(() => {
-        onTurnTimelineMarkersChange?.(turnTimelineMarkers);
-    }, [onTurnTimelineMarkersChange, turnTimelineMarkers]);
-
     const transcript = (
         <TranscriptRenderProvider value={renderContext}>
-            <div className="relative mx-auto min-h-full w-full max-w-[60rem]">
-                <MessageScrollerContent className="w-full gap-1.5" ref={scrollContentRef}>
+            <div className="relative min-h-full w-full">
+                <MessageScrollerContent className="w-full gap-2" ref={scrollContentRef}>
                     {transcriptRows.map((row) =>
                         row.kind === 'hiddenCount' && hiddenCount === 0 ? null : (
                             <MessageScrollerItem

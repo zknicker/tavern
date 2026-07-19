@@ -200,8 +200,10 @@ test('ChatDetailFooter renders active status before the detail composer', () => 
     );
 
     assert.ok(markup.indexOf('Blippy is thinking...') < markup.indexOf('Composer'));
-    assert.match(markup, /lg:px-16/);
-    assert.match(markup, /max-w-\[60rem\]/);
+    // Full-width Slack-style lane: the stack shares the transcript's px-5
+    // gutter and no longer centers into a capped column.
+    assert.match(markup, /px-5/);
+    assert.doesNotMatch(markup, /max-w-\[60rem\]/);
 });
 
 test('status text: queued elsewhere is cute, streaming is typing, default thinks', () => {

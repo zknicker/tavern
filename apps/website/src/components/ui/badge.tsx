@@ -21,15 +21,18 @@ export const badgeVariants = cva(
                 sm: 'h-5 min-w-5 rounded-[.25rem] px-[calc(--spacing(1)-1px)] text-xs sm:h-4.5 sm:min-w-4.5 sm:text-caption',
             },
             variant: {
+                brand: 'border-brand/60 bg-brand/16 text-brand-muted-foreground dark:border-brand/65 dark:bg-brand/32',
                 default: 'bg-primary text-primary-foreground [button&,a&]:hover:bg-primary/90',
                 destructive: 'bg-destructive text-white [button&,a&]:hover:bg-destructive/90',
-                error: 'bg-destructive/8 text-destructive-foreground dark:bg-destructive/16',
-                info: 'bg-info/8 text-info-foreground dark:bg-info/16',
+                error: 'border-destructive/60 bg-destructive/16 text-destructive-foreground dark:border-destructive/55 dark:bg-destructive/30',
+                info: 'border-info/60 bg-info/16 text-info-foreground dark:border-info/55 dark:bg-info/30',
                 secondary:
-                    'bg-secondary text-secondary-foreground [button&,a&]:hover:bg-secondary/90',
-                subtle: 'border-border/70 bg-muted text-foreground/72 dark:text-foreground/76',
-                success: 'bg-success/8 text-success-foreground dark:bg-success/16',
-                warning: 'bg-warning/8 text-warning-foreground dark:bg-warning/16',
+                    'border-input bg-secondary text-secondary-foreground [button&,a&]:hover:bg-(--secondary-hover)',
+                subtle: 'border-border bg-subtle text-foreground/75',
+                success:
+                    'border-success/60 bg-success/16 text-success-foreground dark:border-success/55 dark:bg-success/30',
+                warning:
+                    'border-warning/65 bg-warning/18 text-warning-foreground dark:border-warning/55 dark:bg-warning/30',
             },
         },
     }

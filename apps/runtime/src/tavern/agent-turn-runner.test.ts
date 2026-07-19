@@ -1,8 +1,12 @@
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
 import type { AgentRuntimeAgentSession } from '@tavern/api';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { closeDb, initTestDb } from '../db/connection';
+import { closeDb, getDb, initTestDb } from '../db/connection';
 import { ensureRuntimeSchema } from '../db/schema';
 import { saveAgentModelSelectionIntent } from '../models/selection-service';
+import { registerAgentWorkspace } from '../workspace/instructions';
 import type { AgentExecutorInput } from './agent-executor';
 import { ensureCurrentAgentSession, updateAgentSessionRuntimeState } from './agent-session-store';
 import {
@@ -10,9 +14,11 @@ import {
     setAgentExecutorForTesting,
     waitForAgentTurnSettlement,
 } from './agent-turn-runner';
-import { claimNextAgentTurnForAgent, createAgentTurn } from './agent-turn-store';
+import { claimNextAgentTurnForAgent, createAgentTurn, getAgentTurn } from './agent-turn-store';
 import { getStoredAgent, upsertStoredAgent } from './agents-store';
-import { createChat, createMessage, upsertResponse } from './chat-api';
+import { createChat, createMessage, getResponseActivity, upsertResponse } from './chat-api';
+import { getAgentTurnFileEvidence } from './turn-file-changes';
+import { fileChangesActivityIdForRun } from './turn-file-evidence';
 
 describe('Tavern Runtime agent turn runner', () => {
     let restoreExecutor: (() => void) | null = null;
@@ -133,6 +139,64 @@ describe('Tavern Runtime agent turn runner', () => {
         expect(first?.id).toBe('run_1');
         // One turn at a time: nothing else claims while run_1 runs.
         expect(claimNextAgentTurnForAgent({ agentId: 'agt_drain' })).toBeNull();
+    });
+
+    it('settles workspace file-change evidence when a turn writes files', async () => {
+        const session = seedSeat();
+        const workspaceDir = await mkdtemp(path.join(tmpdir(), 'tavern-turn-ws-'));
+        try {
+            await writeFile(path.join(workspaceDir, 'NOTES.md'), 'before\n');
+            registerAgentWorkspace(getDb(), { agentId: 'agt_primary', workspaceDir });
+
+            restoreExecutor = setAgentExecutorForTesting({
+                execute: async () => {
+                    await writeFile(path.join(workspaceDir, 'NOTES.md'), 'after\nmore\n');
+                    await writeFile(path.join(workspaceDir, 'report.md'), 'fresh\n');
+                    return { activityIds: [], outputMessageIds: [] };
+                },
+            });
+
+            enqueueAgentTurn(turnInput({ index: 1, session }));
+            await waitForAgentTurnSettlement('run_1');
+
+            const evidence = getAgentTurnFileEvidence('run_1');
+            expect(evidence?.truncated).toBe(false);
+            expect(evidence?.changes.map((change) => [change.path, change.change])).toEqual([
+                ['NOTES.md', 'modified'],
+                ['report.md', 'created'],
+            ]);
+
+            const activityId = fileChangesActivityIdForRun('run_1');
+            const activity = getResponseActivity(activityId);
+            expect(activity).toMatchObject({
+                kind: 'tool_call',
+                status: 'completed',
+                title: 'Changed 2 files',
+            });
+            expect(activity?.metadata).toMatchObject({ toolName: 'workspace_changes' });
+            expect(getAgentTurn('run_1')?.activityIds).toContain(activityId);
+        } finally {
+            await rm(workspaceDir, { force: true, recursive: true });
+        }
+    });
+
+    it('leaves turns without file work free of change evidence', async () => {
+        const session = seedSeat();
+        const workspaceDir = await mkdtemp(path.join(tmpdir(), 'tavern-turn-ws-'));
+        try {
+            registerAgentWorkspace(getDb(), { agentId: 'agt_primary', workspaceDir });
+            restoreExecutor = setAgentExecutorForTesting({
+                execute: () => Promise.resolve({ activityIds: [], outputMessageIds: [] }),
+            });
+
+            enqueueAgentTurn(turnInput({ index: 1, session }));
+            await waitForAgentTurnSettlement('run_1');
+
+            expect(getAgentTurnFileEvidence('run_1')).toBeNull();
+            expect(getResponseActivity(fileChangesActivityIdForRun('run_1'))).toBeNull();
+        } finally {
+            await rm(workspaceDir, { force: true, recursive: true });
+        }
     });
 });
 

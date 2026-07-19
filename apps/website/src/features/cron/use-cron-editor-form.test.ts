@@ -76,7 +76,8 @@ test('getCronEditorSubmitErrorMessage only returns form-level string errors', ()
 });
 
 test('getCronEditorFormKey uses a dedicated create key for new cron forms', () => {
-    assert.equal(getCronEditorFormKey(null, 'claw'), 'create:claw');
+    assert.equal(getCronEditorFormKey(null, 'claw'), 'create:claw:');
+    assert.equal(getCronEditorFormKey(null, 'claw', 'home-brief'), 'create:claw:home-brief');
 });
 
 test('getCronEditorFormKey follows the form-facing cron snapshot', () => {

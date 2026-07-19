@@ -14,6 +14,7 @@ import { useTaskBulkUpdate } from '../../hooks/tasks/use-task-mutations.ts';
 import { useTaskSelection } from '../../hooks/tasks/use-task-selection.ts';
 import { appRoutes } from '../../lib/app-routes.ts';
 import type { TaskRecord } from '../../lib/trpc.tsx';
+import { useAgentSelectOptions } from '../agents/use-agent-select-options.ts';
 import { useLayoutContext } from '../shell/use-layout-context.ts';
 import {
     filterTasks,
@@ -23,7 +24,6 @@ import {
     type TaskView,
 } from './task-presentation.ts';
 import { TasksView } from './tasks-view.tsx';
-import { useTaskAgentOptions } from './use-task-agent-options.ts';
 
 export function Tasks() {
     const navigate = useNavigate();
@@ -41,7 +41,7 @@ export function Tasks() {
     const [label, setLabel] = React.useState<TaskLabelFilter>('all');
 
     const tasks = React.useMemo(() => tasksQuery.data?.tasks ?? [], [tasksQuery.data?.tasks]);
-    const agents = useTaskAgentOptions(agentsQuery.data?.agents);
+    const agents = useAgentSelectOptions(agentsQuery.data?.agents);
     const labels = React.useMemo(() => labelsQuery.data?.labels ?? [], [labelsQuery.data?.labels]);
     const tasksById = React.useMemo(() => new Map(tasks.map((task) => [task.id, task])), [tasks]);
     const filteredTasks = React.useMemo(

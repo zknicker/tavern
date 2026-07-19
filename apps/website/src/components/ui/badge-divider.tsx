@@ -1,17 +1,25 @@
 import type React from 'react';
 import { cn } from '../../lib/utils.ts';
+import { Badge, type BadgeProps } from './badge.tsx';
 import { Separator } from './separator.tsx';
 
 interface BadgeDividerProps extends Omit<React.ComponentProps<'div'>, 'children'> {
     action?: React.ReactNode;
-    badgeLocation?: 'left' | 'right';
+    badgeLocation?: 'center' | 'left' | 'right';
     children: React.ReactNode;
     labelClassName?: string;
     separatorClassName?: string;
     subtext?: React.ReactNode;
     subtextClassName?: string;
+    variant?: BadgeProps['variant'];
 }
 
+/**
+ * Section divider anchored by a real Badge chip — brand-tinted by default so
+ * structure markers keep Tavern's voice — on a whisper-quiet hairline. The
+ * chip inherits the badge system (mono, uppercase, bordered, rounded-sm);
+ * pass `variant` for semantic sections.
+ */
 export function BadgeDivider({
     action,
     badgeLocation = 'left',
@@ -21,17 +29,13 @@ export function BadgeDivider({
     separatorClassName,
     subtext,
     subtextClassName,
+    variant = 'brand',
     ...props
 }: BadgeDividerProps) {
     const label = (
-        <span
-            className={cn(
-                'inline-flex shrink-0 items-center gap-2 rounded-full bg-brand-muted px-3 py-0.5 font-medium text-brand-muted-foreground text-sm',
-                labelClassName
-            )}
-        >
+        <Badge className={cn('shrink-0', labelClassName)} variant={variant}>
             {children}
-        </span>
+        </Badge>
     );
     const inlineSubtext = subtext ? (
         <span
@@ -40,8 +44,11 @@ export function BadgeDivider({
             {subtext}
         </span>
     ) : null;
-    const separator = (
-        <Separator className={cn('min-w-6 flex-1 bg-border-strong', separatorClassName)} />
+    const separator = (position: 'end' | 'start') => (
+        <Separator
+            className={cn('min-w-6 flex-1 bg-border/40', separatorClassName)}
+            key={position}
+        />
     );
 
     return (
@@ -50,13 +57,21 @@ export function BadgeDivider({
                 <>
                     {label}
                     {inlineSubtext}
-                    {separator}
+                    {separator('end')}
+                    {action}
+                </>
+            ) : badgeLocation === 'center' ? (
+                <>
+                    {separator('start')}
+                    {label}
+                    {inlineSubtext}
+                    {separator('end')}
                     {action}
                 </>
             ) : (
                 <>
                     {action}
-                    {separator}
+                    {separator('start')}
                     {inlineSubtext}
                     {label}
                 </>

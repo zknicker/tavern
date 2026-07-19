@@ -102,7 +102,7 @@ export function CronEditorScheduleFields({ form }: { form: CronEditorFormApi }) 
                                     }
                                     value={field.state.value}
                                 >
-                                    <TabsSubtleList className="rounded-full bg-muted/80 p-0.5">
+                                    <TabsSubtleList className="rounded-lg bg-muted/80 p-0.5">
                                         {scheduleOptions.map((option) => (
                                             <TabsSubtleItem
                                                 key={option.value}

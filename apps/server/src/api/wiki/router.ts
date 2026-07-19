@@ -13,6 +13,8 @@ import {
     deleteWikiFolder,
     deleteWikiPage,
     getWikiPage,
+    getWikiPageHistory,
+    getWikiPageRevision,
     getWikiSettings,
     getWikiStatus,
     listWikiBacklinks,
@@ -44,11 +46,27 @@ export const wikiRouter = createRouter({
     get: publicProcedure
         .input(z.object({ path: z.string().trim().min(1) }))
         .query(({ input }) => getWikiPage(input)),
+    history: publicProcedure
+        .input(
+            z.object({
+                limit: z.number().int().positive().max(200).optional(),
+                path: z.string().trim().min(1),
+            })
+        )
+        .query(({ input }) => getWikiPageHistory(input)),
     list: publicProcedure.query(() => listWikiPages()),
     movePath: publicProcedure
         .input(wikiMovePathSchema)
         .mutation(({ input }) => moveWikiPath(input)),
     onUpdate: onWikiUpdate,
+    revision: publicProcedure
+        .input(
+            z.object({
+                commit: z.string().regex(/^[0-9a-f]{4,40}$/iu),
+                path: z.string().trim().min(1),
+            })
+        )
+        .query(({ input }) => getWikiPageRevision(input)),
     savePage: publicProcedure
         .input(wikiSavePageSchema)
         .mutation(({ input }) => saveWikiPage(input)),

@@ -12,7 +12,6 @@ import { Icon } from '../../components/ui/icon.tsx';
 import {
     SidebarGroup,
     SidebarGroupContent,
-    SidebarGroupLabel,
     SidebarMenu,
     SidebarMenuButton,
     SidebarMenuItem,
@@ -121,10 +120,9 @@ export function TasksView({
                 </div>
             ) : null}
 
-            <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[220px_minmax(0,1fr)]">
+            <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[240px_minmax(0,1fr)]">
                 <aside className="flex min-h-0 flex-col border-sidebar-border border-r bg-[var(--sidebar)] max-md:hidden">
-                    <SidebarGroup>
-                        <SidebarGroupLabel>Tasks</SidebarGroupLabel>
+                    <SidebarGroup className="pt-3">
                         <SidebarGroupContent>
                             <SidebarMenu>
                                 {taskViews.map((taskView) => (

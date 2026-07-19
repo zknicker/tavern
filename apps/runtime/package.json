@@ -37,6 +37,7 @@
     "ai": "7.0.6",
     "bunqueue": "2.6.38",
     "chokidar": "4.0.3",
+    "diff": "8.0.4",
     "jose": "6.2.3",
     "linkedom": "0.18.13",
     "turndown": "7.2.4",

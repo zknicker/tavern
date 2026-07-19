@@ -19,6 +19,9 @@ interface CronEditorPageFormProps {
     onRunSelect: (run: CronRunsOutput['runs'][number]) => void;
     onSubmit: (formState: CronFormState) => Promise<void>;
     runs: CronRunsOutput['runs'];
+    // Suggested-automation prefill for the create flow.
+    template?: Partial<CronFormState>;
+    templateId?: string;
 }
 
 function CronEditorPageFormInner({
@@ -29,11 +32,13 @@ function CronEditorPageFormInner({
     onSubmit,
     primaryAgentId,
     runs,
+    template,
 }: CronEditorPageFormProps & { primaryAgentId: string }) {
     const form = useCronEditorForm({
         job,
         onSubmit,
         primaryAgentId,
+        template,
     });
 
     const handleSubmit = React.useEffectEvent((event: React.FormEvent<HTMLFormElement>) => {
@@ -75,7 +80,7 @@ export function CronEditorPageForm(props: CronEditorPageFormProps) {
 
     return (
         <CronEditorPageFormInner
-            key={getCronEditorFormKey(props.job, primaryAgent.agent?.id ?? '')}
+            key={getCronEditorFormKey(props.job, primaryAgent.agent?.id ?? '', props.templateId)}
             primaryAgentId={primaryAgent.agent?.id ?? ''}
             {...props}
         />

@@ -1,7 +1,9 @@
-import { File01Icon } from '@hugeicons-pro/core-stroke-rounded';
+import { File01Icon, WorkHistoryIcon } from '@hugeicons-pro/core-stroke-rounded';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import * as React from 'react';
+import { SelectionQuoteContainer } from '../../components/quote/selection-quote.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
+import { Button } from '../../components/ui/primitives/button.tsx';
 import { ResizablePaneRail } from '../../components/ui/resizable-pane-rail.tsx';
 import { ScrollArea } from '../../components/ui/scroll-area.tsx';
 import { Tabs } from '../../components/ui/tabs.tsx';
@@ -13,10 +15,12 @@ import type { ChatArtifactPanelState } from '../../hooks/pane/use-chat-pane-stat
 import { useWikiPage } from '../../hooks/wiki/use-wiki-page.ts';
 import { cn } from '../../lib/utils.ts';
 import { WikiMarkdownViewer } from '../wiki/wiki-markdown-viewer.tsx';
+import { WikiPageHistoryPanel } from '../wiki/wiki-page-history.tsx';
 import { ArtifactPanelChrome } from './chat-artifact-panel-chrome.tsx';
 import { WikiBrowserContent } from './chat-artifact-wiki-content.tsx';
 import { WorkspaceBrowserContent } from './chat-artifact-workspace-content.tsx';
 import {
+    formatTavernResourceLink,
     getArtifactPanelTargetKey,
     isWorkspaceChatPaneTarget,
     type TavernResourceTarget,
@@ -197,6 +201,7 @@ function WikiArtifactContent({
     target: Extract<TavernResourceTarget, { kind: 'wikiPage' }>;
 }) {
     const pageQuery = useWikiPage({ path: target.path });
+    const [showHistory, setShowHistory] = React.useState(false);
 
     if (pageQuery.isPending) {
         return <ArtifactPanelEmpty detail="Loading Wiki page..." title={target.path} />;
@@ -213,11 +218,36 @@ function WikiArtifactContent({
     }
 
     return (
-        <ScrollArea className="h-full min-h-0" scrollFade>
-            <article className="mx-auto max-w-[42rem] px-7 pt-7 pb-12">
-                <WikiMarkdownViewer value={pageQuery.data.body} />
-            </article>
-        </ScrollArea>
+        <div className="relative flex h-full min-h-0 flex-col">
+            <div className="absolute top-2 right-3 z-10">
+                <Button
+                    onClick={() => setShowHistory((visible) => !visible)}
+                    size="sm"
+                    variant={showHistory ? 'secondary' : 'ghost'}
+                >
+                    <Icon icon={WorkHistoryIcon} />
+                    History
+                </Button>
+            </div>
+            <ScrollArea className="h-full min-h-0" scrollFade>
+                {showHistory ? (
+                    <div className="mx-auto max-w-[42rem] px-7 pt-12 pb-12">
+                        <WikiPageHistoryPanel path={target.path} />
+                    </div>
+                ) : (
+                    <SelectionQuoteContainer
+                        source={{
+                            href: formatTavernResourceLink(target),
+                            label: target.path,
+                        }}
+                    >
+                        <article className="mx-auto max-w-[42rem] px-7 pt-7 pb-12">
+                            <WikiMarkdownViewer value={pageQuery.data.body} />
+                        </article>
+                    </SelectionQuoteContainer>
+                )}
+            </ScrollArea>
+        </div>
     );
 }
 

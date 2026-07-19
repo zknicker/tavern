@@ -26,8 +26,11 @@ import { unsupportedAgentEngineSurface } from '../agent-engine/errors.ts';
 import {
     getRuntimeSkill,
     listRuntimeSkills,
+    pageDesignSkillId,
     tasksSkillId,
     tavernAgentSkillId,
+    visualsChartsSkillId,
+    visualsDiagramsSkillId,
 } from '../agent-engine/skill-library.ts';
 import { AGENT_HOME } from '../config.ts';
 import { getDb } from '../db/connection.ts';
@@ -78,7 +81,13 @@ async function dispatchAgentEngineStatic({ request, url }: { request: Request; u
                 autoDispatchEnabled: input.autoDispatchEnabled ?? false,
                 webAccessEnabled: input.webAccessEnabled ?? false,
                 bio: input.bio ?? null,
-                enabledSkillIds: input.enabledSkillIds ?? [tavernAgentSkillId, tasksSkillId],
+                enabledSkillIds: input.enabledSkillIds ?? [
+                    tavernAgentSkillId,
+                    tasksSkillId,
+                    visualsChartsSkillId,
+                    visualsDiagramsSkillId,
+                    pageDesignSkillId,
+                ],
                 enabledPluginIds: input.enabledPluginIds ?? [],
                 id: input.id,
                 isAdmin: input.isAdmin ?? false,

@@ -150,7 +150,7 @@ export function AppSidebarChatList() {
             <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain">
                 <SidebarGroup className="group/channels pt-1">
                     <div className="relative flex h-8 items-center px-2">
-                        <div className="font-medium text-[var(--nav-section-label)] text-sm">
+                        <div className="font-medium font-mono text-[var(--nav-section-label)] text-xs uppercase tracking-wider">
                             Channels
                         </div>
                         <Button
@@ -198,7 +198,7 @@ export function AppSidebarChatList() {
                 </SidebarGroup>
                 <SidebarGroup className="group/dms pt-1">
                     <div className="relative flex h-8 items-center px-2">
-                        <div className="font-medium text-[var(--nav-section-label)] text-sm">
+                        <div className="font-medium font-mono text-[var(--nav-section-label)] text-xs uppercase tracking-wider">
                             Direct messages
                         </div>
                     </div>
@@ -249,7 +249,7 @@ export function AppSidebarChatList() {
                 {sidebarChats.taskChats.length > 0 ? (
                     <SidebarGroup className="group/tasks pt-1">
                         <div className="relative flex h-8 items-center px-2">
-                            <div className="font-medium text-[var(--nav-section-label)] text-sm">
+                            <div className="font-medium font-mono text-[var(--nav-section-label)] text-xs uppercase tracking-wider">
                                 Task chats
                             </div>
                         </div>

@@ -13,9 +13,11 @@ describe('browser shell sidebar visibility', () => {
         expect(shouldShowBrowserShellSidebar('/chats/new')).toBe(true);
     });
 
-    it('hides the chat rail on utility routes', () => {
+    it('hides the chat rail on full-page tool sections', () => {
+        expect(shouldShowBrowserShellSidebar('/tasks')).toBe(false);
+        expect(shouldShowBrowserShellSidebar('/automations')).toBe(false);
+        expect(shouldShowBrowserShellSidebar('/wiki')).toBe(false);
         expect(shouldShowBrowserShellSidebar('/settings')).toBe(false);
         expect(shouldShowBrowserShellSidebar('/workspace')).toBe(false);
-        expect(shouldShowBrowserShellSidebar('/wiki')).toBe(false);
     });
 });

@@ -15,7 +15,6 @@ import type { ChatListItem } from './chat-list-data.ts';
 import { ChatMessageComposer } from './chat-message-composer.tsx';
 import { ChatTimeline } from './chat-timeline.tsx';
 import { ChatTranscriptLoadingIndicator } from './chat-transcript-loading-indicator.tsx';
-import { ChatTurnTimeline, type ChatTurnTimelineMarker } from './chat-turn-timeline.tsx';
 
 const chatSummaryLimit = 20;
 
@@ -46,9 +45,6 @@ export function ChatCard({
         timeline.isPending && !timeline.historyLoaded && !hasActiveReply;
     const contentRef = React.useRef<HTMLDivElement | null>(null);
     const viewportRef = React.useRef<HTMLDivElement | null>(null);
-    const [turnTimelineMarkers, setTurnTimelineMarkers] = React.useState<ChatTurnTimelineMarker[]>(
-        []
-    );
 
     React.useEffect(() => {
         if (!timeline.error) {
@@ -88,7 +84,6 @@ export function ChatCard({
                             <ChatTimeline
                                 activeReplies={timeline.activeReplies}
                                 failedTurns={timeline.failedTurns}
-                                onTurnTimelineMarkersChange={setTurnTimelineMarkers}
                                 rows={rows}
                                 scrollContentRef={contentRef}
                                 totalMessages={totalMessages}
@@ -99,14 +94,6 @@ export function ChatCard({
                             </div>
                         )}
                     </MessageScrollerViewport>
-                    <ChatTurnTimeline
-                        anchorRef={viewportRef}
-                        markers={
-                            hasTimelineContent && !isInitialTranscriptPending
-                                ? turnTimelineMarkers
-                                : []
-                        }
-                    />
                 </MessageScroller>
             </MessageScrollerProvider>
 

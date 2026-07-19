@@ -50,7 +50,7 @@ export function SidebarGroupLabel({
         props: mergeProps<'div'>(
             {
                 className: cn(
-                    'flex h-8 shrink-0 items-center rounded-md px-2 font-medium text-[var(--nav-section-label)] text-sm outline-hidden ring-sidebar-ring focus-visible:ring-2 group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0 [&>svg]:size-4.5 [&>svg]:shrink-0',
+                    'flex h-8 shrink-0 items-center rounded-md px-2 font-medium font-mono text-[var(--nav-section-label)] text-xs uppercase tracking-wider outline-hidden ring-sidebar-ring focus-visible:ring-2 group-data-[collapsible=icon]:-mt-8 group-data-[collapsible=icon]:opacity-0 [&>svg]:size-4.5 [&>svg]:shrink-0',
                     className
                 ),
             },

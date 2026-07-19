@@ -31,12 +31,10 @@ const ChatMessage = forwardRef<HTMLDivElement, ChatMessageProps>(
     ) => {
         const hasBody = children !== null && children !== undefined && children !== '';
         const hasAttachments = attachments !== null && attachments !== undefined;
-        // The app owner's own messages anchor right in a secondary bubble
-        // (`from="user"`); everyone else — agents and other participants —
-        // reads as left-aligned plain ghost text in the roster.
-        const align = from === 'user' ? 'end' : 'start';
-        const bubbleVariant = from === 'user' ? 'secondary' : 'ghost';
 
+        // Every message — the owner's included — reads as left-aligned plain
+        // text in one Slack-style roster. `from` survives only as data-from
+        // so tests and tooling can still tell who sent the row.
         return (
             <motion.div
                 animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -45,25 +43,18 @@ const ChatMessage = forwardRef<HTMLDivElement, ChatMessageProps>(
                 initial={animateEnter ? { opacity: 0, scale: 0.96, y: 8 } : false}
                 ref={ref}
                 style={{
-                    transformOrigin: from === 'user' ? 'bottom right' : 'bottom left',
+                    transformOrigin: 'bottom left',
                     ...style,
                 }}
                 transition={transition ?? springs.moderate}
                 {...props}
             >
-                <Message align={align}>
+                <Message align="start">
                     <MessageContent>
                         {hasAttachments ? <AttachmentGroup>{attachments}</AttachmentGroup> : null}
                         {hasBody ? (
-                            <Bubble align={align} variant={bubbleVariant}>
-                                <BubbleContent
-                                    // Match the prompt input's surface radius
-                                    // so long multi-line sends don't balloon
-                                    // into pill shapes.
-                                    className={from === 'user' ? 'rounded-3xl px-4' : undefined}
-                                >
-                                    {children}
-                                </BubbleContent>
+                            <Bubble align="start" variant="ghost">
+                                <BubbleContent>{children}</BubbleContent>
                             </Bubble>
                         ) : null}
                     </MessageContent>

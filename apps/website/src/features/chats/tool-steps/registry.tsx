@@ -3,6 +3,7 @@ import { ClarificationToolStep } from './clarification-tool-step.tsx';
 import { GenericToolStep } from './generic-tool-step.tsx';
 import { ShellToolStep } from './shell-tool-step.tsx';
 import type { ToolStepRendererProps } from './types.ts';
+import { WorkspaceChangesToolStep } from './workspace-changes-tool-step.tsx';
 
 type ToolStepRenderer = (props: ToolStepRendererProps) => ReactNode;
 
@@ -20,6 +21,7 @@ const toolStepRenderers = {
     exec: ShellToolStep,
     shell: ShellToolStep,
     terminal: ShellToolStep,
+    workspace_changes: WorkspaceChangesToolStep,
     zsh: ShellToolStep,
 } satisfies Record<string, ToolStepRenderer>;
 

@@ -1,8 +1,8 @@
 import * as React from 'react';
 import type { AgentListOutput } from '../../lib/trpc.tsx';
-import type { AgentSelectOption } from '../agents/agent-option-label.tsx';
+import type { AgentSelectOption } from './agent-option-label.tsx';
 
-export function useTaskAgentOptions(
+export function useAgentSelectOptions(
     agents: AgentListOutput['agents'] | undefined
 ): AgentSelectOption[] {
     return React.useMemo(

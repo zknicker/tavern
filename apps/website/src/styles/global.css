@@ -11,23 +11,29 @@
 @import "tw-animate-css";
 @import "./tokens.css";
 
+/* Reel (Jamie Clarke Type) — display face for the logo, greetings, and
+   page-level headings. Currently the trial cut (limited charset: no V/v,
+   minimal punctuation — missing glyphs fall back to Geist); buy the full
+   Medium Bold license before shipping. One face covers 500-700 so bolder
+   utilities don't synthesize. */
 @font-face {
-    font-family: 'Clash Display';
+    font-family: 'Reel';
     font-style: normal;
-    font-weight: 600;
+    font-weight: 500 700;
     font-display: swap;
-    src: url('../assets/fonts/clash-display-semibold.woff2') format('woff2');
+    src: url('../assets/fonts/reel-test-medium-bold.otf') format('opentype');
 }
 
+/* Reel Variable — same trial cut, but with wght (100-900) and HGHT (1-100;
+   Short=1, Medium=40, Tall=100) axes. Used for the overview greeting so the
+   heading can breathe wider than the condensed static cut. */
 @font-face {
-    font-family: 'Clash Display';
+    font-family: 'Reel Variable';
     font-style: normal;
-    font-weight: 700;
+    font-weight: 100 900;
     font-display: swap;
-    src: url('../assets/fonts/clash-display-bold.woff2') format('woff2');
+    src: url('../assets/fonts/reel-variable.woff2') format('woff2');
 }
-
-
 
 @keyframes thinking-indicator-shimmer {
     from {
@@ -224,6 +230,16 @@
         line-height: 1.35;
     }
 
+    /* Overview greeting display line — Reel Variable, wider than the static
+       Medium cut and deliberately light so the greeting reads airy, not
+       shouty. */
+    .font-display-overview {
+        font-family: 'Reel Variable', var(--font-heading);
+        font-variation-settings:
+            'HGHT' 16,
+            'wght' 420;
+    }
+
     .wrap-break-word {
         overflow-wrap: anywhere;
         word-break: normal;
@@ -317,7 +333,7 @@
 
 @supports (corner-shape: superellipse(1.5)) {
     :root {
-        --corner-radius-scale: 1.25;
+        --corner-radius-scale: 0.9;
     }
 
     .rounded-md,

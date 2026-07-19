@@ -123,6 +123,11 @@ per-turn prompt, and the Wiki recall hits — in `agent_turns` metadata at
 turn start, served on demand at `GET /api/turns/{run_id}/prompt`. The app's
 turn drawer shows the recall matches; dev mode (desktop Developer menu) adds
 the raw prompt blob.
+Turns also record workspace file-change evidence: a bounded snapshot brackets
+the turn, and the compared pair settles as `agent_turn_file_changes` rows plus
+a `workspace_changes` tool activity, served at
+`GET /api/turns/{run_id}/file-changes` (see
+[data model](data-model.md#agent_turn_file_changes)).
 
 Tool calls are auto-approved. Tavern does not expose an interactive tool
 approval prompt. Harness tools come from the selected executor, Plugin tools

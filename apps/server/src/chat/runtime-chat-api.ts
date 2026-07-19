@@ -110,7 +110,9 @@ export function isTimelineActivityRow(row: ChatLogPage['rows'][number]) {
         );
     }
     if (row.kind === 'tool') {
-        return Boolean(row.clarification);
+        // The changed-files summary is contribution outcome, like an artifact
+        // card: the chip rides the timeline while file contents stay evidence.
+        return Boolean(row.clarification) || row.toolCall.name === 'workspace_changes';
     }
     if (row.kind === 'message') {
         return row.actor?.kind === 'participant';

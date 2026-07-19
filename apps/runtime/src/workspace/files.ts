@@ -8,24 +8,12 @@ import type {
 } from '@tavern/api';
 import type { Database } from '../db/sqlite.ts';
 import { getAgentWorkspaceSource } from './instructions.ts';
-
-const skippedDirectoryNames = new Set([
-    '.git',
-    '.hg',
-    '.svn',
-    '.turbo',
-    '.venv',
-    '.vite',
-    '__pycache__',
-    'build',
-    'coverage',
-    'dist',
-    'node_modules',
-    'target',
-    'venv',
-]);
-
-const skippedDirectoryPatterns = [/^(?:claude-code|codex)-ags_/u];
+import {
+    isHiddenWorkspaceName,
+    isSensitiveWorkspacePath,
+    isSkippedWorkspaceDirectory,
+    looksBinary,
+} from './visibility.ts';
 
 const imageExtensions = new Set(['.bmp', '.gif', '.jpeg', '.jpg', '.png', '.svg', '.webp']);
 const dataUrlReadMaxBytes = 16 * 1024 * 1024;
@@ -273,17 +261,6 @@ function rejectUnbrowseableWorkspacePath(
     }
 }
 
-function isHiddenWorkspaceName(name: string) {
-    return name.startsWith('.') && name !== '.github';
-}
-
-function isSkippedWorkspaceDirectory(name: string) {
-    return (
-        skippedDirectoryNames.has(name) ||
-        skippedDirectoryPatterns.some((pattern) => pattern.test(name))
-    );
-}
-
 async function toWorkspaceEntry(
     root: string,
     parentPath: string,
@@ -322,38 +299,15 @@ function compareWorkspaceEntries(
 }
 
 function rejectSensitiveWorkspacePath(relativePath: string) {
-    const normalized = relativePath.toLowerCase();
-    const basename = path.posix.basename(normalized);
-    const extension = path.posix.extname(basename);
-    if (basename === '.env' || basename === '.npmrc' || basename === '.netrc') {
-        throw new Error('Workspace file is blocked because it may contain secrets.');
-    }
-    if (basename.startsWith('.env.') && !/\.(example|sample|template)$/u.test(basename)) {
-        throw new Error('Workspace file is blocked because it may contain secrets.');
-    }
-    if (extension === '.pem' || extension === '.p12' || extension === '.pfx') {
-        throw new Error('Workspace file is blocked because it may contain key material.');
+    if (isSensitiveWorkspacePath(relativePath)) {
+        throw new Error(
+            'Workspace file is blocked because it may contain secrets or key material.'
+        );
     }
 }
 
 function mediaTypeForPath(filePath: string) {
     return mediaTypeByExtension[path.extname(filePath).toLowerCase()] ?? 'application/octet-stream';
-}
-
-function looksBinary(data: Buffer) {
-    if (data.length === 0) {
-        return false;
-    }
-    if (data.includes(0)) {
-        return true;
-    }
-    let suspicious = 0;
-    for (const byte of data) {
-        if (byte < 32 && byte !== 9 && byte !== 10 && byte !== 13) {
-            suspicious += 1;
-        }
-    }
-    return suspicious / data.length > 0.12;
 }
 
 function isPathInside(filePath: string, root: string) {

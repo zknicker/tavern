@@ -901,7 +901,7 @@ function extractLinkTargets(content: string): WikiPage['links'] {
     return [...extractWikiLinks(content), ...markdownLinks];
 }
 
-function normalizeRelativeMarkdownPath(value: string) {
+export function normalizeRelativeMarkdownPath(value: string) {
     const normalized = path.normalize(value.trim());
     return normalized.endsWith('.md') ? normalized : `${normalized}.md`;
 }
@@ -940,7 +940,7 @@ function normalizeWritableRelativePath(value: string) {
     return normalized;
 }
 
-function resolveWikiChildPath(wikiPath: string, relativePath: string) {
+export function resolveWikiChildPath(wikiPath: string, relativePath: string) {
     const root = path.resolve(wikiPath);
     const absolutePath = path.resolve(root, ...relativePath.split('/'));
     if (!isPathInside(absolutePath, root)) {

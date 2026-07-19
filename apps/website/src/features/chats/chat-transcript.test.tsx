@@ -65,7 +65,7 @@ test('ChatTranscript renders hover time and copy action without session or usage
     assert.doesNotMatch(markup, /session 9f83ac/);
 });
 
-test('ChatTranscript keeps the detail lane capped', () => {
+test('ChatTranscript fills the detail lane full width', () => {
     const markup = renderTranscript([
         {
             actor: { id: 'tiny', kind: 'agent' },
@@ -87,7 +87,7 @@ test('ChatTranscript keeps the detail lane capped', () => {
         },
     ]);
 
-    assert.match(markup, /relative mx-auto min-h-full w-full max-w-\[60rem\]/);
+    assert.match(markup, /relative min-h-full w-full/);
 });
 
 test('ChatTranscript animates only local optimistic user messages', () => {
@@ -106,8 +106,8 @@ test('ChatTranscript animates only local optimistic user messages', () => {
 
     assert.match(markup, /Can you check this\?/);
     assert.match(markup, /data-slot="message"/);
-    // The owner's own optimistic message anchors right (secondary bubble).
-    assert.match(markup, /style="transform-origin:bottom right;opacity:0;transform/);
+    // Every message shares the left roster; the optimistic row still animates.
+    assert.match(markup, /style="transform-origin:bottom left;opacity:0;transform/);
 });
 
 test('ChatTranscript renders chat markdown headings and inline markup in message text', () => {
@@ -201,9 +201,9 @@ test('ChatTranscript renders active replies through the chat message shell', () 
 
     assert.match(markup, /data-slot="message"/);
     assert.match(markup, /data-slot="bubble"/);
-    assert.match(markup, /group\/turn w-full gap-3 py-1\.5/);
+    assert.match(markup, /group\/turn w-full gap-3 py-1/);
     assert.doesNotMatch(markup, /group\/turn w-full px-3 py-1\.5/);
-    assert.match(markup, /gap-0\.5 pt-0\.5/);
+    assert.match(markup, /gap-0 pt-0\.5/);
     assert.match(markup, /transform-origin:bottom left/);
     assert.doesNotMatch(markup, /pb-6/);
     assert.doesNotMatch(markup, /style="transform-origin:bottom left;opacity:0;transform/);
@@ -403,6 +403,74 @@ test('ChatTranscript renders chart widgets inline', () => {
     assert.doesNotMatch(markup, /aria-expanded/);
     assert.doesNotMatch(markup, /aria-pressed/);
     assert.doesNotMatch(markup, /Expand chart/);
+});
+
+test('ChatTranscript renders visual widget rows in a sandboxed iframe', () => {
+    const row = widgetRow('ui-visual');
+
+    if (row.kind !== 'widget') {
+        throw new Error('Expected widget row.');
+    }
+
+    const markup = renderTranscript([
+        {
+            ...row,
+            widget: {
+                ...row.widget,
+                component: 'tavern.widget.visual',
+                fallbackText: 'Weekly sales',
+                props: {
+                    html: '<h1>Weekly sales</h1><svg viewBox="0 0 10 10"></svg>',
+                    title: 'Weekly sales',
+                },
+            },
+        },
+    ]);
+
+    assert.match(markup, /<iframe/);
+    assert.match(
+        markup,
+        /sandbox="allow-forms allow-modals allow-pointer-lock allow-popups allow-scripts"/
+    );
+    assert.doesNotMatch(markup, /allow-same-origin/);
+    assert.match(markup, /Content-Security-Policy/);
+    assert.doesNotMatch(markup, /Widget unavailable/);
+});
+
+test('ChatTranscript streams an open visual fence as a live visual card', () => {
+    const markup = renderActiveTranscript({
+        agentId: 'tiny',
+        completedAt: null,
+        isThinking: false,
+        runId: 'run-visual',
+        sessionKey: 'agent:tiny:session-1',
+        startedAt: '2026-03-31T15:00:00.000Z',
+        text: 'Drawing the chart now.\n```visual Weekly sales\n<div><h1>Weekly sa',
+    });
+
+    // Prose reveals client-side; statically the partial body must already be
+    // inside the sandbox and the raw fence must never show as text.
+    assert.match(markup, /<iframe/);
+    assert.match(markup, /Weekly sa/);
+    assert.doesNotMatch(markup, /```visual/);
+    assert.doesNotMatch(markup, /allow-same-origin/);
+});
+
+test('ChatTranscript renders a completed reply with a closed visual fence as prose plus card', () => {
+    const markup = renderActiveTranscript({
+        agentId: 'tiny',
+        completedAt: '2026-03-31T15:00:03.000Z',
+        isThinking: false,
+        runId: 'run-visual-done',
+        sessionKey: 'agent:tiny:session-1',
+        startedAt: '2026-03-31T15:00:00.000Z',
+        text: 'Here is the chart.\n```visual Weekly sales\n<h1>Weekly sales</h1>\n```\nDone.',
+    });
+
+    assert.match(markup, /Here is the chart\./);
+    assert.match(markup, /Done\./);
+    assert.match(markup, /<iframe/);
+    assert.doesNotMatch(markup, /```visual/);
 });
 
 test('ChatTranscript renders table widget matrix shorthand', () => {
@@ -2195,6 +2263,44 @@ test('the pane narration slot keeps only the latest update while the turn runs',
     const item = segments[0]?.kind === 'item' ? segments[0].item : null;
     assert.ok(item?.kind === 'row' && item.row.kind === 'message');
     assert.equal(item.row.message.content, 'The layout matches the map.');
+});
+
+test('the pane keeps changed-files chips standalone while other tool work stays in the drawer', () => {
+    const toolRow = (id: string, name: string): ChatRow => ({
+        actor: { id: 'tiny', kind: 'agent' },
+        completedAt: '2026-03-31T15:00:01.000Z',
+        connectsToNext: false,
+        connectsToPrevious: false,
+        id,
+        isFirstInGroup: true,
+        kind: 'tool',
+        sessionKey: 'agent:tiny:session-1',
+        spawnedRelationships: [],
+        startedAt: '2026-03-31T15:00:00.000Z',
+        toolCall: {
+            callId: null,
+            facts: [],
+            label: name === 'workspace_changes' ? 'Changed 2 files' : name,
+            name,
+            status: 'completed',
+            summaryParts: ['2 files'],
+        },
+    });
+
+    const segments = filterPaneSegments(
+        groupAgentItems([
+            { kind: 'row', row: toolRow('act_run-1_tool_1', 'bash') },
+            { kind: 'row', row: toolRow('act_run-1_files', 'workspace_changes') },
+        ])
+    );
+
+    assert.equal(segments.length, 1);
+    const segment = segments[0];
+    assert.ok(segment?.kind === 'item');
+    const item = segment.item;
+    assert.ok(item.kind === 'row' && item.row.kind === 'tool');
+    assert.equal(item.row.toolCall.name, 'workspace_changes');
+    assert.equal(segment.key, 'act_run-1_files');
 });
 
 test('the pane drops narration when the run replied in a sibling turn entry', () => {

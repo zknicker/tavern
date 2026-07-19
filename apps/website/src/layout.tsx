@@ -16,7 +16,6 @@ import {
     useAppLayoutPreference,
     useAppLayoutSearchParam,
 } from './hooks/shell/use-app-layout-preference.ts';
-import { useRouteTab } from './hooks/shell/use-route-tab.ts';
 import { appRoutes } from './lib/app-routes.ts';
 import { getDesktopBridge, getDesktopSurface } from './lib/desktop-bridge.ts';
 
@@ -27,7 +26,6 @@ export interface AppLayoutContextValue {
 const sidebarPinnedOpenStorageKey = 'tavern.sidebar.pinnedOpen.v1';
 
 export function Layout() {
-    const { activeTab, setActiveTab } = useRouteTab();
     const appLayout = useAppLayoutPreference();
     const location = useLocation();
     const navigate = useNavigate();
@@ -116,13 +114,11 @@ export function Layout() {
                     <AppSidebarTopbar isExpanded={isSidebarPinnedOpen} />
                     <AppShellBody className="pt-0 md:flex-row">
                         <AppSidebar
-                            activeTab={activeTab}
                             isSettingsRoute={isSettingsRoute}
                             onBackToApp={navigateBackToApp}
                             onMouseEnter={openSidebarPreview}
                             onMouseLeave={scheduleSidebarPreviewClose}
                             onNavigateToSettings={navigateToSettings}
-                            onSelectTab={setActiveTab}
                         />
                         <AppShellMain data-edge-to-edge="true">
                             {showMainTopDragFade ? <SidebarMainTopDragFade /> : null}
@@ -144,10 +140,8 @@ export function Layout() {
     return (
         <div className="app-reference-theme flex min-h-screen w-full md:h-dvh md:min-h-0">
             <TavernBrowserShell
-                activeRouteTab={activeTab}
                 isSettingsRoute={isSettingsRoute}
                 onNavigateToSettings={navigateToSettings}
-                onSelectRouteTab={setActiveTab}
             >
                 {outlet}
             </TavernBrowserShell>

@@ -27,6 +27,10 @@ export interface CronFormState {
     systemEventText: string;
 }
 
-export function createCronFormState(job: CronJob | null, primaryAgentId = ''): CronFormState {
-    return createFormState(job, primaryAgentId);
+export function createCronFormState(
+    job: CronJob | null,
+    primaryAgentId = '',
+    template?: Partial<CronFormState>
+): CronFormState {
+    return createFormState(job, primaryAgentId, template);
 }

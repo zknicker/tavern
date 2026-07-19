@@ -5,6 +5,7 @@ import { useWikiBacklinks } from '../../hooks/wiki/use-wiki-backlinks.ts';
 import { cn } from '../../lib/utils.ts';
 import type { WikiPageDetail } from './types.ts';
 import { formatTimestamp } from './utils.ts';
+import { WikiPageHistoryPanel } from './wiki-page-history.tsx';
 
 export function WikiDocumentInspector({
     onSelectPage,
@@ -45,6 +46,9 @@ export function WikiDocumentInspector({
                     <PageSignals page={page} />
                 </InspectorSection>
                 <BacklinksPanel onSelectPage={onSelectPage} page={page} />
+                <InspectorSection title="History">
+                    <WikiPageHistoryPanel path={page.path} />
+                </InspectorSection>
                 <InspectorSection title="File Metadata">
                     <InspectorDescriptionList>
                         {fileRows.map(([label, value]) => (

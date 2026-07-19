@@ -112,7 +112,7 @@ export function TasksToolbar({
             </Select>
             <SearchInput
                 aria-label="Search tasks"
-                className="w-full max-w-96 [&_[data-slot=input-control]]:rounded-full"
+                className="w-full max-w-96"
                 name="task-search"
                 onChange={(event) => onQueryChange(event.target.value)}
                 placeholder="Search tasks..."
@@ -128,7 +128,7 @@ export function TasksToolbar({
                 </div>
             ) : null}
             <Button
-                className={cn('shrink-0 rounded-full', showQueueIndicator ? null : 'ml-auto')}
+                className={cn('shrink-0', showQueueIndicator ? null : 'ml-auto')}
                 onClick={onCreate}
                 type="button"
                 variant="secondary"

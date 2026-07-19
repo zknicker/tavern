@@ -26,6 +26,9 @@ projection.
   that are themselves conversation-visible).
 - Execution evidence rows — tool calls, reasoning, narration activity, turn lifecycle status —
   do not appear in the timeline projection.
+- A turn's changed-files summary is contribution outcome, not execution evidence: like widgets
+  and artifacts it rides the timeline (rendered as a chip under the agent's reply), while the
+  per-file contents remain turn-scoped evidence behind it.
 - Every timeline unit renders at its natural size. The timeline never contains units that render
   empty; even spacing between messages is a structural guarantee, not a filtering outcome.
 - Agent messages carry their turn identity (`runId`, response id) as first-class fields so the

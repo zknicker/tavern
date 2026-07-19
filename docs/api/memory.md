@@ -48,6 +48,10 @@ Runtime exposes Wiki through Runtime APIs for:
 * Markdown page/folder reads and writes
 * lightweight lexical search
 * backlinks derived from `[[wikilinks]]`
+* read-only per-page history: the commits touching a page
+  (`GET /wiki/pages/{path}/history`) and one commit's before/after content
+  (`GET /wiki/pages/{path}/history/{commit}`), served over the local Git
+  repository and exposed to clients as `wiki.history` and `wiki.revision`
 
 The shared root seeds `TAXONOMY.md` and Wiki folders, not agent core memory
 files and not episodic files.

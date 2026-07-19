@@ -142,7 +142,9 @@ The Tavern app keeps list and detail reads separate:
   for a Tavern chat. Empty text clears the prompt.
 * `chat.log.list` returns turn-aligned pages of conversation rows for one
   chat: participant messages, widgets, artifacts, context-boundary runtime
-  notices (new session, compaction), stop notes, and clarifications. Status
+  notices (new session, compaction), stop notes, clarifications, and the
+  changed-files summary row (`workspace_changes`) — contribution outcome,
+  rendered as a chip under the agent's reply. Status
   notices (busy delivery, holds, wait-idle) are turn evidence, not timeline
   rows. Execution evidence (tool calls, reasoning, workers,
   narration history) never rides the timeline — see
@@ -156,6 +158,12 @@ The Tavern app keeps list and detail reads separate:
   narration, and worker rows plus artifacts — by `chatId` + `responseId`. The
   turn drawer queries it on demand; live turns stream evidence through turn
   progress events instead.
+* `chat.turn.fileChanges` returns one turn's workspace file-change evidence by
+  `runId` (Runtime `GET /api/turns/{run_id}/file-changes`): the files the turn
+  created, modified, or deleted, with bounded before/after text for diff
+  rendering. The transcript's "Changed N files" row carries only the summary;
+  the drawer fetches contents through this query on demand. Null when no
+  Runtime is connected or the turn recorded no changes.
 
 Invalidate `chat.list` when membership or list ordering can change. Invalidate
 `chat.get` when one chat's detail fields can change. Response and activity

@@ -333,6 +333,55 @@ describe('persistHarnessTurnStream', () => {
         );
     });
 
+    it('streams the post live while a visual fence body is arriving', async () => {
+        const deltaGate = createGate();
+        const messageId = assistantMessageIdForRun(runId);
+
+        async function* parts() {
+            yield { id: 'txt_1', type: 'text-start' };
+            yield { id: 'txt_1', text: 'Drawing now.\n```visual\n<div>', type: 'text-delta' };
+            await deltaGate.opened;
+            yield { id: 'txt_1', text: '<h1>Sales</h1></div>\n```', type: 'text-delta' };
+            yield { id: 'txt_1', type: 'text-end' };
+        }
+
+        const outcome = persistHarnessTurnStream(target(), parts());
+        await waitForMessage(messageId);
+
+        // The post exists before text-end, carrying the partial fence body.
+        expect(getMessage(messageId)?.content).toBe('Drawing now.\n```visual\n<div>');
+
+        deltaGate.open();
+        const result = await outcome;
+
+        expect(result.finalText).toContain('```visual');
+        expect(getMessage(messageId)?.content).toContain('Drawing now.');
+    });
+
+    it('does not stream the post on deltas without a visual fence', async () => {
+        const deltaGate = createGate();
+        const messageId = assistantMessageIdForRun(runId);
+
+        async function* parts() {
+            yield { id: 'txt_1', type: 'text-start' };
+            yield { id: 'txt_1', text: 'Plain prose, no fence here.', type: 'text-delta' };
+            await deltaGate.opened;
+            yield { id: 'txt_1', type: 'text-end' };
+        }
+
+        const outcome = persistHarnessTurnStream(target(), parts());
+        await new Promise((resolve) => {
+            setTimeout(resolve, 20);
+        });
+
+        expect(getMessage(messageId)).toBeNull();
+
+        deltaGate.open();
+        await outcome;
+
+        expect(getMessage(messageId)?.content).toBe('Plain prose, no fence here.');
+    });
+
     it('ignores unrelated stream part types', async () => {
         async function* parts() {
             yield { type: 'start' };
@@ -419,4 +468,16 @@ async function waitForActivity(activityId: string) {
         });
     }
     throw new Error(`Activity ${activityId} was not persisted while the stream was running.`);
+}
+
+async function waitForMessage(messageId: string) {
+    for (let attempt = 0; attempt < 50; attempt += 1) {
+        if (getMessage(messageId)) {
+            return;
+        }
+        await new Promise((resolve) => {
+            setTimeout(resolve, 5);
+        });
+    }
+    throw new Error(`Message ${messageId} was not persisted while the stream was running.`);
 }

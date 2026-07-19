@@ -295,6 +295,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/turns/{run_id}/file-changes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get the workspace file-change evidence captured for one agent turn. */
+        get: operations["getTurnFileChanges"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/events": {
         parameters: {
             query?: never;
@@ -353,6 +370,26 @@ export interface components {
             instructions: string;
             prompt: string;
             recall: components["schemas"]["TurnPromptRecallHit"][];
+        };
+        TurnFileChange: {
+            path: string;
+            /** @enum {string} */
+            change: "created" | "modified" | "deleted";
+            additions: number;
+            deletions: number;
+            /** @enum {string|null} */
+            omitted: "binary" | "too-large" | null;
+            before_text: string | null;
+            after_text: string | null;
+            before_size: number | null;
+            after_size: number | null;
+        };
+        TurnFileChangeEvidence: {
+            run_id: components["schemas"]["RunId"];
+            /** Format: date-time */
+            captured_at: string;
+            truncated: boolean;
+            changes: components["schemas"]["TurnFileChange"][];
         };
         ActivityId: string;
         ArtifactId: string;
@@ -1270,6 +1307,29 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["TurnPromptEvidence"];
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    getTurnFileChanges: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: components["parameters"]["RunId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Turn file-change evidence. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TurnFileChangeEvidence"];
                 };
             };
             default: components["responses"]["Error"];

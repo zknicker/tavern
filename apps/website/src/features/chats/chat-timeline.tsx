@@ -4,7 +4,6 @@ import type { ChatActiveReply, ChatTurnFailure } from '../../hooks/chats/chat-ti
 import type { ChatLogOutput } from '../../lib/trpc.tsx';
 import { ChatTranscript } from './chat-transcript.tsx';
 import type { ConversationMessageLayout } from './chat-transcript-model.ts';
-import type { ChatTurnTimelineMarker } from './chat-turn-timeline.tsx';
 
 export function ChatTimeline({
     activeReplies,
@@ -13,7 +12,6 @@ export function ChatTimeline({
     conversationLayout,
     defaultOpenWorkGroups = false,
     failedTurns,
-    onTurnTimelineMarkersChange,
     rows,
     scrollContentRef,
     totalMessages,
@@ -24,7 +22,6 @@ export function ChatTimeline({
     conversationLayout?: ConversationMessageLayout;
     defaultOpenWorkGroups?: boolean;
     failedTurns?: readonly ChatTurnFailure[];
-    onTurnTimelineMarkersChange?: (markers: ChatTurnTimelineMarker[]) => void;
     rows: NonNullable<ChatLogOutput>['rows'];
     scrollContentRef?: React.RefObject<HTMLDivElement | null>;
     totalMessages: number;
@@ -40,7 +37,6 @@ export function ChatTimeline({
             defaultOpenWorkGroups={defaultOpenWorkGroups}
             failedTurns={failedTurns}
             hiddenCount={hiddenCount}
-            onTurnTimelineMarkersChange={onTurnTimelineMarkersChange}
             rows={rows}
             scrollContentRef={scrollContentRef}
         />

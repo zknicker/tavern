@@ -1,11 +1,12 @@
 import { File01Icon } from '@hugeicons-pro/core-stroke-rounded';
 import { useMemo } from 'react';
 import { SimpleCodeEditor } from '../../components/code-editor/simple-code-editor.tsx';
+import { SelectionQuoteContainer } from '../../components/quote/selection-quote.tsx';
 import { useResolvedThemeOptional } from '../../components/theme-provider.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import { trpc } from '../../lib/trpc.tsx';
 import { injectHostTokenStyle, readHostTokenCss } from './host-token-style.ts';
-import type { TavernResourceTarget } from './tavern-resource-link.ts';
+import { formatTavernResourceLink, type TavernResourceTarget } from './tavern-resource-link.ts';
 
 export function WorkspaceArtifactContent({
     agentId,
@@ -71,7 +72,17 @@ export function WorkspaceArtifactContent({
     }
 
     return (
-        <SimpleCodeEditor className="h-full" filePath={target.path} readOnly value={file.content} />
+        <SelectionQuoteContainer
+            className="h-full min-h-0"
+            source={{ href: formatTavernResourceLink(target), label: target.path }}
+        >
+            <SimpleCodeEditor
+                className="h-full"
+                filePath={target.path}
+                readOnly
+                value={file.content}
+            />
+        </SelectionQuoteContainer>
     );
 }
 

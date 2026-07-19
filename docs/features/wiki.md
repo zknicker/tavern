@@ -28,6 +28,16 @@ after they land, and commits external Markdown edits observed by the filesystem
 watcher. Git history is local recovery state and the delete-history signal for
 background dreaming. It is not a remote backup contract.
 
+## Page History
+
+Every page exposes read-only history over that Git repository: the commits
+that touched the page, each openable as a before/after diff. The Wiki
+inspector shows a History section, and a Wiki page opened in the chat
+artifact pane has a History toggle. Selecting text in a history diff in the
+artifact pane offers "Quote in chat", inserting the quoted lines plus a
+`tavern://wiki/...` source link into the composer. History is a projection —
+there is no restore or revert action in v1.
+
 ## Agent Tools
 
 Normal agents use Wiki tools for shared knowledge:

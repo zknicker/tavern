@@ -111,10 +111,14 @@ function getScheduleState(job: CronJob | null) {
     };
 }
 
-export function createCronFormState(job: CronJob | null, primaryAgentId = ''): CronFormState {
+export function createCronFormState(
+    job: CronJob | null,
+    primaryAgentId = '',
+    template?: Partial<CronFormState>
+): CronFormState {
     const scheduleState = getScheduleState(job);
 
-    return {
+    const base: CronFormState = {
         agentId: job?.agentId ?? primaryAgentId,
         at: scheduleState.at,
         cronExpr: scheduleState.cronExpr,
@@ -133,4 +137,12 @@ export function createCronFormState(job: CronJob | null, primaryAgentId = ''): C
         scriptWorkingDir: job?.payload.kind === 'script' ? (job.payload.workingDir ?? '') : '',
         systemEventText: job?.payload.kind === 'systemEvent' ? job.payload.text : '',
     };
+
+    // Suggested-automation prefill: template fields win over the blank
+    // defaults, never over an existing job being edited.
+    if (template && !job) {
+        return { ...base, ...template };
+    }
+
+    return base;
 }

@@ -8,11 +8,11 @@ import { useAgentList } from '../../hooks/agents/use-agent-list.ts';
 import { useTaskList } from '../../hooks/tasks/use-task-list.ts';
 import { useTaskCreate } from '../../hooks/tasks/use-task-mutations.ts';
 import { appRoutes } from '../../lib/app-routes.ts';
+import { useAgentSelectOptions } from '../agents/use-agent-select-options.ts';
 import { TaskEditorPane } from './task-editor-pane.tsx';
 import { TaskEditorSidebar } from './task-editor-sidebar.tsx';
 import { TaskFields, type TaskFieldsValue } from './task-fields.tsx';
 import { formatTaskNumber } from './task-presentation.ts';
-import { useTaskAgentOptions } from './use-task-agent-options.ts';
 
 const emptyDraftFields: TaskFieldsValue = {
     assignee: null,
@@ -32,7 +32,7 @@ export function TaskNew() {
     const [description, setDescription] = React.useState('');
     const [fields, setFields] = React.useState<TaskFieldsValue>(emptyDraftFields);
 
-    const agents = useTaskAgentOptions(agentsQuery.data?.agents);
+    const agents = useAgentSelectOptions(agentsQuery.data?.agents);
     const epics = React.useMemo(
         () => (tasksQuery.data?.tasks ?? []).filter((candidate) => candidate.kind === 'epic'),
         [tasksQuery.data?.tasks]

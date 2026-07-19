@@ -62,7 +62,7 @@ export function ChannelsSettingsPage() {
                                 title={formatChannelTitle(binding)}
                                 trailingWidth="intrinsic"
                             >
-                                <span className="rounded-full bg-muted px-2 py-1 text-muted-foreground text-xs">
+                                <span className="rounded-sm bg-muted px-2 py-1 text-muted-foreground text-xs">
                                     {binding.enabled ? binding.status : 'disabled'}
                                 </span>
                             </SettingsRow>

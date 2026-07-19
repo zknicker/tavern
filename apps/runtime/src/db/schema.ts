@@ -258,6 +258,26 @@ CREATE INDEX IF NOT EXISTS idx_agent_turns_session_status
 CREATE INDEX IF NOT EXISTS idx_agent_turns_chat_updated
   ON agent_turns(chat_id, updated_at);
 
+-- Per-turn workspace file-change evidence: the files a turn created, modified,
+-- or deleted in the agent workspace, with bounded before/after text for diff
+-- rendering. Filled by snapshot-compare when the turn settles; the summary
+-- rides a workspace_changes activity row while contents load on demand.
+CREATE TABLE IF NOT EXISTS agent_turn_file_changes (
+  run_id      TEXT NOT NULL,
+  path        TEXT NOT NULL,
+  change      TEXT NOT NULL CHECK (change IN ('created', 'modified', 'deleted')),
+  before_text TEXT,
+  after_text  TEXT,
+  omitted     TEXT CHECK (omitted IS NULL OR omitted IN ('binary', 'too-large')),
+  before_size INTEGER,
+  after_size  INTEGER,
+  additions   INTEGER NOT NULL DEFAULT 0,
+  deletions   INTEGER NOT NULL DEFAULT 0,
+  created_at  TEXT NOT NULL,
+  PRIMARY KEY (run_id, path),
+  FOREIGN KEY(run_id) REFERENCES agent_turns(id) ON DELETE CASCADE
+);
+
 -- Compact outcome signals for mention-dispatched turns: when a turn an agent
 -- dispatched by mention settles, the requesting agent's seat receives one note
 -- in its next prompt instead of polling transcripts.

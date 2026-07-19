@@ -90,6 +90,20 @@ export async function getWikiPage(
     return client ? await client.getWikiPage(input) : null;
 }
 
+export async function getWikiPageHistory(
+    input: { limit?: number; path: string },
+    client: TavernAgentRuntimeClient | null = createConfiguredAgentRuntimeClient()
+) {
+    return client ? await client.getWikiPageHistory(input) : null;
+}
+
+export async function getWikiPageRevision(
+    input: { commit: string; path: string },
+    client: TavernAgentRuntimeClient | null = createConfiguredAgentRuntimeClient()
+) {
+    return client ? await client.getWikiPageRevision(input) : null;
+}
+
 export async function searchWiki(
     input: WikiSearchInput,
     client: TavernAgentRuntimeClient | null = createConfiguredAgentRuntimeClient()

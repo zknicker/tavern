@@ -36,6 +36,7 @@ describe('Tavern OpenAPI contract', () => {
             '/api/responses/{response_id}',
             '/api/messages/{message_id}',
             '/api/turns/{run_id}/prompt',
+            '/api/turns/{run_id}/file-changes',
             '/api/events',
             '/api/events/ws',
         ]);

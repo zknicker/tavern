@@ -1,5 +1,6 @@
 import { AlertCircleIcon, Cancel01Icon, ListViewIcon } from '@hugeicons/core-free-icons';
 import type { AgentCharacter } from '@tavern/api/agent-appearance';
+import { splitVisualFences } from '@tavern/api/widgets/visual';
 import { useReducedMotion } from 'framer-motion';
 import * as React from 'react';
 import { ChatMessage } from '../../components/chats/chat-message.tsx';
@@ -19,6 +20,7 @@ import { useChatDismiss } from '../../hooks/chats/use-chat-dismiss.ts';
 import { formatShortTime } from '../../lib/format.ts';
 import { cn } from '../../lib/utils.ts';
 import { AgentWidget } from '../../widgets/render-widget.tsx';
+import { VisualCard } from '../../widgets/visual.tsx';
 import { resolveAgentInk } from '../agents/agent-color-presets.ts';
 import { AgentFace, type HeadName } from './agent-face.tsx';
 import { AgentHoverCard } from './agent-hover-card.tsx';
@@ -63,6 +65,7 @@ import type { SessionNoticeRow } from './chat-transcript-row-model.ts';
 import { RuntimeNoticeEntry, SessionNoticeAction } from './chat-transcript-system-step.tsx';
 import { ChatTurnDrawer } from './chat-turn-drawer.tsx';
 import { useRevealedText } from './use-revealed-text.ts';
+import { WorkspaceChangesChip } from './workspace-changes-chip.tsx';
 
 // `group/turn` is the hover unit for a whole message: hovering the row reveals
 // its actions (the copy button next to the timestamp, or above the owner's own
@@ -70,7 +73,7 @@ import { useRevealedText } from './use-revealed-text.ts';
 // most of the room between messages, with only a small gap between scroller
 // items (see chat-transcript.tsx). gap-3 widens the avatar gutter past the
 // Message default so the roster breathes.
-const rowClassName = 'group/turn w-full gap-3 py-1.5';
+const rowClassName = 'group/turn w-full gap-3 py-1';
 // Message actions stay hidden until the row is hovered or focused. No
 // transition — the affordance tracks the pointer instantly.
 const hoverActionsClassName =
@@ -79,8 +82,12 @@ const newTurnGapClassName = '';
 // Pin the identity avatar to the top of the row. The shadcn MessageAvatar
 // defaults to self-end and lifts by -translate-y-8 when the message has a
 // footer; our roster layout keeps it aligned with the name header instead.
+// 40px avatar spans the header + first message line as one block (Raft
+// proportions). mt-1.5 seats the top edge ~2px above the username's visible
+// cap (the name's line box has ~3px of half-leading above the glyphs), so
+// the avatar reads inline with the sender line rather than floating high.
 const turnAvatarBaseClassName =
-    'size-10 min-w-10 self-start ring-1 ring-border/50 group-has-data-[slot=message-footer]/message:translate-y-0';
+    'mt-1.5 size-10 min-w-10 self-start ring-1 ring-border/50 group-has-data-[slot=message-footer]/message:translate-y-0';
 // The character head is the avatar: a square-ish little character at the
 // same footprint and roundedness as the people avatars beside it.
 const faceStyle = { flexShrink: 0, height: 40, overflow: 'visible', width: 40 } as const;
@@ -159,38 +166,10 @@ function UserTurn({
     const actorProfile = useActorProfile(entry.actor);
     const displayName = actorProfile?.name ?? getTurnFallbackName(entry) ?? 'You';
     const lastMessage = getLastMessage(entry.items);
-    // The app owner's own turn reads as a right-anchored, avatar-less bubble.
-    // Other people in the chat use the same left roster as agents.
-    const isSelf = actorProfile?.isSelf ?? false;
 
-    if (isSelf) {
-        return (
-            <Message align="start" className={cn(rowClassName, newTurnGapClassName)}>
-                <MessageContent className="pt-0.5">
-                    {lastMessage ? (
-                        <div className={cn(hoverActionsClassName, 'justify-end gap-2 pe-0.5')}>
-                            <span className="min-w-0 truncate font-semibold text-foreground text-sm leading-5">
-                                {displayName}
-                            </span>
-                            {entry.timestamp ? (
-                                <time
-                                    className="shrink-0 text-muted-foreground/65 text-xs tabular-nums"
-                                    dateTime={entry.timestamp}
-                                >
-                                    {formatShortTime(entry.timestamp)}
-                                </time>
-                            ) : null}
-                            <TranscriptMessageActions value={lastMessage.content} />
-                        </div>
-                    ) : null}
-                    {entry.items.map((item) => (
-                        <UserTurnItem from="user" item={item} key={getTranscriptItemKey(item)} />
-                    ))}
-                </MessageContent>
-            </Message>
-        );
-    }
-
+    // Every human turn — the app owner's included — shares the same
+    // left-aligned Slack-style roster row as agents: avatar, name header,
+    // plain text. No right-anchored self bubbles.
     return (
         <Message align="start" className={cn(rowClassName, newTurnGapClassName)}>
             <TurnAvatar
@@ -199,7 +178,7 @@ function UserTurn({
                 color={actorProfile?.primaryColor}
                 name={displayName}
             />
-            <MessageContent className="gap-0.5 pt-0.5">
+            <MessageContent className="gap-0 pt-0.5">
                 {layout.showHumanIdentity ? (
                     <TurnHeader
                         actions={
@@ -211,13 +190,9 @@ function UserTurn({
                         timestamp={entry.timestamp}
                     />
                 ) : null}
-                <div className="flex min-w-0 flex-col gap-1.5">
+                <div className="-mt-0.5 flex min-w-0 flex-col gap-1.5">
                     {entry.items.map((item) => (
-                        <UserTurnItem
-                            from="assistant"
-                            item={item}
-                            key={getTranscriptItemKey(item)}
-                        />
+                        <UserTurnItem from="user" item={item} key={getTranscriptItemKey(item)} />
                     ))}
                 </div>
             </MessageContent>
@@ -294,14 +269,16 @@ function TurnAvatar({
           } as React.CSSProperties)
         : undefined;
 
+    // Initials read as a flat tinted chip (badge-style: soft fill, legible
+    // colored text) instead of a heavy solid block — no ring, no shadow.
     return (
         <MessageAvatar
             className={cn(
                 turnAvatarBaseClassName,
-                'rounded-lg font-semibold text-xs shadow-xs',
+                'rounded-lg font-semibold text-xs ring-0',
                 color
-                    ? 'bg-[var(--chat-avatar-color)] text-white'
-                    : 'bg-muted text-muted-foreground'
+                    ? 'bg-[color-mix(in_srgb,var(--chat-avatar-color)_16%,transparent)] text-[color-mix(in_srgb,var(--chat-avatar-color)_75%,var(--foreground))]'
+                    : 'bg-brand/16 text-brand-muted-foreground'
             )}
             style={style}
         >
@@ -472,7 +449,7 @@ function AgentTurn({
                     name={displayName}
                 />
             )}
-            <MessageContent className="gap-0.5 pt-0.5">
+            <MessageContent className="gap-0 pt-0.5">
                 {showIdentity ? (
                     <TurnHeader
                         actions={headerActions}
@@ -480,7 +457,7 @@ function AgentTurn({
                         timestamp={entry.timestamp}
                     />
                 ) : null}
-                <div className={cn(hoverGroupClassName, 'relative min-w-0')}>
+                <div className={cn(hoverGroupClassName, 'relative -mt-0.5 min-w-0')}>
                     <div className="flex min-w-0 flex-col gap-3">
                         {visibleSegments.map((segment, index) => (
                             <AgentTurnSegment
@@ -628,10 +605,22 @@ export function filterPaneSegments(
         }
 
         const clarifications = segment.items.filter(isClarificationItem);
+        // Changed-files chips are contribution outcome and render standalone
+        // (item segments), never inside a collapsed work group.
+        const fileChangeSegments = segment.items
+            .filter(isWorkspaceChangesItem)
+            .map((item, index): AgentItemSegment => {
+                const key =
+                    item.kind === 'row' ? item.row.id : `${segment.key}:files:${String(index)}`;
+                return { item, key, kind: 'item' };
+            });
 
-        return clarifications.length > 0
-            ? [{ ...segment, items: clarifications, key: `${segment.key}:clarify` }]
-            : [];
+        return [
+            ...(clarifications.length > 0
+                ? [{ ...segment, items: clarifications, key: `${segment.key}:clarify` }]
+                : []),
+            ...fileChangeSegments,
+        ];
     });
 }
 
@@ -668,6 +657,14 @@ function isFinalReplyItem(item: TranscriptItem) {
 
 function isClarificationItem(item: TranscriptItem) {
     return item.kind === 'row' && item.row.kind === 'tool' && Boolean(item.row.clarification);
+}
+
+function isWorkspaceChangesItem(item: TranscriptItem) {
+    return (
+        item.kind === 'row' &&
+        item.row.kind === 'tool' &&
+        item.row.toolCall.name === 'workspace_changes'
+    );
 }
 
 function UserTurnItem({ from, item }: { from: 'assistant' | 'user'; item: TranscriptItem }) {
@@ -725,7 +722,7 @@ function AgentTurnItem({
 
     if (item.kind === 'activeReply') {
         return (
-            <AssistantReplyText
+            <AssistantReplyBody
                 content={getActiveReplyDisplayText(item.reply.text ?? '')}
                 revealKey={item.reply.runId}
                 revealText={isStreamingActiveReply(item.reply)}
@@ -749,7 +746,7 @@ function AgentTurnItem({
 
         if (streaming) {
             return (
-                <AssistantReplyText
+                <AssistantReplyBody
                     animateEnter
                     content={getActiveReplyDisplayText(item.row.message.content)}
                     revealKey={item.row.id}
@@ -781,6 +778,10 @@ function AgentTurnItem({
 
     if (item.kind === 'row' && item.row.kind === 'widget') {
         return <AgentWidget row={item.row} />;
+    }
+
+    if (item.kind === 'row' && item.row.kind === 'tool' && isWorkspaceChangesItem(item)) {
+        return <WorkspaceChangesChip chatId={chatId} row={item.row} />;
     }
 
     if (item.kind === 'failure') {
@@ -866,6 +867,50 @@ function AssistantReplyText({
                 body
             )}
         </ChatMessage>
+    );
+}
+
+// A live reply may carry ```visual fences: fence bodies render as streaming
+// visual cards below the prose — matching the durable layout, where widget
+// rows follow the post — and never as raw fence text. An unclosed trailing
+// fence is an in-progress visual whose body grows as content arrives.
+function AssistantReplyBody(props: {
+    animateEnter?: boolean;
+    content: string;
+    revealKey?: string;
+    revealText?: boolean;
+    slotKey?: string | null;
+}) {
+    const segments = splitVisualFences(props.content);
+    const slot = props.slotKey ?? props.revealKey ?? 'visual';
+    // The Nth fence in the reply is that visual's stable identity: content
+    // only appends while streaming, so ordinals never reorder.
+    const cards: React.ReactNode[] = [];
+    for (const segment of segments) {
+        if (segment.kind === 'visual') {
+            cards.push(
+                <div className="max-w-[46rem]" key={`${slot}:visual:${cards.length + 1}`}>
+                    <VisualCard html={segment.html} open={segment.open} title={segment.title} />
+                </div>
+            );
+        }
+    }
+
+    if (cards.length === 0) {
+        return <AssistantReplyText {...props} />;
+    }
+
+    const prose = segments
+        .filter((segment) => segment.kind === 'text')
+        .map((segment) => segment.text)
+        .join('')
+        .trim();
+
+    return (
+        <>
+            {prose ? <AssistantReplyText {...props} content={prose} /> : null}
+            {cards}
+        </>
     );
 }
 

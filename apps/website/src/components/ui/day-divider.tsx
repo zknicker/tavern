@@ -33,11 +33,7 @@ export function formatDayLabel(value: string | Date) {
 
 export function DayDivider({ className, label }: { className?: string; label: string }) {
     return (
-        <BadgeDivider
-            badgeLocation="right"
-            className={cn('py-2', className)}
-            labelClassName="px-2.5 py-0.5"
-        >
+        <BadgeDivider badgeLocation="center" className={cn('py-0.5', className)}>
             {label}
         </BadgeDivider>
     );

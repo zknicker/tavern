@@ -1,6 +1,10 @@
 import { StopIcon } from '@hugeicons-pro/core-solid-rounded';
 import * as React from 'react';
 import { useChatComposerFocusRequest } from '../../commands/chat-composer-focus.ts';
+import {
+    appendComposerInsert,
+    useChatComposerInsertRequest,
+} from '../../commands/chat-composer-insert.ts';
 import { Icon } from '../../components/ui/icon.tsx';
 import {
     PromptInput,
@@ -139,6 +143,14 @@ export function ChatMessageComposer({
         });
     }, [canAutoFocusComposer]);
     useChatComposerFocusRequest(canAutoFocusComposer, mentionComposer.focusTextEditor);
+    const handleComposerInsert = React.useCallback(
+        (text: string) => {
+            setContent((current) => appendComposerInsert(current, text));
+            requestAnimationFrame(() => focusTextEditorRef.current());
+        },
+        [setContent]
+    );
+    useChatComposerInsertRequest(canAutoFocusComposer, handleComposerInsert);
 
     async function handleSubmit(event?: React.FormEvent<HTMLFormElement>) {
         event?.preventDefault();
@@ -220,11 +232,11 @@ export function ChatMessageComposer({
             className={cn(
                 isCompact
                     ? 'border-t border-r-[3px] border-r-border/70 bg-chrome/40 px-3 py-3'
-                    : // Match the transcript's lg gutter so the composer stays
+                    : // Match the transcript's gutter so the composer stays
                       // aligned with the messages.
-                      'lg:px-16'
+                      'px-5'
             )}
-            contentClassName={isCompact ? 'max-w-none' : undefined}
+            contentClassName="max-w-none"
             error={attachmentError ?? sendMessage.error?.message}
             onDragEnter={useMainDropTarget ? undefined : attachmentDrop.onDragEnter}
             onDragLeave={useMainDropTarget ? undefined : attachmentDrop.onDragLeave}

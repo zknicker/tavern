@@ -144,7 +144,9 @@ describe('development chat demo sessions', () => {
         }[];
 
         // Every catalog widget renders once, the table twice (keyed + matrix
-        // shorthand), plus the intentionally invalid fallback payload.
+        // shorthand), four generative visuals (chart, diagram, tall/collapse,
+        // malformed degradation), plus the intentionally invalid fallback
+        // payload.
         expect(activities.map((row) => row.component).sort()).toEqual(
             [
                 'tavern.widget.bar-chart',
@@ -158,6 +160,10 @@ describe('development chat demo sessions', () => {
                 'tavern.widget.artifact',
                 'tavern.widget.table',
                 'tavern.widget.table',
+                'tavern.widget.visual',
+                'tavern.widget.visual',
+                'tavern.widget.visual',
+                'tavern.widget.visual',
             ].sort()
         );
     });

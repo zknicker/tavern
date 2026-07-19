@@ -209,3 +209,28 @@ test('buildToolSummaryFromValues marks timed out tool results consistently', () 
         true
     );
 });
+
+test('buildToolSummaryFromValues summarizes workspace change evidence by file count', () => {
+    const summary = buildToolSummaryFromValues({
+        argumentsValue: {
+            changes: [
+                { additions: 3, change: 'modified', deletions: 1, omitted: null, path: 'NOTES.md' },
+                {
+                    additions: 8,
+                    change: 'created',
+                    deletions: 0,
+                    omitted: null,
+                    path: 'workbench/report.md',
+                },
+            ],
+            truncated: false,
+        },
+        callId: 'call-files',
+        isError: false,
+        name: 'workspace_changes',
+        resultValue: null,
+    });
+
+    assert.deepEqual(summary.summaryParts, ['2 files']);
+    assert.equal(summary.label, '2 files · +11 · −1');
+});

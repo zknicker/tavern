@@ -34,7 +34,7 @@ Rules:
 - The fence body must be one complete valid JSON object with no comments or trailing commas. If unsure the props are valid, reply with text instead.
 - Use widget:table instead of Markdown tables.
 - Build an artifact for anything the user will keep or iterate on: write one self-contained .html file (inline CSS/JS, no external assets) under workbench/, then reference it with a bare \`artifact\` fence. The chat shows a compact card that opens the page in the artifact pane.
-- Never write HTML, JSX, CSS, class names, or imports.
+- Widget fence bodies are pure JSON — never HTML, JSX, CSS, class names, or imports. Raw HTML belongs only in a \`visual\` fence.
 - Do not repeat identical content in prose and in a widget; prose around the fence should add context, not restate it.
 - Multiple widget fences in one reply are allowed when the answer has clearly separate visual parts; prefer one.`;
 
@@ -80,24 +80,34 @@ const widgetPromptEntries = {
             'Sandboxed inline preview of a workspace HTML file; for custom visuals no other widget covers.',
         signature: '{"path":string,"height"?:number,"title"?:string}',
         constraints:
-            "Write a self-contained .html file (inline CSS/JS, no external or sibling assets) under workbench/ first; path is workspace-relative and renders the file's current content. height is px 120-1200 (default 480).",
+            'Self-contained inline CSS/JS only; load the page-design skill before authoring. Write the file under workbench/ first; path is workspace-relative.',
     },
     artifact: {
         description:
             'Durable self-contained single-file HTML page rendered in the artifact pane; the chat shows a compact card.',
         signature: '{"path":string,"title"?:string}',
         constraints:
-            'Inline CSS/JS only, no external or sibling assets. Tavern theme tokens are injected as CSS variables (--background, --foreground, --surface-2, --border, ...) — style with them so the page matches the app in light and dark.',
+            'Self-contained inline CSS/JS only; load the page-design skill before authoring. Write the file under workbench/ first; path is workspace-relative.',
     },
     'merchbase-sales-chart': widgetMerchBaseSalesChartPromptEntry,
-} satisfies Record<WidgetName, WidgetPromptEntry>;
+} satisfies Record<CatalogWidgetName, WidgetPromptEntry>;
+
+// The `visual` fence is taught in its own prompt section (raw HTML body, not
+// a widget:<name> JSON fence), so it never renders a catalog entry here.
+type CatalogWidgetName = Exclude<WidgetName, 'visual'>;
+
+function isCatalogWidgetName(name: WidgetName): name is CatalogWidgetName {
+    return name !== 'visual';
+}
 
 /**
  * Assemble the Widgets prompt for the widgets available to this agent. Pass the
  * gated set (core widgets plus granted-plugin widgets); order is preserved.
  */
 export function renderWidgetsPrompt(names: readonly WidgetName[]): string {
-    const entries = names.map((name) => renderWidgetEntry(name, widgetPromptEntries[name]));
+    const entries = names
+        .filter(isCatalogWidgetName)
+        .map((name) => renderWidgetEntry(name, widgetPromptEntries[name]));
 
     if (entries.length === 0) {
         return widgetRules;
@@ -106,7 +116,7 @@ export function renderWidgetsPrompt(names: readonly WidgetName[]): string {
     return `${widgetRules}\n\nAvailable widgets:\n\n${entries.join('\n\n')}`;
 }
 
-function renderWidgetEntry(name: WidgetName, entry: WidgetPromptEntry): string {
+function renderWidgetEntry(name: CatalogWidgetName, entry: WidgetPromptEntry): string {
     const head = `${widgetFenceLabel(name)} — ${entry.description}\n${entry.signature}`;
     return entry.constraints ? `${head}\n${entry.constraints}` : head;
 }

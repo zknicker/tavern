@@ -99,6 +99,7 @@ interface StreamState {
     aborted: boolean;
     activityIds: string[];
     contextTokens: number | null;
+    lastVisualPostAt: number;
     pendingText: PendingText | null;
     postCreated: boolean;
     reasoningBuffers: Map<string, { content: string; startedAt: string }>;
@@ -114,6 +115,7 @@ function createStreamState(): StreamState {
         aborted: false,
         activityIds: [],
         contextTokens: null,
+        lastVisualPostAt: 0,
         postCreated: false,
         pendingText: null,
         reasoningBuffers: new Map(),
@@ -134,7 +136,7 @@ function handleStreamPart(target: HarnessTurnStreamTarget, state: StreamState, p
             handleTextStart(state, part);
             return;
         case 'text-delta':
-            handleTextDelta(state, part);
+            handleTextDelta(target, state, part);
             return;
         case 'text-end':
             handleTextEnd(target, state, part);
@@ -185,13 +187,44 @@ function handleTextStart(state: StreamState, part: { type: string } & Record<str
     state.textBuffers.set(part.id, { content: '', startedAt: nowIso() });
 }
 
-function handleTextDelta(state: StreamState, part: { type: string } & Record<string, unknown>) {
+function handleTextDelta(
+    target: HarnessTurnStreamTarget,
+    state: StreamState,
+    part: { type: string } & Record<string, unknown>
+) {
     if (typeof part.id !== 'string' || typeof part.text !== 'string') {
         return;
     }
     const buffer = state.textBuffers.get(part.id);
     if (buffer) {
         buffer.content += part.text;
+        streamVisualPostUpdate(target, state, buffer.content);
+    }
+}
+
+// Prose reaches the app per completed segment, but a ```visual fence renders
+// progressively: while one is present mid-segment, the streaming post updates
+// on a throttle so the app can grow the visual as the body arrives. Fence
+// content stays hidden from prose by the app's fence splitter.
+const visualPostStreamThrottleMs = 500;
+const visualFenceHint = /^```visual/mu;
+
+function streamVisualPostUpdate(
+    target: HarnessTurnStreamTarget,
+    state: StreamState,
+    content: string
+) {
+    if (!visualFenceHint.test(content)) {
+        return;
+    }
+    const now = Date.now();
+    if (now - state.lastVisualPostAt < visualPostStreamThrottleMs) {
+        return;
+    }
+    state.lastVisualPostAt = now;
+    const trimmed = content.trim();
+    if (trimmed && !isSilentReplyText(trimmed)) {
+        upsertTurnPost(target, state, trimmed);
     }
 }
 

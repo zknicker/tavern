@@ -185,6 +185,33 @@ const REQUIREMENTS: Array<{
         expected: 'Build an artifact for anything the user will keep or iterate on',
         prompt: 'channel',
     },
+    // Visuals (PRD-80/81): the generative visual fence and its taste layer.
+    {
+        capability: 'visual fence taught',
+        expected: '```visual Weekly sales',
+        prompt: 'channel',
+    },
+    {
+        capability: 'visuals design-skill routing taught',
+        expected:
+            'load the matching design skill and follow it: visuals-charts for charts and data graphics, visuals-diagrams for diagrams',
+        prompt: 'channel',
+    },
+    {
+        capability: 'visual-vs-artifact ladder in the visuals section',
+        expected: 'For anything the user will keep or iterate on',
+        prompt: 'channel',
+    },
+    {
+        capability: 'visuals are self-contained snapshots',
+        expected: 'Embed all data inline',
+        prompt: 'channel',
+    },
+    {
+        capability: 'HTML ban scoped to outside visual fences',
+        expected: 'Never output HTML, JSX, CSS, imports, or class names outside a `visual` fence.',
+        prompt: 'channel',
+    },
     // Automations: script mode exists and watchdogs should use it.
     {
         capability: 'script automations preferred for watchdogs',
@@ -259,9 +286,16 @@ const REQUIREMENTS: Array<{
 // the visuals-vs-artifacts ladder rule (~250 chars) landed for the TSX
 // artifact tier (PRD-74; re-scoped from an inline page widget to the
 // artifact pane on 2026-07-17 inside the same budget).
+// total 15_450 -> 16_500 (2026-07-17, PRD-80/81): the Visuals section —
+// generative ```visual fence, design-skill routing, visual-vs-artifact
+// ladder, self-containment — plus the visual carve-outs in the Outputs and
+// Widgets HTML bans (~1,020 chars). Partly offset by slimming the artifact
+// and html-preview entries to invocation contract + page-design skill
+// routing (quality guidance, incl. the token enumeration, moved to skills);
+// actual total ~16,280.
 const promptBudgets = {
     channelChatSection: 1850,
-    channelTotal: 15_450,
+    channelTotal: 16_500,
 };
 
 // The fixture renders the cron-ready prompt so the Automations section stays
