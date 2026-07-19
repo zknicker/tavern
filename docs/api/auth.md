@@ -52,13 +52,27 @@ source settings, not as an inference credential.
 
 ## Runtime Access
 
-The Runtime HTTP API is protected by the configured Tavern Runtime token. The
-Runtime generates a token on first start and keeps it in its host config file
-(`<runtime-root>/tavern.json`, `token` key, mode `0600`). Override with
-`TAVERN_RUNTIME_TOKEN`. The health route is unauthenticated.
+The Runtime HTTP and event websocket APIs accept either the configured Tavern
+Runtime token or a verified Clerk session. The Runtime generates its token on
+first start and keeps it in its host config file (`<runtime-root>/tavern.json`,
+`token` key, mode `0600`). Override with `TAVERN_RUNTIME_TOKEN`. The health route
+is unauthenticated.
 
 When the Runtime host is remote, run `tavern token` on the host to display the
 pairing token, then save that token in the App settings.
+
+Owners may pair with the Runtime token. Invited members connect with the Runtime
+URL only: Tavern App forwards their current Clerk session without persisting the
+session token in the connection record. The app refreshes the server's ephemeral
+session transport while signed in; reconnecting HTTP clients and event sockets
+use the newest session.
+
+Runtime-token and owner sessions have full Runtime access. Member sessions may
+use the Tavern `/api/*` chat surface and read app-facing identity, capabilities,
+events, agents, models, and Mac app inventory. Runtime administration remains
+owner-only, including model access, agent environment, Plugins, MCP, updates,
+development routes, Memory settings, and timezone settings. Verified
+non-members remain limited to identity introspection and invite redemption.
 
 Clients use Tavern API or TypeScript SDK surfaces instead of reading local
 SQLite files, runtime stores, or executor state directly.
