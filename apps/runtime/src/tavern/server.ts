@@ -27,6 +27,10 @@ export interface TavernRuntimeServerHandle {
     url: URL;
 }
 
+interface TavernRuntimeServerOptions {
+    resolveClerkAuth?: typeof resolveClerkRequestAuth;
+}
+
 function isEventsSocketPath(requestUrl: string | undefined) {
     if (!requestUrl) {
         return false;
@@ -78,7 +82,25 @@ function authFailureMessage(authorizationHeader: string | undefined): string {
         : 'Bearer token required.';
 }
 
-export function startTavernRuntimeServer(): TavernRuntimeServerHandle {
+export async function resolveRuntimeRequestAuth(
+    authorizationHeader: string | undefined,
+    expectedToken: string,
+    resolveClerkAuth: typeof resolveClerkRequestAuth = resolveClerkRequestAuth
+): Promise<RuntimeRequestAuth | null> {
+    if (isBearerTokenValid(authorizationHeader, expectedToken)) {
+        return { kind: 'runtime-token' };
+    }
+
+    if (!authorizationHeader?.startsWith('Bearer ')) {
+        return null;
+    }
+
+    return await resolveClerkAuth(authorizationHeader.slice(7));
+}
+
+export function startTavernRuntimeServer(
+    options: TavernRuntimeServerOptions = {}
+): TavernRuntimeServerHandle {
     const port = Number(getRuntimePort());
     const host = getRuntimeHost();
     const token = getRuntimeApiToken();
@@ -89,13 +111,11 @@ export function startTavernRuntimeServer(): TavernRuntimeServerHandle {
             // Health route is unauthenticated so the app can probe reachability before pairing.
             const isHealth = pathname === runtimeRoutes.health && fetchRequest.method === 'GET';
             const authorizationHeader = fetchRequest.headers.get('authorization') ?? undefined;
-            let auth: RuntimeRequestAuth | null = null;
-            if (isBearerTokenValid(authorizationHeader, token)) {
-                auth = { kind: 'runtime-token' };
-            } else if (authorizationHeader?.startsWith('Bearer ')) {
-                // Not the runtime token: try it as a Clerk session token.
-                auth = await resolveClerkRequestAuth(authorizationHeader.slice(7));
-            }
+            const auth = await resolveRuntimeRequestAuth(
+                authorizationHeader,
+                token,
+                options.resolveClerkAuth
+            );
             if (!(isHealth || auth)) {
                 await writeFetchResponse(
                     unauthorized(authFailureMessage(authorizationHeader)),
@@ -103,9 +123,13 @@ export function startTavernRuntimeServer(): TavernRuntimeServerHandle {
                 );
                 return;
             }
-            if (auth && !isRouteAllowedForAuth(auth, pathname)) {
+            if (auth && !isRouteAllowedForAuth(auth, pathname, fetchRequest.method)) {
                 await writeFetchResponse(
-                    forbidden('Runtime membership required. Redeem an invite first.'),
+                    forbidden(
+                        auth.kind === 'user' && auth.role === 'member'
+                            ? 'Runtime owner access required.'
+                            : 'Runtime membership required. Redeem an invite first.'
+                    ),
                     response
                 );
                 return;
@@ -131,15 +155,22 @@ export function startTavernRuntimeServer(): TavernRuntimeServerHandle {
             return;
         }
 
-        if (!isBearerTokenValid(request.headers.authorization, token)) {
-            socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
-            socket.destroy();
-            return;
-        }
+        void (async () => {
+            const auth = await resolveRuntimeRequestAuth(
+                request.headers.authorization,
+                token,
+                options.resolveClerkAuth
+            );
+            const pathname = new URL(request.url ?? '/', 'http://localhost').pathname;
+            if (!(auth && isRouteAllowedForAuth(auth, pathname, 'GET'))) {
+                rejectUpgrade(socket);
+                return;
+            }
 
-        wss.handleUpgrade(request, socket, head, (webSocket: WebSocket) => {
-            wss.emit('connection', webSocket, request);
-        });
+            wss.handleUpgrade(request, socket, head, (webSocket: WebSocket) => {
+                wss.emit('connection', webSocket, request);
+            });
+        })().catch(() => rejectUpgrade(socket));
     });
 
     wss.on('connection', (socket: WebSocket, request) => {
@@ -205,6 +236,13 @@ export function startTavernRuntimeServer(): TavernRuntimeServerHandle {
         },
         url: new URL(`http://${normalizeHostForUrl(boundHost)}:${boundPort}`),
     };
+}
+
+function rejectUpgrade(socket: Duplex) {
+    if (!socket.destroyed) {
+        socket.write('HTTP/1.1 401 Unauthorized\r\n\r\n');
+        socket.destroy();
+    }
 }
 
 function normalizeHostForUrl(host: string) {

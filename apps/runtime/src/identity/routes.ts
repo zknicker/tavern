@@ -42,12 +42,15 @@ export async function handleIdentityRequest(
         return json({ ok: true });
     }
 
-    if (!isAdmin(auth)) {
-        return forbidden('Runtime owner access required.');
+    if (method === 'GET' && path === runtimeRoutes.identityMembers) {
+        if (auth.kind === 'user' && auth.role === null) {
+            return forbidden('Runtime membership required.');
+        }
+        return json({ members: listMembers() });
     }
 
-    if (method === 'GET' && path === runtimeRoutes.identityMembers) {
-        return json({ members: listMembers() });
+    if (!isAdmin(auth)) {
+        return forbidden('Runtime owner access required.');
     }
 
     if (method === 'DELETE' && path.startsWith('/identity/members/')) {

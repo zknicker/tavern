@@ -41,10 +41,55 @@ const nonMemberAllowedRoutes = new Set<string>([
     runtimeRoutes.identityInviteRedeem,
 ]);
 
-/** Verified non-members may only introspect themselves and redeem invites. */
-export function isRouteAllowedForAuth(auth: RuntimeRequestAuth, pathname: string): boolean {
-    if (auth.kind === 'runtime-token' || auth.role !== null) {
+const memberDeniedPrefixes = [
+    '/model-access',
+    '/agent-env',
+    '/plugins',
+    '/mcp',
+    '/update',
+    '/dev',
+    '/timezone',
+] as const;
+
+/** Owner credentials retain full access; members receive the app-facing runtime surface. */
+export function isRouteAllowedForAuth(
+    auth: RuntimeRequestAuth,
+    pathname: string,
+    method = 'GET'
+): boolean {
+    if (auth.kind === 'runtime-token' || auth.role === 'owner') {
         return true;
     }
-    return nonMemberAllowedRoutes.has(pathname);
+
+    if (auth.role === null) {
+        return nonMemberAllowedRoutes.has(pathname);
+    }
+
+    if (
+        pathname === runtimeRoutes.memorySettings ||
+        memberDeniedPrefixes.some((prefix) => pathname.startsWith(prefix))
+    ) {
+        return false;
+    }
+
+    if (
+        pathname.startsWith('/api/') ||
+        pathname === runtimeRoutes.identityMe ||
+        pathname === runtimeRoutes.events ||
+        pathname === runtimeRoutes.health
+    ) {
+        return true;
+    }
+
+    if (method !== 'GET') {
+        return false;
+    }
+
+    return (
+        pathname === runtimeRoutes.identityMembers ||
+        pathname.startsWith('/capabilities') ||
+        pathname.startsWith('/agents') ||
+        pathname.startsWith('/models') ||
+        pathname === runtimeRoutes.macApps
+    );
 }

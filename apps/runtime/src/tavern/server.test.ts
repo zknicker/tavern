@@ -95,6 +95,34 @@ describe('Tavern Runtime websocket auth', () => {
             openSocket(new URL('/api/events/ws', server.url), 'Bearer wrong-token')
         ).rejects.toThrow();
     });
+
+    it('accepts a Clerk bearer resolved to a runtime member', async () => {
+        server = startTavernRuntimeServer({
+            resolveClerkAuth: async (token) =>
+                token === 'clerk-session-token'
+                    ? {
+                          kind: 'user',
+                          role: 'member',
+                          user: {
+                              avatarUrl: null,
+                              clerkUserId: 'user_member',
+                              createdAt: '2026-07-18T12:00:00.000Z',
+                              email: null,
+                              id: 'usr_member',
+                              name: null,
+                              updatedAt: '2026-07-18T12:00:00.000Z',
+                          },
+                      }
+                    : null,
+        });
+
+        const socket = await openSocket(
+            new URL('/api/events/ws', server.url),
+            'Bearer clerk-session-token'
+        );
+        expect(socket.readyState).toBe(WebSocket.OPEN);
+        socket.close();
+    });
 });
 
 describe('Tavern Runtime websocket events', () => {
