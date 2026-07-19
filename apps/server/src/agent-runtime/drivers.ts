@@ -3,6 +3,7 @@ import { agentRuntimeEventSchema, agentRuntimeRoutes } from '@tavern/api';
 import { createTavernClient } from '@tavern/sdk';
 import { WebSocket } from 'ws';
 import { parseAgentRuntimeConnectionAuth } from '../agent-runtime-connection/auth.ts';
+import { getCurrentSessionToken } from '../identity/session-token-store.ts';
 import type { TavernAgentRuntimeClient } from './client.ts';
 import { createAgentRuntimeClient } from './client.ts';
 
@@ -21,23 +22,34 @@ export interface AgentRuntimeEventSubscription {
 }
 
 export function createAgentRuntimeClientForConnection(
-    input: AgentRuntimeDriverConnection
+    input: AgentRuntimeDriverConnection,
+    getSessionToken: () => string | null = getCurrentSessionToken
 ): TavernAgentRuntimeClient {
     const auth = parseAgentRuntimeConnectionAuth(input.authJson);
-    return createAgentRuntimeClient(input.baseUrl, { token: auth?.token });
+    return createAgentRuntimeClient(input.baseUrl, {
+        token: resolveConnectionBearer(auth, getSessionToken),
+    });
 }
 
-export function createTavernClientForConnection(input: AgentRuntimeDriverConnection) {
+export function createTavernClientForConnection(
+    input: AgentRuntimeDriverConnection,
+    getSessionToken: () => string | null = getCurrentSessionToken
+) {
     const auth = parseAgentRuntimeConnectionAuth(input.authJson);
-    return createTavernClient({ baseUrl: input.baseUrl, token: auth?.token });
+    return createTavernClient({
+        baseUrl: input.baseUrl,
+        token: resolveConnectionBearer(auth, getSessionToken),
+    });
 }
 
 export async function subscribeAgentRuntimeEventsForConnection(
     input: AgentRuntimeDriverConnection,
-    observer: AgentRuntimeEventObserver
+    observer: AgentRuntimeEventObserver,
+    getSessionToken: () => string | null = getCurrentSessionToken
 ): Promise<AgentRuntimeEventSubscription> {
     const auth = parseAgentRuntimeConnectionAuth(input.authJson);
-    const wsHeaders = auth?.token ? { authorization: `Bearer ${auth.token}` } : undefined;
+    const bearer = resolveConnectionBearer(auth, getSessionToken);
+    const wsHeaders = bearer ? { authorization: `Bearer ${bearer}` } : undefined;
     const socket = new WebSocket(toWebSocketUrl(input.baseUrl, agentRuntimeRoutes.events), {
         headers: wsHeaders,
     });
@@ -66,6 +78,26 @@ export async function subscribeAgentRuntimeEventsForConnection(
             socket.close();
         },
     };
+}
+
+function resolveConnectionBearer(
+    auth: ReturnType<typeof parseAgentRuntimeConnectionAuth>,
+    getSessionToken: () => string | null
+) {
+    if (!auth) {
+        return undefined;
+    }
+
+    if (auth.kind === 'token') {
+        return auth.token;
+    }
+
+    const sessionToken = getSessionToken();
+    if (!sessionToken) {
+        throw new Error('No active user session is available for this Tavern Runtime connection.');
+    }
+
+    return sessionToken;
 }
 
 function toWebSocketUrl(baseUrl: string, path: string) {

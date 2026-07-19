@@ -41,7 +41,7 @@ test('environment connection authJson is preserved after markAgentRuntimeConnect
     clearEnvironmentAgentRuntimeConnection();
 
     saveEnvironmentAgentRuntimeConnection({
-        auth: { token: 'test-token' },
+        auth: { kind: 'token', token: 'test-token' },
         baseUrl: 'http://runtime.test',
         id: 'runtime-1',
         lastCheckedAt: new Date().toISOString(),
@@ -61,7 +61,7 @@ test('environment connection authJson is preserved after markAgentRuntimeConnect
 
     const record = getEnvironmentAgentRuntimeConnection();
     assert.ok(record, 'environment connection record should exist');
-    assert.equal(record.authJson, JSON.stringify({ token: 'test-token' }));
+    assert.equal(record.authJson, JSON.stringify({ kind: 'token', token: 'test-token' }));
 
     clearEnvironmentAgentRuntimeConnection();
 });
@@ -82,7 +82,7 @@ test('saved connection authJson is preserved after a URL-only re-save (auth === 
 
     // Initial save with URL + token.
     await saveAgentRuntimeConnection({
-        auth: { token: 'secret-saved-token' },
+        auth: { kind: 'token', token: 'secret-saved-token' },
         baseUrl: 'http://runtime.test',
         id: 'saved-runtime-1',
         isActive: true,
@@ -105,7 +105,7 @@ test('saved connection authJson is preserved after a URL-only re-save (auth === 
     assert.ok(record, 'record should exist after re-save');
     assert.equal(
         record.authJson,
-        JSON.stringify({ token: 'secret-saved-token' }),
+        JSON.stringify({ kind: 'token', token: 'secret-saved-token' }),
         'authJson must be preserved when auth is omitted from the re-save'
     );
 });
@@ -126,7 +126,7 @@ test('saved connection authJson is cleared when auth is explicitly null', async 
 
     // Initial save with token.
     await saveAgentRuntimeConnection({
-        auth: { token: 'to-be-cleared' },
+        auth: { kind: 'token', token: 'to-be-cleared' },
         baseUrl: 'http://runtime.test',
         id: 'saved-runtime-2',
         isActive: true,

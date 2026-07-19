@@ -51,11 +51,13 @@ export const agentRuntimeCapabilityStatusSchema = z.object({
 });
 
 export const agentRuntimeConnectionAuthSchema = z
-    .object({
-        deviceToken: z.string().trim().min(1).optional(),
-        password: z.string().trim().min(1).optional(),
-        token: z.string().trim().min(1).optional(),
-    })
+    .discriminatedUnion('kind', [
+        z.object({
+            kind: z.literal('token'),
+            token: z.string().trim().min(1),
+        }),
+        z.object({ kind: z.literal('clerk-session') }),
+    ])
     .optional();
 
 export const agentRuntimeConnectionInputSchema = z.object({

@@ -5,6 +5,7 @@ import {
     getAgentRuntimeConnection,
     saveAgentRuntimeConnection,
 } from '../../agent-runtime-connection/service.ts';
+import { setCurrentSessionToken } from '../../identity/session-token-store.ts';
 import { syncMessagingBindingsToAgentRuntime } from '../../messaging-platform/service.ts';
 import { enqueueRuntimeSkillInventoryRefresh } from '../../skills/inventory-job.ts';
 import {
@@ -36,12 +37,18 @@ function toErrorMessage(error: unknown) {
 
 export const connectAgentRuntimeRoute = publicProcedure
     .input(agentRuntimeConnectionInputSchema)
-    .mutation(async ({ input }) => {
+    .mutation(async ({ ctx, input }) => {
         const baseUrl = normalizeBaseUrl(input.baseUrl);
+        const auth =
+            input.auth ??
+            (ctx.clerkSessionToken ? ({ kind: 'clerk-session' } as const) : undefined);
+        if (auth?.kind === 'clerk-session' && ctx.clerkSessionToken) {
+            setCurrentSessionToken(ctx.clerkSessionToken);
+        }
 
         try {
             const connection = await saveAgentRuntimeConnection({
-                auth: input.auth,
+                auth,
                 baseUrl,
                 enabled: input.enabled,
                 id: input.id,

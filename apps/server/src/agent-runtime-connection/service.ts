@@ -13,6 +13,7 @@ import {
     saveAgentRuntimeConnection as saveStoredAgentRuntimeConnection,
 } from '../storage/agent-runtime-connections.ts';
 import { parseAgentRuntimeConnectionAuth } from './auth.ts';
+import { checkAgentRuntimeCapabilities, checkAgentRuntimeConnection } from './connection-check.ts';
 import type { AgentRuntimeCapabilityStatus, AgentRuntimeConnection } from './contracts.ts';
 import {
     type AgentRuntimeCapability,
@@ -41,18 +42,6 @@ function clearAgentRuntimeEnvironmentOverride() {
 
 function toErrorMessage(error: unknown) {
     return error instanceof Error ? error.message : String(error);
-}
-
-function toSecureRuntimeUrl(baseUrl: string) {
-    const url = new URL(baseUrl);
-
-    if (url.protocol !== 'http:') {
-        return null;
-    }
-
-    url.protocol = 'https:';
-    const normalized = url.toString();
-    return normalized.endsWith('/') ? normalized.slice(0, -1) : normalized;
 }
 
 let currentAgentRuntimeUrl = getAgentRuntimeEnvironmentBaseUrl();
@@ -271,7 +260,9 @@ export async function loadAgentRuntimeConnection(input?: { refreshStatus?: boole
     if (environmentBaseUrl) {
         const checkedAt = new Date().toISOString();
         const environmentToken = getAgentRuntimeEnvironmentToken();
-        const environmentAuth = environmentToken ? { token: environmentToken } : undefined;
+        const environmentAuth = environmentToken
+            ? ({ kind: 'token', token: environmentToken } as const)
+            : undefined;
 
         if (!refreshStatus) {
             const record = getEnvironmentAgentRuntimeConnection();
@@ -518,7 +509,7 @@ export async function listAgentRuntimeConnections() {
     );
 }
 
-export { agentRuntimeConnectionId };
+export { agentRuntimeConnectionId, checkAgentRuntimeConnection };
 
 export async function isAgentRuntimeReachable() {
     return (await listReachableAgentRuntimeConnections()).length > 0;
@@ -618,41 +609,6 @@ export async function deleteAgentRuntimeConnection(input: { id: string }) {
 
     const active = await getDefaultAgentRuntimeConnection();
     currentAgentRuntimeUrl = getAgentRuntimeEnvironmentBaseUrl() ?? active?.baseUrl ?? null;
-}
-
-export async function checkAgentRuntimeConnection(input: { auth?: unknown; baseUrl: string }) {
-    const auth = input.auth ? parseAgentRuntimeConnectionAuth(input.auth) : null;
-    return await checkAgentRuntimeCapabilities({
-        authJson: auth ? JSON.stringify(auth) : null,
-        baseUrl: input.baseUrl,
-    });
-}
-
-async function checkAgentRuntimeCapabilities(input: { authJson?: null | string; baseUrl: string }) {
-    try {
-        const client = createAgentRuntimeClientForConnection(input);
-        const capabilities = await client.listCapabilities();
-        return {
-            baseUrl: input.baseUrl,
-            capabilities,
-        };
-    } catch (error) {
-        const secureBaseUrl = toSecureRuntimeUrl(input.baseUrl);
-
-        if (!secureBaseUrl) {
-            throw error;
-        }
-
-        const client = createAgentRuntimeClientForConnection({
-            ...input,
-            baseUrl: secureBaseUrl,
-        });
-        const capabilities = await client.listCapabilities();
-        return {
-            baseUrl: secureBaseUrl,
-            capabilities,
-        };
-    }
 }
 
 export async function markAgentRuntimeConnectionFailure(input: {
