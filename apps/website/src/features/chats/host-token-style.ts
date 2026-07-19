@@ -6,6 +6,10 @@
  * re-render the srcDoc when the app scheme flips.
  */
 
+// Reel Variable is small enough (~15 KiB) to carry into every frame as a
+// data URI; opaque-origin iframes cannot reach the app's font files.
+import reelVariableFontUrl from '../../assets/fonts/reel-variable.woff2?inline';
+
 // The agent-facing token vocabulary: colors, surfaces, type, and radii an
 // artifact page can reference. App-shell tokens (sidebar, topbar, chrome)
 // stay host-private.
@@ -69,7 +73,21 @@ const hostTokenNames = [
     '--radius-lg',
     '--radius-xl',
     '--radius-2xl',
+    '--label-amber-fg',
+    '--label-blue-fg',
+    '--label-gray-fg',
+    '--label-green-fg',
+    '--label-orange-fg',
+    '--label-pink-fg',
+    '--label-purple-fg',
+    '--label-red-fg',
+    '--label-teal-fg',
 ] as const;
+
+/** Display-face @font-face rules for sandboxed frames (the wordmark). */
+export function readHostFontFaceCss(): string {
+    return `@font-face{font-family:'Reel Variable';font-style:normal;font-weight:100 900;font-display:swap;src:url('${reelVariableFontUrl}') format('woff2');}`;
+}
 
 /** Resolved `:root` token block for the current app theme, or '' outside a browser. */
 export function readHostTokenCss(scheme: 'dark' | 'light'): string {
