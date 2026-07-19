@@ -105,6 +105,13 @@ export function Cron() {
         navigate(appRoutes.newAutomation);
     }, [navigate]);
 
+    const addSuggested = React.useCallback(
+        (suggestedAutomationId: string) => {
+            navigate(appRoutes.newAutomation, { state: { suggestedAutomationId } });
+        },
+        [navigate]
+    );
+
     const editJob = React.useCallback(
         (job: CronListItem) => {
             navigate(appRoutes.editAutomation(job.id));
@@ -126,6 +133,7 @@ export function Cron() {
                 filteredJobs={filteredJobs}
                 isMutating={isMutating}
                 jobsById={jobsById}
+                onAddSuggested={addSuggested}
                 onClearFilters={() => {
                     setSelection(defaultAutomationsSelection);
                     setQuery('');

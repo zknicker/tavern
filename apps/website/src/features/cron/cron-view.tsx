@@ -16,6 +16,8 @@ import { CronEmptyResults } from './cron-empty-results.tsx';
 import { CronFilterTabs } from './cron-filter-tabs.tsx';
 import { CronJobsList } from './cron-jobs-list.tsx';
 import type { CronListItem } from './cron-list-data.ts';
+import { suggestedAutomations } from './suggested-automations.ts';
+import { SuggestedAutomationsSection } from './suggested-automations-section.tsx';
 
 interface CronViewProps {
     actionErrorMessage: string | null;
@@ -29,6 +31,7 @@ interface CronViewProps {
     filteredJobs: CronListItem[];
     isMutating: boolean;
     jobsById: Map<string, CronListItem>;
+    onAddSuggested: (id: string) => void;
     onClearFilters: () => void;
     onCreate: () => void;
     onDelete: (job: CronListItem) => Promise<void>;
@@ -59,6 +62,7 @@ export function CronView({
     filteredJobs,
     isMutating,
     jobsById,
+    onAddSuggested,
     onCreate,
     onClearFilters,
     onDelete,
@@ -88,7 +92,14 @@ export function CronView({
         );
     }
 
-    if (cronJobs.length === 0) {
+    const existingJobNames = new Set(cronJobs.map((job) => job.name));
+    const hasRemainingSuggestions = suggestedAutomations.some(
+        (suggestion) => !existingJobNames.has(suggestion.name)
+    );
+
+    // With no jobs and no suggestions left, the classic empty state; when
+    // suggestions remain, they are the content and read as "start here".
+    if (cronJobs.length === 0 && !hasRemainingSuggestions) {
         return (
             <EmptyState
                 actionLabel="Create your first automation"
@@ -205,6 +216,11 @@ export function CronView({
                                             query={query}
                                         />
                                     )}
+
+                                    <SuggestedAutomationsSection
+                                        existingNames={existingJobNames}
+                                        onAdd={onAddSuggested}
+                                    />
                                 </section>
                             )}
                         </div>

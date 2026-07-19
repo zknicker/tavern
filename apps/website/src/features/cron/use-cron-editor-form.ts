@@ -9,6 +9,7 @@ interface UseCronEditorFormOptions {
     job: CronJob | null;
     onSubmit: (state: CronFormState) => Promise<void>;
     primaryAgentId?: string;
+    template?: Partial<CronFormState>;
 }
 
 interface CronEditorFormLike {
@@ -78,9 +79,9 @@ export function getCronEditorSubmitErrorMessage(error: unknown) {
     return null;
 }
 
-export function getCronEditorFormKey(job: CronJob | null, primaryAgentId = '') {
+export function getCronEditorFormKey(job: CronJob | null, primaryAgentId = '', templateId = '') {
     if (job === null) {
-        return `create:${primaryAgentId}`;
+        return `create:${primaryAgentId}:${templateId}`;
     }
 
     return JSON.stringify(createCronFormState(job, primaryAgentId));
@@ -90,11 +91,12 @@ export function useCronEditorForm({
     job,
     onSubmit,
     primaryAgentId = '',
+    template,
 }: UseCronEditorFormOptions) {
     const handleSubmit = React.useEffectEvent(onSubmit);
 
     return useForm({
-        defaultValues: createCronFormState(job, primaryAgentId),
+        defaultValues: createCronFormState(job, primaryAgentId, template),
         onSubmit: async ({ formApi, value }) => {
             clearSubmitError(formApi);
 
