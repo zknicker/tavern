@@ -185,7 +185,7 @@ function RuntimeUrlForm({ connection }: { connection: RuntimeConnection }) {
                     return;
                 }
                 connectMutation.mutate({
-                    auth: trimmedToken ? { token: trimmedToken } : undefined,
+                    auth: trimmedToken ? { kind: 'token', token: trimmedToken } : undefined,
                     baseUrl: trimmedBaseUrl,
                 });
             }}

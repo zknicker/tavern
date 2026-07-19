@@ -2,7 +2,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { trpc } from '../../lib/trpc.tsx';
 
 export interface ConnectAgentRuntimeInput {
-    auth?: { token: string };
+    auth?: { kind: 'token'; token: string };
     baseUrl: string;
 }
 

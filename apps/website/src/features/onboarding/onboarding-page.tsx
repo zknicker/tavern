@@ -84,7 +84,9 @@ function TavernRuntimeOnboardingForm({
             errorMessage.includes('Bearer token required') ||
             errorMessage.includes('Bearer token invalid'));
     const displayErrorMessage = isAuthError
-        ? 'The runtime token is missing or invalid. Run `tavern token` on the runtime host and paste the current token here.'
+        ? token.trim()
+            ? 'The runtime token is invalid. Run `tavern token` on the runtime host and paste the current token here.'
+            : 'Your signed-in account could not access this runtime. Ask the owner for an invite, then try again.'
         : errorMessage
           ? formatRuntimeConnectionError(errorMessage)
           : null;
@@ -114,7 +116,7 @@ function TavernRuntimeOnboardingForm({
                 }
                 const trimmedToken = token.trim();
                 connectMutation.mutate({
-                    auth: trimmedToken ? { token: trimmedToken } : undefined,
+                    auth: trimmedToken ? { kind: 'token', token: trimmedToken } : undefined,
                     baseUrl: baseUrl.trim(),
                 });
             }}
@@ -147,7 +149,9 @@ function TavernRuntimeOnboardingForm({
             </Field>
 
             <Field>
-                <FieldLabel htmlFor={runtimeTokenInputId}>Runtime token</FieldLabel>
+                <FieldLabel htmlFor={runtimeTokenInputId}>
+                    Owner runtime token (optional)
+                </FieldLabel>
                 <Input
                     className="select-text"
                     id={runtimeTokenInputId}
@@ -158,7 +162,8 @@ function TavernRuntimeOnboardingForm({
                     value={token}
                 />
                 <FieldDescription>
-                    Run <code>tavern token</code> on the runtime host to get this.
+                    Owners paste the token from <code>tavern token</code>. Invited members leave
+                    this blank.
                 </FieldDescription>
             </Field>
 

@@ -6,6 +6,7 @@ import { ThemeProvider } from './components/theme-provider.tsx';
 import { DesktopEditContextMenuProvider } from './components/ui/edit-context-menu.tsx';
 import { ToastProvider } from './components/ui/toast.tsx';
 import { DevAutoSignIn } from './features/auth/dev-auto-sign-in.tsx';
+import { SessionTokenKeepalive } from './features/auth/session-token-keepalive.tsx';
 import { SignInGate } from './features/auth/sign-in-gate.tsx';
 import { ChromeApp } from './features/shell/browser-shell/chrome-app.tsx';
 import { TavernClerkProvider } from './lib/clerk.tsx';
@@ -35,6 +36,7 @@ createRoot(rootElement).render(
                     <ToastProvider>
                         <TavernProviders>
                             <DevAutoSignIn />
+                            <SessionTokenKeepalive />
                             <DesktopEditContextMenuProvider>
                                 <SignInGate>{isChromeSurface ? <ChromeApp /> : <App />}</SignInGate>
                             </DesktopEditContextMenuProvider>
