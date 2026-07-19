@@ -38,12 +38,22 @@ export function parseCanvasHeight(html: string): number {
     return Math.min(maxCanvasHeight, Math.max(minCanvasHeight, height));
 }
 
-/** Sprite key for a face: the agent's name, lowercased and slug-safe. */
-export function agentFaceSlug(name: string): string {
-    return name
-        .trim()
-        .toLowerCase()
-        .replaceAll(/[^a-z0-9-]+/gu, '-');
+/**
+ * Forgiving sprite keys for a face: the exact lowercased name, a hyphen
+ * slug, and a bare alphanumeric collapse — so "Wren's Twin" matches
+ * `wren's twin`, `wren-s-twin`, and `wrenstwin` alike. Selectors also take
+ * the case-insensitive flag, so capitalization never matters.
+ */
+export function agentFaceAliases(name: string): string[] {
+    const exact = name.trim().toLowerCase().replaceAll(/\s+/gu, ' ');
+    const slug = exact.replaceAll(/[^a-z0-9-]+/gu, '-');
+    const collapsed = exact.replaceAll(/[^a-z0-9]+/gu, '');
+
+    return [...new Set([exact, slug, collapsed])].filter((alias) => alias.length > 0);
+}
+
+function cssAttributeString(value: string): string {
+    return `"${value.replaceAll('\\', '\\\\').replaceAll('"', '\\"')}"`;
 }
 
 /**
@@ -51,20 +61,22 @@ export function agentFaceSlug(name: string): string {
  * `<span class="tavern-face" data-agent="otto"></span>`. Sprites are the
  * live AgentFace render serialized to data URIs, so the roster's current
  * characters, colors, and theme ink always win over generation-time state.
+ * All styling lives on the matched selectors, so a span naming an unknown
+ * agent collapses to nothing instead of leaving an empty gap.
  */
-export function buildFaceSpriteCss(sprites: { slug: string; svg: string }[]): string {
-    if (sprites.length === 0) {
-        return '';
-    }
+export function buildFaceSpriteCss(sprites: { aliases: string[]; svg: string }[]): string {
+    const declarations =
+        'display:inline-block;width:1.15em;height:1.15em;background-size:contain;background-repeat:no-repeat;background-position:center;vertical-align:-0.18em;';
+    const rules = sprites.flatMap((sprite) => {
+        const image = `background-image:url("data:image/svg+xml,${encodeURIComponent(sprite.svg)}")`;
 
-    const base =
-        '.tavern-face{display:inline-block;width:1.15em;height:1.15em;background-size:contain;background-repeat:no-repeat;background-position:center;vertical-align:-0.18em}';
-    const rules = sprites.map(
-        (sprite) =>
-            `.tavern-face[data-agent="${sprite.slug}"]{background-image:url("data:image/svg+xml,${encodeURIComponent(sprite.svg)}")}`
-    );
+        return sprite.aliases.map(
+            (alias) =>
+                `.tavern-face[data-agent=${cssAttributeString(alias)} i]{${declarations}${image}}`
+        );
+    });
 
-    return `${base}${rules.join('')}`;
+    return rules.join('');
 }
 
 export function HomeCanvas({ agents }: { agents: Agent[] }) {
@@ -107,11 +119,13 @@ export function HomeCanvas({ agents }: { agents: Agent[] }) {
         // XMLSerializer (not outerHTML) so the markup carries the SVG
         // namespace a standalone data-URI image requires.
         const serializer = new XMLSerializer();
-        const sprites = [...container.querySelectorAll('[data-face-slug]')].flatMap((holder) => {
+        const sprites = [...container.querySelectorAll('[data-face-name]')].flatMap((holder) => {
             const svg = holder.querySelector('svg');
-            const slug = holder.getAttribute('data-face-slug');
+            const name = holder.getAttribute('data-face-name');
 
-            return svg && slug ? [{ slug, svg: serializer.serializeToString(svg) }] : [];
+            return svg && name
+                ? [{ aliases: agentFaceAliases(name), svg: serializer.serializeToString(svg) }]
+                : [];
         });
         setFaceCss(buildFaceSpriteCss(sprites));
     }, [agents, scheme]);
@@ -134,7 +148,7 @@ export function HomeCanvas({ agents }: { agents: Agent[] }) {
                 ref={spritesRef}
             >
                 {agents.map((agent) => (
-                    <div data-face-slug={agentFaceSlug(agent.name)} key={agent.id}>
+                    <div data-face-name={agent.name} key={agent.id}>
                         <AgentFace
                             animate={false}
                             dark={dark}

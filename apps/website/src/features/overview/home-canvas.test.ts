@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { agentFaceSlug, buildFaceSpriteCss, parseCanvasHeight } from './home-canvas.tsx';
+import { agentFaceAliases, buildFaceSpriteCss, parseCanvasHeight } from './home-canvas.tsx';
 
 describe('parseCanvasHeight', () => {
     test('reads the height meta tag', () => {
@@ -19,21 +19,33 @@ describe('parseCanvasHeight', () => {
     });
 });
 
-describe('agentFaceSlug', () => {
-    test('lowercases and slug-safes names', () => {
-        expect(agentFaceSlug('Otto')).toBe('otto');
-        expect(agentFaceSlug("  Wren's Twin ")).toBe('wren-s-twin');
+describe('agentFaceAliases', () => {
+    test('covers exact, slug, and collapsed forms', () => {
+        expect(agentFaceAliases('Otto')).toEqual(['otto']);
+        expect(agentFaceAliases("  Wren's  Twin ")).toEqual([
+            "wren's twin",
+            'wren-s-twin',
+            'wrenstwin',
+        ]);
     });
 });
 
 describe('buildFaceSpriteCss', () => {
-    test('emits the base class plus one data-URI rule per sprite', () => {
+    test('emits a case-insensitive, fully-styled rule per alias', () => {
         const css = buildFaceSpriteCss([
-            { slug: 'otto', svg: '<svg viewBox="0 0 8 8"><path d="M0 0h8"/></svg>' },
+            {
+                aliases: agentFaceAliases("Wren's Twin"),
+                svg: '<svg viewBox="0 0 8 8"><path d="M0 0h8"/></svg>',
+            },
         ]);
 
-        expect(css).toContain('.tavern-face{');
-        expect(css).toContain('.tavern-face[data-agent="otto"]');
+        expect(css).toContain('.tavern-face[data-agent="wren\'s twin" i]');
+        expect(css).toContain('.tavern-face[data-agent="wren-s-twin" i]');
+        expect(css).toContain('.tavern-face[data-agent="wrenstwin" i]');
+        // Every rule carries its own sizing, so unknown agents collapse to
+        // nothing instead of an empty gap.
+        expect(css).not.toContain('.tavern-face{');
+        expect(css).toContain('display:inline-block;width:1.15em');
         expect(css).toContain('url("data:image/svg+xml,');
         // The markup is URI-encoded so quotes and hashes stay CSS-safe.
         expect(css).not.toContain('viewBox="0');
