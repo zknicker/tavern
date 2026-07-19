@@ -16,6 +16,7 @@ export const appRoutes = {
     editAutomation(jobId: string) {
         return `/automations/edit/${encodeURIComponent(jobId)}`;
     },
+    designBrief: '/design/brief',
     workspace: '/workspace',
     wiki: '/wiki',
     settings: '/settings',

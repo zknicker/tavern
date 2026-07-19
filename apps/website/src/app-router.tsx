@@ -75,6 +75,14 @@ export function createAppRouter() {
                                     ),
                                 },
                                 {
+                                    // Dev hack page for home-brief header treatments.
+                                    path: 'design/brief',
+                                    lazy: lazyRoute(
+                                        () => import('./routes/app/brief-variations-page.tsx'),
+                                        'BriefVariationsPage'
+                                    ),
+                                },
+                                {
                                     path: 'stats',
                                     element: <Navigate replace to={appRoutes.settingsStats} />,
                                 },
