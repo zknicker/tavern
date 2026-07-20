@@ -115,7 +115,7 @@ _Avoid_: Tavern tool, Plugin action, MCP server
 
 **Tavern host tool**:
 A Tool implemented by Tavern Runtime and passed to the Agent executor, such as Memory reads, Plugin
-actions, Rich Response creation, or other Tavern-owned product actions.
+actions, chat sends, or other Tavern-owned product actions.
 _Avoid_: Harness-native tool, raw Runtime route, Plugin setting
 
 **MCP server**:
@@ -157,33 +157,34 @@ _Avoid_: Assigned skill, enabled tool, marketplace item
 An agent setting that references installed skills the agent should receive during turns.
 _Avoid_: Skill install, skill discovery, global enablement
 
-**Rich Response**:
-One assistant-authored, app-rendered UI island attached to an assistant response.
-_Avoid_: Widget, UI block, widget kit, AG-UI component, ChatKit widget
+**Widget**:
+One app-native typed UI component rendered in chat from a `widget:<name>` tagged fence holding
+validated JSON props (ADR 0010).
+_Avoid_: Rich Response, UI block, AG-UI component, ChatKit widget
 
-**Rich Response activity**:
-The durable response activity kind that stores a Rich Response in Tavern chat history.
-_Avoid_: Widget activity, custom activity with UI metadata
+**Widget catalog**:
+The closed Tavern-owned set of widget names and prop schemas an agent may author, taught through
+the visuals skill.
+_Avoid_: Rich Response Catalog, plugin registry, arbitrary component set
 
-**Rich Response Spec**:
-The validated json-render document that describes a Rich Response's state, layout, and catalog
-components.
-_Avoid_: Raw JSON, HTML, JSX, component tree
+**Visual**:
+One bespoke model-authored HTML/SVG graphic rendered from a `visual` fence in a sandboxed inline
+frame styled with Tavern theme tokens.
+_Avoid_: Rich Response, custom widget, raw HTML block
 
-**Rich Response Catalog**:
-The Tavern-owned vocabulary of components and prop schemas an agent may use inside a Rich Response.
-_Avoid_: Plugin registry, arbitrary component set, model component library
+**Widget activity**:
+The durable response activity kind that stores a rendered Widget or Visual in Tavern chat history.
+_Avoid_: Rich Response activity, custom activity with UI metadata
 
-**Rich Response Component**:
-A single allowed component in the Rich Response Catalog, rendered by Tavern from validated props.
-Components may be owned by Tavern core or by a first-party Plugin folder, but they are registered
-through Tavern's typed catalog and renderer.
-_Avoid_: React component, model component, widget tool
+**Visuals skill**:
+The seeded skill that owns rendering guidance for agents: when to render, fence contracts, the
+widget catalog, and the design system (ADR 0012).
+_Avoid_: Prompt design section, page-design skill, per-medium design skills
 
 **Plugin**:
 A Tavern-managed, manifest-declared capability bundle for an external system. A Plugin owns its
 configuration, status, runtime actions, agent-facing skills and tools, normalized view models, and
-any related Rich Response Components. In v1, Plugins are first-party and compiled into Tavern rather
+any related Widgets. In v1, Plugins are first-party and compiled into Tavern rather
 than user-installed packages; user-provided executable integrations belong behind MCP servers.
 _Avoid_: Skill, connector, CLI dependency, user-installed package
 
@@ -203,7 +204,7 @@ masked in API reads.
 _Avoid_: Environment variable, executor home file, checked-in config
 
 **Plugin action**:
-A Runtime-owned operation exposed by a Plugin to Tavern surfaces such as Rich Responses,
+A Runtime-owned operation exposed by a Plugin to Tavern surfaces such as Widgets,
 agent tools, or settings.
 _Avoid_: CLI command, skill tool, raw upstream API call
 
@@ -235,12 +236,12 @@ updated for the user to inspect.
 _Avoid_: Tavern resource, tool result, attachment
 
 **Host adapter**:
-A small adapter file in Runtime, Server, or Website that connects a Rich Response contract to that
+A small adapter file in Runtime, Server, or Website that connects a Widget contract to that
 layer's existing event, projection, or rendering pipeline.
-_Avoid_: Rich Response implementation, plugin loader
+_Avoid_: Widget implementation, plugin loader
 
 **Surface component**:
-A normal Tavern App React component used to render validated rich-response props with the app's shared
+A normal Tavern App React component used to render validated Widget props with the app's shared
 visual system.
 _Avoid_: Model component, widget primitive
 
@@ -283,9 +284,9 @@ moves, deletes, backlinks, freshness, and status.
 _Avoid_: Vault API, Memory browser, ingestion system, maintenance job
 
 **Charts**:
-The Rich Response Component family for agent-authored chart displays.
+The Widget family for agent-authored chart displays.
 _Avoid_: Chart kit
 
 **Calendar displays**:
-The Rich Response Component family for agent-authored calendar event and calendar day displays.
+The Widget family for agent-authored calendar event and calendar day displays.
 _Avoid_: Calendar widget tools

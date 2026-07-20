@@ -27,9 +27,9 @@ iterate on, and big surfaces stay out of the chat column.
   `--muted-foreground`, `--radius-lg`, ...) resolved for the current app
   scheme, so a token-styled page wears the Tavern look in light and dark.
   Pages should use the tokens with fallbacks and must not depend on any other
-  host styling. The seeded `page-design` skill owns the authoring guidance —
-  the full token vocabulary, layout discipline, and self-containment rules —
-  and the always-on prompt entry only routes to it.
+  host styling. The seeded `visuals` skill owns the authoring guidance —
+  the full token vocabulary, page layout discipline, and self-containment
+  rules — and the prompt only routes to it (ADR 0012).
 - Rendering is live file state — later edits or deletion change what the card
   opens, the same replay caveat as `html-preview`.
 

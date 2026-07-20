@@ -54,8 +54,8 @@ registration), with optional info-string text as the title:
 - **CDN allowlist.** One pinned external source: Chart.js
   `4.5.1` via jsdelivr (`visualChartJsUrl`). Pinning the exact version in
   the CSP keeps the supply-chain surface a single immutable artifact; a
-  version bump is a deliberate change that updates the CSP and the
-  visuals-charts skill together. The skills steer toward inline SVG first, so
+  version bump is a deliberate change that updates the CSP and the visuals
+  skill together. The skill steers toward inline SVG first, so
   the CDN is an escape hatch for genuinely interactive charts, and an
   offline app degrades to script-less markup.
 - **Theming.** The iframe cannot read app styles, so the host snapshots a
@@ -71,17 +71,17 @@ registration), with optional info-string text as the title:
   No pane promotion in v1, and no bridge of any kind (no sendPrompt, no
   postMessage API for model content) — interactivity is within-iframe over
   embedded data.
-- **Taste layer.** Design-guidance skills — seeded `visuals-charts`,
-  `visuals-diagrams`, and `page-design` for full self-contained pages
-  (artifact pane pages, html-preview files) — encode DESIGN.md-derived rules
-  (theme token contract, categorical palette with stable roles, two font
-  weights, sentence case, hairline borders, no gradients, "text never wears
-  the series color", streaming order, sandbox constraints). The managed
-  prompt teaches the fence and routes: load the matching design skill before
-  drawing or authoring. Always-on prompt entries carry only capability
-  discovery and the invocation contract; all quality guidance, including the
-  token enumeration, lives in the skills. Skills load on demand, not as
-  permanent prompt budget.
+- **Taste layer.** One seeded `visuals` skill owns everything the agent
+  renders — when to render, the fence contracts, the core widget catalog
+  signatures, and the full design system (`references/design-system.md`,
+  `references/icons.md`, curated icon assets), all derived from DESIGN.md
+  and the theme tokens. The managed prompt keeps a three-line pointer: the
+  surfaces exist and the skill is a mandatory read before emitting any
+  fence (ADR 0012). Plugin widgets are taught by their Plugin's skill via
+  manifest `skillGuidance`, gated on the plugin grant. Skill sources are
+  markdown files under `apps/runtime/src/agent-engine/visuals-skill/`;
+  quality is tuned with the design battery
+  (`bun run eval:design`, `scripts/design-battery/RUBRIC.md`).
 
 ## Widgets
 
