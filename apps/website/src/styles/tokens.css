@@ -72,6 +72,8 @@
 
     --color-muted: var(--muted);
     --color-muted-foreground: var(--muted-foreground);
+    --color-foreground-tertiary: var(--foreground-tertiary);
+    --color-foreground-quaternary: var(--foreground-quaternary);
 
     --color-subtle: var(--subtle);
 
@@ -111,6 +113,11 @@
     --color-info: var(--info);
     --color-info-foreground: var(--info-foreground);
     --color-info-bg: var(--info-bg);
+    --color-chart-1: var(--chart-1);
+    --color-chart-2: var(--chart-2);
+    --color-chart-3: var(--chart-3);
+    --color-chart-4: var(--chart-4);
+    --color-chart-5: var(--chart-5);
     --color-clarification: var(--clarification);
     --color-clarification-foreground: var(--clarification-foreground);
     --color-clarification-bg: var(--clarification-bg);
@@ -311,6 +318,22 @@
             var(--color-white)
         );
 
+        /* Text tiers 3-4 below --foreground and --muted-foreground: metadata,
+           disabled states, grid/baseline chrome. Derived from vars, so the
+           light block inherits correct values without redefining. */
+        --foreground-tertiary: color-mix(in srgb, var(--muted-foreground) 74%, var(--background));
+        --foreground-quaternary: color-mix(in srgb, var(--muted-foreground) 48%, var(--background));
+
+        /* Motion tokens: durations + easings for small purposeful motion.
+           --ease-out matches the app's float-up curve. */
+        --t-micro: 80ms;
+        --t-fast: 120ms;
+        --t-normal: 200ms;
+        --t-slow: 300ms;
+        --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+        --ease-in: cubic-bezier(0.55, 0.06, 0.68, 0.19);
+        --ease-standard: cubic-bezier(0.45, 0.05, 0.55, 0.95);
+
         --accent: --alpha(var(--color-white) / 4%);
         --accent-foreground: var(--color-stone-100);
         --hover: var(--nav-hover);
@@ -416,6 +439,16 @@
         --sender-6: var(--color-teal-400);
         --sender-7: var(--color-pink-400);
         --sender-8: var(--color-cyan-300);
+
+        /* Categorical chart series, in assignment order: blue, red, green,
+           purple, neutral. Shared by kit charts and generative visuals.
+           Positive-vs-negative pairs use chart-1 vs chart-2; baselines and
+           "no data" use chart-5 or --foreground-quaternary. */
+        --chart-1: var(--color-sky-400);
+        --chart-2: var(--color-red-400);
+        --chart-3: var(--color-emerald-400);
+        --chart-4: var(--color-violet-400);
+        --chart-5: var(--color-stone-400);
 
         /* Task label palette. Each color has a subtle chip fill (-bg) and a
            legible foreground (-fg) reused for the dot/swatch. Nine names match
@@ -604,6 +637,14 @@
         --sender-6: var(--color-teal-700);
         --sender-7: var(--color-pink-700);
         --sender-8: var(--color-cyan-700);
+
+        /* Categorical chart series (light): one step deeper so marks read
+           against white cards. Same assignment order as dark. */
+        --chart-1: var(--color-sky-600);
+        --chart-2: var(--color-red-600);
+        --chart-3: var(--color-emerald-600);
+        --chart-4: var(--color-violet-600);
+        --chart-5: var(--color-stone-500);
 
         /* Task label palette (light). Darker foreground on a lighter chip fill
            keeps chips legible against white surfaces. */
