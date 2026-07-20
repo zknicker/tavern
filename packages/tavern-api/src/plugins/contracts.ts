@@ -3,7 +3,6 @@ import {
     agentRuntimeCapabilityHealthIdSchema,
     agentRuntimePluginIdSchema,
 } from '../runtime/contracts.ts';
-import { widgetNameSchema } from '../widgets/contracts.ts';
 
 const pluginManifestNameSchema = z.string().trim().min(1).max(128);
 
@@ -27,12 +26,6 @@ export const tavernPluginToolGroupManifestSchema = z
         label: pluginManifestNameSchema,
         readOnly: z.boolean().default(true),
         tools: z.array(pluginManifestNameSchema),
-    })
-    .strict();
-
-export const tavernPluginWidgetManifestSchema = z
-    .object({
-        name: widgetNameSchema,
     })
     .strict();
 
@@ -68,7 +61,6 @@ export const tavernPluginManifestSchema = z
         healthCapabilities: z.array(agentRuntimeCapabilityHealthIdSchema),
         auth: tavernPluginOAuthManifestSchema.nullable().default(null),
         id: agentRuntimePluginIdSchema,
-        widgets: z.array(tavernPluginWidgetManifestSchema),
         secrets: z.array(tavernPluginSecretManifestSchema),
         services: z.array(tavernPluginServiceManifestSchema).min(1),
         settings: z.array(pluginManifestNameSchema),

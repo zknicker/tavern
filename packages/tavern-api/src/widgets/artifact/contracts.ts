@@ -7,8 +7,7 @@ import { workspaceFilePathSchema } from '../workspace-path.ts';
  * transcript renders a compact card; opening it renders the page in the
  * artifact pane's sandboxed HTML preview with the app's theme tokens injected.
  * Authored as a bare `artifact` fence — see widgetFenceLabel in
- * ../contracts.ts. Path confinement mirrors html-preview
- * (see workspace-path.ts).
+ * ../contracts.ts. Path confinement lives in workspace-path.ts.
  */
 
 export const widgetArtifactPropsSchema = z

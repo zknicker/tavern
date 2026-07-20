@@ -46,5 +46,4 @@ export const googlePluginManifest = tavernPluginManifestSchema.parse({
     ],
     settings: [],
     version: '1.0.0',
-    widgets: [],
 });

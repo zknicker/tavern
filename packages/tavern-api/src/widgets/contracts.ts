@@ -1,30 +1,13 @@
 import * as z from 'zod';
 import { widgetArtifactPropsSchema } from './artifact/contracts.ts';
-import {
-    widgetCalendarDayPropsSchema,
-    widgetCalendarEventPropsSchema,
-} from './calendar/contracts.ts';
-import {
-    widgetBarChartPropsSchema,
-    widgetComposedChartPropsSchema,
-    widgetLineChartPropsSchema,
-} from './charts/contracts.ts';
-import { widgetHtmlPreviewPropsSchema } from './html-preview/contracts.ts';
-import { widgetMerchBaseSalesChartPropsSchema } from './merchbase/contracts.ts';
 import { visualFallbackText, widgetVisualPropsSchema } from './visual/contracts.ts';
 
-export const widgetNameSchema = z.enum([
-    'table',
-    'bar-chart',
-    'line-chart',
-    'composed-chart',
-    'calendar-event',
-    'calendar-day',
-    'html-preview',
-    'artifact',
-    'merchbase-sales-chart',
-    'visual',
-]);
+// The rendering spec is visuals-only (ADR 0012 → PRD-86 catalog retirement):
+// bespoke `visual` fences in chat and the durable `artifact` tier in the
+// pane. Retired catalog widgets (tables, charts, calendars, html-preview,
+// plugin widgets) no longer parse; their stored activity replays as the
+// fallback text card.
+export const widgetNameSchema = z.enum(['artifact', 'visual']);
 
 export type WidgetName = z.infer<typeof widgetNameSchema>;
 
@@ -36,58 +19,8 @@ export const widgetFallbackSchema = z
     })
     .strict();
 
-const tableValueSchema = z.union([z.string(), z.number(), z.boolean(), z.null()]);
-
-const widgetTableColumnSchema = z
-    .object({
-        align: z.enum(['left', 'right']).optional(),
-        key: z.string().trim().min(1).max(80),
-        label: z.string().trim().min(1).max(120),
-    })
-    .strict();
-
-export const widgetTableCanonicalPropsSchema = z
-    .object({
-        columns: z.array(widgetTableColumnSchema).min(1).max(8),
-        rows: z.array(z.record(z.string(), tableValueSchema)).max(50),
-    })
-    .strict();
-
-const widgetTableMatrixPropsSchema = z
-    .object({
-        columns: z.array(z.string().trim().min(1).max(120)).min(1).max(8),
-        rows: z.array(z.array(tableValueSchema).max(8)).max(50),
-    })
-    .strict()
-    .transform((props) => {
-        const columns = props.columns.map((label, index) => ({
-            key: `col_${index + 1}`,
-            label,
-        }));
-
-        return {
-            columns,
-            rows: props.rows.map((row) =>
-                Object.fromEntries(columns.map((column, index) => [column.key, row[index] ?? null]))
-            ),
-        };
-    });
-
-export const widgetTablePropsSchema = z.union([
-    widgetTableCanonicalPropsSchema,
-    widgetTableMatrixPropsSchema,
-]);
-
 export const widgetPropsSchemasByName = {
-    'bar-chart': widgetBarChartPropsSchema,
-    'calendar-day': widgetCalendarDayPropsSchema,
-    'calendar-event': widgetCalendarEventPropsSchema,
-    'composed-chart': widgetComposedChartPropsSchema,
-    'html-preview': widgetHtmlPreviewPropsSchema,
-    'line-chart': widgetLineChartPropsSchema,
-    'merchbase-sales-chart': widgetMerchBaseSalesChartPropsSchema,
     artifact: widgetArtifactPropsSchema,
-    table: widgetTablePropsSchema,
     visual: widgetVisualPropsSchema,
 } satisfies Record<WidgetName, z.ZodType>;
 
@@ -106,22 +39,13 @@ const widgetRenderInputEntry = <Name extends WidgetName>(name: Name) =>
         .strict();
 
 export const widgetRenderInputSchema = z.discriminatedUnion('component', [
-    widgetRenderInputEntry('table'),
-    widgetRenderInputEntry('bar-chart'),
-    widgetRenderInputEntry('line-chart'),
-    widgetRenderInputEntry('composed-chart'),
-    widgetRenderInputEntry('calendar-event'),
-    widgetRenderInputEntry('calendar-day'),
-    widgetRenderInputEntry('html-preview'),
     widgetRenderInputEntry('artifact'),
-    widgetRenderInputEntry('merchbase-sales-chart'),
     widgetRenderInputEntry('visual'),
 ]);
 
 export type WidgetRenderInput = z.infer<typeof widgetRenderInputSchema>;
 export type WidgetFallback = z.infer<typeof widgetFallbackSchema>;
 export type WidgetTarget = z.infer<typeof widgetTargetSchema>;
-export type WidgetTableProps = z.output<typeof widgetTablePropsSchema>;
 
 export interface ParsedWidgetPayload {
     fallbackText: string;
@@ -130,8 +54,8 @@ export interface ParsedWidgetPayload {
 }
 
 /**
- * Validate one widget fence payload (already JSON-parsed) against the widget's
- * props schema and produce the durable render envelope.
+ * Validate one fence payload (already JSON-parsed) against the props schema
+ * and produce the durable render envelope.
  */
 export function parseWidgetPayload(name: string, payload: unknown): ParsedWidgetPayload {
     const parsedName = widgetNameSchema.safeParse(name);
@@ -171,70 +95,23 @@ export function widgetFallbackText(name: WidgetName, props: unknown): string {
         return title.slice(0, 500);
     }
 
-    if (name === 'table') {
-        const columns = Array.isArray(record.columns) ? record.columns : [];
-        const labels = columns
-            .map((column) =>
-                typeof column === 'string'
-                    ? column
-                    : ((column as { label?: unknown })?.label ?? null)
-            )
-            .filter((label): label is string => typeof label === 'string' && label.length > 0);
-        return labels.length > 0 ? `Table: ${labels.join(', ')}`.slice(0, 500) : 'Table';
-    }
-
-    if (name === 'calendar-day') {
-        const date = typeof record.date === 'string' ? record.date : null;
-        return date ? `Agenda for ${date}` : 'Agenda';
-    }
-
-    if (name === 'html-preview') {
-        const path = typeof record.path === 'string' ? record.path.trim() : '';
-        return path ? `HTML preview: ${path}`.slice(0, 500) : 'HTML preview';
-    }
-
     if (name === 'artifact') {
         const path = typeof record.path === 'string' ? record.path.trim() : '';
         return path ? `Artifact: ${path}`.slice(0, 500) : 'Artifact';
     }
 
-    if (name === 'visual') {
-        return visualFallbackText(record);
-    }
-
-    return widgetDisplayName(name);
+    return visualFallbackText(record);
 }
 
 export function widgetDisplayName(name: WidgetName): string {
-    switch (name) {
-        case 'table':
-            return 'Table';
-        case 'bar-chart':
-            return 'Bar chart';
-        case 'line-chart':
-            return 'Line chart';
-        case 'composed-chart':
-            return 'Chart';
-        case 'calendar-event':
-            return 'Calendar event';
-        case 'calendar-day':
-            return 'Agenda';
-        case 'html-preview':
-            return 'HTML preview';
-        case 'artifact':
-            return 'Artifact';
-        case 'merchbase-sales-chart':
-            return 'MerchBase sales chart';
-        case 'visual':
-            return 'Visual';
-    }
+    return name === 'artifact' ? 'Artifact' : 'Visual';
 }
 
 /**
- * The fence language an agent writes for a widget. Widgets use the legacy
- * `widget:<name>` prefix; the artifact tier reads in the visuals-vs-artifacts
- * vocabulary as a bare `artifact` fence.
+ * The fence language an agent writes. The artifact tier is a bare `artifact`
+ * fence; the visual tier is a bare `visual` fence (parsed separately — its
+ * body is raw HTML, not JSON).
  */
 export function widgetFenceLabel(name: WidgetName): string {
-    return name === 'artifact' ? 'artifact' : `widget:${name}`;
+    return name;
 }

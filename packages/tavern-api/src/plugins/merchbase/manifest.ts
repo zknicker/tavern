@@ -30,15 +30,10 @@ export const merchbasePluginManifest = tavernPluginManifestSchema.parse({
             healthCapabilities: [merchbasePluginHealthCapabilityId],
             id: 'merchbase',
             scopes: [],
-            skillGuidance: `## Sales chart widget
+            skillGuidance: `## Presenting sales data
 
-\`widget:merchbase-sales-chart\` is the preferred way to present MerchBase sales trends over a date range. It fetches live MerchBase sales, renders sales as bars and royalties as a line, includes a date range selector, and shows hover-driven sold/cancelled/returned/royalties stats for the active day. Missing days in the range render as zero-sales buckets, including the current endDate.
-
-\`\`\`widget:merchbase-sales-chart
-{"title"?:string,"endDate"?:"YYYY-MM-DD","rangeDays"?:number,"asin"?:string,"color"?:string,"facet"?:string,"facetName"?:string,"fit"?:string,"marketplace"?:string,"productType"?:string}
-\`\`\`
-
-Default to the 10-day trend for today/current sales requests; omit rangeDays or use 10 unless the user explicitly asks for a one-day chart. Use endDate to anchor the active day. The fence body must be one valid JSON object (the signature above shows prop types, not literal JSON).`,
+Present MerchBase results as inline visuals (read the visuals skill first): fetch the data with the tools above, then draw it — daily series as a line or bar chart, breakdowns as compact bar rows, summaries as stat tiles. Embed the fetched numbers in the visual at generation time; visuals cannot fetch live data themselves. Daily rows include explicit zero-sales days: a zero means no sales, not missing data.
+`,
             skills: [{ name: 'merchbase', runtimeSource: 'tavern-plugin:merchbase' }],
             toolGroups: [
                 {
@@ -68,5 +63,4 @@ Default to the 10-day trend for today/current sales requests; omit rangeDays or 
     ],
     settings: ['baseUrl', 'defaultAccount', 'defaultMarketplace'],
     version: '1.0.0',
-    widgets: [{ name: 'merchbase-sales-chart' }],
 });
