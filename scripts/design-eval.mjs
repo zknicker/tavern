@@ -190,11 +190,10 @@ ${sections.join('\n')}
 }
 
 async function currentModelRef(agentId) {
-    const data = await trpc('agent.list');
-    const match = (data?.agents ?? []).find((candidate) => candidate.id === agentId);
-    const model = match?.modelName;
-    assert(model?.provider && model?.model, `agent ${agentId} has no resolved model`);
-    return `${model.provider}/${model.model}`;
+    const data = await trpc('model.list');
+    const match = (data?.agents ?? []).find((candidate) => candidate.agentId === agentId);
+    assert(match?.modelRef, `agent ${agentId} has no resolved model`);
+    return match.modelRef;
 }
 
 function flagValue(name) {
