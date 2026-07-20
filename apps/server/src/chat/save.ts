@@ -115,6 +115,7 @@ export async function updateTavernChat(
     await updateRuntimeTavernChat({
         actingUserId,
         agentIds: binding.agentIds,
+        description: parsed.description === undefined ? undefined : parsed.description || null,
         displayName: parsed.displayName,
         id: parsed.chatId,
     });

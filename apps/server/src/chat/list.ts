@@ -427,6 +427,7 @@ export async function listChatDetails(options?: {
                 canSend,
                 conversationKind,
                 createdAt: agentRuntimeChatEntry?.record.createdAt ?? null,
+                description: readRuntimeChatDescription(agentRuntimeChat),
                 displayName,
                 externalId: identity.externalId,
                 framework: identity.type === 'tavern' ? 'tavern' : 'agentRuntime',
@@ -471,6 +472,7 @@ function toChatListItem(chat: Chat) {
         canSend: chat.canSend,
         conversationKind: chat.conversationKind,
         createdAt: chat.createdAt,
+        description: chat.description,
         displayName: chat.displayName,
         framework: chat.framework,
         id: chat.id,
@@ -661,6 +663,16 @@ function readRuntimeChatTabAppearance(runtimeChat: ParsedRuntimeChat | null) {
             ? tabAppearance.color
             : null;
     return { color };
+}
+
+function readRuntimeChatDescription(runtimeChat: ParsedRuntimeChat | null) {
+    const tavern =
+        typeof runtimeChat?.metadata.tavern === 'object' && runtimeChat.metadata.tavern !== null
+            ? (runtimeChat.metadata.tavern as Record<string, unknown>)
+            : null;
+    const description = tavern?.description;
+
+    return typeof description === 'string' && description.trim() ? description.trim() : null;
 }
 
 function readRuntimeChatSystemPrompt(runtimeChat: ParsedRuntimeChat | null) {

@@ -64,6 +64,8 @@ export const chatTabAppearanceSchema = z.object({
 
 export const chatSystemPromptSchema = z.string().trim().max(8000).nullable();
 
+export const chatDescriptionSchema = z.string().trim().max(500).nullable();
+
 export const chatSourceSchema = z.object({
     kind: z.enum(chatSourceKinds),
     label: z.string().trim().min(1),
@@ -76,6 +78,7 @@ export const chatSchema = z.object({
     canSend: z.boolean(),
     conversationKind: chatConversationKindSchema,
     createdAt: z.string().nullable(),
+    description: chatDescriptionSchema,
     displayName: z.string(),
     externalId: z.string().nullable(),
     framework: z.string(),
@@ -107,6 +110,7 @@ export const chatListItemSchema = chatSchema.pick({
     canSend: true,
     conversationKind: true,
     createdAt: true,
+    description: true,
     displayName: true,
     framework: true,
     id: true,
@@ -159,6 +163,8 @@ export const startChatInputSchema = z
 export const updateChatInputSchema = z.object({
     agentIds: z.array(z.string().trim().min(1)).min(1),
     chatId: z.string().trim().min(1),
+    // Omitted preserves the stored description; empty or null clears it.
+    description: z.string().trim().max(500).nullish(),
     displayName: z.string().trim().min(1).max(120),
 });
 

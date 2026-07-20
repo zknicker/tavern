@@ -24,6 +24,7 @@ export interface RuntimeChatRecord {
 interface TavernChatMetadata {
     agentIds: string[];
     archived: boolean;
+    description: string | null;
     displayName: string;
     displayNameSource: TavernChatDisplayNameSource;
     groupSystemPrompt: string | null;
@@ -121,6 +122,7 @@ export async function getRuntimeChatRecord(
 export async function createRuntimeTavernChat(input: {
     actingUserId?: string;
     agentIds: string[];
+    description?: string | null;
     displayName: string;
     displayNameSource: TavernChatDisplayNameSource;
     id: string;
@@ -132,6 +134,7 @@ export async function createRuntimeTavernChat(input: {
         metadata: buildRuntimeTavernChatMetadata({
             agentIds: input.agentIds,
             archived: false,
+            description: input.description ?? null,
             displayName: input.displayName,
             displayNameSource: input.displayNameSource,
             groupSystemPrompt: null,
@@ -148,6 +151,7 @@ export async function updateRuntimeTavernChat(input: {
     actingUserId?: string;
     agentIds: string[];
     archived?: boolean;
+    description?: string | null;
     displayName: string;
     id: string;
     kind?: TavernChat['kind'];
@@ -163,6 +167,10 @@ export async function updateRuntimeTavernChat(input: {
         metadata: buildRuntimeTavernChatMetadata({
             agentIds: input.agentIds,
             archived,
+            description:
+                input.description === undefined
+                    ? (metadata?.description ?? null)
+                    : input.description,
             displayName: input.displayName,
             displayNameSource: 'explicit',
             groupSystemPrompt: metadata?.groupSystemPrompt ?? null,
@@ -192,6 +200,7 @@ export async function setRuntimeTavernChatArchived(chatId: string, archived: boo
         metadata: buildRuntimeTavernChatMetadata({
             agentIds: metadata.agentIds,
             archived,
+            description: metadata.description,
             displayName: metadata.displayName,
             displayNameSource: metadata.displayNameSource,
             groupSystemPrompt: metadata.groupSystemPrompt,
@@ -219,6 +228,7 @@ export async function updateRuntimeTavernChatTabAppearance(input: {
         metadata: buildRuntimeTavernChatMetadata({
             agentIds: metadata.agentIds,
             archived: metadata.archived,
+            description: metadata.description,
             displayName: metadata.displayName,
             displayNameSource: metadata.displayNameSource,
             groupSystemPrompt: metadata.groupSystemPrompt,
@@ -246,6 +256,7 @@ export async function updateRuntimeTavernChatSystemPrompt(input: {
         metadata: buildRuntimeTavernChatMetadata({
             agentIds: metadata.agentIds,
             archived: metadata.archived,
+            description: metadata.description,
             displayName: metadata.displayName,
             displayNameSource: metadata.displayNameSource,
             groupSystemPrompt: input.systemPrompt,
@@ -493,10 +504,15 @@ function readTavernChatMetadata(chat: TavernChat): TavernChatMetadata {
         typeof tavern.groupSystemPrompt === 'string' && tavern.groupSystemPrompt.trim()
             ? tavern.groupSystemPrompt.trim()
             : null;
+    const description =
+        typeof tavern.description === 'string' && tavern.description.trim()
+            ? tavern.description.trim()
+            : null;
 
     return {
         agentIds,
         archived: tavern.archived === true,
+        description,
         displayName,
         displayNameSource,
         groupSystemPrompt,
@@ -507,6 +523,7 @@ function readTavernChatMetadata(chat: TavernChat): TavernChatMetadata {
 function buildRuntimeTavernChatMetadata(input: {
     agentIds: string[];
     archived: boolean;
+    description: string | null;
     displayName: string;
     displayNameSource: TavernChatDisplayNameSource;
     groupSystemPrompt: string | null;
@@ -520,6 +537,7 @@ function buildRuntimeTavernChatMetadata(input: {
         tavern: {
             agentIds: input.agentIds,
             archived: input.archived,
+            ...(input.description ? { description: input.description } : {}),
             displayName: input.displayName,
             displayNameSource: input.displayNameSource,
             ...(input.groupSystemPrompt ? { groupSystemPrompt: input.groupSystemPrompt } : {}),
