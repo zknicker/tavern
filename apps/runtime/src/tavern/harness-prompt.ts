@@ -162,18 +162,19 @@ function isAmbientPromptMessage(input: AgentExecutorInput, message: TavernChatMe
     return message.author.id !== input.agentParticipantId;
 }
 
-// Where the agent is speaking: chat kind, id, and roster with mention links
-// so the handoff syntax is always in view. Moved here from the system prompt
-// because one global session spans chats with different rosters.
+// Where the agent is speaking: chat kind, id, description, and roster with
+// mention links so the handoff syntax is always in view. Moved here from the
+// system prompt because one global session spans chats with different rosters.
 function chatIdentityLines(input: AgentExecutorInput, _timezone: string) {
     const chat = getChat(input.chatId);
     if (!chat) {
         return [`- chatId: ${input.chatId}`];
     }
+    const description = chat.kind === 'dm' ? null : readChatDescription(chat.metadata);
     const kind =
         chat.kind === 'dm'
             ? 'a direct message between you and the user'
-            : `the "${chat.title}" channel`;
+            : `the "${chat.title}" channel${description ? ` — ${description}` : ''}`;
     const participants = chat.participants.map((participant) => {
         if (participant.id === input.agentParticipantId) {
             return participantLine(participant.label ?? input.agent.name, '(you)', input.agent.bio);
@@ -198,6 +199,17 @@ function participantLine(name: string, tag: string | null, bio: string | null | 
 function participantAgentId(metadata: Record<string, unknown>) {
     const agentId = metadata.agentId;
     return typeof agentId === 'string' && agentId.length > 0 ? agentId : null;
+}
+
+// The operator-authored channel description from the chat's Tavern metadata:
+// it rides the identity line so the room's purpose frames every turn.
+function readChatDescription(metadata: Record<string, unknown>) {
+    const tavern =
+        typeof metadata.tavern === 'object' && metadata.tavern !== null
+            ? (metadata.tavern as Record<string, unknown>)
+            : null;
+    const description = tavern?.description;
+    return typeof description === 'string' && description.trim() ? description.trim() : null;
 }
 
 // Unread counts for the agent's other chats, from the seen ledger. Counts

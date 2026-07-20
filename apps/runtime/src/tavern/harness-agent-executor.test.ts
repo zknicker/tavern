@@ -368,6 +368,7 @@ describe('harness agent executor', () => {
         createChat({
             id: 'cht_anchor',
             kind: 'channel',
+            metadata: { tavern: { description: 'Launch coordination and status.' } },
             participants: [
                 { id: 'usr_alice', kind: 'user', label: 'Alice', metadata: {} },
                 {
@@ -416,7 +417,9 @@ describe('harness agent executor', () => {
 
         // Chat identity and roster with mention links live in the per-turn
         // prompt under agent-global sessions (specs/sessions.md).
-        expect(prompt).toContain('this is the "anchor" channel (chatId: cht_anchor)');
+        expect(prompt).toContain(
+            'this is the "anchor" channel — Launch coordination and status. (chatId: cht_anchor)'
+        );
         expect(prompt).toContain('Tavern (you)');
         expect(prompt).toContain(
             '[Wren](agent://agt_wren) (agent) — Runs the Amazon Merch business.'
