@@ -23,7 +23,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { designBattery } from './design-battery/battery.mjs';
 import { resolveDevPorts } from './dev-ports.mjs';
-import { assert, createEvalHarness, sleep } from './eval-harness.mjs';
+import { assert, createEvalHarness, InfraError, sleep } from './eval-harness.mjs';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const websiteRequire = createRequire(path.join(here, '../apps/website/package.json'));
@@ -88,8 +88,7 @@ try {
     for (const item of items) {
         const startedAt = Date.now();
         process.stdout.write(`\n▶ ${item.slug}\n`);
-        await send(chatId, item.prompt);
-        await waitForQuiet(chatId, 8000, 420_000);
+        await generateItem(item);
         const files = await captureItem(item);
         captures.push({ files, item, seconds: Math.round((Date.now() - startedAt) / 1000) });
         process.stdout.write(`  ✓ captured (${captures.at(-1).seconds}s)\n`);
@@ -158,6 +157,28 @@ async function startCaptureVite() {
     }
     child.kill();
     throw new Error(`capture vite never became ready (see ${logPath})`);
+}
+
+// A single failed turn ("failed to produce a reply", transient provider
+// errors) gets one retry so a long battery run survives model flakiness.
+async function generateItem(item) {
+    for (let attempt = 1; attempt <= 2; attempt += 1) {
+        await send(chatId, item.prompt);
+        // The failure banner clears once the retried turn's response row
+        // lands; give dispatch a beat so waitForQuiet reads the new turn.
+        if (attempt > 1) {
+            await sleep(3000);
+        }
+        try {
+            await waitForQuiet(chatId, 8000, 420_000);
+            return;
+        } catch (error) {
+            if (attempt === 2 || !(error instanceof InfraError)) {
+                throw error;
+            }
+            process.stdout.write(`  ↻ retrying: ${String(error).slice(0, 160)}\n`);
+        }
+    }
 }
 
 async function captureItem(item) {
