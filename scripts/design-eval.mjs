@@ -170,7 +170,9 @@ async function generateItem(item) {
             await sleep(3000);
         }
         try {
-            await waitForQuiet(chatId, 8000, 420_000);
+            // Max-thinking turns legitimately run past ten minutes; the
+            // runtime's own watchdog is the real cap, so wait generously.
+            await waitForQuiet(chatId, 8000, 1_800_000);
             return;
         } catch (error) {
             if (attempt === 2 || !(error instanceof InfraError)) {
