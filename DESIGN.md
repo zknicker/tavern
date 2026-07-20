@@ -3,7 +3,7 @@ version: alpha
 name: Tavern
 description: Quiet desktop control-plane UI for agents, runtime state, memory, jobs, chats, and settings.
 colors:
-  background: "#fef9f9"
+  background: "#f8f8f8"
   foreground: "#292524"
   chrome: "#fbf9f6"
   brand: "#7b51cc"
@@ -118,17 +118,20 @@ Use `apps/website/src/styles/global.css` tokens for all app colors. Do not hardc
 Tailwind palette classes, or opacity mixes in feature components unless the value is a product
 brand color or provider badge treatment.
 
-The palette is flat and near-white: one tinted-white ground (`#fef9f9`) that every light surface
+The palette is flat and near-white on two grounds: the shell (icon rail + sidebar panels) sits on
+neutral `#f8f8f8` (`--background` — never pink) and the main content column is stark white
+(`--content-card`); the main column rescopes `--background` to white so content-side surfaces
+resolve against their own ground. Every other light surface
 derives from, with a warm charcoal dark theme. The UI itself stays quiet and gets out of the way;
 color arrives through accents — the brand pill, status colors, and the agents' single-color
 thick-outline avatars. Borders and secondary surfaces are solid opaque values, not alpha washes —
 they should read like drawn lines and flat fills, matching the avatar doodle style (avatar ink is
 `#1b1b1b`, which is also `--primary` in light mode).
 `--brand` (`#7b51cc`) is reserved for primary emphasis and accents. Selected nav rows — sidebar
-sections, channels, DMs, and settings nav alike — use the inked outline + press-slab treatment
-(solid `--secondary` fill, inset `--input` ring, 2px `--hard-shadow` offset), matching the button
-language. Generic selection highlights (tabs, tables, select items) use the subtle `--active`
-tint; tree rows (file trees) use the `--sidebar-accent-active` tint.
+sections, channels, DMs, settings nav, and file-tree rows alike — use the inked outline +
+press-slab treatment (solid `--secondary` fill, inset `--input` ring, 2px `--hard-shadow`
+offset), matching the button language. Generic selection highlights (tabs, tables, select items)
+use the subtle `--active` tint.
 
 The token palette is neutral-first:
 
@@ -195,14 +198,22 @@ the obvious, shorten it or remove it.
 
 ## Layout
 
-Section navigation (Tasks, Automations, Wiki) lives at the top of the sidebar rail, above
-channels and DMs — the shell toolbar carries only history controls and the breadcrumb. Those
-sections are full-page tools: they replace the rail with their own layouts, and back/forward and
-tabs are the way back to chat surfaces. Every tool page keeps a left sidebar at the rail's 240px
-width built from the sidebar menu primitives, so the left panel never appears to vanish — only
-its contents swap. The overview route is the new-tab/home page and needs no
-nav row; the Workspace page is retired from navigation (workspace files are reached through the
-chat artifact pane).
+The app is a traditional chat layout with a persistent 48px icon rail: the rail carries the app
+sections (Home, Tasks, Automations, Wiki, with Settings at the bottom) as icon buttons on every
+route. The panel beside the rail belongs to the active section — the Home section's panel lists
+Activity (the overview page), channels, DMs, and Archived; tool sections replace it with their
+own 240px left panel built from the sidebar menu primitives; settings swaps in the settings nav.
+Above the main content sits a dynamic bordered topbar (`ContentTopbar`), `--content-topbar-height`
+(40px) tall to match the artifact panel's chrome row — `--topbar-height` (48px) is only the
+traffic-light headroom above the rail and panels. Chat topbars carry room identity on the left
+(channels get a name dropdown with channel actions and the clickable description, both opening
+the Edit channel dialog) and quiet controls on the right: a people-glyph participant count (opens
+the participants dialog on channels) and the pane toggle — no facepiles or card-in-card pills in
+the bar. Tool pages carry their own toolbars. The topbar's bottom hairline and every panel seam
+use `--content-card-border` so the frame reads as one set of straight lines. There is no browser-tab strip, breadcrumb toolbar, or history control row
+anywhere — web and desktop share this one shell, and the desktop window reserves the topbar
+band for the macOS traffic lights. The Workspace page is retired from navigation (workspace
+files are reached through the chat artifact pane).
 
 Tavern screens should be operational, not editorial:
 

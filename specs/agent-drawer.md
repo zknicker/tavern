@@ -18,8 +18,9 @@ express a target in multi-agent chats.
 
 ## Opening
 
-- Every agent avatar in the chat participant facepile (room topbar and
-  browser toolbar) is a button labeled `Agent details: <name>`.
+- Every agent avatar in the chat transcript (and any surface that renders
+  the shared hover card) is a button labeled `Agent details: <name>`. The
+  room topbar shows a participant count, not avatars.
 - Human participants are not clickable; the drawer is an agent surface.
 - The drawer shows the agent's global session — the same session backs every
   chat the agent sits in. Global configuration and session resets stay in
