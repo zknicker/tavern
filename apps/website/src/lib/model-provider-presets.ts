@@ -49,7 +49,7 @@ export const configuredModelProviders = [
     {
         accessDisplayName: 'Kimi Code',
         accessId: 'kimi',
-        color: '#111827',
+        color: '#027AFF',
         configName: 'kimi',
         displayName: 'Kimi Code',
         icon: Atom02Icon,
