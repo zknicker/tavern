@@ -4,7 +4,6 @@ export const appRoutes = {
     chat(chatId: string) {
         return `/chats/${chatId}`;
     },
-    newChatDraft: '/chats/new',
     archivedChats: '/chats/archived',
     tasks: '/tasks',
     newTask: '/tasks/new',

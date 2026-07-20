@@ -82,64 +82,9 @@ export function AppShellDragRegion({
 }
 
 /**
- * AppShellTopbar — absolute-positioned overlay for the sidebar controls.
- */
-export function AppShellTopbar({
-    className,
-    nativeDragRegion = true,
-    render,
-    ...props
-}: useRender.ComponentProps<'header'> & {
-    nativeDragRegion?: boolean;
-}): React.ReactElement {
-    const defaultProps = {
-        className: cn(
-            'app-shell-topbar pointer-events-auto absolute top-0 left-0 z-40 flex h-[var(--topbar-height)] w-full cursor-default select-none items-stretch',
-            nativeDragRegion ? null : 'no-drag',
-            className
-        ),
-        'data-slot': 'app-shell-topbar',
-        ...(nativeDragRegion
-            ? { 'data-window-drag-region': '' }
-            : { 'data-window-drag-disabled': '' }),
-    };
-
-    return useRender({
-        defaultTagName: 'header',
-        props: mergeProps<'header'>(defaultProps, props),
-        render,
-    });
-}
-
-/**
- * AppShellTopbarSidebarSlot — left half of the topbar overlay. Sits over
- * the sidebar column and reserves space on the left for the macOS traffic
- * lights.
- */
-export function AppShellTopbarSidebarSlot({
-    className,
-    render,
-    ...props
-}: useRender.ComponentProps<'div'>): React.ReactElement {
-    const defaultProps = {
-        className: cn(
-            'flex h-full w-full shrink-0 items-start pt-[6px] pr-2 pl-[var(--traffic-light-inset)] md:w-[var(--sidebar-width)]',
-            className
-        ),
-        'data-slot': 'app-shell-topbar-sidebar-slot',
-    };
-
-    return useRender({
-        defaultTagName: 'div',
-        props: mergeProps<'div'>(defaultProps, props),
-        render,
-    });
-}
-
-/**
- * AppShellContentHeader — aligns page chrome in the main column with the
- * sidebar controls in AppShellTopbar. The header is draggable in blank space;
- * buttons and links opt out through shared no-drag styles.
+ * AppShellContentHeader — top-aligned page chrome inside the main column.
+ * The header is draggable in blank space; buttons and links opt out through
+ * shared no-drag styles.
  */
 export function AppShellContentHeader({
     className,

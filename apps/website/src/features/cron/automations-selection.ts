@@ -1,4 +1,3 @@
-import type { AgentSelectOption } from '../agents/agent-option-label.tsx';
 import type { CronFilter } from './filter-cron-jobs.ts';
 
 /** What the automations sidebar has selected: a status filter over the jobs
@@ -27,33 +26,4 @@ export function isSameAutomationsSelection(a: AutomationsSelection, b: Automatio
     }
 
     return false;
-}
-
-export function getAutomationsTitle(
-    selection: AutomationsSelection,
-    agents: AgentSelectOption[]
-): { subtitle: string; title: string } {
-    if (selection.kind === 'runs') {
-        return selection.failuresOnly
-            ? { subtitle: 'Runs that ended in an error.', title: 'Failures' }
-            : { subtitle: 'Latest runs across all automations.', title: 'Recent runs' };
-    }
-
-    if (selection.kind === 'agent') {
-        const name = agents.find((agent) => agent.id === selection.agentId)?.name ?? 'Agent';
-
-        return { subtitle: `Automations owned by ${name}.`, title: name };
-    }
-
-    switch (selection.filter) {
-        case 'active':
-            return { subtitle: 'Automations currently scheduled.', title: 'Active' };
-        case 'paused':
-            return { subtitle: 'Automations on hold.', title: 'Paused' };
-        default:
-            return {
-                subtitle: 'Schedule recurring work for your agent.',
-                title: 'Automations',
-            };
-    }
 }

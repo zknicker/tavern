@@ -197,7 +197,7 @@ function CommandMenuIcon({
             return (
                 <ChannelIconBox
                     className={disabled ? 'opacity-60' : undefined}
-                    size="sidebar"
+                    size="inline"
                     style={getChannelColorStyle(command.icon.color)}
                 />
             );

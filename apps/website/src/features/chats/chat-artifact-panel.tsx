@@ -28,12 +28,9 @@ import {
 
 export function ChatArtifactPanel({
     agentId,
-    chromeHidden = false,
     state,
 }: {
     agentId: string;
-    // True when the shell toolbar hosts the pane chrome (tabs layout).
-    chromeHidden?: boolean;
     state: ChatArtifactPanelState;
 }) {
     const shouldReduceMotion = useReducedMotion();
@@ -75,7 +72,6 @@ export function ChatArtifactPanel({
                     />
                     <ArtifactPanelBody
                         agentId={agentId}
-                        chromeHidden={chromeHidden}
                         state={state}
                         width={artifactPaneWidth.width}
                     />
@@ -86,16 +82,13 @@ export function ChatArtifactPanel({
 }
 
 // The pane renders only the active target's content; tab selection is
-// controlled state, not Base UI panel matching, because in the tabs layout
-// the tab triggers live in the shell toolbar's own Tabs root.
+// controlled state so the chrome and body stay in one Tabs root.
 function ArtifactPanelBody({
     agentId,
-    chromeHidden,
     state,
     width,
 }: {
     agentId: string;
-    chromeHidden: boolean;
     state: ChatArtifactPanelState;
     width: number;
 }) {
@@ -105,25 +98,23 @@ function ArtifactPanelBody({
 
     return (
         <div className="flex h-full min-h-0 flex-col" style={{ width }}>
-            {chromeHidden ? null : (
-                <div className="shrink-0 border-border/70 border-b">
-                    <Tabs
-                        className="flex items-center"
-                        onValueChange={state.setActiveKey}
-                        value={state.activeKey ?? undefined}
-                    >
-                        <ArtifactPanelChrome
-                            activeKey={state.activeKey}
-                            activeTarget={activeTarget}
-                            agentId={agentId}
-                            onClose={state.toggleVisible}
-                            onCloseTarget={state.closeTarget}
-                            onOpenTarget={state.open}
-                            targets={state.targets}
-                        />
-                    </Tabs>
-                </div>
-            )}
+            <div className="shrink-0 border-border/70 border-b">
+                <Tabs
+                    className="flex items-center"
+                    onValueChange={state.setActiveKey}
+                    value={state.activeKey ?? undefined}
+                >
+                    <ArtifactPanelChrome
+                        activeKey={state.activeKey}
+                        activeTarget={activeTarget}
+                        agentId={agentId}
+                        onClose={state.toggleVisible}
+                        onCloseTarget={state.closeTarget}
+                        onOpenTarget={state.open}
+                        targets={state.targets}
+                    />
+                </Tabs>
+            </div>
             <div className="min-h-0 flex-1">
                 {activeTarget ? (
                     <ArtifactPanelContent

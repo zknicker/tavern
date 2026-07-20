@@ -257,7 +257,7 @@ function ChatChip({
     return (
         <span className="flex min-w-0 items-center gap-1.5">
             <ChannelIconBox
-                size="sidebar"
+                size="inline"
                 style={getChannelColorStyle(chat?.tabAppearance.color ?? null)}
             />
             <span className="truncate font-medium text-foreground text-sm">{title}</span>

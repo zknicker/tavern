@@ -61,11 +61,11 @@ export function AutomationsSidebar({
     return (
         <aside
             className={cn(
-                'flex min-h-0 flex-col overflow-y-auto border-sidebar-border border-r bg-[var(--sidebar)]',
+                'flex min-h-0 flex-col overflow-y-auto border-[var(--content-card-border)] border-r bg-[var(--sidebar)] pt-[calc(var(--topbar-height)-4px)]',
                 className
             )}
         >
-            <SidebarGroup className="pt-3">
+            <SidebarGroup className="pt-0">
                 <SidebarGroupContent>
                     <SidebarMenu>
                         {row('All', ListViewIcon, { filter: 'all', kind: 'filter' }, counts.total)}

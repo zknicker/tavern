@@ -12,8 +12,6 @@ import {
     SettingsRow,
     SettingsSection,
 } from '../../../components/ui/settings-row.tsx';
-import { Switch } from '../../../components/ui/switch.tsx';
-import { useAppLayoutPreference } from '../../../hooks/shell/use-app-layout-preference.ts';
 import { appRoutes } from '../../../lib/app-routes.ts';
 import { cn } from '../../../lib/utils.ts';
 
@@ -30,7 +28,6 @@ const themeOptions: Array<{
 
 export function AppearanceSettings() {
     const { setTheme, theme } = useTheme();
-    const appLayout = useAppLayoutPreference();
     const navigate = useNavigate();
 
     return (
@@ -106,25 +103,6 @@ export function AppearanceSettings() {
                         );
                     })}
                 </div>
-            </SettingsSection>
-
-            <SettingsSection title="App Layout">
-                <SettingsGroup>
-                    <SettingsRow
-                        description="Use a sidebar for app navigation."
-                        title="Side navigation"
-                    >
-                        <div className="flex justify-start md:justify-end">
-                            <Switch
-                                aria-label="Side navigation"
-                                checked={appLayout.mode === 'sidebar'}
-                                onCheckedChange={(enabled) =>
-                                    appLayout.setMode(enabled ? 'sidebar' : 'tabs')
-                                }
-                            />
-                        </div>
-                    </SettingsRow>
-                </SettingsGroup>
             </SettingsSection>
 
             <SettingsSection title="Design Lab">

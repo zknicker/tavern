@@ -16,8 +16,8 @@ mock.module('./sidebar-chat-list.tsx', () => ({
     getSidebarDraftActivityLabel: () => 'Draft',
 }));
 
-mock.module('./sidebar-nav.tsx', () => ({
-    AppSidebarNav: () => React.createElement('div', { 'data-testid': 'sidebar-nav' }),
+mock.module('./sidebar-home-nav.tsx', () => ({
+    SidebarHomeNav: () => React.createElement('div', { 'data-testid': 'sidebar-home-nav' }),
 }));
 
 mock.module('./sidebar-update-menu-item.tsx', () => ({
@@ -37,18 +37,14 @@ const { AppSidebar } = await import('./sidebar.tsx');
 mock.restore();
 
 describe('AppSidebar', () => {
-    test('renders update affordance above Settings in the footer', () => {
+    test('renders the home nav and the update affordance in the footer', () => {
         const markup = renderToStaticMarkup(
             <SidebarProvider>
-                <AppSidebar
-                    isSettingsRoute={false}
-                    onBackToApp={() => undefined}
-                    onNavigateToSettings={() => undefined}
-                />
+                <AppSidebar isSettingsRoute={false} onBackToApp={() => undefined} />
             </SidebarProvider>
         );
 
-        expect(markup.indexOf('Update Available')).toBeGreaterThanOrEqual(0);
-        expect(markup.indexOf('Update Available')).toBeLessThan(markup.indexOf('Settings'));
+        expect(markup).toContain('sidebar-home-nav');
+        expect(markup).toContain('Update Available');
     });
 });

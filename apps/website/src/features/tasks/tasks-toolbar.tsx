@@ -13,6 +13,7 @@ import {
 import type { LabelRecord } from '../../lib/trpc.tsx';
 import { cn } from '../../lib/utils.ts';
 import { AgentOptionLabel, type AgentSelectOption } from '../agents/agent-option-label.tsx';
+import { ContentTopbar } from '../shell/content-topbar.tsx';
 import { LabelDot } from './label-chip.tsx';
 import { ManageLabelsDialog } from './manage-labels-dialog.tsx';
 import { TaskQueueIndicator } from './queue-indicator.tsx';
@@ -57,7 +58,7 @@ export function TasksToolbar({
     const [manageLabelsOpen, setManageLabelsOpen] = React.useState(false);
 
     return (
-        <div className="flex shrink-0 items-center gap-2 px-2 py-2.5">
+        <ContentTopbar className="no-drag">
             <Select
                 onValueChange={(value) => {
                     if (value) {
@@ -138,7 +139,7 @@ export function TasksToolbar({
             </Button>
 
             <ManageLabelsDialog onOpenChange={setManageLabelsOpen} open={manageLabelsOpen} />
-        </div>
+        </ContentTopbar>
     );
 }
 

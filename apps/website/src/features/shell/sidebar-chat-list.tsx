@@ -13,15 +13,11 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '../../components/ui/sidebar.tsx';
-import { Spinner } from '../../components/ui/spinner.tsx';
 import { useAgentAppearanceLookup } from '../../hooks/agents/use-agent-appearance.ts';
 import { useAgentList } from '../../hooks/agents/use-agent-list.ts';
 import { useChatArchive } from '../../hooks/chats/use-chat-archive.ts';
 import { useChatCreate } from '../../hooks/chats/use-chat-create.ts';
-import { getChatDraftRouteState } from '../../hooks/chats/use-chat-draft-launch.ts';
 import { useChatList } from '../../hooks/chats/use-chat-list.ts';
-import type { ChatStartDraft } from '../../hooks/chats/use-chat-start-drafts.tsx';
-import { useChatStartDrafts } from '../../hooks/chats/use-chat-start-drafts.tsx';
 import { useChatSystemPrompt } from '../../hooks/chats/use-chat-system-prompt.ts';
 import { useChatTabAppearance } from '../../hooks/chats/use-chat-tab-appearance.ts';
 import { useChatUpdate } from '../../hooks/chats/use-chat-update.ts';
@@ -32,7 +28,6 @@ import {
     useCapability,
 } from '../../hooks/connections/use-capability.ts';
 import { appRoutes } from '../../lib/app-routes.ts';
-import { markChatTiming } from '../../lib/chat-timing.ts';
 import { cn } from '../../lib/utils.ts';
 import { resolveAgentInk } from '../agents/agent-color-presets.ts';
 import { AgentFace } from '../chats/agent-face.tsx';
@@ -50,10 +45,7 @@ import {
 } from './sidebar-chat-actions.tsx';
 import {
     buildSidebarChatGroups,
-    buildSidebarDraftChatList,
     getSidebarChatTitle,
-    getSidebarDraftActivityLabel,
-    getSidebarDraftPath,
     hasLocalActiveTurn,
 } from './sidebar-chat-list-model.ts';
 
@@ -68,7 +60,6 @@ export function AppSidebarChatList() {
     const capability = useCapability();
     const chatQuery = useChatList();
     const agentsQuery = useAgentList();
-    const drafts = useChatStartDrafts();
     const createChat = useChatCreate();
     const updateChat = useChatUpdate();
     const archiveChat = useChatArchive();
@@ -84,28 +75,10 @@ export function AppSidebarChatList() {
         () => buildSidebarChatGroups(buildChatList(chatQuery.data)),
         [chatQuery.data]
     );
-    const draftChats = React.useMemo(
-        () => buildSidebarDraftChatList(drafts.listDrafts(), sidebarChats.allChats),
-        [drafts, sidebarChats.allChats]
-    );
-    const activeDraftRoute = getChatDraftRouteState(location.state);
     const newChatGate = capability(newChatCapabilityRequirements);
     const newChatDisabledReason = newChatGate.healthy
         ? null
         : formatCapabilityDisabledReason(newChatGate);
-
-    React.useEffect(() => {
-        const visibleDraft = draftChats.find((draft) => draft.status !== 'error');
-
-        if (!visibleDraft) {
-            return;
-        }
-
-        markChatTiming('optimistic-sidebar-visible', {
-            draftChatId: visibleDraft.id,
-            realChatId: visibleDraft.realChatId,
-        });
-    }, [draftChats]);
 
     const openRename = React.useCallback(
         (chat: ChatListItem) => {
@@ -204,22 +177,6 @@ export function AppSidebarChatList() {
                     </div>
                     <SidebarGroupContent>
                         <SidebarMenu>
-                            {draftChats.map((draft) => {
-                                const path = getSidebarDraftPath(draft);
-                                const isActive =
-                                    activeDraftRoute?.draftChatId === draft.id ||
-                                    (draft.realChatId !== null &&
-                                        location.pathname === buildChatPath(draft.realChatId));
-
-                                return (
-                                    <SidebarDraftChatItem
-                                        draft={draft}
-                                        isActive={isActive}
-                                        key={draft.id}
-                                        path={path}
-                                    />
-                                );
-                            })}
                             {sidebarChats.directMessages.map((chat) => (
                                 <SidebarRecentChatItem
                                     chat={chat}
@@ -401,46 +358,6 @@ export function AppSidebarChatList() {
     );
 }
 
-function SidebarDraftChatItem({
-    draft,
-    isActive,
-    path,
-}: {
-    draft: ChatStartDraft;
-    isActive: boolean;
-    path: string;
-}) {
-    const timelineChatId = draft.realChatId ?? draft.id;
-    const timelineState = useChatRuntimeTimelineState(timelineChatId);
-    const hasActiveTurn =
-        draft.status === 'queued' ||
-        draft.status === 'creating' ||
-        (draft.status === 'reconciled' && hasLocalActiveTurn(timelineState));
-
-    return (
-        <SidebarMenuItem>
-            <SidebarMenuButton
-                className="font-normal"
-                isActive={isActive}
-                render={<NavLink state={{ draftChatId: draft.id }} to={path} />}
-                tooltip={draft.title}
-            >
-                <span className="flex min-w-0 flex-1 items-center gap-3">
-                    <span className="min-w-0 flex-1 truncate">{draft.title}</span>
-                    {hasActiveTurn ? (
-                        <span aria-hidden="true" className="w-6 shrink-0" />
-                    ) : (
-                        <span className="shrink-0 text-sidebar-muted text-xs">
-                            {getSidebarDraftActivityLabel(draft)}
-                        </span>
-                    )}
-                </span>
-            </SidebarMenuButton>
-            <SidebarChatActiveTurnIndicator hidden={!hasActiveTurn} />
-        </SidebarMenuItem>
-    );
-}
-
 function SidebarRecentChatItem({
     chat,
     isActive,
@@ -480,7 +397,14 @@ function SidebarRecentChatItem({
                 >
                     <div className="flex min-w-0 flex-1 items-center gap-2.5 overflow-visible">
                         <SidebarChatIcon chat={chat} style={channelColorStyle} />
-                        <span className="min-w-0 flex-1 truncate">{title}</span>
+                        <span
+                            className={cn(
+                                'min-w-0 flex-1 truncate',
+                                chat.unreadCount > 0 ? 'font-semibold' : null
+                            )}
+                        >
+                            {title}
+                        </span>
                         <SidebarChatIndicators chat={chat} />
                     </div>
                 </SidebarMenuButton>
@@ -489,10 +413,20 @@ function SidebarRecentChatItem({
     );
 }
 
-// The right edge belongs to the unread pill alone; presence rides the
-// agent face (specs/presence.md).
+// The right edge belongs to the unread indicator alone; presence rides the
+// agent face (specs/presence.md). DMs carry the strong pill — someone is
+// talking to you directly — while channel unreads stay a quiet count so
+// ordinary agent chatter never out-inks the selected row.
 function SidebarChatIndicators({ chat }: { chat: ChatListItem }) {
-    return chat.unreadCount > 0 ? <SidebarUnreadPill count={chat.unreadCount} /> : null;
+    if (chat.unreadCount === 0) {
+        return null;
+    }
+
+    if (chat.conversationKind === 'channel') {
+        return <SidebarUnreadCount count={chat.unreadCount} />;
+    }
+
+    return <SidebarUnreadPill count={chat.unreadCount} />;
 }
 
 /**
@@ -531,6 +465,14 @@ function SidebarUnreadPill({ count }: { count: number }) {
     );
 }
 
+function SidebarUnreadCount({ count }: { count: number }) {
+    return (
+        <span className="shrink-0 font-semibold text-[0.6875rem] text-muted-foreground tabular-nums leading-none">
+            {count > 99 ? '99+' : count}
+        </span>
+    );
+}
+
 function SidebarChatIcon({
     chat,
     style,
@@ -542,7 +484,10 @@ function SidebarChatIcon({
     const dark = useResolvedThemeOptional() === 'dark';
 
     if (chat.conversationKind === 'channel') {
-        return <ChannelIconBox size="sidebar" style={style} />;
+        // Same 20px layout slot as the agent faces below (24px art overflowing
+        // a size-5 box) so text columns align, biased 1px left to sit optically
+        // even inside the hovered row.
+        return <ChannelIconBox className="-mr-px -ml-[3px]" size="sidebar" style={style} />;
     }
 
     const appearance = lookupAppearance(getChatAgentId(chat));
@@ -581,19 +526,4 @@ function getSidebarParticipantInitial(chat: ChatListItem) {
     const normalized = name.trim();
 
     return (normalized[0] ?? '?').toUpperCase();
-}
-
-function SidebarChatActiveTurnIndicator({ hidden }: { hidden: boolean }) {
-    if (hidden) {
-        return null;
-    }
-
-    return (
-        <span
-            className="pointer-events-none absolute top-1/2 right-0.5 z-10 inline-flex size-6 -translate-y-1/2 items-center justify-center text-sidebar-muted group-focus-within/menu-item:text-sidebar-accent-foreground/70 group-hover/menu-item:text-sidebar-accent-foreground/70"
-            title="Agent turn in progress"
-        >
-            <Spinner className="size-4" />
-        </span>
-    );
 }

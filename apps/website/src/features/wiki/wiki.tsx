@@ -353,7 +353,7 @@ export function Wiki() {
 
     return (
         <div
-            className="grid h-full min-h-0 flex-1 grid-rows-[48px_minmax(0,1fr)] overflow-hidden bg-background"
+            className="grid h-full min-h-0 flex-1 grid-rows-[var(--content-topbar-height)_minmax(0,1fr)] overflow-hidden bg-background"
             style={{ gridTemplateColumns: `${sidebarWidth.width}px minmax(0, 1fr)` }}
         >
             <div className="relative col-start-1 row-span-2 row-start-1 min-h-0">

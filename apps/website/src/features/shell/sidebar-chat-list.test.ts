@@ -1,15 +1,11 @@
 import { describe, expect, test } from 'bun:test';
-import type { ChatStartDraft } from '../../hooks/chats/use-chat-start-drafts.tsx';
 import type { ChatListItem } from '../chats/chat-list-data.ts';
 import { canArchiveSidebarChat, canRenameSidebarChat } from './sidebar-chat-actions.tsx';
 import {
     buildSidebarChatGroups,
     buildSidebarChatList,
-    buildSidebarDraftChatList,
     formatSidebarActivityLabel,
     getSidebarChatTitle,
-    getSidebarDraftActivityLabel,
-    getSidebarDraftPath,
     hasLocalActiveTurn,
     isSidebarTavernChat,
 } from './sidebar-chat-list-model.ts';
@@ -23,6 +19,7 @@ function createChat(overrides: Partial<ChatListItem> = {}): ChatListItem {
         canSend: true,
         conversationKind: 'group',
         createdAt: '2026-05-01T12:00:00.000Z',
+        description: null,
         displayName: 'Tavern chat',
         framework: 'tavern',
         activeTurnParticipantIds: [],
@@ -50,24 +47,6 @@ function createChat(overrides: Partial<ChatListItem> = {}): ChatListItem {
         targetParticipant: null,
         title: 'Tavern chat',
         type: 'tavern',
-        ...overrides,
-    };
-}
-
-function createDraft(overrides: Partial<ChatStartDraft> = {}): ChatStartDraft {
-    return {
-        agentId: 'agent-1',
-        clientMessageId: 'msg_1',
-        content: 'Hello',
-        createdAt: '2026-05-13T12:00:00.000Z',
-        errorMessage: null,
-        id: 'tavern-draft-chat:1',
-        realAcceptedAt: null,
-        realChatId: null,
-        realRunId: null,
-        realTurnReference: null,
-        status: 'queued',
-        title: 'Hello',
         ...overrides,
     };
 }
@@ -123,48 +102,6 @@ describe('sidebar chat list', () => {
         expect(groups.recentChats).toEqual([channel, dm, group]);
     });
 
-    test('keeps draft chats visible until their synced chat appears', () => {
-        const pendingDraft = createDraft({ id: 'tavern-draft-chat:pending' });
-        const reconciledDraft = createDraft({
-            id: 'tavern-draft-chat:reconciled',
-            realChatId: 'chat-1',
-            status: 'reconciled',
-        });
-
-        expect(buildSidebarDraftChatList([pendingDraft, reconciledDraft], [])).toEqual([
-            pendingDraft,
-            reconciledDraft,
-        ]);
-        expect(buildSidebarDraftChatList([pendingDraft, reconciledDraft], [createChat()])).toEqual([
-            pendingDraft,
-        ]);
-    });
-
-    test('does not cap visible draft chats', () => {
-        const drafts = Array.from({ length: 10 }, (_, index) =>
-            createDraft({
-                id: `tavern-draft-chat:${index}`,
-                createdAt: `2026-05-13T12:${String(index).padStart(2, '0')}:00.000Z`,
-            })
-        );
-
-        expect(buildSidebarDraftChatList(drafts, [])).toHaveLength(drafts.length);
-    });
-
-    test('links pending drafts to the draft route and reconciled drafts to the real chat', () => {
-        expect(getSidebarDraftPath(createDraft())).toBe('/chats/new');
-        expect(getSidebarDraftPath(createDraft({ realChatId: 'chat-1' }))).toBe('/chats/chat-1');
-    });
-
-    test('labels draft chat activity by local state', () => {
-        expect(getSidebarDraftActivityLabel(createDraft({ status: 'queued' }))).toBe('starting');
-        expect(getSidebarDraftActivityLabel(createDraft({ status: 'creating' }))).toBe('starting');
-        expect(getSidebarDraftActivityLabel(createDraft({ status: 'reconciled' }))).toBe(
-            'just now'
-        );
-        expect(getSidebarDraftActivityLabel(createDraft({ status: 'error' }))).toBe('failed');
-    });
-
     test('shortens sidebar activity labels', () => {
         expect(formatSidebarActivityLabel('33m ago')).toBe('33m');
         expect(formatSidebarActivityLabel('2h ago')).toBe('2h');
@@ -176,6 +113,7 @@ describe('sidebar chat list', () => {
         expect(
             getSidebarChatTitle(
                 createChat({
+                    description: null,
                     displayName: 'Hey Blippy!',
                     title: 'Tavern Hey Blippy!',
                 })

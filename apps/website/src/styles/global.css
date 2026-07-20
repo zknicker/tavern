@@ -514,11 +514,26 @@
         -webkit-backdrop-filter: var(--app-chrome-backdrop);
     }
 
+    /* Flat seam: the sidebar/main division is a straight full-height
+       hairline, not a rounded content-card corner. */
     .app-shell-main[data-edge-to-edge='true'] {
         margin: 0 !important;
         border: 0 solid var(--content-card-border) !important;
         border-left-width: 1px !important;
-        border-radius: var(--main-radius) 0 0 var(--main-radius) !important;
+        border-radius: 0 !important;
+        /* The main column is its own ground: direct `bg-background` uses
+           inside it (topbars, wiki grid, participant pills) resolve to the
+           white content card, while tokens derived at :root (surfaces,
+           muted washes) stay anchored to the app ground. */
+        --background: var(--content-card);
+    }
+
+    /* Tool routes: the tool's own left panel opens the main column and sits
+       directly against the icon rail — the seam belongs on that panel's
+       right edge, so the rail and panel share one surface like the Home
+       sidebar. */
+    .app-shell-main[data-edge-to-edge='true'][data-rail-flush='true'] {
+        border-left-width: 0 !important;
     }
 
     .app-shell-main-top-drag-fade {
@@ -555,103 +570,12 @@
     }
 
     .app-shell-main:has([data-slot='chat-room-topbar']) .app-shell-main-top-drag-fade {
-        top: var(--topbar-height);
+        top: var(--content-topbar-height);
     }
 
-    [data-slot='sidebar-wrapper']:has([data-slot='app-shell-topbar'])
-        [data-slot='app-shell-drag-region'] {
-        left: var(--sidebar-width) !important;
-        width: calc(100% - var(--sidebar-width)) !important;
-    }
-
-    [data-slot='sidebar-wrapper']:has([data-sidebar-collapsed-restore='true'])
-        [data-slot='app-shell-drag-region'] {
-        left: calc(var(--traffic-light-inset) + 3rem) !important;
-        width: calc(100% - var(--traffic-light-inset) - 3rem) !important;
-    }
-
-    [data-slot='sidebar-wrapper'][data-sidebar-preview-open='true'] .app-shell-main-top-drag-fade {
-        left: var(--sidebar-width) !important;
-    }
-
-    .app-shell:has([data-slot='sidebar'][data-state='collapsed'][data-collapsible='offcanvas'])
-        .app-shell-main-top-drag-fade {
-        left: calc(var(--traffic-light-inset) + 2.75rem);
-    }
-
-    .app-shell:has([data-slot='sidebar'][data-state='collapsed'][data-collapsible='offcanvas'])
-        [data-slot='chat-room-topbar'] {
-        app-region: no-drag;
-        -webkit-app-region: no-drag;
-        padding-left: calc(var(--traffic-light-inset) + 2rem);
-    }
-
-    [data-slot='sidebar-wrapper'][data-sidebar-preview-open='true']
-        [data-slot='sidebar'][data-state='collapsed'][data-collapsible='offcanvas']
-        [data-slot='sidebar-container'],
-    [data-slot='sidebar-wrapper']:has([data-slot='sidebar-container']:focus-within)
-        [data-slot='sidebar'][data-state='collapsed'][data-collapsible='offcanvas']
-        [data-slot='sidebar-container'] {
-        left: 0 !important;
-    }
-
-    [data-slot='sidebar'][data-collapsible='offcanvas'] [data-slot='sidebar-container'].app-shell-sidebar {
-        background: transparent !important;
-        backdrop-filter: none;
-        -webkit-backdrop-filter: none;
-        border-right: 0 solid transparent !important;
-    }
-
-    [data-slot='sidebar'][data-collapsible='offcanvas'] [data-slot='sidebar-inner'] {
-        background: transparent !important;
-    }
-
-    [data-slot='sidebar-wrapper'][data-sidebar-preview-open='true']
-        [data-slot='sidebar'][data-collapsible='offcanvas']
-        [data-slot='sidebar-container'].app-shell-sidebar,
-    [data-slot='sidebar-wrapper']:has([data-slot='sidebar-container']:focus-within)
-        [data-slot='sidebar'][data-state='collapsed'][data-collapsible='offcanvas']
-        [data-slot='sidebar-container'].app-shell-sidebar {
-        background: var(--app-chrome-fill) !important;
-        backdrop-filter: var(--app-chrome-backdrop);
-        -webkit-backdrop-filter: var(--app-chrome-backdrop);
-        border-right: 1px solid var(--sidebar-border) !important;
-    }
-
-    [data-slot='sidebar-wrapper'][data-sidebar-preview-open='true']
-        [data-slot='sidebar'][data-collapsible='offcanvas']
-        [data-slot='sidebar-container'].app-shell-sidebar {
-        z-index: 50 !important;
-    }
-
-    [data-slot='sidebar'][data-state='expanded'][data-collapsible='offcanvas']
-        [data-slot='sidebar-container'].app-shell-sidebar,
-    [data-slot='sidebar-wrapper'][data-sidebar-preview-open='true']
-        [data-slot='sidebar'][data-collapsible='offcanvas']
-        [data-slot='sidebar-container'].app-shell-sidebar {
-        box-shadow: 12px 0 28px -24px rgb(0 0 0 / 0.42) !important;
-    }
-
-    [data-slot='sidebar-wrapper'][data-sidebar-preview-open='true']
-        [data-slot='sidebar'][data-collapsible='offcanvas']
-        [data-slot='sidebar-container'].app-shell-sidebar,
-    [data-slot='sidebar-wrapper'][data-sidebar-preview-open='true']
-        [data-slot='sidebar'][data-collapsible='offcanvas']
-        [data-slot='sidebar-inner'] {
-        border-top-right-radius: var(--main-radius);
-        border-bottom-right-radius: var(--main-radius);
-    }
-
-    .app-shell:has([data-slot='sidebar'][data-state='collapsed'][data-collapsible='icon'])
-        .app-shell-topbar {
-        width: var(--sidebar-width-icon);
-    }
-
-    .app-shell:has([data-slot='sidebar'][data-state='collapsed'][data-collapsible='icon'])
-        .app-shell-topbar-sidebar-slot {
-        width: var(--sidebar-width-icon);
-    }
-
+    /* The sidebar panel now sits in normal flow beside the icon rail with
+       no collapse states; the seams are the panel's own borders and the
+       main column's border-left. */
     html.macos-electron .app-chrome-glass {
         background: transparent;
         backdrop-filter: none;
@@ -664,23 +588,6 @@
 
     html.macos-electron .app-shell[data-app-layout='sidebar'] {
         background: var(--app-chrome-native-fill);
-    }
-
-    html.macos-electron
-        [data-slot='sidebar'][data-collapsible='offcanvas']
-        [data-slot='sidebar-container'].app-shell-sidebar {
-        background: transparent !important;
-    }
-
-    html.macos-electron
-        [data-slot='sidebar-wrapper'][data-sidebar-preview-open='true']
-        [data-slot='sidebar'][data-collapsible='offcanvas']
-        [data-slot='sidebar-container'].app-shell-sidebar,
-    html.macos-electron
-        [data-slot='sidebar-wrapper']:has([data-slot='sidebar-container']:focus-within)
-        [data-slot='sidebar'][data-state='collapsed'][data-collapsible='offcanvas']
-        [data-slot='sidebar-container'].app-shell-sidebar {
-        background: var(--app-chrome-native-fill) !important;
     }
 
     .scrollbar-hidden {
@@ -726,10 +633,6 @@
 @layer base {
     .app-reference-theme {
         --content-card: var(--card);
-    }
-
-    :root[data-theme='light'] .app-reference-theme {
-        --content-card: var(--background);
     }
 
     /* App-wide keyboard focus ring. One consistent treatment so every

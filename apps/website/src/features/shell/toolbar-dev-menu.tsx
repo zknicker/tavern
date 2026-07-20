@@ -1,8 +1,8 @@
 import { Bug01Icon } from '@hugeicons-pro/core-stroke-rounded';
-import { Icon } from '../../../components/ui/icon.tsx';
-import { Menu, MenuItem, MenuPopup, MenuTrigger } from '../../../components/ui/menu.tsx';
-import { Button } from '../../../components/ui/primitives/button.tsx';
-import { trpc } from '../../../lib/trpc.tsx';
+import { Icon } from '../../components/ui/icon.tsx';
+import { Menu, MenuItem, MenuPopup, MenuTrigger } from '../../components/ui/menu.tsx';
+import { Button } from '../../components/ui/primitives/button.tsx';
+import { trpc } from '../../lib/trpc.tsx';
 
 /**
  * Dev toolkit menu: development-stack-only helpers for exercising live chat

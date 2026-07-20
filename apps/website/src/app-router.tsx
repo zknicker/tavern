@@ -110,13 +110,6 @@ export function createAppRouter() {
                                             ),
                                         },
                                         {
-                                            path: 'new/:tabKey',
-                                            lazy: lazyRoute(
-                                                () => import('./routes/app/overview-page.tsx'),
-                                                'OverviewPage'
-                                            ),
-                                        },
-                                        {
                                             path: 'chats/archived',
                                             lazy: lazyRoute(
                                                 () =>

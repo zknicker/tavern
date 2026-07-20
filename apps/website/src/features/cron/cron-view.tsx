@@ -4,9 +4,10 @@ import { Button } from '../../components/ui/primitives/button.tsx';
 import { SearchInput } from '../../components/ui/primitives/search-input.tsx';
 import { ScrollArea } from '../../components/ui/scroll-area.tsx';
 import type { CronRunsOutput } from '../../lib/trpc.tsx';
+import { ContentTopbar } from '../shell/content-topbar.tsx';
 import { EmptyState } from '../shell/empty-state.tsx';
 import { AutomationsRunsList } from './automations-runs-list.tsx';
-import { type AutomationsSelection, getAutomationsTitle } from './automations-selection.ts';
+import type { AutomationsSelection } from './automations-selection.ts';
 import {
     type AutomationsAgentEntry,
     type AutomationsCounts,
@@ -112,7 +113,6 @@ export function CronView({
     }
 
     const isRunsView = selection.kind === 'runs';
-    const heading = getAutomationsTitle(selection, sidebarAgents);
 
     return (
         <div className="flex flex-1 flex-col overflow-hidden">
@@ -132,6 +132,29 @@ export function CronView({
                 />
 
                 <section className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
+                    <ContentTopbar className="no-drag">
+                        {isRunsView ? null : (
+                            <SearchInput
+                                aria-label="Search automations"
+                                className="w-full sm:max-w-64"
+                                name="automation-search"
+                                onChange={(event) => onQueryChange(event.target.value)}
+                                placeholder="Search automations..."
+                                size="default"
+                                value={query}
+                            />
+                        )}
+                        <Button
+                            className="ml-auto shrink-0"
+                            disabled={isMutating}
+                            onClick={onCreate}
+                            type="button"
+                            variant="secondary"
+                        >
+                            <Icon aria-hidden="true" className="size-4" icon={Plus} />
+                            New Automation
+                        </Button>
+                    </ContentTopbar>
                     <nav
                         aria-label="Automation filters"
                         className="flex flex-wrap gap-1 px-2 pt-2 md:hidden"
@@ -149,29 +172,7 @@ export function CronView({
                     </nav>
 
                     <ScrollArea className="flex-1">
-                        <div className="flex w-full flex-col px-6 pt-4 pb-8">
-                            <header className="relative z-40 flex items-start pb-6">
-                                <div>
-                                    <h1 className="font-semibold text-2xl text-foreground">
-                                        {heading.title}
-                                    </h1>
-                                    <p className="mt-1 text-muted-foreground text-sm">
-                                        {heading.subtitle}
-                                    </p>
-                                </div>
-                                <Button
-                                    className="ml-auto shrink-0"
-                                    disabled={isMutating}
-                                    onClick={onCreate}
-                                    size="sm"
-                                    type="button"
-                                    variant="secondary"
-                                >
-                                    <Icon aria-hidden="true" className="size-4" icon={Plus} />
-                                    New Automation
-                                </Button>
-                            </header>
-
+                        <div className="flex w-full flex-col px-6 pt-5 pb-8">
                             {isRunsView ? (
                                 <AutomationsRunsList
                                     failuresOnly={selection.failuresOnly}
@@ -182,16 +183,6 @@ export function CronView({
                                 />
                             ) : (
                                 <section className="grid gap-3">
-                                    <SearchInput
-                                        aria-label="Search automations"
-                                        className="w-full sm:max-w-64"
-                                        name="automation-search"
-                                        onChange={(event) => onQueryChange(event.target.value)}
-                                        placeholder="Search automations..."
-                                        size="default"
-                                        value={query}
-                                    />
-
                                     {filteredJobs.length > 0 ? (
                                         <CronJobsList
                                             activeDeleteJobId={activeDeleteJobId}

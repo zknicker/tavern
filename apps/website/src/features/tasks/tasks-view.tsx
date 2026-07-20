@@ -121,8 +121,8 @@ export function TasksView({
             ) : null}
 
             <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[240px_minmax(0,1fr)]">
-                <aside className="flex min-h-0 flex-col border-sidebar-border border-r bg-[var(--sidebar)] max-md:hidden">
-                    <SidebarGroup className="pt-3">
+                <aside className="flex min-h-0 flex-col border-[var(--content-card-border)] border-r bg-[var(--sidebar)] pt-[calc(var(--topbar-height)-4px)] max-md:hidden">
+                    <SidebarGroup className="pt-0">
                         <SidebarGroupContent>
                             <SidebarMenu>
                                 {taskViews.map((taskView) => (
