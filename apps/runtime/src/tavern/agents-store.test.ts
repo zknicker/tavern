@@ -179,6 +179,51 @@ describe('Runtime agent and agent engine reads', () => {
         expect(clearedConfig.bio ?? null).toBeNull();
     });
 
+    it('sets and clears the agent thinking default', async () => {
+        await handleTavernRuntimeRequest(
+            new Request('http://runtime.test/agents', {
+                body: JSON.stringify({
+                    id: 'agt_thinker',
+                    name: 'Thinker',
+                    workspaceFolder: '/tmp/tavern-thinker-workspace',
+                }),
+                headers: { 'content-type': 'application/json' },
+                method: 'POST',
+            })
+        );
+
+        const setResponse = await handleTavernRuntimeRequest(
+            new Request('http://runtime.test/agents/agt_thinker/thinking-default', {
+                body: JSON.stringify({ thinkingDefault: 'max' }),
+                headers: { 'content-type': 'application/json' },
+                method: 'PATCH',
+            })
+        );
+        expect(setResponse.status).toBe(200);
+        const setConfig = (await (
+            await handleTavernRuntimeRequest(
+                new Request('http://runtime.test/agents/agt_thinker/config')
+            )
+        ).json()) as { thinkingDefault?: string | null };
+        expect(setConfig.thinkingDefault).toBe('max');
+
+        // null clears the override; the ?? merge used to resurrect it.
+        const clearResponse = await handleTavernRuntimeRequest(
+            new Request('http://runtime.test/agents/agt_thinker/thinking-default', {
+                body: JSON.stringify({ thinkingDefault: null }),
+                headers: { 'content-type': 'application/json' },
+                method: 'PATCH',
+            })
+        );
+        expect(clearResponse.status).toBe(200);
+        const clearedConfig = (await (
+            await handleTavernRuntimeRequest(
+                new Request('http://runtime.test/agents/agt_thinker/config')
+            )
+        ).json()) as { thinkingDefault?: string | null };
+        expect(clearedConfig.thinkingDefault ?? null).toBeNull();
+    });
+
     it('archives an agent built-in DM when the agent is deleted', async () => {
         await handleTavernRuntimeRequest(
             new Request('http://runtime.test/agents', {
