@@ -1,20 +1,23 @@
-# Tavern
+# Grotto
 
-Tavern is a macOS chat app for working with always-on agents.
+Grotto is a macOS chat app for working with always-on agents.
 
-Tavern Runtime is the local chat server. It owns canonical chats, messages,
+Grotto Runtime is the local chat server. It owns canonical chats, messages,
 participants, sequence, events, reads, deliveries, activity, automations, and
-runtime-owned product state. Tavern App is the first-party Electron client and
+runtime-owned product state. Grotto App is the first-party Electron client and
 presentation layer. The internal agent engine runs turns through local AI SDK
-language models and projects execution activity back into Tavern Runtime.
+language models and projects execution activity back into Grotto Runtime.
+
+The repository, package namespace, API types, environment variables, and local
+state paths retain the `tavern` name while the product rename is underway.
 
 ## Architecture
 
 ```text
-Tavern App
+Grotto App
   -> @tavern/sdk
   -> Tavern API
-  -> Tavern Runtime
+  -> Grotto Runtime
   -> Agent engine
 ```
 
@@ -30,7 +33,7 @@ shape instead of a second protocol package.
 
 * `packages/tavern-api`: OpenAPI and shared Tavern API contracts.
 * `packages/tavern-sdk`: TypeScript client wrapper for Tavern API.
-* `apps/runtime`: always-on Tavern Runtime and local agent engine.
+* `apps/runtime`: always-on Grotto Runtime and local agent engine.
 * `apps/server`: local app backend, tRPC facade, app cache, and product logic.
 * `apps/website`: Electron/React app client.
 * `jobs`: local background jobs for sync, usage ingest, and refresh work.
@@ -49,7 +52,7 @@ Run the full local stack:
 bun run dev
 ```
 
-`bun run dev` starts Tavern Runtime, the local app backend, the website dev
+`bun run dev` starts Grotto Runtime, the local app backend, the website dev
 server, and the desktop shell.
 
 Dev state is isolated under the worktree-specific Tavern dev root. The default
@@ -67,8 +70,9 @@ TAVERN_AGENT_PROVIDER=openai
 Set `TAVERN_RUNTIME_HOST=0.0.0.0` and point the app at
 `http://<host>:18790` when Runtime runs on an always-on Mac.
 
-Production Runtime installs expose `tavern` as the preferred CLI and keep
-`tavern-runtime` as a compatibility alias. `tavern update` upgrades the
+Production Runtime installs expose `grotto` as the preferred CLI and
+`grotto-runtime` as the service binary. Legacy names remain unadvertised
+compatibility aliases. `grotto update` upgrades the
 Homebrew formula and restarts the service by default.
 
 ## Desktop Build

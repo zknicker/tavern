@@ -52,13 +52,13 @@ async function resolveAgentRuntimeBindings(agentIds: string[] | undefined) {
     const missingAgentIds = tavernAgentIds.filter((_, index) => !agents[index]);
 
     if (missingAgentIds.length > 0) {
-        throw new Error(`Unknown Tavern agents: ${missingAgentIds.join(', ')}`);
+        throw new Error(`Unknown Grotto agents: ${missingAgentIds.join(', ')}`);
     }
 
     const runtimeIds = new Set(agents.map((agent) => agent?.runtimeId).filter(Boolean));
 
     if (runtimeIds.size !== 1) {
-        throw new Error('Tavern chats can only bind agents from one runtime.');
+        throw new Error('Grotto chats can only bind agents from one runtime.');
     }
 
     return {
@@ -109,7 +109,7 @@ export async function updateTavernChat(
     const existing = await getRuntimeChatRecord(parsed.chatId, { actingUserId });
 
     if (existing && existing.runtimeId !== binding.runtimeId) {
-        throw new Error('Tavern chats cannot move between runtime namespaces.');
+        throw new Error('Grotto chats cannot move between runtime namespaces.');
     }
 
     await updateRuntimeTavernChat({
@@ -129,7 +129,7 @@ export async function archiveTavernChat(chatId: string) {
     const chat = await getRuntimeChatRecord(chatId);
 
     if (!chat) {
-        throw new Error(`No Tavern chat named "${chatId}" exists.`);
+        throw new Error(`No Grotto chat named "${chatId}" exists.`);
     }
 
     await setRuntimeTavernChatArchived(chat.chat.id, true);
@@ -144,7 +144,7 @@ export async function unarchiveTavernChat(chatId: string) {
     const chat = await getRuntimeChatRecord(chatId);
 
     if (!chat) {
-        throw new Error(`No Tavern chat named "${chatId}" exists.`);
+        throw new Error(`No Grotto chat named "${chatId}" exists.`);
     }
 
     await setRuntimeTavernChatArchived(chat.chat.id, false);
@@ -160,11 +160,11 @@ export async function updateTavernChatTabAppearance(input: UpdateChatTabAppearan
     const chat = await getRuntimeChatRecord(parsed.chatId);
 
     if (!chat) {
-        throw new Error(`No Tavern chat named "${parsed.chatId}" exists.`);
+        throw new Error(`No Grotto chat named "${parsed.chatId}" exists.`);
     }
 
     if (chat.chat.platform !== 'tavern' || chat.chat.scope !== 'channel') {
-        throw new Error('Only Tavern channels can customize channel color.');
+        throw new Error('Only Grotto channels can customize channel color.');
     }
 
     await updateRuntimeTavernChatTabAppearance({
@@ -187,11 +187,11 @@ export async function updateTavernChatSystemPrompt(input: UpdateChatSystemPrompt
     const chat = await getRuntimeChatRecord(parsed.chatId);
 
     if (!chat) {
-        throw new Error(`No Tavern chat named "${parsed.chatId}" exists.`);
+        throw new Error(`No Grotto chat named "${parsed.chatId}" exists.`);
     }
 
     if (chat.chat.platform !== 'tavern') {
-        throw new Error('Only Tavern chats can customize system prompts.');
+        throw new Error('Only Grotto chats can customize system prompts.');
     }
 
     await updateRuntimeTavernChatSystemPrompt({

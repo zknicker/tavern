@@ -120,7 +120,7 @@ function readTavernConfig(): Record<string, unknown> {
     } catch (error) {
         // Never clobber an operator-edited config file we cannot parse.
         throw new Error(
-            `Tavern Runtime config at ${configPath} is not valid JSON: ${
+            `Grotto Runtime config at ${configPath} is not valid JSON: ${
                 error instanceof Error ? error.message : String(error)
             }`
         );

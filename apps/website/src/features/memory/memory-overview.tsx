@@ -20,7 +20,7 @@ import {
 
 export function MemoryOverview({ status }: { status: WikiHubStatus | null }) {
     const health = getWikiHealth(status);
-    const unavailable = 'Tavern Runtime unavailable';
+    const unavailable = 'Grotto Runtime unavailable';
 
     return (
         <div className="min-h-0 flex-1 overflow-y-auto [scrollbar-gutter:stable]">
@@ -121,7 +121,7 @@ export function MemoryOverview({ status }: { status: WikiHubStatus | null }) {
 
                 <MemorySection title="History">
                     <SettingsRow
-                        description="Maintenance runs and source sessions are tracked as Automations until Tavern has a dedicated memory history log."
+                        description="Maintenance runs and source sessions are tracked as Automations until Grotto has a dedicated memory history log."
                         title="Recent runs"
                         trailingWidth="intrinsic"
                     >

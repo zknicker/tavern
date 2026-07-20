@@ -75,9 +75,9 @@ test('stores Tavern generated AGENTS.md without runtime bootstrap companion file
 
     const fullText = await getRuntimeInstructions(runtimeUrl);
 
-    expect(fullText).toContain('# Tavern Agent Instructions');
+    expect(fullText).toContain('# Grotto Agent Instructions');
     expect(fullText).toContain('Memory and Wiki are the durable knowledge you can carry forward.');
-    expect(fullText).toContain("Wiki is Tavern's shared, browsable Markdown knowledge base");
+    expect(fullText).toContain("Wiki is Grotto's shared, browsable Markdown knowledge base");
     expect(fullText).toContain('run `wiki_search` before concluding you lack context');
     expect(fullText).not.toContain('# SOUL.md - Who You Are');
     expect(fullText).not.toContain('# TOOLS.md - Local Notes');

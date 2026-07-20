@@ -224,7 +224,7 @@ function requireTavernMutation(request: Request, label: string) {
     if (request.headers.get('x-tavern-origin') === 'tavern') {
         return null;
     }
-    return forbidden(`${label} require a Tavern caller.`);
+    return forbidden(`${label} require a Grotto caller.`);
 }
 
 async function readJson(request: Request): Promise<unknown> {

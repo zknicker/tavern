@@ -1,5 +1,5 @@
 /*
- * Tavern design tokens: the dark/light theme variables, the Tailwind theme
+ * Grotto design tokens: the dark/light theme variables, the Tailwind theme
  * mapping, and the dark custom variant. Imported by global.css (the app);
  * the artifact pane injects the resolved public token values into sandboxed
  * artifact frames (features/chats/host-token-style.ts). Keep this file free

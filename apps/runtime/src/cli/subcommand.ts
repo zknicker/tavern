@@ -23,7 +23,7 @@ export interface SubCommand {
  * Dispatch a group's raw argv to one of its subcommands. Validates flags against
  * the subcommand spec (UsageError → exit 2 with that subcommand's help) and
  * handles `--help` and unknown-subcommand suggestions. `groupName` prefixes
- * error/help copy ('tavern wiki ...').
+ * error/help copy ('grotto wiki ...').
  */
 export async function dispatchSubcommand(
     groupName: string,
@@ -90,7 +90,7 @@ function reportUnknownSub(groupName: string, name: string | undefined, subs: Sub
             name ? `Unknown ${groupName} command '${name}'.` : `Missing ${groupName} command.`,
             hint
                 ? `Did you mean '${groupName} ${hint}'?`
-                : `Run 'tavern ${groupName} --help' for the command list.`
+                : `Run 'grotto ${groupName} --help' for the command list.`
         )}\n`
     );
     return 2;

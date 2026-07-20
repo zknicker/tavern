@@ -52,12 +52,12 @@ async function probeAgentRuntime(
             const token = getCurrentSessionToken();
             if (!token) {
                 throw new Error(
-                    'No active user session is available for this Tavern Runtime connection.'
+                    'No active user session is available for this Grotto Runtime connection.'
                 );
             }
             const identity = await client.getIdentityMe(token);
             if (identity.role === null) {
-                throw new Error('The signed-in user is not a member of this Tavern Runtime.');
+                throw new Error('The signed-in user is not a member of this Grotto Runtime.');
             }
         }
         return capabilities;

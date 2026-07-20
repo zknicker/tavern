@@ -5,7 +5,7 @@ export const browserSkillUpstreamVersion = '0.31.1';
 
 export const browserSkillContent = `# Browser
 
-Control the managed Chrome browser. Tavern owns the browser process, its
+Control the managed Chrome browser. Grotto owns the browser process, its
 durable profile, the session, and the CDP connection; you drive it with one
 tool.
 
@@ -25,7 +25,7 @@ never try to run agent-browser through shell commands. Shell constructs
 JavaScript as a single argument: \`{"args": ["eval", "<code>"]}\`.
 
 If the tool reports that the browser is unavailable, tell the user the
-reported reason. Browser setup and recovery live in Tavern settings.
+reported reason. Browser setup and recovery live in Grotto settings.
 
 Fast browser automation CLI for AI agents. Chrome/Chromium via CDP, no Playwright or Puppeteer dependency. Accessibility-tree snapshots with compact \`@eN\` refs let agents interact with pages in ~200-400 tokens instead of parsing raw HTML.
 

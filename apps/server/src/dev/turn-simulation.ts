@@ -16,7 +16,7 @@ export async function simulateChatTurn(input: z.infer<typeof simulateTurnInputSc
     const connection = await getActiveAgentRuntimeConnection();
 
     if (!(connection?.enabled && connection.baseUrl)) {
-        throw new Error('Tavern Runtime is not connected.');
+        throw new Error('Grotto Runtime is not connected.');
     }
 
     const client = createTavernClientForConnection(connection);

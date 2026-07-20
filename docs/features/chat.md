@@ -39,7 +39,7 @@ happen, and keep the durable timeline as context.
   with per-file diffs (before/after text, bounded; binary files show a changed
   badge). Selecting text in a diff, workspace file preview, or Wiki page in
   the artifact pane offers "Quote in chat", inserting the quoted lines plus a
-  `tavern://` source link into the composer — the universal review gesture.
+  `grotto://` source link into the composer — the universal review gesture.
 * **Artifacts.** Code, images, files, diffs, documents, and charts render as
   durable outputs attached to messages or response activity.
 * **Receipts.** Message creation and assistant delivery are acknowledged by id.

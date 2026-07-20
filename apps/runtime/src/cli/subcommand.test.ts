@@ -6,10 +6,10 @@ function sub(over: Partial<SubCommand> = {}): SubCommand {
     return {
         name: 'get',
         summary: 'Get a thing',
-        usage: 'tavern wiki get <path>',
+        usage: 'grotto wiki get <path>',
         flags: [{ name: '--json', description: 'Emit JSON' }],
         positionals: ['<path>'],
-        examples: ['tavern wiki get Projects/Alpha.md'],
+        examples: ['grotto wiki get Projects/Alpha.md'],
         run: () => Promise.resolve(0),
         ...over,
     };
@@ -57,7 +57,7 @@ describe('dispatchSubcommand', () => {
         expect(code).toBe(2);
         const written = out.mock.calls.join('');
         expect(written).toContain('Expected 1 argument');
-        expect(written).toContain('tavern wiki get <path>');
+        expect(written).toContain('grotto wiki get <path>');
     });
 
     test('unknown flag prints help to stderr, exit 2', async () => {
@@ -88,6 +88,6 @@ describe('dispatchSubcommand', () => {
         );
         expect(code).toBe(0);
         expect(ran).toBe(false);
-        expect(out.mock.calls.join('')).toContain('tavern wiki get <path>');
+        expect(out.mock.calls.join('')).toContain('grotto wiki get <path>');
     });
 });

@@ -18,7 +18,7 @@ export const setAgentPluginGrantProcedure = publicProcedure
         const client = createConfiguredAgentRuntimeClient();
         const runtimeId = await getActiveRuntimeId();
         if (!(client && runtimeId)) {
-            throw new Error('Tavern Runtime is not connected.');
+            throw new Error('Grotto Runtime is not connected.');
         }
 
         try {

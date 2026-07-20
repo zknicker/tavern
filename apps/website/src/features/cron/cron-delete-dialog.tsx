@@ -41,7 +41,7 @@ export function CronDeleteDialog({
                 <DialogHeader>
                     <DialogTitle>Delete automation?</DialogTitle>
                     <DialogDescription>
-                        {`Delete "${jobName ?? 'this automation'}"? This removes the automation from Tavern Runtime and cannot be undone.`}
+                        {`Delete "${jobName ?? 'this automation'}"? This removes the automation from Grotto Runtime and cannot be undone.`}
                     </DialogDescription>
                 </DialogHeader>
                 {errorMessage ? (

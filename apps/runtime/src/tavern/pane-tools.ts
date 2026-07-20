@@ -18,14 +18,14 @@ export function createTavernPaneTools(input: { agentId: string; chatId: string }
                     .string()
                     .min(1)
                     .describe(
-                        'tavern://workspace/<path> link to one of your workspace files, or tavern://wiki/<path> link to an existing Wiki page.'
+                        'grotto://workspace/<path> link to one of your workspace files, or grotto://wiki/<path> link to an existing Wiki page.'
                     ),
             }),
             execute: async ({ target }) => {
                 const parsed = parseChatPaneTargetLink(target);
                 if (!parsed) {
                     return {
-                        error: 'Target must be a tavern://workspace/<path> or tavern://wiki/<path> link.',
+                        error: 'Target must be a grotto://workspace/<path> or grotto://wiki/<path> link.',
                     };
                 }
                 const result = await openPaneTargetForAgent({

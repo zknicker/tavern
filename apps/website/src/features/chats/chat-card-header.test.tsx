@@ -166,7 +166,7 @@ test('ChatCardHeader badges first-party Tavern chats by provider', () => {
                 scope: null,
                 searchText: '',
                 sessionCount: 1,
-                source: { kind: 'tavern', label: 'Tavern' },
+                source: { kind: 'tavern', label: 'Grotto' },
                 systemPrompt: null,
                 tabAppearance: { color: null },
                 targetParticipant: null,
@@ -176,9 +176,9 @@ test('ChatCardHeader badges first-party Tavern chats by provider', () => {
         />
     );
 
-    assert.match(markup, /Tavern/);
+    assert.match(markup, /Grotto/);
     assert.match(markup, /Hey Blippy!/);
-    assert.doesNotMatch(markup, /Tavern Hey Blippy!/);
+    assert.doesNotMatch(markup, /Grotto Hey Blippy!/);
     assert.doesNotMatch(markup, /DM/);
 });
 

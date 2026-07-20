@@ -3,7 +3,7 @@ import runtimePackage from '../../package.json';
 import { nowIso } from './shared';
 
 function getRuntimeName() {
-    return process.env.TAVERN_RUNTIME_NAME?.trim() || 'Tavern Runtime';
+    return process.env.TAVERN_RUNTIME_NAME?.trim() || 'Grotto Runtime';
 }
 
 const managedAgentEngineRuntimeId = 'tavern-agent-engine';

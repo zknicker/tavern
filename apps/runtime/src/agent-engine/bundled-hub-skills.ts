@@ -3,17 +3,17 @@ import type { AgentRuntimeSkillHubItem } from '@tavern/api';
 const tavernWorkflowSkillId = 'tavern-workflow';
 const tavernWorkflowIdentifier = `builtin:${tavernWorkflowSkillId}`;
 const tavernWorkflowSkillMd = `---
-summary: Tavern workflow
+summary: Grotto workflow
 ---
 
-# Tavern Workflow
+# Grotto Workflow
 
-Use Tavern workspace context, keep durable knowledge in Memory, and keep execution focused on the active chat goal.
+Use Grotto workspace context, keep durable knowledge in Memory, and keep execution focused on the active chat goal.
 `;
 
 export const builtInHubSkills = [
     {
-        description: 'Tavern workspace habits, durable notes, and focused execution guidance.',
+        description: 'Grotto workspace habits, durable notes, and focused execution guidance.',
         identifier: tavernWorkflowIdentifier,
         name: tavernWorkflowSkillId,
         repo: null,

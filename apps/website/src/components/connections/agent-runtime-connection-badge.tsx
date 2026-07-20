@@ -13,14 +13,14 @@ function getAgentRuntimeTitle(
     }
 
     if (status === 'checking') {
-        return 'Loading Tavern Runtime status.';
+        return 'Loading Grotto Runtime status.';
     }
 
     if (status === 'error') {
-        return 'Could not load saved Tavern Runtime state.';
+        return 'Could not load saved Grotto Runtime state.';
     }
 
-    return 'Tavern is running on synced data only.';
+    return 'Grotto is running on synced data only.';
 }
 
 export function AgentRuntimeConnectionBadge() {

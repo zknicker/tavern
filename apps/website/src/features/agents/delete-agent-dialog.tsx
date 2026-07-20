@@ -38,7 +38,7 @@ export function DeleteAgentDialog({
                 </DialogHeader>
                 <div className="grid gap-4 px-6 pb-6">
                     <p className="text-muted-foreground text-sm leading-relaxed">
-                        {`Delete "${agent.name}"? This removes the agent from Tavern Runtime and cannot be undone.`}
+                        {`Delete "${agent.name}"? This removes the agent from Grotto Runtime and cannot be undone.`}
                     </p>
                     {deleteMutation.error ? (
                         <Alert variant="error">

@@ -13,18 +13,18 @@ export const defaultVisualsChartsSkill = `---
 name: visuals-charts
 description: >
   Design rules for drawing charts and data graphics in a \`\`\`visual fence:
-  Tavern's palette and typography tokens, chart chrome discipline, streaming
+  Grotto's palette and typography tokens, chart chrome discipline, streaming
   order, and the sandbox rules. Load before drawing any chart, sparkline,
   gauge, or stat visual.
 ---
 
 # Chart visuals
 
-Managed by Tavern. Do not edit this skill directory; Tavern refreshes it on
+Managed by Grotto. Do not edit this skill directory; Grotto refreshes it on
 startup.
 
 A \`\`\`visual fence body is plain HTML/SVG rendered in a sandboxed frame that
-inherits Tavern's theme as CSS variables. Draw with the tokens below and the
+inherits Grotto's theme as CSS variables. Draw with the tokens below and the
 chart reads as native Tavern UI in both light and dark mode.
 
 ## Environment

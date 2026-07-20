@@ -394,7 +394,7 @@ const agentRuntimeAgentEnvNameSchema = z
     .min(1)
     .max(128)
     .regex(/^[A-Z_][A-Z0-9_]*$/u, 'Use uppercase letters, digits, and underscores.')
-    .refine((name) => !isAgentRuntimeReservedEnvName(name), 'This name is managed by Tavern.');
+    .refine((name) => !isAgentRuntimeReservedEnvName(name), 'This name is managed by Grotto.');
 
 export const agentRuntimeAgentEnvVariableSchema = z.object({
     hasValue: z.boolean(),
@@ -2692,7 +2692,7 @@ export const agentRuntimeTurnProgressStepSchema = z.object({
 });
 
 // Chat pane state: the Runtime-owned tab set of a chat's artifact pane.
-// Targets mirror the app's tavern:// link scheme; identity is kind + path.
+// Targets mirror the app's grotto:// link scheme; identity is kind + path.
 export const chatPaneTargetSchema = z.discriminatedUnion('kind', [
     z.object({ kind: z.literal('wikiDirectory'), path: z.string() }),
     z.object({ kind: z.literal('wikiPage'), path: z.string().trim().min(1) }),

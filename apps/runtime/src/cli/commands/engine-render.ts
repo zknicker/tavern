@@ -1,7 +1,7 @@
 import { rows } from '../ui.ts';
 
 /**
- * The exact object emitted by `tavern engine status --json`. Key order here is
+ * The exact object emitted by `grotto engine status --json`. Key order here is
  * the JSON contract; keep it stable.
  */
 export interface EngineStatusReport {

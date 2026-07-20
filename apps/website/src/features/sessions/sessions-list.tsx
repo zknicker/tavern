@@ -96,14 +96,14 @@ export function SessionsList({
                 actionLabel="Open settings"
                 description={
                     connectionState === 'unconfigured'
-                        ? 'Start Tavern Runtime to see synced sessions.'
-                        : 'No sessions have been reported yet. Check the Tavern Runtime connection or wait for the next sync.'
+                        ? 'Start Grotto Runtime to see synced sessions.'
+                        : 'No sessions have been reported yet. Check the Grotto Runtime connection or wait for the next sync.'
                 }
                 eyebrow={connectionState === 'unconfigured' ? 'Sessions' : 'Waiting for sessions'}
                 onAction={onNavigateToSettings}
                 title={
                     connectionState === 'unconfigured'
-                        ? 'There are no sessions because Tavern Runtime is not connected.'
+                        ? 'There are no sessions because Grotto Runtime is not connected.'
                         : 'No sessions yet.'
                 }
             />

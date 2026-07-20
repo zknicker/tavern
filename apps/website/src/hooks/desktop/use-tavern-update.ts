@@ -205,7 +205,7 @@ export function getTavernUpdateStatus(input: {
 
     if (input.finalRestartPhase === 'runtime') {
         return {
-            detail: 'Restarting Tavern Runtime. Tavern will restart after Runtime is reachable.',
+            detail: 'Restarting Grotto Runtime. Grotto will restart after Runtime is reachable.',
             phase: 'restarting-runtime',
             version: getRuntimeTargetVersion(input.runtimeConnection),
         };
@@ -213,7 +213,7 @@ export function getTavernUpdateStatus(input: {
 
     if (input.finalRestartPhase === 'app') {
         return {
-            detail: 'Runtime is ready. Restarting Tavern.',
+            detail: 'Runtime is ready. Restarting Grotto.',
             phase: 'restarting-app',
             version: getDesktopVersion(input.desktopUpdateStatus),
         };
@@ -229,13 +229,13 @@ export function getTavernUpdateStatus(input: {
             return desktopStatus.phase === 'ready'
                 ? {
                       ...desktopStatus,
-                      detail: `Tavern v${desktopStatus.version} is ready. Click to install and restart.`,
+                      detail: `Grotto v${desktopStatus.version} is ready. Click to install and restart.`,
                   }
                 : desktopStatus;
         }
 
         return {
-            detail: 'This Tavern app is not compatible with the connected Runtime. Install the latest Tavern update to continue.',
+            detail: 'This Grotto app is not compatible with the connected Runtime. Install the latest Grotto update to continue.',
             phase: 'app-update-required',
         };
     }
@@ -250,7 +250,7 @@ export function getTavernUpdateStatus(input: {
 
     if (input.isRuntimeDisconnected) {
         return {
-            detail: 'Tavern Runtime is disconnected.',
+            detail: 'Grotto Runtime is disconnected.',
             phase: 'runtime-disconnected',
         };
     }
@@ -260,7 +260,7 @@ export function getTavernUpdateStatus(input: {
             return {
                 detail:
                     input.runtimeUpdateStatus.message ??
-                    `Tavern Runtime v${getRuntimeTargetVersion(input.runtimeConnection)} could not download. Click to try again.`,
+                    `Grotto Runtime v${getRuntimeTargetVersion(input.runtimeConnection)} could not download. Click to try again.`,
                 phase: 'available',
                 version: getRuntimeTargetVersion(input.runtimeConnection),
             };
@@ -270,7 +270,7 @@ export function getTavernUpdateStatus(input: {
             return {
                 detail:
                     input.runtimeUpdateStatus.message ??
-                    `Downloading Tavern Runtime v${getRuntimeTargetVersion(input.runtimeConnection)}.`,
+                    `Downloading Grotto Runtime v${getRuntimeTargetVersion(input.runtimeConnection)}.`,
                 phase: 'staging-runtime',
                 version: getRuntimeTargetVersion(input.runtimeConnection),
             };
@@ -282,7 +282,7 @@ export function getTavernUpdateStatus(input: {
                 input.desktopUpdateStatus.phase === 'unsupported'
             ) {
                 return {
-                    detail: `Tavern Runtime v${getRuntimeTargetVersion(input.runtimeConnection)} is ready. Click to restart runtime.`,
+                    detail: `Grotto Runtime v${getRuntimeTargetVersion(input.runtimeConnection)} is ready. Click to restart runtime.`,
                     phase: 'ready',
                     version: getRuntimeTargetVersion(input.runtimeConnection),
                 };
@@ -294,13 +294,13 @@ export function getTavernUpdateStatus(input: {
             return desktopStatusWithRuntimeRestart.phase === 'ready'
                 ? {
                       ...desktopStatusWithRuntimeRestart,
-                      detail: `Tavern v${desktopStatusWithRuntimeRestart.version} is ready. Click to install and restart.`,
+                      detail: `Grotto v${desktopStatusWithRuntimeRestart.version} is ready. Click to install and restart.`,
                   }
                 : desktopStatusWithRuntimeRestart;
         }
 
         return {
-            detail: `The Tavern Runtime is ready to update to v${getRuntimeTargetVersion(input.runtimeConnection)}. Click to download.`,
+            detail: `The Grotto Runtime is ready to update to v${getRuntimeTargetVersion(input.runtimeConnection)}. Click to download.`,
             phase: 'available',
             version: getRuntimeTargetVersion(input.runtimeConnection),
         };
@@ -324,8 +324,8 @@ function getPendingUpdateStatus(input: {
         return {
             detail:
                 version === 'latest'
-                    ? 'Downloading Tavern update.'
-                    : `Downloading Tavern v${version}.`,
+                    ? 'Downloading Grotto update.'
+                    : `Downloading Grotto v${version}.`,
             phase: 'downloading-app',
             progress,
             version,
@@ -338,8 +338,8 @@ function getPendingUpdateStatus(input: {
         return {
             detail:
                 version === 'latest'
-                    ? 'Downloading Tavern Runtime.'
-                    : `Downloading Tavern Runtime v${version}.`,
+                    ? 'Downloading Grotto Runtime.'
+                    : `Downloading Grotto Runtime v${version}.`,
             phase: 'staging-runtime',
             version,
         };
@@ -352,24 +352,24 @@ function fromDesktopUpdateStatus(status: DesktopUpdateStatus): TavernUpdateStatu
     switch (status.phase) {
         case 'available':
             return {
-                detail: `Tavern v${status.version} is ready to download.`,
+                detail: `Grotto v${status.version} is ready to download.`,
                 phase: 'available',
                 version: status.version,
             };
         case 'checking':
-            return { detail: 'Checking for Tavern updates.', phase: 'checking' };
+            return { detail: 'Checking for Grotto updates.', phase: 'checking' };
         case 'current':
-            return { detail: 'Tavern is up to date.', phase: 'idle' };
+            return { detail: 'Grotto is up to date.', phase: 'idle' };
         case 'downloading':
             return {
-                detail: `Downloading Tavern v${status.version}.`,
+                detail: `Downloading Grotto v${status.version}.`,
                 phase: 'downloading-app',
                 progress: status.progress,
                 version: status.version,
             };
         case 'ready':
             return {
-                detail: `Tavern v${status.version} is ready. Click to install and restart.`,
+                detail: `Grotto v${status.version} is ready. Click to install and restart.`,
                 phase: 'ready',
                 version: status.version,
             };
@@ -377,7 +377,7 @@ function fromDesktopUpdateStatus(status: DesktopUpdateStatus): TavernUpdateStatu
             return { detail: status.message, phase: 'failed' };
         case 'restarting':
             return {
-                detail: 'Restarting Tavern.',
+                detail: 'Restarting Grotto.',
                 phase: 'restarting-app',
                 version: status.version,
             };
@@ -387,7 +387,7 @@ function fromDesktopUpdateStatus(status: DesktopUpdateStatus): TavernUpdateStatu
                 phase: 'unsupported',
             };
         default:
-            return { detail: 'Tavern update monitor is idle.', phase: 'idle' };
+            return { detail: 'Grotto update monitor is idle.', phase: 'idle' };
     }
 }
 

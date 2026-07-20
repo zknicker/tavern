@@ -24,7 +24,7 @@ export function OnboardingPage() {
     const connection = runtimeConnection.connection;
 
     if (runtimeConnection.status === 'checking') {
-        return <p className="p-6 text-muted-foreground text-sm">Loading Tavern Runtime…</p>;
+        return <p className="p-6 text-muted-foreground text-sm">Loading Grotto Runtime…</p>;
     }
 
     if (connection?.enabled || !['error', 'unconfigured'].includes(runtimeConnection.status)) {
@@ -42,8 +42,8 @@ export function OnboardingPage() {
                             Connect your runtime
                         </h1>
                         <p className="text-muted-foreground text-sm">
-                            The Tavern Runtime is where your agents live, store their memories, and
-                            work on tasks.
+                            Grotto Runtime is where your agents live, store their memories, and work
+                            on tasks.
                         </p>
                     </div>
                     <Card>
@@ -85,7 +85,7 @@ function TavernRuntimeOnboardingForm({
             errorMessage.includes('Bearer token invalid'));
     const displayErrorMessage = isAuthError
         ? token.trim()
-            ? 'The runtime token is invalid. Run `tavern token` on the runtime host and paste the current token here.'
+            ? 'The runtime token is invalid. Run `grotto token` on the runtime host and paste the current token here.'
             : 'Your signed-in account could not access this runtime. Ask the owner for an invite, then try again.'
         : errorMessage
           ? formatRuntimeConnectionError(errorMessage)
@@ -98,7 +98,7 @@ function TavernRuntimeOnboardingForm({
         : connection?.lastError
           ? {
                 message: formatRuntimeConnectionError(connection.lastError),
-                title: 'Tavern Runtime is unreachable',
+                title: 'Grotto Runtime is unreachable',
             }
           : null;
 
@@ -162,7 +162,7 @@ function TavernRuntimeOnboardingForm({
                     value={token}
                 />
                 <FieldDescription>
-                    Owners paste the token from <code>tavern token</code>. Invited members leave
+                    Owners paste the token from <code>grotto token</code>. Invited members leave
                     this blank.
                 </FieldDescription>
             </Field>
@@ -203,5 +203,5 @@ function formatRuntimeConnectionError(message: string) {
         return 'Unable to connect. Check that this computer can access the URL.';
     }
 
-    return normalized || 'Check that Tavern Runtime is running and this computer can access it.';
+    return normalized || 'Check that Grotto Runtime is running and this computer can access it.';
 }

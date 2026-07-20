@@ -27,7 +27,7 @@ const widgetRules = `Render an app-native widget by writing a fenced code block 
 {"title":"Weekly sales","xKey":"day","series":[{"key":"sold","label":"Sold"}],"data":[{"day":"Mon","sold":4},{"day":"Tue","sold":7}]}
 \`\`\`
 
-Tavern strips the fence from your visible reply and renders the widget in place.
+Grotto strips the fence from your visible reply and renders the widget in place.
 
 Rules:
 - Use a widget by default when an answer is primarily tabular, chartable, or calendar-shaped. Use concise text when a widget would be forced, too small to matter, or too large to scan.

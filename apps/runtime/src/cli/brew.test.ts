@@ -45,3 +45,32 @@ describe('brew.isAvailable', () => {
         expect(brew.isAvailable()).toBe(true);
     });
 });
+
+describe('Runtime formula selection', () => {
+    test('uses the canonical Grotto formula when installed', () => {
+        spawnSyncMock.mockReturnValue(spawnResult({ status: 0 }));
+
+        brew.upgradeRuntime();
+
+        expect(spawnSyncMock).toHaveBeenLastCalledWith(
+            'brew',
+            ['upgrade', 'grotto-runtime'],
+            expect.any(Object)
+        );
+    });
+
+    test('keeps upgrading the legacy formula for existing installs', () => {
+        spawnSyncMock
+            .mockReturnValueOnce(spawnResult({ status: 1 }))
+            .mockReturnValueOnce(spawnResult({ status: 0 }))
+            .mockReturnValueOnce(spawnResult({ status: 0 }));
+
+        brew.upgradeRuntime();
+
+        expect(spawnSyncMock).toHaveBeenLastCalledWith(
+            'brew',
+            ['upgrade', 'tavern-runtime'],
+            expect.any(Object)
+        );
+    });
+});

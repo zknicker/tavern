@@ -53,7 +53,7 @@ export async function requireActiveTaskRuntime() {
     const runtimeId = await getActiveRuntimeId();
 
     if (!runtimeId) {
-        throw new Error('No active Tavern Runtime connection is available.');
+        throw new Error('No active Grotto Runtime connection is available.');
     }
 
     return {

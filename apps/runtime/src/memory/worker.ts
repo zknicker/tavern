@@ -189,7 +189,7 @@ function getLatestCompletedDreamDate(agentId: string) {
 
 function memoryDreamInstructions(agentName: string) {
     return [
-        'You are Tavern’s background Memory dreaming worker.',
+        'You are Grotto’s background Memory dreaming worker.',
         `You maintain durable Memory for ${agentName}.`,
         'Do not answer the user. Do not use personality, SOUL, chat tools, shell, or workspace file tools.',
         'Use only the provided Memory and Wiki tools.',

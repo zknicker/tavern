@@ -86,7 +86,7 @@ export const maxTavernRuntimeRequestBodyBytes = 12 * 1024 * 1024;
 
 export class RequestBodyTooLargeError extends Error {
     constructor() {
-        super('Tavern Runtime request body exceeds the 12 MiB limit.');
+        super('Grotto Runtime request body exceeds the 12 MiB limit.');
         this.name = 'RequestBodyTooLargeError';
     }
 }

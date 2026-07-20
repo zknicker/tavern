@@ -27,8 +27,8 @@ export function WorkerLogs({ connectionState, onNavigateToSettings, workers }: W
                 actionLabel="Open settings"
                 description={
                     connectionState === 'unconfigured'
-                        ? 'Worker logs stay empty until Tavern Runtime is connected.'
-                        : 'Tavern Runtime is connected, but no worker logs have streamed in yet.'
+                        ? 'Worker logs stay empty until Grotto Runtime is connected.'
+                        : 'Grotto Runtime is connected, but no worker logs have streamed in yet.'
                 }
                 eyebrow="Logs"
                 onAction={onNavigateToSettings}

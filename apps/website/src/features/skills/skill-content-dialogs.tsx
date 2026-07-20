@@ -44,7 +44,7 @@ export function UpdateConflictDialog({
                     </Button>
                     <Button disabled={busy} onClick={onReplace}>
                         {busy ? <Spinner className="size-4" /> : null}
-                        Replace with Tavern version
+                        Replace with Grotto version
                     </Button>
                 </DialogFooter>
             </DialogContent>

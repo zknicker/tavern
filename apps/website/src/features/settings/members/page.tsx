@@ -24,7 +24,7 @@ export function MembersSettings() {
                 <SettingsPageHeader title="Members" />
                 <SettingsGroup>
                     <SettingsItem className="text-muted-foreground text-sm">
-                        Members are available when Tavern sign-in is enabled.
+                        Members are available when Grotto sign-in is enabled.
                     </SettingsItem>
                 </SettingsGroup>
             </SettingsPage>
@@ -60,7 +60,7 @@ function SignedInMembersSettings() {
     return (
         <SettingsPage>
             <SettingsPageHeader
-                description="People who can join this Tavern and chat with its agents."
+                description="People who can join this Grotto and chat with its agents."
                 title="Members"
             />
             <SettingsSection title="Members">

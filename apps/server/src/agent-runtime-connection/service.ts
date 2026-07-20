@@ -275,7 +275,7 @@ export async function loadAgentRuntimeConnection(input?: { refreshStatus?: boole
                 lastCheckedAt: record?.lastCheckedAt ?? null,
                 lastError: record?.lastError ?? null,
                 lastSyncedAt: record?.lastSyncedAt ?? null,
-                name: record?.name ?? 'Tavern Runtime',
+                name: record?.name ?? 'Grotto Runtime',
                 runtimeVersion: null,
                 source: 'environment',
             });
@@ -344,7 +344,7 @@ export async function loadAgentRuntimeConnection(input?: { refreshStatus?: boole
         lastCheckedAt: null,
         lastError: null,
         lastSyncedAt: null,
-        name: 'Tavern Runtime',
+        name: 'Grotto Runtime',
         source: 'environment',
     });
 }
@@ -378,7 +378,7 @@ export async function getAgentRuntimeConnection(input?: { refreshStatus?: boolea
             lastCheckedAt: environmentRecord?.lastCheckedAt ?? null,
             lastError: environmentRecord?.lastError ?? runtimeStatus?.lastError ?? null,
             lastSyncedAt: environmentRecord?.lastSyncedAt ?? null,
-            name: 'Tavern Runtime',
+            name: 'Grotto Runtime',
             runtimeVersion: runtimeStatus?.runtimeVersion,
             source: 'environment',
         });
@@ -419,7 +419,7 @@ export async function getAgentRuntimeConnection(input?: { refreshStatus?: boolea
         lastCheckedAt: null,
         lastError: null,
         lastSyncedAt: null,
-        name: 'Tavern Runtime',
+        name: 'Grotto Runtime',
         source: 'environment',
     });
 }
@@ -430,7 +430,7 @@ export async function refreshAgentRuntimeCapability(input: {
     const capability = agentRuntimeCapabilitySchema.parse(input.capability);
     const connection = await getAgentRuntimeConnection();
     if (!connection?.enabled) {
-        throw new Error('Tavern Runtime is not configured.');
+        throw new Error('Grotto Runtime is not configured.');
     }
 
     const record = await getDefaultAgentRuntimeConnection();
@@ -449,7 +449,7 @@ export async function refreshAgentRuntimeCapability(input: {
 export async function startAgentRuntimeUpdate() {
     const connection = await getAgentRuntimeConnection();
     if (!connection?.enabled) {
-        throw new Error('Tavern Runtime is not configured.');
+        throw new Error('Grotto Runtime is not configured.');
     }
 
     const record = await getDefaultAgentRuntimeConnection();
@@ -467,7 +467,7 @@ export async function startAgentRuntimeUpdate() {
 export async function getAgentRuntimeUpdateStatus() {
     const connection = await getAgentRuntimeConnection();
     if (!connection?.enabled) {
-        throw new Error('Tavern Runtime is not configured.');
+        throw new Error('Grotto Runtime is not configured.');
     }
 
     const record = await getDefaultAgentRuntimeConnection();
@@ -485,7 +485,7 @@ export async function getAgentRuntimeUpdateStatus() {
 export async function restartAgentRuntimeForUpdate() {
     const connection = await getAgentRuntimeConnection();
     if (!connection?.enabled) {
-        throw new Error('Tavern Runtime is not configured.');
+        throw new Error('Grotto Runtime is not configured.');
     }
 
     const record = await getDefaultAgentRuntimeConnection();
@@ -547,7 +547,7 @@ export async function saveAgentRuntimeConnection(input: {
             lastCheckedAt: checkedAt,
             lastError: message,
             lastSyncedAt: existing?.lastSyncedAt ?? null,
-            name: existing?.name ?? 'Tavern Runtime',
+            name: existing?.name ?? 'Grotto Runtime',
         });
 
         currentAgentRuntimeUrl = getAgentRuntimeEnvironmentBaseUrl() ?? input.baseUrl;

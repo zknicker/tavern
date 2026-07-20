@@ -28,7 +28,7 @@ export async function ensureWikiHistory(wikiPath: string): Promise<WikiHistoryRe
         }
 
         await ensureHistoryIgnoreFile(wikiPath);
-        await runGit(wikiPath, ['config', 'user.name', 'Tavern Wiki']);
+        await runGit(wikiPath, ['config', 'user.name', 'Grotto Wiki']);
         await runGit(wikiPath, ['config', 'user.email', 'wiki@tavern.local']);
         return { ready: true, reason: null };
     } catch (error) {

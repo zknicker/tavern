@@ -1,2 +1,2 @@
 export const merchbaseEnvironmentLockTooltip =
-    'This plugin is managed by your local Tavern configuration. Disable it there, then restart Tavern.';
+    'This plugin is managed by your local Grotto configuration. Disable it there, then restart Grotto.';

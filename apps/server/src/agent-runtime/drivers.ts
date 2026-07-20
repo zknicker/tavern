@@ -94,7 +94,7 @@ function resolveConnectionBearer(
 
     const sessionToken = getSessionToken();
     if (!sessionToken) {
-        throw new Error('No active user session is available for this Tavern Runtime connection.');
+        throw new Error('No active user session is available for this Grotto Runtime connection.');
     }
 
     return sessionToken;

@@ -208,7 +208,7 @@ async function findReleaseArtifacts({ includeRuntime, version }) {
 }
 
 async function findDesktopArtifacts(version) {
-    const expectedPrefix = `Tavern_${version}_`;
+    const expectedPrefix = `Grotto_${version}_`;
     return await findFiles(
         bundleRoot,
         (entry) =>
@@ -223,7 +223,7 @@ async function findFiles(directory, predicate) {
 
 async function findRuntimeArtifacts(version) {
     const files = await readdir(runtimeBundleDir);
-    const expectedPrefix = `tavern-runtime-${version}-`;
+    const expectedPrefix = `grotto-runtime-${version}-`;
     const artifacts = files
         .filter((entry) => entry.startsWith(expectedPrefix) && entry.includes('.tar.gz'))
         .map((entry) => path.join(runtimeBundleDir, entry));

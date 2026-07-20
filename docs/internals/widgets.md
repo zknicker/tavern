@@ -165,7 +165,7 @@ stored in the envelope plus the activity `summary`/`detail`.
 - `document`: a maintained shared Wiki Markdown page, authored as a bare
   ```` ```document ```` fence with `{ path, title? }`. The path is Wiki-relative
   and must end in `.md`. Its compact transcript card opens a `wikiPage` target
-  through the same artifact-pane open path used by `tavern://wiki` links. This
+  through the same artifact-pane open path used by `grotto://wiki` links. This
   is deliberately a sibling of `artifact`, not a second artifact target form:
   `artifact` owns agent-workspace self-contained HTML with sandboxed rendering;
   `document` owns shared Git-backed Markdown with Wiki reads, conflict-guarded

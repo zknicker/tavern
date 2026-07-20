@@ -654,7 +654,7 @@ export function formatHarnessExecutionError(input: AgentExecutorInput, error: un
     ) {
         return new Error(
             [
-                'Pi failed to authenticate for Tavern agent execution.',
+                'Pi failed to authenticate for Grotto agent execution.',
                 'Verify AI Gateway, OPENAI_API_KEY, or TAVERN_AGENT_API_KEY/TAVERN_AGENT_BASE_URL is configured for the selected model.',
                 `Original error: ${message}`,
             ].join(' ')

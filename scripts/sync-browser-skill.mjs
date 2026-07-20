@@ -106,7 +106,7 @@ const forbiddenTokens = [
 
 const tavernPreamble = `# Browser
 
-Control the managed Chrome browser. Tavern owns the browser process, its
+Control the managed Chrome browser. Grotto owns the browser process, its
 durable profile, the session, and the CDP connection; you drive it with one
 tool.
 
@@ -126,7 +126,7 @@ never try to run agent-browser through shell commands. Shell constructs
 JavaScript as a single argument: \`{"args": ["eval", "<code>"]}\`.
 
 If the tool reports that the browser is unavailable, tell the user the
-reported reason. Browser setup and recovery live in Tavern settings.
+reported reason. Browser setup and recovery live in Grotto settings.
 `;
 
 function fail(message) {

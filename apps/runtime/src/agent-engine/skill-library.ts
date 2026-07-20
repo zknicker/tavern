@@ -32,9 +32,9 @@ export const agentEngineSkillsDir = path.join(AGENT_HOME, 'skills');
 export const tavernAgentSkillId = 'tavern-agent';
 export const tasksSkillId = 'tasks';
 
-export const defaultTavernSkill = `# Tavern Agent
+export const defaultTavernSkill = `# Grotto Agent
 
-Use Tavern chat context, memory, files, and local tools. Keep replies direct and action-oriented.
+Use Grotto chat context, memory, files, and local tools. Keep replies direct and action-oriented.
 `;
 
 export const defaultTasksSkill = `---
@@ -46,7 +46,7 @@ description: >
 
 # Tasks
 
-Managed by Tavern. Do not edit this skill directory; Tavern refreshes it on
+Managed by Grotto. Do not edit this skill directory; Grotto refreshes it on
 startup. For durable agent-managed skill changes, create or update a separate
 skill in your normal skills directory.
 
@@ -192,7 +192,7 @@ async function seedSeededSkill(skillId: string, options: { skillsDir?: string } 
     const skillPath = path.join(options.skillsDir ?? agentEngineSkillsDir, skillId, 'SKILL.md');
     const defaultContent = seededSkillDefaults[skillId];
     if (defaultContent === undefined) {
-        throw new Error(`Skill ${skillId} is not a seeded Tavern skill.`);
+        throw new Error(`Skill ${skillId} is not a seeded Grotto skill.`);
     }
     const existing = await fs.readFile(skillPath, 'utf8').catch(() => null);
     if (existing === defaultContent) {
@@ -211,7 +211,7 @@ async function seedSeededSkill(skillId: string, options: { skillsDir?: string } 
 export async function resetSeededSkill(skillId: string, options: { skillsDir?: string } = {}) {
     const defaultContent = seededSkillDefaults[skillId];
     if (defaultContent === undefined) {
-        throw new Error(`Skill ${skillId} is not a seeded Tavern skill.`);
+        throw new Error(`Skill ${skillId} is not a seeded Grotto skill.`);
     }
     const skillPath = path.join(options.skillsDir ?? agentEngineSkillsDir, skillId, 'SKILL.md');
     await fs.mkdir(path.dirname(skillPath), { recursive: true });
@@ -235,7 +235,7 @@ export async function resetRuntimeSkillToDefault(
     if (pluginReset) {
         return pluginReset;
     }
-    throw new Error('Only seeded and Plugin skills have Tavern defaults.');
+    throw new Error('Only seeded and Plugin skills have Grotto defaults.');
 }
 
 export async function listRuntimeSkills(options: RuntimeSkillOptions = {}) {

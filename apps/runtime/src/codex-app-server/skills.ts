@@ -165,7 +165,7 @@ class CodexAppServerClient {
             capabilities: { experimentalApi: true },
             clientInfo: {
                 name: 'tavern-runtime',
-                title: 'Tavern Runtime',
+                title: 'Grotto Runtime',
                 version: '0.0.0',
             },
         });

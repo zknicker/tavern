@@ -227,7 +227,7 @@ function requireTavernMutation(request: Request, label: string) {
     ) {
         return null;
     }
-    return forbidden(`${label} requires a Tavern caller.`);
+    return forbidden(`${label} requires a Grotto caller.`);
 }
 
 /** Wiki content writes need a Tavern caller. Settings stay editable. */

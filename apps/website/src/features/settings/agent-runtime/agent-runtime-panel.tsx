@@ -82,7 +82,7 @@ function RuntimeCapabilitiesGroup({ connection }: { connection: RuntimeConnectio
             ) : null}
             <CapabilitySection
                 capabilities={connection.runtimeCapabilities}
-                emptyLabel="No Tavern Runtime capability checks recorded."
+                emptyLabel="No Grotto Runtime capability checks recorded."
                 onCapabilityRefresh={(capability) =>
                     capabilityMutation.mutate(capability.capability)
                 }
@@ -190,10 +190,10 @@ function RuntimeUrlForm({ connection }: { connection: RuntimeConnection }) {
                 });
             }}
         >
-            <SettingsRow description="Where your agent lives." title="Tavern Runtime URL">
+            <SettingsRow description="Where your agent lives." title="Grotto Runtime URL">
                 <div className="flex max-w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
                     <Input
-                        aria-label="Tavern Runtime URL"
+                        aria-label="Grotto Runtime URL"
                         className="font-mono md:flex-1"
                         disabled={connectMutation.isPending || isEnvironment}
                         id={urlInputId}
@@ -222,20 +222,20 @@ function RuntimeUrlForm({ connection }: { connection: RuntimeConnection }) {
                 error={
                     connectMutation.error
                         ? isAuthError
-                            ? 'The runtime token is missing or invalid. Run `tavern token` on the runtime host and paste the current token here.'
+                            ? 'The runtime token is missing or invalid. Run `grotto token` on the runtime host and paste the current token here.'
                             : errorMessage
                         : null
                 }
                 title={
                     <span className="inline-flex items-center gap-1.5">
-                        Tavern Runtime Token
+                        Grotto Runtime Token
                         <TooltipProvider>
                             <Tooltip
                                 content={
                                     <span>
                                         On the runtime host, run{' '}
                                         <code className="rounded bg-white/10 px-1 py-0.5 font-mono text-[0.92em]">
-                                            tavern token
+                                            grotto token
                                         </code>{' '}
                                         to print the pairing token, then paste it here.
                                     </span>
@@ -262,7 +262,7 @@ function RuntimeUrlForm({ connection }: { connection: RuntimeConnection }) {
                     placeholder={
                         connection.authConfigured && !trimmedToken
                             ? '••••••••••••••••'
-                            : 'Run `tavern token` on the runtime host'
+                            : 'Run `grotto token` on the runtime host'
                     }
                     revealed={tokenRevealed}
                     value={token}
@@ -275,9 +275,9 @@ function RuntimeUrlForm({ connection }: { connection: RuntimeConnection }) {
 function MissingRuntimeRow() {
     return (
         <SettingsItem className="grid gap-2 px-3.5 py-3.5">
-            <h3 className="font-medium text-foreground text-sm">Tavern Runtime</h3>
+            <h3 className="font-medium text-foreground text-sm">Grotto Runtime</h3>
             <p className="text-muted-foreground text-sm">
-                No managed runtime has reported status yet. Start Tavern through the desktop app or
+                No managed runtime has reported status yet. Start Grotto through the desktop app or
                 the local dev stack so the server can discover the managed agent runtime.
             </p>
         </SettingsItem>
@@ -297,14 +297,14 @@ export function AgentRuntimeSettingsPanel({
 
     return (
         <SettingsPage>
-            <SettingsPageHeader title="Tavern Runtime" />
+            <SettingsPageHeader title="Grotto Runtime" />
             <SettingsSection title="Connection">
                 {runtime?.lastError ? (
                     <Alert className="mb-4" variant="error">
                         <Icon icon={AlertCircleIcon} />
-                        <AlertTitle>Tavern Runtime is unreachable.</AlertTitle>
+                        <AlertTitle>Grotto Runtime is unreachable.</AlertTitle>
                         <AlertDescription>
-                            Tavern can&apos;t reach this Runtime URL. Check the address, port, and
+                            Grotto can&apos;t reach this Runtime URL. Check the address, port, and
                             network.
                         </AlertDescription>
                         <AlertAction>
@@ -322,9 +322,9 @@ export function AgentRuntimeSettingsPanel({
                 {runtime && isChecking && !runtime.lastError ? (
                     <Alert className="mb-4" variant="info">
                         <Icon className="animate-spin" icon={Refresh04Icon} />
-                        <AlertTitle>Checking Tavern Runtime reachability.</AlertTitle>
+                        <AlertTitle>Checking Grotto Runtime reachability.</AlertTitle>
                         <AlertDescription>
-                            Tavern is open with synced data while it checks {runtime.baseUrl}. This
+                            Grotto is open with synced data while it checks {runtime.baseUrl}. This
                             can take up to 10 seconds when the Runtime host is unreachable.
                         </AlertDescription>
                     </Alert>

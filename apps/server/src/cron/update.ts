@@ -34,7 +34,7 @@ export async function updateCronJob(input: unknown) {
     }
 
     if (parsed.patch.delivery?.chatId && !deliveryChat) {
-        throw new Error(`No Tavern chat named "${parsed.patch.delivery.chatId}" exists.`);
+        throw new Error(`No Grotto chat named "${parsed.patch.delivery.chatId}" exists.`);
     }
 
     if (deliveryChat && deliveryChat.runtimeId !== job.runtimeId) {

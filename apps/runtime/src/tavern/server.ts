@@ -151,7 +151,7 @@ export function startTavernRuntimeServer(
                 return;
             }
             const fallback = internalError(
-                error instanceof Error ? error.message : 'Tavern Runtime request failed.'
+                error instanceof Error ? error.message : 'Grotto Runtime request failed.'
             );
             await writeFetchResponse(fallback, response);
         }

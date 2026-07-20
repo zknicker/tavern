@@ -199,5 +199,5 @@ function workspaceLink(relativePath: string) {
         .split('/')
         .map((segment) => encodeURIComponent(segment))
         .join('/');
-    return `tavern://workspace/${encoded}`;
+    return `grotto://workspace/${encoded}`;
 }

@@ -23,7 +23,7 @@ export async function resolveActingUserId(
 
     const client = createConfiguredAgentRuntimeClient();
     if (!client) {
-        throw new Error('Unable to resolve the acting Tavern user: Runtime is not connected.');
+        throw new Error('Unable to resolve the acting Grotto user: Runtime is not connected.');
     }
 
     try {
@@ -34,7 +34,7 @@ export async function resolveActingUserId(
         });
         return me.user.id;
     } catch (cause) {
-        throw new Error('Unable to resolve the acting Tavern user from Runtime.', { cause });
+        throw new Error('Unable to resolve the acting Grotto user from Runtime.', { cause });
     } finally {
         client.close();
     }

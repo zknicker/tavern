@@ -56,7 +56,7 @@ The `artifact` fence funnels into the widget machinery (component id
 renderer (`apps/website/src/widgets/artifact-card.tsx`) draws the compact
 card — title, kind line, open affordance — and performs no workspace read.
 Clicking calls the artifact-panel open path with a `workspaceFile` target,
-the same merge-or-focus flow `tavern://workspace` links and the agent
+the same merge-or-focus flow `grotto://workspace` links and the agent
 `pane_open` tool use. In the pane, the workspace HTML preview
 (`apps/website/src/features/chats/chat-artifact-workspace-preview.tsx`)
 renders the page with host tokens injected

@@ -139,7 +139,7 @@ try {
 
             await send(
                 dm,
-                `First run 'sleep 15' in your shell. Then use chat_send to post one line starting with "STATUS:" to the chat titled "Session eval crosspost target ${stamp}" (chatId: ${target}). If you have been shown any message from that chat — for example in a bracketed Tavern notice or a held-send note — include its key detail in the STATUS line. Do not use chat read tools — rely only on what you have been shown.`
+                `First run 'sleep 15' in your shell. Then use chat_send to post one line starting with "STATUS:" to the chat titled "Session eval crosspost target ${stamp}" (chatId: ${target}). If you have been shown any message from that chat — for example in a bracketed Grotto notice or a held-send note — include its key detail in the STATUS line. Do not use chat read tools — rely only on what you have been shown.`
             );
             await waitForTurnActive(dm, 60_000);
             await sleep(2000);

@@ -176,11 +176,11 @@ export function pluginSkillContent(service: TavernPluginServiceManifest) {
 
 ${service.description}
 
-Use these read-only Tavern Plugin tools when the user asks for ${service.displayName} data:
+Use these read-only Grotto Plugin tools when the user asks for ${service.displayName} data:
 
 ${tools}
 
-Do not run setup, sync, ingestion, account switching, or secret changes from chat. Those stay in Tavern Plugin settings.
+Do not run setup, sync, ingestion, account switching, or secret changes from chat. Those stay in Grotto Plugin settings.
 `;
 }
 

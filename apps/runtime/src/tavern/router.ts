@@ -218,7 +218,7 @@ export async function handleTavernRuntimeRequest(
             request.headers.get(agentRuntimeMutationHeaders.origin) !==
             agentRuntimeMutationOrigins.tavern
         ) {
-            return forbidden('Runtime update requires a Tavern caller.');
+            return forbidden('Runtime update requires a Grotto caller.');
         }
         return json(
             agentRuntimeUpdateSchema.parse(
@@ -236,7 +236,7 @@ export async function handleTavernRuntimeRequest(
             request.headers.get(agentRuntimeMutationHeaders.origin) !==
             agentRuntimeMutationOrigins.tavern
         ) {
-            return forbidden('Runtime restart requires a Tavern caller.');
+            return forbidden('Runtime restart requires a Grotto caller.');
         }
         return json(agentRuntimeUpdateSchema.parse(restartRuntimeForUpdate()));
     }

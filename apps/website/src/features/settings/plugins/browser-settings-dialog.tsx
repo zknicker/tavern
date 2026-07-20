@@ -98,7 +98,7 @@ export function BrowserSettingsDialog({
                 </PluginSection>
 
                 <PluginSection
-                    description="The Chrome install Tavern manages."
+                    description="The Chrome install Grotto manages."
                     title="Managed Chrome"
                 >
                     {settings.application ? (

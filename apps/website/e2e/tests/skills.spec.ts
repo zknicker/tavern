@@ -18,7 +18,7 @@ test('lists installed skills with available and sources management', async ({ pa
     // The available catalog lives in the add-from-library dialog.
     await page.getByRole('button', { name: 'Add from library' }).click();
     const libraryDialog = page.getByRole('dialog', { name: 'Add from library' });
-    await expect(libraryDialog.getByText('Tavern Workflow', { exact: true })).toBeVisible();
+    await expect(libraryDialog.getByText('Grotto Workflow', { exact: true })).toBeVisible();
     await expect(libraryDialog.getByText('Built-in', { exact: true }).first()).toBeVisible();
     await page.keyboard.press('Escape');
 });
@@ -34,7 +34,7 @@ test('splits channels and MCP into separate settings pages', async ({ page }) =>
     await page.goto('/settings/channels');
 
     await expect(page.getByRole('heading', { level: 1, name: 'Channels' })).toBeVisible();
-    await expect(page.getByRole('main').getByText('Tavern', { exact: true }).first()).toBeVisible();
+    await expect(page.getByRole('main').getByText('Grotto', { exact: true }).first()).toBeVisible();
 
     await page.goto('/settings/mcp');
 

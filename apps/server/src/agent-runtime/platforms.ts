@@ -2,7 +2,7 @@ import type { AgentRuntimeBinding, AgentRuntimeUpsertBinding } from '@tavern/api
 import type { TavernAgentRuntimeClient } from './client.ts';
 import { createConfiguredAgentRuntimeClient } from './configured-client.ts';
 
-const agentRuntimeNotConfiguredMessage = 'Tavern Runtime is not configured.';
+const agentRuntimeNotConfiguredMessage = 'Grotto Runtime is not configured.';
 
 function requireAgentRuntimeClient(client: TavernAgentRuntimeClient | null) {
     if (!client) {

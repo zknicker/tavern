@@ -42,7 +42,7 @@ export function CronJobActions({
     const toggleLabel = job.enabled ? 'Pause' : 'Enable';
     const toggleTitle = canEdit
         ? `${toggleLabel} automation`
-        : `Start Tavern Runtime to ${toggleLabel.toLowerCase()} this automation`;
+        : `Start Grotto Runtime to ${toggleLabel.toLowerCase()} this automation`;
 
     return (
         <div className={cn('flex shrink-0 items-center gap-0.5', className)}>
@@ -53,7 +53,7 @@ export function CronJobActions({
                     void onRun(job);
                 }}
                 size="icon-sm"
-                title={canEdit ? 'Run now' : 'Start Tavern Runtime to run this automation'}
+                title={canEdit ? 'Run now' : 'Start Grotto Runtime to run this automation'}
                 type="button"
                 variant="ghost"
             >

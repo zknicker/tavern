@@ -3,7 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { appRoutes } from '../../lib/app-routes.ts';
 
 export const routeTabs = [
-    { id: 'overview', label: 'Tavern', path: appRoutes.overview },
+    { id: 'overview', label: 'Grotto', path: appRoutes.overview },
     { id: 'tasks', label: 'Tasks', path: appRoutes.tasks },
     { id: 'automations', label: 'Automations', path: appRoutes.automations },
     { id: 'workspace', label: 'Workspace', path: appRoutes.workspace },

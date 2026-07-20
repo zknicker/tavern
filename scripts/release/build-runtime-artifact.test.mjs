@@ -9,9 +9,11 @@ import {
 } from './build-runtime-artifact.mjs';
 
 test('runtime artifact validation catches missing staged SDK', async () => {
-    const stageRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'tavern-runtime-artifact-'));
+    const stageRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'grotto-runtime-artifact-'));
 
     await fs.mkdir(path.join(stageRoot, 'bin'), { recursive: true });
+    await fs.writeFile(path.join(stageRoot, 'bin', 'grotto'), '');
+    await fs.writeFile(path.join(stageRoot, 'bin', 'grotto-runtime'), '');
     await fs.writeFile(path.join(stageRoot, 'bin', 'tavern'), '');
     await fs.writeFile(path.join(stageRoot, 'bin', 'tavern-runtime'), '');
     await fs.mkdir(path.join(stageRoot, 'share/tavern/node_modules/@tobilu/qmd'), {
@@ -20,6 +22,13 @@ test('runtime artifact validation catches missing staged SDK', async () => {
     await fs.writeFile(
         path.join(stageRoot, 'share/tavern/node_modules/@tobilu/qmd/package.json'),
         '{}'
+    );
+    await fs.mkdir(path.join(stageRoot, 'share/tavern/node_modules/agent-browser/bin'), {
+        recursive: true,
+    });
+    await fs.writeFile(
+        path.join(stageRoot, 'share/tavern/node_modules/agent-browser/bin/agent-browser.js'),
+        ''
     );
     await fs.mkdir(path.join(stageRoot, 'share/tavern/runtime-assets/google'), {
         recursive: true,
@@ -45,7 +54,7 @@ test('runtime artifact validation catches missing staged SDK', async () => {
 });
 
 test('runtime artifact validation rejects unexpected runtime asset roots', async () => {
-    const stageRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'tavern-runtime-artifact-'));
+    const stageRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'grotto-runtime-artifact-'));
     const runtimeAssetsRoot = path.join(stageRoot, 'share/tavern/runtime-assets');
 
     await fs.mkdir(path.join(runtimeAssetsRoot, 'google'), { recursive: true });

@@ -25,13 +25,13 @@ export async function markTavernChatRead(
     });
 
     if (!chatRecord) {
-        throw new Error(`No Tavern chat named "${input.chatId}" exists.`);
+        throw new Error(`No Grotto chat named "${input.chatId}" exists.`);
     }
 
     const connection = await getAgentRuntimeConnection(chatRecord.runtimeId);
 
     if (!(connection?.enabled && connection.baseUrl)) {
-        throw new Error(`Tavern Runtime connection "${chatRecord.runtimeId}" is not configured.`);
+        throw new Error(`Grotto Runtime connection "${chatRecord.runtimeId}" is not configured.`);
     }
 
     const receipt = await createTavernClientForConnection(connection).chat.markRead(input.chatId, {

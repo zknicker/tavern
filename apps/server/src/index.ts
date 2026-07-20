@@ -42,7 +42,7 @@ async function start() {
         getParentPid: () => process.ppid,
     });
 
-    logStartupBanner('🎰 Tavern Server', 'Booting Tavern Runtime services');
+    logStartupBanner('🟠 Grotto Server', 'Booting Grotto Runtime services');
     await ensureDatabaseSchema();
     await loadAgentRuntimeConnection({ refreshStatus: false });
 
@@ -95,12 +95,12 @@ async function start() {
     void refreshRuntimeAfterStartup();
     const configuredAgentRuntimeCount = (await listConfiguredAgentRuntimeConnections()).length;
 
-    logStartupSection('Tavern Runtime');
+    logStartupSection('Grotto Runtime');
     logStartupDetail('🗄️', 'Database', shortenHomePath(env.DATABASE_PATH));
     logStartupDetail('🌐', 'App origin', env.APP_ORIGIN);
     logStartupDetail('📡', 'HTTP', `http://localhost:${env.SERVER_PORT}`);
     logStartupDetail('🔌', 'WebSocket', `ws://localhost:${env.SERVER_PORT}/trpc`);
-    logStartupDetail('🎮', 'Tavern Runtime', getCurrentAgentRuntimeUrl() ?? 'disabled');
+    logStartupDetail('🎮', 'Grotto Runtime', getCurrentAgentRuntimeUrl() ?? 'disabled');
     logStartupDetail(
         '👀',
         'Runtime observe',
@@ -113,7 +113,7 @@ async function start() {
         'Usage refresh',
         formatDurationMs(apiEventSchedulerIntervals.usageIntervalMs)
     );
-    logStartupComplete('Tavern is ready');
+    logStartupComplete('Grotto is ready');
 }
 
 const startupRuntimeConfirmRetryMs = 2000;
@@ -151,7 +151,7 @@ async function refreshRuntimeAfterStartup() {
 }
 
 start().catch((error) => {
-    logStartupFailure('Tavern boot failed');
+    logStartupFailure('Grotto boot failed');
     console.error(error);
     process.exitCode = 1;
 });

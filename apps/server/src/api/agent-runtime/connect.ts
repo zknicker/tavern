@@ -32,7 +32,7 @@ function normalizeBaseUrl(baseUrl: string) {
 }
 
 function toErrorMessage(error: unknown) {
-    return error instanceof Error ? error.message : 'Failed to connect to Tavern Runtime.';
+    return error instanceof Error ? error.message : 'Failed to connect to Grotto Runtime.';
 }
 
 export const connectAgentRuntimeRoute = publicProcedure

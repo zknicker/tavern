@@ -52,7 +52,7 @@ let serverReadyPromise = null;
 let updateCheckInterval = null;
 const newWindowOffsetPx = 36;
 
-app.setName('Tavern');
+app.setName('Grotto');
 app.setAppUserModelId('build.tavern.desktop');
 
 registerClerkAuth({ app, BrowserWindow, ipcMain, safeStorage, shell, webContents });
@@ -74,7 +74,7 @@ if (useMockUpdater) {
 function createWindow({ route, openerBounds } = {}) {
     const bounds = nextWindowBounds(openerBounds, { offset: newWindowOffsetPx });
     const window = new BrowserWindow({
-        title: 'Tavern',
+        title: 'Grotto',
         width: bounds.width,
         height: bounds.height,
         x: bounds.x,
@@ -334,7 +334,7 @@ function sendUpdateStatus(status) {
 async function startDesktopServer() {
     const serverPath = getServerPath();
     if (!existsSync(serverPath)) {
-        throw new Error(`Tavern desktop backend is missing: ${serverPath}`);
+        throw new Error(`Grotto desktop backend is missing: ${serverPath}`);
     }
 
     cleanupDesktopServerPort();
@@ -419,7 +419,7 @@ async function waitForSidecarHealth() {
         await new Promise((resolve) => setTimeout(resolve, sidecarStartupPollMs));
     }
 
-    throw new Error('Tavern desktop backend did not become healthy in time.');
+    throw new Error('Grotto desktop backend did not become healthy in time.');
 }
 
 function cleanupDevPortsOnce() {
@@ -482,7 +482,7 @@ function getErrorMessage(error) {
         return error;
     }
 
-    return 'Tavern could not check for updates.';
+    return 'Grotto could not check for updates.';
 }
 
 app.whenReady().then(() => {

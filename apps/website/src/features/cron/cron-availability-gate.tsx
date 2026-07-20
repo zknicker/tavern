@@ -18,11 +18,11 @@ export function CronAvailabilityGate({ children }: { children: ReactNode }) {
 
     return (
         <EmptyState
-            actionLabel="Open Tavern Runtime settings"
+            actionLabel="Open Grotto Runtime settings"
             description={runtimeUnhealthyTooltip}
             eyebrow="Automations"
             onAction={navigateToSettings}
-            title="Automations are waiting on Tavern Runtime."
+            title="Automations are waiting on Grotto Runtime."
         />
     );
 }

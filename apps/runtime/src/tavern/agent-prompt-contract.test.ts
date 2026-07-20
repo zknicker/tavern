@@ -49,7 +49,7 @@ const REQUIREMENTS: Array<{
     // Identity and durable memory surfaces.
     {
         capability: 'managed identity header',
-        expected: '# Tavern Agent Instructions',
+        expected: '# Grotto Agent Instructions',
         prompt: 'channel',
     },
     { capability: 'SOUL identity section', expected: '## SOUL', prompt: 'channel' },

@@ -8,7 +8,7 @@ import { createConfiguredAgentRuntimeClient } from '../agent-runtime/configured-
 
 function requireRuntimeClient(client: TavernAgentRuntimeClient | null) {
     if (!client) {
-        throw new Error('Tavern Runtime is not configured.');
+        throw new Error('Grotto Runtime is not configured.');
     }
     return client;
 }

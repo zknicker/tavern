@@ -54,7 +54,7 @@ export function MerchbaseSettingsCard({
     if (!settings) {
         return (
             <SettingsRow
-                description={error ?? 'Tavern Runtime unavailable.'}
+                description={error ?? 'Grotto Runtime unavailable.'}
                 title="MerchBase"
                 trailingWidth="intrinsic"
             >
@@ -221,7 +221,7 @@ function MerchbasePluginRow({
                 <PluginEnablementSwitch
                     aria-label={
                         environmentControlled
-                            ? 'MerchBase enablement is managed by local Tavern configuration'
+                            ? 'MerchBase enablement is managed by local Grotto configuration'
                             : needsSetup
                               ? 'MerchBase needs setup before it can be enabled'
                               : `${settings.enabled ? 'Disable' : 'Enable'} MerchBase`

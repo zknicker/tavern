@@ -85,7 +85,7 @@ test('updateTavernChatTabAppearance rejects Tavern DMs', async () => {
             chatId: 'cht_1',
             color: '#22c55e',
         }),
-        /Only Tavern channels/
+        /Only Grotto channels/
     );
 });
 
@@ -101,6 +101,6 @@ test('updateTavernChatSystemPrompt rejects non-Tavern chats', async () => {
             chatId: 'cht_1',
             systemPrompt: 'Nope',
         }),
-        /Only Tavern chats/
+        /Only Grotto chats/
     );
 });

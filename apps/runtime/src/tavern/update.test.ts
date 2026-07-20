@@ -28,9 +28,7 @@ describe('Runtime update', () => {
             'sh',
             [
                 '-lc',
-                expect.stringMatching(
-                    /^brew update && brew upgrade tavern-runtime && .*engine install/
-                ),
+                expect.stringMatching(/grotto-runtime.*brew update.*brew upgrade.*engine install/),
             ],
             expect.objectContaining({
                 stdio: 'ignore',
@@ -55,7 +53,7 @@ describe('Runtime update', () => {
         expect(status.phase).toBe('restarting');
         expect(spawnMock).toHaveBeenCalledWith(
             'sh',
-            ['-lc', 'brew services restart tavern-runtime'],
+            ['-lc', expect.stringMatching(/grotto-runtime.*brew services restart/)],
             expect.objectContaining({
                 detached: true,
                 stdio: 'ignore',

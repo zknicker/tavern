@@ -274,7 +274,7 @@ test('cleanupStaleProcesses closes the old Tauri desktop app in desktop mode', (
             listListeningProcessIds: (port) => (port === 3180 ? [222] : []),
             readProcessCommand: (pid) =>
                 pid === 222
-                    ? '/Applications/Tavern.app/Contents/MacOS/tavern-server --app-origin tauri://localhost --server-port 3180'
+                    ? '/Applications/Grotto.app/Contents/MacOS/tavern-server --app-origin tauri://localhost --server-port 3180'
                     : '',
             readProcessParentId: (pid) => (pid === 222 ? 111 : null),
             readProcessWorkingDirectory: () => null,

@@ -2,7 +2,7 @@ import { getRuntimeApiToken } from '../../config';
 import type { ParsedArgs } from '../parse';
 import { writeJson } from '../ui';
 
-/** Injectable I/O for `tavern token`, so tests supply fixtures without touching the filesystem. */
+/** Injectable I/O for `grotto token`, so tests supply fixtures without touching the filesystem. */
 export interface TokenDeps {
     getToken(): string;
     write(text: string): void;
@@ -16,8 +16,8 @@ function defaultDeps(): TokenDeps {
 }
 
 /**
- * `tavern token [--json]`. Prints the Runtime API token used to authenticate the
- * Tavern app. Plain output is the token itself (one line, script-friendly).
+ * `grotto token [--json]`. Prints the Runtime API token used to authenticate the
+ * Grotto app. Plain output is the token itself (one line, script-friendly).
  * `--json` emits `{ "token": "..." }` for symmetry with other read commands.
  *
  * The token is read from `TAVERN_RUNTIME_TOKEN` env or the `token` key in

@@ -13,14 +13,14 @@ const macosBundleDir = path.join(bundleRoot, 'mac-arm64');
 const main = async () => {
     const websitePackage = await readJson('apps/website/package.json');
     const version = websitePackage.version;
-    const appPath = path.join(macosBundleDir, 'Tavern.app');
-    const artifactPrefix = `Tavern_${version}_arm64`;
+    const appPath = path.join(macosBundleDir, 'Grotto.app');
+    const artifactPrefix = `Grotto_${version}_arm64`;
     const dmgPath = await findSingleFile(bundleRoot, (entry) => entry === `${artifactPrefix}.dmg`);
     const zipPath = await findSingleFile(bundleRoot, (entry) => entry === `${artifactPrefix}.zip`);
     const latestYamlPath = path.join(bundleRoot, 'latest-mac.yml');
     const sidecarPath = path.join(appPath, 'Contents', 'Resources', 'bin', 'tavern-server');
 
-    await assertDirectory(appPath, 'Tavern.app');
+    await assertDirectory(appPath, 'Grotto.app');
     await assertSidecarVersion(sidecarPath, version);
     await assertFileHasContent(dmgPath, path.basename(dmgPath));
     await assertFileHasContent(zipPath, path.basename(zipPath));

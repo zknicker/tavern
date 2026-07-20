@@ -46,7 +46,7 @@ Last updated: 2026-07-03T00:00:00Z
 ## Invariants
 
 - Wiki lives under \`wiki/\`.
-- Wiki is the shared Markdown knowledge system exposed in Tavern's Wiki page.
+- Wiki is the shared Markdown knowledge system exposed in Grotto's Wiki page.
 - Per-agent core memory files (\`USER.md\`, \`MEMORY.md\`) live in each agent workspace, not in Wiki.
 - Episodic memory is worker-owned evidence under the agent's hidden workspace memory, not in Wiki.
 - Each agent owns its own episodic memory and dreaming pass.
@@ -1169,7 +1169,7 @@ function normalizeWritableRelativePath(
         throw new Error('Wiki path must stay inside the Wiki root and avoid dot directories.');
     }
     if (!options.allowAttachments && segments.includes('_attachments')) {
-        throw new Error('Wiki attachment directories are managed by Tavern.');
+        throw new Error('Wiki attachment directories are managed by Grotto.');
     }
 
     const normalized = path.posix.normalize(trimmed);

@@ -194,7 +194,7 @@ export class BrowserSupervisor {
         }
         if (!observation.lockHeld) {
             return {
-                reason: 'Chrome is running without the Tavern profile lock.',
+                reason: 'Chrome is running without the Grotto profile lock.',
                 state: 'degraded',
             };
         }

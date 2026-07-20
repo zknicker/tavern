@@ -17,7 +17,7 @@ interface SkillReviewPromptInput {
     windowStartSequence: number | null;
 }
 
-export const skillReviewInstructions = `You are the background skill review worker for a Tavern agent. A settled
+export const skillReviewInstructions = `You are the background skill review worker for a Grotto agent. A settled
 chat window produced learning signals. Decide what the skill library should
 learn from it, make the smallest durable update, and stop.
 

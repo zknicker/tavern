@@ -235,7 +235,7 @@ export function TavernProviders({ children }: React.PropsWithChildren) {
                 setAgentRuntimeError(
                     error instanceof Error
                         ? error
-                        : new Error('Failed to start Tavern desktop backend.')
+                        : new Error('Failed to start Grotto desktop backend.')
                 );
             });
 
@@ -263,7 +263,7 @@ export function TavernProviders({ children }: React.PropsWithChildren) {
             <div className="flex min-h-screen items-center justify-center bg-background p-6 text-center text-foreground">
                 <div>
                     <p className="font-medium text-lg">
-                        Tavern failed to start its desktop backend.
+                        Grotto failed to start its desktop backend.
                     </p>
                     <p className="mt-2 text-muted-foreground text-sm">
                         {agentRuntimeError.message}

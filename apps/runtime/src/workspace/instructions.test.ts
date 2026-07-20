@@ -46,9 +46,9 @@ describe('generated agent instructions', () => {
 
         expect(result.written).toBe(true);
         expect(result.sha256).toMatch(/^[a-f0-9]{64}$/u);
-        expect(result.content).toMatch(/^# Tavern Agent Instructions/u);
+        expect(result.content).toMatch(/^# Grotto Agent Instructions/u);
         expect(result.content).toContain(
-            'You are Planner, a helpful, proactive, and persistent agent in Tavern'
+            'You are Planner, a helpful, proactive, and persistent agent in Grotto'
         );
         await expect(readNotesFile()).resolves.toBe('');
         await expect(stat(path.join(workspaceDir, 'AGENTS.md'))).rejects.toThrow();
@@ -73,7 +73,7 @@ describe('generated agent instructions', () => {
         expect(content).toContain('## Files');
         expect(content).toContain('`workbench/` is your working directory');
         expect(content).toContain('`workbench/tasks/T-12/`');
-        expect(content).toContain('Keep the workspace root for Tavern-managed files');
+        expect(content).toContain('Keep the workspace root for Grotto-managed files');
         expect(content).toContain('## Chat History');
         expect(content).toContain('`chat_messages_list`');
         expect(content).toContain('`chat_messages_search`');
@@ -92,15 +92,15 @@ describe('generated agent instructions', () => {
         expect(content).toContain('## Skills');
         expect(content).toContain('Your assigned skills are listed with names and descriptions');
         expect(content).toContain('Do not assume an unlisted skill or tool exists');
-        expect(content).toContain('name the missing Tavern capability plainly');
-        expect(content).toContain('you need an appropriate Tavern skill or Plugin capability');
+        expect(content).toContain('name the missing Grotto capability plainly');
+        expect(content).toContain('you need an appropriate Grotto skill or Plugin capability');
         expect(content).toContain('Do not tell the user to run provider-specific setup commands');
         expect(content).toContain('such as `/mcp`, Claude, Codex, or claude.ai');
         expect(content).toContain('## Outputs');
         expect(content).toContain('Link inspectable files');
-        expect(content).toContain('[name](tavern://workspace/path)');
-        expect(content).toContain('[name](tavern://wiki/path)');
-        expect(content).not.toContain('tavern://vault');
+        expect(content).toContain('[name](grotto://workspace/path)');
+        expect(content).toContain('[name](grotto://wiki/path)');
+        expect(content).not.toContain('grotto://vault');
         expect(content).toContain('## Widgets');
         expect(content).toContain('widget:<name>');
         expect(content).toContain('widget:composed-chart');
@@ -226,7 +226,7 @@ describe('generated agent instructions', () => {
 
         expect(result.written).toBe(true);
         expect(result.content).toContain(
-            'You are Navigator, a helpful, proactive, and persistent agent in Tavern'
+            'You are Navigator, a helpful, proactive, and persistent agent in Grotto'
         );
     });
 
@@ -281,7 +281,7 @@ describe('generated agent instructions', () => {
 
         expect(response?.status).toBe(200);
         expect(body.content).toContain(
-            'You are Planner, a helpful, proactive, and persistent agent in Tavern'
+            'You are Planner, a helpful, proactive, and persistent agent in Grotto'
         );
     });
 

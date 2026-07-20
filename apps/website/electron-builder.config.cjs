@@ -4,11 +4,11 @@ const releaseBaseUrl = process.env.TAVERN_RELEASE_BASE_URL?.replace(/\/+$/u, '')
 
 module.exports = {
     appId: 'build.tavern.desktop',
-    productName: 'Tavern',
+    productName: 'Grotto',
     protocols: [
         {
-            name: 'Tavern',
-            schemes: ['tavern'],
+            name: 'Grotto',
+            schemes: ['grotto', 'tavern'],
         },
     ],
     directories: {

@@ -63,7 +63,7 @@ export function ChatEditorDrawer({
                             <div className="rounded-2xl border border-border/70 bg-card/60 p-4">
                                 <div className="font-medium text-foreground text-sm">Agent</div>
                                 <p className="mt-1 text-muted-foreground text-sm leading-6">
-                                    This chat uses Tavern&apos;s synced agent.
+                                    This chat uses Grotto&apos;s synced agent.
                                 </p>
                             </div>
 

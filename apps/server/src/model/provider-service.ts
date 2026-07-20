@@ -3,7 +3,7 @@ import { createConfiguredAgentRuntimeClient } from '../agent-runtime/configured-
 export async function setModelProviderEnabled(input: { enabled: boolean; providerId: string }) {
     const client = createConfiguredAgentRuntimeClient();
     if (!client) {
-        throw new Error('Tavern Runtime is not connected.');
+        throw new Error('Grotto Runtime is not connected.');
     }
 
     try {

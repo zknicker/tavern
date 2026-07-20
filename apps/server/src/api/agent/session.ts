@@ -22,7 +22,7 @@ export const getAgentSessionProcedure = publicProcedure
     .query(async ({ input }) => {
         const client = createConfiguredAgentRuntimeClient();
         if (!client) {
-            throw new Error('Tavern Runtime is not connected.');
+            throw new Error('Grotto Runtime is not connected.');
         }
 
         try {
@@ -40,7 +40,7 @@ export const resetAgentSessionProcedure = publicProcedure
     .mutation(async ({ input }) => {
         const client = createConfiguredAgentRuntimeClient();
         if (!client) {
-            throw new Error('Tavern Runtime is not connected.');
+            throw new Error('Grotto Runtime is not connected.');
         }
 
         try {

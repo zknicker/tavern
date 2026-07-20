@@ -4,7 +4,7 @@ import { type CliCommand, findCommand, LISTED_COMMANDS, SECTION_ORDER } from './
 import { errorBlock, heading, rows, ui } from './ui';
 
 /**
- * `tavern help [command]` entry. Bare → global help. Named → per-command help, or
+ * `grotto help [command]` entry. Bare → global help. Named → per-command help, or
  * a did-you-mean error (exit 2) for an unknown command.
  */
 export async function runHelpCommand(name?: string): Promise<number> {
@@ -21,7 +21,7 @@ export async function runHelpCommand(name?: string): Promise<number> {
         process.stderr.write(
             `${errorBlock(
                 `Unknown command '${name}'.`,
-                hint ? `Did you mean '${hint}'?` : "Run 'tavern help' for the command list."
+                hint ? `Did you mean '${hint}'?` : "Run 'grotto help' for the command list."
             )}\n`
         );
         return 2;
@@ -45,8 +45,8 @@ const ENVIRONMENT: { name: string; description: string }[] = [
 /** Full command list grouped by section, plus usage and environment. */
 export function printGlobalHelp(stream: NodeJS.WriteStream): void {
     const blocks: string[] = [
-        `${ui.bold(`Tavern Runtime v${runtimePackage.version}`, stream)}`,
-        `${heading('Usage', stream)}\n  tavern <command> [flags]`,
+        `${ui.bold(`Grotto Runtime v${runtimePackage.version}`, stream)}`,
+        `${heading('Usage', stream)}\n  grotto <command> [flags]`,
     ];
 
     for (const section of SECTION_ORDER) {

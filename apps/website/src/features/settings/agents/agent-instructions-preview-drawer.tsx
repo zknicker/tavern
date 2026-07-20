@@ -48,7 +48,7 @@ export function AgentInstructionsPreviewDrawer({
                 <DrawerHeader>
                     <DrawerTitle>System Prompt Preview</DrawerTitle>
                     <DrawerDescription className="text-sm">
-                        See the full instructions your agent will use, including Tavern guidance and
+                        See the full instructions your agent will use, including Grotto guidance and
                         your saved custom instructions.
                     </DrawerDescription>
                 </DrawerHeader>
@@ -79,7 +79,7 @@ export function AgentInstructionsPreviewDrawer({
     );
 }
 
-const tavernManagedAgentLinePattern = /^You are .+?, a Tavern-managed agent\.$/mu;
+const tavernManagedAgentLinePattern = /^You are .+?, a Grotto-managed agent\.$/mu;
 
 export function applyAgentDisplayNameToInstructions(content: string, agentDisplayName: string) {
     const name = agentDisplayName.trim();
@@ -89,6 +89,6 @@ export function applyAgentDisplayNameToInstructions(content: string, agentDispla
     }
 
     return content.replace(tavernManagedAgentLinePattern, () => {
-        return `You are ${name}, a Tavern-managed agent.`;
+        return `You are ${name}, a Grotto-managed agent.`;
     });
 }

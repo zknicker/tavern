@@ -85,10 +85,10 @@ export function CronView({
         return (
             <EmptyState
                 actionLabel="Open settings"
-                description="Automations appear after Tavern can talk to Tavern Runtime. Connect or repair Tavern Runtime from settings, then any configured automations will show up here."
+                description="Automations appear after Grotto can talk to Grotto Runtime. Connect or repair Grotto Runtime from settings, then any configured automations will show up here."
                 eyebrow="Automations"
                 onAction={onNavigateToSettings}
-                title="Automations are waiting on Tavern Runtime."
+                title="Automations are waiting on Grotto Runtime."
             />
         );
     }

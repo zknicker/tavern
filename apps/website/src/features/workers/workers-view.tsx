@@ -116,8 +116,8 @@ function getEmptyStateDescription(input: {
     }
 
     if (input.connectionState === 'unconfigured') {
-        return 'Start Tavern Runtime to sync workers and execution state.';
+        return 'Start Grotto Runtime to sync workers and execution state.';
     }
 
-    return 'Tavern Runtime is connected, but no workers have been materialized yet.';
+    return 'Grotto Runtime is connected, but no workers have been materialized yet.';
 }

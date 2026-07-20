@@ -10,6 +10,6 @@ export const deleteMessagingBindingProcedure = publicProcedure
     )
     .mutation(async ({ input }) => {
         throw new Error(
-            `Agent Discord binding edits are not available in Tavern yet: ${input.bindingId}.`
+            `Agent Discord binding edits are not available in Grotto yet: ${input.bindingId}.`
         );
     });

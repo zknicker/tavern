@@ -191,7 +191,7 @@ export async function setRuntimeTavernChatArchived(chatId: string, archived: boo
     const current = await getTavernChatOrNull(client, chatId);
 
     if (!current) {
-        throw new Error(`No Tavern chat named "${chatId}" exists.`);
+        throw new Error(`No Grotto chat named "${chatId}" exists.`);
     }
 
     const metadata = readTavernChatMetadata(current);
@@ -219,7 +219,7 @@ export async function updateRuntimeTavernChatTabAppearance(input: {
     const current = await getTavernChatOrNull(client, input.chatId);
 
     if (!current) {
-        throw new Error(`No Tavern chat named "${input.chatId}" exists.`);
+        throw new Error(`No Grotto chat named "${input.chatId}" exists.`);
     }
 
     const metadata = readTavernChatMetadata(current);
@@ -247,7 +247,7 @@ export async function updateRuntimeTavernChatSystemPrompt(input: {
     const current = await getTavernChatOrNull(client, input.chatId);
 
     if (!current) {
-        throw new Error(`No Tavern chat named "${input.chatId}" exists.`);
+        throw new Error(`No Grotto chat named "${input.chatId}" exists.`);
     }
 
     const metadata = readTavernChatMetadata(current);
@@ -309,7 +309,7 @@ async function requireRuntimeChatClient() {
     const connection = await getActiveAgentRuntimeConnection();
 
     if (!(connection?.enabled && connection.baseUrl)) {
-        throw new Error('Tavern Runtime is not configured.');
+        throw new Error('Grotto Runtime is not configured.');
     }
 
     return {
@@ -342,7 +342,7 @@ async function getTavernChatOrNull(
     try {
         return await withRuntimeChatTimeout(
             client.chat.get(chatId, { readerId }),
-            'reading chat from Tavern Runtime'
+            'reading chat from Grotto Runtime'
         );
     } catch (error) {
         if (error instanceof TavernApiError && error.status === 404) {
@@ -356,7 +356,7 @@ async function saveRuntimeChat(
     client: ReturnType<typeof createTavernClientForConnection>,
     input: TavernCreateChatRequest
 ) {
-    return await withRuntimeChatTimeout(client.chat.create(input), 'saving chat to Tavern Runtime');
+    return await withRuntimeChatTimeout(client.chat.create(input), 'saving chat to Grotto Runtime');
 }
 
 async function withRuntimeChatTimeout<T>(promise: Promise<T>, action: string) {
@@ -369,7 +369,7 @@ async function withRuntimeChatTimeout<T>(promise: Promise<T>, action: string) {
                 timeout = setTimeout(() => {
                     reject(
                         new Error(
-                            `Timed out ${action}. Check the Tavern Runtime connection and try again.`
+                            `Timed out ${action}. Check the Grotto Runtime connection and try again.`
                         )
                     );
                 }, runtimeChatRequestTimeoutMs);

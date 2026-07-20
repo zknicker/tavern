@@ -46,7 +46,7 @@ describe('dispatch', () => {
         const read = capture('stdout');
         const result = await dispatch(['serve', '--help']);
         expect(result).toEqual({ kind: 'exit', code: 0 });
-        expect(read()).toContain('tavern serve');
+        expect(read()).toContain('grotto serve');
     });
 
     test('unknown command → did-you-mean, exit 2', async () => {
@@ -63,7 +63,7 @@ describe('dispatch', () => {
         const result = await dispatch(['update', '--nope']);
         expect(result).toEqual({ kind: 'exit', code: 2 });
         const out = read();
-        expect(out).toContain('tavern update'); // command help printed
+        expect(out).toContain('grotto update'); // command help printed
         expect(out).toContain("Unknown flag '--nope'");
     });
 
@@ -71,14 +71,14 @@ describe('dispatch', () => {
         const read = capture('stdout');
         const result = await dispatch(['engine']);
         expect(result).toEqual({ kind: 'exit', code: 1 });
-        expect(read()).toContain('tavern engine');
+        expect(read()).toContain('grotto engine');
     });
 
     test('group --help → group help, exit 0', async () => {
         const read = capture('stdout');
         const result = await dispatch(['wiki', '--help']);
         expect(result).toEqual({ kind: 'exit', code: 0 });
-        expect(read()).toContain('tavern wiki');
+        expect(read()).toContain('grotto wiki');
     });
 
     test('subcommand --help → that subcommand help, not group help, exit 0', async () => {
@@ -86,7 +86,7 @@ describe('dispatch', () => {
         const result = await dispatch(['wiki', 'list', '--help']);
         expect(result).toEqual({ kind: 'exit', code: 0 });
         const out = read();
-        expect(out).toContain('tavern wiki list');
+        expect(out).toContain('grotto wiki list');
         expect(out).not.toContain('<status|list|get|search>');
     });
 
@@ -103,9 +103,9 @@ describe('dispatch', () => {
         const result = await dispatch([]);
         expect(result).toEqual({ kind: 'exit', code: 0 });
         const out = read();
-        expect(out).toContain('Tavern Runtime');
+        expect(out).toContain('Grotto Runtime');
         expect(out).toContain('Runtime not running');
         expect(out).toContain('serve');
-        expect(out).toContain("Run 'tavern help <command>' for details.");
+        expect(out).toContain("Run 'grotto help <command>' for details.");
     });
 });

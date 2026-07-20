@@ -29,7 +29,7 @@ export function isCliCommandAvailable(command: string) {
 }
 
 export function missingCliCommandMessage(input: { command: string; providerLabel: string }) {
-    return `${input.providerLabel} is unavailable because "${input.command}" was not found in PATH or Tavern's local node_modules/.bin. Install the provider CLI or set the matching Tavern command environment variable.`;
+    return `${input.providerLabel} is unavailable because "${input.command}" was not found in PATH or Grotto's local node_modules/.bin. Install the provider CLI or set the matching Grotto command environment variable.`;
 }
 
 function commandSearchPaths() {

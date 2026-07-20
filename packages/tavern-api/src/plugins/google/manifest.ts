@@ -16,7 +16,7 @@ export const googlePluginManifest = tavernPluginManifestSchema.parse({
         provider: 'google',
         redirect: 'loopback',
     },
-    description: 'Read Google Workspace data through Tavern-managed Google services.',
+    description: 'Read Google Workspace data through Grotto-managed Google services.',
     displayName: 'Google',
     healthCapabilities: [],
     id: googlePluginId,

@@ -5,7 +5,7 @@ import { publicProcedure } from '../trpc.ts';
 export const getAgentEnvSettingsProcedure = publicProcedure.query(async () => {
     const client = createConfiguredAgentRuntimeClient();
     if (!client) {
-        throw new Error('Tavern Runtime is not connected.');
+        throw new Error('Grotto Runtime is not connected.');
     }
 
     try {
@@ -20,7 +20,7 @@ export const saveAgentEnvSettingsProcedure = publicProcedure
     .mutation(async ({ input }) => {
         const client = createConfiguredAgentRuntimeClient();
         if (!client) {
-            throw new Error('Tavern Runtime is not connected.');
+            throw new Error('Grotto Runtime is not connected.');
         }
 
         try {

@@ -34,7 +34,7 @@ mkdirSync(resourcesDirectory, { recursive: true });
 const sidecarSignature = createSidecarSignature();
 
 if (!forceBuild && isCurrentSidecar(sidecarSignature)) {
-    console.log(`[tavern] sidecar unchanged: ${sidecarOutputPath}`);
+    console.log(`[grotto] sidecar unchanged: ${sidecarOutputPath}`);
     process.exit(0);
 }
 

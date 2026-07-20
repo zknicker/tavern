@@ -88,7 +88,7 @@ describe('capabilityTone', () => {
 describe('renderStatus', () => {
     test('full healthy screen', () => {
         const text = render(baseReport());
-        expect(text).toContain('Tavern Runtime v1.4.2');
+        expect(text).toContain('Grotto Runtime v1.4.2');
         expect(text).toContain('Service  running (homebrew)');
         expect(text).toContain('Runtime  v1.4.2 · healthy · http://127.0.0.1:18790');
         expect(text).toContain('Binary   v1.4.2 · up to date');
@@ -109,7 +109,7 @@ describe('renderStatus', () => {
             },
         });
         const text = render(report);
-        expect(text).toContain("binary v1.4.2 staged, run 'tavern restart'");
+        expect(text).toContain("binary v1.4.2 staged, run 'grotto restart'");
         expect(text).toContain('Binary   v1.4.2 · staged — runtime still on v1.4.0');
     });
 
@@ -124,7 +124,7 @@ describe('renderStatus', () => {
             capabilities: null,
         });
         const text = render(report);
-        expect(text).toContain("Runtime  not running · 'brew services start tavern-runtime'");
+        expect(text).toContain("Runtime  not running · 'brew services start grotto-runtime'");
         expect(text).toContain('Binary   v1.4.2 · installed');
         expect(text).toContain('Runtime not reachable — capabilities unavailable.');
         expect(text).toContain('Service  running (homebrew)');

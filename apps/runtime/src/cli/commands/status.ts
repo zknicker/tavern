@@ -6,7 +6,7 @@ import { localRuntimeUrl, probeRuntimeSnapshot, type RuntimeSnapshot } from '../
 import { writeJson } from '../ui';
 import { renderStatus, type StatusEngineSection, type StatusReport } from './status-render';
 
-/** Injectable I/O for `tavern status`, so tests supply fixtures for every edge. */
+/** Injectable I/O for `grotto status`, so tests supply fixtures for every edge. */
 export interface StatusDeps {
     binaryVersion: string;
     brew: Brew;
@@ -30,7 +30,7 @@ function defaultDeps(): StatusDeps {
 }
 
 /**
- * `tavern status [--json] [--runtime-url <url>]`. Gathers brew service state, a
+ * `grotto status [--json] [--runtime-url <url>]`. Gathers brew service state, a
  * runtime/capability snapshot, and local engine resolution into one report.
  * Every source is tolerant: a failed brew/runtime/engine probe nulls its section
  * rather than throwing, so partial failures still render a useful screen. Exit 0

@@ -18,18 +18,30 @@ const main = async () => {
     const { version } = await readJson('apps/runtime/package.json');
     const artifactName = await findRuntimeArtifactName(version);
     const sha256 = readRuntimeArtifactSha256(artifactName);
-    const formulaPath = path.join(tapDirectory, 'Formula', 'tavern-runtime.rb');
+    const formulaPath = path.join(tapDirectory, 'Formula', 'grotto-runtime.rb');
+    const legacyFormulaPath = path.join(tapDirectory, 'Formula', 'tavern-runtime.rb');
 
     await mkdir(path.dirname(formulaPath), { recursive: true });
-    writeFileSync(formulaPath, renderFormula({ artifactName, sha256, version }), 'utf8');
+    writeFileSync(
+        formulaPath,
+        renderFormula({ artifactName, className: 'GrottoRuntime', legacy: false, sha256, version }),
+        'utf8'
+    );
+    writeFileSync(
+        legacyFormulaPath,
+        renderFormula({ artifactName, className: 'TavernRuntime', legacy: true, sha256, version }),
+        'utf8'
+    );
 
     if (!hasGitChanges(tapDirectory)) {
         console.log(`Homebrew formula already current for v${version}`);
         return;
     }
 
-    run('git', ['add', 'Formula/tavern-runtime.rb'], { cwd: tapDirectory });
-    run('git', ['commit', '-m', `tavern-runtime ${version}`], { cwd: tapDirectory });
+    run('git', ['add', 'Formula/grotto-runtime.rb', 'Formula/tavern-runtime.rb'], {
+        cwd: tapDirectory,
+    });
+    run('git', ['commit', '-m', `grotto-runtime ${version}`], { cwd: tapDirectory });
     run('git', ['push', 'origin', 'HEAD:main'], { cwd: tapDirectory });
     console.log(`Published Homebrew formula for v${version} to ${tapRepository}`);
 };
@@ -37,7 +49,7 @@ const main = async () => {
 await main();
 
 async function findRuntimeArtifactName(version) {
-    const expectedPrefix = `tavern-runtime-${version}-`;
+    const expectedPrefix = `grotto-runtime-${version}-`;
     const entries = await readdir(runtimeBundleDir);
     const artifacts = entries.filter(
         (entry) => entry.startsWith(expectedPrefix) && entry.endsWith('.tar.gz')
@@ -65,8 +77,14 @@ function readRuntimeArtifactSha256(artifactName) {
 }
 
 function renderFormula(input) {
-    return `class TavernRuntime < Formula
-  desc "Always-on Tavern Runtime server"
+    const binaries = input.legacy
+        ? '    bin.install "bin/grotto"\n    bin.install "bin/grotto-runtime"\n    bin.install "bin/tavern"\n    bin.install "bin/tavern-runtime"'
+        : '    bin.install "bin/grotto"\n    bin.install "bin/grotto-runtime"';
+    const executable = input.legacy ? 'tavern' : 'grotto';
+    const runtimeExecutable = input.legacy ? 'tavern-runtime' : 'grotto-runtime';
+
+    return `class ${input.className} < Formula
+  desc "Always-on Grotto Runtime server"
   homepage "https://github.com/zknicker/tavern"
   url "${releaseBaseUrl}/${input.artifactName}"
   sha256 "${input.sha256}"
@@ -76,8 +94,7 @@ function renderFormula(input) {
   depends_on "node"
 
   def install
-    bin.install "bin/tavern"
-    bin.install "bin/tavern-runtime"
+${binaries}
     (share/"tavern").install "share/tavern/runtime-assets"
     (share/"tavern/node_modules/@tavern").install "share/tavern/node_modules/@tavern/sdk"
     (share/"tavern/node_modules").install "share/tavern/node_modules/agent-browser"
@@ -86,7 +103,7 @@ function renderFormula(input) {
   end
 
   service do
-    run [opt_bin/"tavern", "serve"]
+    run [opt_bin/"${executable}", "serve"]
     environment_variables TAVERN_RUNTIME_HOST: "127.0.0.1",
       TAVERN_RUNTIME_PORT: "18790",
       PATH: "#{HOMEBREW_PREFIX}/bin:#{HOMEBREW_PREFIX}/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
@@ -96,8 +113,8 @@ function renderFormula(input) {
   end
 
   test do
-    assert_match version.to_s, shell_output("#{bin}/tavern --version")
-    assert_match version.to_s, shell_output("#{bin}/tavern-runtime --version")
+    assert_match version.to_s, shell_output("#{bin}/${executable} --version")
+    assert_match version.to_s, shell_output("#{bin}/${runtimeExecutable} --version")
   end
 end
 `;

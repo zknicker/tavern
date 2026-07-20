@@ -15,12 +15,12 @@ interface RestartArgs {
     noWait: boolean;
 }
 
-/** Resolve the brew-installed tavern binary, e.g. `/opt/homebrew/bin/tavern`. */
-function brewTavernBin(): string {
+/** Resolve the brew-installed Grotto binary, e.g. `/opt/homebrew/bin/grotto`. */
+function brewGrottoBin(): string {
     const prefix = spawnSync('brew', ['--prefix'], {
         encoding: 'utf8',
     }).stdout?.trim();
-    return prefix ? `${prefix}/bin/tavern` : 'tavern';
+    return prefix ? `${prefix}/bin/grotto` : 'grotto';
 }
 
 /**
@@ -29,7 +29,7 @@ function brewTavernBin(): string {
  * one, so we must ask the freshly staged binary directly.
  */
 async function stagedVersion(): Promise<string> {
-    const result = spawnSync(brewTavernBin(), ['--version'], {
+    const result = spawnSync(brewGrottoBin(), ['--version'], {
         encoding: 'utf8',
     });
     return result.stdout?.trim() || 'unknown';
@@ -37,7 +37,7 @@ async function stagedVersion(): Promise<string> {
 
 /** Best-effort engine pre-stage, mirroring apps/runtime/src/tavern/update.ts. */
 async function stageEngine(): Promise<boolean> {
-    const result = spawnSync(brewTavernBin(), ['engine', 'install'], {
+    const result = spawnSync(brewGrottoBin(), ['engine', 'install'], {
         encoding: 'utf8',
         env: process.env,
     });

@@ -51,7 +51,7 @@ function requireTavernMutation(request: Request, label: string) {
         return null;
     }
 
-    return forbidden(`${label} can only be changed by Tavern.`);
+    return forbidden(`${label} can only be changed by Grotto.`);
 }
 
 export function getMemorySettings(): AgentRuntimeMemorySettings {

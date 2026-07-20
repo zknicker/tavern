@@ -77,7 +77,7 @@ async function handleGoogleOAuthLoopbackCallback(
     try {
         const client = createRuntimeClient();
         if (!client) {
-            throw new Error('Tavern Runtime is not connected.');
+            throw new Error('Grotto Runtime is not connected.');
         }
         try {
             const result = await client.completeGoogleOAuth(sessionId, {
@@ -94,7 +94,7 @@ async function handleGoogleOAuthLoopbackCallback(
 
         response
             .writeHead(200, { 'content-type': 'text/html; charset=utf-8' })
-            .end('<h1>Google connected</h1><p>You can close this window and return to Tavern.</p>');
+            .end('<h1>Google connected</h1><p>You can close this window and return to Grotto.</p>');
     } catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         response
@@ -102,7 +102,7 @@ async function handleGoogleOAuthLoopbackCallback(
             .end(
                 [
                     '<h1>Google connection failed</h1>',
-                    '<p>Return to Tavern and try again.</p>',
+                    '<p>Return to Grotto and try again.</p>',
                     `<pre>${escapeHtml(message)}</pre>`,
                 ].join('')
             );

@@ -22,7 +22,7 @@ const demoWikiPages = [
     {
         body: [
             '---',
-            'summary: Chart widgets available in Tavern demo dashboards',
+            'summary: Chart widgets available in Grotto demo dashboards',
             'tags: [charts, widgets, demo]',
             '---',
             '# Demo Dashboard Widgets',
@@ -31,7 +31,7 @@ const demoWikiPages = [
             'Prefer composed charts when a question mixes units and revenue.',
         ].join('\n'),
         relativePath: 'projects/demo-dashboard.md',
-        summary: 'Chart widgets available in Tavern demo dashboards',
+        summary: 'Chart widgets available in Grotto demo dashboards',
         title: 'Demo Dashboard Widgets',
     },
     {
@@ -108,7 +108,7 @@ export function seedDevelopmentRecallEvidence(db: Database) {
                 evidence: {
                     capturedAt: new Date().toISOString(),
                     instructions:
-                        '# Tavern Agent Instructions (demo)\n\nYou are Otto, the demo agent. Static chat guidance and tool descriptions live here.',
+                        '# Grotto Agent Instructions (demo)\n\nYou are Otto, the demo agent. Static chat guidance and tool descriptions live here.',
                     prompt: demoPrompt(request?.content ?? 'Show the demo.'),
                     recall: demoWikiPages.map((page, index) => ({
                         path: page.relativePath,
@@ -135,7 +135,7 @@ function demoPrompt(requestContent: string) {
         'Recalled Wiki:',
         recallLines,
         '',
-        'New message for Tavern:',
+        'New message for Grotto:',
         requestContent,
     ].join('\n');
 }

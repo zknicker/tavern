@@ -11,17 +11,17 @@ name: visuals-diagrams
 description: >
   Design rules for drawing diagrams in a \`\`\`visual fence: flowcharts,
   sequences, timelines, architecture boxes, and relationship maps as plain
-  HTML/SVG with Tavern's tokens. Load before drawing any diagram or
+  HTML/SVG with Grotto's tokens. Load before drawing any diagram or
   structural visual.
 ---
 
 # Diagram visuals
 
-Managed by Tavern. Do not edit this skill directory; Tavern refreshes it on
+Managed by Grotto. Do not edit this skill directory; Grotto refreshes it on
 startup.
 
 A \`\`\`visual fence body is plain HTML/SVG rendered in a sandboxed frame that
-inherits Tavern's theme as CSS variables. Diagrams are boxes, labels, and
+inherits Grotto's theme as CSS variables. Diagrams are boxes, labels, and
 connectors — no diagram library, no mermaid; the sandbox allows no external
 scripts except the pinned Chart.js, which diagrams never need.
 

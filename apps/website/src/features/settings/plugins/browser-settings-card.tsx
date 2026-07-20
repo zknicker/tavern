@@ -57,7 +57,7 @@ export function BrowserSettingsCard({
     if (!settings) {
         return (
             <SettingsRow
-                description={error ?? 'Tavern Runtime unavailable.'}
+                description={error ?? 'Grotto Runtime unavailable.'}
                 title="Browser"
                 trailingWidth="intrinsic"
             >

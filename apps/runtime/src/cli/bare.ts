@@ -10,7 +10,7 @@ export interface BareStatus {
 }
 
 /**
- * Compute the bare `tavern` status line from the running version (probe result)
+ * Compute the bare `grotto` status line from the running version (probe result)
  * and the invoked binary's version. Pure so tests cover the three verdicts.
  *
  * - reachable, versions match → healthy
@@ -21,7 +21,7 @@ export function computeBareStatus(running: string | null, binary: string, url: s
     if (running === null) {
         return {
             tone: 'off',
-            text: `Runtime not running · 'brew services start tavern-runtime'`,
+            text: `Runtime not running · 'brew services start grotto-runtime'`,
         };
     }
     if (running === binary) {
@@ -29,12 +29,12 @@ export function computeBareStatus(running: string | null, binary: string, url: s
     }
     return {
         tone: 'degraded',
-        text: `Runtime v${running} · binary v${binary} staged — run 'tavern restart'`,
+        text: `Runtime v${running} · binary v${binary} staged — run 'grotto restart'`,
     };
 }
 
 /**
- * Bare `tavern`: banner, one status line, the command list, and a help pointer.
+ * Bare `grotto`: banner, one status line, the command list, and a help pointer.
  * Probes the local runtime with a ~750 ms timeout. Always exits 0 and never
  * starts the server.
  */
@@ -51,6 +51,6 @@ export async function runBareTavern(): Promise<number> {
         '  '
     );
     out.write(`${commandRows}\n\n`);
-    out.write(`${ui.dim("Run 'tavern help <command>' for details.", out)}\n`);
+    out.write(`${ui.dim("Run 'grotto help <command>' for details.", out)}\n`);
     return 0;
 }

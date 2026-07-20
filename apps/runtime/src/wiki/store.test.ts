@@ -290,10 +290,10 @@ describe('Wiki store', () => {
 
         await expect(listWikiPages()).resolves.toMatchObject({ folders: ['Concepts', 'Projects'] });
         await expect(createWikiFolder({ path: 'Projects/_attachments/nested' })).rejects.toThrow(
-            'managed by Tavern'
+            'managed by Grotto'
         );
         await expect(deleteWikiFolder({ path: 'Projects/_attachments' })).rejects.toThrow(
-            'managed by Tavern'
+            'managed by Grotto'
         );
         await expect(
             moveWikiPath({
@@ -301,7 +301,7 @@ describe('Wiki store', () => {
                 kind: 'folder',
                 toPath: 'Archive/attachments',
             })
-        ).rejects.toThrow('managed by Tavern');
+        ).rejects.toThrow('managed by Grotto');
     });
 
     test('does not follow attachment symlinks outside the Wiki root', async () => {

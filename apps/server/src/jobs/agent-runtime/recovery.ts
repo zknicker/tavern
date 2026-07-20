@@ -2,7 +2,7 @@ import { emitJobsUpdated } from '../../api/invalidation-events.ts';
 import { recordRecoveredInterruptedJob } from '../execution-history.ts';
 import type { QueueBinding } from './shared.ts';
 
-const interruptedJobFailureReason = 'Interrupted by Tavern restart.';
+const interruptedJobFailureReason = 'Interrupted by Grotto restart.';
 
 export async function recoverInterruptedJobs(binding: QueueBinding) {
     const activeJobs = await binding.queue.getActiveAsync(0, 100);

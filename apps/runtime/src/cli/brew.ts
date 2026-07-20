@@ -48,7 +48,18 @@ export interface Brew {
     upgradeRuntime(): BrewResult;
 }
 
-const FORMULA = 'tavern-runtime';
+const FORMULA = 'grotto-runtime';
+const LEGACY_FORMULA = 'tavern-runtime';
+
+function installedRuntimeFormula(): string {
+    const canonical = runBrewCaptured(['list', '--formula', '--versions', FORMULA]);
+    if (canonical.code === 0) {
+        return FORMULA;
+    }
+
+    const legacy = runBrewCaptured(['list', '--formula', '--versions', LEGACY_FORMULA]);
+    return legacy.code === 0 ? LEGACY_FORMULA : FORMULA;
+}
 
 /**
  * Real brew implementation. Flows depend on this interface so tests inject a
@@ -62,18 +73,18 @@ export const brew: Brew = {
         return runBrewCaptured(['update']);
     },
     upgradeRuntime() {
-        return runBrewCaptured(['upgrade', FORMULA]);
+        return runBrewCaptured(['upgrade', installedRuntimeFormula()]);
     },
     isRuntimeOutdated() {
         // `brew outdated --quiet <formula>` exits 0 with no output when current,
         // and exits 1 (printing the name) when an upgrade is available.
-        const result = runBrewCaptured(['outdated', '--quiet', FORMULA]);
+        const result = runBrewCaptured(['outdated', '--quiet', installedRuntimeFormula()]);
         return result.code !== 0 || result.stdout.trim().length > 0;
     },
     servicesRestartRuntime() {
-        return runBrewCaptured(['services', 'restart', FORMULA]);
+        return runBrewCaptured(['services', 'restart', installedRuntimeFormula()]);
     },
     servicesInfoRuntimeJson() {
-        return runBrewCaptured(['services', 'info', FORMULA, '--json']);
+        return runBrewCaptured(['services', 'info', installedRuntimeFormula(), '--json']);
     },
 };

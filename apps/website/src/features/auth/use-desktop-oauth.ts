@@ -26,11 +26,11 @@ export function useDesktopOAuth() {
 
         const bridge = getDesktopBridge();
         if (!bridge) {
-            throw new Error('The Tavern desktop bridge is unavailable.');
+            throw new Error('The Grotto desktop bridge is unavailable.');
         }
 
         await signIn.create({
-            redirectUrl: 'tavern://sso-callback',
+            redirectUrl: 'grotto://sso-callback',
             strategy: 'oauth_google',
         });
 

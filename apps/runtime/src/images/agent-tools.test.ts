@@ -54,7 +54,7 @@ describe('image generation agent tool', () => {
         expect(result).toMatchObject({
             height: 8,
             link: expect.stringMatching(
-                /^tavern:\/\/workspace\/workbench\/images\/a-bright-blue-moon-[a-z0-9]+\.png$/u
+                /^grotto:\/\/workspace\/workbench\/images\/a-bright-blue-moon-[a-z0-9]+\.png$/u
             ),
             mediaType: 'image/png',
             model: 'openai/gpt-image-2',
@@ -73,7 +73,7 @@ describe('image generation agent tool', () => {
         });
 
         expect(result.path).toBe('generated/blue moon.png');
-        expect(result.link).toBe('tavern://workspace/generated/blue%20moon.png');
+        expect(result.link).toBe('grotto://workspace/generated/blue%20moon.png');
         await expect(fs.readFile(path.join(workspaceFolder, result.path))).resolves.toEqual(
             Buffer.from(png)
         );

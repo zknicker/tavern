@@ -19,7 +19,7 @@ async function resolveCronRuntimeId(input: { agentId: string; delivery: { chatId
     }
 
     if (!deliveryChat) {
-        throw new Error(`No Tavern chat named "${input.delivery.chatId}" exists.`);
+        throw new Error(`No Grotto chat named "${input.delivery.chatId}" exists.`);
     }
 
     const runtimeId = agent.runtimeId;

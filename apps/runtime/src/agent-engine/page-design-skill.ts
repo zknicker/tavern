@@ -11,17 +11,17 @@ export const defaultPageDesignSkill = `---
 name: page-design
 description: >
   Design rules for authoring full self-contained HTML pages: artifact pane
-  pages and workspace html-preview files. Tavern's theme token contract,
+  pages and workspace html-preview files. Grotto's theme token contract,
   layout and typography discipline, and self-containment rules. Load before
   writing any standalone HTML page.
 ---
 
 # Page design
 
-Managed by Tavern. Do not edit this skill directory; Tavern refreshes it on
+Managed by Grotto. Do not edit this skill directory; Grotto refreshes it on
 startup.
 
-Pages you author render with Tavern's theme tokens injected as CSS variables,
+Pages you author render with Grotto's theme tokens injected as CSS variables,
 so a page styled with the tokens below looks native in both light and dark
 mode. Pages must be fully self-contained: inline CSS/JS only, no external or
 sibling asset references, no network requests.

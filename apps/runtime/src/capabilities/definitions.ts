@@ -696,7 +696,7 @@ async function checkCodexModelAccessCapability(): Promise<RuntimeCapabilityCheck
     try {
         if (!findExecutable('codex')) {
             return {
-                reason: 'Codex CLI is not available to Tavern Runtime. Install codex or set TAVERN_AGENT_CODEX_CLI_COMMAND.',
+                reason: 'Codex CLI is not available to Grotto Runtime. Install codex or set TAVERN_AGENT_CODEX_CLI_COMMAND.',
                 state: 'unavailable',
                 technicalMessage: `Searched PATH and ${fallbackBinDirectories().join(', ')}.`,
             };

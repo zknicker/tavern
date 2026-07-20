@@ -88,7 +88,7 @@ describe('runStatusCommand', () => {
         const code = await runStatusCommand(args(), d);
         const text = captured.join('');
         expect(code).toBe(0);
-        expect(text).toContain('Tavern Runtime v1.4.2');
+        expect(text).toContain('Grotto Runtime v1.4.2');
         expect(text).toContain('Service  running (homebrew)');
         expect(text).toContain('Runtime  v1.4.2 · healthy · http://127.0.0.1:18790');
         expect(text).toContain('Binary   v1.4.2 · up to date');
@@ -104,7 +104,7 @@ describe('runStatusCommand', () => {
         const code = await runStatusCommand(args(), d);
         const text = captured.join('');
         expect(code).toBe(0);
-        expect(text).toContain("binary v1.4.2 staged, run 'tavern restart'");
+        expect(text).toContain("binary v1.4.2 staged, run 'grotto restart'");
     });
 
     test('runtime down: service/binary/engine render, capabilities dim line, exit 0', async () => {
@@ -117,7 +117,7 @@ describe('runStatusCommand', () => {
         const code = await runStatusCommand(args(), d);
         const text = captured.join('');
         expect(code).toBe(0);
-        expect(text).toContain("Runtime  not running · 'brew services start tavern-runtime'");
+        expect(text).toContain("Runtime  not running · 'brew services start grotto-runtime'");
         expect(text).toContain('Runtime not reachable — capabilities unavailable.');
         expect(text).toContain('Service  running (homebrew)');
         expect(text).toContain('Engine');

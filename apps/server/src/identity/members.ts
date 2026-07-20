@@ -45,11 +45,11 @@ async function withIdentityClient<T>(
     ) => Promise<T>
 ) {
     if (!ctx.clerkSessionToken) {
-        throw new Error('Sign in to manage Tavern members.');
+        throw new Error('Sign in to manage Grotto members.');
     }
     const client = createConfiguredAgentRuntimeClient();
     if (!client) {
-        throw new Error('Tavern Runtime is not connected.');
+        throw new Error('Grotto Runtime is not connected.');
     }
 
     try {
@@ -58,7 +58,7 @@ async function withIdentityClient<T>(
             throw new Error('Runtime membership is required.');
         }
         if (ownerOnly && me.role !== 'owner') {
-            throw new Error('Only the Tavern owner can manage members and invites.');
+            throw new Error('Only the Grotto owner can manage members and invites.');
         }
         return await operation(client);
     } finally {

@@ -72,8 +72,8 @@ The pane should borrow the useful parts of Codex, Claude, and OpenCode:
 
 I wrote the output here:
 
-- [Panel Brief](tavern://wiki/Demos/Panel%20Brief.md)
-- [Preview HTML](tavern://workspace/out/preview.html)
-- [Generated Chart](tavern://workspace/out/chart.png)
+- [Panel Brief](grotto://wiki/Demos/Panel%20Brief.md)
+- [Preview HTML](grotto://workspace/out/preview.html)
+- [Generated Chart](grotto://workspace/out/chart.png)
 
 The user should be able to click the thing itself and inspect it in the artifact pane.

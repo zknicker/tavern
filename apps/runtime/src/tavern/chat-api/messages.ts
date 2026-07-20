@@ -404,7 +404,7 @@ function assertSameMessage(
         existing.content !== input.content ||
         JSON.stringify(existing.attachments) !== JSON.stringify(input.attachments ?? [])
     ) {
-        throw new Error('Tavern message id or nonce was already used for a different message.');
+        throw new Error('Grotto message id or nonce was already used for a different message.');
     }
 }
 

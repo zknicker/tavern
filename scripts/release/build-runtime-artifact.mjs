@@ -16,6 +16,8 @@ const googleOAuthClientSecretEnv = 'TAVERN_GOOGLE_OAUTH_CLIENT_SECRET';
 loadEnvFile();
 
 export const requiredRuntimeArtifactPaths = [
+    'bin/grotto',
+    'bin/grotto-runtime',
     'bin/tavern',
     'bin/tavern-runtime',
     'share/tavern/node_modules/@tavern/sdk/package.json',
@@ -29,7 +31,7 @@ const allowedRuntimeAssetRoots = new Set(['google', 'harness-bridges']);
 const main = async () => {
     const version = await readReleaseVersion();
     const targetTriple = readTargetTriple();
-    const artifactName = `tavern-runtime-${version}-${targetTriple}.tar.gz`;
+    const artifactName = `grotto-runtime-${version}-${targetTriple}.tar.gz`;
     const artifactPath = path.join(runtimeArtifactDir, artifactName);
     const checksumPath = `${artifactPath}.sha256`;
     const stageRoot = path.join(runtimeArtifactDir, 'stage');
@@ -43,10 +45,17 @@ const main = async () => {
         'apps/runtime/src/index.ts',
         '--compile',
         '--outfile',
-        path.join(stageRoot, 'bin', 'tavern'),
+        path.join(stageRoot, 'bin', 'grotto'),
     ]);
     await fs.copyFile(
-        path.join(stageRoot, 'bin', 'tavern'),
+        path.join(stageRoot, 'bin', 'grotto'),
+        path.join(stageRoot, 'bin', 'grotto-runtime')
+    );
+    // Unadvertised compatibility aliases keep existing installs and scripts working
+    // through the product rename.
+    await fs.copyFile(path.join(stageRoot, 'bin', 'grotto'), path.join(stageRoot, 'bin', 'tavern'));
+    await fs.copyFile(
+        path.join(stageRoot, 'bin', 'grotto'),
         path.join(stageRoot, 'bin', 'tavern-runtime')
     );
 

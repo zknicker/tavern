@@ -11,7 +11,7 @@ export const redeemInviteProcedure = publicProcedure
         }
         const client = createConfiguredAgentRuntimeClient();
         if (!client) {
-            throw new Error('Tavern Runtime is not connected.');
+            throw new Error('Grotto Runtime is not connected.');
         }
         try {
             await client.redeemIdentityInvite(ctx.clerkSessionToken, input.code);

@@ -171,7 +171,7 @@ function formatSkillSource(subject: SkillTreeSubject) {
         return `Plugin · ${subject.plugin.displayName}`;
     }
     if (subject.managedSource === 'seeded') {
-        return 'Tavern default';
+        return 'Grotto default';
     }
     if (subject.managedSource === 'hub') {
         return 'Library';

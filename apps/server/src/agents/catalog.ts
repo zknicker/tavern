@@ -242,7 +242,7 @@ export async function requirePrimaryAgent() {
     const agent = await getPrimaryAgent();
 
     if (!agent) {
-        throw new Error('No agent exists. Start Tavern Runtime first.');
+        throw new Error('No agent exists. Start Grotto Runtime first.');
     }
 
     return agent;
@@ -316,7 +316,7 @@ export async function saveCatalogAgentSettings(
 
     if (!runtimeClient) {
         throw new Error(
-            `No enabled Tavern Runtime connection exists for agent "${input.agentId}".`
+            `No enabled Grotto Runtime connection exists for agent "${input.agentId}".`
         );
     }
 
@@ -485,7 +485,7 @@ export async function getCatalogAgentInstructions(agentId: string) {
         : runtimeAgentRead?.client;
 
     if (!runtimeClient) {
-        throw new Error(`No enabled Tavern Runtime connection exists for agent "${agentId}".`);
+        throw new Error(`No enabled Grotto Runtime connection exists for agent "${agentId}".`);
     }
 
     return runtimeClient.getWorkspaceInstructions(agentId);
@@ -524,7 +524,7 @@ async function createClientForRuntimeId(runtimeId: string) {
     const connection = await getAgentRuntimeConnection(runtimeId);
 
     if (!connection?.enabled) {
-        throw new Error(`No enabled Tavern Runtime connection named "${runtimeId}" exists.`);
+        throw new Error(`No enabled Grotto Runtime connection named "${runtimeId}" exists.`);
     }
 
     return createAgentRuntimeClientForConnection(connection);

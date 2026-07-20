@@ -53,9 +53,9 @@ function GateFrame({ signIn = false }: { signIn?: boolean }) {
     return (
         <div className="flex h-dvh w-full flex-col items-center justify-center gap-6 bg-background">
             <div className="flex flex-col items-center gap-2 text-center">
-                <h1 className="font-semibold text-2xl text-foreground">Welcome to Tavern</h1>
+                <h1 className="font-semibold text-2xl text-foreground">Welcome to Grotto</h1>
                 <p className="max-w-sm text-muted-foreground text-sm">
-                    Sign in to open your Tavern.
+                    Sign in to open your Grotto.
                 </p>
             </div>
             {signIn ? <SignInAction /> : null}

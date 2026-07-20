@@ -21,7 +21,7 @@ export type RuntimeCapability = z.infer<
     typeof agentRuntimeCapabilityHealthListSchema
 >['capabilities'][number];
 
-/** A combined liveness + version + capability snapshot for `tavern status`. */
+/** A combined liveness + version + capability snapshot for `grotto status`. */
 export interface RuntimeSnapshot {
     /** Capability rows, or null when the runtime is unreachable. */
     capabilities: RuntimeCapability[] | null;
