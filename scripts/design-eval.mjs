@@ -14,6 +14,7 @@
 // opus-4-8, codex/gpt-5.6-sol) and restores the previous model afterwards
 // unless --keep-model is passed. The battery chat is left in place for
 // transcript inspection; rerun with --reuse-chats to recycle it.
+import { spawn } from 'node:child_process';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import path from 'node:path';
@@ -32,7 +33,6 @@ const { requireAgents, send, stamp, trpc, waitForQuiet } = harness;
 const modelFlag = flagValue('--model');
 const onlyFilter = flagValue('--only');
 const keepModel = process.argv.includes('--keep-model');
-const websiteUrl = `http://localhost:${resolveDevPorts().websitePort}`;
 
 const items = designBattery.filter((item) => !onlyFilter || item.slug.includes(onlyFilter));
 assert(items.length > 0, `--only ${onlyFilter} matched no battery items`);
@@ -57,6 +57,10 @@ await mkdir(outDir, { recursive: true });
 const chatId = await harness.createChat(`Design battery ${stamp}`, [agent.id]);
 process.stdout.write(`battery chat: ${chatId} (${items.length} items, model ${runModel})\n`);
 
+// The main dev vite serves the Clerk-gated app; captures run against a
+// second, keyless vite (the e2e trick) on the dev-port group's spare port,
+// pointed at the same running server.
+const captureVite = await startCaptureVite();
 const browser = await chromium.launch();
 const page = await browser.newPage({
     deviceScaleFactor: 2,
@@ -76,6 +80,7 @@ try {
     }
 } finally {
     await browser.close();
+    captureVite.child.kill();
     if (modelFlag && !keepModel) {
         await trpc('agent.updateModel', { agentId: agent.id, modelRef: originalModel }).catch(
             (error) => process.stdout.write(`model restore failed: ${error}\n`)
@@ -88,8 +93,53 @@ process.stdout.write(`\n${captures.length}/${items.length} items captured\n`);
 process.stdout.write(`output: ${path.relative(process.cwd(), outDir)}\n`);
 process.stdout.write(`chat kept for inspection: ${chatId}\n`);
 
+async function startCaptureVite() {
+    const ports = resolveDevPorts();
+    // Each checkout owns four consecutive dev ports (website, server,
+    // runtime, spare); the capture vite takes the spare.
+    const capturePort = Number(ports.websitePort) + 3;
+    const logPath = path.join(outDir, 'capture-vite.log');
+    const log = await import('node:fs').then((fs) => fs.openSync(logPath, 'w'));
+    const child = spawn(
+        'bun',
+        ['run', 'dev', '--', '--host', '127.0.0.1', '--port', String(capturePort)],
+        {
+            cwd: path.join(here, '../apps/website'),
+            env: {
+                ...process.env,
+                NODE_ENV: 'development',
+                TAVERN_SERVER_PORT: String(ports.serverPort),
+                TAVERN_WEBSITE_PORT: String(capturePort),
+                VITE_CLERK_PUBLISHABLE_KEY: '',
+                VITE_SERVER_ORIGIN: `http://127.0.0.1:${ports.serverPort}`,
+            },
+            stdio: ['ignore', log, log],
+        }
+    );
+    let exited = false;
+    child.on('exit', () => {
+        exited = true;
+    });
+    const url = `http://127.0.0.1:${capturePort}`;
+    const deadline = Date.now() + 120_000;
+    while (Date.now() < deadline && !exited) {
+        try {
+            const response = await fetch(url);
+            if (response.ok) {
+                process.stdout.write(`capture vite ready at ${url}\n`);
+                return { child, url };
+            }
+        } catch {
+            // Not listening yet.
+        }
+        await sleep(500);
+    }
+    child.kill();
+    throw new Error(`capture vite never became ready (see ${logPath})`);
+}
+
 async function captureItem(item) {
-    await page.goto(`${websiteUrl}/chats/${chatId}`, { waitUntil: 'domcontentloaded' });
+    await page.goto(`${captureVite.url}/chats/${chatId}`, { waitUntil: 'domcontentloaded' });
     await sleep(3500);
     await expandCollapsedVisual();
     if (item.kind === 'artifact') {
