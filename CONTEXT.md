@@ -157,34 +157,26 @@ _Avoid_: Assigned skill, enabled tool, marketplace item
 An agent setting that references installed skills the agent should receive during turns.
 _Avoid_: Skill install, skill discovery, global enablement
 
-**Widget**:
-One app-native typed UI component rendered in chat from a `widget:<name>` tagged fence holding
-validated JSON props (ADR 0010).
+**Widget activity envelope**:
+The durable `tavern.widget.<name>` render envelope that stores a Visual or Artifact fence in chat
+history (ADR 0010). The retired closed widget catalog (tables, charts, calendars, html-preview)
+replays as fallback-text cards.
 _Avoid_: Rich Response, UI block, AG-UI component, ChatKit widget
-
-**Widget catalog**:
-The closed Tavern-owned set of widget names and prop schemas an agent may author, taught through
-the visuals skill.
-_Avoid_: Rich Response Catalog, plugin registry, arbitrary component set
 
 **Visual**:
 One bespoke model-authored HTML/SVG graphic rendered from a `visual` fence in a sandboxed inline
 frame styled with Tavern theme tokens.
 _Avoid_: Rich Response, custom widget, raw HTML block
 
-**Widget activity**:
-The durable response activity kind that stores a rendered Widget or Visual in Tavern chat history.
-_Avoid_: Rich Response activity, custom activity with UI metadata
-
 **Visuals skill**:
-The seeded skill that owns rendering guidance for agents: when to render, fence contracts, the
-widget catalog, and the design system (ADR 0012).
+The seeded skill that owns rendering guidance for agents: when to render, the visual and artifact
+fence contracts, and the design system (ADR 0012).
 _Avoid_: Prompt design section, page-design skill, per-medium design skills
 
 **Plugin**:
 A Tavern-managed, manifest-declared capability bundle for an external system. A Plugin owns its
-configuration, status, runtime actions, agent-facing skills and tools, normalized view models, and
-any related Widgets. In v1, Plugins are first-party and compiled into Tavern rather
+configuration, status, runtime actions, agent-facing skills and tools, and normalized view models.
+In v1, Plugins are first-party and compiled into Tavern rather
 than user-installed packages; user-provided executable integrations belong behind MCP servers.
 _Avoid_: Skill, connector, CLI dependency, user-installed package
 

@@ -3,7 +3,7 @@ summary: Agent artifacts — durable self-contained HTML pages authored in the w
 read_when:
   - changing the artifact fence, its transcript card, the pane HTML preview, or host token injection
   - writing or reviewing agent guidance for authoring artifacts
-  - deciding whether agent output belongs in chat (visual/widget) or the pane (artifact)
+  - deciding whether agent output belongs in chat (visual) or the pane (artifact)
 ---
 
 # Agent Artifacts
@@ -12,8 +12,8 @@ Agents build durable artifacts as self-contained single-file HTML pages: the
 chat transcript shows a compact card, and opening it renders the page in the
 artifact pane's sandboxed HTML preview. The agent authors one `.html` in its
 workspace (inline CSS/JS, no external or sibling assets) and references it
-with a bare `artifact` fence. Widgets and in-chat visuals cover
-in-conversation data; artifacts are for anything the user will keep or
+with a bare `artifact` fence. In-chat visuals cover in-conversation data;
+artifacts are for anything the user will keep or
 iterate on, and big surfaces stay out of the chat column.
 
 ## Authoring contract
