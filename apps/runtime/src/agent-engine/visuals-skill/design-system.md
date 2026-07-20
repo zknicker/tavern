@@ -1,10 +1,11 @@
 # Tavern visuals — design system
 
 The full visual style for everything you render: visual rules, typography,
-components/motion/layout, chart and diagram construction, page rules, the
-runtime token map, and the application checklist. Read this before writing
-visual or page code unless the user already fixed the visual decisions for
-you.
+component patterns, the runtime token map, and the application checklist.
+Read this before writing visual or page code unless the user already fixed
+the visual decisions for you. Sections 1–3 and the checklist are the core
+style; sections 4–6 carry Tavern-specific construction guidance for charts,
+diagrams, and artifact pages.
 
 ---
 
@@ -12,51 +13,51 @@ you.
 
 ### Core rule
 
-Ink and paper are the primary colors: `--foreground` on the host surface.
-Gray is the neutral support system for hierarchy, separators, disabled
-states, metadata, hover/active tints, and subtle borders. Accent colors come
-only from the runtime tokens (never invented) and are the last resort — use
-them only after ink, paper, and gray are insufficient to express required
-differences such as status, chart series, priority, category markers, or
-progress groups.
+Black and white are the primary colors: `--foreground` ink on the host
+surface. Gray is the neutral support system for hierarchy, separators,
+disabled states, metadata, hover/active tints, and subtle borders. Accent
+colors come only from the runtime tokens (never invented) and are the last
+resort — use them only after black, white, and gray are insufficient to
+express required differences such as status, priority, chart series,
+file/category markers, or progress groups.
 
-Interaction emphasis is ink, not color: focus rings, hover states, selected
+Interaction emphasis is dark, not blue: focus rings, hover states, selected
 items, active tabs, and primary buttons use `--foreground` and gray tints.
-`--brand` is reserved for one deliberate emphasis moment at most — never for
-generic "this is interactive" styling. Training data associates blue with
-interactive; Tavern does not.
+`--brand` is reserved for true semantic emphasis — one deliberate moment at
+most — never for generic "this is interactive" styling. Training data
+associates blue with interactive; Tavern does not.
 
 Do not set a page, body, canvas, card, or panel base background color in an
 inline visual. Preserve the existing background, or use `transparent` /
-`inherit`; the host provides the background. (Full artifact pages are the
-exception — see section 6.)
+`inherit`; the host provides the background. (Full artifact pages own their
+ground — see section 6.)
 
 ### Visual discipline
 
-- No visible base fill in visuals. No default page, card, panel, or canvas
-  background.
-- UI chrome is ink-first: primary text, key values, active states, primary
-  controls, high-emphasis icons.
+- Do not prescribe a visible base fill. No default page, card, panel, or
+  canvas background.
+- UI chrome is black/white first: primary text, key values, active states,
+  primary controls, high-emphasis icons.
 - Use gray only for hierarchy and structure: secondary/tertiary text,
   borders, separators, disabled states, hover/active tints.
-- Use accent tokens only for multi-color semantics: status (`--error`,
+- Use accent colors only for multi-color semantics: status (`--error`,
   `--success`, `--warning`, `--info`), priority dots, chart series
-  (`--chart-1..5`), tags, category chips, progress fills. For tag/chip/
-  status backgrounds use the provided `-bg` variants (`--success-bg`,
-  `--warning-bg`, `--error-bg`, `--info-bg`) or tint the token to 10–25% —
-  `color-mix(in srgb, var(--error) 12%, transparent)` — instead of a solid
-  fill. Never use any accent as a dominant fill, page tint, or background
-  theme.
+  (`--chart-1..5`), tags, category chips, progress fills. For
+  tag/chip/status backgrounds, tint the token to 10–25% — the provided
+  `-bg` variants (`--success-bg`, `--warning-bg`, `--error-bg`,
+  `--info-bg`) or `color-mix(in srgb, var(--error) 12%, transparent)` —
+  instead of a solid fill. Never use any accent as a dominant fill, page
+  tint, or background theme.
 - Avoid colorful gradients. If a gradient is necessary for a data mark, keep
   it subtle and within one hue family (opacity steps of a single token, not
   hue blends).
 - Avoid decorative base fills, gradient orbs, bokeh, heavy color washes,
   nested decorative cards, marketing-page hero treatment, heavy shadows,
-  blur, and glassmorphism. Keep surfaces clean and flat.
+  blur, and glassmorphism. Keep surfaces clean/flat.
 - Use fine borders and compact radii: 1px `var(--border)` separators
   (`var(--border-strong)` when the line must carry weight),
-  `var(--radius-sm)` chips, `var(--radius-md)` controls and inputs,
-  `var(--radius-lg)` list cards, `var(--radius-xl)` elevated panels.
+  `var(--radius-sm)` chips, `var(--radius-md)` icon buttons and controls,
+  `var(--radius-lg)` list cards/inputs, `var(--radius-xl)` elevated panels.
 
 ### Chart colors
 
@@ -72,10 +73,10 @@ chart color from the runtime tokens.
   temperature by city): same-hue opacity instead of categorical. Steps
   100 / 70 / 50 / 40 / 25% via
   `color-mix(in srgb, var(--chart-1) 70%, transparent)`.
-- **Positive vs baseline** (actual vs target): `--chart-1` vs `--chart-5`.
-  **Positive vs negative** (profit/loss, risk): `--chart-1` vs `--chart-2`.
-  **Deviation from a true midpoint**: red ↔ neutral ↔ blue diverging — only
-  when a real zero/break-even center exists.
+- **Positive vs baseline** (actual vs target): blue vs neutral gray.
+  **Positive vs negative** (profit/loss, risk): blue vs red. **Deviation
+  from a true midpoint**: red ↔ neutral ↔ blue diverging — only when a real
+  zero/break-even center exists.
 - Baseline, reference lines, grid, and "no data" use
   `--foreground-quaternary` (or the derived `--chart-grid`).
 - Heatmaps and stacked areas are always sequential, never categorical.
@@ -101,28 +102,32 @@ Use the host fonts, not artifact-specific or presentation fonts.
   `button, input, select, textarea { font: inherit; }`, and set
   `svg text { font-family: var(--font-sans); }` when using inline SVG text.
 - Primary display values must use `var(--font-sans)`, including timers,
-  prices, counts, percentages, dates, and chart labels. For numeric display
-  values use `font-variant-numeric: tabular-nums;` instead of switching to a
-  mono font.
-- Reserve `var(--font-mono)` for code, hashes, raw identifiers, timestamps,
-  compact metadata, and genuinely technical monospace tables. Keep mono
+  prices, counts, percentages, dates, times, counters, and chart labels.
+- For numeric display values, use
+  `font-variant-numeric: tabular-nums; font-feature-settings: "tnum" 1;`
+  instead of switching to a mono font.
+- Reserve `var(--font-mono)` for code, hashes, raw identifiers, logs,
+  timestamps, and genuinely technical monospace tables only. Keep mono
   small and secondary; never use mono for large hero metrics, timers,
   counters, prices, percentages, or slider values.
-- Do not hardcode font stacks (`Inter`, `Geist`, `SF Pro`, `system-ui`) and
-  do not introduce decorative display fonts. If a fallback is required,
-  keep it inside the variable: `font-family: var(--font-sans, sans-serif)`.
+- Do not hardcode font stacks (`Inter`, `Geist`, `SF Pro Text`,
+  `system-ui`, `Poppins`, `JetBrains Mono`). Do not introduce decorative
+  display fonts. If a fallback is required, keep it inside the variable
+  fallback: `font-family: var(--font-sans, sans-serif)`.
 
 ### Scale
 
-The base body size is **14px** (`var(--app-ui-font-size)`) — the frame sets
-this on `body`, so plain text is already correct; don't resize it.
+The base body size is **14px** (`var(--app-ui-font-size)`, line-height
+1.5) — the frame sets this on `body`, so plain text is already correct;
+don't resize it.
 
 - Body text: 14px, line-height 1.5. Emphasized body: 14px weight 500.
-- Titles and section labels: 15–16px, weight 500.
+- Title / section labels: 15–16px, weight 500.
 - Secondary text and dense table cells: 12–13px.
-- Metadata and compact labels: 11–12px. Nothing below 11px.
-- Primary display values: usually 24–36px, never larger than 42px in an
-  inline visual; weight 500; line-height at least 1.08 so glyphs don't crop.
+- Metadata and compact labels: 11–12px. No font-size below 11px.
+- Primary display values: usually 24–36px, never larger than 42px in a
+  compact visual; weight 500, line-height at least 1.08 so glyphs don't
+  crop.
 - Letter spacing must be 0 or positive — never negative.
 - **Two weights only**: 400 regular and 500 bold. Avoid 600/700 — they look
   heavy against the host.
@@ -158,8 +163,8 @@ and its container edge.
 - Native controls (sliders, switches, checkboxes, radios, progress bars)
   are UI chrome, not data accents. Keep them neutral:
   `accent-color: var(--foreground)` or gray border/surface tokens. Do not
-  use browser default blue for generic controls — only when the control
-  itself selects a semantic accent/state.
+  use browser default blue or a brand accent for generic controls — only
+  when the control itself is a semantic accent/state selector.
 - **Destructive and secondary row actions are hover-revealed, not always
   visible.** Delete, remove, clear, and similar per-item actions on list
   rows, cards, chips, and table rows stay hidden by default and appear on
@@ -171,32 +176,40 @@ and its container edge.
   ```
 
   Use `opacity`/`visibility`, not `display: none`, so the layout doesn't
-  shift. A permanently visible delete button on every row reads as noisy
-  and dangerous. Exception: a single deliberate destructive action that is
-  the output's point stays visible.
-- Icons: prefer the shipped library — read [icons.md](icons.md), pick from
-  `references/icons/manifest.json`, and inline the SVG from `assets/icons/`
-  with `currentColor`. Do not import, link, or fetch external icon assets.
-  Do not use emoji as UI icons. **24px is the maximum icon size** — if a
-  spot seems to need a larger icon (empty state, hero mark), don't use an
-  icon there at all; solve it with typography or layout.
+  shift and the control stays keyboard-reachable. A permanently visible
+  delete button on every row reads as noisy and dangerous. Exception: a
+  single, deliberate destructive action that is the output's point (e.g. a
+  confirm dialog's "Delete" button) stays visible.
+- Icons: prefer the shipped icon library — read [icons.md](icons.md) and
+  pick from `references/icons/manifest.json`, then inline the SVG from
+  `assets/icons/` with `currentColor`. A small leading icon (16–18px)
+  beside a dashboard title or section header is welcome and reads as
+  native app chrome. Only build a custom icon (same solid rounded style,
+  24×24 grid) when no library icon matches. Do not import, link, or fetch
+  external icon assets. Do not use emoji as UI icons. **24px is the
+  maximum icon size** — if a spot seems to need a larger icon (empty
+  state, hero mark, big decorative glyph), don't use an icon there at all;
+  solve it with typography or layout.
 
 ### Spacing & radius
 
-All spacing snaps to the scale: **4 / 8 / 12 / 16 / 20 / 24 / 32px**. No
-values off the scale — `7px`, `13px`, `17px` read as accidents, not
-decisions. When a gap could sit between two steps, pick the smaller one;
+All spacing snaps to the token scale: **4 / 8 / 12 / 16 / 20 / 24 / 32px**.
+No values off the scale — `7px`, `13px`, `17px` read as accidents, not
+decisions. When a gap needs to sit between two steps, pick the smaller one;
 visuals are compact surfaces.
 
-All radii come from the tokens: `var(--radius-sm)` chips and badges,
-`var(--radius-md)` controls and inputs, `var(--radius-lg)` list cards,
-`var(--radius-xl)` large panels, `9999px` for pills/avatars only.
+All radii come from the radius tokens: `var(--radius-sm)` chips,
+`var(--radius-md)` icon buttons and controls, `var(--radius-lg)` list
+cards/inputs, `var(--radius-xl)` elevated panels, `9999px` for
+pills/avatars only.
 
 **Nested radii: outer is always larger than inner.** When a rounded element
-sits inside another rounded container, compute the inner radius as
-`inner = outer − padding`, never below 4px and never above the container's
-radius. Equal radii inside each other, or an inner element rounder than its
-container, read as broken corners.
+sits inside another rounded container, the inner radius must be smaller —
+compute it as `inner = outer − padding` (e.g. a 12px panel with 8px padding
+holds 4px-radius children), and never let it go below 4px or above the
+container's radius. Equal radii inside each other, or an inner element
+rounder than its container, read as broken corners. Concentric corners are
+the check: the two curves should share a center.
 
 ### Complexity budgets
 
@@ -212,16 +225,17 @@ Hard ceilings; past them, split the output or simplify:
 ### Animation & layout
 
 - Use small CSS transitions or inline JavaScript with native browser APIs
-  only. No external animation libraries. Keep motion purposeful and short;
-  avoid loops that don't communicate progress or state. Use the motion
-  tokens instead of arbitrary values: durations `--t-micro` / `--t-fast` /
-  `--t-normal` / `--t-slow` (80–300ms), easings `--ease-out` / `--ease-in` /
+  only. No Motion, GSAP, React, Vue, npm packages, CDN scripts, or external
+  modules. Keep motion purposeful and short; avoid loops that don't
+  communicate progress or state. Use the shared motion tokens instead of
+  arbitrary values: durations `--t-micro` / `--t-fast` / `--t-normal` /
+  `--t-slow` (80–300ms), easings `--ease-out` / `--ease-in` /
   `--ease-standard`.
 - Responsive, natural width `100%`; the host card fills the content column.
   No `position: fixed` — everything stays in normal document flow. Avoid
-  nested scrolling; let height follow content; don't reserve empty vertical
-  space. Keep text readable in both light and dark mode — that is automatic
-  when every color is a token.
+  nested scrolling; let height follow content, don't reserve empty vertical
+  space. Keep text readable in both light and dark mode — automatic when
+  every color is a token.
 
 ### Streaming-friendly authoring order
 
@@ -233,9 +247,10 @@ Structure code so useful content appears early:
 3. `<script>` last for interactivity. Never reference elements below a
    script.
 
-Prefer inline `style="..."` over `<style>` blocks so elements look correct
+Prefer inline `style="..."` over `<style>` blocks so controls look correct
 mid-stream. Keep `<style>` short (~15 lines). No `<!-- comments -->` or
-`/* comments */` (waste tokens, hurt streaming). Use solid flat fills —
+`/* comments */` (waste tokens, hurt streaming). For SVG, put `<defs>`
+(markers) first, then visual elements immediately. Use solid flat fills —
 gradients, shadows, and blur flash during streaming DOM diffs.
 
 ---
@@ -255,11 +270,19 @@ gradients, shadows, and blur flash during streaming DOM diffs.
 - Lead with the answer: a headline number or one-line takeaway above the
   chart beats a caption below. Numbers are tabular with compact units
   (1.2k, $4.5M).
+- When the data has a story, annotate its most notable point — a labeled
+  peak, dip, or event marker on the chart itself beats prose about it.
 - Gridlines: horizontal only, 1px, `var(--chart-grid)`. No vertical
   gridlines, no axis boxes. Axis labels and ticks: `var(--chart-label)` or
-  `--muted-foreground`, 11–12px.
+  `--muted-foreground`, 11–12px. Start value axes at zero unless the data
+  genuinely demands otherwise.
 - Legend: small swatch (10px, radius 2px) + muted text, above or below the
-  plot. Skip it for a single series.
+  plot; a one-line muted caption ("bar = spend · label = ROAS per channel")
+  works well for compact composed charts. Skip the legend for a single
+  series.
+- Stat tiles: label (12px muted) → value (24–32px, weight 500, tabular) →
+  delta as a tinted pill chip (`--success-bg`/`--error-bg` with the
+  matching `-foreground` text), never bare colored text.
 - Assign series colors once and keep them stable across a conversation:
   first series `--chart-1`, comparison `--chart-2`, and so on. A
   single-metric chart uses `--chart-1`.
@@ -295,21 +318,15 @@ Before closing an `<svg>`:
 </svg>
 ```
 
-### Golden example — stat tile row
+### Golden example — stat tile
 
 ```
-<div style="display:flex;gap:12px">
-  <div style="flex:1;padding:12px 16px;border:1px solid var(--border);border-radius:var(--radius-lg)">
-    <div style="font-size:12px;color:var(--muted-foreground)">Revenue</div>
-    <div style="font-size:26px;font-weight:500;font-variant-numeric:tabular-nums">$102,676</div>
-    <div style="font-size:12px;color:var(--success-foreground)">↑ 12.8% vs May</div>
-  </div>
+<div style="flex:1;padding:12px 16px;border:1px solid var(--border);border-radius:var(--radius-lg)">
+  <div style="font-size:12px;color:var(--muted-foreground)">Revenue</div>
+  <div style="font-size:26px;font-weight:500;font-variant-numeric:tabular-nums">$102,676</div>
+  <span style="display:inline-block;margin-top:4px;padding:1px 8px;border-radius:var(--radius-sm);font-size:12px;background:var(--success-bg);color:var(--success-foreground)">↑ 12.8% vs May</span>
 </div>
 ```
-
-Stat tiles: label 12px muted → value 24–32px weight 500 tabular → delta
-12px in a status foreground color. Never put the value in mono or a series
-color.
 
 ---
 
@@ -329,9 +346,9 @@ structure and inline SVG for connectors — no diagram library, no mermaid.
 - Status states are semantic only: `--success` / `--warning` / `--error`
   for healthy/degraded/failed — never decoration.
 - Keep flow direction consistent: left-to-right for pipelines,
-  top-to-bottom for hierarchies. Align nodes to a grid; even gaps (12–24px).
-  Prefer 4–9 nodes; past that, group into labeled clusters (a bordered
-  container with a 12px muted caption).
+  top-to-bottom for hierarchies. Align nodes to a grid; even gaps
+  (12–24px). Prefer 4–9 nodes; past that, group into labeled clusters (a
+  bordered container with a 12px muted caption).
 - Patterns: pipeline = flex row + SVG arrows; hierarchy = nested flex
   columns or indentation with left borders; sequence = columns with 1px
   lifelines and labeled horizontal arrows; timeline = vertical left border
@@ -408,10 +425,10 @@ follow everything above, plus:
 
 ---
 
-## 7. Runtime token map
+## 7. Runtime token mapping
 
-The frame has Tavern's theme preloaded. Reference only these variables;
-never hardcode surface or text colors.
+The frame has Tavern's theme pre-loaded. Map the style onto these runtime
+variables; prefer runtime variables over hardcoded values.
 
 - Text: `--foreground`, `--muted-foreground`, `--foreground-tertiary`,
   `--foreground-quaternary`
@@ -421,8 +438,8 @@ never hardcode surface or text colors.
   `--ring` (pages)
 - Status: `--success`, `--warning`, `--error`, `--info`, each with
   `-foreground` and `-bg` variants for chips and callouts
-- Emphasis (one moment at most): `--brand`, with `--brand-muted` +
-  `--brand-muted-foreground` for readable tints
+- Emphasis (semantic accents only, never generic interaction): `--brand`,
+  with `--brand-muted` + `--brand-muted-foreground` for readable tints
 - Chart series: `--chart-1` … `--chart-5` (blue, red, green, purple,
   neutral); derived chrome `--chart-grid`, `--chart-label` (visual fences)
 - Radii: `--radius-sm`, `--radius-md`, `--radius-lg`, `--radius-xl`
@@ -430,24 +447,26 @@ never hardcode surface or text colors.
   `--ease-in`, `--ease-standard`
 - Fonts: `--font-sans`, `--font-mono`; base size `--app-ui-font-size`
 
-Do not use `prefers-color-scheme` or maintain a separate light/dark table —
-the host injects the active theme's values.
+Do not use `prefers-color-scheme` or maintain a separate light/dark token
+table — the host injects the active theme's values.
 
 ---
 
 ## 8. Application checklist
 
-1. Preserve the existing background (visuals) or set `--background` (pages).
-2. Convert main UI color decisions to ink-first; interaction emphasis uses
-   `--foreground`, never an accent.
+1. Preserve the existing background (visuals) or set `--background`
+   (pages).
+2. Convert main UI color decisions to black/white first; interaction
+   emphasis uses `--foreground`, never accent blue.
 3. Use gray for hierarchy and structure.
 4. Add accent tokens only for required multi-state or multi-category
-   distinctions (status, chart series, tags) — `-bg` variants or 10–25%
-   tints for backgrounds, chart rules for data marks.
+   distinctions (status, priority, chart series, tags) — tinted 10–25% for
+   backgrounds, following the chart color rules for data marks.
 5. Replace presentation typography with `var(--font-sans)` /
    `var(--font-mono)`; two weights; sentence case; nothing below 11px.
-6. Snap every gap and padding to 4 / 8 / 12 / 16 / 20 / 24 / 32; nested
-   radii outer-large-inner-small.
+6. Tighten large decorative spacing into app-like density; every gap and
+   padding snaps to the 4 / 8 / 12 / 16 / 20 / 24 / 32 scale, nested radii
+   are outer-large-inner-small.
 7. Check text fits its boxes (section 2) and the viewBox checklist
    (section 4).
-8. Verify no accent has become a base fill or dominant theme color.
+8. Verify no accent color has become a base fill or dominant theme color.

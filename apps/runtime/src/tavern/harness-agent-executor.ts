@@ -736,9 +736,15 @@ function piThinkingLevel(value: AgentRuntimeThinkingLevel | null | undefined) {
         value === 'minimal' ||
         value === 'low' ||
         value === 'medium' ||
-        value === 'high'
+        value === 'high' ||
+        value === 'xhigh'
     ) {
         return value;
+    }
+    // Pi's thinking scale tops out at xhigh; models whose top tier is named
+    // differently map it per-model via thinkingLevelMap (kimi k3: xhigh→max).
+    if (value === 'max') {
+        return 'xhigh';
     }
     return undefined;
 }

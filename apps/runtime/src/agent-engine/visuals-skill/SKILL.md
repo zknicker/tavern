@@ -12,11 +12,15 @@ description: >
 Managed by Tavern. Do not edit this skill directory; Tavern refreshes it on
 startup.
 
+A visual is a compact visual or interactive surface rendered inline in the
+conversation: diagrams, dashboards, calculators, sliders, comparisons,
+timelines, state machines, small simulations. Use one when seeing structure
+helps the user understand, compare, inspect, or act on the answer better
+than prose alone.
+
 You render three kinds of visual output in chat:
 
-- A **visual** — bespoke inline HTML/SVG in a ```` ```visual ```` fence:
-  charts, diagrams, dashboards, calculators, comparisons, timelines, state
-  machines, small simulations.
+- A **visual** — bespoke inline HTML/SVG in a ```` ```visual ```` fence.
 - A **widget** — an app-native typed component in a ```` ```widget:<name> ````
   fence holding one JSON props object: tables, standard charts, calendar
   cards.
@@ -25,14 +29,13 @@ You render three kinds of visual output in chat:
 
 ## When to render
 
-- Render when the answer has spatial, sequential, systemic, comparative,
-  numeric, or interactive structure. Seeing structure must help the user
-  understand, compare, inspect, or act better than prose alone.
+- The answer has spatial, sequential, systemic, comparative, numeric, or
+  interactive structure.
 - The user does not need to say "show", "visualize", "chart", or "widget" —
   proactive visuals are expected when the structure is there.
 - If the user gives a compact visual spec without a verb ("REST vs GraphQL
-  table", "checkout state machine", "pricing calculator"), render it instead
-  of only describing it.
+  table", "checkout state machine", "pricing calculator"), render it as a
+  visual instead of only describing it.
 - Routing: use a **widget** when a catalog widget fits the answer exactly
   (tabular → `widget:table`, plain trend or comparison → the chart widgets,
   calendar-shaped → the calendar widgets). Draw a **visual** when the data
@@ -40,9 +43,9 @@ You render three kinds of visual output in chat:
   for deliverables — documents, reports, pages the user will keep. When
   unsure, use plain text.
 - Do **not** render a visual for: ordinary prose answers, routine
-  line-by-line code explanations, file lists or final file deliverables,
-  blocking input workflows, destructive or native actions, or large
-  long-lived apps.
+  line-by-line code explanations, file lists / galleries / final file
+  deliverables, blocking input workflows, destructive or native actions, or
+  large long-lived apps.
 
 ## Fence contracts
 
@@ -151,8 +154,9 @@ application checklist. Do not decide an output is too simple, too static,
 or too small to need it. Skip it only when the user's instructions already
 fix the visual decisions for you.
 
-If the output uses icons, also read
-[references/icons.md](references/icons.md): the skill ships a curated icon
-library (`assets/icons/`, indexed in `references/icons/manifest.json`) —
-pick from the library and inline the SVG instead of drawing your own or
+The skill ships a curated icon library (`assets/icons/`, indexed in
+`references/icons/manifest.json`) — read
+[references/icons.md](references/icons.md) when an output has icon-shaped
+spots: dashboard or section titles, status markers, toolbars, empty states.
+Pick from the library and inline the SVG instead of drawing your own or
 using emoji.

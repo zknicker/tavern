@@ -120,9 +120,9 @@ describe('Kimi Code model access', () => {
             refreshToken: 'kimi-refresh',
         });
         await ensureFreshKimiCredentials({
-            fetch: () => {
+            fetch: (() => {
                 throw new Error('should not refresh');
-            },
+            }) as unknown as typeof fetch,
         });
         expect(getKimiHarnessAuth()).toEqual({ accessToken: 'fresh' });
 

@@ -37,14 +37,16 @@ export const kimiCodingModelDefinitions = [
         maxTokens: 131_072,
         name: 'Kimi K3',
         reasoning: true,
+        // Upstream (pi-ai 0.80) keys K3's only thinking tier as max→'max';
+        // our pinned pi 0.79 scale tops out at xhigh, so xhigh carries it —
+        // the same idiom 0.79's own registry uses for max-tier models.
         thinkingLevelMap: {
             high: null,
             low: null,
-            max: 'max',
             medium: null,
             minimal: null,
             off: null,
-            xhigh: null,
+            xhigh: 'max',
         },
     },
     {

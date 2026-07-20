@@ -7,13 +7,15 @@
 // This is a dev tool, not CI: each run costs real model turns, and the
 // verdict on the output is the operator's.
 //
-// Usage: bun run eval:design [--model <provider>/<model>] [--only <slug>]
-//        [--reuse-chats] [--server URL] [--keep-model]
+// Usage: bun run eval:design [--model <provider>/<model>] [--thinking <level>]
+//        [--only <slug>] [--reuse-chats] [--server URL] [--keep-model]
 //
 // --model sets the battery agent's model for the run (e.g. claude/claude-
 // opus-4-8, codex/gpt-5.6-sol) and restores the previous model afterwards
-// unless --keep-model is passed. The battery chat is left in place for
-// transcript inspection; rerun with --reuse-chats to recycle it.
+// unless --keep-model is passed. --thinking sets the agent's thinking
+// default for the run the same way (kimi/k3 wants max — that is what
+// kimi.com runs). The battery chat is left in place for transcript
+// inspection; rerun with --reuse-chats to recycle it.
 import { spawn } from 'node:child_process';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
@@ -31,6 +33,7 @@ const harness = createEvalHarness({ evalName: 'designeval' });
 const { requireAgents, send, stamp, trpc, waitForQuiet } = harness;
 
 const modelFlag = flagValue('--model');
+const thinkingFlag = flagValue('--thinking');
 const onlyFilter = flagValue('--only');
 const keepModel = process.argv.includes('--keep-model');
 
@@ -39,23 +42,36 @@ assert(items.length > 0, `--only ${onlyFilter} matched no battery items`);
 
 const [agent] = await requireAgents(1);
 const originalModel = await currentModelRef(agent.id);
+const originalThinking = await currentThinkingDefault(agent.id);
 
 if (modelFlag) {
     process.stdout.write(`setting ${agent.name} model: ${originalModel} -> ${modelFlag}\n`);
     await trpc('agent.updateModel', { agentId: agent.id, modelRef: modelFlag });
+}
+if (thinkingFlag) {
+    process.stdout.write(
+        `setting ${agent.name} thinking: ${originalThinking ?? 'default'} -> ${thinkingFlag}\n`
+    );
+    await trpc('agent.updateThinkingDefault', {
+        agentId: agent.id,
+        thinkingDefault: thinkingFlag,
+    });
+}
+if (modelFlag || thinkingFlag) {
     await trpc('agent.resetSession', { agentId: agent.id });
 }
 
 const runModel = modelFlag ?? originalModel;
+const runLabel = thinkingFlag ? `${runModel}-${thinkingFlag}` : runModel;
 const outDir = path.join(
     here,
     'design-battery/output',
-    `${stamp}-${runModel.replaceAll(/[^a-zA-Z0-9.-]+/gu, '-')}`
+    `${stamp}-${runLabel.replaceAll(/[^a-zA-Z0-9.-]+/gu, '-')}`
 );
 await mkdir(outDir, { recursive: true });
 
 const chatId = await harness.createChat(`Design battery ${stamp}`, [agent.id]);
-process.stdout.write(`battery chat: ${chatId} (${items.length} items, model ${runModel})\n`);
+process.stdout.write(`battery chat: ${chatId} (${items.length} items, model ${runLabel})\n`);
 
 // The main dev vite serves the Clerk-gated app; captures run against a
 // second, keyless vite (the e2e trick) on the dev-port group's spare port,
@@ -85,6 +101,12 @@ try {
         await trpc('agent.updateModel', { agentId: agent.id, modelRef: originalModel }).catch(
             (error) => process.stdout.write(`model restore failed: ${error}\n`)
         );
+    }
+    if (thinkingFlag && !keepModel) {
+        await trpc('agent.updateThinkingDefault', {
+            agentId: agent.id,
+            thinkingDefault: originalThinking,
+        }).catch((error) => process.stdout.write(`thinking restore failed: ${error}\n`));
     }
 }
 
@@ -217,7 +239,7 @@ async function writeContactSheet() {
     }
 
     const html = `<!doctype html><html><head><meta charset="utf-8">
-<title>Design battery — ${escapeHtml(runModel)} — ${stamp}</title>
+<title>Design battery — ${escapeHtml(runLabel)} — ${stamp}</title>
 <style>
 body { margin: 0 auto; max-width: 1500px; padding: 32px 24px; background: #16130f; color: #eee;
   font: 14px/1.5 -apple-system, sans-serif; }
@@ -232,7 +254,7 @@ figure img { border: 1px solid #333; border-radius: 8px; width: 100%; }
 figcaption { color: #999; font-size: 12px; margin-top: 4px; }
 </style></head><body>
 <h1>Design battery</h1>
-<p class="meta">model ${escapeHtml(runModel)} · ${stamp} · chat ${chatId} · rubric: scripts/design-battery/RUBRIC.md</p>
+<p class="meta">model ${escapeHtml(runLabel)} · ${stamp} · chat ${chatId} · rubric: scripts/design-battery/RUBRIC.md</p>
 ${sections.join('\n')}
 </body></html>`;
 
@@ -244,6 +266,12 @@ async function currentModelRef(agentId) {
     const match = (data?.agents ?? []).find((candidate) => candidate.agentId === agentId);
     assert(match?.modelRef, `agent ${agentId} has no resolved model`);
     return match.modelRef;
+}
+
+async function currentThinkingDefault(agentId) {
+    const data = await trpc('model.list');
+    const match = (data?.agents ?? []).find((candidate) => candidate.agentId === agentId);
+    return match?.overrideThinkingDefault ?? null;
 }
 
 function flagValue(name) {
