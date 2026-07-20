@@ -8,55 +8,6 @@ import {
 } from './render';
 
 describe('Widget rendering', () => {
-    it('parses a widget fence out of assistant content', () => {
-        const parsed = parseWidgetsFromAssistantContent(
-            [
-                'Here is the chart.',
-                '',
-                '```widget:bar-chart',
-                '{"title":"Sales today","xKey":"day","series":[{"key":"sold","label":"Sold"}],"data":[{"day":"Mon","sold":4}]}',
-                '```',
-                '',
-                'Done.',
-            ].join('\n')
-        );
-
-        expect(parsed).toMatchObject({
-            displayContent: 'Here is the chart.\n\nDone.',
-            invalid: [],
-            widgets: [
-                {
-                    fallbackText: 'Sales today',
-                    name: 'bar-chart',
-                    render: {
-                        component: 'tavern.widget.bar-chart',
-                        fallback: { text: 'Sales today' },
-                        target: 'chat.inline',
-                    },
-                },
-            ],
-        });
-    });
-
-    it('parses multiple widget fences in order', () => {
-        const parsed = parseWidgetsFromAssistantContent(
-            [
-                'Schedule and stats:',
-                '',
-                '```widget:calendar-day',
-                '{"date":"2026-07-06","events":[]}',
-                '```',
-                '',
-                '```widget:table',
-                '{"columns":["State","Population"],"rows":[["California","39,538,223"]]}',
-                '```',
-            ].join('\n')
-        );
-
-        expect(parsed?.widgets.map((widget) => widget.name)).toEqual(['calendar-day', 'table']);
-        expect(parsed?.displayContent).toBe('Schedule and stats:');
-    });
-
     it('parses a visual body fence into the visual render envelope', () => {
         const parsed = parseWidgetsFromAssistantContent(
             [
@@ -91,20 +42,20 @@ describe('Widget rendering', () => {
         });
     });
 
-    it('keeps widget and visual fences in document order', () => {
+    it('keeps visual and artifact fences in document order', () => {
         const parsed = parseWidgetsFromAssistantContent(
             [
                 '```visual',
                 '<h2>Flow</h2>',
                 '```',
                 '',
-                '```widget:table',
-                '{"columns":["State"],"rows":[["California"]]}',
+                '```artifact',
+                '{"path":"workbench/pages/report.html","title":"Q3 report"}',
                 '```',
             ].join('\n')
         );
 
-        expect(parsed?.widgets.map((widget) => widget.name)).toEqual(['visual', 'table']);
+        expect(parsed?.widgets.map((widget) => widget.name)).toEqual(['visual', 'artifact']);
     });
 
     it('strips an empty visual fence as invalid', () => {
@@ -123,68 +74,6 @@ describe('Widget rendering', () => {
         expect(widgetDisplayContent('Drawing now.\n\n```visual\n<div><h1>Part')).toBe(
             'Drawing now.'
         );
-    });
-
-    it('strips invalid widget fences without creating a render payload', () => {
-        const parsed = parseWidgetsFromAssistantContent(
-            ['Here is the chart.', '', '```widget:bar-chart', 'not json', '```', '', 'Done.'].join(
-                '\n'
-            )
-        );
-
-        expect(parsed).toMatchObject({
-            displayContent: 'Here is the chart.\n\nDone.',
-            invalid: [{ error: 'widget:bar-chart props are not valid JSON.', name: 'bar-chart' }],
-            widgets: [],
-        });
-    });
-
-    it('parses an html-preview fence with a workspace path', () => {
-        const parsed = parseWidgetsFromAssistantContent(
-            [
-                'Interactive demo below.',
-                '',
-                '```widget:html-preview',
-                '{"path":"workbench/demos/orbit.html","height":600}',
-                '```',
-            ].join('\n')
-        );
-
-        expect(parsed).toMatchObject({
-            displayContent: 'Interactive demo below.',
-            invalid: [],
-            widgets: [
-                {
-                    fallbackText: 'HTML preview: workbench/demos/orbit.html',
-                    name: 'html-preview',
-                    render: {
-                        component: 'tavern.widget.html-preview',
-                        props: { height: 600, path: 'workbench/demos/orbit.html' },
-                        target: 'chat.inline',
-                    },
-                },
-            ],
-        });
-    });
-
-    it('strips html-preview fences with traversal or non-html paths', () => {
-        const parsed = parseWidgetsFromAssistantContent(
-            [
-                'Look:',
-                '',
-                '```widget:html-preview',
-                '{"path":"../outside.html"}',
-                '```',
-                '',
-                '```widget:html-preview',
-                '{"path":"notes.md"}',
-                '```',
-            ].join('\n')
-        );
-
-        expect(parsed?.widgets).toEqual([]);
-        expect(parsed?.invalid).toHaveLength(2);
-        expect(parsed?.displayContent).toBe('Look:');
     });
 
     it('parses a bare artifact fence with a workspace html path', () => {
@@ -231,6 +120,26 @@ describe('Widget rendering', () => {
         ).toBe('Building it now.');
     });
 
+    it('strips retired catalog widget fences as invalid', () => {
+        const parsed = parseWidgetsFromAssistantContent(
+            [
+                'Here is the chart.',
+                '',
+                '```widget:bar-chart',
+                '{"title":"Sales today","xKey":"day","series":[{"key":"sold","label":"Sold"}],"data":[{"day":"Mon","sold":4}]}',
+                '```',
+                '',
+                'Done.',
+            ].join('\n')
+        );
+
+        expect(parsed).toMatchObject({
+            displayContent: 'Here is the chart.\n\nDone.',
+            invalid: [{ error: 'Unknown widget "bar-chart".', name: 'bar-chart' }],
+            widgets: [],
+        });
+    });
+
     it('rejects unknown widget names as invalid fences', () => {
         const parsed = parseWidgetsFromAssistantContent(
             ['```widget:sparkline', '{"values":[1,2]}', '```'].join('\n')
@@ -259,11 +168,7 @@ describe('Widget rendering', () => {
 
     it('builds durable widget activity with fallback text', () => {
         const parsed = parseWidgetsFromAssistantContent(
-            [
-                '```widget:calendar-event',
-                '{"title":"Q1 roadmap review","date":"2026-06-20","startTime":"13:00","endTime":"14:00"}',
-                '```',
-            ].join('\n')
+            ['```visual Q1 roadmap', '<h2>Q1 roadmap</h2>', '```'].join('\n')
         );
         const widget = parsed?.widgets[0];
 
@@ -284,18 +189,40 @@ describe('Widget rendering', () => {
         });
 
         expect(activity).toMatchObject({
-            detail: 'Q1 roadmap review',
+            detail: 'Q1 roadmap',
             id: 'act_run_1_widget_1',
             kind: 'widget',
             status: 'completed',
-            title: 'Calendar event',
+            title: 'Visual',
         });
         expect(activity.metadata).toMatchObject({
-            widget: { component: 'tavern.widget.calendar-event' },
+            widget: { component: 'tavern.widget.visual' },
         });
     });
 
-    it('projects widget activity into renderable progress', () => {
+    it('projects visual activity into renderable progress', () => {
+        const progress = widgetProgressFromActivity({
+            id: 'act_widget_1',
+            kind: 'widget',
+            metadata: {
+                widget: {
+                    component: 'tavern.widget.visual',
+                    fallback: { text: 'Weekly sales' },
+                    props: { html: '<h2>Weekly sales</h2>', title: 'Weekly sales' },
+                    target: 'chat.inline',
+                },
+            },
+            title: 'Visual',
+        });
+
+        expect(progress).toMatchObject({
+            component: 'tavern.widget.visual',
+            fallbackText: 'Weekly sales',
+            validationError: null,
+        });
+    });
+
+    it('surfaces retired stored widget payloads with fallback text', () => {
         const progress = widgetProgressFromActivity({
             id: 'act_widget_1',
             kind: 'widget',
@@ -310,21 +237,6 @@ describe('Widget rendering', () => {
                     target: 'chat.inline',
                 },
             },
-            title: 'Table',
-        });
-
-        expect(progress).toMatchObject({
-            component: 'tavern.widget.table',
-            fallbackText: 'Table: State',
-            validationError: null,
-        });
-    });
-
-    it('surfaces invalid persisted widget payloads with fallback text', () => {
-        const progress = widgetProgressFromActivity({
-            id: 'act_widget_1',
-            kind: 'widget',
-            metadata: { widget: { component: 'tavern.widget.table' } },
             summary: 'Table: State',
             title: 'Table',
         });

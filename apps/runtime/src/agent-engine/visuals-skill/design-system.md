@@ -318,6 +318,16 @@ Before closing an `<svg>`:
 </svg>
 ```
 
+### Tables
+
+Render tabular data as a plain HTML `<table>` — the visual frame styles
+bare tables natively (app-matched row hairlines, 500-weight headers, muted
+cells, hover tint), so add no table CSS of your own in a visual. Right-align
+numeric columns with `style="text-align:right"` and keep values
+`tabular-nums`. Sentence-case headers; a `<caption>` renders as a muted
+line below the table. Artifact pages style their own tables (see the golden
+page skeleton).
+
 ### Golden example — stat tile
 
 ```
@@ -376,8 +386,8 @@ structure and inline SVG for connectors — no diagram library, no mermaid.
 
 ## 6. Artifact pages
 
-Full self-contained HTML pages (artifact pane pages, html-preview files)
-follow everything above, plus:
+Full self-contained HTML pages (artifact pages) follow everything above,
+plus:
 
 - Pages own their ground: `background: var(--background)` on the page,
   `var(--card)` panels, `--surface-2..4` for nested elevation. This is the
@@ -396,8 +406,7 @@ follow everything above, plus:
   right-aligned numbers, compact mono for timestamps and ids.
 - Semantic HTML with a sensible heading outline; the first heading or
   `<title>` names the page.
-- html-preview files live under `workbench/`; the widget's optional
-  `height` prop clamps 120–1200 (default 480).
+- Artifact page files live under `workbench/`.
 
 ### Golden page skeleton
 

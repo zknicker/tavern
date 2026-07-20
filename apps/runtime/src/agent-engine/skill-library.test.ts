@@ -244,13 +244,14 @@ describe('Runtime skill library', () => {
             )
         ).resolves.toContain('currentColor');
 
-        // The gate SKILL.md carries the fence contracts and widget catalog.
+        // The gate SKILL.md carries the visual and artifact fence contracts.
         const bundles = await readAssignedSkillBundles(
             { enabledSkillIds: [visualsSkillId] },
             { skillsDir }
         );
         expect(bundles).toHaveLength(1);
-        expect(bundles[0]?.content).toContain('widget:bar-chart');
+        expect(bundles[0]?.content).toContain('```visual Weekly sales');
+        expect(bundles[0]?.content).toContain('```artifact');
         expect(bundles[0]?.content).toContain('design-system.md');
         expect(bundles[0]?.description.length).toBeGreaterThan(0);
         expect(bundles[0]?.files.map((file) => file.path)).toEqual(
@@ -382,9 +383,8 @@ describe('Runtime skill library', () => {
 
         const content = await fs.readFile(path.join(skillsDir, 'merchbase', 'SKILL.md'), 'utf8');
         expect(content).toBe(merchbaseSkillContent());
-        // The plugin skill carries the widget authoring guidance now that the
-        // system prompt no longer renders a widget catalog.
-        expect(content).toContain('widget:merchbase-sales-chart');
+        // The plugin skill routes presentation through generative visuals.
+        expect(content).toContain('Present MerchBase results as inline visuals');
         expect(readSkillSource('merchbase')).toMatchObject({
             installedHash: sha256(content),
             source: 'plugin',

@@ -135,7 +135,7 @@ const outputSection = `## Outputs
 
 const visualsSection = `## Visuals
 
-You can render inline visuals (bespoke HTML/SVG), app-native widgets (tables, charts, calendars), and artifact pages in chat with tagged fences. Before emitting any visual, widget, or artifact fence, read the visuals skill — it defines when to render, the fence contracts, the widget catalog, and the design system. Never output HTML, JSX, CSS, imports, or class names in plain reply text.`;
+You can render inline visuals (bespoke HTML/SVG) and artifact pages in chat with tagged fences. Before emitting any visual or artifact fence, read the visuals skill — it defines when to render, the fence contracts, and the design system. Never output HTML, JSX, CSS, imports, or class names in plain reply text.`;
 
 const securitySection = `## Security
 

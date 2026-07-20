@@ -172,14 +172,14 @@ const REQUIREMENTS: Array<{
     // before any fence. Fence grammar, the widget catalog, and all design
     // guidance are guarded skill-side in VISUALS_SKILL_REQUIREMENTS below.
     {
-        capability: 'rendering surfaces named (visuals, widgets, artifacts)',
+        capability: 'rendering surfaces named (visuals, artifacts)',
         expected:
-            'You can render inline visuals (bespoke HTML/SVG), app-native widgets (tables, charts, calendars), and artifact pages in chat with tagged fences.',
+            'You can render inline visuals (bespoke HTML/SVG) and artifact pages in chat with tagged fences.',
         prompt: 'channel',
     },
     {
         capability: 'visuals skill is a mandatory pre-fence read',
-        expected: 'Before emitting any visual, widget, or artifact fence, read the visuals skill',
+        expected: 'Before emitting any visual or artifact fence, read the visuals skill',
         prompt: 'channel',
     },
     {
@@ -250,40 +250,18 @@ const VISUALS_SKILL_REQUIREMENTS: Array<{
     file: 'SKILL.md' | 'references/design-system.md' | 'references/icons.md';
 }> = [
     // Fence contracts (moved from the prompt's Visuals/Widgets sections).
+    // The widget catalog requirements were removed 2026-07-20 with the
+    // catalog itself (operator-directed: the visual spec is the only
+    // rendering surface).
     { capability: 'visual fence taught', expected: '```visual Weekly sales', file: 'SKILL.md' },
     {
-        capability: 'widget fence JSON contract',
-        expected: 'exactly one complete valid JSON object of props',
+        capability: 'artifact fence JSON contract',
+        expected: 'containing exactly one JSON object',
         file: 'SKILL.md',
     },
     {
-        capability: 'markdown tables replaced by widget:table',
-        expected: 'Use `widget:table` instead of Markdown tables.',
-        file: 'SKILL.md',
-    },
-    {
-        capability: 'widget catalog: table',
-        expected: '`widget:table` — compact rows and columns',
-        file: 'SKILL.md',
-    },
-    {
-        capability: 'widget catalog: bar chart signature',
-        expected: '`widget:bar-chart` — bar chart for nonnegative comparable numeric series',
-        file: 'SKILL.md',
-    },
-    {
-        capability: 'widget catalog: composed chart constraint',
-        expected: 'bar and line series keys must not overlap',
-        file: 'SKILL.md',
-    },
-    {
-        capability: 'widget catalog: calendar widgets',
-        expected: '`widget:calendar-day` — single-day agenda',
-        file: 'SKILL.md',
-    },
-    {
-        capability: 'html-preview widget taught',
-        expected: '`widget:html-preview` — sandboxed inline preview of a workspace HTML file',
+        capability: 'markdown tables replaced by plain HTML tables',
+        expected: 'Render tabular data as a plain HTML `<table>`',
         file: 'SKILL.md',
     },
     {
@@ -293,7 +271,7 @@ const VISUALS_SKILL_REQUIREMENTS: Array<{
     },
     {
         capability: 'visual vs artifact ladder taught',
-        expected: /Build an \*\*artifact\*\*\s+for deliverables/u,
+        expected: /Build an \*\*artifact\*\*\s+for\s+deliverables/u,
         file: 'SKILL.md',
     },
     {
@@ -356,6 +334,11 @@ const VISUALS_SKILL_REQUIREMENTS: Array<{
     {
         capability: 'pages own their background',
         expected: 'Pages own their ground: `background: var(--background)`',
+        file: 'references/design-system.md',
+    },
+    {
+        capability: 'native table styling taught',
+        expected: 'the visual frame styles\nbare tables natively',
         file: 'references/design-system.md',
     },
     {
