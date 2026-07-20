@@ -2,6 +2,7 @@ import { Atom02Icon, ChatGptIcon, Globe02Icon } from '@hugeicons-pro/core-stroke
 import type { ModelProviderConfig } from './model-provider-config.ts';
 import {
     anthropicProviderLogo,
+    kimiLogo,
     openAiLogo,
     openRouterLogo,
 } from './model-provider-logo-presets.ts';
@@ -44,6 +45,15 @@ export const configuredModelProviders = [
         displayName: 'Anthropic',
         icon: Atom02Icon,
         logo: anthropicProviderLogo,
+    },
+    {
+        accessDisplayName: 'Kimi Code',
+        accessId: 'kimi',
+        color: '#111827',
+        configName: 'kimi',
+        displayName: 'Kimi Code',
+        icon: Atom02Icon,
+        logo: kimiLogo,
     },
     {
         accessDisplayName: 'OpenRouter',

@@ -37,6 +37,10 @@ const xaiLogo = {
 
 export const anthropicProviderLogo = anthropicLogo;
 
+export const kimiLogo = {
+    light: 'https://svgl.app/library/kimi-icon.svg',
+};
+
 export const logoModelProviderPresets = [
     ['alibaba', 'Qwen Cloud', '#FF6A00', alibabaCloudLogo],
     ['alibaba-coding-plan', 'Alibaba Cloud (Coding Plan)', '#FF6A00', alibabaCloudLogo],

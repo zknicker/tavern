@@ -1,9 +1,9 @@
 ---
-summary: Runtime-owned model provider credentials — Claude sign-in (code-paste OAuth), API keys, refresh, and the capability contract.
+summary: Runtime-owned model provider credentials — Claude sign-in (code-paste OAuth), Kimi Code sign-in (device-code OAuth), API keys, refresh, and the capability contract.
 read_when:
   - changing model provider authentication, credential storage, or refresh
   - adding a provider connect flow to Model access
-  - changing Claude/Codex sign-in behavior or the claudeAuth capability
+  - changing Claude/Codex/Kimi sign-in behavior or the claudeAuth capability
 ---
 
 # Model Access
@@ -32,6 +32,28 @@ expose the same curated Claude models under their own provider ids.
 - **Anthropic (`anthropic`) — API key.** Stored under
   `model-access:anthropic` (`ANTHROPIC_API_KEY` option in Model access).
   Pay-per-token API billing.
+
+## Kimi Code
+
+**Kimi Code (`kimi`) — sign-in.** Stored under `model-access:kimi`. The
+runtime executes the standard OAuth device-code flow against the public
+Kimi Code client at `auth.kimi.com`: `start` requests a device
+authorization and returns the user code + verification URL, the user
+approves at kimi.com in any browser, and the runtime polls the token
+endpoint until approval. Device-code fits remote Runtimes the same way
+Claude's code-paste does. Uses the account's Kimi Code subscription; the
+metered Moonshot platform API is deliberately not a Tavern provider.
+
+Turns execute through the pi harness: the runtime refreshes the access
+token within five minutes of expiry (rotated refresh tokens written back),
+then registers pi's `kimi-coding` provider per turn with the token as the
+bearer plus Tavern-owned model definitions
+(`models/provider-sources/kimi.ts`, mirrored from pi's upstream registry —
+our pinned pi predates K3; the definitions ride a patched
+`KIMI_CODING_MODELS_JSON` custom-env extension). The curated catalog is
+`kimi/k3`, `kimi/kimi-for-coding`, and `kimi/kimi-k2-thinking`. Auth turn
+failures name the fix: "Kimi Code is not connected. Connect Kimi in
+Settings → Connections → Model access."
 
 ### Detected host Claude Code login
 

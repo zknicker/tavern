@@ -20,6 +20,8 @@ import {
 } from './claude-oauth';
 import { getClaudeModelAccessStatus } from './claude-settings';
 import { getCodexModelAccessStatus } from './codex-settings';
+import { cancelKimiOAuth, pollKimiOAuth, startKimiOAuth } from './kimi-oauth';
+import { getKimiModelAccessStatus } from './kimi-settings';
 import { getOpenAiSettings, saveOpenAiSettings } from './openai-settings';
 import { getOpenRouterSettings } from './openrouter-settings';
 
@@ -62,6 +64,43 @@ export async function handleModelAccessRequest(request: Request): Promise<Respon
     const oauthResponse = await handleClaudeOAuthRequest(request, url);
     if (oauthResponse) {
         return oauthResponse;
+    }
+
+    const kimiResponse = await handleKimiOAuthRequest(request, url);
+    if (kimiResponse) {
+        return kimiResponse;
+    }
+
+    return null;
+}
+
+// Kimi Code sign-in (OAuth device flow): the runtime requests the device
+// authorization, the app shows the user code + verification URL, and polls
+// here until auth.kimi.com reports approval.
+async function handleKimiOAuthRequest(request: Request, url: URL): Promise<Response | null> {
+    if (
+        request.method === 'POST' &&
+        url.pathname === agentRuntimeRoutes.modelAccessOAuthStart('kimi')
+    ) {
+        const forbiddenResponse = requireTavernMutation(request, 'Kimi sign-in');
+        if (forbiddenResponse) {
+            return forbiddenResponse;
+        }
+        return json(agentRuntimeModelProviderOAuthStartSchema.parse(await startKimiOAuth()));
+    }
+
+    const pollMatch = url.pathname.match(/^\/model-access\/oauth\/kimi\/poll\/([^/]+)$/u);
+    if (request.method === 'GET' && pollMatch?.[1]) {
+        const result = await pollKimiOAuth(decodeURIComponent(pollMatch[1]));
+        if (result.status === 'approved') {
+            await setModelProviderEnabled({ enabled: true, providerId: 'kimi' });
+            await runRuntimeDoctor({
+                modules: ['models', 'agents'],
+                reason: 'provider_changed',
+                scope: { kind: 'provider', providerId: 'kimi' },
+            });
+        }
+        return json(agentRuntimeModelProviderOAuthPollSchema.parse(result));
     }
 
     return null;
@@ -122,9 +161,12 @@ async function handleClaudeOAuthRequest(request: Request, url: URL): Promise<Res
         );
     }
 
+    // Session cancel is provider-agnostic: session ids are unique across
+    // providers, and cancel is a no-op for unknown ids.
     const cancelMatch = url.pathname.match(/^\/model-access\/oauth\/sessions\/([^/]+)$/u);
     if (request.method === 'DELETE' && cancelMatch?.[1]) {
         cancelClaudeOAuth(decodeURIComponent(cancelMatch[1]));
+        cancelKimiOAuth(decodeURIComponent(cancelMatch[1]));
         return json({ ok: true });
     }
 
@@ -137,9 +179,23 @@ async function listModelAccessStatuses() {
         readClaudeStatus(),
         readAnthropicStatus(),
         codex,
+        readKimiStatus(),
         readOpenAiStatus(),
         readOpenRouterStatus(),
     ];
+}
+
+function readKimiStatus() {
+    try {
+        return getKimiModelAccessStatus();
+    } catch {
+        return {
+            description: 'Sign in with Kimi Code to run Kimi-powered agents.',
+            id: 'kimi',
+            source: null,
+            state: 'needs-auth',
+        };
+    }
 }
 
 function readClaudeStatus() {
