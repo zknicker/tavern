@@ -13,8 +13,14 @@ chat transcript shows a compact card, and opening it renders the page in the
 artifact pane's sandboxed HTML preview. The agent authors one `.html` in its
 workspace (inline CSS/JS, no external or sibling assets) and references it
 with a bare `artifact` fence. Widgets and in-chat visuals cover
-in-conversation data; artifacts are for anything the user will keep or
-iterate on, and big surfaces stay out of the chat column.
+in-conversation data; artifacts are for visual or interactive outputs the
+user will keep or iterate on, and big surfaces stay out of the chat column.
+
+Maintained prose and reference material is not an HTML artifact. Agents write
+that content to the shared Wiki and emit a bare `document` fence; the resulting
+card opens the editable Wiki page in the same pane. Keeping `document` as a
+sibling fence preserves the distinct storage and rendering contracts instead
+of widening `artifact` into an ambiguous multi-target payload.
 
 ## Authoring contract
 

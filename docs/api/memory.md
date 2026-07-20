@@ -56,6 +56,12 @@ Runtime exposes Wiki through Runtime APIs for:
 The shared root seeds `TAXONOMY.md` and Wiki folders, not agent core memory
 files and not episodic files.
 
+Page reads include a content hash. User-facing page saves send that hash as
+`expectedHash`; Runtime rejects a stale save with conflict status. Wiki image
+uploads accept PNG, JPEG, GIF, and WebP content up to 8 MiB, store it in the
+page directory's `_attachments/` folder, and return both the Wiki-relative path
+and the relative Markdown link inserted by the editor.
+
 The shared root is initialized as a local Git repository. Runtime records
 best-effort commits for root preparation, page/folder mutations, agent Memory
 and Wiki tool writes, and external Markdown changes observed by the Wiki
