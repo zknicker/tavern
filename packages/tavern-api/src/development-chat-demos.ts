@@ -1,28 +1,20 @@
 export const developmentChatDemoId = 'cht_demo';
 // Multi-agent demo chat: two agent seats sharing one channel.
 export const developmentChatTeamDemoId = 'cht_demo_team';
-// Widget gallery: one turn per rendered widget, plus the fallback state.
-export const developmentChatWidgetsDemoId = 'cht_demo_widgets';
+// Visuals gallery: one turn per rendered visual, plus fallback states.
+export const developmentChatVisualsDemoId = 'cht_demo_visuals';
 
 export const developmentChatDemoIds = {
     demo: developmentChatDemoId,
     team: developmentChatTeamDemoId,
-    widgets: developmentChatWidgetsDemoId,
+    visuals: developmentChatVisualsDemoId,
     activityTurn: developmentChatDemoId,
     artifactLinks: developmentChatDemoId,
     attachment: developmentChatDemoId,
-    calendarDay: developmentChatDemoId,
-    calendarEvent: developmentChatDemoId,
-    charts: developmentChatDemoId,
-    composedChart: developmentChatDemoId,
-    htmlPreview: developmentChatDemoId,
-    lineChart: developmentChatDemoId,
     longContent: developmentChatDemoId,
-    merchbaseSalesChart: developmentChatDemoId,
     streamingStack: developmentChatDemoId,
     toolHeaders: developmentChatDemoId,
     turnTimeline: developmentChatDemoId,
-    widgetTable: developmentChatDemoId,
 } as const;
 
 export const obsoleteDevelopmentChatDemoIds = [
@@ -40,4 +32,5 @@ export const obsoleteDevelopmentChatDemoIds = [
     'cht_demo_streaming_stack',
     'cht_demo_tool_headers',
     'cht_demo_turn_timeline',
+    'cht_demo_widgets',
 ] as const;

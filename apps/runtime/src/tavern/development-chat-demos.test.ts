@@ -1,7 +1,7 @@
 import {
     developmentChatDemoId,
     developmentChatTeamDemoId,
-    developmentChatWidgetsDemoId,
+    developmentChatVisualsDemoId,
 } from '@tavern/api/development-chat-demos';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { closeDb, getDb, initTestDb } from '../db/connection';
@@ -124,12 +124,12 @@ describe('development chat demo sessions', () => {
         }
     });
 
-    it('seeds the widgets gallery channel with one widget activity per catalog entry', () => {
+    it('seeds the visuals gallery channel with one widget activity per turn', () => {
         seedDevelopmentChatDemos({ db: getDb(), enabled: true });
         // Idempotent across restarts: reseeding leaves the same stable rows.
         seedDevelopmentChatDemos({ db: getDb(), enabled: true });
 
-        expect(getChat(developmentChatWidgetsDemoId)?.title).toBe('widgets');
+        expect(getChat(developmentChatVisualsDemoId)?.title).toBe('visuals');
 
         const activities = getDb()
             .prepare(
@@ -138,28 +138,19 @@ describe('development chat demo sessions', () => {
                  WHERE chat_id = $chatId AND kind = 'widget'
                  ORDER BY id ASC`
             )
-            .all(namedParams({ chatId: developmentChatWidgetsDemoId })) as {
+            .all(namedParams({ chatId: developmentChatVisualsDemoId })) as {
             component: string;
             id: string;
         }[];
 
-        // Every catalog widget renders once, the table twice (keyed + matrix
-        // shorthand), four generative visuals (chart, diagram, tall/collapse,
-        // malformed degradation), plus the intentionally invalid fallback
-        // payload.
+        // Five generative visuals (chart, native table, diagram, tall/collapse,
+        // malformed degradation), the artifact card, plus the retired-widget
+        // replay fallback payload.
         expect(activities.map((row) => row.component).sort()).toEqual(
             [
-                'tavern.widget.bar-chart',
-                'tavern.widget.calendar-day',
-                'tavern.widget.calendar-event',
-                'tavern.widget.composed-chart',
-                'tavern.widget.html-preview',
-                'tavern.widget.line-chart',
-                'tavern.widget.merchbase-sales-chart',
-                'tavern.widget.orbit-map',
                 'tavern.widget.artifact',
-                'tavern.widget.table',
-                'tavern.widget.table',
+                'tavern.widget.bar-chart',
+                'tavern.widget.visual',
                 'tavern.widget.visual',
                 'tavern.widget.visual',
                 'tavern.widget.visual',
