@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test';
-import { fillComposer } from '../support/composer.ts';
+import { sendAgentDmTurn } from '../support/agent-dm.ts';
 import { expect, test } from '../support/test.ts';
 
 test('agent avatar opens a read-only session drawer', async ({ page }) => {
@@ -44,19 +44,10 @@ test('leading slash is plain composer text, not a palette', async ({ page }) => 
     await expect(composer).toHaveText('/status check');
 });
 
+// Chats are persistent DMs and channels — turns run in the seeded agent DM.
 async function startChat(
     page: Page,
     { expectedReply, prompt }: { expectedReply: string; prompt: string }
 ) {
-    await page.goto('/overview');
-
-    await fillComposer(page, '#home-prompt', prompt);
-    await page.getByRole('button', { name: 'Start chat' }).click();
-
-    await page.waitForURL((url) => /^\/chats\/(?!new$)[^/]+$/.test(url.pathname), {
-        timeout: 30_000,
-    });
-    await expect(
-        page.locator('main p').filter({ hasText: new RegExp(`^${expectedReply}$`) })
-    ).toBeVisible({ timeout: 45_000 });
+    await sendAgentDmTurn(page, { expectedReply, prompt });
 }

@@ -35,6 +35,13 @@ function buildWebServers() {
                 `TAVERN_AGENT_MODEL=${agentModel}`,
                 `TAVERN_AGENT_PROVIDER=${agentProvider}`,
                 'TAVERN_AGENT_BASE_URL=http://127.0.0.1:1/v1',
+                // A fake key keeps the OpenAI provider live so the curated
+                // model catalog stays available without reading the repo .env;
+                // turn execution itself runs the fake harness either way.
+                'TAVERN_AGENT_API_KEY=tavern-e2e-fake-key',
+                // Hermetic catalog: never ride a host Claude Code login, so
+                // Claude models stay out of Available Models on any machine.
+                'TAVERN_AGENT_CLAUDE_CODE_HOST_LOGIN=0',
                 'bun e2e/start-tavern-runtime.ts',
             ].join(' '),
             reuseExistingServer: false,

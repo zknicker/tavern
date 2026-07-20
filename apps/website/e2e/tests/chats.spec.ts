@@ -1,9 +1,7 @@
 import type { Page } from '@playwright/test';
 import { createTavernClient } from '@tavern/sdk';
-import { fillComposer } from '../support/composer.ts';
+import { fillChatComposer, openAgentDm, sendAgentDmTurn } from '../support/agent-dm.ts';
 import { expect, test } from '../support/test.ts';
-
-const optimisticVisibleLimitMs = 750;
 
 test.describe.configure({ timeout: 120_000 });
 
@@ -233,7 +231,9 @@ async function upsertRuntimeActivityKinds(input: { chatId: string; runtimeUrl: s
     }
 
     const startedAt = new Date().toISOString();
-    const idSuffix = input.chatId.replace(/[^A-Za-z0-9_-]/gu, '_');
+    // Unique per invocation: the persistent DM is shared by every test in the
+    // run, and an activity id stays bound to the response that first used it.
+    const idSuffix = `${input.chatId.replace(/[^A-Za-z0-9_-]/gu, '_')}_${Date.now()}`;
     // Real turns always stamp run identity on activity; mirror that so the
     // rows group into the turn's drawer and pane narration suppression works.
     const responseRuntime = readResponseRuntime(responsePage.responses.at(-1)?.metadata);
@@ -285,16 +285,15 @@ async function upsertRuntimeActivityKinds(input: { chatId: string; runtimeUrl: s
 test('renders an agent no-content turn as a durable assistant diagnostic', async ({ page }) => {
     test.setTimeout(75_000);
 
-    await page.goto('/overview');
+    await openAgentDm(page);
+    await fillChatComposer(page, 'Empty response exhaustion qa check. Read `QA_KICKOFF_TASK.md`.');
+    await page.getByRole('textbox', { name: 'Chat message' }).press('Enter');
 
-    await fillComposer(
-        page,
-        '#home-prompt',
-        'Empty response exhaustion qa check. Read `QA_KICKOFF_TASK.md`.'
-    );
-    await page.getByRole('button', { name: 'Start chat' }).click();
-
-    await waitForRealChatRoute(page);
+    await expect(
+        transcriptParagraph(page, 'No reply: the model returned empty content.')
+    ).toBeVisible({
+        timeout: 60_000,
+    });
     await page.reload();
 
     await expect(
@@ -308,50 +307,7 @@ test('renders an agent no-content turn as a durable assistant diagnostic', async
     ).toHaveCount(0);
 });
 
-test('new chat renders optimistic state, final reply, and hover metadata without latency regressions', async ({
-    page,
-}) => {
-    test.setTimeout(90_000);
-
-    await enableChatTiming(page);
-
-    await page.goto('/overview');
-
-    const expectedReply = 'QA_CHAT_LATENCY_OK';
-    const prompt = `Latency regression marker. Reply exactly \`${expectedReply}\`.`;
-    await fillComposer(page, '#home-prompt', prompt);
-    await page.getByRole('button', { name: 'Start chat' }).click();
-    await page.mouse.move(1650, 390);
-
-    const optimisticTiming = await waitForChatTiming(page, [
-        'optimistic-chat-visible',
-        'optimistic-sidebar-visible',
-        'optimistic-user-message-visible',
-        'submit',
-        'thinking-visible',
-    ]);
-    expectElapsedWithin(optimisticTiming, 'optimistic-chat-visible', optimisticVisibleLimitMs);
-    expectElapsedWithin(optimisticTiming, 'optimistic-sidebar-visible', optimisticVisibleLimitMs);
-    expectElapsedWithin(
-        optimisticTiming,
-        'optimistic-user-message-visible',
-        optimisticVisibleLimitMs
-    );
-    expectElapsedWithin(optimisticTiming, 'thinking-visible', optimisticVisibleLimitMs);
-
-    await waitForRealChatRoute(page);
-    const finalReply = transcriptParagraph(page, expectedReply);
-    await expect(finalReply).toBeVisible({ timeout: 10_000 });
-    await expect(finalReply).toHaveCount(1);
-
-    await waitForChatTiming(page, ['final-message-visible']);
-
-    const metadata = await getAgentHoverMetadata(page);
-    if (metadata) {
-        expect(metadata.opacity).toBe('0');
-    }
-});
-
+// Chats are persistent DMs and channels — turns run in the seeded agent DM.
 async function startChat(
     page: Page,
     {
@@ -362,17 +318,7 @@ async function startChat(
         prompt: string;
     }
 ) {
-    await page.goto('/overview');
-
-    await fillComposer(page, '#home-prompt', prompt);
-    await page.getByRole('button', { name: 'Start chat' }).click();
-
-    const chatId = await waitForRealChatRoute(page);
-    await expect(transcriptParagraph(page, expectedReply)).toBeVisible({
-        timeout: 45_000,
-    });
-
-    return chatId;
+    return await sendAgentDmTurn(page, { expectedReply, prompt });
 }
 
 async function sendFollowUp(
@@ -459,57 +405,6 @@ function escapeRegExp(text: string) {
     return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-async function enableChatTiming(page: Page) {
-    await page.addInitScript(() => {
-        window.__TAVERN_CHAT_TIMING__ = {
-            enabled: true,
-            events: [],
-            marks: {},
-        };
-    });
-}
-
-async function waitForChatTiming(page: Page, names: string[]) {
-    await page.waitForFunction(
-        (expectedNames) => {
-            const marks = window.__TAVERN_CHAT_TIMING__?.marks ?? {};
-            return expectedNames.every((name) => marks[name as keyof typeof marks]);
-        },
-        names,
-        { timeout: 15_000 }
-    );
-
-    return page.evaluate(() => window.__TAVERN_CHAT_TIMING__);
-}
-
-function expectElapsedWithin(
-    timing: NonNullable<Awaited<ReturnType<typeof waitForChatTiming>>>,
-    name: string,
-    limitMs: number
-) {
-    const submit = timing.marks?.submit;
-    const mark = timing.marks?.[name as keyof typeof timing.marks];
-
-    expect(submit).toBeTruthy();
-    expect(mark).toBeTruthy();
-    expect((mark?.timestamp ?? 0) - (submit?.timestamp ?? 0)).toBeLessThanOrEqual(limitMs);
-}
-
-async function waitForRealChatRoute(page: Page) {
-    await page.waitForURL((url) => /^\/chats\/(?!new$)[^/]+$/.test(url.pathname), {
-        timeout: 30_000,
-    });
-
-    const pathname = new URL(page.url()).pathname;
-    const chatId = pathname.split('/chats/')[1] ?? null;
-
-    if (!chatId || chatId === 'new') {
-        throw new Error(`Expected a real chat route, received "${pathname}".`);
-    }
-
-    return chatId;
-}
-
 // How far the transcript viewport rests above its scrollable end. Pinned at
 // the end this is ~0; a large value means the newest content is below the
 // fold.
@@ -523,21 +418,4 @@ async function transcriptDistanceFromBottom(page: Page) {
 
         return viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight;
     });
-}
-
-async function getAgentHoverMetadata(page: Page) {
-    return page.evaluate(() =>
-        Array.from(document.querySelectorAll('[class*="group-hover:opacity-100"]'))
-            .map((element) => {
-                const rect = element.getBoundingClientRect();
-
-                return {
-                    opacity: getComputedStyle(element).opacity,
-                    text: element.textContent?.replace(/\s+/g, ' ').trim().toLowerCase() ?? '',
-                    x: rect.x,
-                    y: rect.y,
-                };
-            })
-            .find((meta) => meta.text.includes('codex') || meta.text.includes('gpt'))
-    );
 }

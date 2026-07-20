@@ -1,12 +1,13 @@
 import type { Page } from '@playwright/test';
+import { chatComposer, openAgentDm, tavernAgentDmRoute } from '../support/agent-dm.ts';
 import { expect, test } from '../support/test.ts';
 
-test('focuses the homepage composer with adventure placeholder copy', async ({ page }) => {
-    await page.goto('/overview');
+test('focuses the DM composer with adventure placeholder copy', async ({ page }) => {
+    await page.goto(tavernAgentDmRoute);
 
-    const composer = page.locator('#home-prompt');
+    const composer = chatComposer(page);
 
-    await expect(composer).toBeFocused();
+    await expect(composer).toBeFocused({ timeout: 15_000 });
     await expect(composer).toHaveText('');
     await expect(page.getByText("Let's go on an adventure...")).toBeVisible();
 });
@@ -14,9 +15,9 @@ test('focuses the homepage composer with adventure placeholder copy', async ({ p
 test('autocompletes runtime skills with the dollar trigger', async ({ page }) => {
     const skill = await firstInventorySkill(page);
 
-    await page.goto('/overview');
+    await openAgentDm(page);
 
-    const composer = page.locator('#home-prompt');
+    const composer = chatComposer(page);
     await composer.click();
     await composer.pressSequentially(`Please use $${skill.insertText}`);
 
@@ -35,9 +36,9 @@ test('autocompletes runtime skills with the dollar trigger', async ({ page }) =>
 });
 
 test('dollar trigger filters the picker to skills', async ({ page }) => {
-    await page.goto('/overview');
+    await openAgentDm(page);
 
-    const composer = page.locator('#home-prompt');
+    const composer = chatComposer(page);
     await composer.click();
     await composer.pressSequentially('Use $');
 
@@ -57,9 +58,9 @@ test('backspace removes a mention chip without moving the caret to a new line', 
 }) => {
     const skill = await firstInventorySkill(page);
 
-    await page.goto('/overview');
+    await openAgentDm(page);
 
-    const composer = page.locator('#home-prompt');
+    const composer = chatComposer(page);
     await composer.click();
     await composer.pressSequentially(`Use $${skill.insertText}`);
     await page
@@ -78,9 +79,9 @@ test('backspace removes a mention chip without moving the caret to a new line', 
 test('keeps mention chips editable in common composer flows', async ({ page }) => {
     const skill = await firstInventorySkill(page);
 
-    await page.goto('/overview');
+    await openAgentDm(page);
 
-    const composer = page.locator('#home-prompt');
+    const composer = chatComposer(page);
 
     await composer.click();
     await composer.pressSequentially(`$${skill.insertText}`);
@@ -91,7 +92,7 @@ test('keeps mention chips editable in common composer flows', async ({ page }) =
 
     await expect(composer).toContainText(new RegExp(`^${escapeRegExp(skill.label)} done$`, 'u'));
 
-    await page.goto('/overview');
+    await openAgentDm(page);
     await composer.click();
     await composer.pressSequentially('Use $zz');
 
@@ -105,9 +106,9 @@ test('keeps mention chips editable in common composer flows', async ({ page }) =
 });
 
 test('inserts a newline on Shift+Enter in the mention composer', async ({ page }) => {
-    await page.goto('/overview');
+    await openAgentDm(page);
 
-    const composer = page.locator('#home-prompt');
+    const composer = chatComposer(page);
     await composer.click();
     await composer.pressSequentially('first');
     await page.keyboard.press('Shift+Enter');
@@ -123,9 +124,9 @@ test('inserts a newline on Shift+Enter in the mention composer', async ({ page }
 });
 
 test('keeps keyboard selection visible in the skill picker', async ({ page }) => {
-    await page.goto('/overview');
+    await openAgentDm(page);
 
-    const composer = page.locator('#home-prompt');
+    const composer = chatComposer(page);
     await composer.click();
     await composer.pressSequentially('$');
 
@@ -186,17 +187,17 @@ test('submits mention markdown without Tavern metadata', async ({ page }) => {
     ];
 
     for (const testCase of cases) {
-        await page.goto('/overview');
+        await openAgentDm(page);
 
-        const chatStartRequest = waitForBlockedChatStart(page);
-        const composer = page.locator('#home-prompt');
+        const chatSendRequest = waitForBlockedChatSend(page);
+        const composer = chatComposer(page);
 
         await composer.click();
         await composer.pressSequentially(`Use ${testCase.query}`);
         await page.getByRole('listbox').getByRole('option', { name: testCase.optionName }).click();
-        await page.getByRole('button', { name: 'Start chat' }).click();
+        await composer.press('Enter');
 
-        const payload = await chatStartRequest;
+        const payload = await chatSendRequest;
         const input = readTrpcInput(payload);
         const content = String(input.content);
 
@@ -237,7 +238,7 @@ function escapeRegExp(text: string) {
     return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-function waitForBlockedChatStart(page: Page) {
+function waitForBlockedChatSend(page: Page) {
     return new Promise<unknown>((resolve) => {
         const handler: Parameters<Page['route']>[1] = async (route) => {
             const payload = route.request().postDataJSON();
@@ -260,7 +261,7 @@ function waitForBlockedChatStart(page: Page) {
             resolve(payload);
         };
 
-        void page.route('**/trpc/chat.start**', handler, { times: 1 });
+        void page.route('**/trpc/chat.send**', handler, { times: 1 });
     });
 }
 
