@@ -31,6 +31,7 @@ import {
 } from './startup-log.ts';
 import { listConfiguredAgentRuntimeConnections } from './storage/agent-runtime-connections.ts';
 import { syncAgentRuntimeAgents } from './sync/agent-runtime-sync.ts';
+import { getWikiAttachment, wikiAttachmentCacheControl } from './wiki/service.ts';
 
 async function start() {
     startOrphanExitWatch({
@@ -46,6 +47,7 @@ async function start() {
     await loadAgentRuntimeConnection({ refreshStatus: false });
 
     const app = Fastify({
+        bodyLimit: 12 * 1024 * 1024,
         logger: false,
     });
 
@@ -63,6 +65,18 @@ async function start() {
             createContext: createApiContext,
             router: appRouter,
         },
+    });
+
+    app.get<{ Params: { '*': string } }>('/wiki/attachments/*', async (request, reply) => {
+        createApiContext({ req: { headers: request.headers } });
+        const attachment = await getWikiAttachment({ path: request.params['*'] });
+        if (!attachment) {
+            return reply.code(404).send({ message: 'Wiki image not found.' });
+        }
+        return reply
+            .header('cache-control', wikiAttachmentCacheControl())
+            .type(attachment.mediaType)
+            .send(Buffer.from(attachment.contentBase64, 'base64'));
     });
 
     app.get('/healthz', async () => ({

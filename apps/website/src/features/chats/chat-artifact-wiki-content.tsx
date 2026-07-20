@@ -1,19 +1,15 @@
 import * as React from 'react';
-import { SelectionQuoteContainer } from '../../components/quote/selection-quote.tsx';
 import { SearchInput } from '../../components/ui/primitives/search-input.tsx';
 import {
     ResizablePaneRail,
     useResizablePaneWidth,
 } from '../../components/ui/resizable-pane-rail.tsx';
-import { ScrollArea } from '../../components/ui/scroll-area.tsx';
-import { useWikiPage } from '../../hooks/wiki/use-wiki-page.ts';
 import { trpc } from '../../lib/trpc.tsx';
 import type { WikiPageNode } from '../wiki/types.ts';
 import { resolveWikiLinkTarget } from '../wiki/utils.ts';
-import { WikiMarkdownViewer } from '../wiki/wiki-markdown-viewer.tsx';
 import { WikiPageFileTree } from '../wiki/wiki-page-sidebar-file-tree.tsx';
+import { ChatArtifactWikiPage } from './chat-artifact-wiki-page.tsx';
 import { WorkspaceArtifactEmpty } from './chat-artifact-workspace-preview.tsx';
-import { formatTavernResourceLink } from './tavern-resource-link.ts';
 
 export function WikiBrowserContent({
     initialDirectoryPath = '',
@@ -24,7 +20,6 @@ export function WikiBrowserContent({
     const [selectedPage, setSelectedPage] = React.useState<WikiPageNode | null>(null);
     const initialDirectory = normalizeWikiPath(initialDirectoryPath);
     const listQuery = trpc.wiki.list.useQuery();
-    const pageQuery = useWikiPage(selectedPage);
     const fileSidebarWidth = useResizablePaneWidth({
         defaultWidth: 300,
         maxWidth: 440,
@@ -80,13 +75,12 @@ export function WikiBrowserContent({
                 </div>
             </aside>
             <main className="flex min-h-0 min-w-0 flex-col">
-                <WikiBrowserPreview
+                <ChatArtifactWikiPage
                     emptyDetail={
                         initialDirectory
                             ? `Select a Markdown page from ${initialDirectory}.`
                             : 'Select a Markdown page from the Wiki sidebar.'
                     }
-                    isLoading={pageQuery.isPending && Boolean(selectedPage)}
                     onNavigate={(target) => {
                         if (!(selectedPage && listQuery.data)) {
                             return;
@@ -100,52 +94,10 @@ export function WikiBrowserContent({
                             setSelectedPage(resolved);
                         }
                     }}
-                    pageBody={pageQuery.data?.body ?? null}
-                    pagePath={selectedPage?.path ?? null}
+                    path={selectedPage?.path ?? null}
                 />
             </main>
         </div>
-    );
-}
-
-function WikiBrowserPreview({
-    emptyDetail,
-    isLoading,
-    onNavigate,
-    pageBody,
-    pagePath,
-}: {
-    emptyDetail: string;
-    isLoading: boolean;
-    onNavigate: (target: string) => void;
-    pageBody: null | string;
-    pagePath: null | string;
-}) {
-    if (!pagePath) {
-        return <WorkspaceArtifactEmpty detail={emptyDetail} title="No page selected" />;
-    }
-
-    if (isLoading) {
-        return <WorkspaceArtifactEmpty detail="Loading Wiki page..." title={pagePath} />;
-    }
-
-    if (pageBody === null) {
-        return <WorkspaceArtifactEmpty detail="Unable to load this Wiki page." title={pagePath} />;
-    }
-
-    return (
-        <ScrollArea className="h-full min-h-0" scrollFade>
-            <SelectionQuoteContainer
-                source={{
-                    href: formatTavernResourceLink({ kind: 'wikiPage', path: pagePath }),
-                    label: pagePath,
-                }}
-            >
-                <article className="mx-auto max-w-[42rem] px-7 pt-7 pb-12">
-                    <WikiMarkdownViewer onNavigate={onNavigate} value={pageBody} />
-                </article>
-            </SelectionQuoteContainer>
-        </ScrollArea>
     );
 }
 

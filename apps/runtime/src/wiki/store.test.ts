@@ -11,6 +11,7 @@ import {
     createWikiPage,
     deleteWikiFolder,
     deleteWikiPage,
+    getWikiAttachment,
     getWikiPage,
     getWikiSettings,
     getWikiStatus,
@@ -23,6 +24,7 @@ import {
     saveWikiPage,
     saveWikiSettings,
     searchWiki,
+    uploadWikiAttachment,
     writeWikiFile,
 } from './store.ts';
 
@@ -128,10 +130,32 @@ describe('Wiki store', () => {
         });
     });
 
+    test('creates pages with preserved frontmatter', async () => {
+        const result = await createWikiPage({
+            body: '# Restored\n',
+            frontmatter: {
+                aliases: ['restored page'],
+                confidence: 0.9,
+                published: true,
+                source: { kind: 'brief', priority: 2 },
+            },
+            path: 'Projects/Restored.md',
+        });
+
+        expect(result.page?.frontmatter).toEqual({
+            aliases: ['restored page'],
+            confidence: 0.9,
+            published: true,
+            source: { kind: 'brief', priority: 2 },
+        });
+    });
+
     test('saves page bodies while preserving frontmatter', async () => {
+        const opened = await getWikiPage({ path: 'Projects/Alpha.md' });
         await expect(
             saveWikiPage({
                 body: '# Alpha Project\n\nUpdated body.\n',
+                expectedHash: opened?.hash ?? '',
                 path: 'Projects/Alpha.md',
             })
         ).resolves.toMatchObject({
@@ -148,6 +172,296 @@ describe('Wiki store', () => {
         await expect(
             fs.readFile(path.join(root, 'Projects', 'Alpha.md'), 'utf8')
         ).resolves.toContain('aliases:\n  - alpha brief\n---\n# Alpha Project\n\nUpdated body.');
+    });
+
+    test('rejects stale page saves', async () => {
+        const opened = await getWikiPage({ path: 'Projects/Alpha.md' });
+        if (!opened) {
+            throw new Error('Expected the Alpha Wiki page.');
+        }
+        const currentContent = await fs.readFile(path.join(root, opened.path), 'utf8');
+        await writeWikiFile({
+            content: `${currentContent}\nAgent edit.\n`,
+            expectedHash: opened.hash,
+            path: opened.path,
+        });
+
+        await expect(
+            saveWikiPage({
+                body: '# Alpha Project\n\nStale overwrite.\n',
+                expectedHash: opened.hash,
+                path: opened.path,
+            })
+        ).rejects.toThrow('changed since it was opened');
+    });
+
+    test('serializes concurrent saves against the same page revision', async () => {
+        const opened = await getWikiPage({ path: 'Projects/Alpha.md' });
+        if (!opened) {
+            throw new Error('Expected the Alpha Wiki page.');
+        }
+
+        const results = await Promise.allSettled([
+            saveWikiPage({
+                body: '# Alpha Project\n\nFirst concurrent edit.\n',
+                expectedHash: opened.hash,
+                path: opened.path,
+            }),
+            saveWikiPage({
+                body: '# Alpha Project\n\nSecond concurrent edit.\n',
+                expectedHash: opened.hash,
+                path: opened.path,
+            }),
+        ]);
+
+        expect(results.filter((result) => result.status === 'fulfilled')).toHaveLength(1);
+        expect(results.filter((result) => result.status === 'rejected')).toHaveLength(1);
+    });
+
+    test('does not recreate a page during a concurrent move', async () => {
+        const opened = await getWikiPage({ path: 'Projects/Alpha.md' });
+        if (!opened) {
+            throw new Error('Expected the Alpha Wiki page.');
+        }
+
+        await Promise.allSettled([
+            saveWikiPage({
+                body: '# Alpha Project\n\nConcurrent edit.\n',
+                expectedHash: opened.hash,
+                path: opened.path,
+            }),
+            moveWikiPath({
+                fromPath: opened.path,
+                kind: 'page',
+                toPath: 'Archive/Alpha.md',
+            }),
+        ]);
+
+        const pages = await listWikiPages();
+        expect(
+            pages.pages.filter((page) =>
+                ['Archive/Alpha.md', 'Projects/Alpha.md'].includes(page.path)
+            )
+        ).toHaveLength(1);
+    });
+
+    test('stores Wiki image attachments beside the page and reads them back', async () => {
+        const content = Buffer.from('png bytes');
+        const attachment = await uploadWikiAttachment({
+            contentBase64: content.toString('base64'),
+            filename: 'Launch chart.PNG',
+            mediaType: 'image/png',
+            pagePath: 'Projects/Alpha.md',
+        });
+        const attachmentPath = attachment.path;
+
+        expect(attachment).toMatchObject({
+            markdownPath: expect.stringMatching(/^\.\/_attachments\/launch-chart-/u),
+            mediaType: 'image/png',
+            path: expect.stringMatching(/^Projects\/_attachments\/launch-chart-/u),
+            sizeBytes: content.byteLength,
+        });
+        const loaded = await getWikiAttachment({ path: attachmentPath });
+        expect(loaded).toEqual({
+            contentBase64: content.toString('base64'),
+            mediaType: 'image/png',
+            path: attachmentPath,
+        });
+    });
+
+    test('rejects upload collisions containing different bytes', async () => {
+        const content = Buffer.from('original image');
+        const input = {
+            contentBase64: content.toString('base64'),
+            filename: 'chart.png',
+            mediaType: 'image/png' as const,
+            pagePath: 'Projects/Alpha.md',
+        };
+        const attachment = await uploadWikiAttachment(input);
+        await fs.writeFile(path.join(root, attachment.path), 'different image');
+
+        await expect(uploadWikiAttachment(input)).rejects.toThrow(
+            'different Wiki attachment already exists'
+        );
+    });
+
+    test('keeps attachment directories internal to Wiki navigation and mutations', async () => {
+        await fs.mkdir(path.join(root, 'Projects', '_attachments'));
+
+        await expect(listWikiPages()).resolves.toMatchObject({ folders: ['Concepts', 'Projects'] });
+        await expect(createWikiFolder({ path: 'Projects/_attachments/nested' })).rejects.toThrow(
+            'managed by Tavern'
+        );
+        await expect(deleteWikiFolder({ path: 'Projects/_attachments' })).rejects.toThrow(
+            'managed by Tavern'
+        );
+        await expect(
+            moveWikiPath({
+                fromPath: 'Projects/_attachments',
+                kind: 'folder',
+                toPath: 'Archive/attachments',
+            })
+        ).rejects.toThrow('managed by Tavern');
+    });
+
+    test('does not follow attachment symlinks outside the Wiki root', async () => {
+        const outsideRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'tavern-wiki-outside-'));
+        try {
+            await fs.writeFile(path.join(outsideRoot, 'outside.png'), 'outside');
+            await fs.symlink(outsideRoot, path.join(root, 'Projects', '_attachments'));
+
+            await expect(
+                getWikiAttachment({ path: 'Projects/_attachments/outside.png' })
+            ).resolves.toBeNull();
+            await expect(
+                uploadWikiAttachment({
+                    contentBase64: Buffer.from('new image').toString('base64'),
+                    filename: 'new.png',
+                    mediaType: 'image/png',
+                    pagePath: 'Projects/Alpha.md',
+                })
+            ).rejects.toThrow('stay inside the Wiki root');
+        } finally {
+            await fs.rm(outsideRoot, { force: true, recursive: true });
+        }
+    });
+
+    test('reads externally managed JPEG attachment extensions', async () => {
+        const attachmentDirectory = path.join(root, 'Projects', '_attachments');
+        await fs.mkdir(attachmentDirectory);
+        await fs.writeFile(path.join(attachmentDirectory, 'photo.jpeg'), 'jpeg bytes');
+
+        await expect(
+            getWikiAttachment({ path: 'Projects/_attachments/photo.jpeg' })
+        ).resolves.toMatchObject({ mediaType: 'image/jpeg' });
+    });
+
+    test('rejects oversized externally managed attachments before reading them', async () => {
+        const attachmentDirectory = path.join(root, 'Projects', '_attachments');
+        const attachmentPath = path.join(attachmentDirectory, 'oversized.png');
+        await fs.mkdir(attachmentDirectory);
+        await fs.writeFile(attachmentPath, '');
+        await fs.truncate(attachmentPath, 8 * 1024 * 1024 + 1);
+
+        await expect(
+            getWikiAttachment({ path: 'Projects/_attachments/oversized.png' })
+        ).rejects.toThrow('exceeds the 8 MiB read limit');
+    });
+
+    test('copies referenced attachments when a page moves across folders', async () => {
+        const attachment = await uploadWikiAttachment({
+            contentBase64: Buffer.from('chart image').toString('base64'),
+            filename: 'chart.png',
+            mediaType: 'image/png',
+            pagePath: 'Projects/Alpha.md',
+        });
+        const opened = await getWikiPage({ path: 'Projects/Alpha.md' });
+        if (!opened) {
+            throw new Error('Expected the Alpha Wiki page.');
+        }
+        await saveWikiPage({
+            body: `${opened.body}\n![Chart](${attachment.markdownPath})\n`,
+            expectedHash: opened.hash,
+            path: opened.path,
+        });
+
+        await moveWikiPath({
+            fromPath: opened.path,
+            kind: 'page',
+            toPath: 'Archive/Alpha.md',
+        });
+
+        const movedAttachmentPath = attachment.path.replace(/^Projects\//u, 'Archive/');
+        await expect(getWikiAttachment({ path: movedAttachmentPath })).resolves.toMatchObject({
+            path: movedAttachmentPath,
+        });
+    });
+
+    test('copies externally managed attachment names when a page moves', async () => {
+        const attachmentDirectory = path.join(root, 'Projects', '_attachments');
+        const filename = 'Launch Chart.PNG';
+        await fs.mkdir(attachmentDirectory);
+        await fs.writeFile(path.join(attachmentDirectory, filename), 'chart image');
+        const opened = await getWikiPage({ path: 'Projects/Alpha.md' });
+        if (!opened) {
+            throw new Error('Expected the Alpha Wiki page.');
+        }
+        await saveWikiPage({
+            body: `${opened.body}\n![Chart](<_attachments/${encodeURIComponent(filename)}>)\n`,
+            expectedHash: opened.hash,
+            path: opened.path,
+        });
+
+        await moveWikiPath({
+            fromPath: opened.path,
+            kind: 'page',
+            toPath: 'Archive/Alpha.md',
+        });
+
+        await expect(
+            getWikiAttachment({ path: `Archive/_attachments/${filename}` })
+        ).resolves.toMatchObject({ path: `Archive/_attachments/${filename}` });
+    });
+
+    test('rejects page moves when an attachment destination has different bytes', async () => {
+        const attachment = await uploadWikiAttachment({
+            contentBase64: Buffer.from('source image').toString('base64'),
+            filename: 'chart.png',
+            mediaType: 'image/png',
+            pagePath: 'Projects/Alpha.md',
+        });
+        const opened = await getWikiPage({ path: 'Projects/Alpha.md' });
+        if (!opened) {
+            throw new Error('Expected the Alpha Wiki page.');
+        }
+        await saveWikiPage({
+            body: `${opened.body}\n![Chart](${attachment.markdownPath})\n`,
+            expectedHash: opened.hash,
+            path: opened.path,
+        });
+        const destinationDirectory = path.join(root, 'Archive', '_attachments');
+        await fs.mkdir(destinationDirectory, { recursive: true });
+        await fs.writeFile(
+            path.join(destinationDirectory, path.posix.basename(attachment.path)),
+            'different image'
+        );
+
+        await expect(
+            moveWikiPath({
+                fromPath: opened.path,
+                kind: 'page',
+                toPath: 'Archive/Alpha.md',
+            })
+        ).rejects.toThrow('different Wiki attachment');
+        await expect(getWikiPage({ path: opened.path })).resolves.not.toBeNull();
+    });
+
+    test('preflights all attachment conflicts before copying a moved page', async () => {
+        const sourceDirectory = path.join(root, 'Projects', '_attachments');
+        const destinationDirectory = path.join(root, 'Archive', '_attachments');
+        await fs.mkdir(sourceDirectory);
+        await fs.mkdir(destinationDirectory, { recursive: true });
+        await fs.writeFile(path.join(sourceDirectory, 'first.png'), 'first image');
+        await fs.writeFile(path.join(sourceDirectory, 'second.png'), 'second image');
+        await fs.writeFile(path.join(destinationDirectory, 'second.png'), 'different image');
+        const opened = await getWikiPage({ path: 'Projects/Alpha.md' });
+        if (!opened) {
+            throw new Error('Expected the Alpha Wiki page.');
+        }
+        await saveWikiPage({
+            body: `${opened.body}\n![First](./_attachments/first.png)\n![Second](./_attachments/second.png)\n`,
+            expectedHash: opened.hash,
+            path: opened.path,
+        });
+
+        await expect(
+            moveWikiPath({
+                fromPath: opened.path,
+                kind: 'page',
+                toPath: 'Archive/Alpha.md',
+            })
+        ).rejects.toThrow('different Wiki attachment');
+        await expect(fs.stat(path.join(destinationDirectory, 'first.png'))).rejects.toThrow();
     });
 
     test('moves pages and folders inside the Wiki root', async () => {

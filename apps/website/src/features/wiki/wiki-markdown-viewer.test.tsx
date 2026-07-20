@@ -52,3 +52,53 @@ test('WikiMarkdownViewer keeps double-bracket links inert without a navigation h
     assert.doesNotMatch(markup, /<button/);
     assert.match(markup, /Alpha Page/);
 });
+
+test('WikiMarkdownViewer resolves page-relative attachment images', () => {
+    const markup = renderToStaticMarkup(
+        <WikiMarkdownViewer
+            pagePath="projects/alpha.md"
+            value="![Launch chart](./_attachments/launch-chart.png)"
+        />
+    );
+
+    assert.match(markup, /Loading image: Launch chart/);
+    assert.doesNotMatch(markup, /<img/u);
+});
+
+test('WikiMarkdownViewer separates an attachment image title from its path', () => {
+    const markup = renderToStaticMarkup(
+        <WikiMarkdownViewer
+            pagePath="projects/alpha.md"
+            value={'![Launch chart](./_attachments/launch-chart.png "Latest launch")'}
+        />
+    );
+
+    assert.match(markup, /Loading image: Launch chart/);
+    assert.match(markup, /title="Latest launch"/);
+});
+
+test('WikiMarkdownViewer parses a parenthesized image title through the outer delimiter', () => {
+    const markup = renderToStaticMarkup(
+        <WikiMarkdownViewer
+            pagePath="projects/alpha.md"
+            value="![Chart](./_attachments/chart.png (Latest chart))"
+        />
+    );
+
+    assert.match(markup, /Loading image: Chart/);
+    assert.match(markup, /title="Latest chart"/);
+    assert.doesNotMatch(markup, /\)<\/p>/);
+});
+
+test('WikiMarkdownViewer leaves unresolved image sources inert', () => {
+    const markup = renderToStaticMarkup(
+        <WikiMarkdownViewer
+            pagePath="projects/alpha.md"
+            value="![Remote chart](https://example.com/chart.png)"
+        />
+    );
+
+    assert.doesNotMatch(markup, /<img/u);
+    assert.doesNotMatch(markup, /example\.com/u);
+    assert.match(markup, /Image unavailable: Remote chart/u);
+});

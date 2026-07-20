@@ -24,6 +24,7 @@ import {
 import type { ChatLogOutput } from '../lib/trpc.tsx';
 import { cn } from '../lib/utils.ts';
 import { WidgetArtifactCard } from './artifact-card.tsx';
+import { WidgetDocumentCard } from './document-card.tsx';
 import { WidgetHtmlPreview } from './html-preview.tsx';
 import { WidgetMerchBaseSalesChart } from './merchbase-sales-chart.tsx';
 import { VisualCard } from './visual.tsx';
@@ -92,6 +93,8 @@ function widgetElement(input: WidgetRenderInput, agentId: string | null) {
             return <WidgetHtmlPreview agentId={agentId} props={input.props} />;
         case 'tavern.widget.artifact':
             return <WidgetArtifactCard props={input.props} />;
+        case 'tavern.widget.document':
+            return <WidgetDocumentCard props={input.props} />;
         case 'tavern.widget.merchbase-sales-chart':
             return <WidgetMerchBaseSalesChart props={input.props} />;
         case 'tavern.widget.visual':

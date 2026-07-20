@@ -54,5 +54,6 @@ export * from './runtime/tool-setup.js';
 export * from './widgets/calendar/contracts.js';
 export * from './widgets/charts/contracts.js';
 export * from './widgets/contracts.js';
+export * from './widgets/document/contracts.js';
 export * from './widgets/merchbase/contracts.js';
 export * from './widgets/prompt.js';

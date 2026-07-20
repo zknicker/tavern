@@ -19,14 +19,16 @@ interface WidgetActivitySource {
 }
 
 // Two fence languages funnel into the widget machinery: `widget:<name>` for
-// inline widgets and the bare `artifact` language for the durable artifact
-// tier (its widget name is also `artifact`).
-const widgetFencePattern = /```(widget:[a-z][a-z0-9-]*|artifact)[ \t]*\n([\s\S]*?)\n```/gu;
-const openWidgetFencePattern = /```(?:widget:[a-z][a-z0-9-]*|artifact)[ \t]*(?:\n[\s\S]*)?$/u;
+// inline widgets plus bare artifact/document card languages.
+const widgetFencePattern = /```(widget:[a-z][a-z0-9-]*|artifact|document)[ \t]*\n([\s\S]*?)\n```/gu;
+const openWidgetFencePattern =
+    /```(?:widget:[a-z][a-z0-9-]*|artifact|document)[ \t]*(?:\n[\s\S]*)?$/u;
 const maxWidgetBodyChars = 20_000;
 
 function widgetNameFromFenceLanguage(language: string): string {
-    return language === 'artifact' ? 'artifact' : language.slice('widget:'.length);
+    return language === 'artifact' || language === 'document'
+        ? language
+        : language.slice('widget:'.length);
 }
 
 export interface ParsedWidget {

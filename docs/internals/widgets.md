@@ -87,8 +87,8 @@ registration), with optional info-string text as the title:
 
 Widgets let the assistant include app-rendered UI blocks in a final chat reply.
 The assistant writes normal Markdown plus one fenced code block per widget whose
-language is `widget:<name>` — or the bare `artifact` language for the durable
-artifact tier — containing exactly one JSON object of props:
+language is `widget:<name>` — or bare `artifact` and `document` languages for
+pane-opening cards — containing exactly one JSON object of props:
 
 ````markdown
 ```widget:bar-chart
@@ -162,6 +162,14 @@ stored in the envelope plus the activity `summary`/`detail`.
   variables (resolved for the current scheme, light and dark). Rendering is
   live file state, same replay caveat as `html-preview`. See
   [artifacts.md](artifacts.md) for the authoring contract.
+- `document`: a maintained shared Wiki Markdown page, authored as a bare
+  ```` ```document ```` fence with `{ path, title? }`. The path is Wiki-relative
+  and must end in `.md`. Its compact transcript card opens a `wikiPage` target
+  through the same artifact-pane open path used by `tavern://wiki` links. This
+  is deliberately a sibling of `artifact`, not a second artifact target form:
+  `artifact` owns agent-workspace self-contained HTML with sandboxed rendering;
+  `document` owns shared Git-backed Markdown with Wiki reads, conflict-guarded
+  writes, history, backlinks, and attachments.
 - `merchbase-sales-chart`: Plugin-backed sales trend display. Fetches live
   MerchBase data, renders sales as bars and royalties as a line, and includes a
   date range selector. Current-day sales requests default to a 10-day trend

@@ -22,6 +22,20 @@ routing contract for where shared knowledge belongs. Wiki pages use normal
 Markdown, YAML frontmatter, and `[[wikilinks]]`; backlinks are derived from page
 bodies.
 
+Users edit the same page from the full Wiki or from a Wiki document opened in
+the chat artifact pane. Both editors save with the hash from the page read, so
+an agent, user, or external file edit that wins first causes the later save to
+fail for reload instead of overwriting it. Pane edits enter the same local Git
+history as every other Wiki write.
+
+Pasted and dropped PNG, JPEG, GIF, and WebP images are stored beside the page
+under `_attachments/` and inserted as relative Markdown image links. The full
+Wiki and artifact pane resolve those links through Tavern Runtime.
+
+Agents card maintained documents in chat with a bare `document` fence after
+writing the Wiki page. The card opens that shared Markdown page in the artifact
+pane; the maintained page body is not duplicated into the chat reply.
+
 Runtime initializes the Wiki root as a local Git repository. Runtime commits a
 baseline before destructive page or folder mutations, commits Runtime writes
 after they land, and commits external Markdown edits observed by the filesystem

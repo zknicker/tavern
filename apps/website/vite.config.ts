@@ -28,6 +28,9 @@ export default defineConfig(({ command }) => ({
                 target: serverOrigin,
                 ws: true,
             },
+            '/wiki/attachments': {
+                target: serverOrigin,
+            },
         },
     },
 }));

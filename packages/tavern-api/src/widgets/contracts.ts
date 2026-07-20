@@ -9,6 +9,7 @@ import {
     widgetComposedChartPropsSchema,
     widgetLineChartPropsSchema,
 } from './charts/contracts.ts';
+import { widgetDocumentPropsSchema } from './document/contracts.ts';
 import { widgetHtmlPreviewPropsSchema } from './html-preview/contracts.ts';
 import { widgetMerchBaseSalesChartPropsSchema } from './merchbase/contracts.ts';
 import { visualFallbackText, widgetVisualPropsSchema } from './visual/contracts.ts';
@@ -22,6 +23,7 @@ export const widgetNameSchema = z.enum([
     'calendar-day',
     'html-preview',
     'artifact',
+    'document',
     'merchbase-sales-chart',
     'visual',
 ]);
@@ -87,6 +89,7 @@ export const widgetPropsSchemasByName = {
     'line-chart': widgetLineChartPropsSchema,
     'merchbase-sales-chart': widgetMerchBaseSalesChartPropsSchema,
     artifact: widgetArtifactPropsSchema,
+    document: widgetDocumentPropsSchema,
     table: widgetTablePropsSchema,
     visual: widgetVisualPropsSchema,
 } satisfies Record<WidgetName, z.ZodType>;
@@ -114,6 +117,7 @@ export const widgetRenderInputSchema = z.discriminatedUnion('component', [
     widgetRenderInputEntry('calendar-day'),
     widgetRenderInputEntry('html-preview'),
     widgetRenderInputEntry('artifact'),
+    widgetRenderInputEntry('document'),
     widgetRenderInputEntry('merchbase-sales-chart'),
     widgetRenderInputEntry('visual'),
 ]);
@@ -198,6 +202,11 @@ export function widgetFallbackText(name: WidgetName, props: unknown): string {
         return path ? `Artifact: ${path}`.slice(0, 500) : 'Artifact';
     }
 
+    if (name === 'document') {
+        const path = typeof record.path === 'string' ? record.path.trim() : '';
+        return path ? `Document: ${path}`.slice(0, 500) : 'Document';
+    }
+
     if (name === 'visual') {
         return visualFallbackText(record);
     }
@@ -223,6 +232,8 @@ export function widgetDisplayName(name: WidgetName): string {
             return 'HTML preview';
         case 'artifact':
             return 'Artifact';
+        case 'document':
+            return 'Document';
         case 'merchbase-sales-chart':
             return 'MerchBase sales chart';
         case 'visual':
@@ -232,9 +243,8 @@ export function widgetDisplayName(name: WidgetName): string {
 
 /**
  * The fence language an agent writes for a widget. Widgets use the legacy
- * `widget:<name>` prefix; the artifact tier reads in the visuals-vs-artifacts
- * vocabulary as a bare `artifact` fence.
+ * `widget:<name>` prefix; artifact and document cards use product-noun bare fences.
  */
 export function widgetFenceLabel(name: WidgetName): string {
-    return name === 'artifact' ? 'artifact' : `widget:${name}`;
+    return name === 'artifact' || name === 'document' ? name : `widget:${name}`;
 }

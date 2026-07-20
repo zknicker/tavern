@@ -167,8 +167,9 @@ const REQUIREMENTS: Array<{
         prompt: 'channel',
     },
     // Widgets and artifacts: the sandboxed html-preview escape valve and the
-    // durable artifact tier must stay taught, and the two-tier ladder
-    // (in-chat visuals vs pane artifacts) keeps the venue choice deliberate.
+    // durable artifact tier must stay taught, and the output ladder
+    // (in-chat visuals vs pane artifacts vs Wiki documents) keeps the venue
+    // and storage choice deliberate.
     {
         capability: 'html-preview widget taught',
         expected: 'widget:html-preview — ',
@@ -181,8 +182,14 @@ const REQUIREMENTS: Array<{
         prompt: 'channel',
     },
     {
+        capability: 'maintained document card taught',
+        expected: 'For a maintained prose/reference document',
+        prompt: 'channel',
+    },
+    {
         capability: 'visual vs artifact ladder taught',
-        expected: 'Build an artifact for anything the user will keep or iterate on',
+        expected:
+            'Build an artifact for anything the user will keep or iterate on when it is visual or interactive',
         prompt: 'channel',
     },
     // Visuals (PRD-80/81): the generative visual fence and its taste layer.
@@ -199,7 +206,7 @@ const REQUIREMENTS: Array<{
     },
     {
         capability: 'visual-vs-artifact ladder in the visuals section',
-        expected: 'For anything the user will keep or iterate on',
+        expected: 'Use an `artifact` for durable visual/interactive output',
         prompt: 'channel',
     },
     {

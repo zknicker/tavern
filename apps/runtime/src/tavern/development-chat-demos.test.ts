@@ -153,6 +153,7 @@ describe('development chat demo sessions', () => {
                 'tavern.widget.calendar-day',
                 'tavern.widget.calendar-event',
                 'tavern.widget.composed-chart',
+                'tavern.widget.document',
                 'tavern.widget.html-preview',
                 'tavern.widget.line-chart',
                 'tavern.widget.merchbase-sales-chart',

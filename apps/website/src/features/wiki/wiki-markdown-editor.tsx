@@ -3,6 +3,7 @@ import {
     codeBlockPlugin,
     codeMirrorPlugin,
     headingsPlugin,
+    imagePlugin,
     linkDialogPlugin,
     linkPlugin,
     listsPlugin,
@@ -25,7 +26,9 @@ interface WikiMarkdownEditorProps {
     className?: string;
     disabled?: boolean;
     onChange: (value: string) => void;
+    onImageUpload?: (file: File) => Promise<string>;
     onSave: () => void;
+    resolveImagePreview?: (source: string) => Promise<string>;
     saveDisabled: boolean;
     value: string;
 }
@@ -34,7 +37,9 @@ export function WikiMarkdownEditor({
     className,
     disabled = false,
     onChange,
+    onImageUpload,
     onSave,
+    resolveImagePreview,
     saveDisabled,
     value,
 }: WikiMarkdownEditorProps) {
@@ -54,6 +59,11 @@ export function WikiMarkdownEditor({
             thematicBreakPlugin(),
             linkPlugin(),
             linkDialogPlugin(),
+            imagePlugin({
+                disableImageResize: true,
+                imagePreviewHandler: resolveImagePreview ?? null,
+                imageUploadHandler: onImageUpload ?? null,
+            }),
             tablePlugin(),
             codeBlockPlugin({ defaultCodeBlockLanguage: 'txt' }),
             codeMirrorPlugin({
@@ -71,7 +81,7 @@ export function WikiMarkdownEditor({
             }),
             markdownShortcutPlugin(),
         ],
-        []
+        [onImageUpload, resolveImagePreview]
     );
 
     React.useEffect(() => {

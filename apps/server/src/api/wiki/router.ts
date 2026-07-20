@@ -5,6 +5,7 @@ import {
     wikiPathInputSchema,
     wikiSavePageSchema,
     wikiSearchInputSchema,
+    wikiUploadAttachmentSchema,
 } from '@tavern/api';
 import { z } from 'zod';
 import {
@@ -12,6 +13,7 @@ import {
     createWikiPage,
     deleteWikiFolder,
     deleteWikiPage,
+    getWikiAttachment,
     getWikiPage,
     getWikiPageHistory,
     getWikiPageRevision,
@@ -23,11 +25,15 @@ import {
     saveWikiPage,
     saveWikiSettings,
     searchWiki,
+    uploadWikiAttachment,
 } from '../../wiki/service.ts';
 import { createRouter, publicProcedure } from '../trpc.ts';
 import { onWikiUpdate } from './on-update.ts';
 
 export const wikiRouter = createRouter({
+    attachment: publicProcedure
+        .input(wikiPathInputSchema)
+        .query(({ input }) => getWikiAttachment(input)),
     backlinks: publicProcedure
         .input(z.object({ path: z.string().trim().min(1) }))
         .query(({ input }) => listWikiBacklinks(input)),
@@ -76,4 +82,7 @@ export const wikiRouter = createRouter({
     search: publicProcedure.input(wikiSearchInputSchema).query(({ input }) => searchWiki(input)),
     settings: publicProcedure.query(() => getWikiSettings()),
     status: publicProcedure.query(() => getWikiStatus()),
+    uploadAttachment: publicProcedure
+        .input(wikiUploadAttachmentSchema)
+        .mutation(({ input }) => uploadWikiAttachment(input)),
 });
