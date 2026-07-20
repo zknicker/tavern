@@ -147,7 +147,7 @@ Draw an inline visual by writing a fenced code block whose language is \`visual\
 <svg viewBox="0 0 640 220">...</svg>
 \`\`\`
 
-- Draw a visual when in-conversation data deserves a bespoke picture — comparisons, trends, structures — and no catalog widget fits. For anything the user will keep or iterate on, build an \`artifact\` page instead (see Widgets rules).
+- Draw a visual for bespoke in-chat comparisons, trends, or structures when no widget fits. Use an \`artifact\` for durable visual/interactive output; use Wiki + \`document\` for maintained prose/reference.
 - Before drawing, load the matching design skill and follow it: visuals-charts for charts and data graphics, visuals-diagrams for diagrams and structures.
 - Embed all data inline; the frame has no network access beyond what the design skill allows. Write the body top-down — title, content, scripts last — so the visual renders while it streams.`;
 

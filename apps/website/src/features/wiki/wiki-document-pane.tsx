@@ -1,5 +1,7 @@
+import { SelectionQuoteContainer } from '../../components/quote/selection-quote.tsx';
 import { Button } from '../../components/ui/primitives/button.tsx';
 import { cn } from '../../lib/utils.ts';
+import { formatTavernResourceLink } from '../chats/tavern-resource-link.ts';
 import type { WikiPageDetail } from './types.ts';
 import { WikiDocumentInspector } from './wiki-document-inspector.tsx';
 import { WikiDocumentPreview } from './wiki-document-preview.tsx';
@@ -17,6 +19,8 @@ export function WikiDocumentPane({
     onDraftChange,
     onDiscardMissingPage,
     onKeepDraft,
+    onImagePreview,
+    onImageUpload,
     onNavigate,
     onRecreateMissingPage,
     onReloadPage,
@@ -35,10 +39,12 @@ export function WikiDocumentPane({
     onDraftChange: (draft: string) => void;
     onDiscardMissingPage: () => void;
     onKeepDraft: () => void;
+    onImagePreview: (source: string) => Promise<string>;
+    onImageUpload: (file: File) => Promise<string>;
     onNavigate?: WikiLinkNavigate;
     onRecreateMissingPage: () => void;
     onReloadPage: () => void;
-    onSave: (body: string) => Promise<void>;
+    onSave: () => Promise<void>;
     onSelectPage?: (page: { path: string }) => void;
     page: WikiPageDetail | null;
     saveErrorMessage: string | null;
@@ -48,7 +54,7 @@ export function WikiDocumentPane({
         return (
             <div className="flex h-full min-h-0 flex-col">
                 <div className="flex flex-1 items-center justify-center text-muted-foreground text-sm">
-                    {isLoading ? 'Loading file...' : 'No memory file selected.'}
+                    {isLoading ? 'Loading page...' : 'No Wiki page selected.'}
                 </div>
             </div>
         );
@@ -117,7 +123,9 @@ export function WikiDocumentPane({
                                 disabled={isSaving}
                                 key={page.path}
                                 onChange={onDraftChange}
-                                onSave={() => void onSave(draft)}
+                                onImageUpload={onImageUpload}
+                                onSave={() => void onSave()}
+                                resolveImagePreview={onImagePreview}
                                 saveDisabled={saveDisabled}
                                 value={draft}
                             />
@@ -130,12 +138,22 @@ export function WikiDocumentPane({
                                 editorMode === 'preview' && 'mx-auto w-full max-w-4xl px-8 pt-8'
                             )}
                         >
-                            <WikiDocumentPreview
-                                draft={draft}
-                                draftOwnsTitle={draftOwnsTitle}
-                                onNavigate={onNavigate}
-                                page={page}
-                            />
+                            <SelectionQuoteContainer
+                                source={{
+                                    href: formatTavernResourceLink({
+                                        kind: 'wikiPage',
+                                        path: page.path,
+                                    }),
+                                    label: page.path,
+                                }}
+                            >
+                                <WikiDocumentPreview
+                                    draft={draft}
+                                    draftOwnsTitle={draftOwnsTitle}
+                                    onNavigate={onNavigate}
+                                    page={page}
+                                />
+                            </SelectionQuoteContainer>
                         </section>
                     ) : null}
                 </article>

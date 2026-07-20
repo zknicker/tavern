@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { closeDb, initTestDb } from '../db/connection.ts';
 import { ensureRuntimeSchema } from '../db/schema.ts';
 import { getWikiPageHistory, getWikiPageRevision } from './page-history.ts';
-import { createWikiPage, deleteWikiPage, saveWikiPage } from './store.ts';
+import { createWikiPage, deleteWikiPage, getWikiPage, saveWikiPage } from './store.ts';
 
 describe('Wiki page history', () => {
     let root: string;
@@ -30,7 +30,7 @@ describe('Wiki page history', () => {
 
     test('lists the commits touching one page, newest first', async () => {
         await createWikiPage({ body: '# Notes\n\nfirst\n', path: 'Projects/Notes.md' });
-        await saveWikiPage({ body: '# Notes\n\nsecond\n', path: 'Projects/Notes.md' });
+        await saveCurrentPage('Projects/Notes.md', '# Notes\n\nsecond\n');
         await createWikiPage({ body: '# Other\n', path: 'Other.md' });
 
         const history = await getWikiPageHistory({ path: 'Projects/Notes.md' });
@@ -45,7 +45,7 @@ describe('Wiki page history', () => {
 
     test('reads one commit as a before/after pair', async () => {
         await createWikiPage({ body: '# Notes\n\nfirst\n', path: 'Notes.md' });
-        await saveWikiPage({ body: '# Notes\n\nsecond\n', path: 'Notes.md' });
+        await saveCurrentPage('Notes.md', '# Notes\n\nsecond\n');
 
         const history = await getWikiPageHistory({ path: 'Notes.md' });
         const saveCommit = history.commits[0]?.hash ?? '';
@@ -82,3 +82,11 @@ describe('Wiki page history', () => {
         ).rejects.toThrow('commit hash');
     });
 });
+
+async function saveCurrentPage(pagePath: string, body: string) {
+    const page = await getWikiPage({ path: pagePath });
+    if (!page) {
+        throw new Error(`Expected Wiki page ${pagePath}.`);
+    }
+    await saveWikiPage({ body, expectedHash: page.hash, path: pagePath });
+}

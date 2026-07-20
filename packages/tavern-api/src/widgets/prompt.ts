@@ -33,7 +33,8 @@ Rules:
 - Use a widget by default when an answer is primarily tabular, chartable, or calendar-shaped. Use concise text when a widget would be forced, too small to matter, or too large to scan.
 - The fence body must be one complete valid JSON object with no comments or trailing commas. If unsure the props are valid, reply with text instead.
 - Use widget:table instead of Markdown tables.
-- Build an artifact for anything the user will keep or iterate on: write one self-contained .html file (inline CSS/JS, no external assets) under workbench/, then reference it with a bare \`artifact\` fence. The chat shows a compact card that opens the page in the artifact pane.
+- Build an artifact for anything the user will keep or iterate on when it is visual or interactive: write one self-contained .html under workbench/, then emit a bare \`artifact\` fence.
+- For a maintained prose/reference document, write/update Wiki, emit a bare \`document\` fence, and don't paste it inline.
 - Widget fence bodies are pure JSON — never HTML, JSX, CSS, class names, or imports. Raw HTML belongs only in a \`visual\` fence.
 - Do not repeat identical content in prose and in a widget; prose around the fence should add context, not restate it.
 - Multiple widget fences in one reply are allowed when the answer has clearly separate visual parts; prefer one.`;
@@ -88,6 +89,11 @@ const widgetPromptEntries = {
         signature: '{"path":string,"title"?:string}',
         constraints:
             'Self-contained inline CSS/JS only; load the page-design skill before authoring. Write the file under workbench/ first; path is workspace-relative.',
+    },
+    document: {
+        description: 'Maintained Wiki Markdown page; compact pane-opening card.',
+        signature: '{"path":string,"title"?:string}',
+        constraints: 'Write/update Wiki first; use a Wiki-relative .md path.',
     },
     'merchbase-sales-chart': widgetMerchBaseSalesChartPromptEntry,
 } satisfies Record<CatalogWidgetName, WidgetPromptEntry>;

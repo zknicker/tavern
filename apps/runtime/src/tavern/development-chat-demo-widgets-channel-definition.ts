@@ -219,6 +219,21 @@ function widgetTurns(): WidgetTurnSpec[] {
             ],
         },
         {
+            reply: 'Updated the maintained Wiki brief — open the document card in the pane.',
+            request: 'Update the Artifact Panel brief and give me the maintained document.',
+            slug: 'document',
+            widgets: [
+                {
+                    fallbackText: 'Artifact Panel brief',
+                    title: 'Document',
+                    widget: widgetDemoRenderInput('document', 'Artifact Panel brief', {
+                        path: 'Demos/Panel Brief.md',
+                        title: 'Artifact Panel brief',
+                    }),
+                },
+            ],
+        },
+        {
             reply: 'Here is the MerchBase sales trend.',
             request: 'Show 10 days of MerchBase sales.',
             slug: 'merchbase',

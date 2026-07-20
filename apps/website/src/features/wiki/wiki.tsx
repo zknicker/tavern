@@ -4,6 +4,7 @@ import {
     ResizablePaneRail,
     useResizablePaneWidth,
 } from '../../components/ui/resizable-pane-rail.tsx';
+import { usePaneEditorHost } from '../../hooks/pane/use-pane-editor-host.ts';
 import { useWikiListSuspense } from '../../hooks/wiki/use-wiki-list.ts';
 import {
     useCreateWikiFolder,
@@ -11,10 +12,9 @@ import {
     useDeleteWikiFolder,
     useDeleteWikiPage,
     useMoveWikiPath,
-    useSaveWikiPage,
 } from '../../hooks/wiki/use-wiki-mutations.ts';
 import { useWikiPage } from '../../hooks/wiki/use-wiki-page.ts';
-import type { WikiPageDetail } from './types.ts';
+import { useWikiPaneEditorAdapter } from '../../hooks/wiki/use-wiki-pane-editor-adapter.ts';
 import {
     getErrorMessage,
     isPathInFolder,
@@ -74,7 +74,6 @@ export function Wiki() {
     const [deleteError, setDeleteError] = React.useState<string | null>(null);
     const [moveError, setMoveError] = React.useState<string | null>(null);
     const [query, setQuery] = React.useState('');
-    const [draft, setDraft] = React.useState('');
     const [editorMode, setEditorMode] = React.useState<WikiEditorMode>('edit');
     const [inspectorOpen, setInspectorOpen] = React.useState(false);
     const sidebarWidth = useResizablePaneWidth({
@@ -83,11 +82,7 @@ export function Wiki() {
         minWidth: 220,
         storageKey: 'tavern.wiki.sidebar.width',
     });
-    const [externalChangeState, setExternalChangeState] = React.useState<
-        'changed' | 'missing' | null
-    >(null);
     const [restoreError, setRestoreError] = React.useState<string | null>(null);
-    const syncedPageRef = React.useRef<WikiPageDetail | null>(null);
     const [list] = useWikiListSuspense();
     const selectedPageExists = selectedPage
         ? list.pages.some((page) => page.path === selectedPage.path)
@@ -97,22 +92,23 @@ export function Wiki() {
     const selectedPath = selectedPage?.path ?? pageNode?.path ?? null;
     const pageDetailQuery = useWikiPage(selectedPageMissing ? selectedPage : pageNode);
     const createPage = useCreateWikiPage();
-    const savePage = useSaveWikiPage();
     const createFolder = useCreateWikiFolder();
     const deletePage = useDeleteWikiPage();
     const deleteFolder = useDeleteWikiFolder();
     const movePath = useMoveWikiPath();
     const pageDetail = pageDetailQuery.data ?? null;
-    const syncedPage = syncedPageRef.current;
-    const hasDirtyDraft = Boolean(syncedPage && draft !== syncedPage.body);
-    const hasDirtyDraftForSelectedPath = Boolean(
-        hasDirtyDraft && syncedPage && syncedPage.path === selectedPath
+    const editorAdapter = useWikiPaneEditorAdapter(
+        selectedPath ?? '',
+        pageDetail,
+        pageDetailQuery.isFetching
     );
-    const visiblePage = pageDetail ?? (hasDirtyDraftForSelectedPath ? syncedPage : null);
+    const editor = usePaneEditorHost(editorAdapter);
+    const hasDirtyDraft = editor.dirty;
+    const lastPage = editor.lastSnapshot?.document ?? null;
+    const visiblePage = pageDetail ?? (lastPage?.path === selectedPath ? lastPage : null);
     const pagePath = visiblePage?.path ?? '';
-    const isDirty = visiblePage ? draft !== visiblePage.body : false;
-    const isPersistingPage = savePage.isPending || createPage.isPending;
-    const canSave = Boolean(pageDetail && isDirty && !isPersistingPage);
+    const isPersistingPage = editorAdapter.isWriting || createPage.isPending;
+    const canSave = Boolean(pageDetail && editor.canSave);
 
     React.useEffect(() => {
         if (pageNode && (!selectedPage || pageNode.path !== selectedPage.path)) {
@@ -122,43 +118,6 @@ export function Wiki() {
             setSelectedPage(null);
         }
     }, [hasDirtyDraft, pageNode, selectedPage, selectedPageMissing, setSelectedPage]);
-
-    React.useEffect(() => {
-        if (!pageDetail) {
-            const previous = syncedPageRef.current;
-            if (previous && previous.path === selectedPath && draft !== previous.body) {
-                setExternalChangeState('missing');
-                return;
-            }
-
-            syncedPageRef.current = null;
-            setDraft('');
-            setExternalChangeState(null);
-            setRestoreError(null);
-            return;
-        }
-
-        const previous = syncedPageRef.current;
-        const samePage = previous?.path === pageDetail.path;
-        const wasDirty = Boolean(samePage && draft !== previous.body);
-        const serverChanged =
-            !samePage ||
-            previous.body !== pageDetail.body ||
-            previous.updatedAt !== pageDetail.updatedAt;
-
-        syncedPageRef.current = pageDetail;
-
-        if (!(samePage && wasDirty)) {
-            setDraft(pageDetail.body);
-            setExternalChangeState(null);
-            setRestoreError(null);
-            return;
-        }
-
-        if (serverChanged) {
-            setExternalChangeState('changed');
-        }
-    }, [draft, pageDetail, selectedPath]);
 
     function handleCreate(kind: 'folder' | 'page', parentPath?: string) {
         setPathDialogError(null);
@@ -276,40 +235,19 @@ export function Wiki() {
         }
     }
 
-    async function handleSave(body: string) {
-        if (!pageDetailQuery.data) {
-            return;
-        }
-        const result = await savePage.mutateAsync({
-            body,
-            path: pageDetailQuery.data.path,
-        });
-        if (result.page) {
-            syncedPageRef.current = result.page;
-            setDraft(result.page.body);
-        }
-        setExternalChangeState(null);
-        setRestoreError(null);
-    }
-
     function handleReloadExternalChange() {
         if (!pageDetail) {
-            syncedPageRef.current = null;
-            setDraft('');
-            setExternalChangeState(null);
+            editor.reload();
             setRestoreError(null);
             setSelectedPage(null);
             return;
         }
-
-        syncedPageRef.current = pageDetail;
-        setDraft(pageDetail.body);
-        setExternalChangeState(null);
+        editor.reload();
         setRestoreError(null);
     }
 
     async function handleRecreateMissingPage() {
-        const previous = syncedPageRef.current;
+        const previous = editor.lastSnapshot?.document;
         if (!(previous && previous.path === selectedPath)) {
             return;
         }
@@ -317,14 +255,17 @@ export function Wiki() {
         setRestoreError(null);
         try {
             const result = await createPage.mutateAsync({
-                body: draft,
+                body: editor.draft,
+                frontmatter: previous.frontmatter,
                 path: previous.path,
             });
             if (result.page) {
-                syncedPageRef.current = result.page;
-                setDraft(result.page.body);
+                editor.replaceSnapshot({
+                    content: result.page.body,
+                    document: result.page,
+                    revision: result.page.hash,
+                });
                 setSelectedPage({ path: result.page.path });
-                setExternalChangeState(null);
                 setRestoreError(null);
             }
         } catch (error) {
@@ -386,7 +327,7 @@ export function Wiki() {
                     isSaving={isPersistingPage}
                     onEditorModeChange={setEditorMode}
                     onInspectorOpenChange={setInspectorOpen}
-                    onSave={() => void handleSave(draft)}
+                    onSave={() => void editor.save()}
                     onSelectPath={handleSelectBreadcrumbPath}
                     pagePath={pagePath}
                     pageSelected={Boolean(pageDetail)}
@@ -400,25 +341,25 @@ export function Wiki() {
                         </div>
                     ) : null}
                     <WikiDocumentPane
-                        draft={draft}
+                        draft={editor.draft}
                         editorMode={editorMode}
-                        externalChangeState={externalChangeState}
+                        externalChangeState={editor.externalChange}
                         inspectorOpen={inspectorOpen}
                         isLoading={pageDetailQuery.isFetching}
                         isSaving={isPersistingPage}
                         onDiscardMissingPage={handleReloadExternalChange}
-                        onDraftChange={setDraft}
-                        onKeepDraft={() => setExternalChangeState(null)}
+                        onDraftChange={editor.setDraft}
+                        onImagePreview={editorAdapter.imagePreview}
+                        onImageUpload={editorAdapter.uploadImage}
+                        onKeepDraft={editor.keepDraft}
                         onNavigate={handleNavigate}
                         onRecreateMissingPage={() => void handleRecreateMissingPage()}
                         onReloadPage={handleReloadExternalChange}
-                        onSave={handleSave}
+                        onSave={editor.save}
                         onSelectPage={setSelectedPage}
                         page={visiblePage}
                         saveDisabled={!canSave}
-                        saveErrorMessage={
-                            savePage.error ? getErrorMessage(savePage.error) : restoreError
-                        }
+                        saveErrorMessage={editor.saveError ?? restoreError}
                     />
                 </div>
             </section>

@@ -22,7 +22,9 @@ describe('renderWidgetsPrompt', () => {
             expect(prompt).toContain(`${widgetFenceLabel(name)} —`);
         }
         expect(prompt).toContain('\nartifact — ');
+        expect(prompt).toContain('\ndocument — ');
         expect(prompt).not.toContain('widget:artifact');
+        expect(prompt).not.toContain('widget:document');
         expect(prompt).toContain('```widget:bar-chart');
         expect(prompt).toContain('Available widgets:');
     });

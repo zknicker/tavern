@@ -14,6 +14,7 @@ const STATUS_FIXTURE = {
 const PAGE_FIXTURE = {
     body: '# Alpha\n\nBody.',
     frontmatter: {},
+    hash: 'a'.repeat(64),
     links: [],
     path: 'Alpha.md',
     size: 14,

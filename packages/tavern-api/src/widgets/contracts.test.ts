@@ -83,6 +83,18 @@ describe('Widget contracts', () => {
         ).toThrow(/widget:calendar-event/);
     });
 
+    test('document props stay inside the Wiki root', () => {
+        expect(
+            parseWidgetPayload('document', {
+                path: 'projects/launch-plan.md',
+                title: 'Launch plan',
+            }).render.component
+        ).toBe('tavern.widget.document');
+        expect(() => parseWidgetPayload('document', { path: '../launch-plan.md' })).toThrow(
+            /document/
+        );
+    });
+
     test('render input rejects mismatched component and props', () => {
         const result = widgetRenderInputSchema.safeParse({
             component: 'tavern.widget.calendar-event',

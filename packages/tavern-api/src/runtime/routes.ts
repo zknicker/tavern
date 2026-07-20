@@ -115,6 +115,9 @@ export const agentRuntimeRoutes = {
     chatPaneState: (chatId: string) => `/agent/chats/${encodeURIComponent(chatId)}/pane-state`,
     chats: '/agent/chats',
     wikiBacklinks: (pagePath: string) => `/wiki/pages/${encodeURIComponent(pagePath)}/backlinks`,
+    wikiAttachment: (attachmentPath: string) =>
+        `/wiki/attachments/${encodeURIComponent(attachmentPath)}`,
+    wikiAttachments: '/wiki/attachments',
     wikiPageHistory: (pagePath: string) => `/wiki/pages/${encodeURIComponent(pagePath)}/history`,
     wikiPageRevision: (pagePath: string, commit: string) =>
         `/wiki/pages/${encodeURIComponent(pagePath)}/history/${encodeURIComponent(commit)}`,

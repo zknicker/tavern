@@ -5,6 +5,8 @@ import {
     agentRuntimeSaveWikiSettingsResultSchema,
     agentRuntimeSaveWikiSettingsSchema,
     agentRuntimeWikiSettingsSchema,
+    wikiAttachmentContentSchema,
+    wikiAttachmentSchema,
     wikiBacklinkListSchema,
     wikiCreatePageSchema,
     wikiMovePathSchema,
@@ -18,15 +20,17 @@ import {
     wikiSearchInputSchema,
     wikiSearchResultSchema,
     wikiStatusSchema,
+    wikiUploadAttachmentSchema,
 } from '@tavern/api';
 import { signalAgentSettingsApplied } from '../agent-engine/settings-apply';
-import { forbidden, json, notFound } from '../tavern/http';
+import { conflict, forbidden, json, notFound } from '../tavern/http';
 import { getWikiPageHistory, getWikiPageRevision } from './page-history';
 import {
     createWikiFolder,
     createWikiPage,
     deleteWikiFolder,
     deleteWikiPage,
+    getWikiAttachment,
     getWikiPage,
     getWikiSettings,
     getWikiStatus,
@@ -36,6 +40,8 @@ import {
     saveWikiPage,
     saveWikiSettings,
     searchWiki,
+    uploadWikiAttachment,
+    WikiPageConflictError,
 } from './store';
 
 export async function handleWikiRequest(request: Request): Promise<Response | null> {
@@ -104,6 +110,23 @@ export async function handleWikiRequest(request: Request): Promise<Response | nu
         return json(wikiSearchResultSchema.parse(await searchWiki(input)));
     }
 
+    if (request.method === 'POST' && url.pathname === agentRuntimeRoutes.wikiAttachments) {
+        const blockedResponse = requireWikiWrite(request, 'Wiki image uploads');
+        if (blockedResponse) {
+            return blockedResponse;
+        }
+        const input = wikiUploadAttachmentSchema.parse(await readJson(request));
+        return json(wikiAttachmentSchema.parse(await uploadWikiAttachment(input)));
+    }
+
+    const attachmentMatch = url.pathname.match(/^\/wiki\/attachments\/(.+)$/u);
+    if (request.method === 'GET' && attachmentMatch?.[1]) {
+        const attachment = await getWikiAttachment({
+            path: decodeURIComponent(attachmentMatch[1]),
+        });
+        return attachment ? json(wikiAttachmentContentSchema.parse(attachment)) : notFound();
+    }
+
     const revisionMatch = url.pathname.match(/^\/wiki\/pages\/(.+)\/history\/([^/]+)$/u);
     if (request.method === 'GET' && revisionMatch?.[1] && revisionMatch[2]) {
         return json(
@@ -159,7 +182,14 @@ export async function handleWikiRequest(request: Request): Promise<Response | nu
             ...body,
             path: decodeURIComponent(pageMatch[1]),
         });
-        return json(wikiPathMutationResultSchema.parse(await saveWikiPage(input)));
+        try {
+            return json(wikiPathMutationResultSchema.parse(await saveWikiPage(input)));
+        } catch (error) {
+            if (error instanceof WikiPageConflictError) {
+                return conflict(error.message);
+            }
+            throw error;
+        }
     }
 
     if (request.method === 'DELETE' && pageMatch?.[1]) {

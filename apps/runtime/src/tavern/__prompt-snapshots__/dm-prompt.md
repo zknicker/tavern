@@ -89,7 +89,7 @@ Draw an inline visual by writing a fenced code block whose language is `visual`.
 <svg viewBox="0 0 640 220">...</svg>
 ```
 
-- Draw a visual when in-conversation data deserves a bespoke picture — comparisons, trends, structures — and no catalog widget fits. For anything the user will keep or iterate on, build an `artifact` page instead (see Widgets rules).
+- Draw a visual for bespoke in-chat comparisons, trends, or structures when no widget fits. Use an `artifact` for durable visual/interactive output; use Wiki + `document` for maintained prose/reference.
 - Before drawing, load the matching design skill and follow it: visuals-charts for charts and data graphics, visuals-diagrams for diagrams and structures.
 - Embed all data inline; the frame has no network access beyond what the design skill allows. Write the body top-down — title, content, scripts last — so the visual renders while it streams.
 
@@ -107,7 +107,8 @@ Rules:
 - Use a widget by default when an answer is primarily tabular, chartable, or calendar-shaped. Use concise text when a widget would be forced, too small to matter, or too large to scan.
 - The fence body must be one complete valid JSON object with no comments or trailing commas. If unsure the props are valid, reply with text instead.
 - Use widget:table instead of Markdown tables.
-- Build an artifact for anything the user will keep or iterate on: write one self-contained .html file (inline CSS/JS, no external assets) under workbench/, then reference it with a bare `artifact` fence. The chat shows a compact card that opens the page in the artifact pane.
+- Build an artifact for anything the user will keep or iterate on when it is visual or interactive: write one self-contained .html under workbench/, then emit a bare `artifact` fence.
+- For a maintained prose/reference document, write/update Wiki, emit a bare `document` fence, and don't paste it inline.
 - Widget fence bodies are pure JSON — never HTML, JSX, CSS, class names, or imports. Raw HTML belongs only in a `visual` fence.
 - Do not repeat identical content in prose and in a widget; prose around the fence should add context, not restate it.
 - Multiple widget fences in one reply are allowed when the answer has clearly separate visual parts; prefer one.
@@ -144,6 +145,10 @@ Self-contained inline CSS/JS only; load the page-design skill before authoring. 
 artifact — Durable self-contained single-file HTML page rendered in the artifact pane; the chat shows a compact card.
 {"path":string,"title"?:string}
 Self-contained inline CSS/JS only; load the page-design skill before authoring. Write the file under workbench/ first; path is workspace-relative.
+
+document — Maintained Wiki Markdown page; compact pane-opening card.
+{"path":string,"title"?:string}
+Write/update Wiki first; use a Wiki-relative .md path.
 
 ## USER
 

@@ -678,6 +678,34 @@ test('ChatTranscript renders artifact widgets as compact open-in-pane cards', ()
     assert.doesNotMatch(markup, /Widget unavailable/);
 });
 
+test('ChatTranscript renders Wiki documents as compact open-in-pane cards', () => {
+    const row = widgetRow('ui-document');
+
+    if (row.kind !== 'widget') {
+        throw new Error('Expected widget row.');
+    }
+
+    const markup = renderTranscript([
+        {
+            ...row,
+            widget: {
+                ...row.widget,
+                component: 'tavern.widget.document',
+                fallbackText: 'Launch plan',
+                props: {
+                    path: 'projects/launch-plan.md',
+                    title: 'Launch plan',
+                },
+            },
+        },
+    ]);
+
+    assert.match(markup, /Launch plan/);
+    assert.match(markup, /Wiki document · projects\/launch-plan\.md/);
+    assert.match(markup, /Open/);
+    assert.doesNotMatch(markup, /Widget unavailable/);
+});
+
 test('ChatTranscript renders calendar event description fallback', () => {
     const row = widgetRow('ui-calendar-event');
 
