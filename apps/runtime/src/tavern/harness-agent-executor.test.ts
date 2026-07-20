@@ -10,6 +10,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { closeDb, getDb, initTestDb } from '../db/connection.ts';
 import { ensureRuntimeSchema } from '../db/schema.ts';
 import { namedParams } from '../db/sqlite.ts';
+import { saveKimiOAuthCredentials } from '../model-access/kimi-settings.ts';
 import { formatLocalTimestampWithWeekday } from '../timezone.ts';
 import { upsertStoredAgent } from './agents-store.ts';
 import {
@@ -24,6 +25,7 @@ import {
     claudeCodeAuthOptions,
     createHarnessAgentExecutor,
     formatHarnessExecutionError,
+    kimiThinkingLevel,
     piAuthOptions,
     setHarnessAgentFactoryForTesting,
     silentReplyActivityIdForRun,
@@ -96,6 +98,51 @@ describe('harness agent executor', () => {
                 OPENAI_BASE_URL: 'http://127.0.0.1:8080/v1',
             },
         });
+    });
+
+    it('registers the Kimi Code provider with the OAuth bearer and model definitions', () => {
+        saveKimiOAuthCredentials({
+            accessToken: 'kimi-access',
+            expiresAt: Date.now() + 60 * 60 * 1000,
+            refreshToken: 'kimi-refresh',
+        });
+
+        const auth = piAuthOptions('kimi');
+
+        expect(auth?.customEnv?.KIMI_CODING_API_KEY).toBe('kimi-access');
+        expect(auth?.customEnv?.KIMI_CODING_BASE_URL).toBe('https://api.kimi.com/coding');
+        const models = JSON.parse(auth?.customEnv?.KIMI_CODING_MODELS_JSON ?? '[]') as {
+            id: string;
+            thinkingLevelMap?: Record<string, string | null>;
+        }[];
+        expect(models.map((model) => model.id)).toEqual([
+            'k3',
+            'kimi-for-coding',
+            'kimi-k2-thinking',
+        ]);
+        expect(models[0]?.thinkingLevelMap?.xhigh).toBe('max');
+    });
+
+    it('returns no Pi auth for Kimi without stored credentials', () => {
+        expect(piAuthOptions('kimi')).toBeUndefined();
+    });
+
+    // K3's thinking is binary upstream (only max is supported): every
+    // requested level clamps to xhigh (K3's max), off stays off, and other
+    // Kimi models keep the generic ladder.
+    it('clamps K3 thinking to its supported max level', () => {
+        const k3 = { model: 'k3', provider: 'kimi' } as const;
+
+        expect(kimiThinkingLevel(k3, 'max')).toBe('xhigh');
+        expect(kimiThinkingLevel(k3, 'xhigh')).toBe('xhigh');
+        expect(kimiThinkingLevel(k3, 'medium')).toBe('xhigh');
+        expect(kimiThinkingLevel(k3, 'minimal')).toBe('xhigh');
+        expect(kimiThinkingLevel(k3, 'off')).toBe('off');
+        expect(kimiThinkingLevel(k3, null)).toBeUndefined();
+
+        const forCoding = { model: 'kimi-for-coding', provider: 'kimi' } as const;
+        expect(kimiThinkingLevel(forCoding, 'medium')).toBe('medium');
+        expect(kimiThinkingLevel(forCoding, 'max')).toBe('xhigh');
     });
 
     it('adds Claude-specific recovery guidance to auth failures', () => {

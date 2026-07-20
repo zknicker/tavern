@@ -55,6 +55,13 @@ our pinned pi predates K3; the definitions ride a patched
 failures name the fix: "Kimi Code is not connected. Connect Kimi in
 Settings → Connections → Model access."
 
+Thinking on K3 is binary — upstream pi exposes only its `max` level
+(earendil-works/pi#6737), delivered as Anthropic adaptive thinking with
+`effort: max` and no token budgets. The executor clamps accordingly: any
+requested thinking level engages max (Tavern `max`/`xhigh` → pi `xhigh` →
+K3 `max`; intermediates clamp up rather than leaking unsupported efforts),
+and `off` stays off. Other Kimi models keep pi's generic effort ladder.
+
 ### Detected host Claude Code login
 
 The `claude` provider also rides a **detected host Claude Code login**:

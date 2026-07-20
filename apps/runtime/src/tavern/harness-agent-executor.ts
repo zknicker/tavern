@@ -537,7 +537,10 @@ export function createHarnessForModel(input: {
         case 'openai':
         case 'openai-compatible': {
             const auth = piAuthOptions(modelName.provider);
-            const thinkingLevel = piThinkingLevel(input.thinkingDefault);
+            const thinkingLevel =
+                modelName.provider === 'kimi'
+                    ? kimiThinkingLevel(modelName, input.thinkingDefault)
+                    : piThinkingLevel(input.thinkingDefault);
             return createPi({
                 ...(auth ? { auth } : {}),
                 model: piModelId(modelName),
@@ -728,6 +731,25 @@ function codexReasoningEffort(value: AgentRuntimeThinkingLevel | null | undefine
         return 'high';
     }
     return undefined;
+}
+
+/**
+ * K3's thinking is binary — upstream pi exposes only its `max` level
+ * (earendil-works/pi#6737) — so any requested thinking level engages it
+ * (as pi `xhigh`, which the K3 definition maps to Kimi `max`) and `off`
+ * stays off. Intermediate efforts would otherwise leak to an endpoint that
+ * does not support them. Other Kimi models keep the generic ladder,
+ * matching upstream pi behavior.
+ */
+export function kimiThinkingLevel(
+    model: AgentRuntimeModelName,
+    value: AgentRuntimeThinkingLevel | null | undefined
+) {
+    const level = piThinkingLevel(value);
+    if (model.model !== 'k3' || !level || level === 'off') {
+        return level;
+    }
+    return 'xhigh';
 }
 
 function piThinkingLevel(value: AgentRuntimeThinkingLevel | null | undefined) {
