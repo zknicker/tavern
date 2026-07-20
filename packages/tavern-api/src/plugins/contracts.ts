@@ -54,6 +54,8 @@ export const tavernPluginServiceManifestSchema = z
         healthCapabilities: z.array(agentRuntimeCapabilityHealthIdSchema).default([]),
         id: pluginManifestNameSchema,
         scopes: z.array(z.string().trim().min(1)).default([]),
+        /** Extra service-owned skill text appended to the generated skill. */
+        skillGuidance: z.string().trim().min(1).optional(),
         skills: z.array(tavernPluginSkillManifestSchema),
         toolGroups: z.array(tavernPluginToolGroupManifestSchema),
     })

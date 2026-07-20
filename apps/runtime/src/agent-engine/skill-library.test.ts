@@ -18,15 +18,13 @@ import {
     defaultTavernSkill,
     getRuntimeSkill,
     listRuntimeSkills,
-    pageDesignSkillId,
     readAssignedSkillBundles,
     resetRuntimeSkillToDefault,
     resetSeededSkill,
     seedManagedSkills,
     tasksSkillId,
     tavernAgentSkillId,
-    visualsChartsSkillId,
-    visualsDiagramsSkillId,
+    visualsSkillId,
 } from './skill-library.ts';
 
 describe('Runtime skill library', () => {
@@ -222,33 +220,57 @@ describe('Runtime skill library', () => {
         expect(bundles[0]?.content).toContain('Dispatched tasks');
     });
 
-    it('seeds the visuals design-guidance skills for on-demand loading', async () => {
+    it('seeds the visuals skill with references and icon assets', async () => {
         await seedManagedSkills({ skillsDir });
 
-        for (const skillId of [visualsChartsSkillId, visualsDiagramsSkillId, pageDesignSkillId]) {
-            expect(readSkillSource(skillId)?.source).toBe('seeded');
-        }
+        expect(readSkillSource(visualsSkillId)?.source).toBe('seeded');
+        const designSystem = await fs.readFile(
+            path.join(skillsDir, visualsSkillId, 'references', 'design-system.md'),
+            'utf8'
+        );
+        expect(designSystem).toContain('chart.js@4.5.1');
+        expect(designSystem).toContain('Text never wears the series color');
+        const manifest = JSON.parse(
+            await fs.readFile(
+                path.join(skillsDir, visualsSkillId, 'references', 'icons', 'manifest.json'),
+                'utf8'
+            )
+        ) as { icons: { file: string }[] };
+        expect(manifest.icons.length).toBeGreaterThan(50);
+        await expect(
+            fs.readFile(
+                path.join(skillsDir, visualsSkillId, 'assets', 'icons', manifest.icons[0].file),
+                'utf8'
+            )
+        ).resolves.toContain('currentColor');
 
+        // The gate SKILL.md carries the fence contracts and widget catalog.
         const bundles = await readAssignedSkillBundles(
-            { enabledSkillIds: [visualsChartsSkillId, visualsDiagramsSkillId] },
+            { enabledSkillIds: [visualsSkillId] },
             { skillsDir }
         );
-        expect(bundles).toHaveLength(2);
-        expect(bundles[0]?.content).toContain('chart.js@4.5.1');
-        expect(bundles[0]?.content).toContain('Text never wears the series color');
-        expect(bundles[1]?.content).toContain('no diagram library');
-        for (const bundle of bundles) {
-            expect(bundle.description.length).toBeGreaterThan(0);
-        }
+        expect(bundles).toHaveLength(1);
+        expect(bundles[0]?.content).toContain('widget:bar-chart');
+        expect(bundles[0]?.content).toContain('design-system.md');
+        expect(bundles[0]?.description.length).toBeGreaterThan(0);
+        expect(bundles[0]?.files.map((file) => file.path)).toEqual(
+            expect.arrayContaining(['references/design-system.md', 'references/icons.md'])
+        );
+    });
 
-        // The page-level token contract lives once, in the page-design skill;
-        // always-on prompt entries only route to it.
-        const pageBundles = await readAssignedSkillBundles(
-            { enabledSkillIds: [pageDesignSkillId] },
-            { skillsDir }
+    it('restores tampered seeded reference files on reseed', async () => {
+        await seedManagedSkills({ skillsDir });
+        const referencePath = path.join(
+            skillsDir,
+            visualsSkillId,
+            'references',
+            'design-system.md'
         );
-        expect(pageBundles[0]?.content).toContain('var(--background)');
-        expect(pageBundles[0]?.content).toContain('self-contained');
+        await fs.writeFile(referencePath, '# Tampered\n', 'utf8');
+
+        await seedManagedSkills({ skillsDir });
+
+        await expect(fs.readFile(referencePath, 'utf8')).resolves.toContain('chart.js@4.5.1');
     });
 
     it('restores tampered seeded skills and publishes their updates', async () => {
@@ -360,6 +382,9 @@ describe('Runtime skill library', () => {
 
         const content = await fs.readFile(path.join(skillsDir, 'merchbase', 'SKILL.md'), 'utf8');
         expect(content).toBe(merchbaseSkillContent());
+        // The plugin skill carries the widget authoring guidance now that the
+        // system prompt no longer renders a widget catalog.
+        expect(content).toContain('widget:merchbase-sales-chart');
         expect(readSkillSource('merchbase')).toMatchObject({
             installedHash: sha256(content),
             source: 'plugin',

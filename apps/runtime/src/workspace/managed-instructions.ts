@@ -17,7 +17,6 @@ export function renderAgentInstructions(
     agentName: string,
     notes: string,
     options: {
-        availableWidgetNames?: readonly WidgetName[];
         cronEnabled?: boolean;
         memoryEnabled?: boolean;
         merchbaseSalesToolAvailable?: boolean;
@@ -25,7 +24,6 @@ export function renderAgentInstructions(
 ) {
     const cronEnabled = options.cronEnabled ?? true;
     const memoryEnabled = options.memoryEnabled ?? true;
-    const availableWidgetNames = options.availableWidgetNames ?? widgetNameSchema.options;
     const sections = [
         `# Tavern Agent Instructions
 
@@ -42,7 +40,6 @@ Tavern is a multi-agent chat app. The current chat may include the user, other h
         outputSection,
         securitySection,
         visualsSection,
-        renderWidgetsSection(availableWidgetNames),
         options.merchbaseSalesToolAvailable === true ? merchbaseSalesSeriesToolPromptEntry : null,
         renderNotesSection(notes),
     ].filter((section): section is string => Boolean(section));
@@ -134,28 +131,11 @@ Do not tell the user to run provider-specific setup commands or open provider-sp
 const outputSection = `## Outputs
 
 - Link inspectable files, Wiki pages, docs, images, and generated assets. Prefer tool-returned links; otherwise use \`[name](tavern://workspace/path)\` for workspace files or \`[name](tavern://wiki/path)\` for Wiki pages.
-- When you produce a reviewable artifact — a document, report, image, or page — open it in the chat's artifact pane with \`pane_open\` (same tavern:// links; repeat targets focus the existing tab), and still link it in your reply.
-- Use \`widget:<name>\` fences (see Widgets) when the answer is naturally table-, chart-, or calendar-shaped; draw a \`visual\` fence (see Visuals) for bespoke inline graphics. When unsure, use plain text.
-- Never output HTML, JSX, CSS, imports, or class names outside a \`visual\` fence.`;
+- When you produce a reviewable artifact — a document, report, image, or page — open it in the chat's artifact pane with \`pane_open\` (same tavern:// links; repeat targets focus the existing tab), and still link it in your reply.`;
 
 const visualsSection = `## Visuals
 
-Draw an inline visual by writing a fenced code block whose language is \`visual\`. The body is raw HTML/SVG rendered in a sandboxed frame styled with Tavern theme tokens; optional text after \`visual\` on the fence line becomes the title.
-
-\`\`\`visual Weekly sales
-<h2>Weekly sales</h2>
-<svg viewBox="0 0 640 220">...</svg>
-\`\`\`
-
-- Draw a visual when in-conversation data deserves a bespoke picture — comparisons, trends, structures — and no catalog widget fits. For anything the user will keep or iterate on, build an \`artifact\` page instead (see Widgets rules).
-- Before drawing, load the matching design skill and follow it: visuals-charts for charts and data graphics, visuals-diagrams for diagrams and structures.
-- Embed all data inline; the frame has no network access beyond what the design skill allows. Write the body top-down — title, content, scripts last — so the visual renders while it streams.`;
-
-function renderWidgetsSection(availableWidgetNames: readonly WidgetName[]) {
-    return `## Widgets
-
-${renderWidgetsPrompt(availableWidgetNames)}`;
-}
+You can render inline visuals (bespoke HTML/SVG), app-native widgets (tables, charts, calendars), and artifact pages in chat with tagged fences. Before emitting any visual, widget, or artifact fence, read the visuals skill — it defines when to render, the fence contracts, the widget catalog, and the design system. Never output HTML, JSX, CSS, imports, or class names in plain reply text.`;
 
 const securitySection = `## Security
 
@@ -169,5 +149,3 @@ function renderNotesSection(notes: string) {
 }
 
 import { merchbaseSalesSeriesToolPromptEntry } from '@tavern/api/plugins/merchbase';
-import { type WidgetName, widgetNameSchema } from '@tavern/api/widgets';
-import { renderWidgetsPrompt } from '@tavern/api/widgets/prompt';
