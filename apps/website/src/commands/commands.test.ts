@@ -48,7 +48,6 @@ test('global command groups expose the first slice of Tavern actions', () => {
         ['Navigation', 'Create', 'Settings', 'Developer']
     );
     assert.ok(commandTitles.includes('Tavern'));
-    assert.ok(commandTitles.includes('New Chat'));
     assert.ok(commandTitles.includes('New Task'));
     assert.ok(commandTitles.includes('New Automation'));
     assert.ok(commandTitles.includes('Tavern Runtime'));
@@ -129,6 +128,7 @@ function createChat(overrides: Partial<ChatListItem> = {}): ChatListItem {
         agentRuntimeSyncLabel: null,
         archived: false,
         boundAgentIds: ['agt_primary'],
+        description: null,
         canSend: true,
         conversationKind: 'channel',
         createdAt: '2026-07-07T12:00:00.000Z',

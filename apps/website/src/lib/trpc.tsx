@@ -5,7 +5,6 @@ import type { inferRouterInputs, inferRouterOutputs } from '@trpc/server';
 import * as React from 'react';
 import type { AppRouter } from '../../../server/src/api/router.ts';
 import { TrpcEventListeners } from '../components/trpc-event-listeners.tsx';
-import { ChatStartDraftProvider } from '../hooks/chats/use-chat-start-drafts.tsx';
 import { ChatTimelineProvider } from '../hooks/chats/use-chat-timeline-store.tsx';
 import { TimelineContextProvider } from '../hooks/chats/use-timeline-context.tsx';
 import {
@@ -286,12 +285,10 @@ export function TavernProviders({ children }: React.PropsWithChildren) {
         <trpc.Provider client={clientState.client} queryClient={queryClient}>
             <QueryClientProvider client={queryClient}>
                 <ChatTimelineProvider>
-                    <ChatStartDraftProvider>
-                        <TimelineContextProvider>
-                            <TrpcEventListeners />
-                            {children}
-                        </TimelineContextProvider>
-                    </ChatStartDraftProvider>
+                    <TimelineContextProvider>
+                        <TrpcEventListeners />
+                        {children}
+                    </TimelineContextProvider>
                 </ChatTimelineProvider>
             </QueryClientProvider>
         </trpc.Provider>
