@@ -1,31 +1,7 @@
-import {
-    type WidgetRenderInput,
-    type WidgetTableProps,
-    widgetRenderInputSchema,
-} from '@tavern/api/widgets';
-import type {
-    WidgetCalendarDayProps,
-    WidgetCalendarEventProps,
-} from '@tavern/api/widgets/calendar';
-import type {
-    WidgetBarChartProps,
-    WidgetComposedChartProps,
-    WidgetLineChartProps,
-} from '@tavern/api/widgets/charts';
-import {
-    BarChart,
-    CalendarDay,
-    CalendarEvent,
-    Card,
-    ComposedChart,
-    LineChart,
-    Table,
-} from '../kit/index.ts';
+import { type WidgetRenderInput, widgetRenderInputSchema } from '@tavern/api/widgets';
 import type { ChatLogOutput } from '../lib/trpc.tsx';
 import { cn } from '../lib/utils.ts';
 import { WidgetArtifactCard } from './artifact-card.tsx';
-import { WidgetHtmlPreview } from './html-preview.tsx';
-import { WidgetMerchBaseSalesChart } from './merchbase-sales-chart.tsx';
 import { VisualCard } from './visual.tsx';
 
 type WidgetRow = Extract<NonNullable<ChatLogOutput>['rows'][number], { kind: 'widget' }>;
@@ -59,90 +35,24 @@ function renderWidget(row: WidgetRow) {
         target: widget.target,
     });
 
+    // Retired catalog widgets (pre-PRD-86 history) fail the parse and replay
+    // as the fallback card.
     if (!parsed.success) {
         return null;
     }
 
-    // The sending agent's identity scopes workspace-backed widgets to that
-    // agent's confined workspace reads.
-    const agentId = row.actor?.kind === 'agent' ? row.actor.id : null;
-
-    return (
-        <div className="flex max-w-[46rem] flex-col gap-3">
-            {widgetElement(parsed.data, agentId)}
-        </div>
-    );
+    return <div className="flex max-w-[46rem] flex-col gap-3">{widgetElement(parsed.data)}</div>;
 }
 
-function widgetElement(input: WidgetRenderInput, agentId: string | null) {
+function widgetElement(input: WidgetRenderInput) {
     switch (input.component) {
-        case 'tavern.widget.table':
-            return <WidgetTable props={input.props} />;
-        case 'tavern.widget.bar-chart':
-            return <WidgetBarChart props={input.props} />;
-        case 'tavern.widget.line-chart':
-            return <WidgetLineChart props={input.props} />;
-        case 'tavern.widget.composed-chart':
-            return <WidgetComposedChart props={input.props} />;
-        case 'tavern.widget.calendar-event':
-            return <WidgetCalendarEvent props={input.props} />;
-        case 'tavern.widget.calendar-day':
-            return <WidgetCalendarDay props={input.props} />;
-        case 'tavern.widget.html-preview':
-            return <WidgetHtmlPreview agentId={agentId} props={input.props} />;
         case 'tavern.widget.artifact':
             return <WidgetArtifactCard props={input.props} />;
-        case 'tavern.widget.merchbase-sales-chart':
-            return <WidgetMerchBaseSalesChart props={input.props} />;
         case 'tavern.widget.visual':
             return <VisualCard html={input.props.html} title={input.props.title} />;
         default:
             return null;
     }
-}
-
-// Each catalog widget is a thin wrapper: fence props in, kit components out.
-
-function WidgetTable({ props }: { props: WidgetTableProps }) {
-    return <Table columns={props.columns} rows={props.rows} />;
-}
-
-function WidgetBarChart({ props }: { props: WidgetBarChartProps }) {
-    const { title, ...chart } = props;
-
-    return (
-        <Card size="full" title={title}>
-            <BarChart {...chart} />
-        </Card>
-    );
-}
-
-function WidgetLineChart({ props }: { props: WidgetLineChartProps }) {
-    const { title, ...chart } = props;
-
-    return (
-        <Card size="full" title={title}>
-            <LineChart {...chart} />
-        </Card>
-    );
-}
-
-function WidgetComposedChart({ props }: { props: WidgetComposedChartProps }) {
-    const { title, ...chart } = props;
-
-    return (
-        <Card size="full" title={title}>
-            <ComposedChart {...chart} />
-        </Card>
-    );
-}
-
-function WidgetCalendarEvent({ props }: { props: WidgetCalendarEventProps }) {
-    return <CalendarEvent {...props} />;
-}
-
-function WidgetCalendarDay({ props }: { props: WidgetCalendarDayProps }) {
-    return <CalendarDay {...props} />;
 }
 
 function WidgetFallback({ error, text }: { error: string | null; text: string }) {
