@@ -49,6 +49,7 @@ interface TasksViewProps {
     assignee: TaskAssigneeFilter;
     bulkUpdate: (updates: BulkTaskUpdate[]) => Promise<BulkTaskUpdateResult>;
     connectionState: 'reachable' | 'unconfigured' | 'unreachable';
+    embedded?: boolean;
     epics: TaskRecord[];
     filteredTasks: TaskRecord[];
     label: TaskLabelFilter;
@@ -76,6 +77,7 @@ export function TasksView({
     assignee,
     bulkUpdate,
     connectionState,
+    embedded = false,
     epics,
     filteredTasks,
     label,
@@ -120,8 +122,18 @@ export function TasksView({
                 </div>
             ) : null}
 
-            <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[240px_minmax(0,1fr)]">
-                <aside className="flex min-h-0 flex-col border-[var(--content-card-border)] border-r bg-[var(--sidebar)] pt-[calc(var(--topbar-height)-4px)] max-md:hidden">
+            <div
+                className={cn(
+                    'grid min-h-0 flex-1 grid-cols-1',
+                    !embedded && 'md:grid-cols-[240px_minmax(0,1fr)]'
+                )}
+            >
+                <aside
+                    className={cn(
+                        'flex min-h-0 flex-col border-[var(--content-card-border)] border-r bg-[var(--sidebar)] pt-[calc(var(--topbar-height)-4px)] max-md:hidden',
+                        embedded && 'hidden'
+                    )}
+                >
                     <SidebarGroup className="pt-0">
                         <SidebarGroupContent>
                             <SidebarMenu>
@@ -144,7 +156,10 @@ export function TasksView({
                 <section className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
                     <nav
                         aria-label="Task views"
-                        className="flex flex-wrap gap-1 px-2 pt-2 md:hidden"
+                        className={cn(
+                            'flex flex-wrap gap-1 px-2 pt-2 md:hidden',
+                            embedded && 'hidden'
+                        )}
                     >
                         {taskViews.map((taskView) => {
                             const isActive = taskView.value === view;

@@ -26,7 +26,7 @@ import {
 } from './task-presentation.ts';
 import { TasksView } from './tasks-view.tsx';
 
-export function Tasks() {
+export function Tasks({ conversationId, embedded = false }: TasksProps = {}) {
     const navigate = useNavigate();
     const { navigateToSettings } = useLayoutContext();
     const runtimeConnection = useRuntimeConnection();
@@ -37,21 +37,34 @@ export function Tasks() {
     const autoDispatchSettings = useAutoDispatchSettings();
     const bulkUpdate = useTaskBulkUpdate();
     const { deferredQuery, query, setQuery } = useSearch();
-    const [view, setView] = React.useState<TaskView>('all');
+    const [selectedView, setView] = React.useState<TaskView>('all');
     const [assignee, setAssignee] = React.useState<TaskAssigneeFilter>('anyone');
     const [label, setLabel] = React.useState<TaskLabelFilter>('all');
+    const view: TaskView = embedded ? 'all' : selectedView;
 
     React.useEffect(() => {
+        if (embedded) {
+            return;
+        }
+
         markTasksSeen();
-    }, []);
+    }, [embedded]);
 
     const tasks = React.useMemo(() => tasksQuery.data?.tasks ?? [], [tasksQuery.data?.tasks]);
     const agents = useAgentSelectOptions(agentsQuery.data?.agents);
     const labels = React.useMemo(() => labelsQuery.data?.labels ?? [], [labelsQuery.data?.labels]);
     const tasksById = React.useMemo(() => new Map(tasks.map((task) => [task.id, task])), [tasks]);
     const filteredTasks = React.useMemo(
-        () => filterTasks({ assignee, label, query: deferredQuery, tasks, view }),
-        [assignee, deferredQuery, label, tasks, view]
+        () =>
+            filterTasks({
+                assignee,
+                conversationId,
+                label,
+                query: deferredQuery,
+                tasks,
+                view,
+            }),
+        [assignee, conversationId, deferredQuery, label, tasks, view]
     );
     const epics = React.useMemo(() => tasks.filter((task) => task.kind === 'epic'), [tasks]);
     const orderedIds = React.useMemo(() => filteredTasks.map((task) => task.id), [filteredTasks]);
@@ -102,6 +115,7 @@ export function Tasks() {
             assignee={assignee}
             bulkUpdate={bulkUpdate}
             connectionState={toRuntimePageConnectionState(runtimeConnection.status)}
+            embedded={embedded}
             epics={epics}
             filteredTasks={filteredTasks}
             label={label}
@@ -130,4 +144,9 @@ export function Tasks() {
             view={view}
         />
     );
+}
+
+interface TasksProps {
+    conversationId?: string;
+    embedded?: boolean;
 }
