@@ -443,8 +443,11 @@ deployment, so intermediate brokenness is not a constraint.
 - **WS4 — Agent inbox.** Delivery planner + attention rules per I1 (mute/unfollow stores,
   piercing), content-free notice pipeline with tool-boundary flush gating per I2, two-cursor
   ledger per I3 (`delivered`/`seen`, proof-based advancement, wake-advances-nothing contract
-  test), `inbox check` + `message check`, read-only inbox card on agent detail per I4; retire
-  pushed "Unread elsewhere".
+  test), `inbox check` + `message check` — **replacing WS1's honest stubs** (grotto-cli.md §7
+  marks them; their outputs teach that cursor semantics arrive with WS4) — read-only inbox card
+  on agent detail per I4; retire pushed "Unread elsewhere". Security note riding the program:
+  PRD-105 (cross-agent FS isolation; token custody is contract-level until it lands) is a named
+  WS6 blocker.
 - **WS5 — Tasks + reminders + affordances.** D8 tasks (with board view, priorities, labels),
   D4 reminders (+ script payloads; Automations page → Reminders view), reactions, profile
   self-editing.
