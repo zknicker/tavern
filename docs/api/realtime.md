@@ -75,7 +75,6 @@ Chat events:
 * `message.created`
 * `message.delivered`
 * `message.updated`
-* `message.deleted`
 * `response.created`
 * `response.updated`
 * `response.completed`

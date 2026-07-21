@@ -81,6 +81,7 @@ Wiki page identity is the Markdown path relative to the configured Wiki root.
 ```text
 chats
 chat_participants
+thread_follows
 chat_messages
 chat_responses
 chat_response_activity
@@ -190,8 +191,10 @@ Durable conversation containers.
 ```text
 chats
   id                    TEXT PRIMARY KEY
-  kind                  TEXT NOT NULL        -- channel, dm, task
+  kind                  TEXT NOT NULL        -- channel, dm, task, thread
   title                 TEXT
+  parent_chat_id        TEXT                 -- non-null for threads
+  anchor_message_id     TEXT                 -- non-null for threads
   pinned                INTEGER NOT NULL DEFAULT 0  -- legacy Runtime field; Tavern App ignores it
   metadata_json         TEXT NOT NULL DEFAULT '{}'
   created_at            TEXT NOT NULL
@@ -214,7 +217,24 @@ Rules:
 - A DM has exactly two participants: the local human operator and one agent.
 - Dispatched tasks use `kind: task` and keep the local human plus the assigned
   agent participants in the task's reusable work chat.
+- Threads have deterministic ids, their own message sequence, and
+  parent-derived access. Their display name is derived at read time.
 - Chat archival and presentation state currently live in `metadata_json`.
+
+## `thread_follows`
+
+Per-participant attention state for thread chats.
+
+```text
+thread_follows
+  thread_chat_id TEXT NOT NULL
+  participant_id TEXT NOT NULL
+  created_at     TEXT NOT NULL
+  PRIMARY KEY(thread_chat_id, participant_id)
+```
+
+Posting, anchor authorship, and a parent-participant mention auto-follow a
+thread. Followed-thread unread messages roll into the parent chat count.
 
 ## `chat_participants`
 
@@ -286,7 +306,8 @@ Rules:
 - Duplicate `message.id` returns the existing message.
 - Duplicate `(chat_id, nonce)` returns the existing message.
 - Content, timestamp, and display text are never duplicate keys.
-- Soft delete updates `status` and `deleted_at`; it keeps the row and sequence.
+- Per-message edit and delete APIs do not exist. Chat clear may set
+  `deleted_at` while preserving rows and sequence slots.
 
 Message body fields are rendered content only. `content` stores the durable text
 body. `attachment_json` stores the durable attachment array for the message.
