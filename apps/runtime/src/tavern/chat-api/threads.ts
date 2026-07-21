@@ -9,6 +9,7 @@ import type { Database } from '../../db/sqlite';
 import { namedParams } from '../../db/sqlite';
 import { getChat, getChatOrThrow } from './chats';
 import { createAgentParticipantId } from './ids';
+import { getMessage, isTransientStreamingPost } from './messages';
 
 export function threadChatIdForAnchor(anchorMessageId: string) {
     return `cht_thr_${stripMessagePrefix(anchorMessageId)}`;
@@ -43,6 +44,12 @@ export function ensureThreadChat(
         .get(namedParams({ anchorMessageId: input.anchorMessageId })) as AnchorRow | null;
     if (!(anchor && !anchor.deleted_at && anchor.chat_id === input.parentChatId)) {
         throw new Error(`Anchor message ${input.anchorMessageId} is not in the parent chat.`);
+    }
+    const anchorMessage = getMessage(input.anchorMessageId, db);
+    if (anchorMessage && isTransientStreamingPost(anchorMessage)) {
+        throw new Error(
+            `Anchor message ${input.anchorMessageId} is still streaming; thread it once it settles.`
+        );
     }
 
     const threadChatId = threadChatIdForAnchor(input.anchorMessageId);

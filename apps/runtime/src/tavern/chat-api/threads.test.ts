@@ -94,6 +94,20 @@ describe('thread chats', () => {
             ensureThreadChat({ anchorMessageId: 'msg_anchor', parentChatId: 'cht_parent' })
         ).toThrow('not in the parent chat');
 
+        createMessage('cht_parent', {
+            author_id: 'agt_one',
+            content: 'still streaming',
+            id: 'msg_streaming_anchor',
+            metadata: { runtime: { streaming: true } },
+            role: 'assistant',
+        });
+        expect(() =>
+            ensureThreadChat({
+                anchorMessageId: 'msg_streaming_anchor',
+                parentChatId: 'cht_parent',
+            })
+        ).toThrow('still streaming');
+
         seedMessage('cht_parent', 'msg_nested_root', 'usr_tavern');
         const thread = ensureThreadChat({
             anchorMessageId: 'msg_nested_root',

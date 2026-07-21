@@ -762,16 +762,16 @@ function AgentTurnItem({
         const streaming = revealNarration && isStreamingPostRow(item.row);
 
         if (streaming) {
+            // A streaming post is not durable yet (a silent turn discards
+            // it), so it offers no thread affordances.
             return (
-                <ThreadMessageSurface row={item.row}>
-                    <AssistantReplyBody
-                        animateEnter
-                        content={getActiveReplyDisplayText(item.row.message.content)}
-                        revealKey={item.row.id}
-                        revealText
-                        slotKey={getItemRunId(item) ?? item.row.id}
-                    />
-                </ThreadMessageSurface>
+                <AssistantReplyBody
+                    animateEnter
+                    content={getActiveReplyDisplayText(item.row.message.content)}
+                    revealKey={item.row.id}
+                    revealText
+                    slotKey={getItemRunId(item) ?? item.row.id}
+                />
             );
         }
 

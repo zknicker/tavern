@@ -214,18 +214,32 @@ export function updateStreamingMessage(
     }
 }
 
-export function discardStreamingMessage(chatId: string, id: string, db: Database = getDb()) {
-    const message = getMessage(id, db);
-    const runtime = message?.metadata.runtime;
+/** An undelivered post still streaming from a live turn: not durable yet. */
+export function isTransientStreamingPost(message: TavernChatMessage) {
+    const runtime = message.metadata.runtime;
     const isStreaming =
         runtime && typeof runtime === 'object' && !Array.isArray(runtime)
             ? (runtime as Record<string, unknown>).streaming === true
             : false;
-    if (message?.chat_id === chatId && message.delivery_id === null && isStreaming) {
-        db.prepare('DELETE FROM chat_messages WHERE id = $id AND chat_id = $chatId').run(
-            namedParams({ chatId, id })
-        );
+    return message.delivery_id === null && isStreaming;
+}
+
+export function discardStreamingMessage(chatId: string, id: string, db: Database = getDb()) {
+    const message = getMessage(id, db);
+    if (!(message?.chat_id === chatId && isTransientStreamingPost(message))) {
+        return;
     }
+    // A thread anchored on the post makes it durable after all — deleting it
+    // would orphan the thread's replies.
+    const anchored = db
+        .prepare('SELECT 1 FROM chats WHERE anchor_message_id = $id LIMIT 1')
+        .get(namedParams({ id }));
+    if (anchored) {
+        return;
+    }
+    db.prepare('DELETE FROM chat_messages WHERE id = $id AND chat_id = $chatId').run(
+        namedParams({ chatId, id })
+    );
 }
 
 export function insertMessage(
