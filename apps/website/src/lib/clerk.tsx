@@ -1,6 +1,7 @@
 import { ClerkProvider } from '@clerk/clerk-react';
 import type { ReactNode } from 'react';
 import { getNativeClerk, getNativeClerkSessionToken } from './clerk-native.ts';
+import { clerkNativeOptions } from './clerk-native-options.ts';
 import { isElectronDesktopApp } from './desktop-bridge.ts';
 
 export const clerkPublishableKey: string | null =
@@ -41,9 +42,9 @@ export function TavernClerkProvider({ children }: { children: ReactNode }) {
     if (isElectronDesktopApp()) {
         return (
             <ClerkProvider
-                afterSignOutUrl="/"
                 Clerk={getNativeClerk(clerkPublishableKey)}
                 publishableKey={clerkPublishableKey}
+                {...clerkNativeOptions}
             >
                 {children}
             </ClerkProvider>

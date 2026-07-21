@@ -55,6 +55,13 @@ function SignedInRow() {
     const clerk = useClerk();
     const { user } = useUser();
     const displayName = user?.fullName ?? user?.primaryEmailAddress?.emailAddress ?? 'Account';
+    const signOut = () => {
+        if (isElectronDesktopApp()) {
+            void clerk.signOut(() => undefined);
+            return;
+        }
+        void clerk.signOut();
+    };
     return (
         <div className="flex h-8 items-center gap-2 px-2">
             {user?.imageUrl ? (
@@ -75,7 +82,7 @@ function SignedInRow() {
             <button
                 aria-label="Sign out"
                 className="shrink-0 rounded p-1 text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-foreground"
-                onClick={() => void clerk.signOut()}
+                onClick={signOut}
                 type="button"
             >
                 <Icon aria-hidden="true" icon={Logout01Icon} size={16} />
