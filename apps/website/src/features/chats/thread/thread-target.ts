@@ -19,7 +19,10 @@ interface ThreadTargetChat {
 
 const operatorActorIds = new Set(['usr_tavern', 'profile:self']);
 
-export function threadPaneTitles(chat: ThreadTargetChat, anchorMessageId: string) {
+export function threadPaneTitles(
+    chat: ThreadTargetChat,
+    anchorMessageId: string
+): { header: string; target: null | string } {
     const shortId = threadAnchorShortId(anchorMessageId);
 
     if (chat.conversationKind === 'direct' || chat.scope === 'dm') {
@@ -27,6 +30,15 @@ export function threadPaneTitles(chat: ThreadTargetChat, anchorMessageId: string
         return {
             header: `Thread — @${peer}`,
             target: `dm:@${peer}:${shortId}`,
+        };
+    }
+
+    // Task chats are not addressable by the channel/DM target grammar; their
+    // threads get no copyable target.
+    if (chat.conversationKind === 'task' || chat.scope === 'task') {
+        return {
+            header: `Thread — ${resolveTavernChatName(chat) || chat.title}`,
+            target: null,
         };
     }
 

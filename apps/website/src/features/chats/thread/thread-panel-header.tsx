@@ -23,7 +23,7 @@ export function ThreadPanelHeader({
     onClose: () => void;
     onFollowChange: (follow: boolean) => void;
     onViewInChannel: () => void;
-    target: string;
+    target: null | string;
     takeover: boolean;
     threadExists: boolean;
 }) {
@@ -38,22 +38,24 @@ export function ThreadPanelHeader({
             ) : null}
             <div className="min-w-0 flex-1">
                 <div className="truncate font-semibold text-sm">{header}</div>
-                <button
-                    className="block max-w-full truncate text-left text-meta text-muted-foreground hover:text-foreground"
-                    onClick={async () => {
-                        try {
-                            await writeClipboardText(target);
-                            setCopied(true);
-                            window.setTimeout(() => setCopied(false), 1600);
-                        } catch {
-                            setCopied(false);
-                        }
-                    }}
-                    title={copied ? 'Copied thread target' : 'Copy thread target'}
-                    type="button"
-                >
-                    {target}
-                </button>
+                {target ? (
+                    <button
+                        className="block max-w-full truncate text-left text-meta text-muted-foreground hover:text-foreground"
+                        onClick={async () => {
+                            try {
+                                await writeClipboardText(target);
+                                setCopied(true);
+                                window.setTimeout(() => setCopied(false), 1600);
+                            } catch {
+                                setCopied(false);
+                            }
+                        }}
+                        title={copied ? 'Copied thread target' : 'Copy thread target'}
+                        type="button"
+                    >
+                        {target}
+                    </button>
+                ) : null}
             </div>
             <Button
                 disabled={!threadExists || followPending}

@@ -4,6 +4,7 @@ import { readAgentDraft, saveAgentDraft } from './agent-drafts.ts';
 import { readAgentHistory, searchAgentMessages } from './agent-history.ts';
 import { sendAgentMessage } from './agent-send.ts';
 import { ensureCurrentAgentSession, startNewAgentSession } from './agent-session-store.ts';
+import { unfollowAgentThread } from './agent-threads.ts';
 import { upsertStoredAgent } from './agents-store.ts';
 import { createChat, createMessage, listMessages } from './chat-api/index.ts';
 import { readSeenCursor } from './seen-ledger.ts';
@@ -396,6 +397,21 @@ describe('agent attested sends', () => {
         const hits = searchAgentMessages('agt_otto', { q: 'threading' });
         expect(hits.messages.map((message) => message.content)).toContain('threading in');
         expect(hits.messages[0]?.target).toBe('#general:00000000');
+
+        // Unfollow quiets attention only: the thread leaves the enumeration
+        // but stays readable, and a reason lands as a thread-local notice.
+        const receipt = unfollowAgentThread('agt_otto', {
+            reason: 'wrapping up here',
+            target: '#general:00000000',
+        });
+        expect(receipt).toEqual({ target: '#general:00000000', unfollowed: true });
+        const afterUnfollow = readAgentHistory('agt_otto', { target: '#general:00000000' });
+        expect(afterUnfollow.messages.at(-1)?.content).toBe(
+            '@Otto unfollowed this thread — wrapping up here'
+        );
+        expect(
+            searchAgentMessages('agt_otto', { q: 'threading' }).messages.map((m) => m.content)
+        ).toContain('threading in');
     });
 });
 

@@ -8,6 +8,7 @@ import {
 import { readAgentDraft } from './agent-drafts.ts';
 import { getAgentMessage, readAgentHistory, searchAgentMessages } from './agent-history.ts';
 import { agentSendRequestSchema, sendAgentMessage } from './agent-send.ts';
+import { agentThreadUnfollowRequestSchema, unfollowAgentThread } from './agent-threads.ts';
 import { AmbiguousMessageIdError } from './chat-api/index.ts';
 import { json, readJson } from './http.ts';
 
@@ -79,6 +80,14 @@ async function route(request: Request, url: URL, agentId: string): Promise<Respo
                 offset: numberParam(url, 'offset'),
                 query: url.searchParams.get('query') ?? undefined,
             })
+        );
+    }
+    if (request.method === 'POST' && url.pathname === '/api/agent/threads/unfollow') {
+        return json(
+            unfollowAgentThread(
+                agentId,
+                agentThreadUnfollowRequestSchema.parse(await readJson(request))
+            )
         );
     }
     if (request.method === 'GET' && url.pathname === '/api/agent/channels/info') {

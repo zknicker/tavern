@@ -213,6 +213,32 @@ export function listChatsForAgentParticipant(
     return rows.map((row) => rowToChat(row, db));
 }
 
+/**
+ * Read-authorization scope for the agent: every chat whose parent seat the
+ * agent holds, including unfollowed threads. Follow state is attention, not
+ * membership — unfollowing quiets a thread but never revokes reading it.
+ */
+export function listReadableChatsForAgentParticipant(
+    participantId: string,
+    db: Database = getDb()
+): TavernChat[] {
+    const rows = db
+        .prepare(
+            `SELECT chats.*,
+                    NULL AS last_activity_at,
+                    NULL AS unread_count,
+                    NULL AS active_turn_participant_ids
+             FROM chats
+             JOIN chat_participants
+               ON chat_participants.chat_id = COALESCE(chats.parent_chat_id, chats.id)
+              AND chat_participants.id = $participantId
+              AND chat_participants.kind = 'agent'
+             ORDER BY chats.id ASC`
+        )
+        .all(namedParams({ participantId })) as ChatRow[];
+    return rows.map((row) => rowToChat(row, db));
+}
+
 export function getChat(
     id: string,
     db: Database = getDb(),

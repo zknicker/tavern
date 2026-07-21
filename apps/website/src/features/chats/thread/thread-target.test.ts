@@ -10,12 +10,24 @@ const baseChat = {
     type: 'tavern',
 };
 
-test('threadPaneTitles names a channel and trims the message prefix for its short id', () => {
+test('threadPaneTitles names a channel and shortens canonical anchor ids', () => {
     expect(
-        threadPaneTitles({ ...baseChat, conversationKind: 'channel' }, 'msg_12345678abcdef')
+        threadPaneTitles(
+            { ...baseChat, conversationKind: 'channel' },
+            'msg_12345678abcdef0012345678abcdef00'
+        )
     ).toEqual({
         header: 'Thread — #general',
         target: '#general:12345678',
+    });
+});
+
+test('threadPaneTitles keeps non-canonical anchor ids in full', () => {
+    expect(
+        threadPaneTitles({ ...baseChat, conversationKind: 'channel' }, 'msg_demo_anchor')
+    ).toEqual({
+        header: 'Thread — #general',
+        target: '#general:demo_anchor',
     });
 });
 
@@ -31,10 +43,28 @@ test('threadPaneTitles names a DM for its non-operator peer', () => {
                 ],
                 scope: 'dm',
             },
-            'msg_abcdefgh987654'
+            'msg_abcdef00987654abcdef00987654abcd'
         )
     ).toEqual({
         header: 'Thread — @Tiny',
-        target: 'dm:@Tiny:abcdefgh',
+        target: 'dm:@Tiny:abcdef00',
+    });
+});
+
+test('threadPaneTitles omits the copyable target for task threads', () => {
+    expect(
+        threadPaneTitles(
+            {
+                ...baseChat,
+                conversationKind: 'task',
+                displayName: 'T-1: Fix',
+                scope: 'task',
+                title: 'T-1: Fix',
+            },
+            'msg_abcdef00987654abcdef00987654abcd'
+        )
+    ).toEqual({
+        header: 'Thread — T-1: Fix',
+        target: null,
     });
 });

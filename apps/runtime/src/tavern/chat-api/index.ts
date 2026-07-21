@@ -4,6 +4,7 @@ export {
     getChat,
     listChats,
     listChatsForAgentParticipant,
+    listReadableChatsForAgentParticipant,
     setChatArchived,
 } from './chats';
 export { createDelivery, listDeliveriesForTurn } from './deliveries';

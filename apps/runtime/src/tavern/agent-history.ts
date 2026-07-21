@@ -15,7 +15,7 @@ import { createAgentParticipantId } from './chat-api/ids.ts';
 import {
     anchorShortId,
     getChat,
-    listChatsForAgentParticipant,
+    listReadableChatsForAgentParticipant,
     membershipChat,
     resolveMessageId,
     threadSummaries,
@@ -138,11 +138,13 @@ function decorateThreadFields(
 }
 
 export function getAgentMessage(agentId: string, id: string, db: Database = getDb()) {
-    // Short-id resolution is scoped to the caller's chats before ambiguity is
-    // decided; full ids resolve globally and then hit the membership check.
-    const memberChatIds = listChatsForAgentParticipant(createAgentParticipantId(agentId), db).map(
-        (chat) => chat.id
-    );
+    // Short-id resolution is scoped to the caller's READABLE chats (parent
+    // seats, unfollowed threads included) before ambiguity is decided; full
+    // ids resolve globally and then hit the membership check.
+    const memberChatIds = listReadableChatsForAgentParticipant(
+        createAgentParticipantId(agentId),
+        db
+    ).map((chat) => chat.id);
     const message = resolveMessageId(id, { chatIds: memberChatIds }, db);
     if (!message || message.deleted_at) {
         throw new AgentApiError('RESOLVE_FAILED', `Message ${id} was not found.`, 404);
@@ -187,8 +189,10 @@ export function searchAgentMessages(
         throw new AgentApiError('INVALID_ARG', 'sort must be relevance or recent.', 400);
     }
     const participantId = createAgentParticipantId(agentId);
+    // Search spans the readable scope (unfollowed threads included) —
+    // enumeration follows attention, reading follows the parent seat.
     const targets = new Map(
-        listChatsForAgentParticipant(participantId, db).flatMap((chat) => {
+        listReadableChatsForAgentParticipant(participantId, db).flatMap((chat) => {
             const target = formatAgentTarget(agentId, chat, db);
             return target ? [[chat.id, target] as const] : [];
         })

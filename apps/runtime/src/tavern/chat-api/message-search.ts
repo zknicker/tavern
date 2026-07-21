@@ -38,7 +38,11 @@ export function searchMessageRows(
                AND ($after IS NULL OR chat_messages.created_at > $after)
                AND ($participantId IS NULL OR EXISTS (
                  SELECT 1 FROM chat_participants membership
-                 WHERE membership.chat_id = chat_messages.chat_id
+                 -- Threads never own membership: the parent seat authorizes.
+                 WHERE membership.chat_id = COALESCE(
+                     (SELECT parent_chat_id FROM chats WHERE chats.id = chat_messages.chat_id),
+                     chat_messages.chat_id
+                   )
                    AND membership.id = $participantId
                    AND membership.kind = 'agent'
                ))
