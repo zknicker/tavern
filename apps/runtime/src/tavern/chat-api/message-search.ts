@@ -27,7 +27,8 @@ export function searchMessageRows(
     return db
         .prepare(
             `SELECT chat_messages.* FROM chat_messages
-             WHERE instr(lower(chat_messages.content), lower($query)) > 0
+             WHERE chat_messages.deleted_at IS NULL
+               AND instr(lower(chat_messages.content), lower($query)) > 0
                AND ($chatId IS NULL OR chat_messages.chat_id = $chatId)
                AND ($chatIdsJson IS NULL OR chat_messages.chat_id IN (
                  SELECT value FROM json_each($chatIdsJson)

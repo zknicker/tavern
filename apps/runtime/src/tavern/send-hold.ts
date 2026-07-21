@@ -34,7 +34,7 @@ export function resolveSendHold(
     const horizon = Math.max(
         input.seenHorizon ?? 0,
         readSeenCursor(input.sessionId, input.chatId, db),
-        readServedCursor(input.agentId, input.chatId, db)
+        readServedCursor(input.sessionId, input.chatId, db)
     );
     const latest = latestMessageSequence(input.chatId, db);
     if (latest <= horizon) {
@@ -55,7 +55,10 @@ export function resolveSendHold(
     }
     const shownThrough = messages.at(-1)?.sequence ?? 0;
     advanceSeenCursor({ chatId: input.chatId, seq: shownThrough, sessionId: input.sessionId }, db);
-    advanceServedCursor({ agentId: input.agentId, chatId: input.chatId, seq: shownThrough }, db);
+    advanceServedCursor(
+        { chatId: input.chatId, seq: shownThrough, sessionId: input.sessionId },
+        db
+    );
     return {
         newMessageCount: count,
         omittedMessageCount: Math.max(0, count - messages.length),
@@ -106,7 +109,7 @@ export function collectRecentUnread(
         }
         const horizon = Math.max(
             readSeenCursor(input.sessionId, chatId, db),
-            readServedCursor(input.agentId, chatId, db)
+            readServedCursor(input.sessionId, chatId, db)
         );
         if (latestMessageSequence(chatId, db) <= horizon) {
             continue;
@@ -132,7 +135,7 @@ export function collectRecentUnread(
     }
     for (const [chatId, seq] of shownThroughByChat) {
         advanceSeenCursor({ chatId, seq, sessionId: input.sessionId }, db);
-        advanceServedCursor({ agentId: input.agentId, chatId, seq }, db);
+        advanceServedCursor({ chatId, seq, sessionId: input.sessionId }, db);
     }
     return shown;
 }

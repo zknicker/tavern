@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { closeAgentApiTestDb, initAgentApiTestDb } from './agent-api-test-helper.ts';
-import { readAgentHistory, searchAgentMessages } from './agent-history.ts';
+import { getAgentMessage, readAgentHistory, searchAgentMessages } from './agent-history.ts';
 import { upsertStoredAgent } from './agents-store.ts';
-import { createChat, createMessage } from './chat-api/index.ts';
+import { createChat, createMessage, deleteMessage } from './chat-api/index.ts';
 
 describe('agent message search', () => {
     let root: string;
@@ -109,6 +109,24 @@ describe('agent history paging', () => {
 
         const newer = readAgentHistory('agt_otto', { after: '3', limit: 2, target: '#general' });
         expect(newer.messages.map((message) => message.sequence)).toEqual([4, 5]);
+    });
+
+    it('always includes the --around anchor in its window', () => {
+        const only = readAgentHistory('agt_otto', { around: '3', limit: 1, target: '#general' });
+        expect(only.messages.map((message) => message.sequence)).toEqual([3]);
+
+        const window = readAgentHistory('agt_otto', { around: '3', limit: 3, target: '#general' });
+        expect(window.messages.map((message) => message.sequence)).toEqual([2, 3, 4]);
+    });
+
+    it('hides soft-deleted messages from read, search, and resolve', () => {
+        deleteMessage('msg_a0000000000000000000000000000004');
+        const page = readAgentHistory('agt_otto', { limit: 3, target: '#general' });
+        expect(page.messages.map((message) => message.sequence)).toEqual([2, 3, 5]);
+        expect(searchAgentMessages('agt_otto', { q: 'update 4' }).messages).toEqual([]);
+        expect(() => getAgentMessage('agt_otto', 'msg_a0000000000000000000000000000004')).toThrow(
+            'was not found'
+        );
     });
 });
 

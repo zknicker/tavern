@@ -28,7 +28,8 @@ export function resolveMessageId(
     const rows = db
         .prepare(
             `SELECT id FROM chat_messages
-             WHERE lower(substr(id, 5, 8)) = lower($shortId)
+             WHERE deleted_at IS NULL
+               AND lower(substr(id, 5, 8)) = lower($shortId)
                AND ($chatId IS NULL OR chat_id = $chatId)`
         )
         .all(namedParams({ chatId: input.chatId ?? null, shortId: idOrShortId })) as Array<{

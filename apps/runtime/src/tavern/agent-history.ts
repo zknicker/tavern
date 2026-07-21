@@ -3,7 +3,7 @@ import type { Database } from '../db/sqlite.ts';
 import { namedParams } from '../db/sqlite.ts';
 import { AgentApiError, targetNotFound } from './agent-api-errors.ts';
 import { senderIdForHandle, toAgentMessage } from './agent-messages.ts';
-import { readCurrentAgentSession } from './agent-session-store.ts';
+import { ensureCurrentAgentSession } from './agent-session-store.ts';
 import { formatAgentTarget, resolveAgentTarget } from './agent-targets.ts';
 import { isAgentChatParticipant } from './chat-actions-tools.ts';
 import { createAgentParticipantId } from './chat-api/ids.ts';
@@ -34,10 +34,13 @@ export function readAgentHistory(
     const before = input.before ? resolveAnchor(target.chat.id, input.before, db) : null;
     const after = input.after ? resolveAnchor(target.chat.id, input.after, db) : null;
     const around = input.around ? resolveAnchor(target.chat.id, input.around, db) : null;
+    // Around-window: anchor always included, remaining budget split half older /
+    // half newer (exclusive bounds admit exactly `limit` sequence slots).
+    const olderBudget = around === null ? 0 : Math.floor((limit - 1) / 2);
     const bounds = around
         ? {
-              after: Math.max(0, around - Math.ceil(limit / 2) - 1),
-              before: around + Math.floor(limit / 2) + 1,
+              after: Math.max(0, around - olderBudget - 1),
+              before: Math.max(0, around - olderBudget - 1) + limit + 1,
           }
         : { after: after ?? 0, before };
     // No anchor (or --before only) pages from the newest row backward; --after
@@ -47,6 +50,7 @@ export function readAgentHistory(
         .prepare(
             `SELECT * FROM chat_messages
              WHERE chat_id = $chatId
+               AND deleted_at IS NULL
                AND sequence > $after
                AND ($before IS NULL OR sequence < $before)
              ORDER BY sequence ${newestFirst ? 'DESC' : 'ASC'}
@@ -64,17 +68,20 @@ export function readAgentHistory(
         rows.reverse();
     }
     const messages = rows.map((row) => rowToMessage(row, db));
+    const session = ensureCurrentAgentSession({ agentId, db });
     const newestServed = messages.at(-1)?.sequence;
     if (newestServed) {
-        advanceServedCursor({ agentId, chatId: target.chat.id, seq: newestServed }, db);
+        advanceServedCursor(
+            { chatId: target.chat.id, seq: newestServed, sessionId: session.id },
+            db
+        );
     }
     const olderThan =
         messages[0]?.sequence ?? bounds.before ?? target.chat.last_message_sequence + 1;
     const newerThan = messages.at(-1)?.sequence ?? bounds.after;
     const hasOlder = hasMessageOutside(target.chat.id, 'older', olderThan, db);
     const hasNewer = hasMessageOutside(target.chat.id, 'newer', newerThan, db);
-    const session = readCurrentAgentSession({ agentId, db });
-    const seen = session ? readSeenCursor(session.id, target.chat.id, db) : 0;
+    const seen = readSeenCursor(session.id, target.chat.id, db);
     return {
         has_more: hasOlder || hasNewer,
         has_newer: hasNewer,
@@ -87,7 +94,7 @@ export function readAgentHistory(
 
 export function getAgentMessage(agentId: string, id: string, db: Database = getDb()) {
     const message = resolveMessageId(id, {}, db);
-    if (!message) {
+    if (!message || message.deleted_at) {
         throw new AgentApiError('RESOLVE_FAILED', `Message ${id} was not found.`, 404);
     }
     const chat = getChatForMembership(message.chat_id, agentId, db);
@@ -187,7 +194,9 @@ function hasMessageOutside(
         db
             .prepare(
                 `SELECT 1 FROM chat_messages
-                 WHERE chat_id = $chatId AND sequence ${operator} $sequence
+                 WHERE chat_id = $chatId
+                   AND deleted_at IS NULL
+                   AND sequence ${operator} $sequence
                  LIMIT 1`
             )
             .get(namedParams({ chatId, sequence }))

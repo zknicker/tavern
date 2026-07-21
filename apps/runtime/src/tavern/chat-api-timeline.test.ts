@@ -136,7 +136,7 @@ describe('Tavern Runtime chat timeline pages', () => {
     });
 
     it('returns an empty page for a chat with no messages', () => {
-        createChat({ id: 'cht_1' });
+        createChat({ id: 'cht_1', title: 'general' });
 
         const page = getChatTimelinePage('cht_1');
 
@@ -155,7 +155,7 @@ describe('Tavern Runtime chat timeline pages', () => {
 // artifact, assistant reply message. Sequences advance two per turn.
 function seedTurn({ activityCount = 1, index }: { activityCount?: number; index: number }) {
     if (index === 1) {
-        createChat({ id: 'cht_1' });
+        createChat({ id: 'cht_1', title: 'general' });
     }
 
     createMessage('cht_1', {

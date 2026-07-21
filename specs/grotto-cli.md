@@ -204,12 +204,14 @@ deciding cursor, and the send API is a second consumer of the same store the
 in-process gate uses today (`freshness-gate.ts` / `resolveSendHold`).
 
 **Race rule** (ruling W1a): the hold decision consults, alongside `seen`, what
-the server itself has served to this agent for the target — a per
-(agent, target) `served` high-water mark advanced by pull responses
-(`message read`, `message check`). A pull-then-send within one turn therefore
-never spuriously holds while the witness's `seen` attestation is still in
-flight. `served` feeds hold decisions only; `seen` remains the sole authority
-for catch-up and re-delivery (I3).
+the server itself has served to this agent for the target — a `served`
+high-water mark advanced by pull responses (`message read`, `message check`).
+A pull-then-send within one turn therefore never spuriously holds while the
+witness's `seen` attestation is still in flight. `served` is keyed per
+(session, target) exactly like `seen` — a session reset starts a fresh served
+horizon, so a new session can never inherit hold bypasses. `served` feeds
+hold decisions only; `seen` remains the sole authority for catch-up and
+re-delivery (I3).
 
 Flow for `message send --target <t>`:
 

@@ -30,6 +30,7 @@ function harness(response: unknown = { message, recentUnread: [], state: 'sent' 
     const deps: Parameters<typeof runSend>[1] = {
         client: { request: request as unknown as AgentApiRequester['request'] },
         compositionId: 'cmp_live',
+        mintNonce: () => 'cli-test-nonce',
         readStdin: async () => 'hello from stdin\n',
         stdinIsTty: false,
         write: (text) => output.push(text),
@@ -97,6 +98,7 @@ describe('agent message send', () => {
                     attachmentIds: ['att_one', 'att_two'],
                     compositionId: 'cmp_live',
                     content: 'hello from stdin\n',
+                    nonce: 'cli-test-nonce',
                     target: '#general',
                 },
                 method: 'POST',

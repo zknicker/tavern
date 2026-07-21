@@ -15,7 +15,7 @@ const runtimeMetadata = {
 describe('Tavern runtime event projection', () => {
     beforeEach(() => {
         ensureRuntimeSchema(initTestDb());
-        createChat({ id: 'cht_1' });
+        createChat({ id: 'cht_1', title: 'general' });
     });
 
     afterEach(() => {

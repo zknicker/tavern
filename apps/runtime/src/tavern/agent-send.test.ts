@@ -3,7 +3,7 @@ import { closeAgentApiTestDb, initAgentApiTestDb } from './agent-api-test-helper
 import { readAgentDraft, saveAgentDraft } from './agent-drafts.ts';
 import { readAgentHistory } from './agent-history.ts';
 import { sendAgentMessage } from './agent-send.ts';
-import { ensureCurrentAgentSession } from './agent-session-store.ts';
+import { ensureCurrentAgentSession, startNewAgentSession } from './agent-session-store.ts';
 import { upsertStoredAgent } from './agents-store.ts';
 import { createChat, createMessage, listMessages } from './chat-api/index.ts';
 import { readSeenCursor } from './seen-ledger.ts';
@@ -110,7 +110,19 @@ describe('agent attested sends', () => {
         expect(held.state).toBe('held');
         const session = ensureCurrentAgentSession({ agentId: 'agt_otto' });
         expect(readSeenCursor(session.id, 'cht_general')).toBe(2);
-        expect(readServedCursor('agt_otto', 'cht_general')).toBe(2);
+        expect(readServedCursor(session.id, 'cht_general')).toBe(2);
+    });
+
+    it('starts a fresh served horizon per session so resets cannot bypass holds', () => {
+        peerMessage('msg_30000000000000000000000000000001', 'before reset');
+        expect(sendAgentMessage('agt_otto', { content: 'draft', target: '#general' }).state).toBe(
+            'held'
+        );
+
+        startNewAgentSession({ agentId: 'agt_otto' });
+        expect(
+            sendAgentMessage('agt_otto', { content: 'after reset', target: '#general' }).state
+        ).toBe('held');
     });
 
     it('bounds hold display to the latest twelve peer rows and reports omissions', () => {
@@ -160,7 +172,7 @@ describe('agent attested sends', () => {
         });
         const session = ensureCurrentAgentSession({ agentId: 'agt_otto' });
         expect(readSeenCursor(session.id, 'cht_ops')).toBeGreaterThan(0);
-        expect(readServedCursor('agt_otto', 'cht_ops')).toBeGreaterThan(0);
+        expect(readServedCursor(session.id, 'cht_ops')).toBeGreaterThan(0);
         const followUp = sendAgentMessage('agt_otto', { content: 'on it', target: '#ops' });
         expect(followUp.state).toBe('sent');
     });

@@ -229,14 +229,15 @@ CREATE TABLE IF NOT EXISTS agent_session_chat_cursors (
   FOREIGN KEY(chat_id) REFERENCES chats(id) ON DELETE CASCADE
 );
 
--- Server-served pull horizon. This supplements freshness hold decisions only;
--- the session seen ledger remains catch-up authority.
-CREATE TABLE IF NOT EXISTS agent_served_chat_cursors (
-  agent_id        TEXT NOT NULL,
+-- Server-served pull horizon, session-scoped like the seen ledger. This
+-- supplements freshness hold decisions only; the session seen ledger remains
+-- catch-up authority.
+CREATE TABLE IF NOT EXISTS agent_session_served_cursors (
+  session_id      TEXT NOT NULL,
   chat_id         TEXT NOT NULL,
   served_up_to_seq INTEGER NOT NULL DEFAULT 0 CHECK (served_up_to_seq >= 0),
   updated_at      TEXT NOT NULL,
-  PRIMARY KEY (agent_id, chat_id),
+  PRIMARY KEY (session_id, chat_id),
   FOREIGN KEY(chat_id) REFERENCES chats(id) ON DELETE CASCADE
 );
 

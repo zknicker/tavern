@@ -2,20 +2,23 @@ import { getDb } from '../db/connection.ts';
 import type { Database } from '../db/sqlite.ts';
 import { namedParams } from '../db/sqlite.ts';
 
-export function readServedCursor(agentId: string, chatId: string, db: Database = getDb()) {
+// Keyed by (session, chat) like the seen ledger: a session reset starts a
+// fresh served horizon, so a new session never inherits hold bypasses.
+
+export function readServedCursor(sessionId: string, chatId: string, db: Database = getDb()) {
     const row = db
         .prepare(
             `SELECT served_up_to_seq
-             FROM agent_served_chat_cursors
-             WHERE agent_id = $agentId AND chat_id = $chatId`
+             FROM agent_session_served_cursors
+             WHERE session_id = $sessionId AND chat_id = $chatId`
         )
-        .get(namedParams({ agentId, chatId })) as { served_up_to_seq: number } | null;
+        .get(namedParams({ chatId, sessionId })) as { served_up_to_seq: number } | null;
     return row?.served_up_to_seq ?? 0;
 }
 
 /** Monotonic. Pull responses and hold displays are the only callers. */
 export function advanceServedCursor(
-    input: { agentId: string; chatId: string; now?: string; seq: number },
+    input: { chatId: string; now?: string; seq: number; sessionId: string },
     db: Database = getDb()
 ) {
     if (!(Number.isFinite(input.seq) && input.seq > 0)) {
@@ -23,18 +26,18 @@ export function advanceServedCursor(
     }
     const now = input.now ?? new Date().toISOString();
     db.prepare(
-        `INSERT INTO agent_served_chat_cursors
-         (agent_id, chat_id, served_up_to_seq, updated_at)
-         VALUES ($agentId, $chatId, $seq, $now)
-         ON CONFLICT(agent_id, chat_id) DO UPDATE SET
+        `INSERT INTO agent_session_served_cursors
+         (session_id, chat_id, served_up_to_seq, updated_at)
+         VALUES ($sessionId, $chatId, $seq, $now)
+         ON CONFLICT(session_id, chat_id) DO UPDATE SET
            served_up_to_seq = MAX(served_up_to_seq, excluded.served_up_to_seq),
            updated_at = excluded.updated_at`
     ).run(
         namedParams({
-            agentId: input.agentId,
             chatId: input.chatId,
             now,
             seq: Math.floor(input.seq),
+            sessionId: input.sessionId,
         })
     );
 }

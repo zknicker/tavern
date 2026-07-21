@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { type AgentApiRequester, createAgentApiClient } from '../agent-api-client.ts';
 import {
     agentHistoryResponseSchema,
@@ -22,6 +23,7 @@ const HEREDOC_RECIPE = `grotto message send --target "#general" <<'GROTTOMSG'\nB
 interface MessageDeps {
     client: AgentApiRequester;
     compositionId?: string;
+    mintNonce(): string;
     readStdin(): Promise<string>;
     stdinIsTty: boolean;
     write(text: string): void;
@@ -144,23 +146,35 @@ export async function runSend(args: ParsedArgs, deps: MessageDeps): Promise<numb
     if (!(sendDraft || stdin.trim())) {
         throw heredocError('MISSING_CONTENT', 'Message content is required on stdin.');
     }
-    const response = await deps.client.request(
-        '/api/agent/messages/send',
-        agentSendResponseSchema,
-        {
-            body: {
-                ...(attachmentIds.length > 0 ? { attachmentIds } : {}),
-                ...(deps.compositionId ? { compositionId: deps.compositionId } : {}),
-                ...(sendDraft ? {} : { content: stdin }),
-                ...(continueAnyway ? { continueAnyway: true } : {}),
-                ...(sendDraft ? { sendDraft: true } : {}),
-                target,
-            },
-            method: 'POST',
+    // One nonce per invocation makes the send idempotent across the retry
+    // below and any server-side duplicate delivery.
+    const request = {
+        body: {
+            ...(attachmentIds.length > 0 ? { attachmentIds } : {}),
+            ...(deps.compositionId ? { compositionId: deps.compositionId } : {}),
+            ...(sendDraft ? {} : { content: stdin }),
+            ...(continueAnyway ? { continueAnyway: true } : {}),
+            ...(sendDraft ? { sendDraft: true } : {}),
+            nonce: deps.mintNonce(),
+            target,
+        },
+        method: 'POST' as const,
+    };
+    let response: Awaited<ReturnType<typeof sendOnce>>;
+    try {
+        response = await sendOnce(deps, request);
+    } catch (error) {
+        if (!(error instanceof AgentCliError && error.code === 'SERVER_5XX')) {
+            throw error;
         }
-    );
+        response = await sendOnce(deps, request);
+    }
     deps.write(renderSendResponse(target, response));
     return 0;
+}
+
+function sendOnce(deps: MessageDeps, request: { body: object; method: 'POST' }) {
+    return deps.client.request('/api/agent/messages/send', agentSendResponseSchema, request);
 }
 
 export async function runRead(args: ParsedArgs, deps: MessageDeps): Promise<number> {
@@ -212,6 +226,7 @@ function defaultDeps(): MessageDeps {
     return {
         client: createAgentApiClient(),
         compositionId: process.env.GROTTO_COMPOSITION_ID?.trim() || undefined,
+        mintNonce: () => `cli-${randomUUID()}`,
         readStdin,
         stdinIsTty: Boolean(process.stdin.isTTY),
         write: (text) => process.stdout.write(text),
