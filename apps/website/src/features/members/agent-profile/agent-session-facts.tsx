@@ -81,6 +81,33 @@ function getSessionContext(
     );
 }
 
+export function AgentPastSessions({
+    pastSessions,
+}: {
+    pastSessions: AgentSessionOutput['pastSessions'];
+}) {
+    if (pastSessions.length === 0) {
+        return null;
+    }
+
+    return (
+        <ul className="grid gap-1 text-sm">
+            {pastSessions.map((entry) => (
+                <li className="flex min-w-0 items-baseline gap-2" key={entry.id}>
+                    <span className="min-w-0 truncate text-foreground">
+                        {entry.effectiveModel.model}
+                    </span>
+                    <span className="shrink-0 text-muted-foreground">
+                        {entry.turnCount} {entry.turnCount === 1 ? 'turn' : 'turns'} ·{' '}
+                        {entry.status === 'stopped' ? 'stopped' : 'ended'}{' '}
+                        <RelativeTime value={entry.updatedAt} />
+                    </span>
+                </li>
+            ))}
+        </ul>
+    );
+}
+
 function formatTokens(value: number) {
     return new Intl.NumberFormat('en-US', {
         maximumFractionDigits: 1,

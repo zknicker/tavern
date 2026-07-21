@@ -42,15 +42,23 @@ export function Tasks({ conversationId, embedded = false }: TasksProps = {}) {
     const [label, setLabel] = React.useState<TaskLabelFilter>('all');
     const view: TaskView = embedded ? 'all' : selectedView;
 
+    const tasks = React.useMemo(() => tasksQuery.data?.tasks ?? [], [tasksQuery.data?.tasks]);
+
+    // Stamp on every change while the page is open, not just on mount, so
+    // task movement the user just watched never re-lights the rail dot.
+    // Covering the newest loaded updatedAt also absorbs server timestamps
+    // that run ahead of the local clock.
     React.useEffect(() => {
         if (embedded) {
             return;
         }
 
-        markTasksSeen();
-    }, [embedded]);
-
-    const tasks = React.useMemo(() => tasksQuery.data?.tasks ?? [], [tasksQuery.data?.tasks]);
+        const latestTaskUpdate = tasks.reduce(
+            (latest, task) => Math.max(latest, Date.parse(task.updatedAt) || 0),
+            0
+        );
+        markTasksSeen(Math.max(Date.now(), latestTaskUpdate));
+    }, [embedded, tasks]);
     const agents = useAgentSelectOptions(agentsQuery.data?.agents);
     const labels = React.useMemo(() => labelsQuery.data?.labels ?? [], [labelsQuery.data?.labels]);
     const tasksById = React.useMemo(() => new Map(tasks.map((task) => [task.id, task])), [tasks]);
