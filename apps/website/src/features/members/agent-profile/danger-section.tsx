@@ -6,6 +6,7 @@ import {
     SettingsRow,
     SettingsSection,
 } from '../../../components/ui/settings-row.tsx';
+import { closeAgentProfilePanesForAgent } from '../../../hooks/pane/use-agent-profile-pane.ts';
 import { appRoutes } from '../../../lib/app-routes.ts';
 import type { AgentListOutput } from '../../../lib/trpc.tsx';
 import { DeleteAgentDialog } from '../../agents/delete-agent-dialog.tsx';
@@ -29,7 +30,10 @@ export function AgentDangerSection({ agent }: { agent: AgentListOutput['agents']
             </SettingsGroup>
             <DeleteAgentDialog
                 agent={agent}
-                onDeleted={() => navigate(appRoutes.members, { replace: true })}
+                onDeleted={() => {
+                    closeAgentProfilePanesForAgent(agent.id);
+                    navigate(appRoutes.members, { replace: true });
+                }}
                 onOpenChange={setIsDeleteOpen}
                 open={isDeleteOpen}
             />

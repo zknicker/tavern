@@ -17,6 +17,18 @@ export function createAgentProfilePaneStore() {
         get(chatId: string) {
             return profiles.get(chatId) ?? null;
         },
+        closeForAgent(agentId: string) {
+            let removed = false;
+            for (const [chatId, paneAgentId] of profiles) {
+                if (paneAgentId === agentId) {
+                    profiles.delete(chatId);
+                    removed = true;
+                }
+            }
+            if (removed) {
+                notify(listeners);
+            }
+        },
         open(chatId: string, agentId: string) {
             profiles.set(chatId, agentId);
             notify(listeners);
@@ -44,6 +56,11 @@ export function closeAgentProfilePane(chatId: string) {
     if (getChatSidePane(chatId) === 'profile') {
         setChatSidePane(chatId, 'artifact');
     }
+}
+
+// A deleted agent must not leave any chat's pane pointing at its id.
+export function closeAgentProfilePanesForAgent(agentId: string) {
+    store.closeForAgent(agentId);
 }
 
 export function useAgentProfilePane(chatId: string): string | null {
