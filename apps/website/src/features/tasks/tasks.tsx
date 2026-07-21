@@ -36,13 +36,26 @@ export function Tasks({ conversationId, embedded = false }: TasksProps = {}) {
     const autoDispatch = useCapability('autoDispatch');
     const autoDispatchSettings = useAutoDispatchSettings();
     const bulkUpdate = useTaskBulkUpdate();
-    const { deferredQuery, query, setQuery } = useSearch();
+    // The shell search store only tracks full-page routes; the embedded
+    // conversation tab owns a local query so its toolbar search works.
+    const shellSearch = useSearch();
+    const [embeddedQuery, setEmbeddedQuery] = React.useState('');
+    const query = embedded ? embeddedQuery : shellSearch.query;
+    const deferredQuery = embedded ? embeddedQuery : shellSearch.deferredQuery;
+    const setQuery = embedded ? setEmbeddedQuery : shellSearch.setQuery;
     const [selectedView, setView] = React.useState<TaskView>('all');
     const [assignee, setAssignee] = React.useState<TaskAssigneeFilter>('anyone');
     const [label, setLabel] = React.useState<TaskLabelFilter>('all');
     const view: TaskView = embedded ? 'all' : selectedView;
 
     const tasks = React.useMemo(() => tasksQuery.data?.tasks ?? [], [tasksQuery.data?.tasks]);
+    // The unfiltered base the empty states reason about: a conversation tab
+    // is scoped to its own tasks, never the whole workspace.
+    const scopedTasks = React.useMemo(
+        () =>
+            conversationId ? tasks.filter((task) => task.originChatId === conversationId) : tasks,
+        [conversationId, tasks]
+    );
 
     // Stamp on every change while the page is open, not just on mount, so
     // task movement the user just watched never re-lights the rail dot.
@@ -148,7 +161,7 @@ export function Tasks({ conversationId, embedded = false }: TasksProps = {}) {
             selectedTasks={selectedTasks}
             selection={selection}
             showQueueIndicator={showQueueIndicator}
-            tasks={tasks}
+            tasks={scopedTasks}
             view={view}
         />
     );

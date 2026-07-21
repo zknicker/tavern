@@ -1,0 +1,14 @@
+import { expect, test } from 'bun:test';
+import { createNewAgentName } from './create-agent-name.ts';
+
+function agent(name: string) {
+    return { name } as Parameters<typeof createNewAgentName>[0][number];
+}
+
+test('uses the base name when free', () => {
+    expect(createNewAgentName([agent('Scout')])).toBe('New agent');
+});
+
+test('suffixes past existing new agents, case-insensitively', () => {
+    expect(createNewAgentName([agent('new agent'), agent('New Agent 2')])).toBe('New agent 3');
+});
