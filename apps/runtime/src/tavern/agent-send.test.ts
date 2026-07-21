@@ -142,6 +142,55 @@ describe('agent attested sends', () => {
         expect(held.shownMessages[0]?.content).toBe('update 2');
     });
 
+    it('rejects continueAnyway before repeated holds, server-side', () => {
+        peerMessage('msg_40000000000000000000000000000001', 'first hold');
+        expect(sendAgentMessage('agt_otto', { content: 'draft', target: '#general' }).state).toBe(
+            'held'
+        );
+        expect(() =>
+            sendAgentMessage('agt_otto', {
+                continueAnyway: true,
+                sendDraft: true,
+                target: '#general',
+            })
+        ).toThrow('repeated holds');
+    });
+
+    it('returns the committed message when a send-draft retry replays its nonce', () => {
+        peerMessage('msg_50000000000000000000000000000001', 'hold me');
+        expect(sendAgentMessage('agt_otto', { content: 'draft', target: '#general' }).state).toBe(
+            'held'
+        );
+        const released = sendAgentMessage('agt_otto', {
+            nonce: 'draft-nonce',
+            sendDraft: true,
+            target: '#general',
+        });
+        if (released.state !== 'sent') {
+            throw new Error('Expected the draft release to commit.');
+        }
+        const retried = sendAgentMessage('agt_otto', {
+            nonce: 'draft-nonce',
+            sendDraft: true,
+            target: '#general',
+        });
+        expect(retried).toMatchObject({ message: { id: released.message.id }, state: 'sent' });
+    });
+
+    it('rejects writes to archived channels but leaves reads alone', () => {
+        createChat({
+            id: 'cht_frozen',
+            kind: 'channel',
+            metadata: { tavern: { archived: true } },
+            participants: [human(), agent('agt_otto', 'Otto')],
+            title: 'frozen',
+        });
+        expect(() => sendAgentMessage('agt_otto', { content: 'hello', target: '#frozen' })).toThrow(
+            'archived'
+        );
+        expect(readAgentHistory('agt_otto', { target: '#frozen' }).messages).toEqual([]);
+    });
+
     it('skips the freshness gate for DMs', () => {
         seedAgent('agt_wren', 'Wren');
         const sent = sendAgentMessage('agt_otto', { content: 'hello', target: 'dm:@Wren' });

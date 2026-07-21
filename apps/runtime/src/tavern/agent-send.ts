@@ -5,6 +5,7 @@ import { countFormalMentions, toAgentMessage } from './agent-messages.ts';
 import { ensureCurrentAgentSession } from './agent-session-store.ts';
 import { resolveAgentTarget } from './agent-targets.ts';
 import { getStoredAgent } from './agents-store.ts';
+import { isArchivedChat } from './chat-actions-tools.ts';
 import { createAgentParticipantId } from './chat-api/ids.ts';
 import { createMessage, createMessageId, findMessageByNonce } from './chat-api/index.ts';
 import { collectRecentUnread, resolveSendHold } from './send-hold.ts';
@@ -40,6 +41,27 @@ export function sendAgentMessage(
     if (!agent) {
         throw new AgentApiError('SEND_FAILED', 'Calling agent was not found.', 404);
     }
+    if (isArchivedChat(resolved.chat)) {
+        throw new AgentApiError(
+            'TARGET_ARCHIVED',
+            `${resolved.target} is archived; writes there are rejected.`,
+            409
+        );
+    }
+    const session = ensureCurrentAgentSession({ agentId });
+    const participantId = createAgentParticipantId(agentId);
+    // A same-nonce retry of a committed send stays idempotent even when newer
+    // peer traffic would otherwise hold it (the original send already passed
+    // the gate) and even when the committed draft has since been cleared —
+    // checked before draft resolution so retries never see SEND_DRAFT_NOT_FOUND.
+    const committed = input.nonce ? findMessageByNonce(resolved.chat.id, input.nonce) : null;
+    if (committed) {
+        return sentResponse(agentId, committed, {
+            chatId: resolved.chat.id,
+            participantId,
+            sessionId: session.id,
+        });
+    }
     const storedDraft = readAgentDraft(agentId, resolved.chat.id);
     const outgoing = input.sendDraft
         ? requireDraft(storedDraft)
@@ -48,21 +70,23 @@ export function sendAgentMessage(
               content: plainContent ?? '',
               reholdCount: storedDraft?.reholdCount ?? 0,
           };
-    const session = ensureCurrentAgentSession({ agentId });
-    const participantId = createAgentParticipantId(agentId);
-    // A same-nonce retry of a committed send stays idempotent even when newer
-    // peer traffic would otherwise hold it — the original send already passed
-    // the gate.
-    const committed = input.nonce ? findMessageByNonce(resolved.chat.id, input.nonce) : null;
-    const hold =
-        committed || input.continueAnyway
-            ? null
-            : resolveSendHold({
-                  agentId,
-                  chatId: resolved.chat.id,
-                  participantId,
-                  sessionId: session.id,
-              });
+    if (input.continueAnyway && outgoing.reholdCount < 2) {
+        // The escape hatch is earned by repeated holds; the server enforces it,
+        // not just the CLI's teaching.
+        throw new AgentApiError(
+            'SEND_ANYWAY_NOT_ELIGIBLE',
+            'continueAnyway is only available after repeated holds of the same draft.',
+            409
+        );
+    }
+    const hold = input.continueAnyway
+        ? null
+        : resolveSendHold({
+              agentId,
+              chatId: resolved.chat.id,
+              participantId,
+              sessionId: session.id,
+          });
     if (hold) {
         const draft = saveAgentDraft({
             agentId,
@@ -98,14 +122,26 @@ export function sendAgentMessage(
         role: 'assistant',
     });
     clearAgentDraft(agentId, resolved.chat.id);
-    const recentUnread = collectRecentUnread({
-        agentId,
-        excludeChatId: resolved.chat.id,
+    return sentResponse(agentId, receipt.message, {
+        chatId: resolved.chat.id,
         participantId,
         sessionId: session.id,
     });
+}
+
+function sentResponse(
+    agentId: string,
+    message: Parameters<typeof toAgentMessage>[0],
+    context: { chatId: string; participantId: string; sessionId: string }
+) {
+    const recentUnread = collectRecentUnread({
+        agentId,
+        excludeChatId: context.chatId,
+        participantId: context.participantId,
+        sessionId: context.sessionId,
+    });
     return {
-        message: toAgentMessage(receipt.message),
+        message: toAgentMessage(message),
         recentUnread: recentUnread.map((row) => ({
             message: toAgentMessage(row.message),
             target: row.target,

@@ -48,6 +48,15 @@ describe('agent CLI wrapper', () => {
         });
     });
 
+    test('accepts unprefixed agent ids — they are opaque in the public contract', () => {
+        const result = buildAgentToolEnvironment('planner', {
+            entrypoint: { args: [], executable: '/opt/grotto' },
+            serverUrl: 'http://127.0.0.1:18790',
+        });
+        expect(result.env.GROTTO_AGENT_ID).toBe('planner');
+        expect(fs.statSync(result.tokenFile).mode & 0o777).toBe(0o600);
+    });
+
     test('refreshes wrapper content idempotently', () => {
         const first = buildAgentToolEnvironment('agt_wren', {
             entrypoint: { args: [], executable: '/opt/grotto-v1' },

@@ -4,7 +4,9 @@ import path from 'node:path';
 
 import { getAgentTokensDir } from '../config.ts';
 
-const agentIdPattern = /^agt_[A-Za-z0-9_-]+$/u;
+// Agent ids are opaque strings in the public contract; the only requirement
+// here is that they are safe as a single path segment for the token file.
+const agentIdPattern = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/u;
 const tokenPattern = /^grta_[A-Za-z0-9_-]{43}$/u;
 
 export function agentTokenPath(agentId: string): string {
@@ -70,6 +72,6 @@ function tokensEqual(provided: string, expected: string): boolean {
 
 function assertAgentId(agentId: string): void {
     if (!agentIdPattern.test(agentId)) {
-        throw new Error('Agent token id must use an agt_ id.');
+        throw new Error('Agent token id must be a single path-safe token.');
     }
 }

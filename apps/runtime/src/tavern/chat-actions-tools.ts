@@ -151,7 +151,7 @@ export function isAgentChatParticipant(chat: TavernChat, agentId: string, partic
     });
 }
 
-function isArchivedChat(chat: TavernChat) {
+export function isArchivedChat(chat: TavernChat) {
     const tavern = (chat.metadata as Record<string, unknown>).tavern;
     if (!tavern || typeof tavern !== 'object' || Array.isArray(tavern)) {
         return false;

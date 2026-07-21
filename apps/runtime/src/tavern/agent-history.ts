@@ -126,8 +126,8 @@ export function searchAgentMessages(
         ? resolveAgentTarget({ agentId, target: input.target }, db).chat.id
         : null;
     const senderHandle = input.sender?.replace(/^@/u, '') ?? null;
-    validateDateParam(input.before, 'before');
-    validateDateParam(input.after, 'after');
+    const before = normalizeDateParam(input.before, 'before');
+    const after = normalizeDateParam(input.after, 'after');
     const senderId = senderHandle ? senderIdForHandle(senderHandle, db) : null;
     if (senderHandle && !senderId) {
         throw targetNotFound(`Sender @${senderHandle} was not found.`);
@@ -145,8 +145,8 @@ export function searchAgentMessages(
     );
     const rows = searchMessageRows(
         {
-            after: input.after,
-            before: input.before,
+            after,
+            before,
             chatId,
             chatIds: [...targets.keys()],
             limit: clamp(input.limit, 20, 100),
@@ -203,10 +203,17 @@ function hasMessageOutside(
     );
 }
 
-function validateDateParam(value: string | null | undefined, name: string): void {
-    if (value && !Number.isFinite(Date.parse(value))) {
+// Stored created_at values are ISO strings compared lexicographically, so the
+// filter must be normalized ISO too, not whatever Date.parse tolerates.
+function normalizeDateParam(value: string | null | undefined, name: string): string | null {
+    if (!value) {
+        return null;
+    }
+    const parsed = Date.parse(value);
+    if (!Number.isFinite(parsed)) {
         throw new AgentApiError('INVALID_ARG', `${name} must be an ISO timestamp.`, 400);
     }
+    return new Date(parsed).toISOString();
 }
 
 function clamp(value: number | undefined, fallback: number, max: number) {

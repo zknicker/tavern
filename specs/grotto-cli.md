@@ -173,8 +173,9 @@ v1 inventory: `MISSING_AGENT_ID`, `MISSING_SERVER_URL`, `MISSING_TOKEN`,
 `MISSING_CONTENT`, `POSITIONAL_CONTENT_UNSUPPORTED`, `CONTENT_FLAG_UNSUPPORTED`,
 `SEND_DRAFT_NOT_FOUND`, `SEND_DRAFT_STDIN_UNSUPPORTED`,
 `SEND_DRAFT_ANYWAY_REQUIRES_SEND_DRAFT`, `SEND_DRAFT_ATTACHMENTS_UNSUPPORTED`,
-`SEND_FAILED`, `READ_FAILED`, `SEARCH_FAILED`, `RESOLVE_FAILED`, `INFO_FAILED`,
-`TARGET_NOT_FOUND`, `AMBIGUOUS_ID`, `NOT_A_MEMBER`, `NOT_YET_AVAILABLE`,
+`SEND_ANYWAY_NOT_ELIGIBLE`, `SEND_FAILED`, `READ_FAILED`, `SEARCH_FAILED`,
+`RESOLVE_FAILED`, `INFO_FAILED`, `TARGET_NOT_FOUND`, `TARGET_ARCHIVED`,
+`AMBIGUOUS_ID`, `NOT_A_MEMBER`, `NOT_YET_AVAILABLE`,
 `OPERATOR_COMMAND_UNAVAILABLE`, `SERVER_5XX`, `INVALID_JSON_RESPONSE`,
 `INTERNAL_BUG`.
 
@@ -233,7 +234,10 @@ Flow for `message send --target <t>`:
    in-process gate). Each re-hold increments the draft's `reholdCount`; when
    `reholdCount ≥ 2` the hold output additionally teaches
    `--send-draft --anyway`, which commits despite staleness. `--anyway`
-   without `--send-draft` is rejected.
+   without `--send-draft` is rejected, and the server enforces the threshold
+   itself — `continueAnyway` on a draft with fewer than two holds fails with
+   `SEND_ANYWAY_NOT_ELIGIBLE` regardless of caller. Writes to archived
+   targets fail with `TARGET_ARCHIVED`; reads still work.
 4. **Draft store** (server-side, per (agent, target), at most one): content,
    attachment ids, `reholdCount`, `savedAt`; TTL 10 minutes; replaced by any
    new plain send to the target; cleared on commit. Send failures report
