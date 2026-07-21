@@ -2,7 +2,10 @@ import { Avatar, AvatarFallback, AvatarImage } from '../../../components/ui/avat
 import { Message, MessageContent, MessageHeader } from '../../../components/ui/message.tsx';
 import { useActorProfile } from '../../../hooks/actors/use-actor.ts';
 import { formatShortTime } from '../../../lib/format.ts';
-import { ChatTranscriptMessageContent } from '../chat-transcript-message.tsx';
+import {
+    ChatTranscriptMessageContent,
+    renderTranscriptMessageAttachments,
+} from '../chat-transcript-message.tsx';
 import type { TranscriptMessageRow } from '../chat-transcript-render-context.tsx';
 
 export function ThreadAnchorMessage({ row }: { row: TranscriptMessageRow }) {
@@ -32,6 +35,7 @@ export function ThreadAnchorMessage({ row }: { row: TranscriptMessageRow }) {
                     </MessageHeader>
                     <div className="-mt-0.5 min-w-0">
                         <ChatTranscriptMessageContent message={row.message} />
+                        {renderTranscriptMessageAttachments(row.message.attachments)}
                     </div>
                 </MessageContent>
             </Message>
