@@ -35,8 +35,16 @@ frame and can be clipped or warped with the head art.
   the pair (the alien's forehead eye).
 - `eyeScale: { w, h }` restyles a head's eyes by scaling every emotion pose's
   width/height (radii saturate, so a squarer aspect reads rounder). The alien
-  uses `{ w: 1.05, h: 0.62 }` — wide round eyes that leave its round white
+  uses `{ w: 0.9, h: 0.56 }` — wide round eyes that leave its round white
   sockets showing all around, instead of the standard tall capsule.
+- `slot: { dx, dy, s }` overrides `EYE_FRAME` for heads whose drawn eye
+  placement can't meet the standard spacing without the art overflowing the
+  480 box. Fit the art to the box first, then compute the slot from the drawn
+  eye centers (`s` = drawn spacing / 242, `dx`/`dy` = drawn midpoint − 240)
+  and an `eyeScale` that restores the drawn eye size. The robot and blob use
+  this; the knight uses a slot to sink standard-size eyes into its face window
+  so the plate's lower edge occludes the eye bottoms at rest. Heads whose
+  proportions match the standard should stay on `EYE_FRAME`.
 - `AgentFace` still accepts `ink` for currentColor-backed marks, but current
   warp-layer characters mostly use authored fill colors.
 
@@ -79,4 +87,4 @@ Replace that head's art constant in `agent-face.tsx`. No contract change.
 - Adding is additive — `character` is a stored string enum, so there is no
   migration. Renaming or removing a character orphans agents already set to it;
   prefer adding.
-- Current characters are `knight`, `owl`, `bird`, `robot`, and `alien`.
+- Current characters are `knight`, `owl`, `bird`, `robot`, `alien`, and `blob`.
