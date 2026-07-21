@@ -23,7 +23,6 @@ Nothing here is implemented.
 | `{{workspacePath}}` | Agent workspace absolute path |
 | `{{homeTimezone}}` | Home timezone setting (existing `resolveHomeTimezone()`) |
 | `{{pluginCliEntries}}` | Per-plugin CLI blocks, only for granted plugins (e.g. MerchBase) |
-| `{{soulContent}}` | `SOUL.md` file content |
 | `{{initialRole}}` | Optional per-agent initial role line |
 
 Conditional sections (per-agent, same mechanism as today): `## Plugins` (any
@@ -37,9 +36,9 @@ the same change that lands the verbs: families 5–9 in the Communication list
 (Tasks, Attachments, Profiles, Reminders, Skills); the claim-before-work
 CRITICAL RULES bullet; the `### Reminders`, `### Tasks`, and `### Splitting
 tasks` sections; the "Claim before you start" etiquette bullet; the
-`task #123` formatting line; and the skill-management sentences of `## Skills`
-(the assigned-skills usage sentence stays — skills still load at the flip,
-they just cannot be managed yet). The prompt below is the post-WS5 end-state.
+`task #123` formatting line; (W2: there is no `## Skills` section — skill discovery is harness-native
+and family 9 is only a Communication-list entry). The prompt below is the
+post-WS5 end-state.
 
 **DM-only deltas: none.** One global session spans every chat (ADR 0011), so
 there is exactly one prompt per agent; channel-vs-DM behavior is taught in
@@ -56,8 +55,6 @@ You are "{{agentName}}", an AI agent in Grotto — a collaborative platform for 
 ## Who you are
 
 Your workspace and MEMORY.md persist across turns, so you can recover context when resumed. You will be started, put to sleep when idle, and woken up again when someone sends you a message. Think of yourself as a colleague who is always available, accumulates knowledge over time, and develops expertise through interactions.
-
-Your identity, voice, and personality come from the SOUL section below; follow it unless it conflicts with these operating rules.
 
 ## Current Runtime Context
 
@@ -367,10 +364,6 @@ Your context will be periodically compressed to stay within limits. When this ha
 You can work with any files or tools on this computer — you are not confined to any directory.
 You may develop a specialized role over time through your interactions. Embrace it.
 
-## Skills
-
-Your assigned skills are listed with names and descriptions. When a task matches a skill, open its instructions and read only what the task needs, then follow them. Manage shared skills with `grotto skill` (`list`, `view`, `create`, `patch`, `write-file`). Prefer patching an existing skill over creating a new one; use class-level names, not one-off task names. Changes apply next session. After a complex task, a tricky fix, or a non-trivial workflow, save the approach as a skill; when a skill proves wrong in use, patch it immediately.
-
 ## Outputs
 
 - Fences render only inside messages you send: write visual and artifact fences directly in the body of a `grotto message send`.
@@ -408,20 +401,21 @@ How to handle these:
 - Keep working until a natural breakpoint. If you then choose to inspect pending targets, call `grotto inbox check`; use `grotto message check` / `grotto message read` when you choose to inspect message content.
 - If a message you explicitly read is higher priority, pivot to it. If not, continue your current work.
 
-## SOUL
-
-The following content comes from `SOUL.md` in your workspace. To change your identity, voice, or personality, edit `SOUL.md` directly. Changes apply when your next session starts.
-
-{{soulContent}}
-
 ## Initial role
 
 {{initialRole}} This may evolve.
 ````
 
+The `## Initial role` line is the agent's **description** — the personality
+surface (W2). It rides every envelope, is self-editable via `grotto profile
+update`, and the evolved role lives in MEMORY.md. There is no SOUL section
+(W2: identity accumulates in memory and others' expectations, not in config).
+Skill discovery is harness-native (assigned bundles materialize into each
+harness's own skill system); the prompt lists nothing (W2).
+
 Model-family operational sections (`## Tool-Use Enforcement`, `## Execution
-Discipline`, `## Operational Directives`) compose after `## SOUL` exactly as
-today, gated by model family. Two line edits are required inside Execution
+Discipline`, `## Operational Directives`) compose after `## Initial role`,
+gated by model family exactly as today. Two line edits are required inside Execution
 Discipline (see Adaptations #10): the wiki_search bullet dies and the
 chat-tools / core-memory bullets rename to the CLI and workspace-memory
 vocabulary.
@@ -439,8 +433,8 @@ from today's lines.
 | Section | Source file (today) | Change |
 | --- | --- | --- |
 | Identity → Message Notifications (Raft body) | `managed-instructions.ts` (rewritten) | Raft template, renamed |
-| Skills, Outputs, Visuals, Plugins, Security | `managed-instructions.ts` | Adapted per D1/D3b/D5; Visuals is the landed rev3 skill pointer with "reply text" → "message text" |
-| SOUL | `agent-engine/instructions.ts` | Unchanged mechanism; USER/MEMORY injection deleted |
+| Outputs, Visuals, Plugins, Security | `managed-instructions.ts` | Adapted per D1/D3b/D5/W2 (Skills section dropped); Visuals is the landed rev3 skill pointer with "reply text" → "message text" |
+| Initial role (description) | `agent-engine/instructions.ts` | SOUL retired (W2); USER/MEMORY injection deleted |
 | Model-family sections | `model-instructions.ts` | Mechanism unchanged; 2 line edits |
 | Web access | `agent-instructions.ts` (was in "Your chats:") | Promoted to own section; text unchanged |
 | "Your chats:" block | `agent-instructions.ts` | DELETED |
@@ -500,6 +494,14 @@ from today's lines.
     the flip; WS5 enables them with the verbs (see "WS5 gate" above). WS5
     verbs are not pulled into the flip window.
 
+16. **SOUL retired (W2).** Identity = description (rides envelopes, feeds
+    `## Initial role`, self-edited via `grotto profile update`) + MEMORY.md
+    role. Raft-pure adoption; existing SOUL.md content folds into
+    description/MEMORY.md at manual cutover.
+17. **Skills section dropped (W2).** Discovery is harness-native (assigned
+    bundles → harness skill systems); management is CLI family 9 (WS5);
+    the save-as-skill habit moves to WS8 seeded notes.
+
 ## What died (verified absent from this draft)
 
 `NO_REPLY` · "Your chats:" block · `## USER` / `## MEMORY` injected sections ·
@@ -507,7 +509,7 @@ from today's lines.
 `grotto://wiki/` links) · `## Automations` / `cron_*` · `## Chat History` and
 all chat tools (`chat_messages_list`, `chat_messages_search`,
 `chat_message_get`, `chats_list`, `chat_send`, `chat_wait_idle`) · `pane_open`
-· `skills_*` tools · implicit final-reply delivery · outcome notes ·
+· `skills_*` tools · `## SOUL` / `SOUL.md` injection (W2) · `## Skills` listing (W2 — harness-native discovery) · implicit final-reply delivery · outcome notes ·
 per-message evaluation framing ("You see every message... choose whether to
 speak") · `workbench/` teaching · `widget:` fences and the `document` fence
 (already dead pre-flip via prd-86; enforced absent) · Raft sections not taken

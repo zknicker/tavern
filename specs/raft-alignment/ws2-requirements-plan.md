@@ -38,6 +38,14 @@ once WS5 flips it, so the gate itself is contract-tested in both states. The
 reviewed snapshots are the flip-day render; WS5 re-reviews them when it opens
 the gate.
 
+**W2 amendment (2026-07-21, post-merge):** SOUL and the `## Skills` listing are
+retired (README ruling W2). The `### Skills, outputs, visuals` requirements lose
+their skills-listing entries (family-9 Communication entry remains, `phase: 'ws5'`);
+SOUL requirements become Initial-role/description requirements; two rows join the
+REMOVED table below. Measured budgets in this doc predate W2 — expect ~31.5k
+end-state (−895 skills/SOUL, −~110 Who-you-are sentence); `channelTotal: 32_500`
+unchanged, headroom grows. Re-measure at WS2 implementation.
+
 ## REMOVED requirements (named, per prompt-contract rule)
 
 Every entry below is a capability deliberately leaving the prompt. Grouped by
@@ -46,6 +54,8 @@ the decision that kills it.
 | Retired requirement | Killed by |
 | --- | --- |
 | `core memory files taught` (`USER.md`/`MEMORY.md` injection) | D3 — memory is workspace files, never injected |
+| `SOUL identity injection` (`SOUL.md` section + wiring sentence) | W2 — identity = description + MEMORY.md role; config personas retired |
+| `assigned skills listed in prompt` | W2 — skill discovery is harness-native; assignment gates what the harness sees |
 | `wiki recall is background context` | D3b |
 | `wiki tools taught` | D3b |
 | `wiki_search before claiming missing context` | D3b (successor: message-search-for-history requirement) |
