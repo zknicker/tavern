@@ -24,7 +24,13 @@ import type { AgentModelDraft } from './types.ts';
 import { useAgentEnvSettings } from './use-env-settings.ts';
 import { AgentWebAccessSection } from './web-access-section.tsx';
 
-export function AgentProfileTab({ agent }: { agent: AgentListOutput['agents'][number] }) {
+export function AgentProfileTab({
+    agent,
+    variant,
+}: {
+    agent: AgentListOutput['agents'][number];
+    variant: 'page' | 'pane';
+}) {
     const modelsQuery = useModelList();
     const chatsQuery = useAgentChatList({ agentId: agent.id });
     const sessionChat = selectMostRecentAgentChat(chatsQuery.data);
@@ -136,7 +142,7 @@ export function AgentProfileTab({ agent }: { agent: AgentListOutput['agents'][nu
             />
             <AgentSkillsSection agent={agent} />
             <AgentSessionSection agent={agent} />
-            <AgentDangerSection agent={agent} />
+            <AgentDangerSection agent={agent} variant={variant} />
         </div>
     );
 }

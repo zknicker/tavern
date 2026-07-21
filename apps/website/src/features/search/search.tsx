@@ -93,7 +93,7 @@ export function Search() {
                             {people.map((user) => {
                                 const name = getUserDisplayName(user);
                                 return (
-                                    <SearchRow key={user.id} to={appRoutes.members}>
+                                    <SearchRow key={user.id} to={appRoutes.membersHumans}>
                                         <Avatar className="size-5">
                                             {user.avatarUrl ? (
                                                 <AvatarImage

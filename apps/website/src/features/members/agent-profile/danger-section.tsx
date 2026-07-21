@@ -11,7 +11,13 @@ import { appRoutes } from '../../../lib/app-routes.ts';
 import type { AgentListOutput } from '../../../lib/trpc.tsx';
 import { DeleteAgentDialog } from '../../agents/delete-agent-dialog.tsx';
 
-export function AgentDangerSection({ agent }: { agent: AgentListOutput['agents'][number] }) {
+export function AgentDangerSection({
+    agent,
+    variant,
+}: {
+    agent: AgentListOutput['agents'][number];
+    variant: 'page' | 'pane';
+}) {
     const navigate = useNavigate();
     const [isDeleteOpen, setIsDeleteOpen] = useState(false);
 
@@ -31,8 +37,12 @@ export function AgentDangerSection({ agent }: { agent: AgentListOutput['agents']
             <DeleteAgentDialog
                 agent={agent}
                 onDeleted={() => {
+                    // Pane-hosted: closing the pane keeps the user in the
+                    // conversation; only the Members page redirects.
                     closeAgentProfilePanesForAgent(agent.id);
-                    navigate(appRoutes.members, { replace: true });
+                    if (variant === 'page') {
+                        navigate(appRoutes.members, { replace: true });
+                    }
                 }}
                 onOpenChange={setIsDeleteOpen}
                 open={isDeleteOpen}
