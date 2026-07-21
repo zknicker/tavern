@@ -13,9 +13,14 @@ export class AmbiguousMessageIdError extends Error {
     }
 }
 
+/**
+ * `chatIds` scopes short-id candidates to chats the caller can see, so a
+ * collision with a hidden chat's message neither fails the lookup nor leaks
+ * that the collision exists.
+ */
 export function resolveMessageId(
     idOrShortId: string,
-    input: { chatId?: string } = {},
+    input: { chatId?: string; chatIds?: string[] } = {},
     db: Database = getDb()
 ): TavernChatMessage | null {
     const exact = getMessage(idOrShortId, db);
@@ -30,11 +35,18 @@ export function resolveMessageId(
             `SELECT id FROM chat_messages
              WHERE deleted_at IS NULL
                AND lower(substr(id, 5, 8)) = lower($shortId)
-               AND ($chatId IS NULL OR chat_id = $chatId)`
+               AND ($chatId IS NULL OR chat_id = $chatId)
+               AND ($chatIdsJson IS NULL OR chat_id IN (
+                 SELECT value FROM json_each($chatIdsJson)
+               ))`
         )
-        .all(namedParams({ chatId: input.chatId ?? null, shortId: idOrShortId })) as Array<{
-        id: string;
-    }>;
+        .all(
+            namedParams({
+                chatId: input.chatId ?? null,
+                chatIdsJson: input.chatIds ? JSON.stringify(input.chatIds) : null,
+                shortId: idOrShortId,
+            })
+        ) as Array<{ id: string }>;
     const ids = rows.map((row) => row.id).filter((id) => /^msg_[A-Fa-f0-9]{32}$/u.test(id));
     if (ids.length > 1) {
         throw new AmbiguousMessageIdError();

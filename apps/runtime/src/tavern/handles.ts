@@ -44,6 +44,12 @@ export function assertValidHandle(handle: string, label = 'Handle'): void {
     }
 }
 
+/**
+ * Uniqueness is enforced against registered handles only (agents and identity
+ * users). Observed participant labels from external frontends are facts, not
+ * registrations — they never block a handle; a collision just makes handle
+ * resolution ambiguous, which fails closed at action time.
+ */
 export function assertParticipantHandleAvailable(
     handle: string,
     excludedParticipantId: string | null,
@@ -56,11 +62,6 @@ export function assertParticipantHandleAvailable(
                SELECT id FROM agents WHERE lower(name) = lower($handle)
                UNION ALL
                SELECT id FROM identity_users WHERE name IS NOT NULL AND lower(name) = lower($handle)
-               UNION ALL
-               SELECT DISTINCT id FROM chat_participants
-               WHERE kind IN ('user', 'external')
-                 AND label IS NOT NULL
-                 AND lower(label) = lower($handle)
              )
              WHERE ($excludedId IS NULL OR id != $excludedId)
              LIMIT 1`
@@ -77,6 +78,13 @@ export function assertParticipantHandleAvailable(
  * membership and authorization key on the seat, so the seat must be unique.
  */
 export function assertParticipantSeatAvailable(agentId: string, db: Database): void {
+    // Enforced at registration so the token store and wrapper injection can
+    // treat stored agent ids as path-safe single tokens by invariant.
+    if (!/^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/u.test(agentId)) {
+        throw new HandleValidationError(
+            `Agent id "${agentId}" must be a single path-safe token (letters, numbers, underscores, hyphens).`
+        );
+    }
     const seat = createAgentParticipantId(agentId);
     const rows = db
         .prepare('SELECT id FROM agents WHERE id != $agentId')

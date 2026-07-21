@@ -1,6 +1,6 @@
 import { defaultAgentDisplayName, defaultAgentEngineAgentId } from '../agent-engine/constants';
 import type { Database } from '../db/sqlite';
-import { createChat, getChat, localHumanParticipantId } from './chat-api';
+import { createAgentParticipantId, createChat, getChat, localHumanParticipantId } from './chat-api';
 
 export const defaultAgentDmChatId = 'cht_tavern_agent_dm';
 export { localHumanParticipantId } from './chat-api';
@@ -51,7 +51,7 @@ export function ensureAgentDmChat(input: { agentId: string; agentName: string; d
                     metadata: { source: 'tavern' },
                 },
                 {
-                    id: input.agentId,
+                    id: createAgentParticipantId(input.agentId),
                     kind: 'agent',
                     label: input.agentName,
                     metadata: { agentId: input.agentId, source: 'tavern' },

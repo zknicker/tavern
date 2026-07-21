@@ -240,8 +240,10 @@ Flow for `message send --target <t>`:
    until the witness pipeline (WS4/I3) attests tool-result commits, a hold
    response lost in transport leaves cursors advanced without review — the
    same show-and-hope window shipped Raft has. The CLI therefore never
-   auto-retries a send; a failed send is re-driven by the agent, and the nonce
-   keeps the redrive idempotent if the original actually committed. Each re-hold increments the draft's `reholdCount`; when
+   auto-retries a send; a failed send is re-driven by the agent. Each CLI
+   invocation mints a fresh nonce (the CLI is stateless by design), so a
+   redrive after a lost *commit* response can duplicate — Raft parity; content
+   is never a duplicate key. Reading the target first is the taught recovery. Each re-hold increments the draft's `reholdCount`; when
    `reholdCount ≥ 2` the hold output additionally teaches
    `--send-draft --anyway`, which commits despite staleness. `--anyway`
    without `--send-draft` is rejected, and the server enforces the threshold
@@ -323,6 +325,10 @@ GET  /api/agent/inbox              (inbox check — WS4)
 ```
 
 - Sends are idempotent by `nonce` (existing message dedupe rules).
+- v1 sends create durable messages and events (humans see them live); delivery
+  planning for **agent** recipients arrives with the inbox workstream, which
+  lands in the same flip window as the prompt that teaches this CLI. Until
+  then the in-process tool path remains the agent-dispatch trigger.
 - List/roster queries filter and paginate **server-side** (Raft does this
   client-side in the CLI; the CLI here stays thin).
 - 4xx bodies carry `{ code, message, nextAction? }` which the CLI renders

@@ -50,6 +50,21 @@ describe('Grotto handles', () => {
         expect(() => seedAgent('wren', 'Wren2')).toThrow('participant seat');
     });
 
+    it('rejects path-unsafe agent ids at registration', () => {
+        expect(() => seedAgent('a b', 'Spacey')).toThrow('path-safe');
+        expect(() => seedAgent('dot.ted', 'Dotty')).toThrow('path-safe');
+    });
+
+    it('never write-blocks handles against observed participant labels', () => {
+        createChat({
+            id: 'cht_discord',
+            kind: 'channel',
+            participants: [{ id: 'ext_discord_1', kind: 'external', label: 'Otto', metadata: {} }],
+            title: 'discord-bridge',
+        });
+        seedAgent('agt_otto', 'Otto');
+    });
+
     it('enforces channel handles on create and rename', () => {
         expect(() => createChat({ id: 'cht_missing', kind: 'channel' })).toThrow(
             'Channel handle is required'

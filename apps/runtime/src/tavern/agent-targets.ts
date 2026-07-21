@@ -117,6 +117,8 @@ function resolveDm(
         throw targetNotFound(`Participant @${handle} was not found.`);
     }
     const callerParticipantId = createAgentParticipantId(agentId);
+    // Agent peers are addressed by their participant seat, not their raw id.
+    const peerParticipantId = peer.kind === 'agent' ? createAgentParticipantId(peer.id) : peer.id;
     const dmRows = db
         .prepare(
             `SELECT chats.id
@@ -127,7 +129,7 @@ function resolveDm(
                AND caller.id = $callerId
                AND peer.id = $peerId`
         )
-        .all(namedParams({ callerId: callerParticipantId, peerId: peer.id })) as Array<{
+        .all(namedParams({ callerId: callerParticipantId, peerId: peerParticipantId })) as Array<{
         id: string;
     }>;
     if (dmRows.length > 1) {
@@ -159,7 +161,7 @@ function resolveDm(
                     metadata: { agentId, source: 'tavern' },
                 },
                 {
-                    id: peer.id,
+                    id: peerParticipantId,
                     kind: peer.kind,
                     label: peer.handle,
                     metadata:

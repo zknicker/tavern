@@ -3,6 +3,7 @@ import { getDb } from '../db/connection.ts';
 import type { Database } from '../db/sqlite.ts';
 import { namedParams } from '../db/sqlite.ts';
 import { getStoredAgent } from './agents-store.ts';
+import { createAgentParticipantId } from './chat-api/ids.ts';
 
 export interface AgentMessage extends TavernChatMessage {
     sender: {
@@ -46,18 +47,25 @@ export function countFormalMentions(
 }
 
 export function senderIdForHandle(handle: string, db: Database = getDb()): string | null {
+    // Message author_id stores participant seats, so agent ids map through
+    // createAgentParticipantId before they are usable as a sender filter.
     const rows = db
         .prepare(
-            `SELECT id FROM agents WHERE lower(name) = lower($handle)
+            `SELECT id, 'agent' AS kind FROM agents WHERE lower(name) = lower($handle)
              UNION ALL
-             SELECT id FROM identity_users WHERE name IS NOT NULL AND lower(name) = lower($handle)
+             SELECT id, 'user' AS kind
+             FROM identity_users WHERE name IS NOT NULL AND lower(name) = lower($handle)
              UNION ALL
-             SELECT DISTINCT id FROM chat_participants
+             SELECT DISTINCT id, 'participant' AS kind FROM chat_participants
              WHERE label IS NOT NULL AND lower(label) = lower($handle)`
         )
-        .all(namedParams({ handle })) as Array<{ id: string }>;
-    const ids = [...new Set(rows.map((row) => row.id))];
-    return ids.length === 1 ? (ids[0] ?? null) : null;
+        .all(namedParams({ handle })) as Array<{ id: string; kind: string }>;
+    const seats = [
+        ...new Set(
+            rows.map((row) => (row.kind === 'agent' ? createAgentParticipantId(row.id) : row.id))
+        ),
+    ];
+    return seats.length === 1 ? (seats[0] ?? null) : null;
 }
 
 function senderType(message: TavernChatMessage): AgentMessage['sender']['type'] {

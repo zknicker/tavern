@@ -228,6 +228,21 @@ describe('agent attested sends', () => {
         expect(sent.state).toBe('sent');
     });
 
+    it('creates one canonical DM seat for unprefixed peer ids', () => {
+        seedAgent('scout', 'Scout');
+        const first = sendAgentMessage('agt_otto', { content: 'hi', target: 'dm:@Scout' });
+        const second = sendAgentMessage('agt_otto', { content: 'again', target: 'dm:@Scout' });
+        if (first.state !== 'sent' || second.state !== 'sent') {
+            throw new Error('Expected both DM sends to commit.');
+        }
+        expect(second.message.chat_id).toBe(first.message.chat_id);
+        const scoutSends = sendAgentMessage('scout', { content: 'reply', target: 'dm:@Otto' });
+        if (scoutSends.state !== 'sent') {
+            throw new Error('Expected the peer reply to commit.');
+        }
+        expect(scoutSends.message.chat_id).toBe(first.message.chat_id);
+    });
+
     it('reports unseen rows from other targets on a fresh send and acks them', () => {
         createChat({
             id: 'cht_ops',

@@ -93,7 +93,12 @@ export function readAgentHistory(
 }
 
 export function getAgentMessage(agentId: string, id: string, db: Database = getDb()) {
-    const message = resolveMessageId(id, {}, db);
+    // Short-id resolution is scoped to the caller's chats before ambiguity is
+    // decided; full ids resolve globally and then hit the membership check.
+    const memberChatIds = listChatsForAgentParticipant(createAgentParticipantId(agentId), db).map(
+        (chat) => chat.id
+    );
+    const message = resolveMessageId(id, { chatIds: memberChatIds }, db);
     if (!message || message.deleted_at) {
         throw new AgentApiError('RESOLVE_FAILED', `Message ${id} was not found.`, 404);
     }

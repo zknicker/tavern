@@ -68,6 +68,38 @@ describe('agent message search', () => {
 
         expect(result.messages).toMatchObject([{ target: 'dm:@Otto' }]);
     });
+
+    it('filters by sender through the participant seat, unprefixed ids included', () => {
+        seedAgent('scout', 'Scout');
+        createMessage('cht_general', {
+            author_id: 'agt_scout',
+            content: 'needle from scout',
+            id: 'msg_40000000000000000000000000000000',
+            role: 'assistant',
+        });
+        const result = searchAgentMessages('agt_otto', { q: 'needle', sender: '@Scout' });
+        expect(result.messages).toMatchObject([{ id: 'msg_40000000000000000000000000000000' }]);
+    });
+
+    it('resolves a short id that collides only with a hidden chat', () => {
+        // Same 8-hex prefix as the visible general message, in a chat Otto
+        // cannot see.
+        createChat({
+            id: 'cht_private',
+            kind: 'channel',
+            participants: [agent('agt_wren', 'Wren')],
+            title: 'private',
+        });
+        createMessage('cht_private', {
+            author_id: 'agt_wren',
+            content: 'hidden twin',
+            id: 'msg_10000000ffffffffffffffffffffffff',
+            role: 'assistant',
+        });
+        expect(getAgentMessage('agt_otto', '10000000').message.id).toBe(
+            'msg_10000000000000000000000000000000'
+        );
+    });
 });
 
 describe('agent history paging', () => {
