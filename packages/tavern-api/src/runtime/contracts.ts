@@ -2587,8 +2587,6 @@ export const agentRuntimeCreateMessageSchema = z.object({
             id: z.string().trim().min(1),
             metadata: agentRuntimeMessageMetadataSchema.optional(),
             nonce: z.string().trim().min(1).optional(),
-            parentMessageId: z.string().trim().min(1).nullable().optional(),
-            threadRootId: z.string().trim().min(1).nullable().optional(),
         })
         .refine(
             (message) => message.content.trim().length > 0 || Boolean(message.attachments?.length),
@@ -2767,12 +2765,10 @@ export const agentRuntimeAgentUpdatedEventSchema = z.object({
 export const agentRuntimeChatAcceptedMessageSchema = z.object({
     id: z.string().trim().min(1),
     nonce: z.string().trim().min(1).optional(),
-    parentMessageId: z.string().trim().min(1).nullable().optional(),
     senderId: z.string().trim().min(1),
     senderName: z.string().trim().min(1),
     sequence: z.number().int().positive(),
     text: z.string().trim().min(1),
-    threadRootId: z.string().trim().min(1).nullable().optional(),
     timestamp: z.string().datetime(),
 });
 

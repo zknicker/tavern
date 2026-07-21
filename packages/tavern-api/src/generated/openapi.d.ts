@@ -39,6 +39,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/chats/{chat_id}/threads": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Ensure the thread anchored on a chat message exists. */
+        post: operations["ensureThread"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/chats/{chat_id}/follow": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Set a participant's follow state for a thread chat. */
+        put: operations["setThreadFollow"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/chats/{chat_id}/messages": {
         parameters: {
             query?: never;
@@ -271,8 +305,7 @@ export interface paths {
         get: operations["getMessage"];
         put?: never;
         post?: never;
-        /** Soft delete a message. */
-        delete: operations["deleteMessage"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -407,8 +440,10 @@ export interface components {
         Chat: {
             id: components["schemas"]["ChatId"];
             /** @enum {string} */
-            kind: "channel" | "dm" | "task";
+            kind: "channel" | "dm" | "task" | "thread";
             title: string | null;
+            parent_chat_id: components["schemas"]["ChatId"] | null;
+            anchor_message_id: components["schemas"]["MessageId"] | null;
             created_at: components["schemas"]["Timestamp"];
             updated_at: components["schemas"]["Timestamp"];
             last_activity_at: components["schemas"]["Timestamp"] | null;
@@ -425,6 +460,13 @@ export interface components {
             title?: string | null;
             participants?: components["schemas"]["Participant"][];
             metadata?: components["schemas"]["JsonObject"];
+        };
+        EnsureThreadRequest: {
+            anchor_message_id: components["schemas"]["MessageId"];
+        };
+        SetThreadFollowRequest: {
+            participant_id: components["schemas"]["ParticipantId"];
+            follow: boolean;
         };
         ListChatsResponse: {
             chats: components["schemas"]["Chat"][];
@@ -447,8 +489,6 @@ export interface components {
             content: string;
             attachments: components["schemas"]["JsonObject"][];
             nonce: string | null;
-            parent_message_id: components["schemas"]["MessageId"] | null;
-            thread_root_id: components["schemas"]["MessageId"] | null;
             delivery_id: components["schemas"]["DeliveryId"] | null;
             created_at: components["schemas"]["Timestamp"];
             deleted_at: components["schemas"]["Timestamp"] | null;
@@ -462,8 +502,6 @@ export interface components {
             content: string;
             attachments?: components["schemas"]["JsonObject"][];
             nonce?: string;
-            parent_message_id?: components["schemas"]["MessageId"] | null;
-            thread_root_id?: components["schemas"]["MessageId"] | null;
             metadata?: components["schemas"]["JsonObject"];
         };
         ChatMessageReceipt: {
@@ -534,9 +572,18 @@ export interface components {
             responses: components["schemas"]["ChatResponse"][];
             activity: components["schemas"]["ResponseActivity"][];
             artifacts: components["schemas"]["ChatArtifact"][];
+            threads: components["schemas"]["ThreadSummary"][];
             /** @description Cursor for the next older page; null at the start of history. */
             next_before_sequence: number | null;
             total_messages: number;
+        };
+        ThreadSummary: {
+            thread_chat_id: components["schemas"]["ChatId"];
+            anchor_message_id: components["schemas"]["MessageId"];
+            reply_count: number;
+            latest_reply_at: components["schemas"]["Timestamp"] | null;
+            unread_count: number;
+            followed: boolean;
         };
         ResponseActivity: {
             id: components["schemas"]["ActivityId"];
@@ -607,11 +654,6 @@ export interface components {
             reader_id: components["schemas"]["UserParticipantId"];
             last_read_sequence?: number;
         };
-        DeleteMessageReceipt: {
-            message_id: components["schemas"]["MessageId"];
-            deleted_at: components["schemas"]["Timestamp"];
-            cursor: string;
-        };
         DeleteResponseReceipt: {
             response_id: components["schemas"]["ResponseId"];
             deleted_at: components["schemas"]["Timestamp"];
@@ -628,7 +670,7 @@ export interface components {
             events: components["schemas"]["ChatEvent"][];
             next_cursor: string | null;
         };
-        ChatEvent: components["schemas"]["MessageCreatedEvent"] | components["schemas"]["MessageUpdatedEvent"] | components["schemas"]["MessageDeliveredEvent"] | components["schemas"]["MessageDeletedEvent"] | components["schemas"]["ChatReadEvent"] | components["schemas"]["ChatClearedEvent"] | components["schemas"]["ResponseDeletedEvent"] | components["schemas"]["ResponseCreatedEvent"] | components["schemas"]["ResponseUpdatedEvent"] | components["schemas"]["ResponseCompletedEvent"] | components["schemas"]["ResponseFailedEvent"] | components["schemas"]["ActivityCreatedEvent"] | components["schemas"]["ActivityUpdatedEvent"] | components["schemas"]["ActivityCompletedEvent"] | components["schemas"]["ActivityFailedEvent"] | components["schemas"]["ArtifactCreatedEvent"];
+        ChatEvent: components["schemas"]["MessageCreatedEvent"] | components["schemas"]["MessageUpdatedEvent"] | components["schemas"]["MessageDeliveredEvent"] | components["schemas"]["ChatReadEvent"] | components["schemas"]["ChatClearedEvent"] | components["schemas"]["ResponseDeletedEvent"] | components["schemas"]["ResponseCreatedEvent"] | components["schemas"]["ResponseUpdatedEvent"] | components["schemas"]["ResponseCompletedEvent"] | components["schemas"]["ResponseFailedEvent"] | components["schemas"]["ActivityCreatedEvent"] | components["schemas"]["ActivityUpdatedEvent"] | components["schemas"]["ActivityCompletedEvent"] | components["schemas"]["ActivityFailedEvent"] | components["schemas"]["ArtifactCreatedEvent"];
         EventBase: {
             id: components["schemas"]["EventId"];
             cursor: string;
@@ -652,11 +694,6 @@ export interface components {
             /** @constant */
             type: "message.delivered";
             delivery: components["schemas"]["DeliveryReceipt"];
-        };
-        MessageDeletedEvent: components["schemas"]["EventBase"] & {
-            /** @constant */
-            type: "message.deleted";
-            message_id: components["schemas"]["MessageId"];
         };
         ChatReadEvent: components["schemas"]["EventBase"] & {
             /** @constant */
@@ -835,6 +872,62 @@ export interface operations {
             default: components["responses"]["Error"];
         };
     };
+    ensureThread: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                chat_id: components["parameters"]["ChatId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EnsureThreadRequest"];
+            };
+        };
+        responses: {
+            /** @description Existing or newly created thread chat. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Chat"];
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
+    setThreadFollow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                chat_id: components["parameters"]["ChatId"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetThreadFollowRequest"];
+            };
+        };
+        responses: {
+            /** @description Current follow state. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        followed: boolean;
+                    };
+                };
+            };
+            default: components["responses"]["Error"];
+        };
+    };
     listChatMessages: {
         parameters: {
             query?: {
@@ -927,6 +1020,7 @@ export interface operations {
     getChatTimeline: {
         parameters: {
             query?: {
+                reader_id?: components["schemas"]["UserParticipantId"];
                 /** @description Exclusive upper bound on message sequence. Omit for the latest page; pass the previous page's next_before_sequence to walk older history. */
                 before_sequence?: number;
                 limit?: components["parameters"]["Limit"];
@@ -1261,29 +1355,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ChatMessage"];
-                };
-            };
-            default: components["responses"]["Error"];
-        };
-    };
-    deleteMessage: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                message_id: components["parameters"]["MessageId"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Deleted message receipt. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DeleteMessageReceipt"];
                 };
             };
             default: components["responses"]["Error"];

@@ -30,10 +30,8 @@ describe('Tavern SDK client', () => {
                         id: 'msg_1',
                         metadata: {},
                         nonce: 'nonce_1',
-                        parent_message_id: null,
                         role: 'user',
                         sequence: 1,
-                        thread_root_id: null,
                     },
                 });
             }) as typeof fetch,
@@ -54,6 +52,28 @@ describe('Tavern SDK client', () => {
         expect(requests[0].method).toBe('POST');
         expect(requests[0].url).toBe('http://runtime.test/api/chats/cht_1/messages');
         expect(await requests[0].json()).toEqual(body);
+    });
+
+    it('ensures threads and updates follow state through chat paths', async () => {
+        const requests: Request[] = [];
+        const client = createTavernClient({
+            baseUrl: 'http://runtime.test/',
+            fetch: (async (input, init) => {
+                requests.push(new Request(input, init));
+                return Response.json({ followed: true });
+            }) as typeof fetch,
+        });
+
+        await client.chat.ensureThread('cht_parent', { anchor_message_id: 'msg_anchor' });
+        await client.chat.setThreadFollow('cht_thr_anchor', {
+            follow: true,
+            participant_id: 'usr_tavern',
+        });
+
+        expect(requests.map((request) => [request.method, request.url])).toEqual([
+            ['POST', 'http://runtime.test/api/chats/cht_parent/threads'],
+            ['PUT', 'http://runtime.test/api/chats/cht_thr_anchor/follow'],
+        ]);
     });
 
     it('opens realtime sockets as live notification streams', () => {

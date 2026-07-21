@@ -22,6 +22,8 @@ describe('Tavern OpenAPI contract', () => {
         expect(Object.keys(document.paths ?? {})).toEqual([
             '/api/chats',
             '/api/chats/{chat_id}',
+            '/api/chats/{chat_id}/threads',
+            '/api/chats/{chat_id}/follow',
             '/api/chats/{chat_id}/messages',
             '/api/chats/{chat_id}/messages/search',
             '/api/chats/{chat_id}/timeline',
@@ -50,5 +52,6 @@ describe('Tavern OpenAPI contract', () => {
         expect(document.components?.schemas).toHaveProperty('ChatArtifact');
         expect(document.components?.schemas).toHaveProperty('ChatEvent');
         expect(document.components?.schemas).toHaveProperty('ChatMessageReceipt');
+        expect(document.components?.schemas).toHaveProperty('ThreadSummary');
     });
 });

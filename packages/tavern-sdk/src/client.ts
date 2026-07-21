@@ -12,6 +12,7 @@ import type {
     TavernCreateDeliveryRequest,
     TavernCreateMessageRequest,
     TavernDeleteResponseReceipt,
+    TavernEnsureThreadRequest,
     TavernEventList,
     TavernListChatsResponse,
     TavernListMessagesResponse,
@@ -19,6 +20,7 @@ import type {
     TavernMarkReadRequest,
     TavernResponseActivity,
     TavernResponseEvidence,
+    TavernSetThreadFollowRequest,
     TavernSimulateTurnReceipt,
     TavernSimulateTurnRequest,
     TavernTurnFileChangeEvidence,
@@ -30,7 +32,6 @@ import type {
 
 type TavernDeliveryReceipt = components['schemas']['DeliveryReceipt'];
 type TavernReadReceipt = components['schemas']['ReadReceipt'];
-type TavernDeleteMessageReceipt = components['schemas']['DeleteMessageReceipt'];
 type HeaderFactory = HeadersInit | (() => HeadersInit | Promise<HeadersInit>);
 
 export interface TavernClientOptions {
@@ -173,6 +174,20 @@ class TavernChatClient {
         });
     }
 
+    ensureThread(chatId: string, input: TavernEnsureThreadRequest) {
+        return this.#client.request<TavernChat>(
+            `/api/chats/${encodeURIComponent(chatId)}/threads`,
+            { body: input, method: 'POST' }
+        );
+    }
+
+    setThreadFollow(chatId: string, input: TavernSetThreadFollowRequest) {
+        return this.#client.request<{ followed: boolean }>(
+            `/api/chats/${encodeURIComponent(chatId)}/follow`,
+            { body: input, method: 'PUT' }
+        );
+    }
+
     messages(
         chatId: string,
         input: { afterSequence?: number; beforeSequence?: number; limit?: number } = {}
@@ -201,13 +216,17 @@ class TavernChatClient {
         );
     }
 
-    timeline(chatId: string, input: { beforeSequence?: number; limit?: number } = {}) {
+    timeline(
+        chatId: string,
+        input: { beforeSequence?: number; limit?: number; readerId?: string } = {}
+    ) {
         return this.#client.request<TavernChatTimelinePage>(
             `/api/chats/${encodeURIComponent(chatId)}/timeline`,
             {
                 query: {
                     before_sequence: input.beforeSequence,
                     limit: input.limit,
+                    reader_id: input.readerId,
                 },
             }
         );
@@ -393,15 +412,6 @@ class TavernMessageClient {
     get(messageId: string) {
         return this.#client.request<TavernChatMessage>(
             `/api/messages/${encodeURIComponent(messageId)}`
-        );
-    }
-
-    delete(messageId: string) {
-        return this.#client.request<TavernDeleteMessageReceipt>(
-            `/api/messages/${encodeURIComponent(messageId)}`,
-            {
-                method: 'DELETE',
-            }
         );
     }
 }
