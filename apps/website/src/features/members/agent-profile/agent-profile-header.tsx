@@ -23,10 +23,12 @@ type Agent = AgentListOutput['agents'][number];
 
 export function AgentProfileHeader({
     agent,
+    hostChatId,
     onClose,
     variant,
 }: {
     agent: Agent;
+    hostChatId?: string;
     onClose?: () => void;
     variant: 'page' | 'pane';
 }) {
@@ -40,9 +42,12 @@ export function AgentProfileHeader({
     const runId = selectAgentRunId(timeline, agent.id);
     const canStop = presence?.state === 'busy' && Boolean(presence.chatId && runId);
     const [restartOpen, setRestartOpen] = useState(false);
+    // Judged from the host chat's seat: "Replying…" only when the work is in
+    // the chat this profile is open in; "Working in <chat>…" everywhere else
+    // (the Members page has no host chat).
     const presenceLabel = presence
         ? presence.state === 'busy'
-            ? (resolveDmPresenceLabel(presence, presence.chatId ?? '') ?? 'Working…')
+            ? (resolveDmPresenceLabel(presence, hostChatId ?? '') ?? 'Working…')
             : 'Online'
         : 'Status unavailable';
 

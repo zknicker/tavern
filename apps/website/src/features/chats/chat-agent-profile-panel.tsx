@@ -20,6 +20,7 @@ export function ChatAgentProfilePanel({ chatId }: { chatId: string }) {
                     <div className="flex h-full min-h-0 flex-col" style={{ width: width ?? undefined }}>
                         <AgentProfile
                             agentId={agentId}
+                            hostChatId={chatId}
                             key={agentId}
                             onClose={() => closeAgentProfilePane(chatId)}
                             variant="pane"

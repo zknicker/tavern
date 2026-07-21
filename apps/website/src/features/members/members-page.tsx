@@ -85,7 +85,7 @@ export function MembersPage() {
                             key={selectedAgent.id}
                             variant="page"
                         />
-                    ) : (
+                    ) : agentsQuery.isPending ? null : (
                         <p className="m-auto text-muted-foreground text-sm">Member not found.</p>
                     )
                 ) : (
