@@ -142,6 +142,37 @@ describe('agent attested sends', () => {
         expect(held.shownMessages[0]?.content).toBe('update 2');
     });
 
+    it('rejects a nonce replay that points at different content or another author', () => {
+        const first = sendAgentMessage('agt_otto', {
+            content: 'original',
+            nonce: 'replay-nonce',
+            target: '#general',
+        });
+        expect(first.state).toBe('sent');
+        expect(() =>
+            sendAgentMessage('agt_otto', {
+                content: 'tampered',
+                nonce: 'replay-nonce',
+                target: '#general',
+            })
+        ).toThrow('different message');
+
+        createMessage('cht_general', {
+            author_id: 'usr_tavern',
+            content: 'peer row',
+            id: 'msg_60000000000000000000000000000001',
+            nonce: 'peer-nonce',
+            role: 'user',
+        });
+        expect(() =>
+            sendAgentMessage('agt_otto', {
+                content: 'peer row',
+                nonce: 'peer-nonce',
+                target: '#general',
+            })
+        ).toThrow('different message');
+    });
+
     it('rejects continueAnyway before repeated holds, server-side', () => {
         peerMessage('msg_40000000000000000000000000000001', 'first hold');
         expect(sendAgentMessage('agt_otto', { content: 'draft', target: '#general' }).state).toBe(

@@ -32,10 +32,12 @@ export function resolveAgentContext(
             'Run this command from a Runtime-provided agent shell.'
         );
     }
-    if (!/^agt_[A-Za-z0-9_-]+$/u.test(agentId)) {
+    // Agent ids are opaque in the public contract; require only a single
+    // path-safe token (same rule the Runtime token store applies).
+    if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/u.test(agentId)) {
         throw bootstrapError(
             'MISSING_AGENT_ID',
-            'GROTTO_AGENT_ID must use an agt_ id.',
+            'GROTTO_AGENT_ID must be a single path-safe token.',
             'Start a new agent turn so the Runtime can refresh the agent identity.'
         );
     }

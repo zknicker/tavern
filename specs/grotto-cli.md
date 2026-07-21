@@ -249,7 +249,9 @@ agent shells are ephemeral, and grotto.sh must survive machine hops.
 
 **compositionId handoff (I1).** The harness observer mints a composition id
 when it sees a `message send` streaming in tool-call args and injects it as
-`GROTTO_COMPOSITION_ID` into that tool call's shell env. The CLI forwards it in
+`GROTTO_COMPOSITION_ID` into that tool call's shell env. WS1 ships only the
+plumbing (env forwarding, wire field, metadata echo); the observer that mints
+the id lands with WS2's streaming UX. The CLI forwards it in
 the send body; `message.created` echoes it in metadata so the app swaps the
 provisional bubble for the durable message. Absent env → field omitted; the
 send is unaffected. A held send never publishes the composition commit — the

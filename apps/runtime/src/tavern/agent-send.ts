@@ -56,6 +56,19 @@ export function sendAgentMessage(
     // checked before draft resolution so retries never see SEND_DRAFT_NOT_FOUND.
     const committed = input.nonce ? findMessageByNonce(resolved.chat.id, input.nonce) : null;
     if (committed) {
+        // Idempotency covers retries of the same logical send only — a nonce
+        // pointing at someone else's message or different content is a caller
+        // bug, never a receipt.
+        if (
+            committed.author.id !== participantId ||
+            (plainContent !== null && committed.content !== plainContent)
+        ) {
+            throw new AgentApiError(
+                'SEND_FAILED',
+                'This nonce was already used for a different message.',
+                409
+            );
+        }
         return sentResponse(agentId, committed, {
             chatId: resolved.chat.id,
             participantId,

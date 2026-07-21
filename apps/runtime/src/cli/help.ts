@@ -1,4 +1,5 @@
 import runtimePackage from '../../package.json';
+import { isAgentSurfaceCommand } from './agent-commands.ts';
 import { hasAgentIdentityEnvironment } from './agent-context.ts';
 import { suggest } from './parse';
 import {
@@ -20,10 +21,14 @@ export async function runHelpCommand(name?: string): Promise<number> {
         return 0;
     }
     const command = findCommand(name);
-    if (!command) {
+    // Agent shells see only the agent surface — named help for operator
+    // commands stays hidden there, matching dispatch gating in main.ts.
+    if (!command || (hasAgentIdentityEnvironment() && !isAgentSurfaceCommand(command.name))) {
         const hint = suggest(
             name,
-            LISTED_COMMANDS.map((entry) => entry.name)
+            LISTED_COMMANDS.filter(
+                (entry) => !hasAgentIdentityEnvironment() || isAgentSurfaceCommand(entry.name)
+            ).map((entry) => entry.name)
         );
         process.stderr.write(
             `${errorBlock(

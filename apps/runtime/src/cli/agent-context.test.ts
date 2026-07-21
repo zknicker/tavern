@@ -39,11 +39,16 @@ describe('resolveAgentContext', () => {
         );
     });
 
-    test('rejects invalid agent ids', () => {
-        expectAgentError(
-            () => resolveAgentContext({ ...complete, GROTTO_AGENT_ID: 'operator' }, () => token),
-            'MISSING_AGENT_ID'
-        );
+    test('accepts opaque agent ids but rejects path-unsafe ones', () => {
+        expect(
+            resolveAgentContext({ ...complete, GROTTO_AGENT_ID: 'planner' }, () => token).agentId
+        ).toBe('planner');
+        for (const unsafe of ['../evil', 'a b', '.hidden', 'a/b']) {
+            expectAgentError(
+                () => resolveAgentContext({ ...complete, GROTTO_AGENT_ID: unsafe }, () => token),
+                'MISSING_AGENT_ID'
+            );
+        }
     });
 
     test('trims and returns the agent token', () => {

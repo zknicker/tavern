@@ -18,6 +18,14 @@ afterEach(() => {
 });
 
 describe('global help', () => {
+    test('agent shells hide named operator help too', async () => {
+        vi.stubEnv('GROTTO_AGENT_ID', 'agt_otto');
+        const readErr = capture('stderr');
+        expect(await runHelpCommand('token')).toBe(2);
+        expect(readErr()).toContain("Unknown command 'token'");
+        vi.unstubAllEnvs();
+    });
+
     test('agent shells list only the agent surface', () => {
         vi.stubEnv('GROTTO_AGENT_ID', 'agt_otto');
         const read = capture('stdout');
