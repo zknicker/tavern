@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from '../../components/ui/avatar.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import { SearchInput } from '../../components/ui/primitives/search-input.tsx';
+import { Spinner } from '../../components/ui/spinner.tsx';
 import { useAgentList } from '../../hooks/agents/use-agent-list.ts';
 import { useChatList } from '../../hooks/chats/use-chat-list.ts';
 import { useTaskList } from '../../hooks/tasks/use-task-list.ts';
@@ -50,6 +51,14 @@ export function Search() {
         agents.length > 0 ||
         people.length > 0 ||
         tasks.length > 0;
+    // "No results" is only honest once every enabled source has settled.
+    const sourcesPending =
+        chatsQuery.isPending ||
+        agentsQuery.isPending ||
+        tasksQuery.isPending ||
+        (isClerkEnabled && membersQuery.isPending);
+    const sourcesFailed =
+        chatsQuery.isError || agentsQuery.isError || tasksQuery.isError || membersQuery.isError;
 
     return (
         <main className="min-h-0 flex-1 overflow-y-auto px-8 py-12">
@@ -126,10 +135,17 @@ export function Search() {
                             ))}
                         </SearchGroup>
                     </div>
+                ) : sourcesPending ? (
+                    <div className="flex justify-center py-24">
+                        <Spinner aria-label="Searching" />
+                    </div>
                 ) : (
-                    <p className="py-24 text-center text-muted-foreground text-sm">
-                        No results for &quot;{query.trim()}&quot;
-                    </p>
+                    <div className="py-24 text-center text-muted-foreground text-sm">
+                        <p>No results for &quot;{query.trim()}&quot;</p>
+                        {sourcesFailed ? (
+                            <p className="mt-1">Some sources are unavailable right now.</p>
+                        ) : null}
+                    </div>
                 )}
             </div>
         </main>
