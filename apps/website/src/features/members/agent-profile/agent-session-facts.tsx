@@ -22,9 +22,12 @@ export function AgentSessionFacts({
     const provider = getModelProviderConfig(session.effectiveModel.provider);
     const context = getSessionContext(models, session, stats);
     const contextFacts: [string, React.ReactNode][] = context ? [['Context', context]] : [];
+    // Status renders only when it is not Active (specs/agent-profile.md).
+    const statusFacts: [string, React.ReactNode][] =
+        session.status === 'active' ? [] : [['Status', formatSessionStatus(session.status)]];
     const facts: [string, React.ReactNode][] = [
         ['Model', `${session.effectiveModel.model} · ${provider.displayName}`],
-        ['Status', formatSessionStatus(session.status)],
+        ...statusFacts,
         ...contextFacts,
         ['Turns', String(stats?.turnCount ?? 0)],
         ['Started', <RelativeTime key="started" value={session.createdAt} />],
