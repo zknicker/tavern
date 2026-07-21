@@ -81,28 +81,7 @@ export function selectMentionOptionsForQuery({
     query: string;
 }) {
     const agentOptions = filterMentionOptionsForQuery(
-        mentionableAgentIds.map((agentId) => {
-            const agent = agents.find((entry) => entry.id === agentId);
-            const label = agent?.name ?? agentId;
-            return {
-                description: 'Agent in this chat',
-                id: formatAgentReferenceTarget(agentId),
-                insertText: label.startsWith('@') ? label : `@${label}`,
-                kind: 'agent' as const,
-                label,
-                // Appearance rides in metadata so mention chips can render the
-                // agent's face without a live agent-list lookup (the composer
-                // chip mounts in its own React root, outside app providers).
-                metadata: agent?.effectiveCharacter
-                    ? {
-                          agentCharacter: agent.effectiveCharacter,
-                          agentColor: agent.effectivePrimaryColor ?? null,
-                      }
-                    : undefined,
-                projection: 'agent-reference' as const,
-                sourceLabel: 'Agents',
-            };
-        }),
+        mentionableAgentIds.map((agentId) => buildAgentMentionOption({ agentId, agents })),
         query
     );
     const inventoryOptions = inventoryData
@@ -114,6 +93,36 @@ export function selectMentionOptionsForQuery({
             : [];
 
     return [...agentOptions, ...inventoryOptions, ...pathOptions];
+}
+
+export function buildAgentMentionOption({
+    agentId,
+    agents,
+}: {
+    agentId: string;
+    agents: AgentListOutput['agents'];
+}): MentionOption {
+    const agent = agents.find((entry) => entry.id === agentId);
+    const label = agent?.name ?? agentId;
+
+    return {
+        description: 'Agent in this chat',
+        id: formatAgentReferenceTarget(agentId),
+        insertText: label.startsWith('@') ? label : `@${label}`,
+        kind: 'agent',
+        label,
+        // Appearance rides in metadata so mention chips can render the
+        // agent's face without a live agent-list lookup (the composer
+        // chip mounts in its own React root, outside app providers).
+        metadata: agent?.effectiveCharacter
+            ? {
+                  agentCharacter: agent.effectiveCharacter,
+                  agentColor: agent.effectivePrimaryColor ?? null,
+              }
+            : undefined,
+        projection: 'agent-reference',
+        sourceLabel: 'Agents',
+    };
 }
 
 export function filterMentionOptionsForQuery(options: MentionOption[], query: string) {

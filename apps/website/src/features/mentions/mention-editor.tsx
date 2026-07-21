@@ -307,14 +307,10 @@ function insertMentionOption(view: EditorView | null, option: MentionOption) {
         return;
     }
 
-    const activeQuery = getActiveQuery(view.state.doc, view.state.selection.from);
-
-    if (!activeQuery) {
-        return;
-    }
-
-    const from = view.state.selection.from - optionQueryLength(activeQuery);
-    const to = view.state.selection.from;
+    const { selection } = view.state;
+    const activeQuery = selection.empty ? getActiveQuery(view.state.doc, selection.from) : null;
+    const from = activeQuery ? selection.from - optionQueryLength(activeQuery) : selection.from;
+    const to = activeQuery ? selection.from : selection.to;
     const mention = mentionSchema.nodes.mention.create({
         id: option.id,
         kind: option.kind,
@@ -323,9 +319,16 @@ function insertMentionOption(view: EditorView | null, option: MentionOption) {
         projection: option.projection,
         text: option.insertText,
     });
+    const before = view.state.doc.textBetween(Math.max(0, from - 1), from, '\n', '\n');
     const after = view.state.doc.textBetween(to, to + 1, '\n', '\n');
-    const space = /^\s/u.test(after) ? null : mentionSchema.text(' ');
-    const replacement = space ? Fragment.fromArray([mention, space]) : Fragment.from(mention);
+    const leadingSpace =
+        activeQuery || before.length === 0 || /\s$/u.test(before) ? null : mentionSchema.text(' ');
+    const trailingSpace = /^\s/u.test(after) ? null : mentionSchema.text(' ');
+    const replacement = Fragment.fromArray(
+        [leadingSpace, mention, trailingSpace].filter(
+            (node): node is ProseMirrorNode => node !== null
+        )
+    );
     const selectionPosition = from + replacement.size;
     const transaction = view.state.tr.replaceWith(from, to, replacement);
 

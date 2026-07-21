@@ -1,10 +1,14 @@
 import { StopIcon } from '@hugeicons-pro/core-solid-rounded';
 import * as React from 'react';
-import { useChatComposerFocusRequest } from '../../commands/chat-composer-focus.ts';
+import {
+    requestChatComposerFocus,
+    useChatComposerFocusRequest,
+} from '../../commands/chat-composer-focus.ts';
 import {
     appendComposerInsert,
     useChatComposerInsertRequest,
 } from '../../commands/chat-composer-insert.ts';
+import { useChatComposerMentionRequest } from '../../commands/chat-composer-mention.ts';
 import { Icon } from '../../components/ui/icon.tsx';
 import {
     PromptInput,
@@ -29,6 +33,7 @@ import {
     MentionComposerPicker,
     useMentionComposer,
 } from '../mentions/use-mention-composer.tsx';
+import { buildAgentMentionOption } from '../mentions/use-mention-options.ts';
 import {
     ChatComposerAttachmentList,
     readComposerAttachment,
@@ -159,6 +164,19 @@ export function ChatMessageComposer({
         [setContent]
     );
     useChatComposerInsertRequest(canAutoFocusComposer && !threadTarget, handleComposerInsert);
+    const handleComposerMention = React.useCallback(
+        ({ agentId: mentionedAgentId }: { agentId: string }) => {
+            mentionComposer.handleMentionSelect(
+                buildAgentMentionOption({ agentId: mentionedAgentId, agents })
+            );
+            requestChatComposerFocus();
+        },
+        [agents, mentionComposer.handleMentionSelect]
+    );
+    useChatComposerMentionRequest(
+        canAutoFocusComposer && !threadTarget,
+        handleComposerMention
+    );
 
     async function handleSubmit(event?: React.FormEvent<HTMLFormElement>) {
         event?.preventDefault();

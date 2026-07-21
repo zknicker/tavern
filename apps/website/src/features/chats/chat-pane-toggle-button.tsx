@@ -20,7 +20,6 @@ export function ChatPaneToggleButton({ chatId }: { chatId: string }) {
     const visible =
         activeSidePane === 'artifact' && (override ?? (paneQuery.data?.targets.length ?? 0) > 0);
     const label = visible ? 'Hide artifacts' : 'Show artifacts';
-
     return (
         <Button
             aria-label={label}

@@ -1,5 +1,10 @@
 import { afterEach, expect, test } from 'bun:test';
 import {
+    closeAgentProfilePane,
+    openAgentProfilePane,
+    resetAgentProfilePanesForTest,
+} from './use-agent-profile-pane.ts';
+import {
     closeThreadPane,
     openThreadPane,
     resetThreadPanesForTest,
@@ -11,6 +16,7 @@ import {
 } from './use-chat-side-pane.ts';
 
 afterEach(() => {
+    resetAgentProfilePanesForTest();
     resetThreadPanesForTest();
     resetChatSidePanesForTest();
 });
@@ -22,6 +28,23 @@ test('the most recently opened chat side pane wins', () => {
 
     setChatSidePane('chat-1', 'artifact');
     expect(getChatSidePane('chat-1')).toBe('artifact');
+
+    openAgentProfilePane('chat-1', 'agent-1');
+    expect(getChatSidePane('chat-1')).toBe('profile');
+
+    openThreadPane('chat-1', { anchorMessageId: 'msg_2', threadChatId: null });
+    expect(getChatSidePane('chat-1')).toBe('thread');
+});
+
+test('closing the active profile restores artifacts without stealing from a thread', () => {
+    openAgentProfilePane('chat-1', 'agent-1');
+    closeAgentProfilePane('chat-1');
+    expect(getChatSidePane('chat-1')).toBe('artifact');
+
+    openAgentProfilePane('chat-1', 'agent-1');
+    openThreadPane('chat-1', { anchorMessageId: 'msg_1', threadChatId: null });
+    closeAgentProfilePane('chat-1');
+    expect(getChatSidePane('chat-1')).toBe('thread');
 });
 
 test('closing a thread restores the artifact pane for that chat only', () => {

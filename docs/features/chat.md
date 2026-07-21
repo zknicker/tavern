@@ -109,8 +109,9 @@ happen, and keep the durable timeline as context.
   messages store attachment arrays.
 * **Triggers.** `@` autocompletes Agents in the current chat; `$`
   autocompletes skills. A leading `/` is plain message text — session reset
-  actions live in agent settings. See [mentions](../../specs/mentions.md)
-  and [agent-drawer](../../specs/agent-drawer.md).
+  actions live in agent settings. Clicking an agent's transcript name inserts
+  the same typed Agent reference at the composer's cursor. See
+  [mentions](../../specs/mentions.md).
 * **Addressing.** Every agent participant evaluates every channel message —
   each seat gets its own turn and chooses whether to speak. Mentions set
   who is expected to answer; they never gate who evaluates or who can read.
@@ -130,13 +131,14 @@ happen, and keep the durable timeline as context.
   response settles as completed with a "Chose not to reply" summary and
   activity row, so the turn drawer still shows the agent saw the message.
   Channel agents are taught this; the token is honored in every chat kind.
-* **Agent drawer.** Clicking an agent avatar opens a read-only drawer with
-  the agent's global session (model, status, timing) and past sessions.
-  Session resets live in agent settings and are agent-wide
-  (specs/sessions.md); a reset lands a durable new-session notice row in the
-  agent's DM. In chat panes that notice never renders standalone — it
-  attaches to the agent's next turn as a hover affordance in the turn's
-  header actions. See [agent-drawer](../../specs/agent-drawer.md).
+* **Agent profile pane.** Clicking an agent's transcript avatar opens the
+  full six-tab Agent profile in the resizable right pane. The Artifact and
+  Agent profile panes are mutually exclusive per chat; the latest opener
+  wins without clearing either pane's state. Clicking the transcript name
+  inserts an Agent mention, while the DM topbar name remains inert. Session
+  resets stay agent-wide in Agent settings (specs/sessions.md); their durable
+  new-session notice attaches to the agent's next turn as a header-action
+  hover affordance instead of rendering standalone.
 * **Dismissal.** Failed-turn banners can be dismissed with a hover X. The
   dismissal soft-deletes the durable row in Tavern Runtime — sequence slots
   and history records are retained, and the result syncs to every client.

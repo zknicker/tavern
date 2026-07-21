@@ -31,12 +31,14 @@ export function AgentHoverCard({
     agentName,
     chatId,
     children,
+    onOpenProfile,
     triggerClassName,
 }: {
     agentId: string;
     agentName: string;
     chatId: string;
     children: React.ReactNode;
+    onOpenProfile?: () => void;
     triggerClassName?: string;
 }) {
     const [open, setOpen] = React.useState(false);
@@ -50,6 +52,10 @@ export function AgentHoverCard({
                 delay={100}
                 onClick={() => {
                     setOpen(false);
+                    if (onOpenProfile) {
+                        onOpenProfile();
+                        return;
+                    }
                     navigate(appRoutes.memberAgent(agentId));
                 }}
                 openOnHover

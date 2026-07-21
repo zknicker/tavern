@@ -3,6 +3,7 @@ import type { AgentCharacter } from '@tavern/api/agent-appearance';
 import { splitVisualFences } from '@tavern/api/widgets/visual';
 import { useReducedMotion } from 'framer-motion';
 import * as React from 'react';
+import { requestChatComposerMention } from '../../commands/chat-composer-mention.ts';
 import { ChatMessage } from '../../components/chats/chat-message.tsx';
 import { useResolvedThemeOptional } from '../../components/theme-provider.tsx';
 import { CopyButton } from '../../components/ui/copy-button.tsx';
@@ -17,6 +18,7 @@ import { useActorProfile } from '../../hooks/actors/use-actor.ts';
 import { isLocalTimelineMessageMetadata } from '../../hooks/chats/chat-timeline-messages.ts';
 import type { ChatActiveReply } from '../../hooks/chats/chat-timeline-state.ts';
 import { useChatDismiss } from '../../hooks/chats/use-chat-dismiss.ts';
+import { openAgentProfilePane } from '../../hooks/pane/use-agent-profile-pane.ts';
 import { formatShortTime } from '../../lib/format.ts';
 import { cn } from '../../lib/utils.ts';
 import { AgentWidget } from '../../widgets/render-widget.tsx';
@@ -296,18 +298,31 @@ function TurnHeader({
     actions,
     bio,
     displayName,
+    mentionAgentId,
     timestamp,
 }: {
     actions?: React.ReactNode;
     bio?: string | null;
     displayName: string;
+    mentionAgentId?: string;
     timestamp: string | null;
 }) {
     return (
         <MessageHeader className="gap-2 px-0">
-            <span className="shrink-0 truncate font-semibold text-foreground text-sm leading-5">
-                {displayName}
-            </span>
+            {mentionAgentId ? (
+                <button
+                    aria-label={`Mention ${displayName}`}
+                    className="shrink-0 cursor-pointer truncate font-semibold text-foreground text-sm leading-5 hover:underline"
+                    onClick={() => requestChatComposerMention({ agentId: mentionAgentId })}
+                    type="button"
+                >
+                    {displayName}
+                </button>
+            ) : (
+                <span className="shrink-0 truncate font-semibold text-foreground text-sm leading-5">
+                    {displayName}
+                </span>
+            )}
             {bio ? (
                 <span className="min-w-0 truncate text-muted-foreground/75 text-xs leading-5">
                     {bio.length > turnHeaderBioMaxChars
@@ -380,6 +395,7 @@ function AgentTurn({
     turnStartedAt?: string | null;
 }) {
     const actorProfile = useActorProfile(entry.actor);
+    const actorId = entry.actor?.id ?? null;
     const items = entry.items;
     const displayName = actorProfile?.name ?? getTurnFallbackName(entry) ?? 'Agent';
     const showIdentity = layout.showAgentIdentity;
@@ -439,11 +455,12 @@ function AgentTurn({
                 showIdentity ? newTurnGapClassName : followsRuntimeNotice ? 'mt-0' : null
             )}
         >
-            {chatId && entry.actor?.id ? (
+            {chatId && actorId ? (
                 <AgentHoverCard
-                    agentId={entry.actor.id}
+                    agentId={actorId}
                     agentName={displayName}
                     chatId={chatId}
+                    onOpenProfile={() => openAgentProfilePane(chatId, actorId)}
                     // self-start keeps the trigger button from stretching to
                     // the row height and re-centering the avatar it wraps.
                     triggerClassName="shrink-0 cursor-pointer self-start rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
@@ -469,6 +486,9 @@ function AgentTurn({
                         actions={headerActions}
                         bio={actorProfile?.bio}
                         displayName={displayName}
+                        mentionAgentId={
+                            actorProfile?.kind === 'agent' ? (actorId ?? undefined) : undefined
+                        }
                         timestamp={entry.timestamp}
                     />
                 ) : null}
