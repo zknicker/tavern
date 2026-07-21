@@ -59,12 +59,13 @@ Sender without a description:
 [target=<target> msg=<shortid> time=<time> type=<type>] @<sender>: <body>
 ```
 
-Suffixes, in order, when applicable:
+Suffixes, in order, when applicable (both arrive with WS5 — no envelope
+carries them at the flip):
 
 - Attachments: `[<N> attachments: <name> (id:att_…), … — use grotto attachment view to download]`
 - Task: `[task #<N> status=<status> assignee=@<handle>]` (assignee field only when assigned)
 
-System reminder fire (a normal `type=system` envelope; the parenthetical
+System reminder fire (WS5; a normal `type=system` envelope; the parenthetical
 teaching line rides directly beneath it):
 
 ```
@@ -117,8 +118,8 @@ Inbox update: <N> unread messages total; <M> changed target(s)
 ```
 
 One row per changed target. Row tags append after the latest-msg field, when
-applicable: `· task`, `· thread`, `· dm`, `· you were mentioned`. Thread rows
-use `#channel:shortid` targets; DM rows use `dm:@name`.
+applicable: `· task` (WS5), `· thread`, `· dm`, `· you were mentioned`.
+Thread rows use `#channel:shortid` targets; DM rows use `dm:@name`.
 
 Notices carry no bodies, ever. Bodies arrive only via pull (`grotto message
 check` / `message read`) or the next drain turn's envelopes.

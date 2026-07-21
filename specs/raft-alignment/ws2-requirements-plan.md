@@ -6,7 +6,14 @@ shape (executable REQUIREMENTS + reviewed file snapshots + character budgets)
 is unchanged; every entry below lands as one deliberate diff reviewed with the
 operator.
 
-Status: DRAFT for operator review. Not implemented.
+Status: DRAFT v2 — re-derived from the landed rev3-visuals baseline (main
+a20acd0c: widget catalog and `document` widget already retired pre-flip,
+Visuals is the skill pointer, current `channelTotal: 12_400`) per the
+operator's WS2-prep review rulings. Not implemented.
+
+The visuals **SKILL.md requirements block** the landed suite added (fence
+contracts, design-system rules, asserted against the skill file, not the
+prompt) is untouched by the flip and carries forward as-is.
 
 ## Fixtures
 
@@ -23,6 +30,13 @@ Dedicated tests (outside the fixtures, as today): search-capable model
 variant; Claude-family model renders no model sections; plugin-granted prompt
 teaches the per-plugin CLI entry (MerchBase); budgets; two file snapshots
 (`full-prompt.md`, `minimal-prompt.md`).
+
+**WS5 phase flag (operator ruling).** CLI families 5–9 are gated off at the
+flip (see the draft's "WS5 gate"). Requirements for gated capabilities carry
+`phase: 'ws5'`; the suite asserts them ABSENT while the gate is on and present
+once WS5 flips it, so the gate itself is contract-tested in both states. The
+reviewed snapshots are the flip-day render; WS5 re-reviews them when it opens
+the gate.
 
 ## REMOVED requirements (named, per prompt-contract rule)
 
@@ -48,8 +62,7 @@ the decision that kills it.
 | `chat_wait_idle bounded wait taught` | D5 — no such verb; reminders/threads cover waiting |
 | `dispatched turn outcomes arrive without polling` | I1 — successor: `no polling for new messages` |
 | `pane_open artifact presentation` | D5 — successor: `artifact click-to-open, no auto-open` |
-| `maintained document card taught` (`document` fence) | D3b — Wiki-backed fence dies with the Wiki |
-| `visual vs artifact ladder taught` / `visual-vs-artifact ladder in the visuals section` | Reworded (Wiki leg amputated); successor entries below |
+| `HTML ban in plain reply text` | Reworded — "reply" is dead vocabulary; successor: `HTML ban in plain message text` |
 | `script automations preferred for watchdogs` | D4 — successor: `script reminders for watchdogs` |
 | `script quiet-tick convention taught` (cron form) | D4 — successor: `script quiet tick` (reminder form) |
 | `timestamp staleness policy` (Your-chats wording) | Relocated — successor keeps the same teaching on the `time=` field |
@@ -57,6 +70,9 @@ the decision that kills it.
 
 Also leaving, requirements that never existed but text that did: `NOTES.md` /
 `## Notes` section, outcome notes, workbench teaching (see draft "What died").
+The widget-era requirements (widget entries, `document` card, fence ladders)
+already left the suite with prd-86 — they are not this program's removals and
+are not re-listed here.
 
 ## New REQUIREMENTS set
 
@@ -113,7 +129,7 @@ are the enforced dead list.
 | draft send-unchanged path | `--send-draft --target <target>\` with no stdin` | full |
 | exact target reuse on reply | `always reuse the exact \`target\` from the received message` | full |
 
-### Reminders
+### Reminders — all `phase: 'ws5'`
 
 | Capability | Expected (excerpt) | Fixture |
 | --- | --- | --- |
@@ -148,7 +164,7 @@ are the enforced dead list.
 | search before answering historical references | `first use \`grotto message search\` and \`grotto message read\`` | full |
 | admit when history is not found | `if you cannot find it, say that explicitly` | full |
 
-### Tasks
+### Tasks — all `phase: 'ws5'`
 
 | Capability | Expected (excerpt) | Fixture |
 | --- | --- | --- |
@@ -180,7 +196,7 @@ are the enforced dead list.
 | blockers before stopping | `send one minimal actionable message to that person or channel before stopping` | full |
 | skip idle narration | `avoid broadcasting that you are waiting or idle` | full |
 | inline ref rendering | `Grotto auto-renders these inline tokens` | full |
-| task #N ref form | `always write "task #N", not bare "#N"` | full |
+| task #N ref form (`phase: 'ws5'`) | `always write "task #N", not bare "#N"` | full |
 | no refs inside code spans | `do not wrap that link/ref markup in backticks` | full |
 | URL wrapping near non-ASCII text | `wrap the URL in angle brackets` | full |
 
@@ -198,25 +214,23 @@ are the enforced dead list.
 | unconfined computer access | `not confined to any directory` | full |
 | role evolution | `develop a specialized role over time` | full |
 
-### Skills, outputs, visuals, widgets
+### Skills, outputs, visuals
+
+Skill-management rows are `phase: 'ws5'` (the assigned-skills usage row is
+not — skills still load at the flip).
 
 | Capability | Expected (excerpt) | Fixture |
 | --- | --- | --- |
-| skill CLI taught | `\`grotto skill list\`, \`grotto skill view\`, \`grotto skill create\`` | full |
-| patch over create | `Prefer patching an existing skill over creating a new one` | full |
-| save learned workflows as skills | `save the approach as a skill` | full |
+| assigned skills usage | `open its instructions and read only what the task needs` | full |
+| skill CLI taught (`phase: 'ws5'`) | `\`grotto skill\` (\`list\`, \`view\`, \`create\`, \`patch\`, \`write-file\`)` | full |
+| patch over create (`phase: 'ws5'`) | `Prefer patching an existing skill over creating a new one` | full |
+| save learned workflows as skills (`phase: 'ws5'`) | `save the approach as a skill` | full |
 | fences ride send bodies | `directly in the body of a \`grotto message send\`` | full |
 | workspace links | `grotto://workspace/path` | full |
-| artifact click-to-open, no auto-open | `Nothing auto-opens.` | full |
-| visual fence taught | `` ```visual Weekly sales `` | full |
-| visuals design-skill routing | `visuals-charts for charts and data graphics, visuals-diagrams for diagrams` | full |
-| visuals are self-contained snapshots | `Embed all data inline` | full |
-| HTML ban outside visual fences | `Never output HTML, JSX, CSS, imports, or class names outside a \`visual\` fence.` | full |
-| widget fence contract | `containing exactly one JSON object of props` | full |
-| widget default for tabular answers | `Use a widget by default when an answer is primarily tabular` | full |
-| table widget over Markdown tables | `Use widget:table instead of Markdown tables` | full |
-| artifact fence taught | `emit a bare \`artifact\` fence` | full |
-| html-preview widget taught | `widget:html-preview — ` | full |
+| artifact click-to-open, no auto-open | `nothing auto-opens` | full |
+| rendering surfaces named (visuals, artifacts) | `render inline visuals (bespoke HTML/SVG) and artifact pages` | full |
+| visuals skill is a mandatory pre-fence read | `Before emitting any visual or artifact fence, read the visuals skill` | full |
+| HTML ban in plain message text | `Never output HTML, JSX, CSS, imports, or class names in plain message text.` | full |
 
 ### Security, web, notifications
 
@@ -251,7 +265,7 @@ All `absent: true`. This is the "what dies must be verifiably absent" gate.
 | no USER.md surface | `USER.md` | full |
 | no injected memory section | `## MEMORY` (exact header) | full |
 | no NOTES.md surface | `NOTES.md` | full |
-| no document fence | `document — ` | full |
+| no widget fences | `widget:` | full |
 | no workbench teaching | `workbench` | full |
 | no wiki links | `grotto://wiki` | full |
 | no evaluation framing | `choose whether to speak` | full |
@@ -264,78 +278,66 @@ regex (`/^## MEMORY$/m`), not the filename.
 
 ## Budgets
 
-### Measured draft (fixture: full — plugin-free, gpt-family model, default SOUL)
+**Operator ruling: `channelTotal: 32_500`** (post-WS5 end-state; supersedes
+D7's 28k, which predated the audit finding that Raft's own rendered prompt is
+31,056 chars and the §1 "taken" slice alone ~27,600). The draft measures
+**32,485** end-state and **24,670** at the flip with the WS5 gate on
+(fixture: full — plugin-free, gpt-family model, default SOUL). For scale: the
+landed pre-flip prompt budget is 12,400.
+
+### Measured draft (end-state)
 
 | Section | Measured chars |
 | --- | --- |
 | Identity + Who you are + Current Runtime Context | 1,026 |
 | Communication — CLI ONLY (incl. credential hygiene, CRITICAL RULES) | 3,065 |
 | Startup sequence | 1,690 |
-| Messaging (header contract) | 1,981 |
+| Messaging (header contract) | 1,948 |
 | Sending messages | 1,569 |
-| Reminders | 1,924 |
+| Reminders (ws5) | 1,924 |
 | Threads | 1,526 |
 | Discovering people and channels | 1,529 |
 | Channel awareness | 503 |
 | Reading history | 345 |
 | Historical references | 377 |
-| Tasks | 3,812 |
-| Splitting tasks | 703 |
+| Tasks (ws5) | 3,812 |
+| Splitting tasks (ws5) | 703 |
 | @Mentions | 414 |
 | Communication style + etiquette + formatting | 2,974 |
 | Workspace & Memory (incl. MEMORY.md/organize/compaction) | 3,990 |
 | Capabilities | 197 |
-| Skills | 682 |
-| Outputs | 795 |
-| Visuals | 831 |
-| Widgets (incl. catalog, minus `document`) | 3,447 |
+| Skills | 552 |
+| Outputs | 418 |
+| Visuals (landed rev3 pointer) | 328 |
 | Security | 345 |
 | Web access | 303 |
 | Message Notifications | 1,002 |
 | SOUL (framing + default SOUL.md) | 343 |
 | Initial role | 56 |
 | Model-family sections (gpt fixture: enforcement + discipline) | 1,620 |
-| **Total** | **37,049** |
+| **Total (end-state / flip-day)** | **32,485 / 24,670** |
 
-### The 28k conflict (operator decision required)
+### Sub-budgets (under channelTotal 32,500)
 
-D7 set `channelTotal: 28_000`. The audit shows that cap cannot hold the §1
-"taken" table: **Raft's own rendered prompt is 31,056 chars**, and the taken
-slice alone (minus the third-party-integrations section and the
-profile-resolution paragraph) is **~27,600 chars** — the whole budget before
-any Grotto-added section. The additions (Skills, Outputs, Visuals, Widgets,
-Security, Web, SOUL framing, model sections) measure ~8,400.
-
-Options:
-
-1. **Raise `channelTotal` to 38,000** (recommended). Honors "verbatim modulo
-   naming"; the prompt is per-session and prompt-cached, so the marginal spend
-   is far below per-turn cost. Sub-budgets below assume this.
-2. Trim the taken sections (~9k to find; Tasks 3.8k and Workspace & Memory
-   4.0k are the only meaningful targets) — breaks verbatim adoption and
-   re-opens wording judgment Raft already paid to tune.
-3. Cut Grotto additions — Widgets (3.4k) is the only lever that matters, and
-   it is load-bearing product surface.
-
-### Proposed sub-budgets (under channelTotal 38,000)
-
-Grouped ceilings, small headroom over measured; raising any one is the same
-deliberate-spend decision as today.
+Grouped ceilings over the end-state render, small headroom over measured;
+raising any one is the same deliberate-spend decision as today. The budget
+test asserts the end-state render (WS5 gate forced open in the fixture) so
+the ceilings stay meaningful across the gate.
 
 | Sub-budget | Ceiling | Covers (measured) |
 | --- | --- | --- |
-| `identityAndContext` | 1,200 | 1,026 |
+| `identityAndContext` | 1,200 | 1,001 |
 | `cliContract` | 3,300 | 3,065 |
 | `startupAndTurns` | 1,800 | 1,690 |
-| `messaging` | 13,000 | 12,760 (Messaging → Splitting) |
-| `mentionsAndStyle` | 3,600 | 3,388 |
+| `messaging` | 14,500 | 14,200 (Messaging → Splitting) |
+| `mentionsAndStyle` | 3,600 | 3,375 |
 | `workspaceMemory` | 4,200 | 3,990 |
-| `capabilitiesSkills` | 1,000 | 879 |
-| `outputsVisualsWidgets` | 5,400 | 5,073 |
+| `capabilitiesSkills` | 900 | 749 |
+| `outputsVisuals` | 900 | 746 |
 | `securityWebNotifications` | 1,800 | 1,650 |
 | `soulAndRole` | 600 | 399 (default SOUL only; SOUL.md content is user-authored and excluded, as today) |
 | `modelFamily` | 1,700 | 1,620 |
-| **`channelTotal`** | **38,000** | 37,049 |
+| **`channelTotal`** | **32,500** | 32,485 |
 
 Enforcement mechanics as today: slice the rendered fixture prompt on the known
 section headers and assert each group ceiling plus the total. The `## Plugins`

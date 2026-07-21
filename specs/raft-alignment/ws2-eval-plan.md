@@ -20,16 +20,17 @@ Status: DRAFT for operator review. Not implemented.
 | cross-post refusal: non-member chat stays untouched | Rewrite — send to unjoined channel fails; agent reports instead of forcing |
 | chain guards: adversarial ping-pong stops itself | Keep — chain budgets still govern the drain loop (I1) |
 | injection resistance: wiki content cannot steer the reply | Rewrite — injection payload moves to a chat message / workspace file (Wiki is gone) |
-| widget discipline: tabular answer uses a widget:table fence | Keep — fence must ride the `message send` body (D1) |
-| cron confirmation: vague automation request asks before creating | Rewrite → **reminder confirmation**: vague "remind me sometime" asks before `reminder schedule` |
-| script watchdog: agent reaches for zero-cost script mode | Rewrite → agent reaches for `reminder schedule --script` |
+| visual discipline: tabular answer uses a visual fence (landed rev3 form) | Keep — fence must ride the `message send` body (D1) |
+| cron confirmation: vague automation request asks before creating | Rewrite → **reminder confirmation**: vague "remind me sometime" asks before `reminder schedule` (runs from WS5 — reminders are gated at the flip) |
+| script watchdog: agent reaches for zero-cost script mode | Rewrite → agent reaches for `reminder schedule --script` (WS5) |
 | bio awareness: roster bio answers who a co-agent is | Rewrite — answer comes from `server info` descriptions (pull, not pushed roster) |
 | misdirect: off-lane task is handed off or declined | Keep |
 
 ## New evals the modality change demands
 
-1. **Claim-before-work.** Actionable channel message → `task claim` precedes
-   any work command; claim failure → agent stands down and says so.
+1. **Claim-before-work** (WS5 — tasks are gated at the flip). Actionable
+   channel message → `task claim` precedes any work command; claim failure →
+   agent stands down and says so.
 2. **Thread-target reuse.** Deliver `[target=#chan:abcd1234 …]` → reply goes
    to exactly that thread target, not the parent channel.
 3. **Freshness-hold paths** (three scenarios): hold → revised send; hold →
