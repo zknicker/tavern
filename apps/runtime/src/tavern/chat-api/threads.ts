@@ -174,8 +174,20 @@ export function membershipChat(chat: TavernChat, db: Database = getDb()): Tavern
 export function threadSummaries(
     parentChatId: string,
     readerId: string,
-    db: Database = getDb()
+    db: Database = getDb(),
+    anchorMessageIds?: readonly string[]
 ): TavernThreadSummary[] {
+    if (anchorMessageIds && anchorMessageIds.length === 0) {
+        return [];
+    }
+    const anchorParams = Object.fromEntries(
+        (anchorMessageIds ?? []).map((id, index) => [`anchor${String(index)}`, id])
+    );
+    const anchorFilter = anchorMessageIds
+        ? ` AND thread_chats.anchor_message_id IN (${Object.keys(anchorParams)
+              .map((key) => `$${key}`)
+              .join(', ')})`
+        : '';
     const rows = db
         .prepare(
             `SELECT thread_chats.id AS thread_chat_id,
@@ -201,11 +213,11 @@ export function threadSummaries(
                ON thread_reads.chat_id = thread_chats.id
               AND thread_reads.reader_id = $readerId
              WHERE thread_chats.kind = 'thread'
-               AND thread_chats.parent_chat_id = $parentChatId
+               AND thread_chats.parent_chat_id = $parentChatId${anchorFilter}
              GROUP BY thread_chats.id, thread_chats.anchor_message_id
              ORDER BY thread_chats.id ASC`
         )
-        .all(namedParams({ parentChatId, readerId })) as ThreadSummaryRow[];
+        .all(namedParams({ ...anchorParams, parentChatId, readerId })) as ThreadSummaryRow[];
 
     return rows.map((row) => ({
         anchor_message_id: row.anchor_message_id,

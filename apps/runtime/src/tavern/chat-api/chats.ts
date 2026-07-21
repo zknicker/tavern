@@ -18,6 +18,9 @@ export function createChat(input: TavernCreateChatRequest, db: Database = getDb(
     assertTavernIdPrefix(input.id, 'cht_', 'Chat id');
     const existing = getChat(input.id, db);
     if (existing) {
+        if (existing.kind === 'thread') {
+            throw new Error(`Chat ${input.id} is a thread; thread chats cannot be updated here.`);
+        }
         const kind = input.kind ?? existing.kind;
         const participants = input.participants ?? existing.participants;
         validateChatShape({ kind, participants });

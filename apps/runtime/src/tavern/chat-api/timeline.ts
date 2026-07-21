@@ -71,7 +71,14 @@ export function getChatTimelinePage(
                 ? oldestSequence
                 : null,
         responses,
-        threads: threadSummaries(chatId, readerId, db),
+        // Only this page's anchors need summaries; the consumer attaches
+        // them to in-window message rows and nothing else.
+        threads: threadSummaries(
+            chatId,
+            readerId,
+            db,
+            messageRows.map((row) => row.id)
+        ),
         total_messages: countMessages(chatId, db),
     };
 }
