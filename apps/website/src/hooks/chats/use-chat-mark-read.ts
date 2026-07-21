@@ -7,12 +7,14 @@ import { useChatRuntimeTimelineState } from './use-timeline-context.tsx';
  * open and whenever new messages land while it stays open. The sidebar's
  * unread pill zeroes optimistically; the next chat.list refetch reconciles.
  */
-export function useMarkChatReadOnView(chatId: string) {
+export function useMarkChatReadOnView(chatId: string, options: { enabled?: boolean } = {}) {
+    const enabled = options.enabled ?? true;
     const timeline = useChatRuntimeTimelineState(chatId);
     const markRead = useMarkChatRead();
     const mutate = markRead.mutate;
     const lastMarkedRef = React.useRef<string | null>(null);
-    const viewKey = timeline.historyLoaded ? `${chatId}:${timeline.totalMessages}` : null;
+    const viewKey =
+        enabled && timeline.historyLoaded ? `${chatId}:${timeline.totalMessages}` : null;
 
     React.useEffect(() => {
         if (!viewKey || lastMarkedRef.current === viewKey) {

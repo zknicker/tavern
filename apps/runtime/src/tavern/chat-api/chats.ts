@@ -174,7 +174,11 @@ export function listChats(
     };
 }
 
-/** Chats where the given agent participant holds a seat, oldest id first. */
+/**
+ * Chats visible to the given agent participant, oldest id first. Membership
+ * lives on the parent for thread chats, and a thread only surfaces while the
+ * agent follows it — incidental child participant rows never count.
+ */
 export function listChatsForAgentParticipant(
     participantId: string,
     db: Database = getDb()
@@ -186,9 +190,16 @@ export function listChatsForAgentParticipant(
                     NULL AS unread_count,
                     NULL AS active_turn_participant_ids
              FROM chats
-             JOIN chat_participants ON chat_participants.chat_id = chats.id
-             WHERE chat_participants.id = $participantId
-               AND chat_participants.kind = 'agent'
+             JOIN chat_participants
+               ON chat_participants.chat_id = COALESCE(chats.parent_chat_id, chats.id)
+              AND chat_participants.id = $participantId
+              AND chat_participants.kind = 'agent'
+             WHERE chats.kind != 'thread'
+                OR EXISTS (
+                    SELECT 1 FROM thread_follows
+                    WHERE thread_follows.thread_chat_id = chats.id
+                      AND thread_follows.participant_id = $participantId
+                )
              ORDER BY chats.id ASC`
         )
         .all(namedParams({ participantId })) as ChatRow[];

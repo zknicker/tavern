@@ -81,8 +81,13 @@ export function isBlockingActiveTurn(input: {
 function SyncedAgentChatDetail({ chat, chatId }: { chat: ChatListItem; chatId: string }) {
     const agentsQuery = useAgentList();
     const modelsQuery = useModelList();
-    // Viewing the chat reads it: receipt on open and on each new message.
-    useMarkChatReadOnView(chatId);
+    const activeSidePane = useChatSidePane(chatId);
+    const threadPane = useThreadPane(chatId);
+    const threadTakeover = useViewportBelow(1024);
+    const threadOpen = activeSidePane === 'thread' && threadPane !== null;
+    // Viewing the chat reads it: receipt on open and on each new message —
+    // except while the thread takeover hides the parent transcript entirely.
+    useMarkChatReadOnView(chatId, { enabled: !(threadOpen && threadTakeover) });
     const agentId = resolveChatAgentId(chat);
     const agents = agentsQuery.data?.agents ?? [];
     const agent = agents.find((entry) => entry.id === agentId) ?? null;
@@ -100,10 +105,6 @@ function SyncedAgentChatDetail({ chat, chatId }: { chat: ChatListItem; chatId: s
           })
         : null;
     const artifactPanel = useChatArtifactPanelState(chatId);
-    const activeSidePane = useChatSidePane(chatId);
-    const threadPane = useThreadPane(chatId);
-    const threadTakeover = useViewportBelow(1024);
-    const threadOpen = activeSidePane === 'thread' && threadPane !== null;
     const artifactOpen = activeSidePane === 'artifact' && artifactPanel.visible;
     const threadPanel = (
         <ThreadPanel

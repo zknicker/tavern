@@ -13,6 +13,7 @@ import {
     getChat,
     getChatTimelinePage,
     listChats,
+    listChatsForAgentParticipant,
     markRead,
     membershipChat,
     setThreadFollow,
@@ -213,6 +214,19 @@ describe('thread chats', () => {
         expect(membershipChat(threadChat)?.participants.map((seat) => seat.id)).toContain(
             'agt_one'
         );
+
+        // Agent thread enumeration follows parent seats + follows: posting in
+        // the thread alone (incidental child row) is not enough once
+        // unfollowed, while a followed thread lists without any post.
+        expect(listChatsForAgentParticipant('agt_one').map((c) => c.id)).toEqual(['cht_parent']);
+        setThreadFollow({ follow: true, participantId: 'agt_one', threadChatId: thread.id });
+        expect(listChatsForAgentParticipant('agt_one').map((c) => c.id)).toEqual([
+            'cht_parent',
+            thread.id,
+        ]);
+        seedMessage(thread.id, 'msg_agent_post', 'agt_one');
+        setThreadFollow({ follow: false, participantId: 'agt_one', threadChatId: thread.id });
+        expect(listChatsForAgentParticipant('agt_one').map((c) => c.id)).toEqual(['cht_parent']);
     });
 
     it('summarizes replies and rolls only followed unread replies into the parent', () => {
