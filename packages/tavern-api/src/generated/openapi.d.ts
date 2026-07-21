@@ -465,7 +465,8 @@ export interface components {
             anchor_message_id: components["schemas"]["MessageId"];
         };
         SetThreadFollowRequest: {
-            participant_id: components["schemas"]["ParticipantId"];
+            /** @description Follows track human and agent attention only; system and external participants never follow threads. */
+            participant_id: string;
             follow: boolean;
         };
         ListChatsResponse: {

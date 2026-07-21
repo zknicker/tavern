@@ -35,6 +35,9 @@ export function createTavernChatActionTools(input: {
 }): ToolSet {
     const participantId = createAgentParticipantId(input.agentId);
 
+    // Deliberately no thread attention verbs (unfollow etc.): those arrive as
+    // agent CLI commands with the inbox workstream, not as engine tools —
+    // this toolset is shrinking toward the zero-tool cutover, not growing.
     return {
         chat_send: tool({
             description:

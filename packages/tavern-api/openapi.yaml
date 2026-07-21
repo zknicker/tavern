@@ -858,7 +858,11 @@ components:
       required: [participant_id, follow]
       properties:
         participant_id:
-          $ref: '#/components/schemas/ParticipantId'
+          type: string
+          pattern: '^(usr_|agt_)'
+          description: >-
+            Follows track human and agent attention only; system and external
+            participants never follow threads.
         follow:
           type: boolean
     ListChatsResponse:

@@ -110,7 +110,9 @@ export function ChatMessageComposer({
         hasDraftPayload: hasPayload,
         isReplyActive,
     });
-    const useMainDropTarget = !isCompact;
+    // Thread composers coexist with the parent's composer; only one may own
+    // the app-shell drop target or a drop lands in both drafts.
+    const useMainDropTarget = !(isCompact || threadTarget);
     const attachmentDrop = useComposerFileDrop({
         disabled: isComposerBlocked || !canSendToRuntime,
         onFiles: addSelectedAttachments,
