@@ -83,9 +83,7 @@ function renderFormula(input) {
     bin.install "bin/grotto"
     bin.install "bin/grotto-runtime"
     (share/"grotto").install "share/grotto/runtime-assets"
-    (share/"grotto/node_modules/@tavern").install "share/grotto/node_modules/@tavern/sdk"
-    (share/"grotto/node_modules/@tobilu").install "share/grotto/node_modules/@tobilu/qmd"
-    (share/"grotto/node_modules").install "share/grotto/node_modules/agent-browser"
+    (share/"grotto").install "share/grotto/node_modules"
     (etc/"grotto").mkpath
     (var/"log/grotto").mkpath
   end

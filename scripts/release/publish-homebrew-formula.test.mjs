@@ -5,10 +5,8 @@ import test from 'node:test';
 
 const formulaPublisherPath = path.resolve(import.meta.dirname, 'publish-homebrew-formula.mjs');
 
-test('generated formula installs every external Runtime package', async () => {
+test('generated formula installs the complete external Runtime package tree', async () => {
     const source = await fs.readFile(formulaPublisherPath, 'utf8');
 
-    assert.match(source, /share\/grotto\/node_modules\/@tavern\/sdk/u);
-    assert.match(source, /share\/grotto\/node_modules\/@tobilu\/qmd/u);
-    assert.match(source, /share\/grotto\/node_modules\/agent-browser/u);
+    assert.match(source, /\(share\/"grotto"\)\.install "share\/grotto\/node_modules"/u);
 });
