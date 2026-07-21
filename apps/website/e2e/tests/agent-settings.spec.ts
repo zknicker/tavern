@@ -1,10 +1,14 @@
 import type { Page } from '@playwright/test';
 import { expect, test } from '../support/test.ts';
 
-test('agent settings hide unsupported legacy engine controls', async ({ page }) => {
+test('legacy agent settings routes land on the Members profile', async ({ page }) => {
     await page.goto('/settings/agent');
+    await expect(page).toHaveURL(/\/members/);
+
+    await openPrimaryAgentProfile(page);
 
     await expect(page.getByRole('combobox', { name: 'Agent model' })).toBeVisible();
+    // Unsupported legacy engine controls stay hidden in the profile.
     await expect(page.getByText('Fallback models')).toHaveCount(0);
     await expect(page.getByText('Web page summarizer')).toHaveCount(0);
     await expect(page.getByText('Context compression')).toHaveCount(0);
@@ -18,7 +22,7 @@ test('agent model select saves and reflects the selected Runtime model', async (
     const originalModel = await readPrimaryAgentModel();
     const targetModel = { label: 'GPT-5.5 openai', model: 'gpt-5.5', provider: 'openai' };
 
-    await page.goto('/settings/agent');
+    await openPrimaryAgentProfile(page);
     await expect(page.getByText('Thinking')).toBeVisible();
 
     try {
@@ -39,6 +43,19 @@ test('agent model select saves and reflects the selected Runtime model', async (
         await restorePrimaryAgentModel(page, originalModel);
     }
 });
+
+// The Members page hosts the per-agent profile; the primary (first seeded)
+// agent's row opens /members/agents/:agentId.
+async function openPrimaryAgentProfile(page: Page) {
+    const primary = await readPrimaryAgentModel();
+
+    if (!primary) {
+        throw new Error('No seeded agent available.');
+    }
+
+    await page.goto(`/members/agents/${primary.agentId}`);
+    await expect(page.getByRole('tab', { name: 'Profile' })).toBeVisible();
+}
 
 function agentModelSelect(page: Page) {
     return page.getByRole('combobox', { name: 'Agent model' });
@@ -85,7 +102,7 @@ async function restorePrimaryAgentModel(
         return;
     }
 
-    await page.goto('/settings/agent');
+    await openPrimaryAgentProfile(page);
     const modelSelect = agentModelSelect(page);
     await expect(modelSelect).toBeVisible();
     await modelSelect.click();
