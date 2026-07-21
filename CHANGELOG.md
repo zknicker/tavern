@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.5.5 - 2026-07-21
+
+- Runtime: Homebrew installs now package and load Wiki recall correctly,
+  including its external dependencies, and shut down cleanly on macOS.
+
 ## v1.5.4 - 2026-07-20
 
 - App: Google sign-in now completes reliably in the desktop app when Clerk
