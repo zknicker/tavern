@@ -1,4 +1,4 @@
-import { runtimeRoutes } from '@tavern/api';
+import { runtimeRoutes, type TavernCreateChatRequest } from '@tavern/api';
 import { developmentChatDemoIds } from '@tavern/api/development-chat-demos';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { closeDb, getDb, initTestDb } from '../db/connection';
@@ -11,9 +11,9 @@ import {
 } from './bootstrap-chats';
 import {
     clearChat,
-    createChat,
     createDelivery,
     createMessage,
+    createChat as createRuntimeChat,
     deleteResponse,
     getChat,
     getResponse,
@@ -216,7 +216,7 @@ describe('Tavern Runtime Chat API store', () => {
                     displayName: 'Demo: Artifact Links',
                 },
             },
-            title: 'Demo: Artifact Links',
+            title: 'demo-artifact-links',
         });
         createMessage(
             'cht_demo_artifact_links',
@@ -364,7 +364,7 @@ describe('Tavern Runtime Chat API store', () => {
                 { id: 'usr_tavern', kind: 'user', label: 'You', metadata: {} },
                 { id: 'agt_primary', kind: 'agent', label: 'Tavern', metadata: {} },
             ],
-            title: '#general',
+            title: 'general',
         });
         createChat({
             id: 'cht_dm',
@@ -383,7 +383,7 @@ describe('Tavern Runtime Chat API store', () => {
                 { id: 'agt_primary', kind: 'agent', label: 'Tavern' },
                 { id: 'usr_tavern', kind: 'user', label: 'You' },
             ],
-            title: '#general',
+            title: 'general',
         });
         expect(getChat('cht_dm')).toMatchObject({
             id: 'cht_dm',
@@ -1225,7 +1225,9 @@ describe('Tavern Runtime Chat API routes', () => {
     });
 
     it('searches durable messages through the chat API route', async () => {
-        await handleTavernRuntimeRequest(jsonRequest('POST', '/api/chats', { id: 'cht_1' }));
+        await handleTavernRuntimeRequest(
+            jsonRequest('POST', '/api/chats', { id: 'cht_1', title: 'test' })
+        );
         await handleTavernRuntimeRequest(
             jsonRequest(
                 'POST',
@@ -1253,7 +1255,9 @@ describe('Tavern Runtime Chat API routes', () => {
     });
 
     it('filters private event lists by recipient', async () => {
-        await handleTavernRuntimeRequest(jsonRequest('POST', '/api/chats', { id: 'cht_1' }));
+        await handleTavernRuntimeRequest(
+            jsonRequest('POST', '/api/chats', { id: 'cht_1', title: 'test' })
+        );
         await handleTavernRuntimeRequest(
             jsonRequest(
                 'POST',
@@ -1284,7 +1288,9 @@ describe('Tavern Runtime Chat API routes', () => {
     });
 
     it('returns runtime projection events from the durable chat event log', async () => {
-        await handleTavernRuntimeRequest(jsonRequest('POST', '/api/chats', { id: 'cht_1' }));
+        await handleTavernRuntimeRequest(
+            jsonRequest('POST', '/api/chats', { id: 'cht_1', title: 'test' })
+        );
         await handleTavernRuntimeRequest(
             jsonRequest('POST', '/api/chats/cht_1/messages', {
                 ...messageInput('msg_1', 'nonce_1', 'hello'),
@@ -1318,7 +1324,9 @@ describe('Tavern Runtime Chat API routes', () => {
     });
 
     it('filters runtime projection events after a durable cursor', async () => {
-        await handleTavernRuntimeRequest(jsonRequest('POST', '/api/chats', { id: 'cht_1' }));
+        await handleTavernRuntimeRequest(
+            jsonRequest('POST', '/api/chats', { id: 'cht_1', title: 'test' })
+        );
         for (const index of [1, 2]) {
             await handleTavernRuntimeRequest(
                 jsonRequest('POST', '/api/chats/cht_1/messages', {
@@ -1343,6 +1351,14 @@ describe('Tavern Runtime Chat API routes', () => {
         });
     });
 });
+
+function createChat(input: TavernCreateChatRequest) {
+    const kind = input.kind ?? 'channel';
+    return createRuntimeChat({
+        ...input,
+        ...(kind === 'channel' && !input.title ? { title: input.id.replace(/^cht_/u, '') } : {}),
+    });
+}
 
 function messageInput(id: string, nonce: string | undefined, content: string) {
     return {

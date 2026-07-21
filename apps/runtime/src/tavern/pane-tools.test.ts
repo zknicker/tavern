@@ -40,7 +40,7 @@ describe('pane tools', () => {
             metadata: { agentId: 'agt_otto' },
         };
         createChat({ id: 'cht_dm', kind: 'dm', participants: [user, otto], title: 'Otto' });
-        createChat({ id: 'cht_other', kind: 'channel', participants: [user], title: 'No seat' });
+        createChat({ id: 'cht_other', kind: 'channel', participants: [user], title: 'no-seat' });
     });
 
     afterEach(async () => {

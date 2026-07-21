@@ -7,6 +7,7 @@ import type {
 import { getDb } from '../../db/connection.ts';
 import type { Database } from '../../db/sqlite.ts';
 import { namedParams, optionalRow } from '../../db/sqlite.ts';
+import { assertChannelHandleAvailable, HandleValidationError } from '../handles.ts';
 import { assertTavernIdPrefix, localHumanParticipantId } from './ids.ts';
 import { clampLimit } from './limits.ts';
 import type { ChatRow, ParticipantRow } from './types.ts';
@@ -26,6 +27,7 @@ export function createChat(input: TavernCreateChatRequest, db: Database = getDb(
         validateChatShape({ kind, participants });
         const metadata = input.metadata ?? existing.metadata;
         const title = input.title ?? existing.title;
+        assertChannelTitle(kind, title, input.id, db);
         const shouldTouch =
             kind !== existing.kind ||
             title !== existing.title ||
@@ -60,6 +62,8 @@ export function createChat(input: TavernCreateChatRequest, db: Database = getDb(
     const now = new Date().toISOString();
     const kind = input.kind ?? 'channel';
     const participants = input.participants ?? [];
+    const title = input.title ?? null;
+    assertChannelTitle(kind, title, null, db);
     validateChatShape({ kind, participants });
     const transaction = db.transaction(() => {
         db.prepare(
@@ -72,7 +76,7 @@ export function createChat(input: TavernCreateChatRequest, db: Database = getDb(
                 metadataJson: JSON.stringify(input.metadata ?? {}),
                 now,
                 pinned: 0,
-                title: input.title ?? null,
+                title,
             })
         );
         replaceChatParticipants(input.id, participants, db);
@@ -418,4 +422,19 @@ function validateChatShape(input: { kind: ChatKind; participants: ChatParticipan
     if (input.participants.length !== 2) {
         throw new Error('A DM chat must have exactly two participants.');
     }
+}
+
+function assertChannelTitle(
+    kind: ChatKind,
+    title: string | null,
+    excludedChatId: string | null,
+    db: Database
+) {
+    if (kind !== 'channel') {
+        return;
+    }
+    if (!title) {
+        throw new HandleValidationError('Channel handle is required.');
+    }
+    assertChannelHandleAvailable(title, excludedChatId, db);
 }

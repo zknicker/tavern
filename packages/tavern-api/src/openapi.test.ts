@@ -39,6 +39,13 @@ describe('Tavern OpenAPI contract', () => {
             '/api/messages/{message_id}',
             '/api/turns/{run_id}/prompt',
             '/api/turns/{run_id}/file-changes',
+            '/api/agent/messages/send',
+            '/api/agent/history',
+            '/api/agent/messages/search',
+            '/api/agent/messages/{id}',
+            '/api/agent/server',
+            '/api/agent/channels/info',
+            '/api/agent/channels/members',
             '/api/events',
             '/api/events/ws',
         ]);
@@ -53,5 +60,20 @@ describe('Tavern OpenAPI contract', () => {
         expect(document.components?.schemas).toHaveProperty('ChatEvent');
         expect(document.components?.schemas).toHaveProperty('ChatMessageReceipt');
         expect(document.components?.schemas).toHaveProperty('ThreadSummary');
+        expect(document.components?.schemas).toHaveProperty('AgentSendResponse');
+        expect(document.components?.schemas).toHaveProperty('AgentHistoryResponse');
+    });
+
+    it('maps agent send discriminator values to their response variants', () => {
+        const response = document.components?.schemas?.AgentSendResponse as {
+            discriminator?: { mapping?: Record<string, string>; propertyName?: string };
+        };
+        expect(response.discriminator).toEqual({
+            mapping: {
+                held: '#/components/schemas/AgentHeldMessage',
+                sent: '#/components/schemas/AgentSentMessage',
+            },
+            propertyName: 'state',
+        });
     });
 });

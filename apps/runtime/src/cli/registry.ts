@@ -1,4 +1,10 @@
 import runtimePackage from '../../package.json';
+import {
+    channelCommand,
+    inboxCommand,
+    messageCommand,
+    serverInfoCommand,
+} from './agent-commands.ts';
 import type { ParsedArgs } from './parse';
 
 /** A single flag a command accepts. */
@@ -10,10 +16,19 @@ export interface CliFlag {
     valueName?: string;
 }
 
-export type CliSection = 'Server' | 'Status' | 'Maintenance' | 'Wiki' | 'Engine';
+export type CliSection =
+    | 'Messages'
+    | 'Inbox'
+    | 'Directory'
+    | 'Server'
+    | 'Status'
+    | 'Maintenance'
+    | 'Wiki'
+    | 'Engine';
 
 /** Section render order in global help. */
 export const SECTION_ORDER: CliSection[] = ['Server', 'Status', 'Maintenance', 'Wiki', 'Engine'];
+export const AGENT_SECTION_ORDER: CliSection[] = ['Messages', 'Inbox', 'Directory'];
 
 /** A registered top-level command or command group. */
 export interface CliCommand {
@@ -213,6 +228,10 @@ const helpCommand: CliCommand = {
 
 /** Every registered command, in registration order. */
 export const COMMANDS: CliCommand[] = [
+    messageCommand,
+    inboxCommand,
+    serverInfoCommand,
+    channelCommand,
     serveCommand,
     claimCommand,
     statusCommand,

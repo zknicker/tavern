@@ -29,7 +29,7 @@ describe('agent presence', () => {
                 { id: 'usr_tavern', kind: 'user', label: 'You', metadata: {} },
                 { id: 'agt_otto', kind: 'agent', label: 'Otto', metadata: { agentId: 'agt_otto' } },
             ],
-            title: 'Launch prep',
+            title: 'launch-prep',
         });
     });
 
@@ -67,7 +67,7 @@ describe('agent presence', () => {
         const presence = listAgentPresence();
         expect(presence.find((entry) => entry.agentId === 'agt_otto')).toMatchObject({
             chatId: 'cht_room',
-            chatTitle: 'Launch prep',
+            chatTitle: 'launch-prep',
             pendingTurns: 2,
             state: 'busy',
         });

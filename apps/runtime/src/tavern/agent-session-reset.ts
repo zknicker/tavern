@@ -2,6 +2,7 @@ import fs from 'node:fs/promises';
 import { getDb } from '../db/connection.ts';
 import { registerAgentWorkspace } from '../workspace/instructions.ts';
 import { startNewAgentSession } from './agent-session-store.ts';
+import { rotateAgentToken } from './agent-tokens.ts';
 import { getStoredAgent } from './agents-store.ts';
 import { createAgentParticipantId } from './chat-api/ids.ts';
 import {
@@ -27,6 +28,7 @@ export async function resetAgentSession(input: {
         await wipeAgentWorkspace(input.agentId);
     }
     const session = startNewAgentSession({ agentId: input.agentId });
+    rotateAgentToken(input.agentId);
     recordSessionResetNotice({
         agentId: input.agentId,
         sessionId: session.id,

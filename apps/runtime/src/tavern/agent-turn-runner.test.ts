@@ -219,6 +219,7 @@ function seedSeat() {
     createChat({
         id: 'cht_1',
         kind: 'channel',
+        title: 'general',
         participants: [
             { id: 'usr_tavern', kind: 'user', label: 'You', metadata: {} },
             {

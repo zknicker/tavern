@@ -1,9 +1,13 @@
 # Grotto Runtime CLI
 
-Normative contract for the `grotto` CLI: a clear banner, generated help,
-contextual help on incomplete commands, truthful update/restart flows, and
-consistent output without a TUI. The implementation lives in
-`apps/runtime/src/cli/`.
+Normative contract for the operator surface of the `grotto` CLI: a clear
+banner, generated help, contextual help on incomplete commands, truthful
+update/restart flows, and consistent output without a TUI. The implementation
+lives in `apps/runtime/src/cli/`.
+
+The same binary also carries the agent-facing command families (`message`,
+`inbox`, `server`, `channel`, …), active when per-agent identity env is
+present; that surface is specified in [grotto-cli.md](grotto-cli.md).
 
 ## Goals
 

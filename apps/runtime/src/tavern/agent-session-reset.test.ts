@@ -7,14 +7,20 @@ import { closeDb, getDb, initTestDb } from '../db/connection.ts';
 import { ensureRuntimeSchema } from '../db/schema.ts';
 import { resetAgentSession } from './agent-session-reset.ts';
 import { ensureCurrentAgentSession, readCurrentAgentSession } from './agent-session-store.ts';
+import { agentTokenPath, mintAgentToken, readAgentToken } from './agent-tokens.ts';
 import { upsertStoredAgent } from './agents-store.ts';
 import { listActivityForResponses, listResponses } from './chat-api/index.ts';
 
 describe('agent session reset', () => {
     let workspaceDir: string;
+    let runtimeRoot: string;
+    let previousRuntimeRoot: string | undefined;
 
     beforeEach(async () => {
         ensureRuntimeSchema(initTestDb());
+        previousRuntimeRoot = process.env.TAVERN_RUNTIME_ROOT;
+        runtimeRoot = mkdtempSync(path.join(os.tmpdir(), 'tavern-reset-root-'));
+        process.env.TAVERN_RUNTIME_ROOT = runtimeRoot;
         workspaceDir = mkdtempSync(path.join(os.tmpdir(), 'tavern-reset-'));
         upsertStoredAgent({
             agent: {
@@ -31,7 +37,9 @@ describe('agent session reset', () => {
 
     afterEach(async () => {
         closeDb();
+        process.env.TAVERN_RUNTIME_ROOT = previousRuntimeRoot;
         await fs.rm(workspaceDir, { force: true, recursive: true });
+        await fs.rm(runtimeRoot, { force: true, recursive: true });
     });
 
     it('session reset starts the next generation and keeps the workspace', async () => {
@@ -78,5 +86,16 @@ describe('agent session reset', () => {
         ).runtime?.notice;
         expect(notice?.kind).toBe('new_session');
         expect(notice?.sessionId).toBe(session.id);
+    });
+
+    it('rotates the mode-0600 agent token', async () => {
+        const before = mintAgentToken('agt_otto');
+
+        await resetAgentSession({ agentId: 'agt_otto' });
+
+        const after = readAgentToken('agt_otto');
+        expect(after).toMatch(/^grta_[A-Za-z0-9_-]{43}$/u);
+        expect(after).not.toBe(before);
+        expect((await fs.stat(agentTokenPath('agt_otto'))).mode & 0o777).toBe(0o600);
     });
 });

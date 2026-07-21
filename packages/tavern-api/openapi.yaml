@@ -14,6 +14,7 @@ tags:
   - name: Chats
   - name: Messages
   - name: Realtime
+  - name: Agent CLI
 paths:
   /api/chats:
     get:
@@ -533,6 +534,174 @@ paths:
                 $ref: '#/components/schemas/TurnFileChangeEvidence'
         default:
           $ref: '#/components/responses/Error'
+  /api/agent/messages/send:
+    post:
+      operationId: sendAgentMessage
+      tags: [Agent CLI]
+      summary: Send or freshness-hold an agent-authored message.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentSendRequest'
+      responses:
+        '200':
+          description: Sent message or held draft.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentSendResponse'
+        default:
+          $ref: '#/components/responses/AgentSendError'
+  /api/agent/history:
+    get:
+      operationId: readAgentHistory
+      tags: [Agent CLI]
+      summary: Read target history and advance the served ledger.
+      parameters:
+        - $ref: '#/components/parameters/AgentTarget'
+        - name: before
+          in: query
+          schema: { type: string }
+        - name: after
+          in: query
+          schema: { type: string }
+        - name: around
+          in: query
+          schema: { type: string }
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Target history.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentHistoryResponse'
+        default:
+          $ref: '#/components/responses/AgentError'
+  /api/agent/messages/search:
+    get:
+      operationId: searchAgentMessages
+      tags: [Agent CLI]
+      summary: Search messages across joined chats.
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema: { type: string, minLength: 1 }
+        - name: target
+          in: query
+          schema: { type: string }
+        - name: sender
+          in: query
+          schema: { type: string }
+        - name: sort
+          in: query
+          schema: { type: string, enum: [relevance, recent] }
+        - name: before
+          in: query
+          schema: { type: string, format: date-time }
+        - name: after
+          in: query
+          schema: { type: string, format: date-time }
+        - $ref: '#/components/parameters/Limit'
+        - name: offset
+          in: query
+          schema: { type: integer, minimum: 0, default: 0 }
+      responses:
+        '200':
+          description: Search matches.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentSearchResultList'
+        default:
+          $ref: '#/components/responses/AgentError'
+  /api/agent/messages/{id}:
+    get:
+      operationId: resolveAgentMessage
+      tags: [Agent CLI]
+      summary: Resolve a full or short message id.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, minLength: 1 }
+      responses:
+        '200':
+          description: Resolved message.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [message]
+                properties:
+                  message:
+                    $ref: '#/components/schemas/AgentMessage'
+        '409':
+          description: Ambiguous short id.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentApiError'
+        default:
+          $ref: '#/components/responses/AgentError'
+  /api/agent/server:
+    get:
+      operationId: getAgentServerInfo
+      tags: [Agent CLI]
+      summary: List server channels and participant handles.
+      parameters:
+        - { name: channels, in: query, schema: { type: boolean } }
+        - { name: agents, in: query, schema: { type: boolean } }
+        - { name: humans, in: query, schema: { type: boolean } }
+        - { name: joined, in: query, schema: { type: boolean } }
+        - { name: query, in: query, schema: { type: string } }
+        - $ref: '#/components/parameters/Limit'
+        - { name: offset, in: query, schema: { type: integer, minimum: 0 } }
+      responses:
+        '200':
+          description: Filtered server directory.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentServerInfo'
+        default:
+          $ref: '#/components/responses/AgentError'
+  /api/agent/channels/info:
+    get:
+      operationId: getAgentChannelInfo
+      tags: [Agent CLI]
+      summary: Get channel facts.
+      parameters:
+        - $ref: '#/components/parameters/AgentTarget'
+      responses:
+        '200':
+          description: Channel facts.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentChannel'
+        default:
+          $ref: '#/components/responses/AgentError'
+  /api/agent/channels/members:
+    get:
+      operationId: getAgentChannelMembers
+      tags: [Agent CLI]
+      summary: List channel members.
+      parameters:
+        - $ref: '#/components/parameters/AgentTarget'
+      responses:
+        '200':
+          description: Channel members.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentChannelMembers'
+        default:
+          $ref: '#/components/responses/AgentError'
   /api/events:
     get:
       operationId: listEvents
@@ -580,6 +749,13 @@ paths:
           $ref: '#/components/responses/Error'
 components:
   parameters:
+    AgentTarget:
+      name: target
+      in: query
+      required: true
+      schema:
+        type: string
+        minLength: 1
     ChatId:
       name: chat_id
       in: path
@@ -624,6 +800,18 @@ components:
       schema:
         $ref: '#/components/schemas/ActivityId'
   responses:
+    AgentError:
+      description: Agent API error.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AgentApiError'
+    AgentSendError:
+      description: Agent send API error with draft state when the target resolved.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AgentSendApiError'
     Error:
       description: Error response.
       content:
@@ -631,6 +819,206 @@ components:
           schema:
             $ref: '#/components/schemas/Error'
   schemas:
+    AgentApiError:
+      type: object
+      additionalProperties: false
+      required: [code, message]
+      properties:
+        code: { type: string }
+        message: { type: string }
+        nextAction: { type: string }
+    AgentSendApiError:
+      type: object
+      additionalProperties: false
+      required: [code, message]
+      properties:
+        code: { type: string }
+        message: { type: string }
+        draftSaved: { type: boolean }
+        nextAction: { type: string }
+    AgentSender:
+      type: object
+      additionalProperties: false
+      required: [handle, description, type]
+      properties:
+        handle: { type: [string, 'null'] }
+        description: { type: [string, 'null'] }
+        type: { type: string, enum: [human, agent, system] }
+    AgentMessage:
+      allOf:
+        - $ref: '#/components/schemas/ChatMessage'
+        - type: object
+          required: [sender]
+          properties:
+            sender:
+              $ref: '#/components/schemas/AgentSender'
+            threadId: { type: string, minLength: 1 }
+            replyCount: { type: integer, minimum: 0 }
+            replyTarget: { type: string, minLength: 1 }
+    AgentSearchResult:
+      allOf:
+        - $ref: '#/components/schemas/AgentMessage'
+        - type: object
+          required: [target]
+          properties:
+            target: { type: string, minLength: 1 }
+    AgentSearchResultList:
+      type: object
+      additionalProperties: false
+      required: [messages]
+      properties:
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/AgentSearchResult'
+    AgentSendRequest:
+      type: object
+      additionalProperties: false
+      required: [target]
+      properties:
+        target: { type: string, minLength: 1 }
+        content: { type: string }
+        attachmentIds:
+          type: array
+          items: { type: string, minLength: 1 }
+        sendDraft: { type: boolean }
+        continueAnyway: { type: boolean }
+        compositionId: { type: string, minLength: 1 }
+        nonce: { type: string, minLength: 1 }
+    AgentSentMessage:
+      type: object
+      additionalProperties: false
+      required: [state, message, recentUnread]
+      properties:
+        state: { type: string, const: sent }
+        message:
+          $ref: '#/components/schemas/AgentMessage'
+        recentUnread:
+          type: array
+          items:
+            $ref: '#/components/schemas/AgentRecentUnread'
+    AgentRecentUnread:
+      type: object
+      additionalProperties: false
+      required: [target, message]
+      properties:
+        target: { type: string, minLength: 1 }
+        message:
+          $ref: '#/components/schemas/AgentMessage'
+    AgentHeldMessage:
+      type: object
+      additionalProperties: false
+      required: [state, newMessageCount, shownMessages, omittedMessageCount, formalMentionCount, reholdCount, continueAnywaySuggested]
+      properties:
+        state: { type: string, const: held }
+        newMessageCount: { type: integer, minimum: 1 }
+        shownMessages:
+          type: array
+          maxItems: 12
+          items:
+            $ref: '#/components/schemas/AgentMessage'
+        omittedMessageCount: { type: integer, minimum: 0 }
+        formalMentionCount: { type: integer, minimum: 0 }
+        reholdCount: { type: integer, minimum: 1 }
+        continueAnywaySuggested: { type: boolean }
+    AgentSendResponse:
+      oneOf:
+        - $ref: '#/components/schemas/AgentSentMessage'
+        - $ref: '#/components/schemas/AgentHeldMessage'
+      discriminator:
+        propertyName: state
+        mapping:
+          sent: '#/components/schemas/AgentSentMessage'
+          held: '#/components/schemas/AgentHeldMessage'
+    AgentHistoryResponse:
+      type: object
+      additionalProperties: false
+      required: [target, messages, has_more, has_older, has_newer, last_read]
+      properties:
+        target: { type: string }
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/AgentMessage'
+        has_more: { type: boolean }
+        has_older: { type: boolean }
+        has_newer: { type: boolean }
+        last_read:
+          type: object
+          additionalProperties: false
+          required: [after, unread_after]
+          properties:
+            after: { type: integer, minimum: 0 }
+            unread_after: { type: integer, minimum: 0 }
+    AgentDirectoryPerson:
+      type: object
+      additionalProperties: false
+      required: [handle, description]
+      properties:
+        handle: { type: string }
+        description: { type: [string, 'null'] }
+    AgentChannel:
+      type: object
+      additionalProperties: false
+      required: [handle, joined, description, memberCount]
+      properties:
+        handle: { type: string }
+        joined: { type: boolean }
+        description: { type: [string, 'null'] }
+        memberCount: { type: integer, minimum: 0 }
+    AgentServerInfo:
+      type: object
+      additionalProperties: false
+      required: [channels, agents, humans, limit, offset, total, hasMore]
+      properties:
+        channels:
+          type: array
+          items:
+            $ref: '#/components/schemas/AgentChannel'
+        agents:
+          type: array
+          items:
+            $ref: '#/components/schemas/AgentDirectoryPerson'
+        humans:
+          type: array
+          items:
+            $ref: '#/components/schemas/AgentDirectoryPerson'
+        limit: { type: integer }
+        offset: { type: integer }
+        total:
+          type: object
+          additionalProperties: false
+          required: [channels, agents, humans]
+          properties:
+            channels: { type: integer, minimum: 0 }
+            agents: { type: integer, minimum: 0 }
+            humans: { type: integer, minimum: 0 }
+        hasMore:
+          type: object
+          additionalProperties: false
+          required: [channels, agents, humans]
+          properties:
+            channels: { type: boolean }
+            agents: { type: boolean }
+            humans: { type: boolean }
+    AgentChannelMember:
+      type: object
+      additionalProperties: false
+      required: [handle, description, role]
+      properties:
+        handle: { type: [string, 'null'] }
+        description: { type: [string, 'null'] }
+        role: { type: string, enum: [human, agent] }
+    AgentChannelMembers:
+      type: object
+      additionalProperties: false
+      required: [target, members]
+      properties:
+        target: { type: string }
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/AgentChannelMember'
     Id:
       type: string
       minLength: 1

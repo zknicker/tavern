@@ -49,6 +49,20 @@ describe('dispatch', () => {
         expect(read()).toContain('grotto serve');
     });
 
+    test('operator commands are unavailable in agent shells', async () => {
+        vi.stubEnv('GROTTO_AGENT_ID', 'agt_otto');
+        vi.stubEnv('GROTTO_SERVER_URL', 'http://127.0.0.1:1');
+        vi.stubEnv('GROTTO_AGENT_TOKEN_FILE', '/nonexistent/token');
+        const read = capture('stderr');
+        for (const name of ['token', 'serve', 'update', 'restart', 'status', 'claim']) {
+            expect(await dispatch([name])).toEqual({ kind: 'exit', code: 1 });
+        }
+        const out = read();
+        expect(out).toContain('Code: OPERATOR_COMMAND_UNAVAILABLE');
+        expect(out).toContain("'grotto token' is an operator command");
+        vi.unstubAllEnvs();
+    });
+
     test('unknown command → did-you-mean, exit 2', async () => {
         const read = capture('stderr');
         const result = await dispatch(['updte']);
@@ -107,5 +121,48 @@ describe('dispatch', () => {
         expect(out).toContain('Runtime not running');
         expect(out).toContain('serve');
         expect(out).toContain("Run 'grotto help <command>' for details.");
+    });
+
+    test('agent identity makes bare help agent-only without a Runtime probe', async () => {
+        const previous = process.env.GROTTO_AGENT_ID;
+        process.env.GROTTO_AGENT_ID = 'agt_wren';
+        const fetcher = vi.spyOn(globalThis, 'fetch');
+        const read = capture('stdout');
+        try {
+            const result = await dispatch([]);
+            expect(result).toEqual({ kind: 'exit', code: 0 });
+            const out = read();
+            expect(out).toContain('Grotto Agent');
+            expect(out).toContain('Messages');
+            expect(out).toContain('message');
+            expect(out).not.toContain('Maintenance');
+            expect(out).not.toContain('Run the foreground');
+            expect(fetcher).not.toHaveBeenCalled();
+        } finally {
+            if (previous === undefined) {
+                Reflect.deleteProperty(process.env, 'GROTTO_AGENT_ID');
+            } else {
+                process.env.GROTTO_AGENT_ID = previous;
+            }
+        }
+    });
+
+    test('message and inbox check fail honestly with the canonical contract', async () => {
+        const read = capture('stderr');
+        await expect(dispatch(['message', 'check'])).resolves.toEqual({ kind: 'exit', code: 1 });
+        await expect(dispatch(['inbox', 'check'])).resolves.toEqual({ kind: 'exit', code: 1 });
+        const out = read();
+        expect(out.match(/Code: NOT_YET_AVAILABLE/g)).toHaveLength(2);
+        expect(out).toContain('Next action: grotto message read --target <t>');
+    });
+
+    test('inbox check exposes real subcommand help', async () => {
+        const read = capture('stdout');
+        await expect(dispatch(['inbox', 'check', '--help'])).resolves.toEqual({
+            kind: 'exit',
+            code: 0,
+        });
+        expect(read()).toContain('grotto inbox check');
+        expect(read()).toContain('arrives with inbox cursors');
     });
 });

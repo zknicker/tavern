@@ -44,6 +44,7 @@ import { handleTimezoneSettingsRequest } from '../timezone-settings.ts';
 import { handleWikiRequest } from '../wiki/routes.ts';
 import { handleWorkspaceRequest } from '../workspace/routes.ts';
 import { listAgentActivity } from './agent-activity.ts';
+import { handleAgentApiRequest } from './agent-api-router.ts';
 import { agentSessionInstructionsFresh } from './agent-instructions.ts';
 import { listAgentPresence } from './agent-presence.ts';
 import { resetAgentSession } from './agent-session-reset.ts';
@@ -64,6 +65,9 @@ export async function handleTavernRuntimeRequest(
     auth: RuntimeRequestAuth = { kind: 'runtime-token' }
 ): Promise<Response> {
     const url = new URL(request.url);
+    if (auth.kind === 'agent-token') {
+        return (await handleAgentApiRequest(request, auth.agentId)) ?? notFound();
+    }
     const identityResponse = await handleIdentityRequest(request, auth);
     if (identityResponse) {
         return identityResponse;

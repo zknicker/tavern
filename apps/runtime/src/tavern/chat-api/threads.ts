@@ -8,15 +8,19 @@ import { getDb } from '../../db/connection';
 import type { Database } from '../../db/sqlite';
 import { namedParams } from '../../db/sqlite';
 import { getChat, getChatOrThrow } from './chats';
-import { createAgentParticipantId } from './ids';
+import { createAgentParticipantId, messageShortId } from './ids';
 import { getMessage, isTransientStreamingPost } from './messages';
 
 export function threadChatIdForAnchor(anchorMessageId: string) {
     return `cht_thr_${stripMessagePrefix(anchorMessageId)}`;
 }
 
+/**
+ * The wire contract's short-id rule: canonical msg_<32 hex> ids shorten to
+ * hex8; non-canonical ids keep their full body so resolution stays exact.
+ */
 export function anchorShortId(anchorMessageId: string) {
-    return stripMessagePrefix(anchorMessageId).slice(0, 8);
+    return messageShortId(anchorMessageId) ?? stripMessagePrefix(anchorMessageId);
 }
 
 export function ensureThreadChat(

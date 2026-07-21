@@ -1,4 +1,7 @@
 import runtimePackage from '../../package.json';
+import { isAgentSurfaceCommand } from './agent-commands.ts';
+import { hasAgentIdentityEnvironment } from './agent-context.ts';
+import { AgentCliError, renderAgentCliError } from './agent-error.ts';
 import { runBareTavern } from './bare';
 import { printCommandHelp, printGlobalHelp, printGroupHelp } from './help';
 import { parseArgs, suggest, UsageError } from './parse';
@@ -17,6 +20,10 @@ export async function dispatch(argv: string[]): Promise<DispatchResult> {
     const [name, ...rest] = argv;
 
     if (!name) {
+        if (hasAgentIdentityEnvironment()) {
+            printGlobalHelp(process.stdout);
+            return { kind: 'exit', code: 0 };
+        }
         return { kind: 'exit', code: await runBareTavern() };
     }
 
@@ -33,6 +40,19 @@ export async function dispatch(argv: string[]): Promise<DispatchResult> {
     const command = findCommand(name);
     if (!command) {
         return { kind: 'exit', code: reportUnknown(name) };
+    }
+
+    if (hasAgentIdentityEnvironment() && !isAgentSurfaceCommand(command.name)) {
+        process.stderr.write(
+            renderAgentCliError(
+                new AgentCliError(
+                    'OPERATOR_COMMAND_UNAVAILABLE',
+                    `'grotto ${command.name}' is an operator command and is not available here.`,
+                    { nextAction: "Run 'grotto help' for the available commands." }
+                )
+            )
+        );
+        return { kind: 'exit', code: 1 };
     }
 
     if (command.name === 'serve') {
@@ -100,6 +120,10 @@ function reportError(error: unknown, command: CliCommand): number {
         printCommandHelp(error.command ?? command, process.stderr);
         process.stderr.write(`\n${errorBlock(error.message)}\n`);
         return 2;
+    }
+    if (error instanceof AgentCliError) {
+        process.stderr.write(renderAgentCliError(error));
+        return 1;
     }
     const message = error instanceof Error ? error.message : String(error);
     process.stderr.write(`${errorBlock(message)}\n`);

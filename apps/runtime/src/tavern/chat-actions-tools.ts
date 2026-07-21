@@ -7,13 +7,11 @@ import { createAgentParticipantId } from './chat-api/ids.ts';
 import {
     createDelivery,
     getChat,
-    latestMessageSequence,
     listChatsForAgentParticipant,
-    listRecentMessagesBetween,
     membershipChat,
 } from './chat-api/index.ts';
 import { formatPromptMessage } from './harness-prompt.ts';
-import { advanceSeenCursor, readSeenCursor } from './seen-ledger.ts';
+import { resolveSendHold } from './send-hold.ts';
 
 // Cross-chat surface: an agent can see the chats it participates in and post
 // a message, as itself, into one of them. Posting is gated to chats where the
@@ -23,7 +21,6 @@ import { advanceSeenCursor, readSeenCursor } from './seen-ledger.ts';
 // the shared chain guards (specs/addressing.md). Busy seats also receive the
 // post mid-turn through busy delivery (specs/steering.md).
 const maxChatSendLength = 4000;
-const maxHoldContextMessages = 12;
 
 let sendSequence = 0;
 
@@ -77,7 +74,12 @@ export function createTavernChatActionTools(input: {
                 // Action gate (specs/sessions.md): a send into a chat with
                 // unseen rows is held once, with those rows embedded. Showing
                 // them advances the seen ledger, so retrying sends.
-                const hold = resolveSendHold(input.sessionId, chatId, input.agentId, participantId);
+                const hold = resolveToolSendHold(
+                    input.sessionId,
+                    chatId,
+                    input.agentId,
+                    participantId
+                );
                 if (hold) {
                     return hold;
                 }
@@ -133,41 +135,21 @@ export function createTavernChatActionTools(input: {
 
 // Raft's send-side freshness hold: unseen peer rows in the target chat block
 // the send and ride back in the tool result, becoming model-visible.
-function resolveSendHold(
+function resolveToolSendHold(
     sessionId: string,
     chatId: string,
     agentId: string,
     participantId: string
 ) {
-    const cursor = readSeenCursor(sessionId, chatId);
-    const latest = latestMessageSequence(chatId);
-    if (latest <= cursor) {
+    const hold = resolveSendHold({ agentId, chatId, participantId, sessionId });
+    if (!hold) {
         return null;
-    }
-    const unseen = listRecentMessagesBetween(chatId, {
-        afterSequence: cursor,
-        beforeSequence: latest + 1,
-        limit: maxHoldContextMessages,
-    }).filter(
-        (row) =>
-            !row.deleted_at &&
-            (row.role === 'assistant' || row.role === 'user') &&
-            row.author.id !== participantId &&
-            row.author.id !== agentId
-    );
-    if (unseen.length === 0) {
-        advanceSeenCursor({ chatId, seq: latest, sessionId });
-        return null;
-    }
-    const shownThrough = unseen.at(-1)?.sequence;
-    if (shownThrough) {
-        advanceSeenCursor({ chatId, seq: shownThrough, sessionId });
     }
     const timezone = resolveHomeTimezone();
     return {
         held: true,
         note: 'Send held: these messages landed in that chat and you had not seen them. Review, then retry — the retry will send.',
-        unseen: unseen.map((row) => formatPromptMessage(row, timezone)),
+        unseen: hold.shownMessages.map((row) => formatPromptMessage(row, timezone)),
     };
 }
 
@@ -184,7 +166,7 @@ export function isAgentChatParticipant(chat: TavernChat, agentId: string, partic
     });
 }
 
-function isArchivedChat(chat: TavernChat) {
+export function isArchivedChat(chat: TavernChat) {
     const tavern = (chat.metadata as Record<string, unknown>).tavern;
     if (!tavern || typeof tavern !== 'object' || Array.isArray(tavern)) {
         return false;

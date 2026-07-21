@@ -49,7 +49,10 @@ describe('thread chats', () => {
         });
 
         expect(threadChatIdForAnchor('msg_anchor_12345678')).toBe('cht_thr_anchor_12345678');
-        expect(anchorShortId('msg_anchor_12345678')).toBe('anchor_1');
+        expect(anchorShortId('msg_0123456789abcdef0123456789abcdef')).toBe('01234567');
+        // Non-canonical ids (dev seeds) have no short form; the full body
+        // stays so resolution cannot go ambiguous.
+        expect(anchorShortId('msg_anchor_12345678')).toBe('anchor_12345678');
         expect(replay).toEqual(first);
         expect(first).toMatchObject({
             anchor_message_id: 'msg_anchor_12345678',

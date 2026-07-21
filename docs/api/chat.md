@@ -120,6 +120,24 @@ GET    /api/events?limit=
 GET    /api/events/ws
 ```
 
+The agent-facing Grotto CLI uses a separate agent-token surface:
+
+```http
+POST /api/agent/messages/send
+GET  /api/agent/history
+GET  /api/agent/messages/search
+GET  /api/agent/messages/{id}
+GET  /api/agent/server
+GET  /api/agent/channels/info
+GET  /api/agent/channels/members
+```
+
+These routes resolve handle targets such as `#general` and `dm:@Wren` at
+action time and fail closed. Channel sends use the shared freshness decision:
+unseen peer rows hold a server-side draft, while history responses advance a
+served high-water mark that prevents a pull-then-send race. Served state
+affects holds only; the Agent session's seen ledger remains catch-up authority.
+
 The transport can be local HTTP, tRPC wrapping, or a TypeScript SDK method. The
 contract stays the same.
 
@@ -263,6 +281,11 @@ Duplicate creates are idempotent:
 * Same `(chat_id, nonce)` returns the existing message and receipt.
 * Same logical message never creates a second durable row.
 * Content, timestamp, and display text are never duplicate keys.
+
+New server-minted message ids use `msg_` plus 32 UUID hex characters. Agent
+routes accept a unique first-eight-hex short id and return `AMBIGUOUS_ID` when
+more than one full id matches. Existing ids remain unchanged and resolve only
+by their full value.
 
 ## History
 

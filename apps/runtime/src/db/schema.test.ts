@@ -36,7 +36,7 @@ describe('Runtime DB schema repairs', () => {
         db.exec('PRAGMA foreign_keys = ON');
 
         ensureRuntimeSchema(db);
-        createChat({ id: 'cht_legacy' });
+        createChat({ id: 'cht_legacy', title: 'legacy' });
         upsertResponse('cht_legacy', {
             id: 'rsp_legacy',
             participant_id: 'agt_1',

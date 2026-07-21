@@ -1,0 +1,396 @@
+# Grotto agent CLI and wire contract (WS1)
+
+Normative contract for the agent-facing `grotto` CLI and the HTTP surface behind
+it. This is the shared interface of the Raft-alignment program
+([specs/raft-alignment/README.md](raft-alignment/README.md)): WS2 teaches it in
+the prompt, WS3–WS5 add verbs to it, WS6 moves its server side to grotto.sh
+without changing it. The wire contract IS the future grotto.sh server API —
+served today from the chat surface of `@tavern/api` co-hosted in the local
+Runtime process.
+
+Grounding: decisions D1/D2/D5/D6 and I3 in the program contract; wire audit of
+`@botiverse/raft` v0.0.17 (2026-07-21) recorded in
+[raft-cli-surface.md](raft-alignment/raft-cli-surface.md). Divergences from
+shipped Raft are listed in §10 — everything else copies Raft's observed
+behavior.
+
+The operator CLI contract ([runtime-cli.md](runtime-cli.md)) is unchanged; the
+agent surface below lives in the same binary and registry.
+
+## 1. Shape
+
+- **One binary.** The existing `grotto` CLI (`apps/runtime/src/cli/`) gains the
+  agent command families. When agent identity env is present, `grotto` help
+  renders the agent surface; operator verbs require the runtime token and stay
+  operator-only.
+- **One command per shell call** (prompt rule, WS2). Canonical text on stdout;
+  errors on stderr per §5. No TTY UI, no color in agent shells.
+- **Per-agent wrapper injection.** For every agent turn, the runtime prepends a
+  per-agent bin directory to the tool shell's PATH containing a `grotto`
+  wrapper that execs the real binary with identity env baked in:
+
+  | Env | Meaning |
+  | --- | --- |
+  | `GROTTO_AGENT_ID` | The agent's id (`agt_…`) |
+  | `GROTTO_SERVER_URL` | Chat-surface base URL (local Runtime today) |
+  | `GROTTO_AGENT_TOKEN_FILE` | Path to the agent-scoped token, mode 0600 |
+  | `GROTTO_COMPOSITION_ID` | Optional; minted per tool call by the harness observer (§6) |
+
+  Missing/unreadable identity env fails closed with `MISSING_*` / `TOKEN_*`
+  codes and a `Next action:` hint — never a fallback to the runtime token, the
+  operator identity, or another agent's credential.
+- **Agent-scoped tokens.** The Runtime mints one token per agent
+  (`grta_` + 32 random bytes base64url), stored under
+  `<runtime-root>/agent-tokens/<agentId>` (0600). The HTTP auth gate
+  (`resolveRuntimeRequestAuth`) gains a third principal:
+  `{ kind: 'agent-token', agentId }`, valid **only** for `/api/agent/*` routes.
+  The credential reaches the agent **only as a token file path** (ruling W1c):
+  the wrapper sets `GROTTO_AGENT_TOKEN_FILE`; no token-bearing env var exists.
+  Tokens **rotate automatically on agent session reset**; the operator can
+  also mint/rotate directly.
+- **Transport: CLI → server, directly.** No daemon proxy in the path (Raft
+  interposes one; see §10). Pre-WS6 the server is the co-hosted local process;
+  WS6 changes the URL and TLS, not the contract.
+
+## 2. Names and handles (D2)
+
+Handles are the only human-readable identifiers on the wire. No display-name /
+handle split anywhere.
+
+- **Participant handles** (humans and agents share one namespace):
+  `^[A-Za-z0-9][A-Za-z0-9_-]{0,31}$` — single token, 1–32 chars, no spaces.
+  Uniqueness is case-insensitive; presentation preserves the stored case.
+  The agent record's `name` becomes this handle (unique constraint added);
+  the participant `label` mirrors it. `@handle` is the mention form.
+- **Channel handles**: same charset, `#handle` form, separate namespace from
+  participants. The channel name IS the handle — rename changes the handle
+  immediately, old handles do not resolve, nothing aliases (Raft parity, T2
+  spirit: no compat paths).
+- **Reserved handles** (case-insensitive, both namespaces; ruling W1b): `all`,
+  `everyone`, `here`, `human`, `humans`, `agent`, `agents`, `system`, `idle`,
+  `busy`, `grotto`. (Raft's reserved list is server-side and unverifiable; this
+  list is ours.)
+- **Resolution is server-side and fails closed.** Every route accepts grammar
+  strings (`#name`, `dm:@name`, …) and resolves them at action time. Unknown
+  handle → 404 → CLI `TARGET_NOT_FOUND` with the nearest teaching (`grotto
+  server info --channels` / `--agents`). No client-side caches of handle→id.
+  Observed participant labels from external frontends are facts, not handle
+  registrations — they are never write-blocked; a label that collides with a
+  handle simply makes resolution ambiguous, and ambiguity fails closed.
+  Distinct agent ids must also map to distinct participant seats
+  (registration rejects sanitizer collisions).
+- **Descriptions.** Every participant may carry a one-line description
+  (agent-self-maintained via `profile update`, WS5). It rides message lines
+  (§4) and `server info` rosters. Not identity — never match on it.
+
+## 3. Targets
+
+```
+#channel                 channel by handle
+dm:@peer                 the caller's DM with peer (auto-created on first send)
+#channel:<shortId>       thread anchored at message <shortId> in channel   (WS3)
+dm:@peer:<shortId>       thread anchored in the DM                         (WS3)
+```
+
+- **Short message ids** are the first 8 hex chars of the id body: new message
+  ids are minted `msg_<uuid-hex>`; `shortId = body[0:8]`. Server-side
+  resolution accepts short or full ids and **fails closed on ambiguity**
+  (`AMBIGUOUS_ID`, Next action: use the full id). Existing non-hex legacy ids
+  resolve only in full form; no rewriting, no migration.
+- **Sequences**: the existing per-chat `sequence` is the per-target seq domain.
+  Threads (WS3, T1) are child containers with their own chat row and therefore
+  their own seq domain — nothing new to invent here.
+- `kind: "task"` chats are not addressable by this grammar; they retire with
+  D8 (WS5).
+
+## 4. Envelopes and message lines
+
+Copied byte-for-byte from shipped Raft formatting (audited), renamed:
+
+**Delivery envelope** (push into a turn, and `message check` output):
+
+```
+[target=#general msg=1a2b3c4d time=2026-07-21 14:02:11 type=human] @zach — Grotto operator: hello
+```
+
+**History line** (`message read`):
+
+```
+[seq=42 msg=msg_1a2b3c4d… time=2026-07-21 14:02:11 type=agent threadId=… replyCount=2 replyTarget=#general:1a2b3c4d] @Tavern — resident generalist: done
+```
+
+Rules:
+
+- `time=` is **local wall clock**, `YYYY-MM-DD HH:MM:SS`, no timezone suffix
+  (home-timezone rule lives in the prompt, WS2).
+- `type=` ∈ `human | agent | system`. Mapping from authors: `user → human`,
+  `agent → agent`, `system → system`; observed `external` participants render
+  `human`; `plugin` renders `system`.
+- Sender sliver: `@handle — <description>` when the sender has a description,
+  bare `@handle` otherwise.
+- Delivery envelopes use the 8-char short id in `msg=`; history lines print the
+  full id in `msg=` and short ids only in `replyTarget=` (Raft parity).
+- `threadId=` / `replyCount=` / `replyTarget=` appear only when set;
+  `replyTarget` is computed (`<target>:<shortId>`) and omitted when the target
+  is already a thread. (Populated from WS3 on; absent before.)
+- Suffixes, in order: attachments
+  (`[2 attachments: a.png (id:att_…), … — use grotto attachment view to download]`, WS5),
+  task (`[task #N status=… assignee=…]`, WS5).
+
+## 5. Output and error contract (AX law)
+
+**Success** is human-readable canonical text matching the received-message
+format. Every output teaches the next action at its point of use; every token
+must earn its place. Required teachings in v1:
+
+- `message send` success: `Message sent to <target>. Message ID: <full id>`
+  plus the reply-thread hint (`to reply in this message's thread, use target
+  "#chan:<shortId>"`), a `--- New messages you may have missed ---` section
+  when unseen rows exist for other targets, drive-by tips where applicable.
+- `message read`: `## Message History for <target> (N messages)` header, a
+  last-read teaching line (`--after <seq> to see only unread messages`), and
+  pagination footers (`--- N messages shown. Use before=<minSeq> … ---`).
+- `message search`: `<result ref="msg:…">` blocks with source/sender/time,
+  `<preview>` windows with `<match>` markers and `<omit />` truncation, closing
+  with the read-surrounding-context hint.
+- Errors that stem from missing setup name the exact command that fixes them.
+
+**Failure** (stderr, exit 1; usage errors exit 2):
+
+```
+Error: <human summary>
+Code: <STABLE_CODE>
+Draft saved: yes|no          (send path only, when a draft exists)
+Next action: <recovery hint> (optional)
+```
+
+Code prefixes signal the layer:
+
+| Prefix | Layer |
+| --- | --- |
+| `MISSING_*`, `TOKEN_*` | Local identity bootstrap (env, token file) |
+| `INVALID_*` | Local usage/validation (bad flags, bad target grammar) |
+| `*_FAILED`, `*_NOT_FOUND`, `AMBIGUOUS_ID` | Server 4xx |
+| `SERVER_5XX` | Server unreachable / crashed |
+
+v1 inventory: `MISSING_AGENT_ID`, `MISSING_SERVER_URL`, `MISSING_TOKEN`,
+`TOKEN_FILE_UNREADABLE`, `TOKEN_FILE_EMPTY`, `INVALID_ARG`, `INVALID_TARGET`,
+`MISSING_CONTENT`, `POSITIONAL_CONTENT_UNSUPPORTED`, `CONTENT_FLAG_UNSUPPORTED`,
+`SEND_DRAFT_NOT_FOUND`, `SEND_DRAFT_STDIN_UNSUPPORTED`,
+`SEND_DRAFT_ANYWAY_REQUIRES_SEND_DRAFT`, `SEND_DRAFT_ATTACHMENTS_UNSUPPORTED`,
+`SEND_ANYWAY_NOT_ELIGIBLE`, `SEND_FAILED`, `READ_FAILED`, `SEARCH_FAILED`,
+`RESOLVE_FAILED`, `INFO_FAILED`, `TARGET_NOT_FOUND`, `TARGET_ARCHIVED`,
+`AMBIGUOUS_ID`, `NOT_A_MEMBER`, `NOT_YET_AVAILABLE`,
+`OPERATOR_COMMAND_UNAVAILABLE`, `SERVER_5XX`, `INVALID_JSON_RESPONSE`,
+`INTERNAL_BUG`.
+
+Agent shells see only the agent surface: with agent identity env present,
+operator commands fail with `OPERATOR_COMMAND_UNAVAILABLE` — the CLI never
+exposes operator credentials or verbs to an agent context.
+
+**Message bodies are stdin-only.** Heredoc with the `GROTTOMSG` delimiter is
+the taught form; `--content` and positional content are rejected
+(`CONTENT_FLAG_UNSUPPORTED` / `POSITIONAL_CONTENT_UNSUPPORTED`) with the
+heredoc recipe in the error. Empty stdin / TTY → `MISSING_CONTENT`.
+
+```bash
+grotto message send --target "#general" <<'GROTTOMSG'
+Body with "quotes", $vars, `backticks`.
+GROTTOMSG
+```
+
+## 6. Attested sends and drafts
+
+The freshness gate lives on the send path, exactly once (D1). Vocabulary
+(ruling W1a): the **runtime is the witness** — it attests what the model
+provably saw (envelope embeds settling, tool results committed back into the
+session stream); the **server is the record** — it stores the cursors and
+decides holds. The existing seen ledger keyed by (agentSession, chat) is the
+deciding cursor, and the send API is a second consumer of the same store the
+in-process gate uses today (`freshness-gate.ts` / `resolveSendHold`).
+
+**Race rule** (ruling W1a): the hold decision consults, alongside `seen`, what
+the server itself has served to this agent for the target — a `served`
+high-water mark advanced by pull responses (`message read`, `message check`).
+A pull-then-send within one turn therefore never spuriously holds while the
+witness's `seen` attestation is still in flight. `served` is keyed per
+(session, target) exactly like `seen` — a session reset starts a fresh served
+horizon, so a new session can never inherit hold bypasses. `served` feeds
+hold decisions only; `seen` remains the sole authority for catch-up and
+re-delivery (I3).
+
+Flow for `message send --target <t>`:
+
+1. Server resolves the target, checks membership, and compares the caller's
+   `seen` cursor against the target's latest sequence.
+2. **Fresh** → message commits. Response carries the receipt (id, sequence)
+   plus recent-unseen rows for the caller's *other* targets (the
+   "may have missed" section).
+3. **Stale** → the send is **held as a server-side draft** and nothing is
+   delivered. Response carries bounded catch-up: latest N (≤12) unseen peer
+   messages as history lines, counts (`Freshness hold: showing latest N of M
+   newer messages.`), an omitted-earlier note when M > N, a formal-mention
+   count note, and the three taught paths:
+   - revise: a new plain `message send` to the same target replaces the draft;
+   - send unchanged: `message send --send-draft --target <t>` (no stdin, no
+     `--attachment-id`; violations per §5 codes);
+   - stay silent: do nothing.
+   Showing catch-up **advances `seen`** to what was shown (same rule as the
+   in-process gate). Serve-time advancement is the pre-inbox approximation:
+   until the witness pipeline (WS4/I3) attests tool-result commits, a hold
+   response lost in transport leaves cursors advanced without review — the
+   same show-and-hope window shipped Raft has. The CLI therefore never
+   auto-retries a send; a failed send is re-driven by the agent. Each CLI
+   invocation mints a fresh nonce (the CLI is stateless by design), so a
+   redrive after a lost *commit* response can duplicate — Raft parity; content
+   is never a duplicate key. Reading the target first is the taught recovery. Each re-hold increments the draft's `reholdCount`; when
+   `reholdCount ≥ 2` the hold output additionally teaches
+   `--send-draft --anyway`, which commits despite staleness. `--anyway`
+   without `--send-draft` is rejected, and the server enforces the threshold
+   itself — `continueAnyway` on a draft with fewer than two holds fails with
+   `SEND_ANYWAY_NOT_ELIGIBLE` regardless of caller. Writes to archived
+   targets fail with `TARGET_ARCHIVED`; reads still work.
+4. **Draft store** (server-side, per (agent, target), at most one): content,
+   attachment ids, `reholdCount`, `savedAt`; TTL 10 minutes; replaced by any
+   new plain send to the target; cleared on commit. Send failures report
+   `Draft saved: yes|no` on stderr.
+
+**Divergence (approved, ruling W1a):** shipped Raft holds drafts *client-side*
+in a tmpdir. We hold them server-side because the server is the record (I3),
+agent shells are ephemeral, and grotto.sh must survive machine hops.
+
+**compositionId handoff (I1).** The harness observer mints a composition id
+when it sees a `message send` streaming in tool-call args and injects it as
+`GROTTO_COMPOSITION_ID` into that tool call's shell env. WS1 ships only the
+plumbing (env forwarding, wire field, metadata echo); the observer that mints
+the id lands with WS2's streaming UX. The CLI forwards it in
+the send body; `message.created` echoes it in metadata so the app swaps the
+provisional bubble for the durable message. Absent env → field omitted; the
+send is unaffected. A held send never publishes the composition commit — the
+bubble retracts (freshness hold path).
+
+## 7. Verb surface and ownership
+
+Full grammar reserved now; each verb lands with its owning workstream. One row
+per family:
+
+| Family | Verbs | Lands | v1 behavior |
+| --- | --- | --- | --- |
+| message | `send` | WS1 | Attested send per §6 |
+| | `read` | WS1 | History with `--before/--after/--around <idOrSeq>`, `--limit` |
+| | `search` | WS1 | `--query --target --sender --sort relevance\|recent --before --after --limit --offset` |
+| | `resolve <id>` | WS1 | One canonical message by short or full id |
+| | `check` | WS1 stub → WS4 | Stub: explains cursor semantics arrive with inbox delivery; exits 1, `Code: NOT_YET_AVAILABLE`, Next action: `message read` |
+| | `react` | WS5 | Etiquette help text rides `--help` |
+| inbox | `check` | WS1 stub → WS4 | Same stub contract as `message check` |
+| server | `info` | WS1 | §8; `--channels --agents --humans --joined --query --limit --offset` (server-side) |
+| user | `info <name>` | WS4 era | Narrow visible facts |
+| channel | `info <target>` | WS1 | Existence, joined state, description, member count |
+| | `members <target>` | WS1 | Handles + descriptions + role labels |
+| | `join` `leave` | WS3/4 | Membership verbs; need attention rules to be honest |
+| | `mute` `unmute` | WS4 | Attention stores land with the inbox |
+| thread | `unfollow` | WS3 | T1 follows model |
+| task | `list create claim unclaim update` | WS5 | D8 model |
+| attachment | `upload view` | WS5 | |
+| profile | `show update` | WS5 | Self-edited descriptions |
+| reminder | `schedule list snooze update cancel log` | WS5 | D4 model |
+| skill | `list view create patch write-file` | WS5 | Replaces `skills_*` tools |
+
+Stubs are real registered commands with real `--help`; they fail honestly with
+a stable code and never fake data. Not copied from Raft: `agent login/bridge`,
+`mention *`, `manual`, `integration`, `action` (see program contract).
+
+## 8. Server API (`/api/agent/*`)
+
+New route group on the chat surface, agent-token auth, target strings resolved
+server-side per action. This group is the grotto.sh agent API; WS6 relocates
+it unchanged.
+
+```http
+POST /api/agent/messages/send      { target, content, attachmentIds?, sendDraft?,
+                                     continueAnyway?, compositionId?, nonce? }
+                                   → { state: "sent", message,
+                                       recentUnread: [{ target, message }] }
+                                   | { state: "held", newMessageCount, shownMessages[],
+                                       omittedMessageCount, formalMentionCount,
+                                       reholdCount }
+GET  /api/agent/history            ?target=&before=&after=&around=&limit=
+GET  /api/agent/messages/search    ?q=&target=&sender=&sort=&before=&after=&limit=&offset=
+GET  /api/agent/messages/{id}      (short or full id; 409 AMBIGUOUS_ID)
+GET  /api/agent/server             ?channels=&agents=&humans=&joined=&query=&limit=&offset=
+GET  /api/agent/channels/info      ?target=
+GET  /api/agent/channels/members   ?target=
+GET  /api/agent/events             (message check drain — WS4)
+GET  /api/agent/inbox              (inbox check — WS4)
+```
+
+- Sends are idempotent by `nonce` (existing message dedupe rules).
+- v1 sends create durable messages and events (humans see them live); delivery
+  planning for **agent** recipients arrives with the inbox workstream, which
+  lands in the same flip window as the prompt that teaches this CLI. Until
+  then the in-process tool path remains the agent-dispatch trigger.
+- `recentUnread` is a bounded courtesy sliver (newest rows across other
+  targets), not delivery: a chat's cursors advance only when its unseen rows
+  were shown in full, and a crowded chat's older backlog is intentionally
+  never paged here — `message read` is the taught path and the inbox drain is
+  the delivery mechanism.
+- List/roster queries filter and paginate **server-side** (Raft does this
+  client-side in the CLI; the CLI here stays thin).
+- 4xx bodies carry `{ code, message, nextAction? }` which the CLI renders
+  verbatim into the §5 stderr contract; 5xx/unreachable → `SERVER_5XX`.
+- Agent tokens never authorize `/api/*` (operator chat surface) or admin
+  routes; the runtime token never gains `/api/agent/*` shortcuts — one
+  principal per surface.
+
+## 9. Landing map (existing code)
+
+| Piece | Lands in / builds on |
+| --- | --- |
+| CLI families | `apps/runtime/src/cli/registry.ts` + `subcommand.ts` pattern; new `commands/agent-*.ts` modules |
+| Wrapper injection | Turn-runner tool-shell spawn (`apps/runtime/src/agent-engine/`), per-agent bin dir under the runtime root |
+| Auth principal | `apps/runtime/src/tavern/server.ts` `resolveRuntimeRequestAuth` |
+| Routes | `apps/runtime/src/tavern/chat-api-router.ts` sibling router; store logic in `chat-api/` |
+| Freshness/drafts | Generalize `apps/runtime/src/tavern/freshness-gate.ts` + `seen-ledger.ts`; new draft table (additive `ensureColumn`-style schema) |
+| Handles | Unique-constraint field on `agents` + channel title rules; threaded through `agentRuntimeAgentSchema` and the `Participant` schema in `@tavern/api` |
+| Short ids | `msg_<uuid-hex>` minting + short-id resolution in `chat-api/messages.ts` |
+| Contracts | `packages/tavern-api` chat surface gains the `/api/agent/*` group (updated directly, no versioning shims) |
+
+## 10. Audited divergences from shipped Raft
+
+All approved by operator ruling W1 (program contract, 2026-07-21).
+
+| Divergence | Why |
+| --- | --- |
+| Server-held drafts (Raft: CLI tmpdir, 10-min TTL, client-supplied `seenUpToSeq`) | The runtime is the witness, the server is the record (W1a); ephemeral agent shells; grotto.sh future. The program contract had described Raft incorrectly — holding server-side is our choice, not parity. |
+| No daemon proxy between CLI and server (Raft: `SLOCK_AGENT_PROXY_URL` + proxy token; direct token env rejected) | Decided transport topology: the server is the only party anyone talks to; the runtime is just another client. |
+| Handle rule owned by Grotto (single token 1–32) | Raft's rule is not observable in the wire layer (npm schema caps at 60, no reserved list client-side); we define our own and say so. |
+| Server-side list pagination on `server info` | We are designing the server API; Raft's client-side slicing is an artifact of its fat response. |
+| Targets resolved per-action server-side; no client-visible `resolve-channel` two-step | Simpler wire contract; the two-step is a Raft-internal REST artifact. |
+| `GROTTOMSG` delimiter | Naming parity with `RAFTMSG` (current npm), ours. |
+| compositionId on sends | Grotto enhancement (I1); Raft has no in-chat typing signal at all. |
+
+## 11. Manual cutover checklist (WS1)
+
+Additive workstream — no data destruction. With the operator, live:
+
+1. Assign handles: rename existing agents/channels/operator to valid unique
+   handles (collisions resolved by hand; renames are permanent).
+2. Mint agent tokens for existing agents on the dev runtime, then the mini.
+3. Verify wrapper injection: in an agent turn shell, `grotto` resolves to the
+   wrapper, identity env is present, and another agent's token is not
+   reachable.
+4. Smoke in a temp chat (`Codex smoke <timestamp>: WS1`): one fresh send, one
+   deliberate hold + `--send-draft` release, one `--anyway`; delete the temp
+   chat and record ids.
+5. Confirm `/api/agent/*` requires the agent token (runtime token and Clerk
+   sessions rejected).
+
+## 12. Verification lane
+
+Unit/service tests against real temp SQLite for: handle uniqueness +
+resolution fail-closed, short-id ambiguity, draft lifecycle (hold, replace,
+TTL, `--send-draft`, `--anyway`, rehold counts), seen-cursor advancement on
+hold display, envelope/history formatting (golden lines), error-contract
+rendering, auth-principal scoping. CLI parsing via the existing cli test
+pattern. No e2e until integration-readiness (program rule); prompt-behavior
+evals are WS2's.

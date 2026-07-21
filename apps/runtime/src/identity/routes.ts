@@ -84,5 +84,5 @@ export async function handleIdentityRequest(
 }
 
 function isAdmin(auth: RuntimeRequestAuth): boolean {
-    return auth.kind === 'runtime-token' || auth.role === 'owner';
+    return auth.kind === 'runtime-token' || (auth.kind === 'user' && auth.role === 'owner');
 }

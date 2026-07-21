@@ -11,6 +11,7 @@ import { createCodex } from '@ai-sdk/harness-codex';
 import { createPi, type PiAuthOptions } from '@ai-sdk/harness-pi';
 import type { ToolSet } from '@ai-sdk/provider-utils';
 import type { AgentRuntimeModelName, AgentRuntimeThinkingLevel } from '@tavern/api';
+import { buildAgentToolEnvironment } from '../agent-engine/agent-cli-wrapper.ts';
 import { createLocalTrustedSandboxProvider } from '../agent-engine/local-trusted-sandbox.ts';
 import {
     type AssignedSkillBundle,
@@ -483,13 +484,15 @@ function toHarnessAgentSkill(skill: AssignedSkillBundle): HarnessAgentSkill {
 // (rootDir + sandboxConfig.workDir) resolves to the workspace root itself.
 function localTrustedSandboxOptions(input: AgentExecutorInput) {
     const rootDir = path.dirname(input.agent.workspaceFolder);
+    const agentCli = buildAgentToolEnvironment(input.agent.id);
     if (input.agentSession.effectiveModel.provider !== 'codex') {
-        return { rootDir };
+        return { env: agentCli.env, rootDir };
     }
     const homeDir = path.join(input.agent.workspaceFolder, '.home');
     return {
         authProfiles: ['codex'] as const,
         env: {
+            ...agentCli.env,
             CODEX_HOME: path.join(homeDir, '.codex'),
             HOME: homeDir,
         },

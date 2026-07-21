@@ -9,7 +9,14 @@ import {
 import { publicProcedure } from '../trpc.ts';
 
 const createAgentInputSchema = z.object({
-    name: z.string().trim().min(1).max(80),
+    // Agent names are handles: single tokens, validated here so the client
+    // gets a clear error instead of a runtime contract failure.
+    name: z
+        .string()
+        .trim()
+        .regex(/^[A-Za-z0-9][A-Za-z0-9_-]{0,31}$/u, {
+            message: 'Agent name must be a single token (letters, numbers, - or _), 1-32 chars.',
+        }),
     primaryColor: agentPrimaryColorSchema.optional(),
 });
 

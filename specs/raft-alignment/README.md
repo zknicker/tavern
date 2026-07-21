@@ -223,6 +223,19 @@ upgrades transport only, contracts unchanged.
   system, idle, busy, grotto`). (c) No daemon proxy — CLI talks to the server directly with
   per-agent credentials, delivered as a **token file (0600), not env**, rotated on session
   reset. Full rationale + divergence table: `specs/grotto-cli.md` §10.
+- **W2 — Identity and skills go Raft-native (ruled 2026-07-21, post-WS2-prep).** (a) **SOUL is
+  retired.** Adopted philosophy: identity accumulates in memory and other people's expectations,
+  not in config — the agent **description** is the personality surface (it already rides every
+  envelope per D6, is self-editable via `grotto profile update`, and feeds `## Initial role`);
+  the evolved role lives in MEMORY.md. `SOUL.md`, its prompt section, its injection mechanism,
+  and its settings editor all retire at the flip; existing SOUL content folds into
+  description/MEMORY.md at manual cutover. (b) **The Skills prompt section is dropped.** Skill
+  discovery is harness-native (our engine drives Claude Code/Codex/Pi harnesses via AI SDK
+  adapters; assigned skill bundles materialize into each harness's own skill system) — listing
+  them again in our prompt was redundant. Per-agent skill ASSIGNMENT stays (it gates what the
+  harness sees); `grotto skill …` management verbs stay CLI family 9 (WS5); the
+  save-as-a-skill habit teaching moves to WS8 seeded notes. Net: the composed prompt drops
+  ~0.9k below Raft's own length.
 - **I4 — Inbox visibility read-only; attention is agent-owned.** The agent detail panel gains a
   read-only inbox card (pending targets with counts, muted channels, followed threads;
   dev-mode: per-target cursors). No human-side mute/unfollow controls for agents — humans steer
@@ -259,9 +272,13 @@ line); `## Capabilities`; `## Message Notifications`; `## Initial role`.
 
 ### Grotto sections added on top
 
-SOUL / personality; Outputs & Visuals & Widgets (fences ride send bodies; `grotto://` links;
-declarative artifacts); a short Skills paragraph (`grotto skill …`); per-plugin CLI mentions;
-model-family operational sections (unchanged mechanism); web-access lines.
+Outputs & Visuals (the landed rev3 skill pointer — `visual`/`artifact` fences ride send bodies,
+taught by the seeded visuals skill; the widget catalog and `document` fence died pre-flip with
+main a20acd0c); per-plugin CLI mentions; **Security** (3 bullets — omitted from the original
+disposition tables in error, retained by WS2-prep ruling); model-family operational sections
+(unchanged mechanism; empirical per-family behavior patches, re-earn-their-place candidates at
+post-flip evals); web-access lines. ~~SOUL~~ and ~~Skills listing~~ retired by W2 — identity is
+description + memory; skill discovery is harness-native.
 
 ### What dies
 
@@ -405,6 +422,12 @@ floating turns) after which the old reply/tool path is gone. Three phases:
 Specs are written just-in-time per workstream, except the WS1 wire-contract spec and the WS2
 contract-test REQUIREMENTS plan, which are shared interfaces and get drafted first.
 
+**Flip gap (ruled 2026-07-21):** CLI families 5–9 — including reminders — stay prompt-gated
+until WS5, while the flip's WS7 half deletes the cron product. The window between flip and WS5
+therefore has NO agent scheduling primitive, and the automations→reminders cutover conversion
+happens at WS5, not at the flip. Accepted deliberately: the entire program lands before
+deployment, so intermediate brokenness is not a constraint.
+
 - **WS1 — Agent-facing `grotto` CLI v1.** Wrapper injection, agent-scoped tokens, message
   family + `server info` + draft/attested-send semantics, output/error contract. Wire contract
   = the server API. Shippable while tools still exist.
@@ -420,8 +443,11 @@ contract-test REQUIREMENTS plan, which are shared interfaces and get drafted fir
 - **WS4 — Agent inbox.** Delivery planner + attention rules per I1 (mute/unfollow stores,
   piercing), content-free notice pipeline with tool-boundary flush gating per I2, two-cursor
   ledger per I3 (`delivered`/`seen`, proof-based advancement, wake-advances-nothing contract
-  test), `inbox check` + `message check`, read-only inbox card on agent detail per I4; retire
-  pushed "Unread elsewhere".
+  test), `inbox check` + `message check` — **replacing WS1's honest stubs** (grotto-cli.md §7
+  marks them; their outputs teach that cursor semantics arrive with WS4) — read-only inbox card
+  on agent detail per I4; retire pushed "Unread elsewhere". Security note riding the program:
+  PRD-105 (cross-agent FS isolation; token custody is contract-level until it lands) is a named
+  WS6 blocker.
 - **WS5 — Tasks + reminders + affordances.** D8 tasks (with board view, priorities, labels),
   D4 reminders (+ script payloads; Automations page → Reminders view), reactions, profile
   self-editing.

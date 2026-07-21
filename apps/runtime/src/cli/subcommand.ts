@@ -8,6 +8,8 @@ import { errorBlock, heading, rows } from './ui.ts';
  * and renders per-subcommand help uniformly across groups.
  */
 export interface SubCommand {
+    /** Let the command produce its own stable error for otherwise unsupported positional input. */
+    allowExtraPositionals?: boolean;
     examples: string[];
     flags: CliFlag[];
     name: string;
@@ -57,6 +59,9 @@ export async function dispatchSubcommand(
 
 /** Exact-arity check for declared positionals; UsageError carries the spec. */
 function validateArity(spec: CliCommand, sub: SubCommand, parsed: ParsedArgs): void {
+    if (sub.allowExtraPositionals) {
+        return;
+    }
     const expected = sub.positionals.length;
     if (parsed.positionals.length === expected) {
         return;

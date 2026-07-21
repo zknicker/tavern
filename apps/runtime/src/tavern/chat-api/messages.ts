@@ -10,6 +10,7 @@ import { assertChatExists } from './chats';
 import { currentCursor, insertEvent, publish } from './events';
 import { assertTavernIdPrefix } from './ids';
 import { clampLimit } from './limits';
+import { searchMessageRows } from './message-search.ts';
 import { assertThreadWritable, autoFollowMentions, autoFollowOnPost } from './threads';
 import type { MessageReceipt, MessageRow, ParticipantRow } from './types';
 
@@ -133,28 +134,7 @@ export function searchMessages(
     input: { limit?: number; query: string },
     db: Database = getDb()
 ): TavernListMessagesResponse {
-    const query = input.query.trim();
-    if (!query) {
-        throw new Error('Message search query is required.');
-    }
-
-    const limit = clampLimit(input.limit);
-    const rows = db
-        .prepare(
-            `SELECT *
-             FROM chat_messages
-             WHERE chat_id = $chatId
-               AND instr(lower(content), lower($query)) > 0
-             ORDER BY sequence DESC
-             LIMIT $limit`
-        )
-        .all(
-            namedParams({
-                chatId,
-                limit,
-                query,
-            })
-        ) as MessageRow[];
+    const rows = searchMessageRows({ chatId, limit: input.limit, query: input.query }, db);
 
     return {
         messages: rows.map((row) => rowToMessage(row, db)),
@@ -293,6 +273,19 @@ export function getMessageOrThrow(id: string, db: Database): TavernChatMessage {
         throw new Error(`Missing message ${id}.`);
     }
     return message;
+}
+
+export function findMessageByNonce(
+    chatId: string,
+    nonce: string,
+    db: Database = getDb()
+): TavernChatMessage | null {
+    const row = optionalRow(
+        db
+            .prepare('SELECT * FROM chat_messages WHERE chat_id = $chatId AND nonce = $nonce')
+            .get(namedParams({ chatId, nonce })) as MessageRow | null
+    );
+    return row ? rowToMessage(row, db) : null;
 }
 
 export function findExistingMessage(
