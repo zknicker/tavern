@@ -26,9 +26,9 @@ const restoreActionLabel = 'Restore Original Version';
 
 function restoreTargetLabel(source: ManagedSource): string {
     if (source === 'seeded') {
-        return 'the Tavern default';
+        return 'the Grotto default';
     }
-    return source === 'plugin' ? "the plugin's original version" : 'the original Tavern version';
+    return source === 'plugin' ? "the plugin's original version" : 'the original Grotto version';
 }
 
 export interface SkillEnablementController {

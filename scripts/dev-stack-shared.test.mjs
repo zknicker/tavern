@@ -145,9 +145,9 @@ test('createDevStackEnvironment preserves explicit state overrides', () => {
     assert.equal(environment.TAVERN_RUNTIME_ROOT, '/tmp/tavern-runtime');
 });
 
-test('createDevStackEnvironment persists a runtime token in tavern.json under the runtime root', () => {
+test('createDevStackEnvironment persists a runtime token in grotto.json under the runtime root', () => {
     const runtimeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'tavern-dev-token-'));
-    const configPath = path.join(runtimeRoot, 'tavern.json');
+    const configPath = path.join(runtimeRoot, 'grotto.json');
 
     const first = createDevStackEnvironment({
         baseEnvironment: { TAVERN_RUNTIME_ROOT: runtimeRoot },
@@ -167,10 +167,10 @@ test('createDevStackEnvironment persists a runtime token in tavern.json under th
     assert.equal(second.TAVERN_RUNTIME_TOKEN, persisted);
 });
 
-test('createDevStackEnvironment reads an existing token from tavern.json', () => {
+test('createDevStackEnvironment reads an existing token from grotto.json', () => {
     const runtimeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'tavern-dev-token-'));
     fs.writeFileSync(
-        path.join(runtimeRoot, 'tavern.json'),
+        path.join(runtimeRoot, 'grotto.json'),
         `${JSON.stringify({ operatorNote: 'keep me', token: 'persisted-token' })}\n`
     );
 
@@ -182,9 +182,9 @@ test('createDevStackEnvironment reads an existing token from tavern.json', () =>
     assert.equal(environment.TAVERN_RUNTIME_TOKEN, 'persisted-token');
 });
 
-test('createDevStackEnvironment preserves unknown tavern.json keys when generating a token', () => {
+test('createDevStackEnvironment preserves unknown grotto.json keys when generating a token', () => {
     const runtimeRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'tavern-dev-token-'));
-    const configPath = path.join(runtimeRoot, 'tavern.json');
+    const configPath = path.join(runtimeRoot, 'grotto.json');
     fs.writeFileSync(configPath, `${JSON.stringify({ operatorNote: 'keep me' })}\n`);
 
     const environment = createDevStackEnvironment({
@@ -274,7 +274,7 @@ test('cleanupStaleProcesses closes the old Tauri desktop app in desktop mode', (
             listListeningProcessIds: (port) => (port === 3180 ? [222] : []),
             readProcessCommand: (pid) =>
                 pid === 222
-                    ? '/Applications/Tavern.app/Contents/MacOS/tavern-server --app-origin tauri://localhost --server-port 3180'
+                    ? '/Applications/Grotto.app/Contents/MacOS/grotto-server --app-origin tauri://localhost --server-port 3180'
                     : '',
             readProcessParentId: (pid) => (pid === 222 ? 111 : null),
             readProcessWorkingDirectory: () => null,

@@ -1,26 +1,20 @@
-import { File01Icon, WorkHistoryIcon } from '@hugeicons-pro/core-stroke-rounded';
+import { File01Icon } from '@hugeicons-pro/core-stroke-rounded';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import * as React from 'react';
-import { SelectionQuoteContainer } from '../../components/quote/selection-quote.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
-import { Button } from '../../components/ui/primitives/button.tsx';
 import { ResizablePaneRail } from '../../components/ui/resizable-pane-rail.tsx';
-import { ScrollArea } from '../../components/ui/scroll-area.tsx';
 import { Tabs } from '../../components/ui/tabs.tsx';
 import {
     artifactPaneWidthLimits,
     useArtifactPaneWidth,
 } from '../../hooks/pane/use-artifact-pane-width.ts';
 import type { ChatArtifactPanelState } from '../../hooks/pane/use-chat-pane-state.ts';
-import { useWikiPage } from '../../hooks/wiki/use-wiki-page.ts';
 import { cn } from '../../lib/utils.ts';
-import { WikiMarkdownViewer } from '../wiki/wiki-markdown-viewer.tsx';
-import { WikiPageHistoryPanel } from '../wiki/wiki-page-history.tsx';
 import { ArtifactPanelChrome } from './chat-artifact-panel-chrome.tsx';
 import { WikiBrowserContent } from './chat-artifact-wiki-content.tsx';
+import { ChatArtifactWikiPage } from './chat-artifact-wiki-page.tsx';
 import { WorkspaceBrowserContent } from './chat-artifact-workspace-content.tsx';
 import {
-    formatTavernResourceLink,
     getArtifactPanelTargetKey,
     isWorkspaceChatPaneTarget,
     type TavernResourceTarget,
@@ -28,12 +22,9 @@ import {
 
 export function ChatArtifactPanel({
     agentId,
-    chromeHidden = false,
     state,
 }: {
     agentId: string;
-    // True when the shell toolbar hosts the pane chrome (tabs layout).
-    chromeHidden?: boolean;
     state: ChatArtifactPanelState;
 }) {
     const shouldReduceMotion = useReducedMotion();
@@ -75,7 +66,6 @@ export function ChatArtifactPanel({
                     />
                     <ArtifactPanelBody
                         agentId={agentId}
-                        chromeHidden={chromeHidden}
                         state={state}
                         width={artifactPaneWidth.width}
                     />
@@ -86,16 +76,13 @@ export function ChatArtifactPanel({
 }
 
 // The pane renders only the active target's content; tab selection is
-// controlled state, not Base UI panel matching, because in the tabs layout
-// the tab triggers live in the shell toolbar's own Tabs root.
+// controlled state so the chrome and body stay in one Tabs root.
 function ArtifactPanelBody({
     agentId,
-    chromeHidden,
     state,
     width,
 }: {
     agentId: string;
-    chromeHidden: boolean;
     state: ChatArtifactPanelState;
     width: number;
 }) {
@@ -105,25 +92,23 @@ function ArtifactPanelBody({
 
     return (
         <div className="flex h-full min-h-0 flex-col" style={{ width }}>
-            {chromeHidden ? null : (
-                <div className="shrink-0 border-border/70 border-b">
-                    <Tabs
-                        className="flex items-center"
-                        onValueChange={state.setActiveKey}
-                        value={state.activeKey ?? undefined}
-                    >
-                        <ArtifactPanelChrome
-                            activeKey={state.activeKey}
-                            activeTarget={activeTarget}
-                            agentId={agentId}
-                            onClose={state.toggleVisible}
-                            onCloseTarget={state.closeTarget}
-                            onOpenTarget={state.open}
-                            targets={state.targets}
-                        />
-                    </Tabs>
-                </div>
-            )}
+            <div className="shrink-0 border-border/70 border-b">
+                <Tabs
+                    className="flex items-center"
+                    onValueChange={state.setActiveKey}
+                    value={state.activeKey ?? undefined}
+                >
+                    <ArtifactPanelChrome
+                        activeKey={state.activeKey}
+                        activeTarget={activeTarget}
+                        agentId={agentId}
+                        onClose={state.toggleVisible}
+                        onCloseTarget={state.closeTarget}
+                        onOpenTarget={state.open}
+                        targets={state.targets}
+                    />
+                </Tabs>
+            </div>
             <div className="min-h-0 flex-1">
                 {activeTarget ? (
                     <ArtifactPanelContent
@@ -168,7 +153,7 @@ function ArtifactPanelContent({
     );
 
     if (target.kind === 'wikiPage') {
-        return <WikiArtifactContent target={target} />;
+        return <ChatArtifactWikiPage path={target.path} />;
     }
 
     if (target.kind === 'wikiDirectory') {
@@ -193,62 +178,6 @@ function workspaceInitialDirectory(target: TavernResourceTarget) {
         return target.path.split('/').slice(0, -1).join('/');
     }
     return target.path;
-}
-
-function WikiArtifactContent({
-    target,
-}: {
-    target: Extract<TavernResourceTarget, { kind: 'wikiPage' }>;
-}) {
-    const pageQuery = useWikiPage({ path: target.path });
-    const [showHistory, setShowHistory] = React.useState(false);
-
-    if (pageQuery.isPending) {
-        return <ArtifactPanelEmpty detail="Loading Wiki page..." title={target.path} />;
-    }
-
-    if (pageQuery.error) {
-        return <ArtifactPanelEmpty detail="Unable to load this Wiki page." title={target.path} />;
-    }
-
-    if (!pageQuery.data) {
-        return (
-            <ArtifactPanelEmpty detail="No Wiki page exists at this path." title={target.path} />
-        );
-    }
-
-    return (
-        <div className="relative flex h-full min-h-0 flex-col">
-            <div className="absolute top-2 right-3 z-10">
-                <Button
-                    onClick={() => setShowHistory((visible) => !visible)}
-                    size="sm"
-                    variant={showHistory ? 'secondary' : 'ghost'}
-                >
-                    <Icon icon={WorkHistoryIcon} />
-                    History
-                </Button>
-            </div>
-            <ScrollArea className="h-full min-h-0" scrollFade>
-                {showHistory ? (
-                    <div className="mx-auto max-w-[42rem] px-7 pt-12 pb-12">
-                        <WikiPageHistoryPanel path={target.path} />
-                    </div>
-                ) : (
-                    <SelectionQuoteContainer
-                        source={{
-                            href: formatTavernResourceLink(target),
-                            label: target.path,
-                        }}
-                    >
-                        <article className="mx-auto max-w-[42rem] px-7 pt-7 pb-12">
-                            <WikiMarkdownViewer value={pageQuery.data.body} />
-                        </article>
-                    </SelectionQuoteContainer>
-                )}
-            </ScrollArea>
-        </div>
-    );
 }
 
 function ArtifactPanelEmpty({ detail, title }: { detail: string; title: string }) {

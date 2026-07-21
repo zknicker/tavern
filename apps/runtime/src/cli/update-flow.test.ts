@@ -100,9 +100,9 @@ describe('runUpdateFlow', () => {
 
         expect(progress).toEqual([
             'Checking Homebrew...',
-            'Checking Tavern Runtime formula...',
+            'Checking Grotto Runtime formula...',
             'Updating Homebrew metadata...',
-            'Staging Tavern Runtime package...',
+            'Staging Grotto Runtime package...',
             'Pre-staging agent engine...',
             'Reading staged Runtime version...',
             'Checking running Runtime version...',
@@ -125,7 +125,7 @@ describe('runUpdateFlow', () => {
         expect(result.exitCode).toBe(0);
         expect(outText(result.lines)).toContain('Already up to date (v1.4.2)');
         expect(outText(result.lines)).toContain('Staged v1.4.2 — runtime is still running v1.4.0.');
-        expect(outText(result.lines)).toContain("Run 'tavern restart' to cut over.");
+        expect(outText(result.lines)).toContain("Run 'grotto restart' to cut over.");
         expect(result.shouldRestart).toBe(false);
     });
 
@@ -136,7 +136,7 @@ describe('runUpdateFlow', () => {
         );
         expect(result.exitCode).toBe(0);
         expect(outText(result.lines)).toContain(
-            "Staged v1.4.2. Runtime is not running — start it with 'brew services start tavern-runtime'."
+            "Staged v1.4.2. Runtime is not running — start it with 'brew services start grotto-runtime'."
         );
         expect(result.shouldRestart).toBe(false);
     });
@@ -149,7 +149,7 @@ describe('runUpdateFlow', () => {
         expect(result.exitCode).toBe(0);
         expect(outText(result.lines)).toContain('Staged v1.4.2 — runtime is still running v1.4.0.');
         expect(result.shouldRestart).toBe(true);
-        expect(outText(result.lines)).not.toContain("Run 'tavern restart' to cut over.");
+        expect(outText(result.lines)).not.toContain("Run 'grotto restart' to cut over.");
     });
 
     test('versions equal → up-to-date-and-running verdict', async () => {

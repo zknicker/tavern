@@ -4,9 +4,9 @@ import { applyAgentDisplayNameToInstructions } from './agent-instructions-previe
 
 test('applyAgentDisplayNameToInstructions reflects the current display name draft', () => {
     const content = [
-        '# Tavern Agent Instructions',
+        '# Grotto Agent Instructions',
         '',
-        'You are main, a Tavern-managed agent.',
+        'You are main, a Grotto-managed agent.',
         '',
         'Saved instructions.',
     ].join('\n');
@@ -14,9 +14,9 @@ test('applyAgentDisplayNameToInstructions reflects the current display name draf
     assert.equal(
         applyAgentDisplayNameToInstructions(content, 'Blippy'),
         [
-            '# Tavern Agent Instructions',
+            '# Grotto Agent Instructions',
             '',
-            'You are Blippy, a Tavern-managed agent.',
+            'You are Blippy, a Grotto-managed agent.',
             '',
             'Saved instructions.',
         ].join('\n')

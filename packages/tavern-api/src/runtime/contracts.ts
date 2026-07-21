@@ -394,7 +394,7 @@ const agentRuntimeAgentEnvNameSchema = z
     .min(1)
     .max(128)
     .regex(/^[A-Z_][A-Z0-9_]*$/u, 'Use uppercase letters, digits, and underscores.')
-    .refine((name) => !isAgentRuntimeReservedEnvName(name), 'This name is managed by Tavern.');
+    .refine((name) => !isAgentRuntimeReservedEnvName(name), 'This name is managed by Grotto.');
 
 export const agentRuntimeAgentEnvVariableSchema = z.object({
     hasValue: z.boolean(),
@@ -1677,6 +1677,7 @@ export const wikiPageSummarySchema = z.object({
 export const wikiPageSchema = wikiPageSummarySchema.extend({
     body: z.string(),
     frontmatter: z.record(z.string(), z.unknown()).default({}),
+    hash: z.string().regex(/^[0-9a-f]{64}$/u),
     links: z.array(wikiPageLinkSchema).default([]),
     size: z.number().int().nonnegative(),
     wikiPath: z.string().trim().min(1),
@@ -1719,12 +1720,43 @@ export const wikiPathKindSchema = z.enum(['folder', 'page']);
 
 export const wikiCreatePageSchema = z.object({
     body: z.string().optional(),
+    frontmatter: z.record(z.string(), z.unknown()).optional(),
     path: z.string().trim().min(1, 'Enter a page path.'),
 });
 
 export const wikiSavePageSchema = z.object({
     body: z.string(),
+    expectedHash: z.string().regex(/^[0-9a-f]{64}$/u),
     path: z.string().trim().min(1, 'Enter a page path.'),
+});
+
+export const wikiAttachmentMediaTypeSchema = z.enum([
+    'image/gif',
+    'image/jpeg',
+    'image/png',
+    'image/webp',
+]);
+
+export const wikiAttachmentMaxBase64Length = Math.ceil((8 * 1024 * 1024) / 3) * 4;
+
+export const wikiUploadAttachmentSchema = z.object({
+    contentBase64: z.string().min(1).max(wikiAttachmentMaxBase64Length),
+    filename: z.string().trim().min(1).max(255),
+    mediaType: wikiAttachmentMediaTypeSchema,
+    pagePath: z.string().trim().min(1),
+});
+
+export const wikiAttachmentSchema = z.object({
+    markdownPath: z.string().trim().min(1),
+    mediaType: wikiAttachmentMediaTypeSchema,
+    path: z.string().trim().min(1),
+    sizeBytes: z.number().int().positive(),
+});
+
+export const wikiAttachmentContentSchema = z.object({
+    contentBase64: z.string().min(1),
+    mediaType: wikiAttachmentMediaTypeSchema,
+    path: z.string().trim().min(1),
 });
 
 export const wikiPathInputSchema = z.object({
@@ -2660,7 +2692,7 @@ export const agentRuntimeTurnProgressStepSchema = z.object({
 });
 
 // Chat pane state: the Runtime-owned tab set of a chat's artifact pane.
-// Targets mirror the app's tavern:// link scheme; identity is kind + path.
+// Targets mirror the app's grotto:// link scheme; identity is kind + path.
 export const chatPaneTargetSchema = z.discriminatedUnion('kind', [
     z.object({ kind: z.literal('wikiDirectory'), path: z.string() }),
     z.object({ kind: z.literal('wikiPage'), path: z.string().trim().min(1) }),
@@ -3141,6 +3173,9 @@ export type AgentRuntimeBindingMatch = z.infer<typeof agentRuntimeBindingMatchSc
 export type PlatformBindingStatus = z.infer<typeof agentRuntimeBindingStatusSchema>;
 export type WikiBacklink = z.infer<typeof wikiBacklinkSchema>;
 export type WikiBacklinkList = z.infer<typeof wikiBacklinkListSchema>;
+export type WikiAttachment = z.infer<typeof wikiAttachmentSchema>;
+export type WikiAttachmentContent = z.infer<typeof wikiAttachmentContentSchema>;
+export type WikiAttachmentMediaType = z.infer<typeof wikiAttachmentMediaTypeSchema>;
 export type WikiConfigSource = z.infer<typeof wikiConfigSourceSchema>;
 export type WikiCreatePage = z.infer<typeof wikiCreatePageSchema>;
 export type WikiFreshness = z.infer<typeof wikiFreshnessSchema>;
@@ -3156,6 +3191,7 @@ export type WikiPathInput = z.infer<typeof wikiPathInputSchema>;
 export type WikiPathKind = z.infer<typeof wikiPathKindSchema>;
 export type WikiPathMutationResult = z.infer<typeof wikiPathMutationResultSchema>;
 export type WikiSavePage = z.infer<typeof wikiSavePageSchema>;
+export type WikiUploadAttachment = z.infer<typeof wikiUploadAttachmentSchema>;
 export type WikiSearchInput = z.input<typeof wikiSearchInputSchema>;
 export type WikiSearchResult = z.infer<typeof wikiSearchResultSchema>;
 export type WikiStatus = z.infer<typeof wikiStatusSchema>;

@@ -34,7 +34,7 @@ export async function requireConfiguredAgentRuntimeClientForRuntimeId(runtimeId:
     const client = await createConfiguredAgentRuntimeClientForRuntimeId(runtimeId);
 
     if (!client) {
-        throw new Error(`Tavern Runtime connection "${runtimeId}" is not configured.`);
+        throw new Error(`Grotto Runtime connection "${runtimeId}" is not configured.`);
     }
 
     return client;

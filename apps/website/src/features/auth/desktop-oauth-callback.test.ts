@@ -1,18 +1,16 @@
 import { describe, expect, it } from 'bun:test';
-import { parseRotatingTokenNonce } from './desktop-oauth-callback.ts';
+import { getDesktopOAuthReloadOptions } from './desktop-oauth-callback.ts';
 
-describe('parseRotatingTokenNonce', () => {
+describe('getDesktopOAuthReloadOptions', () => {
     it('reads the Clerk rotating token nonce from a desktop callback', () => {
         expect(
-            parseRotatingTokenNonce(
-                'tavern://sso-callback?created_session_id=sess_123&rotating_token_nonce=nonce_456'
+            getDesktopOAuthReloadOptions(
+                'grotto://sso-callback?created_session_id=sess_123&rotating_token_nonce=nonce_456'
             )
-        ).toBe('nonce_456');
+        ).toEqual({ rotatingTokenNonce: 'nonce_456' });
     });
 
-    it('rejects callbacks without a rotating token nonce', () => {
-        expect(() => parseRotatingTokenNonce('tavern://sso-callback')).toThrow(
-            'did not include a rotating token nonce'
-        );
+    it('reloads the client-bound attempt when Clerk returns an empty callback', () => {
+        expect(getDesktopOAuthReloadOptions('grotto://sso-callback')).toEqual({});
     });
 });

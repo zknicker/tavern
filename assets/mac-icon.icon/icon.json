@@ -1,42 +1,48 @@
 {
-  "fill": {
-    "automatic-gradient": "extended-gray:1.00000,1.00000"
+  "fill" : {
+    "automatic-gradient" : "display-p3:0.84229,0.47363,0.17590,1.00000"
   },
-  "groups": [
+  "groups" : [
     {
-      "layers": [
+      "layers" : [
         {
-          "image-name": "bannerwstar 2.png",
-          "name": "bannerwstar 2",
-          "position": {
-            "scale": 0.9,
-            "translation-in-points": [0.029999999999972715, 18]
+          "glass" : false,
+          "image-name" : "Untitled Project - Artboard 14 (1).svg",
+          "name" : "Untitled Project - Artboard 14 (1)",
+          "position" : {
+            "scale" : 1.62,
+            "translation-in-points" : [
+              5.710486427458355,
+              -13.395498259558549
+            ]
+          }
+        },
+        {
+          "image-name" : "Untitled Project - Artboard 14.svg",
+          "name" : "Untitled Project - Artboard 14",
+          "position" : {
+            "scale" : 1.62,
+            "translation-in-points" : [
+              16.22622904154094,
+              7.262093897883684
+            ]
           }
         }
       ],
-      "shadow": {
-        "kind": "neutral",
-        "opacity": 0.5
+      "shadow" : {
+        "kind" : "neutral",
+        "opacity" : 0.5
       },
-      "translucency": {
-        "enabled": true,
-        "value": 0.5
-      }
-    },
-    {
-      "layers": [],
-      "shadow": {
-        "kind": "neutral",
-        "opacity": 0.5
-      },
-      "translucency": {
-        "enabled": true,
-        "value": 0.5
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.5
       }
     }
   ],
-  "supported-platforms": {
-    "circles": ["watchOS"],
-    "squares": "shared"
+  "supported-platforms" : {
+    "circles" : [
+      "watchOS"
+    ],
+    "squares" : "shared"
   }
 }

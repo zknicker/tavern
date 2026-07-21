@@ -33,7 +33,7 @@ function createContext(overrides: Partial<AppCommandBuildContext> = {}): AppComm
     };
 }
 
-test('global command groups expose the first slice of Tavern actions', () => {
+test('global command groups expose the first slice of Grotto actions', () => {
     const context = createContext();
     const groups = [
         buildNavigationCommandGroup(context),
@@ -47,11 +47,10 @@ test('global command groups expose the first slice of Tavern actions', () => {
         groups.map((group) => group.title),
         ['Navigation', 'Create', 'Settings', 'Developer']
     );
-    assert.ok(commandTitles.includes('Tavern'));
-    assert.ok(commandTitles.includes('New Chat'));
+    assert.ok(commandTitles.includes('Grotto'));
     assert.ok(commandTitles.includes('New Task'));
     assert.ok(commandTitles.includes('New Automation'));
-    assert.ok(commandTitles.includes('Tavern Runtime'));
+    assert.ok(commandTitles.includes('Grotto Runtime'));
     assert.ok(commandTitles.includes('Agents'));
     assert.ok(commandTitles.includes('Turn Dev Mode On'));
     assert.ok(commandTitles.includes('Check Runtime Health'));
@@ -129,6 +128,7 @@ function createChat(overrides: Partial<ChatListItem> = {}): ChatListItem {
         agentRuntimeSyncLabel: null,
         archived: false,
         boundAgentIds: ['agt_primary'],
+        description: null,
         canSend: true,
         conversationKind: 'channel',
         createdAt: '2026-07-07T12:00:00.000Z',

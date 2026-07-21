@@ -41,7 +41,7 @@ export const ui = {
  * the trailing blank. Compact wordmark, no figlet.
  */
 export function banner(): string {
-    const title = ui.accent(ui.bold('🍺 Tavern Runtime'));
+    const title = ui.accent(ui.bold('🟠 Grotto Runtime'));
     const version = ui.dim(`v${runtimePackage.version}`);
     return `${title} ${version}\n${ui.dim('The local home for your agents.')}\n`;
 }

@@ -42,7 +42,7 @@ export async function sendTavernChatMessage(
     });
 
     if (!chatRecord) {
-        throw new Error(`No Tavern chat named "${parsed.chatId}" exists.`);
+        throw new Error(`No Grotto chat named "${parsed.chatId}" exists.`);
     }
 
     const chat = chatRecord.chat;
@@ -100,7 +100,7 @@ export async function sendTavernChatMessage(
     }
 
     if (!runtimeClient) {
-        throw new Error(`Tavern Runtime connection "${chatRecord.runtimeId}" is not configured.`);
+        throw new Error(`Grotto Runtime connection "${chatRecord.runtimeId}" is not configured.`);
     }
 
     await requireRuntimeCapabilityHealthy({
@@ -236,7 +236,7 @@ async function createTavernApiClient(runtimeId: string) {
     const connection = await getAgentRuntimeConnection(runtimeId);
 
     if (!(connection?.enabled && connection.baseUrl)) {
-        throw new Error(`Tavern Runtime connection "${runtimeId}" is not configured.`);
+        throw new Error(`Grotto Runtime connection "${runtimeId}" is not configured.`);
     }
 
     return createTavernClientForConnection(connection);

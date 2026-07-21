@@ -2,6 +2,43 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.5.5 - 2026-07-21
+
+- Runtime: Homebrew installs now package and load Wiki recall correctly,
+  including its external dependencies, and shut down cleanly on macOS.
+
+## v1.5.4 - 2026-07-20
+
+- App: Google sign-in now completes reliably in the desktop app when Clerk
+  returns an empty custom-scheme callback, while using the rotating nonce when
+  Clerk supplies one.
+- App: signing out returns to Grotto's welcome screen instead of navigating the
+  packaged Electron window to an invalid browser page.
+- App: local macOS installs preserve the signed bundle's resources and extended
+  attributes.
+
+## v1.5.3 - 2026-07-20
+
+- App/Runtime: Tavern is now Grotto, with a clean install boundary: the desktop
+  bundle is `build.grotto.desktop`, links use only `grotto://`, production state
+  lives under `~/.grotto`, and the Runtime ships only the `grotto` and
+  `grotto-runtime` commands through `zknicker/grotto/grotto-runtime`. Requires
+  this Runtime. **Breaking:** Tavern app data, protocol links, CLI aliases,
+  Homebrew formula, and production state paths are not migrated automatically.
+- Runtime/API/App: Clerk-backed identity now covers sign-in, Runtime ownership,
+  invite redemption, members, reader-scoped unread state, and authenticated
+  remote Runtime connections with session keepalive. Requires this Runtime.
+- App: chats are persistent DMs and channels in a new sidebar-rail layout, with
+  channel descriptions, participant bios, presence, and a channel-menu topbar.
+- App: adds the Home workspace view, a dedicated Automations sidebar, and a
+  warm flat visual system with inked surfaces and press-slab controls.
+- Runtime/API/App: agents can stream generative visuals and create editable
+  document artifacts that open in the chat-scoped artifact pane. Requires this
+  Runtime.
+- Runtime/API/App: adds Wiki page history, per-turn workspace file-change
+  evidence, expanded diffs, and selection-to-chat quoting. Requires this
+  Runtime.
+
 ## v1.5.2 - 2026-07-17
 
 - Runtime/API/App: Claude works with zero setup on desktop Macs — a detected

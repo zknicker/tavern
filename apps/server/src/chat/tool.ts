@@ -12,7 +12,7 @@ export async function getChatToolActivity(input: { activityId: string; chatId: s
     if (!(connection?.enabled && connection.baseUrl)) {
         throw new TRPCError({
             code: 'NOT_FOUND',
-            message: `No active Tavern Runtime connection is available for chat "${input.chatId}".`,
+            message: `No active Grotto Runtime connection is available for chat "${input.chatId}".`,
         });
     }
 

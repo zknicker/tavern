@@ -1,39 +1,39 @@
-# Tavern Runtime CLI
+# Grotto Runtime CLI
 
-Normative contract for the `tavern` CLI: a clear banner, generated help,
+Normative contract for the `grotto` CLI: a clear banner, generated help,
 contextual help on incomplete commands, truthful update/restart flows, and
 consistent output without a TUI. The implementation lives in
 `apps/runtime/src/cli/`.
 
 ## Goals
 
-* Every command and group self-documents: `tavern help`,
-  `tavern help <cmd>`, `--help` anywhere, and contextual group help when a
+* Every command and group self-documents: `grotto help`,
+  `grotto help <cmd>`, `--help` anywhere, and contextual group help when a
   subcommand is missing.
-* `tavern update` / `tavern restart` report the true end state, including the
+* `grotto update` / `grotto restart` report the true end state, including the
   staged-but-not-restarted case.
-* `tavern status` answers "is this box healthy" in one screen.
+* `grotto status` answers "is this box healthy" in one screen.
 * Read commands support `--json`.
 
 ## Command Tree
 
 ```txt
-tavern                      Banner + quick status + command list
-tavern serve                Run the foreground Runtime server
-tavern status [--json]      Service, version, capability, and engine health
-tavern update [--restart] [--verbose]
-tavern restart [--no-wait]
-tavern engine               Group help (exit 1)
-tavern engine status [--json]
-tavern engine install
-tavern engine clean [--all]
-tavern wiki               Group help (exit 1)
-tavern wiki status [--json]
-tavern wiki list [--json]
-tavern wiki get <path> [--json]
-tavern wiki search <query> [--json]
-tavern version | -v | --version
-tavern help [command]
+grotto                      Banner + quick status + command list
+grotto serve                Run the foreground Runtime server
+grotto status [--json]      Service, version, capability, and engine health
+grotto update [--restart] [--verbose]
+grotto restart [--no-wait]
+grotto engine               Group help (exit 1)
+grotto engine status [--json]
+grotto engine install
+grotto engine clean [--all]
+grotto wiki                 Group help (exit 1)
+grotto wiki status [--json]
+grotto wiki list [--json]
+grotto wiki get <path> [--json]
+grotto wiki search <query> [--json]
+grotto version | -v | --version
+grotto help [command]
 ```
 
 ## Global Conventions
@@ -54,13 +54,13 @@ tavern help [command]
 Global help is rendered from the command registry.
 
 ```txt
-Tavern Runtime v1.4.2
+Grotto Runtime v1.4.2
 
 Usage
-  tavern <command> [flags]
+  grotto <command> [flags]
 
 Server
-  serve          Run the foreground Tavern Runtime server
+  serve          Run the foreground Grotto Runtime server
 
 Status
   status         Service, version, capability, and engine health
@@ -80,16 +80,16 @@ Environment
   TAVERN_RUNTIME_URL    Runtime API URL for client commands
   TAVERN_RUNTIME_HOST   Bind host (default 127.0.0.1)
   TAVERN_RUNTIME_PORT   Bind port (default 18790)
-  TAVERN_RUNTIME_ROOT   Runtime data root (default ~/.tavern/runtime)
+  TAVERN_RUNTIME_ROOT   Runtime data root (default ~/.grotto/runtime)
 ```
 
-`tavern help update` / `tavern update --help` shows summary, usage, flags with
-descriptions, and examples. Bare `tavern engine` / `tavern wiki` print group
+`grotto help update` / `grotto update --help` shows summary, usage, flags with
+descriptions, and examples. Bare `grotto engine` / `grotto wiki` print group
 help and exit 1.
 
 ## Wiki Commands
 
-`tavern wiki` commands are thin Runtime clients.
+`grotto wiki` commands are thin Runtime clients.
 
 * `status` reports the resolved Wiki path, config source, page count,
   `TAXONOMY.md` presence, and filesystem access.
@@ -101,10 +101,10 @@ Writes and maintenance happen through managed Wiki tools, not the CLI.
 
 ## Status
 
-`tavern status` renders a compact health view:
+`grotto status` renders a compact health view:
 
 ```txt
-Tavern Runtime v1.4.2
+Grotto Runtime v1.4.2
 
   Service     running (homebrew)
   Runtime     v1.4.2 · healthy · http://127.0.0.1:18790
@@ -117,7 +117,7 @@ Capabilities
 
 Engine
   Pin         5937b95 (pinned)
-  Resolved    ~/.tavern/engine/ed711e.../agent-engine (managed)
+  Resolved    ~/.grotto/runtime/agent (package)
 ```
 
 `--json` emits one object with `binary`, `service`, `runtime`,
@@ -135,22 +135,22 @@ Engine
 | `help.ts` | Render global, group, and per-command help from the registry |
 | `ui.ts` | ANSI palette, banner, headings, aligned rows, error/hint |
 | `runtime-probe.ts` | Typed local-runtime probes with timeouts |
-| `commands/status.ts` | `tavern status` |
-| `commands/update.ts` | `tavern update` |
-| `commands/restart.ts` | `tavern restart` |
-| `commands/wiki.ts` | `tavern wiki ...` subcommands |
-| `commands/engine.ts` | `tavern engine ...` subcommands |
+| `commands/status.ts` | `grotto status` |
+| `commands/update.ts` | `grotto update` |
+| `commands/restart.ts` | `grotto restart` |
+| `commands/wiki.ts` | `grotto wiki ...` subcommands |
+| `commands/engine.ts` | `grotto engine ...` subcommands |
 
 ## Acceptance Criteria
 
-* Bare `tavern` shows banner + status line + commands and does not start the
+* Bare `grotto` shows banner + status line + commands and does not start the
   server.
-* `tavern engine` prints engine group help and exits 1; same for `memory`.
-* `tavern updte` suggests `update`, exits 2.
-* `tavern update` detects the staged-but-not-restarted case and says to run
-  `tavern restart`.
-* `tavern restart` only reports success after observing `/health` healthy.
-* `tavern -v` prints the bare version string.
+* `grotto engine` prints engine group help and exits 1; same for `wiki`.
+* `grotto updte` suggests `update`, exits 2.
+* `grotto update` detects the staged-but-not-restarted case and says to run
+  `grotto restart`.
+* `grotto restart` only reports success after observing `/health` healthy.
+* `grotto -v` prints the bare version string.
 * All read commands support `--json`.
 * No new dependencies; binary still builds via `bun build --compile`.
 * User-facing CLI copy says "agent engine"; runtime-provided capability

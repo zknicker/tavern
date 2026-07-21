@@ -70,7 +70,7 @@ export function createDevStackConfig({
         runtimeRoot: shortenHomePath(runtimeRoot),
         runtimeUrl: hasRuntime ? runtimeUrl : 'disabled',
         serverUrl: `http://localhost:${ports.serverPort}`,
-        trigger: `@${devEnvironment.ASSISTANT_NAME ?? 'Tavern'}`,
+        trigger: `@${devEnvironment.ASSISTANT_NAME ?? 'Otto'}`,
         websiteUrl: `http://localhost:${ports.websitePort}`,
         wsUrl: `ws://localhost:${ports.serverPort}/trpc`,
     };
@@ -238,7 +238,7 @@ export async function waitForRuntimeReady(
         await sleep(100);
     }
 
-    throw new Error(`Timed out waiting for Tavern Runtime readiness at ${runtimeUrl}.`);
+    throw new Error(`Timed out waiting for Grotto Runtime readiness at ${runtimeUrl}.`);
 }
 
 export function assertDevStackPortsAvailable({ mode, ports, repositoryRoot }) {
@@ -378,7 +378,7 @@ export function isSuppressedStartupLine(source, line) {
             /Channel adapter started/.test(line) ||
             /Scheduler loop started/.test(line) ||
             /IPC watcher started/.test(line) ||
-            /Tavern Runtime running/.test(line)
+            /Grotto Runtime running/.test(line)
         );
     }
 
@@ -407,11 +407,11 @@ export function stripAnsi(value) {
 }
 
 // Mirrors resolveRuntimeApiToken in apps/runtime/src/config.ts: read the token
-// from <runtimeRoot>/tavern.json, or create it (base64url 32 bytes, mode 0600,
+// from <runtimeRoot>/grotto.json, or create it (base64url 32 bytes, mode 0600,
 // unknown keys preserved) so the first dev-stack run and the runtime agree on
 // the same persisted token.
 function resolveRuntimeApiTokenFile(runtimeRoot) {
-    const configPath = path.join(runtimeRoot, 'tavern.json');
+    const configPath = path.join(runtimeRoot, 'grotto.json');
     let config = {};
     try {
         const parsed = JSON.parse(fs.readFileSync(configPath, 'utf8'));
@@ -422,7 +422,7 @@ function resolveRuntimeApiTokenFile(runtimeRoot) {
     } catch (error) {
         if (error.code !== 'ENOENT') {
             // Never clobber an operator-edited config file we cannot parse.
-            throw new Error(`Tavern Runtime config at ${configPath} is not valid JSON: ${error}`);
+            throw new Error(`Grotto Runtime config at ${configPath} is not valid JSON: ${error}`);
         }
         // First run creates the config below.
     }
@@ -640,7 +640,7 @@ function readProcessParentId(pid) {
 
 function isStaleTauriDesktopSidecar(command) {
     return (
-        command.includes('/Applications/Tavern.app/Contents/MacOS/tavern-server') &&
+        command.includes('/Applications/Grotto.app/Contents/MacOS/grotto-server') &&
         command.includes('--app-origin tauri://localhost')
     );
 }

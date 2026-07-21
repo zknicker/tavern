@@ -21,7 +21,7 @@ export const staticSettingsNavItems = [
     {
         icon: ComputerTerminal01Icon,
         id: 'agent-runtime',
-        label: 'Tavern Runtime',
+        label: 'Grotto Runtime',
         to: appRoutes.settingsAgentRuntime,
     },
     {

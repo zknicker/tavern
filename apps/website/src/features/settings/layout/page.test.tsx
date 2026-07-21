@@ -5,62 +5,42 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { MemoryRouter, Outlet, Route, Routes } from 'react-router-dom';
 import { trpc } from '../../../lib/trpc.tsx';
 import { useLayoutContext } from '../../shell/use-layout-context.ts';
-import { SettingsContent, SettingsLayout } from './page.tsx';
+import { SettingsLayout } from './page.tsx';
 
 describe('SettingsLayout', () => {
     test('forwards the app layout context to settings child routes', () => {
-        const queryClient = new QueryClient();
-        const client = trpc.createClient({
-            links: [httpLink({ url: 'http://127.0.0.1:1/trpc' })],
-        });
-        const markup = renderToStaticMarkup(
-            <trpc.Provider client={client} queryClient={queryClient}>
-                <QueryClientProvider client={queryClient}>
-                    <MemoryRouter initialEntries={['/settings/probe']}>
-                        <Routes>
-                            <Route element={<AppLayoutProbe />} path="/settings">
-                                <Route element={<SettingsLayout />}>
-                                    <Route element={<SettingsChildProbe />} path="probe" />
-                                </Route>
-                            </Route>
-                        </Routes>
-                    </MemoryRouter>
-                </QueryClientProvider>
-            </trpc.Provider>
-        );
+        const markup = renderSettingsRoute();
 
         expect(markup).toContain('settings context available');
     });
 
-    test('adds extra top space in sidebar app layout', () => {
-        const markup = renderSettingsContent('sidebar');
+    test('pads normal settings routes', () => {
+        const markup = renderSettingsRoute();
 
         expect(markup).toContain('pt-12');
     });
-
-    test('keeps the tighter top space in tabs app layout', () => {
-        const markup = renderSettingsContent('tabs');
-
-        expect(markup).toContain('pt-6');
-        expect(markup).not.toContain('pt-12');
-    });
 });
 
-function renderSettingsContent(appLayoutMode: 'sidebar' | 'tabs') {
+function renderSettingsRoute() {
+    const queryClient = new QueryClient();
+    const client = trpc.createClient({
+        links: [httpLink({ url: 'http://127.0.0.1:1/trpc' })],
+    });
+
     return renderToStaticMarkup(
-        <MemoryRouter initialEntries={['/settings/probe']}>
-            <Routes>
-                <Route
-                    element={
-                        <SettingsContent
-                            appLayoutMode={appLayoutMode}
-                            layoutContext={{ navigateToSettings: () => undefined }}
-                        />
-                    }
-                    path="/settings/probe"
-                />
-            </Routes>
-        </MemoryRouter>
+        <trpc.Provider client={client} queryClient={queryClient}>
+            <QueryClientProvider client={queryClient}>
+                <MemoryRouter initialEntries={['/settings/probe']}>
+                    <Routes>
+                        <Route element={<AppLayoutProbe />} path="/settings">
+                            <Route element={<SettingsLayout />}>
+                                <Route element={<SettingsChildProbe />} path="probe" />
+                            </Route>
+                        </Route>
+                    </Routes>
+                </MemoryRouter>
+            </QueryClientProvider>
+        </trpc.Provider>
     );
 }
 
@@ -69,11 +49,7 @@ function AppLayoutProbe() {
 }
 
 function SettingsChildProbe() {
-    const { navigateToSettings } = useLayoutContext();
+    const context = useLayoutContext();
 
-    return (
-        <button onClick={navigateToSettings} type="button">
-            settings context available
-        </button>
-    );
+    return <span>{context ? 'settings context available' : 'missing context'}</span>;
 }

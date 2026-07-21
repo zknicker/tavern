@@ -79,7 +79,7 @@ describe('Runtime skill library', () => {
             id: 'research',
         });
         expect(coreSkill).toMatchObject({
-            contentMarkdown: expect.stringContaining('# Tavern Agent'),
+            contentMarkdown: expect.stringContaining('# Grotto Agent'),
             id: tavernAgentSkillId,
         });
     });
@@ -365,7 +365,7 @@ describe('Runtime skill library', () => {
 
     it('rejects reset for non-seeded skills', async () => {
         await expect(resetRuntimeSkillToDefault('tavern-workflow', { skillsDir })).rejects.toThrow(
-            'Only seeded and Plugin skills have Tavern defaults.'
+            'Only seeded and Plugin skills have Grotto defaults.'
         );
     });
 

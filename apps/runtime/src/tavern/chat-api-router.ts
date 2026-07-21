@@ -45,7 +45,7 @@ export async function handleTavernApiRequest(request: Request): Promise<Response
     try {
         return await route(request, url);
     } catch (error) {
-        return badRequest(error instanceof Error ? error.message : 'Invalid Tavern API request.');
+        return badRequest(error instanceof Error ? error.message : 'Invalid Grotto API request.');
     }
 }
 

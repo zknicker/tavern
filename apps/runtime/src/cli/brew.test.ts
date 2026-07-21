@@ -22,12 +22,12 @@ describe('brew.isRuntimeOutdated', () => {
     });
 
     test('exit 1 with formula name → outdated', () => {
-        spawnSyncMock.mockReturnValue(spawnResult({ status: 1, stdout: 'tavern-runtime\n' }));
+        spawnSyncMock.mockReturnValue(spawnResult({ status: 1, stdout: 'grotto-runtime\n' }));
         expect(brew.isRuntimeOutdated()).toBe(true);
     });
 
     test('exit 0 but stdout has the name → outdated', () => {
-        spawnSyncMock.mockReturnValue(spawnResult({ status: 0, stdout: 'tavern-runtime\n' }));
+        spawnSyncMock.mockReturnValue(spawnResult({ status: 0, stdout: 'grotto-runtime\n' }));
         expect(brew.isRuntimeOutdated()).toBe(true);
     });
 });
@@ -43,5 +43,19 @@ describe('brew.isAvailable', () => {
     test('successful spawn → available', () => {
         spawnSyncMock.mockReturnValue(spawnResult({ status: 0, stdout: 'Homebrew 4.0.0' }));
         expect(brew.isAvailable()).toBe(true);
+    });
+});
+
+describe('Runtime formula', () => {
+    test('upgrades the Grotto formula', () => {
+        spawnSyncMock.mockReturnValue(spawnResult({ status: 0 }));
+
+        brew.upgradeRuntime();
+
+        expect(spawnSyncMock).toHaveBeenLastCalledWith(
+            'brew',
+            ['upgrade', 'grotto-runtime'],
+            expect.any(Object)
+        );
     });
 });

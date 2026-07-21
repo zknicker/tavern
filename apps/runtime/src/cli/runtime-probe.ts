@@ -21,7 +21,7 @@ export type RuntimeCapability = z.infer<
     typeof agentRuntimeCapabilityHealthListSchema
 >['capabilities'][number];
 
-/** A combined liveness + version + capability snapshot for `tavern status`. */
+/** A combined liveness + version + capability snapshot for `grotto status`. */
 export interface RuntimeSnapshot {
     /** Capability rows, or null when the runtime is unreachable. */
     capabilities: RuntimeCapability[] | null;
@@ -101,7 +101,7 @@ export const runtimeProbe: RuntimeProbe = {
 };
 
 /**
- * Fast running-version probe for bare `tavern` (~750 ms). Returns null when the
+ * Fast running-version probe for bare `grotto` (~750 ms). Returns null when the
  * runtime is unreachable or the timeout fires, so the banner falls back to
  * "not running" instead of stalling.
  */

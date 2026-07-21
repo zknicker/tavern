@@ -15,6 +15,7 @@ export async function listAgentChats(input: { agentId: string }) {
                 canSend: chat.canSend,
                 conversationKind: chat.conversationKind,
                 createdAt: chat.createdAt,
+                description: chat.description,
                 displayName: chat.displayName,
                 framework: chat.framework,
                 id: chat.id,

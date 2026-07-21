@@ -8,7 +8,7 @@ import {
     parseChatPaneTargetLink,
 } from '@tavern/api/pane-links';
 
-// Pane targets and the tavern:// link scheme are the Runtime contract's; the
+// Pane targets and the grotto:// link scheme are the Runtime contract's; the
 // app-local aliases keep chat feature imports stable.
 export type TavernResourceTarget = ChatPaneTarget;
 

@@ -34,7 +34,7 @@ function snapshot(overrides = {}) {
 test('formatHeader prints durable startup context once', () => {
     const output = formatHeader(snapshot(), { colorize: false });
 
-    assert.match(output, /🎰 tavern booting local stack/u);
+    assert.match(output, /🎰 grotto booting local stack/u);
     assert.doesNotMatch(output, /server http:\/\/localhost:8080/u);
     assert.doesNotMatch(output, /data ~\/\.tavern\/tavern\.sqlite/u);
 });
@@ -94,7 +94,7 @@ test('formatReadyBlock prints the final startup summary', () => {
 
     const output = formatReadyBlock(currentSnapshot, { colorize: false });
 
-    assert.match(output, /╭─ 🎰 TAVERN/u);
+    assert.match(output, /╭─ 🎰 GROTTO/u);
     assert.match(output, /Ready to go/u);
     assert.match(output, /Runtime\s+http:\/\/127\.0\.0\.1:18790/u);
     assert.match(output, /Server\s+http:\/\/localhost:8080/u);
@@ -156,7 +156,7 @@ test('getSnapshotChangeLines keeps ready details in the final block', () => {
     const lines = getSnapshotChangeLines(previous, next, currentSnapshot, { colorize: false });
 
     assert.equal(lines.length, 1);
-    assert.match(lines[0], /╭─ 🎰 TAVERN/u);
+    assert.match(lines[0], /╭─ 🎰 GROTTO/u);
     assert.match(lines[0], /Sync Codex Usage every 5m · immediate/u);
     assert.doesNotMatch(lines[0], /scheduled jobs ready/u);
 });

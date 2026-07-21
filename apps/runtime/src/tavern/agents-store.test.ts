@@ -630,7 +630,7 @@ describe('Runtime agent and agent engine reads', () => {
         });
         expect(detailResponse.status).toBe(200);
         await expect(detailResponse.json()).resolves.toMatchObject({
-            contentMarkdown: expect.stringContaining('# Tavern Agent'),
+            contentMarkdown: expect.stringContaining('# Grotto Agent'),
             id: 'tavern-agent',
         });
     });
@@ -664,7 +664,7 @@ describe('Runtime agent and agent engine reads', () => {
                 expect.objectContaining({
                     configured: true,
                     description:
-                        'Read current Tavern chat messages by sequence, search text, or message id.',
+                        'Read current Grotto chat messages by sequence, search text, or message id.',
                     enabled: true,
                     id: 'chat_messages',
                     label: 'Chat messages',

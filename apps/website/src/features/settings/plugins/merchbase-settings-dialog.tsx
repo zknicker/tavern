@@ -64,7 +64,7 @@ export function MerchbaseSettingsDialog({
                 <PluginLockSwitch
                     aria-label={
                         environmentControlled
-                            ? 'MerchBase enablement is managed by local Tavern configuration'
+                            ? 'MerchBase enablement is managed by local Grotto configuration'
                             : `${draft.enabled ? 'Disable' : 'Enable'} MerchBase`
                     }
                     checked={draft.enabled}

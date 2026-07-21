@@ -37,8 +37,8 @@ export function ChannelsSettingsPage() {
             <SettingsSection title="Channels">
                 <SettingsGroup>
                     <SettingsRow
-                        description="Built-in Tavern chat frontend"
-                        title="Tavern"
+                        description="Built-in Grotto chat frontend"
+                        title="Grotto"
                         trailingWidth="intrinsic"
                     >
                         <Button render={<Link to={appRoutes.chats} />} variant="outline">

@@ -35,7 +35,7 @@ export function browserHome(): string {
     if (configured) {
         return resolveConfiguredPath(configured);
     }
-    return path.join(os.homedir(), '.tavern', 'browser');
+    return path.join(os.homedir(), '.grotto', 'browser');
 }
 
 export function browserProfilesRoot(): string {

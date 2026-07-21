@@ -13,6 +13,7 @@ test('ChatCardHeader renders chat labels and omits session link blocks', () => {
                 canSend: false,
                 conversationKind: 'channel',
                 createdAt: '2026-05-01T12:00:00.000Z',
+                description: null,
                 displayName: 'general',
                 framework: 'discord',
                 activeTurnParticipantIds: [],
@@ -76,6 +77,7 @@ test('ChatCardHeader derives runtime DM titles from chat primitives', () => {
                 canSend: true,
                 conversationKind: 'direct',
                 createdAt: '2026-05-01T12:00:00.000Z',
+                description: null,
                 displayName: 'zknicker user id:778786269458464829',
                 framework: 'agentRuntime',
                 activeTurnParticipantIds: [],
@@ -132,6 +134,7 @@ test('ChatCardHeader badges first-party Tavern chats by provider', () => {
                 canSend: true,
                 conversationKind: 'direct',
                 createdAt: '2026-05-01T12:00:00.000Z',
+                description: null,
                 displayName: 'Hey Blippy!',
                 framework: 'agentRuntime',
                 activeTurnParticipantIds: [],
@@ -163,7 +166,7 @@ test('ChatCardHeader badges first-party Tavern chats by provider', () => {
                 scope: null,
                 searchText: '',
                 sessionCount: 1,
-                source: { kind: 'tavern', label: 'Tavern' },
+                source: { kind: 'tavern', label: 'Grotto' },
                 systemPrompt: null,
                 tabAppearance: { color: null },
                 targetParticipant: null,
@@ -173,9 +176,9 @@ test('ChatCardHeader badges first-party Tavern chats by provider', () => {
         />
     );
 
-    assert.match(markup, /Tavern/);
+    assert.match(markup, /Grotto/);
     assert.match(markup, /Hey Blippy!/);
-    assert.doesNotMatch(markup, /Tavern Hey Blippy!/);
+    assert.doesNotMatch(markup, /Grotto Hey Blippy!/);
     assert.doesNotMatch(markup, /DM/);
 });
 
@@ -188,6 +191,7 @@ test('ChatCardHeader omits duplicate badges for system sessions', () => {
                 canSend: false,
                 conversationKind: 'channel',
                 createdAt: '2026-05-01T12:00:00.000Z',
+                description: null,
                 displayName: 'System session',
                 framework: 'agentRuntime',
                 activeTurnParticipantIds: [],

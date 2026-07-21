@@ -5,7 +5,6 @@ import type { inferRouterInputs, inferRouterOutputs } from '@trpc/server';
 import * as React from 'react';
 import type { AppRouter } from '../../../server/src/api/router.ts';
 import { TrpcEventListeners } from '../components/trpc-event-listeners.tsx';
-import { ChatStartDraftProvider } from '../hooks/chats/use-chat-start-drafts.tsx';
 import { ChatTimelineProvider } from '../hooks/chats/use-chat-timeline-store.tsx';
 import { TimelineContextProvider } from '../hooks/chats/use-timeline-context.tsx';
 import {
@@ -236,7 +235,7 @@ export function TavernProviders({ children }: React.PropsWithChildren) {
                 setAgentRuntimeError(
                     error instanceof Error
                         ? error
-                        : new Error('Failed to start Tavern desktop backend.')
+                        : new Error('Failed to start Grotto desktop backend.')
                 );
             });
 
@@ -264,7 +263,7 @@ export function TavernProviders({ children }: React.PropsWithChildren) {
             <div className="flex min-h-screen items-center justify-center bg-background p-6 text-center text-foreground">
                 <div>
                     <p className="font-medium text-lg">
-                        Tavern failed to start its desktop backend.
+                        Grotto failed to start its desktop backend.
                     </p>
                     <p className="mt-2 text-muted-foreground text-sm">
                         {agentRuntimeError.message}
@@ -286,12 +285,10 @@ export function TavernProviders({ children }: React.PropsWithChildren) {
         <trpc.Provider client={clientState.client} queryClient={queryClient}>
             <QueryClientProvider client={queryClient}>
                 <ChatTimelineProvider>
-                    <ChatStartDraftProvider>
-                        <TimelineContextProvider>
-                            <TrpcEventListeners />
-                            {children}
-                        </TimelineContextProvider>
-                    </ChatStartDraftProvider>
+                    <TimelineContextProvider>
+                        <TrpcEventListeners />
+                        {children}
+                    </TimelineContextProvider>
                 </ChatTimelineProvider>
             </QueryClientProvider>
         </trpc.Provider>

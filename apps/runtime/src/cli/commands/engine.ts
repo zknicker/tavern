@@ -37,27 +37,27 @@ function defaultDeps(): EngineDeps {
 const statusSub: SubCommand = {
     name: 'status',
     summary: 'Show the local agent engine status',
-    usage: 'tavern engine status [--json]',
+    usage: 'grotto engine status [--json]',
     flags: [{ name: '--json', description: 'Emit one JSON document' }],
     positionals: [],
-    examples: ['tavern engine status', 'tavern engine status --json'],
+    examples: ['grotto engine status', 'grotto engine status --json'],
     run: (args) => runStatus(args),
 };
 
 const installSub: SubCommand = {
     name: 'install',
     summary: 'Prepare the local agent home',
-    usage: 'tavern engine install',
+    usage: 'grotto engine install',
     flags: [],
     positionals: [],
-    examples: ['tavern engine install'],
+    examples: ['grotto engine install'],
     run: (args) => runInstall(args),
 };
 
 const cleanSub: SubCommand = {
     name: 'clean',
     summary: 'Remove local agent engine install artifacts',
-    usage: 'tavern engine clean [--all]',
+    usage: 'grotto engine clean [--all]',
     flags: [
         {
             name: '--all',
@@ -65,7 +65,7 @@ const cleanSub: SubCommand = {
         },
     ],
     positionals: [],
-    examples: ['tavern engine clean'],
+    examples: ['grotto engine clean'],
     run: (args) => runClean(args),
 };
 

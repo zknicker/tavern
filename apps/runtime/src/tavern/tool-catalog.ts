@@ -25,7 +25,7 @@ const builtInTools = [
     },
     {
         configured: true,
-        description: 'Read current Tavern chat messages by sequence, search text, or message id.',
+        description: 'Read current Grotto chat messages by sequence, search text, or message id.',
         enabled: true,
         id: 'chat_messages',
         label: 'Chat messages',

@@ -2,13 +2,7 @@
 
 const assert = require('node:assert/strict');
 const { test } = require('node:test');
-const {
-    buildDevWindowUrl,
-    findReattachTarget,
-    isSafeWindowRoute,
-    nextWindowBounds,
-    pointOverWindowStrip,
-} = require('./window-routing.cjs');
+const { buildDevWindowUrl, isSafeWindowRoute, nextWindowBounds } = require('./window-routing.cjs');
 
 test('isSafeWindowRoute only accepts in-app routes', () => {
     assert.equal(isSafeWindowRoute('/chats/abc'), true);
@@ -45,25 +39,4 @@ test('buildDevWindowUrl seeds the dev server path route', () => {
         'http://localhost:3100/chats/abc'
     );
     assert.equal(buildDevWindowUrl('http://localhost:3100', undefined), 'http://localhost:3100');
-});
-
-test('pointOverWindowStrip detects the top strip band only', () => {
-    const bounds = { x: 100, y: 200, width: 1000, height: 800 };
-    assert.equal(pointOverWindowStrip(bounds, { x: 500, y: 210 }, 46), true);
-    assert.equal(pointOverWindowStrip(bounds, { x: 500, y: 400 }, 46), false); // below strip
-    assert.equal(pointOverWindowStrip(bounds, { x: 50, y: 210 }, 46), false); // left of window
-});
-
-test('findReattachTarget returns the strip under the cursor, skipping the torn window', () => {
-    const windows = [
-        { id: 1, bounds: { x: 0, y: 0, width: 800, height: 600 } },
-        { id: 2, bounds: { x: 900, y: 0, width: 800, height: 600 } },
-    ];
-
-    // Cursor over window 2's strip, while window 2 is the one being dragged → no target.
-    assert.equal(findReattachTarget(windows, { x: 950, y: 10 }, 2, 46), null);
-    // Cursor over window 1's strip while dragging window 2 → re-attach to 1.
-    assert.equal(findReattachTarget(windows, { x: 100, y: 10 }, 2, 46), 1);
-    // Cursor in open space → no target.
-    assert.equal(findReattachTarget(windows, { x: 100, y: 400 }, 2, 46), null);
 });

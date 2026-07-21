@@ -348,6 +348,8 @@ import {
     runtimeInviteCreateResultSchema,
     runtimeInviteListSchema,
     runtimeMemberListSchema,
+    type WikiAttachment,
+    type WikiAttachmentContent,
     type WikiBacklinkList,
     type WikiCreatePage,
     type WikiMovePath,
@@ -361,6 +363,9 @@ import {
     type WikiSearchInput,
     type WikiSearchResult,
     type WikiStatus,
+    type WikiUploadAttachment,
+    wikiAttachmentContentSchema,
+    wikiAttachmentSchema,
     wikiBacklinkListSchema,
     wikiCreatePageSchema,
     wikiMovePathSchema,
@@ -374,6 +379,7 @@ import {
     wikiSearchInputSchema,
     wikiSearchResultSchema,
     wikiStatusSchema,
+    wikiUploadAttachmentSchema,
 } from '@tavern/api';
 import { z } from 'zod';
 
@@ -476,6 +482,7 @@ export interface TavernAgentRuntimeClient {
     getTimezoneSettings(): Promise<AgentRuntimeTimezoneSettings>;
     getToolConfig(toolId: string): Promise<AgentRuntimeToolConfig>;
     getUpdateStatus(): Promise<AgentRuntimeUpdate>;
+    getWikiAttachment(path: string): Promise<WikiAttachmentContent | null>;
     getWikiPage(input: { path: string }): Promise<WikiPage | null>;
     getWikiPageHistory(input: { limit?: number; path: string }): Promise<WikiPageHistory>;
     getWikiPageRevision(input: { commit: string; path: string }): Promise<WikiPageRevision>;
@@ -686,6 +693,7 @@ export interface TavernAgentRuntimeClient {
         toolId: string,
         input: AgentRuntimeUpdateToolEnabled
     ): Promise<AgentRuntimeTool>;
+    uploadWikiAttachment(input: WikiUploadAttachment): Promise<WikiAttachment>;
     upsertAgent(input: AgentRuntimeCreateAgent): Promise<AgentRuntimeAgent>;
     upsertBinding(input: AgentRuntimeUpsertBinding): Promise<AgentRuntimeBinding>;
 }
@@ -1582,7 +1590,7 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         const response = await fetch(
             `${this.#baseUrl}${agentRuntimeRoutes.wikiPage(payload.path)}`,
             {
-                body: JSON.stringify({ body: payload.body }),
+                body: JSON.stringify({ body: payload.body, expectedHash: payload.expectedHash }),
                 headers: {
                     ...this.#authHeaders,
                     'content-type': 'application/json',
@@ -1597,6 +1605,41 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         }
 
         return wikiPathMutationResultSchema.parse(await response.json());
+    }
+
+    async uploadWikiAttachment(input: WikiUploadAttachment) {
+        const payload = wikiUploadAttachmentSchema.parse(input);
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.wikiAttachments}`, {
+            body: JSON.stringify(payload),
+            headers: {
+                ...this.#authHeaders,
+                'content-type': 'application/json',
+                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+            },
+            method: 'POST',
+        });
+
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return wikiAttachmentSchema.parse(await response.json());
+    }
+
+    async getWikiAttachment(attachmentPath: string) {
+        const response = await fetch(
+            `${this.#baseUrl}${agentRuntimeRoutes.wikiAttachment(attachmentPath)}`,
+            { headers: this.#authHeaders }
+        );
+
+        if (response.status === 404) {
+            return null;
+        }
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+
+        return wikiAttachmentContentSchema.parse(await response.json());
     }
 
     async createWikiFolder(input: WikiPathInput) {

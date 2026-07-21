@@ -10,7 +10,7 @@ export type DispatchResult = { kind: 'serve' } | { kind: 'exit'; code: number };
 
 /**
  * Parse argv and dispatch through the registry. Returns `{ kind: 'serve' }` only
- * for `tavern serve`, so index.ts owns server startup and signal handlers. Maps
+ * for `grotto serve`, so index.ts owns server startup and signal handlers. Maps
  * all errors to the 0/1/2 exit-code contract.
  */
 export async function dispatch(argv: string[]): Promise<DispatchResult> {
@@ -89,7 +89,7 @@ function reportUnknown(name: string): number {
     process.stderr.write(
         `${errorBlock(
             `Unknown command '${name}'.`,
-            hint ? `Did you mean '${hint}'?` : "Run 'tavern help' for the command list."
+            hint ? `Did you mean '${hint}'?` : "Run 'grotto help' for the command list."
         )}\n`
     );
     return 2;

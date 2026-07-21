@@ -45,7 +45,7 @@ export const checkAgentRuntimeHealthRoute = publicProcedure.mutation(async () =>
     return agentRuntimeConnectionStatusSchema.parse({
         capabilities,
         lastCheckedAt: refreshedConnection?.lastCheckedAt ?? new Date().toISOString(),
-        lastError: refreshedConnection?.lastError ?? 'Failed to reach Tavern Runtime.',
+        lastError: refreshedConnection?.lastError ?? 'Failed to reach Grotto Runtime.',
         state: 'unreachable',
         url: connection.baseUrl,
     });

@@ -58,7 +58,7 @@ describe('pane tools', () => {
 
     it('opens a workspace file tab and focuses it', async () => {
         const result = await runTool(paneTools().pane_open, {
-            target: 'tavern://workspace/workbench/report.md',
+            target: 'grotto://workspace/workbench/report.md',
         });
 
         expect(result).toEqual({
@@ -75,7 +75,7 @@ describe('pane tools', () => {
 
     it('opens an existing Wiki page tab', async () => {
         const result = await runTool(paneTools().pane_open, {
-            target: 'tavern://wiki/Launch%20Brief.md',
+            target: 'grotto://wiki/Launch%20Brief.md',
         });
 
         expect(result).toEqual({
@@ -87,11 +87,11 @@ describe('pane tools', () => {
 
     it('focuses the existing tab when the same target opens again', async () => {
         const tools = paneTools();
-        await runTool(tools.pane_open, { target: 'tavern://workspace/workbench/report.md' });
-        await runTool(tools.pane_open, { target: 'tavern://wiki/Launch%20Brief.md' });
+        await runTool(tools.pane_open, { target: 'grotto://workspace/workbench/report.md' });
+        await runTool(tools.pane_open, { target: 'grotto://wiki/Launch%20Brief.md' });
 
         const repeat = await runTool(tools.pane_open, {
-            target: 'tavern://workspace/workbench/report.md',
+            target: 'grotto://workspace/workbench/report.md',
         });
 
         expect(repeat).toMatchObject({ opened: true, tabCount: 2 });
@@ -108,10 +108,10 @@ describe('pane tools', () => {
     it('merges workspace files into the one workspace tab', async () => {
         await fs.writeFile(path.join(workspaceDir, 'workbench', 'notes.md'), '# Notes\n');
         const tools = paneTools();
-        await runTool(tools.pane_open, { target: 'tavern://workspace/workbench/report.md' });
+        await runTool(tools.pane_open, { target: 'grotto://workspace/workbench/report.md' });
 
         const result = await runTool(tools.pane_open, {
-            target: 'tavern://workspace/workbench/notes.md',
+            target: 'grotto://workspace/workbench/notes.md',
         });
 
         expect(result).toMatchObject({ opened: true, tabCount: 1 });
@@ -121,16 +121,16 @@ describe('pane tools', () => {
         });
     });
 
-    it('rejects links outside the tavern:// pane scheme', async () => {
+    it('rejects links outside the grotto:// pane scheme', async () => {
         const tools = paneTools();
 
         for (const target of [
             'https://example.com/report.md',
-            'tavern://settings/agents',
-            'tavern://workspace/../secret.md',
+            'grotto://settings/agents',
+            'grotto://workspace/../secret.md',
         ]) {
             await expect(runTool(tools.pane_open, { target })).resolves.toEqual({
-                error: 'Target must be a tavern://workspace/<path> or tavern://wiki/<path> link.',
+                error: 'Target must be a grotto://workspace/<path> or grotto://wiki/<path> link.',
             });
         }
         expect(getChatPaneState('cht_dm').targets).toHaveLength(0);
@@ -140,10 +140,10 @@ describe('pane tools', () => {
         const tools = paneTools();
 
         await expect(
-            runTool(tools.pane_open, { target: 'tavern://workspace/workbench/missing.md' })
+            runTool(tools.pane_open, { target: 'grotto://workspace/workbench/missing.md' })
         ).resolves.toEqual({ error: 'Workspace file "workbench/missing.md" does not exist.' });
         await expect(
-            runTool(tools.pane_open, { target: 'tavern://wiki/Missing.md' })
+            runTool(tools.pane_open, { target: 'grotto://wiki/Missing.md' })
         ).resolves.toEqual({ error: 'Wiki page "Missing.md" does not exist.' });
         expect(getChatPaneState('cht_dm').targets).toHaveLength(0);
     });
@@ -152,7 +152,7 @@ describe('pane tools', () => {
         const tools = createTavernPaneTools({ agentId: 'agt_otto', chatId: 'cht_other' });
 
         await expect(
-            runTool(tools.pane_open, { target: 'tavern://workspace/workbench/report.md' })
+            runTool(tools.pane_open, { target: 'grotto://workspace/workbench/report.md' })
         ).resolves.toEqual({ error: 'You are not a participant of that chat.' });
         expect(getChatPaneState('cht_other').targets).toHaveLength(0);
     });

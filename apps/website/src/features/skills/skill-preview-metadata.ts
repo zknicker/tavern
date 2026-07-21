@@ -42,7 +42,7 @@ export function getSkillCreator(subject: SkillTreeSubject) {
         return subject.plugin.displayName;
     }
     if (subject.trustLevel === 'builtin' || subject.sourceLabel === 'Built-in library') {
-        return 'Tavern';
+        return 'Grotto';
     }
     return subject.sourceLabel === 'Installed' ? 'User' : subject.sourceLabel;
 }
@@ -125,7 +125,7 @@ function cleanFrontmatterValue(value: string) {
 function formatCreatorLabel(value: null | string) {
     switch (value?.toLowerCase()) {
         case 'builtin':
-            return 'Tavern';
+            return 'Grotto';
         case 'community':
             return 'Community';
         case 'trusted':

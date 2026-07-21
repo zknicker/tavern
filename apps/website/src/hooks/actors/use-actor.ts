@@ -8,6 +8,7 @@ import { useUserProfilePreference } from '../shell/use-user-profile-preference.t
 
 interface ActorProfile {
     avatarUrl: string | null;
+    bio: string | null;
     character: AgentCharacter | null;
     id: string;
     isSelf: boolean;
@@ -53,6 +54,7 @@ export function useActorProfile(actor: HistoryActorOutput | null) {
             return agent
                 ? ({
                       avatarUrl: null,
+                      bio: agent.bio ?? null,
                       character: agent.effectiveCharacter,
                       id: agent.id,
                       isSelf: false,
@@ -68,6 +70,7 @@ export function useActorProfile(actor: HistoryActorOutput | null) {
         if (isLocalOwnerActor(actor, tavernUserId)) {
             return {
                 avatarUrl: userProfile.avatarUrl,
+                bio: null,
                 character: null,
                 id: actor.id,
                 isSelf: true,
@@ -88,6 +91,7 @@ export function useActorProfile(actor: HistoryActorOutput | null) {
         return participant
             ? ({
                   avatarUrl: null,
+                  bio: null,
                   character: null,
                   id: participant.id,
                   isSelf: false,

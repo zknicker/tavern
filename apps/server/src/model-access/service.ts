@@ -48,7 +48,7 @@ export async function listModelAccessStatuses(): Promise<ModelAccessStatus[]> {
 export async function saveModelProviderApiKey(input: AgentRuntimeSaveModelProviderApiKey) {
     const client = createConfiguredAgentRuntimeClient();
     if (!client) {
-        throw new Error('Tavern Runtime is not connected.');
+        throw new Error('Grotto Runtime is not connected.');
     }
 
     try {
@@ -61,7 +61,7 @@ export async function saveModelProviderApiKey(input: AgentRuntimeSaveModelProvid
 export async function startModelProviderOAuth(input: AgentRuntimeStartModelProviderOAuth) {
     const client = createConfiguredAgentRuntimeClient();
     if (!client) {
-        throw new Error('Tavern Runtime is not connected.');
+        throw new Error('Grotto Runtime is not connected.');
     }
 
     try {
@@ -74,7 +74,7 @@ export async function startModelProviderOAuth(input: AgentRuntimeStartModelProvi
 export async function pollModelProviderOAuth(input: AgentRuntimePollModelProviderOAuth) {
     const client = createConfiguredAgentRuntimeClient();
     if (!client) {
-        throw new Error('Tavern Runtime is not connected.');
+        throw new Error('Grotto Runtime is not connected.');
     }
 
     try {
@@ -87,7 +87,7 @@ export async function pollModelProviderOAuth(input: AgentRuntimePollModelProvide
 export async function cancelModelProviderOAuth(input: AgentRuntimeCancelModelProviderOAuth) {
     const client = createConfiguredAgentRuntimeClient();
     if (!client) {
-        throw new Error('Tavern Runtime is not connected.');
+        throw new Error('Grotto Runtime is not connected.');
     }
 
     try {
@@ -100,7 +100,7 @@ export async function cancelModelProviderOAuth(input: AgentRuntimeCancelModelPro
 export async function submitModelProviderOAuth(input: AgentRuntimeSubmitModelProviderOAuth) {
     const client = createConfiguredAgentRuntimeClient();
     if (!client) {
-        throw new Error('Tavern Runtime is not connected.');
+        throw new Error('Grotto Runtime is not connected.');
     }
 
     try {

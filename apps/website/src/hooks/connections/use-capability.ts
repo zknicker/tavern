@@ -19,8 +19,8 @@ export interface CapabilityView {
 }
 
 export const runtimeUnhealthyTooltip =
-    'Runtime is not healthy. See Settings -> Tavern Runtime for more information.';
-const runtimeDisconnectedReason = 'Tavern Runtime is disconnected.';
+    'Runtime is not healthy. See Settings -> Grotto Runtime for more information.';
+const runtimeDisconnectedReason = 'Grotto Runtime is disconnected.';
 const capabilityLabels = {
     apiServer: 'Agent engine API',
     autoDispatch: 'Auto-dispatch',
@@ -133,7 +133,7 @@ export function formatCapabilityDisabledReason(capability: CapabilityView): stri
         return capability.reason ?? runtimeDisconnectedReason;
     }
 
-    return `Tavern Runtime degraded: missing ${formatCapabilityList(capability.missingCapabilities)}.`;
+    return `Grotto Runtime degraded: missing ${formatCapabilityList(capability.missingCapabilities)}.`;
 }
 
 export function useCapability(): (requirement: CapabilityRequirement) => CapabilityView;

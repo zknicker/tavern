@@ -327,7 +327,7 @@ function requireTavernMutation(request: Request, label: string) {
     ) {
         return null;
     }
-    return forbidden(`${label} requires a Tavern caller.`);
+    return forbidden(`${label} requires a Grotto caller.`);
 }
 
 async function readJson(request: Request): Promise<unknown> {

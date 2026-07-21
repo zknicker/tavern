@@ -36,6 +36,6 @@ describe('resolveActingUserId', () => {
 
         await expect(
             resolveActingUserId({ clerkSessionToken: 'session-failure-test' })
-        ).rejects.toThrow('Unable to resolve the acting Tavern user from Runtime.');
+        ).rejects.toThrow('Unable to resolve the acting Grotto user from Runtime.');
     });
 });

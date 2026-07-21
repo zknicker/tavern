@@ -14,13 +14,13 @@ export function getRuntimeVersionMismatchKind(
 
 export function getRuntimeVersionMismatchReason(connection: RuntimeConnection) {
     return getRuntimeVersionMismatchKind(connection) === 'app-needs-update'
-        ? 'Tavern update required.'
-        : 'Tavern Runtime update required.';
+        ? 'Grotto update required.'
+        : 'Grotto Runtime update required.';
 }
 
 export function getRuntimeVersionMismatchDescription(connection: RuntimeConnection) {
     if (getRuntimeVersionMismatchKind(connection) === 'app-needs-update') {
-        return `Runtime ${formatVersion(connection.runtimeVersion)} is newer than this app supports. Install the latest Tavern app to restore chat and Runtime-backed settings.`;
+        return `Runtime ${formatVersion(connection.runtimeVersion)} is newer than this app supports. Install the latest Grotto app to restore chat and Runtime-backed settings.`;
     }
 
     return `Runtime ${formatVersion(connection.runtimeVersion)} is older than this app requires (${formatVersion(connection.requiredRuntimeVersion)}). Chat and Runtime-backed settings stay disabled until Runtime updates.`;

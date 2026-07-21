@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test';
 import { createTavernClient } from '@tavern/sdk';
-import { fillComposer } from '../support/composer.ts';
+import { sendAgentDmTurn, tavernAgentDmChatId } from '../support/agent-dm.ts';
 import { expect, test } from '../support/test.ts';
 
 // Regression: a live turn used to evict loaded history rows (live-progress
@@ -14,15 +14,12 @@ test('keeps loaded history and an open old work drawer stable through a live tur
 }) => {
     test.setTimeout(180_000);
 
-    await page.goto('/overview');
-    await fillComposer(
-        page,
-        '#home-prompt',
-        'Tool progress qa check. Read `QA_KICKOFF_TASK.md`, then reply exactly `QA_WINDOW_T1_OK`.'
-    );
-    await page.getByRole('button', { name: 'Start chat' }).click();
-    const chatId = await waitForRealChatRoute(page);
-    await expect(transcriptParagraph(page, 'QA_WINDOW_T1_OK')).toBeVisible({ timeout: 60_000 });
+    const testStartedAt = Date.now();
+    const chatId = await sendAgentDmTurn(page, {
+        expectedReply: 'QA_WINDOW_T1_OK',
+        prompt: 'Tool progress qa check. Read `QA_KICKOFF_TASK.md`, then reply exactly `QA_WINDOW_T1_OK`.',
+    });
+    expect(chatId).toBe(tavernAgentDmChatId);
 
     await sendFollowUp(page, {
         expectedReply: 'QA_WINDOW_T2_OK',
@@ -31,14 +28,30 @@ test('keeps loaded history and an open old work drawer stable through a live tur
 
     // Give the first turn's drawer several steps and the chat a meaty work
     // log so eviction regressions have something visible to drain.
-    await seedActivities({ chatId, count: 10, prefix: 'a', turn: 'first' });
-    await seedActivities({ chatId, count: 40, prefix: 'b', turn: 'last' });
+    await seedActivities({
+        chatId,
+        count: 10,
+        notBefore: testStartedAt,
+        prefix: 'a',
+        turn: 'first',
+    });
+    await seedActivities({
+        chatId,
+        count: 40,
+        notBefore: testStartedAt,
+        prefix: 'b',
+        turn: 'last',
+    });
 
     await page.reload();
     await expect(transcriptParagraph(page, 'QA_WINDOW_T2_OK')).toBeVisible({ timeout: 45_000 });
 
+    // The shared DM legitimately windows very old history; the eviction
+    // contract is that the counter never grows while the chat stays open.
+    const hiddenEntriesBefore = await page.getByText(/older (?:entry|entries)/).count();
+
     // The first turn's drawer shows all of its seeded work up front.
-    await openTurnDetails(page, 'first');
+    await openTurnDetails(page, 2);
     await expandDrawerGroups(page);
     await expect(page.getByRole('dialog').getByText('Seed tool a0', { exact: true })).toBeVisible();
     await expect(page.getByRole('dialog').getByText('Seed tool a9', { exact: true })).toBeVisible();
@@ -53,14 +66,14 @@ test('keeps loaded history and an open old work drawer stable through a live tur
     await expect(transcriptParagraph(page, 'QA_WINDOW_T3_OK')).toBeVisible({ timeout: 90_000 });
 
     // The live turn must not have evicted the first turn's loaded work.
-    await openTurnDetails(page, 'first');
+    await openTurnDetails(page, 3);
     await expandDrawerGroups(page);
     await expect(page.getByRole('dialog').getByText('Seed tool a0', { exact: true })).toBeVisible();
     await expect(page.getByRole('dialog').getByText('Seed tool a9', { exact: true })).toBeVisible();
     await page.keyboard.press('Escape');
 
     // Loaded history must not shrink behind a hidden-entries counter either.
-    await expect(page.getByText(/older (?:entry|entries)/)).toHaveCount(0);
+    await expect(page.getByText(/older (?:entry|entries)/)).toHaveCount(hiddenEntriesBefore);
 });
 
 function runtimeClient() {
@@ -73,6 +86,7 @@ function runtimeClient() {
 async function seedActivities(input: {
     chatId: string;
     count: number;
+    notBefore: number;
     prefix: string;
     turn: 'first' | 'last';
 }) {
@@ -81,10 +95,12 @@ async function seedActivities(input: {
     }
 
     const client = runtimeClient();
-    const { responses } = await client.chat.responses(input.chatId, { limit: 20 });
-    const ordered = [...responses].sort(
-        (left, right) => Date.parse(left.created_at) - Date.parse(right.created_at)
-    );
+    const { responses } = await client.chat.responses(input.chatId, { limit: 100 });
+    // The DM is persistent and shared across specs — only this test's turns
+    // (created after notBefore) are seeding targets.
+    const ordered = [...responses]
+        .filter((response) => Date.parse(response.created_at) >= input.notBefore)
+        .sort((left, right) => Date.parse(left.created_at) - Date.parse(right.created_at));
     const response = input.turn === 'first' ? ordered[0] : ordered.at(-1);
 
     if (!response) {
@@ -128,11 +144,13 @@ async function seedActivities(input: {
     }
 }
 
-// Open a specific turn's details drawer; the affordance is hover-revealed,
-// so force past the opacity gate.
-async function openTurnDetails(page: Page, which: 'first' | 'last') {
+// Open a turn's details drawer, addressed from the transcript's end so the
+// shared DM's earlier turns don't shift the target; the affordance is
+// hover-revealed, so force past the opacity gate.
+async function openTurnDetails(page: Page, fromEnd: number) {
     const details = page.getByRole('button', { name: 'View turn details' });
-    const trigger = which === 'first' ? details.first() : details.last();
+    const count = await details.count();
+    const trigger = details.nth(count - fromEnd);
     await trigger.click({ force: true });
     await expect(page.getByRole('dialog')).toBeVisible();
 }
@@ -183,19 +201,4 @@ async function sendFollowUp(
 
 function transcriptParagraph(page: Page, text: string) {
     return page.locator('main p').filter({ hasText: new RegExp(`^${text}$`) });
-}
-
-async function waitForRealChatRoute(page: Page) {
-    await page.waitForURL((url) => /^\/chats\/(?!new$)[^/]+$/.test(url.pathname), {
-        timeout: 30_000,
-    });
-
-    const pathname = new URL(page.url()).pathname;
-    const chatId = pathname.split('/chats/')[1];
-
-    if (!chatId || chatId === 'new') {
-        throw new Error(`Expected a real chat route, received "${pathname}".`);
-    }
-
-    return chatId;
 }

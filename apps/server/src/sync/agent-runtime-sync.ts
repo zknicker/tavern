@@ -174,7 +174,7 @@ async function syncPrimitiveAcrossRuntimes(
     }> = [];
 
     if (runtimes.length === 0) {
-        await input?.log?.('No reachable Tavern Runtime connection is available.');
+        await input?.log?.('No reachable Grotto Runtime connection is available.');
         return results;
     }
 

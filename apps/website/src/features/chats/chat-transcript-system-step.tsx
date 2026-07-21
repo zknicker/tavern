@@ -314,7 +314,7 @@ function RuntimeNoticeDrawer({
                                 Raw engine notice
                             </h3>
                             <p className="max-w-[58ch] text-pretty text-muted-foreground text-sm">
-                                Original engine text captured before Tavern rendered it as a runtime
+                                Original engine text captured before Grotto rendered it as a runtime
                                 notice.
                             </p>
                         </div>

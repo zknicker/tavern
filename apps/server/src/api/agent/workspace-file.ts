@@ -92,7 +92,7 @@ async function createClientForAgent(agentId: string) {
 
     const connection = await getAgentRuntimeConnection(agent.runtimeId);
     if (!connection?.enabled) {
-        throw new Error(`No enabled Tavern Runtime connection named "${agent.runtimeId}" exists.`);
+        throw new Error(`No enabled Grotto Runtime connection named "${agent.runtimeId}" exists.`);
     }
 
     return createAgentRuntimeClientForConnection(connection);

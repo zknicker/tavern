@@ -112,7 +112,7 @@ function isPeerMessage(input: AgentExecutorInput, message: TavernChatMessage) {
 function holdPrompt(unseen: TavernChatMessage[], draft: string) {
     const timezone = resolveHomeTimezone();
     return [
-        '[Tavern: your reply was held for freshness — these messages landed while you worked:',
+        '[Grotto: your reply was held for freshness — these messages landed while you worked:',
         ...unseen.map((message) => formatPromptMessage(message, timezone)),
         'Your held reply:',
         '"""',

@@ -16,7 +16,7 @@ const runtimeBundleDir = path.join(repoRoot, 'apps', 'website', 'electron-dist',
 
 const main = async () => {
     const { version } = await readJson('apps/website/package.json');
-    const artifactPrefix = `Tavern_${version}_arm64`;
+    const artifactPrefix = `Grotto_${version}_arm64`;
     const desktopArtifacts = [
         ...(await findFiles(bundleRoot, (entry) => entry === 'latest-mac.yml')),
         ...(await findFiles(bundleRoot, (entry) => entry === `${artifactPrefix}.dmg`)),
@@ -61,7 +61,7 @@ async function findFilesIfExists(directory, predicate) {
 }
 
 async function findRuntimeArtifacts(version) {
-    const expectedPrefix = `tavern-runtime-${version}-`;
+    const expectedPrefix = `grotto-runtime-${version}-`;
     return findFilesIfExists(
         runtimeBundleDir,
         (entry) =>

@@ -25,11 +25,11 @@ export function renderAgentInstructions(
     const cronEnabled = options.cronEnabled ?? true;
     const memoryEnabled = options.memoryEnabled ?? true;
     const sections = [
-        `# Tavern Agent Instructions
+        `# Grotto Agent Instructions
 
-You are ${agentName}, a helpful, proactive, and persistent agent in Tavern.
+You are ${agentName}, a helpful, proactive, and persistent agent in Grotto.
 
-Tavern is a multi-agent chat app. The current chat may include the user, other humans, and other agents. You are one participant. Your identity, voice, and personality come from the SOUL section near the bottom of this prompt; follow it unless it conflicts with these operating rules.`,
+Grotto is a multi-agent chat app. The current chat may include the user, other humans, and other agents. You are one participant. Your identity, voice, and personality come from the SOUL section near the bottom of this prompt; follow it unless it conflicts with these operating rules.`,
         communicationSection,
         workingSection,
         filesSection,
@@ -74,7 +74,7 @@ const filesSection = `## Files
 - \`workbench/\` is your working directory. Put files you produce while working under it.
 - For tracked task T-12, work under \`workbench/tasks/T-12/\`; prior deliverables return to the same folder on re-dispatch.
 - Treat the workbench as scratch. Once files are attached to a task or otherwise delivered, reorganize or clean it freely.
-- Keep the workspace root for Tavern-managed files.`;
+- Keep the workspace root for Grotto-managed files.`;
 
 const chatHistorySection = `## Chat History
 
@@ -95,7 +95,7 @@ You wake up fresh every session. Memory and Wiki are the durable knowledge you c
 
 - \`USER.md\` and \`MEMORY.md\` live in your workspace and are your core memory, loaded into this prompt at the start of every session.
 - \`NOTES.md\` is for non-memory standing instructions and appears as the Notes section when present. Do not put remembered facts there.
-- Wiki is Tavern's shared, browsable Markdown knowledge base of durable subjects; \`TAXONOMY.md\` defines its folders and grows over time. Search it with \`wiki_search\`, browse it with \`wiki_list\`, read pages with \`wiki_read\`, and write them with \`wiki_write\` following \`TAXONOMY.md\` routing. Use \`wiki_backlinks\`, \`wiki_move\`, and \`wiki_delete\` when maintaining or retiring pages.
+- Wiki is Grotto's shared, browsable Markdown knowledge base of durable subjects; \`TAXONOMY.md\` defines its folders and grows over time. Search it with \`wiki_search\`, browse it with \`wiki_list\`, read pages with \`wiki_read\`, and write them with \`wiki_write\` following \`TAXONOMY.md\` routing. Use \`wiki_backlinks\`, \`wiki_move\`, and \`wiki_delete\` when maintaining or retiring pages.
 - When the user references anything with history that is not in your core memory or this chat, run \`wiki_search\` before concluding you lack context — the shared Wiki often already covers it.
 - Episodic memory is background evidence from completed chats and worker runs. Do not edit it directly.
 
@@ -124,14 +124,14 @@ You can inspect, create, and improve shared skills with \`skills_list\`, \`skill
 
 After completing a complex task (5+ tool calls), fixing a tricky error, or discovering a non-trivial workflow, save the approach as a skill so you can reuse it. When a skill proves outdated, incomplete, or wrong in use, patch it immediately — don't wait to be asked. Unmaintained skills become liabilities.
 
-Do not assume an unlisted skill or tool exists. If useful access is missing, name the missing Tavern capability plainly. Prefer saying that you need an appropriate Tavern skill or Plugin capability over giving provider-specific setup instructions.
+Do not assume an unlisted skill or tool exists. If useful access is missing, name the missing Grotto capability plainly. Prefer saying that you need an appropriate Grotto skill or Plugin capability over giving provider-specific setup instructions.
 
-Do not tell the user to run provider-specific setup commands or open provider-specific settings such as \`/mcp\`, Claude, Codex, or claude.ai unless an assigned Tavern skill explicitly instructs that exact step.`;
+Do not tell the user to run provider-specific setup commands or open provider-specific settings such as \`/mcp\`, Claude, Codex, or claude.ai unless an assigned Grotto skill explicitly instructs that exact step.`;
 
 const outputSection = `## Outputs
 
-- Link inspectable files, Wiki pages, docs, images, and generated assets. Prefer tool-returned links; otherwise use \`[name](tavern://workspace/path)\` for workspace files or \`[name](tavern://wiki/path)\` for Wiki pages.
-- When you produce a reviewable artifact — a document, report, image, or page — open it in the chat's artifact pane with \`pane_open\` (same tavern:// links; repeat targets focus the existing tab), and still link it in your reply.`;
+- Link inspectable files, Wiki pages, docs, images, and generated assets. Prefer tool-returned links; otherwise use \`[name](grotto://workspace/path)\` for workspace files or \`[name](grotto://wiki/path)\` for Wiki pages.
+- When you produce a reviewable artifact — a document, report, image, or page — open it in the chat's artifact pane with \`pane_open\` (same grotto:// links; repeat targets focus the existing tab), and still link it in your reply.`;
 
 const visualsSection = `## Visuals
 

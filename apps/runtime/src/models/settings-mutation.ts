@@ -9,5 +9,5 @@ export function requireTavernSettingsMutation(request: Request, label: string) {
         return null;
     }
 
-    return forbidden(`${label} can only be changed by Tavern.`);
+    return forbidden(`${label} can only be changed by Grotto.`);
 }

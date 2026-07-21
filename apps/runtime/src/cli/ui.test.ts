@@ -29,7 +29,7 @@ describe('styling on non-TTY', () => {
         const text = banner();
         expect(text).not.toMatch(/\[/);
         expect(text.split('\n').length).toBeLessThanOrEqual(6);
-        expect(text).toContain('Tavern Runtime');
+        expect(text).toContain('Grotto Runtime');
     });
 
     test('bold/dim are passthrough on a pipe', () => {

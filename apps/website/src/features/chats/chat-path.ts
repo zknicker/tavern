@@ -7,7 +7,3 @@ export function buildChatPath(chatId: string) {
 export function buildDefaultWorkspaceChatPath() {
     return appRoutes.overview;
 }
-
-export function buildNewChatDraftPath() {
-    return appRoutes.newChatDraft;
-}

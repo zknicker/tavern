@@ -12,14 +12,11 @@ const appRoutePrefixes = [
     '/workspace',
     '/wiki',
     '/settings',
-    '/new/',
     '/onboarding',
 ];
 const defaultWindowWidth = 1440;
 const defaultWindowHeight = 960;
 const defaultWindowOffsetPx = 36;
-// Re-attach target band: the tab strip lives in the top of each window.
-const windowStripHeightPx = 46;
 
 /** Only same-origin app routes may seed a new window. */
 function isSafeWindowRoute(route) {
@@ -49,35 +46,8 @@ function buildDevWindowUrl(devUrl, route) {
     return route ? new URL(route, devUrl).toString() : devUrl;
 }
 
-/** True when a screen point sits over a window's tab strip (its re-attach drop zone). */
-function pointOverWindowStrip(bounds, point, stripHeight = windowStripHeightPx) {
-    return (
-        point.x >= bounds.x &&
-        point.x <= bounds.x + bounds.width &&
-        point.y >= bounds.y &&
-        point.y <= bounds.y + stripHeight
-    );
-}
-
-/**
- * The id of the window whose tab strip is under `point` — the re-attach target while
- * tearing a tab out. The torn-off (following) window is excluded via `excludeId`.
- */
-function findReattachTarget(windowBounds, point, excludeId, stripHeight = windowStripHeightPx) {
-    for (const entry of windowBounds) {
-        if (entry.id !== excludeId && pointOverWindowStrip(entry.bounds, point, stripHeight)) {
-            return entry.id;
-        }
-    }
-
-    return null;
-}
-
 module.exports = {
     buildDevWindowUrl,
-    findReattachTarget,
     isSafeWindowRoute,
     nextWindowBounds,
-    pointOverWindowStrip,
-    windowStripHeightPx,
 };

@@ -61,7 +61,7 @@ try {
     cpSync(path.join(outputDirectory, 'AppIcon.icns'), path.join(iconsDirectory, 'AppIcon.icns'));
     cpSync(path.join(outputDirectory, 'AppIcon.icns'), path.join(iconsDirectory, 'icon.icns'));
 
-    console.log('[tavern] macOS app icon compiled from assets/mac-icon.icon');
+    console.log('[grotto] macOS app icon compiled from assets/mac-icon.icon');
 } finally {
     rmSync(path.dirname(stagedIconPath), { recursive: true, force: true });
     rmSync(outputDirectory, { recursive: true, force: true });

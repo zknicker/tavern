@@ -20,7 +20,7 @@ export interface ChatSource {
 
 const chatSourceLabels = {
     acp: 'ACP',
-    tavern: 'Tavern',
+    tavern: 'Grotto',
     cli: 'CLI',
     cron: 'Cron',
     discord: 'Discord',

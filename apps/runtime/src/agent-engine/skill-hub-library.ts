@@ -93,7 +93,7 @@ export function scanSkillHubSkill(identifier: string): AgentRuntimeSkillHubScan 
         identifier: skill.identifier,
         name: skill.name,
         policy: 'allow',
-        policyReason: 'Built-in Tavern skill.',
+        policyReason: 'Built-in Grotto skill.',
         severityCounts: {},
         source: skill.source,
         summary: 'No findings.',

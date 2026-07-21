@@ -135,7 +135,7 @@ function homebrewRuntimeAssetsBridgeRoot(spec: BridgeBootstrapSpec) {
         path.dirname(process.execPath),
         '..',
         'share',
-        'tavern',
+        'grotto',
         'runtime-assets',
         'harness-bridges',
         spec.assetDir

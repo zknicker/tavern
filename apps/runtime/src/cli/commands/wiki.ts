@@ -68,40 +68,40 @@ const json = (args: ParsedArgs) => Boolean(args.flags['--json']);
 const statusSub: SubCommand = {
     name: 'status',
     summary: 'Show Wiki path, page count, taxonomy status, and access',
-    usage: 'tavern wiki status [--json] [--runtime-url <url>]',
+    usage: 'grotto wiki status [--json] [--runtime-url <url>]',
     flags: jsonAndUrlFlags(),
     positionals: [],
-    examples: ['tavern wiki status', 'tavern wiki status --json'],
+    examples: ['grotto wiki status', 'grotto wiki status --json'],
     run: (args) => runStatus(args),
 };
 
 const listSub: SubCommand = {
     name: 'list',
     summary: 'List Wiki pages',
-    usage: 'tavern wiki list [--json] [--runtime-url <url>]',
+    usage: 'grotto wiki list [--json] [--runtime-url <url>]',
     flags: jsonAndUrlFlags(),
     positionals: [],
-    examples: ['tavern wiki list'],
+    examples: ['grotto wiki list'],
     run: (args) => runList(args),
 };
 
 const getSub: SubCommand = {
     name: 'get',
     summary: 'Print one Wiki page',
-    usage: 'tavern wiki get <path> [--json] [--runtime-url <url>]',
+    usage: 'grotto wiki get <path> [--json] [--runtime-url <url>]',
     flags: jsonAndUrlFlags(),
     positionals: ['<path>'],
-    examples: ['tavern wiki get INDEX.md'],
+    examples: ['grotto wiki get INDEX.md'],
     run: (args) => runGet(args),
 };
 
 const searchSub: SubCommand = {
     name: 'search',
     summary: 'Search Wiki pages',
-    usage: 'tavern wiki search <query> [--json] [--runtime-url <url>]',
+    usage: 'grotto wiki search <query> [--json] [--runtime-url <url>]',
     flags: jsonAndUrlFlags(),
     positionals: ['<query>'],
-    examples: ['tavern wiki search "ad campaigns"'],
+    examples: ['grotto wiki search "ad campaigns"'],
     run: (args) => runSearch(args),
 };
 
@@ -169,7 +169,7 @@ async function emit(
     } catch (error) {
         if (error instanceof RuntimeUnreachableError) {
             process.stderr.write(
-                `${errorBlock(error.message, "Is the service running? Try 'tavern status'.")}\n`
+                `${errorBlock(error.message, "Is the service running? Try 'grotto status'.")}\n`
             );
             return 1;
         }
@@ -202,7 +202,7 @@ function readRuntimeError(data: unknown, status: number): string {
     if (data && typeof data === 'object' && 'message' in data) {
         return String((data as { message: unknown }).message);
     }
-    return `Tavern Runtime request failed with HTTP ${status}.`;
+    return `Grotto Runtime request failed with HTTP ${status}.`;
 }
 
 function jsonAndUrlFlags() {

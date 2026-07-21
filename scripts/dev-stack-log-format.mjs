@@ -18,7 +18,7 @@ export const theme = {
 const processOrder = ['runtime', 'server', 'website', 'desktop'];
 
 const sourceMeta = {
-    tavern: { color: theme.accent, icon: '🎰', label: 'tavern' },
+    tavern: { color: theme.accent, icon: '🎰', label: 'grotto' },
     desktop: { color: theme.accent, icon: '🪟', label: 'desktop' },
     runtime: { color: theme.accent, icon: '🧠', label: 'runtime' },
     server: { color: theme.warning, icon: '🖥️', label: 'server' },
@@ -112,7 +112,7 @@ export function getSnapshotChangeLines(previous, next, snapshot, { colorize = fa
 
 export function formatReadyBlock(snapshot, { colorize = false } = {}) {
     const lines = [
-        colorizeText('╭─ 🎰 TAVERN', theme.accent, colorize),
+        colorizeText('╭─ 🎰 GROTTO', theme.accent, colorize),
         `${dim('│', colorize)}  ${colorizeText('Ready to go', theme.ok, colorize)}`,
         colorizeText('├─ Services', theme.accent, colorize),
         readyServiceLine('Runtime', snapshot.config.runtimeUrl, colorize),
@@ -164,7 +164,7 @@ export function snapshotDigest(snapshot) {
 }
 
 export function formatTavernLine(message, { color, colorize, icon }) {
-    return `${colorizeText(`${icon} tavern`, color, colorize)} ${message}`;
+    return `${colorizeText(`${icon} grotto`, color, colorize)} ${message}`;
 }
 
 function formatJobsStateLine(state, { colorize }) {

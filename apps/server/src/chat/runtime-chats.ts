@@ -24,6 +24,7 @@ export interface RuntimeChatRecord {
 interface TavernChatMetadata {
     agentIds: string[];
     archived: boolean;
+    description: string | null;
     displayName: string;
     displayNameSource: TavernChatDisplayNameSource;
     groupSystemPrompt: string | null;
@@ -121,6 +122,7 @@ export async function getRuntimeChatRecord(
 export async function createRuntimeTavernChat(input: {
     actingUserId?: string;
     agentIds: string[];
+    description?: string | null;
     displayName: string;
     displayNameSource: TavernChatDisplayNameSource;
     id: string;
@@ -132,6 +134,7 @@ export async function createRuntimeTavernChat(input: {
         metadata: buildRuntimeTavernChatMetadata({
             agentIds: input.agentIds,
             archived: false,
+            description: input.description ?? null,
             displayName: input.displayName,
             displayNameSource: input.displayNameSource,
             groupSystemPrompt: null,
@@ -148,6 +151,7 @@ export async function updateRuntimeTavernChat(input: {
     actingUserId?: string;
     agentIds: string[];
     archived?: boolean;
+    description?: string | null;
     displayName: string;
     id: string;
     kind?: TavernChat['kind'];
@@ -163,6 +167,10 @@ export async function updateRuntimeTavernChat(input: {
         metadata: buildRuntimeTavernChatMetadata({
             agentIds: input.agentIds,
             archived,
+            description:
+                input.description === undefined
+                    ? (metadata?.description ?? null)
+                    : input.description,
             displayName: input.displayName,
             displayNameSource: 'explicit',
             groupSystemPrompt: metadata?.groupSystemPrompt ?? null,
@@ -183,7 +191,7 @@ export async function setRuntimeTavernChatArchived(chatId: string, archived: boo
     const current = await getTavernChatOrNull(client, chatId);
 
     if (!current) {
-        throw new Error(`No Tavern chat named "${chatId}" exists.`);
+        throw new Error(`No Grotto chat named "${chatId}" exists.`);
     }
 
     const metadata = readTavernChatMetadata(current);
@@ -192,6 +200,7 @@ export async function setRuntimeTavernChatArchived(chatId: string, archived: boo
         metadata: buildRuntimeTavernChatMetadata({
             agentIds: metadata.agentIds,
             archived,
+            description: metadata.description,
             displayName: metadata.displayName,
             displayNameSource: metadata.displayNameSource,
             groupSystemPrompt: metadata.groupSystemPrompt,
@@ -210,7 +219,7 @@ export async function updateRuntimeTavernChatTabAppearance(input: {
     const current = await getTavernChatOrNull(client, input.chatId);
 
     if (!current) {
-        throw new Error(`No Tavern chat named "${input.chatId}" exists.`);
+        throw new Error(`No Grotto chat named "${input.chatId}" exists.`);
     }
 
     const metadata = readTavernChatMetadata(current);
@@ -219,6 +228,7 @@ export async function updateRuntimeTavernChatTabAppearance(input: {
         metadata: buildRuntimeTavernChatMetadata({
             agentIds: metadata.agentIds,
             archived: metadata.archived,
+            description: metadata.description,
             displayName: metadata.displayName,
             displayNameSource: metadata.displayNameSource,
             groupSystemPrompt: metadata.groupSystemPrompt,
@@ -237,7 +247,7 @@ export async function updateRuntimeTavernChatSystemPrompt(input: {
     const current = await getTavernChatOrNull(client, input.chatId);
 
     if (!current) {
-        throw new Error(`No Tavern chat named "${input.chatId}" exists.`);
+        throw new Error(`No Grotto chat named "${input.chatId}" exists.`);
     }
 
     const metadata = readTavernChatMetadata(current);
@@ -246,6 +256,7 @@ export async function updateRuntimeTavernChatSystemPrompt(input: {
         metadata: buildRuntimeTavernChatMetadata({
             agentIds: metadata.agentIds,
             archived: metadata.archived,
+            description: metadata.description,
             displayName: metadata.displayName,
             displayNameSource: metadata.displayNameSource,
             groupSystemPrompt: input.systemPrompt,
@@ -298,7 +309,7 @@ async function requireRuntimeChatClient() {
     const connection = await getActiveAgentRuntimeConnection();
 
     if (!(connection?.enabled && connection.baseUrl)) {
-        throw new Error('Tavern Runtime is not configured.');
+        throw new Error('Grotto Runtime is not configured.');
     }
 
     return {
@@ -331,7 +342,7 @@ async function getTavernChatOrNull(
     try {
         return await withRuntimeChatTimeout(
             client.chat.get(chatId, { readerId }),
-            'reading chat from Tavern Runtime'
+            'reading chat from Grotto Runtime'
         );
     } catch (error) {
         if (error instanceof TavernApiError && error.status === 404) {
@@ -345,7 +356,7 @@ async function saveRuntimeChat(
     client: ReturnType<typeof createTavernClientForConnection>,
     input: TavernCreateChatRequest
 ) {
-    return await withRuntimeChatTimeout(client.chat.create(input), 'saving chat to Tavern Runtime');
+    return await withRuntimeChatTimeout(client.chat.create(input), 'saving chat to Grotto Runtime');
 }
 
 async function withRuntimeChatTimeout<T>(promise: Promise<T>, action: string) {
@@ -358,7 +369,7 @@ async function withRuntimeChatTimeout<T>(promise: Promise<T>, action: string) {
                 timeout = setTimeout(() => {
                     reject(
                         new Error(
-                            `Timed out ${action}. Check the Tavern Runtime connection and try again.`
+                            `Timed out ${action}. Check the Grotto Runtime connection and try again.`
                         )
                     );
                 }, runtimeChatRequestTimeoutMs);
@@ -493,10 +504,15 @@ function readTavernChatMetadata(chat: TavernChat): TavernChatMetadata {
         typeof tavern.groupSystemPrompt === 'string' && tavern.groupSystemPrompt.trim()
             ? tavern.groupSystemPrompt.trim()
             : null;
+    const description =
+        typeof tavern.description === 'string' && tavern.description.trim()
+            ? tavern.description.trim()
+            : null;
 
     return {
         agentIds,
         archived: tavern.archived === true,
+        description,
         displayName,
         displayNameSource,
         groupSystemPrompt,
@@ -507,6 +523,7 @@ function readTavernChatMetadata(chat: TavernChat): TavernChatMetadata {
 function buildRuntimeTavernChatMetadata(input: {
     agentIds: string[];
     archived: boolean;
+    description: string | null;
     displayName: string;
     displayNameSource: TavernChatDisplayNameSource;
     groupSystemPrompt: string | null;
@@ -520,6 +537,7 @@ function buildRuntimeTavernChatMetadata(input: {
         tavern: {
             agentIds: input.agentIds,
             archived: input.archived,
+            ...(input.description ? { description: input.description } : {}),
             displayName: input.displayName,
             displayNameSource: input.displayNameSource,
             ...(input.groupSystemPrompt ? { groupSystemPrompt: input.groupSystemPrompt } : {}),

@@ -33,8 +33,8 @@ const main = async () => {
     });
 
     assert(
-        electronBuilderConfig.appId === 'build.tavern.desktop',
-        'desktop app identifier must be build.tavern.desktop'
+        electronBuilderConfig.appId === 'build.grotto.desktop',
+        'desktop app identifier must be build.grotto.desktop'
     );
     await assertElectronMainRequiresPackaged({
         electronBuilderConfig,

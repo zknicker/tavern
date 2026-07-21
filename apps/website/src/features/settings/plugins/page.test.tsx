@@ -262,6 +262,6 @@ describe('MerchBase Plugin settings', () => {
         );
 
         expect(markup).not.toContain('From .env');
-        expect(markup).toContain('MerchBase enablement is managed by local Tavern configuration');
+        expect(markup).toContain('MerchBase enablement is managed by local Grotto configuration');
     });
 });

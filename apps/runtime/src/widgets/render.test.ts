@@ -104,6 +104,34 @@ describe('Widget rendering', () => {
         });
     });
 
+    it('parses a bare document fence with a Wiki page path', () => {
+        const parsed = parseWidgetsFromAssistantContent(
+            [
+                'I saved the maintained plan.',
+                '',
+                '```document',
+                '{"path":"projects/launch-plan.md","title":"Launch plan"}',
+                '```',
+            ].join('\n')
+        );
+
+        expect(parsed).toMatchObject({
+            displayContent: 'I saved the maintained plan.',
+            invalid: [],
+            widgets: [
+                {
+                    fallbackText: 'Launch plan',
+                    name: 'document',
+                    render: {
+                        component: 'tavern.widget.document',
+                        props: { path: 'projects/launch-plan.md', title: 'Launch plan' },
+                        target: 'chat.inline',
+                    },
+                },
+            ],
+        });
+    });
+
     it('strips invalid artifact fences and hides an in-flight one', () => {
         const parsed = parseWidgetsFromAssistantContent(
             ['Look:', '', '```artifact', '{"path":"notes.md"}', '```'].join('\n')

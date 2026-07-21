@@ -31,7 +31,7 @@ export interface CliCommand {
     run(args: ParsedArgs, raw: string[]): Promise<number>;
     section: CliSection;
     summary: string;
-    /** Usage line shown in per-command help, e.g. `tavern update [--restart]`. */
+    /** Usage line shown in per-command help, e.g. `grotto update [--restart]`. */
     usage: string;
 }
 
@@ -40,10 +40,10 @@ const version = runtimePackage.version;
 const serveCommand: CliCommand = {
     name: 'serve',
     section: 'Server',
-    summary: 'Run the foreground Tavern Runtime server',
-    usage: 'tavern serve',
+    summary: 'Run the foreground Grotto Runtime server',
+    usage: 'grotto serve',
     flags: [],
-    examples: ['tavern serve'],
+    examples: ['grotto serve'],
     run() {
         // serve is dispatched specially in main.ts (signal handlers + startup).
         return Promise.resolve(0);
@@ -54,7 +54,7 @@ const statusCommand: CliCommand = {
     name: 'status',
     section: 'Status',
     summary: 'Service, version, capability, and engine health',
-    usage: 'tavern status [--json] [--runtime-url <url>]',
+    usage: 'grotto status [--json] [--runtime-url <url>]',
     flags: [
         { name: '--json', description: 'Emit one JSON document' },
         {
@@ -63,7 +63,7 @@ const statusCommand: CliCommand = {
             description: 'Probe a specific Runtime URL (staged-binary hint is local-only)',
         },
     ],
-    examples: ['tavern status', 'tavern status --json'],
+    examples: ['grotto status', 'grotto status --json'],
     async run(args) {
         const { runStatusCommand } = await import('./commands/status');
         return await runStatusCommand(args);
@@ -74,9 +74,9 @@ const versionCommand: CliCommand = {
     name: 'version',
     section: 'Status',
     summary: 'Print the Runtime version',
-    usage: 'tavern version',
+    usage: 'grotto version',
     flags: [],
-    examples: ['tavern version'],
+    examples: ['grotto version'],
     run() {
         process.stdout.write(`${version}\n`);
         return Promise.resolve(0);
@@ -87,12 +87,12 @@ const updateCommand: CliCommand = {
     name: 'update',
     section: 'Maintenance',
     summary: 'Stage a Runtime upgrade through Homebrew',
-    usage: 'tavern update [--restart] [--verbose]',
+    usage: 'grotto update [--restart] [--verbose]',
     flags: [
         { name: '--restart', description: 'Restart the service after staging the upgrade' },
         { name: '--verbose', description: 'Print captured Homebrew output' },
     ],
-    examples: ['tavern update', 'tavern update --restart'],
+    examples: ['grotto update', 'grotto update --restart'],
     async run(args) {
         const { runUpdateCommand } = await import('./maintenance-commands');
         return await runUpdateCommand({
@@ -106,9 +106,9 @@ const restartCommand: CliCommand = {
     name: 'restart',
     section: 'Maintenance',
     summary: 'Restart the service and wait for health',
-    usage: 'tavern restart [--no-wait]',
+    usage: 'grotto restart [--no-wait]',
     flags: [{ name: '--no-wait', description: 'Skip the post-restart health wait' }],
-    examples: ['tavern restart', 'tavern restart --no-wait'],
+    examples: ['grotto restart', 'grotto restart --no-wait'],
     async run(args) {
         const { runRestartCommand } = await import('./maintenance-commands');
         return await runRestartCommand({ noWait: Boolean(args.flags['--no-wait']) });
@@ -120,12 +120,12 @@ const wikiCommand: CliCommand = {
     section: 'Wiki',
     group: true,
     summary: 'Browse Wiki pages (status, list, get, search)',
-    usage: 'tavern wiki <status|list|get|search> [flags]',
+    usage: 'grotto wiki <status|list|get|search> [flags]',
     flags: [
         { name: '--json', description: 'Emit one JSON document' },
         { name: '--runtime-url', valueName: '<url>', description: 'Override the Runtime API URL' },
     ],
-    examples: ['tavern wiki status', 'tavern wiki list', 'tavern wiki get INDEX.md'],
+    examples: ['grotto wiki status', 'grotto wiki list', 'grotto wiki get INDEX.md'],
     async run(_args, raw) {
         if (raw.length === 0) {
             const { printGroupHelp } = await import('./help');
@@ -145,12 +145,12 @@ const engineCommand: CliCommand = {
     section: 'Engine',
     group: true,
     summary: 'Inspect, install, or clean the managed agent engine',
-    usage: 'tavern engine <status|install|clean> [flags]',
+    usage: 'grotto engine <status|install|clean> [flags]',
     flags: [
         { name: '--json', description: 'Emit one JSON document (status)' },
         { name: '--all', description: 'Remove every installed pin (clean)' },
     ],
-    examples: ['tavern engine status', 'tavern engine install', 'tavern engine clean --all'],
+    examples: ['grotto engine status', 'grotto engine install', 'grotto engine clean --all'],
     async run(_args, raw) {
         if (raw.length === 0) {
             const { printGroupHelp } = await import('./help');
@@ -168,8 +168,8 @@ const engineCommand: CliCommand = {
 const claimCommand: CliCommand = {
     name: 'claim',
     section: 'Server',
-    summary: 'Bind this runtime to a Tavern account (run on the runtime host)',
-    usage: 'tavern claim --clerk-key <key> --user <clerk-user-id>',
+    summary: 'Bind this runtime to a Grotto account (run on the runtime host)',
+    usage: 'grotto claim --clerk-key <key> --user <clerk-user-id>',
     flags: [
         {
             name: '--clerk-key',
@@ -178,7 +178,7 @@ const claimCommand: CliCommand = {
         },
         { name: '--user', description: 'Clerk user id that owns this runtime', valueName: '<id>' },
     ],
-    examples: ['tavern claim --clerk-key pk_test_abc --user user_2abc'],
+    examples: ['grotto claim --clerk-key pk_test_abc --user user_2abc'],
     async run(args) {
         const { runClaimCommand } = await import('./commands/claim');
         return await runClaimCommand(args);
@@ -188,10 +188,10 @@ const claimCommand: CliCommand = {
 const tokenCommand: CliCommand = {
     name: 'token',
     section: 'Status',
-    summary: 'Print the Runtime API token for pairing the Tavern app',
-    usage: 'tavern token [--json]',
+    summary: 'Print the Runtime API token for pairing the Grotto app',
+    usage: 'grotto token [--json]',
     flags: [{ name: '--json', description: 'Emit one JSON document' }],
-    examples: ['tavern token', 'tavern token --json'],
+    examples: ['grotto token', 'grotto token --json'],
     async run(args) {
         const { runTokenCommand } = await import('./commands/token');
         return await runTokenCommand(args);
@@ -202,9 +202,9 @@ const helpCommand: CliCommand = {
     name: 'help',
     section: 'Status',
     summary: 'Show help for a command or the full command list',
-    usage: 'tavern help [command]',
+    usage: 'grotto help [command]',
     flags: [],
-    examples: ['tavern help', 'tavern help update'],
+    examples: ['grotto help', 'grotto help update'],
     async run(args) {
         const { runHelpCommand } = await import('./help');
         return await runHelpCommand(args.positionals[0]);

@@ -7,7 +7,7 @@ export function AgentRuntimeSettings() {
     const runtime = useRuntimeConnection();
 
     if (runtime.status === 'checking' && !runtime.connection) {
-        return <p className="text-muted-foreground text-sm">Loading Tavern Runtime...</p>;
+        return <p className="text-muted-foreground text-sm">Loading Grotto Runtime...</p>;
     }
 
     return (

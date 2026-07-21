@@ -58,7 +58,7 @@ export function renderStatus(report: StatusReport, options: RenderOptions): stri
 }
 
 function renderHeaderRows(report: StatusReport, stream: NodeJS.WriteStream): string {
-    const header = ui.bold(`Tavern Runtime v${report.binary.version}`, stream);
+    const header = ui.bold(`Grotto Runtime v${report.binary.version}`, stream);
     // Service and Binary always describe this box; label them when the probed
     // Runtime is remote so the local rows next to a remote Runtime don't read
     // as the same host.
@@ -84,7 +84,7 @@ function serviceLine(service: StatusServiceSection | null): string {
 function runtimeLine(report: StatusReport): string {
     const { runtime } = report;
     if (!runtime.reachable) {
-        return "not running · 'brew services start tavern-runtime'";
+        return "not running · 'brew services start grotto-runtime'";
     }
     const version = runtime.version ? `v${runtime.version}` : 'running';
     const health = runtime.health ?? 'unknown';
@@ -95,7 +95,7 @@ function runtimeLine(report: StatusReport): string {
         runtime.version !== report.binary.version &&
         isOlder(runtime.version, report.binary.version)
     ) {
-        return `${version} · ${health} — binary v${report.binary.version} staged, run 'tavern restart'`;
+        return `${version} · ${health} — binary v${report.binary.version} staged, run 'grotto restart'`;
     }
     return base;
 }

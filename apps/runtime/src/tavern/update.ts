@@ -28,7 +28,7 @@ export function startRuntimeUpdate(input?: { targetVersion?: null | string }) {
     updateStatus = {
         currentVersion: getRuntimeInfo().version,
         finishedAt: null,
-        message: 'Installing the Runtime update. Restart is held until Tavern is ready.',
+        message: 'Installing the Runtime update. Restart is held until Grotto is ready.',
         phase: 'installing',
         startedAt,
         targetVersion: input?.targetVersion ?? null,
@@ -38,8 +38,8 @@ export function startRuntimeUpdate(input?: { targetVersion?: null | string }) {
     // the staged binary (only it knows the new pin). Best-effort: a pre-stage
     // failure must not fail staging — restart-time setup is the safety net.
     const stageCommand =
-        'brew update && brew upgrade tavern-runtime && ' +
-        '{ "$(brew --prefix)/bin/tavern" engine install || ' +
+        'brew update && brew upgrade grotto-runtime && ' +
+        '{ "$(brew --prefix)/bin/grotto" engine install || ' +
         'echo "agent engine pre-stage failed; the restart will install it"; }';
     const child = spawn('sh', ['-lc', stageCommand], {
         env: process.env,
@@ -59,7 +59,7 @@ export function startRuntimeUpdate(input?: { targetVersion?: null | string }) {
                 ? {
                       ...updateStatus,
                       finishedAt: new Date().toISOString(),
-                      message: 'Runtime update staged. Restart Tavern to finish.',
+                      message: 'Runtime update staged. Restart Grotto to finish.',
                       phase: 'staged',
                   }
                 : {
@@ -81,12 +81,13 @@ export function restartRuntimeForUpdate() {
     updateStatus = {
         ...updateStatus,
         finishedAt: null,
-        message: 'Restarting Tavern Runtime.',
+        message: 'Restarting Grotto Runtime.',
         phase: 'restarting',
         startedAt: updateStatus.startedAt ?? new Date().toISOString(),
     };
 
-    const child = spawn('sh', ['-lc', 'brew services restart tavern-runtime'], {
+    const restartCommand = 'brew services restart grotto-runtime';
+    const child = spawn('sh', ['-lc', restartCommand], {
         detached: true,
         env: process.env,
         stdio: 'ignore',

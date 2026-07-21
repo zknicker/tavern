@@ -1,6 +1,6 @@
 import { fileURLToPath } from 'node:url';
 import type { Page } from '@playwright/test';
-import { fillComposer } from '../support/composer.ts';
+import { tavernAgentDmRoute } from '../support/agent-dm.ts';
 import { expect, test } from '../support/test.ts';
 
 test.describe.configure({ timeout: 120_000 });
@@ -10,22 +10,15 @@ test('preserves Tavern chat session routing and renders one final reply', async 
 
     const expectedReply = `QA-TAVERN-CONTRACT-${Date.now()}`;
 
-    await page.goto('/overview');
-
-    await fillComposer(
+    await page.goto(tavernAgentDmRoute);
+    await fillChatComposer(
         page,
-        '#home-prompt',
         `Tavern agent marker check. Use exact marker: \`${expectedReply}\`.`
     );
-    await expect(page.getByRole('button', { name: 'Start chat' })).toBeEnabled({
-        timeout: 30_000,
-    });
-    await page.getByRole('button', { name: 'Start chat' }).click();
+    await page.getByRole('textbox', { name: 'Chat message' }).press('Enter');
 
-    const chatId = await waitForRealChatRoute(page);
     await expect(markerCodeOccurrences(page, expectedReply)).toHaveCount(2, { timeout: 45_000 });
     await expect(page.getByLabel('Agent is thinking')).toHaveCount(0);
-    expect(chatId).not.toBe('new');
 });
 
 test('keeps channel messages human-only until an agent is addressed', async ({ page }) => {
@@ -82,9 +75,9 @@ test('stores Tavern generated AGENTS.md without runtime bootstrap companion file
 
     const fullText = await getRuntimeInstructions(runtimeUrl);
 
-    expect(fullText).toContain('# Tavern Agent Instructions');
+    expect(fullText).toContain('# Grotto Agent Instructions');
     expect(fullText).toContain('Memory and Wiki are the durable knowledge you can carry forward.');
-    expect(fullText).toContain("Wiki is Tavern's shared, browsable Markdown knowledge base");
+    expect(fullText).toContain("Wiki is Grotto's shared, browsable Markdown knowledge base");
     expect(fullText).toContain('run `wiki_search` before concluding you lack context');
     expect(fullText).not.toContain('# SOUL.md - Who You Are');
     expect(fullText).not.toContain('# TOOLS.md - Local Notes');

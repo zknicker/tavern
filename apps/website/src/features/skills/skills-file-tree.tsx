@@ -182,6 +182,20 @@ button[data-type='item']:hover {
 
 button[data-type='item'][aria-selected='true'] {
   --tavern-tree-row-bg: var(--trees-selected-bg);
+  /* Inked outline + press slab, matching the nav rows' selected treatment. */
+  box-shadow: inset 0 0 0 1px var(--input), 0 2px 0 0 var(--hard-shadow);
+}
+
+/* Indent guides stop at the selected chip instead of striking through it. */
+button[data-type='item'][aria-selected='true'] [data-item-section='spacing-item'] {
+  border-left-color: transparent;
+}
+
+/* No lingering ring after pointer selection — the tree marks rows
+   data-item-focused on click and keeps it. Real keyboard focus
+   (:focus-visible) still draws the ring. */
+button[data-type='item'][data-item-focused='true']:not(:focus-visible)::before {
+  outline: none;
 }
 
 [data-file-tree-virtualized-scroll='true'] {
@@ -228,6 +242,7 @@ const treeHostStyle: TreeHostStyle = {
     '--trees-fg-override': 'var(--sidebar-foreground)',
     '--trees-file-icon-color': 'var(--sidebar-foreground)',
     '--trees-focus-ring-color-override': 'var(--sidebar-ring)',
+    '--trees-selected-focused-border-color-override': 'var(--sidebar-ring)',
     '--trees-font-family-override': 'inherit',
     '--trees-font-size-override': 'var(--text-sm)',
     '--trees-indent-guide-bg-override': 'transparent',
@@ -236,6 +251,6 @@ const treeHostStyle: TreeHostStyle = {
     '--trees-level-gap-override': '8px',
     '--trees-padding-inline-override': '4px',
     '--trees-scrollbar-gutter-override': '6px',
-    '--trees-selected-bg-override': 'var(--sidebar-accent-active)',
-    '--trees-selected-fg-override': 'var(--sidebar-accent-foreground)',
+    '--trees-selected-bg-override': 'var(--secondary)',
+    '--trees-selected-fg-override': 'var(--foreground)',
 };

@@ -147,7 +147,7 @@ test('listCapabilities parses Wiki capability rows', async () => {
                     healthy: true,
                     id: 'wiki',
                     lastHealthyAt: now,
-                    metadata: { wikiPath: '/Users/zknicker/.tavern/runtime/wiki' },
+                    metadata: { wikiPath: '/Users/zknicker/.grotto/runtime/wiki' },
                     nextCheckAt: now,
                     reason: null,
                     state: 'healthy',

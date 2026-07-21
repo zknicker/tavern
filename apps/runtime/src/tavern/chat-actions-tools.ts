@@ -37,7 +37,7 @@ export function createTavernChatActionTools(input: {
     return {
         chat_send: tool({
             description:
-                'Post a message, as yourself, into another Tavern chat you participate in. Every agent of that chat evaluates the post once your turn completes; mention an agent as [Name](agent://<agentId>) when you need that specific agent to act — this is how you consult an agent who is not in the current chat. Use chats_list for targets. Post when the user asked or the task requires it; confirm self-initiated posts first.',
+                'Post a message, as yourself, into another Grotto chat you participate in. Every agent of that chat evaluates the post once your turn completes; mention an agent as [Name](agent://<agentId>) when you need that specific agent to act — this is how you consult an agent who is not in the current chat. Use chats_list for targets. Post when the user asked or the task requires it; confirm self-initiated posts first.',
             inputSchema: z.object({
                 chatId: z.string().min(1).describe('Target chat id from chats_list.'),
                 message: z
@@ -104,7 +104,7 @@ export function createTavernChatActionTools(input: {
         }),
         chats_list: tool({
             description:
-                'List the Tavern chats you participate in. Use this to find a target chat id for chat_send.',
+                'List the Grotto chats you participate in. Use this to find a target chat id for chat_send.',
             inputSchema: z.object({}),
             execute: () => ({
                 chats: listChatsForAgentParticipant(participantId)

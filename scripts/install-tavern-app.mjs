@@ -1,9 +1,10 @@
-import { cpSync, existsSync, rmSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { existsSync, rmSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 if (process.platform !== 'darwin') {
-    console.error('Tavern desktop release install is only supported on macOS.');
+    console.error('Grotto desktop release install is only supported on macOS.');
     process.exit(1);
 }
 
@@ -15,9 +16,9 @@ const sourceAppPath = join(
     'website',
     'electron-dist',
     'mac-arm64',
-    'Tavern.app'
+    'Grotto.app'
 );
-const destinationAppPath = '/Applications/Tavern.app';
+const destinationAppPath = '/Applications/Grotto.app';
 
 if (!existsSync(sourceAppPath)) {
     console.error(`Built app not found at ${sourceAppPath}.`);
@@ -25,6 +26,6 @@ if (!existsSync(sourceAppPath)) {
 }
 
 rmSync(destinationAppPath, { force: true, recursive: true });
-cpSync(sourceAppPath, destinationAppPath, { recursive: true });
+execFileSync('/usr/bin/ditto', ['--rsrc', '--extattr', sourceAppPath, destinationAppPath]);
 
-console.log(`Installed Tavern.app to ${destinationAppPath}`);
+console.log(`Installed Grotto.app to ${destinationAppPath}`);

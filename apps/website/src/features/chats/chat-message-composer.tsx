@@ -19,7 +19,6 @@ import { Spinner } from '../../components/ui/spinner.tsx';
 import { useChatSend } from '../../hooks/chats/use-chat-send.ts';
 import { useChatStop } from '../../hooks/chats/use-chat-stop.ts';
 import { runtimeUnhealthyTooltip, useCapability } from '../../hooks/connections/use-capability.ts';
-import { getDesktopBridge } from '../../lib/desktop-bridge.ts';
 import type { AgentListOutput } from '../../lib/trpc.tsx';
 import { cn } from '../../lib/utils.ts';
 import { compileMentionSubmission, normalizeMentions } from '../mentions/mention-text.ts';
@@ -133,15 +132,6 @@ export function ChatMessageComposer({
         return () => cancelAnimationFrame(frame);
     }, [chatAutoFocusKey]);
 
-    React.useEffect(() => {
-        if (!canAutoFocusComposer) {
-            return;
-        }
-
-        return getDesktopBridge()?.onViewActivated?.(() => {
-            focusTextEditorRef.current();
-        });
-    }, [canAutoFocusComposer]);
     useChatComposerFocusRequest(canAutoFocusComposer, mentionComposer.focusTextEditor);
     const handleComposerInsert = React.useCallback(
         (text: string) => {

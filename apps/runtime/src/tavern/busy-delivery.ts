@@ -79,7 +79,7 @@ function busyDeliveryNotice(message: TavernChatMessage, chatId: string, turnChat
             ? 'new message in this chat while your turn runs:'
             : `new message in "${getChat(chatId)?.title ?? chatId}" (chatId: ${chatId}) while your turn runs:`;
     return [
-        `[Tavern: ${where}`,
+        `[Grotto: ${where}`,
         line,
         'Read it now and account for it before you finish — do not answer as if you had not seen it. Your reply still answers the original message.]',
     ].join('\n');

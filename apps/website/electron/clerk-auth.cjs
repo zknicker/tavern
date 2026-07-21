@@ -5,7 +5,7 @@ const { existsSync, readFileSync, unlinkSync, writeFileSync } = require('node:fs
 
 const callbackChannel = 'desktop:auth:sso-callback';
 const callbackMarker = 'sso-callback';
-const protocolScheme = 'tavern';
+const protocolScheme = 'grotto';
 let memoryToken = null;
 
 function registerClerkAuth({ app, BrowserWindow, ipcMain, safeStorage, shell, webContents }) {

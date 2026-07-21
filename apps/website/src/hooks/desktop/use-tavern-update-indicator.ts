@@ -76,7 +76,7 @@ export function getUpdateLabel(status: TavernUpdateStatus) {
         case 'available':
             return 'Update';
         case 'app-update-required':
-            return 'Tavern Update Required';
+            return 'Grotto Update Required';
         case 'staging-runtime':
             return 'Staging Runtime';
         case 'downloading-app':

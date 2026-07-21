@@ -427,7 +427,7 @@ async function handleOAuthCallback({
         }
         response
             .writeHead(200, { 'content-type': 'text/html; charset=utf-8' })
-            .end('<h1>Google connected</h1><p>You can close this window and return to Tavern.</p>');
+            .end('<h1>Google connected</h1><p>You can close this window and return to Grotto.</p>');
     } catch (error) {
         session.status = 'error';
         session.errorMessage = error instanceof Error ? error.message : String(error);
@@ -436,7 +436,7 @@ async function handleOAuthCallback({
             .end(
                 [
                     '<h1>Google connection failed</h1>',
-                    '<p>Return to Tavern and try again.</p>',
+                    '<p>Return to Grotto and try again.</p>',
                     `<pre>${escapeHtml(session.errorMessage ?? 'Unknown Google OAuth error.')}</pre>`,
                 ].join('')
             );

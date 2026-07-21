@@ -36,7 +36,7 @@ function InviteRequired({ onJoined }: { onJoined: () => void }) {
             <div className="flex flex-col items-center gap-2 text-center">
                 <h1 className="font-semibold text-2xl text-foreground">Invite required</h1>
                 <p className="max-w-sm text-muted-foreground text-sm">
-                    This Tavern belongs to someone else. Ask the owner for an invite code to join
+                    This Grotto belongs to someone else. Ask the owner for an invite code to join
                     the conversation.
                 </p>
             </div>

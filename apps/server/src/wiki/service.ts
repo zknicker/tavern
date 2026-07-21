@@ -5,13 +5,14 @@ import type {
     WikiPathInput,
     WikiSavePage,
     WikiSearchInput,
+    WikiUploadAttachment,
 } from '@tavern/api';
 import type { TavernAgentRuntimeClient } from '../agent-runtime/client.ts';
 import { createConfiguredAgentRuntimeClient } from '../agent-runtime/configured-client.ts';
 
 function requireRuntimeClient(client: TavernAgentRuntimeClient | null) {
     if (!client) {
-        throw new Error('Tavern Runtime is not configured.');
+        throw new Error('Grotto Runtime is not configured.');
     }
     return client;
 }
@@ -47,6 +48,24 @@ export async function saveWikiPage(
     client: TavernAgentRuntimeClient | null = createConfiguredAgentRuntimeClient()
 ) {
     return await requireRuntimeClient(client).saveWikiPage(input);
+}
+
+export async function uploadWikiAttachment(
+    input: WikiUploadAttachment,
+    client: TavernAgentRuntimeClient | null = createConfiguredAgentRuntimeClient()
+) {
+    return await requireRuntimeClient(client).uploadWikiAttachment(input);
+}
+
+export async function getWikiAttachment(
+    input: { path: string },
+    client: TavernAgentRuntimeClient | null = createConfiguredAgentRuntimeClient()
+) {
+    return await requireRuntimeClient(client).getWikiAttachment(input.path);
+}
+
+export function wikiAttachmentCacheControl() {
+    return 'no-store';
 }
 
 export async function createWikiFolder(

@@ -71,5 +71,5 @@ async function waitForSidecarHealth() {
         });
     }
 
-    throw new Error('Tavern desktop backend did not become healthy in time.');
+    throw new Error('Grotto desktop backend did not become healthy in time.');
 }

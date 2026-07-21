@@ -27,7 +27,8 @@ can continue to feel primary-agent-first.
   deletion. The home timezone lives on the Tavern Runtime settings page.
 * **Agent bio.** A short job description stored on the Runtime agent record.
   Agents sharing a chat see each other's names and bios in their prompt
-  roster, so each agent knows what its co-resident agents are for.
+  roster, so each agent knows what its co-resident agents are for. The chat
+  transcript shows the bio beside the agent's name on each message group.
 * **Agent avatar.** Every agent wears a character face (knight, penguin, cat,
   dog, robot, ghost, or cloud) as its avatar; the animated eyes always sit
   inside a character and are never shown alone. Agents with no chosen character

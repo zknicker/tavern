@@ -92,7 +92,7 @@ export function classifyCapabilityFailure(error: unknown): CapabilityFailure {
     ) {
         return {
             errorCode: code || 'runtime_capability_unauthorized',
-            reason: 'Tavern is not authorized to use this runtime capability.',
+            reason: 'Grotto is not authorized to use this runtime capability.',
             state: 'unauthorized',
             technicalMessage: message,
         };
@@ -101,7 +101,7 @@ export function classifyCapabilityFailure(error: unknown): CapabilityFailure {
     if (error instanceof z.ZodError || normalized.includes('invalid_type')) {
         return {
             errorCode: code || 'runtime_payload_invalid',
-            reason: 'The runtime returned data Tavern could not read.',
+            reason: 'The runtime returned data Grotto could not read.',
             state: 'degraded',
             technicalMessage: message,
         };

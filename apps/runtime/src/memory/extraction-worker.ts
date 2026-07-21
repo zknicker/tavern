@@ -89,7 +89,7 @@ export function memoryExtractionModelRef(model: AgentRuntimeModelName) {
 }
 
 const memoryExtractionInstructions = [
-    'You are Tavern’s background episodic Memory extraction worker.',
+    'You are Grotto’s background episodic Memory extraction worker.',
     'You receive one settled chat transcript window. Distill it into durable observations worth remembering across sessions.',
     'Output rules:',
     '- Output only a Markdown bullet list, one observation per line, most important first.',

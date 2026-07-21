@@ -4,7 +4,7 @@ import type { RuntimeProbe } from './runtime-probe';
 export interface UpdateFlowDeps {
     brew: Brew;
     probe: RuntimeProbe;
-    /** Version of the staged on-disk binary (`tavern --version`). */
+    /** Version of the staged on-disk binary (`grotto --version`). */
     stagedVersion(): Promise<string>;
     /** Best-effort engine pre-stage; resolves to true on success. */
     stageEngine(): Promise<boolean>;
@@ -65,14 +65,14 @@ export async function runUpdateFlow(
         return result(lines, progressLineCount, 1, false, false);
     }
 
-    progress('Checking Tavern Runtime formula...');
+    progress('Checking Grotto Runtime formula...');
     const alreadyCurrent = !deps.brew.isRuntimeOutdated();
 
     progress('Updating Homebrew metadata...');
     const updateResult = deps.brew.update();
     let upgradeFailed = brewFailed(updateResult) ? updateResult : null;
     if (!upgradeFailed) {
-        progress('Staging Tavern Runtime package...');
+        progress('Staging Grotto Runtime package...');
         upgradeFailed = maybeFailed(deps.brew.upgradeRuntime());
     }
     if (upgradeFailed) {
@@ -115,7 +115,7 @@ function finishUpdate(
     if (running === null) {
         lines.push(
             out(
-                `${MARK_OK} Staged v${staged}. Runtime is not running — start it with 'brew services start tavern-runtime'.`
+                `${MARK_OK} Staged v${staged}. Runtime is not running — start it with 'brew services start grotto-runtime'.`
             )
         );
         return result(lines, progressLineCount, 0, false, false);
@@ -130,7 +130,7 @@ function finishUpdate(
     if (options.restart) {
         return result(lines, progressLineCount, 0, true, true);
     }
-    lines.push(out("Run 'tavern restart' to cut over."));
+    lines.push(out("Run 'grotto restart' to cut over."));
     return result(lines, progressLineCount, 0, false, true);
 }
 

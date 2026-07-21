@@ -1,20 +1,20 @@
 ---
 summary: Release workflow for app-only releases, Runtime compatibility floors, Runtime artifacts, desktop signing/notarization, updater metadata, S3 upload, tags, and GitHub Release.
 read_when:
-  - cutting, signing, notarizing, or publishing a Tavern release
-  - deciding whether a Tavern app release needs a Runtime release
+  - cutting, signing, notarizing, or publishing a Grotto release
+  - deciding whether a Grotto app release needs a Runtime release
   - changing Runtime release artifacts or Homebrew deployment
   - changing release scripts, updater metadata, or release environment variables
 ---
 
 # Releases
 
-Tavern releases optimize for frequent app updates and infrequent Runtime updates.
+Grotto releases optimize for frequent app updates and infrequent Runtime updates.
 The desktop app has its own release version. Runtime has a package version, and
 the app declares the minimum compatible Runtime version in
 `apps/website/package.json` at `tavern.runtime.minimumVersion`.
 
-Users experience app and Runtime updates as one Tavern update. The desktop
+Users experience app and Runtime updates as one Grotto update. The desktop
 updater stages a Runtime package first when a newer Runtime is required, keeps
 the existing Runtime process online, downloads the desktop update, then asks for
 one restart. The final restart restarts Runtime, waits for Runtime health, and
@@ -137,12 +137,12 @@ Do not raise `tavern.runtime.minimumVersion` when every answer is no. Examples:
 
 ## User Update Contract
 
-The Tavern updater has one visible product flow:
+The Grotto updater has one visible product flow:
 
 1. Show the topbar updater control when an app update is available, Runtime must
    be staged, a stage/download/restart is active, or the configured Runtime is
    disconnected.
-2. Stage Runtime with `brew update && brew upgrade tavern-runtime`. Do not
+2. Stage Runtime with `brew update && brew upgrade grotto-runtime`. Do not
    restart Runtime during staging.
 3. Download the desktop update.
 4. Show **Restart** only when every required artifact is staged.
@@ -156,21 +156,21 @@ failures link to Runtime settings, where the full connection error is shown.
 
 ## Homebrew Tap
 
-`zknicker/homebrew-tavern` is first-party Tavern release infrastructure. Treat
+`zknicker/homebrew-grotto` is first-party Grotto release infrastructure. Treat
 it as part of this repository's release surface, not as a separate downstream
 project.
 
 When Runtime install, update, service, artifact, environment, port, or CLI
 behavior changes:
 
-* update Tavern release scripts in this repository
+* update Grotto release scripts in this repository
 * update the generated Homebrew formula contract
 * update the tap README and any tap-local operator docs
 * verify the tap still documents install, update, service control, logs, and
   environment overrides
 
 `release:publish-homebrew-formula` owns the formula write path. It updates
-`zknicker/homebrew-tavern` by default through `TAVERN_HOMEBREW_TAP_REPO`, or an
+`zknicker/homebrew-grotto` by default through `TAVERN_HOMEBREW_TAP_REPO`, or an
 explicit local checkout through `TAVERN_HOMEBREW_TAP_DIR`.
 
 Desktop builds compile `assets/mac-icon.icon` with Xcode `actool` before Electron
@@ -178,10 +178,11 @@ packaging. The compiled `Assets.car` provides the layered Liquid Glass app icon
 on macOS 26, and `AppIcon.icns` remains the fallback icon for older macOS
 versions and Electron's DMG/app bundle path.
 
-Tavern ships two production artifacts:
+Grotto ships two production artifacts:
 
-* `Tavern.app` is the desktop client plus its local app backend.
-* `tavern-runtime-<version>-<target>.tar.gz` is the always-on Runtime server for
+* `Grotto.app` (`build.grotto.desktop`) is the desktop client plus its local app backend. Desktop release files use the
+  `Grotto_<version>_<arch>` prefix.
+* `grotto-runtime-<version>-<target>.tar.gz` is the always-on Runtime server for
   a Mac mini or other host.
 
 The desktop app connects to the configured Runtime URL. Runtime deployment and
@@ -199,7 +200,7 @@ Required release environment:
 * `TAVERN_RELEASE_S3_URI`
 * `TAVERN_GOOGLE_OAUTH_CLIENT_ID`
 * `TAVERN_GOOGLE_OAUTH_CLIENT_SECRET`
-* `TAVERN_HOMEBREW_TAP_REPO` defaults to `zknicker/homebrew-tavern`
+* `TAVERN_HOMEBREW_TAP_REPO` defaults to `zknicker/homebrew-grotto`
 * `TAVERN_HOMEBREW_TAP_DIR` optionally points to a local tap checkout
 * `CSC_NAME` or `CSC_LINK` + `CSC_KEY_PASSWORD`
 * `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID`

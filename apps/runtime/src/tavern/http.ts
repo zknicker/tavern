@@ -48,6 +48,16 @@ export const conflict = (message: string) =>
         409
     );
 
+export const payloadTooLarge = (message: string) =>
+    json(
+        {
+            code: 'payload_too_large',
+            message,
+            retryable: false,
+        },
+        413
+    );
+
 export const notFound = () =>
     json(
         {
@@ -72,15 +82,38 @@ export async function readJson(request: Request) {
     return await request.json();
 }
 
-async function readBody(request: IncomingMessage) {
+export const maxTavernRuntimeRequestBodyBytes = 12 * 1024 * 1024;
+
+export class RequestBodyTooLargeError extends Error {
+    constructor() {
+        super('Grotto Runtime request body exceeds the 12 MiB limit.');
+        this.name = 'RequestBodyTooLargeError';
+    }
+}
+
+async function readBody(request: IncomingMessage, maxBodyBytes?: number) {
+    const contentLength = Number(request.headers['content-length']);
+    if (maxBodyBytes && Number.isFinite(contentLength) && contentLength > maxBodyBytes) {
+        throw new RequestBodyTooLargeError();
+    }
     const chunks: Buffer[] = [];
+    let size = 0;
     for await (const chunk of request) {
-        chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
+        const buffer = typeof chunk === 'string' ? Buffer.from(chunk) : chunk;
+        size += buffer.byteLength;
+        if (maxBodyBytes && size > maxBodyBytes) {
+            throw new RequestBodyTooLargeError();
+        }
+        chunks.push(buffer);
     }
     return Buffer.concat(chunks);
 }
 
-export async function toFetchRequest(request: IncomingMessage, baseUrl: string): Promise<Request> {
+export async function toFetchRequest(
+    request: IncomingMessage,
+    baseUrl: string,
+    options: { maxBodyBytes?: number } = {}
+): Promise<Request> {
     const url = new URL(request.url ?? '/', baseUrl);
     const method = request.method ?? 'GET';
     const headers = new Headers();
@@ -107,7 +140,7 @@ export async function toFetchRequest(request: IncomingMessage, baseUrl: string):
         });
     }
 
-    const body = await readBody(request);
+    const body = await readBody(request, options.maxBodyBytes);
     return new Request(url.toString(), {
         body,
         duplex: 'half',

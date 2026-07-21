@@ -10,7 +10,7 @@ function args(over: Partial<ParsedArgs> = {}): ParsedArgs {
 }
 
 const STATUS_FIXTURE: EngineStatusReport = {
-    agentHome: '/home/u/.tavern/runtime/agent',
+    agentHome: '/home/u/.grotto/runtime/agent',
     installedPins: [],
     mode: 'local-ai-sdk',
     provider: 'openai',

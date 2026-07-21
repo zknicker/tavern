@@ -54,7 +54,7 @@ let taskDispatcher: TaskDispatcherHandle | null = null;
 let shuttingDown = false;
 
 async function main(): Promise<void> {
-    log.info('Tavern Runtime starting');
+    log.info('Grotto Runtime starting');
 
     // The recall search engine swaps in an extension-capable SQLite build via
     // bun:sqlite setCustomSQLite, which only works before the first Database
@@ -174,7 +174,7 @@ async function main(): Promise<void> {
     });
 
     runtimeServer = startTavernRuntimeServer();
-    log.info('Tavern Runtime running', { url: runtimeServer.url.toString() });
+    log.info('Grotto Runtime running', { url: runtimeServer.url.toString() });
 
     await restartWikiWatcher({ emitRootChanged: false }).catch((err) => {
         log.warn('Wiki live updates failed to refresh after agent startup', {

@@ -57,7 +57,7 @@ function requireRuntimeClient() {
     if (!client) {
         throw new TRPCError({
             code: 'PRECONDITION_FAILED',
-            message: 'Tavern Runtime is not configured.',
+            message: 'Grotto Runtime is not configured.',
         });
     }
     return client;

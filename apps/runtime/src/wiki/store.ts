@@ -5,6 +5,8 @@ import path from 'node:path';
 import type {
     AgentRuntimeSaveWikiSettings,
     AgentRuntimeWikiSettings,
+    WikiAttachment,
+    WikiAttachmentContent,
     WikiBacklinkList,
     WikiCreatePage,
     WikiMovePath,
@@ -16,12 +18,15 @@ import type {
     WikiSearchInput,
     WikiSearchResult,
     WikiStatus,
+    WikiUploadAttachment,
 } from '@tavern/api';
+import { parse as parseYaml, stringify as stringifyYaml } from 'yaml';
 import { RUNTIME_ROOT, readConfigValue, resolveConfiguredPath } from '../config.ts';
 import { getDb } from '../db/connection.ts';
 import { namedParams } from '../db/sqlite.ts';
 import { getStoredAgent } from '../tavern/agents-store.ts';
 import { commitWikiHistory, wasWikiPathDeletedRecently } from './history.ts';
+import { withWikiPathWriteLock } from './path-write-lock.ts';
 import { getWikiWatcherFreshness, restartWikiWatcher } from './watcher.ts';
 
 const wikiSettingsMetadataKey = 'wiki:settings';
@@ -41,7 +46,7 @@ Last updated: 2026-07-03T00:00:00Z
 ## Invariants
 
 - Wiki lives under \`wiki/\`.
-- Wiki is the shared Markdown knowledge system exposed in Tavern's Wiki page.
+- Wiki is the shared Markdown knowledge system exposed in Grotto's Wiki page.
 - Per-agent core memory files (\`USER.md\`, \`MEMORY.md\`) live in each agent workspace, not in Wiki.
 - Episodic memory is worker-owned evidence under the agent's hidden workspace memory, not in Wiki.
 - Each agent owns its own episodic memory and dreaming pass.
@@ -251,6 +256,20 @@ Use \`## Links\` only when it adds real navigation value.
 const rootWikiFiles = {
     'TAXONOMY.md': sharedWikiTaxonomySeed,
 } as const;
+const maxWikiAttachmentBytes = 8 * 1024 * 1024;
+const wikiAttachmentExtensionByMediaType = {
+    'image/gif': '.gif',
+    'image/jpeg': '.jpg',
+    'image/png': '.png',
+    'image/webp': '.webp',
+} as const;
+
+export class WikiPageConflictError extends Error {
+    constructor() {
+        super('Wiki page changed since it was opened. Reload it before saving again.');
+        this.name = 'WikiPageConflictError';
+    }
+}
 
 interface WikiConfig {
     configuredPath: string | null;
@@ -378,7 +397,8 @@ export async function createWikiPage(input: WikiCreatePage): Promise<WikiPathMut
     const absolutePath = resolveWikiChildPath(config.wikiPath, relativePath);
 
     await fs.mkdir(path.dirname(absolutePath), { recursive: true });
-    await fs.writeFile(absolutePath, input.body ?? defaultMarkdownBody(relativePath), {
+    const body = input.body ?? defaultMarkdownBody(relativePath);
+    await fs.writeFile(absolutePath, serializeMarkdownDocument(body, input.frontmatter), {
         flag: 'wx',
     });
     await commitWikiHistory(config.wikiPath, { reason: 'create page' });
@@ -391,17 +411,111 @@ export async function saveWikiPage(input: WikiSavePage): Promise<WikiPathMutatio
     const config = await resolveWikiConfig();
     const relativePath = normalizeWritableMarkdownPath(input.path);
     const absolutePath = resolveWikiChildPath(config.wikiPath, relativePath);
-    const stat = await fs.stat(absolutePath).catch(() => null);
-    if (!(stat?.isFile() && absolutePath.endsWith('.md'))) {
+    return withWikiPathWriteLock(config.wikiPath, async () => {
+        const stat = await fs.stat(absolutePath).catch(() => null);
+        if (!(stat?.isFile() && absolutePath.endsWith('.md'))) {
+            throw new Error('Wiki page does not exist.');
+        }
+
+        const current = await fs.readFile(absolutePath, 'utf8');
+        if (sha256(current) !== input.expectedHash) {
+            throw new WikiPageConflictError();
+        }
+        await fs.writeFile(absolutePath, replaceMarkdownBody(current, input.body));
+        await commitWikiHistory(config.wikiPath, { reason: 'save page' });
+
+        const file = await toMarkdownFile(config.wikiPath, absolutePath);
+        return { kind: 'page' as const, page: toPage(file), path: relativePath };
+    });
+}
+
+export async function uploadWikiAttachment(input: WikiUploadAttachment): Promise<WikiAttachment> {
+    const config = await resolveWikiConfig();
+    return withWikiPathWriteLock(config.wikiPath, () =>
+        uploadWikiAttachmentUnlocked(config.wikiPath, input)
+    );
+}
+
+async function uploadWikiAttachmentUnlocked(
+    wikiPath: string,
+    input: WikiUploadAttachment
+): Promise<WikiAttachment> {
+    const pagePath = normalizeWritableMarkdownPath(input.pagePath);
+    const pageAbsolutePath = resolveWikiChildPath(wikiPath, pagePath);
+    const safePagePath = await resolveExistingWikiChildPath(wikiPath, pageAbsolutePath);
+    const pageStat = safePagePath ? await fs.stat(safePagePath).catch(() => null) : null;
+    if (!pageStat?.isFile()) {
         throw new Error('Wiki page does not exist.');
     }
 
-    const current = await fs.readFile(absolutePath, 'utf8');
-    await fs.writeFile(absolutePath, replaceMarkdownBody(current, input.body));
-    await commitWikiHistory(config.wikiPath, { reason: 'save page' });
+    const content = Buffer.from(input.contentBase64, 'base64');
+    if (content.byteLength === 0 || content.byteLength > maxWikiAttachmentBytes) {
+        throw new Error('Wiki images must be between 1 byte and 8 MiB.');
+    }
+    if (content.toString('base64') !== normalizeBase64(input.contentBase64)) {
+        throw new Error('Wiki image content is not valid base64.');
+    }
 
-    const file = await toMarkdownFile(config.wikiPath, absolutePath);
-    return { kind: 'page', page: toPage(file), path: relativePath };
+    const pageDirectory = path.posix.dirname(pagePath);
+    const attachmentDirectory =
+        pageDirectory === '.' ? '_attachments' : `${pageDirectory}/_attachments`;
+    const stem = attachmentStem(input.filename);
+    const extension = wikiAttachmentExtensionByMediaType[input.mediaType];
+    const filename = `${stem}-${sha256Buffer(content).slice(0, 12)}${extension}`;
+    const attachmentPath = `${attachmentDirectory}/${filename}`;
+    const absolutePath = resolveWikiChildPath(wikiPath, attachmentPath);
+
+    await fs.mkdir(path.dirname(absolutePath), { recursive: true });
+    const safeAttachmentPath = await resolveWritableWikiChildPath(wikiPath, absolutePath);
+    await fs.writeFile(safeAttachmentPath, content, { flag: 'wx' }).catch(async (error) => {
+        if ((error as NodeJS.ErrnoException).code !== 'EEXIST') {
+            throw error;
+        }
+        const existingPath = await resolveExistingWikiChildPath(wikiPath, safeAttachmentPath);
+        if (!(existingPath && (await fs.readFile(existingPath)).equals(content))) {
+            throw new Error('A different Wiki attachment already exists at the upload path.');
+        }
+    });
+    await commitWikiHistory(wikiPath, { reason: 'add attachment' });
+
+    return {
+        markdownPath: `./_attachments/${filename}`,
+        mediaType: input.mediaType,
+        path: attachmentPath,
+        sizeBytes: content.byteLength,
+    };
+}
+
+export async function getWikiAttachment(input: {
+    path: string;
+}): Promise<WikiAttachmentContent | null> {
+    const config = await resolveWikiConfig();
+    const attachmentPath = normalizeWikiAttachmentPath(input.path);
+    const absolutePath = resolveWikiChildPath(config.wikiPath, attachmentPath);
+    const safeAttachmentPath = await resolveExistingWikiChildPath(config.wikiPath, absolutePath);
+    if (!safeAttachmentPath) {
+        return null;
+    }
+    const stat = await fs.stat(safeAttachmentPath).catch(() => null);
+    if (!stat?.isFile()) {
+        return null;
+    }
+    if (stat.size > maxWikiAttachmentBytes) {
+        throw new Error('Wiki image exceeds the 8 MiB read limit.');
+    }
+    const mediaType = wikiAttachmentMediaTypeForPath(attachmentPath);
+    if (!mediaType) {
+        return null;
+    }
+    const content = await fs.readFile(safeAttachmentPath);
+    if (content.byteLength > maxWikiAttachmentBytes) {
+        throw new Error('Wiki image exceeds the 8 MiB read limit.');
+    }
+    return {
+        contentBase64: content.toString('base64'),
+        mediaType,
+        path: attachmentPath,
+    };
 }
 
 export async function createWikiFolder(input: WikiPathInput): Promise<WikiPathMutationResult> {
@@ -418,15 +532,17 @@ export async function deleteWikiPage(input: WikiPathInput): Promise<WikiPathMuta
     const config = await resolveWikiConfig();
     const relativePath = normalizeWritableMarkdownPath(input.path);
     const absolutePath = resolveWikiChildPath(config.wikiPath, relativePath);
-    const stat = await fs.stat(absolutePath).catch(() => null);
-    if (!(stat?.isFile() && absolutePath.endsWith('.md'))) {
-        throw new Error('Wiki page does not exist.');
-    }
+    return withWikiPathWriteLock(config.wikiPath, async () => {
+        const stat = await fs.stat(absolutePath).catch(() => null);
+        if (!(stat?.isFile() && absolutePath.endsWith('.md'))) {
+            throw new Error('Wiki page does not exist.');
+        }
 
-    await commitWikiHistory(config.wikiPath, { reason: 'baseline' });
-    await fs.rm(absolutePath);
-    await commitWikiHistory(config.wikiPath, { reason: 'delete page' });
-    return { kind: 'page', page: null, path: relativePath };
+        await commitWikiHistory(config.wikiPath, { reason: 'baseline' });
+        await fs.rm(absolutePath);
+        await commitWikiHistory(config.wikiPath, { reason: 'delete page' });
+        return { kind: 'page' as const, page: null, path: relativePath };
+    });
 }
 
 export async function readWikiFile(input: { path: string }): Promise<WikiFileSnapshot | null> {
@@ -454,32 +570,34 @@ export async function writeWikiFile(input: {
     const relativePath = normalizeWritableMarkdownPath(input.path);
     assertNotCoreMemoryBasename(relativePath);
     const absolutePath = resolveWikiChildPath(config.wikiPath, relativePath);
-    const previous = await fs.readFile(absolutePath, 'utf8').catch((error) => {
-        if (isNotFoundError(error)) {
-            return null;
+    return withWikiPathWriteLock(config.wikiPath, async () => {
+        const previous = await fs.readFile(absolutePath, 'utf8').catch((error) => {
+            if (isNotFoundError(error)) {
+                return null;
+            }
+            throw error;
+        });
+        const beforeHash = previous === null ? null : sha256(previous);
+        if (
+            beforeHash === null &&
+            input.expectedHash === null &&
+            (await wasWikiPathDeletedRecently(config.wikiPath, relativePath))
+        ) {
+            throw new Error('Wiki page was deleted recently and cannot be recreated by dreaming.');
         }
-        throw error;
-    });
-    const beforeHash = previous === null ? null : sha256(previous);
-    if (
-        beforeHash === null &&
-        input.expectedHash === null &&
-        (await wasWikiPathDeletedRecently(config.wikiPath, relativePath))
-    ) {
-        throw new Error('Wiki page was deleted recently and cannot be recreated by dreaming.');
-    }
-    if (beforeHash !== input.expectedHash) {
-        throw new Error('Wiki page changed since it was read.');
-    }
+        if (beforeHash !== input.expectedHash) {
+            throw new Error('Wiki page changed since it was read.');
+        }
 
-    await fs.mkdir(path.dirname(absolutePath), { recursive: true });
-    await fs.writeFile(absolutePath, input.content);
-    await commitWikiHistory(config.wikiPath, { reason: 'write file' });
-    return {
-        afterHash: sha256(input.content),
-        beforeHash,
-        path: relativePath,
-    };
+        await fs.mkdir(path.dirname(absolutePath), { recursive: true });
+        await fs.writeFile(absolutePath, input.content);
+        await commitWikiHistory(config.wikiPath, { reason: 'write file' });
+        return {
+            afterHash: sha256(input.content),
+            beforeHash,
+            path: relativePath,
+        };
+    });
 }
 
 export async function listAgentEpisodicMemoryFiles(input: {
@@ -520,15 +638,17 @@ export async function deleteWikiFolder(input: WikiPathInput): Promise<WikiPathMu
     const config = await resolveWikiConfig();
     const relativePath = normalizeWritableFolderPath(input.path);
     const absolutePath = resolveWikiChildPath(config.wikiPath, relativePath);
-    const stat = await fs.stat(absolutePath).catch(() => null);
-    if (!stat?.isDirectory()) {
-        throw new Error('Wiki folder does not exist.');
-    }
+    return withWikiPathWriteLock(config.wikiPath, async () => {
+        const stat = await fs.stat(absolutePath).catch(() => null);
+        if (!stat?.isDirectory()) {
+            throw new Error('Wiki folder does not exist.');
+        }
 
-    await commitWikiHistory(config.wikiPath, { reason: 'baseline' });
-    await fs.rm(absolutePath, { recursive: true });
-    await commitWikiHistory(config.wikiPath, { reason: 'delete folder' });
-    return { kind: 'folder', page: null, path: relativePath };
+        await commitWikiHistory(config.wikiPath, { reason: 'baseline' });
+        await fs.rm(absolutePath, { recursive: true });
+        await commitWikiHistory(config.wikiPath, { reason: 'delete folder' });
+        return { kind: 'folder' as const, page: null, path: relativePath };
+    });
 }
 
 export async function moveWikiPath(input: WikiMovePath): Promise<WikiPathMutationResult> {
@@ -543,37 +663,46 @@ export async function moveWikiPath(input: WikiMovePath): Promise<WikiPathMutatio
             : normalizeWritableFolderPath(input.toPath);
     const fromAbsolutePath = resolveWikiChildPath(config.wikiPath, fromPath);
     const toAbsolutePath = resolveWikiChildPath(config.wikiPath, toPath);
-    const sourceStat = await fs.stat(fromAbsolutePath).catch(() => null);
-    const targetStat = await fs.stat(toAbsolutePath).catch(() => null);
+    return withWikiPathWriteLock(config.wikiPath, async () => {
+        const sourceStat = await fs.stat(fromAbsolutePath).catch(() => null);
+        const targetStat = await fs.stat(toAbsolutePath).catch(() => null);
 
-    if (input.kind === 'page' && !(sourceStat?.isFile() && fromAbsolutePath.endsWith('.md'))) {
-        throw new Error('Wiki page does not exist.');
-    }
-    if (input.kind === 'folder' && !sourceStat?.isDirectory()) {
-        throw new Error('Wiki folder does not exist.');
-    }
-    if (targetStat) {
-        throw new Error('A Wiki item already exists at that path.');
-    }
-    if (
-        input.kind === 'folder' &&
-        (toAbsolutePath === fromAbsolutePath ||
-            toAbsolutePath.startsWith(`${fromAbsolutePath}${path.sep}`))
-    ) {
-        throw new Error('Wiki folder cannot be moved into itself.');
-    }
+        if (input.kind === 'page' && !(sourceStat?.isFile() && fromAbsolutePath.endsWith('.md'))) {
+            throw new Error('Wiki page does not exist.');
+        }
+        if (input.kind === 'folder' && !sourceStat?.isDirectory()) {
+            throw new Error('Wiki folder does not exist.');
+        }
+        if (targetStat) {
+            throw new Error('A Wiki item already exists at that path.');
+        }
+        if (
+            input.kind === 'folder' &&
+            (toAbsolutePath === fromAbsolutePath ||
+                toAbsolutePath.startsWith(`${fromAbsolutePath}${path.sep}`))
+        ) {
+            throw new Error('Wiki folder cannot be moved into itself.');
+        }
 
-    await commitWikiHistory(config.wikiPath, { reason: 'baseline' });
-    await fs.mkdir(path.dirname(toAbsolutePath), { recursive: true });
-    await fs.rename(fromAbsolutePath, toAbsolutePath);
-    await commitWikiHistory(config.wikiPath, { reason: 'move path' });
+        await commitWikiHistory(config.wikiPath, { reason: 'baseline' });
+        await fs.mkdir(path.dirname(toAbsolutePath), { recursive: true });
+        if (input.kind === 'page') {
+            await copyMovedPageAttachments({
+                fromPath,
+                toPath,
+                wikiPath: config.wikiPath,
+            });
+        }
+        await fs.rename(fromAbsolutePath, toAbsolutePath);
+        await commitWikiHistory(config.wikiPath, { reason: 'move path' });
 
-    if (input.kind === 'page') {
-        const file = await toMarkdownFile(config.wikiPath, toAbsolutePath);
-        return { kind: 'page', page: toPage(file), path: toPath };
-    }
+        if (input.kind === 'page') {
+            const file = await toMarkdownFile(config.wikiPath, toAbsolutePath);
+            return { kind: 'page' as const, page: toPage(file), path: toPath };
+        }
 
-    return { kind: 'folder', page: null, path: toPath };
+        return { kind: 'folder' as const, page: null, path: toPath };
+    });
 }
 
 export async function searchWiki(input: WikiSearchInput): Promise<WikiSearchResult> {
@@ -740,7 +869,7 @@ async function walkMarkdown(root: string): Promise<string[]> {
     const entries = await fs.readdir(root, { withFileTypes: true }).catch(() => []);
     const files: string[] = [];
     for (const entry of entries) {
-        if (entry.name.startsWith('.')) {
+        if (entry.name.startsWith('.') || entry.name === '_attachments') {
             continue;
         }
         const entryPath = path.join(root, entry.name);
@@ -757,13 +886,115 @@ async function walkFolders(root: string): Promise<string[]> {
     const entries = await fs.readdir(root, { withFileTypes: true }).catch(() => []);
     const folders: string[] = [];
     for (const entry of entries) {
-        if (!entry.isDirectory() || entry.name.startsWith('.')) {
+        if (!entry.isDirectory() || entry.name.startsWith('.') || entry.name === '_attachments') {
             continue;
         }
         const entryPath = path.join(root, entry.name);
         folders.push(entryPath, ...(await walkFolders(entryPath)));
     }
     return folders;
+}
+
+async function copyMovedPageAttachments(input: {
+    fromPath: string;
+    toPath: string;
+    wikiPath: string;
+}) {
+    const fromDirectory = path.posix.dirname(input.fromPath);
+    const toDirectory = path.posix.dirname(input.toPath);
+    if (fromDirectory === toDirectory) {
+        return;
+    }
+    const pageContent = await fs.readFile(
+        resolveWikiChildPath(input.wikiPath, input.fromPath),
+        'utf8'
+    );
+    const filenames = new Set(
+        Array.from(
+            pageContent.matchAll(
+                /(?<![a-zA-Z0-9._/-])(?:\.\/)?_attachments\/([^/<>\n]+?\.(?:gif|jpe?g|png|webp))(?=>|\s+["'(]|\))/giu
+            ),
+            (match) => decodeMovedAttachmentFilename(match[1])
+        ).filter((filename): filename is string => Boolean(filename))
+    );
+
+    const copies: Array<{ destinationPath: string; sourcePath: string }> = [];
+    for (const filename of filenames) {
+        const sourcePath = resolveWikiChildPath(
+            input.wikiPath,
+            path.posix.join(fromDirectory, '_attachments', filename)
+        );
+        const safeSourcePath = await resolveExistingWikiChildPath(input.wikiPath, sourcePath);
+        if (!safeSourcePath) {
+            continue;
+        }
+        const destinationPath = resolveWikiChildPath(
+            input.wikiPath,
+            path.posix.join(toDirectory, '_attachments', filename)
+        );
+        const destinationStat = await fs.lstat(destinationPath).catch((error) => {
+            if (isNotFoundError(error)) {
+                return null;
+            }
+            throw error;
+        });
+        if (destinationStat) {
+            const safeDestinationPath = await resolveExistingWikiChildPath(
+                input.wikiPath,
+                destinationPath
+            );
+            if (!safeDestinationPath) {
+                throw new Error('Wiki path must stay inside the Wiki root.');
+            }
+            const [source, destination] = await Promise.all([
+                fs.readFile(safeSourcePath),
+                fs.readFile(safeDestinationPath),
+            ]);
+            if (!source.equals(destination)) {
+                throw new Error('A different Wiki attachment already exists at the destination.');
+            }
+            continue;
+        }
+        copies.push({ destinationPath, sourcePath: safeSourcePath });
+    }
+
+    for (const { destinationPath, sourcePath } of copies) {
+        await fs.mkdir(path.dirname(destinationPath), { recursive: true });
+        const safeDestinationPath = await resolveWritableWikiChildPath(
+            input.wikiPath,
+            destinationPath
+        );
+        await fs
+            .copyFile(sourcePath, safeDestinationPath, fsConstants.COPYFILE_EXCL)
+            .catch(async (error) => {
+                if (!isAlreadyExistsError(error)) {
+                    throw error;
+                }
+                const [source, destination] = await Promise.all([
+                    fs.readFile(sourcePath),
+                    fs.readFile(safeDestinationPath),
+                ]);
+                if (!source.equals(destination)) {
+                    throw new Error(
+                        'A different Wiki attachment already exists at the destination.'
+                    );
+                }
+            });
+    }
+}
+
+function decodeMovedAttachmentFilename(value: string | undefined) {
+    if (!value) {
+        return null;
+    }
+    try {
+        const decoded = decodeURIComponent(value);
+        return decoded.includes('/') || decoded.includes('\\') || decoded.includes('\0')
+            ? null
+            : decoded;
+    } catch {
+        return null;
+    }
 }
 
 async function toMarkdownFile(wikiPath: string, absolutePath: string): Promise<MarkdownFile> {
@@ -808,6 +1039,7 @@ function toPage(file: MarkdownFile): WikiPage {
     return {
         body: parsed.body,
         frontmatter: parsed.frontmatter,
+        hash: sha256(file.content),
         links: extractWikiLinks(parsed.body),
         path: file.relativePath,
         size: file.size,
@@ -815,6 +1047,43 @@ function toPage(file: MarkdownFile): WikiPage {
         updatedAt: file.mtime.toISOString(),
         wikiPath: file.wikiPath,
     };
+}
+
+function normalizeWikiAttachmentPath(value: string) {
+    const normalized = normalizeWritableRelativePath(value, { allowAttachments: true });
+    if (!normalized.split('/').includes('_attachments')) {
+        throw new Error('Wiki images must live in an _attachments directory.');
+    }
+    if (!wikiAttachmentMediaTypeForPath(normalized)) {
+        throw new Error('Unsupported Wiki image type.');
+    }
+    return normalized;
+}
+
+function wikiAttachmentMediaTypeForPath(value: string) {
+    const extension = path.posix.extname(value).toLowerCase();
+    if (extension === '.jpeg') {
+        return 'image/jpeg';
+    }
+    return Object.entries(wikiAttachmentExtensionByMediaType).find(
+        ([, candidate]) => candidate === extension
+    )?.[0] as keyof typeof wikiAttachmentExtensionByMediaType | undefined;
+}
+
+function attachmentStem(filename: string) {
+    const stem = path.posix.basename(filename, path.posix.extname(filename));
+    return (
+        stem
+            .normalize('NFKD')
+            .replace(/[^a-zA-Z0-9]+/gu, '-')
+            .replace(/^-+|-+$/gu, '')
+            .toLowerCase()
+            .slice(0, 80) || 'image'
+    );
+}
+
+function normalizeBase64(value: string) {
+    return value.replace(/\s+/gu, '').replace(/=+$/u, (padding) => padding.slice(0, 2));
 }
 
 function parseMarkdown(content: string) {
@@ -831,53 +1100,18 @@ function parseMarkdown(content: string) {
     };
 }
 
+function serializeMarkdownDocument(body: string, frontmatter?: Record<string, unknown>) {
+    if (!frontmatter || Object.keys(frontmatter).length === 0) {
+        return body;
+    }
+    return `---\n${stringifyYaml(frontmatter).trimEnd()}\n---\n${body}`;
+}
+
 function parseFrontmatter(value: string): Record<string, unknown> {
-    const frontmatter: Record<string, unknown> = {};
-    const lines = value.split('\n');
-    for (let index = 0; index < lines.length; index += 1) {
-        const match = /^([A-Za-z0-9_-]+):\s*(.*)$/u.exec(lines[index]);
-        if (!match) {
-            continue;
-        }
-        const inlineValue = (match[2] ?? '').trim();
-        if (inlineValue) {
-            frontmatter[match[1]] = parseFrontmatterValue(inlineValue);
-            continue;
-        }
-        const { items, nextIndex } = readBlockListItems(lines, index + 1);
-        frontmatter[match[1]] = items ?? '';
-        index = nextIndex - 1;
-    }
-    return frontmatter;
-}
-
-function readBlockListItems(lines: string[], startIndex: number) {
-    const items: string[] = [];
-    let index = startIndex;
-    while (index < lines.length) {
-        const item = /^\s+-\s+(.*)$/u.exec(lines[index]);
-        if (!item) {
-            break;
-        }
-        const trimmed = (item[1] ?? '').trim().replace(/^["']|["']$/gu, '');
-        if (trimmed) {
-            items.push(trimmed);
-        }
-        index += 1;
-    }
-    return { items: items.length > 0 ? items : null, nextIndex: index };
-}
-
-function parseFrontmatterValue(value: string): unknown {
-    const trimmed = value.trim();
-    if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
-        return trimmed
-            .slice(1, -1)
-            .split(',')
-            .map((item) => item.trim().replace(/^["']|["']$/gu, ''))
-            .filter(Boolean);
-    }
-    return trimmed.replace(/^["']|["']$/gu, '');
+    const parsed = parseYaml(value);
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+        ? (parsed as Record<string, unknown>)
+        : {};
 }
 
 function extractWikiLinks(content: string): WikiPage['links'] {
@@ -919,7 +1153,10 @@ function normalizeWritableFolderPath(value: string) {
     return normalized;
 }
 
-function normalizeWritableRelativePath(value: string) {
+function normalizeWritableRelativePath(
+    value: string,
+    options: { allowAttachments?: boolean } = {}
+) {
     const trimmed = value.trim().replaceAll('\\', '/');
     const segments = trimmed.split('/');
     if (
@@ -930,6 +1167,9 @@ function normalizeWritableRelativePath(value: string) {
         )
     ) {
         throw new Error('Wiki path must stay inside the Wiki root and avoid dot directories.');
+    }
+    if (!options.allowAttachments && segments.includes('_attachments')) {
+        throw new Error('Wiki attachment directories are managed by Grotto.');
     }
 
     const normalized = path.posix.normalize(trimmed);
@@ -947,6 +1187,30 @@ export function resolveWikiChildPath(wikiPath: string, relativePath: string) {
         throw new Error('Wiki path must stay inside the Wiki root.');
     }
     return absolutePath;
+}
+
+async function resolveExistingWikiChildPath(wikiPath: string, absolutePath: string) {
+    const [realRoot, realPath] = await Promise.all([
+        fs.realpath(wikiPath),
+        fs.realpath(absolutePath).catch((error) => {
+            if (isNotFoundError(error)) {
+                return null;
+            }
+            throw error;
+        }),
+    ]);
+    return realPath && isPathInside(realPath, realRoot) ? realPath : null;
+}
+
+async function resolveWritableWikiChildPath(wikiPath: string, absolutePath: string) {
+    const [realRoot, realParent] = await Promise.all([
+        fs.realpath(wikiPath),
+        fs.realpath(path.dirname(absolutePath)),
+    ]);
+    if (!isPathInside(realParent, realRoot)) {
+        throw new Error('Wiki path must stay inside the Wiki root.');
+    }
+    return path.join(realParent, path.basename(absolutePath));
 }
 
 function isPathInside(filePath: string, root: string) {
@@ -1004,12 +1268,25 @@ function sha256(value: string) {
     return crypto.createHash('sha256').update(value).digest('hex');
 }
 
+function sha256Buffer(value: Buffer) {
+    return crypto.createHash('sha256').update(value).digest('hex');
+}
+
 function isNotFoundError(error: unknown) {
     return Boolean(
         error &&
             typeof error === 'object' &&
             'code' in error &&
             (error as { code?: unknown }).code === 'ENOENT'
+    );
+}
+
+function isAlreadyExistsError(error: unknown) {
+    return Boolean(
+        error &&
+            typeof error === 'object' &&
+            'code' in error &&
+            (error as { code?: unknown }).code === 'EEXIST'
     );
 }
 

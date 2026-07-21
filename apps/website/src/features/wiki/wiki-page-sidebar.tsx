@@ -48,7 +48,7 @@ export function WikiPageSidebar({
     selectedPageKey: string | null;
 }) {
     return (
-        <aside className="flex h-full min-h-0 w-full shrink-0 flex-col overflow-x-hidden border-border/70 border-r bg-sidebar/35 text-sidebar-foreground">
+        <aside className="flex h-full min-h-0 w-full shrink-0 flex-col overflow-x-hidden border-[var(--content-card-border)] border-r bg-[var(--sidebar)] pt-[calc(var(--topbar-height)-4px)] text-sidebar-foreground">
             <WikiPageSidebarContent
                 folders={folders}
                 onCreate={onCreate}
@@ -90,7 +90,7 @@ function WikiPageSidebarContent({
 }) {
     return (
         <div className="flex h-full min-h-0 flex-1 flex-col overflow-x-hidden">
-            <SidebarHeader className="h-12 border-border/70 border-b py-2 pr-2 pl-2">
+            <SidebarHeader className="px-2 pt-0 pb-1">
                 <div className="flex items-center gap-1">
                     <SearchInput
                         className="min-w-0 flex-1"

@@ -46,7 +46,7 @@ export function GoogleSettingsCard({
     if (!settings) {
         return (
             <SettingsRow
-                description={error ?? 'Tavern Runtime unavailable.'}
+                description={error ?? 'Grotto Runtime unavailable.'}
                 title="Google"
                 trailingWidth="intrinsic"
             >

@@ -16,12 +16,12 @@ const googleOAuthClientSecretEnv = 'TAVERN_GOOGLE_OAUTH_CLIENT_SECRET';
 loadEnvFile();
 
 export const requiredRuntimeArtifactPaths = [
-    'bin/tavern',
-    'bin/tavern-runtime',
-    'share/tavern/node_modules/@tavern/sdk/package.json',
-    'share/tavern/node_modules/@tobilu/qmd/package.json',
-    'share/tavern/node_modules/agent-browser/bin/agent-browser.js',
-    'share/tavern/runtime-assets/google/oauth-client.json',
+    'bin/grotto',
+    'bin/grotto-runtime',
+    'share/grotto/node_modules/@tavern/sdk/package.json',
+    'share/grotto/node_modules/@tobilu/qmd/package.json',
+    'share/grotto/node_modules/agent-browser/bin/agent-browser.js',
+    'share/grotto/runtime-assets/google/oauth-client.json',
 ];
 
 const allowedRuntimeAssetRoots = new Set(['google', 'harness-bridges']);
@@ -29,7 +29,7 @@ const allowedRuntimeAssetRoots = new Set(['google', 'harness-bridges']);
 const main = async () => {
     const version = await readReleaseVersion();
     const targetTriple = readTargetTriple();
-    const artifactName = `tavern-runtime-${version}-${targetTriple}.tar.gz`;
+    const artifactName = `grotto-runtime-${version}-${targetTriple}.tar.gz`;
     const artifactPath = path.join(runtimeArtifactDir, artifactName);
     const checksumPath = `${artifactPath}.sha256`;
     const stageRoot = path.join(runtimeArtifactDir, 'stage');
@@ -42,14 +42,14 @@ const main = async () => {
         'build',
         'apps/runtime/src/index.ts',
         '--compile',
+        '--compile-autoload-package-json',
         '--outfile',
-        path.join(stageRoot, 'bin', 'tavern'),
+        path.join(stageRoot, 'bin', 'grotto'),
     ]);
     await fs.copyFile(
-        path.join(stageRoot, 'bin', 'tavern'),
-        path.join(stageRoot, 'bin', 'tavern-runtime')
+        path.join(stageRoot, 'bin', 'grotto'),
+        path.join(stageRoot, 'bin', 'grotto-runtime')
     );
-
     await stageRuntimePackages(stageRoot);
     await stageRuntimeAssets(stageRoot);
     const missingPaths = await findMissingRuntimeArtifactPaths(stageRoot);
@@ -87,7 +87,7 @@ function readTargetTriple() {
 }
 
 async function stageRuntimePackages(stageRoot) {
-    const nodeModulesRoot = path.join(stageRoot, 'share', 'tavern', 'node_modules');
+    const nodeModulesRoot = path.join(stageRoot, 'share', 'grotto', 'node_modules');
 
     await stageWikiRecallEngine(stageRoot);
     await copyPackage(
@@ -100,11 +100,11 @@ async function stageRuntimePackages(stageRoot) {
 // sqlite-vec, node-llama-cpp); agent-browser drives the managed Browser and
 // carries a prebuilt native binary. Neither can compile into the single-file
 // Runtime binary, so the Runtime resolves them from
-// share/tavern/node_modules. npm (not bun) installs them so native
+// share/grotto/node_modules. npm (not bun) installs them so native
 // postinstall scripts run for the build host platform, matching the
 // per-platform artifact target.
 async function stageWikiRecallEngine(stageRoot) {
-    const shareRoot = path.join(stageRoot, 'share', 'tavern');
+    const shareRoot = path.join(stageRoot, 'share', 'grotto');
     const runtimePackageJson = await readJson('apps/runtime/package.json');
     const qmdVersion = runtimePackageJson.dependencies['@tobilu/qmd'];
     if (!qmdVersion) {
@@ -135,7 +135,7 @@ async function stageWikiRecallEngine(stageRoot) {
 }
 
 async function stageRuntimeAssets(stageRoot) {
-    const runtimeAssetsRoot = path.join(stageRoot, 'share', 'tavern', 'runtime-assets');
+    const runtimeAssetsRoot = path.join(stageRoot, 'share', 'grotto', 'runtime-assets');
     await fs.mkdir(runtimeAssetsRoot, { recursive: true });
     await stageGoogleOAuthAssets(runtimeAssetsRoot);
     await stageHarnessBridgeAssets(runtimeAssetsRoot);
@@ -242,7 +242,7 @@ export async function findMissingRuntimeArtifactPaths(stageRoot) {
 }
 
 export async function findUnexpectedRuntimeAssetPaths(stageRoot) {
-    const runtimeAssetsRoot = path.join(stageRoot, 'share', 'tavern', 'runtime-assets');
+    const runtimeAssetsRoot = path.join(stageRoot, 'share', 'grotto', 'runtime-assets');
     let entries;
     try {
         entries = await fs.readdir(runtimeAssetsRoot, { withFileTypes: true });
@@ -255,7 +255,7 @@ export async function findUnexpectedRuntimeAssetPaths(stageRoot) {
 
     return entries
         .filter((entry) => !allowedRuntimeAssetRoots.has(entry.name))
-        .map((entry) => path.join('share', 'tavern', 'runtime-assets', entry.name));
+        .map((entry) => path.join('share', 'grotto', 'runtime-assets', entry.name));
 }
 
 function run(command, args) {

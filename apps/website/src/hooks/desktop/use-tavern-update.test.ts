@@ -33,7 +33,7 @@ describe('Tavern update status', () => {
         });
 
         expect(status).toMatchObject({
-            detail: 'Tavern v1.2.3 is ready to download.',
+            detail: 'Grotto v1.2.3 is ready to download.',
             phase: 'available',
             version: '1.2.3',
         });
@@ -52,7 +52,7 @@ describe('Tavern update status', () => {
         });
 
         expect(status).toMatchObject({
-            detail: 'Tavern v1.2.5 is ready. Click to install and restart.',
+            detail: 'Grotto v1.2.5 is ready. Click to install and restart.',
             phase: 'ready',
             version: '1.2.5',
         });
@@ -73,7 +73,7 @@ describe('Tavern update status', () => {
         });
 
         expect(status).toMatchObject({
-            detail: 'The Tavern Runtime is ready to update to v1.2.4. Click to download.',
+            detail: 'The Grotto Runtime is ready to update to v1.2.4. Click to download.',
             phase: 'available',
             version: '1.2.4',
         });
@@ -99,7 +99,7 @@ describe('Tavern update status', () => {
         });
 
         expect(status).toMatchObject({
-            detail: 'Tavern Runtime v1.2.4 is ready. Click to restart runtime.',
+            detail: 'Grotto Runtime v1.2.4 is ready. Click to restart runtime.',
             phase: 'ready',
             version: '1.2.4',
         });
@@ -177,7 +177,7 @@ function createRuntimeConnection(
         lastCheckedAt: null,
         lastError: null,
         lastSyncedAt: null,
-        name: 'Tavern Runtime',
+        name: 'Grotto Runtime',
         requiredRuntimeVersion: '1.2.2',
         runtimeCapabilities: [],
         runtimeVersion: '1.2.3',

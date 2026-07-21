@@ -31,6 +31,7 @@ import {
 } from './startup-log.ts';
 import { listConfiguredAgentRuntimeConnections } from './storage/agent-runtime-connections.ts';
 import { syncAgentRuntimeAgents } from './sync/agent-runtime-sync.ts';
+import { getWikiAttachment, wikiAttachmentCacheControl } from './wiki/service.ts';
 
 async function start() {
     startOrphanExitWatch({
@@ -41,11 +42,12 @@ async function start() {
         getParentPid: () => process.ppid,
     });
 
-    logStartupBanner('🎰 Tavern Server', 'Booting Tavern Runtime services');
+    logStartupBanner('🟠 Grotto Server', 'Booting Grotto Runtime services');
     await ensureDatabaseSchema();
     await loadAgentRuntimeConnection({ refreshStatus: false });
 
     const app = Fastify({
+        bodyLimit: 12 * 1024 * 1024,
         logger: false,
     });
 
@@ -65,6 +67,18 @@ async function start() {
         },
     });
 
+    app.get<{ Params: { '*': string } }>('/wiki/attachments/*', async (request, reply) => {
+        createApiContext({ req: { headers: request.headers } });
+        const attachment = await getWikiAttachment({ path: request.params['*'] });
+        if (!attachment) {
+            return reply.code(404).send({ message: 'Wiki image not found.' });
+        }
+        return reply
+            .header('cache-control', wikiAttachmentCacheControl())
+            .type(attachment.mediaType)
+            .send(Buffer.from(attachment.contentBase64, 'base64'));
+    });
+
     app.get('/healthz', async () => ({
         status: 'ok',
     }));
@@ -81,12 +95,12 @@ async function start() {
     void refreshRuntimeAfterStartup();
     const configuredAgentRuntimeCount = (await listConfiguredAgentRuntimeConnections()).length;
 
-    logStartupSection('Tavern Runtime');
+    logStartupSection('Grotto Runtime');
     logStartupDetail('🗄️', 'Database', shortenHomePath(env.DATABASE_PATH));
     logStartupDetail('🌐', 'App origin', env.APP_ORIGIN);
     logStartupDetail('📡', 'HTTP', `http://localhost:${env.SERVER_PORT}`);
     logStartupDetail('🔌', 'WebSocket', `ws://localhost:${env.SERVER_PORT}/trpc`);
-    logStartupDetail('🎮', 'Tavern Runtime', getCurrentAgentRuntimeUrl() ?? 'disabled');
+    logStartupDetail('🎮', 'Grotto Runtime', getCurrentAgentRuntimeUrl() ?? 'disabled');
     logStartupDetail(
         '👀',
         'Runtime observe',
@@ -99,7 +113,7 @@ async function start() {
         'Usage refresh',
         formatDurationMs(apiEventSchedulerIntervals.usageIntervalMs)
     );
-    logStartupComplete('Tavern is ready');
+    logStartupComplete('Grotto is ready');
 }
 
 const startupRuntimeConfirmRetryMs = 2000;
@@ -137,7 +151,7 @@ async function refreshRuntimeAfterStartup() {
 }
 
 start().catch((error) => {
-    logStartupFailure('Tavern boot failed');
+    logStartupFailure('Grotto boot failed');
     console.error(error);
     process.exitCode = 1;
 });

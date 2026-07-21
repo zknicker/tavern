@@ -28,7 +28,7 @@ const POLL_BUDGET_MS = 60_000;
 /**
  * Pure-ish restart flow. Restarts the brew service, then (unless --no-wait)
  * polls /health until healthy or the 60 s budget expires. Never reports success
- * without observing health (spec: "tavern restart").
+ * without observing health (spec: "grotto restart").
  */
 export async function runRestartFlow(
     deps: RestartFlowDeps,
@@ -72,7 +72,7 @@ async function pollForHealth(deps: RestartFlowDeps, lines: FlowLine[]): Promise<
     pushCaptured(lines, info);
     lines.push(
         err(
-            "  ↳ Check the service log: 'brew services info tavern-runtime' and the log path it reports."
+            "  ↳ Check the service log: 'brew services info grotto-runtime' and the log path it reports."
         )
     );
     return { lines, exitCode: 1 };

@@ -13,11 +13,11 @@ export function StatsAvailabilityGate({ children }: { children: ReactNode }) {
 
     return (
         <EmptyState
-            actionLabel="Open Tavern Runtime settings"
+            actionLabel="Open Grotto Runtime settings"
             description={runtimeUnhealthyTooltip}
             eyebrow="Stats"
             onAction={navigateToSettings}
-            title="Stats are waiting on Tavern Runtime."
+            title="Stats are waiting on Grotto Runtime."
         />
     );
 }

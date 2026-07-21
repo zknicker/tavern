@@ -131,7 +131,7 @@ export function ProviderInstructionsDialog({
                 <DialogHeader>
                     <DialogTitle>Set Up {provider?.displayName ?? 'Provider'}</DialogTitle>
                     <DialogDescription>
-                        Configure this provider for your agent, then refresh Tavern models.
+                        Configure this provider for your agent, then refresh Grotto models.
                     </DialogDescription>
                 </DialogHeader>
 

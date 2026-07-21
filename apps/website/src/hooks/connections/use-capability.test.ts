@@ -20,7 +20,7 @@ describe('Runtime capability gates', () => {
         );
 
         expect(capability.healthy).toBe(false);
-        expect(formatCapabilityDisabledReason(capability)).toBe('Tavern Runtime update required.');
+        expect(formatCapabilityDisabledReason(capability)).toBe('Grotto Runtime update required.');
     });
 
     test('names Tavern as the required update when Runtime is newer than the app', () => {
@@ -34,7 +34,7 @@ describe('Runtime capability gates', () => {
         );
 
         expect(capability.healthy).toBe(false);
-        expect(formatCapabilityDisabledReason(capability)).toBe('Tavern update required.');
+        expect(formatCapabilityDisabledReason(capability)).toBe('Grotto update required.');
     });
 
     test('keeps Memories settings reachable without Wiki readiness', () => {
@@ -119,7 +119,7 @@ function createRuntimeConnection(
         lastCheckedAt: null,
         lastError: null,
         lastSyncedAt: null,
-        name: 'Tavern Runtime',
+        name: 'Grotto Runtime',
         requiredRuntimeVersion: '1.2.2',
         runtimeCapabilities: [createCapability('apiServer'), createCapability('gateway')],
         runtimeVersion: '1.2.1',

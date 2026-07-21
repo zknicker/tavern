@@ -38,7 +38,7 @@ export function UpdatesSettings() {
     return (
         <SettingsPage>
             <SettingsPageHeader title="Updates" />
-            <SettingsSection title="Tavern Updates">
+            <SettingsSection title="Grotto Updates">
                 <SettingsGroup>
                     <SettingsRow
                         className="md:items-start"

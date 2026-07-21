@@ -1,4 +1,4 @@
-import type * as React from 'react';
+import * as React from 'react';
 import {
     Table,
     TableBody,
@@ -7,15 +7,18 @@ import {
     TableHeader,
     TableRow,
 } from '../../components/ui/table.tsx';
+import { loadWikiAttachmentPreview, resolveWikiAttachmentPath } from './wiki-attachments.ts';
 import { type MarkdownBlock, parseMarkdownBlocks } from './wiki-markdown-parser.ts';
 
 export type WikiLinkNavigate = (target: string) => void;
 
 export function WikiMarkdownViewer({
     onNavigate,
+    pagePath,
     value,
 }: {
     onNavigate?: WikiLinkNavigate;
+    pagePath?: string;
     value: string;
 }) {
     const blocks = parseMarkdownBlocks(value);
@@ -29,17 +32,21 @@ export function WikiMarkdownViewer({
     }
 
     return (
-        <div className="text-foreground text-sm leading-7">
-            {blocks.map((block) => (
-                <MarkdownBlockContent
-                    block={block}
-                    key={`${block.kind}:${block.startLine}`}
-                    onNavigate={onNavigate}
-                />
-            ))}
-        </div>
+        <WikiPagePathContext.Provider value={pagePath ?? null}>
+            <div className="text-foreground text-sm leading-7">
+                {blocks.map((block) => (
+                    <MarkdownBlockContent
+                        block={block}
+                        key={`${block.kind}:${block.startLine}`}
+                        onNavigate={onNavigate}
+                    />
+                ))}
+            </div>
+        </WikiPagePathContext.Provider>
     );
 }
+
+const WikiPagePathContext = React.createContext<string | null>(null);
 
 function MarkdownBlockContent({
     block,
@@ -192,6 +199,7 @@ function renderInlineMarkdown(
     while (cursor < text.length) {
         const match =
             matchInlineCode(text, cursor) ??
+            matchMarkdownImage(text, cursor) ??
             matchMarkdownLink(text, cursor) ??
             matchWikiLink(text, cursor) ??
             matchDelimited(text, cursor, '**') ??
@@ -214,6 +222,7 @@ function renderInlineMarkdown(
 type InlineMatch =
     | { code: string; end: number; kind: 'code' }
     | { content: string; end: number; kind: 'emphasis' | 'strong' }
+    | { alt: string; end: number; kind: 'image'; source: string; title?: string }
     | { end: number; href: string; kind: 'link'; label: string }
     | { end: number; kind: 'memoryLink'; label: string; target: string };
 
@@ -228,6 +237,15 @@ function renderInlineMatch(match: InlineMatch, key: string, onNavigate?: WikiLin
         case 'emphasis':
             return (
                 <em key={key}>{renderInlineMarkdown(match.content, `${key}:em`, onNavigate)}</em>
+            );
+        case 'image':
+            return (
+                <WikiMarkdownImage
+                    alt={match.alt}
+                    key={key}
+                    source={match.source}
+                    title={match.title}
+                />
             );
         case 'link': {
             if (onNavigate && isWikiPageHref(match.href)) {
@@ -272,6 +290,76 @@ function renderInlineMatch(match: InlineMatch, key: string, onNavigate?: WikiLin
             );
         }
     }
+}
+
+function WikiMarkdownImage({
+    alt,
+    source,
+    title,
+}: {
+    alt: string;
+    source: string;
+    title?: string;
+}) {
+    const pagePath = React.useContext(WikiPagePathContext);
+    const attachmentPath = pagePath ? resolveWikiAttachmentPath(pagePath, source) : null;
+    const [preview, setPreview] = React.useState<{
+        attachmentPath: string;
+        url: string;
+    } | null>(null);
+    const [failedAttachmentPath, setFailedAttachmentPath] = React.useState<string | null>(null);
+
+    React.useEffect(() => {
+        if (!(pagePath && attachmentPath)) {
+            return;
+        }
+        let active = true;
+        void loadWikiAttachmentPreview(pagePath, source)
+            .then((url) => {
+                if (active) {
+                    setPreview({ attachmentPath, url });
+                    setFailedAttachmentPath(null);
+                }
+            })
+            .catch(() => {
+                if (active) {
+                    setFailedAttachmentPath(attachmentPath);
+                }
+            });
+        return () => {
+            active = false;
+        };
+    }, [attachmentPath, pagePath, source]);
+
+    if (!attachmentPath || failedAttachmentPath === attachmentPath) {
+        return (
+            <span className="my-4 block rounded-lg border border-border/70 bg-muted/30 px-3 py-2 text-muted-foreground">
+                Image unavailable: {alt || 'Untitled image'}
+            </span>
+        );
+    }
+    const src = preview?.attachmentPath === attachmentPath ? preview.url : null;
+    if (!src) {
+        return (
+            <span
+                className="my-4 block rounded-lg border border-border/70 bg-muted/30 px-3 py-2 text-muted-foreground"
+                title={title}
+            >
+                Loading image: {alt || 'Untitled image'}
+            </span>
+        );
+    }
+    return (
+        <img
+            alt={alt}
+            className="my-4 block h-auto max-h-[32rem] w-auto max-w-full rounded-lg border border-border/70 object-contain"
+            height={768}
+            loading="lazy"
+            src={src}
+            title={title}
+            width={1024}
+        />
+    );
 }
 
 function PageLink({ children, onNavigate }: { children: React.ReactNode; onNavigate: () => void }) {
@@ -322,6 +410,43 @@ function matchMarkdownLink(text: string, cursor: number): InlineMatch | null {
         kind: 'link',
         label: text.slice(cursor + 1, labelEnd),
     };
+}
+
+function matchMarkdownImage(text: string, cursor: number): InlineMatch | null {
+    if (!text.startsWith('![', cursor)) {
+        return null;
+    }
+    const altEnd = text.indexOf(']', cursor + 2);
+    if (altEnd < cursor + 2 || text[altEnd + 1] !== '(') {
+        return null;
+    }
+    const destination = parseMarkdownImageDestination(text.slice(altEnd + 2));
+    if (!destination) {
+        return null;
+    }
+    return {
+        alt: text.slice(cursor + 2, altEnd),
+        end: altEnd + 2 + destination.length,
+        kind: 'image',
+        source: destination.source,
+        title: destination.title,
+    };
+}
+
+function parseMarkdownImageDestination(
+    raw: string
+): { length: number; source: string; title?: string } | null {
+    const match = raw.match(
+        /^(?:<([^>\n]+)>|([^\s)]+))(?:\s+(?:"([^"\n]*)"|'([^'\n]*)'|\(([^)\n]*)\)))?\)/u
+    );
+    const source = sanitizeHref(match?.[1] ?? match?.[2] ?? '');
+    if (!(match && source)) {
+        return null;
+    }
+    const title = match?.[3] ?? match?.[4] ?? match?.[5];
+    return title === undefined
+        ? { length: match[0].length, source }
+        : { length: match[0].length, source, title };
 }
 
 function matchWikiLink(text: string, cursor: number): InlineMatch | null {

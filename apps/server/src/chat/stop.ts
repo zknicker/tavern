@@ -19,7 +19,7 @@ export async function stopTavernChatTurn(
     const chatRecord = await getRuntimeChatRecord(parsed.chatId);
 
     if (!chatRecord) {
-        throw new Error(`No Tavern chat named "${parsed.chatId}" exists.`);
+        throw new Error(`No Grotto chat named "${parsed.chatId}" exists.`);
     }
 
     const runtimeClient =
@@ -28,7 +28,7 @@ export async function stopTavernChatTurn(
             : client;
 
     if (!runtimeClient) {
-        throw new Error(`Tavern Runtime connection "${chatRecord.runtimeId}" is not configured.`);
+        throw new Error(`Grotto Runtime connection "${chatRecord.runtimeId}" is not configured.`);
     }
 
     await requireRuntimeCapabilityHealthy({

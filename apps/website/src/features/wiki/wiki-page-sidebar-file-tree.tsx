@@ -45,6 +45,20 @@ button[data-type='item']:hover {
 
 button[data-type='item'][aria-selected='true'] {
   --tavern-tree-row-bg: var(--trees-selected-bg);
+  /* Inked outline + press slab, matching the nav rows' selected treatment. */
+  box-shadow: inset 0 0 0 1px var(--input), 0 2px 0 0 var(--hard-shadow);
+}
+
+/* Indent guides stop at the selected chip instead of striking through it. */
+button[data-type='item'][aria-selected='true'] [data-item-section='spacing-item'] {
+  border-left-color: transparent;
+}
+
+/* No lingering ring after pointer selection — the tree marks rows
+   data-item-focused on click and keeps it. Real keyboard focus
+   (:focus-visible) still draws the ring. */
+button[data-type='item'][data-item-focused='true']:not(:focus-visible)::before {
+  outline: none;
 }
 
 button[data-type='item'][data-item-dragging='true'] {
@@ -116,7 +130,9 @@ export function WikiPageFileTree({
         initialExpansion: 'open',
         initialSearchQuery: query.trim() || null,
         initialSelectedPaths: initialSelectedPath ? [initialSelectedPath] : [],
-        itemHeight: 28,
+        // Matches the shared SidebarMenuButton row height (and the
+        // --trees-item-height host var below).
+        itemHeight: 32,
         onSelectionChange(selectedPaths) {
             const selectedPath = selectedPaths.find((path) => !isTreeFolderPath(path));
             if (!selectedPath) {
@@ -415,10 +431,14 @@ const treeHostStyle: TreeHostStyle = {
     '--trees-bg-muted-override': 'var(--sidebar-accent)',
     '--trees-border-color-override': 'var(--sidebar-border)',
     '--trees-border-radius-override': '8px',
+    // Match the shared SidebarMenuButton row height so the tree reads like
+    // every other second-column sidebar.
+    '--trees-item-height': '32px',
     '--trees-fg-muted-override': 'var(--muted-foreground)',
     '--trees-fg-override': 'var(--sidebar-foreground)',
     '--trees-file-icon-color': 'var(--sidebar-foreground)',
     '--trees-focus-ring-color-override': 'var(--sidebar-ring)',
+    '--trees-selected-focused-border-color-override': 'var(--sidebar-ring)',
     '--trees-font-family-override': 'inherit',
     '--trees-font-size-override': 'var(--text-sm)',
     '--trees-item-margin-x-override': '0px',
@@ -426,6 +446,6 @@ const treeHostStyle: TreeHostStyle = {
     '--trees-level-gap-override': '8px',
     '--trees-padding-inline-override': '4px',
     '--trees-scrollbar-gutter-override': '6px',
-    '--trees-selected-bg-override': 'var(--sidebar-accent-active)',
-    '--trees-selected-fg-override': 'var(--sidebar-accent-foreground)',
+    '--trees-selected-bg-override': 'var(--secondary)',
+    '--trees-selected-fg-override': 'var(--foreground)',
 };

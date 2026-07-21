@@ -535,7 +535,7 @@ test('sendTavernChatMessage rejects chats that are missing from Runtime', async 
                 },
             } as never
         ),
-        /No Tavern chat named "220f46ed-2d7c-41dd-9d7e-d02691f1afc3" exists\./u
+        /No Grotto chat named "220f46ed-2d7c-41dd-9d7e-d02691f1afc3" exists\./u
     );
 });
 

@@ -287,20 +287,33 @@ function TurnAvatar({
     );
 }
 
+// Bios stay one quiet line: hard-capped well past any reasonable blurb, then
+// CSS-truncated to whatever width the row actually has.
+const turnHeaderBioMaxChars = 165;
+
 function TurnHeader({
     actions,
+    bio,
     displayName,
     timestamp,
 }: {
     actions?: React.ReactNode;
+    bio?: string | null;
     displayName: string;
     timestamp: string | null;
 }) {
     return (
         <MessageHeader className="gap-2 px-0">
-            <span className="min-w-0 truncate font-semibold text-foreground text-sm leading-5">
+            <span className="shrink-0 truncate font-semibold text-foreground text-sm leading-5">
                 {displayName}
             </span>
+            {bio ? (
+                <span className="min-w-0 truncate text-muted-foreground/75 text-xs leading-5">
+                    {bio.length > turnHeaderBioMaxChars
+                        ? `${bio.slice(0, turnHeaderBioMaxChars).trimEnd()}…`
+                        : bio}
+                </span>
+            ) : null}
             {timestamp ? (
                 <time
                     className="shrink-0 text-muted-foreground/65 text-xs tabular-nums"
@@ -453,6 +466,7 @@ function AgentTurn({
                 {showIdentity ? (
                     <TurnHeader
                         actions={headerActions}
+                        bio={actorProfile?.bio}
                         displayName={displayName}
                         timestamp={entry.timestamp}
                     />

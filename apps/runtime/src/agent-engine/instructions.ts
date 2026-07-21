@@ -21,7 +21,7 @@ const defaultUser = '';
 const defaultMemory = '';
 const defaultSoul = `# SOUL.md
 
-You are the resident Tavern agent.
+You are the resident Grotto agent.
 
 Be direct, pragmatic, and useful. Keep the user's momentum. Prefer concrete action over vague narration.
 `;

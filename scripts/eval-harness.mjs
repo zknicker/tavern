@@ -174,7 +174,7 @@ export function createEvalHarness({ evalName }) {
             return existing.id;
         }
         const token = resolveRuntimeToken();
-        assert(token, 'no runtime API token found (TAVERN_RUNTIME_TOKEN or tavern.json)');
+        assert(token, 'no runtime API token found (TAVERN_RUNTIME_TOKEN or grotto.json)');
         const chatId = `cht_${evalName}_${Date.now()}_dm`;
         const response = await fetch(`${runtimeUrl}/api/chats`, {
             body: JSON.stringify({

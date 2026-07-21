@@ -36,10 +36,10 @@ export function createTavernChatTools(input: { agentId: string; chatId: string }
     return {
         chat_message_get: tool({
             description:
-                'Read one message by id from a Tavern chat you participate in. Use this for explicit reply or quote context.',
+                'Read one message by id from a Grotto chat you participate in. Use this for explicit reply or quote context.',
             inputSchema: z.object({
                 chatId: chatIdInput,
-                messageId: z.string().min(1).describe('Tavern message id to read.'),
+                messageId: z.string().min(1).describe('Grotto message id to read.'),
             }),
             execute: ({ chatId, messageId }) => {
                 const targetChatId = resolveChat(chatId);
@@ -55,20 +55,20 @@ export function createTavernChatTools(input: { agentId: string; chatId: string }
         }),
         chat_messages_list: tool({
             description:
-                'List messages from a Tavern chat you participate in, by sequence cursor. Use this to read chat history — including chats flagged as unread elsewhere.',
+                'List messages from a Grotto chat you participate in, by sequence cursor. Use this to read chat history — including chats flagged as unread elsewhere.',
             inputSchema: z.object({
                 afterSequence: z
                     .number()
                     .int()
                     .nonnegative()
                     .optional()
-                    .describe('Only return messages after this Tavern sequence.'),
+                    .describe('Only return messages after this Grotto sequence.'),
                 beforeSequence: z
                     .number()
                     .int()
                     .positive()
                     .optional()
-                    .describe('Only return messages before this Tavern sequence.'),
+                    .describe('Only return messages before this Grotto sequence.'),
                 chatId: chatIdInput,
                 limit: toolLimit.describe('Maximum messages to return. Default 20, max 50.'),
             }),
@@ -90,7 +90,7 @@ export function createTavernChatTools(input: { agentId: string; chatId: string }
         }),
         chat_messages_search: tool({
             description:
-                'Search messages in a Tavern chat you participate in. Use this when someone refers to earlier context not already present.',
+                'Search messages in a Grotto chat you participate in. Use this when someone refers to earlier context not already present.',
             inputSchema: z.object({
                 chatId: chatIdInput,
                 limit: toolLimit.describe('Maximum messages to return. Default 10, max 50.'),

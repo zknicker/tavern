@@ -7,7 +7,7 @@ function command(overrides: Partial<CliCommand> = {}): CliCommand {
         name: 'demo',
         section: 'Status',
         summary: 'demo',
-        usage: 'tavern demo',
+        usage: 'grotto demo',
         flags: [
             { name: '--json', description: 'json' },
             { name: '--topic', valueName: '<topic>', description: 'topic' },

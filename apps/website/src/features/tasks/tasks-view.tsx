@@ -102,10 +102,10 @@ export function TasksView({
         return (
             <EmptyState
                 actionLabel="Open settings"
-                description="Tasks appear after Tavern can talk to Tavern Runtime. Connect or repair Tavern Runtime from settings, then your tracked work will show up here."
+                description="Tasks appear after Grotto can talk to Grotto Runtime. Connect or repair Grotto Runtime from settings, then your tracked work will show up here."
                 eyebrow="Tasks"
                 onAction={onNavigateToSettings}
-                title="Tasks are waiting on Tavern Runtime."
+                title="Tasks are waiting on Grotto Runtime."
             />
         );
     }
@@ -121,8 +121,8 @@ export function TasksView({
             ) : null}
 
             <div className="grid min-h-0 flex-1 grid-cols-1 md:grid-cols-[240px_minmax(0,1fr)]">
-                <aside className="flex min-h-0 flex-col border-sidebar-border border-r bg-[var(--sidebar)] max-md:hidden">
-                    <SidebarGroup className="pt-3">
+                <aside className="flex min-h-0 flex-col border-[var(--content-card-border)] border-r bg-[var(--sidebar)] pt-[calc(var(--topbar-height)-4px)] max-md:hidden">
+                    <SidebarGroup className="pt-0">
                         <SidebarGroupContent>
                             <SidebarMenu>
                                 {taskViews.map((taskView) => (

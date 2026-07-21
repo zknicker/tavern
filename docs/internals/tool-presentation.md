@@ -103,7 +103,7 @@ registered as `workspace_changes`) is a Runtime-synthesized tool activity:
    (`sessions/tools/workspace-changes-drawer-body.tsx`) lists the files and
    fetches before/after text on demand through `chat.turn.fileChanges`,
    rendering diffs with the shared `components/diff/diff-view.tsx`.
-3. Selecting text in a diff quotes it into the composer with a `tavern://`
+3. Selecting text in a diff quotes it into the composer with a `grotto://`
    source link (`components/quote/selection-quote.tsx`).
 
 ## Worked example: clarifications

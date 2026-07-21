@@ -140,7 +140,7 @@ function chatEventToRuntimeEvents(event: TavernChatEvent, db?: Database): Persis
         case 'artifact.created':
             return [];
         default:
-            throw new Error('Unsupported Tavern chat event type during runtime projection.');
+            throw new Error('Unsupported Grotto chat event type during runtime projection.');
     }
 }
 
@@ -209,7 +209,7 @@ function messageDeliveredToRuntimeEvents(
     // must not brick the whole event feed (server catch-up reads every
     // event); skip it loudly instead.
     if (!turn) {
-        log.warn('Delivered Tavern message is missing runtime turn metadata', {
+        log.warn('Delivered Grotto message is missing runtime turn metadata', {
             messageId: event.delivery.message.id,
         });
         return [];

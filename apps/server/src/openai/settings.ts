@@ -27,7 +27,7 @@ export async function getOpenAiSettings(): Promise<OpenAiSettings | null> {
 export async function saveOpenAiSettings(input: { apiKey: string }): Promise<OpenAiSettings> {
     const client = createConfiguredAgentRuntimeClient();
     if (!client) {
-        throw new Error('Tavern Runtime is not configured.');
+        throw new Error('Grotto Runtime is not configured.');
     }
     try {
         return await client.saveOpenAiSettings(input);
@@ -39,7 +39,7 @@ export async function saveOpenAiSettings(input: { apiKey: string }): Promise<Ope
 export async function deleteOpenAiSettings(): Promise<OpenAiSettings> {
     const client = createConfiguredAgentRuntimeClient();
     if (!client) {
-        throw new Error('Tavern Runtime is not configured.');
+        throw new Error('Grotto Runtime is not configured.');
     }
     try {
         return await client.deleteOpenAiSettings();

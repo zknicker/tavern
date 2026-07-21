@@ -122,7 +122,7 @@ export function GoogleSettingsDialogBody({
     return (
         <PluginSectionStack>
             <PluginSection
-                description="Choose which Google services Tavern may expose to granted agents."
+                description="Choose which Google services Grotto may expose to granted agents."
                 title="Services"
             >
                 <PluginServiceList>

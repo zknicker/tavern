@@ -13,12 +13,12 @@ describe('computeBareStatus', () => {
     test('reachable, binary newer → degraded staged hint', () => {
         const status = computeBareStatus('1.4.0', '1.4.2', URL);
         expect(status.tone).toBe('degraded');
-        expect(status.text).toBe("Runtime v1.4.0 · binary v1.4.2 staged — run 'tavern restart'");
+        expect(status.text).toBe("Runtime v1.4.0 · binary v1.4.2 staged — run 'grotto restart'");
     });
 
     test('unreachable → off', () => {
         const status = computeBareStatus(null, '1.4.2', URL);
         expect(status.tone).toBe('off');
-        expect(status.text).toBe("Runtime not running · 'brew services start tavern-runtime'");
+        expect(status.text).toBe("Runtime not running · 'brew services start grotto-runtime'");
     });
 });

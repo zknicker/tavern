@@ -66,7 +66,7 @@ function resolveRuntimeRoot(): string {
 }
 
 function resolveDefaultRuntimeRoot(): string {
-    return path.join(homeDir, '.tavern', 'runtime');
+    return path.join(homeDir, '.grotto', 'runtime');
 }
 
 export const RUNTIME_ROOT = resolveRuntimeRoot();
@@ -96,10 +96,10 @@ function resolveRuntimeApiToken(): string {
 }
 
 export function getTavernConfigPath(): string {
-    return path.join(RUNTIME_ROOT, 'tavern.json');
+    return path.join(RUNTIME_ROOT, 'grotto.json');
 }
 
-// tavern.json is the runtime host's config file (mode 0600 — it holds the API
+// grotto.json is the runtime host's config file (mode 0600 — it holds the API
 // token). Unknown keys are preserved on write so operator edits survive.
 function readTavernConfig(): Record<string, unknown> {
     const configPath = getTavernConfigPath();
@@ -120,7 +120,7 @@ function readTavernConfig(): Record<string, unknown> {
     } catch (error) {
         // Never clobber an operator-edited config file we cannot parse.
         throw new Error(
-            `Tavern Runtime config at ${configPath} is not valid JSON: ${
+            `Grotto Runtime config at ${configPath} is not valid JSON: ${
                 error instanceof Error ? error.message : String(error)
             }`
         );

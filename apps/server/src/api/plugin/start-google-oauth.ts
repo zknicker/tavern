@@ -5,7 +5,7 @@ import { startGoogleOAuthLoopback } from './google-oauth-loopback.ts';
 export const startGoogleOAuthProcedure = publicProcedure.mutation(async () => {
     const client = createConfiguredAgentRuntimeClient();
     if (!client) {
-        throw new Error('Tavern Runtime is not connected.');
+        throw new Error('Grotto Runtime is not connected.');
     }
 
     try {

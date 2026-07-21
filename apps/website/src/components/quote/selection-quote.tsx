@@ -9,14 +9,14 @@ import { cn } from '../../lib/utils.ts';
 import { Icon } from '../ui/icon.tsx';
 
 export interface SelectionQuoteSource {
-    /** tavern:// link inserted under the quote so the agent can open it. */
+    /** grotto:// link inserted under the quote so the agent can open it. */
     href: string;
     label: string;
 }
 
 // The universal review gesture: select text in an inspectable surface (file
 // preview, Wiki page, diff) and quote it into the chat composer with a
-// tavern:// source link. Wrap any readable surface; the affordance hides
+// grotto:// source link. Wrap any readable surface; the affordance hides
 // when no composer is mounted.
 export function SelectionQuoteContainer({
     children,

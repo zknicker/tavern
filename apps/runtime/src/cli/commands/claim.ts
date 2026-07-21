@@ -5,7 +5,7 @@ import { ensureRuntimeSchema } from '../../db/schema';
 import { type ClaimOutcome, claimRuntimeForClerkUser } from '../../identity/claim';
 import type { ParsedArgs } from '../parse';
 
-/** Injectable I/O for `tavern claim`, so tests supply fixtures. */
+/** Injectable I/O for `grotto claim`, so tests supply fixtures. */
 export interface ClaimDeps {
     claim(input: { clerkUserId: string; publishableKey: string }): ClaimOutcome;
     savePublishableKey(key: string): void;
@@ -25,9 +25,9 @@ function defaultDeps(): ClaimDeps {
 }
 
 /**
- * `tavern claim --clerk-key <key> --user <clerk-user-id>`. Run on the runtime
+ * `grotto claim --clerk-key <key> --user <clerk-user-id>`. Run on the runtime
  * host: configures Clerk verification and records the runtime owner. The
- * Tavern app generates this command on its connect-runtime page.
+ * Grotto app generates this command on its connect-runtime page.
  */
 export async function runClaimCommand(
     args: ParsedArgs,
@@ -37,7 +37,7 @@ export async function runClaimCommand(
     const publishableKey = args.values['--clerk-key']?.trim();
     const clerkUserId = args.values['--user']?.trim();
     if (!(publishableKey && clerkUserId)) {
-        deps.write('tavern claim requires --clerk-key <key> and --user <clerk-user-id>.\n');
+        deps.write('grotto claim requires --clerk-key <key> and --user <clerk-user-id>.\n');
         return 1;
     }
 
@@ -57,7 +57,7 @@ export async function runClaimCommand(
     deps.write(
         outcome.alreadyOwner
             ? `Already claimed by this account (${outcome.userId}). Sign-in settings refreshed.\n`
-            : `Runtime claimed. Owner: ${outcome.userId}. Sign in to the Tavern app to connect.\n`
+            : `Runtime claimed. Owner: ${outcome.userId}. Sign in to the Grotto app to connect.\n`
     );
     return 0;
 }

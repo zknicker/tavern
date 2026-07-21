@@ -60,7 +60,7 @@ async function fetchResponse(url: URL): Promise<Response> {
         return await fetch(url, {
             headers: {
                 accept: 'text/html,application/xhtml+xml,text/plain;q=0.9,*/*;q=0.8',
-                'user-agent': 'Tavern/1.0 (+web_fetch)',
+                'user-agent': 'Grotto/1.0 (+web_fetch)',
             },
             redirect: 'follow',
             signal: AbortSignal.timeout(20_000),

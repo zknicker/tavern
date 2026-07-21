@@ -308,7 +308,7 @@ async function dispatchAgentEngineStatic({ request, url }: { request: Request; u
             if (isTavernChannelMessage(input)) {
                 return await sendTavernChannelMessage(chatId, input);
             }
-            return unsupportedPayload('Non-Tavern agent chat messages');
+            return unsupportedPayload('Non-Grotto agent chat messages');
         }
         if (chatId && segments[3] === 'turns' && segments[4] && segments[5] === 'stop') {
             return await stopTavernChannelTurn({ runId: segments[4] });

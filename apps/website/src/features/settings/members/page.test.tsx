@@ -6,5 +6,5 @@ test('Members settings keeps keyless development usable', () => {
     const markup = renderToStaticMarkup(<MembersSettings />);
 
     expect(markup).toContain('Members');
-    expect(markup).toContain('Members are available when Tavern sign-in is enabled.');
+    expect(markup).toContain('Members are available when Grotto sign-in is enabled.');
 });

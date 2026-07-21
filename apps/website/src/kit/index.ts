@@ -1,5 +1,5 @@
 /**
- * Tavern component kit: the shared presentational library behind every
+ * Grotto component kit: the shared presentational library behind every
  * app-internal inline-UI surface (catalog widgets, plugin widgets,
  * dashboards). Kit components are props-in/render-out — no data fetching, no
  * tRPC, no app state — and consume global.css tokens only, so every component

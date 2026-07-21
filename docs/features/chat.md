@@ -39,15 +39,20 @@ happen, and keep the durable timeline as context.
   with per-file diffs (before/after text, bounded; binary files show a changed
   badge). Selecting text in a diff, workspace file preview, or Wiki page in
   the artifact pane offers "Quote in chat", inserting the quoted lines plus a
-  `tavern://` source link into the composer — the universal review gesture.
+  `grotto://` source link into the composer — the universal review gesture.
 * **Artifacts.** Code, images, files, diffs, documents, and charts render as
   durable outputs attached to messages or response activity.
 * **Receipts.** Message creation and assistant delivery are acknowledged by id.
 * **Channels and DMs.** Channels and direct messages are durable chat rooms in
   the sidebar. Channels render with a hash icon and optional channel color.
-  Opening a chat shows a room topbar with the chat name and current
-  participants. Users create channels by naming the channel and choosing its
-  agent participants, and can edit channel participants from the open channel.
+  Opening a chat shows a room topbar with the chat name and a participant
+  count. On channels the name is a dropdown with channel actions, the optional
+  channel description sits beside it (both open the Edit channel dialog, which
+  renames the channel or updates its description), and the participant count
+  opens the participants dialog. The description also frames agent turns: each
+  turn's prompt carries the channel's name and description, so agents treat it
+  as the room's purpose. Users create channels by naming the channel
+  and choosing its agent participants.
   Archive channel is an explicit menu action that hides the channel from the
   sidebar without deleting history. The sidebar's Archived entry opens the
   archived chats view (`/chats/archived`), grouped by chat kind, where any

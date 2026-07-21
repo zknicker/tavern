@@ -37,7 +37,7 @@ export async function getAgentDetail(agentId: string): Promise<AgentDetail> {
     if (!agent) {
         throw new TRPCError({
             code: 'NOT_FOUND',
-            message: `No Tavern agent named "${agentId}" exists.`,
+            message: `No Grotto agent named "${agentId}" exists.`,
         });
     }
 

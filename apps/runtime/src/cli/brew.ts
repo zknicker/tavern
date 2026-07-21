@@ -48,7 +48,7 @@ export interface Brew {
     upgradeRuntime(): BrewResult;
 }
 
-const FORMULA = 'tavern-runtime';
+const FORMULA = 'grotto-runtime';
 
 /**
  * Real brew implementation. Flows depend on this interface so tests inject a

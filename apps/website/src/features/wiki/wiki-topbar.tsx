@@ -48,7 +48,7 @@ export function WikiTopbar({
     pageSelected: boolean;
 }) {
     return (
-        <header className="grid h-12 shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center border-border/70 border-b">
+        <header className="grid h-[var(--content-topbar-height)] shrink-0 grid-cols-[minmax(0,1fr)_auto] items-center border-[var(--content-card-border)] border-b">
             <div className="min-w-0 px-4">
                 {pagePath ? (
                     <WikiPathBreadcrumb onSelectPath={onSelectPath} path={pagePath} />

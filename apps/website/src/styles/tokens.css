@@ -1,5 +1,5 @@
 /*
- * Tavern design tokens: the dark/light theme variables, the Tailwind theme
+ * Grotto design tokens: the dark/light theme variables, the Tailwind theme
  * mapping, and the dark custom variant. Imported by global.css (the app);
  * the artifact pane injects the resolved public token values into sandboxed
  * artifact frames (features/chats/host-token-style.ts). Keep this file free
@@ -165,7 +165,11 @@
     --content-inset: 0px;
     --content-radius: 0px;
     --sidebar-width: 220px;
-    --topbar-height: 38px;
+    /* Chrome headroom: traffic-light clearance for the sidebar/rail columns. */
+    --topbar-height: 48px;
+    /* Bordered topbar rows inside the main column (chat, wiki, tool pages);
+       matches the artifact panel's chrome row. */
+    --content-topbar-height: 40px;
     --traffic-light-inset: 94px;
     --main-radius: 13px;
 
@@ -367,9 +371,6 @@
         --sidebar-primary: var(--color-stone-100);
         --sidebar-primary-foreground: var(--color-stone-800);
         --sidebar-accent: --alpha(var(--color-white) / 5%);
-        /* Selection tint for tree rows (wiki/workspace file trees). Nav rows
-           use the inked outline + press-slab treatment instead. */
-        --sidebar-accent-active: --alpha(var(--brand) / 24%);
         --sidebar-accent-foreground: var(--color-stone-100);
         --sidebar-ring: var(--color-stone-400);
 
@@ -477,9 +478,10 @@
     :root[data-theme='light'] {
         color-scheme: light;
 
-        /* One near-white ground for the whole app; every light surface
-           derives from it. */
-        --background: #fef9f9;
+        /* One near-white neutral ground for the whole app; every light
+           surface derives from it. Keep it neutral or faintly warm — never
+           pink — so it agrees with the stone borders and text mixes below. */
+        --background: #f8f8f8;
         --chrome: var(--sidebar);
         --foreground: var(--color-stone-800);
         --brand: #7b51cc;
@@ -573,9 +575,6 @@
         --sidebar-primary: var(--color-stone-800);
         --sidebar-primary-foreground: var(--color-stone-50);
         --sidebar-accent: --alpha(var(--color-stone-900) / 5%);
-        /* Selection tint for tree rows (wiki/workspace file trees). Nav rows
-           use the inked outline + press-slab treatment instead. */
-        --sidebar-accent-active: --alpha(var(--brand) / 10%);
         --sidebar-accent-foreground: var(--color-stone-800);
         --sidebar-ring: var(--color-stone-400);
 
@@ -607,7 +606,8 @@
         --chat-log-row-hover: --alpha(var(--color-black) / 4%);
         --chat-log-session-badge-bg: var(--color-blue-50);
 
-        --content-card: var(--background);
+        /* Main body is stark white against the #f8f8f8 sidebar ground. */
+        --content-card: var(--card);
         --content-card-border: var(--color-stone-300);
 
         --browser-strip: color-mix(in srgb, var(--background) 93%, var(--foreground));
@@ -626,7 +626,9 @@
         --subnav-hover: var(--nav-hover);
 
         --app-chrome-fill: var(--background);
-        --app-chrome-native-fill: --alpha(var(--color-white) / 55%);
+        /* Flat shell: the desktop window paints the same opaque ground as the
+           web app — no vibrancy glass showing through the sidebar. */
+        --app-chrome-native-fill: var(--background);
         --app-chrome-backdrop: blur(28px) saturate(1.6);
 
         --sender-1: var(--color-violet-700);

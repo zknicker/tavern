@@ -23,7 +23,7 @@ describe('global help', () => {
         printGlobalHelp(process.stdout);
         const out = read();
 
-        expect(out).toContain('Tavern Runtime v');
+        expect(out).toContain('Grotto Runtime v');
         const sectionOrder = [
             'Usage',
             'Server',
@@ -51,7 +51,7 @@ describe('per-command help', () => {
         const out = read();
 
         expect(out).toContain('Stage a Runtime upgrade through Homebrew');
-        expect(out).toContain('tavern update [--restart] [--verbose]');
+        expect(out).toContain('grotto update [--restart] [--verbose]');
         expect(out).toContain('--restart');
         expect(out).toContain('--verbose');
         expect(out).toContain('Examples');
@@ -61,8 +61,8 @@ describe('per-command help', () => {
         const read = capture('stdout');
         printGroupHelp(findCommand('engine')!, process.stdout);
         const out = read();
-        expect(out).toContain('tavern engine <status|install|clean> [flags]');
-        expect(out).toContain('tavern engine install');
+        expect(out).toContain('grotto engine <status|install|clean> [flags]');
+        expect(out).toContain('grotto engine install');
     });
 });
 
