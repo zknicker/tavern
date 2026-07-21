@@ -43,6 +43,27 @@ describe('agent server info roster', () => {
         expect(info.total.humans).toBe(1);
     });
 
+    it('lists one row per handle even when distinct seats share the label', () => {
+        // The roster is a handle directory, not a participant census: two
+        // seats observed as "Sam" are one addressable handle. Targeting it
+        // still fails closed as ambiguous at action time (D2).
+        createChat(
+            {
+                id: 'cht_shared',
+                participants: [
+                    { id: 'usr_a', kind: 'user', label: 'Sam', metadata: {} },
+                    { id: 'usr_b', kind: 'user', label: 'sam', metadata: {} },
+                ],
+                title: 'shared',
+            },
+            getDb()
+        );
+
+        const info = readAgentServerInfo('agt_otto', { humans: true }, getDb());
+        // "you" rides along from Otto's bootstrapped DM (operator seat).
+        expect(info.humans.map((row) => row.handle.toLowerCase())).toEqual(['sam', 'you']);
+    });
+
     it('keeps distinct human handles as distinct rows', () => {
         createChat(
             {

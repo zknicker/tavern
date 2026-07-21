@@ -133,10 +133,13 @@ function listHumans(db: Database) {
              ORDER BY observed`
         )
         .all() as Array<{ handle: string; id: string }>;
-    // Handles are case-insensitively unique, but observed labels are not
-    // registrations: the operator's keyless seat and identity seat can both
-    // surface as "You". The roster collapses rows per handle (registered
-    // identity names win over observed labels).
+    // The humans roster lists distinct addressable handles, not participant
+    // seats: observed labels are not registrations, so the operator's keyless
+    // and identity seats can both surface as "You". One row per normalized
+    // handle (a registered identity name supplies the casing when it shares a
+    // handle with an observed label). Seats are deliberately NOT merged —
+    // when distinct seats share a handle, targeting it stays ambiguous and
+    // fails closed at action time (grotto-cli.md D2).
     const byHandle = new Map<string, { description: null; handle: string }>();
     for (const row of rows) {
         const key = normalizeHandle(row.handle);
