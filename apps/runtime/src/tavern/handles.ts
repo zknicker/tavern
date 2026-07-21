@@ -78,9 +78,9 @@ export function assertParticipantHandleAvailable(
  */
 export function assertParticipantSeatAvailable(agentId: string, db: Database): void {
     const seat = createAgentParticipantId(agentId);
-    const rows = db.prepare('SELECT id FROM agents WHERE id != $agentId').all(
-        namedParams({ agentId })
-    ) as Array<{ id: string }>;
+    const rows = db
+        .prepare('SELECT id FROM agents WHERE id != $agentId')
+        .all(namedParams({ agentId })) as Array<{ id: string }>;
     const collision = rows.find((row) => createAgentParticipantId(row.id) === seat);
     if (collision) {
         throw new HandleValidationError(
