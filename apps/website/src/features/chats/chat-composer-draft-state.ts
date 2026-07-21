@@ -12,6 +12,19 @@ export interface ChatComposerDraftState {
 type DraftValue<T> = T | ((current: T) => T);
 
 const composerDrafts = new Map<string, ChatComposerDraftState>();
+const composerDraftListeners = new Set<() => void>();
+
+export function useChatHasDraft(chatId: string): boolean {
+    return React.useSyncExternalStore(
+        subscribeToComposerDrafts,
+        () => hasDraftContent(composerDrafts.get(chatId)),
+        getServerDraftSnapshot
+    );
+}
+
+export function hasDraftContent(draft: ChatComposerDraftState | undefined): boolean {
+    return draft !== undefined && (draft.content.trim().length > 0 || draft.attachments.length > 0);
+}
 
 export function useChatComposerDraftState({
     boundAgentIds,
@@ -132,10 +145,12 @@ export function readChatComposerDraft(
 
 export function writeChatComposerDraft(chatId: string, draft: ChatComposerDraftState) {
     composerDrafts.set(chatId, cloneChatComposerDraft(draft));
+    notifyComposerDraftListeners();
 }
 
 export function clearChatComposerDraftsForTest() {
     composerDrafts.clear();
+    notifyComposerDraftListeners();
 }
 
 function cloneChatComposerDraft(draft: ChatComposerDraftState): ChatComposerDraftState {
@@ -148,4 +163,21 @@ function cloneChatComposerDraft(draft: ChatComposerDraftState): ChatComposerDraf
 
 function resolveDraftValue<T>(value: DraftValue<T>, current: T) {
     return typeof value === 'function' ? (value as (current: T) => T)(current) : value;
+}
+
+function subscribeToComposerDrafts(listener: () => void) {
+    composerDraftListeners.add(listener);
+    return () => {
+        composerDraftListeners.delete(listener);
+    };
+}
+
+function notifyComposerDraftListeners() {
+    for (const listener of composerDraftListeners) {
+        listener();
+    }
+}
+
+function getServerDraftSnapshot() {
+    return false;
 }

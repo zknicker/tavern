@@ -2,6 +2,7 @@ import { afterEach, expect, test } from 'bun:test';
 import {
     clearChatComposerDraftsForTest,
     createChatComposerDraftState,
+    hasDraftContent,
     normalizeChatComposerDraft,
     readChatComposerDraft,
     writeChatComposerDraft,
@@ -9,6 +10,22 @@ import {
 
 afterEach(() => {
     clearChatComposerDraftsForTest();
+});
+
+test('draft content includes non-whitespace text or attachments', () => {
+    const emptyDraft = createChatComposerDraftState(['agent-1']);
+    const attachment = {
+        dataBase64: 'aGVsbG8=',
+        filename: 'note.txt',
+        mediaType: 'text/plain',
+        sizeBytes: 5,
+        type: 'inline' as const,
+    };
+
+    expect(hasDraftContent(emptyDraft)).toBe(false);
+    expect(hasDraftContent({ ...emptyDraft, content: '   \n' })).toBe(false);
+    expect(hasDraftContent({ ...emptyDraft, content: 'unfinished thought' })).toBe(true);
+    expect(hasDraftContent({ ...emptyDraft, attachments: [attachment] })).toBe(true);
 });
 
 test('chat composer drafts are restored by chat id', () => {

@@ -1,4 +1,4 @@
-import { Plus } from '@hugeicons/core-free-icons';
+import { PencilEdit02Icon, Plus } from '@hugeicons/core-free-icons';
 import { ArchiveIcon } from '@hugeicons-pro/core-stroke-rounded';
 import * as React from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
@@ -33,6 +33,7 @@ import { resolveAgentInk } from '../agents/agent-color-presets.ts';
 import { AgentFace } from '../chats/agent-face.tsx';
 import { useAgentPresenceEntry } from '../chats/agent-presence.tsx';
 import { ChannelDialog } from '../chats/channel-dialog.tsx';
+import { useChatHasDraft } from '../chats/chat-composer-draft-state.ts';
 import { buildChatList, type ChatListItem, getChatAgentId } from '../chats/chat-list-data.ts';
 import { buildChatPath } from '../chats/chat-path.ts';
 import { getChannelColorStyle } from './channel-color-options.ts';
@@ -405,7 +406,7 @@ function SidebarRecentChatItem({
                         >
                             {title}
                         </span>
-                        <SidebarChatIndicators chat={chat} />
+                        <SidebarChatIndicators chat={chat} isActive={isActive} />
                     </div>
                 </SidebarMenuButton>
             </SidebarChatContextMenu>
@@ -417,16 +418,31 @@ function SidebarRecentChatItem({
 // agent face (specs/presence.md). DMs carry the strong pill — someone is
 // talking to you directly — while channel unreads stay a quiet count so
 // ordinary agent chatter never out-inks the selected row.
-function SidebarChatIndicators({ chat }: { chat: ChatListItem }) {
-    if (chat.unreadCount === 0) {
+function SidebarChatIndicators({ chat, isActive }: { chat: ChatListItem; isActive: boolean }) {
+    const hasDraft = useChatHasDraft(chat.id) && !isActive;
+
+    if (!(hasDraft || chat.unreadCount > 0)) {
         return null;
     }
 
-    if (chat.conversationKind === 'channel') {
-        return <SidebarUnreadCount count={chat.unreadCount} />;
-    }
-
-    return <SidebarUnreadPill count={chat.unreadCount} />;
+    return (
+        <span className="flex shrink-0 items-center gap-1.5">
+            {hasDraft ? (
+                <Icon
+                    aria-label="Draft"
+                    className="size-3 text-muted-foreground"
+                    icon={PencilEdit02Icon}
+                />
+            ) : null}
+            {chat.unreadCount > 0 ? (
+                chat.conversationKind === 'channel' ? (
+                    <SidebarUnreadCount count={chat.unreadCount} />
+                ) : (
+                    <SidebarUnreadPill count={chat.unreadCount} />
+                )
+            ) : null}
+        </span>
+    );
 }
 
 /**

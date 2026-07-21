@@ -65,8 +65,9 @@ is no per-token churn.
   the live turn narration already exists for the active chat, and the
   [activity feed](agent-activity.md) covers "what has it been doing" at
   turn granularity.
-- A separate agent presence rail or ticker: agents and built-in DMs are
-  one-to-one, so the DM list already is the presence roster. A dedicated
-  strip only earns its place if presence must stay visible in sections
-  without the chat sidebar.
+- A standing agent presence rail or ticker: agents and built-in DMs are
+  one-to-one, so the DM list already is the presence roster. The
+  bottom-of-sidebar activity strip (specs/raft-alignment, I1) is the one
+  exception — it renders only while an agent is mid-turn and disappears at
+  idle, so at rest the DM list remains the sole presence surface.
 - Presence for external/observed participants.
