@@ -249,6 +249,9 @@ async function drainAgent(input: AgentExecutorInput) {
                         agentId: turnInput.agent.id,
                         agentSessionId: turnInput.agentSession.id,
                         engine: 'agent-engine',
+                        // The failure banner reads this; without it the app
+                        // falls back to a generic "failed to produce a reply".
+                        error: errorMessage,
                         messageId: turnInput.requestMessageId,
                         runId: turnInput.runId,
                         source: 'agent-engine',
@@ -323,7 +326,7 @@ function clearActiveTurn(runId: string, agentId: string) {
 
 function executeAgentTurnWithTimeout(input: AgentExecutorInput) {
     let timer: ReturnType<typeof setTimeout> | undefined;
-    const timeoutMs = resolveAgentTurnTimeoutMs(input.runId);
+    const timeoutMs = resolveAgentTurnTimeoutMs(input);
     const timeout = new Promise<never>((_, reject) => {
         timer = setTimeout(() => {
             void Promise.resolve(executor.stop?.(input.runId)).catch(() => {});
@@ -339,15 +342,24 @@ function executeAgentTurnWithTimeout(input: AgentExecutorInput) {
     });
 }
 
-function resolveAgentTurnTimeoutMs(runId: string) {
-    if (isTaskDispatchRun(runId)) {
+function resolveAgentTurnTimeoutMs(input: AgentExecutorInput) {
+    if (isTaskDispatchRun(input.runId)) {
         const configuredTask = Number(readConfigValue('TAVERN_TASK_TURN_TIMEOUT_MS'));
         return Number.isFinite(configuredTask) && configuredTask > 0
             ? configuredTask
             : defaultTaskTurnTimeoutMs;
     }
     const configured = Number(readConfigValue('TAVERN_AGENT_TURN_TIMEOUT_MS'));
-    return Number.isFinite(configured) && configured > 0 ? configured : defaultAgentTurnTimeoutMs;
+    if (Number.isFinite(configured) && configured > 0) {
+        return configured;
+    }
+    // Top-tier thinking legitimately runs past the interactive watchdog
+    // (K3 at max regularly takes 7-10 minutes), so those turns get the
+    // task-tier timeout instead of being killed mid-thought.
+    if (input.agent.thinkingDefault === 'xhigh' || input.agent.thinkingDefault === 'max') {
+        return defaultTaskTurnTimeoutMs;
+    }
+    return defaultAgentTurnTimeoutMs;
 }
 
 function formatDuration(ms: number) {

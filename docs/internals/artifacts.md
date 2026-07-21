@@ -3,7 +3,7 @@ summary: Agent artifacts — durable self-contained HTML pages authored in the w
 read_when:
   - changing the artifact fence, its transcript card, the pane HTML preview, or host token injection
   - writing or reviewing agent guidance for authoring artifacts
-  - deciding whether agent output belongs in chat (visual/widget) or the pane (artifact)
+  - deciding whether agent output belongs in chat (visual) or the pane (artifact)
 ---
 
 # Agent Artifacts
@@ -12,15 +12,9 @@ Agents build durable artifacts as self-contained single-file HTML pages: the
 chat transcript shows a compact card, and opening it renders the page in the
 artifact pane's sandboxed HTML preview. The agent authors one `.html` in its
 workspace (inline CSS/JS, no external or sibling assets) and references it
-with a bare `artifact` fence. Widgets and in-chat visuals cover
-in-conversation data; artifacts are for visual or interactive outputs the
-user will keep or iterate on, and big surfaces stay out of the chat column.
-
-Maintained prose and reference material is not an HTML artifact. Agents write
-that content to the shared Wiki and emit a bare `document` fence; the resulting
-card opens the editable Wiki page in the same pane. Keeping `document` as a
-sibling fence preserves the distinct storage and rendering contracts instead
-of widening `artifact` into an ambiguous multi-target payload.
+with a bare `artifact` fence. In-chat visuals cover in-conversation data;
+artifacts are for anything the user will keep or
+iterate on, and big surfaces stay out of the chat column.
 
 ## Authoring contract
 
@@ -33,9 +27,9 @@ of widening `artifact` into an ambiguous multi-target payload.
   `--muted-foreground`, `--radius-lg`, ...) resolved for the current app
   scheme, so a token-styled page wears the Tavern look in light and dark.
   Pages should use the tokens with fallbacks and must not depend on any other
-  host styling. The seeded `page-design` skill owns the authoring guidance —
-  the full token vocabulary, layout discipline, and self-containment rules —
-  and the always-on prompt entry only routes to it.
+  host styling. The seeded `visuals` skill owns the authoring guidance —
+  the full token vocabulary, page layout discipline, and self-containment
+  rules — and the prompt only routes to it (ADR 0012).
 - Rendering is live file state — later edits or deletion change what the card
   opens, the same replay caveat as `html-preview`.
 

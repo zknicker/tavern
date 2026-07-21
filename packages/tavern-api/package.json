@@ -15,12 +15,6 @@
     "./pane-links": "./src/runtime/pane-links.ts",
     "./rich-references": "./src/rich-references.ts",
     "./widgets": "./src/widgets/contracts.ts",
-    "./widgets/prompt": "./src/widgets/prompt.ts",
-    "./widgets/calendar": "./src/widgets/calendar/contracts.ts",
-    "./widgets/charts": "./src/widgets/charts/contracts.ts",
-    "./widgets/document": "./src/widgets/document/contracts.ts",
-    "./widgets/html-preview": "./src/widgets/html-preview/contracts.ts",
-    "./widgets/merchbase": "./src/widgets/merchbase/contracts.ts",
     "./widgets/artifact": "./src/widgets/artifact/contracts.ts",
     "./widgets/visual": "./src/widgets/visual/contracts.ts",
     "./openapi.yaml": "./openapi.yaml"

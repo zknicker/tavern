@@ -53,7 +53,11 @@ export function upsertStoredAgent(input: {
     const agent = agentRuntimeAgentSchema.parse({
         ...input.agent,
         bio: input.agent.bio === undefined ? (existing?.bio ?? undefined) : input.agent.bio,
-        thinkingDefault: input.agent.thinkingDefault ?? existing?.thinkingDefault ?? undefined,
+        // null clears the override; only undefined preserves the stored value.
+        thinkingDefault:
+            input.agent.thinkingDefault === undefined
+                ? (existing?.thinkingDefault ?? undefined)
+                : input.agent.thinkingDefault,
     });
 
     writeStoredAgent({

@@ -30,6 +30,10 @@ export const merchbasePluginManifest = tavernPluginManifestSchema.parse({
             healthCapabilities: [merchbasePluginHealthCapabilityId],
             id: 'merchbase',
             scopes: [],
+            skillGuidance: `## Presenting sales data
+
+Present MerchBase results as inline visuals (read the visuals skill first): fetch the data with the tools above, then draw it — daily series as a line or bar chart, breakdowns as compact bar rows, summaries as stat tiles. Embed the fetched numbers in the visual at generation time; visuals cannot fetch live data themselves. Daily rows include explicit zero-sales days: a zero means no sales, not missing data.
+`,
             skills: [{ name: 'merchbase', runtimeSource: 'tavern-plugin:merchbase' }],
             toolGroups: [
                 {
@@ -59,5 +63,4 @@ export const merchbasePluginManifest = tavernPluginManifestSchema.parse({
     ],
     settings: ['baseUrl', 'defaultAccount', 'defaultMarketplace'],
     version: '1.0.0',
-    widgets: [{ name: 'merchbase-sales-chart' }],
 });
