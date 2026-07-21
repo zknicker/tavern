@@ -45,10 +45,9 @@ export function formatDeliveryEnvelope(target: string, message: AgentCliMessage)
 }
 
 export function formatSender(message: AgentCliMessage): string {
-    const handle = message.sender.handle;
-    if (!handle) {
-        throw new AgentCliError('INVALID_JSON_RESPONSE', 'Message sender handle is missing.');
-    }
+    // System and unlabeled authors legitimately have no handle (Raft renders
+    // them as @unknown too); never fail a whole read over one such row.
+    const handle = message.sender.handle ?? 'unknown';
     return message.sender.description ? `@${handle} — ${message.sender.description}` : `@${handle}`;
 }
 

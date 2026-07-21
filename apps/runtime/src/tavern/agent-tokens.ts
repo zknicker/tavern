@@ -6,7 +6,7 @@ import { getAgentTokensDir } from '../config.ts';
 
 // Agent ids are opaque strings in the public contract; the only requirement
 // here is that they are safe as a single path segment for the token file.
-const agentIdPattern = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/u;
+const agentIdPattern = /^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/u;
 const tokenPattern = /^grta_[A-Za-z0-9_-]{43}$/u;
 
 export function agentTokenPath(agentId: string): string {

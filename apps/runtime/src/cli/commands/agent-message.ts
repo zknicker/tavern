@@ -146,35 +146,27 @@ export async function runSend(args: ParsedArgs, deps: MessageDeps): Promise<numb
     if (!(sendDraft || stdin.trim())) {
         throw heredocError('MISSING_CONTENT', 'Message content is required on stdin.');
     }
-    // One nonce per invocation makes the send idempotent across the retry
-    // below and any server-side duplicate delivery.
-    const request = {
-        body: {
-            ...(attachmentIds.length > 0 ? { attachmentIds } : {}),
-            ...(deps.compositionId ? { compositionId: deps.compositionId } : {}),
-            ...(sendDraft ? {} : { content: stdin }),
-            ...(continueAnyway ? { continueAnyway: true } : {}),
-            ...(sendDraft ? { sendDraft: true } : {}),
-            nonce: deps.mintNonce(),
-            target,
-        },
-        method: 'POST' as const,
-    };
-    let response: Awaited<ReturnType<typeof sendOnce>>;
-    try {
-        response = await sendOnce(deps, request);
-    } catch (error) {
-        if (!(error instanceof AgentCliError && error.code === 'SERVER_5XX')) {
-            throw error;
+    // One nonce per invocation keeps a re-driven send idempotent server-side.
+    // No automatic transport retry: a lost held response must be re-driven by
+    // the agent so the catch-up context is actually reviewed (spec §6).
+    const response = await deps.client.request(
+        '/api/agent/messages/send',
+        agentSendResponseSchema,
+        {
+            body: {
+                ...(attachmentIds.length > 0 ? { attachmentIds } : {}),
+                ...(deps.compositionId ? { compositionId: deps.compositionId } : {}),
+                ...(sendDraft ? {} : { content: stdin }),
+                ...(continueAnyway ? { continueAnyway: true } : {}),
+                ...(sendDraft ? { sendDraft: true } : {}),
+                nonce: deps.mintNonce(),
+                target,
+            },
+            method: 'POST',
         }
-        response = await sendOnce(deps, request);
-    }
+    );
     deps.write(renderSendResponse(target, response));
     return 0;
-}
-
-function sendOnce(deps: MessageDeps, request: { body: object; method: 'POST' }) {
-    return deps.client.request('/api/agent/messages/send', agentSendResponseSchema, request);
 }
 
 export async function runRead(args: ParsedArgs, deps: MessageDeps): Promise<number> {

@@ -74,6 +74,11 @@ handle split anywhere.
   strings (`#name`, `dm:@name`, …) and resolves them at action time. Unknown
   handle → 404 → CLI `TARGET_NOT_FOUND` with the nearest teaching (`grotto
   server info --channels` / `--agents`). No client-side caches of handle→id.
+  Observed participant labels from external frontends are facts, not handle
+  registrations — they are never write-blocked; a label that collides with a
+  handle simply makes resolution ambiguous, and ambiguity fails closed.
+  Distinct agent ids must also map to distinct participant seats
+  (registration rejects sanitizer collisions).
 - **Descriptions.** Every participant may carry a one-line description
   (agent-self-maintained via `profile update`, WS5). It rides message lines
   (§4) and `server info` rosters. Not identity — never match on it.
@@ -231,7 +236,12 @@ Flow for `message send --target <t>`:
      `--attachment-id`; violations per §5 codes);
    - stay silent: do nothing.
    Showing catch-up **advances `seen`** to what was shown (same rule as the
-   in-process gate). Each re-hold increments the draft's `reholdCount`; when
+   in-process gate). Serve-time advancement is the pre-inbox approximation:
+   until the witness pipeline (WS4/I3) attests tool-result commits, a hold
+   response lost in transport leaves cursors advanced without review — the
+   same show-and-hope window shipped Raft has. The CLI therefore never
+   auto-retries a send; a failed send is re-driven by the agent, and the nonce
+   keeps the redrive idempotent if the original actually committed. Each re-hold increments the draft's `reholdCount`; when
    `reholdCount ≥ 2` the hold output additionally teaches
    `--send-draft --anyway`, which commits despite staleness. `--anyway`
    without `--send-draft` is rejected, and the server enforces the threshold

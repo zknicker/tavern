@@ -11,7 +11,7 @@ import { getDb } from '../db/connection';
 import type { Database } from '../db/sqlite';
 import { namedParams } from '../db/sqlite';
 import { archiveAgentDmChat, ensureAgentDmChat } from './bootstrap-chats';
-import { assertParticipantHandleAvailable } from './handles.ts';
+import { assertParticipantHandleAvailable, assertParticipantSeatAvailable } from './handles.ts';
 
 interface AgentRow {
     created_at: string;
@@ -343,6 +343,7 @@ function writeStoredAgent(input: {
     syncedAt: string;
 }) {
     assertParticipantHandleAvailable(input.agent.name, input.agent.id, input.db);
+    assertParticipantSeatAvailable(input.agent.id, input.db);
     const enabledSkillIds = [...new Set(input.agent.enabledSkillIds)];
     const enabledPluginIds = [...new Set(input.agent.enabledPluginIds ?? [])];
 

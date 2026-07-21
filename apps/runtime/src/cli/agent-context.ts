@@ -34,7 +34,7 @@ export function resolveAgentContext(
     }
     // Agent ids are opaque in the public contract; require only a single
     // path-safe token (same rule the Runtime token store applies).
-    if (!/^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/u.test(agentId)) {
+    if (!/^[A-Za-z0-9][A-Za-z0-9_-]{0,127}$/u.test(agentId)) {
         throw bootstrapError(
             'MISSING_AGENT_ID',
             'GROTTO_AGENT_ID must be a single path-safe token.',

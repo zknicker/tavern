@@ -53,6 +53,15 @@ describe('agent message formatting', () => {
         );
     });
 
+    test('renders handleless system senders as @unknown instead of failing', () => {
+        expect(
+            formatDeliveryEnvelope('#general', {
+                ...humanMessage,
+                sender: { description: null, handle: null, type: 'system' },
+            })
+        ).toBe('[target=#general msg=1a2b3c4d time=2026-07-21 14:02:11 type=system] @unknown: hello');
+    });
+
     test('renders history teaching and pagination', () => {
         expect(
             renderHistory({

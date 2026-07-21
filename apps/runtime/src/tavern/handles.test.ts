@@ -43,6 +43,13 @@ describe('Grotto handles', () => {
         expect(() => seedAgent('agt_zach', 'zach')).toThrow('already in use');
     });
 
+    it('rejects agent ids that collide on the sanitized participant seat', () => {
+        seedAgent('planner', 'Planner');
+        expect(() => seedAgent('agt_planner', 'Planner2')).toThrow('participant seat');
+        seedAgent('agt_wren', 'Wren');
+        expect(() => seedAgent('wren', 'Wren2')).toThrow('participant seat');
+    });
+
     it('enforces channel handles on create and rename', () => {
         expect(() => createChat({ id: 'cht_missing', kind: 'channel' })).toThrow(
             'Channel handle is required'
