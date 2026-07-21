@@ -202,6 +202,20 @@ describe('thread chats', () => {
             },
         });
         expect(threadSummaries('cht_parent', 'agt_two')[0]?.followed).toBe(true);
+        createMessage(thread.id, {
+            author_id: 'sys_thread_notice',
+            content: 'A participant unfollowed this thread.',
+            id: 'msg_thread_notice',
+            role: 'system',
+        });
+        expect(
+            getDb()
+                .prepare(
+                    `SELECT 1 FROM thread_follows
+                     WHERE thread_chat_id = ? AND participant_id = 'sys_thread_notice'`
+                )
+                .get(thread.id)
+        ).toBeNull();
         expect(
             setThreadFollow({ follow: false, participantId: 'agt_one', threadChatId: thread.id })
         ).toEqual({ followed: false });

@@ -134,7 +134,7 @@ export function autoFollowOnPost(
     db: Database = getDb()
 ) {
     const chat = getChat(input.chatId, db);
-    if (chat?.kind === 'thread') {
+    if (chat?.kind === 'thread' && /^(usr_|agt_)/u.test(input.authorId)) {
         followParticipant(input.chatId, input.authorId, db);
     }
 }
