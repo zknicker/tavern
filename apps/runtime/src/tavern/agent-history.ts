@@ -16,6 +16,7 @@ import {
     anchorShortId,
     getChat,
     listChatsForAgentParticipant,
+    membershipChat,
     resolveMessageId,
     threadSummaries,
 } from './chat-api/index.ts';
@@ -227,7 +228,11 @@ function resolveAnchor(chatId: string, anchor: string, db: Database): number {
 
 function getChatForMembership(chatId: string, agentId: string, db: Database) {
     const chat = getChat(chatId, db);
-    return chat && isAgentChatParticipant(chat, agentId, createAgentParticipantId(agentId))
+    // Threads never own membership: the parent seat authorizes the read.
+    const seatChat = chat ? membershipChat(chat, db) : null;
+    return chat &&
+        seatChat &&
+        isAgentChatParticipant(seatChat, agentId, createAgentParticipantId(agentId))
         ? chat
         : null;
 }

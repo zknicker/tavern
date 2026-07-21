@@ -14,6 +14,7 @@ import {
     ensureThreadChat,
     getChat,
     resolveMessageId,
+    threadChatIdForAnchor,
 } from './chat-api/index.ts';
 import { isValidHandle } from './handles.ts';
 
@@ -32,6 +33,9 @@ export function resolveAgentTarget(
     input: {
         agentId: string;
         createDm?: boolean;
+        // Sends materialize a missing thread (first reply creates); reads
+        // never do, and never apply write policy such as archival.
+        createThread?: boolean;
         requireMembership?: boolean;
         target: string;
     },
@@ -59,6 +63,13 @@ export function formatAgentTarget(
 ): string | null {
     if (chat.kind === 'channel') {
         return chat.title && isValidHandle(chat.title) ? `#${chat.title}` : null;
+    }
+    if (chat.kind === 'thread') {
+        const parent = chat.parent_chat_id ? getChat(chat.parent_chat_id, db) : null;
+        const parentTarget = parent ? formatAgentTarget(agentId, parent, db) : null;
+        return parentTarget && chat.anchor_message_id
+            ? `${parentTarget}:${anchorShortId(chat.anchor_message_id)}`
+            : null;
     }
     if (chat.kind !== 'dm') {
         return null;
@@ -88,10 +99,15 @@ export function formatAgentTarget(
 }
 
 // A thread target is its parent target plus the anchor's message id (short
-// or full). Membership rides the parent resolution; the thread auto-creates
-// on first use exactly like a first reply.
+// or full). Membership rides the parent resolution; a SEND auto-creates the
+// thread exactly like a first reply, while reads only resolve what exists.
 function resolveThread(
-    input: { agentId: string; requireMembership?: boolean; target: string },
+    input: {
+        agentId: string;
+        createThread?: boolean;
+        requireMembership?: boolean;
+        target: string;
+    },
     parentTarget: string,
     anchorRef: string,
     db: Database
@@ -105,7 +121,7 @@ function resolveThread(
         },
         db
     );
-    if (isArchivedChat(parent.chat)) {
+    if (input.createThread && isArchivedChat(parent.chat)) {
         throw new AgentApiError(
             'TARGET_ARCHIVED',
             `${parent.target} is archived; writes there are rejected.`,
@@ -124,15 +140,22 @@ function resolveThread(
     if (!anchor) {
         throw targetNotFound(`No message "${anchorRef}" in ${parent.target}.`);
     }
+    const target = `${parent.target}:${anchorShortId(anchor.id)}`;
+    if (!input.createThread) {
+        const existing = getChat(threadChatIdForAnchor(anchor.id), db);
+        if (existing?.kind !== 'thread' || existing.parent_chat_id !== parent.chat.id) {
+            throw targetNotFound(
+                `No thread exists on that message yet. Sending to ${target} starts it.`
+            );
+        }
+        return { chat: existing, target };
+    }
     try {
         const thread = ensureThreadChat(
             { anchorMessageId: anchor.id, parentChatId: parent.chat.id },
             db
         );
-        return {
-            chat: thread,
-            target: `${parent.target}:${anchorShortId(anchor.id)}`,
-        };
+        return { chat: thread, target };
     } catch (error) {
         throw new AgentApiError(
             'SEND_FAILED',

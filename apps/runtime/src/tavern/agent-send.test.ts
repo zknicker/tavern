@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { closeAgentApiTestDb, initAgentApiTestDb } from './agent-api-test-helper.ts';
 import { readAgentDraft, saveAgentDraft } from './agent-drafts.ts';
-import { readAgentHistory } from './agent-history.ts';
+import { readAgentHistory, searchAgentMessages } from './agent-history.ts';
 import { sendAgentMessage } from './agent-send.ts';
 import { ensureCurrentAgentSession, startNewAgentSession } from './agent-session-store.ts';
 import { upsertStoredAgent } from './agents-store.ts';
@@ -347,6 +347,12 @@ describe('agent attested sends', () => {
     it('resolves thread targets, auto-creating the anchored thread', () => {
         peerMessage('msg_00000000000000000000000000000031', 'anchor for a side discussion');
 
+        // Reads never materialize a thread: the anchor exists but nothing
+        // threads it until a send does.
+        expect(() => readAgentHistory('agt_otto', { target: '#general:00000000' })).toThrow(
+            'No thread exists'
+        );
+
         const sent = sendAgentMessage('agt_otto', {
             content: 'threading in',
             target: '#general:00000000',
@@ -385,6 +391,11 @@ describe('agent attested sends', () => {
         expect(() =>
             sendAgentMessage('agt_otto', { content: 'nope', target: '#general:99999999' })
         ).toThrow('No message');
+
+        // Global search reaches thread rows and names their full target.
+        const hits = searchAgentMessages('agt_otto', { q: 'threading' });
+        expect(hits.messages.map((message) => message.content)).toContain('threading in');
+        expect(hits.messages[0]?.target).toBe('#general:00000000');
     });
 });
 
