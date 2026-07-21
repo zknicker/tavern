@@ -5,7 +5,7 @@ import { namedParams, optionalRow } from '../../db/sqlite';
 import { insertEvent, publish, replaceEventPayload } from './events';
 import { assertOptionalTavernIdPrefix, assertTavernIdPrefix } from './ids';
 import { findExistingMessage, getMessage, getMessageOrThrow, insertMessage } from './messages';
-import { autoFollowMentions, autoFollowOnPost } from './threads';
+import { assertThreadWritable, autoFollowMentions, autoFollowOnPost } from './threads';
 import type { DeliveryReceipt, DeliveryRow } from './types';
 
 export function createDelivery(
@@ -30,6 +30,7 @@ export function createDelivery(
 
     db.exec('BEGIN IMMEDIATE');
     try {
+        assertThreadWritable(chatId, db);
         // A streaming post created at first content links here; the delivery
         // finalizes its text and metadata in place (specs/chat-timeline.md).
         const message =

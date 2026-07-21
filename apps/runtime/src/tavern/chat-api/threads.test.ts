@@ -6,6 +6,7 @@ import { closeDb, getDb, initDb } from '../../db/connection';
 import { ensureRuntimeSchema } from '../../db/schema';
 import {
     anchorShortId,
+    clearChat,
     createChat,
     createDelivery,
     createMessage,
@@ -191,6 +192,43 @@ describe('thread chats', () => {
                 threadChatId: 'cht_parent',
             })
         ).toThrow('not a thread');
+        expect(() =>
+            setThreadFollow({
+                follow: 'false' as unknown as boolean,
+                participantId: 'usr_tavern',
+                threadChatId: thread.id,
+            })
+        ).toThrow('boolean');
+        expect(() =>
+            setThreadFollow({ follow: true, participantId: '', threadChatId: thread.id })
+        ).toThrow('usr_ or agt_');
+    });
+
+    it('rejects writes into a thread whose conversation was cleared', () => {
+        seedParent();
+        seedMessage('cht_parent', 'msg_anchor', 'usr_tavern');
+        const thread = ensureThreadChat({
+            anchorMessageId: 'msg_anchor',
+            parentChatId: 'cht_parent',
+        });
+        seedMessage(thread.id, 'msg_reply', 'usr_tavern');
+
+        clearChat('cht_parent');
+
+        expect(() => seedMessage(thread.id, 'msg_late_reply', 'usr_tavern')).toThrow('cleared');
+        expect(() =>
+            createDelivery(thread.id, {
+                agent_id: 'agt_one',
+                id: 'del_late',
+                message: {
+                    author_id: 'agt_one',
+                    content: 'late',
+                    id: 'msg_late_delivery',
+                    role: 'assistant',
+                },
+            })
+        ).toThrow('cleared');
+        expect(getChat('cht_parent', getDb(), 'usr_reader')?.unread_count).toBe(0);
     });
 
     it('derives membership from the parent chat', () => {

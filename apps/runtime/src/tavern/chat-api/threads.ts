@@ -92,6 +92,12 @@ export function setThreadFollow(
     input: { follow: boolean; participantId: string; threadChatId: string },
     db: Database = getDb()
 ) {
+    if (typeof input.follow !== 'boolean') {
+        throw new Error('Thread follow must be a boolean.');
+    }
+    if (!(typeof input.participantId === 'string' && /^(usr_|agt_)/u.test(input.participantId))) {
+        throw new Error('Thread follow participant must be a usr_ or agt_ id.');
+    }
     assertThreadChat(input.threadChatId, db);
     if (input.follow) {
         followParticipant(input.threadChatId, input.participantId, db);
@@ -135,6 +141,22 @@ export function autoFollowMentions(
         if (participant) {
             followParticipant(input.chatId, participantId, db);
         }
+    }
+}
+
+/**
+ * A cleared parent retires its threads: once the anchor message is deleted
+ * the thread accepts no further writes, so it can never feed the parent's
+ * unread rollup from behind a vanished pill.
+ */
+export function assertThreadWritable(chatId: string, db: Database = getDb()) {
+    const chat = getChat(chatId, db);
+    if (chat?.kind !== 'thread' || !chat.anchor_message_id) {
+        return;
+    }
+    const anchor = getMessage(chat.anchor_message_id, db);
+    if (!anchor || anchor.deleted_at) {
+        throw new Error(`Thread ${chatId} was cleared with its conversation.`);
     }
 }
 

@@ -10,7 +10,7 @@ import { assertChatExists } from './chats';
 import { currentCursor, insertEvent, publish } from './events';
 import { assertTavernIdPrefix } from './ids';
 import { clampLimit } from './limits';
-import { autoFollowMentions, autoFollowOnPost } from './threads';
+import { assertThreadWritable, autoFollowMentions, autoFollowOnPost } from './threads';
 import type { MessageReceipt, MessageRow, ParticipantRow } from './types';
 
 export function createMessage(
@@ -26,6 +26,7 @@ export function createMessage(
 
     db.exec('BEGIN IMMEDIATE');
     try {
+        assertThreadWritable(chatId, db);
         const message = insertMessage(chatId, input, input.author_id, null, db);
         autoFollowOnPost({ authorId: input.author_id, chatId }, db);
         autoFollowMentions({ chatId, content: input.content }, db);
