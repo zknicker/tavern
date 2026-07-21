@@ -25,8 +25,10 @@ import {
     ensureFreshClaudeCredentials,
     getClaudeHarnessAuth,
 } from '../model-access/claude-settings.ts';
+import { ensureFreshKimiCredentials, getKimiHarnessAuth } from '../model-access/kimi-settings.ts';
 import { imageGenerationReadiness } from '../models/capability-selections.ts';
 import { readAnthropicApiKey } from '../models/provider-registry.ts';
+import { kimiCodingBaseUrl, kimiCodingModelDefinitions } from '../models/provider-sources/kimi.ts';
 import { createBrowserToolsForAgent } from '../plugins/browser-tools.ts';
 import { createGoogleToolsForAgent } from '../plugins/google-tools.ts';
 import { createMerchbaseToolsForAgent } from '../plugins/merchbase-tools.ts';
@@ -124,10 +126,13 @@ async function executeHarnessTurn(
     const startedAt = new Date().toISOString();
     const runtime = runtimeMetadata(input);
 
-    // Claude sign-in tokens refresh before the turn so the harness always
-    // receives a live credential (specs/model-access.md).
+    // Sign-in tokens refresh before the turn so the harness always receives
+    // a live credential (specs/model-access.md).
     if (input.agentSession.effectiveModel.provider === 'claude') {
         await ensureFreshClaudeCredentials();
+    }
+    if (input.agentSession.effectiveModel.provider === 'kimi') {
+        await ensureFreshKimiCredentials();
     }
 
     const { fingerprint, instructions } = await buildAgentInstructionBundle(input);
@@ -528,10 +533,14 @@ export function createHarnessForModel(input: {
                 reasoningEffort: codexReasoningEffort(input.thinkingDefault),
                 ...(input.webSearch ? { webSearch: true } : {}),
             }) as HarnessV1<ToolSet>;
+        case 'kimi':
         case 'openai':
         case 'openai-compatible': {
             const auth = piAuthOptions(modelName.provider);
-            const thinkingLevel = piThinkingLevel(input.thinkingDefault);
+            const thinkingLevel =
+                modelName.provider === 'kimi'
+                    ? kimiThinkingLevel(modelName, input.thinkingDefault)
+                    : piThinkingLevel(input.thinkingDefault);
             return createPi({
                 ...(auth ? { auth } : {}),
                 model: piModelId(modelName),
@@ -611,14 +620,37 @@ export function piAuthOptions(
             },
         };
     }
+    if (provider === 'kimi') {
+        // The subscription OAuth access token is the bearer; the customEnv
+        // prefix registers pi's kimi-coding provider, and the model
+        // definitions ride along because our pinned pi registry predates
+        // K3 (KIMI_CODING_MODELS_JSON is a Tavern patch extension).
+        const auth = getKimiHarnessAuth();
+        if (!auth) {
+            return undefined;
+        }
+        return {
+            customEnv: {
+                KIMI_CODING_API_KEY: auth.accessToken,
+                KIMI_CODING_BASE_URL: kimiCodingBaseUrl,
+                KIMI_CODING_MODELS_JSON: JSON.stringify(kimiCodingModelDefinitions),
+            },
+        };
+    }
     return undefined;
 }
 
 // Pi rejects bare model ids that exist under several providers (gpt-4.1-mini
-// also ships as azure-openai-responses), so OpenAI routes must use the
-// canonical provider/model reference.
+// also ships as azure-openai-responses), so OpenAI and Kimi routes use the
+// canonical provider/model reference (kimi's pi provider id is kimi-coding).
 function piModelId(model: AgentRuntimeModelName) {
-    return model.provider === 'openai' ? `openai/${model.model}` : model.model;
+    if (model.provider === 'openai') {
+        return `openai/${model.model}`;
+    }
+    if (model.provider === 'kimi') {
+        return `kimi-coding/${model.model}`;
+    }
+    return model.model;
 }
 
 export function formatHarnessExecutionError(input: AgentExecutorInput, error: unknown): Error {
@@ -643,6 +675,18 @@ export function formatHarnessExecutionError(input: AgentExecutorInput, error: un
             [
                 'The Anthropic API key is missing or invalid.',
                 'Update it in Settings → Connections → Model access.',
+                `Original error: ${message}`,
+            ].join(' ')
+        );
+    }
+    if (
+        input.agentSession.effectiveModel.provider === 'kimi' &&
+        /401|403|authenticat|credential/iu.test(message)
+    ) {
+        return new Error(
+            [
+                'Kimi Code is not connected.',
+                'Connect Kimi in Settings → Connections → Model access.',
                 `Original error: ${message}`,
             ].join(' ')
         );
@@ -689,15 +733,40 @@ function codexReasoningEffort(value: AgentRuntimeThinkingLevel | null | undefine
     return undefined;
 }
 
+/**
+ * K3's thinking is binary — upstream pi exposes only its `max` level
+ * (earendil-works/pi#6737) — so any requested thinking level engages it
+ * (as pi `xhigh`, which the K3 definition maps to Kimi `max`) and `off`
+ * stays off. Intermediate efforts would otherwise leak to an endpoint that
+ * does not support them. Other Kimi models keep the generic ladder,
+ * matching upstream pi behavior.
+ */
+export function kimiThinkingLevel(
+    model: AgentRuntimeModelName,
+    value: AgentRuntimeThinkingLevel | null | undefined
+) {
+    const level = piThinkingLevel(value);
+    if (model.model !== 'k3' || !level || level === 'off') {
+        return level;
+    }
+    return 'xhigh';
+}
+
 function piThinkingLevel(value: AgentRuntimeThinkingLevel | null | undefined) {
     if (
         value === 'off' ||
         value === 'minimal' ||
         value === 'low' ||
         value === 'medium' ||
-        value === 'high'
+        value === 'high' ||
+        value === 'xhigh'
     ) {
         return value;
+    }
+    // Pi's thinking scale tops out at xhigh; models whose top tier is named
+    // differently map it per-model via thinkingLevelMap (kimi k3: xhigh→max).
+    if (value === 'max') {
+        return 'xhigh';
     }
     return undefined;
 }

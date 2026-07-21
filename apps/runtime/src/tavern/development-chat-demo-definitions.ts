@@ -1,16 +1,11 @@
 import { developmentChatDemoId } from '@tavern/api/development-chat-demos';
-import { merchbaseSalesChartDemo } from '../plugins/merchbase/dev/merchbase-sales-chart.demo';
 import { activityTurnDemo, streamingStackDemo } from './development-chat-demo-activity-definitions';
 import {
     artifactLinksDemo,
     attachmentDemo,
-    calendarDayDemo,
-    calendarEventDemo,
     longContentDemo,
     selfMessagesDemo,
 } from './development-chat-demo-basic-definitions';
-import { chartDemo } from './development-chat-demo-composed-chart-definition';
-import { htmlPreviewDemo } from './development-chat-demo-html-preview-definition';
 import { teamDemo } from './development-chat-demo-team-definition';
 import { toolHeadersDemo } from './development-chat-demo-tool-header-definitions';
 import { turnTimelineDemo } from './development-chat-demo-turn-timeline-definition';
@@ -19,17 +14,10 @@ import {
     type DevelopmentDemoMessage,
     demoTime,
 } from './development-chat-demo-types';
-import { widgetTableDemo } from './development-chat-demo-widget-table-definition';
-import { widgetsChannelDemo } from './development-chat-demo-widgets-channel-definition';
+import { visualsChannelDemo } from './development-chat-demo-visuals-channel-definition';
 
 export const developmentChatDemos: DevelopmentChatDemo[] = [
     demoChannel([
-        chartDemo(),
-        merchbaseSalesChartDemo(),
-        widgetTableDemo(),
-        htmlPreviewDemo(),
-        calendarDayDemo(),
-        calendarEventDemo(),
         artifactLinksDemo(),
         longContentDemo(),
         attachmentDemo(),
@@ -40,7 +28,7 @@ export const developmentChatDemos: DevelopmentChatDemo[] = [
         streamingStackDemo(),
     ]),
     teamDemo(),
-    widgetsChannelDemo(),
+    visualsChannelDemo(),
 ];
 
 function demoChannel(demos: DevelopmentChatDemo[]): DevelopmentChatDemo {

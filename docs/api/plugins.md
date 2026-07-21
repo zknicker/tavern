@@ -2,9 +2,9 @@
 summary: Plugin API for Runtime-owned external service settings, secrets, health, and domain actions.
 read_when:
   - adding or changing Tavern Plugins
-  - changing MerchBase settings, health, sales reads, or Plugin-backed Widgets
+  - changing MerchBase settings, health, or sales reads
   - changing Google settings, OAuth, Calendar reads, or Plugin Services
-  - exposing external service actions to agents or widgets
+  - exposing external service actions to agents
 ---
 
 # Plugins
@@ -18,16 +18,14 @@ capabilities under one Plugin id.
 
 Plugins are the user-facing integration unit. A Plugin may call an upstream API
 directly, wrap a local CLI, or materialize an MCP server internally, but the
-stable Tavern surface is the Plugin's settings, health, tools, skills, and Widgets.
+stable Tavern surface is the Plugin's settings, health, tools, and skills.
 
 Plugin and Service enablement control live Plugin-backed behavior. Agent Plugin
-grants control which agents may use Plugin-owned skills, tools, and Widget
-Components during new turns. Historical chat rows with compiled Plugin-owned
-Widgets still render after a grant is removed, but Plugin-backed
-interaction controls are disabled when the Plugin is globally disabled.
+grants control which agents may use Plugin-owned skills and tools during new
+turns.
 
-Runtime materializes Plugin-owned skills, tools, and Widget authoring
-guidance for an agent turn only when the Plugin is globally enabled, the Service
+Runtime materializes Plugin-owned skills and tools for an agent turn only
+when the Plugin is globally enabled, the Service
 is enabled, required connection scopes are granted, and the Plugin is granted to
 that agent. Disabled, unavailable, or ungranted Plugin abilities are omitted from
 the agent-visible tool and guidance inventory. Runtime routes still reject
@@ -47,7 +45,6 @@ A Plugin manifest declares inventory and ownership metadata:
 * Settings and stored secrets.
 * Plugin-level Runtime health capability ids.
 * Services with their own health capability ids, agent-facing skills, and tools.
-* Widgets owned by the Plugin.
 
 First-party manifests live under `@tavern/api/plugins`. Runtime, Server, and
 Website registrations consume those manifests instead of duplicating Plugin
@@ -56,9 +53,7 @@ inventory in each layer.
 In v1, Plugin manifests do not declare arbitrary executable wiring or enumerate
 Plugin-internal read operations. Runtime and App import first-party Plugin
 modules directly rather than dynamically loading JavaScript, React components,
-or external package code from a manifest. Widget source may
-live inside the Plugin folder, but build-time imports register its schema and
-renderer with Tavern's typed catalog.
+or external package code from a manifest.
 
 Core Tavern owns the Plugin host boundary: lifecycle, enablement, Service
 enablement, grants, health registration, capability projection, and first-party
@@ -73,12 +68,6 @@ frame, enablement controls, health presentation, redacted list reads, settings
 detail secret reveal behavior, and save/test affordances. The Plugin folder
 owns domain-specific settings panel content, field validation copy, conflict
 warnings, and repair guidance.
-
-Dev-mode demos use the same Plugin ownership boundary. Each Plugin-owned Widget should have one matching `dev/<widget>.demo.ts` module
-inside the Plugin folder. That module owns seeded chat rows, the Widget
-payload, and any inline fake data needed by the dev app. Core Tavern only
-aggregates those demos; it does not know Plugin-specific demo data or operation
-names.
 
 ## Storage
 
@@ -221,9 +210,9 @@ asin/color/facet/facetName/fit/marketplace/productType filters — and returns
 model-shaped output: compact ISO-dated rows, summed totals, a `rowCount`, and
 the resolved currency code. Daily ranges include explicit zero-sales days that
 MerchBase omits upstream, so a zero row means no sales, not missing data.
-Plugin-gated prompt guidance (the same enabled-plus-granted gate as the
-Plugin's tools and the `merchbase-sales-chart` Widget entry) teaches agents to
-fetch sales data with this tool and present the result themselves.
+Plugin-gated skill guidance (the same enabled-plus-granted gate as the
+Plugin's tools) teaches agents to fetch sales data with this tool and present
+the result themselves as inline visuals.
 
 Settings -> Plugins owns MerchBase enablement. Agent Plugin grants decide which
 agents receive the `merchbase` tools and Plugin-owned guidance. When Runtime
@@ -235,17 +224,9 @@ are rejected for Plugin-owned capabilities. Once the Plugin is enabled, the flat
 `merchbase` name is reserved for Tavern's managed guide.
 
 The generic read action endpoint accepts `{ "action": string, "input": object }`
-for a strict allowlist. It is internal plumbing for Runtime-owned tools, server
-bridges, and Plugin-backed Widgets, not an agent prompting contract. It
-does not expose sync, ripcord, ingestion, setup mutation, account switching, or
-secret changes.
-
-`merchbase-sales-chart` is the preferred Widget component for presenting
-MerchBase sales trends over a date range. It stores query intent durably and
-fetches live sales data through Runtime when rendered. The display includes a
-date range selector, Sales bars, a royalties line, and hover-driven stats for
-the active day in the selected range. Daily ranges render every selected day,
-including zero-sales days that MerchBase omits from the upstream series.
+for a strict allowlist. It is internal plumbing for Runtime-owned tools and
+server bridges, not an agent prompting contract. It does not expose sync,
+ripcord, ingestion, setup mutation, account switching, or secret changes.
 Current-day sales requests default to a 10-day trend unless the user explicitly
 asks for a one-day chart.
 
@@ -288,10 +269,9 @@ agent-side setup:
 4. Add a Runtime capability named `plugin.<id>` whose check proves the
    configured service can answer the agent-visible reads.
 5. Add a Plugin manifest that declares the Plugin id, settings, secrets,
-   Plugin-level capability ids, Services, and Widgets. Services
-   declare their capability ids, skills, and tool groups. Plugin-owned
-   component source may live under the Plugin folder, but keep executable wiring
-   in first-party Runtime and App imports.
+   Plugin-level capability ids, and Services. Services declare their
+   capability ids, skills, and tool groups. Keep executable wiring in
+   first-party Runtime and App imports.
 6. Keep domain-specific read APIs, upstream calls, and component interaction
    logic inside the Plugin folder. Core Tavern should host registration and
    lifecycle, not know Plugin-domain operation names.
@@ -309,15 +289,10 @@ agent-side setup:
    product explicitly projects plugin skills.
 10. Add Settings -> Plugins UI for enablement, health, settings, and secret
     reveal/update controls.
-11. Add a Widget only when the display is a product concept, not
-    a generic chart/table assembly problem. Store query intent and fetch live data
-    through Runtime while rendering.
-12. Add a matching Plugin-local `dev/<component>.demo.ts` module for every
-    Plugin-owned Widget so dev mode can exercise it through
-    normal seeded chat rows. Keep demo data in that one file unless duplication
-    becomes painful.
-13. Document the agent boundary: which reads are available, which operations stay
-    user-managed, and which widget is preferred for common displays.
+11. Keep displays agent-rendered: Plugin tools return model-shaped data and
+    the visuals skill owns presentation. Plugins do not ship UI components.
+12. Document the agent boundary: which reads are available and which
+    operations stay user-managed.
 
 Do not add user-installed Plugin packages in v1. For a new external
 integration, either add a built-in Tavern Plugin or keep the work behind

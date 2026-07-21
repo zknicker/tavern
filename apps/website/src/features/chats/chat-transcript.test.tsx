@@ -391,20 +391,14 @@ test('ChatTranscript labels recovered tool failures without making the final rep
     assert.match(turnBody, /Recovered after failed file read: bad-upload\.png/);
 });
 
-test('ChatTranscript renders chart widgets inline', () => {
+test('ChatTranscript replays retired catalog widgets as the fallback card', () => {
     const markup = renderTranscript([widgetRow('ui-chart')]);
 
     assert.match(markup, /Quarterly Revenue/);
-    assert.match(markup, /\$15,500/);
-    assert.match(markup, /max-w-\[46rem\]/);
-    assert.match(markup, /aspect-ratio:21 \/ 9/);
-    assert.match(markup, /relative w-full overflow-visible/);
-    assert.doesNotMatch(markup, /Widget unavailable/);
-    assert.doesNotMatch(markup, /aria-expanded/);
-    assert.doesNotMatch(markup, /aria-pressed/);
-    assert.doesNotMatch(markup, /Expand chart/);
+    assert.match(markup, /Widget unavailable/);
+    assert.doesNotMatch(markup, /\$15,500/);
+    assert.doesNotMatch(markup, /<iframe/);
 });
-
 test('ChatTranscript renders visual widget rows in a sandboxed iframe', () => {
     const row = widgetRow('ui-visual');
 
@@ -473,180 +467,6 @@ test('ChatTranscript renders a completed reply with a closed visual fence as pro
     assert.doesNotMatch(markup, /```visual/);
 });
 
-test('ChatTranscript renders table widget matrix shorthand', () => {
-    const row = widgetRow('ui-table-matrix');
-
-    if (row.kind !== 'widget') {
-        throw new Error('Expected widget row.');
-    }
-
-    const markup = renderTranscript([
-        {
-            ...row,
-            widget: {
-                ...row.widget,
-                component: 'tavern.widget.table',
-                fallbackText: 'Table: State, Population',
-                props: {
-                    columns: ['State', 'Population'],
-                    rows: [
-                        ['California', '39,538,223'],
-                        ['Texas', '29,145,505'],
-                    ],
-                },
-            },
-        },
-    ]);
-
-    assert.match(markup, /Population/);
-    assert.match(markup, /California/);
-    assert.match(markup, /39,538,223/);
-    assert.doesNotMatch(markup, /Widget unavailable/);
-});
-
-test('ChatTranscript renders line chart widgets inline', () => {
-    const row = widgetRow('ui-line-chart');
-
-    if (row.kind !== 'widget') {
-        throw new Error('Expected widget row.');
-    }
-
-    const markup = renderTranscript([
-        {
-            ...row,
-            widget: {
-                ...row.widget,
-                component: 'tavern.widget.line-chart',
-                fallbackText: 'Monthly Net Signups',
-                props: {
-                    data: [
-                        { month: 'Jan', net: -12 },
-                        { month: 'Feb', net: 18 },
-                    ],
-                    series: [{ key: 'net', label: 'Net' }],
-                    title: 'Monthly Net Signups',
-                    xKey: 'month',
-                },
-            },
-        },
-    ]);
-
-    assert.match(markup, /Monthly Net Signups/);
-    assert.doesNotMatch(markup, /Widget unavailable/);
-});
-
-test('ChatTranscript renders composed chart widgets inline', () => {
-    const row = widgetRow('ui-composed-chart');
-
-    if (row.kind !== 'widget') {
-        throw new Error('Expected widget row.');
-    }
-
-    const markup = renderTranscript([
-        {
-            ...row,
-            widget: {
-                ...row.widget,
-                component: 'tavern.widget.composed-chart',
-                fallbackText: 'Revenue and Profit',
-                props: {
-                    barSeries: [{ key: 'revenue', label: 'Revenue' }],
-                    barUnit: 'USD',
-                    data: [
-                        { month: '2026-01-01', profit: 31, revenue: 120 },
-                        { month: '2026-02-01', profit: 34, revenue: 138 },
-                    ],
-                    lineSeries: [{ key: 'profit', label: 'Profit' }],
-                    lineUnit: '%',
-                    title: 'Revenue and Profit',
-                    xKey: 'month',
-                },
-            },
-        },
-    ]);
-
-    assert.match(markup, /Revenue and Profit/);
-    assert.doesNotMatch(markup, /Widget unavailable/);
-});
-
-test('ChatTranscript renders calendar day widgets inline', () => {
-    const row = widgetRow('ui-calendar-day');
-
-    if (row.kind !== 'widget') {
-        throw new Error('Expected widget row.');
-    }
-
-    const markup = renderTranscript([
-        {
-            ...row,
-            widget: {
-                ...row.widget,
-                component: 'tavern.widget.calendar-day',
-                fallbackText: 'Saturday schedule',
-                props: {
-                    date: '2026-06-20',
-                    events: [
-                        {
-                            endTime: '12:45',
-                            startTime: '12:00',
-                            title: 'Lunch',
-                        },
-                        {
-                            endTime: '14:00',
-                            startTime: '13:00',
-                            title: 'Q1 roadmap review',
-                        },
-                    ],
-                    timezone: 'America/New_York',
-                    title: 'Saturday schedule',
-                },
-            },
-        },
-    ]);
-
-    assert.match(markup, /Lunch/);
-    assert.match(markup, /Q1 roadmap review/);
-    assert.match(markup, /1:00 - 2:00 PM/);
-    assert.match(markup, /JUN/);
-    assert.match(markup, /SAT/);
-    assert.match(markup, /Saturday/);
-    assert.match(markup, /No description\./);
-    assert.match(markup, /max-w-\[30rem\]/);
-    assert.match(markup, /border-border\/45/);
-    assert.match(markup, /shadow-surface-1/);
-    assert.doesNotMatch(markup, /Widget unavailable/);
-});
-
-test('ChatTranscript renders html preview widgets inside a sandboxed frame shell', () => {
-    const row = widgetRow('ui-html-preview');
-
-    if (row.kind !== 'widget') {
-        throw new Error('Expected widget row.');
-    }
-
-    const markup = renderTranscript([
-        {
-            ...row,
-            widget: {
-                ...row.widget,
-                component: 'tavern.widget.html-preview',
-                fallbackText: 'HTML preview: workbench/demos/orbit.html',
-                props: {
-                    height: 600,
-                    path: 'workbench/demos/orbit.html',
-                },
-            },
-        },
-    ]);
-
-    // Static render never resolves the workspace file query: the widget frame
-    // and loading note must render, and no iframe may appear yet.
-    assert.match(markup, /workbench\/demos\/orbit\.html/);
-    assert.match(markup, /Loading preview/);
-    assert.doesNotMatch(markup, /<iframe/);
-    assert.doesNotMatch(markup, /Widget unavailable/);
-});
-
 test('ChatTranscript renders artifact widgets as compact open-in-pane cards', () => {
     const row = widgetRow('ui-artifact');
 
@@ -675,65 +495,6 @@ test('ChatTranscript renders artifact widgets as compact open-in-pane cards', ()
     assert.match(markup, /Page · workbench\/pages\/fleet\.html/);
     assert.match(markup, /Open/);
     assert.doesNotMatch(markup, /<iframe/);
-    assert.doesNotMatch(markup, /Widget unavailable/);
-});
-
-test('ChatTranscript renders Wiki documents as compact open-in-pane cards', () => {
-    const row = widgetRow('ui-document');
-
-    if (row.kind !== 'widget') {
-        throw new Error('Expected widget row.');
-    }
-
-    const markup = renderTranscript([
-        {
-            ...row,
-            widget: {
-                ...row.widget,
-                component: 'tavern.widget.document',
-                fallbackText: 'Launch plan',
-                props: {
-                    path: 'projects/launch-plan.md',
-                    title: 'Launch plan',
-                },
-            },
-        },
-    ]);
-
-    assert.match(markup, /Launch plan/);
-    assert.match(markup, /Wiki document · projects\/launch-plan\.md/);
-    assert.match(markup, /Open/);
-    assert.doesNotMatch(markup, /Widget unavailable/);
-});
-
-test('ChatTranscript renders calendar event description fallback', () => {
-    const row = widgetRow('ui-calendar-event');
-
-    if (row.kind !== 'widget') {
-        throw new Error('Expected widget row.');
-    }
-
-    const markup = renderTranscript([
-        {
-            ...row,
-            widget: {
-                ...row.widget,
-                component: 'tavern.widget.calendar-event',
-                fallbackText: 'Focus block',
-                props: {
-                    date: '2026-06-20',
-                    endTime: '14:00',
-                    startTime: '13:00',
-                    title: 'Focus block',
-                },
-            },
-        },
-    ]);
-
-    assert.match(markup, /Focus block/);
-    assert.match(markup, /No description\./);
-    assert.match(markup, /flex items-start gap-3/);
-    assert.match(markup, /min-h-\[72px\] min-w-0 flex-1 flex-col gap-1/);
     assert.doesNotMatch(markup, /Widget unavailable/);
 });
 

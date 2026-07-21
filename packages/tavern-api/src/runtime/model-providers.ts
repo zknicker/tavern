@@ -4,6 +4,7 @@ export const knownAgentRuntimeModelProviderIds = [
     'claude',
     'codex',
     'custom',
+    'kimi',
     'openai',
     'openrouter',
 ] as const;
@@ -38,6 +39,11 @@ export const agentRuntimeModelProviderCapabilities = {
     custom: {
         executionProvider: null,
         supportsMemory: false,
+        supportsSubAgentRouting: false,
+    },
+    kimi: {
+        executionProvider: null,
+        supportsMemory: true,
         supportsSubAgentRouting: false,
     },
     openai: {

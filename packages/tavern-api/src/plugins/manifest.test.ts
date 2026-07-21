@@ -24,7 +24,6 @@ describe('Plugin manifests', () => {
             secrets: [{ name: 'apiKey' }],
             settings: ['baseUrl', 'defaultAccount', 'defaultMarketplace'],
             version: '1.0.0',
-            widgets: [{ name: 'merchbase-sales-chart' }],
         });
         expect(merchbasePluginManifest.services[0]).toMatchObject({
             defaultEnabled: true,
@@ -85,7 +84,6 @@ describe('Plugin manifests', () => {
             secrets: [],
             settings: ['profileName'],
             version: '1.0.0',
-            widgets: [],
         });
         expect(browserPluginManifest.services[0]).toMatchObject({
             defaultEnabled: true,

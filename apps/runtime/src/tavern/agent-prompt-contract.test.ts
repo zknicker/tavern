@@ -7,6 +7,7 @@ import {
     agentRuntimeRoutes,
 } from '@tavern/api';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { defaultVisualsSkill, visualsSkillFiles } from '../agent-engine/visuals-skill.ts';
 import {
     clearRuntimeCronManager,
     type RuntimeCronManager,
@@ -166,57 +167,24 @@ const REQUIREMENTS: Array<{
         expected: "open it in the chat's artifact pane with `pane_open`",
         prompt: 'channel',
     },
-    // Widgets and artifacts: the sandboxed html-preview escape valve and the
-    // durable artifact tier must stay taught, and the output ladder
-    // (in-chat visuals vs pane artifacts vs Wiki documents) keeps the venue
-    // and storage choice deliberate.
+    // Visuals (PRD-80/81/86): the prompt keeps only the Kimi-style pointer —
+    // rendering surfaces exist, and the visuals skill is a mandatory read
+    // before any fence. Fence grammar, the widget catalog, and all design
+    // guidance are guarded skill-side in VISUALS_SKILL_REQUIREMENTS below.
     {
-        capability: 'html-preview widget taught',
-        expected: 'widget:html-preview — ',
-        prompt: 'channel',
-    },
-    {
-        capability: 'artifact fence taught',
+        capability: 'rendering surfaces named (visuals, artifacts)',
         expected:
-            'artifact — Durable self-contained single-file HTML page rendered in the artifact pane',
+            'You can render inline visuals (bespoke HTML/SVG) and artifact pages in chat with tagged fences.',
         prompt: 'channel',
     },
     {
-        capability: 'maintained document card taught',
-        expected: 'For a maintained prose/reference document',
+        capability: 'visuals skill is a mandatory pre-fence read',
+        expected: 'Before emitting any visual or artifact fence, read the visuals skill',
         prompt: 'channel',
     },
     {
-        capability: 'visual vs artifact ladder taught',
-        expected:
-            'Build an artifact for anything the user will keep or iterate on when it is visual or interactive',
-        prompt: 'channel',
-    },
-    // Visuals (PRD-80/81): the generative visual fence and its taste layer.
-    {
-        capability: 'visual fence taught',
-        expected: '```visual Weekly sales',
-        prompt: 'channel',
-    },
-    {
-        capability: 'visuals design-skill routing taught',
-        expected:
-            'load the matching design skill and follow it: visuals-charts for charts and data graphics, visuals-diagrams for diagrams',
-        prompt: 'channel',
-    },
-    {
-        capability: 'visual-vs-artifact ladder in the visuals section',
-        expected: 'Use an `artifact` for durable visual/interactive output',
-        prompt: 'channel',
-    },
-    {
-        capability: 'visuals are self-contained snapshots',
-        expected: 'Embed all data inline',
-        prompt: 'channel',
-    },
-    {
-        capability: 'HTML ban scoped to outside visual fences',
-        expected: 'Never output HTML, JSX, CSS, imports, or class names outside a `visual` fence.',
+        capability: 'HTML ban in plain reply text',
+        expected: 'Never output HTML, JSX, CSS, imports, or class names in plain reply text.',
         prompt: 'channel',
     },
     // Automations: script mode exists and watchdogs should use it.
@@ -271,6 +239,131 @@ const REQUIREMENTS: Array<{
     },
 ];
 
+/**
+ * Skill-side contract for the seeded visuals skill (PRD-86): capabilities the
+ * prompt used to carry now live in SKILL.md and its references. Same rules as
+ * REQUIREMENTS — never delete or weaken an entry to make the suite pass.
+ */
+const VISUALS_SKILL_REQUIREMENTS: Array<{
+    capability: string;
+    expected: RegExp | string;
+    file: 'SKILL.md' | 'references/design-system.md' | 'references/icons.md';
+}> = [
+    // Fence contracts (moved from the prompt's Visuals/Widgets sections).
+    // The widget catalog requirements were removed 2026-07-20 with the
+    // catalog itself (operator-directed: the visual spec is the only
+    // rendering surface).
+    { capability: 'visual fence taught', expected: '```visual Weekly sales', file: 'SKILL.md' },
+    {
+        capability: 'artifact fence JSON contract',
+        expected: 'containing exactly one JSON object',
+        file: 'SKILL.md',
+    },
+    {
+        capability: 'markdown tables replaced by plain HTML tables',
+        expected: 'Render tabular data as a plain HTML `<table>`',
+        file: 'SKILL.md',
+    },
+    {
+        capability: 'artifact tier taught',
+        expected: 'opened in the artifact pane, for anything the user will keep or iterate on',
+        file: 'SKILL.md',
+    },
+    {
+        capability: 'visual vs artifact ladder taught',
+        expected: /Build an \*\*artifact\*\*\s+for\s+deliverables/u,
+        file: 'SKILL.md',
+    },
+    {
+        capability: 'visuals are self-contained snapshots',
+        expected: 'Embed all\n  data inline at generation time.',
+        file: 'SKILL.md',
+    },
+    {
+        capability: 'proactive rendering taught',
+        expected: 'proactive visuals are expected when the structure is there',
+        file: 'SKILL.md',
+    },
+    {
+        capability: 'design system is a mandatory read',
+        expected: 'you MUST read',
+        file: 'SKILL.md',
+    },
+    {
+        capability: 'token discipline: no hardcoded colors',
+        expected: 'Never hardcode colors, fonts, or radii',
+        file: 'SKILL.md',
+    },
+    // Design system (the taste layer the battery tunes).
+    {
+        capability: 'Chart.js pin matches the renderer CSP',
+        expected: 'chart.js@4.5.1',
+        file: 'references/design-system.md',
+    },
+    {
+        capability: 'categorical series order taught',
+        expected:
+            '`--chart-1`\n  (blue) → `--chart-2` (red) → `--chart-3` (green) → `--chart-4` (purple) →\n  `--chart-5` (neutral gray)',
+        file: 'references/design-system.md',
+    },
+    {
+        capability: 'text never wears the series color',
+        expected: 'Text never wears the series color',
+        file: 'references/design-system.md',
+    },
+    {
+        capability: 'two-weight typography rule',
+        expected: '**Two weights only**: 400 regular and 500 bold.',
+        file: 'references/design-system.md',
+    },
+    {
+        capability: 'sentence case rule',
+        expected: '**Sentence case always**',
+        file: 'references/design-system.md',
+    },
+    {
+        capability: 'spacing scale taught',
+        expected: '4 / 8 / 12 / 16 / 20 / 24 / 32',
+        file: 'references/design-system.md',
+    },
+    {
+        capability: 'streaming authoring order taught',
+        expected: '`<script>` last for interactivity',
+        file: 'references/design-system.md',
+    },
+    {
+        capability: 'pages own their background',
+        expected: 'Pages own their ground: `background: var(--background)`',
+        file: 'references/design-system.md',
+    },
+    {
+        capability: 'native table styling taught',
+        expected: 'the visual frame styles\nbare tables natively',
+        file: 'references/design-system.md',
+    },
+    {
+        capability: 'text fitting calibration taught',
+        expected: 'Budget per character',
+        file: 'references/design-system.md',
+    },
+    {
+        capability: 'viewBox safety checklist taught',
+        expected: 'viewBox safety checklist',
+        file: 'references/design-system.md',
+    },
+    // Icons.
+    {
+        capability: 'emoji ban for UI icons',
+        expected: 'Do not use emoji as UI icons.',
+        file: 'references/icons.md',
+    },
+    {
+        capability: 'icon size ceiling',
+        expected: '24px is the hard ceiling',
+        file: 'references/icons.md',
+    },
+];
+
 // Character ceilings for the deterministic fixture (default SOUL, empty core
 // memory). Raising one is a deliberate spend decision — confirm with the
 // operator, do not just bump the number.
@@ -300,9 +393,14 @@ const REQUIREMENTS: Array<{
 // and html-preview entries to invocation contract + page-design skill
 // routing (quality guidance, incl. the token enumeration, moved to skills);
 // actual total ~16,280.
+// total 16_500 -> 12_400 (2026-07-20, PRD-86): the Widgets catalog and the
+// long Visuals section left the prompt for the seeded visuals skill —
+// the prompt keeps a 3-line pointer (Kimi-style surface parity). Fence
+// grammar, catalog signatures, and design rules are guarded skill-side in
+// VISUALS_SKILL_REQUIREMENTS; actual total ~11,950.
 const promptBudgets = {
     channelChatSection: 1850,
-    channelTotal: 16_500,
+    channelTotal: 12_400,
 };
 
 // The fixture renders the cron-ready prompt so the Automations section stays
@@ -362,6 +460,23 @@ describe('agent prompt contract', () => {
         }).map((requirement) => requirement.capability);
 
         expect(missing, 'Prompt lost capabilities — see PROMPT CONTRACT header').toEqual([]);
+    });
+
+    it('keeps every skill-taught visuals capability present', () => {
+        const sources = {
+            'SKILL.md': defaultVisualsSkill,
+            'references/design-system.md': visualsSkillFiles['references/design-system.md'] ?? '',
+            'references/icons.md': visualsSkillFiles['references/icons.md'] ?? '',
+        };
+
+        const missing = VISUALS_SKILL_REQUIREMENTS.filter((requirement) => {
+            const source = sources[requirement.file];
+            return typeof requirement.expected === 'string'
+                ? !source.includes(requirement.expected)
+                : !requirement.expected.test(source);
+        }).map((requirement) => requirement.capability);
+
+        expect(missing, 'Visuals skill lost capabilities — see PROMPT CONTRACT header').toEqual([]);
     });
 
     it('matches the reviewed channel prompt snapshot', async () => {
