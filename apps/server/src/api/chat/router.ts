@@ -2,6 +2,7 @@ import { createRouter } from '../trpc.ts';
 import { archiveChatRoute } from './archive.ts';
 import { clearChatRoute } from './clear.ts';
 import { createChatRoute } from './create.ts';
+import { listChatFilesRoute } from './files-list.ts';
 import { getChatRoute } from './get.ts';
 import { listArchivedChatsRoute, listChatsRoute } from './list.ts';
 import { dismissChatLogRowRoute } from './log-dismiss.ts';
@@ -32,6 +33,9 @@ export const chatRouter = createRouter({
     archive: archiveChatRoute,
     clear: clearChatRoute,
     create: createChatRoute,
+    files: createRouter({
+        list: listChatFilesRoute,
+    }),
     get: getChatRoute,
     tool: createRouter({
         get: getChatToolRoute,

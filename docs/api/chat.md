@@ -175,6 +175,10 @@ The Tavern app keeps list and detail reads separate:
   is created at its first visible content and edited in place until its
   delivery finalizes it (`message.updated` events), so the timeline is
   append-only from the reader's seat.
+* `chat.files.list` walks the full chat log and returns attachment metadata
+  newest first. Entries include the attachment kind, filename, media type,
+  size, sender, actor, message id, and timestamp. Inline attachment data and
+  file paths are not returned.
 * `chat.turn.evidence` returns one turn's execution record — tool, reasoning,
   narration, and worker rows plus artifacts — by `chatId` + `responseId`. The
   turn drawer queries it on demand; live turns stream evidence through turn
