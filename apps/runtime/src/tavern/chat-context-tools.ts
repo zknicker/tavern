@@ -4,7 +4,13 @@ import { tool } from 'ai';
 import * as z from 'zod';
 import { isAgentChatParticipant } from './chat-actions-tools.ts';
 import { createAgentParticipantId } from './chat-api/ids.ts';
-import { getChat, getMessage, listMessages, searchMessages } from './chat-api/index.ts';
+import {
+    getChat,
+    getMessage,
+    listMessages,
+    membershipChat,
+    searchMessages,
+} from './chat-api/index.ts';
 
 // Target-scoped history reads for the agent's global session
 // (specs/sessions.md): every chat where the agent holds a seat is readable,
@@ -27,7 +33,8 @@ export function createTavernChatTools(input: { agentId: string; chatId: string }
     const resolveChat = (chatId: string | undefined) => {
         const targetChatId = chatId ?? input.chatId;
         const chat = getChat(targetChatId);
-        if (!(chat && isAgentChatParticipant(chat, input.agentId, participantId))) {
+        const accessChat = chat ? membershipChat(chat) : null;
+        if (!(accessChat && isAgentChatParticipant(accessChat, input.agentId, participantId))) {
             return null;
         }
         return targetChatId;

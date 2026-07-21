@@ -10,6 +10,7 @@ import {
     latestMessageSequence,
     listChatsForAgentParticipant,
     listRecentMessagesBetween,
+    membershipChat,
 } from './chat-api/index.ts';
 import { formatPromptMessage } from './harness-prompt.ts';
 import { advanceSeenCursor, readSeenCursor } from './seen-ledger.ts';
@@ -51,10 +52,7 @@ export function createTavernChatActionTools(input: {
                     return { error: 'This is the current chat. Reply normally instead.' };
                 }
                 const chat = getChat(chatId);
-                const accessChat =
-                    chat?.kind === 'thread' && chat.parent_chat_id
-                        ? getChat(chat.parent_chat_id)
-                        : chat;
+                const accessChat = chat ? membershipChat(chat) : null;
                 if (
                     !(
                         chat &&

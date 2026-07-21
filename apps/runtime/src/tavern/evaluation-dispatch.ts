@@ -9,6 +9,7 @@ import {
     getChat,
     getMessage,
     listDeliveriesForTurn,
+    membershipChat,
     upsertResponse,
     upsertResponseActivity,
 } from './chat-api/index.ts';
@@ -206,8 +207,9 @@ function prepareDispatch(input: {
 
 function readChatAgentIds(chatId: string) {
     const chat = getChat(chatId);
+    const seatChat = chat ? membershipChat(chat) : null;
     const ids = new Set<string>();
-    for (const participant of chat?.participants ?? []) {
+    for (const participant of seatChat?.participants ?? []) {
         if (participant.kind !== 'agent') {
             continue;
         }

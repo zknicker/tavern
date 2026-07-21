@@ -37,6 +37,7 @@ export {
     autoFollowMentions,
     autoFollowOnPost,
     ensureThreadChat,
+    membershipChat,
     setThreadFollow,
     threadChatIdForAnchor,
     threadSummaries,

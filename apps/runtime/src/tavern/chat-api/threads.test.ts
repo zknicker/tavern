@@ -14,6 +14,7 @@ import {
     getChatTimelinePage,
     listChats,
     markRead,
+    membershipChat,
     setThreadFollow,
     threadChatIdForAnchor,
     threadSummaries,
@@ -131,6 +132,21 @@ describe('thread chats', () => {
         });
         expect(threadSummaries('cht_parent', 'usr_tavern')[0]?.followed).toBe(true);
 
+        createMessage(thread.id, {
+            author_id: 'usr_tavern',
+            content: 'Also for [@Reader](user://usr_reader).',
+            id: 'msg_reader_mention',
+            role: 'user',
+        });
+        expect(
+            getDb()
+                .prepare(
+                    `SELECT 1 FROM thread_follows
+                     WHERE thread_chat_id = ? AND participant_id = 'usr_reader'`
+                )
+                .get(thread.id)
+        ).toBeTruthy();
+
         setThreadFollow({ follow: false, participantId: 'agt_one', threadChatId: thread.id });
         createMessage(thread.id, {
             author_id: 'usr_tavern',
@@ -160,6 +176,29 @@ describe('thread chats', () => {
                 threadChatId: 'cht_parent',
             })
         ).toThrow('not a thread');
+    });
+
+    it('derives membership from the parent chat', () => {
+        seedParent();
+        seedMessage('cht_parent', 'msg_anchor', 'usr_tavern');
+        const thread = ensureThreadChat({
+            anchorMessageId: 'msg_anchor',
+            parentChatId: 'cht_parent',
+        });
+
+        const parent = getChat('cht_parent');
+        const threadChat = getChat(thread.id);
+        if (!(parent && threadChat)) {
+            throw new Error('Seeded chats must exist.');
+        }
+        expect(membershipChat(threadChat)?.id).toBe('cht_parent');
+        expect(membershipChat(parent)?.id).toBe('cht_parent');
+        // A fresh thread has no participants of its own; the parent's agent
+        // seats are the membership authority.
+        expect(threadChat.participants).toEqual([]);
+        expect(membershipChat(threadChat)?.participants.map((seat) => seat.id)).toContain(
+            'agt_one'
+        );
     });
 
     it('summarizes replies and rolls only followed unread replies into the parent', () => {

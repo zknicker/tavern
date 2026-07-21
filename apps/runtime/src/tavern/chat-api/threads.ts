@@ -8,7 +8,7 @@ import { getDb } from '../../db/connection';
 import type { Database } from '../../db/sqlite';
 import { namedParams } from '../../db/sqlite';
 import { getChat, getChatOrThrow } from './chats';
-import { createAgentParticipantId, localHumanParticipantId } from './ids';
+import { createAgentParticipantId } from './ids';
 
 export function threadChatIdForAnchor(anchorMessageId: string) {
     return `cht_thr_${stripMessagePrefix(anchorMessageId)}`;
@@ -131,6 +131,17 @@ export function autoFollowMentions(
     }
 }
 
+/**
+ * Membership/access authority for a chat: threads never own membership, so
+ * participant checks resolve against the parent chat.
+ */
+export function membershipChat(chat: TavernChat, db: Database = getDb()): TavernChat | null {
+    if (chat.kind !== 'thread') {
+        return chat;
+    }
+    return chat.parent_chat_id ? getChat(chat.parent_chat_id, db) : null;
+}
+
 export function threadSummaries(
     parentChatId: string,
     readerId: string,
@@ -197,11 +208,9 @@ function mentionedParticipantIds(content: string) {
             const agentId = parseAgentReferenceTarget(reference.id);
             return agentId ? [createAgentParticipantId(agentId)] : [];
         }
-        if (
-            reference.kind === 'user' &&
-            parseUserReferenceTarget(reference.id) === localHumanParticipantId
-        ) {
-            return [localHumanParticipantId];
+        if (reference.kind === 'user') {
+            const userId = parseUserReferenceTarget(reference.id);
+            return userId ? [userId] : [];
         }
         return [];
     });
