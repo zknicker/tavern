@@ -48,6 +48,7 @@ export function ChatTranscript({
     failedTurns = [],
     hiddenCount = 0,
     leadingContent,
+    olderHistory,
     rows,
     scrollContentRef,
     threadActionsEnabled = true,
@@ -62,6 +63,9 @@ export function ChatTranscript({
     failedTurns?: readonly ChatTurnFailure[];
     hiddenCount?: number;
     leadingContent?: React.ReactNode;
+    // Standalone-viewport transcripts (the thread pane) page older history
+    // themselves; embedded transcripts leave paging to their outer frame.
+    olderHistory?: { fetch: () => void; hasMore: boolean; isFetching: boolean };
     rows: TranscriptRow[];
     scrollContentRef?: React.RefObject<HTMLDivElement | null>;
     threadActionsEnabled?: boolean;
@@ -210,10 +214,25 @@ export function ChatTranscript({
     );
 
     if (!scrollContentRef) {
+        const handleViewportScroll = (event: React.UIEvent<HTMLDivElement>) => {
+            if (
+                !olderHistory ||
+                event.currentTarget.scrollTop > 160 ||
+                !olderHistory.hasMore ||
+                olderHistory.isFetching
+            ) {
+                return;
+            }
+            olderHistory.fetch();
+        };
+
         return (
             <MessageScrollerProvider defaultScrollPosition="end">
                 <MessageScroller>
-                    <MessageScrollerViewport className={cn(viewportClassName)}>
+                    <MessageScrollerViewport
+                        className={cn(viewportClassName)}
+                        onScroll={handleViewportScroll}
+                    >
                         {transcript}
                     </MessageScrollerViewport>
                 </MessageScroller>

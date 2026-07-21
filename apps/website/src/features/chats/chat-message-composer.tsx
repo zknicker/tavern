@@ -58,6 +58,7 @@ export function ChatMessageComposer({
     isDisabled,
     isReplyActive,
     placeholder = CHAT_COMPOSER_PLACEHOLDER,
+    stopChatId,
     threadTarget,
     variant = 'detail',
 }: {
@@ -73,6 +74,9 @@ export function ChatMessageComposer({
     isDisabled: boolean;
     isReplyActive: boolean;
     placeholder?: string;
+    // Thread turns run in the thread chat while sends address the parent;
+    // stop must target the chat that owns the run.
+    stopChatId?: string;
     threadTarget?: { anchorMessageId: string };
     variant?: ChatMessageComposerVariant;
 }) {
@@ -181,7 +185,7 @@ export function ChatMessageComposer({
 
     function stopActiveRuns() {
         for (const runId of activeRunIds) {
-            stopTurn.mutate({ chatId, runId });
+            stopTurn.mutate({ chatId: stopChatId ?? chatId, runId });
         }
     }
 

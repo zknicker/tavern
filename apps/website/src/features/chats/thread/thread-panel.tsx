@@ -5,6 +5,8 @@ import { useMarkThreadReadOnView } from '../../../hooks/threads/use-thread-mark-
 import { closeThreadPane, type ThreadPaneState } from '../../../hooks/threads/use-thread-pane.ts';
 import type { AgentListOutput, ChatLogOutput } from '../../../lib/trpc.tsx';
 import { trpc } from '../../../lib/trpc.tsx';
+import { ArchivedChatBar } from '../archived-chat-bar.tsx';
+import { getActiveRunIds } from '../chat-active-runs.ts';
 import type { ChatListItem } from '../chat-list-data.ts';
 import { ChatMessageComposer } from '../chat-message-composer.tsx';
 import { getChatMessageLayout } from '../chat-message-layout.ts';
@@ -82,72 +84,54 @@ export function ThreadPanel({
                         target={titles.target}
                         threadExists={threadChatId !== null}
                     />
-                    <div className="min-h-0 flex-1">
-                        <ThreadTranscript
+                    {threadChatId ? (
+                        <SyncedThreadBody
+                            agents={agents}
+                            anchorMessageId={state.anchorMessageId}
                             anchorRow={anchorRow}
                             chat={chat}
                             replyCount={thread?.replyCount ?? 0}
                             threadChatId={threadChatId}
                         />
-                    </div>
-                    <div className="shrink-0 border-border/70 border-t py-3">
-                        <ChatMessageComposer
-                            agents={agents}
-                            boundAgentIds={chat.boundAgentIds}
-                            canSend={chat.canSend}
-                            chatId={chat.id}
-                            conversationKind={chat.conversationKind}
-                            isDisabled={chat.isDisabled}
-                            isReplyActive={false}
-                            placeholder="Message thread"
-                            threadTarget={{ anchorMessageId: state.anchorMessageId }}
-                        />
-                    </div>
+                    ) : (
+                        <>
+                            <div className="min-h-0 flex-1">
+                                <ChatTranscript
+                                    activeReplies={[]}
+                                    leadingContent={
+                                        <ThreadLeadingContent
+                                            anchorRow={anchorRow}
+                                            replyCount={0}
+                                        />
+                                    }
+                                    rows={[]}
+                                    threadActionsEnabled={false}
+                                    viewportClassName="px-4 pb-6"
+                                />
+                            </div>
+                            <ThreadComposerFooter
+                                agents={agents}
+                                anchorMessageId={state.anchorMessageId}
+                                chat={chat}
+                            />
+                        </>
+                    )}
                 </div>
             )}
         </ChatSidePaneShell>
     );
 }
 
-function ThreadTranscript({
+function SyncedThreadBody({
+    agents,
+    anchorMessageId,
     anchorRow,
     chat,
     replyCount,
     threadChatId,
 }: {
-    anchorRow: TranscriptMessageRow;
-    chat: ChatListItem;
-    replyCount: number;
-    threadChatId: string | null;
-}) {
-    if (!threadChatId) {
-        return (
-            <ChatTranscript
-                activeReplies={[]}
-                leadingContent={<ThreadLeadingContent anchorRow={anchorRow} replyCount={0} />}
-                rows={[]}
-                threadActionsEnabled={false}
-                viewportClassName="px-4 pb-6"
-            />
-        );
-    }
-
-    return (
-        <SyncedThreadTranscript
-            anchorRow={anchorRow}
-            chat={chat}
-            replyCount={replyCount}
-            threadChatId={threadChatId}
-        />
-    );
-}
-
-function SyncedThreadTranscript({
-    anchorRow,
-    chat,
-    replyCount,
-    threadChatId,
-}: {
+    agents: AgentListOutput['agents'];
+    anchorMessageId: string;
     anchorRow: TranscriptMessageRow;
     chat: ChatListItem;
     replyCount: number;
@@ -157,16 +141,77 @@ function SyncedThreadTranscript({
     useMarkThreadReadOnView({ parentChatId: chat.id, threadChatId });
 
     return (
-        <ChatTranscript
-            activeReplies={timeline.activeReplies}
-            chatId={threadChatId}
-            conversationLayout={getChatMessageLayout(chat)}
-            failedTurns={timeline.failedTurns}
-            leadingContent={<ThreadLeadingContent anchorRow={anchorRow} replyCount={replyCount} />}
-            rows={timeline.rows}
-            threadActionsEnabled={false}
-            viewportClassName="px-4 pb-6"
-        />
+        <>
+            <div className="min-h-0 flex-1">
+                <ChatTranscript
+                    activeReplies={timeline.activeReplies}
+                    chatId={threadChatId}
+                    conversationLayout={getChatMessageLayout(chat)}
+                    failedTurns={timeline.failedTurns}
+                    leadingContent={
+                        <ThreadLeadingContent anchorRow={anchorRow} replyCount={replyCount} />
+                    }
+                    olderHistory={{
+                        fetch: timeline.fetchOlderHistory,
+                        hasMore: timeline.hasOlderHistory,
+                        isFetching: timeline.isFetchingOlderHistory,
+                    }}
+                    rows={timeline.rows}
+                    threadActionsEnabled={false}
+                    viewportClassName="px-4 pb-6"
+                />
+            </div>
+            <ThreadComposerFooter
+                activeRunIds={getActiveRunIds(timeline)}
+                agents={agents}
+                anchorMessageId={anchorMessageId}
+                chat={chat}
+                isReplyActive={timeline.activeReplies.length > 0}
+                stopChatId={threadChatId}
+            />
+        </>
+    );
+}
+
+function ThreadComposerFooter({
+    activeRunIds = [],
+    agents,
+    anchorMessageId,
+    chat,
+    isReplyActive = false,
+    stopChatId,
+}: {
+    activeRunIds?: readonly string[];
+    agents: AgentListOutput['agents'];
+    anchorMessageId: string;
+    chat: ChatListItem;
+    isReplyActive?: boolean;
+    stopChatId?: string;
+}) {
+    if (chat.archived) {
+        return (
+            <div className="shrink-0 border-border/70 border-t pt-3">
+                <ArchivedChatBar chatId={chat.id} conversationKind={chat.conversationKind} />
+            </div>
+        );
+    }
+
+    return (
+        <div className="shrink-0 border-border/70 border-t py-3">
+            <ChatMessageComposer
+                activeRunIds={activeRunIds}
+                agents={agents}
+                boundAgentIds={chat.boundAgentIds}
+                canSend={chat.canSend}
+                chatId={chat.id}
+                conversationKind={chat.conversationKind}
+                isDisabled={chat.isDisabled}
+                isReplyActive={isReplyActive}
+                placeholder="Message thread"
+                stopChatId={stopChatId}
+                threadTarget={{ anchorMessageId }}
+            />
+        </div>
     );
 }
 
