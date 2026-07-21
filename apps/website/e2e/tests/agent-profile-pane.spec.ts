@@ -2,12 +2,12 @@ import type { Page } from '@playwright/test';
 import { sendAgentDmTurn } from '../support/agent-dm.ts';
 import { expect, test } from '../support/test.ts';
 
-test('agent avatar opens a read-only session drawer', async ({ page }) => {
+test('agent avatar opens the profile side pane', async ({ page }) => {
     test.setTimeout(150_000);
 
     await startChat(page, {
-        expectedReply: 'QA_AGENT_DRAWER_OK',
-        prompt: 'Agent drawer qa marker. Reply exactly `QA_AGENT_DRAWER_OK`.',
+        expectedReply: 'QA_AGENT_PROFILE_OK',
+        prompt: 'Agent profile qa marker. Reply exactly `QA_AGENT_PROFILE_OK`.',
     });
 
     await page
@@ -15,24 +15,26 @@ test('agent avatar opens a read-only session drawer', async ({ page }) => {
         .first()
         .click();
 
-    const drawer = page.getByRole('dialog');
-    await expect(drawer).toBeVisible({ timeout: 15_000 });
-    await expect(drawer.getByText('Session', { exact: true })).toBeVisible();
-    await expect(drawer.getByText('Model', { exact: true })).toBeVisible({ timeout: 30_000 });
+    const pane = page.getByRole('complementary', { name: 'Agent profile' });
+    await expect(pane).toBeVisible({ timeout: 15_000 });
 
-    // Session status is read-only here; resets live in agent settings
-    // (specs/sessions.md).
-    await expect(drawer.getByRole('button', { name: 'New session' })).toHaveCount(0);
+    // The full six-tab profile renders in the pane (specs/agent-profile.md).
+    for (const tab of ['Profile', 'Activity', 'Chat', 'Reminders', 'Workspace', 'Apps']) {
+        await expect(pane.getByRole('tab', { name: tab })).toBeVisible();
+    }
+    await expect(pane.getByRole('combobox', { name: 'Agent model' })).toBeVisible({
+        timeout: 30_000,
+    });
 
-    await page.keyboard.press('Escape');
-    await expect(drawer).toHaveCount(0);
-    await expect(page.locator('main p').filter({ hasText: /^QA_AGENT_DRAWER_OK$/ })).toBeVisible();
+    await pane.getByRole('button', { name: 'Close' }).click();
+    await expect(pane).toHaveCount(0);
+    await expect(page.locator('main p').filter({ hasText: /^QA_AGENT_PROFILE_OK$/ })).toBeVisible();
 });
 
 test('leading slash is plain composer text, not a palette', async ({ page }) => {
     await startChat(page, {
-        expectedReply: 'QA_AGENT_DRAWER_SLASH_OK',
-        prompt: 'Agent drawer slash qa. Reply exactly `QA_AGENT_DRAWER_SLASH_OK`.',
+        expectedReply: 'QA_AGENT_PROFILE_SLASH_OK',
+        prompt: 'Agent profile slash qa. Reply exactly `QA_AGENT_PROFILE_SLASH_OK`.',
     });
 
     const composer = page.getByRole('textbox', { name: /Chat message/ });
