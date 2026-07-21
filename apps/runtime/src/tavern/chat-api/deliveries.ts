@@ -30,7 +30,7 @@ export function createDelivery(
 
     db.exec('BEGIN IMMEDIATE');
     try {
-        assertThreadWritable(chatId, db);
+        assertThreadWritable(chatId, input.message.author_id, db);
         // A streaming post created at first content links here; the delivery
         // finalizes its text and metadata in place (specs/chat-timeline.md).
         const message =

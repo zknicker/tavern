@@ -26,7 +26,7 @@ export function createMessage(
 
     db.exec('BEGIN IMMEDIATE');
     try {
-        assertThreadWritable(chatId, db);
+        assertThreadWritable(chatId, input.author_id, db);
         const message = insertMessage(chatId, input, input.author_id, null, db);
         autoFollowOnPost({ authorId: input.author_id, chatId }, db);
         autoFollowMentions({ chatId, content: input.content }, db);

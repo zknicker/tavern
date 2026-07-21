@@ -99,6 +99,24 @@ export function setThreadFollow(
         throw new Error('Thread follow participant must be a usr_ or agt_ id.');
     }
     assertThreadChat(input.threadChatId, db);
+    // Same split as assertThreadWritable: agent follows require a parent
+    // seat; human ids stay server-enforced (single-operator participant rows).
+    if (input.follow && input.participantId.startsWith('agt_')) {
+        const parentChatId = getChat(input.threadChatId, db)?.parent_chat_id;
+        const seat = parentChatId
+            ? db
+                  .prepare(
+                      `SELECT 1 FROM chat_participants
+                       WHERE chat_id = $parentChatId AND id = $participantId AND kind = 'agent'`
+                  )
+                  .get(namedParams({ parentChatId, participantId: input.participantId }))
+            : null;
+        if (!seat) {
+            throw new Error(
+                `Agent ${input.participantId} holds no seat in the thread's parent chat.`
+            );
+        }
+    }
     if (input.follow) {
         followParticipant(input.threadChatId, input.participantId, db);
     } else {
@@ -149,7 +167,7 @@ export function autoFollowMentions(
  * the thread accepts no further writes, so it can never feed the parent's
  * unread rollup from behind a vanished pill.
  */
-export function assertThreadWritable(chatId: string, db: Database = getDb()) {
+export function assertThreadWritable(chatId: string, authorId: string, db: Database = getDb()) {
     const chat = getChat(chatId, db);
     if (chat?.kind !== 'thread' || !chat.anchor_message_id) {
         return;
@@ -157,6 +175,20 @@ export function assertThreadWritable(chatId: string, db: Database = getDb()) {
     const anchor = getMessage(chat.anchor_message_id, db);
     if (!anchor || anchor.deleted_at) {
         throw new Error(`Thread ${chatId} was cleared with its conversation.`);
+    }
+    // Agent authors must hold a parent seat (membership derives from the
+    // parent). Human seats stay server-enforced: single-operator chats only
+    // carry the usr_tavern row, not every authenticated member id.
+    if (chat.parent_chat_id && authorId.startsWith('agt_')) {
+        const seat = db
+            .prepare(
+                `SELECT 1 FROM chat_participants
+                 WHERE chat_id = $parentChatId AND id = $authorId AND kind = 'agent'`
+            )
+            .get(namedParams({ authorId, parentChatId: chat.parent_chat_id }));
+        if (!seat) {
+            throw new Error(`Agent ${authorId} holds no seat in thread ${chatId}'s parent chat.`);
+        }
     }
 }
 

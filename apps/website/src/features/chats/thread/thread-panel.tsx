@@ -45,8 +45,41 @@ export function ThreadPanel({
     const threadChatId = state?.threadChatId ?? thread?.threadChatId ?? null;
     const titles = state ? threadPaneTitles(chat, state.anchorMessageId) : null;
 
-    if (!(state && anchorRow && titles)) {
+    if (!(state && titles)) {
         return null;
+    }
+
+    // The anchor lives outside the loaded parent window (older history after
+    // a reload): keep the pane openable/closable instead of vanishing — a
+    // null render would blank the narrow-width takeover entirely.
+    if (!anchorRow) {
+        return (
+            <ChatSidePaneShell label="Thread" open={open} takeover={takeover}>
+                {(width) => (
+                    <div
+                        className="flex h-full min-h-0 min-w-0 flex-1 flex-col"
+                        style={width ? { width } : undefined}
+                    >
+                        <ThreadPanelHeader
+                            followed={false}
+                            followPending={false}
+                            header={titles.header}
+                            onBack={() => closeThreadPane(chat.id)}
+                            onClose={() => closeThreadPane(chat.id)}
+                            onFollowChange={() => undefined}
+                            onViewInChannel={() => closeThreadPane(chat.id)}
+                            takeover={takeover}
+                            target={titles.target}
+                            threadExists={false}
+                        />
+                        <div className="flex flex-1 items-center justify-center px-6 text-center text-muted-foreground text-sm">
+                            The thread's first message isn't loaded here. Scroll the channel back to
+                            it, then reopen the thread.
+                        </div>
+                    </div>
+                )}
+            </ChatSidePaneShell>
+        );
     }
 
     const close = () => closeThreadPane(chat.id);
