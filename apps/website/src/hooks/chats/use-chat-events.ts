@@ -25,10 +25,12 @@ export function useChatEvents() {
 
             if (chatId) {
                 void utils.chat.log.list.invalidate({ id: chatId });
+                void utils.chat.files.list.invalidate({ chatId });
                 return;
             }
 
             void utils.chat.log.list.invalidate();
+            void utils.chat.files.list.invalidate();
         },
     });
 }

@@ -3,6 +3,11 @@ import { getRuntimeChatTimelinePage } from './runtime-chat-api.ts';
 
 const pageLimit = 100;
 
+// Conscious v1 tradeoff: this walks full timeline pages (inline attachment
+// bodies included) to project metadata. Transport is an in-process hop until
+// the grotto.sh split, and files move server-side with it — a Runtime
+// metadata-only projection is only worth building if this surfaces as slow
+// before then.
 export async function listChatFiles(chatId: string) {
     const files: ChatFileEntry[] = [];
     let beforeSequence: number | undefined;
