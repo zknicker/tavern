@@ -98,6 +98,7 @@ export function collectRecentUnread(
         )
         .map((row) => (row as { id: string }).id);
     const collected: RecentUnreadRow[] = [];
+    const unseenCountByChat = new Map<string, number>();
     for (const chatId of chatIds) {
         const chat = getChat(chatId, db);
         if (!chat) {
@@ -114,7 +115,7 @@ export function collectRecentUnread(
         if (latestMessageSequence(chatId, db) <= horizon) {
             continue;
         }
-        const { messages } = listUnseenPeerMessages(
+        const { count, messages } = listUnseenPeerMessages(
             {
                 afterSequence: horizon,
                 agentId: input.agentId,
@@ -123,17 +124,27 @@ export function collectRecentUnread(
             },
             db
         );
+        unseenCountByChat.set(chatId, count);
         collected.push(...messages.map((message) => ({ message, target })));
     }
     const shown = collected
         .sort((a, b) => a.message.created_at.localeCompare(b.message.created_at))
         .slice(-maxRecentUnreadMessages);
+    // Cursors advance only for chats whose unseen rows were shown in full —
+    // unlike hold catch-up there is no omission note here, so a partially
+    // shown chat stays pending and simply re-surfaces later.
+    const shownCountByChat = new Map<string, number>();
     const shownThroughByChat = new Map<string, number>();
     for (const row of shown) {
-        const previous = shownThroughByChat.get(row.message.chat_id) ?? 0;
-        shownThroughByChat.set(row.message.chat_id, Math.max(previous, row.message.sequence));
+        const chatId = row.message.chat_id;
+        shownCountByChat.set(chatId, (shownCountByChat.get(chatId) ?? 0) + 1);
+        const previous = shownThroughByChat.get(chatId) ?? 0;
+        shownThroughByChat.set(chatId, Math.max(previous, row.message.sequence));
     }
     for (const [chatId, seq] of shownThroughByChat) {
+        if (shownCountByChat.get(chatId) !== unseenCountByChat.get(chatId)) {
+            continue;
+        }
         advanceSeenCursor({ chatId, seq, sessionId: input.sessionId }, db);
         advanceServedCursor({ chatId, seq, sessionId: input.sessionId }, db);
     }

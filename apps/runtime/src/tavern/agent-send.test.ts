@@ -272,6 +272,46 @@ describe('agent attested sends', () => {
         expect(followUp.state).toBe('sent');
     });
 
+    it('never acks recentUnread rows a crowded chat did not fully show', () => {
+        const seedChannel = (id: string, title: string) =>
+            createChat({
+                id,
+                kind: 'channel',
+                participants: [human(), agent('agt_otto', 'Otto')],
+                title,
+            });
+        seedChannel('cht_busy', 'crowded');
+        seedChannel('cht_quiet', 'calm');
+        for (let index = 1; index <= 12; index += 1) {
+            createMessage('cht_busy', {
+                author_id: 'usr_tavern',
+                content: `busy ${index}`,
+                id: `msg_b${index.toString(16).padStart(31, '0')}`,
+                role: 'user',
+            });
+        }
+        for (let index = 1; index <= 3; index += 1) {
+            createMessage('cht_quiet', {
+                author_id: 'usr_tavern',
+                content: `quiet ${index}`,
+                id: `msg_c${index.toString(16).padStart(31, '0')}`,
+                role: 'user',
+            });
+        }
+        const sent = sendAgentMessage('agt_otto', { content: 'hello', target: '#general' });
+        if (sent.state !== 'sent') {
+            throw new Error('Expected the send to commit.');
+        }
+        expect(sent.recentUnread).toHaveLength(10);
+        const session = ensureCurrentAgentSession({ agentId: 'agt_otto' });
+        // The busy chat was truncated by the global cap: nothing acked there.
+        expect(readSeenCursor(session.id, 'cht_busy')).toBe(0);
+        expect(readServedCursor(session.id, 'cht_busy')).toBe(0);
+        // The quiet chat was shown in full: fully acked.
+        expect(readSeenCursor(session.id, 'cht_quiet')).toBe(3);
+        expect(readServedCursor(session.id, 'cht_quiet')).toBe(3);
+    });
+
     it('deduplicates sends by nonce', () => {
         const first = sendAgentMessage('agt_otto', {
             compositionId: 'cmp_1',
