@@ -30,7 +30,7 @@ const main = async () => {
         return;
     }
 
-    run('git', ['add', '-A', '--', 'Formula/grotto-runtime.rb', 'Formula/tavern-runtime.rb'], {
+    run('git', ['add', '-A', '--', 'Formula'], {
         cwd: tapDirectory,
     });
     run('git', ['commit', '-m', `grotto-runtime ${version}`], { cwd: tapDirectory });
