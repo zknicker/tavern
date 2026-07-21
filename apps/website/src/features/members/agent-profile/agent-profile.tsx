@@ -110,7 +110,7 @@ function ActiveTab({
         case 'reminders':
             return <AgentRemindersTab agentId={agent.id} />;
         case 'workspace':
-            return <AgentWorkspaceTab agentId={agent.id} agentName={agent.name} />;
+            return <AgentWorkspaceTab agentId={agent.id} />;
         case 'apps':
             return <AgentAppsTab agent={agent} />;
     }

@@ -47,8 +47,10 @@ pages; there is no other per-agent surface.
   own section once that concept exists.
 - **Reminders.** Read-only view of the agent's schedules. Creation is
   conversational — the empty state says to tell the agent.
-- **Workspace.** File tree and viewer over the agent's real workspace;
-  NOTES.md and SOUL.md stay editable here.
+- **Workspace.** Read-only file tree and viewer over the agent's real
+  workspace (MEMORY.md, notes/). The workspace is agent-maintained memory;
+  identity steering is the Profile tab's editable description
+  (specs/raft-alignment W2 — SOUL retired, no file editors here).
 - **Apps.** Per-agent plugin grants (enabled-first list plus picker).
 
 ## Session facts and resets
