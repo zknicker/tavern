@@ -49,6 +49,6 @@ pointers, and per-participant follow records derived from parent membership.
   anchor short id (`#channel:shortid`, `dm:@name:shortid`), matching the
   CLI target grammar (D2) so renames propagate by construction.
 - Existing databases carry dead `parent_message_id`/`thread_root_id`
-  columns and a stale `chats.kind` CHECK constraint; the CHECK requires a
-  one-off operator-approved table rebuild at cutover (no migration code,
-  per program policy).
+  columns; the stale `chats.kind` CHECK constraint is rebuilt by the
+  startup schema-repair path (the same guarded rebuild that added the
+  `task` kind), so upgrades need no manual step.

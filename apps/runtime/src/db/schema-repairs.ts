@@ -56,8 +56,10 @@ CREATE INDEX IF NOT EXISTS idx_chat_response_activity_chat_sequence
 const CHATS_TABLE = `
 CREATE TABLE chats (
   id                    TEXT PRIMARY KEY,
-  kind                  TEXT NOT NULL DEFAULT 'channel' CHECK (kind IN ('channel', 'dm', 'task')),
+  kind                  TEXT NOT NULL DEFAULT 'channel' CHECK (kind IN ('channel', 'dm', 'task', 'thread')),
   title                 TEXT,
+  parent_chat_id        TEXT REFERENCES chats(id) ON DELETE CASCADE,
+  anchor_message_id     TEXT,
   pinned                INTEGER NOT NULL DEFAULT 0 CHECK (pinned IN (0, 1)),
   metadata_json         TEXT NOT NULL DEFAULT '{}',
   created_at            TEXT NOT NULL,
@@ -146,7 +148,7 @@ CREATE INDEX IF NOT EXISTS idx_tasks_epic
 
 export function repairRuntimeSchema(db: Database): void {
     ensureChatResponseActivityWidgetKind(db);
-    ensureChatsTaskKind(db);
+    ensureChatsKinds(db);
     ensureMemoryJobsSkillReviewKind(db);
     ensureSkillSourcesPluginSource(db);
     ensureTaskLabelRecords(db);
@@ -154,13 +156,14 @@ export function repairRuntimeSchema(db: Database): void {
     hydrateAgentSkillAssignments(db);
 }
 
-function ensureChatsTaskKind(db: Database): void {
+function ensureChatsKinds(db: Database): void {
     const sql = tableSql(db, 'chats');
 
-    if (!sql || sql.includes("'task'")) {
+    if (!sql || (sql.includes("'task'") && sql.includes("'thread'"))) {
         return;
     }
 
+    const columns = tableColumns(db, 'chats');
     let transactionOpen = false;
     db.exec('PRAGMA foreign_keys = OFF');
     try {
@@ -169,16 +172,19 @@ function ensureChatsTaskKind(db: Database): void {
         db.exec(`
 DROP TABLE IF EXISTS temp.chats_rebuild;
 CREATE TEMP TABLE chats_rebuild AS
-  SELECT id, kind, title, pinned, metadata_json, created_at, updated_at,
+  SELECT id, kind, title,
+         ${columnExpression(columns, 'parent_chat_id', 'NULL')} AS parent_chat_id,
+         ${columnExpression(columns, 'anchor_message_id', 'NULL')} AS anchor_message_id,
+         pinned, metadata_json, created_at, updated_at,
          last_message_sequence
   FROM chats;
 DROP TABLE chats;
 ${CHATS_TABLE};
 INSERT INTO chats
-  (id, kind, title, pinned, metadata_json, created_at, updated_at,
-   last_message_sequence)
-  SELECT id, kind, title, pinned, metadata_json, created_at, updated_at,
-         last_message_sequence
+  (id, kind, title, parent_chat_id, anchor_message_id, pinned, metadata_json,
+   created_at, updated_at, last_message_sequence)
+  SELECT id, kind, title, parent_chat_id, anchor_message_id, pinned,
+         metadata_json, created_at, updated_at, last_message_sequence
   FROM chats_rebuild;
 DROP TABLE temp.chats_rebuild;
 `);

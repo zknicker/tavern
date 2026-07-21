@@ -127,6 +127,43 @@ describe('Runtime DB schema repairs', () => {
         });
     });
 
+    it('repairs chat kind constraints to allow thread chats on upgraded databases', () => {
+        const db = initTestDb();
+        // Pre-thread era: 'task' is already present, so only the missing
+        // 'thread' kind (and the parent/anchor columns) triggers the rebuild.
+        db.exec(`
+CREATE TABLE chats (
+  id                    TEXT PRIMARY KEY,
+  kind                  TEXT NOT NULL DEFAULT 'channel' CHECK (kind IN ('channel', 'dm', 'task')),
+  title                 TEXT,
+  pinned                INTEGER NOT NULL DEFAULT 0 CHECK (pinned IN (0, 1)),
+  metadata_json         TEXT NOT NULL DEFAULT '{}',
+  created_at            TEXT NOT NULL,
+  updated_at            TEXT NOT NULL,
+  last_message_sequence INTEGER NOT NULL DEFAULT 0
+);
+INSERT INTO chats (id, kind, created_at, updated_at)
+  VALUES ('cht_existing', 'channel', '2026-01-01', '2026-01-01');
+`);
+
+        ensureRuntimeSchema(db);
+
+        expect(tableSql(db, 'chats')).toContain("'thread'");
+        expect(() =>
+            db
+                .prepare(
+                    `INSERT INTO chats
+                     (id, kind, parent_chat_id, anchor_message_id, created_at, updated_at)
+                     VALUES ('cht_thr_x', 'thread', 'cht_existing', 'msg_x',
+                             '2026-01-02', '2026-01-02')`
+                )
+                .run()
+        ).not.toThrow();
+        expect(db.prepare("SELECT kind FROM chats WHERE id = 'cht_existing'").get()).toEqual({
+            kind: 'channel',
+        });
+    });
+
     it('migrates legacy task labels into records and repairs task constraints', () => {
         const db = initTestDb();
         createLegacyTasksTable(db);
