@@ -14,6 +14,7 @@ export { AmbiguousMessageIdError, resolveMessageId } from './message-resolution'
 export {
     createMessage,
     deleteMessage,
+    findMessageByNonce,
     getMessage,
     latestMessageSequence,
     listMessages,

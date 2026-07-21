@@ -18,6 +18,22 @@ afterEach(() => {
 });
 
 describe('global help', () => {
+    test('agent shells list only the agent surface', () => {
+        vi.stubEnv('GROTTO_AGENT_ID', 'agt_otto');
+        const read = capture('stdout');
+        printGlobalHelp(process.stdout);
+        const out = read();
+        vi.unstubAllEnvs();
+
+        expect(out).toContain('Grotto Agent v');
+        for (const section of ['Messages', 'Inbox', 'Directory']) {
+            expect(out).toContain(section);
+        }
+        for (const hidden of ['Maintenance', 'Wiki', 'Engine', '  update', '  restart']) {
+            expect(out).not.toContain(hidden);
+        }
+    });
+
     test('lists sections in order with usage and environment', () => {
         const read = capture('stdout');
         printGlobalHelp(process.stdout);

@@ -40,13 +40,16 @@ export function readAgentHistory(
               before: around + Math.floor(limit / 2) + 1,
           }
         : { after: after ?? 0, before };
+    // No anchor (or --before only) pages from the newest row backward; --after
+    // and --around scan forward from their lower bound.
+    const newestFirst = !(after || around);
     const rows = db
         .prepare(
             `SELECT * FROM chat_messages
              WHERE chat_id = $chatId
                AND sequence > $after
                AND ($before IS NULL OR sequence < $before)
-             ORDER BY sequence ASC
+             ORDER BY sequence ${newestFirst ? 'DESC' : 'ASC'}
              LIMIT $limit`
         )
         .all(
@@ -57,6 +60,9 @@ export function readAgentHistory(
                 limit,
             })
         ) as MessageRow[];
+    if (newestFirst) {
+        rows.reverse();
+    }
     const messages = rows.map((row) => rowToMessage(row, db));
     const newestServed = messages.at(-1)?.sequence;
     if (newestServed) {

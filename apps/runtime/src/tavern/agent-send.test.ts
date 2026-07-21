@@ -184,6 +184,17 @@ describe('agent attested sends', () => {
         expect(first.message.metadata).toMatchObject({ compositionId: 'cmp_1' });
         expect(second).toMatchObject({ message: { id: first.message.id }, state: 'sent' });
         expect(listMessages('cht_general').messages).toHaveLength(1);
+
+        // A retry stays idempotent even when peer traffic arrived after the
+        // original commit — the gate must not hold a same-nonce resend.
+        peerMessage('msg_00000000000000000000000000000021', 'landed between retries');
+        const retried = sendAgentMessage('agt_otto', {
+            content: 'once',
+            nonce: 'stable-nonce',
+            target: '#general',
+        });
+        expect(retried).toMatchObject({ message: { id: first.message.id }, state: 'sent' });
+        expect(listMessages('cht_general').messages).toHaveLength(2);
     });
 });
 

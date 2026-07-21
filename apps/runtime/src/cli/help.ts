@@ -64,9 +64,9 @@ export function printGlobalHelp(stream: NodeJS.WriteStream): void {
         `${heading('Usage', stream)}\n  grotto <command> [flags]`,
     ];
 
-    const sectionOrder = agentEnvironment
-        ? [...AGENT_SECTION_ORDER, ...SECTION_ORDER]
-        : SECTION_ORDER;
+    // Agent shells see only the agent surface; operator sections stay hidden
+    // there (main.ts refuses them with OPERATOR_COMMAND_UNAVAILABLE anyway).
+    const sectionOrder = agentEnvironment ? AGENT_SECTION_ORDER : SECTION_ORDER;
     for (const section of sectionOrder) {
         const entries = LISTED_COMMANDS.filter((command) => command.section === section);
         if (entries.length === 0) {

@@ -123,7 +123,7 @@ describe('dispatch', () => {
         expect(out).toContain("Run 'grotto help <command>' for details.");
     });
 
-    test('agent identity makes bare help agent-first without a Runtime probe', async () => {
+    test('agent identity makes bare help agent-only without a Runtime probe', async () => {
         const previous = process.env.GROTTO_AGENT_ID;
         process.env.GROTTO_AGENT_ID = 'agt_wren';
         const fetcher = vi.spyOn(globalThis, 'fetch');
@@ -133,9 +133,10 @@ describe('dispatch', () => {
             expect(result).toEqual({ kind: 'exit', code: 0 });
             const out = read();
             expect(out).toContain('Grotto Agent');
-            expect(out.indexOf('Messages')).toBeLessThan(out.indexOf('Server'));
+            expect(out).toContain('Messages');
             expect(out).toContain('message');
-            expect(out).toContain('serve');
+            expect(out).not.toContain('Maintenance');
+            expect(out).not.toContain('Run the foreground');
             expect(fetcher).not.toHaveBeenCalled();
         } finally {
             if (previous === undefined) {

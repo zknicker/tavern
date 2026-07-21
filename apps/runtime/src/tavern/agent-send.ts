@@ -6,7 +6,7 @@ import { ensureCurrentAgentSession } from './agent-session-store.ts';
 import { resolveAgentTarget } from './agent-targets.ts';
 import { getStoredAgent } from './agents-store.ts';
 import { createAgentParticipantId } from './chat-api/ids.ts';
-import { createMessage, createMessageId } from './chat-api/index.ts';
+import { createMessage, createMessageId, findMessageByNonce } from './chat-api/index.ts';
 import { collectRecentUnread, resolveSendHold } from './send-hold.ts';
 
 export const agentSendRequestSchema = z
@@ -50,14 +50,19 @@ export function sendAgentMessage(
           };
     const session = ensureCurrentAgentSession({ agentId });
     const participantId = createAgentParticipantId(agentId);
-    const hold = input.continueAnyway
-        ? null
-        : resolveSendHold({
-              agentId,
-              chatId: resolved.chat.id,
-              participantId,
-              sessionId: session.id,
-          });
+    // A same-nonce retry of a committed send stays idempotent even when newer
+    // peer traffic would otherwise hold it — the original send already passed
+    // the gate.
+    const committed = input.nonce ? findMessageByNonce(resolved.chat.id, input.nonce) : null;
+    const hold =
+        committed || input.continueAnyway
+            ? null
+            : resolveSendHold({
+                  agentId,
+                  chatId: resolved.chat.id,
+                  participantId,
+                  sessionId: session.id,
+              });
     if (hold) {
         const draft = saveAgentDraft({
             agentId,

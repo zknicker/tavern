@@ -271,6 +271,19 @@ export function getMessageOrThrow(id: string, db: Database): TavernChatMessage {
     return message;
 }
 
+export function findMessageByNonce(
+    chatId: string,
+    nonce: string,
+    db: Database = getDb()
+): TavernChatMessage | null {
+    const row = optionalRow(
+        db
+            .prepare('SELECT * FROM chat_messages WHERE chat_id = $chatId AND nonce = $nonce')
+            .get(namedParams({ chatId, nonce })) as MessageRow | null
+    );
+    return row ? rowToMessage(row, db) : null;
+}
+
 export function findExistingMessage(
     chatId: string,
     input: TavernCreateMessageRequest,
