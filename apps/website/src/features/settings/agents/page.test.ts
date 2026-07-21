@@ -17,15 +17,15 @@ test('selectSettingsAgent falls back to the first listed agent', () => {
     assert.equal(selectSettingsAgent(agents, 'missing')?.id, 'agt_alpha');
 });
 
-test('createNewAgentName picks the next available default name', () => {
-    assert.equal(createNewAgentName(agents), 'New agent');
+test('createNewAgentName picks the next available handle-valid default', () => {
+    assert.equal(createNewAgentName(agents), 'new-agent');
     assert.equal(
         createNewAgentName([
             ...agents,
-            createAgent({ id: 'agt_new', name: 'New agent' }),
-            createAgent({ id: 'agt_new_2', name: 'New agent 2' }),
+            createAgent({ id: 'agt_new', name: 'new-agent' }),
+            createAgent({ id: 'agt_new_2', name: 'new-agent-2' }),
         ]),
-        'New agent 3'
+        'new-agent-3'
     );
 });
 

@@ -14,15 +14,16 @@ export function selectSettingsAgent(
     return agents[0] ?? null;
 }
 
+// Agent names are handles: single tokens, unique case-insensitively.
 export function createNewAgentName(agents: AgentListOutput['agents']) {
     const names = new Set(agents.map((agent) => agent.name.trim().toLowerCase()));
-    if (!names.has('new agent')) {
-        return 'New agent';
+    if (!names.has('new-agent')) {
+        return 'new-agent';
     }
 
     let suffix = 2;
-    while (names.has(`new agent ${suffix}`)) {
+    while (names.has(`new-agent-${suffix}`)) {
         suffix += 1;
     }
-    return `New agent ${suffix}`;
+    return `new-agent-${suffix}`;
 }
