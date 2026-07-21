@@ -2,10 +2,12 @@ import * as React from 'react';
 import { Navigate, useParams } from 'react-router-dom';
 import { ListPageSkeleton } from '../../features/shell/page-skeletons.tsx';
 import { TaskDetail } from '../../features/tasks/task-detail.tsx';
+import { useMarkTasksSeen } from '../../hooks/shell/use-mark-tasks-seen.ts';
 import { appRoutes } from '../../lib/app-routes.ts';
 
 export function TaskDetailPage() {
     const { taskId } = useParams<{ taskId: string }>();
+    useMarkTasksSeen();
 
     if (!taskId) {
         return <Navigate replace to={appRoutes.tasks} />;

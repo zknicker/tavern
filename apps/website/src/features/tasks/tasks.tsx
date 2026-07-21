@@ -7,7 +7,6 @@ import {
     useRuntimeConnection,
 } from '../../hooks/connections/use-runtime-connection.ts';
 import { useLabelList } from '../../hooks/labels/use-label-list.ts';
-import { markTasksSeen } from '../../hooks/shell/use-rail-unseen.ts';
 import { useSearch } from '../../hooks/shell/use-search.ts';
 import { useAutoDispatchSettings } from '../../hooks/tasks/use-auto-dispatch-settings.ts';
 import { useTaskList } from '../../hooks/tasks/use-task-list.ts';
@@ -57,21 +56,6 @@ export function Tasks({ conversationId, embedded = false }: TasksProps = {}) {
         [conversationId, tasks]
     );
 
-    // Stamp on every change while the page is open, not just on mount, so
-    // task movement the user just watched never re-lights the rail dot.
-    // Covering the newest loaded updatedAt also absorbs server timestamps
-    // that run ahead of the local clock.
-    React.useEffect(() => {
-        if (embedded) {
-            return;
-        }
-
-        const latestTaskUpdate = tasks.reduce(
-            (latest, task) => Math.max(latest, Date.parse(task.updatedAt) || 0),
-            0
-        );
-        markTasksSeen(Math.max(Date.now(), latestTaskUpdate));
-    }, [embedded, tasks]);
     const agents = useAgentSelectOptions(agentsQuery.data?.agents);
     const labels = React.useMemo(() => labelsQuery.data?.labels ?? [], [labelsQuery.data?.labels]);
     const tasksById = React.useMemo(() => new Map(tasks.map((task) => [task.id, task])), [tasks]);
@@ -92,8 +76,8 @@ export function Tasks({ conversationId, embedded = false }: TasksProps = {}) {
     const selection = useTaskSelection(orderedIds);
 
     const queueSummary = React.useMemo(
-        () => summarizeDispatchQueue(tasks, tasksById),
-        [tasks, tasksById]
+        () => summarizeDispatchQueue(scopedTasks, tasksById),
+        [scopedTasks, tasksById]
     );
     const showQueueIndicator =
         autoDispatch.healthy && autoDispatchSettings.settings.autoDispatchEnabled;
