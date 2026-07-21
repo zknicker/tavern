@@ -13,8 +13,19 @@ type QmdModule = typeof import('@tobilu/qmd');
 let loaded: Promise<QmdModule> | null = null;
 
 export function loadQmd(): Promise<QmdModule> {
+    configureQmdRuntimeEnvironment(process.platform, process.env);
     loaded ??= importQmd();
     return loaded;
+}
+
+export function configureQmdRuntimeEnvironment(platform: NodeJS.Platform, env: NodeJS.ProcessEnv) {
+    if (
+        platform === 'darwin' &&
+        env.QMD_METAL_KEEP_RESIDENCY !== '1' &&
+        !env.GGML_METAL_NO_RESIDENCY
+    ) {
+        env.GGML_METAL_NO_RESIDENCY = '1';
+    }
 }
 
 async function importQmd(): Promise<QmdModule> {

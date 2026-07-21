@@ -42,6 +42,7 @@ const main = async () => {
         'build',
         'apps/runtime/src/index.ts',
         '--compile',
+        '--compile-autoload-package-json',
         '--outfile',
         path.join(stageRoot, 'bin', 'grotto'),
     ]);

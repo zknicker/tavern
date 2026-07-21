@@ -8,6 +8,15 @@ import {
     findUnexpectedRuntimeAssetPaths,
 } from './build-runtime-artifact.mjs';
 
+test('compiled Runtime loads package metadata for external dependencies', async () => {
+    const source = await fs.readFile(
+        path.resolve(import.meta.dirname, 'build-runtime-artifact.mjs'),
+        'utf8'
+    );
+
+    assert.match(source, /'--compile-autoload-package-json'/u);
+});
+
 test('runtime artifact validation catches missing staged SDK', async () => {
     const stageRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'grotto-runtime-artifact-'));
 
