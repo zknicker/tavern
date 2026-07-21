@@ -22,7 +22,11 @@ export async function listChatFiles(chatId: string) {
         });
 
         if (!page) {
-            break;
+            // Unlike the log page (which degrades to empty for sync-first
+            // rendering), a partial walk here would overwrite cached metadata
+            // with a false "no files" result — fail so the client keeps the
+            // last good list.
+            throw new Error('Chat files are unavailable while Runtime is unreachable.');
         }
 
         for (const row of page.rows) {
