@@ -8,6 +8,12 @@ read_when:
 
 # Widgets use tagged fences
 
+> Amended 2026-07-20: the closed widget catalog this ADR introduced is
+> retired. The tagged-fence mechanism and the `tavern.widget.<name>` activity
+> envelope survive, but the only fences agents author are `visual` and
+> `artifact`; stored catalog widgets replay as fallback cards. See
+> [widgets.md](../internals/widgets.md) and ADR 0012.
+
 Tavern renders assistant UI as Widgets: the assistant writes one fenced code
 block per widget whose language is `widget:<name>`, containing exactly one flat
 JSON object validated by that widget's Zod props schema. Widgets store as

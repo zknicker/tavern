@@ -109,7 +109,7 @@ describe('Tavern Runtime Chat API store', () => {
             'cht_agt_wren_dm',
             developmentChatDemoIds.demo,
             developmentChatDemoIds.team,
-            developmentChatDemoIds.widgets,
+            developmentChatDemoIds.visuals,
             'cht_tavern_agent_dm',
         ]);
         expect(getChat(developmentChatDemoIds.demo)).toMatchObject({
@@ -124,79 +124,21 @@ describe('Tavern Runtime Chat API store', () => {
         });
 
         const demoMessages = listMessages(developmentChatDemoIds.demo).messages;
-        expect(demoMessages).toHaveLength(43);
+        expect(demoMessages).toHaveLength(31);
         expect(demoMessages.slice(0, -1).map((message) => message.role)).toEqual(
-            Array.from({ length: 42 }, (_, index) => (index % 2 === 0 ? 'user' : 'assistant'))
+            Array.from({ length: 30 }, (_, index) => (index % 2 === 0 ? 'user' : 'assistant'))
         );
         expect(demoMessages.at(-1)).toMatchObject({
             id: 'msg_demo_streaming_stack_request',
             role: 'user',
         });
         expect(demoMessages.map((message) => message.id).slice(0, 4)).toEqual([
-            'msg_demo_charts_request',
-            'msg_demo_charts_response',
-            'msg_demo_merchbase_sales_chart_request',
-            'msg_demo_merchbase_sales_chart_response',
+            'msg_demo_artifact_links_request',
+            'msg_demo_artifact_links_response',
+            'msg_demo_long_content_request',
+            'msg_demo_long_content_response',
         ]);
-        expect(listResponses(developmentChatDemoIds.demo).responses).toHaveLength(22);
-        expect(
-            listResponses(developmentChatDemoIds.demo).responses.find(
-                (response) => response.id === 'rsp_demo_charts'
-            )
-        ).toMatchObject({
-            id: 'rsp_demo_charts',
-            request_message_id: 'msg_demo_charts_request',
-            response_message_id: 'msg_demo_charts_response',
-            status: 'completed',
-        });
-        expect(getResponseActivity('act_demo_charts_widget_1')).toMatchObject({
-            id: 'act_demo_charts_widget_1',
-            kind: 'widget',
-            metadata: {
-                widget: { component: 'tavern.widget.bar-chart' },
-            },
-            status: 'completed',
-            title: 'Bar chart',
-        });
-        expect(getResponseActivity('act_demo_charts_widget_3')).toMatchObject({
-            id: 'act_demo_charts_widget_3',
-            kind: 'widget',
-            metadata: {
-                widget: { component: 'tavern.widget.composed-chart' },
-            },
-            status: 'completed',
-            title: 'Chart',
-        });
-        expect(getResponseActivity('act_demo_calendar_day_widget')).toMatchObject({
-            id: 'act_demo_calendar_day_widget',
-            kind: 'widget',
-            status: 'completed',
-            title: 'Agenda',
-        });
-        expect(getResponseActivity('act_demo_merchbase_sales_chart')).toMatchObject({
-            id: 'act_demo_merchbase_sales_chart',
-            kind: 'widget',
-            metadata: {
-                widget: { component: 'tavern.widget.merchbase-sales-chart' },
-            },
-            status: 'completed',
-            title: 'MerchBase sales chart',
-        });
-        expect(getResponseActivity('act_demo_calendar_event_widget')).toMatchObject({
-            id: 'act_demo_calendar_event_widget',
-            kind: 'widget',
-            status: 'completed',
-            title: 'Calendar event',
-        });
-        expect(getResponseActivity('act_demo_widget_table')).toMatchObject({
-            id: 'act_demo_widget_table',
-            kind: 'widget',
-            metadata: {
-                widget: { component: 'tavern.widget.table' },
-            },
-            status: 'completed',
-            title: 'Table',
-        });
+        expect(listResponses(developmentChatDemoIds.demo).responses).toHaveLength(16);
         expect(
             listMessages(developmentChatDemoIds.demo).messages.find(
                 (message) => message.id === 'msg_demo_attachment_request'
@@ -233,17 +175,17 @@ describe('Tavern Runtime Chat API store', () => {
         const db = getDb();
         seedDevelopmentChatDemos({ db, enabled: true });
         db.prepare('DELETE FROM chat_response_activity WHERE response_id = $responseId').run(
-            namedParams({ responseId: 'rsp_demo_charts' })
+            namedParams({ responseId: 'rsp_demo_visuals_visual_chart' })
         );
-        upsertResponseActivity(developmentChatDemoIds.demo, 'rsp_demo_charts', {
-            id: 'act_demo_charts_tool',
+        upsertResponseActivity(developmentChatDemoIds.visuals, 'rsp_demo_visuals_visual_chart', {
+            id: 'act_demo_visuals_visual_chart_tool',
             kind: 'tool_call',
             sequence: 1,
             status: 'completed',
-            title: 'old chart activity',
+            title: 'old visual activity',
         });
-        upsertResponseActivity(developmentChatDemoIds.demo, 'rsp_demo_charts', {
-            id: 'act_demo_charts_widget_stale',
+        upsertResponseActivity(developmentChatDemoIds.visuals, 'rsp_demo_visuals_visual_chart', {
+            id: 'act_demo_visuals_visual_chart_stale',
             kind: 'widget',
             sequence: 2,
             status: 'completed',
@@ -258,77 +200,52 @@ describe('Tavern Runtime Chat API store', () => {
                  WHERE response_id = $responseId
                  ORDER BY sequence ASC`
             )
-            .all(namedParams({ responseId: 'rsp_demo_charts' })) as {
+            .all(namedParams({ responseId: 'rsp_demo_visuals_visual_chart' })) as {
             id: string;
             sequence: number;
         }[];
 
-        expect(rows.map((row) => row.id)).toEqual([
-            'act_demo_charts_widget_1',
-            'act_demo_charts_widget_2',
-            'act_demo_charts_widget_3',
-        ]);
+        expect(rows.map((row) => row.id)).toEqual(['act_demo_visuals_visual_chart_1']);
     });
 
     it('removes obsolete per-feature development demo chats', () => {
         createChat({
-            id: 'cht_demo_charts',
+            id: 'cht_demo_artifact_links',
             metadata: {
                 tavern: {
                     archived: false,
-                    displayName: 'Demo: Charts',
+                    displayName: 'Demo: Artifact Links',
                 },
             },
-            title: 'Demo: Charts',
-        });
-
-        seedDevelopmentChatDemos({ db: getDb(), enabled: true });
-
-        expect(getChat('cht_demo_charts')).toBeNull();
-        expect(getChat(developmentChatDemoIds.demo)).toMatchObject({
-            id: developmentChatDemoIds.demo,
-            title: 'demo',
-        });
-    });
-
-    it('removes obsolete demo rows before reusing stable ids in the demo channel', () => {
-        createChat({
-            id: 'cht_demo_charts',
-            metadata: {
-                tavern: {
-                    archived: false,
-                    displayName: 'Demo: Charts',
-                },
-            },
-            title: 'Demo: Charts',
+            title: 'Demo: Artifact Links',
         });
         createMessage(
-            'cht_demo_charts',
-            messageInput('msg_demo_charts_request', 'old-user', 'old')
+            'cht_demo_artifact_links',
+            messageInput('msg_demo_artifact_links_request', 'old-user', 'old')
         );
         createMessage(
-            'cht_demo_charts',
-            messageInput('msg_demo_charts_response', 'old-agent', 'old response')
+            'cht_demo_artifact_links',
+            messageInput('msg_demo_artifact_links_response', 'old-agent', 'old response')
         );
-        upsertResponse('cht_demo_charts', {
-            id: 'rsp_demo_charts',
+        upsertResponse('cht_demo_artifact_links', {
+            id: 'rsp_demo_artifact_links',
             participant_id: 'agt_primary',
-            request_message_id: 'msg_demo_charts_request',
-            response_message_id: 'msg_demo_charts_response',
+            request_message_id: 'msg_demo_artifact_links_request',
+            response_message_id: 'msg_demo_artifact_links_response',
             status: 'completed',
         });
 
         expect(() => seedDevelopmentChatDemos({ db: getDb(), enabled: true })).not.toThrow();
 
-        expect(getChat('cht_demo_charts')).toBeNull();
-        expect(getResponse('rsp_demo_charts')).toMatchObject({
+        expect(getChat('cht_demo_artifact_links')).toBeNull();
+        expect(getResponse('rsp_demo_artifact_links')).toMatchObject({
             chat_id: developmentChatDemoIds.demo,
-            request_message_id: 'msg_demo_charts_request',
-            response_message_id: 'msg_demo_charts_response',
+            request_message_id: 'msg_demo_artifact_links_request',
+            response_message_id: 'msg_demo_artifact_links_response',
         });
         expect(
             listMessages(developmentChatDemoIds.demo).messages.map((message) => message.id)
-        ).toContain('msg_demo_charts_request');
+        ).toContain('msg_demo_artifact_links_request');
     });
 
     it('soft-deletes a response and projects a history change', () => {

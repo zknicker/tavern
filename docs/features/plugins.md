@@ -1,8 +1,8 @@
 ---
-summary: Plugins feature for Runtime-owned external service settings, health, agent tools, and Plugin-backed Widgets.
+summary: Plugins feature for Runtime-owned external service settings, health, and agent tools.
 read_when:
   - changing the Plugins settings surface
-  - changing Plugin-owned skills, tools, health, or Widgets
+  - changing Plugin-owned skills, tools, or health
   - adding a first-party external service capability
 ---
 
@@ -22,11 +22,10 @@ and repair; agents only get Plugin tools when the Plugin and Service are usable.
 * **Plugin skills and tools.** Enabled Plugin Services expose their agent-facing
   skills and tools through Plugin grants.
 * **MerchBase.** The first Plugin provides read-only sales, product, catalog,
-  and design tools plus the `merchbase-sales-chart` Widget. The
-  `merchbase_sales_series` tool is the typed sales primitive: granted agents
-  fetch ISO-dated rows and totals (daily ranges include explicit zero-sales
-  days) and present the data themselves; plugin-gated prompt guidance teaches
-  that flow.
+  and design tools. The `merchbase_sales_series` tool is the typed sales
+  primitive: granted agents fetch ISO-dated rows and totals (daily ranges
+  include explicit zero-sales days) and present the data themselves as
+  inline visuals; plugin-gated skill guidance teaches that flow.
 * **Google.** The Google Plugin starts with Google Calendar. Settings manages
   loopback authorization, stored tokens, and the Calendar Service toggle. The
   app ships the Tavern-owned Google OAuth client.
@@ -42,7 +41,7 @@ Plugins are Runtime-owned product capabilities and Tavern-managed,
 manifest-declared bundles. Runtime stores their settings, keeps list and summary
 reads redacted, returns secrets to the local owner in settings detail views,
 checks health, stores Service enablement, and exposes narrow read actions for
-managed tools and Widgets.
+managed tools.
 
 Plugins are Tavern's normal user-facing integration surface. A Plugin may be
 implemented with direct API calls, local commands, or MCP internally, but users
@@ -51,8 +50,8 @@ servers in the default product flow.
 
 Plugin enablement, Service enablement, and the agent's Plugin grant are the
 source of truth for Plugin-owned skills and tools. Users do not enable
-individual Plugin tool rows. Runtime only materializes Plugin-owned skills,
-tools, and Widget authoring guidance into an agent turn when the Plugin
+individual Plugin tool rows. Runtime only materializes Plugin-owned skills
+and tools into an agent turn when the Plugin
 is enabled, the Service is enabled, required connection scopes are granted, and
 the Plugin is granted to that agent.
 
@@ -66,8 +65,8 @@ Skills & Plugins page with a short hint and resume when the Plugin is enabled
 again.
 
 The Plugin manifest declares inventory and ownership metadata: Plugin id, name,
-version, settings, secrets, Plugin-level health capability ids, Services, and
-Widgets. Each Service declares its own health capability ids,
+version, settings, secrets, Plugin-level health capability ids, and
+Services. Each Service declares its own health capability ids,
 agent-facing skills, and tool groups. In v1, manifests do not declare arbitrary
 executable wiring or enumerate Plugin-internal read operations. Runtime and App
 still import first-party Plugin modules directly.
@@ -100,8 +99,8 @@ switching, setup repair, or secret-changing flows. Those stay user-managed
 settings or app controls.
 
 Plugin packages are implementation packaging. Tavern shows the Plugin,
-agent-facing skill, tool, or Widget, not a user-installed
-package as a separate product row.
+agent-facing skill, or tool, not a user-installed package as a separate
+product row.
 
 ## Related Docs
 

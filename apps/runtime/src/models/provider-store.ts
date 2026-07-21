@@ -199,6 +199,12 @@ async function providerAccess(spec: ModelCatalogProviderSpec): Promise<{
             : { description: 'Add an Anthropic API key.', state: 'needs-auth' };
     }
 
+    if (spec.provider.id === 'kimi') {
+        return spec.authenticated()
+            ? { description: 'Kimi Code subscription is connected.', state: 'live' }
+            : { description: 'Sign in with Kimi Code.', state: 'needs-auth' };
+    }
+
     return spec.authenticated()
         ? { description: `${spec.provider.label} is configured.`, state: 'live' }
         : { description: `${spec.provider.label} needs setup.`, state: 'needs-auth' };

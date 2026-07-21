@@ -105,6 +105,15 @@ export function buildVisualSrcDoc(html: string, tokensCss: string): string {
         `:root { color-scheme: ${scheme}; ${tokensCss ? `\n${tokensCss}` : ''} }`,
         '* { box-sizing: border-box; }',
         'body { margin: 0; padding: 16px; background: transparent; color: var(--foreground, inherit); font-family: var(--font-sans, system-ui, sans-serif); font-size: var(--app-ui-font-size, 14px); line-height: 1.5; -webkit-font-smoothing: antialiased; }',
+        // Plain <table> markup wears the app's ui/table.tsx look, so agents
+        // render tabular data as bare HTML tables and get native theming.
+        'table { width: 100%; border-collapse: collapse; caption-side: bottom; font-size: var(--app-ui-font-size, 14px); }',
+        'th { padding: 8px 12px; text-align: left; vertical-align: middle; font-weight: 500; color: var(--foreground); line-height: 1.1; }',
+        'td { padding: 8px 12px; vertical-align: middle; color: var(--muted-foreground); line-height: 1.2; }',
+        'tr { border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent); }',
+        'tbody tr:hover { background: color-mix(in srgb, var(--foreground) 5%, transparent); }',
+        'tfoot { font-weight: 500; } tfoot tr { border-top: 1px solid color-mix(in srgb, var(--border) 60%, transparent); border-bottom: none; }',
+        'caption { margin-top: 12px; color: var(--muted-foreground); text-align: left; }',
         '</style>',
         `<script>${sizeReporterScript}</script>`,
         '</head><body>',

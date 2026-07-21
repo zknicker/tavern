@@ -8,6 +8,7 @@ import {
     type AgentModelProvider,
     defaultClaudeModel,
     defaultCodexModel,
+    defaultKimiModel,
     defaultOpenAiModel,
     isAgentModelProvider,
 } from './contracts.ts';
@@ -135,6 +136,8 @@ function defaultModelForProvider(provider: AgentModelProvider) {
             return defaultClaudeModel;
         case 'codex':
             return defaultCodexModel;
+        case 'kimi':
+            return defaultKimiModel;
         case 'openai':
         case 'openai-compatible':
             return defaultOpenAiModel;

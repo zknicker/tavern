@@ -3,9 +3,11 @@ import { readConfigValue } from '../config.ts';
 import { getAnthropicApiKey } from '../model-access/anthropic-settings.ts';
 import { hasClaudeCredentials } from '../model-access/claude-settings.ts';
 import { hasHostClaudeLogin } from '../model-access/host-claude-login.ts';
+import { hasKimiCredentials } from '../model-access/kimi-settings.ts';
 import { getOpenAiApiKey } from '../model-access/openai-settings.ts';
 import { resolveClaudeModelCatalog } from './provider-sources/claude.ts';
 import { resolveCodexModelCatalog } from './provider-sources/codex.ts';
+import { resolveKimiModelCatalog } from './provider-sources/kimi.ts';
 import { resolveOpenAiModelCatalog } from './provider-sources/openai.ts';
 import type {
     AgentRuntimeModelProviderEntry,
@@ -40,6 +42,11 @@ export const anthropicProvider = {
 export const openAiProvider = {
     id: 'openai',
     label: 'OpenAI',
+} as const satisfies ModelCatalogProvider;
+
+export const kimiProvider = {
+    id: 'kimi',
+    label: 'Kimi Code',
 } as const satisfies ModelCatalogProvider;
 
 export function modelCatalogProviderSpecs(): ModelCatalogProviderSpec[] {
@@ -98,6 +105,16 @@ export function modelCatalogProviderSpecs(): ModelCatalogProviderSpec[] {
                     command: claudeCommand,
                     provider: anthropicProvider,
                 }),
+        },
+        {
+            // Kimi Code signs in through the runtime's OAuth device flow;
+            // turns run on the pi harness against the subscription endpoint.
+            authenticated: () => hasKimiCredentials(),
+            authType: 'oauth_device_code',
+            keyEnv: null,
+            oauthFlow: 'device_code',
+            provider: kimiProvider,
+            resolveCatalog: () => resolveKimiModelCatalog(kimiProvider),
         },
     ];
 }

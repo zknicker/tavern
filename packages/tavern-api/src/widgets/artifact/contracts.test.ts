@@ -56,6 +56,6 @@ describe('artifact widget contracts', () => {
 
     test('the fence label is bare artifact, not widget-prefixed', () => {
         expect(widgetFenceLabel('artifact')).toBe('artifact');
-        expect(widgetFenceLabel('bar-chart')).toBe('widget:bar-chart');
+        expect(widgetFenceLabel('visual')).toBe('visual');
     });
 });

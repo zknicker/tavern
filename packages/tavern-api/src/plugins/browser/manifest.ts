@@ -36,5 +36,4 @@ export const browserPluginManifest = tavernPluginManifestSchema.parse({
     ],
     settings: ['profileName'],
     version: '1.0.0',
-    widgets: [],
 });
