@@ -136,11 +136,9 @@ export function createAppRouter() {
                                         },
                                         {
                                             path: 'chats',
-                                            element: (
-                                                <Navigate
-                                                    replace
-                                                    to={buildDefaultWorkspaceChatPath()}
-                                                />
+                                            lazy: lazyRoute(
+                                                () => import('./routes/app/default-chat-page.tsx'),
+                                                'DefaultChatPage'
                                             ),
                                         },
                                         {

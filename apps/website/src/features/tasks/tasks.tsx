@@ -162,6 +162,7 @@ export function Tasks({ conversationId, embedded = false }: TasksProps = {}) {
             selection={selection}
             showQueueIndicator={showQueueIndicator}
             tasks={scopedTasks}
+            tasksById={tasksById}
             view={view}
         />
     );

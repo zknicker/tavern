@@ -29,6 +29,7 @@ const manageLabelsValue = 'manage:labels';
 interface TasksToolbarProps {
     agents: AgentSelectOption[];
     assignee: TaskAssigneeFilter;
+    hideCreate?: boolean;
     label: TaskLabelFilter;
     labels: LabelRecord[];
     onAssigneeChange: (assignee: TaskAssigneeFilter) => void;
@@ -45,6 +46,7 @@ interface TasksToolbarProps {
 export function TasksToolbar({
     agents,
     assignee,
+    hideCreate = false,
     label,
     labels,
     onAssigneeChange,
@@ -128,15 +130,20 @@ export function TasksToolbar({
                     />
                 </div>
             ) : null}
-            <Button
-                className={cn('shrink-0', showQueueIndicator ? null : 'ml-auto')}
-                onClick={onCreate}
-                type="button"
-                variant="secondary"
-            >
-                <Icon aria-hidden="true" className="size-4" icon={Plus} />
-                New task
-            </Button>
+            {hideCreate ? null : (
+                // Hidden in the embedded conversation tab: the global form
+                // cannot carry the conversation origin (originChatId is
+                // runtime-set on tasks filed from chat).
+                <Button
+                    className={cn('shrink-0', showQueueIndicator ? null : 'ml-auto')}
+                    onClick={onCreate}
+                    type="button"
+                    variant="secondary"
+                >
+                    <Icon aria-hidden="true" className="size-4" icon={Plus} />
+                    New task
+                </Button>
+            )}
 
             <ManageLabelsDialog onOpenChange={setManageLabelsOpen} open={manageLabelsOpen} />
         </ContentTopbar>
