@@ -5,17 +5,14 @@ import {
     ChatIcon,
     ComputerTerminal01Icon,
     Database02Icon,
-    FileEditIcon,
     HourglassIcon,
     PaintBrush03Icon,
     PuzzleIcon,
     SystemUpdate01Icon,
     UserCircleIcon,
-    UserMultiple02Icon,
     ZapIcon,
 } from '@hugeicons-pro/core-stroke-rounded';
 import { appRoutes } from '../../../lib/app-routes.ts';
-import type { AgentSettingsTab } from '../../agents/agent-path.ts';
 
 export const staticSettingsNavItems = [
     {
@@ -35,12 +32,6 @@ export const staticSettingsNavItems = [
         id: 'profile',
         label: 'Profile',
         to: appRoutes.settingsProfile,
-    },
-    {
-        icon: UserMultiple02Icon,
-        id: 'members',
-        label: 'Members',
-        to: appRoutes.settingsMembers,
     },
     {
         icon: SystemUpdate01Icon,
@@ -97,33 +88,7 @@ export const staticSettingsNavItems = [
     to: string;
 }>;
 
-export const agentSettingsNavItems = [
-    {
-        icon: FileEditIcon,
-        id: 'agent-general',
-        label: 'General',
-        tab: 'general',
-    },
-    {
-        icon: ZapIcon,
-        id: 'agent-skills',
-        label: 'Skills & Plugins',
-        tab: 'skills',
-    },
-    {
-        icon: ChatIcon,
-        id: 'agent-channels',
-        label: 'Channels',
-        tab: 'channels',
-    },
-] as const satisfies ReadonlyArray<{
-    icon: IconSvgElement;
-    id: string;
-    label: string;
-    tab: AgentSettingsTab;
-}>;
-
-export const settingsNavItems = [...staticSettingsNavItems, ...agentSettingsNavItems] as const;
+export const settingsNavItems = staticSettingsNavItems;
 
 export const settingsNavSections = [
     {
@@ -132,7 +97,6 @@ export const settingsNavSections = [
             'agent-runtime',
             'appearance',
             'profile',
-            'members',
             'updates',
             'models',
             'memories',
@@ -150,13 +114,3 @@ export const settingsNavSections = [
 
 export type SettingsNavItem = (typeof settingsNavItems)[number];
 export type SettingsRouteTab = SettingsNavItem['id'];
-
-export function resolveAgentSettingsNavOpen({
-    isAgentActive,
-    manualOpen,
-}: {
-    isAgentActive: boolean;
-    manualOpen: boolean | null;
-}) {
-    return manualOpen ?? isAgentActive;
-}

@@ -48,7 +48,7 @@ export function AgentInstructionsPreviewDrawer({
                 <DrawerHeader>
                     <DrawerTitle>System Prompt Preview</DrawerTitle>
                     <DrawerDescription className="text-sm">
-                        See the full instructions your agent will use, including Grotto guidance and
+                        See the full instructions your agent will use, including Tavern guidance and
                         your saved custom instructions.
                     </DrawerDescription>
                 </DrawerHeader>

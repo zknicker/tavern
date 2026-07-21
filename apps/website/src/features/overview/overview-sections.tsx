@@ -17,7 +17,6 @@ import { appRoutes } from '../../lib/app-routes.ts';
 import { formatRelativeTime } from '../../lib/format.ts';
 import type { AgentActivityOutput, AgentListOutput, AgentPresenceOutput } from '../../lib/trpc.tsx';
 import { resolveAgentInk } from '../agents/agent-color-presets.ts';
-import { buildAgentPath } from '../agents/agent-path.ts';
 import { AgentFace } from '../chats/agent-face.tsx';
 import { buildChatList, type ChatListItem } from '../chats/chat-list-data.ts';
 import { buildChatPath } from '../chats/chat-path.ts';
@@ -53,7 +52,7 @@ export function OverviewAgentCards({
                     <Link
                         className="group min-w-56 flex-1 sm:max-w-80"
                         key={agent.id}
-                        to={buildAgentPath(agent.id)}
+                        to={appRoutes.memberAgent(agent.id)}
                     >
                         <Card className="flex h-full flex-col gap-2.5 px-3.5 py-3 transition-colors group-hover:bg-accent/40">
                             <div className="flex items-center gap-2.5">
@@ -148,7 +147,7 @@ export function OverviewActivity({
                                 : item.entry.kind === 'automation_fired'
                                   ? appRoutes.reminders
                                   : agent
-                                    ? buildAgentPath(agent.id)
+                                    ? appRoutes.memberAgent(agent.id)
                                     : appRoutes.activity;
                             const { clause, showsChat } = describeActivityEntry(item.entry);
 

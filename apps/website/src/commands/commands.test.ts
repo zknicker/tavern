@@ -53,7 +53,7 @@ test('global command groups expose the first slice of Grotto actions', () => {
     assert.ok(commandTitles.includes('New Task'));
     assert.ok(commandTitles.includes('New Reminder'));
     assert.ok(commandTitles.includes('Grotto Runtime'));
-    assert.ok(commandTitles.includes('Agents'));
+    assert.ok(commandTitles.includes('Members'));
     assert.ok(commandTitles.includes('Turn Dev Mode On'));
     assert.ok(commandTitles.includes('Check Runtime Health'));
 });
@@ -121,7 +121,7 @@ test('current chat commands only appear on chat routes', () => {
 
     assert.equal(group?.title, 'Current Chat');
     assert.ok(group?.commands.some((command) => command.title === 'Focus Composer'));
-    assert.ok(group?.commands.some((command) => command.title === 'Agent Settings'));
+    assert.ok(group?.commands.some((command) => command.title === 'Agent Profile'));
 });
 
 function createChat(overrides: Partial<ChatListItem> = {}): ChatListItem {
