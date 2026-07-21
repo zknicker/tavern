@@ -3,11 +3,17 @@ import { buildChatList } from '../../features/chats/chat-list-data.ts';
 import { isSidebarTavernChat } from '../../features/shell/sidebar-chat-list-model.ts';
 import { useChatList } from '../chats/use-chat-list.ts';
 import { useTaskList } from '../tasks/use-task-list.ts';
-import { hasTasksUpdatedAfter, parseTasksLastSeenAt } from './rail-unseen-store.ts';
+import {
+    buildTaskSeenRevisions,
+    hasUnseenTasks,
+    parseTaskSeenRevisions,
+    type TaskSeenRevision,
+} from './rail-unseen-store.ts';
 
-const tasksLastSeenAtStorageKey = 'tavern.tasks.lastSeenAt';
+const taskSeenRevisionsStorageKey = 'tavern.tasks.seenRevisions';
 const listeners = new Set<() => void>();
-let tasksLastSeenAt = readInitialTasksLastSeenAt();
+const emptyTaskSeenRevisions: TaskSeenRevision[] = [];
+let taskSeenRevisions = readInitialTaskSeenRevisions();
 
 export function useActivityUnseen() {
     const chatsQuery = useChatList();
@@ -23,45 +29,39 @@ export function useActivityUnseen() {
 
 export function useTasksUnseen() {
     const tasksQuery = useTaskList();
-    const lastSeenAt = React.useSyncExternalStore(
-        subscribeToTasksLastSeenAt,
-        getTasksLastSeenAt,
-        () => 0
+    const seenRevisions = React.useSyncExternalStore(
+        subscribeToTaskSeenRevisions,
+        getTaskSeenRevisions,
+        () => emptyTaskSeenRevisions
     );
 
-    return hasTasksUpdatedAfter(tasksQuery.data?.tasks ?? [], lastSeenAt);
+    return hasUnseenTasks(tasksQuery.data?.tasks ?? [], seenRevisions);
 }
 
-// Monotonic, and in the task-timestamp domain: callers pass the newest
-// displayed updatedAt, never the wall clock, so updates that sync in later
-// with earlier timestamps than "now" still read as unseen.
-export function markTasksSeen(seenAt: number) {
-    if (seenAt <= tasksLastSeenAt) {
-        return;
-    }
-    tasksLastSeenAt = seenAt;
-    window.localStorage.setItem(tasksLastSeenAtStorageKey, String(seenAt));
+export function markTasksSeen(tasks: readonly { id: string; updatedAt: string }[]) {
+    taskSeenRevisions = buildTaskSeenRevisions(tasks);
+    window.localStorage.setItem(taskSeenRevisionsStorageKey, JSON.stringify(taskSeenRevisions));
 
     for (const listener of listeners) {
         listener();
     }
 }
 
-function getTasksLastSeenAt() {
-    return tasksLastSeenAt;
+function getTaskSeenRevisions() {
+    return taskSeenRevisions;
 }
 
-function subscribeToTasksLastSeenAt(listener: () => void) {
+function subscribeToTaskSeenRevisions(listener: () => void) {
     listeners.add(listener);
     return () => {
         listeners.delete(listener);
     };
 }
 
-function readInitialTasksLastSeenAt() {
+function readInitialTaskSeenRevisions() {
     if (typeof window === 'undefined') {
-        return 0;
+        return emptyTaskSeenRevisions;
     }
 
-    return parseTasksLastSeenAt(window.localStorage.getItem(tasksLastSeenAtStorageKey));
+    return parseTaskSeenRevisions(window.localStorage.getItem(taskSeenRevisionsStorageKey));
 }

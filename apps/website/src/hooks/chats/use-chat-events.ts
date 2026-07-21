@@ -2,25 +2,22 @@ import { trpc } from '../../lib/trpc.tsx';
 
 export function useChatEvents() {
     const utils = trpc.useUtils();
+    const handlers = createChatEventHandlers(utils);
 
     trpc.chat.onUpdate.useSubscription(undefined, {
-        onData: (event) => {
-            const chatId = readStringField(event, 'chatId');
-
-            void utils.chat.list.invalidate();
-            void utils.chat.listArchived.invalidate();
-
-            if (chatId) {
-                void utils.chat.get.invalidate({ chatId });
-                return;
-            }
-
-            void utils.chat.get.invalidate();
-        },
+        onData: handlers.onChatUpdate,
     });
 
     trpc.chat.log.onUpdate.useSubscription(undefined, {
-        onData: (event) => {
+        onData: handlers.onChatLogUpdate,
+    });
+}
+
+type ChatEventUtils = Pick<ReturnType<typeof trpc.useUtils>, 'agent' | 'chat'>;
+
+export function createChatEventHandlers(utils: ChatEventUtils) {
+    return {
+        onChatLogUpdate: (event: unknown) => {
             const chatId = readStringField(event, 'chatId');
 
             if (chatId) {
@@ -32,7 +29,21 @@ export function useChatEvents() {
             void utils.chat.log.list.invalidate();
             void utils.chat.files.list.invalidate();
         },
-    });
+        onChatUpdate: (event: unknown) => {
+            const chatId = readStringField(event, 'chatId');
+
+            void utils.agent.chats.list.invalidate();
+            void utils.chat.list.invalidate();
+            void utils.chat.listArchived.invalidate();
+
+            if (chatId) {
+                void utils.chat.get.invalidate({ chatId });
+                return;
+            }
+
+            void utils.chat.get.invalidate();
+        },
+    };
 }
 
 function readStringField(input: unknown, field: string) {
