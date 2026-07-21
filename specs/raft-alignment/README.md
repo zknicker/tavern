@@ -70,6 +70,23 @@ upgrades transport only, contracts unchanged.
   transcripts — not extrapolated from docs/blog prose. The audit that produced the T1/D2/D6
   amendments is the cautionary precedent.
 
+**Execution rules** (every workstream thread inherits these):
+
+- **Raft audit first.** Before implementing, each thread audits its slice of this contract
+  against the Raft evidence set (and the live raft CLI/docs where the evidence is thin) to
+  catch incorrect assumptions or unexplained divergence. Anything weird stops and goes to the
+  operator for manual review before code is written.
+- **Test discipline.** Do not run e2e or full test suites early — prefer the smallest
+  verification lane (docs/operations/testing.md) and save broad suites for
+  integration-readiness. Update lint rules when that encodes a convention better than review
+  does. Actively look for test-suite and code simplification/cleanup in everything touched —
+  pruning bloat is in-scope work, not a side quest.
+- **Model routing.** Threads delegate per the operator's global orchestration rules: clear-spec
+  mechanical implementation to codex (gpt-5.6-sol), exploration sweeps to cheaper models;
+  Fable-class models only for design, judgment, and finish passes.
+- **Closeout review.** Every workstream ends with a GPT-5.6-Sol review (codex-review flow,
+  explicitly `-m gpt-5.6-sol`) plus an operator walkthrough before merge.
+
 ## Resolved decisions
 
 - **D1 — Full CLI-only output.** `grotto message send` is the only way to speak. `NO_REPLY`,
