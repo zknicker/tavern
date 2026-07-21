@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## v1.5.4 - 2026-07-20
+
+- App: Google sign-in now completes reliably in the desktop app when Clerk
+  returns an empty custom-scheme callback, while using the rotating nonce when
+  Clerk supplies one.
+- App: signing out returns to Grotto's welcome screen instead of navigating the
+  packaged Electron window to an invalid browser page.
+- App: local macOS installs preserve the signed bundle's resources and extended
+  attributes.
+
 ## v1.5.3 - 2026-07-20
 
 - App/Runtime: Tavern is now Grotto, with a clean install boundary: the desktop
