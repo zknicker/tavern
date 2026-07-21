@@ -7,6 +7,9 @@ import { useMarkChatReadOnView } from '../../hooks/chats/use-chat-mark-read.ts';
 import { useChatTimeline } from '../../hooks/chats/use-chat-timeline.ts';
 import { useModelList } from '../../hooks/models/use-model-list.ts';
 import { useChatArtifactPanelState } from '../../hooks/pane/use-chat-pane-state.ts';
+import { useChatSidePane } from '../../hooks/pane/use-chat-side-pane.ts';
+import { useThreadPane } from '../../hooks/threads/use-thread-pane.ts';
+import { useViewportBelow } from '../../hooks/use-viewport-below.ts';
 import { appRoutes } from '../../lib/app-routes.ts';
 import { MissingAgentState } from '../agents/missing-agent-state.tsx';
 import { ArchivedChatBar } from './archived-chat-bar.tsx';
@@ -20,6 +23,7 @@ import { buildChatListItem, type ChatListItem } from './chat-list-data.ts';
 import { ChatMessageComposer } from './chat-message-composer.tsx';
 import { getChatMessageLayout } from './chat-message-layout.ts';
 import { ChatRoomTopbar } from './chat-room-topbar.tsx';
+import { ThreadPanel } from './thread/thread-panel.tsx';
 
 export const chatDetailLogLimit = 24;
 export const demoChannelLogLimit = 48;
@@ -96,6 +100,21 @@ function SyncedAgentChatDetail({ chat, chatId }: { chat: ChatListItem; chatId: s
           })
         : null;
     const artifactPanel = useChatArtifactPanelState(chatId);
+    const activeSidePane = useChatSidePane(chatId);
+    const threadPane = useThreadPane(chatId);
+    const threadTakeover = useViewportBelow(1024);
+    const threadOpen = activeSidePane === 'thread' && threadPane !== null;
+    const artifactOpen = activeSidePane === 'artifact' && artifactPanel.visible;
+    const threadPanel = (
+        <ThreadPanel
+            agents={agents}
+            chat={chat}
+            open={threadOpen}
+            parentRows={rows}
+            state={threadPane}
+            takeover={threadTakeover}
+        />
+    );
     const isTurnBlocking = isBlockingActiveTurn({
         activeReplies: timeline.activeReplies,
         activeTurns: timeline.activeTurns,
@@ -111,7 +130,6 @@ function SyncedAgentChatDetail({ chat, chatId }: { chat: ChatListItem; chatId: s
             <ChatDetailFrame
                 activeReplies={timeline.activeReplies}
                 agentStatusCharacter={agent?.effectiveCharacter ?? null}
-                artifactPanel={<ChatArtifactPanel agentId={agentId} state={artifactPanel} />}
                 chatId={chat.id}
                 conversationLayout={conversationLayout}
                 emptyLabel="No synced messages for this chat yet."
@@ -154,6 +172,17 @@ function SyncedAgentChatDetail({ chat, chatId }: { chat: ChatListItem; chatId: s
                 isFetchingOlderHistory={timeline.isFetchingOlderHistory}
                 isPending={timeline.isPending}
                 rows={rows}
+                sidePanel={
+                    <>
+                        <ChatArtifactPanel
+                            agentId={agentId}
+                            open={artifactOpen}
+                            state={artifactPanel}
+                        />
+                        {threadTakeover ? null : threadPanel}
+                    </>
+                }
+                takeoverPanel={threadOpen && threadTakeover ? threadPanel : undefined}
                 totalMessages={totalMessages}
             />
         </ArtifactPanelOpenProvider>

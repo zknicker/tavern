@@ -22,7 +22,8 @@ export function ChatDetailFrame({
     defaultOpenWorkGroups = false,
     emptyLabel,
     error,
-    artifactPanel,
+    sidePanel,
+    takeoverPanel,
     fetchOlderHistory,
     failedTurns,
     footer,
@@ -41,7 +42,8 @@ export function ChatDetailFrame({
     defaultOpenWorkGroups?: boolean;
     emptyLabel: string;
     error?: unknown;
-    artifactPanel?: React.ReactNode;
+    sidePanel?: React.ReactNode;
+    takeoverPanel?: React.ReactNode;
     fetchOlderHistory?: () => void;
     failedTurns?: readonly ChatTurnFailure[];
     footer: React.ReactNode;
@@ -71,73 +73,75 @@ export function ChatDetailFrame({
     return (
         <MessageScrollerProvider autoScroll={hasTimelineContent} defaultScrollPosition="end">
             <div className="flex min-h-0 flex-1 overflow-hidden">
-                <div className="relative flex min-w-0 flex-1 flex-col">
-                    {header}
-                    <div className="relative min-h-0 flex-1">
-                        <div className="absolute top-3 left-1/2 z-10 -translate-x-1/2">
-                            <ChatTranscriptLoadingIndicator
-                                className="shrink-0"
-                                visible={isInitialTranscriptPending}
-                            />
-                        </div>
-                        <MessageScroller>
-                            <MessageScrollerViewport
-                                // The conversation hugs the composer — the
-                                // bottom padding (96px) is static clearance
-                                // for a two-row floating status stack. New
-                                // sends append here without re-anchoring the
-                                // viewport, so the history above stays put.
-                                className="px-5 pt-4 pb-24"
-                                onScroll={handleScroll}
-                                ref={viewportRef}
-                            >
-                                {isInitialTranscriptPending ? null : error ? (
-                                    <MessageScrollerContent className="w-full">
-                                        <div className="px-2 py-4 text-muted-foreground text-sm">
-                                            Unable to load this chat transcript right now.
-                                        </div>
-                                    </MessageScrollerContent>
-                                ) : hasTimelineContent ? (
-                                    <ChatTimeline
-                                        activeReplies={activeReplies}
-                                        agentStatusCharacter={agentStatusCharacter}
-                                        chatId={chatId}
-                                        conversationLayout={conversationLayout}
-                                        defaultOpenWorkGroups={defaultOpenWorkGroups}
-                                        failedTurns={failedTurns}
-                                        rows={rows}
-                                        scrollContentRef={contentRef}
-                                        totalMessages={totalMessages}
-                                    />
-                                ) : (
-                                    <MessageScrollerContent className="w-full">
-                                        <div className="px-2 py-4 text-muted-foreground text-sm">
-                                            {emptyLabel}
-                                        </div>
-                                    </MessageScrollerContent>
-                                )}
-                            </MessageScrollerViewport>
-                            <ChatScrollPositionMemory
-                                chatId={chatId}
-                                enabled={hasTimelineContent && !isInitialTranscriptPending}
-                                key={chatId}
-                                viewportRef={viewportRef}
-                            />
-                            {hasTimelineContent ? (
-                                <MessageScrollerButton
-                                    aria-label="Jump to latest message"
-                                    className="z-10"
-                                    direction="end"
-                                    size="icon-sm"
-                                    variant="secondary"
+                {takeoverPanel ?? (
+                    <div className="relative flex min-w-0 flex-1 flex-col">
+                        {header}
+                        <div className="relative min-h-0 flex-1">
+                            <div className="absolute top-3 left-1/2 z-10 -translate-x-1/2">
+                                <ChatTranscriptLoadingIndicator
+                                    className="shrink-0"
+                                    visible={isInitialTranscriptPending}
                                 />
-                            ) : null}
-                        </MessageScroller>
-                    </div>
+                            </div>
+                            <MessageScroller>
+                                <MessageScrollerViewport
+                                    // The conversation hugs the composer — the
+                                    // bottom padding (96px) is static clearance
+                                    // for a two-row floating status stack. New
+                                    // sends append here without re-anchoring the
+                                    // viewport, so the history above stays put.
+                                    className="px-5 pt-4 pb-24"
+                                    onScroll={handleScroll}
+                                    ref={viewportRef}
+                                >
+                                    {isInitialTranscriptPending ? null : error ? (
+                                        <MessageScrollerContent className="w-full">
+                                            <div className="px-2 py-4 text-muted-foreground text-sm">
+                                                Unable to load this chat transcript right now.
+                                            </div>
+                                        </MessageScrollerContent>
+                                    ) : hasTimelineContent ? (
+                                        <ChatTimeline
+                                            activeReplies={activeReplies}
+                                            agentStatusCharacter={agentStatusCharacter}
+                                            chatId={chatId}
+                                            conversationLayout={conversationLayout}
+                                            defaultOpenWorkGroups={defaultOpenWorkGroups}
+                                            failedTurns={failedTurns}
+                                            rows={rows}
+                                            scrollContentRef={contentRef}
+                                            totalMessages={totalMessages}
+                                        />
+                                    ) : (
+                                        <MessageScrollerContent className="w-full">
+                                            <div className="px-2 py-4 text-muted-foreground text-sm">
+                                                {emptyLabel}
+                                            </div>
+                                        </MessageScrollerContent>
+                                    )}
+                                </MessageScrollerViewport>
+                                <ChatScrollPositionMemory
+                                    chatId={chatId}
+                                    enabled={hasTimelineContent && !isInitialTranscriptPending}
+                                    key={chatId}
+                                    viewportRef={viewportRef}
+                                />
+                                {hasTimelineContent ? (
+                                    <MessageScrollerButton
+                                        aria-label="Jump to latest message"
+                                        className="z-10"
+                                        direction="end"
+                                        size="icon-sm"
+                                        variant="secondary"
+                                    />
+                                ) : null}
+                            </MessageScroller>
+                        </div>
 
-                    {footer}
-                </div>
-                {artifactPanel}
+                        {footer}
+                    </div>
+                )}
+                {takeoverPanel ? null : sidePanel}
             </div>
         </MessageScrollerProvider>
     );

@@ -68,6 +68,22 @@
     }
 }
 
+@keyframes chat-thread-flash {
+    0%,
+    24% {
+        background-color: var(--warning-bg);
+        box-shadow: 0 0 0 2px var(--warning-border);
+    }
+    100% {
+        background-color: transparent;
+        box-shadow: 0 0 0 0 transparent;
+    }
+}
+
+.chat-thread-flash {
+    animation: chat-thread-flash 1.5s ease-out both;
+}
+
 @media (prefers-reduced-motion: reduce) {
     .animate-float-up {
         animation: none !important;
@@ -83,6 +99,10 @@
     .chat-step-enter,
     .chat-turn-work-panel {
         transition: none !important;
+    }
+
+    .chat-thread-flash {
+        animation: none !important;
     }
 }
 

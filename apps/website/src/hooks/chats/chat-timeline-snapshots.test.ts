@@ -179,6 +179,36 @@ test('a log refetch cannot strip the quiet-evaluation stamp from a live reply', 
     expect(next.activeReplies[0]?.trigger).toBe('evaluation');
 });
 
+test('applyLogSnapshot carries an updated thread summary on unchanged row ids', () => {
+    const withThread = (replyCount: number): ChatLogRow => ({
+        ...(agentMessage('anchor-1', '16:08:10') as Extract<ChatLogRow, { kind: 'message' }>),
+        thread: {
+            anchorMessageId: 'anchor-1',
+            followed: true,
+            latestReplyAt: '2026-04-21T16:09:00.000Z',
+            replyCount,
+            threadChatId: 'cht_thr_anchor_1',
+            unreadCount: 0,
+        },
+    });
+    const loaded = applyLogSnapshot(emptyTimelineState(), {
+        limit: 3,
+        nextBeforeSequence: null,
+        rows: [withThread(1)],
+        totalMessages: 1,
+    });
+
+    const next = applyLogSnapshot(loaded, {
+        limit: 3,
+        nextBeforeSequence: null,
+        rows: [withThread(2)],
+        totalMessages: 1,
+    });
+
+    const row = next.timeline[0];
+    expect(row?.kind === 'message' ? row.thread?.replyCount : null).toBe(2);
+});
+
 function agentMessage(id: string, time: string): ChatLogRow {
     return messageRow(id, time, 'agent');
 }

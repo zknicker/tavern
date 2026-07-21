@@ -1,6 +1,7 @@
 import { SidebarRightIcon } from '@hugeicons-pro/core-stroke-rounded';
 import { Icon } from '../../components/ui/icon.tsx';
 import { Button } from '../../components/ui/primitives/button.tsx';
+import { setChatSidePane } from '../../hooks/pane/use-chat-side-pane.ts';
 import {
     setPaneVisibilityOverride,
     usePaneVisibilityOverride,
@@ -22,7 +23,12 @@ export function ChatPaneToggleButton({ chatId }: { chatId: string }) {
             className={cn(
                 visible ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'
             )}
-            onClick={() => setPaneVisibilityOverride(chatId, !visible)}
+            onClick={() => {
+                if (!visible) {
+                    setChatSidePane(chatId, 'artifact');
+                }
+                setPaneVisibilityOverride(chatId, !visible);
+            }}
             size="icon-sm"
             title={label}
             variant={visible ? 'secondary' : 'ghost'}

@@ -8,7 +8,12 @@ import {
     MessageScrollerViewport,
 } from '../../components/ui/message-scroller.tsx';
 import type { ChatActiveReply, ChatTurnFailure } from '../../hooks/chats/chat-timeline-state.ts';
+import { useChatSidePane } from '../../hooks/pane/use-chat-side-pane.ts';
+import { useMessageFlash } from '../../hooks/threads/use-message-flash.ts';
+import { openThreadPane, useThreadPane } from '../../hooks/threads/use-thread-pane.ts';
 import { markChatTiming } from '../../lib/chat-timing.ts';
+import { trpc } from '../../lib/trpc.tsx';
+import { cn } from '../../lib/utils.ts';
 import { getTranscriptItemKey } from './chat-transcript-item-utils.ts';
 import {
     buildTranscriptEntries,
@@ -17,6 +22,7 @@ import {
     type TranscriptRow,
 } from './chat-transcript-model.ts';
 import {
+    getTranscriptMessageThread,
     type TranscriptRenderContextValue,
     TranscriptRenderProvider,
 } from './chat-transcript-render-context.tsx';
@@ -41,8 +47,11 @@ export function ChatTranscript({
     defaultOpenWorkGroups = false,
     failedTurns = [],
     hiddenCount = 0,
+    leadingContent,
     rows,
     scrollContentRef,
+    threadActionsEnabled = true,
+    viewportClassName,
 }: {
     activeReplies: readonly ChatActiveReply[];
     agentStatusCharacter?: AgentCharacter | null;
@@ -52,9 +61,17 @@ export function ChatTranscript({
     defaultOpenWorkGroups?: boolean;
     failedTurns?: readonly ChatTurnFailure[];
     hiddenCount?: number;
+    leadingContent?: React.ReactNode;
     rows: TranscriptRow[];
     scrollContentRef?: React.RefObject<HTMLDivElement | null>;
+    threadActionsEnabled?: boolean;
+    viewportClassName?: string;
 }) {
+    const threadPane = useThreadPane(chatId ?? '');
+    const activeSidePane = useChatSidePane(chatId ?? '');
+    const flashMessageId = useMessageFlash(chatId ?? '');
+    const unfollowThread = trpc.thread.setFollow.useMutation();
+    const mutateThreadFollow = unfollowThread.mutate;
     const entries = React.useMemo(
         () =>
             buildTranscriptEntries({
@@ -82,25 +99,54 @@ export function ChatTranscript({
         return new Set(seenRepliedRunsRef.current);
     }, [rows, activeReplies]);
     const shouldAnimateItemEnter = useLiveEdgeItemEnter(chatId, transcriptRows);
+    const onOpenThread = React.useCallback(
+        (row: Parameters<TranscriptRenderContextValue['onOpenThread']>[0]) => {
+            if (!chatId) {
+                return;
+            }
+
+            openThreadPane(chatId, {
+                anchorMessageId: row.message.id,
+                threadChatId: getTranscriptMessageThread(row)?.threadChatId ?? null,
+            });
+        },
+        [chatId]
+    );
+    const onUnfollowThread = React.useCallback(
+        (threadChatId: string) => mutateThreadFollow({ follow: false, threadChatId }),
+        [mutateThreadFollow]
+    );
     const renderContext = React.useMemo(
         () =>
             ({
                 chatId,
+                activeThreadAnchorId:
+                    activeSidePane === 'thread' ? (threadPane?.anchorMessageId ?? null) : null,
                 conversationLayout,
                 currentSessionKey,
                 defaultOpenWorkGroups,
+                flashMessageId,
                 hiddenCount,
+                onOpenThread,
+                onUnfollowThread,
                 repliedRunIds,
                 shouldAnimateItemEnter,
+                threadActionsEnabled: threadActionsEnabled && Boolean(chatId),
             }) satisfies TranscriptRenderContextValue,
         [
             chatId,
+            activeSidePane,
+            threadPane?.anchorMessageId,
             conversationLayout,
             currentSessionKey,
             defaultOpenWorkGroups,
+            flashMessageId,
             hiddenCount,
+            onOpenThread,
+            onUnfollowThread,
             repliedRunIds,
             shouldAnimateItemEnter,
+            threadActionsEnabled,
         ]
     );
 
@@ -139,6 +185,7 @@ export function ChatTranscript({
         <TranscriptRenderProvider value={renderContext}>
             <div className="relative min-h-full w-full">
                 <MessageScrollerContent className="w-full gap-2" ref={scrollContentRef}>
+                    {leadingContent}
                     {transcriptRows.map((row) =>
                         row.kind === 'hiddenCount' && hiddenCount === 0 ? null : (
                             <MessageScrollerItem
@@ -166,7 +213,9 @@ export function ChatTranscript({
         return (
             <MessageScrollerProvider defaultScrollPosition="end">
                 <MessageScroller>
-                    <MessageScrollerViewport>{transcript}</MessageScrollerViewport>
+                    <MessageScrollerViewport className={cn(viewportClassName)}>
+                        {transcript}
+                    </MessageScrollerViewport>
                 </MessageScroller>
             </MessageScrollerProvider>
         );

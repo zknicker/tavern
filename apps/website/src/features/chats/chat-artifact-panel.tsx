@@ -1,19 +1,14 @@
 import { File01Icon } from '@hugeicons-pro/core-stroke-rounded';
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import * as React from 'react';
 import { Icon } from '../../components/ui/icon.tsx';
-import { ResizablePaneRail } from '../../components/ui/resizable-pane-rail.tsx';
 import { Tabs } from '../../components/ui/tabs.tsx';
-import {
-    artifactPaneWidthLimits,
-    useArtifactPaneWidth,
-} from '../../hooks/pane/use-artifact-pane-width.ts';
 import type { ChatArtifactPanelState } from '../../hooks/pane/use-chat-pane-state.ts';
 import { cn } from '../../lib/utils.ts';
 import { ArtifactPanelChrome } from './chat-artifact-panel-chrome.tsx';
 import { WikiBrowserContent } from './chat-artifact-wiki-content.tsx';
 import { ChatArtifactWikiPage } from './chat-artifact-wiki-page.tsx';
 import { WorkspaceBrowserContent } from './chat-artifact-workspace-content.tsx';
+import { ChatSidePaneShell } from './chat-side-pane-shell.tsx';
 import {
     getArtifactPanelTargetKey,
     isWorkspaceChatPaneTarget,
@@ -22,56 +17,19 @@ import {
 
 export function ChatArtifactPanel({
     agentId,
+    open = true,
     state,
 }: {
     agentId: string;
+    open?: boolean;
     state: ChatArtifactPanelState;
 }) {
-    const shouldReduceMotion = useReducedMotion();
-    const open = state.visible;
-    const [resizingArtifactPane, setResizingArtifactPane] = React.useState(false);
-    const artifactPaneWidth = useArtifactPaneWidth();
-
     return (
-        <AnimatePresence initial={false}>
-            {open ? (
-                <motion.aside
-                    animate={{ opacity: 1, width: artifactPaneWidth.width, x: 0 }}
-                    aria-label="Artifacts"
-                    className="relative z-[36] flex h-full min-h-0 shrink-0 overflow-hidden border-border/70 border-l bg-background/96 shadow-2xl shadow-black/8"
-                    exit={{ opacity: 0, width: 0, x: 36 }}
-                    initial={shouldReduceMotion ? false : { opacity: 0, width: 0, x: 36 }}
-                    transition={
-                        shouldReduceMotion
-                            ? { duration: 0.12 }
-                            : {
-                                  opacity: { duration: 0.28, ease: [0.16, 1, 0.3, 1] },
-                                  width: {
-                                      duration: resizingArtifactPane ? 0 : 0.28,
-                                      ease: [0.16, 1, 0.3, 1],
-                                  },
-                                  x: { duration: 0.28, ease: [0.16, 1, 0.3, 1] },
-                              }
-                    }
-                >
-                    <ResizablePaneRail
-                        maxWidth={artifactPaneWidthLimits.max}
-                        minWidth={artifactPaneWidthLimits.min}
-                        onResizeEnd={() => setResizingArtifactPane(false)}
-                        onResizeStart={() => setResizingArtifactPane(true)}
-                        onWidthChange={artifactPaneWidth.setWidth}
-                        onWidthCommit={artifactPaneWidth.persistWidth}
-                        side="left"
-                        width={artifactPaneWidth.width}
-                    />
-                    <ArtifactPanelBody
-                        agentId={agentId}
-                        state={state}
-                        width={artifactPaneWidth.width}
-                    />
-                </motion.aside>
-            ) : null}
-        </AnimatePresence>
+        <ChatSidePaneShell label="Artifacts" open={open && state.visible}>
+            {(width) => (
+                <ArtifactPanelBody agentId={agentId} state={state} width={width ?? undefined} />
+            )}
+        </ChatSidePaneShell>
     );
 }
 
@@ -84,14 +42,14 @@ function ArtifactPanelBody({
 }: {
     agentId: string;
     state: ChatArtifactPanelState;
-    width: number;
+    width?: number;
 }) {
     const activeTarget = state.targets.find(
         (target) => getArtifactPanelTargetKey(target) === state.activeKey
     );
 
     return (
-        <div className="flex h-full min-h-0 flex-col" style={{ width }}>
+        <div className="flex h-full min-h-0 flex-col" style={width ? { width } : undefined}>
             <div className="shrink-0 border-border/70 border-b">
                 <Tabs
                     className="flex items-center"

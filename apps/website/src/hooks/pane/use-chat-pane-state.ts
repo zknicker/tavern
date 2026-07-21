@@ -6,6 +6,7 @@ import {
     type TavernResourceTarget,
 } from '../../features/chats/tavern-resource-link.ts';
 import { trpc } from '../../lib/trpc.tsx';
+import { setChatSidePane } from './use-chat-side-pane.ts';
 import { setPaneVisibilityOverride, usePaneVisibilityOverride } from './use-pane-visibility.ts';
 
 export interface ChatArtifactPanelState {
@@ -67,6 +68,7 @@ export function useChatArtifactPanelState(chatId: string): ChatArtifactPanelStat
     const open = React.useCallback(
         (target: TavernResourceTarget) => {
             const { activeKey, targets } = readTargets();
+            setChatSidePane(chatId, 'artifact');
             setPaneVisibilityOverride(chatId, true);
             const merged = mergeChatPaneOpenTarget(targets, target);
             // Already open and focused: writing anyway would drift the
@@ -125,6 +127,9 @@ export function useChatArtifactPanelState(chatId: string): ChatArtifactPanelStat
     const visible = visibilityOverride ?? state.targets.length > 0;
 
     const toggleVisible = React.useCallback(() => {
+        if (!visible) {
+            setChatSidePane(chatId, 'artifact');
+        }
         setPaneVisibilityOverride(chatId, !visible);
     }, [chatId, visible]);
 
