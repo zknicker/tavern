@@ -5,7 +5,7 @@ import { AgentApiError } from './agent-api-errors.ts';
 import { type ResolvedAgentTarget, resolveAgentTarget } from './agent-targets.ts';
 import { getStoredAgent, listStoredAgents } from './agents-store.ts';
 import { createAgentParticipantId } from './chat-api/ids.ts';
-import { isValidHandle } from './handles.ts';
+import { isValidHandle, normalizeHandle } from './handles.ts';
 
 export function readAgentServerInfo(
     agentId: string,
@@ -126,19 +126,25 @@ function listAgents(db: Database) {
 function listHumans(db: Database) {
     const rows = db
         .prepare(
-            `SELECT id, name AS handle FROM identity_users WHERE name IS NOT NULL
+            `SELECT id, name AS handle, 0 AS observed FROM identity_users WHERE name IS NOT NULL
              UNION ALL
-             SELECT DISTINCT id, label AS handle FROM chat_participants
-             WHERE kind IN ('user', 'external') AND label IS NOT NULL`
+             SELECT DISTINCT id, label AS handle, 1 AS observed FROM chat_participants
+             WHERE kind IN ('user', 'external') AND label IS NOT NULL
+             ORDER BY observed`
         )
         .all() as Array<{ handle: string; id: string }>;
-    const byId = new Map<string, { description: null; handle: string }>();
+    // Handles are case-insensitively unique, but observed labels are not
+    // registrations: the operator's keyless seat and identity seat can both
+    // surface as "You". The roster collapses rows per handle (registered
+    // identity names win over observed labels).
+    const byHandle = new Map<string, { description: null; handle: string }>();
     for (const row of rows) {
-        if (isValidHandle(row.handle)) {
-            byId.set(row.id, { description: null, handle: row.handle });
+        const key = normalizeHandle(row.handle);
+        if (isValidHandle(row.handle) && !byHandle.has(key)) {
+            byHandle.set(key, { description: null, handle: row.handle });
         }
     }
-    return [...byId.values()].sort((a, b) => a.handle.localeCompare(b.handle));
+    return [...byHandle.values()].sort((a, b) => a.handle.localeCompare(b.handle));
 }
 
 function filterRoster<T extends { description: string | null; handle: string }>(

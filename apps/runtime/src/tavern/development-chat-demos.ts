@@ -17,13 +17,21 @@ import { developmentChatDemos } from './development-chat-demo-definitions';
 import {
     type DevelopmentDemoMessage,
     demoAgentId,
+    demoOwnerParticipantId,
     demoSecondAgentId,
     demoSecondAgentName,
     demoTime,
+    demoUserHandle,
+    demoUserParticipantId,
 } from './development-chat-demo-types';
 import { seedDevelopmentRecallEvidence } from './development-recall-demo';
 import { ensurePrimaryManagedAgent } from './managed-agent';
 
+// Seeding is create-only for rows a user or real turn may have touched:
+// existing dev DBs keep their chat titles and any already-observed participant
+// labels (throwaway data — reseeding never retitles or relabels them). Handle
+// hygiene for fresh seeds is locked by the seed-lint cases in
+// development-chat-demos.test.ts.
 export function shouldSeedDevelopmentChatDemos() {
     return process.env.TAVERN_DEV_STACK === '1';
 }
@@ -297,9 +305,15 @@ function seedMessage(chatId: string, input: DevelopmentDemoMessage, db: Database
     }
 
     createMessage(chatId, input, db);
+    // createMessage registers the author with a NULL label; the stamp runs
+    // after it on both paths so fresh seeds carry handles too.
+    upsertDemoParticipant(chatId, input.author_id, input.role, db);
     setMessageTimestamp(input.id, input.createdAt, db);
 }
 
+// Human seats get real handles so grotto CLI envelopes render `@Sam` / `@You`
+// instead of `@unknown` (agent senders resolve via their stored agents). The
+// stamp only fills missing labels; an already-observed label stays put.
 function upsertDemoParticipant(
     chatId: string,
     id: string,
@@ -308,9 +322,30 @@ function upsertDemoParticipant(
 ) {
     db.prepare(
         `INSERT INTO chat_participants (chat_id, id, kind, label, metadata_json)
-         VALUES ($chatId, $id, $kind, NULL, '{}')
-         ON CONFLICT(chat_id, id) DO UPDATE SET kind = excluded.kind`
-    ).run(namedParams({ chatId, id, kind: role === 'assistant' ? 'agent' : role }));
+         VALUES ($chatId, $id, $kind, $label, '{}')
+         ON CONFLICT(chat_id, id) DO UPDATE
+         SET kind = excluded.kind,
+             label = COALESCE(chat_participants.label, excluded.label)`
+    ).run(
+        namedParams({
+            chatId,
+            id,
+            kind: role === 'assistant' ? 'agent' : role,
+            label: demoHumanLabel(id, role),
+        })
+    );
+}
+
+function demoHumanLabel(id: string, role: TavernCreateMessageRequest['role']): string | null {
+    if (role !== 'user') {
+        return null;
+    }
+    if (id === demoUserParticipantId) {
+        return demoUserHandle;
+    }
+    // The operator's keyless seat carries the same label the server and DM
+    // bootstrap stamp elsewhere.
+    return id === demoOwnerParticipantId ? 'You' : null;
 }
 
 function setMessageTimestamp(messageId: string, timestamp: string, db: Database) {
