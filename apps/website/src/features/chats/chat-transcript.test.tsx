@@ -14,7 +14,11 @@ import { ChatTranscript } from './chat-transcript.tsx';
 import { groupAgentItems } from './chat-transcript-item-utils.ts';
 import type { TranscriptItem } from './chat-transcript-model.ts';
 import { SystemStep } from './chat-transcript-system-step.tsx';
-import { filterPaneSegments, getActiveReplyDisplayText } from './chat-transcript-turn.tsx';
+import {
+    filterPaneSegments,
+    getActiveReplyDisplayText,
+    resolveMentionAgentId,
+} from './chat-transcript-turn.tsx';
 import { ChatTurnItems } from './chat-turn-drawer.tsx';
 import { ToolStep } from './tool-steps/registry.tsx';
 
@@ -87,6 +91,11 @@ test('ChatTranscript fills the detail lane full width', () => {
     ]);
 
     assert.match(markup, /relative min-h-full w-full/);
+});
+
+test('archived transcripts render agent names without mention actions', () => {
+    assert.equal(resolveMentionAgentId('agent-1', 'agent', false), undefined);
+    assert.equal(resolveMentionAgentId('agent-1', 'agent', true), 'agent-1');
 });
 
 test('ChatTranscript animates only local optimistic user messages', () => {
@@ -2211,6 +2220,7 @@ function renderTranscript(
     rows: ChatRow[],
     options: {
         activeReplies?: ChatActiveReply[];
+        canRequestMention?: boolean;
         chatId?: string;
         defaultOpenWorkGroups?: boolean;
     } = {}
@@ -2237,6 +2247,7 @@ function renderTranscript(
                     <DevModeProvider>
                         <ChatTranscript
                             activeReplies={options.activeReplies ?? []}
+                            canRequestMention={options.canRequestMention}
                             chatId={options.chatId}
                             defaultOpenWorkGroups={options.defaultOpenWorkGroups}
                             rows={rows}

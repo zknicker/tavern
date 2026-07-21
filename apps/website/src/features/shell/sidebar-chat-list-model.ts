@@ -26,6 +26,16 @@ export function buildSidebarChatGroups(chats: ChatListItem[]) {
     };
 }
 
+export function selectMostRecentChatRailConversation(chats: ChatListItem[]) {
+    return [...chats]
+        .filter((chat) => chat.conversationKind === 'channel' || chat.conversationKind === 'direct')
+        .sort((left, right) => chatTimestamp(right) - chatTimestamp(left))[0];
+}
+
+export function resolveNavigableActivityChatId(chatId: null | string, chats: ChatListItem[]) {
+    return chatId && chats.some((chat) => chat.id === chatId) ? chatId : null;
+}
+
 export function isSidebarTavernChat(
     chat: Pick<ChatListItem, 'framework' | 'type'>
 ): chat is ChatListItem {
@@ -38,4 +48,8 @@ export function getSidebarChatTitle(chat: ChatListItem) {
 
 export function hasLocalActiveTurn(state: Pick<ChatTimelineState, 'activeTurns'>) {
     return state.activeTurns.length > 0;
+}
+
+function chatTimestamp(chat: Pick<ChatListItem, 'createdAt' | 'lastActivityAt'>) {
+    return Date.parse(chat.lastActivityAt ?? chat.createdAt ?? '') || 0;
 }

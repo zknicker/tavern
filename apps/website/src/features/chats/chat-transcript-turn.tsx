@@ -354,6 +354,14 @@ export function resolveTurnAvatarVariant(
     return avatarUrl ? 'image' : 'initials';
 }
 
+export function resolveMentionAgentId(
+    actorId: null | string,
+    actorKind: 'agent' | 'participant' | 'profile' | undefined,
+    canRequestMention: boolean
+) {
+    return canRequestMention && actorKind === 'agent' ? (actorId ?? undefined) : undefined;
+}
+
 function getActorInitials(name: string) {
     const parts = name
         .trim()
@@ -401,7 +409,7 @@ function AgentTurn({
     const showIdentity = layout.showAgentIdentity;
     const lastMessage = getLastMessage(items);
     const turnCompletedAt = lastMessage?.timestamp ?? null;
-    const { repliedRunIds } = useTranscriptRenderContext();
+    const { canRequestMention, repliedRunIds } = useTranscriptRenderContext();
     const segments = groupAgentItems(items);
     const visibleSegments = filterPaneSegments(segments, repliedRunIds);
     const turnStopped =
@@ -486,9 +494,11 @@ function AgentTurn({
                         actions={headerActions}
                         bio={actorProfile?.bio}
                         displayName={displayName}
-                        mentionAgentId={
-                            actorProfile?.kind === 'agent' ? (actorId ?? undefined) : undefined
-                        }
+                        mentionAgentId={resolveMentionAgentId(
+                            actorId,
+                            actorProfile?.kind,
+                            canRequestMention
+                        )}
                         timestamp={entry.timestamp}
                     />
                 ) : null}

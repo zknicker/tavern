@@ -41,6 +41,7 @@ const directConversationMessageLayout: ConversationMessageLayout = {
 export function ChatTranscript({
     activeReplies,
     agentStatusCharacter = null,
+    canRequestMention = true,
     chatId,
     conversationLayout = directConversationMessageLayout,
     currentSessionKey,
@@ -56,6 +57,7 @@ export function ChatTranscript({
 }: {
     activeReplies: readonly ChatActiveReply[];
     agentStatusCharacter?: AgentCharacter | null;
+    canRequestMention?: boolean;
     chatId?: string;
     conversationLayout?: ConversationMessageLayout;
     currentSessionKey?: string | null;
@@ -123,6 +125,7 @@ export function ChatTranscript({
     const renderContext = React.useMemo(
         () =>
             ({
+                canRequestMention,
                 chatId,
                 activeThreadAnchorId:
                     activeSidePane === 'thread' ? (threadPane?.anchorMessageId ?? null) : null,
@@ -138,6 +141,7 @@ export function ChatTranscript({
                 threadActionsEnabled: threadActionsEnabled && Boolean(chatId),
             }) satisfies TranscriptRenderContextValue,
         [
+            canRequestMention,
             chatId,
             activeSidePane,
             threadPane?.anchorMessageId,

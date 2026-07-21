@@ -148,6 +148,7 @@ function SyncedAgentChatDetail({ chat, chatId }: { chat: ChatListItem; chatId: s
                         <ChatFilesTab chatId={chatId} enabled={activeViewTab === 'files'} />
                     ) : undefined
                 }
+                canRequestMention={!chat.archived}
                 chatId={chat.id}
                 conversationLayout={conversationLayout}
                 emptyLabel="No synced messages for this chat yet."
