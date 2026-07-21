@@ -16,7 +16,7 @@ export function getDefaultDatabasePath() {
         return getDefaultTestDatabasePath();
     }
 
-    return join(os.homedir(), '.tavern', 'tavern.sqlite');
+    return join(os.homedir(), '.grotto', 'grotto.sqlite');
 }
 
 function resolveHomePath(value: string) {

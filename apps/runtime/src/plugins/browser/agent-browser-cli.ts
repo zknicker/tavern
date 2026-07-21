@@ -25,7 +25,7 @@ export interface AgentBrowserRunner {
 // executes the platform binary directly: the compiled Runtime binary cannot
 // host the package's JS launcher (`process.execPath` is the Runtime itself,
 // not a JS engine). Dev resolves the workspace dependency; the packaged
-// Runtime resolves the copy installed under `share/tavern/node_modules` by
+// Runtime resolves the copy installed under `share/grotto/node_modules` by
 // the Homebrew formula (the same shape as the Wiki recall engine).
 export function resolveAgentBrowserBinary(): string {
     const binaryName = `agent-browser-${process.platform}-${process.arch}${
@@ -39,7 +39,7 @@ export function resolveAgentBrowserBinary(): string {
             path.dirname(process.execPath),
             '..',
             'share',
-            'tavern',
+            'grotto',
             'node_modules',
             'agent-browser'
         );

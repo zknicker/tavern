@@ -98,7 +98,7 @@ the triggering message runs a vector search over the qmd-backed recall index
 three pages above the relevance floor inject as labeled background context.
 qmd loads at runtime via dynamic import — its native modules cannot compile
 into the single-file Runtime binary — resolving the workspace package in dev
-and the artifact-staged copy under `share/tavern/node_modules` when packaged
+and the artifact-staged copy under `share/grotto/node_modules` when packaged
 (`TAVERN_RUNTIME_QMD_PATH` overrides).
 Each turn prompt is time-anchored with the current time, and every included
 message carries its send time — weekday-prefixed home-timezone wall clock,

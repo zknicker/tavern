@@ -54,7 +54,7 @@ source settings, not as an inference credential.
 
 The Runtime HTTP and event websocket APIs accept either the configured Tavern
 Runtime token or a verified Clerk session. The Runtime generates its token on
-first start and keeps it in its host config file (`<runtime-root>/tavern.json`,
+first start and keeps it in its host config file (`<runtime-root>/grotto.json`,
 `token` key, mode `0600`). Override with `TAVERN_RUNTIME_TOKEN`. The health route
 is unauthenticated.
 
@@ -89,8 +89,7 @@ implemented surface:
   identity instead of locking the user out. Packaged desktop builds use
   Clerk's native header authentication, keep the encrypted client token in
   Electron storage, and complete Google sign-in in the system browser through
-  the `grotto://sso-callback` protocol. Existing builds continue to accept the
-  legacy `tavern://sso-callback` protocol during the rename.
+  the `grotto://sso-callback` protocol.
 - Dev builds automatically sign in as the configured dev user when
   `CLERK_SECRET_KEY` and `DEV_CLERK_SIGN_IN_USER_ID` are set in the
   machine-local root `.env`. E2e remains keyless and does not use this flow.
@@ -98,7 +97,7 @@ implemented surface:
   (`Authorization: Bearer`, websocket `connectionParams.clerkSessionToken`);
   the server exposes it as `ctx.clerkSessionToken`.
 - The Runtime verifies forwarded Clerk tokens against the instance JWKS when
-  `TAVERN_CLERK_PUBLISHABLE_KEY` (or `clerkPublishableKey` in `tavern.json`)
+  `TAVERN_CLERK_PUBLISHABLE_KEY` (or `clerkPublishableKey` in `grotto.json`)
   is set. Verified users are minted `identity_users` rows keyed by tavern
   user id; the first verified user to connect claims an unclaimed runtime as
   `owner`. Non-members can only introspect `/identity/me` and redeem
@@ -111,5 +110,4 @@ implemented surface:
   release builds bake the pk_live publishable key via the
   `desktop:build:release` script; dev and unsigned builds stay on the dev
   instance. Before release, both Clerk instances must whitelist the canonical
-  `grotto://sso-callback` redirect and retain the legacy callback during the
-  rename.
+  `grotto://sso-callback` redirect.

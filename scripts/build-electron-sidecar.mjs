@@ -24,7 +24,7 @@ const resourcesDirectory = path.join(
 );
 const sidecarOutputPath = path.join(
     resourcesDirectory,
-    process.platform === 'win32' ? 'tavern-server.exe' : 'tavern-server'
+    process.platform === 'win32' ? 'grotto-server.exe' : 'grotto-server'
 );
 const sidecarSignaturePath = `${sidecarOutputPath}.build-signature`;
 const forceBuild = process.argv.includes('--force');
@@ -40,6 +40,10 @@ if (!forceBuild && isCurrentSidecar(sidecarSignature)) {
 
 rmSync(sidecarOutputPath, { force: true });
 rmSync(`${sidecarOutputPath}.exe`, { force: true });
+rmSync(path.join(resourcesDirectory, 'tavern-server'), { force: true });
+rmSync(path.join(resourcesDirectory, 'tavern-server.exe'), { force: true });
+rmSync(path.join(resourcesDirectory, 'tavern-server.build-signature'), { force: true });
+rmSync(path.join(resourcesDirectory, 'tavern-server.exe.build-signature'), { force: true });
 
 execFileSync('bun', ['run', '--filter', '@tavern/sdk', 'build'], {
     cwd: repositoryRoot,

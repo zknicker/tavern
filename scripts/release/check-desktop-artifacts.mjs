@@ -18,7 +18,7 @@ const main = async () => {
     const dmgPath = await findSingleFile(bundleRoot, (entry) => entry === `${artifactPrefix}.dmg`);
     const zipPath = await findSingleFile(bundleRoot, (entry) => entry === `${artifactPrefix}.zip`);
     const latestYamlPath = path.join(bundleRoot, 'latest-mac.yml');
-    const sidecarPath = path.join(appPath, 'Contents', 'Resources', 'bin', 'tavern-server');
+    const sidecarPath = path.join(appPath, 'Contents', 'Resources', 'bin', 'grotto-server');
 
     await assertDirectory(appPath, 'Grotto.app');
     await assertSidecarVersion(sidecarPath, version);
@@ -86,7 +86,7 @@ async function assertFileHasContent(filePath, label) {
 }
 
 async function assertSidecarVersion(filePath, version) {
-    await assertFileHasContent(filePath, 'tavern-server sidecar');
+    await assertFileHasContent(filePath, 'grotto-server sidecar');
     const binary = await readFile(filePath);
     const versionPatterns = [
         Buffer.from(`version: "${version}"`),
@@ -95,7 +95,7 @@ async function assertSidecarVersion(filePath, version) {
     ];
 
     if (!versionPatterns.some((pattern) => binary.includes(pattern))) {
-        fail(`tavern-server sidecar does not embed app version ${version}`);
+        fail(`grotto-server sidecar does not embed app version ${version}`);
     }
 }
 

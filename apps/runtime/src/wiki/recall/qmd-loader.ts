@@ -5,7 +5,7 @@ import path from 'node:path';
  * native modules (better-sqlite3, sqlite-vec, node-llama-cpp) that cannot be
  * compiled into the single-file Runtime binary. Dev resolves the workspace
  * package; the packaged Runtime resolves the copy staged under
- * `share/tavern/node_modules` by the release artifact build.
+ * `share/grotto/node_modules` by the release artifact build.
  */
 
 type QmdModule = typeof import('@tobilu/qmd');
@@ -36,7 +36,7 @@ function stagedQmdEntry() {
         path.dirname(process.execPath),
         '..',
         'share',
-        'tavern',
+        'grotto',
         'node_modules',
         '@tobilu',
         'qmd',

@@ -4,7 +4,7 @@ import { getClerkPublishableKey } from '../config.ts';
 /**
  * Verifies Clerk session JWTs against the instance JWKS. The instance is
  * identified by the publishable key (env `TAVERN_CLERK_PUBLISHABLE_KEY` or
- * `clerkPublishableKey` in tavern.json); without one, Clerk auth is disabled
+ * `clerkPublishableKey` in grotto.json); without one, Clerk auth is disabled
  * and only the runtime token authenticates.
  */
 

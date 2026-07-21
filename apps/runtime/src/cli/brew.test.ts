@@ -22,12 +22,12 @@ describe('brew.isRuntimeOutdated', () => {
     });
 
     test('exit 1 with formula name → outdated', () => {
-        spawnSyncMock.mockReturnValue(spawnResult({ status: 1, stdout: 'tavern-runtime\n' }));
+        spawnSyncMock.mockReturnValue(spawnResult({ status: 1, stdout: 'grotto-runtime\n' }));
         expect(brew.isRuntimeOutdated()).toBe(true);
     });
 
     test('exit 0 but stdout has the name → outdated', () => {
-        spawnSyncMock.mockReturnValue(spawnResult({ status: 0, stdout: 'tavern-runtime\n' }));
+        spawnSyncMock.mockReturnValue(spawnResult({ status: 0, stdout: 'grotto-runtime\n' }));
         expect(brew.isRuntimeOutdated()).toBe(true);
     });
 });
@@ -46,8 +46,8 @@ describe('brew.isAvailable', () => {
     });
 });
 
-describe('Runtime formula selection', () => {
-    test('uses the canonical Grotto formula when installed', () => {
+describe('Runtime formula', () => {
+    test('upgrades the Grotto formula', () => {
         spawnSyncMock.mockReturnValue(spawnResult({ status: 0 }));
 
         brew.upgradeRuntime();
@@ -55,21 +55,6 @@ describe('Runtime formula selection', () => {
         expect(spawnSyncMock).toHaveBeenLastCalledWith(
             'brew',
             ['upgrade', 'grotto-runtime'],
-            expect.any(Object)
-        );
-    });
-
-    test('keeps upgrading the legacy formula for existing installs', () => {
-        spawnSyncMock
-            .mockReturnValueOnce(spawnResult({ status: 1 }))
-            .mockReturnValueOnce(spawnResult({ status: 0 }))
-            .mockReturnValueOnce(spawnResult({ status: 0 }));
-
-        brew.upgradeRuntime();
-
-        expect(spawnSyncMock).toHaveBeenLastCalledWith(
-            'brew',
-            ['upgrade', 'tavern-runtime'],
             expect.any(Object)
         );
     });

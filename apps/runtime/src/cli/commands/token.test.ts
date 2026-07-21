@@ -47,7 +47,7 @@ describe('runTokenCommand', () => {
         // a token written to a temp file is read back identically on subsequent calls.
         const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'tavern-token-test-'));
         try {
-            const configFile = path.join(tmpDir, 'tavern.json');
+            const configFile = path.join(tmpDir, 'grotto.json');
             const persistedToken = 'persisted-token-stable-value';
             fs.writeFileSync(configFile, `${JSON.stringify({ token: persistedToken })}\n`, {
                 mode: 0o600,

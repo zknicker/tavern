@@ -6,7 +6,6 @@ const { existsSync, readFileSync, unlinkSync, writeFileSync } = require('node:fs
 const callbackChannel = 'desktop:auth:sso-callback';
 const callbackMarker = 'sso-callback';
 const protocolScheme = 'grotto';
-const acceptedProtocolSchemes = new Set([protocolScheme, 'tavern']);
 let memoryToken = null;
 
 function registerClerkAuth({ app, BrowserWindow, ipcMain, safeStorage, shell, webContents }) {
@@ -54,15 +53,14 @@ function registerClerkAuth({ app, BrowserWindow, ipcMain, safeStorage, shell, we
 }
 
 function registerProtocolClient(app) {
-    for (const scheme of acceptedProtocolSchemes) {
-        if (process.defaultApp && process.argv.length >= 2) {
-            app.setAsDefaultProtocolClient(scheme, process.execPath, [
-                path.resolve(process.argv[1]),
-            ]);
-        } else {
-            app.setAsDefaultProtocolClient(scheme);
-        }
+    if (process.defaultApp && process.argv.length >= 2) {
+        app.setAsDefaultProtocolClient(protocolScheme, process.execPath, [
+            path.resolve(process.argv[1]),
+        ]);
+        return;
     }
+
+    app.setAsDefaultProtocolClient(protocolScheme);
 }
 
 function broadcastSsoCallback(url, allWebContents) {
@@ -83,7 +81,7 @@ function isSsoCallbackUrl(value) {
     }
 
     try {
-        return acceptedProtocolSchemes.has(new URL(value).protocol.slice(0, -1));
+        return new URL(value).protocol === `${protocolScheme}:`;
     } catch {
         return false;
     }

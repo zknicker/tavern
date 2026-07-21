@@ -84,7 +84,7 @@ function homebrewRuntimeAssetPath() {
         path.dirname(process.execPath),
         '..',
         'share',
-        'tavern',
+        'grotto',
         'runtime-assets',
         googleOAuthAssetPath
     );

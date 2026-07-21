@@ -97,7 +97,7 @@ describe('dispatch', () => {
         expect(read()).toContain('Stage a Runtime upgrade through Homebrew');
     });
 
-    test('bare tavern → banner + status + commands, exit 0, no serve', async () => {
+    test('bare grotto → banner + status + commands, exit 0, no serve', async () => {
         vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('unreachable'));
         const read = capture('stdout');
         const result = await dispatch([]);

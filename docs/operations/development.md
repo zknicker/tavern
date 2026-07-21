@@ -27,7 +27,7 @@ The dev stack uses worktree-isolated development state by default:
 The stack derives a stable port group from the worktree path. Website, server,
 and Tavern Runtime each get one port from that group, so multiple Tavern
 worktrees can run at the same time without sharing Runtime state. This keeps the
-managed dev Runtime out of the packaged app's `~/.tavern/tavern.sqlite` state.
+managed dev Runtime out of the packaged app's `~/.grotto/grotto.sqlite` state.
 
 To intentionally share one dev workspace across worktrees, run:
 
@@ -64,7 +64,7 @@ Use `TAVERN_AGENT_PROVIDER`, `TAVERN_AGENT_MODEL`, and provider-specific
 model provider.
 
 The Runtime API requires a bearer token. The dev stack reads (or creates) the
-token from `<runtime root>/tavern.json` — the same config file the Runtime and
+token from `<runtime root>/grotto.json` — the same config file the Runtime and
 the `tavern` CLI resolve — and hands it to every stack process, so the token
 is stable per worktree across sessions. To use the CLI against a running dev
 stack, point it at the same state:

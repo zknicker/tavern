@@ -38,7 +38,7 @@ const ENVIRONMENT: { name: string; description: string }[] = [
     { name: 'TAVERN_RUNTIME_URL', description: 'Runtime API URL for client commands' },
     { name: 'TAVERN_RUNTIME_HOST', description: 'Bind host (default 127.0.0.1)' },
     { name: 'TAVERN_RUNTIME_PORT', description: 'Bind port (default 18790)' },
-    { name: 'TAVERN_RUNTIME_ROOT', description: 'Runtime data root (default ~/.tavern/runtime)' },
+    { name: 'TAVERN_RUNTIME_ROOT', description: 'Runtime data root (default ~/.grotto/runtime)' },
     { name: 'TAVERN_TASK_ARTIFACTS_DIR', description: 'Task attachment artifacts root' },
 ];
 

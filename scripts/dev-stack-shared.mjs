@@ -407,11 +407,11 @@ export function stripAnsi(value) {
 }
 
 // Mirrors resolveRuntimeApiToken in apps/runtime/src/config.ts: read the token
-// from <runtimeRoot>/tavern.json, or create it (base64url 32 bytes, mode 0600,
+// from <runtimeRoot>/grotto.json, or create it (base64url 32 bytes, mode 0600,
 // unknown keys preserved) so the first dev-stack run and the runtime agree on
 // the same persisted token.
 function resolveRuntimeApiTokenFile(runtimeRoot) {
-    const configPath = path.join(runtimeRoot, 'tavern.json');
+    const configPath = path.join(runtimeRoot, 'grotto.json');
     let config = {};
     try {
         const parsed = JSON.parse(fs.readFileSync(configPath, 'utf8'));
@@ -640,7 +640,7 @@ function readProcessParentId(pid) {
 
 function isStaleTauriDesktopSidecar(command) {
     return (
-        command.includes('/Applications/Grotto.app/Contents/MacOS/tavern-server') &&
+        command.includes('/Applications/Grotto.app/Contents/MacOS/grotto-server') &&
         command.includes('--app-origin tauri://localhost')
     );
 }
