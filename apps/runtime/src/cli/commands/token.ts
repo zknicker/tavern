@@ -21,7 +21,7 @@ function defaultDeps(): TokenDeps {
  * `--json` emits `{ "token": "..." }` for symmetry with other read commands.
  *
  * The token is read from `TAVERN_RUNTIME_TOKEN` env or the `token` key in
- * `tavern.json` under the runtime root (created on first call if absent).
+ * `grotto.json` under the runtime root (created on first call if absent).
  */
 export async function runTokenCommand(
     args: ParsedArgs,

@@ -1,7 +1,8 @@
 import { useSignIn, useSignUp } from '@clerk/clerk-react';
 import { useCallback, useEffect, useRef } from 'react';
 import { getDesktopBridge, isElectronDesktopApp } from '../../lib/desktop-bridge.ts';
-import { parseRotatingTokenNonce } from './desktop-oauth-callback.ts';
+import { getDesktopOAuthReloadOptions } from './desktop-oauth-callback.ts';
+import { desktopGoogleOAuthRequest } from './desktop-oauth-request.ts';
 
 export function useDesktopOAuth() {
     const { isLoaded: isSignInLoaded, setActive, signIn } = useSignIn();
@@ -29,17 +30,12 @@ export function useDesktopOAuth() {
             throw new Error('The Grotto desktop bridge is unavailable.');
         }
 
-        await signIn.create({
-            redirectUrl: 'grotto://sso-callback',
-            strategy: 'oauth_google',
-        });
+        await signIn.create(desktopGoogleOAuthRequest);
 
         const redirectUrl = signIn.firstFactorVerification.externalVerificationRedirectURL;
         if (!redirectUrl) {
             throw new Error('Google sign-in did not return an authorization URL.');
         }
-        redirectUrl.searchParams.set('prompt', 'select_account');
-
         unsubscribeRef.current?.();
         await bridge.openExternal(redirectUrl.toString());
 
@@ -52,8 +48,7 @@ export function useDesktopOAuth() {
                 handlingCallback = true;
 
                 try {
-                    const rotatingTokenNonce = parseRotatingTokenNonce(callbackUrl);
-                    await signIn.reload({ rotatingTokenNonce });
+                    await signIn.reload(getDesktopOAuthReloadOptions(callbackUrl));
 
                     let createdSessionId: string | null = null;
                     if (signIn.status === 'complete') {

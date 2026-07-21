@@ -53,7 +53,7 @@ let updateCheckInterval = null;
 const newWindowOffsetPx = 36;
 
 app.setName('Grotto');
-app.setAppUserModelId('build.tavern.desktop');
+app.setAppUserModelId('build.grotto.desktop');
 
 registerClerkAuth({ app, BrowserWindow, ipcMain, safeStorage, shell, webContents });
 
@@ -345,7 +345,7 @@ async function startDesktopServer() {
             '--app-origin',
             'file://',
             '--database-path',
-            path.join(app.getPath('home'), '.tavern', 'tavern.sqlite'),
+            path.join(app.getPath('home'), '.grotto', 'grotto.sqlite'),
             '--server-port',
             '3180',
         ],
@@ -377,7 +377,7 @@ function cleanupDesktopServerPort() {
         }
 
         const command = readProcessCommand(pid);
-        if (command.includes('tavern-server')) {
+        if (command.includes('grotto-server')) {
             process.kill(Number(pid), 'SIGTERM');
         }
     }
@@ -401,7 +401,7 @@ function cleanupDesktopServerPort() {
 }
 
 function getServerPath() {
-    const executableName = process.platform === 'win32' ? 'tavern-server.exe' : 'tavern-server';
+    const executableName = process.platform === 'win32' ? 'grotto-server.exe' : 'grotto-server';
     return path.join(process.resourcesPath, 'bin', executableName);
 }
 

@@ -164,7 +164,7 @@ class CodexAppServerClient {
         await this.request('initialize', {
             capabilities: { experimentalApi: true },
             clientInfo: {
-                name: 'tavern-runtime',
+                name: 'grotto-runtime',
                 title: 'Grotto Runtime',
                 version: '0.0.0',
             },

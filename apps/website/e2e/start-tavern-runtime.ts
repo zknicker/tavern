@@ -124,14 +124,18 @@ async function* streamedTextSegment(id: string, text: string) {
 function tallTableReply(marker: string) {
     const rows = Array.from(
         { length: 30 },
-        (_, index) => `["Region ${index + 1}","${(1000 + index * 37).toLocaleString('en-US')}"]`
+        (_, index) =>
+            `<tr><td>Region ${index + 1}</td><td>${(1000 + index * 37).toLocaleString('en-US')}</td></tr>`
     );
 
     return [
         `Here is the table.\n${marker}`,
         '',
-        '```widget:table',
-        `{"columns":["Region","Variance"],"rows":[${rows.join(',')}]}`,
+        '```visual Regional variance',
+        '<table>',
+        '<thead><tr><th>Region</th><th>Variance</th></tr></thead>',
+        `<tbody>${rows.join('')}</tbody>`,
+        '</table>',
         '```',
     ].join('\n');
 }

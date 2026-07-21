@@ -19,8 +19,8 @@ const imageExtensions = new Set(['.bmp', '.gif', '.jpeg', '.jpg', '.png', '.svg'
 const dataUrlReadMaxBytes = 16 * 1024 * 1024;
 const textSourceMaxBytes = 64 * 1024 * 1024;
 const textPreviewMaxBytes = 512 * 1024;
-// HTML previews render whole documents in sandboxed iframes (artifact pane and
-// the html-preview widget), so they get a larger complete-read window.
+// HTML previews render whole documents in sandboxed iframes (the artifact
+// pane), so they get a larger complete-read window.
 const htmlPreviewMaxBytes = 5 * 1024 * 1024;
 
 const languageByExtension: Record<string, string> = {

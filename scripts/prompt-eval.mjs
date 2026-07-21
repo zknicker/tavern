@@ -194,20 +194,20 @@ try {
         );
     });
 
-    await scenario('widget discipline: tabular answer uses a widget:table fence', async () => {
-        const chatId = await createChat(`Prompt eval widget ${stamp}`, [alpha.id]);
+    await scenario('visual discipline: tabular answer uses a visual fence', async () => {
+        const chatId = await createChat(`Prompt eval visual ${stamp}`, [alpha.id]);
         await send(
             chatId,
             `${mention(alpha)} without using any tools, show me a small table of three fruits and their colors.`
         );
-        // Widget fences are stripped from message content and projected as
-        // first-class widget rows. Timeout means no table widget arrived.
+        // Visual fences are stripped from message content and projected as
+        // first-class widget rows. Timeout means no visual arrived.
         await pollLog(
             chatId,
             (rows) =>
                 rows.some(
                     (row) =>
-                        row.kind === 'widget' && row.widget?.component === 'tavern.widget.table'
+                        row.kind === 'widget' && row.widget?.component === 'tavern.widget.visual'
                 ),
             180_000
         );

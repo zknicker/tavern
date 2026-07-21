@@ -8,8 +8,8 @@ describe('desktop OAuth callback URLs', () => {
         expect(isSsoCallbackUrl('grotto://sso-callback?rotating_token_nonce=nonce')).toBe(true);
     });
 
-    test('accepts the legacy Tavern callback', () => {
-        expect(isSsoCallbackUrl('tavern://sso-callback?rotating_token_nonce=nonce')).toBe(true);
+    test('rejects the retired Tavern callback', () => {
+        expect(isSsoCallbackUrl('tavern://sso-callback?rotating_token_nonce=nonce')).toBe(false);
     });
 
     test('rejects unrelated schemes and routes', () => {

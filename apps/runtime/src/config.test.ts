@@ -25,12 +25,12 @@ describe('runtime config paths', () => {
     });
 
     it('expands a configured agent home path under the user home', async () => {
-        process.env.TAVERN_AGENT_HOME = '~/.tavern/runtime/agent';
+        process.env.TAVERN_AGENT_HOME = '~/.grotto/runtime/agent';
         vi.resetModules();
 
         const config = await import('./config');
 
-        expect(config.AGENT_HOME).toBe(path.join(home, '.tavern', 'runtime', 'agent'));
+        expect(config.AGENT_HOME).toBe(path.join(home, '.grotto', 'runtime', 'agent'));
     });
 
     it('uses the user runtime root for source runs by default', async () => {
@@ -41,11 +41,11 @@ describe('runtime config paths', () => {
 
         const config = await import('./config');
 
-        expect(config.RUNTIME_ROOT).toBe(path.join(home, '.tavern', 'runtime'));
+        expect(config.RUNTIME_ROOT).toBe(path.join(home, '.grotto', 'runtime'));
     });
 });
 
-describe('runtime API token (tavern.json)', () => {
+describe('runtime API token (grotto.json)', () => {
     const originalRuntimeRoot = process.env.TAVERN_RUNTIME_ROOT;
     const originalToken = process.env.TAVERN_RUNTIME_TOKEN;
     let runtimeRoot: string;
@@ -53,7 +53,7 @@ describe('runtime API token (tavern.json)', () => {
 
     beforeEach(async () => {
         runtimeRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'tavern-config-token-'));
-        configPath = path.join(runtimeRoot, 'tavern.json');
+        configPath = path.join(runtimeRoot, 'grotto.json');
         process.env.TAVERN_RUNTIME_ROOT = runtimeRoot;
         // biome-ignore lint/performance/noDelete: assigning undefined to process.env coerces to the string "undefined"; delete is the only way to unset.
         delete process.env.TAVERN_RUNTIME_TOKEN;
@@ -67,7 +67,7 @@ describe('runtime API token (tavern.json)', () => {
         await fs.rm(runtimeRoot, { force: true, recursive: true });
     });
 
-    it('generates a token into tavern.json on first call and returns it on the next', async () => {
+    it('generates a token into grotto.json on first call and returns it on the next', async () => {
         const config = await import('./config');
 
         const token = config.getRuntimeApiToken();
@@ -78,7 +78,7 @@ describe('runtime API token (tavern.json)', () => {
         expect(config.getRuntimeApiToken()).toBe(token);
     });
 
-    it('reads an existing token from tavern.json', async () => {
+    it('reads an existing token from grotto.json', async () => {
         await fs.writeFile(configPath, `${JSON.stringify({ token: 'persisted-token' })}\n`);
         const config = await import('./config');
 
@@ -96,7 +96,7 @@ describe('runtime API token (tavern.json)', () => {
         expect(persisted.token).toBe(token);
     });
 
-    it('prefers the TAVERN_RUNTIME_TOKEN env override and leaves tavern.json alone', async () => {
+    it('prefers the TAVERN_RUNTIME_TOKEN env override and leaves grotto.json alone', async () => {
         process.env.TAVERN_RUNTIME_TOKEN = 'env-token';
         vi.resetModules();
         const config = await import('./config');
@@ -105,7 +105,7 @@ describe('runtime API token (tavern.json)', () => {
         await expect(fs.access(configPath)).rejects.toThrow();
     });
 
-    it('throws on unparseable tavern.json instead of clobbering it', async () => {
+    it('throws on unparseable grotto.json instead of clobbering it', async () => {
         await fs.writeFile(configPath, '{ not json');
         const config = await import('./config');
 

@@ -216,6 +216,23 @@ agent's model restored afterward. Run it after session, ledger, delivery,
 or turn-runner changes. Both eval scripts share
 `scripts/eval-harness.mjs`; `--only <substring>` reruns one scenario.
 
+## Design Battery
+
+`bun run eval:design` is a dev tool, not a suite: it drives the fixed
+battery of visual prompts (`scripts/design-battery/battery.mjs`) through a
+running dev stack as real model turns, screenshots each rendered result in
+dark and light themes with Playwright, and writes per-run output plus a
+`contact-sheet.html` under `scripts/design-battery/output/` (gitignored).
+The verdict is human: judge the sheet against
+`scripts/design-battery/RUBRIC.md`, revise the visuals skill sources
+(`apps/runtime/src/agent-engine/visuals-skill/`), restart the stack to
+reseed, and rerun. `--model <provider>/<model>` runs the battery on a
+specific executor model (restored afterward unless `--keep-model`);
+`--only <slug>` reruns a subset; `--reuse-chats` recycles the battery chat.
+The battery chat is intentionally left unarchived for transcript
+inspection. Rerun the loop after skill-text, token, or executor-model
+changes (PRD-86, ADR 0012).
+
 ## Keeping Suites Current
 
 * Add tests with the feature or bug fix, not in a later cleanup.

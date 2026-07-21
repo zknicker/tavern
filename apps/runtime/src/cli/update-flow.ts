@@ -4,7 +4,7 @@ import type { RuntimeProbe } from './runtime-probe';
 export interface UpdateFlowDeps {
     brew: Brew;
     probe: RuntimeProbe;
-    /** Version of the staged on-disk binary (`tavern --version`). */
+    /** Version of the staged on-disk binary (`grotto --version`). */
     stagedVersion(): Promise<string>;
     /** Best-effort engine pre-stage; resolves to true on success. */
     stageEngine(): Promise<boolean>;

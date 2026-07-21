@@ -3,12 +3,12 @@
 const releaseBaseUrl = process.env.TAVERN_RELEASE_BASE_URL?.replace(/\/+$/u, '');
 
 module.exports = {
-    appId: 'build.tavern.desktop',
+    appId: 'build.grotto.desktop',
     productName: 'Grotto',
     protocols: [
         {
             name: 'Grotto',
-            schemes: ['grotto', 'tavern'],
+            schemes: ['grotto'],
         },
     ],
     directories: {
@@ -26,8 +26,8 @@ module.exports = {
     ],
     extraResources: [
         {
-            from: 'electron/resources/bin/tavern-server',
-            to: 'bin/tavern-server',
+            from: 'electron/resources/bin/grotto-server',
+            to: 'bin/grotto-server',
         },
         {
             from: 'electron/generated-icons/Assets.car',
@@ -37,7 +37,7 @@ module.exports = {
     mac: {
         // biome-ignore lint/suspicious/noTemplateCurlyInString: electron-builder artifact macros are literal strings.
         artifactName: '${productName}_${version}_${arch}.${ext}',
-        binaries: ['Contents/Resources/bin/tavern-server'],
+        binaries: ['Contents/Resources/bin/grotto-server'],
         category: 'public.app-category.productivity',
         darkModeSupport: true,
         entitlements: 'electron/Entitlements.plist',

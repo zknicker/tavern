@@ -8,8 +8,9 @@ runtime-owned product state. Grotto App is the first-party Electron client and
 presentation layer. The internal agent engine runs turns through local AI SDK
 language models and projects execution activity back into Grotto Runtime.
 
-The repository, package namespace, API types, environment variables, and local
-state paths retain the `tavern` name while the product rename is underway.
+The repository, package namespace, API types, environment variables, and dev
+state retain the internal `tavern` name. Production app and Runtime artifacts
+use Grotto names and `~/.grotto` state paths.
 
 ## Architecture
 
@@ -56,7 +57,7 @@ bun run dev
 server, and the desktop shell.
 
 Dev state is isolated under the worktree-specific Tavern dev root. The default
-Runtime root outside the dev stack is `~/.tavern/runtime`.
+Runtime root outside the dev stack is `~/.grotto/runtime`.
 
 Local dev ports are derived from the worktree path so multiple worktrees can run
 at once. Override them with:
@@ -70,9 +71,8 @@ TAVERN_AGENT_PROVIDER=openai
 Set `TAVERN_RUNTIME_HOST=0.0.0.0` and point the app at
 `http://<host>:18790` when Runtime runs on an always-on Mac.
 
-Production Runtime installs expose `grotto` as the preferred CLI and
-`grotto-runtime` as the service binary. Legacy names remain unadvertised
-compatibility aliases. `grotto update` upgrades the
+Production Runtime installs expose `grotto` as the CLI and
+`grotto-runtime` as the service binary. `grotto update` upgrades the
 Homebrew formula and restarts the service by default.
 
 ## Desktop Build

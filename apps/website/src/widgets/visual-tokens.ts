@@ -51,14 +51,19 @@ const typographyTokenNames = ['--font-sans', '--font-mono', '--app-ui-font-size'
 
 const radiusTokenNames = ['--radius-sm', '--radius-md', '--radius-lg', '--radius-xl'] as const;
 
-// Categorical series palette, mirroring the kit chart order
-// (apps/website/src/kit/chart-view-model.ts) with a fifth step for visuals.
-const chartSeriesSources = [
-    ['--chart-1', '--color-cyan-300'],
-    ['--chart-2', '--color-cyan-500'],
-    ['--chart-3', '--brand'],
-    ['--chart-4', '--info'],
-    ['--chart-5', '--color-violet-400'],
+const textTierTokenNames = ['--foreground-tertiary', '--foreground-quaternary'] as const;
+
+// Categorical chart series shared with kit charts (tokens.css).
+const chartTokenNames = ['--chart-1', '--chart-2', '--chart-3', '--chart-4', '--chart-5'] as const;
+
+const motionTokenNames = [
+    '--t-micro',
+    '--t-fast',
+    '--t-normal',
+    '--t-slow',
+    '--ease-out',
+    '--ease-in',
+    '--ease-standard',
 ] as const;
 
 export const visualTokenNames: readonly string[] = [
@@ -66,6 +71,9 @@ export const visualTokenNames: readonly string[] = [
     ...statusTokenNames,
     ...typographyTokenNames,
     ...radiusTokenNames,
+    ...textTierTokenNames,
+    ...chartTokenNames,
+    ...motionTokenNames,
 ];
 
 /**
@@ -82,13 +90,6 @@ export function visualTokenDeclarations(): string {
 
     for (const name of visualTokenNames) {
         const value = computed.getPropertyValue(name).trim();
-        if (value) {
-            declarations.push(`${name}: ${value};`);
-        }
-    }
-
-    for (const [name, source] of chartSeriesSources) {
-        const value = computed.getPropertyValue(source).trim();
         if (value) {
             declarations.push(`${name}: ${value};`);
         }

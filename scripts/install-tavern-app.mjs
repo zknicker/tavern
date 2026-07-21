@@ -1,4 +1,5 @@
-import { cpSync, existsSync, rmSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
+import { existsSync, rmSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -25,6 +26,6 @@ if (!existsSync(sourceAppPath)) {
 }
 
 rmSync(destinationAppPath, { force: true, recursive: true });
-cpSync(sourceAppPath, destinationAppPath, { recursive: true });
+execFileSync('/usr/bin/ditto', ['--rsrc', '--extattr', sourceAppPath, destinationAppPath]);
 
 console.log(`Installed Grotto.app to ${destinationAppPath}`);

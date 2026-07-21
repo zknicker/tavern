@@ -38,9 +38,7 @@ export function startRuntimeUpdate(input?: { targetVersion?: null | string }) {
     // the staged binary (only it knows the new pin). Best-effort: a pre-stage
     // failure must not fail staging — restart-time setup is the safety net.
     const stageCommand =
-        'formula="$(brew list --formula --versions grotto-runtime >/dev/null 2>&1 && ' +
-        'echo grotto-runtime || echo tavern-runtime)" && ' +
-        'brew update && brew upgrade "$formula" && ' +
+        'brew update && brew upgrade grotto-runtime && ' +
         '{ "$(brew --prefix)/bin/grotto" engine install || ' +
         'echo "agent engine pre-stage failed; the restart will install it"; }';
     const child = spawn('sh', ['-lc', stageCommand], {
@@ -88,9 +86,7 @@ export function restartRuntimeForUpdate() {
         startedAt: updateStatus.startedAt ?? new Date().toISOString(),
     };
 
-    const restartCommand =
-        'formula="$(brew list --formula --versions grotto-runtime >/dev/null 2>&1 && ' +
-        'echo grotto-runtime || echo tavern-runtime)" && brew services restart "$formula"';
+    const restartCommand = 'brew services restart grotto-runtime';
     const child = spawn('sh', ['-lc', restartCommand], {
         detached: true,
         env: process.env,

@@ -37,6 +37,14 @@ const xaiLogo = {
 
 export const anthropicProviderLogo = anthropicLogo;
 
+// Kimi's K + sparkle mark, recolored per scheme with the square canvas
+// dropped so the glyph fills the tile like sibling logos. Derived from
+// svgl.app/library/kimi-icon.svg; the sparkle carries Kimi's #027aff.
+export const kimiLogo = {
+    dark: 'data:image/svg+xml,%3Csvg%20viewBox=%2290%2090%20332%20332%22%20xmlns=%22http://www.w3.org/2000/svg%22%20fill-rule=%22evenodd%22%20clip-rule=%22evenodd%22%3E%3Cpath%20d=%22M342.065%20189.759c1.886-2.42%203.541-4.63%205.289-6.77.81-1.007.74-1.771-.046-2.824-7.58-9.965-8.298-21.028-3.935-32.254%203.275-8.448%2010.52-12.406%2019.373-13.25%205.52-.521%2010.936.046%2015.959%202.73%206.596%203.53%2010.438%208.912%2011.688%2016.341.995%205.926.81%2011.712-.868%2017.452-2.974%2010.161-10.277%2015.427-20.287%2016.758-8.31%201.11-16.734%201.25-25.113%201.817-.648.046-1.308%200-2.06%200z%22%20fill=%22%23027aff%22/%3E%3Cpath%20d=%22M321.512%20144.254h-50.064l-39.637%2090.384h-56.036v-89.99H131v232.868h44.787v-98.103h78.973c13.598%200%2026.015-7.927%2031.744-20.252v118.355h44.787v-98.103c0-23.342-18.239-42.97-41.523-44.671v-.116h-24.593a45.577%2045.577%200%200026.884-24.534l29.453-65.838z%22%20fill=%22%23FFFFFF%22/%3E%3C/svg%3E',
+    light: 'data:image/svg+xml,%3Csvg%20viewBox=%2290%2090%20332%20332%22%20xmlns=%22http://www.w3.org/2000/svg%22%20fill-rule=%22evenodd%22%20clip-rule=%22evenodd%22%3E%3Cpath%20d=%22M342.065%20189.759c1.886-2.42%203.541-4.63%205.289-6.77.81-1.007.74-1.771-.046-2.824-7.58-9.965-8.298-21.028-3.935-32.254%203.275-8.448%2010.52-12.406%2019.373-13.25%205.52-.521%2010.936.046%2015.959%202.73%206.596%203.53%2010.438%208.912%2011.688%2016.341.995%205.926.81%2011.712-.868%2017.452-2.974%2010.161-10.277%2015.427-20.287%2016.758-8.31%201.11-16.734%201.25-25.113%201.817-.648.046-1.308%200-2.06%200z%22%20fill=%22%23027aff%22/%3E%3Cpath%20d=%22M321.512%20144.254h-50.064l-39.637%2090.384h-56.036v-89.99H131v232.868h44.787v-98.103h78.973c13.598%200%2026.015-7.927%2031.744-20.252v118.355h44.787v-98.103c0-23.342-18.239-42.97-41.523-44.671v-.116h-24.593a45.577%2045.577%200%200026.884-24.534l29.453-65.838z%22%20fill=%22%2316191E%22/%3E%3C/svg%3E',
+};
+
 export const logoModelProviderPresets = [
     ['alibaba', 'Qwen Cloud', '#FF6A00', alibabaCloudLogo],
     ['alibaba-coding-plan', 'Alibaba Cloud (Coding Plan)', '#FF6A00', alibabaCloudLogo],
@@ -78,18 +86,8 @@ export const logoModelProviderPresets = [
             light: 'https://svgl.app/library/kilocode-light.svg',
         },
     ],
-    [
-        'kimi-coding',
-        'Kimi / Kimi Coding Plan',
-        '#111827',
-        { light: 'https://svgl.app/library/kimi-icon.svg' },
-    ],
-    [
-        'kimi-coding-cn',
-        'Kimi / Moonshot (China)',
-        '#111827',
-        { light: 'https://svgl.app/library/kimi-icon.svg' },
-    ],
+    ['kimi-coding', 'Kimi / Kimi Coding Plan', '#027AFF', kimiLogo],
+    ['kimi-coding-cn', 'Kimi / Moonshot (China)', '#027AFF', kimiLogo],
     [
         'lmstudio',
         'LM Studio',

@@ -1,10 +1,11 @@
 import { widgetDemoRenderInput } from './development-chat-demo-basic-definitions';
 
 /**
- * Generative-visual turns for the widgets gallery channel: a token-styled
- * chart, a diagram, a tall visual that exercises the collapse affordance, and
- * a malformed body that proves error-tolerant degradation. Bodies follow the
- * visuals design skills (theme tokens only, content-first ordering).
+ * Generative-visual turns for the visuals gallery channel: a token-styled
+ * chart, a bare native-styled table, a diagram, a tall visual that exercises
+ * the collapse affordance, and a malformed body that proves error-tolerant
+ * degradation. Bodies follow the visuals skill (theme tokens only,
+ * content-first ordering).
  */
 export function visualDemoTurns() {
     return [
@@ -19,6 +20,21 @@ export function visualDemoTurns() {
                     widget: widgetDemoRenderInput('visual', 'Weekly sales', {
                         html: chartVisualHtml,
                         title: 'Weekly sales',
+                    }),
+                },
+            ],
+        },
+        {
+            reply: 'Rendered as a bare HTML table; the frame styles it natively.',
+            request: 'Show regional revenue as a plain table.',
+            slug: 'visual_table',
+            widgets: [
+                {
+                    fallbackText: 'Regional revenue',
+                    title: 'Visual',
+                    widget: widgetDemoRenderInput('visual', 'Regional revenue', {
+                        html: tableVisualHtml,
+                        title: 'Regional revenue',
                     }),
                 },
             ],
@@ -87,6 +103,24 @@ const chartVisualHtml = `<h2 style="margin:0 0 4px;font-size:15px;font-weight:60
   <text x="326" y="180" text-anchor="middle" font-size="12" fill="var(--muted-foreground)">Thu</text>
   <text x="416" y="180" text-anchor="middle" font-size="12" fill="var(--muted-foreground)">Fri</text>
 </svg>`;
+
+// Bare <table> markup on purpose: the sandbox base stylesheet owns the look
+// (ui/table.tsx parity), so a styled table here would mask a regression.
+const tableVisualHtml = `<h2 style="margin:0 0 12px;font-size:15px;font-weight:600">Regional revenue</h2>
+<table>
+  <thead>
+    <tr><th>Region</th><th style="text-align:right">Revenue</th><th style="text-align:right">Change</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>North America</td><td style="text-align:right">$412,900</td><td style="text-align:right">+8.2%</td></tr>
+    <tr><td>Europe</td><td style="text-align:right">$268,400</td><td style="text-align:right">+3.1%</td></tr>
+    <tr><td>Asia Pacific</td><td style="text-align:right">$194,700</td><td style="text-align:right">-1.4%</td></tr>
+  </tbody>
+  <tfoot>
+    <tr><td>Total</td><td style="text-align:right">$876,000</td><td style="text-align:right">+4.6%</td></tr>
+  </tfoot>
+  <caption>Q2 revenue by region, year over year.</caption>
+</table>`;
 
 const diagramVisualHtml = `<h2 style="margin:0 0 12px;font-size:15px;font-weight:600">Deploy pipeline</h2>
 <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">

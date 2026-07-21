@@ -3,7 +3,7 @@ import { type ChatPaneTarget, chatPaneTargetKey } from './contracts.js';
 // The grotto:// link scheme for chat pane targets. This is the one shared
 // parser for every consumer of the scheme — app link clicks and the Runtime
 // pane_open agent tool must agree on what a link means and what is unsafe.
-const paneProtocols = new Set(['grotto:', 'tavern:']);
+const paneProtocol = 'grotto:';
 
 export function isWorkspaceChatPaneTarget(
     target: ChatPaneTarget
@@ -60,7 +60,7 @@ export function parseChatPaneTargetLink(href: string): ChatPaneTarget | null {
         return null;
     }
 
-    if (!paneProtocols.has(url.protocol) || url.search || url.hash) {
+    if (url.protocol !== paneProtocol || url.search || url.hash) {
         return null;
     }
 

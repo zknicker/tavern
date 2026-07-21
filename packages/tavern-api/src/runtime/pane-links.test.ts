@@ -104,9 +104,6 @@ test('formatChatPaneTargetLink formats clickable artifact links', () => {
     });
 });
 
-test('parseChatPaneTargetLink accepts legacy Tavern links', () => {
-    expect(parseChatPaneTargetLink('tavern://wiki/INDEX.md')).toEqual({
-        kind: 'wikiPage',
-        path: 'INDEX.md',
-    });
+test('parseChatPaneTargetLink rejects Tavern links', () => {
+    expect(parseChatPaneTargetLink('tavern://wiki/INDEX.md')).toBeNull();
 });

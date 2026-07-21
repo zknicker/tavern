@@ -1,8 +1,33 @@
+diff --git a/node_modules/@ai-sdk/harness-pi/.bun-tag-f6b29c15a5a65fa2 b/.bun-tag-f6b29c15a5a65fa2
+new file mode 100644
+index 0000000000000000000000000000000000000000..e69de29bb2d1d6434b8b29ae775ad8c2e48c5391
 diff --git a/dist/index.js b/dist/index.js
-index 86ae6f9db637ede643a17a6625cc09278275e87e..a4ef32a17bbcad7ff41c06f5aba993a7e2c0164f 100644
+index 86ae6f9db637ede643a17a6625cc09278275e87e..3c82e3e4703e2b7562fb19228aa96a3cb564639f 100644
 --- a/dist/index.js
 +++ b/dist/index.js
-@@ -379,7 +379,8 @@ function createPiModelResolver(modelRegistry, env = process.env) {
+@@ -263,10 +263,20 @@ function applyCustomEnv(customEnv, registries) {
+     if (!baseUrl) {
+       continue;
+     }
++    let models;
++    const modelsJson = customEnv[`${prefix}_MODELS_JSON`];
++    if (modelsJson) {
++      try {
++        const parsed = JSON.parse(modelsJson);
++        if (Array.isArray(parsed) && parsed.length > 0) models = parsed;
++      } catch {
++      }
++    }
+     register(registries, provider, apiKey, {
+       apiKey,
+       baseUrl,
+-      authHeader: true
++      authHeader: true,
++      ...models ? { models } : {}
+     });
+   }
+   return out;
+@@ -379,7 +389,8 @@ function createPiModelResolver(modelRegistry, env = process.env) {
      if (!effectiveId) return void 0;
      const models = loadModels();
      const matches = (m) => m.id === effectiveId || m.name === effectiveId;

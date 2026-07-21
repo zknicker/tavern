@@ -156,7 +156,7 @@ failures link to Runtime settings, where the full connection error is shown.
 
 ## Homebrew Tap
 
-`zknicker/homebrew-tavern` is first-party Grotto release infrastructure. Treat
+`zknicker/homebrew-grotto` is first-party Grotto release infrastructure. Treat
 it as part of this repository's release surface, not as a separate downstream
 project.
 
@@ -170,7 +170,7 @@ behavior changes:
   environment overrides
 
 `release:publish-homebrew-formula` owns the formula write path. It updates
-`zknicker/homebrew-tavern` by default through `TAVERN_HOMEBREW_TAP_REPO`, or an
+`zknicker/homebrew-grotto` by default through `TAVERN_HOMEBREW_TAP_REPO`, or an
 explicit local checkout through `TAVERN_HOMEBREW_TAP_DIR`.
 
 Desktop builds compile `assets/mac-icon.icon` with Xcode `actool` before Electron
@@ -180,7 +180,7 @@ versions and Electron's DMG/app bundle path.
 
 Grotto ships two production artifacts:
 
-* `Grotto.app` is the desktop client plus its local app backend. Desktop release files use the
+* `Grotto.app` (`build.grotto.desktop`) is the desktop client plus its local app backend. Desktop release files use the
   `Grotto_<version>_<arch>` prefix.
 * `grotto-runtime-<version>-<target>.tar.gz` is the always-on Runtime server for
   a Mac mini or other host.
@@ -200,7 +200,7 @@ Required release environment:
 * `TAVERN_RELEASE_S3_URI`
 * `TAVERN_GOOGLE_OAUTH_CLIENT_ID`
 * `TAVERN_GOOGLE_OAUTH_CLIENT_SECRET`
-* `TAVERN_HOMEBREW_TAP_REPO` defaults to `zknicker/homebrew-tavern`
+* `TAVERN_HOMEBREW_TAP_REPO` defaults to `zknicker/homebrew-grotto`
 * `TAVERN_HOMEBREW_TAP_DIR` optionally points to a local tap checkout
 * `CSC_NAME` or `CSC_LINK` + `CSC_KEY_PASSWORD`
 * `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD`, `APPLE_TEAM_ID`

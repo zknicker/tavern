@@ -18,7 +18,7 @@ test('MemoryOverview renders Aside-style memory settings and hub status', () => 
                     indexExists: true,
                     pageCount: 42,
                     readable: true,
-                    wikiPath: '/Users/zknicker/.tavern/runtime/memory',
+                    wikiPath: '/Users/zknicker/.grotto/runtime/memory',
                     writable: true,
                 }}
             />

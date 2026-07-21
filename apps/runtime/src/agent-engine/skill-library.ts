@@ -22,11 +22,9 @@ import {
     tryReadSkillSummarySource,
     tryResolveSkillSource,
 } from './managed-skill-summary.ts';
-import { defaultPageDesignSkill, pageDesignSkillId } from './page-design-skill.ts';
-import { defaultVisualsChartsSkill, visualsChartsSkillId } from './visuals-charts-skill.ts';
-import { defaultVisualsDiagramsSkill, visualsDiagramsSkillId } from './visuals-diagrams-skill.ts';
+import { defaultVisualsSkill, visualsSkillFiles, visualsSkillId } from './visuals-skill.ts';
 
-export { pageDesignSkillId, visualsChartsSkillId, visualsDiagramsSkillId };
+export { visualsSkillId };
 
 export const agentEngineSkillsDir = path.join(AGENT_HOME, 'skills');
 export const tavernAgentSkillId = 'tavern-agent';
@@ -139,11 +137,14 @@ them.
 `;
 
 const seededSkillDefaults: Record<string, string> = {
-    [pageDesignSkillId]: defaultPageDesignSkill,
     [tasksSkillId]: defaultTasksSkill,
     [tavernAgentSkillId]: defaultTavernSkill,
-    [visualsChartsSkillId]: defaultVisualsChartsSkill,
-    [visualsDiagramsSkillId]: defaultVisualsDiagramsSkill,
+    [visualsSkillId]: defaultVisualsSkill,
+};
+
+/** Reference/asset files seeded beside SKILL.md, keyed by relative path. */
+const seededSkillExtraFiles: Record<string, Record<string, string>> = {
+    [visualsSkillId]: visualsSkillFiles,
 };
 
 export function isSeededSkillId(skillId: string): boolean {
@@ -189,21 +190,27 @@ export async function seedManagedSkills(options: { skillsDir?: string } = {}) {
 }
 
 async function seedSeededSkill(skillId: string, options: { skillsDir?: string } = {}) {
-    const skillPath = path.join(options.skillsDir ?? agentEngineSkillsDir, skillId, 'SKILL.md');
     const defaultContent = seededSkillDefaults[skillId];
     if (defaultContent === undefined) {
         throw new Error(`Skill ${skillId} is not a seeded Grotto skill.`);
     }
-    const existing = await fs.readFile(skillPath, 'utf8').catch(() => null);
-    if (existing === defaultContent) {
-        recordSeededSkillSource(skillId);
-        return;
+
+    let replacedExisting = false;
+    let changed = false;
+    for (const [relativePath, content] of seededSkillEntries(skillId, defaultContent)) {
+        const filePath = seededSkillFilePath({ options, relativePath, skillId });
+        const existing = await fs.readFile(filePath, 'utf8').catch(() => null);
+        if (existing === content) {
+            continue;
+        }
+        await fs.mkdir(path.dirname(filePath), { recursive: true });
+        await fs.writeFile(filePath, content, { mode: 0o600 });
+        changed = true;
+        replacedExisting ||= existing !== null;
     }
 
-    await fs.mkdir(path.dirname(skillPath), { recursive: true });
-    await fs.writeFile(skillPath, defaultContent, { mode: 0o600 });
     recordSeededSkillSource(skillId);
-    if (existing !== null) {
+    if (changed && replacedExisting) {
         publishSkillUpdated(skillId);
     }
 }
@@ -213,15 +220,33 @@ export async function resetSeededSkill(skillId: string, options: { skillsDir?: s
     if (defaultContent === undefined) {
         throw new Error(`Skill ${skillId} is not a seeded Grotto skill.`);
     }
-    const skillPath = path.join(options.skillsDir ?? agentEngineSkillsDir, skillId, 'SKILL.md');
-    await fs.mkdir(path.dirname(skillPath), { recursive: true });
-    await fs.writeFile(skillPath, defaultContent, { mode: 0o600 });
+    for (const [relativePath, content] of seededSkillEntries(skillId, defaultContent)) {
+        const filePath = seededSkillFilePath({ options, relativePath, skillId });
+        await fs.mkdir(path.dirname(filePath), { recursive: true });
+        await fs.writeFile(filePath, content, { mode: 0o600 });
+    }
     recordSeededSkillSource(skillId);
     publishSkillUpdated(skillId);
     return {
         hash: sha256(defaultContent),
         skillId,
     };
+}
+
+function seededSkillEntries(skillId: string, defaultContent: string): [string, string][] {
+    return [['SKILL.md', defaultContent], ...Object.entries(seededSkillExtraFiles[skillId] ?? {})];
+}
+
+function seededSkillFilePath(input: {
+    options: { skillsDir?: string };
+    relativePath: string;
+    skillId: string;
+}) {
+    return path.join(
+        input.options.skillsDir ?? agentEngineSkillsDir,
+        input.skillId,
+        ...input.relativePath.split('/')
+    );
 }
 
 export async function resetRuntimeSkillToDefault(

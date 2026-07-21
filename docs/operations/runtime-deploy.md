@@ -60,13 +60,12 @@ default. They browse the resolved Wiki root; writes and maintenance happen
 through Wiki tools. When the Runtime is unreachable they fail
 with a pointer to `grotto status`.
 
-`grotto` is the preferred CLI. `grotto-runtime` is the service binary. The old
-names remain compatibility aliases for existing installations and scripts.
+`grotto` is the CLI. `grotto-runtime` is the service binary.
 
 `engine` commands report and manage local agent-execution readiness without
 needing a running Runtime. `status` shows resolved runtime paths, configured
 providers, and installed dependencies.
-`install` pre-provisions the pinned engine into `~/.tavern/engine/<pin>/`
+`install` prepares the agent home under `~/.grotto/runtime/agent/`
 (idempotent; streams installer output). `clean` removes engine installs for
 other pins; `--all` removes every install.
 
@@ -102,7 +101,7 @@ On the Mac mini, installing Runtime through Homebrew is the install step. The
 first start initializes Runtime storage and local agent workspaces:
 
 ```bash
-brew install zknicker/tavern/grotto-runtime
+brew install zknicker/grotto/grotto-runtime
 brew services start grotto-runtime
 ```
 
@@ -134,7 +133,7 @@ Runtime defaults to local-only binding:
 ```bash
 TAVERN_RUNTIME_HOST=127.0.0.1
 TAVERN_RUNTIME_PORT=18790
-TAVERN_RUNTIME_ROOT=~/.tavern/runtime
+TAVERN_RUNTIME_ROOT=~/.grotto/runtime
 ```
 
 For a server that accepts app connections from another machine, set the host in
@@ -178,7 +177,7 @@ cutover.
 
 Every non-health Runtime HTTP request and WebSocket upgrade requires a bearer
 token. Grotto Runtime generates the token on first start and stores it in the host
-config file `<runtime-root>/tavern.json` (`token` key, mode 0600). The Grotto App reads the token
+config file `<runtime-root>/grotto.json` (`token` key, mode 0600). The Grotto App reads the token
 from the connection record and sends it as `Authorization: Bearer <token>` on
 every request.
 
@@ -206,7 +205,7 @@ to the app:
    connecting to a remote Runtime.
 
 The token is stable unless you rotate it manually by editing the `token` key
-in `<runtime-root>/tavern.json` (or deleting the file to regenerate). A URL-only re-save in the app does not
+in `<runtime-root>/grotto.json` (or deleting the file to regenerate). A URL-only re-save in the app does not
 clear a stored token; only entering a new token value changes it.
 
 ## Release Artifact
@@ -221,7 +220,7 @@ The release publisher uploads that tarball and its checksum beside the desktop
 updater artifacts under `TAVERN_RELEASE_S3_URI`. The formula URL uses the same
 public `TAVERN_RELEASE_BASE_URL`.
 
-`release:publish` updates `zknicker/homebrew-tavern` by default. Set
+`release:publish` updates `zknicker/homebrew-grotto` by default. Set
 `TAVERN_HOMEBREW_TAP_REPO` to publish to another tap, or
 `TAVERN_HOMEBREW_TAP_DIR` to update an existing local checkout.
 
@@ -234,13 +233,11 @@ The tarball contains:
 ```txt
 bin/grotto-runtime
 bin/grotto
-bin/tavern-runtime # compatibility alias
-bin/tavern         # compatibility alias
-share/tavern/node_modules/@tavern/sdk/
-share/tavern/node_modules/@tobilu/qmd/
-share/tavern/node_modules/agent-browser/
-share/tavern/runtime-assets/
-share/tavern/runtime-assets/google/oauth-client.json
+share/grotto/node_modules/@tavern/sdk/
+share/grotto/node_modules/@tobilu/qmd/
+share/grotto/node_modules/agent-browser/
+share/grotto/runtime-assets/
+share/grotto/runtime-assets/google/oauth-client.json
 ```
 
 `runtime-assets/google/oauth-client.json` is generated during Runtime artifact

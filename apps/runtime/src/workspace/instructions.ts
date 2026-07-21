@@ -4,7 +4,6 @@ import { isRuntimeCronReady } from '../cron/manager-state.ts';
 import type { Database } from '../db/sqlite.ts';
 import { namedParams } from '../db/sqlite.ts';
 import { isMemoryEnabled } from '../memory/settings.ts';
-import { availableWidgetNamesForAgent } from '../plugins/agent-capabilities.ts';
 import { merchbaseToolsGrantedForAgent } from '../plugins/merchbase-tools.ts';
 import { getStoredAgent } from '../tavern/agents-store.ts';
 import { publishRuntimeEvent } from '../tavern/runtime-events.ts';
@@ -128,7 +127,6 @@ export async function generateAgentInstructions(db: Database, agentId = defaultA
     await removeGeneratedInstructionFiles(source.workspaceDir);
     const agent = getStoredAgent(source.agentId, db);
     const next = renderAgentInstructions(source.agentName, notes, {
-        availableWidgetNames: availableWidgetNamesForAgent(agent),
         cronEnabled: isRuntimeCronReady(),
         memoryEnabled: isMemoryEnabled(),
         merchbaseSalesToolAvailable: merchbaseToolsGrantedForAgent(agent),
