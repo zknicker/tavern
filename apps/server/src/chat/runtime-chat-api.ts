@@ -1,3 +1,4 @@
+import type { TavernThreadSummary } from '@tavern/api';
 import type {
     TavernArtifact,
     TavernChatMessage,
@@ -24,7 +25,7 @@ export interface RuntimeChatTimelinePage {
 
 export async function getRuntimeChatTimelinePage(
     chatId: string,
-    input: { beforeSequence?: number; limit?: number } = {}
+    input: { beforeSequence?: number; limit?: number; readerId?: string } = {}
 ): Promise<RuntimeChatTimelinePage | null> {
     const connection = await getActiveAgentRuntimeConnection();
 
@@ -39,6 +40,7 @@ export async function getRuntimeChatTimelinePage(
         client.chat.timeline(chatId, {
             beforeSequence: input.beforeSequence,
             limit: input.limit,
+            readerId: input.readerId,
         }),
     ]);
     const agentsById = new Map(agents.map((agent) => [agent.id, agent]));
@@ -50,6 +52,9 @@ export async function getRuntimeChatTimelinePage(
     });
     const responsesById = new Map(responses.map((response) => [response.id, response]));
     const responseIdByMessageId = mapResponseIdsByMessageId(responses);
+    const threadsByAnchorMessageId = new Map(
+        page.threads.map((thread) => [thread.anchor_message_id, thread])
+    );
 
     const finalReplyTextByRunId = new Map(
         messages
@@ -59,7 +64,7 @@ export async function getRuntimeChatTimelinePage(
     );
     const agentNamesById = new Map(agents.map((agent) => [agent.id, agent.name]));
     const messageRows = messages.flatMap((message) =>
-        messageToChatRows(message, agentsById, responseIdByMessageId)
+        messageToChatRows(message, agentsById, responseIdByMessageId, threadsByAnchorMessageId)
     );
     // The timeline carries conversation units only (specs/chat-timeline.md);
     // tool, reasoning, worker, and narration rows are turn evidence served by
@@ -219,7 +224,8 @@ export function cancelledResponseToChatRow(response: TavernChatResponse): ChatLo
 function messageToChatRows(
     message: TavernChatMessage,
     agentsById: Map<string, Awaited<ReturnType<typeof listAgents>>[number]>,
-    responseIdByMessageId: ReadonlyMap<string, string>
+    responseIdByMessageId: ReadonlyMap<string, string>,
+    threadsByAnchorMessageId: ReadonlyMap<string, TavernThreadSummary>
 ): ChatLogPage['rows'] {
     const sourceAgentId = runtimeMetadataString(message, 'agentId') ?? message.author.id;
     const agent = message.author.kind === 'agent' ? agentsById.get(sourceAgentId) : null;
@@ -229,6 +235,7 @@ function messageToChatRows(
             : message.author.kind === 'user'
               ? { id: message.author.id, kind: 'participant' as const }
               : null;
+    const thread = threadSummaryRow(threadsByAnchorMessageId.get(message.id));
 
     const row: ChatLogPage['rows'][number] = {
         actor,
@@ -239,6 +246,7 @@ function messageToChatRows(
         kind: 'message',
         responseId: responseIdByMessageId.get(message.id),
         runId: runtimeMetadataString(message, 'runId'),
+        ...(thread ? { thread } : {}),
         message: {
             actor,
             attachments: messageAttachments(message),
@@ -258,6 +266,21 @@ function messageToChatRows(
     };
 
     return [row];
+}
+
+function threadSummaryRow(thread: TavernThreadSummary | undefined) {
+    if (!thread) {
+        return undefined;
+    }
+
+    return {
+        anchorMessageId: thread.anchor_message_id,
+        followed: thread.followed,
+        latestReplyAt: thread.latest_reply_at,
+        replyCount: thread.reply_count,
+        threadChatId: thread.thread_chat_id,
+        unreadCount: thread.unread_count,
+    };
 }
 
 function messageAttachments(message: TavernChatMessage) {

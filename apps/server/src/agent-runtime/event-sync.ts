@@ -38,6 +38,7 @@ import {
 } from './active-turn-sessions.ts';
 import {
     createAgentRuntimeClientForConnection,
+    createTavernClientForConnection,
     subscribeAgentRuntimeEventsForConnection,
 } from './drivers.ts';
 import { emitObservedAgentRuntimeEvent } from './events.ts';
@@ -51,6 +52,7 @@ let activeEventConnections = new Map<string, { close(): void }>();
 let reconnectTimers = new Map<string, ReturnType<typeof setTimeout>>();
 let connectionRevision = 0;
 const eventStreamReconnectDelayMs = 1000;
+const threadParentChatIds = new Map<string, string>();
 
 export async function applyObservedAgentRuntimeEvent(
     event: AgentRuntimeEvent,
@@ -69,21 +71,38 @@ export async function applyObservedAgentRuntimeEvent(
         case 'chat.historyChanged': {
             emitObservedAgentRuntimeEvent(event);
             debugTurnEvent(event);
-            emitChatUpdated({ chatId: event.chatId });
+            const parentChatId = await resolveThreadParentChatId(event.chatId, connection);
+            emitChatUpdated({ chatId: parentChatId ?? event.chatId });
             emitChatLogUpdated();
+            if (parentChatId) {
+                emitChatLogUpdated({ chatId: parentChatId });
+            }
             return;
         }
         case 'chat.messageAccepted': {
             emitObservedAgentRuntimeEvent(event);
             debugTurnEvent(event);
-            emitChatUpdated();
-            emitChatLogUpdated();
+            const parentChatId = await resolveThreadParentChatId(event.chatId, connection);
+            if (parentChatId) {
+                emitChatUpdated({ chatId: parentChatId });
+                emitChatLogUpdated({ chatId: event.chatId });
+                emitChatLogUpdated({ chatId: parentChatId });
+            } else {
+                emitChatUpdated();
+                emitChatLogUpdated();
+            }
             return;
         }
         case 'chat.read': {
             emitObservedAgentRuntimeEvent(event);
             debugTurnEvent(event);
-            emitChatUpdated();
+            const parentChatId = await resolveThreadParentChatId(event.chatId, connection);
+            if (parentChatId) {
+                emitChatUpdated({ chatId: parentChatId });
+                emitChatLogUpdated({ chatId: parentChatId });
+            } else {
+                emitChatUpdated();
+            }
             return;
         }
         case 'model.updated': {
@@ -219,9 +238,13 @@ export async function applyObservedAgentRuntimeEvent(
             clearTurnSessionActive(event.turn.sessionKey);
             emitObservedAgentRuntimeEvent(event);
             debugTurnEvent(event);
-            emitChatUpdated({ chatId: event.turn.chatId });
+            const parentChatId = await resolveThreadParentChatId(event.turn.chatId, connection);
+            emitChatUpdated({ chatId: parentChatId ?? event.turn.chatId });
             emitSessionUpdated({ sessionKey: event.turn.sessionKey });
             emitChatLogUpdated({ sessionKey: event.turn.sessionKey });
+            if (parentChatId) {
+                emitChatLogUpdated({ chatId: parentChatId });
+            }
             return;
         }
         case 'session.invalidated':
@@ -239,6 +262,33 @@ export async function applyObservedAgentRuntimeEvent(
             emitChatLogUpdated({ sessionKey });
             return;
         }
+    }
+}
+
+async function resolveThreadParentChatId(chatId: string, connection?: RuntimeConnectionRecord) {
+    if (!chatId.startsWith('cht_thr_')) {
+        return null;
+    }
+
+    if (!connection) {
+        return null;
+    }
+    const cacheKey = `${connection.id}:${chatId}`;
+    const cached = threadParentChatIds.get(cacheKey);
+    if (cached) {
+        return cached;
+    }
+
+    try {
+        const chat = await createTavernClientForConnection(connection).chat.get(chatId);
+        if (chat.kind !== 'thread' || !chat.parent_chat_id) {
+            return null;
+        }
+        threadParentChatIds.set(cacheKey, chat.parent_chat_id);
+        return chat.parent_chat_id;
+    } catch (error) {
+        console.warn('[tavern] failed to resolve thread parent for invalidation', error);
+        return null;
     }
 }
 

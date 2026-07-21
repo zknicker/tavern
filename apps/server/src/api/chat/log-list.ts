@@ -17,4 +17,4 @@ const listChatLogInputSchema = z.object({
 
 export const listChatLogRoute = publicProcedure
     .input(listChatLogInputSchema)
-    .query(async ({ input }) => await getChatLogPage(input));
+    .query(async ({ ctx, input }) => await getChatLogPage(input, ctx));

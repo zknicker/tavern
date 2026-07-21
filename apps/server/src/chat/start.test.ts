@@ -17,6 +17,7 @@ test('startTavernChat stores the deterministic Tavern chat name', async () => {
         chatId: '220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
         clientMessageId: 'msg_1',
         status: 'accepted',
+        threadChatId: null,
         turns: [
             {
                 agentId: 'claw',
@@ -35,6 +36,7 @@ test('startTavernChat stores the deterministic Tavern chat name', async () => {
         chatId: '220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
         clientMessageId: 'msg_1',
         status: 'accepted',
+        threadChatId: null,
         turns: [
             {
                 agentId: 'claw',
@@ -74,6 +76,7 @@ test('startTavernChat can defer agent resolution to chat creation', async () => 
         chatId: '220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
         clientMessageId: 'msg_1',
         status: 'accepted',
+        threadChatId: null,
         turns: [
             {
                 agentId: 'claw',
@@ -118,6 +121,7 @@ test('startTavernChat preserves the optimistic first message identity', async ()
         chatId: '220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
         clientMessageId: 'msg_draft_1',
         status: 'accepted',
+        threadChatId: null,
         turns: [
             {
                 agentId: 'claw',

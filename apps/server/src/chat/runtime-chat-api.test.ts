@@ -323,10 +323,8 @@ function message(input: { id: string }): TavernChatMessage {
         id: input.id,
         metadata: {},
         nonce: null,
-        parent_message_id: null,
         role: 'user',
         sequence: 1,
-        thread_root_id: null,
     } as TavernChatMessage;
 }
 

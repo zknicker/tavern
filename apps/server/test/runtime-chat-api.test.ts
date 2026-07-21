@@ -22,7 +22,13 @@ ensureDatabaseSchema();
 
 const { getRuntimeChatTimelinePage } = await import('../src/chat/runtime-chat-api.ts');
 const { getChatLogPage } = await import('../src/chat/log.ts');
+const { markTavernChatRead } = await import('../src/chat/read.ts');
+const { listRuntimeChatRecords } = await import('../src/chat/runtime-chats.ts');
+const { setTavernThreadFollow } = await import('../src/chat/thread-follow.ts');
 const { getChatToolActivity } = await import('../src/chat/tool.ts');
+const { subscribeToTavernEvent, tavernEventNames } = await import(
+    '../src/api/invalidation-events.ts'
+);
 
 afterEach(() => {
     globalThis.fetch = originalFetch;
@@ -102,6 +108,7 @@ test('listRuntimeChatRows maps Tavern API messages and keeps execution activity 
                 ],
                 artifacts: [],
                 next_before_sequence: null,
+                threads: [],
                 total_messages: 0,
                 responses: [
                     {
@@ -160,6 +167,204 @@ test('listRuntimeChatRows maps Tavern API messages and keeps execution activity 
     });
 });
 
+test('chat log attaches per-reader thread summaries to anchor message rows', async () => {
+    await saveAgentRuntimeConnection({
+        baseUrl: 'http://runtime.test',
+        enabled: true,
+        id: 'runtime-1',
+        isActive: true,
+        lastCheckedAt: '2026-05-18T12:00:00.000Z',
+        lastError: null,
+        name: 'Runtime',
+    });
+
+    const requests: string[] = [];
+    globalThis.fetch = (async (input, init) => {
+        const request = new Request(input, init);
+        const url = new URL(request.url);
+        requests.push(`${url.pathname}${url.search}`);
+
+        return Response.json({
+            activity: [],
+            artifacts: [],
+            messages: [
+                chatMessage({
+                    authorId: 'usr_owner',
+                    authorKind: 'user',
+                    authorLabel: 'You',
+                    content: 'Anchor',
+                    id: 'msg_anchor_1',
+                    role: 'user',
+                    sequence: 1,
+                }),
+                chatMessage({
+                    authorId: 'usr_owner',
+                    authorKind: 'user',
+                    authorLabel: 'You',
+                    content: 'No thread',
+                    id: 'msg_plain',
+                    role: 'user',
+                    sequence: 2,
+                }),
+            ],
+            next_before_sequence: null,
+            responses: [],
+            threads: [
+                {
+                    anchor_message_id: 'msg_anchor_1',
+                    followed: true,
+                    latest_reply_at: '2026-05-18T12:01:00.000Z',
+                    reply_count: 2,
+                    thread_chat_id: 'cht_thr_anchor_1',
+                    unread_count: 1,
+                },
+            ],
+            total_messages: 2,
+        });
+    }) as typeof fetch;
+
+    const page = await getChatLogPage({ id: 'cht_1', limit: 100 });
+
+    expect(requests).toEqual(['/api/chats/cht_1/timeline?limit=100&reader_id=usr_tavern']);
+    expect(page.rows.find((row) => row.id === 'msg_anchor_1')).toMatchObject({
+        thread: {
+            anchorMessageId: 'msg_anchor_1',
+            followed: true,
+            latestReplyAt: '2026-05-18T12:01:00.000Z',
+            replyCount: 2,
+            threadChatId: 'cht_thr_anchor_1',
+            unreadCount: 1,
+        },
+    });
+    expect(page.rows.find((row) => row.id === 'msg_plain')).not.toHaveProperty('thread');
+});
+
+test('setTavernThreadFollow returns follow state and invalidates the parent chat', async () => {
+    await saveAgentRuntimeConnection({
+        baseUrl: 'http://runtime.test',
+        enabled: true,
+        id: 'runtime-1',
+        isActive: true,
+        lastCheckedAt: '2026-05-18T12:00:00.000Z',
+        lastError: null,
+        name: 'Runtime',
+    });
+
+    const requests: Array<{ body: unknown; method: string; path: string; search: string }> = [];
+    globalThis.fetch = (async (input, init) => {
+        const request = new Request(input, init);
+        const url = new URL(request.url);
+        const body = request.method === 'GET' ? null : await request.json();
+        requests.push({ body, method: request.method, path: url.pathname, search: url.search });
+
+        if (request.method === 'GET') {
+            return Response.json({
+                active_turn_participant_ids: [],
+                anchor_message_id: 'msg_anchor_1',
+                created_at: '2026-05-18T12:00:00.000Z',
+                id: 'cht_thr_anchor_1',
+                kind: 'thread',
+                last_activity_at: null,
+                last_message_sequence: 0,
+                metadata: {},
+                parent_chat_id: 'cht_1',
+                participants: [],
+                title: null,
+                unread_count: 0,
+                updated_at: '2026-05-18T12:00:00.000Z',
+            });
+        }
+
+        return Response.json({ followed: true });
+    }) as typeof fetch;
+
+    const chatInvalidation = nextInvalidation(tavernEventNames.chatUpdated);
+    const logInvalidation = nextInvalidation(tavernEventNames.chatLogUpdated);
+    const result = await setTavernThreadFollow({
+        follow: true,
+        threadChatId: 'cht_thr_anchor_1',
+    });
+
+    expect(result).toEqual({ followed: true, threadChatId: 'cht_thr_anchor_1' });
+    expect(requests).toEqual([
+        {
+            body: null,
+            method: 'GET',
+            path: '/api/chats/cht_thr_anchor_1',
+            search: '?reader_id=usr_tavern',
+        },
+        {
+            body: { follow: true, participant_id: 'usr_tavern' },
+            method: 'PUT',
+            path: '/api/chats/cht_thr_anchor_1/follow',
+            search: '',
+        },
+    ]);
+    expect(await chatInvalidation).toMatchObject({ chatId: 'cht_1' });
+    expect(await logInvalidation).toMatchObject({ chatId: 'cht_1' });
+});
+
+test('thread chats stay out of server lists but resolve transiently for mark read', async () => {
+    await saveAgentRuntimeConnection({
+        baseUrl: 'http://runtime.test',
+        enabled: true,
+        id: 'runtime-1',
+        isActive: true,
+        lastCheckedAt: '2026-05-18T12:00:00.000Z',
+        lastError: null,
+        name: 'Runtime',
+    });
+
+    const parentChat = tavernChatFixture({ id: 'cht_1', kind: 'channel' });
+    const threadChat = tavernChatFixture({
+        anchorMessageId: 'msg_anchor_1',
+        id: 'cht_thr_anchor_1',
+        kind: 'thread',
+        parentChatId: 'cht_1',
+    });
+    const requests: Array<{ body: unknown; method: string; path: string }> = [];
+    globalThis.fetch = (async (input, init) => {
+        const request = new Request(input, init);
+        const url = new URL(request.url);
+        const body = request.method === 'GET' ? null : await request.json();
+        requests.push({ body, method: request.method, path: url.pathname });
+
+        if (url.pathname === '/api/chats') {
+            return Response.json({ chats: [parentChat, threadChat], next_cursor: null });
+        }
+        if (url.pathname === '/agent/chats') {
+            return Response.json({ chats: [] });
+        }
+        if (url.pathname === '/api/chats/cht_thr_anchor_1/read') {
+            return Response.json({
+                chat_id: 'cht_thr_anchor_1',
+                last_read_sequence: 4,
+                read_at: '2026-05-18T12:00:00.000Z',
+                reader_id: 'usr_tavern',
+            });
+        }
+        if (url.pathname === '/api/chats/cht_thr_anchor_1') {
+            return Response.json(threadChat);
+        }
+        if (url.pathname === '/api/chats/cht_1') {
+            return Response.json(parentChat);
+        }
+
+        throw new Error(`Unexpected Tavern API request: ${url.pathname}`);
+    }) as typeof fetch;
+
+    const listed = await listRuntimeChatRecords();
+    const receipt = await markTavernChatRead({ chatId: 'cht_thr_anchor_1' });
+
+    expect(listed.map((record) => record.chat.id)).toEqual(['cht_1']);
+    expect(receipt).toEqual({ chatId: 'cht_thr_anchor_1', lastReadSequence: 4 });
+    expect(requests).toContainEqual({
+        body: { reader_id: 'usr_tavern' },
+        method: 'POST',
+        path: '/api/chats/cht_thr_anchor_1/read',
+    });
+});
+
 test('listRuntimeChatTimeline accepts custom provider message metadata', async () => {
     await saveAgentRuntimeConnection({
         baseUrl: 'http://runtime.test',
@@ -212,6 +417,7 @@ test('listRuntimeChatTimeline accepts custom provider message metadata', async (
                 activity: [],
                 artifacts: [],
                 next_before_sequence: null,
+                threads: [],
                 total_messages: 0,
                 responses: [],
             });
@@ -285,6 +491,7 @@ test('getChatLogPage preserves completed openai-codex provider metadata', async 
                 activity: [],
                 artifacts: [],
                 next_before_sequence: null,
+                threads: [],
                 total_messages: 0,
                 responses: [],
             });
@@ -343,6 +550,7 @@ test('listRuntimeChatRows maps Tavern API artifacts into chat timeline rows', as
                     },
                 ],
                 next_before_sequence: null,
+                threads: [],
                 total_messages: 0,
                 responses: [
                     {
@@ -447,6 +655,7 @@ test('listRuntimeChatRows keeps response artifacts while filtering their produci
                     },
                 ],
                 next_before_sequence: null,
+                threads: [],
                 total_messages: 0,
                 responses: [
                     {
@@ -514,6 +723,7 @@ test('listRuntimeChatRows maps runtime notice activity into system rows', async 
                 ],
                 artifacts: [],
                 next_before_sequence: null,
+                threads: [],
                 total_messages: 0,
                 responses: [
                     {
@@ -597,6 +807,7 @@ test('listRuntimeChatRows keeps status notices off the timeline', async () => {
                 ],
                 artifacts: [],
                 next_before_sequence: null,
+                threads: [],
                 total_messages: 0,
                 responses: [
                     {
@@ -667,6 +878,7 @@ test('listRuntimeChatRows keeps tool evidence off the timeline', async () => {
                 ],
                 artifacts: [],
                 next_before_sequence: null,
+                threads: [],
                 total_messages: 0,
                 responses: [
                     {
@@ -732,6 +944,7 @@ test('listRuntimeChatRows keeps running narration activity off the timeline', as
                 ],
                 artifacts: [],
                 next_before_sequence: null,
+                threads: [],
                 total_messages: 0,
                 responses: [
                     {
@@ -805,6 +1018,7 @@ test('listRuntimeChatRows keeps only the request message while a turn narrates',
                 ],
                 artifacts: [],
                 next_before_sequence: null,
+                threads: [],
                 total_messages: 0,
                 responses: [
                     {
@@ -869,6 +1083,7 @@ test('listRuntimeChatTimeline exposes running responses as active replies after 
                 activity: [],
                 artifacts: [],
                 next_before_sequence: null,
+                threads: [],
                 total_messages: 0,
                 responses: [
                     {
@@ -951,6 +1166,7 @@ test('older timeline pages forward the cursor and never carry live turn state', 
                         updated_at: '2026-05-18T12:00:03.000Z',
                     },
                 ],
+                threads: [],
                 total_messages: 12,
             });
         }
@@ -1059,10 +1275,41 @@ function chatMessage(input: {
             },
         },
         nonce: null,
-        parent_message_id: null,
         role: input.role,
         sequence: input.sequence,
-        thread_root_id: null,
+    };
+}
+
+function tavernChatFixture(input: {
+    anchorMessageId?: string;
+    id: string;
+    kind: 'channel' | 'thread';
+    parentChatId?: string;
+}) {
+    return {
+        active_turn_participant_ids: [],
+        anchor_message_id: input.anchorMessageId ?? null,
+        created_at: '2026-05-18T12:00:00.000Z',
+        id: input.id,
+        kind: input.kind,
+        last_activity_at: null,
+        last_message_sequence: 0,
+        metadata: {
+            tavern: {
+                agentIds: ['main'],
+                archived: false,
+                displayName: 'Planning',
+                displayNameSource: 'explicit',
+            },
+        },
+        parent_chat_id: input.parentChatId ?? null,
+        participants: [
+            { id: 'usr_tavern', kind: 'user', label: 'You', metadata: {} },
+            { id: 'main', kind: 'agent', label: 'Main', metadata: {} },
+        ],
+        title: input.kind === 'thread' ? null : 'Planning',
+        unread_count: 0,
+        updated_at: '2026-05-18T12:00:00.000Z',
     };
 }
 
@@ -1095,4 +1342,21 @@ function responseActivity(input: {
         title: input.title,
         updated_at: '2026-05-18T12:00:03.000Z',
     };
+}
+
+async function nextInvalidation(
+    eventName: (typeof tavernEventNames)[keyof typeof tavernEventNames]
+) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5000);
+
+    try {
+        for await (const event of subscribeToTavernEvent(eventName, controller.signal)) {
+            return event;
+        }
+    } finally {
+        clearTimeout(timeout);
+    }
+
+    throw new Error(`Timed out waiting for ${eventName} invalidation.`);
 }

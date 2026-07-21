@@ -74,7 +74,13 @@ export async function sendTavernChatMessage(
                 ? ((chat.metadata.tavern as Record<string, unknown>).displayName as string)
                 : undefined,
     });
-    const messageReceipt = await tavernApi.chat.createMessage(parsed.chatId, {
+    const threadChat = parsed.thread
+        ? await tavernApi.chat.ensureThread(parsed.chatId, {
+              anchor_message_id: parsed.thread.anchorMessageId,
+          })
+        : null;
+    const writeChatId = threadChat?.id ?? parsed.chatId;
+    const messageReceipt = await tavernApi.chat.createMessage(writeChatId, {
         author_id: actingUserId,
         id: clientMessageId,
         metadata: {
@@ -95,6 +101,7 @@ export async function sendTavernChatMessage(
             chatId: parsed.chatId,
             clientMessageId,
             status: 'accepted',
+            threadChatId: threadChat?.id ?? null,
             turns: [],
         });
     }
@@ -118,7 +125,7 @@ export async function sendTavernChatMessage(
                     runtimeId: chatRecord.runtimeId,
                 },
                 async () =>
-                    await runtimeClient.postMessage(chatRecord.chat.id, {
+                    await runtimeClient.postMessage(writeChatId, {
                         agent: {
                             agentId,
                         },
@@ -144,6 +151,7 @@ export async function sendTavernChatMessage(
         chatId: parsed.chatId,
         clientMessageId,
         status: 'accepted',
+        threadChatId: threadChat?.id ?? null,
         turns: acceptedTurns,
     });
 }
