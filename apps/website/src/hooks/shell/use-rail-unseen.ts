@@ -32,7 +32,13 @@ export function useTasksUnseen() {
     return hasTasksUpdatedAfter(tasksQuery.data?.tasks ?? [], lastSeenAt);
 }
 
-export function markTasksSeen(seenAt = Date.now()) {
+// Monotonic, and in the task-timestamp domain: callers pass the newest
+// displayed updatedAt, never the wall clock, so updates that sync in later
+// with earlier timestamps than "now" still read as unseen.
+export function markTasksSeen(seenAt: number) {
+    if (seenAt <= tasksLastSeenAt) {
+        return;
+    }
     tasksLastSeenAt = seenAt;
     window.localStorage.setItem(tasksLastSeenAtStorageKey, String(seenAt));
 

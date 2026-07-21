@@ -23,7 +23,9 @@ export function ChatFilesTab({ chatId, enabled }: { chatId: string; enabled: boo
         );
     }
 
-    if (filesQuery.isError) {
+    // Sync-first: a failed background refetch must not blank the last good
+    // list — the error blocks only when nothing was ever loaded.
+    if (filesQuery.isError && !filesQuery.data) {
         return (
             <p className="px-5 py-8 text-destructive text-sm">
                 Could not load files for this chat.
@@ -31,7 +33,7 @@ export function ChatFilesTab({ chatId, enabled }: { chatId: string; enabled: boo
         );
     }
 
-    const files = filesQuery.data.files;
+    const files = filesQuery.data?.files ?? [];
 
     if (files.length === 0) {
         return (
