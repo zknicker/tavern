@@ -8,6 +8,7 @@ import type { ConversationMessageLayout } from './chat-transcript-model.ts';
 export function ChatTimeline({
     activeReplies,
     agentStatusCharacter = null,
+    canRequestMention = true,
     chatId,
     conversationLayout,
     defaultOpenWorkGroups = false,
@@ -18,6 +19,7 @@ export function ChatTimeline({
 }: {
     activeReplies: readonly ChatActiveReply[];
     agentStatusCharacter?: AgentCharacter | null;
+    canRequestMention?: boolean;
     chatId?: string;
     conversationLayout?: ConversationMessageLayout;
     defaultOpenWorkGroups?: boolean;
@@ -32,6 +34,7 @@ export function ChatTimeline({
         <ChatTranscript
             activeReplies={activeReplies}
             agentStatusCharacter={agentStatusCharacter}
+            canRequestMention={canRequestMention}
             chatId={chatId}
             conversationLayout={conversationLayout}
             defaultOpenWorkGroups={defaultOpenWorkGroups}

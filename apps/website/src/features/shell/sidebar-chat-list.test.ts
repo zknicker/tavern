@@ -8,6 +8,8 @@ import {
     getSidebarChatTitle,
     hasLocalActiveTurn,
     isSidebarTavernChat,
+    resolveNavigableActivityChatId,
+    selectMostRecentChatRailConversation,
 } from './sidebar-chat-list-model.ts';
 
 function createChat(overrides: Partial<ChatListItem> = {}): ChatListItem {
@@ -100,6 +102,34 @@ describe('sidebar chat list', () => {
         expect(groups.channels).toEqual([channel]);
         expect(groups.directMessages).toEqual([dm]);
         expect(groups.recentChats).toEqual([channel, dm, group]);
+    });
+
+    test('selects the newest visible Chat rail conversation', () => {
+        const channel = createChat({
+            conversationKind: 'channel',
+            id: 'channel',
+            lastActivityAt: '2026-05-06T12:00:00.000Z',
+        });
+        const direct = createChat({
+            conversationKind: 'direct',
+            id: 'direct',
+            lastActivityAt: '2026-05-07T12:00:00.000Z',
+        });
+        const task = createChat({
+            conversationKind: 'task',
+            id: 'task',
+            lastActivityAt: '2026-05-08T12:00:00.000Z',
+        });
+
+        expect(selectMostRecentChatRailConversation([task, channel, direct])).toBe(direct);
+    });
+
+    test('navigates activity only when its chat is in the first-party list', () => {
+        const chat = createChat({ id: 'chat-1' });
+
+        expect(resolveNavigableActivityChatId('chat-1', [chat])).toBe('chat-1');
+        expect(resolveNavigableActivityChatId('external-chat', [chat])).toBeNull();
+        expect(resolveNavigableActivityChatId(null, [chat])).toBeNull();
     });
 
     test('shortens sidebar activity labels', () => {

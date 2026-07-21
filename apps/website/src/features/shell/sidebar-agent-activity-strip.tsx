@@ -3,11 +3,14 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useResolvedThemeOptional } from '../../components/theme-provider.tsx';
 import { useAgentList } from '../../hooks/agents/use-agent-list.ts';
 import { useAgentPresence } from '../../hooks/agents/use-agent-presence.ts';
+import { useChatList } from '../../hooks/chats/use-chat-list.ts';
 import { appRoutes } from '../../lib/app-routes.ts';
 import { cn } from '../../lib/utils.ts';
 import { resolveAgentInk } from '../agents/agent-color-presets.ts';
 import { AgentFace } from '../chats/agent-face.tsx';
 import { resolveDmPresenceLabel } from '../chats/agent-presence.tsx';
+import { buildChatList } from '../chats/chat-list-data.ts';
+import { resolveNavigableActivityChatId } from './sidebar-chat-list-model.ts';
 
 const maximumVisibleAgents = 3;
 const faceStyle = { flexShrink: 0, overflow: 'visible' } as const;
@@ -18,6 +21,7 @@ export function SidebarAgentActivityStrip() {
     const dark = useResolvedThemeOptional() === 'dark';
     const agents = useAgentList().data?.agents ?? [];
     const presence = useAgentPresence().data?.presence ?? [];
+    const chats = buildChatList(useChatList().data);
     const busyAgents = presence.filter((entry) => entry.state === 'busy');
     const agentById = React.useMemo(
         () => new Map(agents.map((agent) => [agent.id, agent])),
@@ -36,20 +40,21 @@ export function SidebarAgentActivityStrip() {
                 {busyAgents.slice(0, maximumVisibleAgents).map((entry) => {
                     const agent = agentById.get(entry.agentId);
                     const label = resolveDmPresenceLabel(entry, currentChatId ?? '');
+                    const navigableChatId = resolveNavigableActivityChatId(entry.chatId, chats);
 
                     return (
                         <button
                             className={cn(
                                 'flex h-7 min-w-0 items-center gap-2 rounded-md px-2 text-left',
-                                entry.chatId
+                                navigableChatId
                                     ? 'hover:bg-sidebar-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring'
                                     : 'cursor-default'
                             )}
-                            disabled={!entry.chatId}
+                            disabled={!navigableChatId}
                             key={entry.agentId}
                             onClick={() => {
-                                if (entry.chatId) {
-                                    void navigate(appRoutes.chat(entry.chatId));
+                                if (navigableChatId) {
+                                    void navigate(appRoutes.chat(navigableChatId));
                                 }
                             }}
                             type="button"

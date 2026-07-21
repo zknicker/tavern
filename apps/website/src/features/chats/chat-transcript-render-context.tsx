@@ -15,6 +15,7 @@ export function getTranscriptMessageThread(
 
 export interface TranscriptRenderContextValue {
     activeThreadAnchorId: string | null;
+    canRequestMention: boolean;
     chatId?: string;
     conversationLayout: ConversationMessageLayout;
     currentSessionKey?: string | null;
