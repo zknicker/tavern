@@ -35,6 +35,11 @@ const tabs = [
 
 type AgentProfileTabId = (typeof tabs)[number]['value'];
 
+// Per-agent tab memory: the pane arbitration hides/unmounts the profile when
+// the artifact panel wins, and reopening must not lose the selected tab
+// (T3: latest opener wins without clearing either pane's state).
+const activeTabByAgent = new Map<string, AgentProfileTabId>();
+
 export function AgentProfile({
     agentId,
     hostChatId,
@@ -48,7 +53,13 @@ export function AgentProfile({
 }) {
     const agentsQuery = useAgentList();
     const agent = agentsQuery.data?.agents.find((candidate) => candidate.id === agentId) ?? null;
-    const [activeTab, setActiveTab] = useState<AgentProfileTabId>('profile');
+    const [activeTab, setActiveTabState] = useState<AgentProfileTabId>(
+        () => activeTabByAgent.get(agentId) ?? 'profile'
+    );
+    const setActiveTab = (tab: AgentProfileTabId) => {
+        activeTabByAgent.set(agentId, tab);
+        setActiveTabState(tab);
+    };
 
     if (agentsQuery.isPending) {
         return <p className="p-6 text-muted-foreground text-sm">Loading agent profile...</p>;
