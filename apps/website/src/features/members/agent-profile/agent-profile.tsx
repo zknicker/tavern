@@ -94,7 +94,7 @@ export function AgentProfile({
                 )}
                 value={activeTab}
             >
-                <ActiveTab agent={agent} tab={activeTab} />
+                <ActiveTab agent={agent} tab={activeTab} variant={variant} />
             </TabsSubtlePanel>
         </TabsSubtle>
     );
@@ -103,13 +103,15 @@ export function AgentProfile({
 function ActiveTab({
     agent,
     tab,
+    variant,
 }: {
     agent: AgentListOutput['agents'][number];
     tab: AgentProfileTabId;
+    variant: 'page' | 'pane';
 }) {
     switch (tab) {
         case 'profile':
-            return <AgentProfileTab agent={agent} />;
+            return <AgentProfileTab agent={agent} variant={variant} />;
         case 'activity':
             return <AgentActivityTab agentId={agent.id} />;
         case 'chat':
