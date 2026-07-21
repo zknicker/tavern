@@ -76,7 +76,12 @@ export async function runServerInfo(args: ParsedArgs, deps: DirectoryDeps): Prom
             query: args.values['--query'],
         },
     });
-    deps.write(renderServerInfo(response));
+    deps.write(
+        renderServerInfo(response, {
+            joined: Boolean(args.flags['--joined']),
+            query: args.values['--query'],
+        })
+    );
     return 0;
 }
 

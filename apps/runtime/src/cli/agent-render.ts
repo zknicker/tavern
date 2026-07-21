@@ -1,10 +1,10 @@
+import type { TavernAgentSendResponse } from '@tavern/api';
 import type { z } from 'zod';
 import type {
     AgentCliMessage,
     agentChannelMembersSchema,
     agentChannelSchema,
     agentHistoryResponseSchema,
-    agentSendResponseSchema,
     agentServerInfoSchema,
 } from './agent-api-schemas.ts';
 import { AgentCliError } from './agent-error.ts';
@@ -15,7 +15,7 @@ import {
     shortMessageId,
 } from './agent-format.ts';
 
-type AgentSendResponse = z.infer<typeof agentSendResponseSchema>;
+type AgentSendResponse = TavernAgentSendResponse;
 type AgentHistoryResponse = z.infer<typeof agentHistoryResponseSchema>;
 type AgentServerInfo = z.infer<typeof agentServerInfoSchema>;
 type AgentChannel = z.infer<typeof agentChannelSchema>;
@@ -62,10 +62,13 @@ export function renderSearchFooter(): string {
     return 'Use grotto message read --target <target> --around <id> to read surrounding context.';
 }
 
-export function renderServerInfo(response: AgentServerInfo): string {
+export function renderServerInfo(
+    response: AgentServerInfo,
+    filters: { joined?: boolean; query?: string } = {}
+): string {
     const lines = [
         '## Server summary',
-        `${response.channels.length} channels · ${response.agents.length} agents · ${response.humans.length} humans`,
+        `${response.total.channels} channels · ${response.total.agents} agents · ${response.total.humans} humans`,
         'Use --channels, --agents, --humans, --joined, or --query <text> to narrow this view.',
     ];
     if (response.channels.length > 0) {
@@ -83,6 +86,10 @@ export function renderServerInfo(response: AgentServerInfo): string {
     }
     if (response.humans.length > 0) {
         lines.push('', '## Server Humans', ...response.humans.map(renderPerson));
+    }
+    const nextCommands = serverInfoNextCommands(response, filters);
+    if (nextCommands.length > 0) {
+        lines.push('', ...nextCommands);
     }
     return `${lines.join('\n')}\n`;
 }
@@ -206,6 +213,35 @@ function renderPerson(person: { description: string | null; handle: string }): s
 
 function descriptionSuffix(description: string | null): string {
     return description ? ` — ${description}` : '';
+}
+
+function serverInfoNextCommands(
+    response: AgentServerInfo,
+    filters: { joined?: boolean; query?: string }
+): string[] {
+    const sectionFlags = [
+        ['channels', '--channels'],
+        ['agents', '--agents'],
+        ['humans', '--humans'],
+    ] as const;
+    return sectionFlags.flatMap(([section, flag]) => {
+        if (!response.hasMore[section]) {
+            return [];
+        }
+        const command = [
+            'grotto server info',
+            flag,
+            ...(filters.joined ? ['--joined'] : []),
+            ...(filters.query ? ['--query', quoteCommandValue(filters.query)] : []),
+            `--offset ${response.offset + response.limit}`,
+            `--limit ${response.limit}`,
+        ];
+        return [`Next: ${command.join(' ')}`];
+    });
+}
+
+function quoteCommandValue(value: string): string {
+    return `'${value.replaceAll("'", `'"'"'`)}'`;
 }
 
 function escapeXml(value: string): string {

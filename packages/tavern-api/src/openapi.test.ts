@@ -60,4 +60,17 @@ describe('Tavern OpenAPI contract', () => {
         expect(document.components?.schemas).toHaveProperty('AgentSendResponse');
         expect(document.components?.schemas).toHaveProperty('AgentHistoryResponse');
     });
+
+    it('maps agent send discriminator values to their response variants', () => {
+        const response = document.components?.schemas?.AgentSendResponse as {
+            discriminator?: { mapping?: Record<string, string>; propertyName?: string };
+        };
+        expect(response.discriminator).toEqual({
+            mapping: {
+                held: '#/components/schemas/AgentHeldMessage',
+                sent: '#/components/schemas/AgentSentMessage',
+            },
+            propertyName: 'state',
+        });
+    });
 });

@@ -15,6 +15,7 @@ import {
     requiredValue,
     valuesFor,
 } from './agent-command-utils.ts';
+import { messageSearchSubcommand } from './agent-message-search.ts';
 
 const HEREDOC_RECIPE = `grotto message send --target "#general" <<'GROTTOMSG'\nBody with "quotes", $vars, \`backticks\`.\nGROTTOMSG`;
 
@@ -85,6 +86,7 @@ export const MESSAGE_SUBCOMMANDS: SubCommand[] = [
         summary: 'Read canonical history for one target',
         usage: 'grotto message read --target <t> [--before|--after|--around <idOrSeq>] [--limit <n>]',
     },
+    messageSearchSubcommand,
     {
         examples: ['grotto message resolve msg_1a2b3c4d'],
         flags: [],

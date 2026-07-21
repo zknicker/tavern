@@ -515,7 +515,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/AgentSendResponse'
         default:
-          $ref: '#/components/responses/AgentError'
+          $ref: '#/components/responses/AgentSendError'
   /api/agent/history:
     get:
       operationId: readAgentHistory
@@ -577,7 +577,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AgentMessageList'
+                $ref: '#/components/schemas/AgentSearchResultList'
         default:
           $ref: '#/components/responses/AgentError'
   /api/agent/messages/{id}:
@@ -768,6 +768,12 @@ components:
         application/json:
           schema:
             $ref: '#/components/schemas/AgentApiError'
+    AgentSendError:
+      description: Agent send API error with draft state when the target resolved.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AgentSendApiError'
     Error:
       description: Error response.
       content:
@@ -782,6 +788,15 @@ components:
       properties:
         code: { type: string }
         message: { type: string }
+        nextAction: { type: string }
+    AgentSendApiError:
+      type: object
+      additionalProperties: false
+      required: [code, message]
+      properties:
+        code: { type: string }
+        message: { type: string }
+        draftSaved: { type: boolean }
         nextAction: { type: string }
     AgentSender:
       type: object
@@ -799,7 +814,17 @@ components:
           properties:
             sender:
               $ref: '#/components/schemas/AgentSender'
-    AgentMessageList:
+            threadId: { type: string, minLength: 1 }
+            replyCount: { type: integer, minimum: 0 }
+            replyTarget: { type: string, minLength: 1 }
+    AgentSearchResult:
+      allOf:
+        - $ref: '#/components/schemas/AgentMessage'
+        - type: object
+          required: [target]
+          properties:
+            target: { type: string, minLength: 1 }
+    AgentSearchResultList:
       type: object
       additionalProperties: false
       required: [messages]
@@ -807,7 +832,7 @@ components:
         messages:
           type: array
           items:
-            $ref: '#/components/schemas/AgentMessage'
+            $ref: '#/components/schemas/AgentSearchResult'
     AgentSendRequest:
       type: object
       additionalProperties: false
@@ -856,6 +881,9 @@ components:
         - $ref: '#/components/schemas/AgentHeldMessage'
       discriminator:
         propertyName: state
+        mapping:
+          sent: '#/components/schemas/AgentSentMessage'
+          held: '#/components/schemas/AgentHeldMessage'
     AgentHistoryResponse:
       type: object
       additionalProperties: false
@@ -895,7 +923,7 @@ components:
     AgentServerInfo:
       type: object
       additionalProperties: false
-      required: [channels, agents, humans, limit, offset]
+      required: [channels, agents, humans, limit, offset, total, hasMore]
       properties:
         channels:
           type: array
@@ -911,6 +939,22 @@ components:
             $ref: '#/components/schemas/AgentDirectoryPerson'
         limit: { type: integer }
         offset: { type: integer }
+        total:
+          type: object
+          additionalProperties: false
+          required: [channels, agents, humans]
+          properties:
+            channels: { type: integer, minimum: 0 }
+            agents: { type: integer, minimum: 0 }
+            humans: { type: integer, minimum: 0 }
+        hasMore:
+          type: object
+          additionalProperties: false
+          required: [channels, agents, humans]
+          properties:
+            channels: { type: boolean }
+            agents: { type: boolean }
+            humans: { type: boolean }
     AgentChannelMember:
       type: object
       additionalProperties: false

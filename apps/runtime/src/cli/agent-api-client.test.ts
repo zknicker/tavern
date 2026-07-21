@@ -40,6 +40,7 @@ describe('AgentApiClient', () => {
                 Response.json(
                     {
                         code: 'AMBIGUOUS_ID',
+                        draftSaved: true,
                         message: 'Message id is ambiguous.',
                         nextAction: 'Use the full message id.',
                     },
@@ -54,6 +55,7 @@ describe('AgentApiClient', () => {
         expect(error).toBeInstanceOf(AgentCliError);
         expect(error).toMatchObject({ code: 'AMBIGUOUS_ID', message: 'Message id is ambiguous.' });
         expect((error as AgentCliError).options.nextAction).toBe('Use the full message id.');
+        expect((error as AgentCliError).options.draftSaved).toBe(true);
     });
 
     test.each([

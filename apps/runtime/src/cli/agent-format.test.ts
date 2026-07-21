@@ -14,12 +14,21 @@ afterAll(() => {
 });
 
 const humanMessage: AgentCliMessage = {
+    attachments: [],
+    author: { id: 'usr_tavern', kind: 'user', label: 'zach', metadata: {} },
     chat_id: 'cht_general',
     content: 'hello',
     created_at: '2026-07-21T18:02:11.000Z',
+    deleted_at: null,
+    delivery_id: null,
     id: 'msg_1a2b3c4d00000000',
+    metadata: {},
+    nonce: null,
+    parent_message_id: null,
+    role: 'user',
     sender: { description: 'Grotto operator', handle: 'zach', type: 'human' },
     sequence: 42,
+    thread_root_id: null,
 };
 
 describe('agent message formatting', () => {

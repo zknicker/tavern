@@ -5,6 +5,7 @@ import {
     readAgentChannelMembers,
     readAgentServerInfo,
 } from './agent-directory.ts';
+import { readAgentDraft } from './agent-drafts.ts';
 import { getAgentMessage, readAgentHistory, searchAgentMessages } from './agent-history.ts';
 import { agentSendRequestSchema, sendAgentMessage } from './agent-send.ts';
 import { AmbiguousMessageIdError } from './chat-api/index.ts';
@@ -36,8 +37,7 @@ export async function handleAgentApiRequest(
 
 async function route(request: Request, url: URL, agentId: string): Promise<Response> {
     if (request.method === 'POST' && url.pathname === '/api/agent/messages/send') {
-        const input = agentSendRequestSchema.parse(await readJson(request));
-        return json(sendAgentMessage(agentId, input));
+        return handleSend(request, agentId);
     }
     if (request.method === 'GET' && url.pathname === '/api/agent/history') {
         return json(
@@ -90,8 +90,52 @@ async function route(request: Request, url: URL, agentId: string): Promise<Respo
     return agentError('TARGET_NOT_FOUND', 'Agent API route was not found.', 404);
 }
 
-function agentError(code: string, message: string, status: number, nextAction?: string) {
-    return json({ code, message, ...(nextAction ? { nextAction } : {}) }, status);
+async function handleSend(request: Request, agentId: string): Promise<Response> {
+    let resolvedChatId: string | null = null;
+    try {
+        const input = agentSendRequestSchema.parse(await readJson(request));
+        return json(
+            sendAgentMessage(agentId, input, {
+                onTargetResolved: (chatId) => {
+                    resolvedChatId = chatId;
+                },
+            })
+        );
+    } catch (error) {
+        if (
+            error instanceof AgentApiError &&
+            error.status >= 400 &&
+            error.status < 500 &&
+            resolvedChatId
+        ) {
+            return agentError(
+                error.code,
+                error.message,
+                error.status,
+                error.nextAction,
+                Boolean(readAgentDraft(agentId, resolvedChatId))
+            );
+        }
+        throw error;
+    }
+}
+
+function agentError(
+    code: string,
+    message: string,
+    status: number,
+    nextAction?: string,
+    draftSaved?: boolean
+) {
+    return json(
+        {
+            code,
+            message,
+            ...(draftSaved === undefined ? {} : { draftSaved }),
+            ...(nextAction ? { nextAction } : {}),
+        },
+        status
+    );
 }
 
 function requiredParam(url: URL, name: string): string {

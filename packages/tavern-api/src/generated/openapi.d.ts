@@ -477,6 +477,12 @@ export interface components {
             message: string;
             nextAction?: string;
         };
+        AgentSendApiError: {
+            code: string;
+            message: string;
+            draftSaved?: boolean;
+            nextAction?: string;
+        };
         AgentSender: {
             handle: string | null;
             description: string | null;
@@ -485,9 +491,15 @@ export interface components {
         };
         AgentMessage: components["schemas"]["ChatMessage"] & {
             sender: components["schemas"]["AgentSender"];
+            threadId?: string;
+            replyCount?: number;
+            replyTarget?: string;
         };
-        AgentMessageList: {
-            messages: components["schemas"]["AgentMessage"][];
+        AgentSearchResult: components["schemas"]["AgentMessage"] & {
+            target: string;
+        };
+        AgentSearchResultList: {
+            messages: components["schemas"]["AgentSearchResult"][];
         };
         AgentSendRequest: {
             target: string;
@@ -503,7 +515,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            state: "AgentSentMessage";
+            state: "sent";
             message: components["schemas"]["AgentMessage"];
             recentUnread: components["schemas"]["AgentMessage"][];
         };
@@ -512,7 +524,7 @@ export interface components {
              * @description discriminator enum property added by openapi-typescript
              * @enum {string}
              */
-            state: "AgentHeldMessage";
+            state: "held";
             newMessageCount: number;
             shownMessages: components["schemas"]["AgentMessage"][];
             omittedMessageCount: number;
@@ -548,6 +560,16 @@ export interface components {
             humans: components["schemas"]["AgentDirectoryPerson"][];
             limit: number;
             offset: number;
+            total: {
+                channels: number;
+                agents: number;
+                humans: number;
+            };
+            hasMore: {
+                channels: boolean;
+                agents: boolean;
+                humans: boolean;
+            };
         };
         AgentChannelMember: {
             handle: string | null;
@@ -939,6 +961,15 @@ export interface components {
             };
             content: {
                 "application/json": components["schemas"]["AgentApiError"];
+            };
+        };
+        /** @description Agent send API error with draft state when the target resolved. */
+        AgentSendError: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["AgentSendApiError"];
             };
         };
         /** @description Error response. */
@@ -1573,7 +1604,7 @@ export interface operations {
                     "application/json": components["schemas"]["AgentSendResponse"];
                 };
             };
-            default: components["responses"]["AgentError"];
+            default: components["responses"]["AgentSendError"];
         };
     };
     readAgentHistory: {
@@ -1627,7 +1658,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["AgentMessageList"];
+                    "application/json": components["schemas"]["AgentSearchResultList"];
                 };
             };
             default: components["responses"]["AgentError"];

@@ -5,6 +5,7 @@ import { AgentCliError } from './agent-error.ts';
 const REQUEST_TIMEOUT_MS = 1500;
 const errorResponseSchema = z.object({
     code: z.string().min(1),
+    draftSaved: z.boolean().optional(),
     message: z.string().min(1),
     nextAction: z.string().min(1).optional(),
 });
@@ -56,6 +57,7 @@ export class AgentApiClient implements AgentApiRequester {
                 throw invalidJson();
             }
             throw new AgentCliError(parsedError.data.code, parsedError.data.message, {
+                draftSaved: parsedError.data.draftSaved,
                 nextAction: parsedError.data.nextAction,
             });
         }

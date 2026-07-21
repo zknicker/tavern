@@ -27,12 +27,25 @@ export function readAgentServerInfo(
     const channels = noKinds || input.channels ? listChannels(agentId, input.joined, db) : [];
     const agents = noKinds || input.agents ? listAgents(db) : [];
     const humans = noKinds || input.humans ? listHumans(db) : [];
+    const filteredChannels = filterRoster(channels, query);
+    const filteredAgents = filterRoster(agents, query);
+    const filteredHumans = filterRoster(humans, query);
     return {
-        agents: page(filterRoster(agents, query), offset, limit),
-        channels: page(filterRoster(channels, query), offset, limit),
-        humans: page(filterRoster(humans, query), offset, limit),
+        agents: page(filteredAgents, offset, limit),
+        channels: page(filteredChannels, offset, limit),
+        hasMore: {
+            agents: hasMore(filteredAgents, offset, limit),
+            channels: hasMore(filteredChannels, offset, limit),
+            humans: hasMore(filteredHumans, offset, limit),
+        },
+        humans: page(filteredHumans, offset, limit),
         limit,
         offset,
+        total: {
+            agents: filteredAgents.length,
+            channels: filteredChannels.length,
+            humans: filteredHumans.length,
+        },
     };
 }
 
@@ -144,6 +157,10 @@ function filterRoster<T extends { description: string | null; handle: string }>(
 
 function page<T>(rows: T[], offset: number, limit: number) {
     return rows.slice(offset, offset + limit);
+}
+
+function hasMore(rows: unknown[], offset: number, limit: number): boolean {
+    return offset + limit < rows.length;
 }
 
 function clamp(value: number | undefined, fallback: number, max: number) {

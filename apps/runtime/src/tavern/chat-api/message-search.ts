@@ -9,6 +9,7 @@ export function searchMessageRows(
         after?: string | null;
         before?: string | null;
         chatId?: string | null;
+        chatIds?: string[];
         limit?: number;
         offset?: number;
         participantId?: string | null;
@@ -28,6 +29,9 @@ export function searchMessageRows(
             `SELECT chat_messages.* FROM chat_messages
              WHERE instr(lower(chat_messages.content), lower($query)) > 0
                AND ($chatId IS NULL OR chat_messages.chat_id = $chatId)
+               AND ($chatIdsJson IS NULL OR chat_messages.chat_id IN (
+                 SELECT value FROM json_each($chatIdsJson)
+               ))
                AND ($senderId IS NULL OR chat_messages.author_id = $senderId)
                AND ($before IS NULL OR chat_messages.created_at < $before)
                AND ($after IS NULL OR chat_messages.created_at > $after)
@@ -45,6 +49,7 @@ export function searchMessageRows(
                 after: input.after ?? null,
                 before: input.before ?? null,
                 chatId: input.chatId ?? null,
+                chatIdsJson: input.chatIds ? JSON.stringify(input.chatIds) : null,
                 limit: clampLimit(input.limit),
                 offset: Math.max(0, Math.floor(input.offset ?? 0)),
                 participantId: input.participantId ?? null,

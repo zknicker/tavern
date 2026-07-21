@@ -2,7 +2,7 @@ import { describe, expect, test, vi } from 'vitest';
 import type { AgentApiRequester } from '../agent-api-client.ts';
 import { AgentCliError } from '../agent-error.ts';
 import type { ParsedArgs } from '../parse.ts';
-import { runRead, runSend } from './agent-message.ts';
+import { MESSAGE_SUBCOMMANDS, runRead, runSend } from './agent-message.ts';
 
 const message = {
     chat_id: 'cht_general',
@@ -38,6 +38,10 @@ function harness(response: unknown = { message, recentUnread: [], state: 'sent' 
 }
 
 describe('agent message send', () => {
+    test('registers message search', () => {
+        expect(MESSAGE_SUBCOMMANDS.map((command) => command.name)).toContain('search');
+    });
+
     test.each([
         [args({ flags: { '--content': true } }), 'CONTENT_FLAG_UNSUPPORTED'],
         [args({ positionals: ['hello'] }), 'POSITIONAL_CONTENT_UNSUPPORTED'],

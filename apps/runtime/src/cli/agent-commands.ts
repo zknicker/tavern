@@ -3,14 +3,15 @@ import type { CliCommand } from './registry.ts';
 export const messageCommand: CliCommand = {
     examples: [
         'grotto message read --target "#general"',
+        'grotto message search --query "release notes"',
         'grotto message send --target "#general" <<\'GROTTOMSG\'',
     ],
     flags: [],
     group: true,
     name: 'message',
     section: 'Messages',
-    summary: 'Send, read, resolve, or check messages',
-    usage: 'grotto message <send|read|resolve|check> [flags]',
+    summary: 'Send, read, search, resolve, or check messages',
+    usage: 'grotto message <send|read|search|resolve|check> [flags]',
     async run(_args, raw) {
         const [{ MESSAGE_SUBCOMMANDS }, { dispatchSubcommand }] = await Promise.all([
             import('./commands/agent-message'),

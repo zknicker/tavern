@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { getDb } from '../db/connection.ts';
 import { handleAgentApiRequest } from './agent-api-router.ts';
 import { closeAgentApiTestDb, initAgentApiTestDb } from './agent-api-test-helper.ts';
+import { saveAgentDraft } from './agent-drafts.ts';
 import { upsertStoredAgent } from './agents-store.ts';
 import { createChat, createMessage } from './chat-api/index.ts';
 
@@ -56,6 +58,8 @@ describe('agent API router', () => {
         );
         await expect(directory?.json()).resolves.toMatchObject({
             channels: [{ handle: 'general', joined: true }],
+            hasMore: { channels: false },
+            total: { channels: 1 },
         });
 
         const body = JSON.stringify({ content: 'once', nonce: 'nonce-1', target: '#general' });
@@ -80,6 +84,73 @@ describe('agent API router', () => {
         expect(firstJson.state).toBe('sent');
         expect(secondJson.message.id).toBe(firstJson.message.id);
     });
+
+    it('reports directory totals and more rows before pagination', async () => {
+        createChat({
+            id: 'cht_updates',
+            kind: 'channel',
+            participants: [
+                {
+                    id: 'agt_otto',
+                    kind: 'agent',
+                    label: 'Otto',
+                    metadata: { agentId: 'agt_otto' },
+                },
+            ],
+            title: 'updates',
+        });
+        const response = await handleAgentApiRequest(
+            new Request('http://runtime.test/api/agent/server?channels=true&limit=1'),
+            'agt_otto'
+        );
+
+        await expect(response?.json()).resolves.toMatchObject({
+            channels: [{ handle: 'general' }],
+            hasMore: { channels: true },
+            limit: 1,
+            offset: 0,
+            total: { channels: 2 },
+        });
+    });
+
+    it('adds draftSaved only after the send target resolves', async () => {
+        const missingDraft = await send({ sendDraft: true, target: '#general' });
+        await expect(missingDraft?.json()).resolves.toMatchObject({
+            code: 'SEND_DRAFT_NOT_FOUND',
+            draftSaved: false,
+        });
+
+        const missingTarget = await send({ content: 'hello', target: '#missing' });
+        const missingTargetBody = (await missingTarget?.json()) as Record<string, unknown>;
+        expect(missingTargetBody).not.toHaveProperty('draftSaved');
+
+        saveAgentDraft({
+            agentId: 'agt_otto',
+            attachmentIds: [],
+            chatId: 'cht_general',
+            content: 'keep me',
+            reholdCount: 1,
+        });
+        const db = getDb();
+        db.exec('PRAGMA foreign_keys = OFF');
+        db.prepare("DELETE FROM agents WHERE id = 'agt_otto'").run();
+        const savedDraft = await send({ content: 'replacement', target: '#general' });
+        await expect(savedDraft?.json()).resolves.toMatchObject({
+            code: 'SEND_FAILED',
+            draftSaved: true,
+        });
+    });
+
+    function send(body: Record<string, unknown>) {
+        return handleAgentApiRequest(
+            new Request('http://runtime.test/api/agent/messages/send', {
+                body: JSON.stringify(body),
+                headers: { 'content-type': 'application/json' },
+                method: 'POST',
+            }),
+            'agt_otto'
+        );
+    }
 });
 
 function seed(id: string) {

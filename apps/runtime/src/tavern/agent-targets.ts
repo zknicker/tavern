@@ -8,6 +8,7 @@ import { getStoredAgent } from './agents-store.ts';
 import { isAgentChatParticipant } from './chat-actions-tools.ts';
 import { createAgentParticipantId } from './chat-api/ids.ts';
 import { createChat, getChat } from './chat-api/index.ts';
+import { isValidHandle } from './handles.ts';
 
 export interface ResolvedAgentTarget {
     chat: TavernChat;
@@ -31,7 +32,7 @@ export function resolveAgentTarget(
 ): ResolvedAgentTarget {
     const threadMatch = /^(?:#[^:]+|dm:@[^:]+):.+$/u.exec(input.target);
     if (threadMatch) {
-        throw targetNotFound('Thread targets are not available yet; they land in WS3.');
+        throw targetNotFound('Thread targets are not available yet.');
     }
     const channelMatch = /^#([A-Za-z0-9][A-Za-z0-9_-]{0,31})$/u.exec(input.target);
     if (channelMatch?.[1]) {
@@ -42,6 +43,41 @@ export function resolveAgentTarget(
         return resolveDm(input.agentId, dmMatch[1], input.createDm ?? false, db);
     }
     throw targetNotFound(`Invalid target "${input.target}".`);
+}
+
+export function formatAgentTarget(
+    agentId: string,
+    chat: TavernChat,
+    db: Database = getDb()
+): string | null {
+    if (chat.kind === 'channel') {
+        return chat.title && isValidHandle(chat.title) ? `#${chat.title}` : null;
+    }
+    if (chat.kind !== 'dm') {
+        return null;
+    }
+    const callerParticipantId = createAgentParticipantId(agentId);
+    const caller = chat.participants.find(
+        (participant) =>
+            participant.id === callerParticipantId || participant.metadata.agentId === agentId
+    );
+    const peers = chat.participants.filter((participant) => participant !== caller);
+    if (!caller || peers.length !== 1) {
+        return null;
+    }
+    const peer = peers[0];
+    if (!peer) {
+        return null;
+    }
+    const metadataAgentId = peer.metadata.agentId;
+    const peerAgentId =
+        typeof metadataAgentId === 'string'
+            ? metadataAgentId
+            : peer.kind === 'agent'
+              ? peer.id
+              : null;
+    const handle = (peerAgentId ? getStoredAgent(peerAgentId, db)?.name : null) ?? peer.label;
+    return handle && isValidHandle(handle) ? `dm:@${handle}` : null;
 }
 
 function resolveChannel(

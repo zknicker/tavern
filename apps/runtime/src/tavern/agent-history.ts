@@ -4,10 +4,10 @@ import { namedParams } from '../db/sqlite.ts';
 import { AgentApiError, targetNotFound } from './agent-api-errors.ts';
 import { senderIdForHandle, toAgentMessage } from './agent-messages.ts';
 import { readCurrentAgentSession } from './agent-session-store.ts';
-import { resolveAgentTarget } from './agent-targets.ts';
+import { formatAgentTarget, resolveAgentTarget } from './agent-targets.ts';
 import { isAgentChatParticipant } from './chat-actions-tools.ts';
 import { createAgentParticipantId } from './chat-api/ids.ts';
-import { getChat, resolveMessageId } from './chat-api/index.ts';
+import { getChat, listChatsForAgentParticipant, resolveMessageId } from './chat-api/index.ts';
 import { searchMessageRows } from './chat-api/message-search.ts';
 import { rowToMessage } from './chat-api/messages.ts';
 import type { MessageRow } from './chat-api/types.ts';
@@ -123,21 +123,33 @@ export function searchAgentMessages(
     if (sort !== 'recent' && sort !== 'relevance') {
         throw new AgentApiError('INVALID_ARG', 'sort must be relevance or recent.', 400);
     }
+    const participantId = createAgentParticipantId(agentId);
+    const targets = new Map(
+        listChatsForAgentParticipant(participantId, db).flatMap((chat) => {
+            const target = formatAgentTarget(agentId, chat, db);
+            return target ? [[chat.id, target] as const] : [];
+        })
+    );
     const rows = searchMessageRows(
         {
             after: input.after,
             before: input.before,
             chatId,
+            chatIds: [...targets.keys()],
             limit: clamp(input.limit, 20, 100),
             offset: input.offset,
-            participantId: createAgentParticipantId(agentId),
+            participantId,
             query,
             senderId,
             sort,
         },
         db
     );
-    return { messages: rows.map((row) => toAgentMessage(rowToMessage(row, db), db)) };
+    const messages = rows.flatMap((row) => {
+        const target = targets.get(row.chat_id);
+        return target ? [{ ...toAgentMessage(rowToMessage(row, db), db), target }] : [];
+    });
+    return { messages };
 }
 
 function resolveAnchor(chatId: string, anchor: string, db: Database): number {

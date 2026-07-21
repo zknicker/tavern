@@ -29,9 +29,11 @@ describe('agent directory commands', () => {
             channels: [
                 { description: 'Team chat', handle: 'general', joined: true, memberCount: 2 },
             ],
+            hasMore: { agents: false, channels: true, humans: false },
             humans: [],
             limit: 10,
             offset: 5,
+            total: { agents: 1, channels: 20, humans: 0 },
         });
         const output: string[] = [];
 
@@ -61,6 +63,9 @@ describe('agent directory commands', () => {
         expect(output.join('')).toContain('## Server summary');
         expect(output.join('')).toContain('#general [joined] — Team chat');
         expect(output.join('')).toContain('@Wren — resident generalist');
+        expect(output.join('')).toContain(
+            "Next: grotto server info --channels --joined --query 'gen' --offset 15 --limit 10"
+        );
     });
 
     test('renders channel members with role labels', async () => {

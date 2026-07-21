@@ -23,7 +23,11 @@ export const agentSendRequestSchema = z
 
 export type AgentSendRequest = z.infer<typeof agentSendRequestSchema>;
 
-export function sendAgentMessage(agentId: string, input: AgentSendRequest) {
+export function sendAgentMessage(
+    agentId: string,
+    input: AgentSendRequest,
+    options: { onTargetResolved?(chatId: string): void } = {}
+) {
     validateSendMode(input);
     const plainContent = input.sendDraft ? null : requireContent(input.content);
     const resolved = resolveAgentTarget({
@@ -31,6 +35,7 @@ export function sendAgentMessage(agentId: string, input: AgentSendRequest) {
         createDm: !input.sendDraft,
         target: input.target,
     });
+    options.onTargetResolved?.(resolved.chat.id);
     const agent = getStoredAgent(agentId);
     if (!agent) {
         throw new AgentApiError('SEND_FAILED', 'Calling agent was not found.', 404);
