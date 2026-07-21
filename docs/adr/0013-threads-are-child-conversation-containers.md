@@ -6,7 +6,7 @@ read_when:
   - adding surfaces anchored on a message (tasks, reminders, file comments)
 ---
 
-# ADR 0012: Threads Are Child Conversation Containers
+# ADR 0013: Threads Are Child Conversation Containers
 
 ## Status
 
