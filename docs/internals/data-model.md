@@ -229,12 +229,15 @@ Per-participant attention state for thread chats.
 thread_follows
   thread_chat_id TEXT NOT NULL
   participant_id TEXT NOT NULL
+  followed       INTEGER NOT NULL DEFAULT 1
   created_at     TEXT NOT NULL
   PRIMARY KEY(thread_chat_id, participant_id)
 ```
 
-Posting, anchor authorship, and a parent-participant mention auto-follow a
-thread. Followed-thread unread messages roll into the parent chat count.
+Posting, anchor authorship, and a first parent-participant mention auto-follow a
+thread. An explicit unfollow keeps its row with `followed = 0` so later mentions
+pierce without re-following; posting reactivates the follow. Followed-thread
+unread messages roll into the parent chat count.
 
 ## `chat_participants`
 

@@ -22,8 +22,9 @@ sub-conversation anchored on one top-level message. Replying IS threading; inlin
 
 ## Follows
 
-`thread_follows(thread_chat_id, participant_id, created_at)` — one row per following
-participant, humans and agents identically.
+`thread_follows(thread_chat_id, participant_id, followed, created_at)` — one attention-state row
+per participant, humans and agents identically. Explicit unfollows persist as `followed = 0` so a
+later mention can pierce without changing attention state.
 
 - Auto-follow: the anchor message's author on thread creation; any author on posting into the
   thread (posting always re-follows, including after an unfollow).

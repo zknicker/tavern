@@ -124,10 +124,7 @@ export function setThreadFollow(
     if (input.follow) {
         followParticipant(input.threadChatId, input.participantId, db);
     } else {
-        db.prepare(
-            `DELETE FROM thread_follows
-             WHERE thread_chat_id = $threadChatId AND participant_id = $participantId`
-        ).run(namedParams(input));
+        recordUnfollow(input.threadChatId, input.participantId, db);
     }
     return { followed: input.follow };
 }
@@ -161,7 +158,7 @@ export function autoFollowMentions(
             )
             .get(namedParams({ parentChatId: thread.parent_chat_id, participantId }));
         if (participant) {
-            followParticipant(input.chatId, participantId, db);
+            followMentionedParticipant(input.chatId, participantId, db);
         }
     }
 }
@@ -240,6 +237,7 @@ export function threadSummaries(
                         SELECT 1 FROM thread_follows
                         WHERE thread_follows.thread_chat_id = thread_chats.id
                           AND thread_follows.participant_id = $readerId
+                          AND thread_follows.followed = 1
                     ) AS followed
              FROM chats AS thread_chats
              LEFT JOIN chat_messages AS thread_messages
@@ -274,8 +272,25 @@ function assertThreadChat(threadChatId: string, db: Database) {
 
 function followParticipant(threadChatId: string, participantId: string, db: Database) {
     db.prepare(
-        `INSERT OR IGNORE INTO thread_follows (thread_chat_id, participant_id, created_at)
-         VALUES ($threadChatId, $participantId, $createdAt)`
+        `INSERT INTO thread_follows (thread_chat_id, participant_id, followed, created_at)
+         VALUES ($threadChatId, $participantId, 1, $createdAt)
+         ON CONFLICT (thread_chat_id, participant_id) DO UPDATE SET followed = 1`
+    ).run(namedParams({ createdAt: new Date().toISOString(), participantId, threadChatId }));
+}
+
+function followMentionedParticipant(threadChatId: string, participantId: string, db: Database) {
+    db.prepare(
+        `INSERT OR IGNORE INTO thread_follows
+         (thread_chat_id, participant_id, followed, created_at)
+         VALUES ($threadChatId, $participantId, 1, $createdAt)`
+    ).run(namedParams({ createdAt: new Date().toISOString(), participantId, threadChatId }));
+}
+
+function recordUnfollow(threadChatId: string, participantId: string, db: Database) {
+    db.prepare(
+        `INSERT INTO thread_follows (thread_chat_id, participant_id, followed, created_at)
+         VALUES ($threadChatId, $participantId, 0, $createdAt)
+         ON CONFLICT (thread_chat_id, participant_id) DO UPDATE SET followed = 0`
     ).run(namedParams({ createdAt: new Date().toISOString(), participantId, threadChatId }));
 }
 

@@ -105,6 +105,7 @@ const unreadCountSelect = `((
     JOIN thread_follows
       ON thread_follows.thread_chat_id = thread_chats.id
      AND thread_follows.participant_id = $readerId
+     AND thread_follows.followed = 1
     JOIN chat_messages AS thread_messages
       ON thread_messages.chat_id = thread_chats.id
     WHERE thread_chats.parent_chat_id = chats.id
@@ -206,6 +207,7 @@ export function listChatsForAgentParticipant(
                     SELECT 1 FROM thread_follows
                     WHERE thread_follows.thread_chat_id = chats.id
                       AND thread_follows.participant_id = $participantId
+                      AND thread_follows.followed = 1
                 )
              ORDER BY chats.id ASC`
         )

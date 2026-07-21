@@ -185,6 +185,7 @@ CREATE TABLE IF NOT EXISTS chats (
 CREATE TABLE IF NOT EXISTS thread_follows (
   thread_chat_id TEXT NOT NULL,
   participant_id TEXT NOT NULL,
+  followed       INTEGER NOT NULL DEFAULT 1 CHECK (followed IN (0, 1)),
   created_at     TEXT NOT NULL,
   PRIMARY KEY (thread_chat_id, participant_id),
   FOREIGN KEY (thread_chat_id) REFERENCES chats(id) ON DELETE CASCADE

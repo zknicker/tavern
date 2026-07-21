@@ -124,7 +124,7 @@ describe('thread chats', () => {
         ).toThrow('nesting');
     });
 
-    it('toggles follows, re-follows posters, and follows mentioned parent participants', () => {
+    it('toggles follows, re-follows posters, and preserves unfollows across mentions', () => {
         seedParent();
         seedMessage('cht_parent', 'msg_anchor', 'usr_tavern');
         const thread = ensureThreadChat({
@@ -149,7 +149,7 @@ describe('thread chats', () => {
             id: 'msg_user_mention',
             role: 'user',
         });
-        expect(threadSummaries('cht_parent', 'usr_tavern')[0]?.followed).toBe(true);
+        expect(threadSummaries('cht_parent', 'usr_tavern')[0]?.followed).toBe(false);
 
         createMessage(thread.id, {
             author_id: 'usr_tavern',
@@ -161,7 +161,7 @@ describe('thread chats', () => {
             getDb()
                 .prepare(
                     `SELECT 1 FROM thread_follows
-                     WHERE thread_chat_id = ? AND participant_id = 'usr_reader'`
+                     WHERE thread_chat_id = ? AND participant_id = 'usr_reader' AND followed = 1`
                 )
                 .get(thread.id)
         ).toBeTruthy();
@@ -173,7 +173,7 @@ describe('thread chats', () => {
             id: 'msg_mention',
             role: 'user',
         });
-        expect(threadSummaries('cht_parent', 'agt_one')[0]?.followed).toBe(true);
+        expect(threadSummaries('cht_parent', 'agt_one')[0]?.followed).toBe(false);
         createDelivery(thread.id, {
             agent_id: 'agt_one',
             id: 'del_thread_mention',

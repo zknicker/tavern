@@ -177,7 +177,9 @@ function threadIdentityLine(
                       (participant) => participant.id !== input.agentParticipantId
                   )?.label ?? 'user'
               }`
-            : `#${parent.title ?? parent.id}`;
+            : parent.kind === 'task'
+              ? `task ${JSON.stringify(parent.title ?? parent.id)}`
+              : `#${parent.title ?? parent.id}`;
     const author = anchor?.author.label ?? anchor?.author.id ?? 'unknown';
     const excerpt = (anchor?.content ?? '').replace(/\s+/gu, ' ').trim().slice(0, 200);
     return `- this chat is a thread in ${parentName} anchored on @${author}: ${JSON.stringify(excerpt)}. Replies here stay in the thread. (chatId: ${thread.id})`;
