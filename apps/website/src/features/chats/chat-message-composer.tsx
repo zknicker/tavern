@@ -91,6 +91,9 @@ export function ChatMessageComposer({
     const { setAttachments, setContent, setMentions } = composerDraft;
     const isCompact = variant === 'compact';
     const isAgentDm = conversationKind === 'direct';
+    // Task sends address one agent explicitly (specs/addressing.md), so task
+    // chats carry the bound agent target exactly like DMs do.
+    const needsAgentTarget = isAgentDm || conversationKind === 'task';
     const trimmedContent = content.trim();
     const hasPayload = trimmedContent.length > 0 || attachments.length > 0;
     const canSendToRuntime = gatewayCapability.healthy;
@@ -102,7 +105,7 @@ export function ChatMessageComposer({
         chatCanSend &&
         canSendToRuntime &&
         !isComposerBlocked &&
-        (!isAgentDm || agentId.length > 0) &&
+        (!needsAgentTarget || agentId.length > 0) &&
         hasPayload &&
         !sendMessage.isPending;
     const primaryAction = getComposerPrimaryAction({
@@ -172,7 +175,7 @@ export function ChatMessageComposer({
         setAttachmentError(null);
 
         const result = await sendMessage.mutateAsync({
-            ...(isAgentDm ? { agentId } : {}),
+            ...(needsAgentTarget ? { agentId } : {}),
             ...(submittedAttachments.length ? { attachments: submittedAttachments } : {}),
             chatId,
             clientMessageId: `msg_${crypto.randomUUID()}`,
