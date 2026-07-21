@@ -46,7 +46,11 @@ export function MembersPage() {
             <section className="flex min-w-0 flex-1">
                 {agentId ? (
                     selectedAgent ? (
-                        <AgentProfile agentId={selectedAgent.id} variant="page" />
+                        <AgentProfile
+                            agentId={selectedAgent.id}
+                            key={selectedAgent.id}
+                            variant="page"
+                        />
                     ) : (
                         <p className="m-auto text-muted-foreground text-sm">Member not found.</p>
                     )

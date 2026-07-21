@@ -55,11 +55,11 @@ function MemberSection({ count, users }: { count: number; users: RuntimeUser[] }
     );
 }
 
-function getUserDisplayName(user: RuntimeUser) {
+export function getUserDisplayName(user: RuntimeUser) {
     return user.name ?? user.email ?? user.id;
 }
 
-function getInitials(value: string) {
+export function getInitials(value: string) {
     const parts = value.trim().split(/\s+/u);
     return parts.length > 1
         ? `${parts[0]?.[0] ?? ''}${parts.at(-1)?.[0] ?? ''}`.toUpperCase()

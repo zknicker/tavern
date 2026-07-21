@@ -11,7 +11,7 @@ import { useModelList } from '../../../hooks/models/use-model-list.ts';
 import { withSaveErrorToast, withSavingToast } from '../../../lib/saving-toast.ts';
 import { type AgentListOutput, trpc } from '../../../lib/trpc.tsx';
 import { selectMostRecentAgentChat } from './agent-chat-selection.ts';
-import { AgentSessionFacts } from './agent-session-facts.tsx';
+import { AgentPastSessions, AgentSessionFacts } from './agent-session-facts.tsx';
 import { AgentDangerSection } from './danger-section.tsx';
 import { AgentEnvSection } from './env-section.tsx';
 import { AgentIdentitySection } from './identity-section.tsx';
@@ -103,6 +103,16 @@ export function AgentProfileTab({ agent }: { agent: AgentListOutput['agents'][nu
                         </Alert>
                     ) : null}
                 </SettingsRow>
+                {(sessionQuery.data?.pastSessions.length ?? 0) > 0 ? (
+                    <>
+                        <Separator />
+                        <SettingsRow title="Past sessions" trailingWidth="wide">
+                            <AgentPastSessions
+                                pastSessions={sessionQuery.data?.pastSessions ?? []}
+                            />
+                        </SettingsRow>
+                    </>
+                ) : null}
                 {Date.parse(agent.updatedAt) > 0 ? (
                     <>
                         <Separator />

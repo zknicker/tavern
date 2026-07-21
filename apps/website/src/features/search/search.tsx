@@ -1,14 +1,18 @@
 import { Search01Icon } from '@hugeicons-pro/core-stroke-rounded';
 import * as React from 'react';
 import { Link } from 'react-router-dom';
+import { Avatar, AvatarFallback, AvatarImage } from '../../components/ui/avatar.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import { SearchInput } from '../../components/ui/primitives/search-input.tsx';
 import { useAgentList } from '../../hooks/agents/use-agent-list.ts';
 import { useChatList } from '../../hooks/chats/use-chat-list.ts';
 import { useTaskList } from '../../hooks/tasks/use-task-list.ts';
 import { appRoutes } from '../../lib/app-routes.ts';
+import { isClerkEnabled } from '../../lib/clerk.tsx';
+import { trpc } from '../../lib/trpc.tsx';
 import { AgentOptionLabel } from '../agents/agent-option-label.tsx';
 import { buildChatList } from '../chats/chat-list-data.ts';
+import { getInitials, getUserDisplayName } from '../members/human-member-list.tsx';
 import { buildSidebarChatGroups, getSidebarChatTitle } from '../shell/sidebar-chat-list-model.ts';
 import { formatTaskNumber } from '../tasks/task-presentation.ts';
 import { SearchChatIcon } from './search-chat-icon.tsx';
@@ -32,8 +36,20 @@ export function Search() {
     const tasks = (tasksQuery.data?.tasks ?? []).filter((task) =>
         `${formatTaskNumber(task)}\n${task.title}`.toLowerCase().includes(normalizedQuery)
     );
+    const membersQuery = trpc.identity.members.useQuery(undefined, { enabled: isClerkEnabled });
+    const people = (membersQuery.data?.members ?? [])
+        .map((member) => member.user)
+        .filter((user) =>
+            `${getUserDisplayName(user)}\n${user.email ?? ''}`
+                .toLowerCase()
+                .includes(normalizedQuery)
+        );
     const hasResults =
-        channels.length > 0 || directMessages.length > 0 || agents.length > 0 || tasks.length > 0;
+        channels.length > 0 ||
+        directMessages.length > 0 ||
+        agents.length > 0 ||
+        people.length > 0 ||
+        tasks.length > 0;
 
     return (
         <main className="min-h-0 flex-1 overflow-y-auto px-8 py-12">
@@ -72,6 +88,32 @@ export function Search() {
                                     </div>
                                 </SearchRow>
                             ))}
+                        </SearchGroup>
+                        <SearchGroup label="People">
+                            {people.map((user) => {
+                                const name = getUserDisplayName(user);
+                                return (
+                                    <SearchRow key={user.id} to={appRoutes.members}>
+                                        <Avatar className="size-5">
+                                            {user.avatarUrl ? (
+                                                <AvatarImage
+                                                    alt={`${name} avatar`}
+                                                    src={user.avatarUrl}
+                                                />
+                                            ) : null}
+                                            <AvatarFallback className="text-[10px]">
+                                                {getInitials(name)}
+                                            </AvatarFallback>
+                                        </Avatar>
+                                        <span className="min-w-0 truncate">{name}</span>
+                                        {user.email ? (
+                                            <span className="min-w-0 truncate text-muted-foreground">
+                                                {user.email}
+                                            </span>
+                                        ) : null}
+                                    </SearchRow>
+                                );
+                            })}
                         </SearchGroup>
                         <SearchGroup label="Tasks">
                             {tasks.map((task) => (
