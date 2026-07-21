@@ -34,8 +34,8 @@ export function CronEditorActions({
                         size="icon"
                         title={
                             canRunActions
-                                ? 'Delete automation'
-                                : 'Agent engine offline — reconnect to delete this automation'
+                                ? 'Delete reminder'
+                                : 'Agent engine offline — reconnect to delete this reminder'
                         }
                         type="button"
                         variant="destructive-outline"
@@ -49,7 +49,7 @@ export function CronEditorActions({
                         title={
                             canRunActions
                                 ? 'Run now'
-                                : 'Agent engine offline — reconnect to run this automation'
+                                : 'Agent engine offline — reconnect to run this reminder'
                         }
                         type="button"
                         variant="secondary"
@@ -64,7 +64,7 @@ export function CronEditorActions({
                     'Saving...'
                 ) : isNew ? (
                     <span>
-                        Create<span className="hidden sm:inline"> automation</span>
+                        Create<span className="hidden sm:inline"> reminder</span>
                     </span>
                 ) : (
                     <span>

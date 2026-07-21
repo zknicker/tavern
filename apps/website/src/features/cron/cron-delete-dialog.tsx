@@ -39,9 +39,9 @@ export function CronDeleteDialog({
         >
             <DialogContent>
                 <DialogHeader>
-                    <DialogTitle>Delete automation?</DialogTitle>
+                    <DialogTitle>Delete reminder?</DialogTitle>
                     <DialogDescription>
-                        {`Delete "${jobName ?? 'this automation'}"? This removes the automation from Grotto Runtime and cannot be undone.`}
+                        {`Delete "${jobName ?? 'this reminder'}"? This removes the reminder from Grotto Runtime and cannot be undone.`}
                     </DialogDescription>
                 </DialogHeader>
                 {errorMessage ? (
@@ -64,7 +64,7 @@ export function CronDeleteDialog({
                         type="button"
                         variant="destructive"
                     >
-                        Delete automation
+                        Delete reminder
                     </Button>
                 </DialogFooter>
             </DialogContent>

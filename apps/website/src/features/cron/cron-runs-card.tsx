@@ -265,8 +265,8 @@ function CronRunsEmpty({ isPending }: { isPending: boolean }) {
                     <EmptyTitle>{isPending ? 'Loading runs' : 'No runs yet'}</EmptyTitle>
                     <EmptyDescription>
                         {isPending
-                            ? 'Fetching recent automation runs.'
-                            : 'Runs will appear after the automation fires.'}
+                            ? 'Fetching recent reminder runs.'
+                            : 'Runs will appear after the reminder fires.'}
                     </EmptyDescription>
                 </EmptyHeader>
             </Empty>

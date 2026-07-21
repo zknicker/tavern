@@ -3,13 +3,13 @@ import { getSearchConfig, setSearchQuery } from './search-state.ts';
 
 describe('shell search state', () => {
     test('returns the expected placeholder for supported routes', () => {
-        expect(getSearchConfig('/automations')).toEqual({
-            placeholder: 'Filter jobs...',
+        expect(getSearchConfig('/reminders')).toEqual({
+            placeholder: 'Search reminders...',
         });
     });
 
     test('returns null when the route does not support search', () => {
-        expect(getSearchConfig('/overview')).toBeNull();
+        expect(getSearchConfig('/activity')).toBeNull();
         expect(getSearchConfig('/settings')).toBeNull();
     });
 

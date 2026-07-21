@@ -10,7 +10,7 @@ export function CronEmptyResults({ filter, onClearFilters, query }: CronEmptyRes
     return (
         <div className="flex flex-1 flex-col items-center justify-center py-12 text-center">
             <p className="text-muted-foreground text-sm">
-                No automations match
+                No reminders match
                 {filter !== 'all' ? ` "${filter}"` : ''}
                 {query ? ` "${query}"` : ''}
             </p>

@@ -11,7 +11,7 @@ interface CronIdentityCardProps {
 export function CronIdentityCard({ form }: CronIdentityCardProps) {
     return (
         <Card className="overflow-hidden">
-            <BadgeDivider className="px-4 pt-5 pb-4" subtext="Name and describe this automation.">
+            <BadgeDivider className="px-4 pt-5 pb-4" subtext="Name and describe this reminder.">
                 Identity
             </BadgeDivider>
             <div className="grid gap-3 p-4 sm:grid-cols-2">

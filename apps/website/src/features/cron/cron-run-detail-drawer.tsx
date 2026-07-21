@@ -44,7 +44,7 @@ export function CronRunDetailDrawer({
                     <DrawerHeader className="gap-1 pe-28">
                         <DrawerTitle className="text-lg">Run details</DrawerTitle>
                         <DrawerDescription className="truncate text-sm">
-                            {jobName ?? 'Automation run'}
+                            {jobName ?? 'Reminder run'}
                         </DrawerDescription>
                     </DrawerHeader>
                     <DrawerPanel className="space-y-4">

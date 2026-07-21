@@ -83,7 +83,7 @@ export function CronEditor() {
     const isLoadingEditor = !(shouldRenderForm || isMissingJob);
 
     const handleBack = React.useCallback(() => {
-        navigate(appRoutes.automations);
+        navigate(appRoutes.reminders);
     }, [navigate]);
 
     const editorActions = (
@@ -147,7 +147,7 @@ export function CronEditor() {
                             await createMutation.mutateAsync(buildCronCreateInput(formState));
                         }
 
-                        navigate(appRoutes.automations);
+                        navigate(appRoutes.reminders);
                     }}
                     runs={optimisticCronRuns.runs}
                     template={suggested?.template}
@@ -185,7 +185,7 @@ export function CronEditor() {
                     }
 
                     await deleteMutation.mutateAsync({ jobId: job.id });
-                    navigate(appRoutes.automations);
+                    navigate(appRoutes.reminders);
                 }}
             />
         </div>
@@ -195,7 +195,7 @@ export function CronEditor() {
 function CronEditorSkeleton() {
     return (
         <div aria-busy="true" className="flex min-h-0 flex-1 flex-col lg:flex-row">
-            <span className="sr-only">Loading automation editor</span>
+            <span className="sr-only">Loading reminder editor</span>
             <section className="min-w-0 flex-1">
                 <div className="mx-auto flex h-full min-h-[42rem] w-full max-w-4xl flex-col gap-6 px-6 pt-3 pb-8 lg:px-10">
                     <div className="flex shrink-0 flex-col gap-2 pt-1">

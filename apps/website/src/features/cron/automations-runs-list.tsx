@@ -49,7 +49,7 @@ export function AutomationsRunsList({
                 {visibleRuns.map((run, index) => (
                     <AutomationsRunRow
                         index={index}
-                        jobName={jobsById.get(run.jobId)?.name ?? 'Deleted automation'}
+                        jobName={jobsById.get(run.jobId)?.name ?? 'Deleted reminder'}
                         key={run.id}
                         onSelect={() => onRunSelect(run)}
                         run={run}

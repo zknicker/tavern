@@ -24,8 +24,8 @@ export function SidebarHomeNav() {
                 <SidebarMenu>
                     <SidebarMenuItem>
                         <SidebarMenuButton
-                            isActive={location.pathname === appRoutes.overview}
-                            render={<NavLink to={appRoutes.overview} />}
+                            isActive={location.pathname === appRoutes.activity}
+                            render={<NavLink to={appRoutes.activity} />}
                         >
                             <Icon
                                 aria-hidden="true"

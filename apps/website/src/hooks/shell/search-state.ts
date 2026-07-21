@@ -9,9 +9,9 @@ const searchConfigs: Array<{
     match: (pathname: string) => boolean;
 }> = [
     {
-        match: (pathname) => pathname === appRoutes.automations,
+        match: (pathname) => pathname === appRoutes.reminders,
         config: {
-            placeholder: 'Filter jobs...',
+            placeholder: 'Search reminders...',
         },
     },
     {

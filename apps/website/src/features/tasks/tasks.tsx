@@ -7,6 +7,7 @@ import {
     useRuntimeConnection,
 } from '../../hooks/connections/use-runtime-connection.ts';
 import { useLabelList } from '../../hooks/labels/use-label-list.ts';
+import { markTasksSeen } from '../../hooks/shell/use-rail-unseen.ts';
 import { useSearch } from '../../hooks/shell/use-search.ts';
 import { useAutoDispatchSettings } from '../../hooks/tasks/use-auto-dispatch-settings.ts';
 import { useTaskList } from '../../hooks/tasks/use-task-list.ts';
@@ -39,6 +40,10 @@ export function Tasks() {
     const [view, setView] = React.useState<TaskView>('all');
     const [assignee, setAssignee] = React.useState<TaskAssigneeFilter>('anyone');
     const [label, setLabel] = React.useState<TaskLabelFilter>('all');
+
+    React.useEffect(() => {
+        markTasksSeen();
+    }, []);
 
     const tasks = React.useMemo(() => tasksQuery.data?.tasks ?? [], [tasksQuery.data?.tasks]);
     const agents = useAgentSelectOptions(agentsQuery.data?.agents);

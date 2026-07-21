@@ -3,11 +3,12 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { appRoutes } from '../../lib/app-routes.ts';
 
 export const routeTabs = [
-    { id: 'overview', label: 'Grotto', path: appRoutes.overview },
+    { id: 'search', label: 'Search', path: appRoutes.search },
+    { id: 'chat', label: 'Chat', path: appRoutes.chats },
+    { id: 'activity', label: 'Activity', path: appRoutes.activity },
     { id: 'tasks', label: 'Tasks', path: appRoutes.tasks },
-    { id: 'automations', label: 'Automations', path: appRoutes.automations },
-    { id: 'workspace', label: 'Workspace', path: appRoutes.workspace },
-    { id: 'wiki', label: 'Wiki', path: appRoutes.wiki },
+    { id: 'reminders', label: 'Reminders', path: appRoutes.reminders },
+    { id: 'members', label: 'Members', path: appRoutes.members },
 ] as const;
 
 type RouteTab = (typeof routeTabs)[number]['id'];
@@ -22,8 +23,12 @@ export function getRouteTab(pathname: string): RouteTab | null {
     const segments = pathname.split('/').filter(Boolean);
     const primaryTab = segments[0] === 'dashboard' ? (segments[1] ?? null) : (segments[0] ?? null);
 
-    if (primaryTab === 'cron') {
-        return 'automations';
+    if (primaryTab === 'automations' || primaryTab === 'cron') {
+        return 'reminders';
+    }
+
+    if (primaryTab === 'chats') {
+        return 'chat';
     }
 
     if (isRouteTab(primaryTab)) {
@@ -44,7 +49,7 @@ export function useRouteTab() {
             tabs: routeTabs,
             setActiveTab(nextTab: RouteTab) {
                 const nextRoute = routeTabs.find((tab) => tab.id === nextTab)?.path;
-                navigate(nextRoute ?? appRoutes.overview);
+                navigate(nextRoute ?? appRoutes.activity);
             },
         }),
         [activeTab, navigate]

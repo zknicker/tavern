@@ -27,7 +27,7 @@ test('MemoryOverview renders Aside-style memory settings and hub status', () => 
 
     assert.match(markup, /Enable memories/);
     assert.match(markup, /Episodic retention/);
-    assert.match(markup, /Open Automations/);
+    assert.match(markup, /Open Reminders/);
     assert.match(markup, /Open Wiki/);
     assert.match(markup, /Settings/);
     assert.match(markup, /Recent runs/);

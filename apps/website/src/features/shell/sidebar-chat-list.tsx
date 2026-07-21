@@ -94,7 +94,7 @@ export function AppSidebarChatList() {
                 await archiveChat.mutateAsync({ chatId: chat.id });
 
                 if (location.pathname === buildChatPath(chat.id)) {
-                    await navigate(appRoutes.overview);
+                    await navigate(appRoutes.activity);
                 }
             } catch (error) {
                 // biome-ignore lint/suspicious/noAlert: Keep sidebar failures visible without adding a global toast dependency.

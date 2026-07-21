@@ -26,7 +26,7 @@ function createContext(overrides: Partial<AppCommandBuildContext> = {}): AppComm
         devMode: false,
         isCheckingRuntimeHealth: false,
         navigate: () => undefined,
-        pathname: '/overview',
+        pathname: '/activity',
         resolveCapability: () => healthyCapability,
         setDevMode: () => undefined,
         ...overrides,
@@ -47,9 +47,11 @@ test('global command groups expose the first slice of Grotto actions', () => {
         groups.map((group) => group.title),
         ['Navigation', 'Create', 'Settings', 'Developer']
     );
-    assert.ok(commandTitles.includes('Grotto'));
+    assert.ok(commandTitles.includes('Search'));
+    assert.ok(commandTitles.includes('Chat'));
+    assert.ok(commandTitles.includes('Activity'));
     assert.ok(commandTitles.includes('New Task'));
-    assert.ok(commandTitles.includes('New Automation'));
+    assert.ok(commandTitles.includes('New Reminder'));
     assert.ok(commandTitles.includes('Grotto Runtime'));
     assert.ok(commandTitles.includes('Agents'));
     assert.ok(commandTitles.includes('Turn Dev Mode On'));

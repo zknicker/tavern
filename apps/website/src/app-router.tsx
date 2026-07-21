@@ -80,10 +80,21 @@ export function createAppRouter() {
                                             ),
                                         },
                                         {
-                                            path: 'overview',
+                                            path: 'activity',
                                             lazy: lazyRoute(
                                                 () => import('./routes/app/overview-page.tsx'),
                                                 'OverviewPage'
+                                            ),
+                                        },
+                                        {
+                                            path: 'overview',
+                                            element: <Navigate replace to={appRoutes.activity} />,
+                                        },
+                                        {
+                                            path: 'search',
+                                            lazy: lazyRoute(
+                                                () => import('./routes/app/search-page.tsx'),
+                                                'SearchPage'
                                             ),
                                         },
                                         {
@@ -135,7 +146,7 @@ export function createAppRouter() {
                                         },
                                         {
                                             path: 'workers',
-                                            element: <Navigate replace to={appRoutes.wiki} />,
+                                            element: <Navigate replace to={appRoutes.activity} />,
                                         },
                                         {
                                             path: 'tasks',
@@ -159,24 +170,52 @@ export function createAppRouter() {
                                             ),
                                         },
                                         {
-                                            path: 'automations',
+                                            path: 'reminders',
                                             lazy: lazyRoute(
                                                 () => import('./routes/app/cron-page.tsx'),
                                                 'CronPage'
                                             ),
                                         },
                                         {
-                                            path: 'automations/new',
+                                            path: 'reminders/new',
                                             lazy: lazyRoute(
                                                 () => import('./routes/app/cron-editor-page.tsx'),
                                                 'CronEditorPage'
                                             ),
                                         },
                                         {
-                                            path: 'automations/edit/:jobId',
+                                            path: 'reminders/edit/:jobId',
                                             lazy: lazyRoute(
                                                 () => import('./routes/app/cron-editor-page.tsx'),
                                                 'CronEditorPage'
+                                            ),
+                                        },
+                                        {
+                                            path: 'automations',
+                                            element: <Navigate replace to={appRoutes.reminders} />,
+                                        },
+                                        {
+                                            path: 'automations/new',
+                                            element: (
+                                                <Navigate replace to={appRoutes.newReminder} />
+                                            ),
+                                        },
+                                        {
+                                            path: 'automations/edit/:jobId',
+                                            element: <LegacyAutomationRedirect />,
+                                        },
+                                        {
+                                            path: 'members',
+                                            lazy: lazyRoute(
+                                                () => import('./routes/app/members-page.tsx'),
+                                                'MembersPage'
+                                            ),
+                                        },
+                                        {
+                                            path: 'members/agents/:agentId',
+                                            lazy: lazyRoute(
+                                                () => import('./routes/app/members-page.tsx'),
+                                                'MembersPage'
                                             ),
                                         },
                                         {
@@ -194,18 +233,18 @@ export function createAppRouter() {
                                         },
                                         {
                                             path: 'events',
-                                            element: <Navigate replace to={appRoutes.wiki} />,
+                                            element: <Navigate replace to={appRoutes.activity} />,
                                         },
                                         {
                                             path: 'logs',
-                                            element: <Navigate replace to={appRoutes.wiki} />,
+                                            element: <Navigate replace to={appRoutes.activity} />,
                                         },
                                         {
                                             // The workspace page is retired from
                                             // navigation; workspace files are reached
                                             // through the chat artifact pane instead.
                                             path: 'workspace',
-                                            element: <Navigate replace to={appRoutes.overview} />,
+                                            element: <Navigate replace to={appRoutes.activity} />,
                                         },
                                         {
                                             path: 'wiki',
@@ -216,15 +255,15 @@ export function createAppRouter() {
                                         },
                                         {
                                             path: 'pulse',
-                                            element: <Navigate replace to={appRoutes.wiki} />,
+                                            element: <Navigate replace to={appRoutes.activity} />,
                                         },
                                         {
                                             path: 'memories',
-                                            element: <Navigate replace to={appRoutes.wiki} />,
+                                            element: <Navigate replace to={appRoutes.activity} />,
                                         },
                                         {
                                             path: 'jobs',
-                                            element: <Navigate replace to={appRoutes.overview} />,
+                                            element: <Navigate replace to={appRoutes.activity} />,
                                         },
                                         {
                                             path: 'settings',
@@ -483,7 +522,7 @@ export function createAppRouter() {
                                         },
                                         {
                                             path: '*',
-                                            element: <Navigate replace to={appRoutes.overview} />,
+                                            element: <Navigate replace to={appRoutes.activity} />,
                                         },
                                     ],
                                 },
@@ -493,7 +532,7 @@ export function createAppRouter() {
                 },
                 {
                     path: '*',
-                    element: <Navigate replace to={appRoutes.overview} />,
+                    element: <Navigate replace to={appRoutes.activity} />,
                 },
             ],
         },
@@ -503,6 +542,11 @@ export function createAppRouter() {
 function AgentSkillsRedirect() {
     const { agentId } = useParams();
     return <Navigate replace to={buildAgentSettingsPath(agentId, 'skills')} />;
+}
+
+function LegacyAutomationRedirect() {
+    const { jobId } = useParams();
+    return <Navigate replace to={jobId ? appRoutes.editReminder(jobId) : appRoutes.reminders} />;
 }
 
 function LegacyDashboardRedirect() {
@@ -526,6 +570,7 @@ function resolveLegacyDashboardPath(pathname: string) {
             return appRoutes.settingsSessions;
         case 'chats':
             return segments.length === 0 ? buildDefaultWorkspaceChatPath() : `/${suffix}`;
+        case 'automations':
         case 'cron':
             return resolveLegacyAutomationPath(segments);
         case 'events':
@@ -533,36 +578,37 @@ function resolveLegacyDashboardPath(pathname: string) {
         case 'memories':
         case 'pulse':
         case 'workers':
-            return appRoutes.wiki;
+            return appRoutes.activity;
         case 'jobs':
         case 'models':
-            return appRoutes.overview;
+            return appRoutes.activity;
         case 'overview':
-            return appRoutes.overview;
+            return appRoutes.activity;
         case 'settings':
             return resolveLegacySettingsPath(segments);
         case 'skills':
             return appRoutes.settingsSkills;
         case 'stats':
             return appRoutes.settingsStats;
-        case 'wiki':
         case 'workspace':
-            return `/${suffix}`;
+            return appRoutes.activity;
+        case 'wiki':
+            return appRoutes.wiki;
         default:
-            return appRoutes.overview;
+            return appRoutes.activity;
     }
 }
 
 function resolveLegacyAutomationPath(segments: string[]) {
     if (segments[0] === 'new') {
-        return appRoutes.newAutomation;
+        return appRoutes.newReminder;
     }
 
     if (segments[0] === 'edit' && segments[1]) {
-        return `/automations/edit/${segments.slice(1).join('/')}`;
+        return `/reminders/edit/${segments.slice(1).join('/')}`;
     }
 
-    return appRoutes.automations;
+    return appRoutes.reminders;
 }
 
 function resolveLegacySettingsPath(segments: string[]) {

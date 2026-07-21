@@ -46,7 +46,7 @@ export function AgentChatDetail({ chatId }: { chatId: string }) {
             return <div className="flex min-h-0 flex-1 flex-col" />;
         }
 
-        return <Navigate replace to={appRoutes.overview} />;
+        return <Navigate replace to={appRoutes.activity} />;
     }
 
     return <SyncedAgentChatDetail chat={chat} chatId={chatId} />;
