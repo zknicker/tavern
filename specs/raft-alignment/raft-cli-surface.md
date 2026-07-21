@@ -7,8 +7,11 @@ the agent-facing `grotto` CLI.
 
 ## Entry shapes
 
-- **Managed runner** (daemon-injected): the local wrapper on PATH sets `SLOCK_AGENT_TOKEN` /
-  `SLOCK_AGENT_PROXY_URL`; the agent just runs `raft …`.
+- **Managed runner** (daemon-injected): the local wrapper on PATH sets `SLOCK_AGENT_ID`,
+  `SLOCK_SERVER_URL`, `SLOCK_SERVER_ID`, `SLOCK_AGENT_PROXY_URL`, and
+  `SLOCK_AGENT_PROXY_TOKEN_FILE` (or `…_TOKEN`); the agent just runs `raft …`. The CLI talks to
+  the **daemon proxy**, not the server; direct `SLOCK_AGENT_TOKEN` bootstrap is rejected with
+  `LEGACY_MACHINE_UNSUPPORTED` (npm v0.0.17).
 - **External agent** (self-hosted runtime): `raft agent login --server <url> --agent <id>
   --profile-slug <slug>` (device-code flow, human approves in browser, mints `sk_agent_*`),
   then `raft --profile <slug> …` or `RAFT_PROFILE=<slug>`.
@@ -42,10 +45,16 @@ the agent-facing `grotto` CLI.
   cursor).
 - `message send --target <t> [--attachment-id …] [--send-draft] [--anyway]` — body via stdin
   heredoc. Targets: `#channel`, `dm:@peer`, `#channel:shortid`, `dm:@peer:shortid`.
-  **Attested send**: if unseen newer messages exist for the target, the server holds the send as a
-  draft and returns bounded catch-up ("Freshness hold: showing latest N of M newer messages…",
+  **Attested send**: if unseen newer messages exist for the target, the send is held and the
+  server returns bounded catch-up ("Freshness hold: showing latest N of M newer messages…",
   mention counts, paths: revise / `--send-draft` unchanged / stay silent / `--anyway` after
-  repeated holds).
+  repeated holds). **The draft is CLI-local, not server-held** (v0.0.17): held content is saved
+  to a tmpdir JSON per (agent, target) with a 10-minute TTL and a `reholdCount`; the server
+  decides hold-vs-send statelessly from client-supplied `seenUpToSeq` + `draftReholdCount`, and
+  a `held` response's shown messages advance the client's consumed-seq cursor. `--anyway`
+  requires `--send-draft`; `--send-draft` rejects stdin bodies and `--attachment-id`. A
+  `syncing_hold` decision variant exists ("Unreviewed synced context for this target"). Send
+  failures add a `Draft saved: yes|no` stderr line between `Code:` and `Next action:`.
 - `message read --target <t> [--before|--after|--around <idOrSeq>] [--limit]` — history; output
   includes the read-cursor hint.
 - `message search --query … [--target] [--sender @h] [--sort relevance|recent] [--before|--after
@@ -121,6 +130,27 @@ the agent-facing `grotto` CLI.
   for Agents" + recipe cards; both take `--intent` and `--reason` (server logs why agents consult
   it). Known topics: `index`, `raft-cli-overview`, `recipes/seeded`, `recipes/<kind>/<slug>`
   (e.g. `decision/when-to-ask-human`, `pattern/discuss-then-assign`, `technique/task-claim-lock`).
+
+## WS1 audit corrections (2026-07-21, npm v0.0.17 bundle source)
+
+- Heredoc delimiter in current CLI teaching text is `RAFTMSG` (the captured v1.0.0 prompt used
+  `SLOCKMSG`).
+- Handle rules: the "single-token 1–32 chars; reserved names blocked" claim is **not visible in
+  the npm bundle** — the shipped `agent:create` action-card schema is `min(1).max(60)` (channel
+  names `max(80)`, descriptions `max(500)`), with no reserved list or single-token regex
+  client-side; docs are silent. If it exists, it is server-side enforcement we cannot inspect.
+  Grotto must own its handle rule explicitly rather than cite Raft for it.
+- Handle → id resolution is server-side and fails closed: channel verbs first call
+  `POST /internal/agent-api/resolve-channel` (target → channelId), then id-scoped routes.
+- `server info` fetches the full inventory in one call; `--query/--limit/--offset/--joined`
+  filtering and pagination happen **client-side** in the CLI, with a computed
+  "next command" teach line.
+- `message check` acks/advances its per-target consumed-seq cursor (tmpdir state) only after
+  printing — show-and-hope, as I3 already characterizes.
+- Send body extras observed in the wire schema: `idempotencyKey`, `continue`,
+  `draftReplacedExisting`.
+- History lines print the full message id in `msg=`; only delivery envelopes and reply-target
+  suffixes use the 8-char short id.
 
 ## Host service binary (separate): `raft-computer`
 
