@@ -52,7 +52,8 @@ export function RestartAgentDialog({
                         size={36}
                     />
                     <p className="text-muted-foreground text-sm">
-                        Start a fresh session for {agent.name}? In-flight work stops.
+                        Start a fresh session for {agent.name}? The next turn begins with a clean
+                        context; a turn already running finishes on the old session.
                     </p>
                 </div>
                 {resetSession.error ? (
