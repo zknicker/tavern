@@ -14,7 +14,6 @@ import {
     createChat,
     createDelivery,
     createMessage,
-    deleteMessage,
     deleteResponse,
     getChat,
     getResponse,
@@ -547,7 +546,7 @@ describe('Tavern Runtime Chat API store', () => {
             expect.objectContaining({ id: 'cht_1', last_activity_at: null }),
         ]);
 
-        const first = createMessage('cht_1', messageInput('msg_1', 'nonce_1', 'hello'));
+        createMessage('cht_1', messageInput('msg_1', 'nonce_1', 'hello'));
         const second = createMessage('cht_1', messageInput('msg_2', 'nonce_2', 'again'));
 
         expect(getChat('cht_1')).toMatchObject({
@@ -564,11 +563,6 @@ describe('Tavern Runtime Chat API store', () => {
         expect(getChat('cht_1')).toMatchObject({
             last_activity_at: second.message.created_at,
             title: 'Renamed',
-        });
-
-        deleteMessage('msg_2');
-        expect(getChat('cht_1')).toMatchObject({
-            last_activity_at: first.message.created_at,
         });
     });
 

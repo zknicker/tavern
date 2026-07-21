@@ -81,7 +81,7 @@ export function createChat(input: TavernCreateChatRequest, db: Database = getDb(
 // Unread for the requested reader: messages past that user's receipt,
 // excluding their own messages. Keyless callers default to the synthetic
 // local operator.
-const unreadCountSelect = `(
+const unreadCountSelect = `((
     SELECT COUNT(*)
     FROM chat_messages
     WHERE chat_messages.chat_id = chats.id
@@ -92,7 +92,24 @@ const unreadCountSelect = `(
           WHERE chat_reads.chat_id = chats.id
             AND chat_reads.reader_id = $readerId
       ), 0)
-) AS unread_count`;
+) + (
+    SELECT COUNT(*)
+    FROM chats AS thread_chats
+    JOIN thread_follows
+      ON thread_follows.thread_chat_id = thread_chats.id
+     AND thread_follows.participant_id = $readerId
+    JOIN chat_messages AS thread_messages
+      ON thread_messages.chat_id = thread_chats.id
+    WHERE thread_chats.parent_chat_id = chats.id
+      AND thread_chats.kind = 'thread'
+      AND thread_messages.deleted_at IS NULL
+      AND thread_messages.author_id != $readerId
+      AND thread_messages.sequence > COALESCE((
+          SELECT last_read_sequence FROM chat_reads
+          WHERE chat_reads.chat_id = thread_chats.id
+            AND chat_reads.reader_id = $readerId
+      ), 0)
+)) AS unread_count`;
 
 export function listChats(
     input: { cursor?: string | null; limit?: number; readerId?: string } = {},
@@ -140,6 +157,7 @@ export function listChats(
                     ) AS active_turn_participant_ids
              FROM chats
              WHERE id > $cursor
+               AND kind != 'thread'
              ORDER BY id ASC
              LIMIT $limit`
         )
@@ -276,12 +294,14 @@ export function getChatOrThrow(id: string, db: Database): TavernChat {
 function rowToChat(row: ChatRow, db: Database): TavernChat {
     return {
         active_turn_participant_ids: parseActiveTurnParticipantIds(row.active_turn_participant_ids),
+        anchor_message_id: row.anchor_message_id,
         created_at: row.created_at,
         id: row.id,
         kind: row.kind,
         last_activity_at: row.last_activity_at,
         last_message_sequence: row.last_message_sequence,
         metadata: JSON.parse(row.metadata_json) as Record<string, unknown>,
+        parent_chat_id: row.parent_chat_id,
         participants: listChatParticipants(row.id, db),
         title: row.title,
         unread_count: row.unread_count,
@@ -374,6 +394,9 @@ function replaceChatParticipants(chatId: string, participants: ChatParticipant[]
 }
 
 function validateChatShape(input: { kind: ChatKind; participants: ChatParticipant[] }) {
+    if (input.kind === 'thread') {
+        throw new Error('Thread chats must be created with ensureThread.');
+    }
     if (input.kind !== 'dm') {
         return;
     }

@@ -12,7 +12,7 @@ export { listEvents, subscribeToTavernApiEvents } from './events';
 export { localHumanParticipantId } from './ids';
 export {
     createMessage,
-    deleteMessage,
+    discardStreamingMessage,
     getMessage,
     latestMessageSequence,
     listMessages,
@@ -32,4 +32,13 @@ export {
     upsertResponse,
     upsertResponseActivity,
 } from './responses';
+export {
+    anchorShortId,
+    autoFollowMentions,
+    autoFollowOnPost,
+    ensureThreadChat,
+    setThreadFollow,
+    threadChatIdForAnchor,
+    threadSummaries,
+} from './threads';
 export { getChatTimelinePage } from './timeline';

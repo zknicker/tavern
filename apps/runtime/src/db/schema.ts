@@ -171,13 +171,23 @@ CREATE TABLE IF NOT EXISTS runtime_model_providers (
 
 CREATE TABLE IF NOT EXISTS chats (
   id                    TEXT PRIMARY KEY,
-  kind                  TEXT NOT NULL DEFAULT 'channel' CHECK (kind IN ('channel', 'dm', 'task')),
+  kind                  TEXT NOT NULL DEFAULT 'channel' CHECK (kind IN ('channel', 'dm', 'task', 'thread')),
   title                 TEXT,
+  parent_chat_id        TEXT REFERENCES chats(id) ON DELETE CASCADE,
+  anchor_message_id     TEXT,
   pinned                INTEGER NOT NULL DEFAULT 0 CHECK (pinned IN (0, 1)),
   metadata_json         TEXT NOT NULL DEFAULT '{}',
   created_at            TEXT NOT NULL,
   updated_at            TEXT NOT NULL,
   last_message_sequence INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS thread_follows (
+  thread_chat_id TEXT NOT NULL,
+  participant_id TEXT NOT NULL,
+  created_at     TEXT NOT NULL,
+  PRIMARY KEY (thread_chat_id, participant_id),
+  FOREIGN KEY (thread_chat_id) REFERENCES chats(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS chat_participants (
@@ -522,8 +532,6 @@ CREATE TABLE IF NOT EXISTS chat_messages (
   content           TEXT NOT NULL DEFAULT '',
   attachment_json   TEXT,
   nonce             TEXT,
-  parent_message_id TEXT,
-  thread_root_id    TEXT,
   delivery_id       TEXT,
   created_at        TEXT NOT NULL,
   deleted_at        TEXT,
@@ -708,9 +716,23 @@ export function ensureRuntimeSchema(db: Database): void {
     repairRuntimeSchema(db);
     ensureColumn(db, {
         column: 'kind',
-        definition: "TEXT NOT NULL DEFAULT 'channel' CHECK (kind IN ('channel', 'dm', 'task'))",
+        definition:
+            "TEXT NOT NULL DEFAULT 'channel' CHECK (kind IN ('channel', 'dm', 'task', 'thread'))",
         table: 'chats',
     });
+    ensureColumn(db, {
+        column: 'parent_chat_id',
+        definition: 'TEXT',
+        table: 'chats',
+    });
+    ensureColumn(db, {
+        column: 'anchor_message_id',
+        definition: 'TEXT',
+        table: 'chats',
+    });
+    db.exec(
+        'CREATE INDEX IF NOT EXISTS idx_chats_parent ON chats(parent_chat_id) WHERE parent_chat_id IS NOT NULL'
+    );
     ensureColumn(db, {
         column: 'pinned',
         definition: 'INTEGER NOT NULL DEFAULT 0 CHECK (pinned IN (0, 1))',

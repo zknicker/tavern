@@ -5,6 +5,7 @@ import { namedParams, optionalRow } from '../../db/sqlite';
 import { insertEvent, publish, replaceEventPayload } from './events';
 import { assertOptionalTavernIdPrefix, assertTavernIdPrefix } from './ids';
 import { findExistingMessage, getMessage, getMessageOrThrow, insertMessage } from './messages';
+import { autoFollowMentions, autoFollowOnPost } from './threads';
 import type { DeliveryReceipt, DeliveryRow } from './types';
 
 export function createDelivery(
@@ -34,6 +35,8 @@ export function createDelivery(
         const message =
             finalizeExistingMessage(chatId, input.message, db) ??
             insertMessage(chatId, input.message, input.agent_id, input.id, db);
+        autoFollowOnPost({ authorId: input.agent_id, chatId }, db);
+        autoFollowMentions({ chatId, content: input.message.content }, db);
         const now = new Date().toISOString();
         const event = insertEvent(
             {

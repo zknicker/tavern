@@ -8,9 +8,10 @@ import type { Database } from '../../db/sqlite';
 import { namedParams, optionalRow } from '../../db/sqlite';
 import { assertChatExists } from './chats';
 import { currentCursor, insertEvent, publish } from './events';
-import { assertOptionalTavernIdPrefix, assertTavernIdPrefix } from './ids';
+import { assertTavernIdPrefix } from './ids';
 import { clampLimit } from './limits';
-import type { DeleteReceipt, MessageReceipt, MessageRow, ParticipantRow } from './types';
+import { autoFollowMentions, autoFollowOnPost } from './threads';
+import type { MessageReceipt, MessageRow, ParticipantRow } from './types';
 
 export function createMessage(
     chatId: string,
@@ -26,6 +27,8 @@ export function createMessage(
     db.exec('BEGIN IMMEDIATE');
     try {
         const message = insertMessage(chatId, input, input.author_id, null, db);
+        autoFollowOnPost({ authorId: input.author_id, chatId }, db);
+        autoFollowMentions({ chatId, content: input.content }, db);
         const event = insertEvent({ chatId, event: 'message.created', payload: { message } }, db);
         db.exec('COMMIT');
         publish(event);
@@ -211,29 +214,17 @@ export function updateStreamingMessage(
     }
 }
 
-export function deleteMessage(id: string, db: Database = getDb()): DeleteReceipt {
-    assertTavernIdPrefix(id, 'msg_', 'Message id');
-    const message = getMessageOrThrow(id, db);
-    const deletedAt = new Date().toISOString();
-    db.exec('BEGIN IMMEDIATE');
-    try {
-        db.prepare('UPDATE chat_messages SET deleted_at = $deletedAt WHERE id = $id').run(
-            namedParams({ deletedAt, id })
+export function discardStreamingMessage(chatId: string, id: string, db: Database = getDb()) {
+    const message = getMessage(id, db);
+    const runtime = message?.metadata.runtime;
+    const isStreaming =
+        runtime && typeof runtime === 'object' && !Array.isArray(runtime)
+            ? (runtime as Record<string, unknown>).streaming === true
+            : false;
+    if (message?.chat_id === chatId && message.delivery_id === null && isStreaming) {
+        db.prepare('DELETE FROM chat_messages WHERE id = $id AND chat_id = $chatId').run(
+            namedParams({ chatId, id })
         );
-        const event = insertEvent(
-            {
-                chatId: message.chat_id,
-                event: 'message.deleted',
-                payload: { message_id: id },
-            },
-            db
-        );
-        db.exec('COMMIT');
-        publish(event);
-        return { cursor: event.cursor, deleted_at: deletedAt, message_id: id };
-    } catch (error) {
-        db.exec('ROLLBACK');
-        throw error;
     }
 }
 
@@ -251,10 +242,10 @@ export function insertMessage(
     const createdAt = new Date().toISOString();
     db.prepare(
         `INSERT INTO chat_messages
-         (id, chat_id, sequence, author_id, role, content, attachment_json, nonce, parent_message_id,
-          thread_root_id, delivery_id, created_at, metadata_json)
+         (id, chat_id, sequence, author_id, role, content, attachment_json, nonce, delivery_id,
+          created_at, metadata_json)
          VALUES ($id, $chatId, $sequence, $authorId, $role, $content, $attachmentJson, $nonce,
-          $parentMessageId, $threadRootId, $deliveryId, $createdAt, $metadataJson)`
+          $deliveryId, $createdAt, $metadataJson)`
     ).run(
         namedParams({
             attachmentJson:
@@ -269,10 +260,8 @@ export function insertMessage(
             id: input.id,
             metadataJson: JSON.stringify(input.metadata ?? {}),
             nonce: input.nonce ?? null,
-            parentMessageId: input.parent_message_id ?? null,
             role: input.role,
             sequence,
-            threadRootId: input.thread_root_id ?? null,
         })
     );
     db.prepare(
@@ -330,10 +319,8 @@ export function rowToMessage(row: MessageRow, db: Database): TavernChatMessage {
         id: row.id,
         metadata: JSON.parse(row.metadata_json) as Record<string, unknown>,
         nonce: row.nonce,
-        parent_message_id: row.parent_message_id,
         role: row.role,
         sequence: row.sequence,
-        thread_root_id: row.thread_root_id,
     };
 }
 
@@ -341,8 +328,6 @@ function assertMessageInputIds(chatId: string, input: TavernCreateMessageRequest
     assertTavernIdPrefix(chatId, 'cht_', 'Chat id');
     assertTavernIdPrefix(input.id, 'msg_', 'Message id');
     assertTavernIdPrefix(input.author_id, authorPrefix(input.role), 'Author id');
-    assertOptionalTavernIdPrefix(input.parent_message_id, 'msg_', 'Parent message id');
-    assertOptionalTavernIdPrefix(input.thread_root_id, 'msg_', 'Thread root message id');
 }
 
 function authorPrefix(role: TavernChatMessage['role']) {

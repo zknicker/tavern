@@ -125,7 +125,6 @@ function toolMessage(message: TavernChatMessage) {
         createdAt: message.created_at,
         deletedAt: message.deleted_at,
         id: message.id,
-        parentMessageId: message.parent_message_id,
         role: message.role,
         sequence: message.sequence,
     };

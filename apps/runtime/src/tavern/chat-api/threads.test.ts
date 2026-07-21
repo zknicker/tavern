@@ -1,0 +1,230 @@
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { closeDb, getDb, initDb } from '../../db/connection';
+import { ensureRuntimeSchema } from '../../db/schema';
+import {
+    anchorShortId,
+    createChat,
+    createDelivery,
+    createMessage,
+    ensureThreadChat,
+    getChat,
+    getChatTimelinePage,
+    listChats,
+    markRead,
+    setThreadFollow,
+    threadChatIdForAnchor,
+    threadSummaries,
+} from './index';
+
+let tempRoot = '';
+
+beforeEach(() => {
+    tempRoot = mkdtempSync(path.join(tmpdir(), 'tavern-threads-'));
+    ensureRuntimeSchema(initDb(path.join(tempRoot, 'runtime.sqlite')));
+});
+
+afterEach(() => {
+    closeDb();
+    rmSync(tempRoot, { force: true, recursive: true });
+});
+
+describe('thread chats', () => {
+    it('creates one deterministic child chat and follows the anchor author', () => {
+        seedParent();
+        seedMessage('cht_parent', 'msg_anchor_12345678', 'usr_tavern');
+
+        const first = ensureThreadChat({
+            anchorMessageId: 'msg_anchor_12345678',
+            parentChatId: 'cht_parent',
+        });
+        const replay = ensureThreadChat({
+            anchorMessageId: 'msg_anchor_12345678',
+            parentChatId: 'cht_parent',
+        });
+
+        expect(threadChatIdForAnchor('msg_anchor_12345678')).toBe('cht_thr_anchor_12345678');
+        expect(anchorShortId('msg_anchor_12345678')).toBe('anchor_1');
+        expect(replay).toEqual(first);
+        expect(first).toMatchObject({
+            anchor_message_id: 'msg_anchor_12345678',
+            id: 'cht_thr_anchor_12345678',
+            kind: 'thread',
+            parent_chat_id: 'cht_parent',
+            participants: [],
+            title: null,
+        });
+        expect(threadSummaries('cht_parent', 'usr_tavern')).toEqual([
+            expect.objectContaining({ followed: true, thread_chat_id: first.id }),
+        ]);
+
+        createMessage('cht_parent', {
+            author_id: 'sys_notice',
+            content: 'system anchor',
+            id: 'msg_system_anchor',
+            role: 'system',
+        });
+        ensureThreadChat({
+            anchorMessageId: 'msg_system_anchor',
+            parentChatId: 'cht_parent',
+        });
+        expect(threadSummaries('cht_parent', 'sys_notice')[1]?.followed).toBe(false);
+    });
+
+    it('rejects missing, deleted, foreign, and nested anchors', () => {
+        seedParent();
+        seedMessage('cht_parent', 'msg_anchor', 'usr_tavern');
+        createChat({ id: 'cht_other', title: 'Other' });
+        seedMessage('cht_other', 'msg_foreign', 'usr_tavern');
+
+        expect(() =>
+            ensureThreadChat({ anchorMessageId: 'msg_missing', parentChatId: 'cht_parent' })
+        ).toThrow('not in the parent chat');
+        expect(() =>
+            ensureThreadChat({ anchorMessageId: 'msg_foreign', parentChatId: 'cht_parent' })
+        ).toThrow('not in the parent chat');
+
+        getDb()
+            .prepare("UPDATE chat_messages SET deleted_at = 'deleted' WHERE id = 'msg_anchor'")
+            .run();
+        expect(() =>
+            ensureThreadChat({ anchorMessageId: 'msg_anchor', parentChatId: 'cht_parent' })
+        ).toThrow('not in the parent chat');
+
+        seedMessage('cht_parent', 'msg_nested_root', 'usr_tavern');
+        const thread = ensureThreadChat({
+            anchorMessageId: 'msg_nested_root',
+            parentChatId: 'cht_parent',
+        });
+        seedMessage(thread.id, 'msg_nested_anchor', 'usr_tavern');
+        expect(() =>
+            ensureThreadChat({ anchorMessageId: 'msg_nested_anchor', parentChatId: thread.id })
+        ).toThrow('nesting');
+    });
+
+    it('toggles follows, re-follows posters, and follows mentioned parent participants', () => {
+        seedParent();
+        seedMessage('cht_parent', 'msg_anchor', 'usr_tavern');
+        const thread = ensureThreadChat({
+            anchorMessageId: 'msg_anchor',
+            parentChatId: 'cht_parent',
+        });
+
+        expect(
+            setThreadFollow({
+                follow: false,
+                participantId: 'usr_tavern',
+                threadChatId: thread.id,
+            })
+        ).toEqual({ followed: false });
+        seedMessage(thread.id, 'msg_reply', 'usr_tavern');
+        expect(threadSummaries('cht_parent', 'usr_tavern')[0]?.followed).toBe(true);
+
+        setThreadFollow({ follow: false, participantId: 'usr_tavern', threadChatId: thread.id });
+        createMessage(thread.id, {
+            author_id: 'usr_reader',
+            content: 'Loop in [@You](user://usr_tavern).',
+            id: 'msg_user_mention',
+            role: 'user',
+        });
+        expect(threadSummaries('cht_parent', 'usr_tavern')[0]?.followed).toBe(true);
+
+        setThreadFollow({ follow: false, participantId: 'agt_one', threadChatId: thread.id });
+        createMessage(thread.id, {
+            author_id: 'usr_tavern',
+            content: 'Please review [@One](agent://one).',
+            id: 'msg_mention',
+            role: 'user',
+        });
+        expect(threadSummaries('cht_parent', 'agt_one')[0]?.followed).toBe(true);
+        createDelivery(thread.id, {
+            agent_id: 'agt_one',
+            id: 'del_thread_mention',
+            message: {
+                author_id: 'agt_one',
+                content: 'Adding [@Two](agent://two).',
+                id: 'msg_delivery_mention',
+                role: 'assistant',
+            },
+        });
+        expect(threadSummaries('cht_parent', 'agt_two')[0]?.followed).toBe(true);
+        expect(
+            setThreadFollow({ follow: false, participantId: 'agt_one', threadChatId: thread.id })
+        ).toEqual({ followed: false });
+        expect(() =>
+            setThreadFollow({
+                follow: true,
+                participantId: 'usr_tavern',
+                threadChatId: 'cht_parent',
+            })
+        ).toThrow('not a thread');
+    });
+
+    it('summarizes replies and rolls only followed unread replies into the parent', () => {
+        seedParent();
+        seedMessage('cht_parent', 'msg_anchor', 'usr_tavern');
+        markRead('cht_parent', { reader_id: 'usr_reader' });
+        const thread = ensureThreadChat({
+            anchorMessageId: 'msg_anchor',
+            parentChatId: 'cht_parent',
+        });
+        setThreadFollow({ follow: true, participantId: 'usr_reader', threadChatId: thread.id });
+        const first = seedMessage(thread.id, 'msg_reply_1', 'agt_one');
+        const second = seedMessage(thread.id, 'msg_reply_2', 'agt_one');
+
+        expect(listChats({ readerId: 'usr_reader' }).chats.map((chat) => chat.id)).toEqual([
+            'cht_parent',
+        ]);
+        expect(threadSummaries('cht_parent', 'usr_reader')).toEqual([
+            {
+                anchor_message_id: 'msg_anchor',
+                followed: true,
+                latest_reply_at: second.message.created_at,
+                reply_count: 2,
+                thread_chat_id: thread.id,
+                unread_count: 2,
+            },
+        ]);
+        expect(getChatTimelinePage('cht_parent', { readerId: 'usr_reader' }).threads).toEqual(
+            threadSummaries('cht_parent', 'usr_reader')
+        );
+        expect(getChat('cht_parent', getDb(), 'usr_reader')?.unread_count).toBe(2);
+
+        setThreadFollow({ follow: false, participantId: 'usr_reader', threadChatId: thread.id });
+        expect(getChat('cht_parent', getDb(), 'usr_reader')?.unread_count).toBe(0);
+        setThreadFollow({ follow: true, participantId: 'usr_reader', threadChatId: thread.id });
+        expect(getChat('cht_parent', getDb(), 'usr_reader')?.unread_count).toBe(2);
+
+        markRead(thread.id, {
+            last_read_sequence: second.message.sequence,
+            reader_id: 'usr_reader',
+        });
+        expect(threadSummaries('cht_parent', 'usr_reader')[0]?.unread_count).toBe(0);
+        expect(getChat('cht_parent', getDb(), 'usr_reader')?.unread_count).toBe(0);
+        expect(first.message.sequence).toBe(1);
+    });
+});
+
+function seedParent() {
+    createChat({
+        id: 'cht_parent',
+        participants: [
+            { id: 'usr_tavern', kind: 'user', label: 'You', metadata: {} },
+            { id: 'usr_reader', kind: 'user', label: 'Reader', metadata: {} },
+            { id: 'agt_one', kind: 'agent', label: 'One', metadata: { agentId: 'one' } },
+            { id: 'agt_two', kind: 'agent', label: 'Two', metadata: { agentId: 'two' } },
+        ],
+        title: 'general',
+    });
+}
+
+function seedMessage(chatId: string, id: string, authorId: string) {
+    return createMessage(chatId, {
+        author_id: authorId,
+        content: id,
+        id,
+        role: authorId.startsWith('agt_') ? 'assistant' : 'user',
+    });
+}

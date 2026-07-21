@@ -125,7 +125,6 @@ function chatEventToRuntimeEvents(event: TavernChatEvent, db?: Database): Persis
             }));
         case 'chat.cleared':
         case 'message.updated':
-        case 'message.deleted':
         case 'response.deleted':
             return [
                 {
@@ -186,12 +185,10 @@ function messageCreatedToRuntimeEvent(
         message: {
             id: message.id,
             nonce: message.nonce ?? undefined,
-            parentMessageId: message.parent_message_id,
             senderId: message.author.id,
             senderName: message.author.label ?? message.author.id,
             sequence: message.sequence,
             text: messageText(message),
-            threadRootId: message.thread_root_id ?? message.id,
             timestamp: message.created_at,
         },
         runId: metadataRuntimeString(message.metadata, 'runId') ?? createRunId(message.id, agentId),

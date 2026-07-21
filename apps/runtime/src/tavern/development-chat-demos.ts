@@ -275,8 +275,6 @@ function seedMessage(chatId: string, input: DevelopmentDemoMessage, db: Database
                  content = $content,
                  attachment_json = $attachmentJson,
                  nonce = $nonce,
-                 parent_message_id = $parentMessageId,
-                 thread_root_id = $threadRootId,
                  metadata_json = $metadataJson,
                  deleted_at = NULL
              WHERE id = $id`
@@ -291,9 +289,7 @@ function seedMessage(chatId: string, input: DevelopmentDemoMessage, db: Database
                 id: input.id,
                 metadataJson: JSON.stringify(input.metadata ?? {}),
                 nonce: input.nonce ?? null,
-                parentMessageId: input.parent_message_id ?? null,
                 role: input.role,
-                threadRootId: input.thread_root_id ?? null,
             })
         );
         setMessageTimestamp(input.id, input.createdAt, db);

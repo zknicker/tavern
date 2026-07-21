@@ -51,10 +51,20 @@ export function createTavernChatActionTools(input: {
                     return { error: 'This is the current chat. Reply normally instead.' };
                 }
                 const chat = getChat(chatId);
-                if (!(chat && isAgentChatParticipant(chat, input.agentId, participantId))) {
+                const accessChat =
+                    chat?.kind === 'thread' && chat.parent_chat_id
+                        ? getChat(chat.parent_chat_id)
+                        : chat;
+                if (
+                    !(
+                        chat &&
+                        accessChat &&
+                        isAgentChatParticipant(accessChat, input.agentId, participantId)
+                    )
+                ) {
                     return { error: 'You are not a participant of that chat.' };
                 }
-                if (isArchivedChat(chat)) {
+                if (isArchivedChat(accessChat)) {
                     return { error: 'That chat is archived.' };
                 }
 

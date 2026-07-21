@@ -2,7 +2,9 @@ import type {
     TavernCreateChatRequest,
     TavernCreateDeliveryRequest,
     TavernCreateMessageRequest,
+    TavernEnsureThreadRequest,
     TavernMarkReadRequest,
+    TavernSetThreadFollowRequest,
     TavernUpsertArtifactRequest,
     TavernUpsertResponseActivityRequest,
     TavernUpsertResponseRequest,
@@ -14,8 +16,8 @@ import {
     createChat,
     createDelivery,
     createMessage,
-    deleteMessage,
     deleteResponse,
+    ensureThreadChat,
     getChat,
     getChatTimelinePage,
     getMessage,
@@ -29,6 +31,7 @@ import {
     listResponses,
     markRead,
     searchMessages,
+    setThreadFollow,
     upsertArtifact,
     upsertResponse,
     upsertResponseActivity,
@@ -74,6 +77,31 @@ async function route(request: Request, url: URL): Promise<Response> {
         );
     }
 
+    const resolvedChatMatch = url.pathname.match(/^\/api\/chats\/([^/]+)/u);
+    if (resolvedChatMatch) {
+        assertThreadParentExists(decodeURIComponent(resolvedChatMatch[1]));
+    }
+
+    const threadEnsureMatch = url.pathname.match(/^\/api\/chats\/([^/]+)\/threads$/u);
+    if (threadEnsureMatch && request.method === 'POST') {
+        const parentChatId = decodeURIComponent(threadEnsureMatch[1]);
+        const input = (await readJson(request)) as TavernEnsureThreadRequest;
+        return json(ensureThreadChat({ anchorMessageId: input.anchor_message_id, parentChatId }));
+    }
+
+    const threadFollowMatch = url.pathname.match(/^\/api\/chats\/([^/]+)\/follow$/u);
+    if (threadFollowMatch && request.method === 'PUT') {
+        const threadChatId = decodeURIComponent(threadFollowMatch[1]);
+        const input = (await readJson(request)) as TavernSetThreadFollowRequest;
+        return json(
+            setThreadFollow({
+                follow: input.follow,
+                participantId: input.participant_id,
+                threadChatId,
+            })
+        );
+    }
+
     const chatMessagesMatch = url.pathname.match(/^\/api\/chats\/([^/]+)\/messages$/u);
     if (chatMessagesMatch) {
         const chatId = decodeURIComponent(chatMessagesMatch[1]);
@@ -111,6 +139,7 @@ async function route(request: Request, url: URL): Promise<Response> {
             getChatTimelinePage(decodeURIComponent(chatTimelineMatch[1]), {
                 beforeSequence: numberParam(url, 'before_sequence'),
                 limit: numberParam(url, 'limit'),
+                readerId: url.searchParams.get('reader_id') ?? undefined,
             })
         );
     }
@@ -270,12 +299,16 @@ async function route(request: Request, url: URL): Promise<Response> {
             const message = getMessage(messageId);
             return message ? json(message) : notFound();
         }
-        if (request.method === 'DELETE') {
-            return json(deleteMessage(messageId));
-        }
     }
 
     return notFound();
+}
+
+function assertThreadParentExists(chatId: string) {
+    const chat = getChat(chatId);
+    if (chat?.kind === 'thread' && !(chat.parent_chat_id && getChat(chat.parent_chat_id))) {
+        throw new Error(`Thread chat ${chatId} has no parent chat.`);
+    }
 }
 
 function numberParam(url: URL, name: string) {

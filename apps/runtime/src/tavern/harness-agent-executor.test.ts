@@ -15,6 +15,7 @@ import { upsertStoredAgent } from './agents-store.ts';
 import {
     createChat,
     createMessage,
+    ensureThreadChat,
     getMessage,
     getResponse,
     getResponseActivity,
@@ -620,45 +621,40 @@ describe('harness agent executor', () => {
         );
     });
 
-    it('adds reply parent context when the cursor delta does not include it', async () => {
-        seedPromptChat({ chatId: 'cht_reply', kind: 'channel' });
-        createPromptMessage('cht_reply', {
+    it('identifies a thread by its parent and anchor excerpt', async () => {
+        seedPromptChat({ chatId: 'cht_thread_parent', kind: 'channel' });
+        createPromptMessage('cht_thread_parent', {
             authorId: 'usr_alice',
-            content: 'root context',
-            id: 'msg_reply_root',
+            content: 'anchor context for the focused discussion',
+            id: 'msg_thread_anchor',
             role: 'user',
         });
-        createPromptMessage('cht_reply', {
-            authorId: 'usr_alice',
-            content: 'parent message context',
-            id: 'msg_reply_parent',
-            parentMessageId: 'msg_reply_root',
-            role: 'user',
+        const thread = ensureThreadChat({
+            anchorMessageId: 'msg_thread_anchor',
+            parentChatId: 'cht_thread_parent',
         });
-        createPromptMessage('cht_reply', {
+        createPromptMessage(thread.id, {
             authorId: 'usr_bob',
-            content: 'current follow-up',
-            id: 'msg_reply_current',
-            parentMessageId: 'msg_reply_parent',
+            content: 'thread follow-up',
+            id: 'msg_thread_current',
             role: 'user',
         });
 
-        advanceSeenCursor({ chatId: 'cht_reply', seq: 2, sessionId: 'ags_agt_primary_1' });
         const prompt = await harnessPrompt(
             executorInput(
                 { model: 'gpt-4.1-mini', provider: 'openai' },
                 {
-                    chatId: 'cht_reply',
-                    content: 'current follow-up',
-                    requestMessageId: 'msg_reply_current',
+                    chatId: thread.id,
+                    content: 'thread follow-up',
+                    requestMessageId: 'msg_thread_current',
                 }
             )
         );
 
-        expect(prompt).toContain('Reply context:');
-        expect(prompt).toContain('parent message context');
-        expect(prompt).not.toContain('root context');
-        expect(prompt.match(/current follow-up/g)).toHaveLength(1);
+        expect(prompt).toContain('this chat is a thread in #cht_thread_parent');
+        expect(prompt).toContain('anchored on @Alice');
+        expect(prompt).toContain('anchor context for the focused discussion');
+        expect(prompt).toContain('Replies here stay in the thread.');
     });
 
     it('projects linked enabled skill references into the harness prompt as hints', async () => {
@@ -799,7 +795,6 @@ function createPromptMessage(
         authorId: string;
         content: string;
         id: string;
-        parentMessageId?: string;
         role: 'assistant' | 'user';
     }
 ) {
@@ -807,7 +802,6 @@ function createPromptMessage(
         author_id: input.authorId,
         content: input.content,
         id: input.id,
-        ...(input.parentMessageId ? { parent_message_id: input.parentMessageId } : {}),
         role: input.role,
     });
 }
