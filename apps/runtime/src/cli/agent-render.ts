@@ -9,6 +9,7 @@ import type {
 } from './agent-api-schemas.ts';
 import { AgentCliError } from './agent-error.ts';
 import {
+    formatDeliveryEnvelope,
     formatHistoryLine,
     formatLocalTime,
     formatSender,
@@ -121,7 +122,11 @@ export function renderChannelMembers(response: AgentChannelMembers): string {
     ].join('\n');
 }
 
-function renderSent(target: string, message: AgentCliMessage, unread: AgentCliMessage[]): string {
+function renderSent(
+    target: string,
+    message: AgentCliMessage,
+    unread: Array<{ message: AgentCliMessage; target: string }>
+): string {
     const lines = [`Message sent to ${target}. Message ID: ${message.id}`];
     if (!isThreadTarget(target)) {
         lines.push(
@@ -132,7 +137,7 @@ function renderSent(target: string, message: AgentCliMessage, unread: AgentCliMe
         lines.push(
             '',
             '--- New messages you may have missed ---',
-            ...unread.map(formatHistoryLine)
+            ...unread.map((row) => formatDeliveryEnvelope(row.target, row.message))
         );
     }
     return `${lines.join('\n')}\n`;

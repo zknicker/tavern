@@ -136,6 +136,35 @@ describe('agent attested sends', () => {
         expect(sent.state).toBe('sent');
     });
 
+    it('reports unseen rows from other targets on a fresh send and acks them', () => {
+        createChat({
+            id: 'cht_ops',
+            kind: 'channel',
+            participants: [human(), agent('agt_otto', 'Otto')],
+            title: 'ops',
+        });
+        createMessage('cht_ops', {
+            author_id: 'usr_tavern',
+            content: 'deploy finished',
+            id: 'msg_00000000000000000000000000000011',
+            role: 'user',
+        });
+        const sent = sendAgentMessage('agt_otto', { content: 'hello', target: '#general' });
+        if (sent.state !== 'sent') {
+            throw new Error('Expected a fresh send to commit.');
+        }
+        expect(sent.recentUnread).toHaveLength(1);
+        expect(sent.recentUnread[0]).toMatchObject({
+            message: { content: 'deploy finished' },
+            target: '#ops',
+        });
+        const session = ensureCurrentAgentSession({ agentId: 'agt_otto' });
+        expect(readSeenCursor(session.id, 'cht_ops')).toBeGreaterThan(0);
+        expect(readServedCursor('agt_otto', 'cht_ops')).toBeGreaterThan(0);
+        const followUp = sendAgentMessage('agt_otto', { content: 'on it', target: '#ops' });
+        expect(followUp.state).toBe('sent');
+    });
+
     it('deduplicates sends by nonce', () => {
         const first = sendAgentMessage('agt_otto', {
             compositionId: 'cmp_1',

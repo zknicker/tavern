@@ -8,7 +8,7 @@ describe('development turn simulator', () => {
     beforeEach(() => {
         process.env.TAVERN_DEV_STACK = '1';
         ensureRuntimeSchema(initTestDb());
-        createChat({ id: 'cht_devsim' });
+        createChat({ id: 'cht_devsim', title: 'devsim' });
         createMessage('cht_devsim', {
             author_id: 'usr_1',
             content: 'run something',

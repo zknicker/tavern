@@ -1,5 +1,12 @@
 import type { CliCommand } from './registry.ts';
 
+/** Commands available in agent shells; everything else is operator-only there. */
+const AGENT_SURFACE_COMMANDS = new Set(['message', 'inbox', 'server', 'channel', 'help']);
+
+export function isAgentSurfaceCommand(name: string): boolean {
+    return AGENT_SURFACE_COMMANDS.has(name);
+}
+
 export const messageCommand: CliCommand = {
     examples: [
         'grotto message read --target "#general"',

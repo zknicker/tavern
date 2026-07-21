@@ -7,7 +7,7 @@ import { resolveAgentTarget } from './agent-targets.ts';
 import { getStoredAgent } from './agents-store.ts';
 import { createAgentParticipantId } from './chat-api/ids.ts';
 import { createMessage, createMessageId } from './chat-api/index.ts';
-import { resolveSendHold } from './send-hold.ts';
+import { collectRecentUnread, resolveSendHold } from './send-hold.ts';
 
 export const agentSendRequestSchema = z
     .object({
@@ -93,9 +93,18 @@ export function sendAgentMessage(
         role: 'assistant',
     });
     clearAgentDraft(agentId, resolved.chat.id);
+    const recentUnread = collectRecentUnread({
+        agentId,
+        excludeChatId: resolved.chat.id,
+        participantId,
+        sessionId: session.id,
+    });
     return {
         message: toAgentMessage(receipt.message),
-        recentUnread: [],
+        recentUnread: recentUnread.map((row) => ({
+            message: toAgentMessage(row.message),
+            target: row.target,
+        })),
         state: 'sent' as const,
     };
 }

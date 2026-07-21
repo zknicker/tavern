@@ -23,6 +23,10 @@ export function mintAgentToken(agentId: string): string {
 
 export const rotateAgentToken = mintAgentToken;
 
+export function deleteAgentToken(agentId: string): void {
+    fs.rmSync(agentTokenPath(agentId), { force: true });
+}
+
 export function readAgentToken(agentId: string): string | null {
     try {
         const token = fs.readFileSync(agentTokenPath(agentId), 'utf8').trim();

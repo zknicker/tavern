@@ -858,7 +858,15 @@ components:
         recentUnread:
           type: array
           items:
-            $ref: '#/components/schemas/AgentMessage'
+            $ref: '#/components/schemas/AgentRecentUnread'
+    AgentRecentUnread:
+      type: object
+      additionalProperties: false
+      required: [target, message]
+      properties:
+        target: { type: string, minLength: 1 }
+        message:
+          $ref: '#/components/schemas/AgentMessage'
     AgentHeldMessage:
       type: object
       additionalProperties: false

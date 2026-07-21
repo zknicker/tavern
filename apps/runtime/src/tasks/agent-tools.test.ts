@@ -99,7 +99,7 @@ describe('tasks agent tools', () => {
     });
 
     test('records tool chat context as immutable task origin', async () => {
-        createChat({ id: 'cht_origin' });
+        createChat({ id: 'cht_origin', title: 'origin' });
         const tools = createTavernTaskTools({ agentId: 'agt_primary', chatId: 'cht_origin' });
         const created = await runTool<Record<string, unknown>, { task: ToolTask }>(
             tools,

@@ -517,7 +517,11 @@ export interface components {
              */
             state: "sent";
             message: components["schemas"]["AgentMessage"];
-            recentUnread: components["schemas"]["AgentMessage"][];
+            recentUnread: components["schemas"]["AgentRecentUnread"][];
+        };
+        AgentRecentUnread: {
+            target: string;
+            message: components["schemas"]["AgentMessage"];
         };
         AgentHeldMessage: {
             /**

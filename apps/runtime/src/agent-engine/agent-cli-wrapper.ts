@@ -1,7 +1,12 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { getRuntimeHost, getRuntimePort, getRuntimeRoot } from '../config.ts';
-import { agentTokenPath, mintAgentToken, readAgentToken } from '../tavern/agent-tokens.ts';
+import {
+    agentTokenPath,
+    deleteAgentToken,
+    mintAgentToken,
+    readAgentToken,
+} from '../tavern/agent-tokens.ts';
 
 export interface AgentCliEntrypoint {
     args: string[];
@@ -57,6 +62,11 @@ export function buildAgentToolEnvironment(
         tokenFile,
         wrapperPath,
     };
+}
+
+export function removeAgentToolEnvironment(agentId: string): void {
+    deleteAgentToken(agentId);
+    fs.rmSync(path.join(getRuntimeRoot(), 'agent-bin', agentId), { force: true, recursive: true });
 }
 
 export function resolveAgentCliEntrypoint(

@@ -6,6 +6,7 @@ import {
     agentRuntimePluginIdSchema,
 } from '@tavern/api';
 import { tavernPluginManifests } from '@tavern/api/plugins';
+import { removeAgentToolEnvironment } from '../agent-engine/agent-cli-wrapper.ts';
 import { getDb } from '../db/connection';
 import type { Database } from '../db/sqlite';
 import { namedParams } from '../db/sqlite';
@@ -80,6 +81,7 @@ export function deleteStoredAgent(agentId: string, db: Database = getDb()) {
         db.exec('ROLLBACK');
         throw error;
     }
+    removeAgentToolEnvironment(agentId);
 }
 
 export function updateStoredAgent(input: {
@@ -171,6 +173,11 @@ export function replaceStoredAgents(input: {
         throw error;
     }
 
+    for (const agent of existing) {
+        if (!nextJsonById.has(agent.id)) {
+            removeAgentToolEnvironment(agent.id);
+        }
+    }
     for (const agent of input.agents) {
         ensureAgentDmChat({ agentId: agent.id, agentName: agent.name, db });
     }

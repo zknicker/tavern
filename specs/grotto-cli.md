@@ -174,8 +174,13 @@ v1 inventory: `MISSING_AGENT_ID`, `MISSING_SERVER_URL`, `MISSING_TOKEN`,
 `SEND_DRAFT_NOT_FOUND`, `SEND_DRAFT_STDIN_UNSUPPORTED`,
 `SEND_DRAFT_ANYWAY_REQUIRES_SEND_DRAFT`, `SEND_DRAFT_ATTACHMENTS_UNSUPPORTED`,
 `SEND_FAILED`, `READ_FAILED`, `SEARCH_FAILED`, `RESOLVE_FAILED`, `INFO_FAILED`,
-`TARGET_NOT_FOUND`, `AMBIGUOUS_ID`, `NOT_A_MEMBER`, `SERVER_5XX`,
-`INVALID_JSON_RESPONSE`, `INTERNAL_BUG`.
+`TARGET_NOT_FOUND`, `AMBIGUOUS_ID`, `NOT_A_MEMBER`, `NOT_YET_AVAILABLE`,
+`OPERATOR_COMMAND_UNAVAILABLE`, `SERVER_5XX`, `INVALID_JSON_RESPONSE`,
+`INTERNAL_BUG`.
+
+Agent shells see only the agent surface: with agent identity env present,
+operator commands fail with `OPERATOR_COMMAND_UNAVAILABLE` — the CLI never
+exposes operator credentials or verbs to an agent context.
 
 **Message bodies are stdin-only.** Heredoc with the `GROTTOMSG` delimiter is
 the taught form; `--content` and positional content are rejected
@@ -284,7 +289,8 @@ it unchanged.
 ```http
 POST /api/agent/messages/send      { target, content, attachmentIds?, sendDraft?,
                                      continueAnyway?, compositionId?, nonce? }
-                                   → { state: "sent", message, recentUnread[] }
+                                   → { state: "sent", message,
+                                       recentUnread: [{ target, message }] }
                                    | { state: "held", newMessageCount, shownMessages[],
                                        omittedMessageCount, formalMentionCount,
                                        reholdCount }

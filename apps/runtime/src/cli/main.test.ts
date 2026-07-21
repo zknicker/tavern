@@ -49,6 +49,20 @@ describe('dispatch', () => {
         expect(read()).toContain('grotto serve');
     });
 
+    test('operator commands are unavailable in agent shells', async () => {
+        vi.stubEnv('GROTTO_AGENT_ID', 'agt_otto');
+        vi.stubEnv('GROTTO_SERVER_URL', 'http://127.0.0.1:1');
+        vi.stubEnv('GROTTO_AGENT_TOKEN_FILE', '/nonexistent/token');
+        const read = capture('stderr');
+        for (const name of ['token', 'serve', 'update', 'restart', 'status', 'claim']) {
+            expect(await dispatch([name])).toEqual({ kind: 'exit', code: 1 });
+        }
+        const out = read();
+        expect(out).toContain('Code: OPERATOR_COMMAND_UNAVAILABLE');
+        expect(out).toContain("'grotto token' is an operator command");
+        vi.unstubAllEnvs();
+    });
+
     test('unknown command → did-you-mean, exit 2', async () => {
         const read = capture('stderr');
         const result = await dispatch(['updte']);

@@ -40,7 +40,9 @@ export const agentSendResponseSchema: z.ZodType<TavernAgentSendResponse> = z.dis
     [
         z.object({
             message: agentMessageSchema,
-            recentUnread: z.array(agentMessageSchema),
+            recentUnread: z.array(
+                z.object({ message: agentMessageSchema, target: z.string().min(1) })
+            ),
             state: z.literal('sent'),
         }),
         z.object({

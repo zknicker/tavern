@@ -1,12 +1,13 @@
-import { mkdtempSync } from 'node:fs';
-import fs from 'node:fs/promises';
-import os from 'node:os';
-import path from 'node:path';
+import { existsSync } from 'node:fs';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { mintAgentToken } from './agent-tokens.ts';
+import { buildAgentToolEnvironment } from '../agent-engine/agent-cli-wrapper.ts';
+import { closeAgentApiTestDb, initAgentApiTestDb } from './agent-api-test-helper.ts';
+import { agentTokenPath, mintAgentToken } from './agent-tokens.ts';
+import { deleteStoredAgent, upsertStoredAgent } from './agents-store.ts';
 import { isPrincipalAllowedOnSurface, resolveRuntimeRequestAuth } from './surface-auth.ts';
 
 const runtimeToken = 'runtime-owner-token';
+const clerkResolver = async () => null;
 
 describe('agent API principal scoping', () => {
     let root: string;
@@ -14,18 +15,27 @@ describe('agent API principal scoping', () => {
 
     beforeEach(() => {
         previousRoot = process.env.TAVERN_RUNTIME_ROOT;
-        root = mkdtempSync(path.join(os.tmpdir(), 'grotto-agent-auth-'));
+        root = initAgentApiTestDb('grotto-agent-auth-');
         process.env.TAVERN_RUNTIME_ROOT = root;
+        upsertStoredAgent({
+            agent: {
+                enabledSkillIds: [],
+                id: 'agt_otto',
+                isAdmin: false,
+                name: 'Otto',
+                primaryColor: null,
+                workspaceFolder: `${root}/otto`,
+            },
+        });
     });
 
     afterEach(async () => {
         process.env.TAVERN_RUNTIME_ROOT = previousRoot;
-        await fs.rm(root, { force: true, recursive: true });
+        await closeAgentApiTestDb(root);
     });
 
     it('resolves agent tokens and limits each principal to one surface', async () => {
         const agentToken = mintAgentToken('agt_otto');
-        const clerkResolver = async () => null;
         const agent = await resolveRuntimeRequestAuth(
             `Bearer ${agentToken}`,
             runtimeToken,
@@ -61,5 +71,24 @@ describe('agent API principal scoping', () => {
                 '/api/agent/server'
             )
         ).toBe(false);
+    });
+
+    it('removes credentials on agent deletion and rejects stray token files', async () => {
+        const agentToken = mintAgentToken('agt_otto');
+        const tooling = buildAgentToolEnvironment('agt_otto');
+        expect(existsSync(tooling.wrapperPath)).toBe(true);
+
+        deleteStoredAgent('agt_otto');
+        expect(existsSync(agentTokenPath('agt_otto'))).toBe(false);
+        expect(existsSync(tooling.wrapperPath)).toBe(false);
+
+        // A stray token file (cleanup missed, or agent record gone) must not authenticate.
+        const strayToken = mintAgentToken('agt_otto');
+        expect(
+            await resolveRuntimeRequestAuth(`Bearer ${strayToken}`, runtimeToken, clerkResolver)
+        ).toBeNull();
+        expect(
+            await resolveRuntimeRequestAuth(`Bearer ${agentToken}`, runtimeToken, clerkResolver)
+        ).toBeNull();
     });
 });

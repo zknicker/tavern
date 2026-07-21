@@ -1,6 +1,7 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
 import type { RuntimeRequestAuth } from '../identity/auth.ts';
 import { resolveAgentToken } from './agent-tokens.ts';
+import { getStoredAgent } from './agents-store.ts';
 
 export type ClerkAuthResolver = (token: string) => Promise<RuntimeRequestAuth | null>;
 
@@ -18,7 +19,8 @@ export async function resolveRuntimeRequestAuth(
     const bearerToken = authorizationHeader.slice(7);
     const agentId = resolveAgentToken(bearerToken);
     if (agentId) {
-        return { agentId, kind: 'agent-token' };
+        // A token file may outlive its agent record; only live agents authenticate.
+        return getStoredAgent(agentId) ? { agentId, kind: 'agent-token' } : null;
     }
     return await resolveClerkAuth(bearerToken);
 }

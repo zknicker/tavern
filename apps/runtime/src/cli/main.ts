@@ -1,4 +1,5 @@
 import runtimePackage from '../../package.json';
+import { isAgentSurfaceCommand } from './agent-commands.ts';
 import { hasAgentIdentityEnvironment } from './agent-context.ts';
 import { AgentCliError, renderAgentCliError } from './agent-error.ts';
 import { runBareTavern } from './bare';
@@ -39,6 +40,19 @@ export async function dispatch(argv: string[]): Promise<DispatchResult> {
     const command = findCommand(name);
     if (!command) {
         return { kind: 'exit', code: reportUnknown(name) };
+    }
+
+    if (hasAgentIdentityEnvironment() && !isAgentSurfaceCommand(command.name)) {
+        process.stderr.write(
+            renderAgentCliError(
+                new AgentCliError(
+                    'OPERATOR_COMMAND_UNAVAILABLE',
+                    `'grotto ${command.name}' is an operator command and is not available here.`,
+                    { nextAction: "Run 'grotto help' for the available commands." }
+                )
+            )
+        );
+        return { kind: 'exit', code: 1 };
     }
 
     if (command.name === 'serve') {

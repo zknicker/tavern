@@ -101,7 +101,7 @@ describe('task dispatch recovery', () => {
     });
 
     test('notifies an originating chat once with only the summary first line', () => {
-        createChat({ id: 'cht_origin' });
+        createChat({ id: 'cht_origin', title: 'origin' });
         createChat({ id: 'cht_work', kind: 'task' });
         const task = createQueuedTask('tsk_notify', 'cht_origin');
         setTaskWorkChat(task.id, 'cht_work');
@@ -124,7 +124,7 @@ describe('task dispatch recovery', () => {
     });
 
     test('uses blocked reason kind and first line in the notification', () => {
-        createChat({ id: 'cht_blocked_origin' });
+        createChat({ id: 'cht_blocked_origin', title: 'blocked-origin' });
         const task = createQueuedTask('tsk_blocked_notify', 'cht_blocked_origin');
         claimAndRecord(task.id, task.updatedAt, 'run_blocked');
         updateTask(task.id, {
@@ -150,7 +150,7 @@ describe('task dispatch recovery', () => {
         updateTask(sameChat.id, { status: 'review', summary: 'Ready for review.' });
         recoverTaskDispatchForTurn('run_same', { status: 'completed' });
 
-        createChat({ id: 'cht_manual_origin' });
+        createChat({ id: 'cht_manual_origin', title: 'manual-origin' });
         const manual = createQueuedTask('tsk_manual', 'cht_manual_origin');
         claimAndRecord(manual.id, manual.updatedAt, 'run_manual', 'manual');
         updateTask(manual.id, { status: 'canceled', summary: 'No longer needed.' });
