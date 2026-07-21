@@ -21,11 +21,14 @@ export function Layout() {
     const navigate = useNavigate();
     // Tool sections bring their own left panel, so the full rail collapses
     // to the icon strip there instead of nesting two sidebars.
+    // Wiki keeps its tool-route layout while the page stays URL-reachable
+    // (rail tab retired; the page itself goes with the memory/wiki cut).
     const isToolRoute = [
         appRoutes.search,
         appRoutes.tasks,
         appRoutes.reminders,
         appRoutes.members,
+        appRoutes.wiki,
     ].some((path) => location.pathname.startsWith(path));
 
     const isSettingsRoute = location.pathname.startsWith(appRoutes.settings);

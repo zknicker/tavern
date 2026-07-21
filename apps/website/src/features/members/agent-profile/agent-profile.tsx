@@ -37,10 +37,12 @@ type AgentProfileTabId = (typeof tabs)[number]['value'];
 
 export function AgentProfile({
     agentId,
+    hostChatId,
     onClose,
     variant,
 }: {
     agentId: string;
+    hostChatId?: string;
     onClose?: () => void;
     variant: 'page' | 'pane';
 }) {
@@ -61,7 +63,12 @@ export function AgentProfile({
             onValueChange={(value) => setActiveTab(value as AgentProfileTabId)}
             value={activeTab}
         >
-            <AgentProfileHeader agent={agent} onClose={onClose} variant={variant} />
+            <AgentProfileHeader
+                agent={agent}
+                hostChatId={hostChatId}
+                onClose={onClose}
+                variant={variant}
+            />
             <div
                 className={cn(
                     'shrink-0 border-[var(--content-card-border)] border-b',

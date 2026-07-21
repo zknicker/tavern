@@ -10,6 +10,9 @@ const pageLimit = 100;
 // before then.
 export async function listChatFiles(chatId: string) {
     const files: ChatFileEntry[] = [];
+    // Timeline pages overlap when a turn straddles a page boundary; a message
+    // must contribute its attachments once.
+    const seenMessageIds = new Set<string>();
     let beforeSequence: number | undefined;
 
     do {
@@ -26,6 +29,10 @@ export async function listChatFiles(chatId: string) {
             if (row.kind !== 'message') {
                 continue;
             }
+            if (seenMessageIds.has(row.message.id)) {
+                continue;
+            }
+            seenMessageIds.add(row.message.id);
 
             for (const [index, attachment] of (row.message.attachments ?? []).entries()) {
                 files.push({
