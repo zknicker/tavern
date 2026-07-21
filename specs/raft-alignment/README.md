@@ -211,6 +211,18 @@ upgrades transport only, contracts unchanged.
   wakes advance nothing, ever (their wake proofs stamp `cursorImpact: {deliveryAck: false,
   modelSeen: false, read: false}` — adopted as a contract test). A turn that pulled and died
   leaves `read > seen` in effect; catch-up re-delivers from `seen`.
+- **W1 — WS1 wire-contract gate rulings (2026-07-21).** (a) Freshness-hold drafts are
+  **server-held** — approved divergence from shipped Raft's client-local tmpdir drafts (found in
+  the WS1 audit; the contract had mischaracterized Raft as server-held). Vocabulary made
+  explicit: the **runtime is the witness** (attests what the model provably saw), the **server
+  is the record** (stores cursors, decides holds); the hold decision may consult
+  what-the-server-served alongside `seen`, so pull-then-send never spuriously holds. (b) Handle
+  rule is Grotto-owned (unverifiable in Raft's wire layer): single token
+  `[A-Za-z0-9][A-Za-z0-9_-]{0,31}`, case-insensitive uniqueness, participant and channel
+  namespaces separate, named reserved list (`all, everyone, here, human, humans, agent, agents,
+  system, idle, busy, grotto`). (c) No daemon proxy — CLI talks to the server directly with
+  per-agent credentials, delivered as a **token file (0600), not env**, rotated on session
+  reset. Full rationale + divergence table: `specs/grotto-cli.md` §10.
 - **I4 — Inbox visibility read-only; attention is agent-owned.** The agent detail panel gains a
   read-only inbox card (pending targets with counts, muted channels, followed threads;
   dev-mode: per-target cursors). No human-side mute/unfollow controls for agents — humans steer
@@ -268,7 +280,7 @@ section; `## Chat History` tool teaching; all prompt-taught tool catalogs.
 | Unread elsewhere | Nothing pushed; `grotto inbox check` (notice rows only when they change) |
 | Identity/roster/description | Not pushed; `server info` / `channel info` pulls (D6) |
 | Current time | Envelope timestamps only; home-timezone rule lives in the prompt |
-| Freshness | Attested sends: server-held drafts + bounded catch-up + revise / `--send-draft` / silent / `--anyway` paths |
+| Freshness | Attested sends: bounded catch-up + revise / `--send-draft` / silent / `--anyway` paths. Drafts are held **server-side** — a decided divergence: shipped Raft parks drafts client-side (tmpdir, 10-min TTL, client-supplied cursors) on an API its own manifest calls interim |
 | Cursors | Two per (session, target): `delivered` + `seen` (model-seen authority, proof-based advancement per I3); notices and wakes advance nothing |
 
 ## 3. Grotto agent CLI
