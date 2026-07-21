@@ -9,6 +9,15 @@ export type TavernApiOperations = operations;
 export type TavernApiSchema<Name extends keyof components['schemas']> = components['schemas'][Name];
 
 export type TavernArtifact = TavernApiSchema<'ChatArtifact'>;
+export type TavernAgentApiError = TavernApiSchema<'AgentApiError'>;
+export type TavernAgentChannel = TavernApiSchema<'AgentChannel'>;
+export type TavernAgentChannelMember = TavernApiSchema<'AgentChannelMember'>;
+export type TavernAgentChannelMembers = TavernApiSchema<'AgentChannelMembers'>;
+export type TavernAgentHistoryResponse = TavernApiSchema<'AgentHistoryResponse'>;
+export type TavernAgentMessage = TavernApiSchema<'AgentMessage'>;
+export type TavernAgentSendRequest = TavernApiSchema<'AgentSendRequest'>;
+export type TavernAgentSendResponse = TavernApiSchema<'AgentSendResponse'>;
+export type TavernAgentServerInfo = TavernApiSchema<'AgentServerInfo'>;
 export type TavernChat = TavernApiSchema<'Chat'>;
 export type TavernChatEvent = TavernApiSchema<'ChatEvent'>;
 export type TavernChatMessage = TavernApiSchema<'ChatMessage'>;

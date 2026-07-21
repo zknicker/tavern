@@ -10,6 +10,15 @@ export function createEventId(cursor: number) {
     return `evt_${cursor}`;
 }
 
+export function createMessageId() {
+    return `msg_${crypto.randomUUID().replaceAll('-', '')}`;
+}
+
+export function messageShortId(messageId: string): string | null {
+    const match = /^msg_([A-Fa-f0-9]{32})$/u.exec(messageId);
+    return match?.[1]?.slice(0, 8).toLowerCase() ?? null;
+}
+
 export function createAgentParticipantId(agentId: string) {
     return agentId.startsWith('agt_') ? agentId : `agt_${agentId.replace(/[^A-Za-z0-9_-]/g, '_')}`;
 }

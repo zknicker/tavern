@@ -58,6 +58,13 @@ first start and keeps it in its host config file (`<runtime-root>/grotto.json`,
 `token` key, mode `0600`). Override with `TAVERN_RUNTIME_TOKEN`. The health route
 is unauthenticated.
 
+The agent CLI surface uses a separate per-agent bearer credential. Runtime
+stores one `grta_` token file per agent under
+`<runtime-root>/agent-tokens/<agentId>` with mode `0600` and rotates it on an
+agent session reset. An agent token authorizes only `/api/agent/*`. Runtime
+tokens and Clerk sessions do not authorize that surface, and agent tokens do
+not authorize operator, chat, admin, or event surfaces.
+
 When the Runtime host is remote, run `grotto token` on the host to display the
 pairing token, then save that token in the App settings.
 

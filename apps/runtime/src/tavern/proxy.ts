@@ -21,6 +21,7 @@ import {
     agentRuntimeUpdateSkillEnabledSchema,
     agentRuntimeUpdateToolEnabledSchema,
 } from '@tavern/api';
+import { ZodError } from 'zod';
 import { defaultAgentEngineAgentId } from '../agent-engine/constants.ts';
 import { unsupportedAgentEngineSurface } from '../agent-engine/errors.ts';
 import {
@@ -55,15 +56,22 @@ import {
     upsertStoredAgent,
 } from './agents-store.ts';
 import { sendTavernChannelMessage, stopTavernChannelTurn } from './channel-relay.ts';
-import { json } from './http.ts';
+import { HandleValidationError } from './handles.ts';
+import { badRequest, json } from './http.ts';
 import { primaryManagedAgent } from './managed-agent.ts';
 import { getRuntimeTool, listRuntimeTools } from './tool-catalog.ts';
 
 export async function handleAgentProxyRequest(request: Request): Promise<Response | null> {
-    const url = new URL(request.url);
-    const payload = await dispatchAgentEngineStatic({ request, url });
-
-    return payload === undefined ? null : json(payload);
+    try {
+        const url = new URL(request.url);
+        const payload = await dispatchAgentEngineStatic({ request, url });
+        return payload === undefined ? null : json(payload);
+    } catch (error) {
+        if (error instanceof HandleValidationError || error instanceof ZodError) {
+            return badRequest(error.message);
+        }
+        throw error;
+    }
 }
 
 async function dispatchAgentEngineStatic({ request, url }: { request: Request; url: URL }) {

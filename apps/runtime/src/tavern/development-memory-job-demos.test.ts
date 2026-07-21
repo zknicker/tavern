@@ -16,7 +16,7 @@ describe('Development Memory job demos', () => {
     beforeEach(async () => {
         workspace = await fs.mkdtemp(path.join(os.tmpdir(), 'tavern-memory-demo-seed-'));
         ensureRuntimeSchema(initTestDb());
-        createChat({ id: 'cht_demo', title: '#demo' });
+        createChat({ id: 'cht_demo', title: 'demo' });
     });
 
     afterEach(async () => {

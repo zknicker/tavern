@@ -10,6 +10,7 @@ import { assertChatExists } from './chats';
 import { currentCursor, insertEvent, publish } from './events';
 import { assertOptionalTavernIdPrefix, assertTavernIdPrefix } from './ids';
 import { clampLimit } from './limits';
+import { searchMessageRows } from './message-search.ts';
 import type { DeleteReceipt, MessageReceipt, MessageRow, ParticipantRow } from './types';
 
 export function createMessage(
@@ -129,28 +130,7 @@ export function searchMessages(
     input: { limit?: number; query: string },
     db: Database = getDb()
 ): TavernListMessagesResponse {
-    const query = input.query.trim();
-    if (!query) {
-        throw new Error('Message search query is required.');
-    }
-
-    const limit = clampLimit(input.limit);
-    const rows = db
-        .prepare(
-            `SELECT *
-             FROM chat_messages
-             WHERE chat_id = $chatId
-               AND instr(lower(content), lower($query)) > 0
-             ORDER BY sequence DESC
-             LIMIT $limit`
-        )
-        .all(
-            namedParams({
-                chatId,
-                limit,
-                query,
-            })
-        ) as MessageRow[];
+    const rows = searchMessageRows({ chatId, limit: input.limit, query: input.query }, db);
 
     return {
         messages: rows.map((row) => rowToMessage(row, db)),

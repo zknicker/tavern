@@ -9,7 +9,8 @@ export {
 export { createDelivery, listDeliveriesForTurn } from './deliveries';
 export { clearChat, deleteResponse } from './dismiss';
 export { listEvents, subscribeToTavernApiEvents } from './events';
-export { localHumanParticipantId } from './ids';
+export { createMessageId, localHumanParticipantId, messageShortId } from './ids';
+export { AmbiguousMessageIdError, resolveMessageId } from './message-resolution';
 export {
     createMessage,
     deleteMessage,

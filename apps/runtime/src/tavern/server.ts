@@ -1,15 +1,10 @@
-import { createHash, timingSafeEqual } from 'node:crypto';
 import http from 'node:http';
 import type { Duplex } from 'node:stream';
 
 import { runtimeEventSchema, runtimeRoutes } from '@tavern/api';
 import { type WebSocket, WebSocketServer } from 'ws';
 import { getRuntimeApiToken, getRuntimeHost, getRuntimePort } from '../config.ts';
-import {
-    isRouteAllowedForAuth,
-    type RuntimeRequestAuth,
-    resolveClerkRequestAuth,
-} from '../identity/auth.ts';
+import { isRouteAllowedForAuth, resolveClerkRequestAuth } from '../identity/auth.ts';
 import { subscribeToTavernApiEvents } from './chat-api/index.ts';
 import {
     forbidden,
@@ -24,6 +19,18 @@ import {
 import { handleTavernRuntimeRequest } from './router.ts';
 import { listProjectedTavernRuntimeEvents } from './runtime-event-projection.ts';
 import { subscribeToRuntimeEvents } from './runtime-events.ts';
+import {
+    isPrincipalAllowedOnSurface,
+    resolveRuntimeRequestAuth as resolveSurfaceAuth,
+} from './surface-auth.ts';
+
+export async function resolveRuntimeRequestAuth(
+    authorizationHeader: string | undefined,
+    expectedToken: string,
+    resolveClerkAuth: typeof resolveClerkRequestAuth = resolveClerkRequestAuth
+) {
+    return await resolveSurfaceAuth(authorizationHeader, expectedToken, resolveClerkAuth);
+}
 
 export interface TavernRuntimeServerHandle {
     stop(): void;
@@ -58,47 +65,10 @@ function isTavernApiEventsSocketPath(requestUrl: string | undefined) {
     }
 }
 
-function hashToken(token: string): Buffer {
-    return createHash('sha256').update(token).digest();
-}
-
-function isBearerTokenValid(
-    authorizationHeader: string | undefined,
-    expectedToken: string
-): boolean {
-    if (!authorizationHeader?.startsWith('Bearer ')) {
-        return false;
-    }
-    const provided = authorizationHeader.slice(7);
-    try {
-        const providedHash = hashToken(provided);
-        const expectedHash = hashToken(expectedToken);
-        return timingSafeEqual(providedHash, expectedHash);
-    } catch {
-        return false;
-    }
-}
-
 function authFailureMessage(authorizationHeader: string | undefined): string {
     return authorizationHeader?.startsWith('Bearer ')
         ? 'Bearer token invalid.'
         : 'Bearer token required.';
-}
-
-export async function resolveRuntimeRequestAuth(
-    authorizationHeader: string | undefined,
-    expectedToken: string,
-    resolveClerkAuth: typeof resolveClerkRequestAuth = resolveClerkRequestAuth
-): Promise<RuntimeRequestAuth | null> {
-    if (isBearerTokenValid(authorizationHeader, expectedToken)) {
-        return { kind: 'runtime-token' };
-    }
-
-    if (!authorizationHeader?.startsWith('Bearer ')) {
-        return null;
-    }
-
-    return await resolveClerkAuth(authorizationHeader.slice(7));
 }
 
 export function startTavernRuntimeServer(
@@ -123,7 +93,7 @@ export function startTavernRuntimeServer(
             const auth = await resolveRuntimeRequestAuth(
                 authorizationHeader,
                 token,
-                options.resolveClerkAuth
+                options.resolveClerkAuth ?? resolveClerkRequestAuth
             );
             if (!(isHealth || auth)) {
                 await writeFetchResponse(
@@ -132,7 +102,13 @@ export function startTavernRuntimeServer(
                 );
                 return;
             }
-            if (auth && !isRouteAllowedForAuth(auth, pathname, fetchRequest.method)) {
+            if (
+                auth &&
+                !(
+                    isPrincipalAllowedOnSurface(auth, pathname) &&
+                    isRouteAllowedForAuth(auth, pathname, fetchRequest.method)
+                )
+            ) {
                 await writeFetchResponse(
                     forbidden(
                         auth.kind === 'user' && auth.role === 'member'
@@ -172,10 +148,16 @@ export function startTavernRuntimeServer(
             const auth = await resolveRuntimeRequestAuth(
                 request.headers.authorization,
                 token,
-                options.resolveClerkAuth
+                options.resolveClerkAuth ?? resolveClerkRequestAuth
             );
             const pathname = new URL(request.url ?? '/', 'http://localhost').pathname;
-            if (!(auth && isRouteAllowedForAuth(auth, pathname, 'GET'))) {
+            if (
+                !(
+                    auth &&
+                    isPrincipalAllowedOnSurface(auth, pathname) &&
+                    isRouteAllowedForAuth(auth, pathname, 'GET')
+                )
+            ) {
                 rejectUpgrade(socket);
                 return;
             }

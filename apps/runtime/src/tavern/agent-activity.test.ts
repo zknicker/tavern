@@ -33,7 +33,7 @@ describe('agent activity feed', () => {
                 { id: 'usr_tavern', kind: 'user', label: 'You', metadata: {} },
                 { id: 'agt_otto', kind: 'agent', label: 'Otto', metadata: { agentId: 'agt_otto' } },
             ],
-            title: 'Launch prep',
+            title: 'launch-prep',
         });
     });
 
@@ -60,7 +60,7 @@ describe('agent activity feed', () => {
         expect(byKind('message_received')).toHaveLength(3);
         expect(byKind('message_received')[2]).toMatchObject({
             chatId: 'cht_room',
-            chatTitle: 'Launch prep',
+            chatTitle: 'launch-prep',
             detail: 'You',
             turnId: 'run_1',
         });

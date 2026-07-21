@@ -24,7 +24,7 @@ export function teamDemo(): DevelopmentChatDemo {
         agentIds: [demoAgentId, demoSecondAgentId],
         chatId,
         color: '#8b5cf6',
-        title: 'team demo',
+        title: 'team-demo',
         messages: [
             ownerMessage({
                 chatId,
