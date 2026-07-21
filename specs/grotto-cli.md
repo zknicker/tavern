@@ -44,8 +44,10 @@ agent surface below lives in the same binary and registry.
   `<runtime-root>/agent-tokens/<agentId>` (0600). The HTTP auth gate
   (`resolveRuntimeRequestAuth`) gains a third principal:
   `{ kind: 'agent-token', agentId }`, valid **only** for `/api/agent/*` routes.
-  Tokens are mintable/rotatable by the operator; rotation is a cutover step,
-  not an API.
+  The credential reaches the agent **only as a token file path** (ruling W1c):
+  the wrapper sets `GROTTO_AGENT_TOKEN_FILE`; no token-bearing env var exists.
+  Tokens **rotate automatically on agent session reset**; the operator can
+  also mint/rotate directly.
 - **Transport: CLI → server, directly.** No daemon proxy in the path (Raft
   interposes one; see §10). Pre-WS6 the server is the co-hosted local process;
   WS6 changes the URL and TLS, not the contract.
@@ -64,9 +66,10 @@ handle split anywhere.
   participants. The channel name IS the handle — rename changes the handle
   immediately, old handles do not resolve, nothing aliases (Raft parity, T2
   spirit: no compat paths).
-- **Reserved handles** (case-insensitive, both namespaces): `system`, `grotto`,
-  `everyone`, `here`, `all`, `admin`, `owner`, `me`, `agent`, `human`. (Raft's
-  reserved list is server-side and unverifiable; this list is ours.)
+- **Reserved handles** (case-insensitive, both namespaces; ruling W1b): `all`,
+  `everyone`, `here`, `human`, `humans`, `agent`, `agents`, `system`, `idle`,
+  `busy`, `grotto`. (Raft's reserved list is server-side and unverifiable; this
+  list is ours.)
 - **Resolution is server-side and fails closed.** Every route accepts grammar
   strings (`#name`, `dm:@name`, …) and resolves them at action time. Unknown
   handle → 404 → CLI `TARGET_NOT_FOUND` with the nearest teaching (`grotto
@@ -187,11 +190,21 @@ GROTTOMSG
 
 ## 6. Attested sends and drafts
 
-The freshness gate lives on the send path, exactly once (D1). Per I3, `seen`
-authority is server-side: the existing seen ledger keyed by
-(agentSession, chat) is the deciding cursor, and the send API is a second
-consumer of the same store the in-process gate uses today
-(`freshness-gate.ts` / `resolveSendHold`).
+The freshness gate lives on the send path, exactly once (D1). Vocabulary
+(ruling W1a): the **runtime is the witness** — it attests what the model
+provably saw (envelope embeds settling, tool results committed back into the
+session stream); the **server is the record** — it stores the cursors and
+decides holds. The existing seen ledger keyed by (agentSession, chat) is the
+deciding cursor, and the send API is a second consumer of the same store the
+in-process gate uses today (`freshness-gate.ts` / `resolveSendHold`).
+
+**Race rule** (ruling W1a): the hold decision consults, alongside `seen`, what
+the server itself has served to this agent for the target — a per
+(agent, target) `served` high-water mark advanced by pull responses
+(`message read`, `message check`). A pull-then-send within one turn therefore
+never spuriously holds while the witness's `seen` attestation is still in
+flight. `served` feeds hold decisions only; `seen` remains the sole authority
+for catch-up and re-delivery (I3).
 
 Flow for `message send --target <t>`:
 
@@ -219,11 +232,9 @@ Flow for `message send --target <t>`:
    new plain send to the target; cleared on commit. Send failures report
    `Draft saved: yes|no` on stderr.
 
-**Divergence flag (operator call, §10):** shipped Raft holds drafts
-*client-side* in a tmpdir. We hold them server-side because our `seen`
-authority is already server-side (I3), agent shells are ephemeral, and
-grotto.sh must survive machine hops. Raft-parity fallback is possible but
-splits freshness state across two stores.
+**Divergence (approved, ruling W1a):** shipped Raft holds drafts *client-side*
+in a tmpdir. We hold them server-side because the server is the record (I3),
+agent shells are ephemeral, and grotto.sh must survive machine hops.
 
 **compositionId handoff (I1).** The harness observer mints a composition id
 when it sees a `message send` streaming in tool-call args and injects it as
@@ -311,9 +322,11 @@ GET  /api/agent/inbox              (inbox check — WS4)
 
 ## 10. Audited divergences from shipped Raft
 
+All approved by operator ruling W1 (program contract, 2026-07-21).
+
 | Divergence | Why |
 | --- | --- |
-| Server-held drafts (Raft: CLI tmpdir, 10-min TTL, client-supplied `seenUpToSeq`) | I3 makes the server the seen authority; ephemeral agent shells; grotto.sh future. **Needs operator sign-off** — the program contract's "server-held" line described Raft incorrectly; holding server-side is our choice, not parity. |
+| Server-held drafts (Raft: CLI tmpdir, 10-min TTL, client-supplied `seenUpToSeq`) | The runtime is the witness, the server is the record (W1a); ephemeral agent shells; grotto.sh future. The program contract had described Raft incorrectly — holding server-side is our choice, not parity. |
 | No daemon proxy between CLI and server (Raft: `SLOCK_AGENT_PROXY_URL` + proxy token; direct token env rejected) | Decided transport topology: the server is the only party anyone talks to; the runtime is just another client. |
 | Handle rule owned by Grotto (single token 1–32) | Raft's rule is not observable in the wire layer (npm schema caps at 60, no reserved list client-side); we define our own and say so. |
 | Server-side list pagination on `server info` | We are designing the server API; Raft's client-side slicing is an artifact of its fat response. |
