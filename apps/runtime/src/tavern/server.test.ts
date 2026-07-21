@@ -147,7 +147,7 @@ describe('Tavern Runtime websocket events', () => {
     });
 
     it('streams live app events without backfilling old events', async () => {
-        createChat({ id: 'cht_1' });
+        createChat({ id: 'cht_1', title: 'general' });
         createMessage('cht_1', messageInput('msg_1', 'first'));
         server = startTavernRuntimeServer();
 
@@ -171,7 +171,7 @@ describe('Tavern Runtime websocket events', () => {
     });
 
     it('streams later live app events on new sockets', async () => {
-        createChat({ id: 'cht_1' });
+        createChat({ id: 'cht_1', title: 'general' });
         createMessage('cht_1', messageInput('msg_1', 'first'));
         server = startTavernRuntimeServer();
 

@@ -312,6 +312,125 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/agent/messages/send": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Send or freshness-hold an agent-authored message. */
+        post: operations["sendAgentMessage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/agent/history": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read target history and advance the served ledger. */
+        get: operations["readAgentHistory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/agent/messages/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Search messages across joined chats. */
+        get: operations["searchAgentMessages"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/agent/messages/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Resolve a full or short message id. */
+        get: operations["resolveAgentMessage"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/agent/server": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List server channels and participant handles. */
+        get: operations["getAgentServerInfo"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/agent/channels/info": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get channel facts. */
+        get: operations["getAgentChannelInfo"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/agent/channels/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List channel members. */
+        get: operations["getAgentChannelMembers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/events": {
         parameters: {
             query?: never;
@@ -353,6 +472,119 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        AgentApiError: {
+            code: string;
+            message: string;
+            nextAction?: string;
+        };
+        AgentSendApiError: {
+            code: string;
+            message: string;
+            draftSaved?: boolean;
+            nextAction?: string;
+        };
+        AgentSender: {
+            handle: string | null;
+            description: string | null;
+            /** @enum {string} */
+            type: "human" | "agent" | "system";
+        };
+        AgentMessage: components["schemas"]["ChatMessage"] & {
+            sender: components["schemas"]["AgentSender"];
+            threadId?: string;
+            replyCount?: number;
+            replyTarget?: string;
+        };
+        AgentSearchResult: components["schemas"]["AgentMessage"] & {
+            target: string;
+        };
+        AgentSearchResultList: {
+            messages: components["schemas"]["AgentSearchResult"][];
+        };
+        AgentSendRequest: {
+            target: string;
+            content?: string;
+            attachmentIds?: string[];
+            sendDraft?: boolean;
+            continueAnyway?: boolean;
+            compositionId?: string;
+            nonce?: string;
+        };
+        AgentSentMessage: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            state: "sent";
+            message: components["schemas"]["AgentMessage"];
+            recentUnread: components["schemas"]["AgentRecentUnread"][];
+        };
+        AgentRecentUnread: {
+            target: string;
+            message: components["schemas"]["AgentMessage"];
+        };
+        AgentHeldMessage: {
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            state: "held";
+            newMessageCount: number;
+            shownMessages: components["schemas"]["AgentMessage"][];
+            omittedMessageCount: number;
+            formalMentionCount: number;
+            reholdCount: number;
+            continueAnywaySuggested: boolean;
+        };
+        AgentSendResponse: components["schemas"]["AgentSentMessage"] | components["schemas"]["AgentHeldMessage"];
+        AgentHistoryResponse: {
+            target: string;
+            messages: components["schemas"]["AgentMessage"][];
+            has_more: boolean;
+            has_older: boolean;
+            has_newer: boolean;
+            last_read: {
+                after: number;
+                unread_after: number;
+            };
+        };
+        AgentDirectoryPerson: {
+            handle: string;
+            description: string | null;
+        };
+        AgentChannel: {
+            handle: string;
+            joined: boolean;
+            description: string | null;
+            memberCount: number;
+        };
+        AgentServerInfo: {
+            channels: components["schemas"]["AgentChannel"][];
+            agents: components["schemas"]["AgentDirectoryPerson"][];
+            humans: components["schemas"]["AgentDirectoryPerson"][];
+            limit: number;
+            offset: number;
+            total: {
+                channels: number;
+                agents: number;
+                humans: number;
+            };
+            hasMore: {
+                channels: boolean;
+                agents: boolean;
+                humans: boolean;
+            };
+        };
+        AgentChannelMember: {
+            handle: string | null;
+            description: string | null;
+            /** @enum {string} */
+            role: "human" | "agent";
+        };
+        AgentChannelMembers: {
+            target: string;
+            members: components["schemas"]["AgentChannelMember"][];
+        };
         Id: string;
         ChatId: string;
         MessageId: string;
@@ -726,6 +958,24 @@ export interface components {
         };
     };
     responses: {
+        /** @description Agent API error. */
+        AgentError: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["AgentApiError"];
+            };
+        };
+        /** @description Agent send API error with draft state when the target resolved. */
+        AgentSendError: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/json": components["schemas"]["AgentSendApiError"];
+            };
+        };
         /** @description Error response. */
         Error: {
             headers: {
@@ -737,6 +987,7 @@ export interface components {
         };
     };
     parameters: {
+        AgentTarget: string;
         ChatId: components["schemas"]["ChatId"];
         RunId: components["schemas"]["RunId"];
         Cursor: string;
@@ -1333,6 +1584,197 @@ export interface operations {
                 };
             };
             default: components["responses"]["Error"];
+        };
+    };
+    sendAgentMessage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentSendRequest"];
+            };
+        };
+        responses: {
+            /** @description Sent message or held draft. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentSendResponse"];
+                };
+            };
+            default: components["responses"]["AgentSendError"];
+        };
+    };
+    readAgentHistory: {
+        parameters: {
+            query: {
+                target: components["parameters"]["AgentTarget"];
+                before?: string;
+                after?: string;
+                around?: string;
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Target history. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentHistoryResponse"];
+                };
+            };
+            default: components["responses"]["AgentError"];
+        };
+    };
+    searchAgentMessages: {
+        parameters: {
+            query: {
+                q: string;
+                target?: string;
+                sender?: string;
+                sort?: "relevance" | "recent";
+                before?: string;
+                after?: string;
+                limit?: components["parameters"]["Limit"];
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Search matches. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentSearchResultList"];
+                };
+            };
+            default: components["responses"]["AgentError"];
+        };
+    };
+    resolveAgentMessage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Resolved message. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        message: components["schemas"]["AgentMessage"];
+                    };
+                };
+            };
+            /** @description Ambiguous short id. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentApiError"];
+                };
+            };
+            default: components["responses"]["AgentError"];
+        };
+    };
+    getAgentServerInfo: {
+        parameters: {
+            query?: {
+                channels?: boolean;
+                agents?: boolean;
+                humans?: boolean;
+                joined?: boolean;
+                query?: string;
+                limit?: components["parameters"]["Limit"];
+                offset?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Filtered server directory. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentServerInfo"];
+                };
+            };
+            default: components["responses"]["AgentError"];
+        };
+    };
+    getAgentChannelInfo: {
+        parameters: {
+            query: {
+                target: components["parameters"]["AgentTarget"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Channel facts. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentChannel"];
+                };
+            };
+            default: components["responses"]["AgentError"];
+        };
+    };
+    getAgentChannelMembers: {
+        parameters: {
+            query: {
+                target: components["parameters"]["AgentTarget"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Channel members. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentChannelMembers"];
+                };
+            };
+            default: components["responses"]["AgentError"];
         };
     };
     listEvents: {

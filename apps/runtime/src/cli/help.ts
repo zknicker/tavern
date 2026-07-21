@@ -1,6 +1,14 @@
 import runtimePackage from '../../package.json';
+import { isAgentSurfaceCommand } from './agent-commands.ts';
+import { hasAgentIdentityEnvironment } from './agent-context.ts';
 import { suggest } from './parse';
-import { type CliCommand, findCommand, LISTED_COMMANDS, SECTION_ORDER } from './registry';
+import {
+    AGENT_SECTION_ORDER,
+    type CliCommand,
+    findCommand,
+    LISTED_COMMANDS,
+    SECTION_ORDER,
+} from './registry';
 import { errorBlock, heading, rows, ui } from './ui';
 
 /**
@@ -13,10 +21,14 @@ export async function runHelpCommand(name?: string): Promise<number> {
         return 0;
     }
     const command = findCommand(name);
-    if (!command) {
+    // Agent shells see only the agent surface — named help for operator
+    // commands stays hidden there, matching dispatch gating in main.ts.
+    if (!command || (hasAgentIdentityEnvironment() && !isAgentSurfaceCommand(command.name))) {
         const hint = suggest(
             name,
-            LISTED_COMMANDS.map((entry) => entry.name)
+            LISTED_COMMANDS.filter(
+                (entry) => !hasAgentIdentityEnvironment() || isAgentSurfaceCommand(entry.name)
+            ).map((entry) => entry.name)
         );
         process.stderr.write(
             `${errorBlock(
@@ -42,14 +54,25 @@ const ENVIRONMENT: { name: string; description: string }[] = [
     { name: 'TAVERN_TASK_ARTIFACTS_DIR', description: 'Task attachment artifacts root' },
 ];
 
+const AGENT_ENVIRONMENT = [
+    { name: 'GROTTO_AGENT_ID', description: 'Runtime-provided agent id' },
+    { name: 'GROTTO_SERVER_URL', description: 'Agent API base URL' },
+    { name: 'GROTTO_AGENT_TOKEN_FILE', description: 'Agent-scoped token file path' },
+    { name: 'GROTTO_COMPOSITION_ID', description: 'Optional current composition id' },
+];
+
 /** Full command list grouped by section, plus usage and environment. */
 export function printGlobalHelp(stream: NodeJS.WriteStream): void {
+    const agentEnvironment = hasAgentIdentityEnvironment();
     const blocks: string[] = [
-        `${ui.bold(`Grotto Runtime v${runtimePackage.version}`, stream)}`,
+        `${ui.bold(`${agentEnvironment ? 'Grotto Agent' : 'Grotto Runtime'} v${runtimePackage.version}`, stream)}`,
         `${heading('Usage', stream)}\n  grotto <command> [flags]`,
     ];
 
-    for (const section of SECTION_ORDER) {
+    // Agent shells see only the agent surface; operator sections stay hidden
+    // there (main.ts refuses them with OPERATOR_COMMAND_UNAVAILABLE anyway).
+    const sectionOrder = agentEnvironment ? AGENT_SECTION_ORDER : SECTION_ORDER;
+    for (const section of sectionOrder) {
         const entries = LISTED_COMMANDS.filter((command) => command.section === section);
         if (entries.length === 0) {
             continue;
@@ -61,8 +84,9 @@ export function printGlobalHelp(stream: NodeJS.WriteStream): void {
         blocks.push(`${heading(section, stream)}\n${body}`);
     }
 
+    const environment = agentEnvironment ? [...AGENT_ENVIRONMENT, ...ENVIRONMENT] : ENVIRONMENT;
     const env = rows(
-        ENVIRONMENT.map((entry) => ({ left: entry.name, right: entry.description })),
+        environment.map((entry) => ({ left: entry.name, right: entry.description })),
         '  '
     );
     blocks.push(`${heading('Environment', stream)}\n${env}`);

@@ -23,8 +23,15 @@ describe('parseArgs', () => {
         const parsed = parseArgs(command(), ['get', '--json', '--topic', 'runtime', 'overview']);
         expect(parsed.flags).toEqual({ '--json': true });
         expect(parsed.values).toEqual({ '--topic': 'runtime' });
+        expect(parsed.valueLists).toEqual({ '--topic': ['runtime'] });
         expect(parsed.positionals).toEqual(['get', 'overview']);
         expect(parsed.help).toBe(false);
+    });
+
+    test('keeps every value for repeatable flags', () => {
+        const parsed = parseArgs(command(), ['--topic', 'one', '--topic', 'two']);
+        expect(parsed.values['--topic']).toBe('two');
+        expect(parsed.valueLists?.['--topic']).toEqual(['one', 'two']);
     });
 
     test('--help short-circuits', () => {

@@ -1018,7 +1018,7 @@ const agentRuntimeAgentEngineConfigMutationSchema = z.object({});
 
 export const agentRuntimeUpdateAgentNameSchema = agentRuntimeAgentEngineConfigMutationSchema.extend(
     {
-        name: z.string().trim().min(1),
+        name: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_-]{0,31}$/u),
     }
 );
 
@@ -1150,7 +1150,7 @@ export const agentRuntimeCreateAgentSchema = z.object({
     enabledSkillIds: z.array(z.string().trim().min(1)).optional(),
     id: z.string().trim().min(1),
     isAdmin: z.boolean().optional(),
-    name: z.string().trim().min(1),
+    name: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_-]{0,31}$/u),
     primaryColor: z.string().trim().min(1).nullable().optional(),
     taskReviewPolicy: z.boolean().optional(),
     workspaceFolder: z.string().trim().min(1).optional(),
@@ -1163,7 +1163,10 @@ export const agentRuntimeUpdateAgentSchema = z.object({
     enabledPluginIds: z.array(agentRuntimePluginIdSchema).optional(),
     enabledSkillIds: z.array(z.string().trim().min(1)).optional(),
     isAdmin: z.boolean().optional(),
-    name: z.string().trim().min(1).optional(),
+    name: z
+        .string()
+        .regex(/^[A-Za-z0-9][A-Za-z0-9_-]{0,31}$/u)
+        .optional(),
     primaryColor: z.string().trim().min(1).nullable().optional(),
     taskReviewPolicy: z.boolean().optional(),
     workspaceFolder: z.string().trim().min(1).optional(),

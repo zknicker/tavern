@@ -56,7 +56,7 @@ export function resolveConfiguredPath(configuredPath: string): string {
     return path.resolve(trimmed);
 }
 
-function resolveRuntimeRoot(): string {
+export function getRuntimeRoot(): string {
     const configuredRoot = process.env.TAVERN_RUNTIME_ROOT || envConfig.TAVERN_RUNTIME_ROOT;
     if (!(configuredRoot && configuredRoot.trim().length > 0)) {
         return resolveDefaultRuntimeRoot();
@@ -69,7 +69,7 @@ function resolveDefaultRuntimeRoot(): string {
     return path.join(homeDir, '.grotto', 'runtime');
 }
 
-export const RUNTIME_ROOT = resolveRuntimeRoot();
+export const RUNTIME_ROOT = getRuntimeRoot();
 export const DATA_DIR = path.join(RUNTIME_ROOT, 'data');
 export const AGENT_HOME = resolveConfiguredPath(
     readConfigValue('TAVERN_AGENT_HOME') ?? path.join(RUNTIME_ROOT, 'agent')
@@ -77,6 +77,10 @@ export const AGENT_HOME = resolveConfiguredPath(
 export const AGENT_WORKSPACE = resolveConfiguredPath(
     readConfigValue('TAVERN_AGENT_WORKSPACE') ?? path.join(RUNTIME_ROOT, 'agent', 'workspace')
 );
+
+export function getAgentTokensDir(): string {
+    return path.join(getRuntimeRoot(), 'agent-tokens');
+}
 
 function resolveRuntimeApiToken(): string {
     const configured = readConfigValue('TAVERN_RUNTIME_TOKEN');

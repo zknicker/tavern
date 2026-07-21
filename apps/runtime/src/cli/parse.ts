@@ -19,6 +19,8 @@ export interface ParsedArgs {
     help: boolean;
     /** Non-flag positionals in order. */
     positionals: string[];
+    /** Every value for repeatable valued flags, in command-line order. */
+    valueLists?: Record<string, string[]>;
     /** Valued flags, e.g. `{ '--topic': 'foo' }`. */
     values: Record<string, string>;
 }
@@ -33,7 +35,13 @@ function flagTakesValue(flag: CliFlag): boolean {
  * stderr and exits 2). `--help`/`-h` short-circuit validation.
  */
 export function parseArgs(command: CliCommand, args: string[]): ParsedArgs {
-    const parsed: ParsedArgs = { flags: {}, values: {}, positionals: [], help: false };
+    const parsed: ParsedArgs = {
+        flags: {},
+        values: {},
+        valueLists: {},
+        positionals: [],
+        help: false,
+    };
     const known = new Map(command.flags.map((flag) => [flag.name, flag] as const));
 
     for (let index = 0; index < args.length; index++) {
@@ -56,6 +64,12 @@ export function parseArgs(command: CliCommand, args: string[]): ParsedArgs {
                 throw new UsageError(`Flag '${arg}' requires a value.`, command);
             }
             parsed.values[arg] = value;
+            const previousValues = parsed.valueLists?.[arg];
+            if (previousValues) {
+                previousValues.push(value);
+            } else if (parsed.valueLists) {
+                parsed.valueLists[arg] = [value];
+            }
             index++;
         } else {
             parsed.flags[arg] = true;

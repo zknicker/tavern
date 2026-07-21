@@ -1,14 +1,9 @@
 import type { TavernChatMessage } from '@tavern/api';
 import { resolveHomeTimezone } from '../timezone-settings.ts';
 import type { AgentExecutorInput } from './agent-executor.ts';
-import {
-    getChat,
-    latestMessageSequence,
-    listRecentMessagesBetween,
-    upsertResponseActivity,
-} from './chat-api/index.ts';
+import { upsertResponseActivity } from './chat-api/index.ts';
 import { formatPromptMessage, promptCursorSequence } from './harness-prompt.ts';
-import { advanceSeenCursor, readSeenCursor } from './seen-ledger.ts';
+import { resolveSendHold } from './send-hold.ts';
 
 // Freshness gate (specs/steering.md): a completed channel reply is held when
 // peer messages the turn never saw landed while it worked. The held turn gets
@@ -16,8 +11,6 @@ import { advanceSeenCursor, readSeenCursor } from './seen-ledger.ts';
 // revise, or decline — the mechanical dedupe that lets several agents
 // evaluate one message without piling on answers. One hold per turn; DMs
 // skip the gate because a 1:1 reply is never made redundant by a peer.
-
-const maxHoldContextMessages = 12;
 
 export interface FreshnessHold {
     prompt: string;
@@ -35,37 +28,17 @@ export function resolveFreshnessHold(
     input: AgentExecutorInput,
     draft: string
 ): FreshnessHold | null {
-    const chat = getChat(input.chatId);
-    if (chat?.kind !== 'channel') {
+    const hold = resolveSendHold({
+        agentId: input.agent.id,
+        chatId: input.chatId,
+        participantId: input.agentParticipantId,
+        seenHorizon: promptCursorSequence(input),
+        sessionId: input.agentSession.id,
+    });
+    if (!hold) {
         return null;
     }
-
-    const seenHorizon = Math.max(
-        promptCursorSequence(input),
-        readSeenCursor(input.agentSession.id, input.chatId)
-    );
-    const latest = latestMessageSequence(input.chatId);
-    if (latest <= seenHorizon) {
-        return null;
-    }
-
-    const unseen = listRecentMessagesBetween(input.chatId, {
-        afterSequence: seenHorizon,
-        beforeSequence: latest + 1,
-        limit: maxHoldContextMessages,
-    }).filter((message) => isPeerMessage(input, message));
-    if (unseen.length === 0) {
-        return null;
-    }
-
-    const shownThrough = unseen.at(-1)?.sequence;
-    if (shownThrough) {
-        advanceSeenCursor({
-            chatId: input.chatId,
-            seq: shownThrough,
-            sessionId: input.agentSession.id,
-        });
-    }
+    const unseen = hold.shownMessages;
     return { prompt: holdPrompt(unseen, draft), unseen };
 }
 
@@ -100,13 +73,6 @@ export function recordFreshnessHoldNotice(input: AgentExecutorInput, hold: Fresh
         status: 'completed',
         title: 'Reply held for freshness review',
     });
-}
-
-function isPeerMessage(input: AgentExecutorInput, message: TavernChatMessage) {
-    if (message.deleted_at || (message.role !== 'assistant' && message.role !== 'user')) {
-        return false;
-    }
-    return message.author.id !== input.agentParticipantId && message.author.id !== input.agent.id;
 }
 
 function holdPrompt(unseen: TavernChatMessage[], draft: string) {

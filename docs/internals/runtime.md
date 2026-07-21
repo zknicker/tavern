@@ -58,6 +58,8 @@ Durable Runtime state includes:
 - `chat_deliveries`
 - `agent_sessions`
 - `agent_turns`
+- `agent_served_chat_cursors`
+- `agent_message_drafts`
 - `agent_runtime_profiles`
 - model provider, access, inventory, and selection tables
 

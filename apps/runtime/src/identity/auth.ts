@@ -10,6 +10,7 @@ import { getOrCreateUserByClerkId } from './users.ts';
  * their member role (null until they redeem an invite).
  */
 export type RuntimeRequestAuth =
+    | { kind: 'agent-token'; agentId: string }
     | { kind: 'runtime-token' }
     | { kind: 'user'; role: RuntimeMemberRole | null; user: RuntimeUser };
 
@@ -57,6 +58,12 @@ export function isRouteAllowedForAuth(
     pathname: string,
     method = 'GET'
 ): boolean {
+    if (auth.kind === 'agent-token') {
+        return pathname.startsWith('/api/agent/');
+    }
+    if (pathname.startsWith('/api/agent/')) {
+        return false;
+    }
     if (auth.kind === 'runtime-token' || auth.role === 'owner') {
         return true;
     }

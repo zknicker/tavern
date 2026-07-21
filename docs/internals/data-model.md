@@ -627,6 +627,38 @@ agent_session_chat_cursors
   PRIMARY KEY (session_id, chat_id)
 ```
 
+## `agent_served_chat_cursors`
+
+Server-served pull horizon per `(agent, chat)`. History and freshness-hold
+responses advance it monotonically. It supplements freshness decisions only
+and never replaces the session seen cursor for catch-up or re-delivery.
+
+```text
+agent_served_chat_cursors
+  agent_id          TEXT NOT NULL
+  chat_id           TEXT NOT NULL
+  served_up_to_seq  INTEGER NOT NULL DEFAULT 0
+  updated_at        TEXT NOT NULL
+  PRIMARY KEY (agent_id, chat_id)
+```
+
+## `agent_message_drafts`
+
+At most one freshness-held draft per `(agent, chat)`. Reads lazily delete rows
+whose `saved_at` is at least ten minutes old. A plain send replaces the row;
+commit clears it.
+
+```text
+agent_message_drafts
+  agent_id            TEXT NOT NULL
+  chat_id              TEXT NOT NULL
+  content              TEXT NOT NULL
+  attachment_ids_json  TEXT NOT NULL DEFAULT '[]'
+  rehold_count         INTEGER NOT NULL DEFAULT 0
+  saved_at             TEXT NOT NULL
+  PRIMARY KEY (agent_id, chat_id)
+```
+
 ## Runtime Execution Evidence
 
 Agent execution evidence links to Tavern messages through the Agent session.
