@@ -1,11 +1,14 @@
 import type { AppRouterOutputs } from '../../../lib/trpc.tsx';
 import { buildChatList } from '../../chats/chat-list-data.ts';
+import { isSidebarTavernChat } from '../../shell/sidebar-chat-list-model.ts';
 
 type AgentChats = AppRouterOutputs['agent']['chats']['list'];
 type AgentChat = ReturnType<typeof buildChatList>[number];
 
+// Only Tavern chats are navigable via /chats/:id (chat.get excludes
+// external runtime chats), so the profile lists and routes only those.
 export function listAgentChats(chats: AgentChats | null | undefined) {
-    return buildChatList(chats);
+    return buildChatList(chats).filter(isSidebarTavernChat);
 }
 
 export function selectMostRecentAgentChat(

@@ -7,7 +7,6 @@ import {
     Loading03Icon,
     UserIcon,
 } from '@hugeicons-pro/core-stroke-rounded';
-import * as React from 'react';
 import { Icon } from '../../components/ui/icon.tsx';
 import {
     SidebarGroup,
@@ -68,6 +67,7 @@ interface TasksViewProps {
     selection: TaskSelection;
     showQueueIndicator: boolean;
     tasks: TaskRecord[];
+    tasksById: Map<string, TaskRecord>;
     view: TaskView;
 }
 
@@ -96,10 +96,11 @@ export function TasksView({
     selection,
     showQueueIndicator,
     tasks,
+    // Always the full workspace map, even when `tasks` is conversation
+    // scoped: dependency labels may point across conversations.
+    tasksById,
     view,
 }: TasksViewProps) {
-    const tasksById = React.useMemo(() => new Map(tasks.map((task) => [task.id, task])), [tasks]);
-
     if (tasks.length === 0 && connectionState !== 'reachable') {
         return (
             <EmptyState
@@ -190,6 +191,7 @@ export function TasksView({
                     <TasksToolbar
                         agents={agents}
                         assignee={assignee}
+                        hideCreate={embedded}
                         label={label}
                         labels={labels}
                         onAssigneeChange={onAssigneeChange}
@@ -224,12 +226,22 @@ export function TasksView({
                                     ))}
                                 </div>
                             ) : tasks.length === 0 ? (
-                                <EmptyState
-                                    actionLabel="New task"
-                                    description="Create a task, or ask an agent to file one from chat. Tasks and epics are shared between you and your agents."
-                                    onAction={onCreate}
-                                    title="No tasks yet"
-                                />
+                                embedded ? (
+                                    // Creation can't carry the conversation origin yet
+                                    // (originChatId is runtime-set), so the embedded tab
+                                    // points at chat instead of the global form.
+                                    <EmptyState
+                                        description="Ask an agent to file a task from this conversation and it will appear here."
+                                        title="No tasks yet"
+                                    />
+                                ) : (
+                                    <EmptyState
+                                        actionLabel="New task"
+                                        description="Create a task, or ask an agent to file one from chat. Tasks and epics are shared between you and your agents."
+                                        onAction={onCreate}
+                                        title="No tasks yet"
+                                    />
+                                )
                             ) : (
                                 <TasksEmptyResults onClearFilters={onClearFilters} />
                             )}
