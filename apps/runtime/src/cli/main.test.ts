@@ -108,4 +108,46 @@ describe('dispatch', () => {
         expect(out).toContain('serve');
         expect(out).toContain("Run 'grotto help <command>' for details.");
     });
+
+    test('agent identity makes bare help agent-first without a Runtime probe', async () => {
+        const previous = process.env.GROTTO_AGENT_ID;
+        process.env.GROTTO_AGENT_ID = 'agt_wren';
+        const fetcher = vi.spyOn(globalThis, 'fetch');
+        const read = capture('stdout');
+        try {
+            const result = await dispatch([]);
+            expect(result).toEqual({ kind: 'exit', code: 0 });
+            const out = read();
+            expect(out).toContain('Grotto Agent');
+            expect(out.indexOf('Messages')).toBeLessThan(out.indexOf('Server'));
+            expect(out).toContain('message');
+            expect(out).toContain('serve');
+            expect(fetcher).not.toHaveBeenCalled();
+        } finally {
+            if (previous === undefined) {
+                Reflect.deleteProperty(process.env, 'GROTTO_AGENT_ID');
+            } else {
+                process.env.GROTTO_AGENT_ID = previous;
+            }
+        }
+    });
+
+    test('message and inbox check fail honestly with the canonical contract', async () => {
+        const read = capture('stderr');
+        await expect(dispatch(['message', 'check'])).resolves.toEqual({ kind: 'exit', code: 1 });
+        await expect(dispatch(['inbox', 'check'])).resolves.toEqual({ kind: 'exit', code: 1 });
+        const out = read();
+        expect(out.match(/Code: NOT_YET_AVAILABLE/g)).toHaveLength(2);
+        expect(out).toContain('Next action: grotto message read --target <t>');
+    });
+
+    test('inbox check exposes real subcommand help', async () => {
+        const read = capture('stdout');
+        await expect(dispatch(['inbox', 'check', '--help'])).resolves.toEqual({
+            kind: 'exit',
+            code: 0,
+        });
+        expect(read()).toContain('grotto inbox check');
+        expect(read()).toContain('arrives with inbox cursors');
+    });
 });

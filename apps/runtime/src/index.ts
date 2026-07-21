@@ -1,4 +1,5 @@
 import path from 'node:path';
+import { setAgentCliServerUrl } from './agent-engine/agent-cli-wrapper.ts';
 import { seededSkillDefaultEntries, seedManagedSkills } from './agent-engine/skill-library.ts';
 import { refreshRuntimeCapabilities } from './capabilities/store.ts';
 import { dispatch } from './cli/main.ts';
@@ -174,6 +175,7 @@ async function main(): Promise<void> {
     });
 
     runtimeServer = startTavernRuntimeServer();
+    setAgentCliServerUrl(runtimeServer.url);
     log.info('Grotto Runtime running', { url: runtimeServer.url.toString() });
 
     await restartWikiWatcher({ emitRootChanged: false }).catch((err) => {
