@@ -20,8 +20,7 @@ import { withSaveErrorToast } from '../../../lib/saving-toast.ts';
 import type { AgentListOutput } from '../../../lib/trpc.tsx';
 
 // Manual reset contract (specs/sessions.md): agent-scoped, human-initiated,
-// lives here in agent settings. The chat drawer shows session status
-// read-only.
+// and owned by the agent profile.
 export function AgentSessionSection({ agent }: { agent: AgentListOutput['agents'][number] }) {
     const resetSession = useAgentSessionReset();
     const [isFullResetOpen, setIsFullResetOpen] = useState(false);
@@ -97,7 +96,9 @@ function FullResetDialog({
                 </DialogHeader>
                 <div className="grid gap-4 px-6 pb-6">
                     <p className="text-muted-foreground text-sm leading-relaxed">
-                        {`Fully reset "${agent.name}"? This starts a fresh session and wipes the agent's workspace. Workspace files cannot be recovered; memory persists.`}
+                        Fully reset this agent? This starts a fresh session and wipes the
+                        agent&apos;s workspace. Workspace files cannot be recovered; memory
+                        persists.
                     </p>
                     {resetSession.error ? (
                         <Alert variant="error">

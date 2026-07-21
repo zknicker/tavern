@@ -1,7 +1,7 @@
 import { CopyLinkIcon, CursorTextIcon, UserCircleIcon } from '@hugeicons-pro/core-stroke-rounded';
 import { toastManager } from '../components/ui/toast.tsx';
-import { buildAgentSettingsPath } from '../features/agents/agent-path.ts';
 import { getChatAgentId } from '../features/chats/chat-list-data.ts';
+import { appRoutes } from '../lib/app-routes.ts';
 import { writeClipboardText } from '../lib/clipboard.ts';
 import { requestChatComposerFocus } from './chat-composer-focus.ts';
 import type { AppCommand, AppCommandBuildContext, AppCommandGroup } from './types.ts';
@@ -59,8 +59,8 @@ function buildCurrentAgentCommands(context: AppCommandBuildContext): AppCommand[
             icon: UserCircleIcon,
             id: 'current-chat.open-agent-settings',
             keywords: ['chat', 'agent', 'settings', 'assistant'],
-            run: () => context.navigate(buildAgentSettingsPath(agentId, 'general')),
-            title: 'Agent Settings',
+            run: () => context.navigate(appRoutes.memberAgent(agentId)),
+            title: 'Agent Profile',
         },
     ];
 }

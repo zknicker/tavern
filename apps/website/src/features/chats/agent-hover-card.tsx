@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useResolvedThemeOptional } from '../../components/theme-provider.tsx';
 import { Popover, PopoverPopup, PopoverTrigger } from '../../components/ui/popover.tsx';
 import { Spinner } from '../../components/ui/spinner.tsx';
@@ -6,6 +7,7 @@ import { useAgentActivity } from '../../hooks/agents/use-agent-activity.ts';
 import { useAgentAppearanceLookup } from '../../hooks/agents/use-agent-appearance.ts';
 import { useAgentList } from '../../hooks/agents/use-agent-list.ts';
 import { useAgentSession } from '../../hooks/agents/use-agent-session.ts';
+import { appRoutes } from '../../lib/app-routes.ts';
 import { getModelProviderConfig } from '../../lib/model-provider-config.ts';
 import { cn } from '../../lib/utils.ts';
 import { resolveAgentInk } from '../agents/agent-color-presets.ts';
@@ -14,7 +16,6 @@ import {
     formatAgentActivityEntry,
     formatAgentActivityTime,
 } from './agent-activity-labels.ts';
-import { useOpenAgentDrawer } from './agent-drawer-context.tsx';
 import { AgentFace } from './agent-face.tsx';
 import { useAgentPresenceEntry } from './agent-presence.tsx';
 
@@ -23,7 +24,7 @@ const hoverCardEntryLimit = 5;
 /**
  * Profile hover card for any agent avatar (specs/agent-activity.md):
  * identity, live presence, the session model, and the latest activity.
- * Clicking the avatar opens the full agent drawer.
+ * Clicking the avatar opens the full Members profile.
  */
 export function AgentHoverCard({
     agentId,
@@ -39,7 +40,7 @@ export function AgentHoverCard({
     triggerClassName?: string;
 }) {
     const [open, setOpen] = React.useState(false);
-    const openAgentDrawer = useOpenAgentDrawer();
+    const navigate = useNavigate();
 
     return (
         <Popover onOpenChange={setOpen} open={open}>
@@ -49,7 +50,7 @@ export function AgentHoverCard({
                 delay={100}
                 onClick={() => {
                     setOpen(false);
-                    openAgentDrawer({ agentId, agentName, chatId });
+                    navigate(appRoutes.memberAgent(agentId));
                 }}
                 openOnHover
                 render={<button title={agentName} type="button" />}
@@ -95,17 +96,15 @@ function AgentHoverCardBody({
     return (
         <div className="flex min-w-0 flex-col">
             <div className="flex min-w-0 items-center gap-2.5 px-3 pt-2.5 pb-2">
-                {appearance.character !== 'none' ? (
-                    <span aria-hidden="true" className="flex size-11 shrink-0 items-center">
-                        <AgentFace
-                            animate={false}
-                            dark={dark}
-                            head={appearance.character}
-                            ink={resolveAgentInk(dark, appearance.primaryColor)}
-                            size={44}
-                        />
-                    </span>
-                ) : null}
+                <span aria-hidden="true" className="flex size-11 shrink-0 items-center">
+                    <AgentFace
+                        animate={false}
+                        dark={dark}
+                        head={appearance.character}
+                        ink={resolveAgentInk(dark, appearance.primaryColor)}
+                        size={44}
+                    />
+                </span>
                 <div className="flex min-w-0 flex-col gap-0.5">
                     <span className="flex min-w-0 items-center gap-2">
                         <span className="min-w-0 truncate font-semibold text-base text-foreground">

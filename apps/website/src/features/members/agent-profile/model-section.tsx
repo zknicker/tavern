@@ -1,4 +1,5 @@
 import { AlertCircleIcon } from '@hugeicons/core-free-icons';
+import type React from 'react';
 import { Alert, AlertDescription } from '../../../components/ui/alert.tsx';
 import { Icon } from '../../../components/ui/icon.tsx';
 import {
@@ -33,7 +34,9 @@ export function AgentModelSection({
     onChange,
     syncError,
     value,
+    children,
 }: {
+    children?: React.ReactNode;
     disabled: boolean;
     modelOptions: Model[];
     onChange: (value: AgentModelDraft | null) => void;
@@ -46,7 +49,7 @@ export function AgentModelSection({
     const isDisabled = disabled;
 
     return (
-        <SettingsSection title="Model">
+        <SettingsSection title="Info">
             <SettingsGroup>
                 <SettingsRow title="Model">
                     <Select
@@ -135,6 +138,12 @@ export function AgentModelSection({
                         </SelectContent>
                     </Select>
                 </SettingsRow>
+                {children ? (
+                    <>
+                        <Separator />
+                        {children}
+                    </>
+                ) : null}
             </SettingsGroup>
         </SettingsSection>
     );

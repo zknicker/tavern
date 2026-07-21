@@ -3,11 +3,9 @@ import { SimpleCodeEditor } from '../../../components/code-editor/simple-code-ed
 import { Card, CardFrame } from '../../../components/ui/card.tsx';
 import { Button } from '../../../components/ui/primitives/button.tsx';
 import { SettingsSection } from '../../../components/ui/settings-row.tsx';
-import { usePrimaryAgent } from '../../../hooks/agents/use-agent-list.ts';
 import { nextSessionNote, withSavingToast } from '../../../lib/saving-toast.ts';
 import { trpc } from '../../../lib/trpc.tsx';
 import { cn } from '../../../lib/utils.ts';
-import { MissingAgentState } from '../../agents/missing-agent-state.tsx';
 import { AgentInstructionsPreviewDrawer } from './agent-instructions-preview-drawer.tsx';
 
 export type EditableAgentWorkspaceFile = 'NOTES.md' | 'SOUL.md';
@@ -28,22 +26,6 @@ export const editableAgentWorkspaceFiles = [
     label: string;
     path: EditableAgentWorkspaceFile;
 }>;
-
-export function AgentWorkspaceFileSettingsPage({ path }: { path: EditableAgentWorkspaceFile }) {
-    const primaryAgentQuery = usePrimaryAgent();
-
-    if (primaryAgentQuery.isPending) {
-        return <p className="text-muted-foreground text-sm">Loading workspace file...</p>;
-    }
-
-    const agent = primaryAgentQuery.data?.agent ?? null;
-
-    if (!agent) {
-        return <MissingAgentState agentId="primary" />;
-    }
-
-    return <AgentWorkspaceFileEditor agentId={agent.id} agentName={agent.name} path={path} />;
-}
 
 export function AgentWorkspaceFileEditor({
     agentId,

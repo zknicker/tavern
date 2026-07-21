@@ -41,10 +41,6 @@ describe('Runtime capability gates', () => {
         expect(settingsCapabilityRequirements.memories).toEqual([]);
     });
 
-    test('keeps Members settings reachable in keyless mode', () => {
-        expect(settingsCapabilityRequirements.members).toEqual([]);
-    });
-
     test('gates Plugins settings on Runtime API access', () => {
         expect(settingsCapabilityRequirements.plugins).toEqual(['apiServer']);
     });
@@ -67,15 +63,6 @@ describe('Runtime capability gates', () => {
     test('keeps workspace instruction files editable without agent runtime capabilities', () => {
         expect(settingsCapabilityRequirements['notes-md']).toEqual([]);
         expect(settingsCapabilityRequirements['soul-md']).toEqual([]);
-    });
-
-    test('gates agent settings subpages on their Runtime capabilities', () => {
-        expect(settingsCapabilityRequirements['agent-general']).toEqual([
-            'apiServer',
-            'modelExecution',
-        ]);
-        expect(settingsCapabilityRequirements['agent-skills']).toEqual(['apiServer', 'skills']);
-        expect(settingsCapabilityRequirements.memories).toEqual([]);
     });
 
     test('gates Reminders on agent runtime capabilities', () => {

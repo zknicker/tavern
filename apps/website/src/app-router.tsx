@@ -8,7 +8,6 @@ import {
     useParams,
 } from 'react-router-dom';
 import { AppFrame } from './components/app-frame.tsx';
-import { buildAgentSettingsPath } from './features/agents/agent-path.ts';
 import { MembershipGate } from './features/auth/membership-gate.tsx';
 import { buildDefaultWorkspaceChatPath } from './features/chats/chat-path.ts';
 import { RuntimeSetupGate } from './features/onboarding/runtime-setup-gate.tsx';
@@ -273,6 +272,12 @@ export function createAppRouter() {
                                             ),
                                             children: [
                                                 {
+                                                    path: 'members',
+                                                    element: (
+                                                        <Navigate replace to={appRoutes.members} />
+                                                    ),
+                                                },
+                                                {
                                                     index: true,
                                                     element: (
                                                         <Navigate replace to="agent-runtime" />
@@ -409,64 +414,13 @@ export function createAppRouter() {
                                                     ),
                                                 },
                                                 {
-                                                    path: 'agents/:agentId/general',
-                                                    lazy: lazyRoute(
-                                                        () =>
-                                                            import(
-                                                                './routes/app/settings-agent-page.tsx'
-                                                            ),
-                                                        'SettingsAgentPage'
-                                                    ),
-                                                },
-                                                {
-                                                    path: 'agents/:agentId/skills',
-                                                    lazy: lazyRoute(
-                                                        () =>
-                                                            import(
-                                                                './routes/app/settings-agent-skills-page.tsx'
-                                                            ),
-                                                        'SettingsAgentSkillsPage'
-                                                    ),
-                                                },
-                                                {
-                                                    path: 'agents/:agentId/tools',
-                                                    element: <AgentSkillsRedirect />,
-                                                },
-                                                {
-                                                    path: 'agents/:agentId/plugins',
-                                                    element: <AgentSkillsRedirect />,
-                                                },
-                                                {
-                                                    path: 'agents/:agentId/channels',
-                                                    lazy: lazyRoute(
-                                                        () =>
-                                                            import(
-                                                                './routes/app/channels-page.tsx'
-                                                            ),
-                                                        'ChannelsPage'
-                                                    ),
-                                                },
-                                                {
-                                                    path: 'agents/:agentId/mcp',
-                                                    element: <AgentSkillsRedirect />,
-                                                },
-                                                {
-                                                    path: 'agents/:agentId/memory',
-                                                    element: (
-                                                        <Navigate
-                                                            replace
-                                                            to={appRoutes.settingsMemories}
-                                                        />
-                                                    ),
+                                                    path: 'agents/:agentId/*',
+                                                    element: <LegacyAgentSettingsRedirect />,
                                                 },
                                                 {
                                                     path: 'agent',
-                                                    lazy: lazyRoute(
-                                                        () =>
-                                                            import(
-                                                                './routes/app/settings-agent-page.tsx'
-                                                            ),
-                                                        'SettingsAgentPage'
+                                                    element: (
+                                                        <Navigate replace to={appRoutes.members} />
                                                     ),
                                                 },
                                                 {
@@ -539,9 +493,9 @@ export function createAppRouter() {
     ]);
 }
 
-function AgentSkillsRedirect() {
+function LegacyAgentSettingsRedirect() {
     const { agentId } = useParams();
-    return <Navigate replace to={buildAgentSettingsPath(agentId, 'skills')} />;
+    return <Navigate replace to={agentId ? appRoutes.memberAgent(agentId) : appRoutes.members} />;
 }
 
 function LegacyAutomationRedirect() {

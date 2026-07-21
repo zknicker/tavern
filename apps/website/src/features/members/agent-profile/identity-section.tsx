@@ -37,7 +37,7 @@ import { AgentFace } from '../../chats/agent-face.tsx';
 
 const faceStyle = { flexShrink: 0, overflow: 'visible' } as const;
 
-export function AgentAppearanceSection({
+export function AgentIdentitySection({
     agent,
     disabled,
 }: {
@@ -71,7 +71,7 @@ export function AgentAppearanceSection({
         ) ?? null;
 
     return (
-        <SettingsSection title="Appearance">
+        <SettingsSection title="Identity">
             <SettingsGroup>
                 <SettingsRow title="Display name">
                     <Input
@@ -111,7 +111,7 @@ export function AgentAppearanceSection({
 
                 <SettingsRow
                     description="A short job description. Agents sharing a chat see each other's bios."
-                    title="Bio"
+                    title="Description"
                 >
                     <Textarea
                         disabled={isSavingBio}

@@ -1,8 +1,8 @@
 import { NavLink, useParams } from 'react-router-dom';
 import { useAgentList } from '../../hooks/agents/use-agent-list.ts';
 import { appRoutes } from '../../lib/app-routes.ts';
-import type { AgentListOutput } from '../../lib/trpc.tsx';
 import { cn } from '../../lib/utils.ts';
+import { AgentProfile } from './agent-profile/agent-profile.tsx';
 import { HumanMemberList } from './human-member-list.tsx';
 import { MemberAgentLabel } from './member-agent-label.tsx';
 
@@ -43,22 +43,17 @@ export function MembersPage() {
                     <HumanMemberList />
                 </div>
             </aside>
-            <section className="flex min-w-0 flex-1 items-center justify-center p-8">
+            <section className="flex min-w-0 flex-1">
                 {agentId ? (
                     selectedAgent ? (
-                        <AgentProfilePlaceholder agent={selectedAgent} />
+                        <AgentProfile agentId={selectedAgent.id} variant="page" />
                     ) : (
-                        <p className="text-muted-foreground text-sm">Member not found.</p>
+                        <p className="m-auto text-muted-foreground text-sm">Member not found.</p>
                     )
                 ) : (
-                    <p className="text-muted-foreground text-sm">Select a member</p>
+                    <p className="m-auto text-muted-foreground text-sm">Select a member</p>
                 )}
             </section>
         </main>
     );
-}
-
-function AgentProfilePlaceholder({ agent }: { agent: AgentListOutput['agents'][number] }) {
-    // Profile tabs land in the next slice.
-    return <MemberAgentLabel agent={agent} className="w-full max-w-xl items-start" />;
 }
