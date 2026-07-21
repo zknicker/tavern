@@ -30,7 +30,9 @@ export function createDelivery(
 
     db.exec('BEGIN IMMEDIATE');
     try {
-        assertThreadWritable(chatId, input.message.author_id, db);
+        // input.agent_id is the persisted author (insertMessage), so the
+        // parent-seat check must validate it, not the request's author field.
+        assertThreadWritable(chatId, input.agent_id, db);
         // A streaming post created at first content links here; the delivery
         // finalizes its text and metadata in place (specs/chat-timeline.md).
         const message =

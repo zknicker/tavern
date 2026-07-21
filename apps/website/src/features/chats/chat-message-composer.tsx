@@ -184,7 +184,7 @@ export function ChatMessageComposer({
         });
 
         if (threadTarget && result.threadChatId) {
-            setThreadPaneChatId(chatId, result.threadChatId);
+            setThreadPaneChatId(chatId, threadTarget.anchorMessageId, result.threadChatId);
         }
     }
 

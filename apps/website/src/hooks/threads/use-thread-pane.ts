@@ -33,10 +33,16 @@ export function closeThreadPane(chatId: string) {
     emitChange();
 }
 
-export function setThreadPaneChatId(chatId: string, threadChatId: string) {
+export function setThreadPaneChatId(chatId: string, anchorMessageId: string, threadChatId: string) {
     const current = panes.get(chatId);
 
-    if (!(current && current.threadChatId !== threadChatId)) {
+    // A first-reply completion for another anchor (the user switched threads
+    // mid-flight) must not attach its thread id to the pane's current anchor.
+    if (
+        !current ||
+        current.anchorMessageId !== anchorMessageId ||
+        current.threadChatId === threadChatId
+    ) {
         return;
     }
 
