@@ -1,7 +1,7 @@
 ---
-summary: Agent activity feed — a durable, turn-grained log of what an agent has been doing, shown in the agent drawer and avatar hover card.
+summary: Agent activity feed — a durable, turn-grained log of what an agent has been doing, shown in the agent profile's Activity tab and avatar hover card.
 read_when:
-  - changing the agent drawer, avatar hover cards, or any agent activity feed
+  - changing the agent profile, avatar hover cards, or any agent activity feed
   - changing turn lifecycle records, triggers, or outcome projection
   - considering finer-grained (tool-level) agent status surfaces
 ---
@@ -53,12 +53,14 @@ Rules:
 
 ## Surfaces
 
-- **Agent drawer** — a "Recent activity" section below the session card.
-  The drawer stays read-only; entries are not links in v1.
+- **Agent profile, Activity tab** — the full timestamped diagnostics view
+  with Copy Diagnostic Info ([agent-profile](agent-profile.md)). Read-only;
+  entries are not links in v1.
 - **Avatar hover card** — hovering any agent avatar (facepile, sidebar,
   transcript) shows the agent's name, live presence line, and the top few
-  activity entries. Clicking any agent avatar opens the agent drawer — the
-  hover card is the preview, the drawer is the full view.
+  activity entries. Clicking a transcript avatar opens the profile in the
+  chat's right pane; elsewhere it opens the Members profile page — the
+  hover card is the preview, the profile is the full view.
 
 ## Contract
 
