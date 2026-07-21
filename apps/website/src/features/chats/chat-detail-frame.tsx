@@ -22,6 +22,7 @@ export function ChatDetailFrame({
     defaultOpenWorkGroups = false,
     emptyLabel,
     error,
+    body,
     sidePanel,
     takeoverPanel,
     fetchOlderHistory,
@@ -42,6 +43,7 @@ export function ChatDetailFrame({
     defaultOpenWorkGroups?: boolean;
     emptyLabel: string;
     error?: unknown;
+    body?: React.ReactNode;
     sidePanel?: React.ReactNode;
     takeoverPanel?: React.ReactNode;
     fetchOlderHistory?: () => void;
@@ -76,6 +78,7 @@ export function ChatDetailFrame({
                 {takeoverPanel ?? (
                     <div className="relative flex min-w-0 flex-1 flex-col">
                         {header}
+                        {body === undefined ? (
                         <div className="relative min-h-0 flex-1">
                             <div className="absolute top-3 left-1/2 z-10 -translate-x-1/2">
                                 <ChatTranscriptLoadingIndicator
@@ -137,6 +140,11 @@ export function ChatDetailFrame({
                                 ) : null}
                             </MessageScroller>
                         </div>
+                        ) : (
+                            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+                                {body}
+                            </div>
+                        )}
 
                         {footer}
                     </div>

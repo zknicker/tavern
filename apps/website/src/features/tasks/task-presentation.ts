@@ -224,6 +224,7 @@ export function groupTasksByStatus(tasks: TaskRecord[]) {
 
 export function filterTasks(input: {
     assignee: TaskAssigneeFilter;
+    conversationId?: string;
     label: TaskLabelFilter;
     query: string;
     tasks: TaskRecord[];
@@ -232,6 +233,10 @@ export function filterTasks(input: {
     const query = input.query.trim().toLowerCase();
 
     return input.tasks.filter((task) => {
+        if (input.conversationId && task.originChatId !== input.conversationId) {
+            return false;
+        }
+
         if (!matchesView(task, input.view)) {
             return false;
         }

@@ -12,6 +12,7 @@ import { useThreadPane } from '../../hooks/threads/use-thread-pane.ts';
 import { useViewportBelow } from '../../hooks/use-viewport-below.ts';
 import { appRoutes } from '../../lib/app-routes.ts';
 import { MissingAgentState } from '../agents/missing-agent-state.tsx';
+import { Tasks } from '../tasks/tasks.tsx';
 import { ArchivedChatBar } from './archived-chat-bar.tsx';
 import { ArtifactPanelOpenProvider } from './artifact-panel-context.tsx';
 import { getActiveRunIds } from './chat-active-runs.ts';
@@ -19,10 +20,12 @@ import { ChatArtifactPanel } from './chat-artifact-panel.tsx';
 import { getChatContextFullness } from './chat-context-fullness.ts';
 import { ChatDetailFooter } from './chat-detail-footer.tsx';
 import { ChatDetailFrame } from './chat-detail-frame.tsx';
+import { ChatFilesTab } from './chat-files-tab.tsx';
 import { buildChatListItem, type ChatListItem } from './chat-list-data.ts';
 import { ChatMessageComposer } from './chat-message-composer.tsx';
 import { getChatMessageLayout } from './chat-message-layout.ts';
 import { ChatRoomTopbar } from './chat-room-topbar.tsx';
+import { type ChatViewTab, ChatViewTabs, supportsChatViewTabs } from './chat-view-tabs.tsx';
 import { ThreadPanel } from './thread/thread-panel.tsx';
 
 export const chatDetailLogLimit = 24;
@@ -49,7 +52,7 @@ export function AgentChatDetail({ chatId }: { chatId: string }) {
         return <Navigate replace to={appRoutes.activity} />;
     }
 
-    return <SyncedAgentChatDetail chat={chat} chatId={chatId} />;
+    return <SyncedAgentChatDetail chat={chat} chatId={chatId} key={chatId} />;
 }
 
 export function isBlockingActiveTurn(input: {
@@ -79,15 +82,18 @@ export function isBlockingActiveTurn(input: {
 }
 
 function SyncedAgentChatDetail({ chat, chatId }: { chat: ChatListItem; chatId: string }) {
+    const [viewTab, setViewTab] = React.useState<ChatViewTab>('chat');
     const agentsQuery = useAgentList();
     const modelsQuery = useModelList();
     const activeSidePane = useChatSidePane(chatId);
     const threadPane = useThreadPane(chatId);
     const threadTakeover = useViewportBelow(1024);
     const threadOpen = activeSidePane === 'thread' && threadPane !== null;
-    // Viewing the chat reads it: receipt on open and on each new message —
-    // except while the thread takeover hides the parent transcript entirely.
-    useMarkChatReadOnView(chatId, { enabled: !(threadOpen && threadTakeover) });
+    // Only the visible parent transcript reads the chat. Tasks, Files, and a
+    // thread takeover keep this route mounted while hiding that transcript.
+    useMarkChatReadOnView(chatId, {
+        enabled: activeViewTab === 'chat' && !(threadOpen && threadTakeover),
+    });
     const agentId = resolveChatAgentId(chat);
     const agents = agentsQuery.data?.agents ?? [];
     const agent = agents.find((entry) => entry.id === agentId) ?? null;
@@ -121,6 +127,8 @@ function SyncedAgentChatDetail({ chat, chatId }: { chat: ChatListItem; chatId: s
         activeTurns: timeline.activeTurns,
         agentsPending: agentsQuery.isPending,
     });
+    const hasViewTabs = supportsChatViewTabs(chat);
+    const activeViewTab = hasViewTabs ? viewTab : 'chat';
 
     if (!(agent || agentsQuery.isPending)) {
         return <MissingAgentState agentId={agentId} />;
@@ -131,6 +139,13 @@ function SyncedAgentChatDetail({ chat, chatId }: { chat: ChatListItem; chatId: s
             <ChatDetailFrame
                 activeReplies={timeline.activeReplies}
                 agentStatusCharacter={agent?.effectiveCharacter ?? null}
+                body={
+                    activeViewTab === 'tasks' ? (
+                        <Tasks conversationId={chatId} embedded />
+                    ) : activeViewTab === 'files' ? (
+                        <ChatFilesTab chatId={chatId} enabled={activeViewTab === 'files'} />
+                    ) : undefined
+                }
                 chatId={chat.id}
                 conversationLayout={conversationLayout}
                 emptyLabel="No synced messages for this chat yet."
@@ -138,7 +153,7 @@ function SyncedAgentChatDetail({ chat, chatId }: { chat: ChatListItem; chatId: s
                 failedTurns={timeline.failedTurns}
                 fetchOlderHistory={timeline.fetchOlderHistory}
                 footer={
-                    chat.archived ? (
+                    activeViewTab !== 'chat' ? null : chat.archived ? (
                         <ArchivedChatBar
                             chatId={chat.id}
                             conversationKind={chat.conversationKind}
@@ -168,7 +183,14 @@ function SyncedAgentChatDetail({ chat, chatId }: { chat: ChatListItem; chatId: s
                     )
                 }
                 hasOlderHistory={timeline.hasOlderHistory}
-                header={<ChatRoomTopbar chat={chat} />}
+                header={
+                    <>
+                        <ChatRoomTopbar chat={chat} />
+                        {hasViewTabs ? (
+                            <ChatViewTabs onValueChange={setViewTab} value={activeViewTab} />
+                        ) : null}
+                    </>
+                }
                 historyLoaded={timeline.historyLoaded}
                 isFetchingOlderHistory={timeline.isFetchingOlderHistory}
                 isPending={timeline.isPending}

@@ -44,7 +44,10 @@ happen, and keep the durable timeline as context.
   durable outputs attached to messages or response activity.
 * **Receipts.** Message creation and assistant delivery are acknowledged by id.
 * **Channels and DMs.** Channels and direct messages are durable chat rooms in
-  the sidebar. Channels render with a hash icon and optional channel color.
+  the sidebar. Each Tavern channel and DM has Chat, Tasks, and Files tabs;
+  Tasks stays scoped to work originating in that conversation, and Files lists
+  attachments from its messages. Channels render with a hash icon and optional
+  channel color.
   Opening a chat shows a room topbar with the chat name and a participant
   count. On channels the name is a dropdown with channel actions, the optional
   channel description sits beside it (both open the Edit channel dialog, which

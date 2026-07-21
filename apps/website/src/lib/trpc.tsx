@@ -30,6 +30,7 @@ export type AgentListOutput = RouterOutput['agent']['list'];
 export type AgentSessionOutput = RouterOutput['agent']['session'];
 export type PrimaryAgentOutput = RouterOutput['agent']['primary'];
 export type ChatGetOutput = RouterOutput['chat']['get'];
+export type ChatFilesOutput = RouterOutput['chat']['files']['list'];
 export type ChatMessageAttachmentInput = NonNullable<
     RouterInput['chat']['send']['attachments']
 >[number];
