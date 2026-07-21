@@ -5,5 +5,5 @@ export function buildChatPath(chatId: string) {
 }
 
 export function buildDefaultWorkspaceChatPath() {
-    return appRoutes.overview;
+    return appRoutes.activity;
 }

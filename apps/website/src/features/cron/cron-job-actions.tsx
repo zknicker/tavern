@@ -41,8 +41,8 @@ export function CronJobActions({
 }: CronJobActionsProps) {
     const toggleLabel = job.enabled ? 'Pause' : 'Enable';
     const toggleTitle = canEdit
-        ? `${toggleLabel} automation`
-        : `Start Grotto Runtime to ${toggleLabel.toLowerCase()} this automation`;
+        ? `${toggleLabel} reminder`
+        : `Start Grotto Runtime to ${toggleLabel.toLowerCase()} this reminder`;
 
     return (
         <div className={cn('flex shrink-0 items-center gap-0.5', className)}>
@@ -53,7 +53,7 @@ export function CronJobActions({
                     void onRun(job);
                 }}
                 size="icon-sm"
-                title={canEdit ? 'Run now' : 'Start Grotto Runtime to run this automation'}
+                title={canEdit ? 'Run now' : 'Start Grotto Runtime to run this reminder'}
                 type="button"
                 variant="ghost"
             >
@@ -63,7 +63,7 @@ export function CronJobActions({
                 disabled={false}
                 onClick={() => onEdit(job)}
                 size="icon-sm"
-                title="Edit automation"
+                title="Edit reminder"
                 type="button"
                 variant="ghost"
             >
@@ -75,7 +75,7 @@ export function CronJobActions({
                         <Button
                             aria-label={`${job.name} actions`}
                             size="icon-sm"
-                            title="Automation actions"
+                            title="Reminder actions"
                             variant="ghost"
                         />
                     }

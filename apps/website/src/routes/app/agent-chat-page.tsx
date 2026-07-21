@@ -7,7 +7,7 @@ export function AgentChatPage() {
     const { chatId } = useParams<{ chatId: string }>();
 
     if (!chatId) {
-        return <Navigate replace to={appRoutes.overview} />;
+        return <Navigate replace to={appRoutes.activity} />;
     }
 
     return <Navigate replace to={buildChatPath(chatId)} />;
@@ -17,7 +17,7 @@ export function ChatPage() {
     const { chatId } = useParams<{ chatId: string }>();
 
     if (!chatId) {
-        return <Navigate replace to={appRoutes.overview} />;
+        return <Navigate replace to={appRoutes.activity} />;
     }
 
     return <AgentChatDetail chatId={chatId} />;

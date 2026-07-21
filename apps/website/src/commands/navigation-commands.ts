@@ -1,4 +1,3 @@
-import { Joystick04Icon } from '@hugeicons-pro/core-stroke-rounded';
 import { getRouteTabIcon } from '../features/shell/route-tab-presentation.tsx';
 import {
     formatCapabilityDisabledReason,
@@ -14,8 +13,7 @@ export function buildNavigationCommandGroup(context: AppCommandBuildContext): Ap
 
             return {
                 disabledReason: gate.healthy ? null : formatCapabilityDisabledReason(gate),
-                icon:
-                    tab.id === 'overview' ? 'tavern' : (getRouteTabIcon(tab.id) ?? Joystick04Icon),
+                icon: getRouteTabIcon(tab.id),
                 id: `navigation.${tab.id}`,
                 keywords: ['go', 'open', tab.id, tab.label],
                 run: () => context.navigate(tab.path),

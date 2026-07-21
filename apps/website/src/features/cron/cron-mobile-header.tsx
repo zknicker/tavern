@@ -42,7 +42,7 @@ export function CronMobileHeader({
                 type="button"
             >
                 <Icon className="size-3.5" icon={Plus} />
-                New Automation
+                New Reminder
             </Button>
         </div>
     );

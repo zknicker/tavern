@@ -2,35 +2,33 @@ import { describe, expect, test } from 'bun:test';
 import { getRouteTab, routeTabs } from './use-route-tab.ts';
 
 describe('app route tab', () => {
-    test('labels the task tab as Tasks', () => {
-        expect(routeTabs.find((tab) => tab.id === 'tasks')?.label).toBe('Tasks');
-    });
-
-    test('labels the automations tab as Automations', () => {
-        expect(routeTabs.find((tab) => tab.id === 'automations')?.label).toBe('Automations');
-    });
-
-    test('exposes Workspace as an app tab', () => {
-        expect(routeTabs.find((tab) => tab.id === 'workspace')).toEqual({
-            id: 'workspace',
-            label: 'Workspace',
-            path: '/workspace',
-        });
+    test('exposes the shell tabs in rail order', () => {
+        expect(routeTabs).toEqual([
+            { id: 'search', label: 'Search', path: '/search' },
+            { id: 'chat', label: 'Chat', path: '/chats' },
+            { id: 'activity', label: 'Activity', path: '/activity' },
+            { id: 'tasks', label: 'Tasks', path: '/tasks' },
+            { id: 'reminders', label: 'Reminders', path: '/reminders' },
+            { id: 'members', label: 'Members', path: '/members' },
+        ]);
     });
 
     test('returns the matching app tab for primary routes', () => {
-        expect(getRouteTab('/overview')).toBe('overview');
+        expect(getRouteTab('/search')).toBe('search');
+        expect(getRouteTab('/chats')).toBe('chat');
+        expect(getRouteTab('/chats/chat_123')).toBe('chat');
+        expect(getRouteTab('/activity')).toBe('activity');
         expect(getRouteTab('/tasks')).toBe('tasks');
-        expect(getRouteTab('/automations')).toBe('automations');
-        expect(getRouteTab('/workspace')).toBe('workspace');
-        expect(getRouteTab('/wiki')).toBe('wiki');
+        expect(getRouteTab('/reminders')).toBe('reminders');
+        expect(getRouteTab('/members/agents/agent_123')).toBe('members');
+        expect(getRouteTab('/automations')).toBe('reminders');
     });
 
     test('keeps dashboard tab detection during redirects', () => {
-        expect(getRouteTab('/dashboard/overview')).toBe('overview');
-        expect(getRouteTab('/dashboard/cron')).toBe('automations');
-        expect(getRouteTab('/dashboard/workspace')).toBe('workspace');
-        expect(getRouteTab('/dashboard/wiki')).toBe('wiki');
+        expect(getRouteTab('/dashboard/activity')).toBe('activity');
+        expect(getRouteTab('/dashboard/chats/chat_123')).toBe('chat');
+        expect(getRouteTab('/dashboard/cron')).toBe('reminders');
+        expect(getRouteTab('/dashboard/automations')).toBe('reminders');
     });
 
     test('returns null when no app tab is active', () => {
@@ -39,5 +37,7 @@ describe('app route tab', () => {
         expect(getRouteTab('/skills')).toBeNull();
         expect(getRouteTab('/settings')).toBeNull();
         expect(getRouteTab('/settings/theme')).toBeNull();
+        expect(getRouteTab('/overview')).toBeNull();
+        expect(getRouteTab('/wiki')).toBeNull();
     });
 });

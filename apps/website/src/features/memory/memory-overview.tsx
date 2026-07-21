@@ -29,7 +29,7 @@ export function MemoryOverview({ status }: { status: WikiHubStatus | null }) {
                     <h1 className="font-semibold text-2xl tracking-tight">Memory</h1>
                     <p className="max-w-2xl text-muted-foreground text-sm leading-6">
                         Durable knowledge lives in Memory. The agent reads and maintains those
-                        Markdown files through regular Automations.
+                        Markdown files through regular Reminders.
                     </p>
                 </header>
 
@@ -62,12 +62,12 @@ export function MemoryOverview({ status }: { status: WikiHubStatus | null }) {
                         trailingWidth="intrinsic"
                     >
                         <Button
-                            render={<NavLink to={appRoutes.automations} />}
+                            render={<NavLink to={appRoutes.reminders} />}
                             size="sm"
                             variant="outline"
                         >
                             <Icon icon={HourglassIcon} />
-                            <span>Open Automations</span>
+                            <span>Open Reminders</span>
                         </Button>
                     </SettingsRow>
                     <Separator />
@@ -121,16 +121,16 @@ export function MemoryOverview({ status }: { status: WikiHubStatus | null }) {
 
                 <MemorySection title="History">
                     <SettingsRow
-                        description="Maintenance runs and source sessions are tracked as Automations until Grotto has a dedicated memory history log."
+                        description="Maintenance runs and source sessions are tracked as Reminders until Grotto has a dedicated memory history log."
                         title="Recent runs"
                         trailingWidth="intrinsic"
                     >
                         <Button
-                            render={<NavLink to={appRoutes.automations} />}
+                            render={<NavLink to={appRoutes.reminders} />}
                             size="sm"
                             variant="ghost"
                         >
-                            <span>View Automations</span>
+                            <span>View Reminders</span>
                             <Icon icon={ArrowRight01Icon} />
                         </Button>
                     </SettingsRow>

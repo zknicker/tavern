@@ -28,7 +28,7 @@ export function OnboardingPage() {
     }
 
     if (connection?.enabled || !['error', 'unconfigured'].includes(runtimeConnection.status)) {
-        return <Navigate replace to={appRoutes.overview} />;
+        return <Navigate replace to={appRoutes.activity} />;
     }
 
     return (
@@ -51,7 +51,7 @@ export function OnboardingPage() {
                             <TavernRuntimeOnboardingForm
                                 connection={connection}
                                 onConnect={() => {
-                                    navigate(appRoutes.overview);
+                                    navigate(appRoutes.activity);
                                 }}
                             />
                         </CardContent>

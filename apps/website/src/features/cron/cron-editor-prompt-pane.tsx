@@ -22,11 +22,11 @@ export function CronEditorPromptPane({ errorMessage, form }: CronEditorPromptPan
                     <form.Field name="name">
                         {(field) => (
                             <Input
-                                aria-label="Automation name"
+                                aria-label="Reminder name"
                                 className="-mx-2 block rounded-md text-foreground transition-colors hover:bg-muted/55 has-focus-visible:bg-muted/55 [&_[data-slot=input]]:h-auto [&_[data-slot=input]]:px-2 [&_[data-slot=input]]:py-1 [&_[data-slot=input]]:font-semibold [&_[data-slot=input]]:text-3xl [&_[data-slot=input]]:leading-tight"
                                 onBlur={field.handleBlur}
                                 onChange={(event) => field.handleChange(event.target.value)}
-                                placeholder="Untitled automation"
+                                placeholder="Untitled reminder"
                                 unstyled
                                 value={field.state.value}
                             />
@@ -35,7 +35,7 @@ export function CronEditorPromptPane({ errorMessage, form }: CronEditorPromptPan
                     <form.Field name="description">
                         {(field) => (
                             <Input
-                                aria-label="Automation description"
+                                aria-label="Reminder description"
                                 className="-mx-2 block rounded-md text-muted-foreground transition-colors hover:bg-muted/55 has-focus-visible:bg-muted/55 has-focus-visible:text-foreground [&_[data-slot=input]]:h-auto [&_[data-slot=input]]:px-2 [&_[data-slot=input]]:py-1 [&_[data-slot=input]]:text-base"
                                 onBlur={field.handleBlur}
                                 onChange={(event) => field.handleChange(event.target.value)}

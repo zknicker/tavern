@@ -49,12 +49,11 @@ describe('Runtime capability gates', () => {
         expect(settingsCapabilityRequirements.plugins).toEqual(['apiServer']);
     });
 
-    test('gates the Workspace app tab on Runtime API access', () => {
-        expect(routeTabCapabilityRequirements.workspace).toEqual(['apiServer']);
-    });
-
-    test('gates the Wiki app tab on Wiki readiness', () => {
-        expect(routeTabCapabilityRequirements.wiki).toEqual(['wiki']);
+    test('keeps local shell tabs reachable without Runtime capabilities', () => {
+        expect(routeTabCapabilityRequirements.search).toEqual([]);
+        expect(routeTabCapabilityRequirements.chat).toEqual([]);
+        expect(routeTabCapabilityRequirements.activity).toEqual([]);
+        expect(routeTabCapabilityRequirements.members).toEqual([]);
     });
 
     test('gates Stats settings on model execution', () => {
@@ -79,8 +78,8 @@ describe('Runtime capability gates', () => {
         expect(settingsCapabilityRequirements.memories).toEqual([]);
     });
 
-    test('gates Automations on agent runtime capabilities', () => {
-        expect(routeTabCapabilityRequirements.automations).toEqual([
+    test('gates Reminders on agent runtime capabilities', () => {
+        expect(routeTabCapabilityRequirements.reminders).toEqual([
             ...agentCapabilityRequirements,
             'cron',
         ]);

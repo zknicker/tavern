@@ -62,7 +62,7 @@ export function getCronEditorErrorMessage(error: unknown) {
         }
     }
 
-    return 'Unable to save automation.';
+    return 'Unable to save reminder.';
 }
 
 export function getCronEditorSubmitErrorMessage(error: unknown) {

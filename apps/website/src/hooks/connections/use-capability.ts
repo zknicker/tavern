@@ -26,7 +26,7 @@ const capabilityLabels = {
     autoDispatch: 'Auto-dispatch',
     claudeAuth: 'Claude sign-in',
     codexOAuth: 'Codex OAuth',
-    cron: 'Automations',
+    cron: 'Reminders',
     dashboardServer: 'Agent engine',
     devToolkit: 'Dev toolkit',
     gateway: 'Agent connection',
@@ -77,13 +77,14 @@ export const agentCapabilityRequirements = [
 ] as const satisfies readonly RuntimeCapabilityId[];
 
 export const routeTabCapabilityRequirements = {
-    // Automations are hidden unless the agent runtime is fully ready because create/run actions execute there.
-    automations: [...agentCapabilityRequirements, 'cron'],
+    activity: [],
+    chat: [],
+    members: [],
+    // Reminders are hidden unless the agent runtime is fully ready because create/run actions execute there.
+    reminders: [...agentCapabilityRequirements, 'cron'],
+    search: [],
     // Tasks only need the runtime API for CRUD; dispatch gates on gateway at the button level.
     tasks: ['apiServer'],
-    overview: [],
-    wiki: ['wiki'],
-    workspace: ['apiServer'],
 } as const satisfies Record<RouteTab, readonly RuntimeCapabilityId[]>;
 
 export const newChatCapabilityRequirements = ['apiServer', 'gateway'] as const;

@@ -1,5 +1,5 @@
 export const appRoutes = {
-    overview: '/overview',
+    search: '/search',
     chats: '/chats',
     chat(chatId: string) {
         return `/chats/${chatId}`;
@@ -10,10 +10,15 @@ export const appRoutes = {
     task(taskId: string) {
         return `/tasks/${encodeURIComponent(taskId)}`;
     },
-    automations: '/automations',
-    newAutomation: '/automations/new',
-    editAutomation(jobId: string) {
-        return `/automations/edit/${encodeURIComponent(jobId)}`;
+    activity: '/activity',
+    reminders: '/reminders',
+    newReminder: '/reminders/new',
+    editReminder(jobId: string) {
+        return `/reminders/edit/${encodeURIComponent(jobId)}`;
+    },
+    members: '/members',
+    memberAgent(agentId: string) {
+        return `/members/agents/${encodeURIComponent(agentId)}`;
     },
     designBrief: '/design/brief',
     workspace: '/workspace',

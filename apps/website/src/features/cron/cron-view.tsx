@@ -85,10 +85,10 @@ export function CronView({
         return (
             <EmptyState
                 actionLabel="Open settings"
-                description="Automations appear after Grotto can talk to Grotto Runtime. Connect or repair Grotto Runtime from settings, then any configured automations will show up here."
-                eyebrow="Automations"
+                description="Reminders appear after Grotto can talk to Grotto Runtime. Connect or repair Grotto Runtime from settings, then any configured reminders will show up here."
+                eyebrow="Reminders"
                 onAction={onNavigateToSettings}
-                title="Automations are waiting on Grotto Runtime."
+                title="Reminders are waiting on Grotto Runtime."
             />
         );
     }
@@ -103,11 +103,11 @@ export function CronView({
     if (cronJobs.length === 0 && !hasRemainingSuggestions) {
         return (
             <EmptyState
-                actionLabel="Create your first automation"
-                description="Create an automation to schedule recurring work for your agent."
-                eyebrow="Automations"
+                actionLabel="Create your first reminder"
+                description="Create a reminder to schedule recurring work for your agent."
+                eyebrow="Reminders"
                 onAction={onCreate}
-                title="No automations configured"
+                title="No reminders configured"
             />
         );
     }
@@ -135,11 +135,11 @@ export function CronView({
                     <ContentTopbar className="no-drag">
                         {isRunsView ? null : (
                             <SearchInput
-                                aria-label="Search automations"
+                                aria-label="Search reminders"
                                 className="w-full sm:max-w-64"
                                 name="automation-search"
                                 onChange={(event) => onQueryChange(event.target.value)}
-                                placeholder="Search automations..."
+                                placeholder="Search reminders..."
                                 size="default"
                                 value={query}
                             />
@@ -152,11 +152,11 @@ export function CronView({
                             variant="secondary"
                         >
                             <Icon aria-hidden="true" className="size-4" icon={Plus} />
-                            New Automation
+                            New Reminder
                         </Button>
                     </ContentTopbar>
                     <nav
-                        aria-label="Automation filters"
+                        aria-label="Reminder filters"
                         className="flex flex-wrap gap-1 px-2 pt-2 md:hidden"
                     >
                         <CronFilterTabs

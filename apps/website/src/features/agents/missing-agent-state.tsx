@@ -9,7 +9,7 @@ export function MissingAgentState({ agentId }: { agentId: string }) {
         <EmptyState
             actionLabel="Back to overview"
             description={`No agent named "${agentId}" was found.`}
-            onAction={() => navigate(appRoutes.overview)}
+            onAction={() => navigate(appRoutes.activity)}
             title="Agent not found"
         />
     );

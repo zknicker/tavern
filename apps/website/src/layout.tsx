@@ -21,14 +21,17 @@ export function Layout() {
     const navigate = useNavigate();
     // Tool sections bring their own left panel, so the full rail collapses
     // to the icon strip there instead of nesting two sidebars.
-    const isToolRoute = [appRoutes.tasks, appRoutes.automations, appRoutes.wiki].some((path) =>
-        location.pathname.startsWith(path)
-    );
+    const isToolRoute = [
+        appRoutes.search,
+        appRoutes.tasks,
+        appRoutes.reminders,
+        appRoutes.members,
+    ].some((path) => location.pathname.startsWith(path));
 
     const isSettingsRoute = location.pathname.startsWith(appRoutes.settings);
     const showMainTopDragFade = shouldShowMainTopDragFade(location.pathname);
     const currentPath = `${location.pathname}${location.search}${location.hash}`;
-    const lastAppPathRef = React.useRef<string>(appRoutes.overview);
+    const lastAppPathRef = React.useRef<string>(appRoutes.activity);
     React.useEffect(() => {
         if (!isSettingsRoute) {
             lastAppPathRef.current = currentPath;

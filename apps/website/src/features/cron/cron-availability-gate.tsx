@@ -9,7 +9,7 @@ import { useLayoutContext } from '../shell/use-layout-context.ts';
 
 export function CronAvailabilityGate({ children }: { children: ReactNode }) {
     const capability = useCapability();
-    const gate = capability(routeTabCapabilityRequirements.automations);
+    const gate = capability(routeTabCapabilityRequirements.reminders);
     const { navigateToSettings } = useLayoutContext();
 
     if (gate.healthy) {
@@ -20,9 +20,9 @@ export function CronAvailabilityGate({ children }: { children: ReactNode }) {
         <EmptyState
             actionLabel="Open Grotto Runtime settings"
             description={runtimeUnhealthyTooltip}
-            eyebrow="Automations"
+            eyebrow="Reminders"
             onAction={navigateToSettings}
-            title="Automations are waiting on Grotto Runtime."
+            title="Reminders are waiting on Grotto Runtime."
         />
     );
 }

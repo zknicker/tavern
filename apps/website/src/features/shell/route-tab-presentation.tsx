@@ -1,55 +1,40 @@
 import type { IconSvgElement } from '@hugeicons/react';
 import {
+    Activity03Icon,
+    BubbleChatIcon,
     CheckListIcon,
-    Database02Icon,
-    Folder01Icon,
-    Joystick04Icon,
+    Notification03Icon,
+    Search01Icon,
+    UserMultiple02Icon,
 } from '@hugeicons-pro/core-stroke-rounded';
-import { TavernLogo } from '../../components/tavern-logo.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import type { RouteTab } from '../../hooks/shell/use-route-tab.ts';
 import { cn } from '../../lib/utils.ts';
 
-const routeTabIconNodeClassName =
-    'size-5 shrink-0 opacity-70 transition-opacity duration-150 group-data-active:opacity-90';
-
 export function RouteTabIcon({ className, tab }: { className?: string; tab: RouteTab }) {
-    const icon = getRouteTabIcon(tab);
-
-    if (icon) {
-        return (
-            <Icon aria-hidden="true" className={cn('shrink-0', className)} icon={icon} size={18} />
-        );
-    }
-
-    return getRouteTabIconNode(tab, cn('shrink-0', className));
+    return (
+        <Icon
+            aria-hidden="true"
+            className={cn('shrink-0', className)}
+            icon={getRouteTabIcon(tab)}
+            size={18}
+        />
+    );
 }
 
-export function getRouteTabIcon(tab: RouteTab): IconSvgElement | undefined {
+export function getRouteTabIcon(tab: RouteTab): IconSvgElement {
     switch (tab) {
         case 'tasks':
             return CheckListIcon;
-        case 'workspace':
-            return Folder01Icon;
-        case 'wiki':
-            return Database02Icon;
-        case 'automations':
-        case 'overview':
-            return undefined;
-    }
-}
-
-export function getRouteTabIconNode(tab: RouteTab, className = routeTabIconNodeClassName) {
-    switch (tab) {
-        case 'automations':
-            return (
-                <Icon aria-hidden="true" className={className} icon={Joystick04Icon} size={20} />
-            );
-        case 'overview':
-            return <TavernLogo aria-hidden="true" className={className} />;
-        case 'tasks':
-        case 'workspace':
-        case 'wiki':
-            return undefined;
+        case 'search':
+            return Search01Icon;
+        case 'chat':
+            return BubbleChatIcon;
+        case 'activity':
+            return Activity03Icon;
+        case 'reminders':
+            return Notification03Icon;
+        case 'members':
+            return UserMultiple02Icon;
     }
 }

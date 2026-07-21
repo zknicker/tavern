@@ -9,10 +9,7 @@ import type { AppCommandBuildContext, AppCommandGroup } from './types.ts';
 
 export function buildCreateCommandGroup(context: AppCommandBuildContext): AppCommandGroup {
     const newTaskGate = context.resolveCapability(routeTabCapabilityRequirements.tasks);
-    const newAutomationGate = context.resolveCapability([
-        ...agentCapabilityRequirements,
-        'cron',
-    ] as const);
+    const newReminderGate = context.resolveCapability([...agentCapabilityRequirements, 'cron']);
 
     return {
         commands: [
@@ -27,14 +24,14 @@ export function buildCreateCommandGroup(context: AppCommandBuildContext): AppCom
                 title: 'New Task',
             },
             {
-                disabledReason: newAutomationGate.healthy
+                disabledReason: newReminderGate.healthy
                     ? null
-                    : formatCapabilityDisabledReason(newAutomationGate),
+                    : formatCapabilityDisabledReason(newReminderGate),
                 icon: ClockAddIcon,
-                id: 'create.automation',
-                keywords: ['automation', 'cron', 'scheduled work', 'job'],
-                run: () => context.navigate(appRoutes.newAutomation),
-                title: 'New Automation',
+                id: 'create.reminder',
+                keywords: ['reminder', 'cron', 'scheduled work', 'job'],
+                run: () => context.navigate(appRoutes.newReminder),
+                title: 'New Reminder',
             },
         ],
         id: 'create',

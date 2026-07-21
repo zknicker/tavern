@@ -57,9 +57,9 @@ test('getCronEditorErrorMessage prefers explicit error messages', () => {
 });
 
 test('getCronEditorErrorMessage falls back to a generic save error', () => {
-    assert.equal(getCronEditorErrorMessage('   '), 'Unable to save automation.');
-    assert.equal(getCronEditorErrorMessage({}), 'Unable to save automation.');
-    assert.equal(getCronEditorErrorMessage(null), 'Unable to save automation.');
+    assert.equal(getCronEditorErrorMessage('   '), 'Unable to save reminder.');
+    assert.equal(getCronEditorErrorMessage({}), 'Unable to save reminder.');
+    assert.equal(getCronEditorErrorMessage(null), 'Unable to save reminder.');
 });
 
 test('getCronEditorSubmitErrorMessage only returns form-level string errors', () => {

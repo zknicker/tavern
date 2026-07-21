@@ -198,11 +198,10 @@ the obvious, shorten it or remove it.
 
 ## Layout
 
-The app is a traditional chat layout with a persistent 48px icon rail: the rail carries the app
-sections (Home, Tasks, Automations, Wiki, with Settings at the bottom) as icon buttons on every
-route. The panel beside the rail belongs to the active section — the Home section's panel lists
-Activity (the overview page), channels, DMs, and Archived; tool sections replace it with their
-own 240px left panel built from the sidebar menu primitives; settings swaps in the settings nav.
+The app is a traditional chat layout with a persistent 48px icon rail: the rail carries Search,
+Chat, Activity, Tasks, Reminders, Members, and Settings as icon buttons on every route. The chat
+sidebar remains beside Chat and Activity; full-width tools collapse it, Members supplies its own
+list panel, and Settings swaps in the settings nav.
 Above the main content sits a dynamic bordered topbar (`ContentTopbar`), `--content-topbar-height`
 (40px) tall to match the artifact panel's chrome row — `--topbar-height` (48px) is only the
 traffic-light headroom above the rail and panels. Chat topbars carry room identity on the left

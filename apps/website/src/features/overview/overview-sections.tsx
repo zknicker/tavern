@@ -146,10 +146,10 @@ export function OverviewActivity({
                             const target = item.entry.chatId
                                 ? buildChatPath(item.entry.chatId)
                                 : item.entry.kind === 'automation_fired'
-                                  ? appRoutes.automations
+                                  ? appRoutes.reminders
                                   : agent
                                     ? buildAgentPath(agent.id)
-                                    : appRoutes.overview;
+                                    : appRoutes.activity;
                             const { clause, showsChat } = describeActivityEntry(item.entry);
 
                             return (
