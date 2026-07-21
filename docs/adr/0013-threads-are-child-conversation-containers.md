@@ -45,9 +45,9 @@ pointers, and per-participant follow records derived from parent membership.
 - Every message-anchored surface (task work threads, reminder receipts, file
   comments) gets one uniform container with ordinary chat mechanics — seq,
   reads, events — for free.
-- Thread display names derive at read time from the parent handle + 8-char
-  anchor short id (`#channel:shortid`, `dm:@name:shortid`), matching the
-  CLI target grammar (D2) so renames propagate by construction.
+- Thread display names derive at read time from the parent handle + anchor
+  reference (`#channel:anchor-ref`, `dm:@name:anchor-ref`): 8-char short ids
+  for canonical messages, exact full ids otherwise. Renames propagate by construction.
 - Existing databases carry dead `parent_message_id`/`thread_root_id`
   columns; the stale `chats.kind` CHECK constraint is rebuilt by the
   startup schema-repair path (the same guarded rebuild that added the

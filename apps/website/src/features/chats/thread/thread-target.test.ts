@@ -22,12 +22,21 @@ test('threadPaneTitles names a channel and shortens canonical anchor ids', () =>
     });
 });
 
-test('threadPaneTitles keeps non-canonical anchor ids in full', () => {
+test('threadPaneTitles keeps non-canonical anchor ids exact and resolvable', () => {
     expect(
         threadPaneTitles({ ...baseChat, conversationKind: 'channel' }, 'msg_demo_anchor')
     ).toEqual({
         header: 'Thread — #general',
-        target: '#general:demo_anchor',
+        target: '#general:msg_demo_anchor',
+    });
+    expect(
+        threadPaneTitles(
+            { ...baseChat, conversationKind: 'channel' },
+            'msg_01234567-89ab-cdef-0123-456789abcdef'
+        )
+    ).toEqual({
+        header: 'Thread — #general',
+        target: '#general:msg_01234567-89ab-cdef-0123-456789abcdef',
     });
 });
 

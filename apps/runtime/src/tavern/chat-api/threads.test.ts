@@ -17,6 +17,7 @@ import {
     listChatsForAgentParticipant,
     markRead,
     membershipChat,
+    resolveMessageId,
     setThreadFollow,
     threadChatIdForAnchor,
     threadSummaries,
@@ -50,9 +51,12 @@ describe('thread chats', () => {
 
         expect(threadChatIdForAnchor('msg_anchor_12345678')).toBe('cht_thr_anchor_12345678');
         expect(anchorShortId('msg_0123456789abcdef0123456789abcdef')).toBe('01234567');
-        // Non-canonical ids (dev seeds) have no short form; the full body
-        // stays so resolution cannot go ambiguous.
-        expect(anchorShortId('msg_anchor_12345678')).toBe('anchor_12345678');
+        // Non-canonical ids (dev seeds and UUID strings) have no short form;
+        // the exact full id stays so resolution cannot go ambiguous.
+        expect(anchorShortId('msg_anchor_12345678')).toBe('msg_anchor_12345678');
+        expect(anchorShortId('msg_01234567-89ab-cdef-0123-456789abcdef')).toBe(
+            'msg_01234567-89ab-cdef-0123-456789abcdef'
+        );
         expect(replay).toEqual(first);
         expect(first).toMatchObject({
             anchor_message_id: 'msg_anchor_12345678',
@@ -77,6 +81,19 @@ describe('thread chats', () => {
             parentChatId: 'cht_parent',
         });
         expect(threadSummaries('cht_parent', 'sys_notice')[1]?.followed).toBe(false);
+    });
+
+    it('emits anchor references accepted by message resolution', () => {
+        seedParent();
+        const canonicalId = 'msg_0123456789abcdef0123456789abcdef';
+        const uuidId = 'msg_01234567-89ab-cdef-0123-456789abcdef';
+        seedMessage('cht_parent', canonicalId, 'usr_tavern');
+        seedMessage('cht_parent', uuidId, 'usr_tavern');
+
+        expect(resolveMessageId(anchorShortId(canonicalId), { chatId: 'cht_parent' })?.id).toBe(
+            canonicalId
+        );
+        expect(resolveMessageId(anchorShortId(uuidId), { chatId: 'cht_parent' })?.id).toBe(uuidId);
     });
 
     it('rejects missing, deleted, foreign, and nested anchors', () => {
@@ -205,6 +222,42 @@ describe('thread chats', () => {
         expect(() =>
             setThreadFollow({ follow: true, participantId: '', threadChatId: thread.id })
         ).toThrow('usr_ or agt_');
+    });
+
+    it('applies follow effects only when a streaming post becomes durable', () => {
+        seedParent();
+        seedMessage('cht_parent', 'msg_anchor', 'usr_tavern');
+        const thread = ensureThreadChat({
+            anchorMessageId: 'msg_anchor',
+            parentChatId: 'cht_parent',
+        });
+        setThreadFollow({ follow: false, participantId: 'agt_one', threadChatId: thread.id });
+
+        createMessage(thread.id, {
+            author_id: 'agt_one',
+            content: 'Draft for [@Two](agent://two).',
+            id: 'msg_streaming_reply',
+            metadata: { runtime: { streaming: true } },
+            role: 'assistant',
+        });
+
+        expect(threadSummaries('cht_parent', 'agt_one')[0]?.followed).toBe(false);
+        expect(threadSummaries('cht_parent', 'agt_two')[0]?.followed).toBe(false);
+
+        createDelivery(thread.id, {
+            agent_id: 'agt_one',
+            id: 'del_streaming_reply',
+            message: {
+                author_id: 'agt_one',
+                content: 'Final for [@Reader](user://usr_reader).',
+                id: 'msg_streaming_reply',
+                role: 'assistant',
+            },
+        });
+
+        expect(threadSummaries('cht_parent', 'agt_one')[0]?.followed).toBe(true);
+        expect(threadSummaries('cht_parent', 'agt_two')[0]?.followed).toBe(false);
+        expect(threadSummaries('cht_parent', 'usr_reader')[0]?.followed).toBe(true);
     });
 
     it('rejects writes into a thread whose conversation was cleared', () => {

@@ -11,14 +11,15 @@ sub-conversation anchored on one top-level message. Replying IS threading; inlin
   `parent_chat_id`. Never a column on messages.
 - Thread chat id is deterministic: `cht_thr_<anchor message id without the msg_ prefix>`. One
   thread per anchor by construction; creation is idempotent.
-- The **anchor short id** is the first 8 characters of the anchor message id (sans `msg_`).
-  Target grammar (D2, shared with the WS1 CLI): `#channel:<shortid>` and `dm:@name:<shortid>`.
+- Canonical `msg_<32 hex>` anchors use their first 8 hex characters. Existing non-canonical
+  anchors use their exact full id so the target stays resolvable. Target grammar (D2, shared with
+  the WS1 CLI): `#channel:<anchor-ref>` and `dm:@name:<anchor-ref>`.
 - First reply auto-creates the thread. No nesting: a thread chat cannot anchor another thread
   (anchors must live in a `channel`, `dm`, or `task` chat). Thread messages cannot become tasks.
 - Threads have **no membership of their own**. Access derives from the parent chat's
   participants; thread-chat participant rows are incidental author upserts, never authoritative.
-- Display names are derived at read time from the parent (channel name / DM peer) + anchor short
-  id. Never stored — renames propagate by construction.
+- Display names are derived at read time from the parent (channel name / DM peer) + anchor
+  reference. Never stored — renames propagate by construction.
 
 ## Follows
 

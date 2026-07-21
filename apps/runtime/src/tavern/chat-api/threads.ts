@@ -17,10 +17,10 @@ export function threadChatIdForAnchor(anchorMessageId: string) {
 
 /**
  * The wire contract's short-id rule: canonical msg_<32 hex> ids shorten to
- * hex8; non-canonical ids keep their full body so resolution stays exact.
+ * hex8; non-canonical ids keep their full value so resolution stays exact.
  */
 export function anchorShortId(anchorMessageId: string) {
-    return messageShortId(anchorMessageId) ?? stripMessagePrefix(anchorMessageId);
+    return messageShortId(anchorMessageId) ?? anchorMessageId;
 }
 
 export function ensureThreadChat(

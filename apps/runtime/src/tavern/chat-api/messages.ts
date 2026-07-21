@@ -29,8 +29,12 @@ export function createMessage(
     try {
         assertThreadWritable(chatId, input.author_id, db);
         const message = insertMessage(chatId, input, input.author_id, null, db);
-        autoFollowOnPost({ authorId: input.author_id, chatId }, db);
-        autoFollowMentions({ chatId, content: input.content }, db);
+        // A provisional harness post can still disappear or change mentions.
+        // Delivery applies follow effects once its final content is durable.
+        if (!isTransientStreamingPost(message)) {
+            autoFollowOnPost({ authorId: input.author_id, chatId }, db);
+            autoFollowMentions({ chatId, content: input.content }, db);
+        }
         const event = insertEvent({ chatId, event: 'message.created', payload: { message } }, db);
         db.exec('COMMIT');
         publish(event);

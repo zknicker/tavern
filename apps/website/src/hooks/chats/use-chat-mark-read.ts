@@ -46,5 +46,10 @@ function useMarkChatRead() {
                 };
             });
         },
+        // Parent unread includes followed child threads. A parent receipt can
+        // clear only the parent portion, so restore the authoritative rollup.
+        onSettled: () => {
+            void utils.chat.list.invalidate();
+        },
     });
 }
