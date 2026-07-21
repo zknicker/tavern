@@ -329,6 +329,11 @@ GET  /api/agent/inbox              (inbox check — WS4)
   planning for **agent** recipients arrives with the inbox workstream, which
   lands in the same flip window as the prompt that teaches this CLI. Until
   then the in-process tool path remains the agent-dispatch trigger.
+- `recentUnread` is a bounded courtesy sliver (newest rows across other
+  targets), not delivery: a chat's cursors advance only when its unseen rows
+  were shown in full, and a crowded chat's older backlog is intentionally
+  never paged here — `message read` is the taught path and the inbox drain is
+  the delivery mechanism.
 - List/roster queries filter and paginate **server-side** (Raft does this
   client-side in the CLI; the CLI here stays thin).
 - 4xx bodies carry `{ code, message, nextAction? }` which the CLI renders
