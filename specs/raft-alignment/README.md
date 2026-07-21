@@ -259,9 +259,12 @@ line); `## Capabilities`; `## Message Notifications`; `## Initial role`.
 
 ### Grotto sections added on top
 
-SOUL / personality; Outputs & Visuals & Widgets (fences ride send bodies; `grotto://` links;
-declarative artifacts); a short Skills paragraph (`grotto skill …`); per-plugin CLI mentions;
-model-family operational sections (unchanged mechanism); web-access lines.
+SOUL / personality; Outputs & Visuals (the landed rev3 skill pointer — `visual`/`artifact`
+fences ride send bodies, taught by the seeded visuals skill; the widget catalog and `document`
+fence died pre-flip with main a20acd0c); a short Skills paragraph (`grotto skill …`); per-plugin
+CLI mentions; **Security** (3 bullets — omitted from the original disposition tables in error,
+retained by WS2-prep ruling); model-family operational sections (unchanged mechanism);
+web-access lines.
 
 ### What dies
 
@@ -404,6 +407,12 @@ floating turns) after which the old reply/tool path is gone. Three phases:
 
 Specs are written just-in-time per workstream, except the WS1 wire-contract spec and the WS2
 contract-test REQUIREMENTS plan, which are shared interfaces and get drafted first.
+
+**Flip gap (ruled 2026-07-21):** CLI families 5–9 — including reminders — stay prompt-gated
+until WS5, while the flip's WS7 half deletes the cron product. The window between flip and WS5
+therefore has NO agent scheduling primitive, and the automations→reminders cutover conversion
+happens at WS5, not at the flip. Accepted deliberately: the entire program lands before
+deployment, so intermediate brokenness is not a constraint.
 
 - **WS1 — Agent-facing `grotto` CLI v1.** Wrapper injection, agent-scoped tokens, message
   family + `server info` + draft/attested-send semantics, output/error contract. Wire contract
