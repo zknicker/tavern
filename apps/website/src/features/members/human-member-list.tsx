@@ -1,5 +1,7 @@
 import type { RuntimeUser } from '@tavern/api';
+import { NavLink } from 'react-router-dom';
 import { Avatar, AvatarFallback, AvatarImage } from '../../components/ui/avatar.tsx';
+import { appRoutes } from '../../lib/app-routes.ts';
 import { isClerkEnabled } from '../../lib/clerk.tsx';
 import { trpc } from '../../lib/trpc.tsx';
 
@@ -21,10 +23,22 @@ function SignedInHumanMemberList() {
 function MemberSection({ count, users }: { count: number; users: RuntimeUser[] }) {
     return (
         <section className="mt-6">
-            <h2 className="mb-2 flex items-center gap-2 px-3 font-mono text-sidebar-muted text-xs uppercase tracking-wider">
-                <span>Humans</span>
-                <span className="tabular-nums">{count}</span>
-            </h2>
+            <div className="mb-2 flex items-center justify-between px-3">
+                <h2 className="flex items-center gap-2 font-mono text-sidebar-muted text-xs uppercase tracking-wider">
+                    <span>Humans</span>
+                    <span className="tabular-nums">{count}</span>
+                </h2>
+                <NavLink
+                    className={({ isActive }) =>
+                        isActive
+                            ? 'font-medium text-foreground text-xs'
+                            : 'text-sidebar-muted text-xs hover:text-foreground'
+                    }
+                    to={appRoutes.membersHumans}
+                >
+                    Manage
+                </NavLink>
+            </div>
             <div className="space-y-1">
                 {users.map((user) => {
                     const name = getUserDisplayName(user);

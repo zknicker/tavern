@@ -166,12 +166,18 @@ export function ChatMessageComposer({
     useChatComposerInsertRequest(canAutoFocusComposer && !threadTarget, handleComposerInsert);
     const handleComposerMention = React.useCallback(
         ({ agentId: mentionedAgentId }: { agentId: string }) => {
+            // Historical turns keep their author clickable after the agent
+            // leaves the chat; the server rejects mentions of unbound agents,
+            // so the request is dropped here instead.
+            if (!boundAgentIds.includes(mentionedAgentId)) {
+                return;
+            }
             mentionComposer.handleMentionSelect(
                 buildAgentMentionOption({ agentId: mentionedAgentId, agents })
             );
             requestChatComposerFocus();
         },
-        [agents, mentionComposer.handleMentionSelect]
+        [agents, boundAgentIds, mentionComposer.handleMentionSelect]
     );
     useChatComposerMentionRequest(
         canAutoFocusComposer && !threadTarget,

@@ -209,6 +209,13 @@ export function createAppRouter() {
                                             ),
                                         },
                                         {
+                                            path: 'members/humans',
+                                            lazy: lazyRoute(
+                                                () => import('./routes/app/members-page.tsx'),
+                                                'MembersPage'
+                                            ),
+                                        },
+                                        {
                                             path: 'members/agents/:agentId',
                                             lazy: lazyRoute(
                                                 () => import('./routes/app/members-page.tsx'),
@@ -272,7 +279,10 @@ export function createAppRouter() {
                                                 {
                                                     path: 'members',
                                                     element: (
-                                                        <Navigate replace to={appRoutes.members} />
+                                                        <Navigate
+                                                            replace
+                                                            to={appRoutes.membersHumans}
+                                                        />
                                                     ),
                                                 },
                                                 {

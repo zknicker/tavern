@@ -1,5 +1,5 @@
 import { Plus } from '@hugeicons/core-free-icons';
-import { NavLink, useNavigate, useParams } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { Icon } from '../../components/ui/icon.tsx';
 import { useAgentList } from '../../hooks/agents/use-agent-list.ts';
 import { appRoutes } from '../../lib/app-routes.ts';
@@ -10,9 +10,11 @@ import { AgentProfile } from './agent-profile/agent-profile.tsx';
 import { createNewAgentName } from './create-agent-name.ts';
 import { HumanMemberList } from './human-member-list.tsx';
 import { MemberAgentLabel } from './member-agent-label.tsx';
+import { MembersAdmin } from './members-admin.tsx';
 
 export function MembersPage() {
     const { agentId } = useParams();
+    const isHumansAdmin = useLocation().pathname.endsWith('/humans');
     const navigate = useNavigate();
     const utils = trpc.useUtils();
     const agentsQuery = useAgentList();
@@ -78,7 +80,11 @@ export function MembersPage() {
                 </div>
             </aside>
             <section className="flex min-w-0 flex-1">
-                {agentId ? (
+                {isHumansAdmin ? (
+                    <div className="min-w-0 flex-1 overflow-y-auto">
+                        <MembersAdmin />
+                    </div>
+                ) : agentId ? (
                     selectedAgent ? (
                         <AgentProfile
                             agentId={selectedAgent.id}
