@@ -13,8 +13,12 @@ export function useMarkChatReadOnView(chatId: string, options: { enabled?: boole
     const markRead = useMarkChatRead();
     const mutate = markRead.mutate;
     const lastMarkedRef = React.useRef<string | null>(null);
-    const viewKey =
-        enabled && timeline.historyLoaded ? `${chatId}:${timeline.totalMessages}` : null;
+    const viewKey = buildChatReadViewKey({
+        chatId,
+        enabled,
+        historyLoaded: timeline.historyLoaded,
+        totalMessages: timeline.totalMessages,
+    });
 
     React.useEffect(() => {
         if (!viewKey || lastMarkedRef.current === viewKey) {
@@ -23,6 +27,15 @@ export function useMarkChatReadOnView(chatId: string, options: { enabled?: boole
         lastMarkedRef.current = viewKey;
         mutate({ chatId });
     }, [chatId, mutate, viewKey]);
+}
+
+export function buildChatReadViewKey(input: {
+    chatId: string;
+    enabled: boolean;
+    historyLoaded: boolean;
+    totalMessages: number;
+}) {
+    return input.enabled && input.historyLoaded ? `${input.chatId}:${input.totalMessages}` : null;
 }
 
 function useMarkChatRead() {

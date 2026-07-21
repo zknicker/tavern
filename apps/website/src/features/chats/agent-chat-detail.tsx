@@ -85,6 +85,8 @@ export function isBlockingActiveTurn(input: {
 
 function SyncedAgentChatDetail({ chat, chatId }: { chat: ChatListItem; chatId: string }) {
     const [viewTab, setViewTab] = React.useState<ChatViewTab>('chat');
+    const hasViewTabs = supportsChatViewTabs(chat);
+    const activeViewTab = hasViewTabs ? viewTab : 'chat';
     const agentsQuery = useAgentList();
     const modelsQuery = useModelList();
     const activeSidePane = useChatSidePane(chatId);
@@ -129,9 +131,6 @@ function SyncedAgentChatDetail({ chat, chatId }: { chat: ChatListItem; chatId: s
         activeTurns: timeline.activeTurns,
         agentsPending: agentsQuery.isPending,
     });
-    const hasViewTabs = supportsChatViewTabs(chat);
-    const activeViewTab = hasViewTabs ? viewTab : 'chat';
-
     if (!(agent || agentsQuery.isPending)) {
         return <MissingAgentState agentId={agentId} />;
     }
