@@ -1,16 +1,17 @@
 ---
-summary: How to add or update an agent character avatar (AgentFace) — the two files to touch, the 480x480 frame contract, and current character registry.
+summary: How to add or update an agent character avatar (AgentFace) — the two files to touch, the shared 1000x1000 core-fit frame, per-head eyes, and current character registry.
 read_when:
   - adding a new agent character/avatar or updating an existing one's face art
   - changing AgentFace, head art, eye placement, or the agentCharacters contract
-  - authoring 480x480 head SVGs for agents
+  - authoring 1000x1000 head SVGs for agents
 ---
 
 # Agent Avatars
 
 Agents render as a **character face** via `AgentFace`. Adding or changing a
-character is a two-file change. The animated eyes render inside a 480x480 face
-frame and can be clipped or warped with the head art.
+character is a two-file change. Head art is authored on a shared 1000x1000
+canvas; the engine's animated eyes drop into per-head positions and can be
+clipped or occluded by the head art.
 
 ## The two files
 
@@ -23,43 +24,58 @@ frame and can be clipped or warped with the head art.
 
 ## Frame contract
 
-- All art is authored in a **480x480** box. Eyes render at `EYE_FRAME`
-  (`{ dx: -1.5, dy: 39.5, s: 0.7066 }`). `<AgentFace guide />` overlays the frame
-  and resting eyes to check alignment while authoring.
-- Current heads use `buildWarpLayers(...)` with path layers flattened once at
-  module load, then warped each frame with the animated eyes. Use `front` layers
-  for art that should occlude wandering eyes, such as beaks or mouths. Use
-  `clip` to keep eyes inside a face window.
-- `thirdEye: { dx, dy }` adds a live center eye at an eye-canvas offset from
-  `(240, 240)`. Its pose is the L/R average, so it blinks and follows gaze with
-  the pair (the alien's forehead eye).
-- `eyeScale: { w, h }` restyles a head's eyes by scaling every emotion pose's
-  width/height (radii saturate, so a squarer aspect reads rounder). The alien
-  uses `{ w: 0.9, h: 0.56 }` — wide round eyes that leave its round white
-  sockets showing all around, instead of the standard tall capsule.
-- `slot: { dx, dy, s }` overrides `EYE_FRAME` for heads whose drawn eye
-  placement can't meet the standard spacing without the art overflowing the
-  480 box. Fit the art to the box first, then compute the slot from the drawn
-  eye centers (`s` = drawn spacing / 242, `dx`/`dy` = drawn midpoint − 240)
-  and an `eyeScale` that restores the drawn eye size. The robot and blob use
-  this; the knight uses a slot to sink standard-size eyes into its face window
-  so the plate's lower edge occludes the eye bottoms at rest. Heads whose
-  proportions match the standard should stay on `EYE_FRAME`.
-- `AgentFace` still accepts `ink` for currentColor-backed marks, but current
-  warp-layer characters mostly use authored fill colors.
+- Head art is a **1000x1000** Fable export. Every export shares the same inner
+  **core box** (the hidden 605x605 guide the artist keeps in-frame), so heads
+  line up regardless of their outer silhouette. `FIT` maps that core box onto
+  the internal **480** frame once, for every head, via `buildWarpLayers(FIT,
+  …)` — so heads come out consistently sized without per-head fit math.
+- The rendered footprint is the core box (the 480 frame); parts that reach past
+  it — the knight plume, robot ears, star points — **overflow** the frame and
+  paint outside it (`overflow: visible`), so tall/wide pieces read
+  asymmetrically without enlarging the layout box. Containers must not clip.
+- Art layers carry their own transform: `buildWarpLayers(FIT, [{ d, tf, fill }])`
+  composes `FIT ∘ tf` per layer. Use `front` layers for art that should occlude
+  the eyes (beaks, mouths, the knight's face plate); `clip` keeps eyes inside a
+  face window (robot screen, alien sockets).
+- **Eyes are per-head, not on a single standard spot.** Each head carries a
+  `slot: { dx, dy, s }` (spacing + offset) and `eyeScale: { w, h }` that
+  reproduce that head's artist-drawn eyes. Author by reading the drawn eye
+  centers/size (in the 480 frame after `FIT`): `s` = eye spacing / 242,
+  `dx`/`dy` = eye midpoint − 240, `eyeScale` = drawn eye size / (base × `s`)
+  where base is `89.148 × 153.526`. `EYE_FRAME` remains only as the fallback
+  slot for the eyes-only `none` head.
+- **Two eye variants.** The default is the tall capsule (owl, robot, bird,
+  blob, knight). The **circular** variant (alien) is the same engine eye made
+  round via `eyeScale` (near-square w/h so the corners saturate to a circle)
+  and clipped to round white sockets — socket = art, iris = engine eye,
+  glint = engine highlight, giving the concentric look.
+- Occlusion is geometry, not a flag: place the eye so its edge crosses a front
+  layer. The knight's drawn eyes sit low enough in the visor slot that their
+  bottoms extend past the face plate's window edge, so the plate occludes ~15%
+  at rest (eyes "behind the lower visor").
+- `thirdEye: { dx, dy }` adds a live center eye (eye-canvas offset from the
+  pair). Its pose is the L/R average, so it blinks and tracks gaze with them
+  (the alien's forehead eye).
+- `AgentFace` still accepts `ink` for currentColor marks, but current
+  characters use authored fill colors and render the same in light/dark.
 
 ## Add a character
 
-1. In `agent-face.tsx`, add the SVG path constants for the head. Drop any
-   reference-eye paths because animated eyes render from `EYE_FRAME`.
-2. Register in `HEADS`:
+1. Export the head at **1000x1000** keeping the shared core guide in-frame, with
+   reference eyes drawn where they should sit. Keep the head silhouette + any
+   occluders; the drawn eye/socket subpaths are only references.
+2. In `agent-face.tsx`, register the art via `buildWarpLayers(FIT, [{ d, tf,
+   fill }])` (per-layer `tf` from the export), then read the drawn eye
+   centers/size to compute `slot` + `eyeScale`. Register in `HEADS`:
    ```tsx
    xyz: (_dark: boolean) => ({
      back: [],
      front: [],
      warp: XYZ_WARP,
-     eyeColor: "#070708",
+     eyeColor: "#000000",
+     eyeScale: { w: 1.2, h: 1.2 },
      hlColor: "#fcfcfd",
+     slot: { dx: 0, dy: 20, s: 0.86 },
    }),
    ```
 3. In `agent-appearance.ts`, add the id to `agentCharacters` and a label to
