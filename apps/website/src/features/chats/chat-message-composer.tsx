@@ -179,7 +179,7 @@ export function ChatMessageComposer({
         },
         [agents, boundAgentIds, mentionComposer.handleMentionSelect]
     );
-    useChatComposerMentionRequest(canAutoFocusComposer && !threadTarget, handleComposerMention);
+    useChatComposerMentionRequest(canAutoFocusComposer ? draftKey : null, handleComposerMention);
 
     async function handleSubmit(event?: React.FormEvent<HTMLFormElement>) {
         event?.preventDefault();

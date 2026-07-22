@@ -297,23 +297,27 @@ const turnHeaderBioMaxChars = 165;
 function TurnHeader({
     actions,
     bio,
+    composerId,
     displayName,
     mentionAgentId,
     timestamp,
 }: {
     actions?: React.ReactNode;
     bio?: string | null;
+    composerId?: string;
     displayName: string;
     mentionAgentId?: string;
     timestamp: string | null;
 }) {
     return (
         <MessageHeader className="gap-2 px-0">
-            {mentionAgentId ? (
+            {mentionAgentId && composerId ? (
                 <button
                     aria-label={`Mention ${displayName}`}
                     className="shrink-0 cursor-pointer truncate font-semibold text-foreground text-sm leading-5 hover:underline"
-                    onClick={() => requestChatComposerMention({ agentId: mentionAgentId })}
+                    onClick={() =>
+                        requestChatComposerMention({ agentId: mentionAgentId, composerId })
+                    }
                     type="button"
                 >
                     {displayName}
@@ -409,7 +413,8 @@ function AgentTurn({
     const showIdentity = layout.showAgentIdentity;
     const lastMessage = getLastMessage(items);
     const turnCompletedAt = lastMessage?.timestamp ?? null;
-    const { canRequestMention, repliedRunIds } = useTranscriptRenderContext();
+    const { canRequestMention, composerId, profilePaneChatId, repliedRunIds } =
+        useTranscriptRenderContext();
     const segments = groupAgentItems(items);
     const visibleSegments = filterPaneSegments(segments, repliedRunIds);
     const turnStopped =
@@ -468,7 +473,11 @@ function AgentTurn({
                     agentId={actorId}
                     agentName={displayName}
                     chatId={chatId}
-                    onOpenProfile={() => openAgentProfilePane(chatId, actorId)}
+                    onOpenProfile={
+                        profilePaneChatId
+                            ? () => openAgentProfilePane(profilePaneChatId, actorId)
+                            : undefined
+                    }
                     // self-start keeps the trigger button from stretching to
                     // the row height and re-centering the avatar it wraps.
                     triggerClassName="shrink-0 cursor-pointer self-start rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring/50"
@@ -493,11 +502,12 @@ function AgentTurn({
                     <TurnHeader
                         actions={headerActions}
                         bio={actorProfile?.bio}
+                        composerId={composerId}
                         displayName={displayName}
                         mentionAgentId={resolveMentionAgentId(
                             actorId,
                             actorProfile?.kind,
-                            canRequestMention
+                            canRequestMention && Boolean(composerId)
                         )}
                         timestamp={entry.timestamp}
                     />

@@ -182,6 +182,7 @@ function SyncedThreadBody({
                 <ChatTranscript
                     activeReplies={timeline.activeReplies}
                     chatId={threadChatId}
+                    composerId={`${chat.id}:thread:${anchorMessageId}`}
                     conversationLayout={getChatMessageLayout(chat)}
                     failedTurns={timeline.failedTurns}
                     leadingContent={
@@ -192,6 +193,7 @@ function SyncedThreadBody({
                         hasMore: timeline.hasOlderHistory,
                         isFetching: timeline.isFetchingOlderHistory,
                     }}
+                    profilePaneChatId={chat.id}
                     rows={timeline.rows}
                     threadActionsEnabled={false}
                     viewportClassName="px-4 pb-6"

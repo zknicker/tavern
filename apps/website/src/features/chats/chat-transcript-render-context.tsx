@@ -17,6 +17,7 @@ export interface TranscriptRenderContextValue {
     activeThreadAnchorId: string | null;
     canRequestMention: boolean;
     chatId?: string;
+    composerId?: string;
     conversationLayout: ConversationMessageLayout;
     currentSessionKey?: string | null;
     defaultOpenWorkGroups: boolean;
@@ -24,6 +25,7 @@ export interface TranscriptRenderContextValue {
     hiddenCount: number;
     onOpenThread: (row: TranscriptMessageRow) => void;
     onUnfollowThread: (threadChatId: string) => void;
+    profilePaneChatId?: string;
     /** Runs whose final reply is present anywhere in the transcript. */
     repliedRunIds: ReadonlySet<string>;
     /**
@@ -33,6 +35,17 @@ export interface TranscriptRenderContextValue {
      */
     shouldAnimateItemEnter: (key: string, timestampMs: number | null) => boolean;
     threadActionsEnabled: boolean;
+}
+
+export function resolveTranscriptInteractionHosts(input: {
+    chatId?: string;
+    composerId?: string;
+    profilePaneChatId?: string;
+}) {
+    return {
+        composerId: input.composerId ?? input.chatId,
+        profilePaneChatId: input.profilePaneChatId ?? input.chatId,
+    };
 }
 
 const TranscriptRenderContext = React.createContext<TranscriptRenderContextValue | null>(null);
