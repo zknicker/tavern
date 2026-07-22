@@ -6,9 +6,9 @@ function agent(name: string) {
 }
 
 test('uses the base name when free', () => {
-    expect(createNewAgentName([agent('Scout')])).toBe('New agent');
+    expect(createNewAgentName([agent('Scout')])).toBe('new-agent');
 });
 
 test('suffixes past existing new agents, case-insensitively', () => {
-    expect(createNewAgentName([agent('new agent'), agent('New Agent 2')])).toBe('New agent 3');
+    expect(createNewAgentName([agent('new-agent'), agent('NEW-AGENT-2')])).toBe('new-agent-3');
 });

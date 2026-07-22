@@ -22,6 +22,16 @@ export function selectMostRecentAgentChat(
     );
 }
 
+// The session is agent-global, so any associated chat can address it. Unlike
+// profile chat links, this includes archived Tavern and external runtime chats.
+export function selectMostRecentAgentSessionChat(chats: AgentChats | null | undefined) {
+    return (
+        [...buildChatList(chats)].sort(
+            (left, right) => chatTimestamp(right) - chatTimestamp(left)
+        )[0] ?? null
+    );
+}
+
 function chatTimestamp(chat: AgentChat) {
     return Date.parse(chat.lastActivityAt ?? chat.createdAt ?? '') || 0;
 }

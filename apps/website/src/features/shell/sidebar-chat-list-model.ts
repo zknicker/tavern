@@ -1,5 +1,7 @@
+import { matchPath } from 'react-router-dom';
 import { resolveTavernChatName } from '../../components/chats/chat-display.ts';
 import type { ChatTimelineState } from '../../hooks/chats/chat-timeline-state.ts';
+import { appRoutes } from '../../lib/app-routes.ts';
 import type { ChatListItem } from '../chats/chat-list-data.ts';
 
 export function formatSidebarActivityLabel(label: string) {
@@ -34,6 +36,16 @@ export function selectMostRecentChatRailConversation(chats: ChatListItem[]) {
 
 export function resolveNavigableActivityChatId(chatId: null | string, chats: ChatListItem[]) {
     return chatId && chats.some((chat) => chat.id === chatId) ? chatId : null;
+}
+
+export function resolveCurrentChatId(pathname: string) {
+    if (pathname === appRoutes.archivedChats) {
+        return null;
+    }
+
+    return (
+        matchPath({ end: true, path: appRoutes.chat(':chatId') }, pathname)?.params.chatId ?? null
+    );
 }
 
 export function isSidebarTavernChat(

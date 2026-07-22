@@ -132,10 +132,10 @@ happen, and keep the durable timeline as context.
   activity row, so the turn drawer still shows the agent saw the message.
   Channel agents are taught this; the token is honored in every chat kind.
 * **Agent profile pane.** Clicking an agent's transcript avatar opens the
-  full six-tab Agent profile in the resizable right pane. The Artifact and
-  Agent profile panes are mutually exclusive per chat; the latest opener
-  wins without clearing either pane's state. Clicking the transcript name
-  inserts an Agent mention, while the DM topbar name remains inert. Session
+  full six-tab Agent profile in the resizable right pane. Artifact, Agent
+  profile, and thread panes share one visible slot and width per chat; the
+  latest opener wins without clearing another pane's state. Clicking the
+  transcript name inserts an Agent mention, while the DM topbar name remains inert. Session
   resets stay agent-wide in Agent settings (specs/sessions.md); their durable
   new-session notice attaches to the agent's next turn as a header-action
   hover affordance instead of rendering standalone.

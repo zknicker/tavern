@@ -1,8 +1,11 @@
 import { chatListSchema } from '../chat/contracts.ts';
 import { listChatDetails } from '../chat/list.ts';
 
-export async function listAgentChats(input: { agentId: string }) {
-    const chats = await listChatDetails({ includeExternal: true });
+export async function listAgentChats(input: { agentId: string; includeArchived?: boolean }) {
+    const chats = await listChatDetails({
+        archivedFilter: input.includeArchived ? 'all' : 'active',
+        includeExternal: true,
+    });
     const agentChats = chats.filter((chat) => chat.boundAgentIds.includes(input.agentId));
     const itemsById = Object.fromEntries(
         agentChats.map((chat) => [

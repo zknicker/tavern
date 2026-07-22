@@ -10,7 +10,7 @@ import { useAgentSession } from '../../../hooks/agents/use-agent-session.ts';
 import { useModelList } from '../../../hooks/models/use-model-list.ts';
 import { withSaveErrorToast, withSavingToast } from '../../../lib/saving-toast.ts';
 import { type AgentListOutput, trpc } from '../../../lib/trpc.tsx';
-import { selectMostRecentAgentChat } from './agent-chat-selection.ts';
+import { selectMostRecentAgentSessionChat } from './agent-chat-selection.ts';
 import { AgentPastSessions, AgentSessionFacts } from './agent-session-facts.tsx';
 import { AgentDangerSection } from './danger-section.tsx';
 import { AgentEnvSection } from './env-section.tsx';
@@ -32,8 +32,8 @@ export function AgentProfileTab({
     variant: 'page' | 'pane';
 }) {
     const modelsQuery = useModelList();
-    const chatsQuery = useAgentChatList({ agentId: agent.id });
-    const sessionChat = selectMostRecentAgentChat(chatsQuery.data);
+    const chatsQuery = useAgentChatList({ agentId: agent.id, includeArchived: true });
+    const sessionChat = selectMostRecentAgentSessionChat(chatsQuery.data);
     const sessionQuery = useAgentSession({
         agentId: agent.id,
         chatId: sessionChat?.id ?? '',

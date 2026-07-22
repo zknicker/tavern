@@ -20,10 +20,9 @@ pages; there is no other per-agent surface.
   left, profile detail at `/members/agents/:agentId`. This is the profile's
   full-page home.
 - **Chat right pane**: clicking an agent's avatar in a chat transcript opens
-  the same component in the resizable right pane. The artifact panel and the
-  profile pane share one-visible-pane arbitration per chat — the most recent
-  opener wins and both stay reopenable (the same contract the thread pane
-  adopts when it lands).
+  the same component in the resizable right pane. Artifact, profile, and
+  thread panes share one-visible-pane arbitration and one width per chat —
+  the most recent opener wins and every pane stays reopenable.
 - Clicking an agent's **name** in a transcript header inserts an @mention
   into the composer instead; the DM topbar name is inert. Human
   participants have no profile pane.

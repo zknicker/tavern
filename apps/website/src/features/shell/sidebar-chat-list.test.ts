@@ -8,6 +8,7 @@ import {
     getSidebarChatTitle,
     hasLocalActiveTurn,
     isSidebarTavernChat,
+    resolveCurrentChatId,
     resolveNavigableActivityChatId,
     selectMostRecentChatRailConversation,
 } from './sidebar-chat-list-model.ts';
@@ -130,6 +131,12 @@ describe('sidebar chat list', () => {
         expect(resolveNavigableActivityChatId('chat-1', [chat])).toBe('chat-1');
         expect(resolveNavigableActivityChatId('external-chat', [chat])).toBeNull();
         expect(resolveNavigableActivityChatId(null, [chat])).toBeNull();
+    });
+
+    test('resolves the current chat from the leaf URL outside its route context', () => {
+        expect(resolveCurrentChatId('/chats/chat-1')).toBe('chat-1');
+        expect(resolveCurrentChatId('/chats/archived')).toBeNull();
+        expect(resolveCurrentChatId('/activity')).toBeNull();
     });
 
     test('shortens sidebar activity labels', () => {
