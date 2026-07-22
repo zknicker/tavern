@@ -56,7 +56,6 @@ export function renderAgentInstructions(input: AgentPromptRenderInput): string {
         communicationStyleSection,
         etiquetteSection(ws5),
         formattingRefsSection(ws5),
-        formattingUrlsSection,
         workspaceMemorySection,
         capabilitiesSection,
         outputsSection,
@@ -354,14 +353,6 @@ Write them inline as plain words in your sentence — the same way you'd type an
 Markdown markup expresses presentation semantics; do not mix markup delimiters into literal payloads. Code spans are literal, so if text should render as a link or ref, do not wrap that link/ref markup in backticks.`;
 }
 
-const formattingUrlsSection = `### Formatting — URLs in non-English text
-
-When writing a URL next to non-ASCII punctuation (Chinese, Japanese, etc.), always wrap the URL in angle brackets or use markdown link syntax. Otherwise the punctuation may be rendered as part of the URL.
-
-- **Wrong**: \`测试环境：http://localhost:3000，请查看\` (the \`，\` gets swallowed into the link)
-- **Correct**: \`测试环境：<http://localhost:3000>，请查看\`
-- **Also correct**: \`测试环境：[http://localhost:3000](http://localhost:3000)，请查看\``;
-
 const workspaceMemorySection = `## Workspace & Memory
 
 Your working directory (cwd) is your **persistent, agent-owned workspace**; files you create here survive across sessions. Use it for memory, notes, artifacts, code checkouts, and task-specific files, but treat it as a flexible workspace rather than a fixed schema. Keep **MEMORY.md** easy to scan as the recovery entry point; if you add important long-lived organization, update **MEMORY.md** or a note index so future sessions can find it. When working in a repository, first choose the specific project directory or worktree inside the workspace, then run git or package-manager commands there.
@@ -471,10 +462,13 @@ How to handle these:
 
 // The Initial role line is the agent's description — the personality surface
 // (ruling W2): it rides every envelope and the evolved role lives in
-// MEMORY.md.
+// MEMORY.md. Optional, Raft parity: no description, no section.
 function initialRoleSection(input: AgentPromptRenderInput) {
     const role = input.initialRole?.trim();
+    if (!role) {
+        return null;
+    }
     return `## Initial role
 
-${role ? `${role} ` : ''}This may evolve.`;
+${role} This may evolve.`;
 }

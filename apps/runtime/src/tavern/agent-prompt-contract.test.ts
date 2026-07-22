@@ -74,6 +74,9 @@ import { buildAgentInstructions } from './agent-instructions.ts';
  *   script quiet tick, ws5)
  * - `timestamp staleness policy` (Your-chats wording) — relocated to the
  *   `time=` header-field teaching
+ * - `URL wrapping near non-ASCII text` — dropped (operator-ruled):
+ *   English-only workspace; the section's value is language-conditional —
+ *   re-add if agents ever produce CJK content.
  * - `no MerchBase tool teaching without the plugin grant` — reworded: plugin
  *   engine tools retired at the flip (operator ruling); the per-plugin CLI
  *   entry and its granted test arrive with plugin CLIs. The absence row
@@ -100,8 +103,15 @@ const REQUIREMENTS: PromptRequirement[] = [
     },
     {
         capability: 'initial role from description (W2)',
-        expected: '## Initial role',
+        expected: '## Initial role\n\nRuns the contract fixtures desk. This may evolve.',
         prompt: 'full',
+    },
+    // Raft parity: the section is optional — no description, no section.
+    {
+        absent: true,
+        capability: 'no initial role without a description',
+        expected: '## Initial role',
+        prompt: 'minimal',
     },
     {
         capability: 'authoritative runtime context',
@@ -465,11 +475,6 @@ const REQUIREMENTS: PromptRequirement[] = [
     {
         capability: 'no refs inside code spans',
         expected: 'do not wrap that link/ref markup in backticks',
-        prompt: 'full',
-    },
-    {
-        capability: 'URL wrapping near non-ASCII text',
-        expected: 'wrap the URL in angle brackets',
         prompt: 'full',
     },
     // Workspace and memory.
@@ -997,6 +1002,7 @@ function executorInput(fixture: 'full' | 'minimal', workspaceFolder: string): Ag
     const now = '2026-06-29T12:00:00.000Z';
     return {
         agent: {
+            ...(fixture === 'full' ? { bio: 'Runs the contract fixtures desk.' } : {}),
             enabledSkillIds: [],
             id: 'agt_primary',
             isAdmin: true,
