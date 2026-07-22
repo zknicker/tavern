@@ -22,6 +22,7 @@ export const appRoutes = {
         return `/members/agents/${encodeURIComponent(agentId)}`;
     },
     designBrief: '/design/brief',
+    designFaces: '/design/faces',
     workspace: '/workspace',
     wiki: '/wiki',
     settings: '/settings',
