@@ -10,12 +10,26 @@ test('agent avatar opens the profile side pane', async ({ page }) => {
         prompt: 'Agent profile qa marker. Reply exactly `QA_AGENT_PROFILE_OK`.',
     });
 
-    await page
-        .getByRole('button', { name: /Agent details:/ })
-        .first()
-        .click();
+    const agentDetails = page.getByRole('button', { name: /Agent details:/ }).first();
+    const artifactPane = page.getByRole('complementary', { name: 'Artifacts' });
+    const profilePane = page.getByRole('complementary', { name: 'Agent profile' });
 
-    const pane = page.getByRole('complementary', { name: 'Agent profile' });
+    await page.getByRole('button', { name: 'Show artifacts' }).click();
+    await expect(artifactPane).toBeVisible();
+
+    // Artifact, profile, and thread surfaces share one chat-side slot. The
+    // most recent opener wins without leaving another pane visible beside it.
+    await agentDetails.click();
+    await expect(profilePane).toBeVisible({ timeout: 15_000 });
+    await expect(artifactPane).toHaveCount(0);
+
+    await page.getByRole('button', { name: 'Show artifacts' }).click();
+    await expect(artifactPane).toBeVisible();
+    await expect(profilePane).toHaveCount(0);
+
+    await agentDetails.click();
+
+    const pane = profilePane;
     await expect(pane).toBeVisible({ timeout: 15_000 });
 
     // The full six-tab profile renders in the pane (specs/agent-profile.md).
