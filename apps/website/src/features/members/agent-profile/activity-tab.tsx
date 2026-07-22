@@ -35,7 +35,7 @@ export function AgentActivityTab({ agentId }: { agentId: string }) {
                     <Spinner className="size-4" />
                     Loading activity...
                 </p>
-            ) : activity.isError ? (
+            ) : activity.isError && !activity.data ? (
                 <p className="px-3 py-8 text-destructive text-sm">Could not load activity.</p>
             ) : entries.length === 0 ? (
                 <p className="px-3 py-8 text-muted-foreground text-sm">No activity yet</p>

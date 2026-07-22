@@ -20,11 +20,6 @@ mock.module('./sidebar-home-nav.tsx', () => ({
     SidebarHomeNav: () => React.createElement('div', { 'data-testid': 'sidebar-home-nav' }),
 }));
 
-mock.module('./sidebar-agent-activity-strip.tsx', () => ({
-    SidebarAgentActivityStrip: () =>
-        React.createElement('div', { 'data-testid': 'sidebar-agent-activity-strip' }),
-}));
-
 mock.module('./sidebar-update-menu-item.tsx', () => ({
     SidebarUpdateMenuItem: () =>
         React.createElement(
@@ -51,8 +46,5 @@ describe('AppSidebar', () => {
 
         expect(markup).toContain('sidebar-home-nav');
         expect(markup).toContain('Update Available');
-        expect(markup.indexOf('sidebar-agent-activity-strip')).toBeLessThan(
-            markup.indexOf('sidebar-update-menu-item')
-        );
     });
 });

@@ -51,6 +51,7 @@ interface TasksViewProps {
     embedded?: boolean;
     epics: TaskRecord[];
     filteredTasks: TaskRecord[];
+    hasTaskData: boolean;
     label: TaskLabelFilter;
     labels: LabelRecord[];
     onAssigneeChange: (assignee: TaskAssigneeFilter) => void;
@@ -80,6 +81,7 @@ export function TasksView({
     embedded = false,
     epics,
     filteredTasks,
+    hasTaskData,
     label,
     labels,
     onAssigneeChange,
@@ -101,7 +103,7 @@ export function TasksView({
     tasksById,
     view,
 }: TasksViewProps) {
-    if (tasks.length === 0 && connectionState !== 'reachable') {
+    if (shouldShowTasksRuntimeUnavailable({ connectionState, hasTaskData })) {
         return (
             <EmptyState
                 actionLabel="Open settings"
@@ -262,6 +264,13 @@ export function TasksView({
             </div>
         </div>
     );
+}
+
+export function shouldShowTasksRuntimeUnavailable(input: {
+    connectionState: TasksViewProps['connectionState'];
+    hasTaskData: boolean;
+}) {
+    return !input.hasTaskData && input.connectionState !== 'reachable';
 }
 
 function TasksEmptyResults({ onClearFilters }: { onClearFilters: () => void }) {

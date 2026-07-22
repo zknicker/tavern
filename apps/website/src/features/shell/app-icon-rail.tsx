@@ -12,6 +12,7 @@ import { routeTabs, useRouteTab } from '../../hooks/shell/use-route-tab.ts';
 import { appRoutes } from '../../lib/app-routes.ts';
 import { cn } from '../../lib/utils.ts';
 import { RouteTabIcon } from './route-tab-presentation.tsx';
+import { SidebarAgentActivityStrip } from './sidebar-agent-activity-strip.tsx';
 
 /**
  * The always-present section rail. Full-width tools collapse the chat
@@ -29,7 +30,7 @@ export function AppIconRail() {
     return (
         <nav
             aria-label="Sections"
-            className="z-30 flex w-12 shrink-0 flex-col items-center gap-1 bg-[var(--sidebar)] pt-[calc(var(--topbar-height)-4px)] pb-2"
+            className="relative z-30 flex w-12 shrink-0 flex-col items-center gap-1 bg-[var(--sidebar)] pt-[calc(var(--topbar-height)-4px)] pb-2"
         >
             {routeTabs.map((tab) => {
                 const gate = capability(routeTabCapabilityRequirements[tab.id]);
@@ -56,6 +57,7 @@ export function AppIconRail() {
                 );
             })}
             <div className="flex-1" />
+            <SidebarAgentActivityStrip />
             <RailButton
                 isActive={isSettingsActive}
                 label="Settings"
