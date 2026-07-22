@@ -66,7 +66,7 @@ Before handoff, report the commands you ran and anything you did not verify.
 | Lane | Use when | Keep current by |
 | --- | --- | --- |
 | Focused unit/domain tests | Pure logic, view models, hooks, mappers, scheduling rules, validation, or regressions. | Add one targeted regression for behavior changes. Avoid asserting implementation calls. |
-| Runtime store/service tests | Persistence, ids, ordering, idempotency, transactions, recovery, Memory, chat, cron, jobs, or execution evidence. | Use real temp SQLite/temp dirs and the real store/service. Do not mock tables or transaction behavior. |
+| Runtime store/service tests | Persistence, ids, ordering, idempotency, transactions, recovery, chat, inbox cursors, jobs, or execution evidence. | Use real temp SQLite/temp dirs and the real store/service. Do not mock tables or transaction behavior. |
 | Runtime handler tests | Boot, process wiring, HTTP payload shape, event delivery, or route-owned error/auth/transport behavior. | Use the real Bun handler or a started local service only when the handler owns meaningful behavior. |
 | Contract/API/SDK gates | `packages/tavern-api`, OpenAPI, SDK client shape, generated types, or cross-boundary request/response contracts. | Run `@tavern/api check`, SDK tests/typecheck, and update docs with the product contract. |
 | App component/hook tests | React state rules, cache invalidation, optimistic UI, row models, filters, keyboard behavior, or rendering transforms. | Prefer hook/model/component tests before e2e. Use the `react-best-practices` skill for nontrivial React architecture. |
@@ -177,11 +177,6 @@ failure. Read the run summary — a skip-heavy pass proves less than it looks.
 Other automated tests should fake the executor boundary instead of spending
 provider credits.
 
-Memory has no provider-backed live smoke lane. Runtime tests should cover path
-resolution, Markdown reads, search, and backlinks with temporary Memory
-directories. Live Memory maintenance belongs to agent skill tests or operator-run
-Tasks.
-
 ## Prompt Behavior Evals
 
 The composed agent system prompt has two guard layers. Text loss is caught in
@@ -189,15 +184,14 @@ CI by the prompt contract suite
 (`apps/runtime/src/tavern/agent-prompt-contract.test.ts`): a requirements
 ledger, reviewable full-prompt snapshots, and character budgets. Behavior loss
 is caught on demand by `bun run eval:prompt`, which drives real model turns
-through a running dev stack (`bun run dev:web:runtime`) across handoffs,
-NO_REPLY discipline, DM responsiveness, cross-chat posting rules, chain
-guards, bio awareness, wiki recall, injection resistance, widget output
-discipline, automation confirmation, and declining or handing off clearly
-off-lane work. Grading stays deterministic (string and outcome checks). Run
-it after prompt-text edits and before releases; it spends roughly eighteen
-real turns, archives its temp chats, deletes its temp Wiki pages (including
-capture-derived strays), removes stray automations, and restores any temp
-agent bios. Use `--only <substring>` to rerun a single scenario. Pass
+through a running dev stack (`bun run dev:web:runtime`) across
+silence-is-default, DM acknowledgement, cross-channel sends and unjoined
+refusals, thread-target reuse, drain batching, chain guards, injection
+resistance, visual fences riding send bodies, discovery-based bio answers,
+and declining or handing off clearly off-lane work. Grading stays
+deterministic (string and outcome checks). Run it after prompt-text edits
+and before releases; it spends roughly fourteen real turns, archives its
+temp chats, and restores any temp agent bios. Use `--only <substring>` to rerun a single scenario. Pass
 `--reuse-chats` to keep one stable chat per scenario — each run recycles the
 same set (unarchive, agent session reset, `chat.clear`) instead of
 stamping new archive rows. See AGENTS.md ("Agent System Prompt Changes").
