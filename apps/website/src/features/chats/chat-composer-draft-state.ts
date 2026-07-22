@@ -17,9 +17,22 @@ const composerDraftListeners = new Set<() => void>();
 export function useChatHasDraft(chatId: string): boolean {
     return React.useSyncExternalStore(
         subscribeToComposerDrafts,
-        () => hasDraftContent(composerDrafts.get(chatId)),
+        () => hasChatDraftContent(chatId),
         getServerDraftSnapshot
     );
+}
+
+export function hasChatDraftContent(chatId: string): boolean {
+    const threadDraftPrefix = `${chatId}:thread:`;
+    for (const [draftId, draft] of composerDrafts) {
+        if (
+            (draftId === chatId || draftId.startsWith(threadDraftPrefix)) &&
+            hasDraftContent(draft)
+        ) {
+            return true;
+        }
+    }
+    return false;
 }
 
 export function hasDraftContent(draft: ChatComposerDraftState | undefined): boolean {
