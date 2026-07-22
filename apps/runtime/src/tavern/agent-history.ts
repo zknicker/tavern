@@ -1,13 +1,25 @@
+import type { TavernThreadSummary } from '@tavern/api';
 import { getDb } from '../db/connection.ts';
 import type { Database } from '../db/sqlite.ts';
 import { namedParams } from '../db/sqlite.ts';
 import { AgentApiError, targetNotFound } from './agent-api-errors.ts';
 import { senderIdForHandle, toAgentMessage } from './agent-messages.ts';
 import { ensureCurrentAgentSession } from './agent-session-store.ts';
-import { formatAgentTarget, resolveAgentTarget } from './agent-targets.ts';
+import {
+    formatAgentTarget,
+    type ResolvedAgentTarget,
+    resolveAgentTarget,
+} from './agent-targets.ts';
 import { isAgentChatParticipant } from './chat-actions-tools.ts';
 import { createAgentParticipantId } from './chat-api/ids.ts';
-import { getChat, listChatsForAgentParticipant, resolveMessageId } from './chat-api/index.ts';
+import {
+    anchorShortId,
+    getChat,
+    listReadableChatsForAgentParticipant,
+    membershipChat,
+    resolveMessageId,
+    threadSummaries,
+} from './chat-api/index.ts';
 import { searchMessageRows } from './chat-api/message-search.ts';
 import { rowToMessage } from './chat-api/messages.ts';
 import type { MessageRow } from './chat-api/types.ts';
@@ -87,17 +99,52 @@ export function readAgentHistory(
         has_newer: hasNewer,
         has_older: hasOlder,
         last_read: { after: seen, unread_after: seen },
-        messages: messages.map((message) => toAgentMessage(message, db)),
+        messages: decorateThreadFields(messages, target, createAgentParticipantId(agentId), db),
         target: target.target,
     };
 }
 
+// History lines carry the thread slivers (specs/grotto-cli.md): anchors with
+// an existing thread expose threadId/replyCount, and every top-level line
+// gets the computed replyTarget — omitted inside threads, where replying in
+// place is already threading.
+function decorateThreadFields(
+    messages: ReturnType<typeof rowToMessage>[],
+    target: ResolvedAgentTarget,
+    participantId: string,
+    db: Database
+) {
+    const inThread = target.chat.kind === 'thread';
+    const summariesByAnchor = inThread
+        ? new Map<string, TavernThreadSummary>()
+        : new Map(
+              threadSummaries(
+                  target.chat.id,
+                  participantId,
+                  db,
+                  messages.map((message) => message.id)
+              ).map((summary) => [summary.anchor_message_id, summary])
+          );
+    return messages.map((message) => {
+        const summary = summariesByAnchor.get(message.id);
+        return {
+            ...toAgentMessage(message, db),
+            ...(summary
+                ? { replyCount: summary.reply_count, threadId: summary.thread_chat_id }
+                : {}),
+            ...(inThread ? {} : { replyTarget: `${target.target}:${anchorShortId(message.id)}` }),
+        };
+    });
+}
+
 export function getAgentMessage(agentId: string, id: string, db: Database = getDb()) {
-    // Short-id resolution is scoped to the caller's chats before ambiguity is
-    // decided; full ids resolve globally and then hit the membership check.
-    const memberChatIds = listChatsForAgentParticipant(createAgentParticipantId(agentId), db).map(
-        (chat) => chat.id
-    );
+    // Short-id resolution is scoped to the caller's READABLE chats (parent
+    // seats, unfollowed threads included) before ambiguity is decided; full
+    // ids resolve globally and then hit the membership check.
+    const memberChatIds = listReadableChatsForAgentParticipant(
+        createAgentParticipantId(agentId),
+        db
+    ).map((chat) => chat.id);
     const message = resolveMessageId(id, { chatIds: memberChatIds }, db);
     if (!message || message.deleted_at) {
         throw new AgentApiError('RESOLVE_FAILED', `Message ${id} was not found.`, 404);
@@ -142,8 +189,10 @@ export function searchAgentMessages(
         throw new AgentApiError('INVALID_ARG', 'sort must be relevance or recent.', 400);
     }
     const participantId = createAgentParticipantId(agentId);
+    // Search spans the readable scope (unfollowed threads included) —
+    // enumeration follows attention, reading follows the parent seat.
     const targets = new Map(
-        listChatsForAgentParticipant(participantId, db).flatMap((chat) => {
+        listReadableChatsForAgentParticipant(participantId, db).flatMap((chat) => {
             const target = formatAgentTarget(agentId, chat, db);
             return target ? [[chat.id, target] as const] : [];
         })
@@ -183,7 +232,11 @@ function resolveAnchor(chatId: string, anchor: string, db: Database): number {
 
 function getChatForMembership(chatId: string, agentId: string, db: Database) {
     const chat = getChat(chatId, db);
-    return chat && isAgentChatParticipant(chat, agentId, createAgentParticipantId(agentId))
+    // Threads never own membership: the parent seat authorizes the read.
+    const seatChat = chat ? membershipChat(chat, db) : null;
+    return chat &&
+        seatChat &&
+        isAgentChatParticipant(seatChat, agentId, createAgentParticipantId(agentId))
         ? chat
         : null;
 }

@@ -64,6 +64,7 @@ import {
 import type { SessionNoticeRow } from './chat-transcript-row-model.ts';
 import { RuntimeNoticeEntry, SessionNoticeAction } from './chat-transcript-system-step.tsx';
 import { ChatTurnDrawer } from './chat-turn-drawer.tsx';
+import { ThreadMessageSurface } from './thread/thread-message-surface.tsx';
 import { useRevealedText } from './use-revealed-text.ts';
 import { WorkspaceChangesChip } from './workspace-changes-chip.tsx';
 
@@ -693,13 +694,15 @@ function UserTurnItem({ from, item }: { from: 'assistant' | 'user'; item: Transc
     const body = <ChatTranscriptMessageContent message={message} textClassName="text-current" />;
 
     return body ? (
-        <ChatMessage
-            animateEnter={isLocalTimelineMessageMetadata(message.metadata) || animateLiveEnter}
-            attachments={attachments}
-            from={from}
-        >
-            {body}
-        </ChatMessage>
+        <ThreadMessageSurface row={item.row}>
+            <ChatMessage
+                animateEnter={isLocalTimelineMessageMetadata(message.metadata) || animateLiveEnter}
+                attachments={attachments}
+                from={from}
+            >
+                {body}
+            </ChatMessage>
+        </ThreadMessageSurface>
     ) : null;
 }
 
@@ -759,6 +762,8 @@ function AgentTurnItem({
         const streaming = revealNarration && isStreamingPostRow(item.row);
 
         if (streaming) {
+            // A streaming post is not durable yet (a silent turn discards
+            // it), so it offers no thread affordances.
             return (
                 <AssistantReplyBody
                     animateEnter
@@ -773,20 +778,22 @@ function AgentTurnItem({
         const narration = revealNarration && isActivityBackedMessageRow(item.row);
 
         return (
-            <AssistantReplyText
-                message={item.row.message}
-                {...(narration
-                    ? {
-                          animateEnter: true,
-                          revealKey: item.row.id,
-                          revealText: true,
-                          slotKey: getItemRunId(item) ?? item.row.id,
-                      }
-                    : // A finished reply that never streamed here (fast turn,
-                      // another device's turn) still lands at the live edge —
-                      // it enters like any new message instead of popping.
-                      { animateEnter: animateLiveEnter })}
-            />
+            <ThreadMessageSurface row={item.row}>
+                <AssistantReplyText
+                    message={item.row.message}
+                    {...(narration
+                        ? {
+                              animateEnter: true,
+                              revealKey: item.row.id,
+                              revealText: true,
+                              slotKey: getItemRunId(item) ?? item.row.id,
+                          }
+                        : // A finished reply that never streamed here (fast turn,
+                          // another device's turn) still lands at the live edge —
+                          // it enters like any new message instead of popping.
+                          { animateEnter: animateLiveEnter })}
+                />
+            </ThreadMessageSurface>
         );
     }
 

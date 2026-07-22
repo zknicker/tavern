@@ -24,11 +24,9 @@ const humanMessage: AgentCliMessage = {
     id: 'msg_1a2b3c4d00000000',
     metadata: {},
     nonce: null,
-    parent_message_id: null,
     role: 'user',
     sender: { description: 'Grotto operator', handle: 'zach', type: 'human' },
     sequence: 42,
-    thread_root_id: null,
 };
 
 describe('agent message formatting', () => {

@@ -1,7 +1,7 @@
 import type { CliCommand } from './registry.ts';
 
 /** Commands available in agent shells; everything else is operator-only there. */
-const AGENT_SURFACE_COMMANDS = new Set(['message', 'inbox', 'server', 'channel', 'help']);
+const AGENT_SURFACE_COMMANDS = new Set(['message', 'inbox', 'server', 'channel', 'thread', 'help']);
 
 export function isAgentSurfaceCommand(name: string): boolean {
     return AGENT_SURFACE_COMMANDS.has(name);
@@ -59,6 +59,23 @@ export const serverInfoCommand: CliCommand = {
             import('./subcommand'),
         ]);
         return await dispatchSubcommand('server', SERVER_SUBCOMMANDS, raw);
+    },
+};
+
+export const threadCommand: CliCommand = {
+    examples: ['grotto thread unfollow --target "#general:1a2b3c4d"'],
+    flags: [],
+    group: true,
+    name: 'thread',
+    section: 'Messages',
+    summary: 'Thread attention operations',
+    usage: 'grotto thread <unfollow> [flags]',
+    async run(_args, raw) {
+        const [{ THREAD_SUBCOMMANDS }, { dispatchSubcommand }] = await Promise.all([
+            import('./commands/agent-thread'),
+            import('./subcommand'),
+        ]);
+        return await dispatchSubcommand('thread', THREAD_SUBCOMMANDS, raw);
     },
 };
 

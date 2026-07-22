@@ -28,6 +28,21 @@ export function listProjectedTavernRuntimeEvents(
 }
 
 function chatEventToRuntimeEvents(event: TavernChatEvent, db?: Database): PersistedRuntimeEvent[] {
+    // Upgraded databases can retain this retired event shape. It still means
+    // the visible chat history changed, and must not brick event catch-up.
+    if ((event as { type: string }).type === 'message.deleted') {
+        return [
+            {
+                cursor: Number(event.cursor),
+                event: {
+                    chatId: event.chat_id,
+                    timestamp: event.created_at,
+                    type: 'chat.historyChanged',
+                },
+            },
+        ];
+    }
+
     // Composer command runs are settled evidence, not live turns; projecting
     // them would surface a phantom in-flight turn in the app.
     if (isCommandRunEvent(event)) {
@@ -125,7 +140,6 @@ function chatEventToRuntimeEvents(event: TavernChatEvent, db?: Database): Persis
             }));
         case 'chat.cleared':
         case 'message.updated':
-        case 'message.deleted':
         case 'response.deleted':
             return [
                 {
@@ -170,6 +184,17 @@ function messageCreatedToRuntimeEvent(
     message: TavernChatMessage,
     timestamp: string
 ): AgentRuntimeEvent | null {
+    const source = metadataRuntimeString(message.metadata, 'source');
+    if (
+        (message.role === 'assistant' && source === 'agent-api') ||
+        (message.role === 'system' && source === 'thread-notice')
+    ) {
+        return {
+            chatId: message.chat_id,
+            timestamp,
+            type: 'chat.historyChanged',
+        };
+    }
     if (message.role !== 'user') {
         return null;
     }
@@ -186,12 +211,10 @@ function messageCreatedToRuntimeEvent(
         message: {
             id: message.id,
             nonce: message.nonce ?? undefined,
-            parentMessageId: message.parent_message_id,
             senderId: message.author.id,
             senderName: message.author.label ?? message.author.id,
             sequence: message.sequence,
             text: messageText(message),
-            threadRootId: message.thread_root_id ?? message.id,
             timestamp: message.created_at,
         },
         runId: metadataRuntimeString(message.metadata, 'runId') ?? createRunId(message.id, agentId),

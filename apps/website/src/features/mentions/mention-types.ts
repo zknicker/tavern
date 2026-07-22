@@ -1,4 +1,12 @@
-export type MentionKind = 'agent' | 'app' | 'directory' | 'file' | 'image' | 'plugin' | 'skill';
+export type MentionKind =
+    | 'agent'
+    | 'app'
+    | 'directory'
+    | 'file'
+    | 'image'
+    | 'plugin'
+    | 'skill'
+    | 'user';
 export type MentionOptionKind = MentionKind;
 export type MentionTrigger = '@' | '$';
 export type MentionProjection =

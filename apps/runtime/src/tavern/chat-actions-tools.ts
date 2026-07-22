@@ -4,7 +4,12 @@ import { tool } from 'ai';
 import * as z from 'zod';
 import { resolveHomeTimezone } from '../timezone-settings.ts';
 import { createAgentParticipantId } from './chat-api/ids.ts';
-import { createDelivery, getChat, listChatsForAgentParticipant } from './chat-api/index.ts';
+import {
+    createDelivery,
+    getChat,
+    listChatsForAgentParticipant,
+    membershipChat,
+} from './chat-api/index.ts';
 import { formatPromptMessage } from './harness-prompt.ts';
 import { resolveSendHold } from './send-hold.ts';
 
@@ -27,6 +32,9 @@ export function createTavernChatActionTools(input: {
 }): ToolSet {
     const participantId = createAgentParticipantId(input.agentId);
 
+    // Deliberately no thread attention verbs (unfollow etc.): those arrive as
+    // agent CLI commands with the inbox workstream, not as engine tools —
+    // this toolset is shrinking toward the zero-tool cutover, not growing.
     return {
         chat_send: tool({
             description:
@@ -44,10 +52,17 @@ export function createTavernChatActionTools(input: {
                     return { error: 'This is the current chat. Reply normally instead.' };
                 }
                 const chat = getChat(chatId);
-                if (!(chat && isAgentChatParticipant(chat, input.agentId, participantId))) {
+                const accessChat = chat ? membershipChat(chat) : null;
+                if (
+                    !(
+                        chat &&
+                        accessChat &&
+                        isAgentChatParticipant(accessChat, input.agentId, participantId)
+                    )
+                ) {
                     return { error: 'You are not a participant of that chat.' };
                 }
-                if (isArchivedChat(chat)) {
+                if (isArchivedChat(accessChat)) {
                     return { error: 'That chat is archived.' };
                 }
 
@@ -106,7 +121,10 @@ export function createTavernChatActionTools(input: {
             inputSchema: z.object({}),
             execute: () => ({
                 chats: listChatsForAgentParticipant(participantId)
-                    .filter((chat) => !isArchivedChat(chat))
+                    .filter((chat) => {
+                        const accessChat = membershipChat(chat);
+                        return accessChat ? !isArchivedChat(accessChat) : false;
+                    })
                     .map((chat) => ({
                         current: chat.id === input.chatId,
                         id: chat.id,

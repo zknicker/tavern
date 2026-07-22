@@ -297,7 +297,47 @@ function areSameTimeline(left: ChatTimeline, right: ChatTimeline) {
         return false;
     }
 
-    return left.every((row, index) => row.id === right[index]?.id);
+    // Row ids alone miss in-place row changes: a refetch that only moves a
+    // message's thread summary (new reply, follow toggle) must not be
+    // swallowed as "same timeline".
+    return left.every((row, index) => {
+        const other = right[index];
+
+        if (!other || row.id !== other.id) {
+            return false;
+        }
+
+        if (row.kind === 'message' && other.kind === 'message') {
+            return isSameThreadSummary(row.thread ?? null, other.thread ?? null);
+        }
+
+        return true;
+    });
+}
+
+type MessageThreadSummary = NonNullable<
+    Extract<ChatTimeline[number], { kind: 'message' }>['thread']
+>;
+
+function isSameThreadSummary(
+    left: MessageThreadSummary | null,
+    right: MessageThreadSummary | null
+) {
+    if (left === right) {
+        return true;
+    }
+
+    if (!(left && right)) {
+        return false;
+    }
+
+    return (
+        left.replyCount === right.replyCount &&
+        left.unreadCount === right.unreadCount &&
+        left.followed === right.followed &&
+        left.latestReplyAt === right.latestReplyAt &&
+        left.threadChatId === right.threadChatId
+    );
 }
 
 // Rows we already showed stay loaded when the fetched window no longer

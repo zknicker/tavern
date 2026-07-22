@@ -74,10 +74,8 @@ test('sendTavernChatMessage dispatches evaluation turns to seated channel agents
                 id: body.id,
                 metadata: body.metadata,
                 nonce: body.nonce,
-                parent_message_id: null,
                 role: 'user',
                 sequence: 1,
-                thread_root_id: null,
             },
         });
     }) as typeof fetch;
@@ -99,6 +97,7 @@ test('sendTavernChatMessage dispatches evaluation turns to seated channel agents
         chatId: planningChatId,
         clientMessageId: result.clientMessageId,
         status: 'accepted',
+        threadChatId: null,
         turns: [{ agentId: 'agent:planner', runId: 'run-agent_planner' }],
     });
     assert.equal(calls.length, 1);
@@ -107,6 +106,108 @@ test('sendTavernChatMessage dispatches evaluation turns to seated channel agents
         tavernApiCalls.some((call) => call.path === `/api/chats/${planningChatId}/messages`),
         true
     );
+});
+
+test('sendTavernChatMessage ensures a thread and writes the reply into it', async () => {
+    await seedPlanningChat();
+    const calls: unknown[] = [];
+    const threadChatId = 'cht_thr_anchor_1';
+    const tavernApiCalls: Array<{ body: unknown; method: string; path: string }> = [];
+    globalThis.fetch = (async (input, init) => {
+        const request = new Request(input, init);
+        const url = new URL(request.url);
+        const body = request.method === 'GET' ? null : await request.json();
+        tavernApiCalls.push({ body, method: request.method, path: url.pathname });
+
+        if (url.pathname === '/api/chats' && request.method === 'GET') {
+            return Response.json({ chats: [runtimeTavernChat()], next_cursor: null });
+        }
+        if (url.pathname === '/agent/chats') {
+            return Response.json({ chats: [] });
+        }
+        if (url.pathname === '/api/chats' && request.method === 'POST') {
+            return Response.json(runtimeTavernChat());
+        }
+        if (url.pathname === `/api/chats/${planningChatId}/threads`) {
+            return Response.json({
+                ...runtimeTavernChat(),
+                anchor_message_id: 'msg_anchor_1',
+                id: threadChatId,
+                kind: 'thread',
+                parent_chat_id: planningChatId,
+            });
+        }
+        if (url.pathname === `/api/chats/${threadChatId}/messages`) {
+            return Response.json({
+                cursor: '1',
+                idempotent: false,
+                message: {
+                    attachments: [],
+                    author: { id: 'usr_tavern', kind: 'user', label: null, metadata: {} },
+                    chat_id: threadChatId,
+                    content: body.content,
+                    created_at: '2026-04-06T12:10:00.000Z',
+                    deleted_at: null,
+                    delivery_id: null,
+                    id: body.id,
+                    metadata: body.metadata,
+                    nonce: body.nonce,
+                    role: 'user',
+                    sequence: 1,
+                },
+            });
+        }
+
+        throw new Error(`Unexpected Tavern API request: ${url.pathname}`);
+    }) as typeof fetch;
+
+    const result = await sendTavernChatMessage(
+        {
+            chatId: planningChatId,
+            content: 'Thread reply.',
+            thread: { anchorMessageId: 'msg_anchor_1' },
+        },
+        runtimeClient({ calls }) as never
+    );
+
+    assert.equal(result.chatId, planningChatId);
+    assert.equal(result.threadChatId, threadChatId);
+    assert.deepEqual(
+        new Set(
+            tavernApiCalls
+                .filter((call) => call.method === 'GET')
+                .map((call) => `${call.method} ${call.path}`)
+        ),
+        new Set(['GET /api/chats', 'GET /agent/chats'])
+    );
+    assert.deepEqual(
+        tavernApiCalls
+            .filter((call) => call.method === 'POST')
+            .map((call) => `${call.method} ${call.path}`),
+        [
+            'POST /api/chats',
+            `POST /api/chats/${planningChatId}/threads`,
+            `POST /api/chats/${threadChatId}/messages`,
+        ]
+    );
+    assert.deepEqual(calls, [
+        {
+            chatId: threadChatId,
+            input: {
+                agent: { agentId: 'agent:planner' },
+                message: {
+                    content: 'Thread reply.',
+                    id: result.clientMessageId,
+                    nonce: result.clientMessageId,
+                },
+                target: {
+                    externalId: planningChatId,
+                    target: `channel:${planningChatId}`,
+                    type: 'tavern',
+                },
+            },
+        },
+    ]);
 });
 
 test('sendTavernChatMessage posts one turn for a mentioned channel agent', async () => {
@@ -462,10 +563,8 @@ function runtimeTavernApiFetch(input?: { chat?: ReturnType<typeof runtimeTavernC
                 id: body.id,
                 metadata: body.metadata,
                 nonce: body.nonce,
-                parent_message_id: null,
                 role: 'user',
                 sequence: 1,
-                thread_root_id: null,
             },
         });
     }) as typeof fetch;

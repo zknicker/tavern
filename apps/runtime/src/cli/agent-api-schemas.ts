@@ -19,7 +19,6 @@ export const agentMessageSchema = z.object({
     id: z.string().min(1),
     metadata: jsonObjectSchema,
     nonce: z.string().nullable(),
-    parent_message_id: z.string().nullable(),
     replyCount: z.number().int().nonnegative().optional(),
     replyTarget: z.string().min(1).optional(),
     role: z.enum(['user', 'assistant', 'system']),
@@ -29,7 +28,6 @@ export const agentMessageSchema = z.object({
         type: z.enum(['human', 'agent', 'system']),
     }),
     sequence: z.number().int().positive(),
-    thread_root_id: z.string().nullable(),
     threadId: z.string().min(1).optional(),
 }) satisfies z.ZodType<TavernAgentMessage>;
 

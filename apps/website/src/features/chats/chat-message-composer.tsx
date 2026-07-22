@@ -19,6 +19,7 @@ import { Spinner } from '../../components/ui/spinner.tsx';
 import { useChatSend } from '../../hooks/chats/use-chat-send.ts';
 import { useChatStop } from '../../hooks/chats/use-chat-stop.ts';
 import { runtimeUnhealthyTooltip, useCapability } from '../../hooks/connections/use-capability.ts';
+import { setThreadPaneChatId } from '../../hooks/threads/use-thread-pane.ts';
 import type { AgentListOutput } from '../../lib/trpc.tsx';
 import { cn } from '../../lib/utils.ts';
 import { compileMentionSubmission, normalizeMentions } from '../mentions/mention-text.ts';
@@ -56,6 +57,9 @@ export function ChatMessageComposer({
     contextFullness = null,
     isDisabled,
     isReplyActive,
+    placeholder = CHAT_COMPOSER_PLACEHOLDER,
+    stopChatId,
+    threadTarget,
     variant = 'detail',
 }: {
     agentRuntimeSyncLabel?: string | null;
@@ -69,18 +73,27 @@ export function ChatMessageComposer({
     contextFullness?: ChatContextFullness | null;
     isDisabled: boolean;
     isReplyActive: boolean;
+    placeholder?: string;
+    // Thread turns run in the thread chat while sends address the parent;
+    // stop must target the chat that owns the run.
+    stopChatId?: string;
+    threadTarget?: { anchorMessageId: string };
     variant?: ChatMessageComposerVariant;
 }) {
     const sendMessage = useChatSend();
     const stopTurn = useChatStop();
     const gatewayCapability = useCapability('gateway');
-    const composerDraft = useChatComposerDraftState({ boundAgentIds, chatId });
+    const draftKey = threadTarget ? `${chatId}:thread:${threadTarget.anchorMessageId}` : chatId;
+    const composerDraft = useChatComposerDraftState({ boundAgentIds, chatId: draftKey });
     const fileInputRef = React.useRef<HTMLInputElement | null>(null);
     const [attachmentError, setAttachmentError] = React.useState<string | null>(null);
     const { agentId, attachments, content, mentions } = composerDraft.draft;
     const { setAttachments, setContent, setMentions } = composerDraft;
     const isCompact = variant === 'compact';
     const isAgentDm = conversationKind === 'direct';
+    // Task sends address one agent explicitly (specs/addressing.md), so task
+    // chats carry the bound agent target exactly like DMs do.
+    const needsAgentTarget = isAgentDm || conversationKind === 'task';
     const trimmedContent = content.trim();
     const hasPayload = trimmedContent.length > 0 || attachments.length > 0;
     const canSendToRuntime = gatewayCapability.healthy;
@@ -92,7 +105,7 @@ export function ChatMessageComposer({
         chatCanSend &&
         canSendToRuntime &&
         !isComposerBlocked &&
-        (!isAgentDm || agentId.length > 0) &&
+        (!needsAgentTarget || agentId.length > 0) &&
         hasPayload &&
         !sendMessage.isPending;
     const primaryAction = getComposerPrimaryAction({
@@ -100,7 +113,9 @@ export function ChatMessageComposer({
         hasDraftPayload: hasPayload,
         isReplyActive,
     });
-    const useMainDropTarget = !isCompact;
+    // Thread composers coexist with the parent's composer; only one may own
+    // the app-shell drop target or a drop lands in both drafts.
+    const useMainDropTarget = !(isCompact || threadTarget);
     const attachmentDrop = useComposerFileDrop({
         disabled: isComposerBlocked || !canSendToRuntime,
         onFiles: addSelectedAttachments,
@@ -121,7 +136,7 @@ export function ChatMessageComposer({
     const focusTextEditorRef = React.useRef(mentionComposer.focusTextEditor);
     focusTextEditorRef.current = mentionComposer.focusTextEditor;
     const canAutoFocusComposer = variant === 'detail' && !isComposerBlocked && canSendToRuntime;
-    const chatAutoFocusKey = canAutoFocusComposer ? chatId : null;
+    const chatAutoFocusKey = canAutoFocusComposer ? draftKey : null;
 
     React.useEffect(() => {
         if (!chatAutoFocusKey) {
@@ -132,7 +147,10 @@ export function ChatMessageComposer({
         return () => cancelAnimationFrame(frame);
     }, [chatAutoFocusKey]);
 
-    useChatComposerFocusRequest(canAutoFocusComposer, mentionComposer.focusTextEditor);
+    useChatComposerFocusRequest(
+        canAutoFocusComposer && !threadTarget,
+        mentionComposer.focusTextEditor
+    );
     const handleComposerInsert = React.useCallback(
         (text: string) => {
             setContent((current) => appendComposerInsert(current, text));
@@ -140,7 +158,7 @@ export function ChatMessageComposer({
         },
         [setContent]
     );
-    useChatComposerInsertRequest(canAutoFocusComposer, handleComposerInsert);
+    useChatComposerInsertRequest(canAutoFocusComposer && !threadTarget, handleComposerInsert);
 
     async function handleSubmit(event?: React.FormEvent<HTMLFormElement>) {
         event?.preventDefault();
@@ -156,18 +174,23 @@ export function ChatMessageComposer({
         setAttachments([]);
         setAttachmentError(null);
 
-        await sendMessage.mutateAsync({
-            ...(isAgentDm ? { agentId } : {}),
+        const result = await sendMessage.mutateAsync({
+            ...(needsAgentTarget ? { agentId } : {}),
             ...(submittedAttachments.length ? { attachments: submittedAttachments } : {}),
             chatId,
             clientMessageId: `msg_${crypto.randomUUID()}`,
             content: submission.content,
+            ...(threadTarget ? { thread: threadTarget } : {}),
         });
+
+        if (threadTarget && result.threadChatId) {
+            setThreadPaneChatId(chatId, threadTarget.anchorMessageId, result.threadChatId);
+        }
     }
 
     function stopActiveRuns() {
         for (const runId of activeRunIds) {
-            stopTurn.mutate({ chatId, runId });
+            stopTurn.mutate({ chatId: stopChatId ?? chatId, runId });
         }
     }
 
@@ -261,7 +284,7 @@ export function ChatMessageComposer({
                     composer={mentionComposer}
                     disabled={isComposerBlocked || !canSendToRuntime}
                     name="chat-message"
-                    placeholder={CHAT_COMPOSER_PLACEHOLDER}
+                    placeholder={placeholder}
                 />
             </PromptInputBody>
             <MentionComposerPicker composer={mentionComposer} />

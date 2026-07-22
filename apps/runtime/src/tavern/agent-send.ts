@@ -7,7 +7,12 @@ import { resolveAgentTarget } from './agent-targets.ts';
 import { getStoredAgent } from './agents-store.ts';
 import { isArchivedChat } from './chat-actions-tools.ts';
 import { createAgentParticipantId } from './chat-api/ids.ts';
-import { createMessage, createMessageId, findMessageByNonce } from './chat-api/index.ts';
+import {
+    createMessage,
+    createMessageId,
+    findMessageByNonce,
+    membershipChat,
+} from './chat-api/index.ts';
 import { collectRecentUnread, resolveSendHold } from './send-hold.ts';
 
 export const agentSendRequestSchema = z
@@ -34,6 +39,9 @@ export function sendAgentMessage(
     const resolved = resolveAgentTarget({
         agentId,
         createDm: !input.sendDraft,
+        // Releasing a draft is a lookup, not a first reply: if the thread does
+        // not exist, fail without leaving an empty followed thread behind.
+        createThread: !input.sendDraft,
         target: input.target,
     });
     options.onTargetResolved?.(resolved.chat.id);
@@ -41,7 +49,10 @@ export function sendAgentMessage(
     if (!agent) {
         throw new AgentApiError('SEND_FAILED', 'Calling agent was not found.', 404);
     }
-    if (isArchivedChat(resolved.chat)) {
+    // Archival lives on the membership authority: a thread is archived
+    // exactly when its parent is.
+    const archivalChat = membershipChat(resolved.chat) ?? resolved.chat;
+    if (isArchivedChat(archivalChat)) {
         throw new AgentApiError(
             'TARGET_ARCHIVED',
             `${resolved.target} is archived; writes there are rejected.`,

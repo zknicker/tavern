@@ -49,18 +49,29 @@ export function clearChat(chatId: string, db: Database = getDb()): TavernClearCh
     db.exec('BEGIN IMMEDIATE');
     try {
         assertChatExists(chatId, db);
+        // Threads are part of the conversation being reset: clearing a chat
+        // clears its child threads too, or their anchors would vanish while
+        // followed replies kept feeding the parent's unread rollup.
         const messages = db
             .prepare(
                 `UPDATE chat_messages
                  SET deleted_at = $clearedAt
-                 WHERE chat_id = $chatId AND deleted_at IS NULL`
+                 WHERE deleted_at IS NULL
+                   AND chat_id IN (
+                       SELECT id FROM chats
+                       WHERE id = $chatId OR parent_chat_id = $chatId
+                   )`
             )
             .run(namedParams({ chatId, clearedAt }));
         const responses = db
             .prepare(
                 `UPDATE chat_responses
                  SET deleted_at = $clearedAt
-                 WHERE chat_id = $chatId AND deleted_at IS NULL`
+                 WHERE deleted_at IS NULL
+                   AND chat_id IN (
+                       SELECT id FROM chats
+                       WHERE id = $chatId OR parent_chat_id = $chatId
+                   )`
             )
             .run(namedParams({ chatId, clearedAt }));
         const event = insertEvent(

@@ -1,13 +1,21 @@
 import { randomUUID } from 'node:crypto';
-import type { TavernChat } from '@tavern/api';
+import type { TavernChat, TavernChatMessage } from '@tavern/api';
 import { getDb } from '../db/connection.ts';
 import type { Database } from '../db/sqlite.ts';
 import { namedParams } from '../db/sqlite.ts';
 import { AgentApiError, targetNotFound } from './agent-api-errors.ts';
 import { getStoredAgent } from './agents-store.ts';
-import { isAgentChatParticipant } from './chat-actions-tools.ts';
+import { isAgentChatParticipant, isArchivedChat } from './chat-actions-tools.ts';
 import { createAgentParticipantId } from './chat-api/ids.ts';
-import { createChat, getChat } from './chat-api/index.ts';
+import {
+    AmbiguousMessageIdError,
+    anchorShortId,
+    createChat,
+    ensureThreadChat,
+    getChat,
+    resolveMessageId,
+    threadChatIdForAnchor,
+} from './chat-api/index.ts';
 import { isValidHandle } from './handles.ts';
 
 export interface ResolvedAgentTarget {
@@ -25,14 +33,17 @@ export function resolveAgentTarget(
     input: {
         agentId: string;
         createDm?: boolean;
+        // Sends materialize a missing thread (first reply creates); reads
+        // never do, and never apply write policy such as archival.
+        createThread?: boolean;
         requireMembership?: boolean;
         target: string;
     },
     db: Database = getDb()
 ): ResolvedAgentTarget {
-    const threadMatch = /^(?:#[^:]+|dm:@[^:]+):.+$/u.exec(input.target);
-    if (threadMatch) {
-        throw targetNotFound('Thread targets are not available yet.');
+    const threadMatch = /^(#[^:]+|dm:@[^:]+):([A-Za-z0-9_-]+)$/u.exec(input.target);
+    if (threadMatch?.[1] && threadMatch[2]) {
+        return resolveThread(input, threadMatch[1], threadMatch[2], db);
     }
     const channelMatch = /^#([A-Za-z0-9][A-Za-z0-9_-]{0,31})$/u.exec(input.target);
     if (channelMatch?.[1]) {
@@ -52,6 +63,13 @@ export function formatAgentTarget(
 ): string | null {
     if (chat.kind === 'channel') {
         return chat.title && isValidHandle(chat.title) ? `#${chat.title}` : null;
+    }
+    if (chat.kind === 'thread') {
+        const parent = chat.parent_chat_id ? getChat(chat.parent_chat_id, db) : null;
+        const parentTarget = parent ? formatAgentTarget(agentId, parent, db) : null;
+        return parentTarget && chat.anchor_message_id
+            ? `${parentTarget}:${anchorShortId(chat.anchor_message_id)}`
+            : null;
     }
     if (chat.kind !== 'dm') {
         return null;
@@ -78,6 +96,73 @@ export function formatAgentTarget(
               : null;
     const handle = (peerAgentId ? getStoredAgent(peerAgentId, db)?.name : null) ?? peer.label;
     return handle && isValidHandle(handle) ? `dm:@${handle}` : null;
+}
+
+// A thread target is its parent target plus the anchor's message id (short
+// or full). Membership rides the parent resolution; a SEND auto-creates the
+// thread exactly like a first reply, while reads only resolve what exists.
+function resolveThread(
+    input: {
+        agentId: string;
+        createThread?: boolean;
+        requireMembership?: boolean;
+        target: string;
+    },
+    parentTarget: string,
+    anchorRef: string,
+    db: Database
+): ResolvedAgentTarget {
+    const parent = resolveAgentTarget(
+        {
+            agentId: input.agentId,
+            createDm: false,
+            requireMembership: input.requireMembership,
+            target: parentTarget,
+        },
+        db
+    );
+    if (input.createThread && isArchivedChat(parent.chat)) {
+        throw new AgentApiError(
+            'TARGET_ARCHIVED',
+            `${parent.target} is archived; writes there are rejected.`,
+            409
+        );
+    }
+    let anchor: TavernChatMessage | null;
+    try {
+        anchor = resolveMessageId(anchorRef, { chatId: parent.chat.id }, db);
+    } catch (error) {
+        if (error instanceof AmbiguousMessageIdError) {
+            throw new AgentApiError('AMBIGUOUS_ID', error.message, 409);
+        }
+        throw error;
+    }
+    if (!anchor) {
+        throw targetNotFound(`No message "${anchorRef}" in ${parent.target}.`);
+    }
+    const target = `${parent.target}:${anchorShortId(anchor.id)}`;
+    if (!input.createThread) {
+        const existing = getChat(threadChatIdForAnchor(anchor.id), db);
+        if (existing?.kind !== 'thread' || existing.parent_chat_id !== parent.chat.id) {
+            throw targetNotFound(
+                `No thread exists on that message yet. Sending to ${target} starts it.`
+            );
+        }
+        return { chat: existing, target };
+    }
+    try {
+        const thread = ensureThreadChat(
+            { anchorMessageId: anchor.id, parentChatId: parent.chat.id },
+            db
+        );
+        return { chat: thread, target };
+    } catch (error) {
+        throw new AgentApiError(
+            'SEND_FAILED',
+            error instanceof Error ? error.message : 'Thread target could not be resolved.',
+            409
+        );
+    }
 }
 
 function resolveChannel(

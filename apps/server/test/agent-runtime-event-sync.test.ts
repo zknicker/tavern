@@ -35,6 +35,19 @@ const markAgentRuntimeConnectionFailure = mock(async () => undefined);
 const markAgentRuntimeConnectionReachable = mock(async () => undefined);
 const loadAgentRuntimeConnection = mock(async () => undefined);
 const createAgentRuntimeClientForConnection = mock(() => undefined);
+const createTavernClientForConnection = mock(
+    (connection: { baseUrl: string }) =>
+        ({
+            chat: {
+                get: async (chatId: string) => {
+                    const response = await fetch(
+                        `${connection.baseUrl}/api/chats/${encodeURIComponent(chatId)}`
+                    );
+                    return await response.json();
+                },
+            },
+        }) as never
+);
 const subscribeAgentRuntimeEventsForConnection = mock(async () => ({
     close() {},
 }));
@@ -90,7 +103,7 @@ mock.module('../src/api/invalidation-events.ts', () => ({
 
 mock.module('../src/agent-runtime/drivers.ts', () => ({
     createAgentRuntimeClientForConnection,
-    createTavernClientForConnection: mock(() => undefined),
+    createTavernClientForConnection,
     subscribeAgentRuntimeEventsForConnection,
 }));
 
@@ -150,6 +163,7 @@ beforeEach(async () => {
     markAgentRuntimeConnectionFailure.mockClear();
     markAgentRuntimeConnectionReachable.mockClear();
     createAgentRuntimeClientForConnection.mockClear();
+    createTavernClientForConnection.mockClear();
     createAgentRuntimeClientForConnection.mockReturnValue({
         close() {},
         listEvents: mock(async () => ({ events: [] })),
@@ -242,10 +256,8 @@ beforeEach(async () => {
                     id: record.message.id,
                     metadata: record.message.metadata,
                     nonce: null,
-                    parent_message_id: null,
                     role: 'assistant',
                     sequence: 2,
-                    thread_root_id: null,
                 },
             });
         }
@@ -464,6 +476,65 @@ test('applyObservedAgentRuntimeEvent forwards completed turns without fetching s
     expect(emitChatUpdated).toHaveBeenCalledWith({ chatId: tavernChatId });
     expect(emitSessionUpdated).toHaveBeenCalledWith({ sessionKey: 'session-1' });
     expect(emitChatLogUpdated).toHaveBeenCalledWith({ sessionKey: 'session-1' });
+});
+
+test('thread message events invalidate the thread and its parent with memoized resolution', async () => {
+    const threadChatId = 'cht_thr_event_anchor';
+    const parentChatId = 'cht_parent';
+    globalThis.fetch = (async (input, init) => {
+        const request = new Request(input, init);
+        const url = new URL(request.url);
+        tavernApiRequests.push({ body: null, method: request.method, path: url.pathname });
+
+        return Response.json({
+            active_turn_participant_ids: [],
+            anchor_message_id: 'msg_event_anchor',
+            created_at: '2026-05-12T19:00:00.000Z',
+            id: threadChatId,
+            kind: 'thread',
+            last_activity_at: '2026-05-12T19:00:00.000Z',
+            last_message_sequence: 1,
+            metadata: {},
+            parent_chat_id: parentChatId,
+            participants: [],
+            title: null,
+            unread_count: 1,
+            updated_at: '2026-05-12T19:00:00.000Z',
+        });
+    }) as typeof fetch;
+    const connection = { baseUrl: 'http://runtime.test', id: 'runtime-1' } as never;
+    const event = {
+        agentId: 'agent:test',
+        chatId: threadChatId,
+        message: {
+            id: 'msg_reply_1',
+            senderId: 'usr_tavern',
+            senderName: 'You',
+            sequence: 1,
+            text: 'Thread reply',
+            timestamp: '2026-05-12T19:00:00.000Z',
+        },
+        runId: 'run-1',
+        timestamp: '2026-05-12T19:00:00.000Z',
+        type: 'chat.messageAccepted' as const,
+    };
+
+    await applyObservedAgentRuntimeEvent(event, connection);
+    await applyObservedAgentRuntimeEvent(event, connection);
+
+    expect(tavernApiRequests).toEqual([
+        { body: null, method: 'GET', path: `/api/chats/${threadChatId}` },
+    ]);
+    expect(emitChatUpdated.mock.calls).toEqual([
+        [{ chatId: parentChatId }],
+        [{ chatId: parentChatId }],
+    ]);
+    expect(emitChatLogUpdated.mock.calls).toEqual([
+        [{ chatId: threadChatId }],
+        [{ chatId: parentChatId }],
+        [{ chatId: threadChatId }],
+        [{ chatId: parentChatId }],
+    ]);
 });
 
 test('applyObservedAgentRuntimeEvent does not sync history for live reply updates', async () => {

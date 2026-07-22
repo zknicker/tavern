@@ -1,11 +1,19 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { closeAgentApiTestDb, initAgentApiTestDb } from './agent-api-test-helper.ts';
 import { readAgentDraft, saveAgentDraft } from './agent-drafts.ts';
-import { readAgentHistory } from './agent-history.ts';
+import { readAgentHistory, searchAgentMessages } from './agent-history.ts';
 import { sendAgentMessage } from './agent-send.ts';
 import { ensureCurrentAgentSession, startNewAgentSession } from './agent-session-store.ts';
+import { unfollowAgentThread } from './agent-threads.ts';
 import { upsertStoredAgent } from './agents-store.ts';
-import { createChat, createMessage, listMessages } from './chat-api/index.ts';
+import {
+    createChat,
+    createMessage,
+    ensureThreadChat,
+    getChat,
+    listMessages,
+    setThreadFollow,
+} from './chat-api/index.ts';
 import { readSeenCursor } from './seen-ledger.ts';
 import { readServedCursor } from './served-ledger.ts';
 
@@ -222,6 +230,35 @@ describe('agent attested sends', () => {
         expect(readAgentHistory('agt_otto', { target: '#frozen' }).messages).toEqual([]);
     });
 
+    it('rejects unfollow reason notices in archived thread parents', () => {
+        createChat({
+            id: 'cht_frozen_thread_parent',
+            kind: 'channel',
+            metadata: { tavern: { archived: true } },
+            participants: [human(), agent('agt_otto', 'Otto')],
+            title: 'frozen-thread-parent',
+        });
+        createMessage('cht_frozen_thread_parent', {
+            author_id: 'usr_tavern',
+            content: 'archived anchor',
+            id: 'msg_80000000000000000000000000000001',
+            role: 'user',
+        });
+        const thread = ensureThreadChat({
+            anchorMessageId: 'msg_80000000000000000000000000000001',
+            parentChatId: 'cht_frozen_thread_parent',
+        });
+        setThreadFollow({ follow: true, participantId: 'agt_otto', threadChatId: thread.id });
+
+        expect(() =>
+            unfollowAgentThread('agt_otto', {
+                reason: 'done here',
+                target: '#frozen-thread-parent:80000000',
+            })
+        ).toThrow('reason notices cannot be posted');
+        expect(listMessages(thread.id).messages).toEqual([]);
+    });
+
     it('skips the freshness gate for DMs', () => {
         seedAgent('agt_wren', 'Wren');
         const sent = sendAgentMessage('agt_otto', { content: 'hello', target: 'dm:@Wren' });
@@ -270,6 +307,38 @@ describe('agent attested sends', () => {
         expect(readServedCursor(session.id, 'cht_ops')).toBeGreaterThan(0);
         const followUp = sendAgentMessage('agt_otto', { content: 'on it', target: '#ops' });
         expect(followUp.state).toBe('sent');
+    });
+
+    it('reports unseen replies from followed threads on a fresh send', () => {
+        peerMessage('msg_70000000000000000000000000000001', 'thread anchor');
+        const opened = sendAgentMessage('agt_otto', {
+            content: 'opening reply',
+            target: '#general:70000000',
+        });
+        if (opened.state !== 'sent') {
+            throw new Error('Expected the thread send to commit.');
+        }
+        createMessage(opened.message.chat_id, {
+            author_id: 'usr_tavern',
+            content: 'new thread detail',
+            id: 'msg_70000000000000000000000000000002',
+            role: 'user',
+        });
+
+        const sent = sendAgentMessage('agt_otto', {
+            content: 'back in channel',
+            target: '#general',
+        });
+
+        if (sent.state !== 'sent') {
+            throw new Error('Expected the parent send to commit.');
+        }
+        expect(sent.recentUnread).toContainEqual(
+            expect.objectContaining({
+                message: expect.objectContaining({ content: 'new thread detail' }),
+                target: '#general:70000000',
+            })
+        );
     });
 
     it('never acks recentUnread rows a crowded chat did not fully show', () => {
@@ -342,6 +411,82 @@ describe('agent attested sends', () => {
         });
         expect(retried).toMatchObject({ message: { id: first.message.id }, state: 'sent' });
         expect(listMessages('cht_general').messages).toHaveLength(2);
+    });
+
+    it('resolves thread targets, auto-creating the anchored thread', () => {
+        peerMessage('msg_00000000000000000000000000000031', 'anchor for a side discussion');
+
+        // Reads never materialize a thread: the anchor exists but nothing
+        // threads it until a send does.
+        expect(() => readAgentHistory('agt_otto', { target: '#general:00000000' })).toThrow(
+            'No thread exists'
+        );
+        expect(() =>
+            sendAgentMessage('agt_otto', {
+                sendDraft: true,
+                target: '#general:00000000',
+            })
+        ).toThrow('No thread exists');
+        expect(getChat('cht_thr_00000000000000000000000000000031')).toBeNull();
+
+        const sent = sendAgentMessage('agt_otto', {
+            content: 'threading in',
+            target: '#general:00000000',
+        });
+        expect(sent).toMatchObject({ state: 'sent' });
+        if (sent.state !== 'sent') {
+            throw new Error('Expected a sent response.');
+        }
+        expect(sent.message.chat_id).toBe('cht_thr_00000000000000000000000000000031');
+        // Short and full anchor ids resolve to the same thread; replying into
+        // it lands in the thread's own sequence domain, not the channel's.
+        const again = sendAgentMessage('agt_otto', {
+            content: 'again by full id',
+            target: '#general:msg_00000000000000000000000000000031',
+        });
+        expect(again).toMatchObject({ state: 'sent' });
+        expect(listMessages('cht_thr_00000000000000000000000000000031').messages).toHaveLength(2);
+        expect(listMessages('cht_general').messages).toHaveLength(1);
+
+        // The thread's history carries no replyTarget (it is already the
+        // thread); channel history exposes the anchor's thread slivers.
+        const threadHistory = readAgentHistory('agt_otto', {
+            target: '#general:00000000',
+        });
+        expect(threadHistory.messages[0]?.replyTarget).toBeUndefined();
+        const channelHistory = readAgentHistory('agt_otto', { target: '#general' });
+        const anchorLine = channelHistory.messages.find(
+            (message) => message.id === 'msg_00000000000000000000000000000031'
+        );
+        expect(anchorLine).toMatchObject({
+            replyCount: 2,
+            replyTarget: '#general:00000000',
+            threadId: 'cht_thr_00000000000000000000000000000031',
+        });
+
+        expect(() =>
+            sendAgentMessage('agt_otto', { content: 'nope', target: '#general:99999999' })
+        ).toThrow('No message');
+
+        // Global search reaches thread rows and names their full target.
+        const hits = searchAgentMessages('agt_otto', { q: 'threading' });
+        expect(hits.messages.map((message) => message.content)).toContain('threading in');
+        expect(hits.messages[0]?.target).toBe('#general:00000000');
+
+        // Unfollow quiets attention only: the thread leaves the enumeration
+        // but stays readable, and a reason lands as a thread-local notice.
+        const receipt = unfollowAgentThread('agt_otto', {
+            reason: 'wrapping up here',
+            target: '#general:00000000',
+        });
+        expect(receipt).toEqual({ target: '#general:00000000', unfollowed: true });
+        const afterUnfollow = readAgentHistory('agt_otto', { target: '#general:00000000' });
+        expect(afterUnfollow.messages.at(-1)?.content).toBe(
+            '@Otto unfollowed this thread — wrapping up here'
+        );
+        expect(
+            searchAgentMessages('agt_otto', { q: 'threading' }).messages.map((m) => m.content)
+        ).toContain('threading in');
     });
 });
 

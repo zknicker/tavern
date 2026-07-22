@@ -1,12 +1,28 @@
 import * as React from 'react';
-import type { ConversationMessageLayout } from './chat-transcript-model.ts';
+import type { ChatLogOutput } from '../../lib/trpc.tsx';
+import type { ConversationMessageLayout, TranscriptRow } from './chat-transcript-model.ts';
+
+export type TranscriptMessageRow = Extract<TranscriptRow, { kind: 'message' }>;
+export type TranscriptThreadSummary = NonNullable<
+    Extract<NonNullable<ChatLogOutput>['rows'][number], { kind: 'message' }>['thread']
+>;
+
+export function getTranscriptMessageThread(
+    row: TranscriptMessageRow
+): TranscriptThreadSummary | null {
+    return 'thread' in row ? (row.thread ?? null) : null;
+}
 
 export interface TranscriptRenderContextValue {
+    activeThreadAnchorId: string | null;
     chatId?: string;
     conversationLayout: ConversationMessageLayout;
     currentSessionKey?: string | null;
     defaultOpenWorkGroups: boolean;
+    flashMessageId: string | null;
     hiddenCount: number;
+    onOpenThread: (row: TranscriptMessageRow) => void;
+    onUnfollowThread: (threadChatId: string) => void;
     /** Runs whose final reply is present anywhere in the transcript. */
     repliedRunIds: ReadonlySet<string>;
     /**
@@ -15,6 +31,7 @@ export interface TranscriptRenderContextValue {
      * pages loading in.
      */
     shouldAnimateItemEnter: (key: string, timestampMs: number | null) => boolean;
+    threadActionsEnabled: boolean;
 }
 
 const TranscriptRenderContext = React.createContext<TranscriptRenderContextValue | null>(null);

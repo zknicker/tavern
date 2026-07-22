@@ -9,6 +9,7 @@ import type { TavernAgentRuntimeClient } from '../agent-runtime/client.ts';
 import { createTavernClientForConnection } from '../agent-runtime/client-factory.ts';
 import { createConfiguredAgentRuntimeClientForRuntimeId } from '../agent-runtime/configured-client.ts';
 import type { ApiContext } from '../api/context.ts';
+import { emitChatLogUpdated, emitChatUpdated } from '../api/invalidation-events.ts';
 import { resolveActingUserId } from '../identity/acting-user.ts';
 import { getAgentRuntimeConnection } from '../storage/agent-runtime-connections.ts';
 import { getAgent as getAgentRecord } from '../storage/agents.ts';
@@ -74,7 +75,13 @@ export async function sendTavernChatMessage(
                 ? ((chat.metadata.tavern as Record<string, unknown>).displayName as string)
                 : undefined,
     });
-    const messageReceipt = await tavernApi.chat.createMessage(parsed.chatId, {
+    const threadChat = parsed.thread
+        ? await tavernApi.chat.ensureThread(parsed.chatId, {
+              anchor_message_id: parsed.thread.anchorMessageId,
+          })
+        : null;
+    const writeChatId = threadChat?.id ?? parsed.chatId;
+    const messageReceipt = await tavernApi.chat.createMessage(writeChatId, {
         author_id: actingUserId,
         id: clientMessageId,
         metadata: {
@@ -88,6 +95,14 @@ export async function sendTavernChatMessage(
         nonce: clientMessageId,
         role: 'user',
     });
+    if (threadChat) {
+        // Human thread replies never project a runtime message event (no turn
+        // metadata), so the server emits the refresh itself: thread log,
+        // parent log (reply pill), and chat list (unread rollup).
+        emitChatLogUpdated({ chatId: threadChat.id });
+        emitChatLogUpdated({ chatId: parsed.chatId });
+        emitChatUpdated({ chatId: parsed.chatId });
+    }
 
     if (targetAgentIds.length === 0) {
         return sendChatMessageResultSchema.parse({
@@ -95,6 +110,7 @@ export async function sendTavernChatMessage(
             chatId: parsed.chatId,
             clientMessageId,
             status: 'accepted',
+            threadChatId: threadChat?.id ?? null,
             turns: [],
         });
     }
@@ -118,7 +134,7 @@ export async function sendTavernChatMessage(
                     runtimeId: chatRecord.runtimeId,
                 },
                 async () =>
-                    await runtimeClient.postMessage(chatRecord.chat.id, {
+                    await runtimeClient.postMessage(writeChatId, {
                         agent: {
                             agentId,
                         },
@@ -144,6 +160,7 @@ export async function sendTavernChatMessage(
         chatId: parsed.chatId,
         clientMessageId,
         status: 'accepted',
+        threadChatId: threadChat?.id ?? null,
         turns: acceptedTurns,
     });
 }

@@ -36,7 +36,9 @@ execution evidence linked to Tavern messages.
 
 A `chat` is a Runtime-owned conversation container. Tavern-owned chats use
 `kind: "channel"` for shared room-style conversations, `kind: "dm"` for
-one-to-one direct messages, and `kind: "task"` for dispatched task work chats.
+one-to-one direct messages, `kind: "task"` for dispatched task work chats, and
+`kind: "thread"` for message-anchored child conversations. Thread access comes
+from the parent chat; threads have no independent membership.
 Runtime does not bootstrap channels in a normal workspace. Each Runtime-managed
 agent has one built-in DM with the local human operator. Built-in agent DMs are
 removed from the app chat list when their agent is deleted, and clients must not
@@ -100,9 +102,11 @@ read model for chat history.
 GET    /api/chats?cursor=&limit=&reader_id=
 POST   /api/chats
 GET    /api/chats/{chat_id}?reader_id=
+POST   /api/chats/{chat_id}/threads
+PUT    /api/chats/{chat_id}/follow
 GET    /api/chats/{chat_id}/messages?after_sequence=&before_sequence=&limit=
 GET    /api/chats/{chat_id}/messages/search?query=&limit=
-GET    /api/chats/{chat_id}/timeline?before_sequence=&limit=
+GET    /api/chats/{chat_id}/timeline?before_sequence=&limit=&reader_id=
 GET    /api/chats/{chat_id}/responses?after_sequence=&limit=
 GET    /api/chats/{chat_id}/activity/{activity_id}
 POST   /api/chats/{chat_id}/messages
@@ -112,7 +116,6 @@ POST   /api/chats/{chat_id}/responses/{response_id}/activity
 POST   /api/chats/{chat_id}/artifacts
 POST   /api/chats/{chat_id}/read
 GET    /api/messages/{message_id}
-DELETE /api/messages/{message_id}
 GET    /api/events?limit=
 GET    /api/events/ws
 ```
@@ -265,8 +268,6 @@ Response:
     "attachments": [],
     "nonce": "client-send-...",
     "delivery_id": null,
-    "parent_message_id": null,
-    "thread_root_id": null,
     "deleted_at": null,
     "created_at": "2026-05-17T00:00:00.000Z",
     "metadata": {}
@@ -306,7 +307,8 @@ content and returns newest matches first.
 `GET /api/chats/{chat_id}/timeline` returns one turn-aligned page of chat
 history: a message window walked backward by sequence plus every response
 anchored to a window message by request or reply, with that response's full
-activity and artifacts.
+activity and artifacts. The page also includes one thread summary per anchor,
+with reply, unread, and follow state for the requesting reader.
 
 Rules:
 
@@ -484,7 +486,6 @@ describe:
 * `message.created`
 * `message.delivered`
 * `message.updated`
-* `message.deleted`
 * `response.created`
 * `response.updated`
 * `response.completed`
@@ -516,19 +517,17 @@ Event shape:
 Websocket delivery is a notification pipe. Clients recover missed state through
 durable chat reads.
 
-## Deletes
+## Clearing And Response Dismissal
 
-`DELETE /api/messages/{message_id}` soft-deletes a message.
+Messages have no edit or delete API. Corrections belong in thread replies.
 `DELETE /api/responses/{response_id}` soft-deletes a response; its activity and
 artifacts follow it out of the timeline.
 `POST /api/chats/{chat_id}/clear` soft-deletes every message and response
 currently in the chat in one operation and emits one `chat.cleared` event.
 
-Soft delete sets `deleted_at`, keeps the row, and preserves the per-chat
-sequence slot so cursors remain stable. List endpoints still return
-soft-deleted rows with `deleted_at` set; clients drop them from the product
-timeline. Hard delete is not part of the Chat API. Dismissing a failed turn
-in the app rides this contract.
+Chat clear sets `deleted_at`, keeps rows, and preserves per-chat sequence slots
+so cursors remain stable. Dismissing a failed response rides the response
+contract.
 
 ## Runtime Metadata
 
@@ -554,7 +553,7 @@ to existing Tavern messages by content or timestamp.
 
 ## What Is Intentionally Missing
 
-* Hard delete.
+* Per-message edit or delete.
 * Content/timestamp duplicate detection.
 * Hidden chain-of-thought as message content or activity.
 * Runtime session sequence as the Tavern timeline cursor.

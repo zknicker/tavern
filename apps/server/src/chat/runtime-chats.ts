@@ -21,6 +21,9 @@ export interface RuntimeChatRecord {
     updatedAt: string | null;
 }
 
+type ListableTavernChatKind = Exclude<TavernChat['kind'], 'thread'>;
+type ListableTavernChat = TavernChat & { kind: ListableTavernChatKind };
+
 interface TavernChatMetadata {
     agentIds: string[];
     archived: boolean;
@@ -57,7 +60,7 @@ export async function listRuntimeChatRecords(options?: {
     if (options?.chatId) {
         const chat = await getTavernChatOrNull(tavernClient, options.chatId, options.readerId);
 
-        if (!chat) {
+        if (!(chat && isListableTavernChat(chat))) {
             return [];
         }
 
@@ -85,6 +88,7 @@ export async function listRuntimeChatRecords(options?: {
         runtimeClient ? runtimeClient.listChats().then((result) => result.chats) : [],
     ]);
     const tavernRecords = tavernChats
+        .filter(isListableTavernChat)
         .map((chat) => ({
             chat: tavernChatToRuntimeChat(chat, options?.actingUserId),
             createdAt: chat.created_at,
@@ -112,11 +116,48 @@ export async function getRuntimeChatRecord(
     chatId: string,
     options?: { actingUserId?: string; readerId?: string }
 ) {
-    return (
-        (await listRuntimeChatRecords({ ...options, includeArchived: true })).find(
-            (record) => record.chat.id === chatId
-        ) ?? null
+    const listedRecord = (await listRuntimeChatRecords({ ...options, includeArchived: true })).find(
+        (record) => record.chat.id === chatId
     );
+    if (listedRecord) {
+        return listedRecord;
+    }
+
+    const connection = await getActiveAgentRuntimeConnection();
+    if (!(connection?.enabled && connection.baseUrl)) {
+        return null;
+    }
+
+    const client = createTavernClientForConnection(connection);
+    const chat = await getTavernChatOrNull(client, chatId, options?.readerId);
+    if (!chat) {
+        return null;
+    }
+    if (isListableTavernChat(chat)) {
+        return tavernChatRecord(chat, connection.id, options?.actingUserId);
+    }
+    if (!chat.parent_chat_id) {
+        return null;
+    }
+
+    const parent = await getTavernChatOrNull(client, chat.parent_chat_id, options?.readerId);
+    if (!(parent && isListableTavernChat(parent))) {
+        return null;
+    }
+
+    const parentRecord = tavernChatRecord(parent, connection.id, options?.actingUserId);
+    return {
+        chat: {
+            ...parentRecord.chat,
+            activeTurnParticipantIds: chat.active_turn_participant_ids,
+            id: chat.id,
+            unreadCount: chat.unread_count,
+        },
+        createdAt: chat.created_at,
+        lastActivityAt: chat.last_activity_at,
+        runtimeId: connection.id,
+        updatedAt: chat.updated_at,
+    };
 }
 
 export async function createRuntimeTavernChat(input: {
@@ -126,7 +167,7 @@ export async function createRuntimeTavernChat(input: {
     displayName: string;
     displayNameSource: TavernChatDisplayNameSource;
     id: string;
-    kind?: TavernChat['kind'];
+    kind?: ListableTavernChatKind;
 }) {
     const { client } = await requireRuntimeChatClient();
     await saveRuntimeChat(client, {
@@ -154,10 +195,14 @@ export async function updateRuntimeTavernChat(input: {
     description?: string | null;
     displayName: string;
     id: string;
-    kind?: TavernChat['kind'];
+    kind?: ListableTavernChatKind;
 }) {
     const { client } = await requireRuntimeChatClient();
     const current = await getTavernChatOrNull(client, input.id);
+    if (current?.kind === 'thread') {
+        throw new Error(`Thread chat "${input.id}" cannot be updated as a parent chat.`);
+    }
+
     const archived = input.archived ?? (current ? readTavernChatMetadata(current).archived : false);
     const metadata = current ? readTavernChatMetadata(current) : null;
 
@@ -382,7 +427,10 @@ async function withRuntimeChatTimeout<T>(promise: Promise<T>, action: string) {
     }
 }
 
-function tavernChatToRuntimeChat(chat: TavernChat, actingUserId?: string): AgentRuntimeChat {
+function tavernChatToRuntimeChat(
+    chat: ListableTavernChat,
+    actingUserId?: string
+): AgentRuntimeChat {
     const metadata = readTavernChatMetadata(chat);
     const agentIds = resolveTavernChatAgentIds(chat, metadata);
     const participants = buildPresentedTavernParticipants(chat, agentIds, actingUserId);
@@ -420,6 +468,24 @@ function tavernChatToRuntimeChat(chat: TavernChat, actingUserId?: string): Agent
         target,
         trigger: null,
     };
+}
+
+function tavernChatRecord(
+    chat: ListableTavernChat,
+    runtimeId: string,
+    actingUserId?: string
+): RuntimeChatRecord {
+    return {
+        chat: tavernChatToRuntimeChat(chat, actingUserId),
+        createdAt: chat.created_at,
+        lastActivityAt: chat.last_activity_at,
+        runtimeId,
+        updatedAt: chat.updated_at,
+    };
+}
+
+function isListableTavernChat(chat: TavernChat): chat is ListableTavernChat {
+    return chat.kind !== 'thread';
 }
 
 function toRuntimeChatParticipants(

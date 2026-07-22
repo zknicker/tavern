@@ -13,6 +13,7 @@ import { deliverToBusySeats, resetBusyDeliveryForTesting } from './busy-delivery
 import {
     createChat,
     createMessage,
+    ensureThreadChat,
     getMessage,
     getResponse,
     getResponseActivity,
@@ -57,6 +58,25 @@ describe('freshness gate', () => {
             expect(hold?.prompt).toContain('Bob already answered.');
             expect(hold?.prompt).toContain('Draft.');
             expect(hold?.prompt).toContain('reply exactly NO_REPLY');
+        });
+
+        it('holds a thread reply against its independent sequence cursor', () => {
+            seedChat('cht_parent', 'channel');
+            seedMessage('cht_parent', 'msg_anchor', 'usr_alice', 'question?');
+            const thread = ensureThreadChat({
+                anchorMessageId: 'msg_anchor',
+                parentChatId: 'cht_parent',
+            });
+            seedMessage(thread.id, 'msg_thread_trigger', 'usr_alice', 'thread question?');
+            seedMessage(thread.id, 'msg_thread_peer', 'usr_bob', 'thread answer landed');
+
+            const hold = resolveFreshnessHold(
+                gateInput(thread.id, 'msg_thread_trigger'),
+                'Stale thread draft.'
+            );
+
+            expect(hold?.unseen.map((message) => message.id)).toEqual(['msg_thread_peer']);
+            expect(readSeenCursor('ags_agt_primary_1', thread.id)).toBe(2);
         });
 
         it('does not hold in DMs, for own messages, or without unseen rows', () => {

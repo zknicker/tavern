@@ -54,7 +54,7 @@ import { recordAgentTurnPromptEvidence } from './agent-turn-store.ts';
 import { createTavernChatActionTools } from './chat-actions-tools.ts';
 import {
     createDelivery,
-    deleteMessage,
+    discardStreamingMessage,
     getMessage,
     upsertResponse,
     upsertResponseActivity,
@@ -353,7 +353,7 @@ function completeSilentHarnessTurn(
     // narration already created one (specs/chat-timeline.md).
     const postId = assistantMessageIdForRun(input.runId);
     if (getMessage(postId)) {
-        deleteMessage(postId);
+        discardStreamingMessage(input.chatId, postId);
     }
     upsertResponseActivity(input.chatId, input.responseId, {
         completed_at: turn.completedAt,

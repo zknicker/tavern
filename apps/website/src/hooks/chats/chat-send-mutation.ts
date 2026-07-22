@@ -4,6 +4,7 @@ import { createChatRunId } from './chat-run-id.ts';
 
 export interface ChatSendMutationContext {
     optimisticRunIds: string[];
+    timelineChatId: string | null;
     timelineMessageId: string;
 }
 
@@ -70,9 +71,18 @@ export function createChatSendMutationHandlers(utils: ChatSendMutationUtils) {
             chatId: string;
             clientMessageId?: string;
             content: string;
+            thread?: { anchorMessageId: string };
         }) => {
             const timestamp = new Date().toISOString();
             const timelineMessageId = input.clientMessageId ?? `msg_${crypto.randomUUID()}`;
+            if (input.thread) {
+                return {
+                    optimisticRunIds: [],
+                    timelineChatId: null,
+                    timelineMessageId,
+                } satisfies ChatSendMutationContext;
+            }
+
             utils.timelineMessage.add({
                 ...(input.attachments?.length ? { attachments: input.attachments } : {}),
                 chatId: input.chatId,
@@ -101,6 +111,7 @@ export function createChatSendMutationHandlers(utils: ChatSendMutationUtils) {
 
             return {
                 optimisticRunIds,
+                timelineChatId: input.chatId,
                 timelineMessageId,
             } satisfies ChatSendMutationContext;
         },
@@ -113,10 +124,12 @@ export function createChatSendMutationHandlers(utils: ChatSendMutationUtils) {
                 return;
             }
 
-            utils.timelineMessage.remove({
-                chatId: input.chatId,
-                messageId: context.timelineMessageId,
-            });
+            if (context.timelineChatId) {
+                utils.timelineMessage.remove({
+                    chatId: context.timelineChatId,
+                    messageId: context.timelineMessageId,
+                });
+            }
 
             for (const runId of context.optimisticRunIds) {
                 utils.timelineTurn.clear({
@@ -133,6 +146,7 @@ export function createChatSendMutationHandlers(utils: ChatSendMutationUtils) {
                     agentId: string;
                     runId: string;
                 }>;
+                threadChatId?: string | null;
             },
             _input: unknown,
             context: ChatSendMutationContext | undefined
@@ -140,9 +154,9 @@ export function createChatSendMutationHandlers(utils: ChatSendMutationUtils) {
             const firstTurn = result.turns[0] ?? null;
             const turnReference = firstTurn?.runId ?? null;
 
-            if (context && turnReference) {
+            if (context?.timelineChatId && turnReference) {
                 utils.timelineMessage.setSession({
-                    chatId: result.chatId,
+                    chatId: context.timelineChatId,
                     messageId: context.timelineMessageId,
                     sessionKey: turnReference,
                 });
@@ -158,14 +172,16 @@ export function createChatSendMutationHandlers(utils: ChatSendMutationUtils) {
                 }
             }
 
-            for (const turn of result.turns) {
-                utils.timelineTurn.start({
-                    agentId: turn.agentId,
-                    chatId: result.chatId,
-                    runId: turn.runId,
-                    sessionKey: turn.runId,
-                    startedAt: result.acceptedAt,
-                });
+            if (context?.timelineChatId) {
+                for (const turn of result.turns) {
+                    utils.timelineTurn.start({
+                        agentId: turn.agentId,
+                        chatId: context.timelineChatId,
+                        runId: turn.runId,
+                        sessionKey: turn.runId,
+                        startedAt: result.acceptedAt,
+                    });
+                }
             }
 
             await Promise.all([

@@ -3,10 +3,11 @@ import { getDb } from '../../db/connection';
 import type { Database } from '../../db/sqlite';
 import { namedParams } from '../../db/sqlite';
 import { assertChatExists } from './chats';
-import { assertTavernIdPrefix } from './ids';
+import { assertTavernIdPrefix, localHumanParticipantId } from './ids';
 import { clampLimit } from './limits';
 import { rowToMessage } from './messages';
 import { listActivityForResponses, listArtifactsForResponses, rowToResponse } from './responses';
+import { threadSummaries } from './threads';
 import type { MessageRow, ResponseRow } from './types';
 
 // A turn that needs more passes than this is pathologically interleaved;
@@ -26,7 +27,7 @@ const maxAlignmentPasses = 5;
  */
 export function getChatTimelinePage(
     chatId: string,
-    input: { beforeSequence?: number; limit?: number } = {},
+    input: { beforeSequence?: number; limit?: number; readerId?: string } = {},
     db: Database = getDb()
 ): TavernChatTimelinePage {
     assertTavernIdPrefix(chatId, 'cht_', 'Chat id');
@@ -58,6 +59,8 @@ export function getChatTimelinePage(
 
     const responseIds = responses.map((response) => response.id);
     const oldestSequence = messageRows[0]?.sequence;
+    const readerId = input.readerId ?? localHumanParticipantId;
+    assertTavernIdPrefix(readerId, 'usr_', 'Chat reader id');
 
     return {
         activity: listActivityForResponses(responseIds, db),
@@ -68,6 +71,14 @@ export function getChatTimelinePage(
                 ? oldestSequence
                 : null,
         responses,
+        // Only this page's anchors need summaries; the consumer attaches
+        // them to in-window message rows and nothing else.
+        threads: threadSummaries(
+            chatId,
+            readerId,
+            db,
+            messageRows.map((row) => row.id)
+        ),
         total_messages: countMessages(chatId, db),
     };
 }

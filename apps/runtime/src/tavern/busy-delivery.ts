@@ -2,7 +2,12 @@ import type { TavernChatEvent, TavernChatMessage } from '@tavern/api';
 import { log } from '../log.ts';
 import { resolveHomeTimezone } from '../timezone-settings.ts';
 import { type AgentTurn, findRunningAgentTurnForAgent } from './agent-turn-store.ts';
-import { getChat, subscribeToTavernApiEvents, upsertResponseActivity } from './chat-api/index.ts';
+import {
+    getChat,
+    membershipChat,
+    subscribeToTavernApiEvents,
+    upsertResponseActivity,
+} from './chat-api/index.ts';
 import { formatPromptMessage } from './harness-prompt.ts';
 import { deliverToActiveTurn } from './turn-delivery.ts';
 
@@ -86,8 +91,10 @@ function busyDeliveryNotice(message: TavernChatMessage, chatId: string, turnChat
 }
 
 function chatAgentIds(chatId: string) {
+    const chat = getChat(chatId);
+    const seatChat = chat ? membershipChat(chat) : null;
     const ids = new Set<string>();
-    for (const participant of getChat(chatId)?.participants ?? []) {
+    for (const participant of seatChat?.participants ?? []) {
         if (participant.kind !== 'agent') {
             continue;
         }

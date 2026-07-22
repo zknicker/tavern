@@ -27,6 +27,15 @@ export const messageRowMessageSchema = sessionMessageSchema.extend({
     sourceSessionKey: z.string(),
 });
 
+export const threadSummaryRowSchema = z.object({
+    anchorMessageId: z.string(),
+    followed: z.boolean(),
+    latestReplyAt: z.string().nullable(),
+    replyCount: z.number().int().nonnegative(),
+    threadChatId: z.string(),
+    unreadCount: z.number().int().nonnegative(),
+});
+
 export const messageRowSchema = z.object({
     actor: actorRefSchema.nullable(),
     connectsToNext: z.boolean(),
@@ -39,6 +48,7 @@ export const messageRowSchema = z.object({
     // Turn identity for agent replies: the message is the turn's output, and
     // consumers associate the two by this field, never by parsing ids.
     runId: z.string().nullable().optional(),
+    thread: threadSummaryRowSchema.nullable().optional(),
 });
 
 export const toolRowSchema = z.object({

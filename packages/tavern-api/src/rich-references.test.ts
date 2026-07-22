@@ -7,6 +7,7 @@ import {
     parseAppReferenceTarget,
     parseSkillReferenceTarget,
     parseTavernRichReferences,
+    parseUserReferenceTarget,
 } from './rich-references.ts';
 
 describe('Tavern rich references', () => {
@@ -71,6 +72,17 @@ describe('Tavern rich references', () => {
 
     it('leaves bare mention-looking text unparsed', () => {
         expect(parseTavernRichReferences('@Planner $ui B0TESTASIN')).toEqual([]);
+    });
+
+    it('parses explicit user references', () => {
+        expect(parseUserReferenceTarget('user://usr_tavern')).toBe('usr_tavern');
+        expect(parseTavernRichReferences('Ask [@You](user://usr_tavern).')).toEqual([
+            expect.objectContaining({
+                id: 'user://usr_tavern',
+                kind: 'user',
+                label: 'You',
+            }),
+        ]);
     });
 
     it('parses skill targets independently from filesystem paths', () => {

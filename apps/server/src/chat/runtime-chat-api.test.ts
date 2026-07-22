@@ -7,9 +7,37 @@ import {
     failedTurnsFromResponses,
     isTimelineActivityRow,
     mapResponseIdsByMessageId,
+    messageToChatRows,
     settledRunIdsFromResponses,
     visibleTimelineSources,
 } from './runtime-chat-api.ts';
+
+test('thread unfollow reasons map to system notice rows', () => {
+    const notice = {
+        ...message({ id: 'msg_thread_notice' }),
+        author: { id: 'sys_thread_notice', kind: 'system', label: null, metadata: {} },
+        content: '@Otto unfollowed this thread — done here',
+        metadata: { runtime: { agentId: 'agt_otto', source: 'thread-notice' } },
+        role: 'system',
+    } as TavernChatMessage;
+
+    assert.deepEqual(messageToChatRows(notice, new Map(), new Map(), new Map()), [
+        {
+            id: 'msg_thread_notice',
+            kind: 'system',
+            runtimeNotice: {
+                agentId: 'agt_otto',
+                detail: null,
+                kind: 'status',
+                sessionId: null,
+                text: '@Otto unfollowed this thread — done here',
+                title: 'Thread unfollowed',
+            },
+            systemKind: 'runtimeNotice',
+            timestamp: '2026-06-08T12:00:00.000Z',
+        },
+    ]);
+});
 
 test('a reply that triggers the next turn stays attributed to its producing response', () => {
     const responses = [
@@ -323,10 +351,8 @@ function message(input: { id: string }): TavernChatMessage {
         id: input.id,
         metadata: {},
         nonce: null,
-        parent_message_id: null,
         role: 'user',
         sequence: 1,
-        thread_root_id: null,
     } as TavernChatMessage;
 }
 

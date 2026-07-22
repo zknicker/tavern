@@ -1,4 +1,4 @@
-import { runtimeRoutes, type TavernCreateChatRequest } from '@tavern/api';
+import { runtimeRoutes, type TavernChatEvent, type TavernCreateChatRequest } from '@tavern/api';
 import { developmentChatDemoIds } from '@tavern/api/development-chat-demos';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { closeDb, getDb, initTestDb } from '../db/connection';
@@ -14,7 +14,6 @@ import {
     createDelivery,
     createMessage,
     createChat as createRuntimeChat,
-    deleteMessage,
     deleteResponse,
     getChat,
     getResponse,
@@ -268,6 +267,67 @@ describe('Tavern Runtime Chat API store', () => {
         );
     });
 
+    it('projects retained legacy message deletion events after an upgrade', () => {
+        createChat({ id: 'cht_legacy_delete' });
+        insertEvent(
+            {
+                chatId: 'cht_legacy_delete',
+                event: 'message.deleted' as TavernChatEvent['type'],
+                payload: { message_id: 'msg_legacy' },
+            },
+            getDb()
+        );
+
+        expect(listProjectedTavernRuntimeEvents()).toContainEqual(
+            expect.objectContaining({
+                event: expect.objectContaining({
+                    chatId: 'cht_legacy_delete',
+                    type: 'chat.historyChanged',
+                }),
+            })
+        );
+    });
+
+    it('projects agent API posts as chat history changes', () => {
+        createChat({ id: 'cht_agent_api_post' });
+        createMessage('cht_agent_api_post', {
+            author_id: 'agt_primary',
+            content: 'posted from the agent CLI',
+            id: 'msg_agent_api_post',
+            metadata: { runtime: { agentId: 'agt_primary', source: 'agent-api' } },
+            role: 'assistant',
+        });
+
+        expect(listProjectedTavernRuntimeEvents()).toContainEqual(
+            expect.objectContaining({
+                event: expect.objectContaining({
+                    chatId: 'cht_agent_api_post',
+                    type: 'chat.historyChanged',
+                }),
+            })
+        );
+    });
+
+    it('projects thread notices as chat history changes', () => {
+        createChat({ id: 'cht_thread_notice' });
+        createMessage('cht_thread_notice', {
+            author_id: 'sys_thread_notice',
+            content: '@Otto unfollowed this thread — done here',
+            id: 'msg_thread_notice',
+            metadata: { runtime: { agentId: 'agt_otto', source: 'thread-notice' } },
+            role: 'system',
+        });
+
+        expect(listProjectedTavernRuntimeEvents()).toContainEqual(
+            expect.objectContaining({
+                event: expect.objectContaining({
+                    chatId: 'cht_thread_notice',
+                    type: 'chat.historyChanged',
+                }),
+            })
+        );
+    });
+
     it('rejects deleting a response that does not exist', () => {
         createChat({ id: 'cht_1' });
 
@@ -464,7 +524,7 @@ describe('Tavern Runtime Chat API store', () => {
             expect.objectContaining({ id: 'cht_1', last_activity_at: null }),
         ]);
 
-        const first = createMessage('cht_1', messageInput('msg_1', 'nonce_1', 'hello'));
+        createMessage('cht_1', messageInput('msg_1', 'nonce_1', 'hello'));
         const second = createMessage('cht_1', messageInput('msg_2', 'nonce_2', 'again'));
 
         expect(getChat('cht_1')).toMatchObject({
@@ -481,11 +541,6 @@ describe('Tavern Runtime Chat API store', () => {
         expect(getChat('cht_1')).toMatchObject({
             last_activity_at: second.message.created_at,
             title: 'Renamed',
-        });
-
-        deleteMessage('msg_2');
-        expect(getChat('cht_1')).toMatchObject({
-            last_activity_at: first.message.created_at,
         });
     });
 

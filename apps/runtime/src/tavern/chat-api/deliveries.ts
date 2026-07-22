@@ -5,6 +5,7 @@ import { namedParams, optionalRow } from '../../db/sqlite';
 import { insertEvent, publish, replaceEventPayload } from './events';
 import { assertOptionalTavernIdPrefix, assertTavernIdPrefix } from './ids';
 import { findExistingMessage, getMessage, getMessageOrThrow, insertMessage } from './messages';
+import { assertThreadWritable, autoFollowMentions, autoFollowOnPost } from './threads';
 import type { DeliveryReceipt, DeliveryRow } from './types';
 
 export function createDelivery(
@@ -29,11 +30,16 @@ export function createDelivery(
 
     db.exec('BEGIN IMMEDIATE');
     try {
+        // input.agent_id is the persisted author (insertMessage), so the
+        // parent-seat check must validate it, not the request's author field.
+        assertThreadWritable(chatId, input.agent_id, db);
         // A streaming post created at first content links here; the delivery
         // finalizes its text and metadata in place (specs/chat-timeline.md).
         const message =
             finalizeExistingMessage(chatId, input.message, db) ??
             insertMessage(chatId, input.message, input.agent_id, input.id, db);
+        autoFollowOnPost({ authorId: input.agent_id, chatId }, db);
+        autoFollowMentions({ chatId, content: input.message.content }, db);
         const now = new Date().toISOString();
         const event = insertEvent(
             {

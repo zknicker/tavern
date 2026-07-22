@@ -1,4 +1,11 @@
-export type TavernRichReferenceKind = 'agent' | 'app' | 'directory' | 'file' | 'plugin' | 'skill';
+export type TavernRichReferenceKind =
+    | 'agent'
+    | 'app'
+    | 'directory'
+    | 'file'
+    | 'plugin'
+    | 'skill'
+    | 'user';
 
 export type TavernRichReferenceProjection =
     | 'agent-reference'
@@ -42,6 +49,10 @@ export function parseAppReferenceTarget(target: string) {
 
 export function parseSkillReferenceTarget(target: string) {
     return parseSchemeReferenceTarget(target, 'skill');
+}
+
+export function parseUserReferenceTarget(target: string) {
+    return parseSchemeReferenceTarget(target, 'user');
 }
 
 export function parseTavernRichReferences(content: string) {
@@ -91,6 +102,14 @@ function parseRichReferenceLink({
     if (parseAgentReferenceTarget(target)) {
         return {
             kind: 'agent',
+            label: stripReferenceLabelSigil(rawLabel),
+            projection: 'agent-reference',
+        };
+    }
+
+    if (parseUserReferenceTarget(target)) {
+        return {
+            kind: 'user',
             label: stripReferenceLabelSigil(rawLabel),
             projection: 'agent-reference',
         };

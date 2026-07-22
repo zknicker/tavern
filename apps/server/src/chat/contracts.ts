@@ -217,6 +217,12 @@ export const sendChatMessageInputSchema = z
         chatId: z.string().trim().min(1),
         clientMessageId: z.string().trim().min(1).optional(),
         content: z.string().trim(),
+        thread: z
+            .object({
+                anchorMessageId: z.string().trim().min(1),
+            })
+            .strict()
+            .optional(),
     })
     .strict()
     .refine((input) => input.content.trim().length > 0 || Boolean(input.attachments?.length), {
@@ -228,6 +234,7 @@ export const sendChatMessageResultSchema = z.object({
     acceptedAt: z.string().datetime(),
     chatId: z.string().trim().min(1),
     clientMessageId: z.string().trim().min(1),
+    threadChatId: z.string().trim().min(1).nullable(),
     turns: z.array(
         z.object({
             agentId: z.string().trim().min(1),

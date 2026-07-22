@@ -8,6 +8,7 @@ import {
     Image01Icon,
     MagicWand01Icon,
     PlugIcon,
+    UserIcon,
 } from '@hugeicons-pro/core-solid-rounded';
 import { Icon } from '../../components/ui/icon.tsx';
 import { cn } from '../../lib/utils.ts';
@@ -25,6 +26,7 @@ const mentionIconKeys = [
     'plugin',
     'skill',
     'unknown',
+    'user',
 ] as const;
 
 export type MentionIconKey = (typeof mentionIconKeys)[number];
@@ -54,6 +56,7 @@ const defaultMentionAppearance = {
     image: { icon: 'image' },
     plugin: { icon: 'plugin' },
     skill: { brandColor: 'var(--brand)', icon: 'skill' },
+    user: { icon: 'user' },
 } satisfies Record<MentionOptionKind, MentionAppearance>;
 
 const skillAppearanceOverrides = {
@@ -97,6 +100,7 @@ const mentionIconMap = {
     plugin: PlugIcon,
     skill: CubeIcon,
     unknown: MagicWand01Icon,
+    user: UserIcon,
 } satisfies Record<MentionIconKey, IconSvgElement>;
 
 export function getMentionAppearance(input: MentionAppearanceInput): MentionAppearance {

@@ -72,10 +72,6 @@ export function harnessPrompt(input: AgentExecutorInput, recallContext?: null | 
         }
     }
 
-    if (context.replyContext) {
-        sections.push('', 'Reply context:', formatPromptMessage(context.replyContext, timezone));
-    }
-
     // Pending traffic elsewhere: unread counts per other chat, never bodies.
     // The agent reads with the chat tools; auto-drain brings dedicated turns.
     const pendingLines = pendingChatLines(input);
@@ -114,42 +110,11 @@ function buildHarnessPromptContext(input: AgentExecutorInput) {
         isAmbientPromptMessage(input, message)
     );
     const ambientMessages = filteredAmbientMessages.slice(-maxAmbientContextMessages);
-    const replyContext = request?.parent_message_id
-        ? getReplyContext({
-              ambientMessages,
-              currentMessageId: request.id,
-              parentMessageId: request.parent_message_id,
-          })
-        : null;
-
     return {
         ambientMessages,
         ambientMessagesOmitted: filteredAmbientMessages.length > maxAmbientContextMessages,
         currentMessage: request,
-        replyContext,
     };
-}
-
-function getReplyContext(input: {
-    ambientMessages: TavernChatMessage[];
-    currentMessageId: string;
-    parentMessageId: string;
-}) {
-    if (
-        input.parentMessageId === input.currentMessageId ||
-        input.ambientMessages.some((message) => message.id === input.parentMessageId)
-    ) {
-        return null;
-    }
-    const message = getMessage(input.parentMessageId);
-    if (
-        message &&
-        !message.deleted_at &&
-        (message.role === 'assistant' || message.role === 'user')
-    ) {
-        return message;
-    }
-    return null;
 }
 
 function isAmbientPromptMessage(input: AgentExecutorInput, message: TavernChatMessage) {
@@ -170,12 +135,16 @@ function chatIdentityLines(input: AgentExecutorInput, _timezone: string) {
     if (!chat) {
         return [`- chatId: ${input.chatId}`];
     }
-    const description = chat.kind === 'dm' ? null : readChatDescription(chat.metadata);
+    const parent =
+        chat.kind === 'thread' && chat.parent_chat_id ? getChat(chat.parent_chat_id) : null;
+    const identityChat = parent ?? chat;
+    const description =
+        identityChat.kind === 'dm' ? null : readChatDescription(identityChat.metadata);
     const kind =
-        chat.kind === 'dm'
+        identityChat.kind === 'dm'
             ? 'a direct message between you and the user'
-            : `the "${chat.title}" channel${description ? ` — ${description}` : ''}`;
-    const participants = chat.participants.map((participant) => {
+            : `the "${identityChat.title}" channel${description ? ` — ${description}` : ''}`;
+    const participants = identityChat.participants.map((participant) => {
         if (participant.id === input.agentParticipantId) {
             return participantLine(participant.label ?? input.agent.name, '(you)', input.agent.bio);
         }
@@ -188,7 +157,32 @@ function chatIdentityLines(input: AgentExecutorInput, _timezone: string) {
         }
         return participantLine(participant.label ?? participant.id, null, null);
     });
-    return [`- this is ${kind} (chatId: ${input.chatId})`, '- participants:', ...participants];
+    const identity =
+        chat.kind === 'thread'
+            ? threadIdentityLine(chat, identityChat, input)
+            : `- this is ${kind} (chatId: ${input.chatId})`;
+    return [identity, '- participants:', ...participants];
+}
+
+function threadIdentityLine(
+    thread: NonNullable<ReturnType<typeof getChat>>,
+    parent: NonNullable<ReturnType<typeof getChat>>,
+    input: AgentExecutorInput
+) {
+    const anchor = thread.anchor_message_id ? getMessage(thread.anchor_message_id) : null;
+    const parentName =
+        parent.kind === 'dm'
+            ? `@${
+                  parent.participants.find(
+                      (participant) => participant.id !== input.agentParticipantId
+                  )?.label ?? 'user'
+              }`
+            : parent.kind === 'task'
+              ? `task ${JSON.stringify(parent.title ?? parent.id)}`
+              : `#${parent.title ?? parent.id}`;
+    const author = anchor?.author.label ?? anchor?.author.id ?? 'unknown';
+    const excerpt = (anchor?.content ?? '').replace(/\s+/gu, ' ').trim().slice(0, 200);
+    return `- this chat is a thread in ${parentName} anchored on @${author}: ${JSON.stringify(excerpt)}. Replies here stay in the thread. (chatId: ${thread.id})`;
 }
 
 function participantLine(name: string, tag: string | null, bio: string | null | undefined) {

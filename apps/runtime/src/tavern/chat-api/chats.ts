@@ -19,6 +19,9 @@ export function createChat(input: TavernCreateChatRequest, db: Database = getDb(
     assertTavernIdPrefix(input.id, 'cht_', 'Chat id');
     const existing = getChat(input.id, db);
     if (existing) {
+        if (existing.kind === 'thread') {
+            throw new Error(`Chat ${input.id} is a thread; thread chats cannot be updated here.`);
+        }
         const kind = input.kind ?? existing.kind;
         const participants = input.participants ?? existing.participants;
         validateChatShape({ kind, participants });
@@ -85,7 +88,7 @@ export function createChat(input: TavernCreateChatRequest, db: Database = getDb(
 // Unread for the requested reader: messages past that user's receipt,
 // excluding their own messages. Keyless callers default to the synthetic
 // local operator.
-const unreadCountSelect = `(
+const unreadCountSelect = `((
     SELECT COUNT(*)
     FROM chat_messages
     WHERE chat_messages.chat_id = chats.id
@@ -96,7 +99,25 @@ const unreadCountSelect = `(
           WHERE chat_reads.chat_id = chats.id
             AND chat_reads.reader_id = $readerId
       ), 0)
-) AS unread_count`;
+) + (
+    SELECT COUNT(*)
+    FROM chats AS thread_chats
+    JOIN thread_follows
+      ON thread_follows.thread_chat_id = thread_chats.id
+     AND thread_follows.participant_id = $readerId
+     AND thread_follows.followed = 1
+    JOIN chat_messages AS thread_messages
+      ON thread_messages.chat_id = thread_chats.id
+    WHERE thread_chats.parent_chat_id = chats.id
+      AND thread_chats.kind = 'thread'
+      AND thread_messages.deleted_at IS NULL
+      AND thread_messages.author_id != $readerId
+      AND thread_messages.sequence > COALESCE((
+          SELECT last_read_sequence FROM chat_reads
+          WHERE chat_reads.chat_id = thread_chats.id
+            AND chat_reads.reader_id = $readerId
+      ), 0)
+)) AS unread_count`;
 
 export function listChats(
     input: { cursor?: string | null; limit?: number; readerId?: string } = {},
@@ -144,6 +165,7 @@ export function listChats(
                     ) AS active_turn_participant_ids
              FROM chats
              WHERE id > $cursor
+               AND kind != 'thread'
              ORDER BY id ASC
              LIMIT $limit`
         )
@@ -160,7 +182,11 @@ export function listChats(
     };
 }
 
-/** Chats where the given agent participant holds a seat, oldest id first. */
+/**
+ * Chats visible to the given agent participant, oldest id first. Membership
+ * lives on the parent for thread chats, and a thread only surfaces while the
+ * agent follows it — incidental child participant rows never count.
+ */
 export function listChatsForAgentParticipant(
     participantId: string,
     db: Database = getDb()
@@ -172,9 +198,43 @@ export function listChatsForAgentParticipant(
                     NULL AS unread_count,
                     NULL AS active_turn_participant_ids
              FROM chats
-             JOIN chat_participants ON chat_participants.chat_id = chats.id
-             WHERE chat_participants.id = $participantId
-               AND chat_participants.kind = 'agent'
+             JOIN chat_participants
+               ON chat_participants.chat_id = COALESCE(chats.parent_chat_id, chats.id)
+              AND chat_participants.id = $participantId
+              AND chat_participants.kind = 'agent'
+             WHERE chats.kind != 'thread'
+                OR EXISTS (
+                    SELECT 1 FROM thread_follows
+                    WHERE thread_follows.thread_chat_id = chats.id
+                      AND thread_follows.participant_id = $participantId
+                      AND thread_follows.followed = 1
+                )
+             ORDER BY chats.id ASC`
+        )
+        .all(namedParams({ participantId })) as ChatRow[];
+    return rows.map((row) => rowToChat(row, db));
+}
+
+/**
+ * Read-authorization scope for the agent: every chat whose parent seat the
+ * agent holds, including unfollowed threads. Follow state is attention, not
+ * membership — unfollowing quiets a thread but never revokes reading it.
+ */
+export function listReadableChatsForAgentParticipant(
+    participantId: string,
+    db: Database = getDb()
+): TavernChat[] {
+    const rows = db
+        .prepare(
+            `SELECT chats.*,
+                    NULL AS last_activity_at,
+                    NULL AS unread_count,
+                    NULL AS active_turn_participant_ids
+             FROM chats
+             JOIN chat_participants
+               ON chat_participants.chat_id = COALESCE(chats.parent_chat_id, chats.id)
+              AND chat_participants.id = $participantId
+              AND chat_participants.kind = 'agent'
              ORDER BY chats.id ASC`
         )
         .all(namedParams({ participantId })) as ChatRow[];
@@ -280,12 +340,14 @@ export function getChatOrThrow(id: string, db: Database): TavernChat {
 function rowToChat(row: ChatRow, db: Database): TavernChat {
     return {
         active_turn_participant_ids: parseActiveTurnParticipantIds(row.active_turn_participant_ids),
+        anchor_message_id: row.anchor_message_id,
         created_at: row.created_at,
         id: row.id,
         kind: row.kind,
         last_activity_at: row.last_activity_at,
         last_message_sequence: row.last_message_sequence,
         metadata: JSON.parse(row.metadata_json) as Record<string, unknown>,
+        parent_chat_id: row.parent_chat_id,
         participants: listChatParticipants(row.id, db),
         title: row.title,
         unread_count: row.unread_count,
@@ -378,6 +440,9 @@ function replaceChatParticipants(chatId: string, participants: ChatParticipant[]
 }
 
 function validateChatShape(input: { kind: ChatKind; participants: ChatParticipant[] }) {
+    if (input.kind === 'thread') {
+        throw new Error('Thread chats must be created with ensureThread.');
+    }
     if (input.kind !== 'dm') {
         return;
     }

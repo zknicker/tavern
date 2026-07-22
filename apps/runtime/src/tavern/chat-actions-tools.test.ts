@@ -3,7 +3,13 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { closeDb, initTestDb } from '../db/connection.ts';
 import { ensureRuntimeSchema } from '../db/schema.ts';
 import { createTavernChatActionTools } from './chat-actions-tools.ts';
-import { createChat, createMessage, listMessages } from './chat-api/index.ts';
+import {
+    createChat,
+    createMessage,
+    ensureThreadChat,
+    listMessages,
+    setThreadFollow,
+} from './chat-api/index.ts';
 import { readSeenCursor } from './seen-ledger.ts';
 
 describe('chat action tools', () => {
@@ -27,6 +33,27 @@ describe('chat action tools', () => {
                 { current: false, id: 'cht_general', kind: 'channel', title: 'general' },
             ],
         });
+    });
+
+    it('excludes followed threads whose parent chat is archived', async () => {
+        seedChats();
+        createMessage('cht_archived', {
+            author_id: 'usr_tavern',
+            content: 'archived anchor',
+            id: 'msg_archived_anchor',
+            role: 'user',
+        });
+        const thread = ensureThreadChat({
+            anchorMessageId: 'msg_archived_anchor',
+            parentChatId: 'cht_archived',
+        });
+        setThreadFollow({ follow: true, participantId: 'agt_otto', threadChatId: thread.id });
+
+        const result = await runTool(actionTools().chats_list, {});
+
+        expect(
+            (result as { chats: Array<{ id: string }> }).chats.map((chat) => chat.id)
+        ).not.toContain(thread.id);
     });
 
     it('posts a message as the agent into another participating chat', async () => {

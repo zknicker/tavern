@@ -4,6 +4,7 @@ export {
     getChat,
     listChats,
     listChatsForAgentParticipant,
+    listReadableChatsForAgentParticipant,
     setChatArchived,
 } from './chats';
 export { createDelivery, listDeliveriesForTurn } from './deliveries';
@@ -18,7 +19,7 @@ export {
 export { AmbiguousMessageIdError, resolveMessageId } from './message-resolution';
 export {
     createMessage,
-    deleteMessage,
+    discardStreamingMessage,
     findMessageByNonce,
     getMessage,
     latestMessageSequence,
@@ -39,4 +40,14 @@ export {
     upsertResponse,
     upsertResponseActivity,
 } from './responses';
+export {
+    anchorShortId,
+    autoFollowMentions,
+    autoFollowOnPost,
+    ensureThreadChat,
+    membershipChat,
+    setThreadFollow,
+    threadChatIdForAnchor,
+    threadSummaries,
+} from './threads';
 export { getChatTimelinePage } from './timeline';

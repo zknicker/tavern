@@ -1,8 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { getDb } from '../db/connection.ts';
 import { closeAgentApiTestDb, initAgentApiTestDb } from './agent-api-test-helper.ts';
 import { getAgentMessage, readAgentHistory, searchAgentMessages } from './agent-history.ts';
 import { upsertStoredAgent } from './agents-store.ts';
-import { createChat, createMessage, deleteMessage } from './chat-api/index.ts';
+import { createChat, createMessage } from './chat-api/index.ts';
 
 describe('agent message search', () => {
     let root: string;
@@ -152,7 +153,14 @@ describe('agent history paging', () => {
     });
 
     it('hides soft-deleted messages from read, search, and resolve', () => {
-        deleteMessage('msg_a0000000000000000000000000000004');
+        // Per-message deletion has no API (immutability posture); rows only
+        // soft-delete via chat clear. Stamp deleted_at directly to model that.
+        getDb()
+            .prepare(
+                `UPDATE chat_messages SET deleted_at = '2026-07-21T00:00:00.000Z'
+                 WHERE id = 'msg_a0000000000000000000000000000004'`
+            )
+            .run();
         const page = readAgentHistory('agt_otto', { limit: 3, target: '#general' });
         expect(page.messages.map((message) => message.sequence)).toEqual([2, 3, 5]);
         expect(searchAgentMessages('agt_otto', { q: 'update 4' }).messages).toEqual([]);

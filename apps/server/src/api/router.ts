@@ -22,6 +22,7 @@ import { sessionRouter } from './session/router.ts';
 import { skillRouter } from './skill/router.ts';
 import { subAgentRouter } from './sub-agent/router.ts';
 import { tasksRouter } from './tasks/router.ts';
+import { threadRouter } from './thread/router.ts';
 import { timezoneRouter } from './timezone/router.ts';
 import { createRouter } from './trpc.ts';
 import { usageRouter } from './usage/router.ts';
@@ -53,6 +54,7 @@ export const appRouter = createRouter({
     skill: skillRouter,
     subAgent: subAgentRouter,
     tasks: tasksRouter,
+    thread: threadRouter,
     timezone: timezoneRouter,
     usage: usageRouter,
     wiki: wikiRouter,

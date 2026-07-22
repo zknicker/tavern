@@ -26,20 +26,16 @@ export interface ReadReceipt {
     reader_id: string;
 }
 
-export interface DeleteReceipt {
-    cursor: string;
-    deleted_at: string;
-    message_id: string;
-}
-
 export interface ChatRow {
     active_turn_participant_ids: string | null;
+    anchor_message_id: string | null;
     created_at: string;
     id: string;
-    kind: 'channel' | 'dm' | 'task';
+    kind: 'channel' | 'dm' | 'task' | 'thread';
     last_activity_at: string | null;
     last_message_sequence: number;
     metadata_json: string;
+    parent_chat_id: string | null;
     pinned: number;
     title: string | null;
     unread_count: number | null;
@@ -65,10 +61,8 @@ export interface MessageRow {
     id: string;
     metadata_json: string;
     nonce: string | null;
-    parent_message_id: string | null;
     role: TavernChatMessage['role'];
     sequence: number;
-    thread_root_id: string | null;
 }
 
 export interface EventRow {

@@ -24,10 +24,6 @@ export async function sendTavernChannelMessage(
     if (payload.target.type !== 'channel' && payload.target.type !== 'tavern') {
         throw new Error('Grotto agent adapter currently supports only root chat messages.');
     }
-    if (payload.message.parentMessageId || payload.message.threadRootId) {
-        throw new Error('Grotto agent adapter currently supports only root chat messages.');
-    }
-
     const acceptedAt = new Date().toISOString();
     const modelInventory = await listAgentModels();
     if (!modelInventory.models.some((model) => model.availability === 'available')) {

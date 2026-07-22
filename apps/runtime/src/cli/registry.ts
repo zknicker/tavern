@@ -4,6 +4,7 @@ import {
     inboxCommand,
     messageCommand,
     serverInfoCommand,
+    threadCommand,
 } from './agent-commands.ts';
 import type { ParsedArgs } from './parse';
 
@@ -232,6 +233,7 @@ export const COMMANDS: CliCommand[] = [
     inboxCommand,
     serverInfoCommand,
     channelCommand,
+    threadCommand,
     serveCommand,
     claimCommand,
     statusCommand,
