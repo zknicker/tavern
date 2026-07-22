@@ -123,6 +123,7 @@ export function ThreadPanel({
                             anchorMessageId={state.anchorMessageId}
                             anchorRow={anchorRow}
                             chat={chat}
+                            open={open}
                             replyCount={thread?.replyCount ?? 0}
                             threadChatId={threadChatId}
                         />
@@ -160,6 +161,7 @@ function SyncedThreadBody({
     anchorMessageId,
     anchorRow,
     chat,
+    open,
     replyCount,
     threadChatId,
 }: {
@@ -167,11 +169,12 @@ function SyncedThreadBody({
     anchorMessageId: string;
     anchorRow: TranscriptMessageRow;
     chat: ChatListItem;
+    open: boolean;
     replyCount: number;
     threadChatId: string;
 }) {
     const timeline = useChatTimeline({ chatId: threadChatId, limit: threadLogLimit });
-    useMarkThreadReadOnView({ parentChatId: chat.id, threadChatId });
+    useMarkThreadReadOnView({ enabled: open, parentChatId: chat.id, threadChatId });
 
     return (
         <>

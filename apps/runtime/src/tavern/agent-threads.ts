@@ -55,7 +55,7 @@ export function unfollowAgentThread(
                 author_id: 'sys_thread_notice',
                 content: `@${handle} unfollowed this thread — ${reason}`,
                 id: createMessageId(),
-                metadata: { runtime: { source: 'thread-notice' } },
+                metadata: { runtime: { agentId, source: 'thread-notice' } },
                 role: 'system',
             },
             db

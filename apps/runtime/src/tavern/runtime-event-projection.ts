@@ -184,9 +184,10 @@ function messageCreatedToRuntimeEvent(
     message: TavernChatMessage,
     timestamp: string
 ): AgentRuntimeEvent | null {
+    const source = metadataRuntimeString(message.metadata, 'source');
     if (
-        message.role === 'assistant' &&
-        metadataRuntimeString(message.metadata, 'source') === 'agent-api'
+        (message.role === 'assistant' && source === 'agent-api') ||
+        (message.role === 'system' && source === 'thread-notice')
     ) {
         return {
             chatId: message.chat_id,

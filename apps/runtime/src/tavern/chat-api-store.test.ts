@@ -308,6 +308,26 @@ describe('Tavern Runtime Chat API store', () => {
         );
     });
 
+    it('projects thread notices as chat history changes', () => {
+        createChat({ id: 'cht_thread_notice' });
+        createMessage('cht_thread_notice', {
+            author_id: 'sys_thread_notice',
+            content: '@Otto unfollowed this thread — done here',
+            id: 'msg_thread_notice',
+            metadata: { runtime: { agentId: 'agt_otto', source: 'thread-notice' } },
+            role: 'system',
+        });
+
+        expect(listProjectedTavernRuntimeEvents()).toContainEqual(
+            expect.objectContaining({
+                event: expect.objectContaining({
+                    chatId: 'cht_thread_notice',
+                    type: 'chat.historyChanged',
+                }),
+            })
+        );
+    });
+
     it('rejects deleting a response that does not exist', () => {
         createChat({ id: 'cht_1' });
 

@@ -221,12 +221,31 @@ export function cancelledResponseToChatRow(response: TavernChatResponse): ChatLo
     ];
 }
 
-function messageToChatRows(
+export function messageToChatRows(
     message: TavernChatMessage,
     agentsById: Map<string, Awaited<ReturnType<typeof listAgents>>[number]>,
     responseIdByMessageId: ReadonlyMap<string, string>,
     threadsByAnchorMessageId: ReadonlyMap<string, TavernThreadSummary>
 ): ChatLogPage['rows'] {
+    if (message.role === 'system' && runtimeMetadataString(message, 'source') === 'thread-notice') {
+        return [
+            {
+                id: message.id,
+                kind: 'system',
+                runtimeNotice: {
+                    agentId: runtimeMetadataString(message, 'agentId'),
+                    detail: null,
+                    kind: 'status',
+                    sessionId: null,
+                    text: messageText(message),
+                    title: 'Thread unfollowed',
+                },
+                systemKind: 'runtimeNotice',
+                timestamp: message.created_at,
+            },
+        ];
+    }
+
     const sourceAgentId = runtimeMetadataString(message, 'agentId') ?? message.author.id;
     const agent = message.author.kind === 'agent' ? agentsById.get(sourceAgentId) : null;
     const actor =

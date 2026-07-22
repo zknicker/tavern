@@ -7,7 +7,11 @@ import { useChatRuntimeTimelineState } from '../chats/use-timeline-context.tsx';
  * log: the anchor's reply pill carries this reader's thread unread count, so
  * a read receipt written for the thread must invalidate the parent's rows.
  */
-export function useMarkThreadReadOnView(input: { parentChatId: string; threadChatId: string }) {
+export function useMarkThreadReadOnView(input: {
+    enabled?: boolean;
+    parentChatId: string;
+    threadChatId: string;
+}) {
     const timeline = useChatRuntimeTimelineState(input.threadChatId);
     const utils = trpc.useUtils();
     const markRead = trpc.chat.markRead.useMutation({
@@ -18,9 +22,10 @@ export function useMarkThreadReadOnView(input: { parentChatId: string; threadCha
     });
     const mutate = markRead.mutate;
     const lastMarkedRef = React.useRef<null | string>(null);
-    const viewKey = timeline.historyLoaded
-        ? `${input.threadChatId}:${timeline.totalMessages}`
-        : null;
+    const viewKey =
+        (input.enabled ?? true) && timeline.historyLoaded
+            ? `${input.threadChatId}:${timeline.totalMessages}`
+            : null;
 
     React.useEffect(() => {
         if (!viewKey || lastMarkedRef.current === viewKey) {
