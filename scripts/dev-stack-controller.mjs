@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process';
 import { EventEmitter } from 'node:events';
+import path from 'node:path';
 import readline from 'node:readline';
 import {
     assertDevStackPortsAvailable,
@@ -26,12 +27,19 @@ const processGroupShutdownPollMs = 50;
 const serverDependencyPrebuildCommand = 'bun run --filter @tavern/sdk build';
 
 export class DevStackController extends EventEmitter {
-    constructor({ mode, ports, repositoryRoot, runtimeEnvironmentOverrides = {} }) {
+    constructor({
+        mode,
+        ports,
+        repositoryRoot,
+        runtimeEnvironmentOverrides = {},
+        spawnImpl = spawn,
+    }) {
         super();
         this.mode = mode;
         this.ports = ports;
         this.repositoryRoot = repositoryRoot;
         this.runtimeEnvironmentOverrides = runtimeEnvironmentOverrides;
+        this.spawnImpl = spawnImpl;
         this.processes = new Map();
         this.backgroundProcesses = new Set();
         this.expectedProcessStops = new Set();
@@ -171,16 +179,16 @@ export class DevStackController extends EventEmitter {
         attach(child.stderr);
     }
 
-    spawnProcess(source, command, env = process.env) {
+    spawnProcess(source, executable, args = [], options = {}) {
         this.update((snapshot) => {
             snapshot.processes[source].status = 'starting';
         });
 
-        const child = spawn(command, {
-            cwd: this.repositoryRoot,
+        const child = this.spawnImpl(executable, args, {
+            cwd: options.cwd ?? this.repositoryRoot,
             detached: true,
-            env,
-            shell: true,
+            env: options.env ?? process.env,
+            shell: false,
             stdio: ['ignore', 'pipe', 'pipe'],
         });
 
@@ -210,7 +218,7 @@ export class DevStackController extends EventEmitter {
     }
 
     spawnBackgroundProcess(source, command, env = process.env) {
-        const child = spawn(command, {
+        const child = this.spawnImpl(command, {
             cwd: this.repositoryRoot,
             detached: true,
             env,
@@ -263,19 +271,25 @@ export class DevStackController extends EventEmitter {
             repositoryRoot: this.repositoryRoot,
         });
         const runtimeUrl = getRuntimeBaseUrl(devStackEnvironment);
+        const runtimeDirectory = path.join(this.repositoryRoot, 'apps', 'runtime');
+        const serverDirectory = path.join(this.repositoryRoot, 'apps', 'server');
+        const websiteDirectory = path.join(this.repositoryRoot, 'apps', 'website');
         const startupUiEnv = {
             ...devStackEnvironment,
             TAVERN_STARTUP_UI: '1',
         };
 
         const hasRuntime = isRuntimeMode(this.mode);
-        const serverCommand = 'cd apps/server && TAVERN_EXIT_ON_ORPHAN=1 bun --watch src/index.ts';
         const serverEnv = hasRuntime
             ? {
                   ...startupUiEnv,
                   TAVERN_RUNTIME_URL: runtimeUrl,
+                  TAVERN_EXIT_ON_ORPHAN: '1',
               }
-            : startupUiEnv;
+            : {
+                  ...startupUiEnv,
+                  TAVERN_EXIT_ON_ORPHAN: '1',
+              };
         let websiteReadyPromise = null;
         let desktopPrebuildPromise = null;
         let serverDependencyPrebuildPromise = null;
@@ -296,8 +310,12 @@ export class DevStackController extends EventEmitter {
             if (!websiteReadyPromise) {
                 this.spawnProcess(
                     'website',
-                    `cd apps/website && bun x vite --host 127.0.0.1 --port ${this.ports.websitePort}`,
-                    startupUiEnv
+                    'bun',
+                    ['x', 'vite', '--host', '127.0.0.1', '--port', String(this.ports.websitePort)],
+                    {
+                        cwd: websiteDirectory,
+                        env: startupUiEnv,
+                    }
                 );
                 websiteReadyPromise = waitForPort(Number(this.ports.websitePort)).then(() => {
                     this.update((snapshot) => {
@@ -344,9 +362,12 @@ export class DevStackController extends EventEmitter {
                 ].filter(Boolean);
                 this.addLog('tavern', `MerchBase Plugin preseeded ${parts.join(' and ')}`);
             }
-            this.spawnProcess('runtime', 'cd apps/runtime && bun --watch src/index.ts serve', {
-                ...startupUiEnv,
-                ...this.runtimeEnvironmentOverrides,
+            this.spawnProcess('runtime', 'bun', ['--watch', 'src/index.ts', 'serve'], {
+                cwd: runtimeDirectory,
+                env: {
+                    ...startupUiEnv,
+                    ...this.runtimeEnvironmentOverrides,
+                },
             });
             startWebsite();
             startServerDependencyPrebuild();
@@ -363,7 +384,10 @@ export class DevStackController extends EventEmitter {
             throw new Error('Failed to build server workspace dependencies.');
         }
 
-        this.spawnProcess('server', serverCommand, serverEnv);
+        this.spawnProcess('server', 'bun', ['--watch', 'src/index.ts'], {
+            cwd: serverDirectory,
+            env: serverEnv,
+        });
         await waitForPort(Number(this.ports.serverPort));
         this.update((snapshot) => {
             snapshot.processes.server.status = 'running';
@@ -378,8 +402,9 @@ export class DevStackController extends EventEmitter {
             }
             this.spawnProcess(
                 'desktop',
-                'node scripts/run-desktop-dev.mjs --skip-server-cleanup',
-                getDesktopEnv()
+                'node',
+                ['scripts/run-desktop-dev.mjs', '--skip-server-cleanup'],
+                { env: getDesktopEnv() }
             );
             this.update((snapshot) => {
                 snapshot.processes.desktop.status = 'running';
@@ -399,6 +424,7 @@ export class DevStackController extends EventEmitter {
         this.isStopping = true;
 
         this.stopPromise = (async () => {
+            const shutdownSignal = options.signal ?? 'SIGTERM';
             this.addLog(
                 'tavern',
                 options.signal ? `shutdown requested (${options.signal})` : 'shutdown requested'
@@ -407,7 +433,7 @@ export class DevStackController extends EventEmitter {
                 snapshot.phase = 'stopping';
             });
 
-            this.signalManagedProcesses('SIGTERM');
+            this.signalManagedProcesses(shutdownSignal);
 
             for (const source of shutdownProcessOrder) {
                 await this.stopProcess(source, { signaled: true });

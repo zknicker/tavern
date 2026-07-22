@@ -106,8 +106,8 @@ hand; the file regenerates each session.
 ## Shutdown
 
 From the terminal, stop the dev stack with `Ctrl+C` or `kill -TERM <dev-stack-pid>`.
-The stack sends `SIGTERM` to every managed child process immediately, then waits
-for each one to exit before returning control to the shell.
+The stack forwards that signal to every directly managed child process immediately, then waits
+for each process group to exit before returning control to the shell.
 
 In desktop mode, quitting the app with `Cmd+Q` also lets the stack unwind. The
 desktop process exits first, then the stack signals the remaining website, app
