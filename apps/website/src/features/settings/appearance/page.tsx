@@ -121,6 +121,20 @@ export function AppearanceSettings() {
                             </Button>
                         </div>
                     </SettingsRow>
+                    <SettingsRow
+                        description="Every agent character across the full set of facial expressions."
+                        title="Agent faces"
+                    >
+                        <div className="flex justify-start md:justify-end">
+                            <Button
+                                onClick={() => navigate(appRoutes.designFaces)}
+                                size="sm"
+                                variant="outline"
+                            >
+                                Open
+                            </Button>
+                        </div>
+                    </SettingsRow>
                 </SettingsGroup>
             </SettingsSection>
         </SettingsPage>
