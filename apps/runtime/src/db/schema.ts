@@ -755,6 +755,11 @@ export function ensureRuntimeSchema(db: Database): void {
         definition: 'TEXT',
         table: 'chats',
     });
+    ensureColumn(db, {
+        column: 'followed',
+        definition: 'INTEGER NOT NULL DEFAULT 1 CHECK (followed IN (0, 1))',
+        table: 'thread_follows',
+    });
     db.exec(
         'CREATE INDEX IF NOT EXISTS idx_chats_parent ON chats(parent_chat_id) WHERE parent_chat_id IS NOT NULL'
     );

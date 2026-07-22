@@ -164,6 +164,36 @@ INSERT INTO chats (id, kind, created_at, updated_at)
         });
     });
 
+    it('adds followed state to existing thread follow records', () => {
+        const db = initTestDb();
+        db.exec(`
+CREATE TABLE thread_follows (
+  thread_chat_id TEXT NOT NULL,
+  participant_id TEXT NOT NULL,
+  created_at     TEXT NOT NULL,
+  PRIMARY KEY (thread_chat_id, participant_id)
+);
+INSERT INTO thread_follows (thread_chat_id, participant_id, created_at)
+  VALUES ('cht_thr_existing', 'agt_existing', '2026-07-21T12:00:00.000Z');
+`);
+
+        ensureRuntimeSchema(db);
+
+        expect(
+            db
+                .prepare(
+                    `SELECT thread_chat_id, participant_id, followed, created_at
+                     FROM thread_follows`
+                )
+                .get()
+        ).toEqual({
+            created_at: '2026-07-21T12:00:00.000Z',
+            followed: 1,
+            participant_id: 'agt_existing',
+            thread_chat_id: 'cht_thr_existing',
+        });
+    });
+
     it('migrates legacy task labels into records and repairs task constraints', () => {
         const db = initTestDb();
         createLegacyTasksTable(db);
