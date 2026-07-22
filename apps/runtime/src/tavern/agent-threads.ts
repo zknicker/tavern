@@ -17,10 +17,10 @@ export const agentThreadUnfollowRequestSchema = z
 export type AgentThreadUnfollowRequest = z.infer<typeof agentThreadUnfollowRequestSchema>;
 
 /**
- * Stops the thread's ordinary delivery for this agent. Attention-only:
- * reading and replying stay possible, mentions still pierce without
- * re-following, and posting re-follows. A reason lands as a thread-local
- * system notice so the room sees why the agent stepped away.
+ * Removes the thread from this agent's followed attention state. Reading and
+ * replying stay possible, and posting re-follows. Inbox delivery filtering
+ * lands separately; a reason lands as a thread-local system notice so the
+ * room sees why the agent stepped away.
  */
 export function unfollowAgentThread(
     agentId: string,

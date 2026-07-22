@@ -39,7 +39,9 @@ export function sendAgentMessage(
     const resolved = resolveAgentTarget({
         agentId,
         createDm: !input.sendDraft,
-        createThread: true,
+        // Releasing a draft is a lookup, not a first reply: if the thread does
+        // not exist, fail without leaving an empty followed thread behind.
+        createThread: !input.sendDraft,
         target: input.target,
     });
     options.onTargetResolved?.(resolved.chat.id);

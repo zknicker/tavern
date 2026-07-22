@@ -35,7 +35,7 @@ export const THREAD_SUBCOMMANDS: SubCommand[] = [
         name: 'unfollow',
         positionals: [],
         run: (args) => runThreadUnfollow(args, defaultDeps()),
-        summary: 'Stop following a thread you no longer need ordinary delivery for',
+        summary: 'Remove a thread from your followed attention state',
         usage: 'grotto thread unfollow --target <target> [--reason <text>]',
     },
 ];
@@ -57,8 +57,8 @@ export async function runThreadUnfollow(args: ParsedArgs, deps: ThreadDeps): Pro
     );
     deps.write(
         [
-            `Unfollowed ${response.target}. Ordinary delivery for this thread has stopped.`,
-            'Still arrives: personal @mentions pierce as single messages — they do NOT re-follow you.',
+            `Unfollowed ${response.target}. It no longer appears in your followed-thread attention state.`,
+            'Current message delivery is unchanged.',
             'Posting in this thread re-follows you automatically.',
             '',
         ].join('\n')

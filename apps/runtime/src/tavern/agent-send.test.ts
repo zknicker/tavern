@@ -6,7 +6,7 @@ import { sendAgentMessage } from './agent-send.ts';
 import { ensureCurrentAgentSession, startNewAgentSession } from './agent-session-store.ts';
 import { unfollowAgentThread } from './agent-threads.ts';
 import { upsertStoredAgent } from './agents-store.ts';
-import { createChat, createMessage, listMessages } from './chat-api/index.ts';
+import { createChat, createMessage, getChat, listMessages } from './chat-api/index.ts';
 import { readSeenCursor } from './seen-ledger.ts';
 import { readServedCursor } from './served-ledger.ts';
 
@@ -353,6 +353,13 @@ describe('agent attested sends', () => {
         expect(() => readAgentHistory('agt_otto', { target: '#general:00000000' })).toThrow(
             'No thread exists'
         );
+        expect(() =>
+            sendAgentMessage('agt_otto', {
+                sendDraft: true,
+                target: '#general:00000000',
+            })
+        ).toThrow('No thread exists');
+        expect(getChat('cht_thr_00000000000000000000000000000031')).toBeNull();
 
         const sent = sendAgentMessage('agt_otto', {
             content: 'threading in',

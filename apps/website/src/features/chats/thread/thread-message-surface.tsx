@@ -13,8 +13,10 @@ import {
 } from '../../../components/ui/context-menu.tsx';
 import { Icon } from '../../../components/ui/icon.tsx';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../../../components/ui/tooltip.tsx';
+import { isLocalTimelineMessageMetadata } from '../../../hooks/chats/chat-timeline-messages.ts';
 import { writeClipboardText } from '../../../lib/clipboard.ts';
 import { cn } from '../../../lib/utils.ts';
+import { isActivityBackedMessageRow, isStreamingPostMessageRow } from '../chat-transcript-model.ts';
 import {
     getTranscriptMessageThread,
     type TranscriptMessageRow,
@@ -34,7 +36,7 @@ export function ThreadMessageSurface({
 }) {
     const context = useTranscriptRenderContextOptional();
 
-    if (!context?.threadActionsEnabled) {
+    if (!(context?.threadActionsEnabled && isThreadAnchorRow(row))) {
         return children;
     }
 
@@ -77,6 +79,16 @@ export function ThreadMessageSurface({
                 ) : null}
             </ContextMenuPopup>
         </ContextMenu>
+    );
+}
+
+/** Only Runtime-persisted, settled chat messages can anchor child threads. */
+export function isThreadAnchorRow(row: TranscriptMessageRow) {
+    return (
+        row.message.id.startsWith('msg_') &&
+        !isActivityBackedMessageRow(row) &&
+        !isLocalTimelineMessageMetadata(row.message.metadata) &&
+        !isStreamingPostMessageRow(row)
     );
 }
 
