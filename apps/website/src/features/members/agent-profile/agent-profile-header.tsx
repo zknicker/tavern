@@ -8,7 +8,7 @@ import { Button } from '../../../components/ui/primitives/button.tsx';
 import { Tooltip } from '../../../components/ui/tooltip.tsx';
 import { useAgentChatList } from '../../../hooks/agents/use-agent-chats.ts';
 import { useChatStop } from '../../../hooks/chats/use-chat-stop.ts';
-import { useChatRuntimeTimelineState } from '../../../hooks/chats/use-timeline-context.tsx';
+import { useChatTimeline } from '../../../hooks/chats/use-chat-timeline.ts';
 import { appRoutes } from '../../../lib/app-routes.ts';
 import type { AgentListOutput } from '../../../lib/trpc.tsx';
 import { cn } from '../../../lib/utils.ts';
@@ -37,10 +37,6 @@ export function AgentProfileHeader({
     const chatsQuery = useAgentChatList({ agentId: agent.id });
     const directChat = selectMostRecentAgentChat(chatsQuery.data, 'direct');
     const presence = useAgentPresenceEntry(agent.id);
-    const timeline = useChatRuntimeTimelineState(presence?.chatId ?? '');
-    const stopTurn = useChatStop();
-    const runId = selectAgentRunId(timeline, agent.id);
-    const canStop = presence?.state === 'busy' && Boolean(presence.chatId && runId);
     const [restartOpen, setRestartOpen] = useState(false);
     // Judged from the host chat's seat: "Replying…" only when the work is in
     // the chat this profile is open in; "Working in <chat>…" everywhere else
@@ -100,16 +96,16 @@ export function AgentProfileHeader({
                         label={directChat ? 'Message' : 'No direct message chat yet'}
                         onClick={() => directChat && navigate(appRoutes.chat(directChat.id))}
                     />
-                    <ActionButton
-                        disabled={!canStop || stopTurn.isPending}
-                        icon={StopIcon}
-                        label={stopTooltip(presence?.state, presence?.chatId, runId)}
-                        onClick={() => {
-                            if (presence?.chatId && runId) {
-                                stopTurn.mutate({ chatId: presence.chatId, runId });
-                            }
-                        }}
-                    />
+                    {presence?.state === 'busy' && presence.chatId ? (
+                        <AgentStopAction agentId={agent.id} chatId={presence.chatId} />
+                    ) : (
+                        <ActionButton
+                            disabled
+                            icon={StopIcon}
+                            label="Agent is not working"
+                            onClick={() => undefined}
+                        />
+                    )}
                     <ActionButton
                         icon={RefreshIcon}
                         label="Restart"
@@ -122,6 +118,27 @@ export function AgentProfileHeader({
             </header>
             <RestartAgentDialog agent={agent} onOpenChange={setRestartOpen} open={restartOpen} />
         </>
+    );
+}
+
+function AgentStopAction({ agentId, chatId }: { agentId: string; chatId: string }) {
+    // Profiles can open before their busy chat has ever mounted. Hydrating its
+    // newest log page supplies the active run needed by the Stop capability.
+    const timeline = useChatTimeline({ chatId, limit: 1 });
+    const stopTurn = useChatStop();
+    const runId = selectAgentRunId(timeline, agentId);
+
+    return (
+        <ActionButton
+            disabled={!runId || stopTurn.isPending}
+            icon={StopIcon}
+            label={runId ? 'Stop' : 'Loading active turn…'}
+            onClick={() => {
+                if (runId) {
+                    stopTurn.mutate({ chatId, runId });
+                }
+            }}
+        />
     );
 }
 
@@ -152,8 +169,11 @@ function ActionButton({
     );
 }
 
-function selectAgentRunId(
-    timeline: ReturnType<typeof useChatRuntimeTimelineState>,
+export function selectAgentRunId(
+    timeline: {
+        activeReplies: readonly { agentId: string; completedAt?: string | null; runId: string }[];
+        activeTurns: readonly { agentId: string; runId: string }[];
+    },
     agentId: string
 ) {
     const agentRunIds = new Set(
@@ -162,15 +182,4 @@ function selectAgentRunId(
             .map((turn) => turn.runId)
     );
     return getActiveRunIds(timeline).find((candidate) => agentRunIds.has(candidate)) ?? null;
-}
-
-function stopTooltip(
-    state: 'busy' | 'idle' | undefined,
-    chatId: string | null | undefined,
-    runId: string | null
-) {
-    if (state === 'busy' && chatId && !runId) {
-        return 'Open the chat to stop this turn';
-    }
-    return state === 'busy' && chatId && runId ? 'Stop' : 'Agent is not working';
 }
