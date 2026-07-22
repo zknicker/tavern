@@ -39,11 +39,7 @@ import {
     resolveAgentModelSelection,
     saveAgentModelSelectionIntent,
 } from '../models/selection-service.ts';
-import {
-    generateRegisteredAgentInstructions,
-    registerAgentWorkspace,
-} from '../workspace/instructions.ts';
-import { agentNotesFileName } from '../workspace/managed-instructions.ts';
+import { registerAgentWorkspace } from '../workspace/instructions.ts';
 import {
     deleteStoredAgent,
     getStoredAgent,
@@ -227,34 +223,8 @@ async function dispatchAgentEngineStatic({ request, url }: { request: Request; u
             updatedAt: new Date().toISOString(),
         });
     }
-    if (method === 'GET' && segments[0] === 'agents' && segments[1] && segments[2] === 'files') {
-        const agentId = segments[1];
-        if (segments[3]) {
-            return await readAgentEngineAgentFile(agentId, segments[3]);
-        }
-        return {
-            files: await Promise.all(
-                agentEngineAgentFiles(agentId).map(readAgentEngineAgentFileSummary)
-            ),
-        };
-    }
-    if (method === 'PUT' && segments[0] === 'agents' && segments[1] && segments[2] === 'files') {
-        const agentId = segments[1];
-        const filePath = segments[3];
-        if (!filePath) {
-            return undefined;
-        }
-        const file = resolveAgentEngineAgentFile(agentId, filePath);
-        const body = (await readJson(request)) as { content?: unknown };
-        await fs.mkdir(path.dirname(file.storagePath), { recursive: true });
-        await fs.writeFile(file.storagePath, String(body.content ?? ''), {
-            mode: 0o600,
-        });
-        if (filePath === agentNotesFileName) {
-            await generateRegisteredAgentInstructions(getDb(), agentId);
-        }
-        return await readAgentEngineAgentFile(agentId, filePath);
-    }
+    // The managed agent-file surface (NOTES.md / SOUL.md editors) retired
+    // with the flip: notes injection died with D3 and SOUL with ruling W2.
     if (method === 'GET' && url.pathname === agentRuntimeRoutes.models) {
         return await listAgentModels();
     }
@@ -441,66 +411,4 @@ function agentEngineAgentConfigSnapshot() {
         raw: null,
         valid: true,
     };
-}
-
-function agentEngineAgentFiles(agentId: string) {
-    const agent =
-        agentId === defaultAgentEngineAgentId ? ensurePrimaryAgent() : getStoredAgent(agentId);
-    if (!agent) {
-        throw unsupportedAgentEngineSurface(`agent "${agentId}"`);
-    }
-    return [
-        {
-            mediaType: 'text/markdown',
-            path: agentNotesFileName,
-            storagePath: path.join(agent.workspaceFolder, agentNotesFileName),
-        },
-        {
-            mediaType: 'text/markdown',
-            path: 'SOUL.md',
-            storagePath: path.join(agent.workspaceFolder, 'SOUL.md'),
-        },
-    ];
-}
-
-async function readAgentEngineAgentFile(agentId: string, filePath: string) {
-    const file = resolveAgentEngineAgentFile(agentId, filePath);
-    const stats = await readFileStats(file.storagePath);
-    return {
-        content: await fs.readFile(file.storagePath, 'utf8').catch(() => ''),
-        mediaType: file.mediaType,
-        path: file.path,
-        sizeBytes: stats?.size ?? 0,
-        updatedAt: stats?.updatedAt ?? null,
-    };
-}
-
-async function readAgentEngineAgentFileSummary(
-    file: ReturnType<typeof agentEngineAgentFiles>[number]
-) {
-    const stats = await readFileStats(file.storagePath);
-    return {
-        mediaType: file.mediaType,
-        path: file.path,
-        sizeBytes: stats?.size ?? 0,
-        updatedAt: stats?.updatedAt ?? null,
-    };
-}
-
-function resolveAgentEngineAgentFile(agentId: string, filePath: string) {
-    const file = agentEngineAgentFiles(agentId).find((candidate) => candidate.path === filePath);
-    if (!file) {
-        throw unsupportedAgentEngineSurface(`agent file "${filePath}"`);
-    }
-    return file;
-}
-
-async function readFileStats(filePath: string) {
-    const stats = await fs.stat(filePath).catch(() => null);
-    return stats
-        ? {
-              size: stats.size,
-              updatedAt: stats.mtime.toISOString(),
-          }
-        : null;
 }

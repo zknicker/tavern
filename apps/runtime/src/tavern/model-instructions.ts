@@ -18,10 +18,7 @@ const disciplineFamilies = ['gpt', 'codex', 'grok'];
 // Google models get extra operational directives.
 const googleFamilies = ['gemini', 'gemma'];
 
-export function modelOperationalInstructions(
-    model: AgentRuntimeModelName,
-    options: { wikiEnabled?: boolean } = {}
-): string | null {
+export function modelOperationalInstructions(model: AgentRuntimeModelName): string | null {
     const name = model.model.toLowerCase();
     const sections: string[] = [];
 
@@ -29,7 +26,7 @@ export function modelOperationalInstructions(
         sections.push(toolUseEnforcement);
     }
     if (disciplineFamilies.some((family) => name.includes(family))) {
-        sections.push(executionDiscipline(options.wikiEnabled ?? true));
+        sections.push(executionDiscipline);
     }
     if (googleFamilies.some((family) => name.includes(family))) {
         sections.push(googleOperationalDirectives);
@@ -44,8 +41,7 @@ You MUST use your tools to take action — do not describe what you would do wit
 
 Keep working until the task is actually complete. Every response should either contain tool calls that make progress or deliver a final result. Responses that only describe intentions are not acceptable.`;
 
-function executionDiscipline(wikiEnabled: boolean) {
-    return `## Execution Discipline
+const executionDiscipline = `## Execution Discipline
 
 Tool persistence:
 - Use tools whenever they improve correctness, completeness, or grounding.
@@ -55,13 +51,12 @@ Tool persistence:
 Never answer these from memory — always use a tool:
 - Arithmetic, hashes, encodings, current time or dates → your shell.
 - File contents, sizes, structure → your file tools.
-- Older chat messages → the chat tools.${wikiEnabled ? '\n- Durable shared knowledge the user references → wiki_search.' : ''}
-- Your core memory files describe the user, not the machine you run on.
+- Older chat messages → \`grotto message read\` / \`grotto message search\`.
+- Your MEMORY.md and notes describe people and projects, not the machine you run on.
 
 Act on the obvious interpretation instead of asking ("what time is it?" → run it). Ask for clarification only when the ambiguity changes which tool you would call. If required context is missing and retrievable, retrieve it; if you must proceed without it, label assumptions explicitly.
 
 Before finalizing: does the output satisfy every stated requirement, are factual claims backed by tool outputs, and does the format match what was asked?`;
-}
 
 const googleOperationalDirectives = `## Operational Directives
 

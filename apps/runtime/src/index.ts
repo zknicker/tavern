@@ -46,7 +46,6 @@ import { prepareWikiRoot, resolveWikiConfig } from './wiki/store.ts';
 import { closeWikiWatcher, restartWikiWatcher, startWikiWatcher } from './wiki/watcher.ts';
 import { seedDevelopmentWorkspaceDemos } from './workspace/development-demos.ts';
 import { getAgentWorkspaceSource } from './workspace/instructions.ts';
-import { closeAgentNotesWatchers } from './workspace/notes-watcher.ts';
 
 let runtimeServer: ReturnType<typeof startTavernRuntimeServer> | null = null;
 let runtimeJobs: RuntimeJobsManager | null = null;
@@ -214,7 +213,6 @@ async function shutdown(signal: string): Promise<void> {
 
     shuttingDown = true;
     log.info('Shutdown signal received', { signal });
-    closeAgentNotesWatchers();
     log.info('Stopping Memory extraction scheduler');
     stopMemoryExtractionScheduler();
     log.info('Memory extraction scheduler stopped');

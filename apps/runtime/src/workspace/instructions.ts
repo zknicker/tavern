@@ -1,18 +1,16 @@
 import fs from 'node:fs/promises';
+import os from 'node:os';
 import path from 'node:path';
-import { isRuntimeCronReady } from '../cron/manager-state.ts';
+import type { AgentRuntimeAgent, AgentRuntimeModelName } from '@tavern/api';
+import runtimePackage from '../../package.json';
 import type { Database } from '../db/sqlite.ts';
 import { namedParams } from '../db/sqlite.ts';
-import { isMemoryEnabled } from '../memory/settings.ts';
-import { merchbaseToolsGrantedForAgent } from '../plugins/merchbase-tools.ts';
+import { resolveAgentModelSelection } from '../models/selection-service.ts';
 import { getStoredAgent } from '../tavern/agents-store.ts';
 import { publishRuntimeEvent } from '../tavern/runtime-events.ts';
-import {
-    agentNotesFileName,
-    agentWorkDirectoryName,
-    renderAgentInstructions,
-    renderSeededNotes,
-} from './managed-instructions.ts';
+import { resolveHomeTimezone } from '../timezone-settings.ts';
+import { modelProviderHasWebSearch } from '../web/agent-tools.ts';
+import { agentWorkDirectoryName, renderAgentInstructions } from './managed-instructions.ts';
 
 export interface AgentWorkspaceSource {
     agentId: string;
@@ -34,6 +32,22 @@ export interface AgentInstructionReadResult {
     renderedAt: string | null;
     sha256: string | null;
     updatedAt: string | null;
+}
+
+/** Host facts for the Current Runtime Context section; injectable in tests. */
+export interface AgentRuntimeContextFacts {
+    hostname: string;
+    os: string;
+    runtimeVersion: string;
+}
+
+export interface GenerateAgentInstructionOptions {
+    /** Engine callers pass the resolved agent record; admin callers omit it. */
+    agent?: AgentRuntimeAgent | null;
+    model?: AgentRuntimeModelName;
+    runtimeContext?: AgentRuntimeContextFacts;
+    /** Contract-test override for the WS5 CLI-surface gate. */
+    ws5CliSurface?: boolean;
 }
 
 const defaultAgentId = 'main';
@@ -111,25 +125,41 @@ export function registerAgentWorkspace(
 }
 
 /**
- * Generate the agent system prompt from its editable workspace sources.
- * Tavern composes this deterministically from managed content, the agent name,
- * and NOTES.md. NOTES.md is seeded once and never written by Tavern again.
+ * Generate the agent system prompt body from the managed Raft template
+ * (ws2-prompt-draft.md). The render is near-deterministic per agent: host
+ * facts, the agent record, and the effective model's web-search capability
+ * are the only inputs. Model-family operational sections compose downstream
+ * (tavern/agent-instructions.ts).
  */
-export async function generateAgentInstructions(db: Database, agentId = defaultAgentId) {
+export async function generateAgentInstructions(
+    db: Database,
+    agentId = defaultAgentId,
+    options: GenerateAgentInstructionOptions = {}
+) {
     const source = getAgentWorkspaceSource(db, agentId);
 
     if (!source) {
         throw new Error(`No managed workspace is registered for agent "${agentId}".`);
     }
 
-    const notes = await ensureAgentNotes(source.workspaceDir);
     await ensureAgentWorkDirectory(source.workspaceDir);
     await removeGeneratedInstructionFiles(source.workspaceDir);
-    const agent = getStoredAgent(source.agentId, db);
-    const next = renderAgentInstructions(source.agentName, notes, {
-        cronEnabled: isRuntimeCronReady(),
-        memoryEnabled: isMemoryEnabled(),
-        merchbaseSalesToolAvailable: merchbaseToolsGrantedForAgent(agent),
+    const agent = options.agent ?? getStoredAgent(source.agentId, db);
+    const facts = options.runtimeContext ?? hostRuntimeContextFacts();
+    const next = renderAgentInstructions({
+        agentId: source.agentId,
+        agentName: agent?.name ?? source.agentName,
+        homeTimezone: resolveHomeTimezone(),
+        hostname: facts.hostname,
+        initialRole: agent?.bio ?? null,
+        os: facts.os,
+        // No per-plugin CLIs exist yet; the section composes once they do
+        // (flip ruling: plugin tools retired, plugin CLIs are follow-up work).
+        pluginCliEntries: [],
+        runtimeVersion: facts.runtimeVersion,
+        webAccess: resolveWebAccessVariant(agent, options.model, source.agentId),
+        workspacePath: source.workspaceDir,
+        ...(options.ws5CliSurface === undefined ? {} : { ws5CliSurface: options.ws5CliSurface }),
     });
     const previousHash = readRenderedInstructionHash(db, source.agentId);
     const renderedAt = new Date().toISOString();
@@ -177,18 +207,24 @@ export async function readRenderedAgentInstructions(db: Database, agentId = defa
     } satisfies AgentInstructionReadResult;
 }
 
-async function ensureAgentNotes(workspaceDir: string) {
-    const notesPath = path.join(workspaceDir, agentNotesFileName);
-    const existing = await fs.readFile(notesPath, 'utf8').catch(() => null);
-
-    if (existing !== null) {
-        return existing;
+function resolveWebAccessVariant(
+    agent: AgentRuntimeAgent | null,
+    model: AgentRuntimeModelName | undefined,
+    agentId: string
+): 'fetch-only' | 'search' | null {
+    if (agent?.webAccessEnabled !== true) {
+        return null;
     }
+    const effectiveModel = model ?? resolveAgentModelSelection({ agentId });
+    return modelProviderHasWebSearch(effectiveModel.provider) ? 'search' : 'fetch-only';
+}
 
-    const seed = renderSeededNotes();
-    await fs.mkdir(workspaceDir, { recursive: true });
-    await fs.writeFile(notesPath, seed, { mode: 0o600 });
-    return seed;
+function hostRuntimeContextFacts(): AgentRuntimeContextFacts {
+    return {
+        hostname: os.hostname(),
+        os: `${os.type()} ${os.release()}`,
+        runtimeVersion: runtimePackage.version,
+    };
 }
 
 async function ensureAgentWorkDirectory(workspaceDir: string) {

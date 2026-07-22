@@ -12,7 +12,6 @@ import {
     readRenderedAgentInstructions,
     registerAgentWorkspace,
 } from './instructions';
-import { ensureAgentNotesWatcher } from './notes-watcher';
 
 export async function handleWorkspaceRequest(request: Request): Promise<Response | null> {
     const url = new URL(request.url);
@@ -56,7 +55,6 @@ export async function handleWorkspaceRequest(request: Request): Promise<Response
             workspaceDir: readString(body.workspaceDir, 'workspaceDir'),
         });
         const generated = await generateAgentInstructions(getDb(), agentId);
-        ensureAgentNotesWatcher(getDb(), agentId);
         await seedDevelopmentWorkspaceDemos({ sources: [source] });
 
         return json({
