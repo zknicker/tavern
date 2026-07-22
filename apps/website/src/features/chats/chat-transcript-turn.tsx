@@ -1,4 +1,4 @@
-import { AlertCircleIcon, Cancel01Icon, ListViewIcon } from '@hugeicons/core-free-icons';
+import { AlertCircleIcon, ListViewIcon } from '@hugeicons/core-free-icons';
 import type { AgentCharacter } from '@tavern/api/agent-appearance';
 import { splitVisualFences } from '@tavern/api/widgets/visual';
 import { useReducedMotion } from 'framer-motion';
@@ -17,7 +17,6 @@ import {
 import { useActorProfile } from '../../hooks/actors/use-actor.ts';
 import { isLocalTimelineMessageMetadata } from '../../hooks/chats/chat-timeline-messages.ts';
 import type { ChatActiveReply } from '../../hooks/chats/chat-timeline-state.ts';
-import { useChatDismiss } from '../../hooks/chats/use-chat-dismiss.ts';
 import { openAgentProfilePane } from '../../hooks/pane/use-agent-profile-pane.ts';
 import { formatShortTime } from '../../lib/format.ts';
 import { cn } from '../../lib/utils.ts';
@@ -845,10 +844,6 @@ function AgentTurnItem({
         return <WorkspaceChangesChip chatId={chatId} row={item.row} />;
     }
 
-    if (item.kind === 'failure') {
-        return <AgentTurnFailure chatId={chatId} item={item} />;
-    }
-
     if (isTurnStatusItem(item)) {
         return <AgentTurnStatus item={item} />;
     }
@@ -1039,44 +1034,6 @@ function isStreamingActiveReply(reply: ChatActiveReply) {
 
 export function getActiveReplyDisplayText(text: string) {
     return text.trimStart().trimEnd();
-}
-
-function AgentTurnFailure({
-    chatId,
-    item,
-}: {
-    chatId?: string;
-    item: Extract<TranscriptItem, { kind: 'failure' }>;
-}) {
-    const { dismissRow } = useChatDismiss(chatId);
-    const responseId = item.failure.responseId;
-
-    return (
-        <p className="group/failure max-w-[34rem] pl-0.5 text-sm leading-5" role="alert">
-            <Icon
-                aria-hidden
-                className="mr-1.5 inline-block size-3.5 shrink-0 align-[-0.2em] text-error-foreground"
-                icon={AlertCircleIcon}
-                strokeWidth={2}
-            />
-            <span className="font-medium text-foreground/90">Response failed</span>
-            <span className="text-muted-foreground"> · {item.failure.error}</span>
-            {chatId && responseId ? (
-                <button
-                    aria-label="Dismiss failed response"
-                    className={cn(
-                        messageActionButtonClassName,
-                        'ml-1 align-text-bottom opacity-0 group-hover/failure:opacity-100'
-                    )}
-                    onClick={() => dismissRow(responseId)}
-                    title="Dismiss"
-                    type="button"
-                >
-                    <Icon className="size-3.5" icon={Cancel01Icon} strokeWidth={2} />
-                </button>
-            ) : null}
-        </p>
-    );
 }
 
 function AgentTurnStatus({

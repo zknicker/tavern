@@ -225,7 +225,7 @@ function shouldRenderTranscriptEntry(entry: TranscriptEntry) {
 }
 
 function isPaneVisibleAgentItem(item: TranscriptItem) {
-    if (item.kind === 'activeReply' || item.kind === 'failure') {
+    if (item.kind === 'activeReply') {
         return true;
     }
 

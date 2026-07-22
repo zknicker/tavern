@@ -7,7 +7,7 @@ import {
     MessageScrollerProvider,
     MessageScrollerViewport,
 } from '../../components/ui/message-scroller.tsx';
-import type { ChatActiveReply, ChatTurnFailure } from '../../hooks/chats/chat-timeline-state.ts';
+import type { ChatActiveReply } from '../../hooks/chats/chat-timeline-state.ts';
 import type { ChatLogOutput } from '../../lib/trpc.tsx';
 import { ChatScrollPositionMemory } from './chat-scroll-position-memory.tsx';
 import { ChatTimeline } from './chat-timeline.tsx';
@@ -27,7 +27,6 @@ export function ChatDetailFrame({
     sidePanel,
     takeoverPanel,
     fetchOlderHistory,
-    failedTurns,
     footer,
     hasOlderHistory = false,
     header,
@@ -49,7 +48,6 @@ export function ChatDetailFrame({
     sidePanel?: React.ReactNode;
     takeoverPanel?: React.ReactNode;
     fetchOlderHistory?: () => void;
-    failedTurns?: readonly ChatTurnFailure[];
     footer: React.ReactNode;
     hasOlderHistory?: boolean;
     header?: React.ReactNode;
@@ -62,7 +60,7 @@ export function ChatDetailFrame({
     const viewportRef = React.useRef<HTMLDivElement | null>(null);
     const contentRef = React.useRef<HTMLDivElement | null>(null);
     const hasActiveReply = activeReplies.length > 0;
-    const hasTimelineContent = rows.length > 0 || hasActiveReply || (failedTurns?.length ?? 0) > 0;
+    const hasTimelineContent = rows.length > 0 || hasActiveReply;
     const isInitialTranscriptPending = isPending && !historyLoaded && !hasActiveReply;
     const handleScroll = () => {
         const viewport = viewportRef.current;
@@ -107,13 +105,11 @@ export function ChatDetailFrame({
                                             </MessageScrollerContent>
                                         ) : hasTimelineContent ? (
                                             <ChatTimeline
-                                                activeReplies={activeReplies}
                                                 agentStatusCharacter={agentStatusCharacter}
                                                 canRequestMention={canRequestMention}
                                                 chatId={chatId}
                                                 conversationLayout={conversationLayout}
                                                 defaultOpenWorkGroups={defaultOpenWorkGroups}
-                                                failedTurns={failedTurns}
                                                 rows={rows}
                                                 scrollContentRef={contentRef}
                                                 totalMessages={totalMessages}

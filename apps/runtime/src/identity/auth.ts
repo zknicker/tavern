@@ -72,10 +72,7 @@ export function isRouteAllowedForAuth(
         return nonMemberAllowedRoutes.has(pathname);
     }
 
-    if (
-        pathname === runtimeRoutes.memorySettings ||
-        memberDeniedPrefixes.some((prefix) => pathname.startsWith(prefix))
-    ) {
+    if (memberDeniedPrefixes.some((prefix) => pathname.startsWith(prefix))) {
         return false;
     }
 

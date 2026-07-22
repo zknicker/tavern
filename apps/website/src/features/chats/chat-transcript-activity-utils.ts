@@ -18,7 +18,7 @@ export {
 } from './chat-transcript-tool-intents.ts';
 
 export function isActivityItem(item: TranscriptItem): item is ActivityItem {
-    if (item.kind === 'activeReply' || item.kind === 'activeStatus' || item.kind === 'failure') {
+    if (item.kind === 'activeReply' || item.kind === 'activeStatus') {
         return false;
     }
 

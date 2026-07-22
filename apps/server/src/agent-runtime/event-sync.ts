@@ -47,7 +47,6 @@ export async function applyObservedAgentRuntimeEvent(
     switch (event.type) {
         case 'agent.updated': {
             emitObservedAgentRuntimeEvent(event);
-            debugTurnEvent(event);
             void syncAgentRuntimeAgents().catch((error) => {
                 console.warn('[tavern] failed to sync agent event', error);
             });
@@ -56,7 +55,6 @@ export async function applyObservedAgentRuntimeEvent(
         }
         case 'chat.historyChanged': {
             emitObservedAgentRuntimeEvent(event);
-            debugTurnEvent(event);
             const parentChatId = await resolveThreadParentChatId(event.chatId, connection);
             emitChatUpdated({ chatId: parentChatId ?? event.chatId });
             emitChatLogUpdated();
@@ -67,7 +65,6 @@ export async function applyObservedAgentRuntimeEvent(
         }
         case 'chat.messageAccepted': {
             emitObservedAgentRuntimeEvent(event);
-            debugTurnEvent(event);
             const parentChatId = await resolveThreadParentChatId(event.chatId, connection);
             if (parentChatId) {
                 emitChatUpdated({ chatId: parentChatId });
@@ -81,7 +78,6 @@ export async function applyObservedAgentRuntimeEvent(
         }
         case 'chat.read': {
             emitObservedAgentRuntimeEvent(event);
-            debugTurnEvent(event);
             const parentChatId = await resolveThreadParentChatId(event.chatId, connection);
             if (parentChatId) {
                 emitChatUpdated({ chatId: parentChatId });
@@ -93,25 +89,21 @@ export async function applyObservedAgentRuntimeEvent(
         }
         case 'model.updated': {
             emitObservedAgentRuntimeEvent(event);
-            debugTurnEvent(event);
             emitModelUpdated();
             return;
         }
         case 'workspace.instructions.updated': {
             emitObservedAgentRuntimeEvent(event);
-            debugTurnEvent(event);
             emitAgentInstructionsUpdated({ agentId: event.agentId });
             return;
         }
         case 'skill.updated': {
             emitObservedAgentRuntimeEvent(event);
-            debugTurnEvent(event);
             queueRuntimeSkillInventoryRefresh();
             return;
         }
         case 'skill.deleted': {
             emitObservedAgentRuntimeEvent(event);
-            debugTurnEvent(event);
             queueRuntimeSkillInventoryRefresh();
             return;
         }
@@ -149,7 +141,6 @@ export async function applyObservedAgentRuntimeEvent(
             const sessionKey =
                 event.type === 'session.updated' ? event.session.key : event.sessionKey;
             emitObservedAgentRuntimeEvent(event);
-            debugTurnEvent(event);
             emitWorkersUpdated();
             emitSessionUpdated({ sessionKey });
             emitChatLogUpdated({ sessionKey });
@@ -182,39 +173,6 @@ async function resolveThreadParentChatId(chatId: string, connection?: RuntimeCon
     } catch (error) {
         console.warn('[tavern] failed to resolve thread parent for invalidation', error);
         return null;
-    }
-}
-
-function debugTurnEvent(event: AgentRuntimeEvent) {
-    if (process.env.TAVERN_CHAT_DEBUG !== '1') {
-        return;
-    }
-
-    switch (event.type) {
-        case 'turn.completed':
-        case 'turn.failed':
-        case 'turn.progress':
-        case 'turn.replyUpdated':
-        case 'turn.statusUpdated':
-        case 'turn.started':
-            console.info('[tavern:chat:server]', event.type, {
-                runId: event.turn.runId,
-                sessionKey: event.turn.sessionKey,
-                step:
-                    event.type === 'turn.progress'
-                        ? {
-                              id: event.step.id,
-                              kind: event.step.kind,
-                              label: event.step.label,
-                              status: event.step.status,
-                          }
-                        : undefined,
-                sequence: event.type === 'turn.statusUpdated' ? event.sequence : undefined,
-                timestamp: event.timestamp,
-            });
-            return;
-        default:
-            return;
     }
 }
 
@@ -327,39 +285,13 @@ async function catchUpRuntimeEvents(connection: RuntimeConnectionRecord, revisio
         }
 
         for (const event of events) {
-            await applyCatchUpRuntimeEvent(event, connection);
+            await applyObservedAgentRuntimeEvent(event, connection);
         }
         emitRuntimeReconnectInvalidations();
     } catch (error) {
         if (revision === connectionRevision) {
             console.warn('[tavern] failed to catch up runtime events', error);
         }
-    }
-}
-
-export async function applyCatchUpRuntimeEvent(
-    event: AgentRuntimeEvent,
-    connection?: RuntimeConnectionRecord
-) {
-    if (!shouldApplyCatchUpRuntimeEvent(event)) {
-        return;
-    }
-
-    await applyObservedAgentRuntimeEvent(event, connection);
-}
-
-export function shouldApplyCatchUpRuntimeEvent(event: AgentRuntimeEvent) {
-    switch (event.type) {
-        case 'turn.cancelled':
-        case 'turn.completed':
-        case 'turn.failed':
-        case 'turn.progress':
-        case 'turn.replyUpdated':
-        case 'turn.started':
-        case 'turn.statusUpdated':
-            return false;
-        default:
-            return true;
     }
 }
 

@@ -41,8 +41,6 @@ const capabilityLabels = {
     'plugin.merchbase': 'MerchBase',
     skills: 'Skills',
     webAccess: 'Web access',
-    wiki: 'Wiki',
-    wikiRecall: 'Wiki recall',
 } satisfies Record<RuntimeCapabilityId, string>;
 
 export const settingsCapabilityRequirements = {

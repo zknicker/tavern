@@ -43,7 +43,6 @@ const hexColorPattern = /^#[0-9a-f]{6}$/i;
 const fallbackAgentUpdatedAt = new Date(0).toISOString();
 
 export interface Agent {
-    autoDispatchEnabled: boolean;
     bio: string | null;
     character: AgentCharacter | null;
     enabledPluginIds: NonNullable<AgentRuntimeAgent['enabledPluginIds']>;
@@ -52,7 +51,6 @@ export interface Agent {
     name: string;
     primaryColor: string | null;
     runtimeId: string;
-    taskReviewPolicy: boolean;
     updatedAt: string;
     userInstructions: string;
     webAccessEnabled: boolean;
@@ -90,7 +88,6 @@ export const agentUserInstructionsSchema = z.string().max(20_000).nullable();
 export const agentCharacterProfileSchema = agentCharacterSchema.nullable();
 
 export interface AgentCatalogItem {
-    autoDispatchEnabled: boolean;
     bio: string | null;
     character: AgentCharacter | null;
     defaultCharacter: AgentCharacter;
@@ -103,7 +100,6 @@ export interface AgentCatalogItem {
     name: string;
     primaryColor: string | null;
     runtimeId: string;
-    taskReviewPolicy: boolean;
     title: string;
     updatedAt: string;
     userInstructions: string;
@@ -125,7 +121,6 @@ function parseCharacter(value: string | null | undefined): AgentCharacter | null
 function toAgent(agent: AgentRecord, profile: AgentProfileLike | null): Agent {
     const runtimeAgent = parseAgentRawJson(agent);
     return {
-        autoDispatchEnabled: runtimeAgent.autoDispatchEnabled === true,
         webAccessEnabled: runtimeAgent.webAccessEnabled === true,
         bio: parseAgentRawJson(agent).bio ?? null,
         character: parseCharacter(profile?.character),
@@ -135,7 +130,6 @@ function toAgent(agent: AgentRecord, profile: AgentProfileLike | null): Agent {
         name: agent.name,
         primaryColor: profile?.primaryColor ?? agent.primaryColor ?? null,
         runtimeId: agent.runtimeId,
-        taskReviewPolicy: runtimeAgent.taskReviewPolicy === true,
         updatedAt: profile?.updatedAt ?? fallbackAgentUpdatedAt,
         userInstructions: profile?.userInstructions ?? '',
     };
@@ -184,7 +178,6 @@ export function toAgentCatalogItem(
     const defaultCharacter = resolveAgentDefaultCharacter(agent.id);
 
     return {
-        autoDispatchEnabled: agent.autoDispatchEnabled,
         webAccessEnabled: agent.webAccessEnabled,
         bio: agent.bio,
         character: agent.character,
@@ -198,7 +191,6 @@ export function toAgentCatalogItem(
         name: resolveAgentName(agent),
         primaryColor: agent.primaryColor,
         runtimeId: agent.runtimeId,
-        taskReviewPolicy: agent.taskReviewPolicy,
         title: agent.name,
         updatedAt: agent.updatedAt,
         userInstructions: agent.userInstructions,
@@ -528,7 +520,6 @@ function toAgentFromAgentRuntimeAgent(input: {
     runtimeId: string;
 }): Agent {
     return {
-        autoDispatchEnabled: input.agent.autoDispatchEnabled === true,
         webAccessEnabled: input.agent.webAccessEnabled === true,
         bio: input.agent.bio ?? null,
         character: parseCharacter(input.profile?.character),
@@ -538,7 +529,6 @@ function toAgentFromAgentRuntimeAgent(input: {
         name: input.agent.name,
         primaryColor: input.profile?.primaryColor ?? input.agent.primaryColor ?? null,
         runtimeId: input.runtimeId,
-        taskReviewPolicy: input.agent.taskReviewPolicy === true,
         updatedAt: input.profile?.updatedAt ?? fallbackAgentUpdatedAt,
         userInstructions: input.profile?.userInstructions ?? '',
     };

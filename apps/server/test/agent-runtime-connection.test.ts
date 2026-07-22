@@ -192,13 +192,13 @@ test('Tavern Runtime environment override does not replace the saved Runtime URL
     assert.equal(connection?.baseUrl, 'http://127.0.0.1:18790');
     assert.equal(saved?.baseUrl, 'https://zachs-mac-mini.example:18790');
     assert.equal(
-        connection?.capabilities.some((capability) => capability.capability === 'wikiRecall'),
+        connection?.capabilities.some((capability) => capability.capability === 'gateway'),
         true
     );
     assert.deepEqual(
-        connection?.capabilities.find((capability) => capability.capability === 'wikiRecall'),
+        connection?.capabilities.find((capability) => capability.capability === 'gateway'),
         {
-            capability: 'wikiRecall',
+            capability: 'gateway',
             checkedAt: null,
             displayName: null,
             errorCode: null,

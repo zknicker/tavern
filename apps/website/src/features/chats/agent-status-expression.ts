@@ -1,4 +1,4 @@
-import type { ChatActiveReply, ChatTurnFailure } from '../../hooks/chats/chat-timeline-state.ts';
+import type { ChatActiveReply } from '../../hooks/chats/chat-timeline-state.ts';
 import type { Emotion } from './agent-face.tsx';
 import type { TranscriptRow } from './chat-transcript-model.ts';
 
@@ -6,13 +6,8 @@ export type AgentStatusChatRow = TranscriptRow;
 
 export function resolveAgentStatusExpression(input: {
     activeReply: ChatActiveReply | null;
-    failedTurn?: ChatTurnFailure | null;
     rows: AgentStatusChatRow[];
 }): Emotion {
-    if (input.failedTurn) {
-        return 'sweat';
-    }
-
     if (!input.activeReply) {
         return 'idle';
     }

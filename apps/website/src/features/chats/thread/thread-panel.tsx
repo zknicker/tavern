@@ -131,7 +131,6 @@ export function ThreadPanel({
                         <>
                             <div className="min-h-0 flex-1">
                                 <ChatTranscript
-                                    activeReplies={[]}
                                     leadingContent={
                                         <ThreadLeadingContent
                                             anchorRow={anchorRow}
@@ -180,12 +179,10 @@ function SyncedThreadBody({
         <>
             <div className="min-h-0 flex-1">
                 <ChatTranscript
-                    activeReplies={timeline.activeReplies}
                     canRequestMention={!chat.archived}
                     chatId={threadChatId}
                     composerId={`${chat.id}:thread:${anchorMessageId}`}
                     conversationLayout={getChatMessageLayout(chat)}
-                    failedTurns={timeline.failedTurns}
                     leadingContent={
                         <ThreadLeadingContent anchorRow={anchorRow} replyCount={replyCount} />
                     }
@@ -292,7 +289,7 @@ function findAnchorRow(rows: NonNullable<ChatLogOutput>['rows'], messageId: stri
 }
 
 function findAnchorEntryId(rows: NonNullable<ChatLogOutput>['rows'], messageId: string) {
-    const entries = buildTranscriptEntries({ activeReplies: [], rows });
+    const entries = buildTranscriptEntries({ rows });
     return (
         entries.find(
             (entry) =>

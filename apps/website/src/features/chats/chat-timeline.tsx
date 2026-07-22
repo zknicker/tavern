@@ -1,29 +1,24 @@
 import type { AgentCharacter } from '@tavern/api/agent-appearance';
 import type * as React from 'react';
-import type { ChatActiveReply, ChatTurnFailure } from '../../hooks/chats/chat-timeline-state.ts';
 import type { ChatLogOutput } from '../../lib/trpc.tsx';
 import { ChatTranscript } from './chat-transcript.tsx';
 import type { ConversationMessageLayout } from './chat-transcript-model.ts';
 
 export function ChatTimeline({
-    activeReplies,
     agentStatusCharacter = null,
     canRequestMention = true,
     chatId,
     conversationLayout,
     defaultOpenWorkGroups = false,
-    failedTurns,
     rows,
     scrollContentRef,
     totalMessages,
 }: {
-    activeReplies: readonly ChatActiveReply[];
     agentStatusCharacter?: AgentCharacter | null;
     canRequestMention?: boolean;
     chatId?: string;
     conversationLayout?: ConversationMessageLayout;
     defaultOpenWorkGroups?: boolean;
-    failedTurns?: readonly ChatTurnFailure[];
     rows: NonNullable<ChatLogOutput>['rows'];
     scrollContentRef?: React.RefObject<HTMLDivElement | null>;
     totalMessages: number;
@@ -32,13 +27,11 @@ export function ChatTimeline({
 
     return (
         <ChatTranscript
-            activeReplies={activeReplies}
             agentStatusCharacter={agentStatusCharacter}
             canRequestMention={canRequestMention}
             chatId={chatId}
             conversationLayout={conversationLayout}
             defaultOpenWorkGroups={defaultOpenWorkGroups}
-            failedTurns={failedTurns}
             hiddenCount={hiddenCount}
             rows={rows}
             scrollContentRef={scrollContentRef}

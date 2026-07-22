@@ -148,7 +148,6 @@ function SyncedAgentChatDetail({ chat, chatId }: { chat: ChatListItem; chatId: s
                 conversationLayout={conversationLayout}
                 emptyLabel="No synced messages for this chat yet."
                 error={timeline.error}
-                failedTurns={timeline.failedTurns}
                 fetchOlderHistory={timeline.fetchOlderHistory}
                 footer={
                     activeViewTab !== 'chat' ? null : chat.archived ? (
@@ -160,7 +159,6 @@ function SyncedAgentChatDetail({ chat, chatId }: { chat: ChatListItem; chatId: s
                         <ChatDetailFooter
                             activeReplies={timeline.activeReplies}
                             agents={agents}
-                            chat={chat}
                             chatId={chat.id}
                             rows={rows}
                             turnEvidence={timeline.turnEvidence}

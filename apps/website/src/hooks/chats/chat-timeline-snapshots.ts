@@ -1,13 +1,11 @@
 import type { ChatLogOutput } from '../../lib/trpc.tsx';
 import { hasLoggedTurnFailure } from './chat-timeline-failures.ts';
 import {
-    type ActiveReplyMergeOptions,
     areSameActiveReplies,
     findActiveReply,
     hasTerminalReplyOrFailure,
     mergeActiveReplySnapshot,
     normalizeActiveReply,
-    removeActiveReply,
     upsertActiveReply,
 } from './chat-timeline-reply.ts';
 import {
@@ -15,22 +13,16 @@ import {
     isOptimisticStopRow,
     isTurnStatusRow,
 } from './chat-timeline-turn-status.ts';
-import type {
-    ChatActiveReply,
-    ChatTimeline,
-    ChatTimelineState,
-    ChatTurnFailure,
-} from './chat-timeline-types.ts';
+import type { ChatActiveReply, ChatTimeline, ChatTimelineState } from './chat-timeline-types.ts';
 
 // The server-side chat log page no longer carries live turn state
 // (specs/chat-timeline.md): no turn.* runtime events reach the app, so
-// active replies, failed turns, and settled run ids are always empty here.
-// The fields stay on ChatTimelineState because agent-level presence/stop UX
-// still reads them; only the server-fed inputs are gone.
+// active replies and settled run ids are always empty here. The fields stay
+// on ChatTimelineState because agent-level presence/stop UX still reads
+// them; only the server-fed inputs are gone.
 type ServerChatLogPage = NonNullable<ChatLogOutput>;
 type ChatLogPage = ServerChatLogPage & {
     activeReplies: ChatActiveReply[];
-    failedTurns: ChatTurnFailure[];
     settledRunIds: readonly string[];
 };
 type ChatLogInput = ServerChatLogPage;
@@ -39,7 +31,6 @@ export function emptyTimelineState(): ChatTimelineState {
     return {
         activeReplies: [],
         activeTurns: [],
-        failedTurns: [],
         historyLoaded: false,
         terminalRunIds: [],
         timeline: [],
@@ -78,7 +69,7 @@ export function applyLogSnapshot(
     const isTerminalRun = (runId: string) =>
         settledRunIds.has(runId) ||
         hasTurnStatusRow(snapshot.rows, runId) ||
-        snapshot.failedTurns.some((failure) => failure.turn.runId === runId);
+        hasLoggedTurnFailure(snapshot.rows, runId);
     const survivingReplies = state.activeReplies.filter(
         (reply) =>
             !(
@@ -98,7 +89,6 @@ export function applyLogSnapshot(
                 })
             )
     );
-    const nextFailedTurns = mergeSnapshotFailures(state.failedTurns, snapshot);
     const historyLoaded = true;
     // The loaded transcript only grows while the chat stays open. The tail
     // page refetches from the newest message, so new durable turns slide the
@@ -125,8 +115,7 @@ export function applyLogSnapshot(
         state.totalMessages === nextTotal &&
         state.historyLoaded === historyLoaded &&
         areSameActiveReplies(state.activeReplies, nextActiveReplies) &&
-        areSameActiveTurns(state.activeTurns, nextActiveTurns) &&
-        areSameTurnFailures(state.failedTurns, nextFailedTurns)
+        areSameActiveTurns(state.activeTurns, nextActiveTurns)
     ) {
         return state;
     }
@@ -134,7 +123,6 @@ export function applyLogSnapshot(
     return {
         activeReplies: nextActiveReplies,
         activeTurns: nextActiveTurns,
-        failedTurns: nextFailedTurns,
         historyLoaded,
         terminalRunIds: state.terminalRunIds,
         timeline: nextTimeline,
@@ -192,98 +180,15 @@ function mergeSnapshotReplies(
     return next;
 }
 
-// Durable failures (with responseId, so dismissal works) win over live-event
-// failures for the same run; live failures survive until the log confirms or
-// contradicts them.
-function mergeSnapshotFailures(failures: ChatTurnFailure[], snapshot: ChatLogPage) {
-    const next = failures.filter(
-        (failure) =>
-            !(
-                snapshot.failedTurns.some(
-                    (snapshotFailure) => snapshotFailure.turn.runId === failure.turn.runId
-                ) || hasLoggedTurnFailure(snapshot.rows, failure.turn.runId)
-            )
-    );
-    const merged = [...next, ...snapshot.failedTurns];
-
-    return merged.length === failures.length &&
-        merged.every((failure, index) => isSameTurnFailure(failure, failures[index] ?? null))
-        ? failures
-        : merged;
-}
-
 function normalizeChatLog(log: ChatLogInput): ChatLogPage {
     return {
         activeReplies: [],
-        failedTurns: [],
         limit: log.limit,
         nextBeforeSequence: log.nextBeforeSequence,
         rows: log.rows,
         settledRunIds: [],
         totalMessages: log.totalMessages,
     };
-}
-
-export function applyReplySnapshot(
-    state: ChatTimelineState,
-    activeReply: ChatActiveReply,
-    options: ActiveReplyMergeOptions = {}
-): ChatTimelineState {
-    // A run the client already marked failed stays failed; only live turn
-    // events (authoritative) may write to it again, and those are filtered
-    // upstream in updateTimelineReply.
-    if (
-        !options.authoritative &&
-        state.failedTurns.some((failure) => failure.turn.runId === activeReply.runId)
-    ) {
-        return state;
-    }
-
-    const merged = mergeActiveReplySnapshot(
-        findActiveReply(state.activeReplies, activeReply.runId),
-        normalizeActiveReply(activeReply),
-        options
-    );
-    const isTerminal =
-        merged === null ||
-        hasTerminalReplyOrFailure({ activeReply: merged, rows: state.timeline }) ||
-        hasTurnStatusRow(state.timeline, merged.runId);
-    const nextActiveReplies = isTerminal
-        ? removeActiveReply(state.activeReplies, activeReply.runId)
-        : upsertActiveReply(state.activeReplies, merged);
-
-    if (nextActiveReplies === state.activeReplies) {
-        return state;
-    }
-
-    return {
-        ...state,
-        activeReplies: nextActiveReplies,
-    };
-}
-
-export function isSameTurnFailure(left: ChatTurnFailure | null, right: ChatTurnFailure | null) {
-    if (left === right) {
-        return true;
-    }
-
-    if (!(left && right)) {
-        return false;
-    }
-
-    return (
-        left.error === right.error &&
-        left.turn.runId === right.turn.runId &&
-        left.responseId === right.responseId
-    );
-}
-
-function areSameTurnFailures(left: readonly ChatTurnFailure[], right: readonly ChatTurnFailure[]) {
-    return (
-        left === right ||
-        (left.length === right.length &&
-            left.every((failure, index) => isSameTurnFailure(failure, right[index] ?? null)))
-    );
 }
 
 function areSameActiveTurns(

@@ -9,7 +9,6 @@ import { subscribeToTavernApiEvents } from './chat-api/index.ts';
 import {
     forbidden,
     internalError,
-    maxTavernRuntimeRequestBodyBytes,
     payloadTooLarge,
     RequestBodyTooLargeError,
     toFetchRequest,
@@ -81,11 +80,7 @@ export function startTavernRuntimeServer(
         try {
             const baseUrl = `http://127.0.0.1:${port}`;
             const requestUrl = new URL(request.url ?? '/', baseUrl);
-            const maxBodyBytes =
-                request.method === 'POST' && requestUrl.pathname === runtimeRoutes.wikiAttachments
-                    ? maxTavernRuntimeRequestBodyBytes
-                    : undefined;
-            const fetchRequest = await toFetchRequest(request, baseUrl, { maxBodyBytes });
+            const fetchRequest = await toFetchRequest(request, baseUrl, {});
             const pathname = new URL(fetchRequest.url).pathname;
             // Health route is unauthenticated so the app can probe reachability before pairing.
             const isHealth = pathname === runtimeRoutes.health && fetchRequest.method === 'GET';

@@ -1,4 +1,3 @@
-import { repairCronCacheTables } from './bootstrap-cron-repair.ts';
 import { databaseClient } from './index.ts';
 
 const schemaStatements = [
@@ -225,79 +224,6 @@ const schemaStatements = [
         ON participant_labels (participant_id);`,
     `CREATE INDEX IF NOT EXISTS participant_labels_normalized_idx
         ON participant_labels (participant_id, normalized_label);`,
-    `CREATE TABLE IF NOT EXISTS cron_runs (
-        id TEXT PRIMARY KEY NOT NULL,
-        job_id TEXT NOT NULL,
-        runtime_id TEXT,
-        chat_id TEXT,
-        turn_id TEXT,
-        scheduled_for TEXT NOT NULL,
-        started_at TEXT,
-        finished_at TEXT,
-        status TEXT NOT NULL,
-        execution_error_code TEXT,
-        execution_error_message TEXT,
-        quiet INTEGER NOT NULL DEFAULT 0,
-        script_exit_code INTEGER,
-        script_stderr TEXT,
-        synced_at TEXT NOT NULL,
-        trigger TEXT NOT NULL DEFAULT 'schedule'
-    );`,
-    `CREATE INDEX IF NOT EXISTS cron_runs_job_id_scheduled_for_idx
-        ON cron_runs (job_id, scheduled_for);`,
-    'CREATE INDEX IF NOT EXISTS cron_runs_scheduled_for_idx ON cron_runs (scheduled_for);',
-    'CREATE INDEX IF NOT EXISTS cron_runs_chat_id_idx ON cron_runs (chat_id);',
-    'CREATE INDEX IF NOT EXISTS cron_runs_turn_id_idx ON cron_runs (turn_id);',
-    `CREATE TABLE IF NOT EXISTS cron_jobs (
-        id TEXT PRIMARY KEY NOT NULL,
-        runtime_id TEXT NOT NULL,
-        runtime_cron_job_id TEXT NOT NULL,
-        agent_id TEXT NOT NULL,
-        name TEXT NOT NULL,
-        description TEXT,
-        enabled INTEGER NOT NULL,
-        schedule_json TEXT NOT NULL,
-        state_json TEXT NOT NULL,
-        payload_json TEXT NOT NULL,
-        delivery_json TEXT NOT NULL,
-        delete_after_run INTEGER NOT NULL,
-        raw_json TEXT NOT NULL,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL,
-        last_synced_at TEXT NOT NULL
-    );`,
-    `CREATE UNIQUE INDEX IF NOT EXISTS cron_jobs_runtime_cron_job_idx
-        ON cron_jobs (runtime_id, runtime_cron_job_id);`,
-    `CREATE INDEX IF NOT EXISTS cron_jobs_runtime_idx
-        ON cron_jobs (runtime_id);`,
-    `CREATE INDEX IF NOT EXISTS cron_jobs_agent_id_idx
-        ON cron_jobs (agent_id);`,
-    `CREATE INDEX IF NOT EXISTS cron_jobs_last_synced_at_idx
-        ON cron_jobs (last_synced_at);`,
-    `CREATE TABLE IF NOT EXISTS tasks (
-        id TEXT PRIMARY KEY NOT NULL,
-        runtime_id TEXT NOT NULL,
-        runtime_task_id TEXT NOT NULL,
-        number INTEGER NOT NULL,
-        kind TEXT NOT NULL,
-        title TEXT NOT NULL,
-        status TEXT NOT NULL,
-        priority TEXT NOT NULL,
-        assignee_kind TEXT,
-        assignee_agent_id TEXT,
-        epic_id TEXT,
-        raw_json TEXT NOT NULL,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL,
-        last_synced_at TEXT NOT NULL
-    );`,
-    `CREATE UNIQUE INDEX IF NOT EXISTS tasks_runtime_task_idx
-        ON tasks (runtime_id, runtime_task_id);`,
-    `CREATE INDEX IF NOT EXISTS tasks_runtime_idx
-        ON tasks (runtime_id);`,
-    'CREATE INDEX IF NOT EXISTS tasks_status_idx ON tasks (status);',
-    `CREATE INDEX IF NOT EXISTS tasks_last_synced_at_idx
-        ON tasks (last_synced_at);`,
     `CREATE TABLE IF NOT EXISTS sync_state (
         kind TEXT NOT NULL,
         id TEXT NOT NULL,
@@ -518,28 +444,9 @@ export function ensureDatabaseSchema() {
     runSchemaStatements(
         (statement) => !(statement.startsWith('PRAGMA') || statement.startsWith('CREATE INDEX'))
     );
-    migrateCronRunScriptColumns();
-    repairCronCacheTables(runSchemaStatements);
     runSchemaStatements((statement) => statement.startsWith('CREATE INDEX'));
     migrateAgentProfilesUserInstructions();
     migrateAgentProfilesCharacter();
-}
-
-// Runs before the cron cache repair so an existing current-shape table gains
-// the script-run columns instead of tripping the legacy-shape rebuild.
-function migrateCronRunScriptColumns() {
-    const additions = [
-        'ALTER TABLE cron_runs ADD COLUMN quiet INTEGER NOT NULL DEFAULT 0;',
-        'ALTER TABLE cron_runs ADD COLUMN script_exit_code INTEGER;',
-        'ALTER TABLE cron_runs ADD COLUMN script_stderr TEXT;',
-    ];
-    for (const statement of additions) {
-        try {
-            databaseClient.exec(statement);
-        } catch {
-            /* column already exists or the table is a pre-repair legacy shape */
-        }
-    }
 }
 
 function migrateAgentProfilesCharacter() {

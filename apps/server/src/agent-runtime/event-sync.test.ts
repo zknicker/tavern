@@ -14,7 +14,7 @@ process.env.DATABASE_PATH = join(directory, 'test.sqlite');
 
 const [
     { ensureDatabaseSchema },
-    { applyObservedAgentRuntimeEvent, shouldApplyCatchUpRuntimeEvent },
+    { applyObservedAgentRuntimeEvent },
     connectionService,
     { listReachableAgentRuntimeConnections },
 ] = await Promise.all([
@@ -79,66 +79,6 @@ test('capability.updated refreshes the cached runtime capability snapshot', asyn
     });
     assert.equal(capabilityState(refreshed, 'gateway'), 'healthy');
     assert.equal(capabilityState(refreshed, 'apiServer'), 'healthy');
-});
-
-test('runtime catch-up ignores historical turn events', () => {
-    const turn = {
-        agentId: 'agt_primary',
-        chatId: 'cht_1',
-        runId: 'run_1',
-        sessionKey: 'ags_1',
-        startedAt: '2026-06-21T12:00:00.000Z',
-    };
-    const timestamp = '2026-06-21T12:00:01.000Z';
-
-    assert.equal(shouldApplyCatchUpRuntimeEvent({ timestamp, turn, type: 'turn.started' }), false);
-    assert.equal(
-        shouldApplyCatchUpRuntimeEvent({
-            step: { id: 'step_1', kind: 'tool', label: 'Read file', status: 'active' },
-            timestamp,
-            turn,
-            type: 'turn.progress',
-        }),
-        false
-    );
-    assert.equal(
-        shouldApplyCatchUpRuntimeEvent({
-            text: 'Working',
-            timestamp,
-            turn,
-            type: 'turn.replyUpdated',
-        }),
-        false
-    );
-    assert.equal(
-        shouldApplyCatchUpRuntimeEvent({
-            sequence: 1,
-            timestamp,
-            turn,
-            type: 'turn.statusUpdated',
-        }),
-        false
-    );
-    assert.equal(
-        shouldApplyCatchUpRuntimeEvent({ timestamp, turn, type: 'turn.completed' }),
-        false
-    );
-    assert.equal(
-        shouldApplyCatchUpRuntimeEvent({ timestamp, turn, type: 'turn.cancelled' }),
-        false
-    );
-    assert.equal(
-        shouldApplyCatchUpRuntimeEvent({ error: 'failed', timestamp, turn, type: 'turn.failed' }),
-        false
-    );
-    assert.equal(
-        shouldApplyCatchUpRuntimeEvent({
-            chatId: 'cht_1',
-            timestamp,
-            type: 'chat.historyChanged',
-        }),
-        true
-    );
 });
 
 function capabilityState(

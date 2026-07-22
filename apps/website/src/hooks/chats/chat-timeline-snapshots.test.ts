@@ -1,21 +1,8 @@
 import { expect, test } from 'bun:test';
 import type { ChatLogOutput } from '../../lib/trpc.tsx';
-import {
-    applyLogSnapshot,
-    completeTimelineTurn,
-    emptyTimelineState,
-    startTimelineTurn,
-} from './chat-timeline-state.ts';
+import { applyLogSnapshot, emptyTimelineState } from './chat-timeline-state.ts';
 
 type ChatLogRow = NonNullable<ChatLogOutput>['rows'][number];
-
-const turn = {
-    agentId: 'claw',
-    chatId: 'chat-1',
-    runId: 'run-1',
-    sessionKey: 'session-1',
-    startedAt: '2026-04-21T16:08:42.000Z',
-};
 
 test('applyLogSnapshot retains loaded history when the live window slides forward', () => {
     const loaded = applyLogSnapshot(emptyTimelineState(), {
@@ -28,9 +15,8 @@ test('applyLogSnapshot retains loaded history when the live window slides forwar
         ],
         totalMessages: 3,
     });
-    const live = startTimelineTurn(loaded, turn);
 
-    const next = applyLogSnapshot(live, {
+    const next = applyLogSnapshot(loaded, {
         limit: 3,
         nextBeforeSequence: 2,
         rows: [agentMessage('recent-1', '16:08:30'), userMessage('user-2', '16:08:50')],
@@ -56,9 +42,8 @@ test('applyLogSnapshot retains slid-out rows regardless of timestamp order', () 
         ],
         totalMessages: 3,
     });
-    const live = startTimelineTurn(loaded, turn);
 
-    const next = applyLogSnapshot(live, {
+    const next = applyLogSnapshot(loaded, {
         limit: 3,
         nextBeforeSequence: 2,
         rows: [agentMessage('recent-1', '16:08:30'), userMessage('user-2', '16:08:50')],
@@ -85,9 +70,8 @@ test('applyLogSnapshot retains loaded history through the completion refetch', (
         ],
         totalMessages: 3,
     });
-    const live = startTimelineTurn(loaded, turn);
 
-    const next = applyLogSnapshot(live, {
+    const next = applyLogSnapshot(loaded, {
         limit: 3,
         nextBeforeSequence: 2,
         rows: [agentMessage('recent-1', '16:08:30'), agentMessage('reply-1', '16:08:55')],
@@ -120,44 +104,6 @@ test('applyLogSnapshot defers to a full-coverage window for deletions', () => {
 
     expect(next.timeline.map((row) => row.id)).toEqual(['old-2', 'recent-1']);
     expect(next.totalMessages).toBe(2);
-});
-
-test('applyLogSnapshot never resurrects a run the client saw settle', () => {
-    const live = startTimelineTurn(emptyTimelineState(), turn);
-    const settled = completeTimelineTurn(live, {
-        completedAt: '2026-04-21T16:08:50.000Z',
-        // A silent turn: the reply is removed outright at completion.
-        hasReply: false,
-        turn,
-    });
-    expect(settled.activeReplies).toEqual([]);
-
-    // A stale snapshot served while the run was still in flight lands after
-    // the live completion event. The chat log no longer carries snapshot
-    // replies (specs/chat-timeline.md); a refetch simply cannot resurrect one.
-    const next = applyLogSnapshot(settled, {
-        limit: 3,
-        nextBeforeSequence: null,
-        rows: [],
-        totalMessages: 0,
-    });
-
-    expect(next.activeReplies).toEqual([]);
-});
-
-test('a log refetch cannot strip the quiet-evaluation stamp from a live reply', () => {
-    const live = startTimelineTurn(emptyTimelineState(), { ...turn, trigger: 'evaluation' });
-
-    // The chat log no longer carries snapshot replies (specs/chat-timeline.md);
-    // a refetch that touches unrelated rows must not disturb the live reply.
-    const next = applyLogSnapshot(live, {
-        limit: 3,
-        nextBeforeSequence: null,
-        rows: [],
-        totalMessages: 0,
-    });
-
-    expect(next.activeReplies[0]?.trigger).toBe('evaluation');
 });
 
 test('applyLogSnapshot carries an updated thread summary on unchanged row ids', () => {

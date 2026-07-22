@@ -1,5 +1,4 @@
 import { useAgentPresence } from '../../hooks/agents/use-agent-presence.ts';
-import type { ChatActiveReply } from '../../hooks/chats/chat-timeline-types.ts';
 import type { AgentPresenceOutput } from '../../lib/trpc.tsx';
 import { cn } from '../../lib/utils.ts';
 import { type ChatListItem, getChatAgentId } from './chat-list-data.ts';
@@ -24,24 +23,6 @@ export function AgentPresenceBadge({ chat }: { chat: ChatListItem }) {
             {label ? <span className="truncate text-muted-foreground text-xs">{label}</span> : null}
         </span>
     );
-}
-
-/**
- * Composer hint: a seated agent is busy with a turn anchored in another
- * chat, so a send here queues.
- *
- * Presence carries no chat anchor (specs/presence.md): busy-here and
- * busy-elsewhere are no longer distinguishable server-side, so this hint is
- * inert until a chat-scoped signal exists again. Kept as a no-op component
- * (rather than deleted) so its call site doesn't need to branch on a
- * workstream that hasn't landed yet.
- */
-export function AgentBusyElsewhereHint(_props: {
-    activeReplies: readonly ChatActiveReply[];
-    boundAgentIds: readonly string[];
-    chat: ChatListItem;
-}) {
-    return null;
 }
 
 export function resolveDmPresenceLabel(presence: AgentPresenceEntry, _chatId: string) {

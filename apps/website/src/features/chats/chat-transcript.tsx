@@ -7,7 +7,6 @@ import {
     MessageScrollerProvider,
     MessageScrollerViewport,
 } from '../../components/ui/message-scroller.tsx';
-import type { ChatActiveReply, ChatTurnFailure } from '../../hooks/chats/chat-timeline-state.ts';
 import { useChatSidePane } from '../../hooks/pane/use-chat-side-pane.ts';
 import { useMessageFlash } from '../../hooks/threads/use-message-flash.ts';
 import { openThreadPane, useThreadPane } from '../../hooks/threads/use-thread-pane.ts';
@@ -41,7 +40,6 @@ const directConversationMessageLayout: ConversationMessageLayout = {
 };
 
 export function ChatTranscript({
-    activeReplies,
     agentStatusCharacter = null,
     canRequestMention = true,
     chatId,
@@ -49,7 +47,6 @@ export function ChatTranscript({
     conversationLayout = directConversationMessageLayout,
     currentSessionKey,
     defaultOpenWorkGroups = false,
-    failedTurns = [],
     hiddenCount = 0,
     leadingContent,
     olderHistory,
@@ -59,7 +56,6 @@ export function ChatTranscript({
     threadActionsEnabled = true,
     viewportClassName,
 }: {
-    activeReplies: readonly ChatActiveReply[];
     agentStatusCharacter?: AgentCharacter | null;
     canRequestMention?: boolean;
     chatId?: string;
@@ -67,7 +63,6 @@ export function ChatTranscript({
     conversationLayout?: ConversationMessageLayout;
     currentSessionKey?: string | null;
     defaultOpenWorkGroups?: boolean;
-    failedTurns?: readonly ChatTurnFailure[];
     hiddenCount?: number;
     leadingContent?: React.ReactNode;
     // Standalone-viewport transcripts (the thread pane) page older history
@@ -89,15 +84,7 @@ export function ChatTranscript({
         profilePaneChatId,
     });
     const mutateThreadFollow = unfollowThread.mutate;
-    const entries = React.useMemo(
-        () =>
-            buildTranscriptEntries({
-                activeReplies,
-                failedTurns,
-                rows,
-            }),
-        [activeReplies, failedTurns, rows]
-    );
+    const entries = React.useMemo(() => buildTranscriptEntries({ rows }), [rows]);
     const rawTranscriptRows = React.useMemo(
         () => buildTranscriptRenderRows(entries, hiddenCount),
         [entries, hiddenCount]
@@ -112,12 +99,12 @@ export function ChatTranscript({
     // back into the pane during that gap.
     const seenRepliedRunsRef = React.useRef(new Set<string>());
     const repliedRunIds = React.useMemo(() => {
-        for (const runId of getRepliedRunIds(rows, activeReplies)) {
+        for (const runId of getRepliedRunIds(rows)) {
             seenRepliedRunsRef.current.add(runId);
         }
 
         return new Set(seenRepliedRunsRef.current);
-    }, [rows, activeReplies]);
+    }, [rows]);
     const shouldAnimateItemEnter = useLiveEdgeItemEnter(chatId, transcriptRows);
     const onOpenThread = React.useCallback(
         (row: Parameters<TranscriptRenderContextValue['onOpenThread']>[0]) => {
@@ -177,26 +164,6 @@ export function ChatTranscript({
     );
 
     React.useEffect(() => {
-        for (const reply of activeReplies) {
-            markChatTiming('thinking-visible', {
-                runId: reply.runId,
-                sessionKey: reply.sessionKey,
-            });
-        }
-    }, [activeReplies]);
-
-    React.useEffect(() => {
-        for (const reply of activeReplies) {
-            if (reply.isThinking === false && reply.text?.trim()) {
-                markChatTiming('final-message-visible', {
-                    runId: reply.runId,
-                    sessionKey: reply.sessionKey,
-                });
-            }
-        }
-    }, [activeReplies]);
-
-    React.useEffect(() => {
         if (!latestAgentMessage) {
             return;
         }
@@ -223,7 +190,6 @@ export function ChatTranscript({
                                 messageId={row.id}
                             >
                                 <TranscriptRenderRowItem
-                                    activeReplies={activeReplies}
                                     agentStatusCharacter={agentStatusCharacter}
                                     row={row}
                                 />

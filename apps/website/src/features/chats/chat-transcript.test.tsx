@@ -197,45 +197,6 @@ test('ChatTranscript renders image attachments in a fluid media frame', () => {
     assert.doesNotMatch(markup, /File reference/);
 });
 
-test('ChatTranscript renders active replies through the chat message shell', () => {
-    const markup = renderActiveTranscript({
-        agentId: 'tiny',
-        isThinking: false,
-        runId: 'run-1',
-        sessionKey: 'agent:tiny:session-1',
-        startedAt: '2026-03-31T15:00:00.000Z',
-        text: 'Done.',
-    });
-
-    assert.match(markup, /data-slot="message"/);
-    assert.match(markup, /data-slot="bubble"/);
-    assert.match(markup, /group\/turn w-full gap-3 py-1/);
-    assert.doesNotMatch(markup, /group\/turn w-full px-3 py-1\.5/);
-    assert.match(markup, /gap-0 pt-0\.5/);
-    assert.match(markup, /transform-origin:bottom left/);
-    assert.doesNotMatch(markup, /pb-6/);
-    assert.doesNotMatch(markup, /style="transform-origin:bottom left;opacity:0;transform/);
-});
-
-test('ChatTranscript renders completed active replies as one full message block', () => {
-    const markup = renderActiveTranscript({
-        agentId: 'tiny',
-        completedAt: '2026-03-31T15:00:03.000Z',
-        isThinking: false,
-        runId: 'run-1',
-        sessionKey: 'agent:tiny:session-1',
-        startedAt: '2026-03-31T15:00:00.000Z',
-        text: 'First line.\nSecond line.\nThird line.',
-    });
-
-    assert.match(markup, /First line\./);
-    assert.match(markup, /Second line\./);
-    assert.match(markup, /Third line\./);
-    assert.match(markup, /data-slot="message"/);
-    assert.match(markup, /data-slot="bubble"/);
-    assert.doesNotMatch(markup, /chat-streaming-text-unit/);
-});
-
 test('ChatTranscript renders loaded multiline assistant replies as one message block', () => {
     const markup = renderTranscript([
         {
@@ -439,42 +400,6 @@ test('ChatTranscript renders visual widget rows in a sandboxed iframe', () => {
     assert.doesNotMatch(markup, /Widget unavailable/);
 });
 
-test('ChatTranscript streams an open visual fence as a live visual card', () => {
-    const markup = renderActiveTranscript({
-        agentId: 'tiny',
-        completedAt: null,
-        isThinking: false,
-        runId: 'run-visual',
-        sessionKey: 'agent:tiny:session-1',
-        startedAt: '2026-03-31T15:00:00.000Z',
-        text: 'Drawing the chart now.\n```visual Weekly sales\n<div><h1>Weekly sa',
-    });
-
-    // Prose reveals client-side; statically the partial body must already be
-    // inside the sandbox and the raw fence must never show as text.
-    assert.match(markup, /<iframe/);
-    assert.match(markup, /Weekly sa/);
-    assert.doesNotMatch(markup, /```visual/);
-    assert.doesNotMatch(markup, /allow-same-origin/);
-});
-
-test('ChatTranscript renders a completed reply with a closed visual fence as prose plus card', () => {
-    const markup = renderActiveTranscript({
-        agentId: 'tiny',
-        completedAt: '2026-03-31T15:00:03.000Z',
-        isThinking: false,
-        runId: 'run-visual-done',
-        sessionKey: 'agent:tiny:session-1',
-        startedAt: '2026-03-31T15:00:00.000Z',
-        text: 'Here is the chart.\n```visual Weekly sales\n<h1>Weekly sales</h1>\n```\nDone.',
-    });
-
-    assert.match(markup, /Here is the chart\./);
-    assert.match(markup, /Done\./);
-    assert.match(markup, /<iframe/);
-    assert.doesNotMatch(markup, /```visual/);
-});
-
 test('ChatTranscript renders artifact widgets as compact open-in-pane cards', () => {
     const row = widgetRow('ui-artifact');
 
@@ -630,17 +555,7 @@ test('ChatTranscript keeps active thinking out of the pane and in the turn body'
             timestamp: '2026-03-31T15:00:02.000Z',
         },
     ];
-    const markup = renderActiveTranscript(
-        {
-            agentId: 'tiny',
-            isThinking: true,
-            runId: 'response-1',
-            sessionKey: 'agent:tiny:session-1',
-            startedAt: '2026-03-31T15:00:00.000Z',
-            text: '',
-        },
-        rows
-    );
+    const markup = renderTranscript(rows);
     const turnBodyMarkup = renderTurnBody(rows);
 
     assert.doesNotMatch(markup, /Reviewing the request/);
@@ -1252,60 +1167,6 @@ test('ChatTranscript renders nothing for a new-session notice with no turn to at
     assert.doesNotMatch(markup, /aria-label="Started a fresh session"/);
 });
 
-test('ChatTranscript reveals the streaming post from its first chunk', () => {
-    // The live-patch shape: the turn's first message step creates the post
-    // row (streaming metadata), and the run's live overlay item drops the
-    // same render. The post must mount with the paced reveal — enabled means
-    // the first server render shows none of the text yet.
-    const markup = renderTranscript(
-        [
-            {
-                actor: { id: 'tiny', kind: 'agent' },
-                connectsToNext: false,
-                connectsToPrevious: false,
-                id: 'msg_run-live_assistant',
-                isFirstInGroup: true,
-                kind: 'message',
-                runId: 'run-live',
-                message: {
-                    actor: { id: 'tiny', kind: 'agent' },
-                    content: 'First streamed chunk of the preamble.',
-                    id: 'msg_run-live_assistant',
-                    metadata: {
-                        runtime: {
-                            runId: 'run-live',
-                            sessionKey: 'session-live',
-                            source: 'agent-engine',
-                            streaming: true,
-                        },
-                    },
-                    sender: 'tiny',
-                    senderType: 'agent',
-                    sourceSessionId: null,
-                    sourceSessionKey: 'session-live',
-                    tavernAgentId: 'tiny',
-                    timestamp: '2026-03-31T15:00:05.000Z',
-                },
-            },
-        ],
-        {
-            activeReplies: [
-                {
-                    agentId: 'tiny',
-                    isThinking: true,
-                    runId: 'run-live',
-                    sessionKey: 'session-live',
-                    startedAt: '2026-03-31T15:00:00.000Z',
-                    text: '',
-                },
-            ],
-        }
-    );
-
-    assert.doesNotMatch(markup, /First streamed chunk of the preamble\./);
-    assert.match(markup, /min-h-\[1lh\]/);
-});
-
 test('ChatTranscript hides a stopped turn that produced no visible content', () => {
     const markup = renderTranscript([stoppedTurnRow()]);
 
@@ -1349,53 +1210,43 @@ function stoppedTurnRow(runId = 'run-cancelled'): ChatRow {
     };
 }
 
-test('ChatTranscript does not keep timing a stopped active turn', () => {
-    const markup = renderActiveTranscript(
+test('ChatTranscript does not keep timing a stopped turn', () => {
+    const markup = renderTranscript([
         {
-            agentId: 'tiny',
-            isThinking: true,
-            runId: 'run-cancelled',
+            actor: { id: 'tiny', kind: 'agent' },
+            completedAt: null,
+            connectsToNext: true,
+            connectsToPrevious: false,
+            id: 'act_run-cancelled_tool_1',
+            isFirstInGroup: true,
+            kind: 'tool',
             sessionKey: 'agent:tiny:session-1',
-            startedAt: '2026-03-31T15:00:00.000Z',
-            text: '',
+            spawnedRelationships: [],
+            startedAt: '2026-03-31T15:00:05.000Z',
+            toolCall: {
+                callId: 'call-1',
+                facts: [],
+                label: 'bash',
+                name: 'bash',
+                status: 'running',
+                summaryParts: ['bash'],
+            },
         },
-        [
-            {
-                actor: { id: 'tiny', kind: 'agent' },
-                completedAt: null,
-                connectsToNext: true,
-                connectsToPrevious: false,
-                id: 'act_run-cancelled_tool_1',
-                isFirstInGroup: true,
-                kind: 'tool',
+        {
+            id: 'response-cancelled:cancelled',
+            kind: 'system',
+            responseId: 'response-cancelled',
+            systemKind: 'turnStatus',
+            timestamp: '2026-03-31T15:00:10.000Z',
+            turnStatus: {
+                agentId: 'tiny',
+                runId: 'run-cancelled',
                 sessionKey: 'agent:tiny:session-1',
-                spawnedRelationships: [],
-                startedAt: '2026-03-31T15:00:05.000Z',
-                toolCall: {
-                    callId: 'call-1',
-                    facts: [],
-                    label: 'bash',
-                    name: 'bash',
-                    status: 'running',
-                    summaryParts: ['bash'],
-                },
+                status: 'stopped',
+                text: 'Agent response stopped.',
             },
-            {
-                id: 'response-cancelled:cancelled',
-                kind: 'system',
-                responseId: 'response-cancelled',
-                systemKind: 'turnStatus',
-                timestamp: '2026-03-31T15:00:10.000Z',
-                turnStatus: {
-                    agentId: 'tiny',
-                    runId: 'run-cancelled',
-                    sessionKey: 'agent:tiny:session-1',
-                    status: 'stopped',
-                    text: 'Agent response stopped.',
-                },
-            },
-        ]
-    );
+        },
+    ]);
 
     // Tool work is drawer-only, so a stopped turn with no pane-visible
     // content drops out entirely — including its lifecycle note and timer.
@@ -1468,87 +1319,6 @@ test('ChatTranscript keeps completed agent status out of transcript after activi
     assert.doesNotMatch(markup, /Worked for 3 seconds/);
     assert.doesNotMatch(markup, /Worked for 1 second/);
     assert.doesNotMatch(markup, /Agent idle/);
-});
-
-test('ChatTranscript omits active-only status rows', () => {
-    const markup = renderActiveTranscript({
-        agentId: 'tiny',
-        isThinking: true,
-        runId: 'run-thinking',
-        sessionKey: 'agent:tiny:session-1',
-        startedAt: '2026-03-31T15:00:00.000Z',
-        text: '',
-    });
-
-    assert.doesNotMatch(markup, /Agent is thinking/);
-    assert.doesNotMatch(markup, /thinking-indicator-text/);
-    assert.doesNotMatch(markup, /Worked/);
-});
-
-test('ChatTranscript keeps status sequence signals out of transcript', () => {
-    const markup = renderActiveTranscript({
-        agentId: 'tiny',
-        isThinking: true,
-        runId: 'run-thinking',
-        sessionKey: 'agent:tiny:session-1',
-        startedAt: '2026-03-31T15:00:00.000Z',
-        statusSequence: 1,
-        text: '',
-    });
-
-    assert.doesNotMatch(markup, /Agent is thinking/);
-    assert.doesNotMatch(markup, /thinking-indicator-text/);
-});
-
-test('ChatTranscript omits presence-only agent turns in multi-agent layout', () => {
-    const markup = renderActiveTranscript(
-        {
-            agentId: 'tiny',
-            isThinking: true,
-            runId: 'run-thinking',
-            sessionKey: 'agent:tiny:session-1',
-            startedAt: '2026-03-31T15:00:00.000Z',
-            text: '',
-        },
-        [],
-        { showAgentIdentity: true, showHumanIdentity: false }
-    );
-
-    assert.doesNotMatch(markup, />Agent</);
-    assert.doesNotMatch(markup, /Agent is thinking/);
-});
-
-test('ChatTranscript keeps active reply identity without bottom status text', () => {
-    const markup = renderActiveTranscript(
-        {
-            agentId: 'tiny',
-            isThinking: false,
-            runId: 'run-replying',
-            sessionKey: 'agent:tiny:session-1',
-            startedAt: '2026-03-31T15:00:00.000Z',
-            text: 'Replying now.',
-        },
-        [],
-        { showAgentIdentity: true, showHumanIdentity: false }
-    );
-
-    assert.equal(markup.match(/>Agent</g)?.length, 1);
-    assert.doesNotMatch(markup, /Agent is replying/);
-});
-
-test('ChatTranscript omits empty non-thinking replies from transcript status', () => {
-    const markup = renderActiveTranscript({
-        agentId: 'tiny',
-        isThinking: false,
-        runId: 'run-typing',
-        sessionKey: 'agent:tiny:session-1',
-        startedAt: '2026-03-31T15:00:00.000Z',
-        text: '',
-    });
-
-    assert.doesNotMatch(markup, /Agent is thinking/);
-    assert.doesNotMatch(markup, /thinking-indicator-text/);
-    assert.doesNotMatch(markup, /Worked/);
 });
 
 test('ChatTranscript shows active progress through the same thinking steps surface', () => {
@@ -1693,46 +1463,36 @@ test('ChatTranscript renders active tool progress as one-line status rows', () =
 });
 
 test('ChatTranscript renders a pending clarification as a read-only question row', () => {
-    const markup = renderActiveTranscript(
+    const markup = renderTranscript([
         {
-            agentId: 'tiny',
-            isThinking: true,
-            runId: 'run-clarify',
-            sessionKey: 'agent:tiny:session-1',
-            startedAt: new Date(Date.now() - 3000).toISOString(),
-            text: '',
-        },
-        [
-            {
-                actor: { id: 'tiny', kind: 'agent' },
-                clarification: {
-                    answer: null,
-                    choices: ['Los Angeles', 'San Francisco'],
-                    deadlineAt: new Date(Date.now() + 60_000).toISOString(),
-                    disposition: null,
-                    question: 'Which part of California?',
-                    requestId: 'clarify_1',
-                },
-                completedAt: null,
-                connectsToNext: false,
-                connectsToPrevious: false,
-                id: 'act_run-clarify_clarify_1',
-                isFirstInGroup: true,
-                kind: 'tool',
-                sessionKey: 'agent:tiny:session-1',
-                spawnedRelationships: [],
-                startedAt: new Date().toISOString(),
-                toolCall: {
-                    callId: null,
-                    facts: [],
-                    label: 'Clarification',
-                    name: 'clarify',
-                    status: null,
-                    summaryParts: ['Which part of California?'],
-                },
+            actor: { id: 'tiny', kind: 'agent' },
+            clarification: {
+                answer: null,
+                choices: ['Los Angeles', 'San Francisco'],
+                deadlineAt: new Date(Date.now() + 60_000).toISOString(),
+                disposition: null,
+                question: 'Which part of California?',
+                requestId: 'clarify_1',
             },
-        ]
-    );
+            completedAt: null,
+            connectsToNext: false,
+            connectsToPrevious: false,
+            id: 'act_run-clarify_clarify_1',
+            isFirstInGroup: true,
+            kind: 'tool',
+            sessionKey: 'agent:tiny:session-1',
+            spawnedRelationships: [],
+            startedAt: new Date().toISOString(),
+            toolCall: {
+                callId: null,
+                facts: [],
+                label: 'Clarification',
+                name: 'clarify',
+                status: null,
+                summaryParts: ['Which part of California?'],
+            },
+        },
+    ]);
 
     assert.match(markup, /Needs an answer[\s\S]*Which part of California\?/);
     assert.doesNotMatch(markup, /Los Angeles/);
@@ -1743,46 +1503,36 @@ test('ChatTranscript renders a pending clarification as a read-only question row
 });
 
 test('ChatTranscript renders free-text clarifications as read-only question rows', () => {
-    const markup = renderActiveTranscript(
+    const markup = renderTranscript([
         {
-            agentId: 'tiny',
-            isThinking: true,
-            runId: 'run-clarify',
-            sessionKey: 'agent:tiny:session-1',
-            startedAt: new Date(Date.now() - 3000).toISOString(),
-            text: '',
-        },
-        [
-            {
-                actor: { id: 'tiny', kind: 'agent' },
-                clarification: {
-                    answer: null,
-                    choices: [],
-                    deadlineAt: new Date(Date.now() + 60_000).toISOString(),
-                    disposition: null,
-                    question: 'Which city should I use?',
-                    requestId: 'clarify_text',
-                },
-                completedAt: null,
-                connectsToNext: false,
-                connectsToPrevious: false,
-                id: 'act_run-clarify_text',
-                isFirstInGroup: true,
-                kind: 'tool',
-                sessionKey: 'agent:tiny:session-1',
-                spawnedRelationships: [],
-                startedAt: new Date().toISOString(),
-                toolCall: {
-                    callId: null,
-                    facts: [],
-                    label: 'Clarification',
-                    name: 'clarify',
-                    status: null,
-                    summaryParts: ['Which city should I use?'],
-                },
+            actor: { id: 'tiny', kind: 'agent' },
+            clarification: {
+                answer: null,
+                choices: [],
+                deadlineAt: new Date(Date.now() + 60_000).toISOString(),
+                disposition: null,
+                question: 'Which city should I use?',
+                requestId: 'clarify_text',
             },
-        ]
-    );
+            completedAt: null,
+            connectsToNext: false,
+            connectsToPrevious: false,
+            id: 'act_run-clarify_text',
+            isFirstInGroup: true,
+            kind: 'tool',
+            sessionKey: 'agent:tiny:session-1',
+            spawnedRelationships: [],
+            startedAt: new Date().toISOString(),
+            toolCall: {
+                callId: null,
+                facts: [],
+                label: 'Clarification',
+                name: 'clarify',
+                status: null,
+                summaryParts: ['Which city should I use?'],
+            },
+        },
+    ]);
 
     assert.match(markup, /Needs an answer[\s\S]*Which city should I use\?/);
     assert.equal(countMatches(markup, />Answer</g), 0);
@@ -1825,43 +1575,6 @@ test('ChatTranscript wires active progress tool ids to the tool drawer trigger',
 
     assert.match(markup, /Using[\s\S]*computer use\.list apps/);
     assert.match(markup, /data-slot="drawer-trigger"/);
-});
-
-test('ChatTranscript keeps live progress in working state when current steps are completed', () => {
-    const markup = renderActiveTranscript(
-        {
-            agentId: 'tiny',
-            isThinking: true,
-            runId: 'run-progress',
-            sessionKey: 'agent:tiny:session-1',
-            startedAt: new Date(Date.now() - 3000).toISOString(),
-            text: '',
-        },
-        [
-            {
-                actor: { id: 'tiny', kind: 'agent' },
-                completedAt: new Date().toISOString(),
-                connectsToNext: false,
-                connectsToPrevious: false,
-                id: 'activity:run-progress:assistant-reply:1',
-                isFirstInGroup: true,
-                kind: 'tool',
-                sessionKey: 'agent:tiny:session-1',
-                spawnedRelationships: [],
-                startedAt: new Date(Date.now() - 3000).toISOString(),
-                toolCall: {
-                    callId: null,
-                    facts: [],
-                    label: 'Assistant reply',
-                    name: 'message',
-                    status: 'completed',
-                    summaryParts: ['Assistant reply'],
-                },
-            },
-        ]
-    );
-
-    assert.doesNotMatch(markup, /Worked for/);
 });
 
 test('ChatTranscript keeps active work headers stable between fast completed tools', () => {
@@ -1948,18 +1661,8 @@ test('ChatTranscript renders the streaming post as one evolving contribution', (
         }) as ChatRow;
 
     // Mid-turn the post exists as one message and edits in place: exactly one
-    // assistant bubble, no live overlay beside it.
-    const live = renderActiveTranscript(
-        {
-            agentId: 'blippy',
-            isThinking: true,
-            runId,
-            sessionKey: 'ses_1',
-            startedAt: '2026-07-07T12:00:00.000Z',
-            text: 'Update: halfway there.',
-        },
-        [post('Update: halfway there.', true)]
-    );
+    // assistant bubble, no duplicate beside it.
+    const live = renderTranscript([post('Update: halfway there.', true)]);
     assert.equal(live.match(/data-from="assistant"/g)?.length ?? 0, 1);
 
     // The finalized post is the same single message.
@@ -2182,44 +1885,11 @@ function narrationMessageRow(id: string, content: string, timestampMs: number): 
     };
 }
 
-test('ChatTranscript keeps live reasoning out of the transcript pane', () => {
-    const now = Date.now();
-    const markup = renderActiveTranscript(
-        {
-            agentId: 'tiny',
-            isThinking: true,
-            runId: 'run-1',
-            sessionKey: 'agent:tiny:session-1',
-            startedAt: new Date(now - 2000).toISOString(),
-            text: '',
-        },
-        [
-            {
-                id: 'act_run-1_thinking_1',
-                kind: 'system',
-                systemKind: 'thinking',
-                thinking: {
-                    id: 'act_run-1_thinking_1',
-                    messageId: 'run-1',
-                    sender: 'tiny',
-                    text: 'Considering which files matter.',
-                    timestamp: new Date(now - 1000).toISOString(),
-                },
-                timestamp: new Date(now - 1000).toISOString(),
-            },
-        ]
-    );
-
-    assert.doesNotMatch(markup, /Considering which files matter\./);
-    assert.doesNotMatch(markup, /data-slot="drawer-trigger"/);
-});
-
 type ChatRow = NonNullable<ChatLogOutput>['rows'][number];
 
 function renderTranscript(
     rows: ChatRow[],
     options: {
-        activeReplies?: ChatActiveReply[];
         canRequestMention?: boolean;
         chatId?: string;
         defaultOpenWorkGroups?: boolean;
@@ -2246,7 +1916,6 @@ function renderTranscript(
                 <MemoryRouter>
                     <DevModeProvider>
                         <ChatTranscript
-                            activeReplies={options.activeReplies ?? []}
                             canRequestMention={options.canRequestMention}
                             chatId={options.chatId}
                             defaultOpenWorkGroups={options.defaultOpenWorkGroups}
@@ -2304,44 +1973,6 @@ function renderTurnBody(rows: ChatRow[], activeReply: ChatActiveReply | null = n
 
 function renderActiveTurnBody(activeReply: ChatActiveReply, rows: ChatRow[] = []) {
     return renderTurnBody(rows, activeReply);
-}
-
-function renderActiveTranscript(
-    activeReply: ChatActiveReply,
-    rows: ChatRow[] = [],
-    conversationLayout?: { showAgentIdentity: boolean; showHumanIdentity: boolean }
-) {
-    const queryClient = new QueryClient({
-        defaultOptions: {
-            queries: {
-                retry: false,
-            },
-        },
-    });
-    const client = trpc.createClient({
-        links: [
-            httpLink({
-                url: 'http://127.0.0.1:1/trpc',
-            }),
-        ],
-    });
-
-    return renderToStaticMarkup(
-        <trpc.Provider client={client} queryClient={queryClient}>
-            <QueryClientProvider client={queryClient}>
-                <MemoryRouter>
-                    <DevModeProvider>
-                        <ChatTranscript
-                            activeReplies={[activeReply]}
-                            chatId="cht_test"
-                            conversationLayout={conversationLayout}
-                            rows={rows}
-                        />
-                    </DevModeProvider>
-                </MemoryRouter>
-            </QueryClientProvider>
-        </trpc.Provider>
-    );
 }
 
 function widgetRow(id: string): ChatRow {

@@ -9,8 +9,6 @@ const agentRuntimeCoreCapabilityIds = [
     'claudeAuth',
     'codexOAuth',
     'memory',
-    'wiki',
-    'wikiRecall',
     'memoryExtraction',
     'memoryDreaming',
     'dashboardServer',
@@ -286,97 +284,6 @@ export const agentRuntimeSaveTimezoneSettingsResultSchema =
     agentRuntimeTimezoneSettingsSchema.extend({
         restartScheduled: z.boolean(),
     });
-
-export const agentRuntimeMemorySettingsSchema = z.object({
-    enabled: z.boolean(),
-    updatedAt: z.string().datetime().nullable(),
-});
-
-export const agentRuntimeSaveMemorySettingsSchema = z.object({
-    enabled: z.boolean().optional(),
-});
-
-export const agentRuntimeSaveMemorySettingsResultSchema = agentRuntimeMemorySettingsSchema.extend({
-    restartScheduled: z.boolean(),
-});
-
-export const memoryJobKindSchema = z.enum(['curation', 'dream', 'extraction', 'skill_review']);
-export const memoryJobStatusSchema = z.enum([
-    'completed',
-    'failed',
-    'queued',
-    'running',
-    'skipped',
-]);
-
-export const memoryJobFileChangeSchema = z.object({
-    afterHash: z.string().trim().min(1).nullable(),
-    beforeHash: z.string().trim().min(1).nullable(),
-    path: z.string().trim().min(1),
-});
-
-export const memoryJobSummarySchema = z.object({
-    agentId: z.string().trim().min(1),
-    agentParticipantId: z.string().trim().min(1).nullable(),
-    chatId: z.string().trim().min(1).nullable(),
-    completedAt: z.string().datetime().nullable(),
-    createdAt: z.string().datetime(),
-    error: z.string().trim().min(1).nullable(),
-    fileChangeCount: z.number().int().nonnegative(),
-    id: z.string().trim().min(1),
-    kind: memoryJobKindSchema,
-    modelCategory: agentRuntimeModelCategorySchema.nullable(),
-    outputPath: z.string().trim().min(1).nullable(),
-    sourceEndSequence: z.number().int().nonnegative().nullable(),
-    sourceStartSequence: z.number().int().nonnegative().nullable(),
-    status: memoryJobStatusSchema,
-    updatedAt: z.string().datetime(),
-});
-
-export const memoryJobDetailSchema = memoryJobSummarySchema.extend({
-    fileChanges: z.array(memoryJobFileChangeSchema),
-    metadata: z.record(z.string(), z.unknown()),
-    model: agentRuntimeModelNameSchema.nullable(),
-    transcript: z.unknown(),
-    usage: z.unknown(),
-});
-
-export const memoryJobListSchema = z.object({
-    jobs: z.array(memoryJobSummarySchema),
-});
-
-export const memoryActivityNextRunSchema = z.union([
-    z.object({ at: z.string().datetime(), kind: z.literal('scheduled') }),
-    z.object({ kind: z.literal('waiting'), waitingOn: z.string().trim().min(1) }),
-]);
-
-export const memoryActivitySchema = z.object({
-    enabled: z.boolean(),
-    kind: memoryJobKindSchema,
-    lastRun: z
-        .object({
-            completedAt: z.string().datetime().nullable(),
-            durationMs: z.number().int().nonnegative().nullable(),
-            error: z.string().nullable(),
-            id: z.string().trim().min(1),
-            startedAt: z.string().datetime().nullable(),
-            status: memoryJobStatusSchema,
-        })
-        .nullable(),
-    nextRun: memoryActivityNextRunSchema.nullable(),
-});
-
-export const memoryActivityListSchema = z.object({
-    activities: z.array(memoryActivitySchema),
-});
-
-export const memoryDreamRequestSchema = z.object({
-    agentId: z.string().trim().min(1),
-});
-
-export const memoryDreamResultSchema = z.object({
-    job: memoryJobDetailSchema,
-});
 
 const agentRuntimeReservedEnvPrefixes = ['TAVERN_'] as const;
 const agentRuntimeReservedEnvNames = new Set(['OPENAI_API_KEY', 'OPENROUTER_API_KEY']);
@@ -1118,7 +1025,6 @@ export const agentRuntimeDiscordBindingListSchema = z.object({
 });
 
 export const agentRuntimeAgentSchema = z.object({
-    autoDispatchEnabled: z.boolean().optional(),
     webAccessEnabled: z.boolean().optional(),
     bio: z.string().trim().min(1).nullable().optional(),
     enabledPluginIds: z.array(agentRuntimePluginIdSchema).optional(),
@@ -1128,7 +1034,6 @@ export const agentRuntimeAgentSchema = z.object({
     name: z.string().trim().min(1),
     modelName: agentRuntimeModelNameSchema.nullable().optional(),
     primaryColor: z.string().trim().min(1).nullable(),
-    taskReviewPolicy: z.boolean().optional(),
     thinkingDefault: agentRuntimeThinkingLevelSchema.nullable().optional(),
     workspaceFolder: z.string().trim().min(1),
 });
@@ -1143,7 +1048,6 @@ export const agentRuntimeArchiveAgentSchema = z.object({
 });
 
 export const agentRuntimeCreateAgentSchema = z.object({
-    autoDispatchEnabled: z.boolean().optional(),
     webAccessEnabled: z.boolean().optional(),
     bio: z.string().trim().min(1).nullable().optional(),
     enabledPluginIds: z.array(agentRuntimePluginIdSchema).optional(),
@@ -1152,12 +1056,10 @@ export const agentRuntimeCreateAgentSchema = z.object({
     isAdmin: z.boolean().optional(),
     name: z.string().regex(/^[A-Za-z0-9][A-Za-z0-9_-]{0,31}$/u),
     primaryColor: z.string().trim().min(1).nullable().optional(),
-    taskReviewPolicy: z.boolean().optional(),
     workspaceFolder: z.string().trim().min(1).optional(),
 });
 
 export const agentRuntimeUpdateAgentSchema = z.object({
-    autoDispatchEnabled: z.boolean().optional(),
     webAccessEnabled: z.boolean().optional(),
     bio: z.string().trim().min(1).nullable().optional(),
     enabledPluginIds: z.array(agentRuntimePluginIdSchema).optional(),
@@ -1168,7 +1070,6 @@ export const agentRuntimeUpdateAgentSchema = z.object({
         .regex(/^[A-Za-z0-9][A-Za-z0-9_-]{0,31}$/u)
         .optional(),
     primaryColor: z.string().trim().min(1).nullable().optional(),
-    taskReviewPolicy: z.boolean().optional(),
     workspaceFolder: z.string().trim().min(1).optional(),
 });
 
@@ -1664,525 +1565,6 @@ export const agentRuntimeModelsSchema = z.object({
     updatedAt: z.string().datetime().nullable(),
 });
 
-export const wikiConfigSourceSchema = z.enum(['default', 'environment', 'settings']);
-
-export const wikiPageLinkSchema = z.object({
-    label: z.string().trim().min(1).nullable(),
-    target: z.string().trim().min(1),
-});
-
-export const wikiPageSummarySchema = z.object({
-    path: z.string().trim().min(1),
-    title: z.string().trim().min(1),
-    updatedAt: z.string().datetime(),
-});
-
-export const wikiPageSchema = wikiPageSummarySchema.extend({
-    body: z.string(),
-    frontmatter: z.record(z.string(), z.unknown()).default({}),
-    hash: z.string().regex(/^[0-9a-f]{64}$/u),
-    links: z.array(wikiPageLinkSchema).default([]),
-    size: z.number().int().nonnegative(),
-    wikiPath: z.string().trim().min(1),
-});
-
-export const wikiPageListSchema = z.object({
-    folders: z.array(z.string().trim().min(1)).default([]),
-    pages: z.array(wikiPageSummarySchema),
-});
-
-export const wikiPageCommitSchema = z.object({
-    committedAt: z.string(),
-    hash: z.string().trim().min(4),
-    subject: z.string(),
-});
-
-// Read-only Git history for one Wiki page: the commits that touched it,
-// newest first. `ready: false` mirrors WikiHistoryResult — Git missing or the
-// root not initialized — and carries the reason.
-export const wikiPageHistorySchema = z.object({
-    commits: z.array(wikiPageCommitSchema),
-    path: z.string().trim().min(1),
-    ready: z.boolean(),
-    reason: z.string().nullable(),
-});
-
-// One commit's before/after content for a page. Null text means the page did
-// not exist on that side of the commit, or the content is unavailable
-// (binary or oversized).
-export const wikiPageRevisionSchema = z.object({
-    afterText: z.string().nullable(),
-    beforeText: z.string().nullable(),
-    commit: wikiPageCommitSchema.nullable(),
-    path: z.string().trim().min(1),
-    ready: z.boolean(),
-    reason: z.string().nullable(),
-});
-
-export const wikiPathKindSchema = z.enum(['folder', 'page']);
-
-export const wikiCreatePageSchema = z.object({
-    body: z.string().optional(),
-    frontmatter: z.record(z.string(), z.unknown()).optional(),
-    path: z.string().trim().min(1, 'Enter a page path.'),
-});
-
-export const wikiSavePageSchema = z.object({
-    body: z.string(),
-    expectedHash: z.string().regex(/^[0-9a-f]{64}$/u),
-    path: z.string().trim().min(1, 'Enter a page path.'),
-});
-
-export const wikiAttachmentMediaTypeSchema = z.enum([
-    'image/gif',
-    'image/jpeg',
-    'image/png',
-    'image/webp',
-]);
-
-export const wikiAttachmentMaxBase64Length = Math.ceil((8 * 1024 * 1024) / 3) * 4;
-
-export const wikiUploadAttachmentSchema = z.object({
-    contentBase64: z.string().min(1).max(wikiAttachmentMaxBase64Length),
-    filename: z.string().trim().min(1).max(255),
-    mediaType: wikiAttachmentMediaTypeSchema,
-    pagePath: z.string().trim().min(1),
-});
-
-export const wikiAttachmentSchema = z.object({
-    markdownPath: z.string().trim().min(1),
-    mediaType: wikiAttachmentMediaTypeSchema,
-    path: z.string().trim().min(1),
-    sizeBytes: z.number().int().positive(),
-});
-
-export const wikiAttachmentContentSchema = z.object({
-    contentBase64: z.string().min(1),
-    mediaType: wikiAttachmentMediaTypeSchema,
-    path: z.string().trim().min(1),
-});
-
-export const wikiPathInputSchema = z.object({
-    path: z.string().trim().min(1, 'Enter a Wiki path.'),
-});
-
-export const wikiMovePathSchema = z.object({
-    fromPath: z.string().trim().min(1, 'Enter the current path.'),
-    kind: wikiPathKindSchema,
-    toPath: z.string().trim().min(1, 'Enter the new path.'),
-});
-
-export const wikiPathMutationResultSchema = z.object({
-    kind: wikiPathKindSchema,
-    page: wikiPageSchema.nullable().default(null),
-    path: z.string().trim().min(1),
-});
-
-export const wikiSearchInputSchema = z.object({
-    limit: z.number().int().positive().max(100).default(20),
-    offset: z.number().int().nonnegative().default(0),
-    query: z.string().trim().min(1),
-});
-
-export const wikiSearchHitSchema = z.object({
-    page: wikiPageSummarySchema,
-    score: z.number().nonnegative(),
-    snippet: z.string().default(''),
-});
-
-export const wikiSearchResultSchema = z.object({
-    hits: z.array(wikiSearchHitSchema),
-    limit: z.number().int().positive().default(20),
-    offset: z.number().int().nonnegative().default(0),
-    query: z.string().trim().min(1),
-    totalHitCount: z.number().int().nonnegative(),
-});
-
-export const wikiBacklinkSchema = z.object({
-    fromPath: z.string().trim().min(1),
-    fromTitle: z.string().trim().min(1),
-    label: z.string().trim().min(1).nullable(),
-    targetPath: z.string().trim().min(1),
-});
-
-export const wikiBacklinkListSchema = z.object({
-    links: z.array(wikiBacklinkSchema),
-    targetPath: z.string().trim().min(1),
-});
-
-export const wikiFreshnessStateSchema = z.enum(['idle', 'watching', 'degraded']);
-
-export const wikiFreshnessSchema = z.object({
-    live: z.boolean(),
-    reason: z.string().trim().min(1).nullable(),
-    state: wikiFreshnessStateSchema,
-});
-
-export const wikiStatusSchema = z.object({
-    configSource: wikiConfigSourceSchema,
-    freshness: wikiFreshnessSchema.default({
-        live: false,
-        reason: 'Wiki live updates have not started.',
-        state: 'idle',
-    }),
-    indexExists: z.boolean(),
-    pageCount: z.number().int().nonnegative(),
-    readable: z.boolean(),
-    wikiPath: z.string().trim().min(1),
-    writable: z.boolean(),
-});
-
-export const agentRuntimeWikiSettingsSchema = z.object({
-    configSource: wikiConfigSourceSchema,
-    configuredPath: z.string().trim().min(1).nullable(),
-    environmentPath: z.string().trim().min(1).nullable(),
-    effectivePath: z.string().trim().min(1),
-    updatedAt: z.string().datetime().nullable(),
-});
-
-export const agentRuntimeSaveWikiSettingsSchema = z.object({
-    wikiPath: z.string().trim().min(1, 'Enter a Wiki path.'),
-});
-
-export const agentRuntimeSaveWikiSettingsResultSchema = agentRuntimeWikiSettingsSchema.extend({
-    restartScheduled: z.boolean(),
-});
-
-export const agentRuntimeCronDeliverySchema = z.object({
-    chatId: z.string().trim().min(1),
-});
-
-export const agentRuntimeExecutionStatusSchema = z.enum([
-    'queued',
-    'running',
-    'success',
-    'error',
-    'skipped',
-]);
-
-export const agentRuntimeExecutionErrorCodeSchema = z.enum([
-    'agent_not_found',
-    'execution_failed',
-    'control_plane_restarted',
-]);
-
-export const agentRuntimeExecutionErrorSchema = z.object({
-    code: agentRuntimeExecutionErrorCodeSchema,
-    message: z.string().trim().min(1),
-});
-
-export const agentRuntimeCronStateSchema = z.object({
-    consecutiveErrors: z.number().int().nonnegative().optional(),
-    lastDurationMs: z.number().int().nonnegative().optional(),
-    lastErrorCode: agentRuntimeExecutionErrorSchema.shape.code.optional(),
-    lastErrorMessage: agentRuntimeExecutionErrorSchema.shape.message.optional(),
-    lastRunAtMs: z.number().int().nonnegative().optional(),
-    lastRunStatus: agentRuntimeExecutionStatusSchema.optional(),
-    nextRunAtMs: z.number().int().nonnegative().optional(),
-    runningAtMs: z.number().int().nonnegative().optional(),
-});
-
-export const agentRuntimeCronPayloadSchema = z.union([
-    z.object({
-        kind: z.literal('systemEvent'),
-        text: z.string().trim().min(1),
-    }),
-    z.object({
-        kind: z.literal('agentTurn'),
-        message: z.string().trim().min(1),
-    }),
-    z.object({
-        command: z.string().trim().min(1),
-        kind: z.literal('script'),
-        workingDir: z.string().trim().min(1).optional(),
-    }),
-]);
-
-export const agentRuntimeCronScheduleSchema = z.union([
-    z.object({
-        at: z.string().trim().min(1),
-        kind: z.literal('at'),
-    }),
-    z.object({
-        everyMs: z.number().int().positive(),
-        kind: z.literal('every'),
-    }),
-    z.object({
-        expr: z.string().trim().min(1),
-        kind: z.literal('cron'),
-        tz: z.string().trim().min(1).optional(),
-    }),
-]);
-
-export const agentRuntimeCronModeSchema = z.enum(['agentTurn', 'script', 'systemEvent']);
-
-export const agentRuntimeCronSummarySchema = z.object({
-    agentId: z.string().trim().min(1),
-    description: z.string().nullable(),
-    enabled: z.boolean(),
-    id: z.string().trim().min(1),
-    mode: agentRuntimeCronModeSchema,
-    name: z.string().trim().min(1),
-    schedule: agentRuntimeCronScheduleSchema,
-    state: agentRuntimeCronStateSchema,
-    updatedAt: z.string().datetime(),
-});
-
-export const agentRuntimeCronSchema = agentRuntimeCronSummarySchema.extend({
-    createdAt: z.string().datetime(),
-    deleteAfterRun: z.boolean(),
-    delivery: agentRuntimeCronDeliverySchema,
-    payload: agentRuntimeCronPayloadSchema,
-});
-
-export const agentRuntimeCronListSchema = z.object({
-    jobs: z.array(agentRuntimeCronSummarySchema),
-});
-
-export const agentRuntimeCreateCronSchema = z.object({
-    agentId: z.string().trim().min(1),
-    deleteAfterRun: z.boolean().optional(),
-    delivery: agentRuntimeCronDeliverySchema,
-    description: z.string().trim().min(1).nullable().optional(),
-    enabled: z.boolean().optional(),
-    id: z.string().trim().min(1),
-    name: z.string().trim().min(1),
-    payload: agentRuntimeCronPayloadSchema,
-    schedule: agentRuntimeCronScheduleSchema,
-});
-
-export const agentRuntimeUpdateCronSchema = z.object({
-    agentId: z.string().trim().min(1).optional(),
-    deleteAfterRun: z.boolean().optional(),
-    delivery: agentRuntimeCronDeliverySchema.optional(),
-    description: z.string().trim().min(1).nullable().optional(),
-    enabled: z.boolean().optional(),
-    name: z.string().trim().min(1).optional(),
-    payload: agentRuntimeCronPayloadSchema.optional(),
-    schedule: agentRuntimeCronScheduleSchema.optional(),
-});
-
-export const agentRuntimeArchiveCronSchema = z.object({
-    archived: z.literal(true),
-    id: z.string().trim().min(1),
-});
-
-export const agentRuntimeCronRunStatusSchema = agentRuntimeExecutionStatusSchema;
-
-export const agentRuntimeCronRunTriggerSchema = z.enum(['manual', 'recovery', 'schedule']);
-
-export const agentRuntimeCronRunSchema = z.object({
-    chatId: z.string().trim().min(1).nullable(),
-    executionErrorCode: agentRuntimeExecutionErrorSchema.shape.code.nullable(),
-    executionErrorMessage: agentRuntimeExecutionErrorSchema.shape.message.nullable(),
-    finishedAt: z.string().datetime().nullable(),
-    id: z.string().trim().min(1),
-    jobId: z.string().trim().min(1),
-    // Script runs only: a quiet run finished without posting into the chat.
-    quiet: z.boolean(),
-    scheduledFor: z.string().datetime(),
-    scriptExitCode: z.number().int().nullable(),
-    scriptStderr: z.string().nullable(),
-    startedAt: z.string().datetime().nullable(),
-    status: agentRuntimeCronRunStatusSchema,
-    trigger: agentRuntimeCronRunTriggerSchema,
-    turnId: z.string().trim().min(1).nullable(),
-});
-
-export const agentRuntimeCronRunListSchema = z.object({
-    runs: z.array(agentRuntimeCronRunSchema),
-});
-
-export const agentRuntimeTaskKindSchema = z.enum(['task', 'epic']);
-
-export const agentRuntimeTaskStatusSchema = z.enum([
-    'backlog',
-    'todo',
-    'in_progress',
-    'blocked',
-    'review',
-    'done',
-    'canceled',
-]);
-
-export const agentRuntimeTaskPrioritySchema = z.enum(['none', 'urgent', 'high', 'medium', 'low']);
-
-export const agentRuntimeTaskLabelColorSchema = z.enum([
-    'red',
-    'orange',
-    'amber',
-    'green',
-    'teal',
-    'blue',
-    'purple',
-    'pink',
-    'gray',
-]);
-
-export const agentRuntimeTaskLabelSchema = z.object({
-    color: agentRuntimeTaskLabelColorSchema,
-    id: z.string().trim().min(1),
-    name: z.string().trim().min(1),
-});
-
-export const agentRuntimeTaskLabelWithCountSchema = agentRuntimeTaskLabelSchema.extend({
-    taskCount: z.number().int().nonnegative(),
-});
-
-export const agentRuntimeTaskLabelListSchema = z.object({
-    labels: z.array(agentRuntimeTaskLabelWithCountSchema),
-});
-
-export const agentRuntimeCreateTaskLabelSchema = z.object({
-    color: agentRuntimeTaskLabelColorSchema.optional(),
-    name: z.string().trim().min(1),
-});
-
-export const agentRuntimeUpdateTaskLabelSchema = z
-    .object({
-        color: agentRuntimeTaskLabelColorSchema.optional(),
-        name: z.string().trim().min(1).optional(),
-    })
-    .refine((value) => value.color !== undefined || value.name !== undefined, {
-        message: 'Provide a label name or color.',
-    });
-
-export const agentRuntimeTaskBlockedReasonSchema = z.object({
-    kind: z.enum(['needs_input', 'error']),
-    message: z.string(),
-});
-
-export const agentRuntimeTaskScheduledForSchema = z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Expected YYYY-MM-DD.')
-    .refine(
-        (value) => {
-            const date = new Date(`${value}T00:00:00.000Z`);
-            return !Number.isNaN(date.getTime()) && date.toISOString().startsWith(value);
-        },
-        { message: 'Expected a valid YYYY-MM-DD date.' }
-    );
-
-export const agentRuntimeTaskAssigneeSchema = z.union([
-    z.object({
-        kind: z.literal('user'),
-    }),
-    z.object({
-        agentId: z.string().trim().min(1),
-        kind: z.literal('agent'),
-    }),
-]);
-
-export const agentRuntimeTaskDispatchTriggerSchema = z.enum(['manual', 'auto']);
-
-export const agentRuntimeTaskAttachmentSchema = z.object({
-    byteSize: z.number().int().nonnegative(),
-    filename: z.string().trim().min(1),
-    id: z.string().trim().min(1),
-    mediaType: z.string().trim().min(1).nullable(),
-    promotedAt: z.string().datetime(),
-    sourcePath: z.string().trim().min(1),
-});
-
-export const agentRuntimeTaskAttachmentContentSchema = z.object({
-    contentBase64: z.string(),
-    filename: z.string().trim().min(1),
-    mediaType: z.string().trim().min(1).nullable(),
-});
-
-export const agentRuntimeTaskSchema = z.object({
-    activeDispatchRunId: z.string().trim().min(1).nullable(),
-    assignee: agentRuntimeTaskAssigneeSchema.nullable(),
-    attachments: z.array(agentRuntimeTaskAttachmentSchema),
-    blockedBy: z.array(z.string().trim().min(1)),
-    blockedReason: agentRuntimeTaskBlockedReasonSchema.nullable(),
-    createdAt: z.string().datetime(),
-    description: z.string().nullable(),
-    dispatchAttempts: z.number().int().nonnegative(),
-    dispatchTrigger: agentRuntimeTaskDispatchTriggerSchema.nullable(),
-    epicId: z.string().trim().min(1).nullable(),
-    id: z.string().trim().min(1),
-    kind: agentRuntimeTaskKindSchema,
-    labels: z.array(agentRuntimeTaskLabelSchema),
-    number: z.number().int().positive(),
-    originChatId: z.string().trim().min(1).nullable(),
-    priority: agentRuntimeTaskPrioritySchema,
-    scheduledFor: agentRuntimeTaskScheduledForSchema.nullable(),
-    status: agentRuntimeTaskStatusSchema,
-    summary: z.string().nullable(),
-    title: z.string().trim().min(1),
-    updatedAt: z.string().datetime(),
-    workChatId: z.string().trim().min(1).nullable(),
-});
-
-export const agentRuntimeTaskListSchema = z.object({
-    tasks: z.array(agentRuntimeTaskSchema),
-});
-
-export const agentRuntimeCreateTaskSchema = z.object({
-    assignee: agentRuntimeTaskAssigneeSchema.nullable().optional(),
-    blockedBy: z.array(z.string().trim().min(1)).optional(),
-    blockedReason: agentRuntimeTaskBlockedReasonSchema.nullable().optional(),
-    description: z.string().trim().min(1).nullable().optional(),
-    epicId: z.string().trim().min(1).nullable().optional(),
-    id: z.string().trim().min(1),
-    kind: agentRuntimeTaskKindSchema.optional(),
-    labels: z.array(z.string().trim().min(1)).optional(),
-    priority: agentRuntimeTaskPrioritySchema.optional(),
-    scheduledFor: agentRuntimeTaskScheduledForSchema.nullable().optional(),
-    status: agentRuntimeTaskStatusSchema.optional(),
-    summary: z.string().nullable().optional(),
-    title: z.string().trim().min(1),
-});
-
-export const agentRuntimeUpdateTaskSchema = z.object({
-    assignee: agentRuntimeTaskAssigneeSchema.nullable().optional(),
-    blockedBy: z.array(z.string().trim().min(1)).optional(),
-    blockedReason: agentRuntimeTaskBlockedReasonSchema.nullable().optional(),
-    description: z.string().trim().min(1).nullable().optional(),
-    epicId: z.string().trim().min(1).nullable().optional(),
-    labels: z.array(z.string().trim().min(1)).optional(),
-    priority: agentRuntimeTaskPrioritySchema.optional(),
-    scheduledFor: agentRuntimeTaskScheduledForSchema.nullable().optional(),
-    status: agentRuntimeTaskStatusSchema.optional(),
-    summary: z.string().nullable().optional(),
-    title: z.string().trim().min(1).optional(),
-});
-
-export const agentRuntimeSetTaskWorkChatSchema = z.object({
-    workChatId: z.string().trim().min(1),
-});
-
-export const agentRuntimeDispatchTaskSchema = z.object({
-    agentId: z.string().trim().min(1),
-});
-
-export const agentRuntimeDispatchTaskResultSchema = z.object({
-    chatId: z.string().trim().min(1),
-    task: agentRuntimeTaskSchema,
-});
-
-export const agentRuntimeAutoDispatchSettingsSchema = z.object({
-    autoDispatchConcurrency: z.number().int().positive(),
-    autoDispatchEnabled: z.boolean(),
-    updatedAt: z.string().datetime().nullable(),
-});
-
-export const agentRuntimeSaveAutoDispatchSettingsSchema = z.object({
-    autoDispatchConcurrency: z.number().int().positive().optional(),
-    autoDispatchEnabled: z.boolean().optional(),
-});
-
-export const agentRuntimeUpdateAgentTaskSettingsSchema = z
-    .object({
-        autoDispatchEnabled: z.boolean().optional(),
-        taskReviewPolicy: z.boolean().optional(),
-    })
-    .refine(
-        (value) => value.autoDispatchEnabled !== undefined || value.taskReviewPolicy !== undefined,
-        { message: 'Provide an auto-dispatch or review-policy setting.' }
-    );
-
 export const agentRuntimeUpdateAgentWebSettingsSchema = z.object({
     webAccessEnabled: z.boolean(),
 });
@@ -2277,6 +1659,37 @@ export const agentRuntimeAgentPresenceListSchema = z.object({
     presence: z.array(agentRuntimeAgentPresenceSchema),
 });
 
+export const agentRuntimeAgentStopResultSchema = z.object({
+    agentId: z.string().trim().min(1),
+    stopped: z.boolean(),
+});
+
+// Read-only inbox visibility (I4): pending targets, mutes, and follows on
+// the agent profile. Cursors are dev-mode diagnostics.
+export const agentRuntimeAgentInboxSchema = z.object({
+    cursors: z.array(
+        z.object({
+            delivered: z.number().int().nonnegative(),
+            seen: z.number().int().nonnegative(),
+            target: z.string().min(1),
+        })
+    ),
+    followedThreads: z.array(z.string().min(1)),
+    muted: z.array(z.string().min(1)),
+    rows: z.array(
+        z.object({
+            dm: z.boolean(),
+            firstShortId: z.string().min(1),
+            latestSender: z.string().min(1),
+            latestShortId: z.string().min(1),
+            mentioned: z.boolean(),
+            pendingCount: z.number().int().positive(),
+            target: z.string().min(1),
+            thread: z.boolean(),
+        })
+    ),
+});
+
 // Agent activity feed (specs/agent-activity.md): a turn-grained projection
 // over durable turn rows and session notices. The entry catalog is the
 // rendering contract; `detail` carries the per-kind context (sender label,
@@ -2298,12 +1711,6 @@ export const agentRuntimeAgentActivityEntrySchema = z.object({
 
 export const agentRuntimeAgentActivityListSchema = z.object({
     entries: z.array(agentRuntimeAgentActivityEntrySchema),
-});
-
-export const agentRuntimeRunCronSchema = z.object({
-    // 'force' executes inline and holds the request open for the whole agent
-    // turn; manual runs default to the queue so the app gets its run row fast.
-    mode: z.enum(['enqueue', 'force']).default('enqueue'),
 });
 
 export const agentRuntimeJobSlugSchema = z.enum(['refresh-runtime-capabilities']);
@@ -2615,21 +2022,6 @@ export const agentRuntimeStopTurnResultSchema = z.object({
     stopped: z.boolean(),
 });
 
-export const agentRuntimeClarificationDispositionSchema = z.enum([
-    'answered',
-    'skipped',
-    'timeout',
-]);
-
-export const agentRuntimeClarificationPromptSchema = z.object({
-    answer: z.string().nullable().optional(),
-    choices: z.array(z.string().trim().min(1)).default([]),
-    deadlineAt: z.string().datetime().nullable().optional(),
-    disposition: agentRuntimeClarificationDispositionSchema.nullable().optional(),
-    question: z.string().trim().min(1),
-    requestId: z.string().trim().min(1),
-});
-
 export const tavernChannelMessageAcceptedFrameSchema = z.object({
     accepted: agentRuntimeMessageAcceptedSchema,
     kind: z.literal('message-accepted'),
@@ -2642,20 +2034,6 @@ export const tavernChannelRuntimeLogFrameSchema = z.object({
     payload: z.record(z.string(), z.unknown()).default({}),
 });
 
-export const agentRuntimeTurnSchema = z.object({
-    agentId: z.string().trim().min(1),
-    chatId: z.string().trim().min(1),
-    runId: z.string().trim().min(1),
-    sessionKey: z.string().trim().min(1),
-    startedAt: z.string().datetime(),
-    // Present on peer-evaluation turns (agent-authored trigger): clients
-    // keep these quiet until reply text streams (specs/addressing.md).
-    trigger: z.literal('evaluation').optional(),
-});
-
-export const agentRuntimeTurnProgressStatusSchema = z.enum(['active', 'completed', 'failed']);
-export const agentRuntimeMessagePhaseSchema = z.enum(['commentary', 'final_answer']);
-
 export const agentRuntimeWidgetProgressSchema = z.object({
     component: z.string().trim().min(1).nullable(),
     fallbackText: z.string().trim().min(1),
@@ -2663,28 +2041,6 @@ export const agentRuntimeWidgetProgressSchema = z.object({
     props: z.unknown().nullable(),
     target: z.string().trim().min(1).nullable(),
     validationError: z.string().trim().min(1).nullable(),
-});
-
-export const agentRuntimeTurnProgressStepSchema = z.object({
-    detail: z.string().trim().min(1).nullable().optional(),
-    id: z.string().trim().min(1),
-    kind: z.enum([
-        'artifact',
-        'command',
-        'message',
-        'notice',
-        'reasoning',
-        'tool',
-        'widget',
-        'worker',
-    ]),
-    label: z.string().trim().min(1),
-    messagePhase: agentRuntimeMessagePhaseSchema.optional(),
-    status: agentRuntimeTurnProgressStatusSchema,
-    clarification: agentRuntimeClarificationPromptSchema.optional(),
-    toolCallId: z.string().trim().min(1).nullable().optional(),
-    toolName: z.string().trim().min(1).nullable().optional(),
-    widget: agentRuntimeWidgetProgressSchema.optional(),
 });
 
 // Chat pane state: the Runtime-owned tab set of a chat's artifact pane.
@@ -2730,24 +2086,7 @@ export const agentRuntimeEventTypeSchema = z.enum([
     'workspace.instructions.updated',
     'skill.updated',
     'skill.deleted',
-    'cron.updated',
-    'cron.deleted',
-    'cron.runStarted',
-    'cron.runFinished',
-    'task.updated',
-    'task.deleted',
-    'label.updated',
-    'label.deleted',
-    'memoryJob.updated',
     'pane.updated',
-    'wiki.changed',
-    'turn.started',
-    'turn.progress',
-    'turn.replyUpdated',
-    'turn.statusUpdated',
-    'turn.completed',
-    'turn.cancelled',
-    'turn.failed',
     'session.invalidated',
     'session.updated',
     'agent.composition',
@@ -2769,11 +2108,12 @@ export const agentRuntimeChatAcceptedMessageSchema = z.object({
     timestamp: z.string().datetime(),
 });
 
+// Post-flip (ADR 0014) a human message dispatches no per-agent turn, so the
+// accepted event carries no agent or run identity — delivery is
+// planner-owned runtime-side.
 export const agentRuntimeChatMessageAcceptedEventSchema = z.object({
-    agentId: z.string().trim().min(1),
     chatId: z.string().trim().min(1),
     message: agentRuntimeChatAcceptedMessageSchema,
-    runId: z.string().trim().min(1),
     timestamp: z.string().datetime(),
     type: z.literal('chat.messageAccepted'),
 });
@@ -2821,30 +2161,6 @@ export const agentRuntimeSkillDeletedEventSchema = z.object({
     type: z.literal('skill.deleted'),
 });
 
-export const agentRuntimeCronUpdatedEventSchema = z.object({
-    cronJobId: z.string().trim().min(1),
-    timestamp: z.string().datetime(),
-    type: z.literal('cron.updated'),
-});
-
-export const agentRuntimeCronDeletedEventSchema = z.object({
-    cronJobId: z.string().trim().min(1),
-    timestamp: z.string().datetime(),
-    type: z.literal('cron.deleted'),
-});
-
-export const agentRuntimeTaskUpdatedEventSchema = z.object({
-    taskId: z.string().trim().min(1),
-    timestamp: z.string().datetime(),
-    type: z.literal('task.updated'),
-});
-
-export const agentRuntimeTaskDeletedEventSchema = z.object({
-    taskId: z.string().trim().min(1),
-    timestamp: z.string().datetime(),
-    type: z.literal('task.deleted'),
-});
-
 export const agentRuntimePaneUpdatedEventSchema = z.object({
     chatId: z.string().trim().min(1),
     revision: z.number().int().nonnegative(),
@@ -2867,106 +2183,10 @@ export const agentRuntimeCompositionEventSchema = z.object({
     type: z.literal('agent.composition'),
 });
 
-export const agentRuntimeLabelUpdatedEventSchema = z.object({
-    labelId: z.string().trim().min(1),
-    timestamp: z.string().datetime(),
-    type: z.literal('label.updated'),
-});
-
-export const agentRuntimeLabelDeletedEventSchema = z.object({
-    labelId: z.string().trim().min(1),
-    timestamp: z.string().datetime(),
-    type: z.literal('label.deleted'),
-});
-
-export const agentRuntimeCronRunStartedEventSchema = z.object({
-    cronJobId: z.string().trim().min(1),
-    runId: z.string().trim().min(1),
-    timestamp: z.string().datetime(),
-    type: z.literal('cron.runStarted'),
-});
-
-export const agentRuntimeCronRunFinishedEventSchema = z.object({
-    cronJobId: z.string().trim().min(1),
-    runId: z.string().trim().min(1),
-    timestamp: z.string().datetime(),
-    type: z.literal('cron.runFinished'),
-});
-
-export const agentRuntimeMemoryJobUpdatedEventSchema = z.object({
-    jobId: z.string().trim().min(1).optional(),
-    timestamp: z.string().datetime(),
-    type: z.literal('memoryJob.updated'),
-});
-
-export const agentRuntimeWikiChangedScopeSchema = z.enum(['content', 'root']);
-export const agentRuntimeWikiChangedReasonSchema = z.enum(['watch', 'bulk', 'settings']);
-
-export const agentRuntimeWikiChangedEventSchema = z.object({
-    paths: z.array(z.string().trim().min(1)).default([]),
-    reason: agentRuntimeWikiChangedReasonSchema.optional(),
-    scope: agentRuntimeWikiChangedScopeSchema,
-    timestamp: z.string().datetime(),
-    type: z.literal('wiki.changed'),
-});
-
 export const agentRuntimeCapabilityUpdatedEventSchema = z.object({
     capability: z.string().trim().min(1),
     timestamp: z.string().datetime(),
     type: z.literal('capability.updated'),
-});
-
-export const agentRuntimeTurnStartedEventSchema = z.object({
-    timestamp: z.string().datetime(),
-    turn: agentRuntimeTurnSchema,
-    type: z.literal('turn.started'),
-});
-
-export const agentRuntimeTurnReplyUpdatedEventSchema = z.object({
-    delta: z.string().optional(),
-    isThinking: z.boolean().optional(),
-    replace: z.boolean().optional(),
-    text: z.string(),
-    timestamp: z.string().datetime(),
-    turn: agentRuntimeTurnSchema,
-    type: z.literal('turn.replyUpdated'),
-});
-
-export const agentRuntimeTurnStatusUpdatedEventSchema = z.object({
-    sequence: z.number().int().positive(),
-    timestamp: z.string().datetime(),
-    turn: agentRuntimeTurnSchema,
-    type: z.literal('turn.statusUpdated'),
-});
-
-export const agentRuntimeTurnCompletedEventSchema = z.object({
-    // False when the turn settled without delivering an assistant message
-    // (a sanctioned silent reply): clients must drop the turn's live reply
-    // instead of holding it for a durable-message swap that never comes.
-    hasReply: z.boolean().optional(),
-    timestamp: z.string().datetime(),
-    turn: agentRuntimeTurnSchema,
-    type: z.literal('turn.completed'),
-});
-
-export const agentRuntimeTurnCancelledEventSchema = z.object({
-    timestamp: z.string().datetime(),
-    turn: agentRuntimeTurnSchema,
-    type: z.literal('turn.cancelled'),
-});
-
-export const agentRuntimeTurnProgressEventSchema = z.object({
-    step: agentRuntimeTurnProgressStepSchema,
-    timestamp: z.string().datetime(),
-    turn: agentRuntimeTurnSchema,
-    type: z.literal('turn.progress'),
-});
-
-export const agentRuntimeTurnFailedEventSchema = z.object({
-    error: z.string().trim().min(1),
-    timestamp: z.string().datetime(),
-    turn: agentRuntimeTurnSchema,
-    type: z.literal('turn.failed'),
 });
 
 export const agentRuntimeSessionInvalidatedEventSchema = z.object({
@@ -3003,25 +2223,8 @@ export const agentRuntimeEventSchema = z.discriminatedUnion('type', [
     agentRuntimeWorkspaceInstructionsUpdatedEventSchema,
     agentRuntimeSkillUpdatedEventSchema,
     agentRuntimeSkillDeletedEventSchema,
-    agentRuntimeCronUpdatedEventSchema,
-    agentRuntimeCronDeletedEventSchema,
-    agentRuntimeCronRunStartedEventSchema,
-    agentRuntimeCronRunFinishedEventSchema,
-    agentRuntimeTaskUpdatedEventSchema,
-    agentRuntimeTaskDeletedEventSchema,
-    agentRuntimeLabelUpdatedEventSchema,
-    agentRuntimeLabelDeletedEventSchema,
-    agentRuntimeMemoryJobUpdatedEventSchema,
     agentRuntimePaneUpdatedEventSchema,
-    agentRuntimeWikiChangedEventSchema,
     agentRuntimeCapabilityUpdatedEventSchema,
-    agentRuntimeTurnStartedEventSchema,
-    agentRuntimeTurnProgressEventSchema,
-    agentRuntimeTurnReplyUpdatedEventSchema,
-    agentRuntimeTurnStatusUpdatedEventSchema,
-    agentRuntimeTurnCompletedEventSchema,
-    agentRuntimeTurnCancelledEventSchema,
-    agentRuntimeTurnFailedEventSchema,
     agentRuntimeSessionInvalidatedEventSchema,
     agentRuntimeSessionUpdatedEventSchema,
     agentRuntimeCompositionEventSchema,
@@ -3043,42 +2246,17 @@ export type AgentRuntimeAgentBinding = z.infer<typeof agentRuntimeAgentBindingSc
 export type AgentRuntimeAgentList = z.infer<typeof agentRuntimeAgentListSchema>;
 export type AgentRuntimeArchiveAgent = z.infer<typeof agentRuntimeArchiveAgentSchema>;
 export type AgentRuntimeArchiveBinding = z.infer<typeof agentRuntimeArchiveBindingSchema>;
-export type AgentRuntimeArchiveCron = z.infer<typeof agentRuntimeArchiveCronSchema>;
 export type AgentRuntimeCapability = z.infer<typeof agentRuntimeCapabilitySchema>;
 export type AgentRuntimeCreateAgent = z.infer<typeof agentRuntimeCreateAgentSchema>;
 export type AgentRuntimeAgentFile = z.infer<typeof agentRuntimeAgentFileSchema>;
 export type AgentRuntimeAgentFileContent = z.infer<typeof agentRuntimeAgentFileContentSchema>;
 export type AgentRuntimeAgentFileList = z.infer<typeof agentRuntimeAgentFileListSchema>;
 export type AgentRuntimeSaveAgentFile = z.infer<typeof agentRuntimeSaveAgentFileSchema>;
-export type AgentRuntimeCreateCron = z.infer<typeof agentRuntimeCreateCronSchema>;
 export type AgentRuntimeAgentUpdatedEvent = z.infer<typeof agentRuntimeAgentUpdatedEventSchema>;
 export type AgentRuntimeChatMessageAcceptedEvent = z.infer<
     typeof agentRuntimeChatMessageAcceptedEventSchema
 >;
 export type AgentRuntimeChatReadEvent = z.infer<typeof agentRuntimeChatReadEventSchema>;
-export type AgentRuntimeCron = z.infer<typeof agentRuntimeCronSchema>;
-export type AgentRuntimeCronDeletedEvent = z.infer<typeof agentRuntimeCronDeletedEventSchema>;
-export type AgentRuntimeCronList = z.infer<typeof agentRuntimeCronListSchema>;
-export type AgentRuntimeCronMode = z.infer<typeof agentRuntimeCronModeSchema>;
-export type AgentRuntimeCronPayload = z.infer<typeof agentRuntimeCronPayloadSchema>;
-export type AgentRuntimeCronRun = z.infer<typeof agentRuntimeCronRunSchema>;
-export type AgentRuntimeCronRunFinishedEvent = z.infer<
-    typeof agentRuntimeCronRunFinishedEventSchema
->;
-export type AgentRuntimeCronRunList = z.infer<typeof agentRuntimeCronRunListSchema>;
-export type AgentRuntimeCronRunStartedEvent = z.infer<typeof agentRuntimeCronRunStartedEventSchema>;
-export type AgentRuntimeCronRunStatus = z.infer<typeof agentRuntimeCronRunStatusSchema>;
-export type AgentRuntimeCronRunTrigger = z.infer<typeof agentRuntimeCronRunTriggerSchema>;
-export type AgentRuntimeCronSchedule = z.infer<typeof agentRuntimeCronScheduleSchema>;
-export type AgentRuntimeCronState = z.infer<typeof agentRuntimeCronStateSchema>;
-export type AgentRuntimeCronSummary = z.infer<typeof agentRuntimeCronSummarySchema>;
-export type AgentRuntimeCronUpdatedEvent = z.infer<typeof agentRuntimeCronUpdatedEventSchema>;
-export type AgentRuntimeMemoryJobUpdatedEvent = z.infer<
-    typeof agentRuntimeMemoryJobUpdatedEventSchema
->;
-export type AgentRuntimeExecutionError = z.infer<typeof agentRuntimeExecutionErrorSchema>;
-export type AgentRuntimeExecutionErrorCode = z.infer<typeof agentRuntimeExecutionErrorCodeSchema>;
-export type AgentRuntimeExecutionStatus = z.infer<typeof agentRuntimeExecutionStatusSchema>;
 export type AgentRuntimeChatPaneState = z.infer<typeof agentRuntimeChatPaneStateSchema>;
 export type AgentRuntimeSetChatPaneStateRequest = z.infer<
     typeof agentRuntimeSetChatPaneStateRequestSchema
@@ -3088,6 +2266,8 @@ export type AgentRuntimeSetChatPaneStateResult = z.infer<
 >;
 export type AgentRuntimePaneUpdatedEvent = z.infer<typeof agentRuntimePaneUpdatedEventSchema>;
 export type AgentRuntimeCompositionEvent = z.infer<typeof agentRuntimeCompositionEventSchema>;
+export type AgentRuntimeAgentStopResult = z.infer<typeof agentRuntimeAgentStopResultSchema>;
+export type AgentRuntimeAgentInbox = z.infer<typeof agentRuntimeAgentInboxSchema>;
 export type ChatPaneTarget = z.infer<typeof chatPaneTargetSchema>;
 export type AgentRuntimeEvent = z.infer<typeof agentRuntimeEventSchema>;
 export type AgentRuntimeEngineRestartPhase = z.infer<typeof agentRuntimeEngineRestartPhaseSchema>;
@@ -3181,36 +2361,6 @@ export type AgentRuntimeBinding = z.infer<typeof agentRuntimeBindingSchema>;
 export type AgentRuntimeBindingList = z.infer<typeof agentRuntimeBindingListSchema>;
 export type AgentRuntimeBindingMatch = z.infer<typeof agentRuntimeBindingMatchSchema>;
 export type PlatformBindingStatus = z.infer<typeof agentRuntimeBindingStatusSchema>;
-export type WikiBacklink = z.infer<typeof wikiBacklinkSchema>;
-export type WikiBacklinkList = z.infer<typeof wikiBacklinkListSchema>;
-export type WikiAttachment = z.infer<typeof wikiAttachmentSchema>;
-export type WikiAttachmentContent = z.infer<typeof wikiAttachmentContentSchema>;
-export type WikiAttachmentMediaType = z.infer<typeof wikiAttachmentMediaTypeSchema>;
-export type WikiConfigSource = z.infer<typeof wikiConfigSourceSchema>;
-export type WikiCreatePage = z.infer<typeof wikiCreatePageSchema>;
-export type WikiFreshness = z.infer<typeof wikiFreshnessSchema>;
-export type WikiFreshnessState = z.infer<typeof wikiFreshnessStateSchema>;
-export type WikiMovePath = z.infer<typeof wikiMovePathSchema>;
-export type WikiPage = z.infer<typeof wikiPageSchema>;
-export type WikiPageList = z.infer<typeof wikiPageListSchema>;
-export type WikiPageSummary = z.infer<typeof wikiPageSummarySchema>;
-export type WikiPageCommit = z.infer<typeof wikiPageCommitSchema>;
-export type WikiPageHistory = z.infer<typeof wikiPageHistorySchema>;
-export type WikiPageRevision = z.infer<typeof wikiPageRevisionSchema>;
-export type WikiPathInput = z.infer<typeof wikiPathInputSchema>;
-export type WikiPathKind = z.infer<typeof wikiPathKindSchema>;
-export type WikiPathMutationResult = z.infer<typeof wikiPathMutationResultSchema>;
-export type WikiSavePage = z.infer<typeof wikiSavePageSchema>;
-export type WikiUploadAttachment = z.infer<typeof wikiUploadAttachmentSchema>;
-export type WikiSearchInput = z.input<typeof wikiSearchInputSchema>;
-export type WikiSearchResult = z.infer<typeof wikiSearchResultSchema>;
-export type WikiStatus = z.infer<typeof wikiStatusSchema>;
-export type WikiPageLink = z.infer<typeof wikiPageLinkSchema>;
-export type AgentRuntimeWikiSettings = z.infer<typeof agentRuntimeWikiSettingsSchema>;
-export type AgentRuntimeSaveWikiSettings = z.infer<typeof agentRuntimeSaveWikiSettingsSchema>;
-export type AgentRuntimeSaveWikiSettingsResult = z.infer<
-    typeof agentRuntimeSaveWikiSettingsResultSchema
->;
 export type AgentRuntimeModelAccess = z.infer<typeof agentRuntimeModelAccessSchema>;
 export type AgentRuntimeModelAccessId = z.infer<typeof agentRuntimeModelAccessIdSchema>;
 export type AgentRuntimeModelAccessState = z.infer<typeof agentRuntimeModelAccessStateSchema>;
@@ -3291,22 +2441,6 @@ export type AgentRuntimeSaveTimezoneSettings = z.infer<
 export type AgentRuntimeSaveTimezoneSettingsResult = z.infer<
     typeof agentRuntimeSaveTimezoneSettingsResultSchema
 >;
-export type AgentRuntimeMemorySettings = z.infer<typeof agentRuntimeMemorySettingsSchema>;
-export type AgentRuntimeSaveMemorySettings = z.infer<typeof agentRuntimeSaveMemorySettingsSchema>;
-export type AgentRuntimeSaveMemorySettingsResult = z.infer<
-    typeof agentRuntimeSaveMemorySettingsResultSchema
->;
-export type MemoryDreamRequest = z.infer<typeof memoryDreamRequestSchema>;
-export type MemoryDreamResult = z.infer<typeof memoryDreamResultSchema>;
-export type MemoryJobDetail = z.infer<typeof memoryJobDetailSchema>;
-export type MemoryJobFileChange = z.infer<typeof memoryJobFileChangeSchema>;
-export type MemoryJobKind = z.infer<typeof memoryJobKindSchema>;
-export type MemoryJobList = z.infer<typeof memoryJobListSchema>;
-export type MemoryJobStatus = z.infer<typeof memoryJobStatusSchema>;
-export type MemoryJobSummary = z.infer<typeof memoryJobSummarySchema>;
-export type MemoryActivityNextRun = z.infer<typeof memoryActivityNextRunSchema>;
-export type MemoryActivity = z.infer<typeof memoryActivitySchema>;
-export type MemoryActivityList = z.infer<typeof memoryActivityListSchema>;
 export type AgentRuntimeAgentEnv = z.infer<typeof agentRuntimeAgentEnvSchema>;
 export type AgentRuntimeAgentEnvVariable = z.infer<typeof agentRuntimeAgentEnvVariableSchema>;
 export type AgentRuntimeSaveAgentEnv = z.infer<typeof agentRuntimeSaveAgentEnvSchema>;
@@ -3413,61 +2547,18 @@ export type AgentRuntimeCreateMessage = z.infer<typeof agentRuntimeCreateMessage
 export type AgentRuntimeMessageAccepted = z.infer<typeof agentRuntimeMessageAcceptedSchema>;
 export type AgentRuntimeStopTurn = z.infer<typeof agentRuntimeStopTurnSchema>;
 export type AgentRuntimeStopTurnResult = z.infer<typeof agentRuntimeStopTurnResultSchema>;
-export type AgentRuntimeClarificationDisposition = z.infer<
-    typeof agentRuntimeClarificationDispositionSchema
->;
-export type AgentRuntimeClarificationPrompt = z.infer<typeof agentRuntimeClarificationPromptSchema>;
 export type TavernChannelMessageAcceptedFrame = z.infer<
     typeof tavernChannelMessageAcceptedFrameSchema
 >;
-export type AgentRuntimeRunCron = z.infer<typeof agentRuntimeRunCronSchema>;
 export type AgentRuntimeJobDetail = z.infer<typeof agentRuntimeJobDetailSchema>;
 export type AgentRuntimeJobList = z.infer<typeof agentRuntimeJobListSchema>;
 export type AgentRuntimeJobSlug = z.infer<typeof agentRuntimeJobSlugSchema>;
 export type AgentRuntimeJobSummary = z.infer<typeof agentRuntimeJobSummarySchema>;
 export type AgentRuntimeRunJobInput = z.infer<typeof agentRuntimeRunJobInputSchema>;
 export type AgentRuntimeRunJob = z.infer<typeof agentRuntimeRunJobSchema>;
-export type AgentRuntimeTurn = z.infer<typeof agentRuntimeTurnSchema>;
 export type AgentRuntimeWidgetProgress = z.infer<typeof agentRuntimeWidgetProgressSchema>;
-export type AgentRuntimeTurnProgressStep = z.infer<typeof agentRuntimeTurnProgressStepSchema>;
-export type AgentRuntimeTurnCompletedEvent = z.infer<typeof agentRuntimeTurnCompletedEventSchema>;
-export type AgentRuntimeTurnFailedEvent = z.infer<typeof agentRuntimeTurnFailedEventSchema>;
-export type AgentRuntimeTurnStartedEvent = z.infer<typeof agentRuntimeTurnStartedEventSchema>;
 export type AgentRuntimeUpsertBinding = z.infer<typeof agentRuntimeUpsertBindingSchema>;
 export type AgentRuntimeUpdateAgent = z.infer<typeof agentRuntimeUpdateAgentSchema>;
-export type AgentRuntimeUpdateCron = z.infer<typeof agentRuntimeUpdateCronSchema>;
-export type AgentRuntimeTask = z.infer<typeof agentRuntimeTaskSchema>;
-export type AgentRuntimeTaskAttachment = z.infer<typeof agentRuntimeTaskAttachmentSchema>;
-export type AgentRuntimeTaskAttachmentContent = z.infer<
-    typeof agentRuntimeTaskAttachmentContentSchema
->;
-export type AgentRuntimeTaskAssignee = z.infer<typeof agentRuntimeTaskAssigneeSchema>;
-export type AgentRuntimeTaskBlockedReason = z.infer<typeof agentRuntimeTaskBlockedReasonSchema>;
-export type AgentRuntimeTaskKind = z.infer<typeof agentRuntimeTaskKindSchema>;
-export type AgentRuntimeTaskLabel = z.infer<typeof agentRuntimeTaskLabelSchema>;
-export type AgentRuntimeTaskLabelColor = z.infer<typeof agentRuntimeTaskLabelColorSchema>;
-export type AgentRuntimeTaskLabelList = z.infer<typeof agentRuntimeTaskLabelListSchema>;
-export type AgentRuntimeTaskLabelWithCount = z.infer<typeof agentRuntimeTaskLabelWithCountSchema>;
-export type AgentRuntimeTaskList = z.infer<typeof agentRuntimeTaskListSchema>;
-export type AgentRuntimeTaskPriority = z.infer<typeof agentRuntimeTaskPrioritySchema>;
-export type AgentRuntimeSetTaskWorkChat = z.infer<typeof agentRuntimeSetTaskWorkChatSchema>;
-export type AgentRuntimeDispatchTask = z.infer<typeof agentRuntimeDispatchTaskSchema>;
-export type AgentRuntimeDispatchTaskResult = z.infer<typeof agentRuntimeDispatchTaskResultSchema>;
-export type AgentRuntimeAutoDispatchSettings = z.infer<
-    typeof agentRuntimeAutoDispatchSettingsSchema
->;
-export type AgentRuntimeSaveAutoDispatchSettings = z.infer<
-    typeof agentRuntimeSaveAutoDispatchSettingsSchema
->;
-export type AgentRuntimeTaskDispatchTrigger = z.infer<typeof agentRuntimeTaskDispatchTriggerSchema>;
-export type AgentRuntimeUpdateAgentTaskSettings = z.infer<
-    typeof agentRuntimeUpdateAgentTaskSettingsSchema
->;
 export type AgentRuntimeUpdateAgentWebSettings = z.infer<
     typeof agentRuntimeUpdateAgentWebSettingsSchema
 >;
-export type AgentRuntimeTaskStatus = z.infer<typeof agentRuntimeTaskStatusSchema>;
-export type AgentRuntimeCreateTask = z.infer<typeof agentRuntimeCreateTaskSchema>;
-export type AgentRuntimeUpdateTask = z.infer<typeof agentRuntimeUpdateTaskSchema>;
-export type AgentRuntimeCreateTaskLabel = z.infer<typeof agentRuntimeCreateTaskLabelSchema>;
-export type AgentRuntimeUpdateTaskLabel = z.infer<typeof agentRuntimeUpdateTaskLabelSchema>;

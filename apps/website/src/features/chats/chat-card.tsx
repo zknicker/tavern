@@ -40,7 +40,7 @@ export function ChatCard({
     const totalMessages = timeline.totalMessages;
     const hasActiveReply = timeline.activeReplies.length > 0;
     const hasActiveTurn = timeline.activeTurns.length > 0 || hasActiveReply;
-    const hasTimelineContent = rowCount > 0 || hasActiveReply || timeline.failedTurns.length > 0;
+    const hasTimelineContent = rowCount > 0 || hasActiveReply;
     const isInitialTranscriptPending =
         timeline.isPending && !timeline.historyLoaded && !hasActiveReply;
     const contentRef = React.useRef<HTMLDivElement | null>(null);
@@ -82,8 +82,6 @@ export function ChatCard({
                     <MessageScrollerViewport className="px-3 py-3" ref={viewportRef}>
                         {isInitialTranscriptPending ? null : hasTimelineContent ? (
                             <ChatTimeline
-                                activeReplies={timeline.activeReplies}
-                                failedTurns={timeline.failedTurns}
                                 rows={rows}
                                 scrollContentRef={contentRef}
                                 totalMessages={totalMessages}

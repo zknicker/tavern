@@ -42,55 +42,6 @@ describe('Tavern Runtime Chat API store', () => {
         closeDb();
     });
 
-    it('keeps composer command runs out of the live turn projection', () => {
-        createChat({ id: 'cht_1', title: 'Test' });
-        upsertResponse('cht_1', {
-            id: 'rsp_cmd_1',
-            metadata: { runtime: { agentId: 'agt_primary', source: 'command' } },
-            participant_id: 'agt_primary',
-            status: 'completed',
-        });
-        upsertResponseActivity('cht_1', 'rsp_cmd_1', {
-            detail: 'Agent CLI Status',
-            id: 'act_rsp_cmd_1',
-            kind: 'command',
-            metadata: { command: { status: 'completed', text: '/status' } },
-            status: 'completed',
-            title: '/status',
-        });
-
-        const projected = listProjectedTavernRuntimeEvents().map((entry) => entry.event.type);
-        expect(projected).not.toContain('turn.started');
-        expect(projected).not.toContain('turn.completed');
-        expect(projected).not.toContain('turn.progress');
-    });
-
-    it('attributes metadata-less activity progress to the owning response, never a default agent', () => {
-        createChat({ id: 'cht_1', title: 'Test' });
-        upsertResponse('cht_1', {
-            id: 'rsp_live_1',
-            metadata: { runtime: { agentId: 'agt_tiny', runId: 'run_live_1' } },
-            participant_id: 'agt_tiny',
-            status: 'running',
-        });
-        upsertResponseActivity('cht_1', 'rsp_live_1', {
-            detail: 'ls -la',
-            id: 'act_rsp_live_1_tool',
-            kind: 'tool_call',
-            metadata: {},
-            status: 'running',
-            title: 'terminal',
-        });
-
-        const progress = listProjectedTavernRuntimeEvents()
-            .map((entry) => entry.event)
-            .filter((event) => event.type === 'turn.progress');
-
-        expect(progress).toHaveLength(1);
-        expect(progress[0]?.type === 'turn.progress' && progress[0].turn.agentId).toBe('agt_tiny');
-        expect(progress[0]?.type === 'turn.progress' && progress[0].turn.runId).toBe('run_live_1');
-    });
-
     it('seeds development chat demos as durable Runtime chats', () => {
         const first = seedDevelopmentChatDemos({ db: getDb(), enabled: true });
         const second = seedDevelopmentChatDemos({ db: getDb(), enabled: true });
@@ -182,12 +133,13 @@ describe('Tavern Runtime Chat API store', () => {
         expect(getResponse('rsp_cmd_1')?.deleted_at).toBe(receipt.deleted_at);
         expect(listResponses('cht_1').responses[0]?.deleted_at).toBe(receipt.deleted_at);
         expect(listEvents().events.map((event) => event.type)).toContain('response.deleted');
-        expect(listProjectedTavernRuntimeEvents().map((entry) => entry.event.type)).toContain(
+        // Retired pre-flip event shapes no longer project (ADR 0014).
+        expect(listProjectedTavernRuntimeEvents().map((entry) => entry.event.type)).not.toContain(
             'chat.historyChanged'
         );
     });
 
-    it('projects retained legacy message deletion events after an upgrade', () => {
+    it('skips retained legacy message deletion events after an upgrade', () => {
         createChat({ id: 'cht_legacy_delete' });
         insertEvent(
             {
@@ -198,14 +150,9 @@ describe('Tavern Runtime Chat API store', () => {
             getDb()
         );
 
-        expect(listProjectedTavernRuntimeEvents()).toContainEqual(
-            expect.objectContaining({
-                event: expect.objectContaining({
-                    chatId: 'cht_legacy_delete',
-                    type: 'chat.historyChanged',
-                }),
-            })
-        );
+        // Retired pre-flip event shapes are skipped rather than bricking
+        // catch-up (ADR 0014).
+        expect(listProjectedTavernRuntimeEvents()).toEqual([]);
     });
 
     it('projects agent API posts as chat history changes', () => {
@@ -1290,14 +1237,12 @@ describe('Tavern Runtime Chat API routes', () => {
         await expect(response.json()).resolves.toMatchObject({
             events: [
                 {
-                    agentId: 'agt_1',
                     chatId: 'cht_1',
                     message: {
                         id: 'msg_1',
                         sequence: 1,
                         text: 'hello',
                     },
-                    runId: 'run_1',
                     type: 'chat.messageAccepted',
                 },
             ],
@@ -1328,7 +1273,7 @@ describe('Tavern Runtime Chat API routes', () => {
         );
 
         await expect(response.json()).resolves.toMatchObject({
-            events: [{ message: { id: 'msg_2' }, runId: 'run_2', type: 'chat.messageAccepted' }],
+            events: [{ message: { id: 'msg_2' }, type: 'chat.messageAccepted' }],
         });
     });
 });

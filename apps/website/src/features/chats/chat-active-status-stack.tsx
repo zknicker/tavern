@@ -151,7 +151,6 @@ export function ChatActiveStatusStack({
                                         <ChatActiveStatusRow
                                             activeReplies={activeReplies}
                                             agents={agents}
-                                            chatId={chatId}
                                             onViewDetails={() => setDrawerRunId(reply.runId)}
                                             reply={reply}
                                             rows={rowsWithEvidence}
@@ -184,14 +183,12 @@ export function ChatActiveStatusStack({
 function ChatActiveStatusRow({
     activeReplies,
     agents,
-    chatId,
     onViewDetails,
     reply,
     rows,
 }: {
     activeReplies: readonly ChatActiveReply[];
     agents: AgentListOutput['agents'];
-    chatId?: string;
     onViewDetails: () => void;
     reply: ChatActiveReply;
     rows: TranscriptRow[];
@@ -201,12 +198,6 @@ function ChatActiveStatusRow({
         () => findActiveTurnEntry({ activeReplies, rows, runId: reply.runId }),
         [activeReplies, reply.runId, rows]
     );
-    // Presence carries no chat anchor anymore (specs/presence.md), so this
-    // can no longer tell "queued behind another chat's turn" apart from
-    // "thinking about this one" — it never fires until a chat-scoped signal
-    // exists again.
-    void chatId;
-    const queuedElsewhere: { chatTitle: string | null; others: number } | null = null;
 
     return (
         <ChatActiveStatusItem
@@ -215,7 +206,6 @@ function ChatActiveStatusRow({
             agentName={agent?.name ?? 'Agent'}
             agentPrimaryColor={agent?.effectivePrimaryColor ?? null}
             onViewDetails={onViewDetails}
-            queuedElsewhere={queuedElsewhere}
             rows={rows}
             workIcon={getWorkGroupIcon(turnEntry?.items.filter(isActivityItem) ?? [])}
             workSummary={formatTurnWorkSummary(turnEntry)}
@@ -229,7 +219,6 @@ function ChatActiveStatusItem({
     agentName,
     agentPrimaryColor,
     onViewDetails,
-    queuedElsewhere,
     rows,
     workIcon,
     workSummary,
@@ -239,7 +228,6 @@ function ChatActiveStatusItem({
     agentName: string;
     agentPrimaryColor: string | null;
     onViewDetails: () => void;
-    queuedElsewhere: { chatTitle: string | null; others: number } | null;
     rows: TranscriptRow[];
     workIcon: React.ComponentProps<typeof Icon>['icon'] | null;
     workSummary: string | null;
@@ -247,7 +235,7 @@ function ChatActiveStatusItem({
     // Dwell between summary changes so fast tool bursts read as discrete
     // updates; label changes roll in with the drawers' slot-text treatment.
     const stableSummary = useStableWorkGroupLabel(workSummary, true);
-    const statusText = formatActiveStatusText({ activeReply, agentName, queuedElsewhere, rows });
+    const statusText = formatActiveStatusText({ activeReply, agentName, rows });
 
     return (
         <button
@@ -318,23 +306,12 @@ function coalesceRepliesByAgent(replies: readonly ChatActiveReply[]) {
 export function formatActiveStatusText({
     activeReply,
     agentName,
-    queuedElsewhere,
     rows,
 }: {
     activeReply: ChatActiveReply;
     agentName: string;
-    queuedElsewhere: { chatTitle: string | null; others: number } | null;
     rows: TranscriptRow[];
 }) {
-    if (queuedElsewhere) {
-        const where = queuedElsewhere.chatTitle ? ` in ${queuedElsewhere.chatTitle}` : '';
-        const others =
-            queuedElsewhere.others > 0
-                ? `, and ${queuedElsewhere.others} other${queuedElsewhere.others === 1 ? '' : 's'}`
-                : '';
-        return `${agentName} is wrapping up${where}${others}`;
-    }
-
     const emotion = resolveAgentStatusExpression({
         activeReply,
         rows,

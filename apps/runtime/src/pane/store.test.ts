@@ -8,7 +8,7 @@ import {
     setChatPaneState,
 } from './store.ts';
 
-const wikiTarget = { kind: 'wikiPage', path: 'Demos/Panel Brief.md' } as const;
+const workspaceTarget = { kind: 'workspaceFile', path: 'Demos/Panel Brief.md' } as const;
 const fileTarget = { kind: 'workspaceFile', path: 'workbench/out/report.html' } as const;
 
 describe('chat pane store', () => {
@@ -32,13 +32,13 @@ describe('chat pane store', () => {
 
     test('set replaces state and bumps the revision', () => {
         const state = setChatPaneState('cht_1', {
-            activeKey: 'wikiPage:Demos/Panel Brief.md',
+            activeKey: 'workspaceFile:Demos/Panel Brief.md',
             expectedRevision: 0,
-            targets: [wikiTarget],
+            targets: [workspaceTarget],
         });
 
         expect(state.revision).toBe(1);
-        expect(state.targets).toEqual([wikiTarget]);
+        expect(state.targets).toEqual([workspaceTarget]);
         expect(getChatPaneState('cht_1')).toEqual(state);
     });
 
@@ -46,7 +46,7 @@ describe('chat pane store', () => {
         setChatPaneState('cht_1', {
             activeKey: null,
             expectedRevision: 0,
-            targets: [wikiTarget],
+            targets: [workspaceTarget],
         });
 
         let conflict: ChatPaneRevisionConflictError | null = null;
@@ -62,7 +62,7 @@ describe('chat pane store', () => {
 
         expect(conflict).toBeInstanceOf(ChatPaneRevisionConflictError);
         expect(conflict?.current.revision).toBe(1);
-        expect(conflict?.current.targets).toEqual([wikiTarget]);
+        expect(conflict?.current.targets).toEqual([workspaceTarget]);
     });
 
     test('set rejects an activeKey that references no submitted target', () => {
@@ -70,69 +70,40 @@ describe('chat pane store', () => {
             setChatPaneState('cht_1', {
                 activeKey: 'workspaceFile:missing.md',
                 expectedRevision: 0,
-                targets: [wikiTarget],
+                targets: [workspaceTarget],
             })
         ).toThrow(/activeKey/);
     });
 
-    test('open appends and focuses a new target without a revision check', () => {
+    test('open merges workspace files into the one workspace tab', () => {
         setChatPaneState('cht_1', {
-            activeKey: 'wikiPage:Demos/Panel Brief.md',
+            activeKey: 'workspaceFile:Demos/Panel Brief.md',
             expectedRevision: 0,
-            targets: [wikiTarget],
+            targets: [workspaceTarget],
         });
 
         const state = openChatPaneTarget('cht_1', fileTarget);
 
         expect(state.revision).toBe(2);
-        expect(state.targets).toEqual([wikiTarget, fileTarget]);
+        expect(state.targets).toEqual([fileTarget]);
         expect(state.activeKey).toBe('workspaceFile:workbench/out/report.html');
-    });
-
-    test('open focuses an existing target without duplicating it', () => {
-        setChatPaneState('cht_1', {
-            activeKey: 'workspaceFile:workbench/out/report.html',
-            expectedRevision: 0,
-            targets: [wikiTarget, fileTarget],
-        });
-
-        const state = openChatPaneTarget('cht_1', wikiTarget);
-
-        expect(state.targets).toEqual([wikiTarget, fileTarget]);
-        expect(state.activeKey).toBe('wikiPage:Demos/Panel Brief.md');
-    });
-
-    test('open merges workspace files into the one workspace tab', () => {
-        setChatPaneState('cht_1', {
-            activeKey: 'workspaceFile:workbench/out/report.html',
-            expectedRevision: 0,
-            targets: [wikiTarget, fileTarget],
-        });
-
-        const state = openChatPaneTarget('cht_1', {
-            kind: 'workspaceFile',
-            path: 'NOTES.md',
-        });
-
-        expect(state.targets).toEqual([wikiTarget, { kind: 'workspaceFile', path: 'NOTES.md' }]);
-        expect(state.activeKey).toBe('workspaceFile:NOTES.md');
     });
 
     test('open keeps the open workspace file on a root open', () => {
         setChatPaneState('cht_1', {
-            activeKey: 'wikiPage:Demos/Panel Brief.md',
+            activeKey: 'workspaceFile:workbench/out/report.html',
             expectedRevision: 0,
-            targets: [wikiTarget, fileTarget],
+            targets: [fileTarget],
         });
 
         const state = openChatPaneTarget('cht_1', { kind: 'workspaceRoot', path: '' });
 
-        expect(state.targets).toEqual([wikiTarget, fileTarget]);
+        expect(state.targets).toEqual([fileTarget]);
         expect(state.activeKey).toBe('workspaceFile:workbench/out/report.html');
     });
 
     test('states are isolated per chat', () => {
-        openChatPaneTarget('cht_1', wikiTarget);
+        openChatPaneTarget('cht_1', workspaceTarget);
 
         expect(getChatPaneState('cht_2').targets).toEqual([]);
     });

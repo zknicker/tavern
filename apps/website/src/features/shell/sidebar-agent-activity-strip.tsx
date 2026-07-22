@@ -111,7 +111,6 @@ export function resolveAgentActivityLabel(input: {
     return formatActiveStatusText({
         activeReply,
         agentName: input.agentName,
-        queuedElsewhere: null,
         rows: [...input.timeline.timeline, ...Object.values(input.timeline.turnEvidence).flat()],
     });
 }
