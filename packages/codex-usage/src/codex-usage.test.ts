@@ -123,6 +123,40 @@ describe('normalizeCodexUsageResponse', () => {
             ],
         });
     });
+
+    it('accepts the current nullable secondary window contract', () => {
+        const snapshot = normalizeCodexUsageResponse(
+            {
+                credits: {
+                    balance: '25',
+                },
+                plan_type: 'pro',
+                rate_limit: {
+                    primary_window: {
+                        limit_window_seconds: 18_000,
+                        reset_after_seconds: 3600,
+                        reset_at: 1_773_532_800,
+                        used_percent: 10,
+                    },
+                    secondary_window: null,
+                },
+            },
+            {
+                now: new Date('2026-03-14T15:00:00.000Z'),
+            }
+        );
+
+        expect(snapshot.windows).toEqual([
+            {
+                id: 'current-session',
+                label: 'Current session',
+                remainingPercent: 90,
+                resetAfterSeconds: 3600,
+                resetsAt: '2026-03-15T00:00:00.000Z',
+                usedPercent: 10,
+            },
+        ]);
+    });
 });
 
 describe('getCodexUsage', () => {
