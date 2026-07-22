@@ -5,7 +5,6 @@ import { closeDb, getDb, initTestDb } from '../db/connection';
 import { ensureRuntimeSchema } from '../db/schema';
 import { subscribeToRuntimeEvents } from '../tavern/runtime-events';
 import { getMerchbaseSettings, queryMerchbaseAction, saveMerchbaseSettings } from './merchbase';
-import { createMerchbaseToolsForAgent } from './merchbase-tools';
 import { handlePluginsRequest } from './routes';
 import { getPlugin } from './store';
 
@@ -145,100 +144,6 @@ describe('MerchBase Plugin settings', () => {
             action: 'sales.summary',
             result: { unitsSold: 42 },
         });
-    });
-
-    test('exposes MerchBase tools only to agents with the Plugin grant', () => {
-        saveMerchbaseSettings({
-            apiKey: 'secret-key',
-            baseUrl: 'https://app.merchbase.co',
-            enabled: true,
-        });
-
-        expect(
-            Object.keys(
-                createMerchbaseToolsForAgent({
-                    enabledPluginIds: ['merchbase'],
-                    enabledSkillIds: [],
-                    id: 'agt_primary',
-                    isAdmin: true,
-                    name: 'Tavern',
-                    primaryColor: null,
-                    workspaceFolder: '/tmp/tavern-agent',
-                })
-            )
-        ).toEqual(expect.arrayContaining(['merchbase_sales_series', 'merchbase_products_get']));
-        expect(
-            createMerchbaseToolsForAgent({
-                enabledPluginIds: [],
-                enabledSkillIds: [],
-                id: 'agt_primary',
-                isAdmin: true,
-                name: 'Tavern',
-                primaryColor: null,
-                workspaceFolder: '/tmp/tavern-agent',
-            })
-        ).toEqual({});
-    });
-
-    test('runs the typed sales series tool through the shared series logic', async () => {
-        saveMerchbaseSettings({
-            apiKey: 'secret-key',
-            defaultMarketplace: 'US',
-            enabled: true,
-        });
-        merchbaseClientMock.salesSeriesQuery.mockResolvedValue({
-            chartData: { data: [], title: 'MerchBase sales', unit: 'USD', x: 'date', y: 'units' },
-            series: [
-                {
-                    bucketEnd: '2026-07-01',
-                    bucketStart: '2026-07-01',
-                    currencyCode: 'USD',
-                    netUnits: 2,
-                    revenue: 39.98,
-                    royalties: 5.54,
-                    unitsCancelled: 0,
-                    unitsReturned: 0,
-                    unitsSold: 2,
-                },
-            ],
-        });
-
-        const tools = createMerchbaseToolsForAgent({
-            enabledPluginIds: ['merchbase'],
-            enabledSkillIds: [],
-            id: 'agt_primary',
-            isAdmin: true,
-            name: 'Tavern',
-            primaryColor: null,
-            workspaceFolder: '/tmp/tavern-agent',
-        });
-        const result = await tools.merchbase_sales_series?.execute?.(
-            { range: '2026-07-01..2026-07-03' },
-            { context: undefined, messages: [], toolCallId: 'call_series' }
-        );
-
-        expect(merchbaseClientMock.salesSeriesQuery).toHaveBeenCalledWith({
-            bucket: 'day',
-            marketplace: 'US',
-            range: '2026-07-01..2026-07-03',
-        });
-        expect(result).toMatchObject({
-            bucket: 'day',
-            currencyCode: 'USD',
-            range: '2026-07-01..2026-07-03',
-            rowCount: 3,
-            totals: { net: 2, revenue: 39.98, royalties: 5.54, sold: 2 },
-        });
-        expect(
-            (result as { rows: Array<{ date: string; sold: number }> }).rows.map((row) => [
-                row.date,
-                row.sold,
-            ])
-        ).toEqual([
-            ['2026-07-01', 2],
-            ['2026-07-02', 0],
-            ['2026-07-03', 0],
-        ]);
     });
 
     test('refreshes and publishes MerchBase capability after settings saves', async () => {

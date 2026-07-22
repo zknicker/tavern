@@ -22,13 +22,10 @@ import { handleSkillHubRequest } from '../agent-engine/skill-hub-routes.ts';
 import { resetRuntimeSkillToDefault } from '../agent-engine/skill-library.ts';
 import { handleToolSetupRequest } from '../agent-engine/tool-setup-routes.ts';
 import { handleRuntimeCapabilitiesRequest } from '../capabilities/routes.ts';
-import { handleCronRequest } from '../cron/routes.ts';
 import type { RuntimeRequestAuth } from '../identity/auth.ts';
 import { handleIdentityRequest } from '../identity/routes.ts';
 import { handleRuntimeJobsRequest } from '../jobs/routes.ts';
 import { listMacApps } from '../mac-apps/inventory.ts';
-import { handleMemoryRequest } from '../memory/routes.ts';
-import { handleMemorySettingsRequest } from '../memory/settings.ts';
 import { handleModelAccessRequest } from '../model-access/model-access.ts';
 import { handleOpenAiSettingsRequest } from '../model-access/openai-settings.ts';
 import { handleOpenRouterSettingsRequest } from '../model-access/openrouter-settings.ts';
@@ -37,11 +34,7 @@ import { handleModelCategorySettingsRequest } from '../models/category-settings.
 import { handleModelProviderRequest } from '../models/provider-routes.ts';
 import { handleChatPaneRequest } from '../pane/routes.ts';
 import { handlePluginsRequest } from '../plugins/routes.ts';
-import { handleTaskLabelsRequest } from '../tasks/label-routes.ts';
-import { handleTasksRequest } from '../tasks/routes.ts';
-import { handleAutoDispatchSettingsRequest } from '../tasks/settings.ts';
 import { handleTimezoneSettingsRequest } from '../timezone-settings.ts';
-import { handleWikiRequest } from '../wiki/routes.ts';
 import { handleWorkspaceRequest } from '../workspace/routes.ts';
 import { listAgentActivity } from './agent-activity.ts';
 import { handleAgentApiRequest } from './agent-api-router.ts';
@@ -88,44 +81,14 @@ export async function handleTavernRuntimeRequest(
         );
     }
 
-    const wikiResponse = await handleWikiRequest(request);
-    if (wikiResponse) {
-        return wikiResponse;
-    }
-
-    const memoryResponse = await handleMemoryRequest(request);
-    if (memoryResponse) {
-        return memoryResponse;
-    }
-
     const jobsResponse = await handleRuntimeJobsRequest(request);
     if (jobsResponse) {
         return jobsResponse;
     }
 
-    const cronResponse = await handleCronRequest(request);
-    if (cronResponse) {
-        return cronResponse;
-    }
-
     const chatPaneResponse = await handleChatPaneRequest(request);
     if (chatPaneResponse) {
         return chatPaneResponse;
-    }
-
-    const autoDispatchSettingsResponse = await handleAutoDispatchSettingsRequest(request);
-    if (autoDispatchSettingsResponse) {
-        return autoDispatchSettingsResponse;
-    }
-
-    const tasksResponse = await handleTasksRequest(request);
-    if (tasksResponse) {
-        return tasksResponse;
-    }
-
-    const taskLabelsResponse = await handleTaskLabelsRequest(request);
-    if (taskLabelsResponse) {
-        return taskLabelsResponse;
     }
 
     const modelProviderResponse = await handleModelProviderRequest(request);
@@ -136,11 +99,6 @@ export async function handleTavernRuntimeRequest(
     const modelAccessResponse = await handleModelAccessRequest(request);
     if (modelAccessResponse) {
         return modelAccessResponse;
-    }
-
-    const memorySettingsResponse = await handleMemorySettingsRequest(request);
-    if (memorySettingsResponse) {
-        return memorySettingsResponse;
     }
 
     const modelCategorySettingsResponse = await handleModelCategorySettingsRequest(request);

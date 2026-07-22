@@ -24,11 +24,10 @@ export type CliSection =
     | 'Server'
     | 'Status'
     | 'Maintenance'
-    | 'Wiki'
     | 'Engine';
 
 /** Section render order in global help. */
-export const SECTION_ORDER: CliSection[] = ['Server', 'Status', 'Maintenance', 'Wiki', 'Engine'];
+export const SECTION_ORDER: CliSection[] = ['Server', 'Status', 'Maintenance', 'Engine'];
 export const AGENT_SECTION_ORDER: CliSection[] = ['Messages', 'Inbox', 'Directory'];
 
 /** A registered top-level command or command group. */
@@ -131,31 +130,6 @@ const restartCommand: CliCommand = {
     },
 };
 
-const wikiCommand: CliCommand = {
-    name: 'wiki',
-    section: 'Wiki',
-    group: true,
-    summary: 'Browse Wiki pages (status, list, get, search)',
-    usage: 'grotto wiki <status|list|get|search> [flags]',
-    flags: [
-        { name: '--json', description: 'Emit one JSON document' },
-        { name: '--runtime-url', valueName: '<url>', description: 'Override the Runtime API URL' },
-    ],
-    examples: ['grotto wiki status', 'grotto wiki list', 'grotto wiki get INDEX.md'],
-    async run(_args, raw) {
-        if (raw.length === 0) {
-            const { printGroupHelp } = await import('./help');
-            printGroupHelp(wikiCommand, process.stdout);
-            return 1;
-        }
-        const [{ WIKI_SUBCOMMANDS }, { dispatchSubcommand }] = await Promise.all([
-            import('./commands/wiki'),
-            import('./subcommand'),
-        ]);
-        return await dispatchSubcommand('wiki', WIKI_SUBCOMMANDS, raw);
-    },
-};
-
 const engineCommand: CliCommand = {
     name: 'engine',
     section: 'Engine',
@@ -241,7 +215,6 @@ export const COMMANDS: CliCommand[] = [
     tokenCommand,
     updateCommand,
     restartCommand,
-    wikiCommand,
     engineCommand,
     helpCommand,
 ];

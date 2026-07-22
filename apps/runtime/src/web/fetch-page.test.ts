@@ -124,23 +124,6 @@ describe('createWebToolsForAgent', () => {
         expect(tool?.description).toContain('UNTRUSTED external data');
     });
 
-    test('mentions the browser escalation path only when the agent holds the browser tool', () => {
-        const withoutBrowser = createWebToolsForAgent(createAgent(true)).web_fetch;
-
-        expect(withoutBrowser?.description).not.toContain('browser tool');
-
-        ensureRuntimeSchema(initTestDb());
-        try {
-            writePluginConfig({ config: {}, enabled: true, id: browserPluginId });
-            const granted = { ...createAgent(true), enabledPluginIds: [browserPluginId] };
-
-            expect(createWebToolsForAgent(granted).web_fetch?.description).toContain(
-                'use the browser tool'
-            );
-        } finally {
-            closeDb();
-        }
-    });
 
     test('returns non-http scheme failures as tool errors', async () => {
         const tools = createWebToolsForAgent(createAgent(true));

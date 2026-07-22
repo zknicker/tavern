@@ -2,7 +2,6 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {
     type AgentRuntimeAgent,
-    type AgentRuntimeCreateMessage,
     agentRuntimeAgentPluginGrantListSchema,
     agentRuntimeAgentPluginGrantSchema,
     agentRuntimeArchiveAgentSchema,
@@ -11,6 +10,7 @@ import {
     agentRuntimeRoutes,
     agentRuntimeSkillListSchema,
     agentRuntimeSkillSchema,
+    agentRuntimeStopTurnResultSchema,
     agentRuntimeUpdateAgentBioSchema,
     agentRuntimeUpdateAgentModelSchema,
     agentRuntimeUpdateAgentNameSchema,
@@ -23,7 +23,6 @@ import {
 } from '@tavern/api';
 import { ZodError } from 'zod';
 import { defaultAgentEngineAgentId } from '../agent-engine/constants.ts';
-import { unsupportedAgentEngineSurface } from '../agent-engine/errors.ts';
 import {
     getRuntimeSkill,
     listRuntimeSkills,
@@ -40,6 +39,7 @@ import {
     saveAgentModelSelectionIntent,
 } from '../models/selection-service.ts';
 import { registerAgentWorkspace } from '../workspace/instructions.ts';
+import { stopAgentTurn } from './agent-turn-runner.ts';
 import {
     deleteStoredAgent,
     getStoredAgent,
@@ -49,7 +49,6 @@ import {
     updateStoredAgent,
     upsertStoredAgent,
 } from './agents-store.ts';
-import { sendTavernChannelMessage, stopTavernChannelTurn } from './channel-relay.ts';
 import { HandleValidationError } from './handles.ts';
 import { badRequest, json } from './http.ts';
 import { primaryManagedAgent } from './managed-agent.ts';
@@ -281,34 +280,17 @@ async function dispatchAgentEngineStatic({ request, url }: { request: Request; u
     }
     if (method === 'POST' && segments[0] === 'agent' && segments[1] === 'chats') {
         const chatId = segments[2];
-        if (chatId && segments[3] === 'messages') {
-            const input = (await readJson(request)) as AgentRuntimeCreateMessage;
-            if (isTavernChannelMessage(input)) {
-                return await sendTavernChannelMessage(chatId, input);
-            }
-            return unsupportedPayload('Non-Grotto agent chat messages');
-        }
         if (chatId && segments[3] === 'turns' && segments[4] && segments[5] === 'stop') {
-            return await stopTavernChannelTurn({ runId: segments[4] });
+            const runId = segments[4];
+            const stopped = await stopAgentTurn(runId);
+            return agentRuntimeStopTurnResultSchema.parse({ runId, stopped });
         }
     }
     return undefined;
 }
 
-function isTavernChannelMessage(input: AgentRuntimeCreateMessage) {
-    if (!input.target) {
-        return false;
-    }
-
-    return input.target.type === 'tavern';
-}
-
 async function readJson(request: Request): Promise<unknown> {
     return await request.json().catch(() => ({}));
-}
-
-function unsupportedPayload(message: string) {
-    return unsupportedAgentEngineSurface(message);
 }
 
 async function savePatchedModel(agentId: string, input: unknown) {
