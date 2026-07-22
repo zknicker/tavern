@@ -2,27 +2,51 @@ import * as React from 'react';
 
 const chatComposerMentionEventName = 'tavern:chat-composer-mention-request';
 
-export function requestChatComposerMention({ agentId }: { agentId: string }) {
-    window.dispatchEvent(new CustomEvent(chatComposerMentionEventName, { detail: { agentId } }));
+export interface ChatComposerMentionRequest {
+    agentId: string;
+    composerId: string;
+}
+
+export function requestChatComposerMention(request: ChatComposerMentionRequest) {
+    window.dispatchEvent(new CustomEvent(chatComposerMentionEventName, { detail: request }));
 }
 
 export function useChatComposerMentionRequest(
-    enabled: boolean,
-    mention: (request: { agentId: string }) => void
+    composerId: null | string,
+    mention: (request: ChatComposerMentionRequest) => void
 ) {
     React.useEffect(() => {
-        if (!enabled) {
+        if (!composerId) {
             return;
         }
 
         const listener = (event: Event) => {
-            const detail = (event as CustomEvent<{ agentId?: unknown }>).detail;
-            if (typeof detail?.agentId === 'string' && detail.agentId.length > 0) {
-                mention({ agentId: detail.agentId });
+            const request = matchChatComposerMentionRequest(
+                (event as CustomEvent<unknown>).detail,
+                composerId
+            );
+            if (request) {
+                mention(request);
             }
         };
 
         window.addEventListener(chatComposerMentionEventName, listener);
         return () => window.removeEventListener(chatComposerMentionEventName, listener);
-    }, [enabled, mention]);
+    }, [composerId, mention]);
+}
+
+export function matchChatComposerMentionRequest(
+    detail: unknown,
+    composerId: string
+): ChatComposerMentionRequest | null {
+    if (!(detail && typeof detail === 'object')) {
+        return null;
+    }
+
+    const request = detail as Partial<ChatComposerMentionRequest>;
+    return request.composerId === composerId &&
+        typeof request.agentId === 'string' &&
+        request.agentId.length > 0
+        ? { agentId: request.agentId, composerId }
+        : null;
 }

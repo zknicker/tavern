@@ -23,6 +23,7 @@ import {
 } from './chat-transcript-model.ts';
 import {
     getTranscriptMessageThread,
+    resolveTranscriptInteractionHosts,
     type TranscriptRenderContextValue,
     TranscriptRenderProvider,
 } from './chat-transcript-render-context.tsx';
@@ -43,6 +44,7 @@ export function ChatTranscript({
     agentStatusCharacter = null,
     canRequestMention = true,
     chatId,
+    composerId,
     conversationLayout = directConversationMessageLayout,
     currentSessionKey,
     defaultOpenWorkGroups = false,
@@ -50,6 +52,7 @@ export function ChatTranscript({
     hiddenCount = 0,
     leadingContent,
     olderHistory,
+    profilePaneChatId,
     rows,
     scrollContentRef,
     threadActionsEnabled = true,
@@ -59,6 +62,7 @@ export function ChatTranscript({
     agentStatusCharacter?: AgentCharacter | null;
     canRequestMention?: boolean;
     chatId?: string;
+    composerId?: string;
     conversationLayout?: ConversationMessageLayout;
     currentSessionKey?: string | null;
     defaultOpenWorkGroups?: boolean;
@@ -68,6 +72,7 @@ export function ChatTranscript({
     // Standalone-viewport transcripts (the thread pane) page older history
     // themselves; embedded transcripts leave paging to their outer frame.
     olderHistory?: { fetch: () => void; hasMore: boolean; isFetching: boolean };
+    profilePaneChatId?: string;
     rows: TranscriptRow[];
     scrollContentRef?: React.RefObject<HTMLDivElement | null>;
     threadActionsEnabled?: boolean;
@@ -77,6 +82,11 @@ export function ChatTranscript({
     const activeSidePane = useChatSidePane(chatId ?? '');
     const flashMessageId = useMessageFlash(chatId ?? '');
     const unfollowThread = trpc.thread.setFollow.useMutation();
+    const interactionHosts = resolveTranscriptInteractionHosts({
+        chatId,
+        composerId,
+        profilePaneChatId,
+    });
     const mutateThreadFollow = unfollowThread.mutate;
     const entries = React.useMemo(
         () =>
@@ -127,6 +137,7 @@ export function ChatTranscript({
             ({
                 canRequestMention,
                 chatId,
+                composerId: interactionHosts.composerId,
                 activeThreadAnchorId:
                     activeSidePane === 'thread' ? (threadPane?.anchorMessageId ?? null) : null,
                 conversationLayout,
@@ -136,6 +147,7 @@ export function ChatTranscript({
                 hiddenCount,
                 onOpenThread,
                 onUnfollowThread,
+                profilePaneChatId: interactionHosts.profilePaneChatId,
                 repliedRunIds,
                 shouldAnimateItemEnter,
                 threadActionsEnabled: threadActionsEnabled && Boolean(chatId),
@@ -143,6 +155,7 @@ export function ChatTranscript({
         [
             canRequestMention,
             chatId,
+            interactionHosts.composerId,
             activeSidePane,
             threadPane?.anchorMessageId,
             conversationLayout,
@@ -152,6 +165,7 @@ export function ChatTranscript({
             hiddenCount,
             onOpenThread,
             onUnfollowThread,
+            interactionHosts.profilePaneChatId,
             repliedRunIds,
             shouldAnimateItemEnter,
             threadActionsEnabled,
