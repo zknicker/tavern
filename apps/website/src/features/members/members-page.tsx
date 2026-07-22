@@ -11,10 +11,11 @@ import { createNewAgentName } from './create-agent-name.ts';
 import { HumanMemberList } from './human-member-list.tsx';
 import { MemberAgentLabel } from './member-agent-label.tsx';
 import { MembersAdmin } from './members-admin.tsx';
+import { isHumansMembersPath } from './members-route.ts';
 
 export function MembersPage() {
     const { agentId } = useParams();
-    const isHumansAdmin = useLocation().pathname.endsWith('/humans');
+    const isHumansAdmin = isHumansMembersPath(useLocation().pathname);
     const navigate = useNavigate();
     const utils = trpc.useUtils();
     const agentsQuery = useAgentList();

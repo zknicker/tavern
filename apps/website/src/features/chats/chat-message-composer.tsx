@@ -175,9 +175,11 @@ export function ChatMessageComposer({
             mentionComposer.handleMentionSelect(
                 buildAgentMentionOption({ agentId: mentionedAgentId, agents })
             );
-            requestChatComposerFocus();
+            if (!threadTarget) {
+                requestChatComposerFocus();
+            }
         },
-        [agents, boundAgentIds, mentionComposer.handleMentionSelect]
+        [agents, boundAgentIds, mentionComposer.handleMentionSelect, threadTarget]
     );
     useChatComposerMentionRequest(canAutoFocusComposer ? draftKey : null, handleComposerMention);
 

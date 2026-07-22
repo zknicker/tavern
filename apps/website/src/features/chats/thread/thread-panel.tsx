@@ -181,6 +181,7 @@ function SyncedThreadBody({
             <div className="min-h-0 flex-1">
                 <ChatTranscript
                     activeReplies={timeline.activeReplies}
+                    canRequestMention={!chat.archived}
                     chatId={threadChatId}
                     composerId={`${chat.id}:thread:${anchorMessageId}`}
                     conversationLayout={getChatMessageLayout(chat)}

@@ -2,6 +2,7 @@ import { afterEach, expect, test } from 'bun:test';
 import {
     clearChatComposerDraftsForTest,
     createChatComposerDraftState,
+    hasChatDraftContent,
     hasDraftContent,
     normalizeChatComposerDraft,
     readChatComposerDraft,
@@ -39,6 +40,16 @@ test('chat composer drafts are restored by chat id', () => {
         content: 'do not drop this',
     });
     expect(readChatComposerDraft('chat-2', ['agent-1']).content).toBe('');
+});
+
+test('a thread draft marks its parent conversation as drafted', () => {
+    writeChatComposerDraft('chat-1:thread:message-1', {
+        ...createChatComposerDraftState(['agent-1']),
+        content: 'reply later',
+    });
+
+    expect(hasChatDraftContent('chat-1')).toBe(true);
+    expect(hasChatDraftContent('chat-2')).toBe(false);
 });
 
 test('chat composer draft reads return defensive copies', () => {
