@@ -85,7 +85,25 @@ upgrades transport only, contracts unchanged.
   mechanical implementation to codex (gpt-5.6-sol), exploration sweeps to cheaper models;
   Fable-class models only for design, judgment, and finish passes.
 - **Closeout review.** Every workstream ends with a GPT-5.6-Sol review (codex-review flow,
-  explicitly `-m gpt-5.6-sol`) plus an operator walkthrough before merge.
+  explicitly `-m gpt-5.6-sol`) plus an operator walkthrough before merge. **Review economy is
+  law** (tightened policy, agents repo 768fec7): findings are advisory, not automatically
+  actionable — accept only branch-caused findings with a concrete user/operator path and
+  material correctness, security, data, or capability impact; defer polish, speculative edge
+  cases, generic resilience, pre-existing issues, and adjacent improvements. Budget: ONE
+  initial full-branch review, at most TWO full-branch reruns, never a fourth; after narrow
+  fixes, review the fix range only — full-branch again only when a fix moves a shared API,
+  storage contract, security boundary, or ownership model. Batch accepted findings before
+  editing. "Clean" = no accepted release blockers, not zero observations. Deterministic host
+  tests run once. Closeout reports accepted / rejected / consciously deferred; if the rerun
+  budget ends in disagreement, escalate to the operator for an explicit ship/defer call.
+  (WS9's ten review rounds are the cautionary precedent — high grind, low marginal risk
+  reduction.)
+- **Scope economy.** The review problem starts at build time: delegated implementations (codex
+  especially) must ship the smallest end-to-end diff that satisfies the spec. Unrequested
+  abstractions, defensive branches for impossible states, speculative config surface, and
+  "while I was here" additions are DEFECTS — reviewers flag them for removal, not refinement.
+  When a delegated diff comes back doing more than the spec asked, cut it down before review,
+  don't review it into shape.
 
 ## Resolved decisions
 
