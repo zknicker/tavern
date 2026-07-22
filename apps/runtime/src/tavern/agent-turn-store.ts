@@ -128,7 +128,7 @@ export function listAgentTurnsForSession(agentSessionId: string, db: Database = 
             `SELECT *
              FROM agent_turns
              WHERE agent_session_id = $agentSessionId
-             ORDER BY created_at ASC, id ASC`
+             ORDER BY rowid ASC`
         )
         .all(namedParams({ agentSessionId })) as AgentTurnRow[];
     return rows.map(rowToAgentTurn);
@@ -189,7 +189,7 @@ export function listUnsettledAgentTurns(db: Database = getDb()) {
             `SELECT *
              FROM agent_turns
              WHERE status IN ('queued', 'running')
-             ORDER BY CASE status WHEN 'running' THEN 0 ELSE 1 END, created_at ASC, id ASC`
+             ORDER BY CASE status WHEN 'running' THEN 0 ELSE 1 END, rowid ASC`
         )
         .all() as AgentTurnRow[];
     return rows.map(rowToAgentTurn);
@@ -223,7 +223,7 @@ export function claimNextAgentTurnForAgent(
              FROM agent_turns
              WHERE agent_id = $agentId
                AND status = 'queued'
-             ORDER BY created_at ASC, id ASC
+             ORDER BY rowid ASC
              LIMIT 1`
         )
         .get(namedParams({ agentId: input.agentId })) as AgentTurnRow | null;
@@ -242,11 +242,14 @@ export function claimNextAgentTurnForAgent(
     return getAgentTurnOrThrow(next.id, db);
 }
 
-export function hasQueuedAgentTurn(agentId: string, db: Database = getDb()) {
+// Drain coalescing looks at queued DRAINS only: a queued Start. turn must
+// not swallow the drain that delivers the wake's messages (ws2-turn-shapes
+// §1/§3 — Start. is bare; deliveries arrive as their own turn).
+export function hasQueuedAgentDrain(agentId: string, db: Database = getDb()) {
     const row = db
         .prepare(
             `SELECT 1 AS present FROM agent_turns
-             WHERE agent_id = $agentId AND status = 'queued' LIMIT 1`
+             WHERE agent_id = $agentId AND status = 'queued' AND kind = 'drain' LIMIT 1`
         )
         .get(namedParams({ agentId })) as { present: number } | null;
     return Boolean(row);

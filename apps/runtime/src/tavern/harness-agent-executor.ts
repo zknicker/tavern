@@ -277,7 +277,10 @@ export function createHarnessForModel(input: {
                 // web_fetch is the uniform Tavern fetch tool across providers,
                 // so page reads keep one size-cap and injection posture.
                 disallowedTools: input.webSearch ? ['WebFetch'] : ['WebSearch', 'WebFetch'],
-                maxTurns: 8,
+                // CLI-only output (D1) makes every send/check/read a tool
+                // call, so turns legitimately run long tool loops; the turn
+                // watchdog is the real bound, this only stops runaways.
+                maxTurns: 50,
                 model: modelName.model,
                 thinking: claudeThinking(input.thinkingDefault),
             }) as HarnessV1<ToolSet>;

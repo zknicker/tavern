@@ -14,7 +14,7 @@ import {
     failAgentTurn,
     findRunningAgentTurnForAgent,
     getAgentTurn,
-    hasQueuedAgentTurn,
+    hasQueuedAgentDrain,
     listAgentTurnsForSession,
 } from './agent-turn-store.ts';
 import { getStoredAgent } from './agents-store.ts';
@@ -71,7 +71,7 @@ export function wakeAgent(agentId: string) {
 export function scheduleAgentDrain(agentId: string) {
     const session = ensureCurrentAgentSession({ agentId });
     ensureStartTurn(agentId, session);
-    if (!hasQueuedAgentTurn(agentId)) {
+    if (!hasQueuedAgentDrain(agentId)) {
         createAgentTurn({
             agentId,
             agentSessionId: session.id,
