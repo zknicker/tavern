@@ -1,14 +1,11 @@
 import { developmentChatTeamDemoId } from '@tavern/api/development-chat-demos';
 import {
-    activityRuntimeMetadata,
     assistantMessage,
-    completedResponse,
     type DevelopmentChatDemo,
     demoAgentId,
     demoSecondAgentId,
     demoTime,
     ownerMessage,
-    toolActivity,
 } from './development-chat-demo-types';
 
 // Multi-agent demo: two agent seats answering the same request in one
@@ -55,80 +52,6 @@ export function teamDemo(): DevelopmentChatDemo {
                 requestMessageId,
                 runId: wrenRunId,
             }),
-        ],
-        responses: [
-            {
-                ...completedResponse({
-                    chatId,
-                    id: 'rsp_demo_team_otto',
-                    requestMessageId,
-                    responseMessageId: 'msg_demo_team_otto_reply',
-                    runId: ottoRunId,
-                    summary: 'Summarized the week of shipping.',
-                }),
-                activities: [
-                    toolActivity({
-                        chatId,
-                        id: `act_${ottoRunId}_tool_1`,
-                        requestMessageId,
-                        runId: ottoRunId,
-                        sequence: 1,
-                        title: 'git log --since="1 week"',
-                        toolArguments: { command: 'git log --since="1 week" --oneline' },
-                        toolCallId: `${ottoRunId}_t1`,
-                        toolName: 'exec',
-                    }),
-                ],
-            },
-            {
-                ...completedResponse({
-                    agentId: demoSecondAgentId,
-                    chatId,
-                    id: 'rsp_demo_team_wren',
-                    requestMessageId,
-                    responseMessageId: 'msg_demo_team_wren_reply',
-                    runId: wrenRunId,
-                    summary: 'Flagged the risky queue items.',
-                }),
-                activities: [
-                    toolActivity({
-                        agentId: demoSecondAgentId,
-                        chatId,
-                        id: `act_${wrenRunId}_tool_1`,
-                        requestMessageId,
-                        runId: wrenRunId,
-                        sequence: 1,
-                        title: 'Read QUEUE.md',
-                        toolArguments: { path: 'QUEUE.md' },
-                        toolCallId: `${wrenRunId}_t1`,
-                        toolName: 'read_file',
-                    }),
-                    {
-                        completed_at: demoTime,
-                        detail: 'Cross-checking token expiry against the plugin settings.',
-                        id: `act_${wrenRunId}_msg_1`,
-                        kind: 'message',
-                        metadata: {
-                            runtime: {
-                                ...activityRuntimeMetadata({
-                                    agentId: demoSecondAgentId,
-                                    chatId,
-                                    id: `act_${wrenRunId}_msg_1`,
-                                    requestMessageId,
-                                    runId: wrenRunId,
-                                    sequence: 2,
-                                }),
-                                messagePhase: 'commentary',
-                            },
-                        },
-                        sequence: 2,
-                        started_at: demoTime,
-                        status: 'completed',
-                        summary: 'Cross-checking token expiry against the plugin settings.',
-                        title: 'Assistant update',
-                    },
-                ],
-            },
         ],
     };
 }

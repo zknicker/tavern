@@ -1,13 +1,6 @@
-import {
-    type WidgetName,
-    type WidgetRenderInput,
-    widgetComponentId,
-    widgetRenderInputSchema,
-} from '@tavern/api';
 import { developmentChatDemoIds } from '@tavern/api/development-chat-demos';
 import {
     assistantMessage,
-    completedResponse,
     type DevelopmentChatDemo,
     ownerMessage,
     userMessage,
@@ -31,7 +24,6 @@ export function artifactLinksDemo(): DevelopmentChatDemo {
             'Workspace links use the same shape. This one opens the panel with the current unsupported state: [preview.html](grotto://workspace/out/preview.html).',
         ].join('\n'),
         slug: 'artifact_links',
-        summary: 'Linked inspectable outputs for the Artifact Panel demo.',
         title: 'Demo: Artifact Links',
     });
 }
@@ -43,7 +35,6 @@ export function longContentDemo(): DevelopmentChatDemo {
         request: longPastedOAuthJson,
         reply: `Auth URL created. Open this URL:\n\n${longOAuthConsentUrl}\n\nAfter authorizing, copy the localhost callback URL and paste it here.`,
         slug: 'long_content',
-        summary: 'Shows long pasted JSON and a long URL in chat.',
     });
 }
 
@@ -81,16 +72,6 @@ export function attachmentDemo(): DevelopmentChatDemo {
                 runId,
             }),
         ],
-        responses: [
-            completedResponse({
-                chatId,
-                id: 'rsp_demo_attachment',
-                requestMessageId,
-                responseMessageId,
-                runId,
-                summary: 'Answered a message with a file attachment.',
-            }),
-        ],
     };
 }
 
@@ -99,7 +80,6 @@ function completedTextDemo(input: {
     request: string;
     reply: string;
     slug: string;
-    summary: string;
     title: string;
 }): DevelopmentChatDemo {
     const runId = `run_demo_${input.slug}`;
@@ -125,30 +105,7 @@ function completedTextDemo(input: {
                 runId,
             }),
         ],
-        responses: [
-            completedResponse({
-                chatId: input.chatId,
-                id: `rsp_demo_${input.slug}`,
-                requestMessageId,
-                responseMessageId,
-                runId,
-                summary: input.summary,
-            }),
-        ],
     };
-}
-
-export function widgetDemoRenderInput(
-    name: WidgetName,
-    fallbackText: string,
-    props: Record<string, unknown>
-): WidgetRenderInput {
-    return widgetRenderInputSchema.parse({
-        component: widgetComponentId(name),
-        fallback: { text: fallbackText },
-        props,
-        target: 'chat.inline',
-    });
 }
 
 // A short exchange authored by the app owner (`usr_tavern`) rather than the
@@ -191,18 +148,6 @@ export function selfMessagesDemo(): DevelopmentChatDemo {
                 }),
             ];
         }),
-        responses: selfDemoTurns.map((turn, index) => {
-            const ids = selfDemoTurnIds(index);
-
-            return completedResponse({
-                chatId,
-                id: ids.responseId,
-                requestMessageId: ids.requestMessageId,
-                responseMessageId: ids.responseMessageId,
-                runId: ids.runId,
-                summary: turn.reply,
-            });
-        }),
     };
 }
 
@@ -212,7 +157,6 @@ function selfDemoTurnIds(index: number) {
 
     return {
         requestMessageId: `msg_demo_self_${number}_request`,
-        responseId: `rsp_demo_self_${number}`,
         responseMessageId: `msg_demo_self_${number}_response`,
         runId: `run_demo_self_${number}`,
         slug,
