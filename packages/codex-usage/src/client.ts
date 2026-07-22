@@ -9,6 +9,7 @@ import type {
 } from './types.ts';
 
 const CODEX_USAGE_URL = 'https://chatgpt.com/backend-api/wham/usage';
+const codexUsageWindowSchema = z.record(z.string(), z.unknown()).nullable().optional();
 
 const codexUsageResponseSchema = z
     .object({
@@ -24,8 +25,8 @@ const codexUsageResponseSchema = z
         plan_type: z.string().trim().min(1).optional(),
         rate_limit: z
             .object({
-                primary_window: z.record(z.string(), z.unknown()).optional(),
-                secondary_window: z.record(z.string(), z.unknown()).optional(),
+                primary_window: codexUsageWindowSchema,
+                secondary_window: codexUsageWindowSchema,
             })
             .passthrough()
             .optional(),
@@ -49,8 +50,8 @@ export function normalizeCodexUsageResponse(
         'current-session',
         'Current session',
         headerNumber(options.headers, 'x-codex-primary-used-percent') ??
-            numberField(response.rate_limit?.primary_window, 'used_percent'),
-        response.rate_limit?.primary_window,
+            numberField(response.rate_limit?.primary_window ?? undefined, 'used_percent'),
+        response.rate_limit?.primary_window ?? undefined,
         now
     );
 
@@ -59,8 +60,8 @@ export function normalizeCodexUsageResponse(
         'current-week',
         'Current week',
         headerNumber(options.headers, 'x-codex-secondary-used-percent') ??
-            numberField(response.rate_limit?.secondary_window, 'used_percent'),
-        response.rate_limit?.secondary_window,
+            numberField(response.rate_limit?.secondary_window ?? undefined, 'used_percent'),
+        response.rate_limit?.secondary_window ?? undefined,
         now
     );
 
