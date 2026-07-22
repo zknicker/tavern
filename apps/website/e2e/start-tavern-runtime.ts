@@ -29,6 +29,14 @@ const { setAgentExecutorForTesting } = await import(
 const { createHarnessAgentExecutor, setHarnessAgentFactoryForTesting } = await import(
     '../../runtime/src/tavern/harness-agent-executor.ts'
 );
+// The agent's only reply channel is `grotto message send` (D1); the fake
+// harness drives the exact function the CLI's send route calls so a real
+// durable message lands, instead of writing chat rows directly.
+const { sendAgentMessage } = await import('../../runtime/src/tavern/agent-send.ts');
+// A real agent runs `grotto message check` before replying, which serves the
+// delivered rows and clears the channel/thread freshness hold; the fake
+// mirrors that so its immediate send is not held as stale.
+const { checkAgentMessages } = await import('../../runtime/src/tavern/agent-inbox-api.ts');
 
 // The e2e mock fakes only the model harness; the real executor runs — real
 // instructions, prompt assembly, activity persistence, widget parsing, empty
@@ -55,12 +63,14 @@ function createFakeHarnessAgentFactory() {
     })) as unknown as Parameters<typeof setHarnessAgentFactoryForTesting>[0];
 }
 
-// Marker-driven model behavior. Prompts opt into tools, narration, widgets,
-// slowness, or an empty reply; everything else echoes deterministically.
+// Marker-driven model behavior: the turn's prompt is the drain delivery
+// (envelopes plus trailer), never raw chat content. Prompts opt into a tool
+// read; everything else replies deterministically through the agent's only
+// output channel, `grotto message send` (D1) — a bare `Start.` turn (or any
+// turn whose envelope carries no addressable target) has nothing to send.
 async function* e2eTurnParts(input: AgentExecutorInput) {
-    const content = input.content;
-    const readTarget = content.match(/(?:Read|against) `([^`]+)`/iu)?.[1] ?? null;
-    const slow = /slow QA command/iu.test(content);
+    const prompt = input.prompt;
+    const readTarget = prompt.match(/(?:Read|against) `([^`]+)`/iu)?.[1] ?? null;
 
     if (readTarget) {
         yield {
@@ -69,11 +79,6 @@ async function* e2eTurnParts(input: AgentExecutorInput) {
             toolName: 'read',
             type: 'tool-call',
         };
-
-        if (slow) {
-            await delay(2500);
-        }
-
         yield {
             input: { file_path: readTarget },
             output: '# QA kickoff task',
@@ -83,83 +88,46 @@ async function* e2eTurnParts(input: AgentExecutorInput) {
         };
     }
 
-    // No text parts at all: the executor's empty-content diagnostic path.
-    if (/empty response exhaustion/iu.test(content)) {
+    const target = deliveryTarget(prompt);
+    if (!target) {
         return;
     }
 
-    if (/render a tall table/iu.test(content)) {
-        yield* textSegment('txt_narration', 'Investigating variance across regions.');
-        yield* streamedTextSegment(
-            'txt_reply',
-            tallTableReply(parseExactReply(content) ?? 'QA_TABLE_OK')
-        );
-        return;
-    }
-
-    yield* textSegment('txt_reply', e2eResponseContent(input));
-}
-
-function* textSegment(id: string, text: string) {
-    yield { id, type: 'text-start' };
-    yield { id, text, type: 'text-delta' };
-    yield { id, type: 'text-end' };
-}
-
-// Stream the reply in small paced deltas so live-reveal and follow-scroll
-// behavior engage like a real model turn.
-async function* streamedTextSegment(id: string, text: string) {
-    yield { id, type: 'text-start' };
-
-    const chunkSize = Math.max(24, Math.ceil(text.length / 24));
-
-    for (let index = 0; index < text.length; index += chunkSize) {
-        yield { id, text: text.slice(index, index + chunkSize), type: 'text-delta' };
-        await delay(50);
-    }
-
-    yield { id, type: 'text-end' };
-}
-
-function tallTableReply(marker: string) {
-    const rows = Array.from(
-        { length: 30 },
-        (_, index) =>
-            `<tr><td>Region ${index + 1}</td><td>${(1000 + index * 37).toLocaleString('en-US')}</td></tr>`
-    );
-
-    return [
-        `Here is the table.\n${marker}`,
-        '',
-        '```visual Regional variance',
-        '<table>',
-        '<thead><tr><th>Region</th><th>Variance</th></tr></thead>',
-        `<tbody>${rows.join('')}</tbody>`,
-        '</table>',
-        '```',
-    ].join('\n');
-}
-
-function delay(ms: number) {
-    return new Promise((resolve) => {
-        setTimeout(resolve, ms);
+    // Mirrors the real agent's `grotto message check` before replying.
+    checkAgentMessages(input.agent.id);
+    // The exact function the CLI's `grotto message send` invokes
+    // (`/api/agent/messages/send` -> agent-send.ts) — this is what makes the
+    // durable reply land; the text parts above are execution evidence only.
+    sendAgentMessage(input.agent.id, {
+        content: e2eResponseContent(input),
+        nonce: `e2e_${input.runId}`,
+        target,
     });
 }
 
+// The drain prompt embeds one `[target=... msg=... ...]` envelope per
+// pending message (inbox-drain.ts); the most recent one is who to reply to.
+function deliveryTarget(prompt: string) {
+    const matches = [...prompt.matchAll(/\[target=(\S+)/gu)];
+    return matches.at(-1)?.[1] ?? null;
+}
+
 function e2eResponseContent(input: AgentExecutorInput) {
-    const exactReply = parseExactReply(input.content);
+    const exactReply = parseExactReply(input.prompt);
     if (exactReply) {
         return exactReply;
     }
-    const quoted = input.content.trim() || 'your message';
-    return `${input.agent.name}: received "${quoted}".`;
+    return `${input.agent.name}: received a message.`;
 }
 
-function parseExactReply(content: string) {
-    const quoted = content.match(/reply exactly\s+`([^`]+)`/iu);
-    if (quoted?.[1]) {
-        return quoted[1];
+// A session reset re-delivers the whole unseen backlog in one batched
+// prompt (envelopes oldest first); the most recent envelope is the live ask,
+// so its marker wins over any stale ones dragged along by catch-up.
+function parseExactReply(prompt: string) {
+    const quoted = [...prompt.matchAll(/reply exactly\s+`([^`]+)`/giu)];
+    if (quoted.length > 0) {
+        return quoted.at(-1)?.[1] ?? null;
     }
-    const bare = content.match(/reply exactly\s+([A-Z0-9_-]+)/iu);
-    return bare?.[1] ?? null;
+    const bare = [...prompt.matchAll(/reply exactly\s+([A-Z0-9_-]+)/giu)];
+    return bare.at(-1)?.[1] ?? null;
 }

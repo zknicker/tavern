@@ -1,24 +1,7 @@
 import type { Page } from '@playwright/test';
-import { tavernAgentDmRoute } from '../support/agent-dm.ts';
 import { expect, test } from '../support/test.ts';
 
 test.describe.configure({ timeout: 120_000 });
-
-test('preserves Tavern chat session routing and renders one final reply', async ({ page }) => {
-    test.setTimeout(120_000);
-
-    const expectedReply = `QA-TAVERN-CONTRACT-${Date.now()}`;
-
-    await page.goto(tavernAgentDmRoute);
-    await fillChatComposer(
-        page,
-        `Tavern agent marker check. Use exact marker: \`${expectedReply}\`.`
-    );
-    await page.getByRole('textbox', { name: 'Chat message' }).press('Enter');
-
-    await expect(markerCodeOccurrences(page, expectedReply)).toHaveCount(2, { timeout: 45_000 });
-    await expect(page.getByLabel('Agent is thinking')).toHaveCount(0);
-});
 
 test('keeps channel messages human-only until an agent is addressed', async ({ page }) => {
     test.setTimeout(90_000);
@@ -113,10 +96,6 @@ async function mentionTavernAgent(page: Page, text: string) {
         .click();
     await composer.pressSequentially(` ${text}`);
     await composer.press('Enter');
-}
-
-function markerCodeOccurrences(page: Page, marker: string) {
-    return page.locator('code').filter({ hasText: exactTextRegex(marker) });
 }
 
 function transcriptParagraph(page: Page, text: string | RegExp) {

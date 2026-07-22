@@ -99,8 +99,17 @@ function ChannelDialogForm({
     );
     const trimmedDisplayName = displayName.trim();
     const agentIds = normalizeChannelAgentIds(selectedAgentIds);
+    // The channel name IS its handle (specs/grotto-cli.md §2): one token,
+    // 1-32 chars, no spaces. Renames change the handle, so both create and
+    // rename enforce the same rule the runtime does.
+    const handleIssue =
+        showDisplayName && trimmedDisplayName.length > 0 && !isValidChannelHandle(trimmedDisplayName)
+            ? 'Channel names are single handles: letters, numbers, dashes, or underscores — no spaces, up to 32 characters.'
+            : null;
     const canSubmit =
-        (showDisplayName ? trimmedDisplayName.length > 0 : initialDisplayName.trim().length > 0) &&
+        (showDisplayName
+            ? trimmedDisplayName.length > 0 && !handleIssue
+            : initialDisplayName.trim().length > 0) &&
         agentIds.length > 0 &&
         !isPending;
 
@@ -147,6 +156,9 @@ function ChannelDialogForm({
                             type="text"
                             value={displayName}
                         />
+                        {handleIssue ? (
+                            <p className="text-muted-foreground text-xs">{handleIssue}</p>
+                        ) : null}
                     </Field>
                 ) : null}
                 <Field>
@@ -281,4 +293,8 @@ function AgentAvatar({ agent }: { agent: AgentOption }) {
 
 export function normalizeChannelAgentIds(agentIds: string[]) {
     return [...new Set(agentIds.map((agentId) => agentId.trim()).filter(Boolean))];
+}
+
+function isValidChannelHandle(value: string) {
+    return /^[A-Za-z0-9][A-Za-z0-9_-]{0,31}$/u.test(value);
 }
