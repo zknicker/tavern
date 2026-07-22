@@ -6,7 +6,14 @@ import { sendAgentMessage } from './agent-send.ts';
 import { ensureCurrentAgentSession, startNewAgentSession } from './agent-session-store.ts';
 import { unfollowAgentThread } from './agent-threads.ts';
 import { upsertStoredAgent } from './agents-store.ts';
-import { createChat, createMessage, getChat, listMessages } from './chat-api/index.ts';
+import {
+    createChat,
+    createMessage,
+    ensureThreadChat,
+    getChat,
+    listMessages,
+    setThreadFollow,
+} from './chat-api/index.ts';
 import { readSeenCursor } from './seen-ledger.ts';
 import { readServedCursor } from './served-ledger.ts';
 
@@ -221,6 +228,35 @@ describe('agent attested sends', () => {
             'archived'
         );
         expect(readAgentHistory('agt_otto', { target: '#frozen' }).messages).toEqual([]);
+    });
+
+    it('rejects unfollow reason notices in archived thread parents', () => {
+        createChat({
+            id: 'cht_frozen_thread_parent',
+            kind: 'channel',
+            metadata: { tavern: { archived: true } },
+            participants: [human(), agent('agt_otto', 'Otto')],
+            title: 'frozen-thread-parent',
+        });
+        createMessage('cht_frozen_thread_parent', {
+            author_id: 'usr_tavern',
+            content: 'archived anchor',
+            id: 'msg_80000000000000000000000000000001',
+            role: 'user',
+        });
+        const thread = ensureThreadChat({
+            anchorMessageId: 'msg_80000000000000000000000000000001',
+            parentChatId: 'cht_frozen_thread_parent',
+        });
+        setThreadFollow({ follow: true, participantId: 'agt_otto', threadChatId: thread.id });
+
+        expect(() =>
+            unfollowAgentThread('agt_otto', {
+                reason: 'done here',
+                target: '#frozen-thread-parent:80000000',
+            })
+        ).toThrow('reason notices cannot be posted');
+        expect(listMessages(thread.id).messages).toEqual([]);
     });
 
     it('skips the freshness gate for DMs', () => {

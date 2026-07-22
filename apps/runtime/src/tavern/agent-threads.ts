@@ -4,8 +4,9 @@ import type { Database } from '../db/sqlite.ts';
 import { AgentApiError } from './agent-api-errors.ts';
 import { resolveAgentTarget } from './agent-targets.ts';
 import { getStoredAgent } from './agents-store.ts';
+import { isArchivedChat } from './chat-actions-tools.ts';
 import { createAgentParticipantId, createMessageId } from './chat-api/ids.ts';
-import { createMessage, setThreadFollow } from './chat-api/index.ts';
+import { createMessage, membershipChat, setThreadFollow } from './chat-api/index.ts';
 
 export const agentThreadUnfollowRequestSchema = z
     .object({
@@ -36,8 +37,16 @@ export function unfollowAgentThread(
         );
     }
     const participantId = createAgentParticipantId(agentId);
-    setThreadFollow({ follow: false, participantId, threadChatId: resolved.chat.id }, db);
     const reason = input.reason?.trim();
+    const parent = membershipChat(resolved.chat, db);
+    if (reason && parent && isArchivedChat(parent)) {
+        throw new AgentApiError(
+            'TARGET_ARCHIVED',
+            `${resolved.target} is archived; reason notices cannot be posted there.`,
+            409
+        );
+    }
+    setThreadFollow({ follow: false, participantId, threadChatId: resolved.chat.id }, db);
     if (reason) {
         const handle = getStoredAgent(agentId, db)?.name ?? agentId;
         createMessage(

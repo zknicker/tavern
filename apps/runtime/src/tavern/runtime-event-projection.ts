@@ -28,6 +28,21 @@ export function listProjectedTavernRuntimeEvents(
 }
 
 function chatEventToRuntimeEvents(event: TavernChatEvent, db?: Database): PersistedRuntimeEvent[] {
+    // Upgraded databases can retain this retired event shape. It still means
+    // the visible chat history changed, and must not brick event catch-up.
+    if ((event as { type: string }).type === 'message.deleted') {
+        return [
+            {
+                cursor: Number(event.cursor),
+                event: {
+                    chatId: event.chat_id,
+                    timestamp: event.created_at,
+                    type: 'chat.historyChanged',
+                },
+            },
+        ];
+    }
+
     // Composer command runs are settled evidence, not live turns; projecting
     // them would surface a phantom in-flight turn in the app.
     if (isCommandRunEvent(event)) {
@@ -169,6 +184,16 @@ function messageCreatedToRuntimeEvent(
     message: TavernChatMessage,
     timestamp: string
 ): AgentRuntimeEvent | null {
+    if (
+        message.role === 'assistant' &&
+        metadataRuntimeString(message.metadata, 'source') === 'agent-api'
+    ) {
+        return {
+            chatId: message.chat_id,
+            timestamp,
+            type: 'chat.historyChanged',
+        };
+    }
     if (message.role !== 'user') {
         return null;
     }

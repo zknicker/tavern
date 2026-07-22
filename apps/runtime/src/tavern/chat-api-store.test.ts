@@ -1,4 +1,4 @@
-import { runtimeRoutes, type TavernCreateChatRequest } from '@tavern/api';
+import { runtimeRoutes, type TavernChatEvent, type TavernCreateChatRequest } from '@tavern/api';
 import { developmentChatDemoIds } from '@tavern/api/development-chat-demos';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { closeDb, getDb, initTestDb } from '../db/connection';
@@ -264,6 +264,47 @@ describe('Tavern Runtime Chat API store', () => {
         expect(listEvents().events.map((event) => event.type)).toContain('response.deleted');
         expect(listProjectedTavernRuntimeEvents().map((entry) => entry.event.type)).toContain(
             'chat.historyChanged'
+        );
+    });
+
+    it('projects retained legacy message deletion events after an upgrade', () => {
+        createChat({ id: 'cht_legacy_delete' });
+        insertEvent(
+            {
+                chatId: 'cht_legacy_delete',
+                event: 'message.deleted' as TavernChatEvent['type'],
+                payload: { message_id: 'msg_legacy' },
+            },
+            getDb()
+        );
+
+        expect(listProjectedTavernRuntimeEvents()).toContainEqual(
+            expect.objectContaining({
+                event: expect.objectContaining({
+                    chatId: 'cht_legacy_delete',
+                    type: 'chat.historyChanged',
+                }),
+            })
+        );
+    });
+
+    it('projects agent API posts as chat history changes', () => {
+        createChat({ id: 'cht_agent_api_post' });
+        createMessage('cht_agent_api_post', {
+            author_id: 'agt_primary',
+            content: 'posted from the agent CLI',
+            id: 'msg_agent_api_post',
+            metadata: { runtime: { agentId: 'agt_primary', source: 'agent-api' } },
+            role: 'assistant',
+        });
+
+        expect(listProjectedTavernRuntimeEvents()).toContainEqual(
+            expect.objectContaining({
+                event: expect.objectContaining({
+                    chatId: 'cht_agent_api_post',
+                    type: 'chat.historyChanged',
+                }),
+            })
         );
     });
 
