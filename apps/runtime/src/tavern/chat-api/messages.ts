@@ -106,11 +106,13 @@ export function listRecentMessagesBetween(
     input: {
         afterSequence: number;
         beforeSequence: number;
+        direction?: 'asc' | 'desc';
         limit?: number;
     },
     db: Database = getDb()
 ): TavernChatMessage[] {
     const limit = clampLimit(input.limit);
+    const direction = input.direction ?? 'desc';
     const rows = db
         .prepare(
             `SELECT *
@@ -118,7 +120,7 @@ export function listRecentMessagesBetween(
              WHERE chat_id = $chatId
                AND sequence > $afterSequence
                AND sequence < $beforeSequence
-             ORDER BY sequence DESC
+             ORDER BY sequence ${direction === 'asc' ? 'ASC' : 'DESC'}
              LIMIT $limit`
         )
         .all(
@@ -130,7 +132,8 @@ export function listRecentMessagesBetween(
             })
         ) as MessageRow[];
 
-    return rows.reverse().map((row) => rowToMessage(row, db));
+    const ordered = direction === 'desc' ? rows.reverse() : rows;
+    return ordered.map((row) => rowToMessage(row, db));
 }
 
 export function searchMessages(

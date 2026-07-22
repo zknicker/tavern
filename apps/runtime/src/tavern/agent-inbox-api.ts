@@ -4,9 +4,14 @@ import { listFollowedThreadIds, listMutedChannelIds } from './agent-attention.ts
 import { type AgentMessage, toAgentMessage } from './agent-messages.ts';
 import { ensureCurrentAgentSession } from './agent-session-store.ts';
 import { formatAgentTarget } from './agent-targets.ts';
+import { findRunningAgentTurnForAgent } from './agent-turn-store.ts';
 import { createAgentParticipantId } from './chat-api/ids.ts';
 import { getChat } from './chat-api/index.ts';
-import { clearInboxPierces, listInboxCursors } from './inbox-cursors.ts';
+import {
+    clearInboxPierces,
+    listInboxCursors,
+    markInboxPiercesServed,
+} from './inbox-cursors.ts';
 import { collectPendingInboxRows } from './inbox-drain.ts';
 import { collectInboxTargetSummaries, type InboxTargetSummary } from './inbox-notices.ts';
 import { advanceServedCursor } from './served-ledger.ts';
@@ -54,7 +59,15 @@ export function checkAgentMessages(
         }
     }
     if (pierceMessageIds.length > 0) {
-        clearInboxPierces({ messageIds: pierceMessageIds, sessionId: session.id });
+        const running = findRunningAgentTurnForAgent(agentId, db);
+        if (running) {
+            markInboxPiercesServed(
+                { messageIds: pierceMessageIds, runId: running.id, sessionId: session.id },
+                db
+            );
+        } else {
+            clearInboxPierces({ messageIds: pierceMessageIds, sessionId: session.id }, db);
+        }
     }
     return { messages, more: rows.length > maxCheckMessages };
 }

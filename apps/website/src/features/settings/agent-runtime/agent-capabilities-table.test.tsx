@@ -105,7 +105,7 @@ test('AgentCapabilitiesSummary renders a provisioning progress bar from capabili
         />
     );
 
-    assert.match(markup, /Wiki recall/);
+    assert.match(markup, /Skills/);
     assert.match(markup, /progressbar/);
     assert.match(markup, /42%/);
 });

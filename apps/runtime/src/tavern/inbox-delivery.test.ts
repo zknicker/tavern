@@ -14,7 +14,12 @@ import { upsertStoredAgent } from './agents-store.ts';
 import { createAgentParticipantId, createMessageId } from './chat-api/ids.ts';
 import { createChat, createMessage, ensureThreadChat, setThreadFollow } from './chat-api/index.ts';
 import { planMessageDelivery, registerInboxWakeSink } from './delivery-planner.ts';
-import { listInboxPierces, listPendingInboxTargets, readInboxCursor } from './inbox-cursors.ts';
+import {
+    advanceSeenCursor,
+    listInboxPierces,
+    listPendingInboxTargets,
+    readInboxCursor,
+} from './inbox-cursors.ts';
 import { composeDrainDelivery } from './inbox-drain.ts';
 import {
     composeInboxNotice,
@@ -127,6 +132,33 @@ describe('inbox delivery (I1/I2/I3)', () => {
         ).toBe(true);
         expect(delivery?.embeddedSeqByChatId.get('cht_general')).toBe(second.sequence);
         expect(delivery?.hasHumanEnvelope).toBe(true);
+    });
+
+    it('drains an over-limit backlog oldest-first without skipping rows', () => {
+        const messages = Array.from({ length: 45 }, (_, index) => {
+            const message = sendHuman(`backlog ${index + 1}`);
+            planMessageDelivery('cht_general', message);
+            return message;
+        });
+        const session = sessionFor(ottoId);
+
+        const first = composeDrainDelivery({ agentId: ottoId, sessionId: session.id });
+        expect(first?.envelopeCount).toBe(40);
+        expect(first?.prompt).toContain('backlog 1');
+        expect(first?.prompt).toContain('backlog 40');
+        expect(first?.prompt).not.toContain('backlog 41');
+        expect(first?.embeddedSeqByChatId.get('cht_general')).toBe(messages[39]?.sequence);
+
+        advanceSeenCursor({
+            chatId: 'cht_general',
+            seq: messages[39]?.sequence ?? 0,
+            sessionId: session.id,
+        });
+        const second = composeDrainDelivery({ agentId: ottoId, sessionId: session.id });
+        expect(second?.envelopeCount).toBe(5);
+        expect(second?.prompt).toContain('backlog 41');
+        expect(second?.prompt).toContain('backlog 45');
+        expect(second?.embeddedSeqByChatId.get('cht_general')).toBe(messages[44]?.sequence);
     });
 
     it('uses the singular header for one envelope', () => {

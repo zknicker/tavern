@@ -3,6 +3,13 @@ import { closeDb, initTestDb } from '../db/connection';
 import { ensureRuntimeSchema } from '../db/schema';
 import { ensureCurrentAgentSession } from './agent-session-store';
 import { claimNextAgentTurnForAgent, createAgentTurn, getAgentTurn } from './agent-turn-store';
+import { agentDmChatId } from './bootstrap-chats';
+import {
+    advanceDeliveredCursor,
+    listInboxPierces,
+    markInboxPiercesServed,
+    recordInboxPierce,
+} from './inbox-cursors';
 import { ensurePrimaryManagedAgent } from './managed-agent';
 import { recoverInterruptedAgentTurns } from './turn-recovery';
 
@@ -26,17 +33,32 @@ describe('turn recovery', () => {
         });
         claimNextAgentTurnForAgent({ agentId: agent.id });
 
-        const recovered = recoverInterruptedAgentTurns();
+        recordInboxPierce({
+            chatId: agentDmChatId(agent.id),
+            messageId: 'msg_pierce',
+            sessionId: session.id,
+        });
+        markInboxPiercesServed({
+            messageIds: ['msg_pierce'],
+            runId: 'run_stuck',
+            sessionId: session.id,
+        });
 
-        expect(recovered).toBe(1);
+        const recovery = recoverInterruptedAgentTurns();
+
+        expect(recovery.recoveredTurnCount).toBe(1);
+        expect(recovery.agentIdsToWake).toEqual(new Set([agent.id]));
         expect(getAgentTurn('run_stuck')).toMatchObject({
             completedAt: expect.any(String),
             metadata: { error: 'Interrupted by an agent runtime restart.' },
             status: 'failed',
         });
+        expect(listInboxPierces(session.id, { excludeServed: true })).toEqual([
+            { chatId: agentDmChatId(agent.id), messageId: 'msg_pierce' },
+        ]);
     });
 
-    test('is a no-op when every turn is terminal', () => {
+    test('requests a wake for queued turns and current-session pending targets', () => {
         const agent = ensurePrimaryManagedAgent();
         const session = ensureCurrentAgentSession({ agentId: agent.id });
         createAgentTurn({
@@ -45,8 +67,11 @@ describe('turn recovery', () => {
             id: 'run_queued',
             kind: 'start',
         });
+        advanceDeliveredCursor({ chatId: agentDmChatId(agent.id), seq: 1, sessionId: session.id });
 
-        expect(recoverInterruptedAgentTurns()).toBe(0);
+        const recovery = recoverInterruptedAgentTurns();
+        expect(recovery.recoveredTurnCount).toBe(0);
+        expect(recovery.agentIdsToWake).toEqual(new Set([agent.id]));
         expect(getAgentTurn('run_queued')).toMatchObject({ status: 'queued' });
     });
 });

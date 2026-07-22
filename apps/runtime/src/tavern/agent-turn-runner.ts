@@ -16,12 +16,20 @@ import {
     getAgentTurn,
     hasQueuedAgentDrain,
     listAgentTurnsForSession,
+    listUnsettledAgentTurns,
 } from './agent-turn-store.ts';
 import { getStoredAgent } from './agents-store.ts';
 import { registerInboxWakeSink } from './delivery-planner.ts';
-import { advanceSeenCursor, clearInboxPierces, listPendingInboxTargets } from './inbox-cursors.ts';
+import {
+    advanceSeenCursor,
+    clearInboxPierces,
+    clearInboxPiercesForRun,
+    listPendingInboxTargets,
+    resetInboxPiercesForRun,
+} from './inbox-cursors.ts';
 import { composeDrainDelivery, type DrainDelivery } from './inbox-drain.ts';
 import { noticeBusyAgent } from './inbox-notices.ts';
+import { publishRuntimeEvent } from './runtime-events.ts';
 import { listServedCursors } from './served-ledger.ts';
 import { registerTurnDelivery } from './turn-delivery.ts';
 import { captureTurnWorkspaceBaseline, settleTurnFileEvidence } from './turn-file-evidence.ts';
@@ -96,15 +104,14 @@ export function scheduleAgentStart(agentId: string) {
  */
 export async function stopAgentTurns(agentId: string) {
     let stopped = false;
+    for (const turn of listUnsettledAgentTurns()) {
+        if (turn.agentId === agentId && turn.status === 'queued') {
+            stopped = (await stopAgentTurn(turn.id)) || stopped;
+        }
+    }
     const running = findRunningAgentTurnForAgent(agentId);
     if (running) {
         stopped = (await stopAgentTurn(running.id)) || stopped;
-    }
-    const session = ensureCurrentAgentSession({ agentId });
-    for (const turn of listAgentTurnsForSession(session.id)) {
-        if (turn.status === 'queued') {
-            stopped = (await stopAgentTurn(turn.id)) || stopped;
-        }
     }
     return stopped;
 }
@@ -120,6 +127,8 @@ export async function stopAgentTurn(runId: string) {
     if (!cancelled) {
         return false;
     }
+    resetInboxPiercesForRun({ runId, sessionId: turn.agentSessionId });
+    publishAgentTurnStateChange(turn.agentId);
     if (wasActive) {
         await Promise.resolve(executor.stop?.(runId)).catch(() => {});
         clearActiveTurn(runId, turn.agentId);
@@ -205,10 +214,12 @@ async function drainAgent(agentId: string) {
         return;
     }
     activeAgentRuns.set(agentId, turn.id);
+    publishAgentTurnStateChange(agentId);
 
     const agent = getStoredAgent(agentId);
     if (!agent) {
         failAgentTurn({ error: `Agent "${agentId}" no longer exists.`, id: turn.id });
+        publishAgentTurnStateChange(agentId);
         clearActiveTurn(turn.id, agentId);
         return;
     }
@@ -221,6 +232,7 @@ async function drainAgent(agentId: string) {
     if (turn.kind === 'drain' && !delivery) {
         // Raced pulls or resets consumed the backlog: nothing to deliver.
         cancelAgentTurn({ id: turn.id });
+        publishAgentTurnStateChange(agentId);
         clearActiveTurn(turn.id, agentId);
         notifyTurnSettled(turn.id, { status: 'cancelled' });
         void drainAgent(agentId);
@@ -228,6 +240,7 @@ async function drainAgent(agentId: string) {
     }
     if (delivery && !spendChainBudget(session.id, delivery)) {
         cancelAgentTurn({ id: turn.id });
+        publishAgentTurnStateChange(agentId);
         clearActiveTurn(turn.id, agentId);
         notifyTurnSettled(turn.id, { status: 'cancelled' });
         log.warn('Agent drain suppressed by chain budget', { agentId, runId: turn.id });
@@ -257,6 +270,8 @@ async function drainAgent(agentId: string) {
         if (getAgentTurn(turn.id)?.status === 'running') {
             completeAgentTurn({ contextTokens: result.contextTokens, id: turn.id });
             settleTurnCursors(session.id, delivery, servedSnapshot);
+            clearInboxPiercesForRun({ runId: turn.id, sessionId: session.id });
+            publishAgentTurnStateChange(agentId);
             notifyTurnSettled(turn.id, { status: 'completed' });
         }
     } catch (error) {
@@ -264,6 +279,8 @@ async function drainAgent(agentId: string) {
         if (getAgentTurn(turn.id)?.status === 'running') {
             const errorMessage = formatTurnError(error);
             failAgentTurn({ error: errorMessage, id: turn.id });
+            resetInboxPiercesForRun({ runId: turn.id, sessionId: session.id });
+            publishAgentTurnStateChange(agentId);
             // No cursor advancement: a failed turn's envelopes were not
             // provably seen, so catch-up re-delivers from `seen` (I3).
             notifyTurnSettled(turn.id, { error: errorMessage, status: 'failed' });
@@ -275,7 +292,7 @@ async function drainAgent(agentId: string) {
         // wait for the next external wake, with the error on the turn record.
         if (
             getAgentTurn(turn.id)?.status === 'completed' &&
-            listPendingInboxTargets(session.id).length > 0
+            listPendingInboxTargets(ensureCurrentAgentSession({ agentId }).id).length > 0
         ) {
             scheduleAgentDrain(agentId);
         } else {
@@ -340,6 +357,10 @@ function clearActiveTurn(runId: string, agentId: string) {
     if (activeAgentRuns.get(agentId) === runId) {
         activeAgentRuns.delete(agentId);
     }
+}
+
+function publishAgentTurnStateChange(agentId: string) {
+    publishRuntimeEvent({ agentId, timestamp: new Date().toISOString(), type: 'agent.updated' });
 }
 
 function newRunId() {

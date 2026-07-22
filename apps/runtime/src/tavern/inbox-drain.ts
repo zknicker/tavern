@@ -57,13 +57,14 @@ export function collectPendingInboxRows(
             {
                 afterSequence: target.seenUpToSeq,
                 beforeSequence: target.deliveredUpToSeq + 1,
+                direction: 'asc',
                 limit: input.limit,
             },
             db
         ).filter((message) => isDeliverableRow(message, input.agentId, participantId));
         rows.push(...pending.map((message) => ({ chatId: target.chatId, message, pierce: false })));
     }
-    for (const pierce of listInboxPierces(input.sessionId, db)) {
+    for (const pierce of listInboxPierces(input.sessionId, { excludeServed: true }, db)) {
         const message = getMessage(pierce.messageId, db);
         if (message && isDeliverableRow(message, input.agentId, participantId)) {
             rows.push({ chatId: pierce.chatId, message, pierce: true });

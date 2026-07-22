@@ -1,12 +1,22 @@
-import { getChannelName, getDmPeerName, type ThreadTargetChat } from './thread/thread-target.ts';
+import {
+    getChannelName,
+    getDmPeerName,
+    type ThreadTargetChat,
+    threadPaneTitles,
+} from './thread/thread-target.ts';
 
 /**
- * The `grotto message send --target <t>` grammar for a chat itself, no
- * thread suffix (specs/grotto-cli.md): `#channel` or `dm:@peer`. Used to
+ * The `grotto message send --target <t>` grammar for a chat. Used to
  * scope an ephemeral `agent.composition` event to the chat it belongs to.
- * Null for chats the CLI target grammar cannot address (tasks, threads).
+ * Null for chats the CLI target grammar cannot address (tasks).
  */
-export function resolveChatCompositionTarget(chat: ThreadTargetChat): string | null {
+export function resolveChatCompositionTarget(
+    chat: ThreadTargetChat & { id: string }
+): string | null {
+    if (chat.id.startsWith('cht_thr_')) {
+        return threadPaneTitles(chat, `msg_${chat.id.slice('cht_thr_'.length)}`).target;
+    }
+
     if (chat.conversationKind === 'direct' || chat.scope === 'dm') {
         return `dm:@${getDmPeerName(chat)}`;
     }

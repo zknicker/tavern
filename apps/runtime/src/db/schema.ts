@@ -262,6 +262,7 @@ CREATE TABLE IF NOT EXISTS agent_inbox_pierces (
   session_id TEXT NOT NULL,
   chat_id    TEXT NOT NULL,
   message_id TEXT NOT NULL,
+  served_run_id TEXT,
   created_at TEXT NOT NULL,
   PRIMARY KEY (session_id, chat_id, message_id),
   FOREIGN KEY(chat_id) REFERENCES chats(id) ON DELETE CASCADE
@@ -758,6 +759,11 @@ export function ensureRuntimeSchema(db: Database): void {
         column: 'followed',
         definition: 'INTEGER NOT NULL DEFAULT 1 CHECK (followed IN (0, 1))',
         table: 'thread_follows',
+    });
+    ensureColumn(db, {
+        column: 'served_run_id',
+        definition: 'TEXT',
+        table: 'agent_inbox_pierces',
     });
     db.exec(
         'CREATE INDEX IF NOT EXISTS idx_chats_parent ON chats(parent_chat_id) WHERE parent_chat_id IS NOT NULL'

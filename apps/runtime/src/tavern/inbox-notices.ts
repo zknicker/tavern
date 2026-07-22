@@ -121,7 +121,7 @@ export function collectInboxTargetSummaries(
             pendingByChat.set(target.chatId, pending);
         }
     }
-    for (const pierce of listInboxPierces(session, db)) {
+    for (const pierce of listInboxPierces(session, { excludeServed: true }, db)) {
         const message = getMessage(pierce.messageId, db);
         if (!message || message.deleted_at) {
             continue;

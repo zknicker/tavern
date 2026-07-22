@@ -119,16 +119,61 @@ export function recordInboxPierce(
     );
 }
 
-export function listInboxPierces(sessionId: string, db: Database = getDb()) {
+export function listInboxPierces(
+    sessionId: string,
+    input: { excludeServed?: boolean } = {},
+    db: Database = getDb()
+) {
     const rows = db
         .prepare(
             `SELECT chat_id, message_id
              FROM agent_inbox_pierces
              WHERE session_id = $sessionId
+               AND ($excludeServed = 0 OR served_run_id IS NULL)
              ORDER BY created_at ASC, message_id ASC`
         )
-        .all(namedParams({ sessionId })) as Array<{ chat_id: string; message_id: string }>;
+        .all(namedParams({ excludeServed: input.excludeServed ? 1 : 0, sessionId })) as Array<{
+        chat_id: string;
+        message_id: string;
+    }>;
     return rows.map((row) => ({ chatId: row.chat_id, messageId: row.message_id }));
+}
+
+export function markInboxPiercesServed(
+    input: { messageIds: string[]; runId: string; sessionId: string },
+    db: Database = getDb()
+) {
+    const mark = db.prepare(
+        `UPDATE agent_inbox_pierces
+         SET served_run_id = $runId
+         WHERE session_id = $sessionId
+           AND message_id = $messageId
+           AND served_run_id IS NULL`
+    );
+    for (const messageId of input.messageIds) {
+        mark.run(namedParams({ messageId, runId: input.runId, sessionId: input.sessionId }));
+    }
+}
+
+export function resetInboxPiercesForRun(
+    input: { runId: string; sessionId: string },
+    db: Database = getDb()
+) {
+    db.prepare(
+        `UPDATE agent_inbox_pierces
+         SET served_run_id = NULL
+         WHERE session_id = $sessionId AND served_run_id = $runId`
+    ).run(namedParams(input));
+}
+
+export function clearInboxPiercesForRun(
+    input: { runId: string; sessionId: string },
+    db: Database = getDb()
+) {
+    db.prepare(
+        `DELETE FROM agent_inbox_pierces
+         WHERE session_id = $sessionId AND served_run_id = $runId`
+    ).run(namedParams(input));
 }
 
 export function clearInboxPierces(

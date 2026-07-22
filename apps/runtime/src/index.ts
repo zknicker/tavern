@@ -15,6 +15,7 @@ import { setBrowserStatusListener, stopBrowserService } from './plugins/browser/
 import { reconcileBrowserService } from './plugins/browser.ts';
 import { materializePluginSkills } from './plugins/materialize-skills.ts';
 import { recordSkillSource, sha256 } from './skills/store.ts';
+import { wakeAgent } from './tavern/agent-turn-runner.ts';
 import { installInboxDelivery } from './tavern/delivery-planner.ts';
 import { demoAgentId } from './tavern/development-chat-demo-types.ts';
 import { seedDevelopmentChatDemos } from './tavern/development-chat-demos.ts';
@@ -64,9 +65,12 @@ async function main(): Promise<void> {
         log.warn('Runtime Doctor failed during startup', { err });
     });
     log.info('Runtime DB ready', { path: dbPath });
-    const recoveredTurns = recoverInterruptedAgentTurns(db);
-    if (recoveredTurns > 0) {
-        log.info('Recovered interrupted agent turns', { count: recoveredTurns });
+    const recovery = recoverInterruptedAgentTurns(db);
+    if (recovery.recoveredTurnCount > 0) {
+        log.info('Recovered interrupted agent turns', { count: recovery.recoveredTurnCount });
+    }
+    for (const agentId of recovery.agentIdsToWake) {
+        wakeAgent(agentId);
     }
     const demoSeed = seedDevelopmentChatDemos({ db });
     if (demoSeed.seeded > 0) {
