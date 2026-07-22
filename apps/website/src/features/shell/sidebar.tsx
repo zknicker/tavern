@@ -5,7 +5,6 @@ import {
     SidebarMenu,
 } from '../../components/ui/sidebar.tsx';
 import { SettingsSidebarNav } from '../settings/layout/sidebar-nav.tsx';
-import { SidebarAgentActivityStrip } from './sidebar-agent-activity-strip.tsx';
 import { SidebarAuthItems } from './sidebar-auth-items.tsx';
 import { AppSidebarChatList } from './sidebar-chat-list.tsx';
 import { SidebarHomeNav } from './sidebar-home-nav.tsx';
@@ -39,7 +38,6 @@ export function AppSidebar({ isSettingsRoute, onBackToApp }: AppSidebarProps) {
             </SidebarContent>
             {isSettingsRoute ? null : (
                 <SidebarFooter>
-                    <SidebarAgentActivityStrip />
                     <SidebarMenu>
                         <SidebarUpdateMenuItem />
                         <SidebarAuthItems />

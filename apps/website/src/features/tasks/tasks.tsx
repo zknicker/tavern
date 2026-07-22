@@ -123,6 +123,7 @@ export function Tasks({ conversationId, embedded = false }: TasksProps = {}) {
             embedded={embedded}
             epics={epics}
             filteredTasks={filteredTasks}
+            hasTaskData={tasksQuery.data !== undefined}
             label={label}
             labels={labels}
             onAssigneeChange={setAssignee}

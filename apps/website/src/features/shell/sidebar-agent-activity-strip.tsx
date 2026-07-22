@@ -3,12 +3,15 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useResolvedThemeOptional } from '../../components/theme-provider.tsx';
 import { useAgentList } from '../../hooks/agents/use-agent-list.ts';
 import { useAgentPresence } from '../../hooks/agents/use-agent-presence.ts';
+import type { ChatTimelineState } from '../../hooks/chats/chat-timeline-state.ts';
 import { useChatList } from '../../hooks/chats/use-chat-list.ts';
+import { useChatRuntimeTimelineStates } from '../../hooks/chats/use-timeline-context.tsx';
 import { appRoutes } from '../../lib/app-routes.ts';
 import { cn } from '../../lib/utils.ts';
 import { resolveAgentInk } from '../agents/agent-color-presets.ts';
 import { AgentFace } from '../chats/agent-face.tsx';
 import { resolveDmPresenceLabel } from '../chats/agent-presence.tsx';
+import { formatActiveStatusText } from '../chats/chat-active-status-stack.tsx';
 import { buildChatList } from '../chats/chat-list-data.ts';
 import { resolveCurrentChatId, resolveNavigableActivityChatId } from './sidebar-chat-list-model.ts';
 
@@ -22,6 +25,7 @@ export function SidebarAgentActivityStrip() {
     const agents = useAgentList().data?.agents ?? [];
     const presence = useAgentPresence().data?.presence ?? [];
     const chats = buildChatList(useChatList().data);
+    const timelineStates = useChatRuntimeTimelineStates();
     const busyAgents = presence.filter((entry) => entry.state === 'busy');
     const agentById = React.useMemo(
         () => new Map(agents.map((agent) => [agent.id, agent])),
@@ -35,11 +39,17 @@ export function SidebarAgentActivityStrip() {
     const hiddenAgentCount = Math.max(0, busyAgents.length - maximumVisibleAgents);
 
     return (
-        <div className="-mx-2 border-sidebar-border border-t px-2 pt-2">
+        <div className="absolute bottom-12 left-1 z-40 w-56 rounded-lg border border-sidebar-border bg-sidebar p-1 shadow-lg">
             <div className="flex flex-col gap-0.5">
                 {busyAgents.slice(0, maximumVisibleAgents).map((entry) => {
                     const agent = agentById.get(entry.agentId);
-                    const label = resolveDmPresenceLabel(entry, currentChatId ?? '');
+                    const label = resolveAgentActivityLabel({
+                        agentId: entry.agentId,
+                        agentName: agent?.name ?? 'Agent',
+                        fallbackLabel:
+                            resolveDmPresenceLabel(entry, currentChatId ?? '') ?? 'Working…',
+                        timeline: entry.chatId ? timelineStates[entry.chatId] : undefined,
+                    });
                     const navigableChatId = resolveNavigableActivityChatId(entry.chatId, chats);
 
                     return (
@@ -87,4 +97,26 @@ export function SidebarAgentActivityStrip() {
             </div>
         </div>
     );
+}
+
+export function resolveAgentActivityLabel(input: {
+    agentId: string;
+    agentName: string;
+    fallbackLabel: string;
+    timeline?: ChatTimelineState;
+}) {
+    const activeReply = input.timeline?.activeReplies.find(
+        (reply) => reply.agentId === input.agentId
+    );
+
+    if (!(activeReply && input.timeline)) {
+        return input.fallbackLabel;
+    }
+
+    return formatActiveStatusText({
+        activeReply,
+        agentName: input.agentName,
+        queuedElsewhere: null,
+        rows: [...input.timeline.timeline, ...Object.values(input.timeline.turnEvidence).flat()],
+    });
 }

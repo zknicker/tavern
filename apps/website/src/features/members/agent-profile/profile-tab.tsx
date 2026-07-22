@@ -89,7 +89,7 @@ export function AgentProfileTab({
                 <SettingsRow title="Session" trailingWidth="wide">
                     {sessionQuery.isPending && sessionChat ? (
                         <SettingsValue>Loading session...</SettingsValue>
-                    ) : sessionQuery.isError ? (
+                    ) : sessionQuery.isError && !sessionQuery.data ? (
                         <SettingsValue className="text-destructive">
                             Could not load the session.
                         </SettingsValue>
