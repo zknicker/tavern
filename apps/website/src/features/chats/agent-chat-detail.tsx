@@ -17,7 +17,6 @@ import { ArchivedChatBar } from './archived-chat-bar.tsx';
 import { ArtifactPanelOpenProvider } from './artifact-panel-context.tsx';
 import { getActiveRunIds } from './chat-active-runs.ts';
 import { ChatAgentProfilePanel } from './chat-agent-profile-panel.tsx';
-import { ChatAgentProfilePanel } from './chat-agent-profile-panel.tsx';
 import { ChatArtifactPanel } from './chat-artifact-panel.tsx';
 import { getChatContextFullness } from './chat-context-fullness.ts';
 import { ChatDetailFooter } from './chat-detail-footer.tsx';
