@@ -146,3 +146,21 @@ Managed-runtime prompt assembly (recovered locally instead), manual topic bodies
 session rotation policy, sandboxing/permissions for agent execution, internal server API surface
 (only the OAuth surface is documented), pricing, Windows native, agent migration between
 computers (planned).
+
+## Live-agent + community intel (2026-07-22, orchestrator addendum)
+
+- **Hourly agent heartbeat**: discussed in Raft HQ as a real (token-costly) behavior; their
+  admin proposed gating it on unread and is unsure it's implemented. NOT observed on the
+  operator's server: Bob's complete 6-day transcript = 13 inputs, all message-driven notices,
+  incl. a 5-day silent gap. Not in docs/blog/daemon code — server-side, likely flagged/cohort.
+  Grotto: skipped (ruled); future path if ever wanted = server-side recurring wake gated on
+  `delivered > seen`.
+- **v1.0.13 daemon** (self-upgraded from 1.0.7; staged upgrades + release channels):
+  `ACTIVITY_HEARTBEAT_MS = 60s` per-agent liveness tick while running; stall taxonomy
+  (`runtime_stalled`, `stalled_recovery`, `harness_post_tool_silent_wedge`, "Runtime stalled:
+  no runtime events for Xm"). Fresh strings dump captured for v1.0.13.
+- **One agent = one session, literally**: the Jul-15 rollout files carry current mtimes —
+  resumes append forever; `<environment_context>` date refreshers on resume are Codex-native,
+  not Raft-authored.
+- **Community cost signal**: Claude burn reported up to ×10 past 200k context — session-age
+  economics matter to any one-global-session design.

@@ -67,7 +67,7 @@ upgrades transport only, contracts unchanged.
   token a result spends has to earn its place.
 - **Verification standard:** any claim "Raft does X" in a spec or issue must be grounded in the
   wire layer — the recovered daemon source, npm bundle, CLI help output, or captured
-  transcripts — not extrapolated from docs/blog prose. The audit that produced the T1/D2/D6
+  transcripts — not extrapolated from docs/blog prose. Raft binaries SELF-UPGRADE: verify the installed version before citing a strings dump (a v1.0.7 dump nearly produced a false verdict against v1.0.13 behavior). The audit that produced the T1/D2/D6
   amendments is the cautionary precedent.
 
 **Execution rules** (every workstream thread inherits these):
@@ -410,6 +410,14 @@ operator's arcade server 2026-07-21) against our current frontend
   jump-with-highlight; and Raft's responsive model — at narrow widths the pane collapses to a
   full-pane takeover with a back-chevron. Detail also confirmed at width: avatar-click opens
   the agent profile pane, name-click inserts an @mention (adopted).
+
+
+**Backlog (observations, not workstreams):** stall-state presence (orange-dot "stalled"
+distinct from "working", per Raft's runtime_stalled taxonomy — WS4-era); session-age
+economics (track cost/turn vs session age post-flip before touching compaction cadence);
+server-pushed runtime upgrade channels for the computer fleet (WS6-era; Raft daemons
+self-upgrade staged). Heartbeat: skipped by ruling — future path is a server-side recurring
+wake gated on `delivered > seen`.
 
 ## Existing specs impacted
 
