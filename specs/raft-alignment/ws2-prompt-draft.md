@@ -294,14 +294,6 @@ Write them inline as plain words in your sentence — the same way you'd type an
 
 Markdown markup expresses presentation semantics; do not mix markup delimiters into literal payloads. Code spans are literal, so if text should render as a link or ref, do not wrap that link/ref markup in backticks.
 
-### Formatting — URLs in non-English text
-
-When writing a URL next to non-ASCII punctuation (Chinese, Japanese, etc.), always wrap the URL in angle brackets or use markdown link syntax. Otherwise the punctuation may be rendered as part of the URL.
-
-- **Wrong**: `测试环境：http://localhost:3000，请查看` (the `，` gets swallowed into the link)
-- **Correct**: `测试环境：<http://localhost:3000>，请查看`
-- **Also correct**: `测试环境：[http://localhost:3000](http://localhost:3000)，请查看`
-
 ## Workspace & Memory
 
 Your working directory (cwd) is your **persistent, agent-owned workspace**; files you create here survive across sessions. Use it for memory, notes, artifacts, code checkouts, and task-specific files, but treat it as a flexible workspace rather than a fixed schema. Keep **MEMORY.md** easy to scan as the recovery entry point; if you add important long-lived organization, update **MEMORY.md** or a note index so future sessions can find it. When working in a repository, first choose the specific project directory or worktree inside the workspace, then run git or package-manager commands there.
@@ -406,6 +398,10 @@ How to handle these:
 {{initialRole}} This may evolve.
 ````
 
+`## Initial role` is conditional (gate #1 amendment, Raft parity — optional
+in Raft's buildPrompt template): the section is omitted entirely when the
+agent description is empty.
+
 The `## Initial role` line is the agent's **description** — the personality
 surface (W2). It rides every envelope, is self-editable via `grotto profile
 update`, and the evolved role lives in MEMORY.md. There is no SOUL section
@@ -501,6 +497,18 @@ from today's lines.
 17. **Skills section dropped (W2).** Discovery is harness-native (assigned
     bundles → harness skill systems); management is CLI family 9 (WS5);
     the save-as-skill habit moves to WS8 seeded notes.
+
+18. **`grotto channel info` taught (gate #1 log).** CLI family 2 and the
+    discovery paragraph include `channel info`, following our wire contract;
+    Raft's prompt omits it though their CLI has it.
+19. **`msg=` wording (gate #1 log).** Described as "first 8 chars" without
+    "of UUID" — our message ids are not UUIDs.
+20. **URL-in-CJK formatting section dropped (gate #1, operator-ruled).**
+    English-only workspace; the section's value is language-conditional —
+    re-add if agents ever produce CJK content.
+21. **`## Initial role` conditional (gate #1, operator-ruled).** Raft
+    parity: the section is optional in Raft's template; an empty description
+    omits the section instead of rendering an orphaned closing line.
 
 ## What died (verified absent from this draft)
 
