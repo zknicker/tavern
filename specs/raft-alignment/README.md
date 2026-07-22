@@ -480,7 +480,11 @@ deployment, so intermediate brokenness is not a constraint.
   WS6 blocker.
 - **WS5 — Tasks + reminders + affordances.** D8 tasks (with board view, priorities, labels),
   D4 reminders (+ script payloads; Automations page → Reminders view), reactions, profile
-  self-editing.
+  self-editing. **UI ports, not rewrites** (operator ruling): the polished pre-flip surfaces
+  are the parts shelf — tasks board/list/calendar/label/priority components repoint onto
+  task-messages; the automations page anatomy (filter sidebar, status rows, run-history
+  drawers ≈ `reminder log`, editor panes) becomes the Reminders operator view. Port source =
+  the last pre-flip main sha (pin it in the WS5 kickoff when the flip merges).
 - **WS6 — grotto.sh server split.** Move the chat surface to the hosted server + DB (drizzle
   migrations); grotto-runtime becomes the machine attachment (claim/attach, wake delivery,
   lifecycle); Clerk Owner/Admin/Member roles, invites; agent credential minting; later external
