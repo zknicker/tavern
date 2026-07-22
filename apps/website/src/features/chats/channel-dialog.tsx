@@ -103,7 +103,9 @@ function ChannelDialogForm({
     // 1-32 chars, no spaces. Renames change the handle, so both create and
     // rename enforce the same rule the runtime does.
     const handleIssue =
-        showDisplayName && trimmedDisplayName.length > 0 && !isValidChannelHandle(trimmedDisplayName)
+        showDisplayName &&
+        trimmedDisplayName.length > 0 &&
+        !isValidChannelHandle(trimmedDisplayName)
             ? 'Channel names are single handles: letters, numbers, dashes, or underscores — no spaces, up to 32 characters.'
             : null;
     const canSubmit =

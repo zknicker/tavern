@@ -66,7 +66,7 @@ function syncChatMetadataAgentIds(chatId: string, agentId: string, action: 'add'
         typeof metadata.tavern === 'object' && metadata.tavern !== null
             ? (metadata.tavern as Record<string, unknown>)
             : null;
-    if (!tavern || !Array.isArray(tavern.agentIds)) {
+    if (!(tavern && Array.isArray(tavern.agentIds))) {
         return;
     }
     const agentIds = new Set(tavern.agentIds.filter((id): id is string => typeof id === 'string'));
