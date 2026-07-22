@@ -3,9 +3,16 @@ import type { ChatLogOutput } from '../../lib/trpc.tsx';
 const sessionRailMaxGapMs = 5 * 60 * 1000;
 
 type ChatLogRow = NonNullable<ChatLogOutput>['rows'][number];
-type ChatLogPage = NonNullable<ChatLogOutput>;
-type ChatLogInput = Omit<ChatLogPage, 'activeReplies' | 'failedTurns' | 'settledRunIds'> &
-    Partial<Pick<ChatLogPage, 'activeReplies' | 'failedTurns' | 'settledRunIds'>>;
+type ServerChatLogPage = NonNullable<ChatLogOutput>;
+// The server-side chat log page no longer carries live turn state
+// (specs/chat-timeline.md); these callers are unreachable now that no
+// turn.* runtime event drives them, but keep the type shape they expect.
+type ChatLogPage = ServerChatLogPage & {
+    activeReplies: never[];
+    failedTurns: never[];
+    settledRunIds: never[];
+};
+type ChatLogInput = ServerChatLogPage;
 type ChatMessageRow = Extract<ChatLogRow, { kind: 'message' }>;
 
 const localTimelineMessageMetadataKey = '__tavernLocalTimelineMessage';
@@ -251,12 +258,12 @@ export function getLoggedTimelineMessageIds(
 
 function normalizeChatLog(log: ChatLogInput): ChatLogPage {
     return {
-        activeReplies: log.activeReplies ?? [],
-        failedTurns: log.failedTurns ?? [],
+        activeReplies: [],
+        failedTurns: [],
         limit: log.limit,
         nextBeforeSequence: log.nextBeforeSequence,
         rows: log.rows,
-        settledRunIds: log.settledRunIds ?? [],
+        settledRunIds: [],
         totalMessages: log.totalMessages,
     };
 }

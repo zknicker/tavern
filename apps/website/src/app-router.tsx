@@ -97,17 +97,6 @@ export function createAppRouter() {
                                             ),
                                         },
                                         {
-                                            // Dev hack page for home-brief header treatments.
-                                            path: 'design/brief',
-                                            lazy: lazyRoute(
-                                                () =>
-                                                    import(
-                                                        './routes/app/brief-variations-page.tsx'
-                                                    ),
-                                                'BriefVariationsPage'
-                                            ),
-                                        },
-                                        {
                                             path: 'stats',
                                             element: (
                                                 <Navigate replace to={appRoutes.settingsStats} />
@@ -153,53 +142,27 @@ export function createAppRouter() {
                                             ),
                                         },
                                         {
-                                            path: 'tasks/new',
-                                            lazy: lazyRoute(
-                                                () => import('./routes/app/task-new-page.tsx'),
-                                                'TaskNewPage'
-                                            ),
-                                        },
-                                        {
-                                            path: 'tasks/:taskId',
-                                            lazy: lazyRoute(
-                                                () => import('./routes/app/task-detail-page.tsx'),
-                                                'TaskDetailPage'
-                                            ),
+                                            path: 'tasks/*',
+                                            element: <Navigate replace to={appRoutes.tasks} />,
                                         },
                                         {
                                             path: 'reminders',
                                             lazy: lazyRoute(
-                                                () => import('./routes/app/cron-page.tsx'),
-                                                'CronPage'
+                                                () => import('./routes/app/reminders-page.tsx'),
+                                                'RemindersPage'
                                             ),
                                         },
                                         {
-                                            path: 'reminders/new',
-                                            lazy: lazyRoute(
-                                                () => import('./routes/app/cron-editor-page.tsx'),
-                                                'CronEditorPage'
-                                            ),
-                                        },
-                                        {
-                                            path: 'reminders/edit/:jobId',
-                                            lazy: lazyRoute(
-                                                () => import('./routes/app/cron-editor-page.tsx'),
-                                                'CronEditorPage'
-                                            ),
+                                            path: 'reminders/*',
+                                            element: <Navigate replace to={appRoutes.reminders} />,
                                         },
                                         {
                                             path: 'automations',
                                             element: <Navigate replace to={appRoutes.reminders} />,
                                         },
                                         {
-                                            path: 'automations/new',
-                                            element: (
-                                                <Navigate replace to={appRoutes.newReminder} />
-                                            ),
-                                        },
-                                        {
-                                            path: 'automations/edit/:jobId',
-                                            element: <LegacyAutomationRedirect />,
+                                            path: 'automations/*',
+                                            element: <Navigate replace to={appRoutes.reminders} />,
                                         },
                                         {
                                             path: 'members',
@@ -252,10 +215,7 @@ export function createAppRouter() {
                                         },
                                         {
                                             path: 'wiki',
-                                            lazy: lazyRoute(
-                                                () => import('./routes/app/wiki-page.tsx'),
-                                                'WikiPage'
-                                            ),
+                                            element: <Navigate replace to={appRoutes.activity} />,
                                         },
                                         {
                                             path: 'pulse',
@@ -432,36 +392,6 @@ export function createAppRouter() {
                                                     ),
                                                 },
                                                 {
-                                                    path: 'notes-md',
-                                                    lazy: lazyRoute(
-                                                        () =>
-                                                            import(
-                                                                './routes/app/settings-notes-md-page.tsx'
-                                                            ),
-                                                        'SettingsNotesMdPage'
-                                                    ),
-                                                },
-                                                {
-                                                    path: 'soul-md',
-                                                    lazy: lazyRoute(
-                                                        () =>
-                                                            import(
-                                                                './routes/app/settings-soul-md-page.tsx'
-                                                            ),
-                                                        'SettingsSoulMdPage'
-                                                    ),
-                                                },
-                                                {
-                                                    path: 'memories',
-                                                    lazy: lazyRoute(
-                                                        () =>
-                                                            import(
-                                                                './routes/app/settings-memories-page.tsx'
-                                                            ),
-                                                        'SettingsMemoriesPage'
-                                                    ),
-                                                },
-                                                {
                                                     path: 'tracking',
                                                     lazy: lazyRoute(
                                                         () =>
@@ -506,11 +436,6 @@ function LegacyAgentSettingsRedirect() {
     return <Navigate replace to={agentId ? appRoutes.memberAgent(agentId) : appRoutes.members} />;
 }
 
-function LegacyAutomationRedirect() {
-    const { jobId } = useParams();
-    return <Navigate replace to={jobId ? appRoutes.editReminder(jobId) : appRoutes.reminders} />;
-}
-
 function LegacyDashboardRedirect() {
     const location = useLocation();
     const targetPath = resolveLegacyDashboardPath(location.pathname);
@@ -534,12 +459,13 @@ function resolveLegacyDashboardPath(pathname: string) {
             return segments.length === 0 ? buildDefaultWorkspaceChatPath() : `/${suffix}`;
         case 'automations':
         case 'cron':
-            return resolveLegacyAutomationPath(segments);
+            return appRoutes.reminders;
         case 'events':
         case 'logs':
         case 'memories':
         case 'pulse':
         case 'workers':
+        case 'wiki':
             return appRoutes.activity;
         case 'jobs':
         case 'models':
@@ -554,23 +480,9 @@ function resolveLegacyDashboardPath(pathname: string) {
             return appRoutes.settingsStats;
         case 'workspace':
             return appRoutes.activity;
-        case 'wiki':
-            return appRoutes.wiki;
         default:
             return appRoutes.activity;
     }
-}
-
-function resolveLegacyAutomationPath(segments: string[]) {
-    if (segments[0] === 'new') {
-        return appRoutes.newReminder;
-    }
-
-    if (segments[0] === 'edit' && segments[1]) {
-        return `/reminders/edit/${segments.slice(1).join('/')}`;
-    }
-
-    return appRoutes.reminders;
 }
 
 function resolveLegacySettingsPath(segments: string[]) {
@@ -580,7 +492,13 @@ function resolveLegacySettingsPath(segments: string[]) {
         return appRoutes.settings;
     }
 
-    if (section === 'connections' || section === 'tracking') {
+    if (
+        section === 'connections' ||
+        section === 'tracking' ||
+        section === 'notes-md' ||
+        section === 'soul-md' ||
+        section === 'memories'
+    ) {
         return appRoutes.settingsAgentRuntime;
     }
 

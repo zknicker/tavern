@@ -5,7 +5,6 @@ import { Icon } from '../../components/ui/icon.tsx';
 import type { ChatActiveReply, ChatTimelineState } from '../../hooks/chats/chat-timeline-state.ts';
 import type { AgentListOutput } from '../../lib/trpc.tsx';
 import { cn } from '../../lib/utils.ts';
-import { useAgentPresenceEntry } from './agent-presence.tsx';
 import { getAgentStatusLabel, resolveAgentStatusExpression } from './agent-status-expression.ts';
 import { AgentStatusIndicator } from './agent-status-indicator.tsx';
 import {
@@ -198,25 +197,16 @@ function ChatActiveStatusRow({
     rows: TranscriptRow[];
 }) {
     const agent = agents.find((entry) => entry.id === reply.agentId) ?? null;
-    const presence = useAgentPresenceEntry(reply.agentId);
     const turnEntry = React.useMemo(
         () => findActiveTurnEntry({ activeReplies, rows, runId: reply.runId }),
         [activeReplies, reply.runId, rows]
     );
-    // The turn here is waiting while the agent finishes a turn anchored in
-    // another chat: say so instead of pretending to think about this one.
-    const queuedElsewhere =
-        (reply.text ?? '').trim().length === 0 &&
-        presence?.state === 'busy' &&
-        presence.chatId !== null &&
-        chatId !== undefined &&
-        presence.chatId !== chatId
-            ? {
-                  chatTitle: presence.chatTitle,
-                  // Beyond the anchoring turn and this chat's own turn.
-                  others: Math.max(presence.pendingTurns - 2, 0),
-              }
-            : null;
+    // Presence carries no chat anchor anymore (specs/presence.md), so this
+    // can no longer tell "queued behind another chat's turn" apart from
+    // "thinking about this one" — it never fires until a chat-scoped signal
+    // exists again.
+    void chatId;
+    const queuedElsewhere: { chatTitle: string | null; others: number } | null = null;
 
     return (
         <ChatActiveStatusItem

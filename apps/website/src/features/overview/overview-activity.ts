@@ -22,15 +22,7 @@ const dayMs = 24 * 60 * 60 * 1000;
 
 // The workspace feed shows what agents *did*; inbound user messages are
 // timeline noise here.
-const feedKinds = new Set<ActivityEntry['kind']>([
-    'automation_fired',
-    'declined',
-    'failed',
-    'new_session',
-    'replied',
-    'stopped',
-    'task_dispatched',
-]);
+const feedKinds = new Set<ActivityEntry['kind']>(['completed', 'failed', 'new_session', 'stopped']);
 
 export function buildOverviewActivityFeed(
     agents: Array<{ agentId: string; entries: ActivityEntry[] }>,
@@ -74,36 +66,21 @@ export function buildOverviewActivityFeed(
     return { items: items.slice(0, feedLimit), seriesByAgentId };
 }
 
-/** The clause between the agent chip and the chat chip: what the agent did,
-    with `showsChat` telling the row whether to append "in <chat chip>". */
-export function describeActivityEntry(entry: ActivityEntry): {
-    clause: string;
-    showsChat: boolean;
-} {
+/** The clause next to the agent chip: what the agent did. Entries carry no
+    chat anchor (specs/presence.md), so the row never references a chat. */
+export function describeActivityEntry(entry: ActivityEntry): string {
     switch (entry.kind) {
-        case 'automation_fired':
-            return {
-                clause: entry.detail ? `ran the ${entry.detail} automation` : 'ran an automation',
-                showsChat: true,
-            };
-        case 'declined':
-            return { clause: 'held back a reply', showsChat: true };
+        case 'completed':
+            return entry.detail ? `replied — ${entry.detail}` : 'replied';
         case 'failed':
-            return { clause: 'hit an error', showsChat: true };
+            return 'hit an error';
         case 'message_received':
-            return { clause: 'received a message', showsChat: true };
+            return 'received a message';
         case 'new_session':
-            return { clause: 'started a fresh session', showsChat: false };
-        case 'replied':
-            return { clause: 'replied', showsChat: true };
+            return 'started a fresh session';
         case 'stopped':
-            return { clause: 'was stopped', showsChat: true };
-        case 'task_dispatched':
-            return {
-                clause: entry.detail ? `picked up “${entry.detail}”` : 'picked up a task',
-                showsChat: false,
-            };
+            return 'was stopped';
         default:
-            return { clause: 'did something', showsChat: false };
+            return 'did something';
     }
 }

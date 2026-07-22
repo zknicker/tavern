@@ -1,4 +1,3 @@
-import { fileURLToPath } from 'node:url';
 import type { Page } from '@playwright/test';
 import { tavernAgentDmRoute } from '../support/agent-dm.ts';
 import { expect, test } from '../support/test.ts';
@@ -60,31 +59,6 @@ test('routes the Tavern agent DM through its current session', async ({ page }) 
 
     await expect(transcriptParagraph(page, expectedReply)).toBeVisible({ timeout: 60_000 });
     await expect(page.getByLabel('Agent is thinking')).toHaveCount(0);
-});
-
-test('stores Tavern generated AGENTS.md without runtime bootstrap companion files', async () => {
-    test.setTimeout(120_000);
-
-    const runtimeUrl = requireRuntimeUrl();
-
-    await saveWorkspaceInstructions({
-        agentName: 'main',
-        runtimeUrl,
-        workspaceDir: getManagedWorkspaceDir(),
-    });
-
-    const fullText = await getRuntimeInstructions(runtimeUrl);
-
-    expect(fullText).toContain('# Grotto Agent Instructions');
-    expect(fullText).toContain('Memory and Wiki are the durable knowledge you can carry forward.');
-    expect(fullText).toContain("Wiki is Grotto's shared, browsable Markdown knowledge base");
-    expect(fullText).toContain('run `wiki_search` before concluding you lack context');
-    expect(fullText).not.toContain('# SOUL.md - Who You Are');
-    expect(fullText).not.toContain('# TOOLS.md - Local Notes');
-    expect(fullText).not.toContain('# IDENTITY.md - Who Am I?');
-    expect(fullText).not.toContain('Missing file: SOUL.md');
-    expect(fullText).not.toContain('Missing file: TOOLS.md');
-    expect(fullText).not.toContain('Missing file: IDENTITY.md');
 });
 
 async function waitForRealChatRoute(page: Page) {
@@ -161,69 +135,4 @@ function exactTextRegex(text: string) {
 
 function escapeRegExp(text: string) {
     return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
-
-function asRecord(value: unknown) {
-    return typeof value === 'object' && value !== null ? (value as Record<string, unknown>) : {};
-}
-
-function getManagedWorkspaceDir() {
-    const runId = process.env.TAVERN_E2E_RUN_ID ?? 'default';
-    return fileURLToPath(
-        new URL(`../../../../.context/e2e/${runId}/tavern-runtime/agent/workspace`, import.meta.url)
-    );
-}
-
-function requireRuntimeUrl() {
-    const runtimeUrl = process.env.TAVERN_RUNTIME_URL;
-
-    if (!runtimeUrl) {
-        throw new Error('TAVERN_RUNTIME_URL is required for prompt inspection e2e coverage.');
-    }
-
-    return runtimeUrl;
-}
-
-async function saveWorkspaceInstructions(input: {
-    agentName: string;
-    runtimeUrl: string;
-    workspaceDir: string;
-}) {
-    await putRuntimeJson(`${input.runtimeUrl}/workspace/agents/main/instructions`, {
-        agentName: input.agentName,
-        workspaceDir: input.workspaceDir,
-    });
-}
-
-function runtimeAuthHeaders(): HeadersInit {
-    const token = process.env.TAVERN_RUNTIME_TOKEN?.trim();
-    return token ? { authorization: `Bearer ${token}` } : {};
-}
-
-async function putRuntimeJson(url: string, body: Record<string, unknown>) {
-    const response = await fetch(url, {
-        body: JSON.stringify(body),
-        headers: { 'content-type': 'application/json', ...runtimeAuthHeaders() },
-        method: 'PUT',
-    });
-
-    if (!response.ok) {
-        throw new Error(`Runtime request failed (${response.status}): ${await response.text()}`);
-    }
-}
-
-async function getRuntimeInstructions(runtimeUrl: string) {
-    const response = await fetch(`${runtimeUrl}/workspace/agents/main/instructions`, {
-        headers: runtimeAuthHeaders(),
-    });
-    if (!response.ok) {
-        throw new Error(`Runtime request failed (${response.status}): ${await response.text()}`);
-    }
-
-    const body = asRecord(await response.json());
-    const content = body.content;
-    if (typeof content !== 'string') {
-        throw new Error('Expected Runtime instructions response content.');
-    }
-    return content;
 }

@@ -16,12 +16,9 @@ const turn = {
 
 function emptyLog(): ChatLogOutput {
     return {
-        activeReplies: [],
-        failedTurns: [],
         limit: 100,
         nextBeforeSequence: null,
         rows: [],
-        settledRunIds: [],
         totalMessages: 0,
     };
 }

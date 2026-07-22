@@ -21,10 +21,6 @@ export function getArtifactPanelTargetKey(target: TavernResourceTarget) {
 }
 
 export function getArtifactPanelTargetLabel(target: TavernResourceTarget) {
-    if (target.kind === 'wikiDirectory') {
-        return target.path ? (target.path.split('/').filter(Boolean).at(-1) ?? 'Wiki') : 'Wiki';
-    }
-
     // The workspace is one tab; it reads "Workspace" whenever no file is open.
     if (target.kind === 'workspaceDirectory' || target.kind === 'workspaceRoot') {
         return 'Workspace';

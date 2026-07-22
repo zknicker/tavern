@@ -36,16 +36,9 @@ export function patchTimelineProgress(
 
 function timelineLog(state: ChatTimelineState): ChatLogOutput {
     return {
-        activeReplies: state.activeReplies.map((reply) => ({
-            ...reply,
-            isThinking: reply.isThinking ?? true,
-            text: reply.text ?? '',
-        })),
-        failedTurns: state.failedTurns,
         limit: Math.max(state.timeline.length + 1, 100),
         nextBeforeSequence: null,
         rows: state.timeline,
-        settledRunIds: [],
         totalMessages: state.totalMessages,
     };
 }

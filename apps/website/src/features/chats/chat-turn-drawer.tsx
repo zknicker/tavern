@@ -244,48 +244,25 @@ function mergeTurnItems(evidenceItems: TranscriptItem[], entryItems: readonly Tr
     });
 }
 
-// Wiki recall matches always show when the turn had them; the raw prompt
-// blob is dev-mode-only runtime evidence.
+// The composed instructions and per-turn prompt are dev-mode-only runtime
+// evidence (specs/chat-timeline.md); the turn's Wiki recall is gone with
+// the Wiki retirement.
 function TurnPromptEvidence({ runId }: { runId: string | null }) {
     const { devMode } = useDevMode();
     const evidence = useChatTurnPrompt(runId);
-    const recall = evidence.data?.recall ?? [];
 
-    if (!evidence.data || (recall.length === 0 && !devMode)) {
+    if (!(evidence.data && devMode)) {
         return null;
     }
 
     return (
         <div className="flex min-w-0 flex-col gap-3">
-            {recall.length > 0 ? (
-                <section className="grid gap-1.5">
-                    <h4 className="font-medium text-muted-foreground text-xs">Recalled Wiki</h4>
-                    <ul className="grid gap-1 rounded-md bg-muted px-3 py-2">
-                        {recall.map((hit) => (
-                            <li
-                                className="flex min-w-0 items-baseline gap-2 text-sm"
-                                key={hit.path}
-                            >
-                                <span className="truncate font-medium">{hit.title}</span>
-                                <span className="truncate font-mono text-meta text-muted-foreground">
-                                    {hit.path}
-                                </span>
-                                <span className="ml-auto shrink-0 font-mono text-meta text-muted-foreground tabular-nums">
-                                    {hit.score.toFixed(2)}
-                                </span>
-                            </li>
-                        ))}
-                    </ul>
-                </section>
-            ) : null}
-            {devMode ? (
-                <section className="grid gap-1.5">
-                    <h4 className="font-medium text-muted-foreground text-xs">Prompt (dev mode)</h4>
-                    <pre className="max-h-96 overflow-auto whitespace-pre-wrap rounded-md bg-muted px-3 py-2 font-mono text-muted-foreground text-xs">
-                        {`${evidence.data.instructions}\n\n--- turn prompt ---\n\n${evidence.data.prompt}`}
-                    </pre>
-                </section>
-            ) : null}
+            <section className="grid gap-1.5">
+                <h4 className="font-medium text-muted-foreground text-xs">Prompt (dev mode)</h4>
+                <pre className="max-h-96 overflow-auto whitespace-pre-wrap rounded-md bg-muted px-3 py-2 font-mono text-muted-foreground text-xs">
+                    {`${evidence.data.instructions}\n\n--- turn prompt ---\n\n${evidence.data.prompt}`}
+                </pre>
+            </section>
         </div>
     );
 }

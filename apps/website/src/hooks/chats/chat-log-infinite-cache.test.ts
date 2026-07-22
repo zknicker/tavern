@@ -81,12 +81,9 @@ test('single-page live progress keeps loaded history instead of trimming', () =>
 
 function chatLogPage(nextBeforeSequence: number | null, ids: string[]): ChatLogPage {
     return {
-        activeReplies: [],
-        failedTurns: [],
         limit: 2,
         nextBeforeSequence,
         rows: ids.map(messageRow),
-        settledRunIds: [],
         totalMessages: 4,
     };
 }

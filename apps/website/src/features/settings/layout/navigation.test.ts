@@ -4,7 +4,7 @@ import { settingsNavItems } from './navigation.ts';
 
 test('settings navigation uses current agent configuration vocabulary', () => {
     const labels: string[] = settingsNavItems.map((item) => item.label);
-    assert.ok(labels.includes('Memory'));
+    assert.ok(!labels.includes('Memory'));
     assert.ok(!labels.includes('Members'));
     assert.ok(!labels.includes('Tools'));
     assert.ok(!labels.includes('Channels'));

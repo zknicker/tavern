@@ -22,9 +22,18 @@ import type {
     ChatTurnFailure,
 } from './chat-timeline-types.ts';
 
-type ChatLogPage = NonNullable<ChatLogOutput>;
-type ChatLogInput = Omit<ChatLogPage, 'activeReplies' | 'failedTurns' | 'settledRunIds'> &
-    Partial<Pick<ChatLogPage, 'activeReplies' | 'failedTurns' | 'settledRunIds'>>;
+// The server-side chat log page no longer carries live turn state
+// (specs/chat-timeline.md): no turn.* runtime events reach the app, so
+// active replies, failed turns, and settled run ids are always empty here.
+// The fields stay on ChatTimelineState because agent-level presence/stop UX
+// still reads them; only the server-fed inputs are gone.
+type ServerChatLogPage = NonNullable<ChatLogOutput>;
+type ChatLogPage = ServerChatLogPage & {
+    activeReplies: ChatActiveReply[];
+    failedTurns: ChatTurnFailure[];
+    settledRunIds: readonly string[];
+};
+type ChatLogInput = ServerChatLogPage;
 
 export function emptyTimelineState(): ChatTimelineState {
     return {
@@ -205,12 +214,12 @@ function mergeSnapshotFailures(failures: ChatTurnFailure[], snapshot: ChatLogPag
 
 function normalizeChatLog(log: ChatLogInput): ChatLogPage {
     return {
-        activeReplies: log.activeReplies ?? [],
-        failedTurns: log.failedTurns ?? [],
+        activeReplies: [],
+        failedTurns: [],
         limit: log.limit,
         nextBeforeSequence: log.nextBeforeSequence,
         rows: log.rows,
-        settledRunIds: log.settledRunIds ?? [],
+        settledRunIds: [],
         totalMessages: log.totalMessages,
     };
 }

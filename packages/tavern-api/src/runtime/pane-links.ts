@@ -70,8 +70,6 @@ export function parseChatPaneTargetLink(href: string): ChatPaneTarget | null {
     }
 
     switch (url.hostname) {
-        case 'wiki':
-            return path ? { kind: 'wikiPage', path } : { kind: 'wikiDirectory', path: '' };
         case 'workspace':
             return path
                 ? { kind: 'workspaceFile', path }
@@ -82,8 +80,7 @@ export function parseChatPaneTargetLink(href: string): ChatPaneTarget | null {
 }
 
 export function formatChatPaneTargetLink(target: ChatPaneTarget) {
-    const host =
-        target.kind === 'wikiPage' || target.kind === 'wikiDirectory' ? 'wiki' : 'workspace';
+    const host = 'workspace';
     const path = target.path
         .split('/')
         .filter(Boolean)

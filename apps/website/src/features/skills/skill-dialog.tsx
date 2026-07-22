@@ -1,5 +1,6 @@
 import { CubeIcon, FileEmpty02Icon } from '@hugeicons-pro/core-stroke-rounded';
 import type * as React from 'react';
+import { WikiMarkdownViewer } from '../../components/markdown/markdown-viewer.tsx';
 import {
     Dialog,
     DialogContent,
@@ -17,7 +18,6 @@ import { useSkillHubPreview } from '../../hooks/skills/use-skill-hub-preview.ts'
 import { useSkillHubScan } from '../../hooks/skills/use-skill-hub-scan.ts';
 import { useSkillHubUninstall } from '../../hooks/skills/use-skill-hub-uninstall.ts';
 import { cn } from '../../lib/utils.ts';
-import { WikiMarkdownViewer } from '../wiki/wiki-markdown-viewer.tsx';
 import { SkillScanBadge, SkillTrustBadge } from './skill-hub-badges.tsx';
 import { formatSkillName } from './skill-name-format.ts';
 

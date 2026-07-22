@@ -1,18 +1,13 @@
 import type { IconSvgElement } from '@hugeicons/react';
 import { ComputerIcon, Moon02Icon, Sun01Icon } from '@hugeicons-pro/core-duotone-rounded';
 import { Tick02Icon } from '@hugeicons-pro/core-stroke-rounded';
-import { useNavigate } from 'react-router-dom';
 import { type ThemePreference, useTheme } from '../../../components/theme-provider.tsx';
 import { Icon } from '../../../components/ui/icon.tsx';
-import { Button } from '../../../components/ui/primitives/button.tsx';
 import {
-    SettingsGroup,
     SettingsPage,
     SettingsPageHeader,
-    SettingsRow,
     SettingsSection,
 } from '../../../components/ui/settings-row.tsx';
-import { appRoutes } from '../../../lib/app-routes.ts';
 import { cn } from '../../../lib/utils.ts';
 
 const themeOptions: Array<{
@@ -28,7 +23,6 @@ const themeOptions: Array<{
 
 export function AppearanceSettings() {
     const { setTheme, theme } = useTheme();
-    const navigate = useNavigate();
 
     return (
         <SettingsPage>
@@ -103,25 +97,6 @@ export function AppearanceSettings() {
                         );
                     })}
                 </div>
-            </SettingsSection>
-
-            <SettingsSection title="Design Lab">
-                <SettingsGroup>
-                    <SettingsRow
-                        description="Iterate on the home brief's chips, wordmark, and sentence patterns."
-                        title="Brief variations"
-                    >
-                        <div className="flex justify-start md:justify-end">
-                            <Button
-                                onClick={() => navigate(appRoutes.designBrief)}
-                                size="sm"
-                                variant="outline"
-                            >
-                                Open
-                            </Button>
-                        </div>
-                    </SettingsRow>
-                </SettingsGroup>
             </SettingsSection>
         </SettingsPage>
     );

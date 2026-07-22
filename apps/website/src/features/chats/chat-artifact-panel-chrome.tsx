@@ -5,7 +5,6 @@ import {
     File01Icon,
     MoreHorizontalIcon,
 } from '@hugeicons-pro/core-stroke-rounded';
-import { useNavigate } from 'react-router-dom';
 import { CloseableTab } from '../../components/ui/closeable-tab.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import {
@@ -17,7 +16,6 @@ import {
 } from '../../components/ui/menu.tsx';
 import { Button } from '../../components/ui/primitives/button.tsx';
 import { ScrollArea } from '../../components/ui/scroll-area.tsx';
-import { appRoutes } from '../../lib/app-routes.ts';
 import { cn } from '../../lib/utils.ts';
 import { ArtifactPanelSourceMenu } from './chat-artifact-panel-source-menu.tsx';
 import {
@@ -96,9 +94,6 @@ export function ArtifactPanelChrome({
 }
 
 function ArtifactOptionsMenu({ target }: { target: TavernResourceTarget }) {
-    const navigate = useNavigate();
-    const openHref = getArtifactPanelOpenHref(target);
-
     return (
         <Menu>
             <MenuTrigger
@@ -108,13 +103,6 @@ function ArtifactOptionsMenu({ target }: { target: TavernResourceTarget }) {
                 <Icon className="size-3.5" icon={MoreHorizontalIcon} />
             </MenuTrigger>
             <MenuPopup align="end" className="w-44">
-                <MenuItem
-                    disabled={openHref === null}
-                    onClick={() => openHref && navigate(openHref)}
-                >
-                    <Icon icon={File01Icon} />
-                    Open source
-                </MenuItem>
                 <MenuItem onClick={() => void copyArtifactText(formatTavernResourceLink(target))}>
                     <Icon icon={Copy01Icon} />
                     Copy link
@@ -160,14 +148,6 @@ function ArtifactPanelTab({
             </TabsPrimitive.Tab>
         </CloseableTab>
     );
-}
-
-function getArtifactPanelOpenHref(target: TavernResourceTarget) {
-    if (target.kind === 'wikiPage' || target.kind === 'wikiDirectory') {
-        return `${appRoutes.wiki}?path=${encodeURIComponent(target.path)}`;
-    }
-
-    return null;
 }
 
 async function copyArtifactText(value: string) {

@@ -7,7 +7,6 @@ import { SearchInput } from '../../components/ui/primitives/search-input.tsx';
 import { Spinner } from '../../components/ui/spinner.tsx';
 import { useAgentList } from '../../hooks/agents/use-agent-list.ts';
 import { useChatList } from '../../hooks/chats/use-chat-list.ts';
-import { useTaskList } from '../../hooks/tasks/use-task-list.ts';
 import { appRoutes } from '../../lib/app-routes.ts';
 import { isClerkEnabled } from '../../lib/clerk.tsx';
 import { trpc } from '../../lib/trpc.tsx';
@@ -15,14 +14,12 @@ import { AgentOptionLabel } from '../agents/agent-option-label.tsx';
 import { buildChatList } from '../chats/chat-list-data.ts';
 import { getInitials, getUserDisplayName } from '../members/human-member-list.tsx';
 import { buildSidebarChatGroups, getSidebarChatTitle } from '../shell/sidebar-chat-list-model.ts';
-import { formatTaskNumber } from '../tasks/task-presentation.ts';
 import { SearchChatIcon } from './search-chat-icon.tsx';
 
 export function Search() {
     const [query, setQuery] = React.useState('');
     const chatsQuery = useChatList();
     const agentsQuery = useAgentList();
-    const tasksQuery = useTaskList();
     const normalizedQuery = query.trim().toLowerCase();
     const chatGroups = buildSidebarChatGroups(buildChatList(chatsQuery.data));
     const channels = chatGroups.channels.filter((chat) =>
@@ -34,9 +31,6 @@ export function Search() {
     const agents = (agentsQuery.data?.agents ?? []).filter((agent) =>
         `${agent.name}\n${agent.bio ?? ''}`.toLowerCase().includes(normalizedQuery)
     );
-    const tasks = (tasksQuery.data?.tasks ?? []).filter((task) =>
-        `${formatTaskNumber(task)}\n${task.title}`.toLowerCase().includes(normalizedQuery)
-    );
     const membersQuery = trpc.identity.members.useQuery(undefined, { enabled: isClerkEnabled });
     const people = (membersQuery.data?.members ?? [])
         .map((member) => member.user)
@@ -46,19 +40,11 @@ export function Search() {
                 .includes(normalizedQuery)
         );
     const hasResults =
-        channels.length > 0 ||
-        directMessages.length > 0 ||
-        agents.length > 0 ||
-        people.length > 0 ||
-        tasks.length > 0;
+        channels.length > 0 || directMessages.length > 0 || agents.length > 0 || people.length > 0;
     // "No results" is only honest once every enabled source has settled.
     const sourcesPending =
-        chatsQuery.isPending ||
-        agentsQuery.isPending ||
-        tasksQuery.isPending ||
-        (isClerkEnabled && membersQuery.isPending);
-    const sourcesFailed =
-        chatsQuery.isError || agentsQuery.isError || tasksQuery.isError || membersQuery.isError;
+        chatsQuery.isPending || agentsQuery.isPending || (isClerkEnabled && membersQuery.isPending);
+    const sourcesFailed = chatsQuery.isError || agentsQuery.isError || membersQuery.isError;
 
     return (
         <main className="min-h-0 flex-1 overflow-y-auto px-8 py-12">
@@ -124,16 +110,6 @@ export function Search() {
                                 );
                             })}
                         </SearchGroup>
-                        <SearchGroup label="Tasks">
-                            {tasks.map((task) => (
-                                <SearchRow key={task.id} to={appRoutes.task(task.id)}>
-                                    <span className="w-14 shrink-0 font-mono text-meta text-muted-foreground">
-                                        {formatTaskNumber(task)}
-                                    </span>
-                                    <span className="min-w-0 truncate">{task.title}</span>
-                                </SearchRow>
-                            ))}
-                        </SearchGroup>
                     </div>
                 ) : sourcesPending ? (
                     <div className="flex justify-center py-24">
@@ -197,7 +173,7 @@ function SearchEmpty() {
             <Icon aria-hidden="true" className="size-8 text-muted-foreground" icon={Search01Icon} />
             <h1 className="mt-4 font-semibold text-sm">Search everything</h1>
             <p className="mt-1 text-muted-foreground text-sm">
-                Search channels, DMs, people, agents, and tasks.
+                Search channels, DMs, people, and agents.
             </p>
         </div>
     );

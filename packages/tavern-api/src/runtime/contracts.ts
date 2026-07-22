@@ -2690,8 +2690,6 @@ export const agentRuntimeTurnProgressStepSchema = z.object({
 // Chat pane state: the Runtime-owned tab set of a chat's artifact pane.
 // Targets mirror the app's grotto:// link scheme; identity is kind + path.
 export const chatPaneTargetSchema = z.discriminatedUnion('kind', [
-    z.object({ kind: z.literal('wikiDirectory'), path: z.string() }),
-    z.object({ kind: z.literal('wikiPage'), path: z.string().trim().min(1) }),
     z.object({ kind: z.literal('workspaceDirectory'), path: z.string() }),
     z.object({ kind: z.literal('workspaceFile'), path: z.string().trim().min(1) }),
     z.object({ kind: z.literal('workspaceRoot'), path: z.literal('') }),

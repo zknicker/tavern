@@ -4,7 +4,6 @@ import {
     AiBrain01Icon,
     ChatIcon,
     ComputerTerminal01Icon,
-    Database02Icon,
     HourglassIcon,
     PaintBrush03Icon,
     PuzzleIcon,
@@ -58,12 +57,6 @@ export const staticSettingsNavItems = [
         to: appRoutes.settingsModels,
     },
     {
-        icon: Database02Icon,
-        id: 'memories',
-        label: 'Memory',
-        to: appRoutes.settingsMemories,
-    },
-    {
         icon: ZapIcon,
         id: 'skills',
         label: 'Skills',
@@ -99,7 +92,6 @@ export const settingsNavSections = [
             'profile',
             'updates',
             'models',
-            'memories',
             'skills',
             'plugins',
         ],

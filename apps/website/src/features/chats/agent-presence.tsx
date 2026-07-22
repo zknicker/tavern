@@ -1,12 +1,8 @@
-import { Clock } from '@hugeicons/core-free-icons';
-import { AnimatePresence } from 'framer-motion';
-import { Icon } from '../../components/ui/icon.tsx';
 import { useAgentPresence } from '../../hooks/agents/use-agent-presence.ts';
 import type { ChatActiveReply } from '../../hooks/chats/chat-timeline-types.ts';
 import type { AgentPresenceOutput } from '../../lib/trpc.tsx';
 import { cn } from '../../lib/utils.ts';
 import { type ChatListItem, getChatAgentId } from './chat-list-data.ts';
-import { StatusRiseRow } from './chat-status-motion.tsx';
 
 type AgentPresenceEntry = AgentPresenceOutput['presence'][number];
 
@@ -32,91 +28,24 @@ export function AgentPresenceBadge({ chat }: { chat: ChatListItem }) {
 
 /**
  * Composer hint: a seated agent is busy with a turn anchored in another
- * chat, so a send here queues. Hidden the moment a turn runs in this chat —
- * the active status stack takes over.
+ * chat, so a send here queues.
+ *
+ * Presence carries no chat anchor (specs/presence.md): busy-here and
+ * busy-elsewhere are no longer distinguishable server-side, so this hint is
+ * inert until a chat-scoped signal exists again. Kept as a no-op component
+ * (rather than deleted) so its call site doesn't need to branch on a
+ * workstream that hasn't landed yet.
  */
-export function AgentBusyElsewhereHint({
-    activeReplies,
-    boundAgentIds,
-    chat,
-}: {
+export function AgentBusyElsewhereHint(_props: {
     activeReplies: readonly ChatActiveReply[];
     boundAgentIds: readonly string[];
     chat: ChatListItem;
 }) {
-    const { data } = useAgentPresence();
-    const busyElsewhere = resolveBusyElsewhere({
-        boundAgentIds,
-        chatId: chat.id,
-        presence: data?.presence ?? [],
-    });
-    const agentName = busyElsewhere
-        ? (chat.participants.find((participant) => participant.actorId === busyElsewhere.agentId)
-              ?.name ?? 'The agent')
-        : null;
-
-    const visible =
-        busyElsewhere !== null &&
-        !activeReplies.some((reply) => reply.agentId === busyElsewhere.agentId);
-
-    // Mirror the composer's full-width gutter so the hint sits flush with
-    // the prompt bar's left edge. The gutters stay static (zero height while
-    // hidden); only the content row rises, so its scale anchors at the
-    // column's left edge instead of lurching from the viewport edge.
-    return (
-        <div className="px-5" data-slot="agent-busy-elsewhere">
-            <div className="w-full">
-                <AnimatePresence initial={false}>
-                    {visible ? (
-                        <StatusRiseRow key={busyElsewhere.agentId}>
-                            <div className="flex items-center gap-1.5 px-1 pb-1.5 text-muted-foreground text-xs">
-                                <Icon
-                                    aria-hidden="true"
-                                    className="size-3.5 shrink-0"
-                                    icon={Clock}
-                                />
-                                <span className="min-w-0 truncate">
-                                    {agentName} is busy{formatWhere(busyElsewhere)} — your message
-                                    is queued and answers next
-                                </span>
-                            </div>
-                        </StatusRiseRow>
-                    ) : null}
-                </AnimatePresence>
-            </div>
-        </div>
-    );
+    return null;
 }
 
-export function resolveDmPresenceLabel(presence: AgentPresenceEntry, chatId: string) {
-    if (presence.state !== 'busy') {
-        return null;
-    }
-    if (presence.chatId === chatId) {
-        return 'Replying…';
-    }
-    return `Working in ${presence.chatTitle ?? 'another chat'}…`;
-}
-
-export function resolveBusyElsewhere(input: {
-    boundAgentIds: readonly string[];
-    chatId: string;
-    presence: readonly AgentPresenceEntry[];
-}) {
-    const seated = new Set(input.boundAgentIds);
-    return (
-        input.presence.find(
-            (entry) =>
-                seated.has(entry.agentId) &&
-                entry.state === 'busy' &&
-                entry.chatId !== null &&
-                entry.chatId !== input.chatId
-        ) ?? null
-    );
-}
-
-function formatWhere(presence: AgentPresenceEntry) {
-    return presence.chatTitle ? ` in ${presence.chatTitle}` : ' in another chat';
+export function resolveDmPresenceLabel(presence: AgentPresenceEntry, _chatId: string) {
+    return presence.state === 'busy' ? 'Working…' : null;
 }
 
 function AgentPresenceDot({
@@ -150,9 +79,7 @@ export function AgentPresenceStatusLine({ agentId }: { agentId: string }) {
         <span className="flex min-w-0 items-center gap-1.5">
             <AgentPresenceDot state={presence.state} />
             {presence.state === 'busy' ? (
-                <span className="truncate text-muted-foreground text-xs">
-                    {`Working in ${presence.chatTitle ?? 'another chat'}…`}
-                </span>
+                <span className="truncate text-muted-foreground text-xs">Working…</span>
             ) : null}
         </span>
     );

@@ -36,22 +36,12 @@ export function useChatDismiss(chatId: string | undefined) {
     return { dismissRow };
 }
 
+// The chat log no longer carries failed-turn banners (specs/chat-timeline.md):
+// dismissal is purely the durable soft-delete plus the local timeline-state
+// patch above; the log cache itself has nothing left to strip.
 function removeResponseFromLog(
     log: ChatLogOutput | undefined,
-    responseId: string
+    _responseId: string
 ): ChatLogOutput | undefined {
-    if (!log) {
-        return log;
-    }
-
-    const failedTurns = log.failedTurns.filter((failure) => failure.responseId !== responseId);
-
-    if (failedTurns.length === log.failedTurns.length) {
-        return log;
-    }
-
-    return {
-        ...log,
-        failedTurns,
-    };
+    return log;
 }

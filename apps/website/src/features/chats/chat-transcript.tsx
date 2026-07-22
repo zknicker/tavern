@@ -14,6 +14,7 @@ import { openThreadPane, useThreadPane } from '../../hooks/threads/use-thread-pa
 import { markChatTiming } from '../../lib/chat-timing.ts';
 import { trpc } from '../../lib/trpc.tsx';
 import { cn } from '../../lib/utils.ts';
+import { ChatCompositionBubbles } from './chat-composition-bubble.tsx';
 import { getTranscriptItemKey } from './chat-transcript-item-utils.ts';
 import {
     buildTranscriptEntries,
@@ -103,6 +104,9 @@ export function ChatTranscript({
     );
     const transcriptRows = useStableTranscriptRenderRows(rawTranscriptRows);
     const latestAgentMessage = React.useMemo(() => getLatestAgentMessage(rows), [rows]);
+    // The durable message's compositionId echo is the commit signal for a
+    // provisional composition bubble (specs/chat-timeline.md).
+    const messageCompositionIds = React.useMemo(() => getMessageCompositionIds(rows), [rows]);
     // Sticky across renders: the completion handoff can clear the live reply
     // a beat before the durable reply row lands, and narration must not flash
     // back into the pane during that gap.
@@ -226,6 +230,12 @@ export function ChatTranscript({
                             </MessageScrollerItem>
                         )
                     )}
+                    {chatId ? (
+                        <ChatCompositionBubbles
+                            chatId={chatId}
+                            messageCompositionIds={messageCompositionIds}
+                        />
+                    ) : null}
                 </MessageScrollerContent>
             </div>
         </TranscriptRenderProvider>
@@ -327,6 +337,23 @@ function useStableTranscriptRenderRows(rows: ReturnType<typeof buildTranscriptRe
         stateRef.current = nextState;
         return nextState.result;
     }, [rows]);
+}
+
+function getMessageCompositionIds(rows: TranscriptRow[]) {
+    const ids = new Set<string>();
+
+    for (const row of rows) {
+        if (row.kind !== 'message') {
+            continue;
+        }
+
+        const compositionId = row.message.metadata?.compositionId;
+        if (typeof compositionId === 'string') {
+            ids.add(compositionId);
+        }
+    }
+
+    return ids;
 }
 
 function getLatestAgentMessage(rows: TranscriptRow[]) {

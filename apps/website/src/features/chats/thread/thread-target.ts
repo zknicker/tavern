@@ -3,7 +3,7 @@ import {
     resolveTavernChatName,
 } from '../../../components/chats/chat-display.ts';
 
-interface ThreadTargetChat {
+export interface ThreadTargetChat {
     conversationKind: 'channel' | 'direct' | 'group' | 'task' | 'topic';
     displayName: string;
     participants: Array<{
@@ -57,12 +57,12 @@ function threadAnchorShortId(anchorMessageId: string) {
     return match?.[1]?.slice(0, 8).toLowerCase() ?? anchorMessageId;
 }
 
-function getChannelName(chat: ThreadTargetChat) {
+export function getChannelName(chat: ThreadTargetChat) {
     const title = chat.type === 'tavern' ? resolveTavernChatName(chat) : getChatDisplayTitle(chat);
     return title.replace(/^#/u, '');
 }
 
-function getDmPeerName(chat: ThreadTargetChat) {
+export function getDmPeerName(chat: ThreadTargetChat) {
     const candidates = chat.participants.filter(
         (participant) => !operatorActorIds.has(participant.actorId ?? '')
     );

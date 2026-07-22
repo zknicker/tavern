@@ -15,28 +15,6 @@ test('runs a chat turn through the agent engine and renders the assistant reply'
     });
 });
 
-test('a silent turn clears its thinking indicator without leaving a reply', async ({ page }) => {
-    await startChat(page, {
-        expectedReply: 'QA_SILENT_SETUP_OK',
-        prompt: 'Normal chat turn marker. Reply exactly `QA_SILENT_SETUP_OK`.',
-    });
-
-    const composer = page.getByRole('textbox', { name: /Chat message/ });
-    await expect(composer).toBeEnabled({ timeout: 30_000 });
-
-    const prompt = 'Silent turn marker. Reply exactly NO_REPLY.';
-    await composer.fill(prompt);
-    await composer.press('Enter');
-
-    await expect(transcriptParagraph(page, prompt)).toBeVisible({ timeout: 15_000 });
-
-    // The silent completion delivers no message, so only the turn's
-    // completion event can retire the indicator — before the fix it lingered
-    // here indefinitely.
-    await expect(page.getByLabel('Active agent status')).toHaveCount(0, { timeout: 15_000 });
-    await expect(transcriptParagraph(page, 'NO_REPLY')).toHaveCount(0);
-});
-
 test('runs a follow-up turn in an existing chat', async ({ page }) => {
     await startChat(page, {
         expectedReply: 'QA_FIRST_TURN_OK',

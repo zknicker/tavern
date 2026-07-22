@@ -6,24 +6,14 @@ export const appRoutes = {
     },
     archivedChats: '/chats/archived',
     tasks: '/tasks',
-    newTask: '/tasks/new',
-    task(taskId: string) {
-        return `/tasks/${encodeURIComponent(taskId)}`;
-    },
     activity: '/activity',
     reminders: '/reminders',
-    newReminder: '/reminders/new',
-    editReminder(jobId: string) {
-        return `/reminders/edit/${encodeURIComponent(jobId)}`;
-    },
     members: '/members',
     membersHumans: '/members/humans',
     memberAgent(agentId: string) {
         return `/members/agents/${encodeURIComponent(agentId)}`;
     },
-    designBrief: '/design/brief',
     workspace: '/workspace',
-    wiki: '/wiki',
     settings: '/settings',
     settingsAgentRuntime: '/settings/agent-runtime',
     settingsAppearance: '/settings/appearance',
@@ -31,13 +21,10 @@ export const appRoutes = {
     settingsUpdates: '/settings/updates',
     settingsStats: '/settings/stats',
     settingsSessions: '/settings/sessions',
-    settingsNotesMd: '/settings/notes-md',
-    settingsSoulMd: '/settings/soul-md',
     settingsSkills: '/settings/skills',
     settingsPlugins: '/settings/plugins',
     settingsChannels: '/settings/channels',
     settingsMcp: '/settings/mcp',
     settingsModels: '/settings/models',
-    settingsMemories: '/settings/memories',
     settingsJobs: '/settings/jobs',
 } as const;

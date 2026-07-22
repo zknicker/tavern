@@ -1,26 +1,16 @@
 import { AlertCircleIcon, BubbleChatIcon, Cancel01Icon } from '@hugeicons/core-free-icons';
 import type { IconSvgElement } from '@hugeicons/react';
-import {
-    BubbleChatTemporaryIcon,
-    CheckListIcon,
-    Joystick04Icon,
-    RefreshIcon,
-} from '@hugeicons-pro/core-stroke-rounded';
+import { RefreshIcon } from '@hugeicons-pro/core-stroke-rounded';
 import { Link, useNavigate } from 'react-router-dom';
-import { ChannelIconBox } from '../../components/chats/channel-icon-box.tsx';
 import { useResolvedThemeOptional } from '../../components/theme-provider.tsx';
 import { Card } from '../../components/ui/card.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import { Table, TableBody, TableCell, TableRow } from '../../components/ui/table.tsx';
-import { useChatList } from '../../hooks/chats/use-chat-list.ts';
 import { appRoutes } from '../../lib/app-routes.ts';
 import { formatRelativeTime } from '../../lib/format.ts';
 import type { AgentActivityOutput, AgentListOutput, AgentPresenceOutput } from '../../lib/trpc.tsx';
 import { resolveAgentInk } from '../agents/agent-color-presets.ts';
 import { AgentFace } from '../chats/agent-face.tsx';
-import { buildChatList, type ChatListItem } from '../chats/chat-list-data.ts';
-import { buildChatPath } from '../chats/chat-path.ts';
-import { getChannelColorStyle } from '../shell/channel-color-options.ts';
 import { describeActivityEntry, type OverviewActivityItem } from './overview-activity.ts';
 
 type Agent = AgentListOutput['agents'][number];
@@ -112,10 +102,6 @@ export function OverviewActivity({
 }) {
     const dark = useResolvedThemeOptional() === 'dark';
     const navigate = useNavigate();
-    const chatListQuery = useChatList();
-    const chatsById = new Map<string, ChatListItem>(
-        buildChatList(chatListQuery.data).map((chat) => [chat.id, chat])
-    );
 
     return (
         <Card className="overflow-hidden">
@@ -139,17 +125,10 @@ export function OverviewActivity({
                     <TableBody>
                         {activity.map((item, index) => {
                             const agent = agents.find((entry) => entry.id === item.agentId);
-                            const chat = item.entry.chatId
-                                ? chatsById.get(item.entry.chatId)
-                                : undefined;
-                            const target = item.entry.chatId
-                                ? buildChatPath(item.entry.chatId)
-                                : item.entry.kind === 'automation_fired'
-                                  ? appRoutes.reminders
-                                  : agent
-                                    ? appRoutes.memberAgent(agent.id)
-                                    : appRoutes.activity;
-                            const { clause, showsChat } = describeActivityEntry(item.entry);
+                            const target = agent
+                                ? appRoutes.memberAgent(agent.id)
+                                : appRoutes.activity;
+                            const clause = describeActivityEntry(item.entry);
 
                             return (
                                 <TableRow
@@ -181,15 +160,7 @@ export function OverviewActivity({
                                             {agent ? <AgentChip agent={agent} dark={dark} /> : null}
                                             <span className="shrink-0 text-foreground/80 text-sm">
                                                 {clause}
-                                                {showsChat && item.entry.chatTitle ? ' in' : ''}
                                             </span>
-                                            {showsChat && item.entry.chatTitle ? (
-                                                <ChatChip
-                                                    chat={chat}
-                                                    dark={dark}
-                                                    title={item.entry.chatTitle}
-                                                />
-                                            ) : null}
                                         </span>
                                     </TableCell>
                                     <TableCell className="h-9 px-3 py-1 text-right text-muted-foreground text-xs tabular-nums">
@@ -208,14 +179,11 @@ export function OverviewActivity({
 }
 
 const activityKindIcons: Record<AgentActivityOutput['entries'][number]['kind'], IconSvgElement> = {
-    automation_fired: Joystick04Icon,
-    declined: BubbleChatTemporaryIcon,
+    completed: BubbleChatIcon,
     failed: AlertCircleIcon,
     message_received: BubbleChatIcon,
     new_session: RefreshIcon,
-    replied: BubbleChatIcon,
     stopped: Cancel01Icon,
-    task_dispatched: CheckListIcon,
 };
 
 // The same agent identity used in chat rows: face plus name.
@@ -232,34 +200,6 @@ function AgentChip({ agent, dark }: { agent: Agent; dark: boolean }) {
                 />
             </span>
             <span className="truncate font-medium text-foreground text-sm">{agent.name}</span>
-        </span>
-    );
-}
-
-// The channel identity used in the chat sidebar: colored hash box plus title.
-// DMs fall back to plain text (their identity is the agent chip already).
-function ChatChip({
-    chat,
-    dark,
-    title,
-}: {
-    chat: ChatListItem | undefined;
-    dark: boolean;
-    title: string;
-}) {
-    void dark;
-
-    if (chat && chat.conversationKind !== 'channel') {
-        return <span className="truncate text-foreground/80 text-sm">a DM</span>;
-    }
-
-    return (
-        <span className="flex min-w-0 items-center gap-1.5">
-            <ChannelIconBox
-                size="inline"
-                style={getChannelColorStyle(chat?.tabAppearance.color ?? null)}
-            />
-            <span className="truncate font-medium text-foreground text-sm">{title}</span>
         </span>
     );
 }

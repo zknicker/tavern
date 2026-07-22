@@ -7,8 +7,6 @@ import { Icon } from '../../../components/ui/icon.tsx';
 import { Button } from '../../../components/ui/primitives/button.tsx';
 import { Tooltip } from '../../../components/ui/tooltip.tsx';
 import { useAgentChatList } from '../../../hooks/agents/use-agent-chats.ts';
-import { useChatStop } from '../../../hooks/chats/use-chat-stop.ts';
-import { useChatTimeline } from '../../../hooks/chats/use-chat-timeline.ts';
 import { appRoutes } from '../../../lib/app-routes.ts';
 import type { AgentListOutput } from '../../../lib/trpc.tsx';
 import { cn } from '../../../lib/utils.ts';
@@ -38,9 +36,8 @@ export function AgentProfileHeader({
     const directChat = selectMostRecentAgentChat(chatsQuery.data, 'direct');
     const presence = useAgentPresenceEntry(agent.id);
     const [restartOpen, setRestartOpen] = useState(false);
-    // Judged from the host chat's seat: "Replying…" only when the work is in
-    // the chat this profile is open in; "Working in <chat>…" everywhere else
-    // (the Members page has no host chat).
+    // Presence carries no chat anchor (specs/presence.md): busy always reads
+    // as a plain "Working…", regardless of which chat this profile hosts.
     const presenceLabel = presence
         ? presence.state === 'busy'
             ? (resolveDmPresenceLabel(presence, hostChatId ?? '') ?? 'Working…')
@@ -96,16 +93,14 @@ export function AgentProfileHeader({
                         label={directChat ? 'Message' : 'No direct message chat yet'}
                         onClick={() => directChat && navigate(appRoutes.chat(directChat.id))}
                     />
-                    {presence?.state === 'busy' && presence.chatId ? (
-                        <AgentStopAction agentId={agent.id} chatId={presence.chatId} />
-                    ) : (
-                        <ActionButton
-                            disabled
-                            icon={StopIcon}
-                            label="Agent is not working"
-                            onClick={() => undefined}
-                        />
-                    )}
+                    {/* Presence carries no chat anchor (specs/presence.md), so the Stop
+                        action can no longer target a specific run from here. */}
+                    <ActionButton
+                        disabled
+                        icon={StopIcon}
+                        label="Agent is not working"
+                        onClick={() => undefined}
+                    />
                     <ActionButton
                         icon={RefreshIcon}
                         label="Restart"
@@ -118,27 +113,6 @@ export function AgentProfileHeader({
             </header>
             <RestartAgentDialog agent={agent} onOpenChange={setRestartOpen} open={restartOpen} />
         </>
-    );
-}
-
-function AgentStopAction({ agentId, chatId }: { agentId: string; chatId: string }) {
-    // Profiles can open before their busy chat has ever mounted. Hydrating its
-    // newest log page supplies the active run needed by the Stop capability.
-    const timeline = useChatTimeline({ chatId, limit: 1 });
-    const stopTurn = useChatStop();
-    const runId = selectAgentRunId(timeline, agentId);
-
-    return (
-        <ActionButton
-            disabled={!runId || stopTurn.isPending}
-            icon={StopIcon}
-            label={runId ? 'Stop' : 'Loading active turn…'}
-            onClick={() => {
-                if (runId) {
-                    stopTurn.mutate({ chatId, runId });
-                }
-            }}
-        />
     );
 }
 

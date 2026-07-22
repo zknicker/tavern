@@ -6,7 +6,6 @@ import { useChatList } from '../hooks/chats/use-chat-list.ts';
 import { useCapability } from '../hooks/connections/use-capability.ts';
 import { trpc } from '../lib/trpc.tsx';
 import { buildChatNavigationCommandGroups } from './chat-navigation-commands.ts';
-import { buildCreateCommandGroup } from './create-commands.ts';
 import { buildCurrentChatCommandGroup, getCurrentChatId } from './current-chat-commands.ts';
 import { buildDeveloperCommandGroup } from './developer-commands.ts';
 import { buildNavigationCommandGroup } from './navigation-commands.ts';
@@ -78,7 +77,6 @@ export function useAppCommands(router: CommandRouter) {
         return filterCommandGroups(
             [
                 buildNavigationCommandGroup(context),
-                buildCreateCommandGroup(context),
                 ...buildChatNavigationCommandGroups(context),
                 buildCurrentChatCommandGroup(context),
                 buildSettingsCommandGroup(context),

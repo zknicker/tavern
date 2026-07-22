@@ -622,19 +622,12 @@ export interface components {
         ChatId: string;
         MessageId: string;
         ResponseId: string;
-        TurnPromptRecallHit: {
-            path: string;
-            title: string;
-            score: number;
-            snippet: string;
-        };
         TurnPromptEvidence: {
             run_id: components["schemas"]["RunId"];
             /** Format: date-time */
             captured_at: string;
             instructions: string;
             prompt: string;
-            recall: components["schemas"]["TurnPromptRecallHit"][];
         };
         TurnFileChange: {
             path: string;

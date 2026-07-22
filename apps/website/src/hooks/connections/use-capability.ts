@@ -47,18 +47,15 @@ const capabilityLabels = {
 
 export const settingsCapabilityRequirements = {
     'agent-runtime': [],
-    'notes-md': [],
     appearance: [],
     profile: [],
     channels: ['apiServer'],
     mcp: ['apiServer'],
     plugins: ['apiServer'],
     jobs: [],
-    memories: [],
     models: ['apiServer'],
     sessions: ['apiServer'],
     skills: ['apiServer', 'skills'],
-    'soul-md': [],
     stats: ['modelExecution'],
     updates: [],
 } as const satisfies Record<string, readonly RuntimeCapabilityId[]>;
@@ -75,11 +72,13 @@ export const routeTabCapabilityRequirements = {
     activity: [],
     chat: [],
     members: [],
-    // Reminders are hidden unless the agent runtime is fully ready because create/run actions execute there.
-    reminders: [...agentCapabilityRequirements, 'cron'],
+    // Reminders is a static honest-empty page (specs/tasks.md) until the
+    // tasks-and-reminders workstream lands; it never gates on the runtime.
+    reminders: [],
     search: [],
-    // Tasks only need the runtime API for CRUD; dispatch gates on gateway at the button level.
-    tasks: ['apiServer'],
+    // Tasks is a static honest-empty page (specs/tasks.md) until the
+    // chat-first tasks workstream lands; it never gates on the runtime.
+    tasks: [],
 } as const satisfies Record<RouteTab, readonly RuntimeCapabilityId[]>;
 
 export const newChatCapabilityRequirements = ['apiServer', 'gateway'] as const;

@@ -133,18 +133,9 @@ test('applyLogSnapshot never resurrects a run the client saw settle', () => {
     expect(settled.activeReplies).toEqual([]);
 
     // A stale snapshot served while the run was still in flight lands after
-    // the live completion event.
+    // the live completion event. The chat log no longer carries snapshot
+    // replies (specs/chat-timeline.md); a refetch simply cannot resurrect one.
     const next = applyLogSnapshot(settled, {
-        activeReplies: [
-            {
-                agentId: turn.agentId,
-                isThinking: true,
-                runId: turn.runId,
-                sessionKey: turn.sessionKey,
-                startedAt: turn.startedAt,
-                text: '',
-            },
-        ],
         limit: 3,
         nextBeforeSequence: null,
         rows: [],
@@ -157,19 +148,9 @@ test('applyLogSnapshot never resurrects a run the client saw settle', () => {
 test('a log refetch cannot strip the quiet-evaluation stamp from a live reply', () => {
     const live = startTimelineTurn(emptyTimelineState(), { ...turn, trigger: 'evaluation' });
 
-    // Snapshot reply for the same run without the stamp (e.g. an older
-    // server): the merge keeps the live stamp, so the row stays quiet.
+    // The chat log no longer carries snapshot replies (specs/chat-timeline.md);
+    // a refetch that touches unrelated rows must not disturb the live reply.
     const next = applyLogSnapshot(live, {
-        activeReplies: [
-            {
-                agentId: turn.agentId,
-                isThinking: true,
-                runId: turn.runId,
-                sessionKey: turn.sessionKey,
-                startedAt: turn.startedAt,
-                text: '',
-            },
-        ],
         limit: 3,
         nextBeforeSequence: null,
         rows: [],
