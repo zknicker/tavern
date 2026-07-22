@@ -26,7 +26,7 @@ export function AgentRemindersTab({ agentId }: { agentId: string }) {
         );
     }
 
-    if (jobsQuery.isError) {
+    if (jobsQuery.isError && !jobsQuery.data) {
         return <p className="px-6 py-10 text-destructive text-sm">Could not load reminders.</p>;
     }
 
