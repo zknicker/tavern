@@ -59,6 +59,27 @@ export function advanceSeenCursor(
     advanceCursorColumn('seen_up_to_seq', input, db);
 }
 
+/** Every cursor row for a session — dev-mode inbox diagnostics (I4). */
+export function listInboxCursors(sessionId: string, db: Database = getDb()) {
+    const rows = db
+        .prepare(
+            `SELECT chat_id, delivered_up_to_seq, seen_up_to_seq
+             FROM agent_inbox_cursors
+             WHERE session_id = $sessionId
+             ORDER BY chat_id ASC`
+        )
+        .all(namedParams({ sessionId })) as Array<{
+        chat_id: string;
+        delivered_up_to_seq: number;
+        seen_up_to_seq: number;
+    }>;
+    return rows.map((row) => ({
+        chatId: row.chat_id,
+        deliveredUpToSeq: row.delivered_up_to_seq,
+        seenUpToSeq: row.seen_up_to_seq,
+    }));
+}
+
 /** Targets with queued-but-unseen rows, for drains and `inbox check`. */
 export function listPendingInboxTargets(sessionId: string, db: Database = getDb()) {
     const rows = db

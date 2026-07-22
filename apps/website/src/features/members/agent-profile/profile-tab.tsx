@@ -15,11 +15,11 @@ import { AgentPastSessions, AgentSessionFacts } from './agent-session-facts.tsx'
 import { AgentDangerSection } from './danger-section.tsx';
 import { AgentEnvSection } from './env-section.tsx';
 import { AgentIdentitySection } from './identity-section.tsx';
+import { AgentInboxSection } from './inbox-section.tsx';
 import { AgentModelSection } from './model-section.tsx';
 import { createAgentModelBaseline, saveAgentModel } from './profile-model.ts';
 import { AgentSessionSection } from './session-section.tsx';
 import { AgentSkillsSection } from './skills-section.tsx';
-import { AgentTasksSection } from './tasks-section.tsx';
 import type { AgentModelDraft } from './types.ts';
 import { useAgentEnvSettings } from './use-env-settings.ts';
 import { AgentWebAccessSection } from './web-access-section.tsx';
@@ -131,7 +131,7 @@ export function AgentProfileTab({
                 ) : null}
             </AgentModelSection>
             <AgentWebAccessSection agent={agent} disabled={isSavingModel} />
-            <AgentTasksSection agent={agent} disabled={isSavingModel} />
+            <AgentInboxSection agentId={agent.id} />
             <AgentEnvSection
                 disabled={envSettings.isLoading}
                 isSaving={envSettings.isSaving}

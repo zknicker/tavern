@@ -7,6 +7,7 @@ import { Icon } from '../../../components/ui/icon.tsx';
 import { Button } from '../../../components/ui/primitives/button.tsx';
 import { Tooltip } from '../../../components/ui/tooltip.tsx';
 import { useAgentChatList } from '../../../hooks/agents/use-agent-chats.ts';
+import { useStopAgent } from '../../../hooks/agents/use-agent-inbox.ts';
 import { appRoutes } from '../../../lib/app-routes.ts';
 import type { AgentListOutput } from '../../../lib/trpc.tsx';
 import { cn } from '../../../lib/utils.ts';
@@ -35,6 +36,7 @@ export function AgentProfileHeader({
     const chatsQuery = useAgentChatList({ agentId: agent.id });
     const directChat = selectMostRecentAgentChat(chatsQuery.data, 'direct');
     const presence = useAgentPresenceEntry(agent.id);
+    const stopAgent = useStopAgent();
     const [restartOpen, setRestartOpen] = useState(false);
     // Presence carries no chat anchor (specs/presence.md): busy always reads
     // as a plain "Working…", regardless of which chat this profile hosts.
@@ -93,13 +95,13 @@ export function AgentProfileHeader({
                         label={directChat ? 'Message' : 'No direct message chat yet'}
                         onClick={() => directChat && navigate(appRoutes.chat(directChat.id))}
                     />
-                    {/* Presence carries no chat anchor (specs/presence.md), so the Stop
-                        action can no longer target a specific run from here. */}
+                    {/* Stop lives on agent presence (I1): it stops the
+                        running turn and clears the queued backlog. */}
                     <ActionButton
-                        disabled
+                        disabled={presence?.state !== 'busy' || stopAgent.isPending}
                         icon={StopIcon}
-                        label="Agent is not working"
-                        onClick={() => undefined}
+                        label={presence?.state === 'busy' ? 'Stop' : 'Agent is not working'}
+                        onClick={() => stopAgent.mutate({ agentId: agent.id })}
                     />
                     <ActionButton
                         icon={RefreshIcon}

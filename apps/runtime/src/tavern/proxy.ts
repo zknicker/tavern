@@ -2,8 +2,10 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {
     type AgentRuntimeAgent,
+    agentRuntimeAgentInboxSchema,
     agentRuntimeAgentPluginGrantListSchema,
     agentRuntimeAgentPluginGrantSchema,
+    agentRuntimeAgentStopResultSchema,
     agentRuntimeArchiveAgentSchema,
     agentRuntimeCreateAgentSchema,
     agentRuntimePluginIdSchema,
@@ -15,7 +17,6 @@ import {
     agentRuntimeUpdateAgentModelSchema,
     agentRuntimeUpdateAgentNameSchema,
     agentRuntimeUpdateAgentPluginGrantSchema,
-    agentRuntimeUpdateAgentTaskSettingsSchema,
     agentRuntimeUpdateAgentThinkingDefaultSchema,
     agentRuntimeUpdateAgentWebSettingsSchema,
     agentRuntimeUpdateSkillEnabledSchema,
@@ -39,7 +40,8 @@ import {
     saveAgentModelSelectionIntent,
 } from '../models/selection-service.ts';
 import { registerAgentWorkspace } from '../workspace/instructions.ts';
-import { stopAgentTurn } from './agent-turn-runner.ts';
+import { readAgentInboxVisibility } from './agent-inbox-api.ts';
+import { stopAgentTurn, stopAgentTurns } from './agent-turn-runner.ts';
 import {
     deleteStoredAgent,
     getStoredAgent,
@@ -79,7 +81,6 @@ async function dispatchAgentEngineStatic({ request, url }: { request: Request; u
         const input = agentRuntimeCreateAgentSchema.parse(await readJson(request));
         const agent = upsertStoredAgent({
             agent: {
-                autoDispatchEnabled: input.autoDispatchEnabled ?? false,
                 webAccessEnabled: input.webAccessEnabled ?? false,
                 bio: input.bio ?? null,
                 enabledSkillIds: input.enabledSkillIds ?? [
@@ -92,7 +93,6 @@ async function dispatchAgentEngineStatic({ request, url }: { request: Request; u
                 isAdmin: input.isAdmin ?? false,
                 name: input.name,
                 primaryColor: input.primaryColor ?? null,
-                taskReviewPolicy: input.taskReviewPolicy ?? false,
                 workspaceFolder: resolveAgentWorkspaceFolder(input),
             },
         });
@@ -120,21 +120,6 @@ async function dispatchAgentEngineStatic({ request, url }: { request: Request; u
         ensurePrimaryAgent();
         const agent = getStoredAgent(segments[1]);
         return agent ? withResolvedModelName(agent) : undefined;
-    }
-    if (
-        method === 'PATCH' &&
-        segments[0] === 'agents' &&
-        segments[1] &&
-        segments[2] === 'task-settings' &&
-        !segments[3]
-    ) {
-        const payload = agentRuntimeUpdateAgentTaskSettingsSchema.parse(await readJson(request));
-        const updatedAgent = updateStoredAgent({
-            agentId: segments[1],
-            autoDispatchEnabled: payload.autoDispatchEnabled,
-            taskReviewPolicy: payload.taskReviewPolicy,
-        });
-        return updatedAgent ? withResolvedModelName(updatedAgent) : undefined;
     }
     if (
         method === 'PATCH' &&
@@ -181,6 +166,14 @@ async function dispatchAgentEngineStatic({ request, url }: { request: Request; u
             return undefined;
         }
         return agentEngineAgentConfigSnapshot();
+    }
+    if (method === 'POST' && segments[0] === 'agents' && segments[1] && segments[2] === 'stop') {
+        const agentId = segments[1];
+        const stopped = await stopAgentTurns(agentId);
+        return agentRuntimeAgentStopResultSchema.parse({ agentId, stopped });
+    }
+    if (method === 'GET' && segments[0] === 'agents' && segments[1] && segments[2] === 'inbox') {
+        return agentRuntimeAgentInboxSchema.parse(readAgentInboxVisibility(segments[1]));
     }
     if (method === 'GET' && segments[0] === 'agents' && segments[1] && segments[2] === 'plugins') {
         const agentId = segments[1];

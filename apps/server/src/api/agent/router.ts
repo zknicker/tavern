@@ -5,6 +5,7 @@ import { createAgentProcedure } from './create.ts';
 import { deleteAgent } from './delete.ts';
 import { getAgentEnvSettingsProcedure, saveAgentEnvSettingsProcedure } from './env-settings.ts';
 import { getAgent } from './get.ts';
+import { getAgentInboxRoute } from './inbox.ts';
 import { getAgentInstructions } from './instructions.ts';
 import { listAgents } from './list.ts';
 import { onEngineRestart } from './on-engine-restart.ts';
@@ -15,10 +16,10 @@ import { getPrimaryAgentRoute } from './primary.ts';
 import { saveAgentProfile } from './save-profile.ts';
 import { saveAgentSkillsProcedure } from './save-skills.ts';
 import { getAgentSessionProcedure, resetAgentSessionProcedure } from './session.ts';
+import { stopAgentRoute } from './stop.ts';
 import { updateAgentBioProcedure } from './update-bio.ts';
 import { updateAgentModelProcedure } from './update-model.ts';
 import { updateAgentNameProcedure } from './update-name.ts';
-import { updateAgentTaskSettingsProcedure } from './update-task-settings.ts';
 import { updateAgentThinkingDefaultProcedure } from './update-thinking-default.ts';
 import { updateAgentWebSettingsProcedure } from './update-web-settings.ts';
 import {
@@ -30,7 +31,9 @@ import {
 
 export const agentRouter = createRouter({
     activity: agentActivityFeedRoute,
+    inbox: getAgentInboxRoute,
     presence: listAgentPresenceRoute,
+    stop: stopAgentRoute,
     chats: createRouter({
         list: listAgentChatsRoute,
     }),
@@ -54,7 +57,6 @@ export const agentRouter = createRouter({
     updateModel: updateAgentModelProcedure,
     updateName: updateAgentNameProcedure,
     updateThinkingDefault: updateAgentThinkingDefaultProcedure,
-    updateTaskSettings: updateAgentTaskSettingsProcedure,
     updateWebSettings: updateAgentWebSettingsProcedure,
     workspaceFile: getAgentWorkspaceFile,
     workspaceFiles: listAgentWorkspaceFiles,

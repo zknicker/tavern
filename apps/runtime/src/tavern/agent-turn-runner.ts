@@ -89,6 +89,26 @@ export function scheduleAgentStart(agentId: string) {
     void drainAgent(agentId);
 }
 
+/**
+ * The human interrupt at agent scope (I1: Stop lives on agent presence):
+ * stops the running turn and clears the queued backlog. Cursors are
+ * untouched, so pending rows re-deliver on the next wake.
+ */
+export async function stopAgentTurns(agentId: string) {
+    let stopped = false;
+    const running = findRunningAgentTurnForAgent(agentId);
+    if (running) {
+        stopped = (await stopAgentTurn(running.id)) || stopped;
+    }
+    const session = ensureCurrentAgentSession({ agentId });
+    for (const turn of listAgentTurnsForSession(session.id)) {
+        if (turn.status === 'queued') {
+            stopped = (await stopAgentTurn(turn.id)) || stopped;
+        }
+    }
+    return stopped;
+}
+
 export async function stopAgentTurn(runId: string) {
     const turn = getAgentTurn(runId);
     if (!(turn && ['queued', 'running'].includes(turn.status))) {
