@@ -37,7 +37,7 @@ describe('global help', () => {
         for (const section of ['Messages', 'Inbox', 'Directory']) {
             expect(out).toContain(section);
         }
-        for (const hidden of ['Maintenance', 'Wiki', 'Engine', '  update', '  restart']) {
+        for (const hidden of ['Maintenance', 'Engine', '  update', '  restart']) {
             expect(out).not.toContain(hidden);
         }
     });
@@ -53,7 +53,6 @@ describe('global help', () => {
             'Server',
             'Status',
             'Maintenance',
-            'Wiki',
             'Engine',
             'Environment',
         ];

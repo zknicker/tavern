@@ -1,5 +1,6 @@
 import { type AgentApiRequester, createAgentApiClient } from '../agent-api-client.ts';
 import {
+    agentChannelActionResponseSchema,
     agentChannelMembersSchema,
     agentChannelSchema,
     agentServerInfoSchema,
@@ -62,7 +63,62 @@ export const CHANNEL_SUBCOMMANDS: SubCommand[] = [
         summary: 'List one channel’s members and role labels',
         usage: 'grotto channel members <target>',
     },
+    channelActionSubcommand('join', {
+        confirmation: (target) => `Joined ${target}. Channel messages now reach your inbox.`,
+        example: 'grotto channel join --target "#general"',
+        summary: 'Join a channel so ordinary delivery reaches you',
+    }),
+    channelActionSubcommand('leave', {
+        confirmation: (target) => `Left ${target}.`,
+        example: 'grotto channel leave --target "#general"',
+        summary: 'Leave a channel you have joined',
+    }),
+    channelActionSubcommand('mute', {
+        confirmation: (target) =>
+            `Muted ${target}. Personal @mentions and DMs still reach you; reverse with grotto channel unmute.`,
+        example: 'grotto channel mute --target "#general"',
+        summary: 'Mute ordinary delivery from a channel and its threads',
+    }),
+    channelActionSubcommand('unmute', {
+        confirmation: (target) => `Unmuted ${target}. Ordinary delivery resumes.`,
+        example: 'grotto channel unmute --target "#general"',
+        summary: 'Reverse a channel mute',
+    }),
 ];
+
+function channelActionSubcommand(
+    action: 'join' | 'leave' | 'mute' | 'unmute',
+    copy: { confirmation(target: string): string; example: string; summary: string }
+): SubCommand {
+    return {
+        examples: [copy.example],
+        flags: [{ name: '--target', valueName: '<t>', description: 'Channel target (#name)' }],
+        name: action,
+        positionals: [],
+        run: (args) => runChannelAction(action, args, defaultDeps(), copy.confirmation),
+        summary: copy.summary,
+        usage: `grotto channel ${action} --target <t>`,
+    };
+}
+
+async function runChannelAction(
+    action: 'join' | 'leave' | 'mute' | 'unmute',
+    args: ParsedArgs,
+    deps: DirectoryDeps,
+    confirmation: (target: string) => string
+): Promise<number> {
+    const target = args.values['--target'];
+    if (!(target && /^#[A-Za-z0-9][A-Za-z0-9_-]{0,31}$/u.test(target))) {
+        throw new AgentCliError('INVALID_TARGET', 'A #channel target is required.');
+    }
+    const response = await deps.client.request(
+        `/api/agent/channels/${action}`,
+        agentChannelActionResponseSchema,
+        { body: { target }, method: 'POST' }
+    );
+    deps.write(`${confirmation(response.target)}\n`);
+    return 0;
+}
 
 export async function runServerInfo(args: ParsedArgs, deps: DirectoryDeps): Promise<number> {
     const response = await deps.client.request('/api/agent/server', agentServerInfoSchema, {
