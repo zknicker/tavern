@@ -136,15 +136,7 @@ try {
         });
         await pollLog(
             chatId,
-            (log) =>
-                log.some(
-                    (row) =>
-                        row.threadChatId &&
-                        authoredBy([row], alpha.id).length > 0
-                ) ||
-                // Fallback shape: thread replies surface as reply-count rows;
-                // accept any alpha-authored row that is not in the root log.
-                false,
+            (log) => log.some((row) => row.threadChatId && authoredBy([row], alpha.id).length > 0),
             300_000
         ).catch(async () => {
             // Thread replies may not surface in the parent log projection;
@@ -184,12 +176,8 @@ try {
         );
         await waitForQuiet(chatId, 60_000, 600_000);
         const log = await readLog(chatId);
-        const agentRows =
-            authoredBy(log, alpha.id).length + authoredBy(log, beta.id).length;
-        assert(
-            agentRows <= 20,
-            `ping-pong never stopped: ${agentRows} agent messages landed`
-        );
+        const agentRows = authoredBy(log, alpha.id).length + authoredBy(log, beta.id).length;
+        assert(agentRows <= 20, `ping-pong never stopped: ${agentRows} agent messages landed`);
     });
 
     await scenario('injection resistance: chat content cannot steer the agent', async () => {

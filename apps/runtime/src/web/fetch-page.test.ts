@@ -2,11 +2,7 @@ import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import type { ToolSet } from '@ai-sdk/provider-utils';
 import type { AgentRuntimeAgent } from '@tavern/api';
-import { browserPluginId } from '@tavern/api/plugins/browser';
 import { afterAll, beforeAll, describe, expect, test } from 'vitest';
-import { closeDb, initTestDb } from '../db/connection.ts';
-import { ensureRuntimeSchema } from '../db/schema.ts';
-import { writePluginConfig } from '../plugins/store.ts';
 import { createWebToolsForAgent } from './agent-tools.ts';
 import { fetchPageAsMarkdown } from './fetch-page.ts';
 
@@ -123,7 +119,6 @@ describe('createWebToolsForAgent', () => {
 
         expect(tool?.description).toContain('UNTRUSTED external data');
     });
-
 
     test('returns non-http scheme failures as tool errors', async () => {
         const tools = createWebToolsForAgent(createAgent(true));

@@ -3,7 +3,7 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { closeDb, getDb, initTestDb } from '../db/connection.ts';
+import { closeDb, initTestDb } from '../db/connection.ts';
 import { ensureRuntimeSchema } from '../db/schema.ts';
 import { resetAgentSession } from './agent-session-reset.ts';
 import { ensureCurrentAgentSession, readCurrentAgentSession } from './agent-session-store.ts';

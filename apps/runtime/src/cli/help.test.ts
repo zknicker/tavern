@@ -48,14 +48,7 @@ describe('global help', () => {
         const out = read();
 
         expect(out).toContain('Grotto Runtime v');
-        const sectionOrder = [
-            'Usage',
-            'Server',
-            'Status',
-            'Maintenance',
-            'Engine',
-            'Environment',
-        ];
+        const sectionOrder = ['Usage', 'Server', 'Status', 'Maintenance', 'Engine', 'Environment'];
         let last = -1;
         for (const section of sectionOrder) {
             const at = out.indexOf(section);
