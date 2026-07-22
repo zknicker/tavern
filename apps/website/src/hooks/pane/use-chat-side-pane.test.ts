@@ -6,6 +6,7 @@ import {
 } from '../threads/use-thread-pane.ts';
 import {
     closeAgentProfilePane,
+    closeAgentProfilePanesForAgent,
     openAgentProfilePane,
     resetAgentProfilePanesForTest,
 } from './use-agent-profile-pane.ts';
@@ -52,6 +53,17 @@ test('closing a thread restores the artifact pane for that chat only', () => {
     openThreadPane('chat-2', { anchorMessageId: 'msg_2', threadChatId: 'cht_thr_2' });
 
     closeThreadPane('chat-1');
+
+    expect(getChatSidePane('chat-1')).toBe('artifact');
+    expect(getChatSidePane('chat-2')).toBe('thread');
+});
+
+test('deleting an agent restores artifacts without stealing from a thread', () => {
+    openAgentProfilePane('chat-1', 'agent-1');
+    openAgentProfilePane('chat-2', 'agent-1');
+    openThreadPane('chat-2', { anchorMessageId: 'msg_1', threadChatId: null });
+
+    closeAgentProfilePanesForAgent('agent-1');
 
     expect(getChatSidePane('chat-1')).toBe('artifact');
     expect(getChatSidePane('chat-2')).toBe('thread');

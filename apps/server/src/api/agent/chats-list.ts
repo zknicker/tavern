@@ -4,6 +4,7 @@ import { publicProcedure } from '../trpc.ts';
 
 const listAgentChatsInputSchema = z.object({
     agentId: z.string().trim().min(1),
+    includeArchived: z.boolean().optional(),
 });
 
 export const listAgentChatsRoute = publicProcedure

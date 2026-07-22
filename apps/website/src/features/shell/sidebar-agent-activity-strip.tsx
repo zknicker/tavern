@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useResolvedThemeOptional } from '../../components/theme-provider.tsx';
 import { useAgentList } from '../../hooks/agents/use-agent-list.ts';
 import { useAgentPresence } from '../../hooks/agents/use-agent-presence.ts';
@@ -10,14 +10,14 @@ import { resolveAgentInk } from '../agents/agent-color-presets.ts';
 import { AgentFace } from '../chats/agent-face.tsx';
 import { resolveDmPresenceLabel } from '../chats/agent-presence.tsx';
 import { buildChatList } from '../chats/chat-list-data.ts';
-import { resolveNavigableActivityChatId } from './sidebar-chat-list-model.ts';
+import { resolveCurrentChatId, resolveNavigableActivityChatId } from './sidebar-chat-list-model.ts';
 
 const maximumVisibleAgents = 3;
 const faceStyle = { flexShrink: 0, overflow: 'visible' } as const;
 
 export function SidebarAgentActivityStrip() {
     const navigate = useNavigate();
-    const { chatId: currentChatId } = useParams<{ chatId: string }>();
+    const currentChatId = resolveCurrentChatId(useLocation().pathname);
     const dark = useResolvedThemeOptional() === 'dark';
     const agents = useAgentList().data?.agents ?? [];
     const presence = useAgentPresence().data?.presence ?? [];
