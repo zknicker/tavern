@@ -36,6 +36,27 @@ test('dev stack shutdown signals all managed processes before waiting in order',
     await stopPromise;
 });
 
+test('dev stack shutdown forwards the operator signal to managed processes', async () => {
+    const controller = new DevStackController({
+        mode: 'web-runtime',
+        ports: { runtimePort: 80_801, serverPort: 80_800, websitePort: 31_000 },
+        repositoryRoot: process.cwd(),
+    });
+    const website = createManagedChildProcessStub(12_342);
+    const server = createManagedChildProcessStub(12_343);
+    const runtime = createManagedChildProcessStub(12_344);
+
+    controller.processes.set('website', website);
+    controller.processes.set('server', server);
+    controller.processes.set('runtime', runtime);
+
+    await controller.stop(130, { signal: 'SIGINT' });
+
+    assert.deepEqual(website.signals, ['SIGINT']);
+    assert.deepEqual(server.signals, ['SIGINT']);
+    assert.deepEqual(runtime.signals, ['SIGINT']);
+});
+
 test('waitForChildShutdown waits after the shell exits until the process group is gone', async () => {
     const child = createChildProcessStub();
     let groupActive = true;
@@ -92,6 +113,39 @@ test('signalChildProcessGroup can signal surviving groups after the shell exits'
 
     assert.equal(signaled, true);
     assert.deepEqual(signals, [{ pid: -12_345, signal: 'SIGKILL' }]);
+});
+
+test('managed processes launch directly without an intermediate shell', () => {
+    const spawnCalls = [];
+    const child = createManagedChildProcessStub(12_346, { autoExit: false });
+    const controller = new DevStackController({
+        mode: 'web-runtime',
+        ports: { runtimePort: 80_801, serverPort: 80_800, websitePort: 31_000 },
+        repositoryRoot: process.cwd(),
+        spawnImpl: (...args) => {
+            spawnCalls.push(args);
+            return child;
+        },
+    });
+
+    controller.spawnProcess('runtime', 'bun', ['--watch', 'src/index.ts', 'serve'], {
+        cwd: '/tmp/tavern-runtime',
+        env: { TAVERN_RUNTIME_PORT: '80801' },
+    });
+
+    assert.deepEqual(spawnCalls, [
+        [
+            'bun',
+            ['--watch', 'src/index.ts', 'serve'],
+            {
+                cwd: '/tmp/tavern-runtime',
+                detached: true,
+                env: { TAVERN_RUNTIME_PORT: '80801' },
+                shell: false,
+                stdio: ['ignore', 'pipe', 'pipe'],
+            },
+        ],
+    ]);
 });
 
 function createChildProcessStub() {
