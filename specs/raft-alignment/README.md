@@ -415,8 +415,12 @@ operator's arcade server 2026-07-21) against our current frontend
 **Backlog (observations, not workstreams):** stall-state presence (orange-dot "stalled"
 distinct from "working", per Raft's runtime_stalled taxonomy — WS4-era); session-age
 economics (track cost/turn vs session age post-flip before touching compaction cadence);
-server-pushed runtime upgrade channels for the computer fleet (WS6-era; Raft daemons
-self-upgrade staged). Heartbeat: skipped by ruling — future path is a server-side recurring
+runtime upgrades stay operator-TRIGGERED (Raft: an update button in the app fires the
+server-staged upgrade — not automatic); our existing update surface (Settings → Updates /
+sidebar update item) needs to work better and, on update, regenerate the per-agent CLI
+wrappers so agents pick up the new `grotto` in their next turn shell — today CLI and runtime
+are one binary, so wrapper regeneration IS the CLI update; revisit if an npm-shaped external
+CLI ships with WS6. Heartbeat: skipped by ruling — future path is a server-side recurring
 wake gated on `delivered > seen`.
 
 ## Existing specs impacted
