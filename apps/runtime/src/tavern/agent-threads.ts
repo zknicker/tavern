@@ -4,9 +4,9 @@ import type { Database } from '../db/sqlite.ts';
 import { AgentApiError } from './agent-api-errors.ts';
 import { resolveAgentTarget } from './agent-targets.ts';
 import { getStoredAgent } from './agents-store.ts';
-import { isArchivedChat } from './chat-actions-tools.ts';
 import { createAgentParticipantId, createMessageId } from './chat-api/ids.ts';
 import { createMessage, membershipChat, setThreadFollow } from './chat-api/index.ts';
+import { isArchivedChat } from './chat-guards.ts';
 
 export const agentThreadUnfollowRequestSchema = z
     .object({

@@ -262,7 +262,6 @@ async function route(request: Request, url: URL): Promise<Response> {
                   captured_at: evidence.capturedAt,
                   instructions: evidence.instructions,
                   prompt: evidence.prompt,
-                  recall: evidence.recall,
                   run_id: runId,
               })
             : notFound();
