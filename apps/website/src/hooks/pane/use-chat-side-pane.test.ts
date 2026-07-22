@@ -1,14 +1,14 @@
 import { afterEach, expect, test } from 'bun:test';
 import {
-    closeAgentProfilePane,
-    openAgentProfilePane,
-    resetAgentProfilePanesForTest,
-} from './use-agent-profile-pane.ts';
-import {
     closeThreadPane,
     openThreadPane,
     resetThreadPanesForTest,
 } from '../threads/use-thread-pane.ts';
+import {
+    closeAgentProfilePane,
+    openAgentProfilePane,
+    resetAgentProfilePanesForTest,
+} from './use-agent-profile-pane.ts';
 import {
     getChatSidePane,
     resetChatSidePanesForTest,
