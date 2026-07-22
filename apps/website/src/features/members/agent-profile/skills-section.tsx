@@ -53,7 +53,7 @@ export function AgentSkillsSection({ agent }: { agent: AgentListOutput['agents']
         >
             {skillsQuery.isPending ? (
                 <SectionMessage>Loading skills...</SectionMessage>
-            ) : skillsQuery.isError ? (
+            ) : skillsQuery.isError && !skillsQuery.data ? (
                 <SectionMessage>Could not load skills.</SectionMessage>
             ) : assigned.length > 0 ? (
                 <SettingsGroup>

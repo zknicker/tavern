@@ -24,7 +24,7 @@ export function AgentChatTab({ agentId }: { agentId: string }) {
     if (chatsQuery.isPending) {
         return <LoadingChats />;
     }
-    if (chatsQuery.isError) {
+    if (chatsQuery.isError && !chatsQuery.data) {
         return <p className="px-6 py-10 text-destructive text-sm">Could not load chats.</p>;
     }
 

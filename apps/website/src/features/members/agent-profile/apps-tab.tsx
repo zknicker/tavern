@@ -44,7 +44,7 @@ export function AgentAppsTab({ agent }: { agent: AgentListOutput['agents'][numbe
             >
                 {pluginsQuery.isPending ? (
                     <SectionMessage>Loading apps...</SectionMessage>
-                ) : pluginsQuery.isError ? (
+                ) : pluginsQuery.isError && !pluginsQuery.data ? (
                     <SectionMessage>Could not load apps.</SectionMessage>
                 ) : granted.length > 0 ? (
                     <SettingsGroup>
