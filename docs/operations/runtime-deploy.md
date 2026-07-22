@@ -20,11 +20,8 @@ Keep the CLI small:
 grotto                 # banner, live runtime status line, command list
 grotto serve
 grotto status [--json] [--runtime-url <url>]
+grotto claim [--clerk-key <key>] [--user <id>]
 grotto token [--json]
-grotto wiki list
-grotto wiki get INDEX.md
-grotto wiki search "theme across project notes"
-grotto wiki status
 grotto engine status
 grotto engine install
 grotto engine clean
@@ -37,15 +34,19 @@ grotto help [command]
 Bare `grotto` does not start the server; it prints the banner, a one-line
 runtime status, and the command list. Help is generated from the command
 registry: `grotto help <command>` and `--help` work on every command, bare
-`grotto engine` / `grotto wiki` print group help, and unknown commands get
-a did-you-mean suggestion. Exit codes are `0` success, `1` operational
-failure, `2` usage error. Read commands support `--json`.
+`grotto engine` prints group help, and unknown commands get a did-you-mean
+suggestion. Exit codes are `0` success, `1` operational failure, `2` usage
+error. Read commands support `--json`.
+
+This is the operator-facing surface. Agents get a separate, per-agent
+`grotto message`/`grotto inbox`/`grotto channel`/`grotto thread` CLI
+authorized by an agent-token bearer credential, not the operator token — see
+[Agent Inbox](../../specs/inbox.md) and [Grotto CLI](../../specs/grotto-cli.md).
 
 `serve` runs the foreground Runtime process. It starts the Runtime HTTP and
-WebSocket API, Runtime storage, Memory reads, Agent execution,
-reads, and Runtime jobs. It logs to stdout and stderr, and exits on
-`SIGINT` or `SIGTERM`. The Homebrew service and the dev launchd plist invoke
-`grotto serve` explicitly.
+WebSocket API, Runtime storage, Agent execution, reads, and Runtime jobs. It
+logs to stdout and stderr, and exits on `SIGINT` or `SIGTERM`. The Homebrew
+service and the dev launchd plist invoke `grotto serve` explicitly.
 
 `status` is the one-screen host health view: Homebrew service state, the
 running Runtime version versus the installed binary version (including the
@@ -53,12 +54,6 @@ running Runtime version versus the installed binary version (including the
 resolved engine. With `--runtime-url` it inspects a remote Runtime; the
 local-only rows are then labeled `(local)` and the staged-binary hint is
 suppressed.
-
-`memory` commands are thin CLI clients for the managed Runtime. They require a
-running Runtime and use `TAVERN_RUNTIME_URL`, or `http://127.0.0.1:18790` by
-default. They browse the resolved Wiki root; writes and maintenance happen
-through Wiki tools. When the Runtime is unreachable they fail
-with a pointer to `grotto status`.
 
 `grotto` is the CLI. `grotto-runtime` is the service binary.
 

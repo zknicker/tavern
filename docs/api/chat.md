@@ -1,9 +1,9 @@
 ---
-summary: Durable chat API for messages, responses, activity, artifacts, receipts, reads, events, soft deletes, and runtime metadata.
+summary: Durable chat API for messages, artifacts, receipts, reads, events, soft deletes, inbox delivery, and runtime metadata.
 read_when:
-  - changing chat messages, responses, activity, artifacts, receipts, history, or timeline recovery
+  - changing chat messages, artifacts, receipts, history, or timeline recovery
   - changing how agent runtimes, bots, webhooks, or local tools send chat work into Tavern
-  - changing chat turn stop contracts or busy-delivery evidence
+  - changing the agent-token CLI surface, inbox delivery, or agent-scoped stop
 ---
 
 # Chat API
@@ -74,27 +74,17 @@ takes effect on the agent's next turn with a fresh session.
 
 ## Addressing
 
-Sending a message and invoking an agent are separate operations.
+Sending a message never starts a turn directly. A durable `message.created`
+event is planned by Runtime's inbox delivery: every joined agent in a channel
+(and the one agent in a DM) is queued the message regardless of mentions; a
+channel mute suppresses delivery except for a personal @mention, which pierces
+as a single delivery. An idle agent wakes on a drain turn; a busy agent gets a
+content-free notice. See [Agent Inbox](../../specs/inbox.md).
 
-In a `channel`, a normal human message creates only a durable message. It does
-not start agent work. A channel message starts agent work only for Agent
-participants explicitly linked in message content with `agent://...` rich
-references, such as `[@Tavern](agent://agt_primary)`. Mentioning multiple Agent
-participants creates one independent turn request for each linked Agent seat.
-
-In an agent `dm`, the one agent participant is addressed implicitly. The user
-does not need to mention the agent, and the app must not invent routing ids from
-route params, display names, or engine session ids.
-
-The server resolves addressing through Runtime-owned chat participants and the
-current Agent session for each addressed Agent seat. `chat.send` returns
-`turns: []` for a human-only message and one `turns[]` entry per accepted agent
-turn.
-
-Each accepted agent turn creates a durable Runtime turn record linked to the
-triggering message and response. The turn records queue/running/completed/
-failed/cancelled execution state. The response and activity rows remain the UI
-read model for chat history.
+`chat.send` returns no turns — just the durable message's acceptance receipt
+(`acceptedAt`, `chatId`, `clientMessageId`, `status`, `threadChatId`). Turns
+float on the agent's session rather than anchoring to the triggering message
+or chat (ADR 0014), so there is no per-message turn record to return.
 
 ## Endpoints
 
@@ -130,7 +120,19 @@ GET  /api/agent/messages/{id}
 GET  /api/agent/server
 GET  /api/agent/channels/info
 GET  /api/agent/channels/members
+POST /api/agent/channels/join
+POST /api/agent/channels/leave
+POST /api/agent/channels/mute
+POST /api/agent/channels/unmute
+POST /api/agent/threads/unfollow
+GET  /api/agent/events
+GET  /api/agent/inbox
 ```
+
+`GET /api/agent/events` (`grotto message check`) serves pending envelopes and
+advances the `served` cursor. `GET /api/agent/inbox` (`grotto inbox check`)
+lists pending target rows without draining. See
+[Agent Inbox](../../specs/inbox.md).
 
 These routes resolve handle targets such as `#general` and `dm:@Wren` at
 action time and fail closed. Channel sends use the shared freshness decision:
@@ -161,20 +163,18 @@ The Tavern app keeps list and detail reads separate:
   Tavern chat.
 * `chat.updateSystemPrompt` changes trusted chat-specific agent instructions
   for a Tavern chat. Empty text clears the prompt.
-* `chat.log.list` returns turn-aligned pages of conversation rows for one
-  chat: participant messages, widgets, artifacts, context-boundary runtime
-  notices (new session, compaction), stop notes, clarifications, and the
-  changed-files summary row (`workspace_changes`) — contribution outcome,
-  rendered as a chip under the agent's reply. Status
-  notices (busy delivery, holds, wait-idle) are turn evidence, not timeline
-  rows. Execution evidence (tool calls, reasoning, workers,
-  narration history) never rides the timeline — see
-  [chat-timeline](../../specs/chat-timeline.md). Pages walk backward from the
-  newest message with a `beforeSequence` cursor; rows carry their owning
-  `responseId`, and agent contributions carry `runId`. A turn's message row
-  is created at its first visible content and edited in place until its
-  delivery finalizes it (`message.updated` events), so the timeline is
-  append-only from the reader's seat.
+* `chat.log.list` returns durable conversation rows for one chat: participant
+  messages, widgets, artifacts, system notices (new session, compaction), and
+  the changed-files summary row (`workspace_changes`) rendered as a chip
+  under the agent's reply. Historical clarification rows from before agent
+  turns stopped pausing for inline answers may still appear. Execution
+  evidence (tool calls, reasoning, narration, prompt and file-change trace)
+  never rides the timeline — it lives on the agent profile, queried per turn
+  by `runId` — see [chat-timeline](../../specs/chat-timeline.md) and
+  [agent-activity](../../specs/agent-activity.md). Pages walk backward from
+  the newest message with a `beforeSequence` cursor; the timeline is
+  append-only from the reader's seat — a new row only ever appears at the
+  end, and no row moves.
 * `chat.files.list` walks the full chat log and returns attachment metadata
   newest first. Entries include the attachment kind, filename, media type,
   size, sender, actor, message id, and timestamp. Inline attachment data and
@@ -191,29 +191,20 @@ The Tavern app keeps list and detail reads separate:
   Runtime is connected or the turn recorded no changes.
 
 Invalidate `chat.list` when membership or list ordering can change. Invalidate
-`chat.get` when one chat's detail fields can change. Response and activity
-events update the app timeline by stable ids. Durable log invalidation belongs
-when messages, responses, activity, or artifacts are persisted.
-Channel color and system prompt changes invalidate `chat.list` and the changed
-`chat.get` record.
+`chat.get` when one chat's detail fields can change. Message and artifact
+events update the app timeline by stable ids. Channel color and system prompt
+changes invalidate `chat.list` and the changed `chat.get` record.
 
-Live turn progress feeds two app surfaces: every step lands in the run's live
-evidence (the drawer's source while a turn streams), and conversation-visible
-steps — the turn's post, widgets, notices — update the visible
-`chat.log.list` cache. Narration steps create or edit the turn's post row;
-streamed reply text edits it in place, with the delivery settling the durable
-content.
+`agent.stop` is the agent-scoped interrupt (I1): it stops the agent's running
+turn and clears its queued backlog wherever the agent is running, not a
+single chat's turn. It does not delete the triggering message or any
+previously delivered output.
 
-`chat.stop` is the turn-control mutation, not a message write. It settles a
-queued or running Runtime turn as cancelled and settles the linked response
-as cancelled. It does not delete the triggering message or any previously
-delivered output.
-
-There is no steer mutation: sending while a turn runs is a normal message
-send. Runtime attempts busy delivery of the new message into running turns
-and records notice activity when the engine accepts it; the seat's context
-cursor guarantees delivery either way (see
-[steering](../../specs/steering.md)). Model changes are Runtime session
+There is no steer mutation and no composer queue: sending while an agent is
+mid-turn is a normal message send. Runtime attempts busy delivery of the new
+message into the agent's running turn; when it cannot, the message reaches
+the agent through its next drain's catch-up instead (see
+[Agent Inbox](../../specs/inbox.md)). Model changes are Runtime session
 controls, not message composer payloads.
 
 ## Messages
@@ -336,7 +327,15 @@ agent turn adapter for the chat. Generated temporary chat titles do not become
 durable execution labels; explicitly renamed chats may use their display name
 as the conversation label.
 
-## Deliveries
+## Deliveries And Activity
+
+Agents write their own reply messages directly (`grotto message send`); the
+delivery/response/activity objects below are not created for real agent
+turns. They remain a real, schema-backed part of the API — used by seeded
+chat demos and available to external clients — but live execution evidence
+for a turn is the agent-scoped model instead: `agent_turns` rows, per-turn
+prompt and file-change evidence (`chat.turn.fileChanges`, keyed by `runId`),
+and the agent activity feed. See [Agent Activity](../../specs/agent-activity.md).
 
 `POST /api/chats/{chat_id}/deliveries` records an assistant delivery receipt and,
 when text is final, creates or links the assistant message.

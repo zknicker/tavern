@@ -27,7 +27,11 @@ plain text unless the user selects or types explicit link syntax.
   project references.
 - The composer may keep local metadata for live chip appearance while the user
   edits a draft.
-- Channel messages start agent work only for linked `agent://...` references.
+- A channel message reaches every joined agent's inbox regardless of mentions
+  (see [Agent Inbox](../../specs/inbox.md)). A personal @mention — rich
+  `agent://` reference or plain `@handle` — pierces a channel mute or an
+  unfollowed thread as a single delivery; it does not gate who else sees the
+  message.
 - DMs still address their single Agent participant implicitly.
 - Skill references use stable `skill://<skill-id>` targets. They nudge the
   addressed Agent to use that skill only when the skill is already assigned to

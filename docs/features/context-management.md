@@ -1,87 +1,38 @@
 ---
-summary: Context management feature for bounded turn context and the boundary with Tavern Memory and Wiki.
+summary: Context management feature — instruction composition and time-anchoring for an agent's session-scoped prompt.
 read_when:
-  - changing prompt-time context readiness or context-engine status
-  - changing how active turns receive bounded context from chat, participants, activity, Memory, or Wiki material
+  - changing generated agent instructions or model-family operational directives
+  - changing how a session's system prompt is composed or fingerprinted
 ---
 
 # Context Management
 
-Context management is the prompt-time continuity layer for active turns.
+Context management composes the instructions an agent's session runs with.
+It does not manage per-turn continuity: a session's instructions are composed
+once, delivered on the session's first turn, and reused for the rest of the
+session. Per-turn content — which messages an agent sees on a given turn — is
+inbox delivery, not context management; see [Agent Inbox](../../specs/inbox.md).
 
-Managed Tavern context does not use Lossless Claw. Runtime strips stale
-`lossless-claw` config instead of installing or enabling that plugin.
+Durable per-agent knowledge lives in the agent's own workspace (`MEMORY.md`
+and notes it maintains itself), not a Runtime-injected memory system. Memory,
+Wiki, and their background extraction/dreaming/recall pipelines were retired;
+see [ADR 0014](../adr/0014-cli-is-the-agents-only-output-channel.md).
 
 ## Contract
 
-* Runtime injects generated agent instructions and, when Memory is enabled, the
-  agent workspace `USER.md` and `MEMORY.md` core memory files.
-* Runtime retrieves relevant shared Wiki pages for bounded prompt
-  context: each turn's triggering message runs a semantic search over the
-  Wiki recall index, and up to three pages above the relevance floor are
-  injected as a clearly-labeled recalled-context block (background context, not
-  user input, capped snippets). No hits, disabled Memory, or unprovisioned
-  recall models inject nothing. Recall never fails a turn.
-* The harness session owns prior user-agent turn history. Runtime does not
-  replay a rolling Tavern transcript into every turn.
-* Runtime always includes the triggering Tavern message once.
-* Turn prompts are time-anchored: each prompt states the current time and every
-  included chat message carries its send time, rendered as weekday-prefixed
-  home-timezone wall clock (for example `Sun 2026-07-05T13:22:42-04:00`). The
-  home timezone name, the staleness policy ("treat older context and prior
-  data reads as stale until re-checked"), and Tavern tool guidance live in the
-  agent instructions, so they are stated once per session instead of once per
-  turn.
-* Channel turns may include ambient channel messages since that Agent session's
-  prompt context cursor. DM turns do not include ambient history because each
-  DM user message already belongs to that Agent session.
-* Channel ambient context is bounded to the most recent 20 eligible messages
-  before the triggering message. Deleted, system, internal, and same-Agent
-  assistant messages are excluded.
-* Reply turns include the parent message when the cursor delta did not already
-  include it.
-* Agent sessions store a per-chat seen-ledger cursor
-  (`agent_session_chat_cursors`). It advances only when rows are provably
-  model-visible — prompt catch-up and hold envelopes — never for notices,
-  busy deliveries, or chat tool reads, so messages created while the Agent
-  is working are still eligible next time.
-* A fresh session starts with empty seen cursors, so its first turn catches
-  up from durable chat history rather than replaying engine context. The
-  fresh session's first turn states that earlier conversation is not in
-  context; continuity comes from Memory.
+* Runtime composes generated agent instructions (managed instruction text,
+  the agent's description, and CLI/tool guidance) once per session and
+  fingerprints the result; `agent.session` reports `instructionsFresh: false`
+  when a live session's delivered instructions no longer match a fresh
+  compose (for example after an instruction-text change).
+* Model-family operational directives (tool-use enforcement, execution
+  discipline, Google-specific directives) are appended for models that need
+  explicit steering; Claude-family models get none.
+* Instructions state the current time, the home timezone, and a staleness
+  policy ("treat older context and prior data reads as stale until
+  re-checked") once per session rather than once per turn.
 * Sessions never rotate on a schedule. A new session starts only on a model
   switch, a manual reset from agent settings, or after ~7 fully idle days
   (specs/sessions.md).
-* Agents can read same-chat history through read-only Tavern chat tools when
-  bounded prompt context is insufficient.
-* Context management does not create a separate long-term source of truth.
-  Durable shared knowledge belongs to Wiki. Durable per-agent defaults belong to Memory.
-* Wiki filesystem failures and context-engine failures are separate
-  readiness signals.
-
-## Runtime Setup
-
-Runtime setup:
-
-* sets `plugins.slots.memory` to `none`
-* strips stale `lossless-claw`, `active-memory`, and `memory-core` managed
-  memory plugin entries
-
-The flat runtime capability should describe this as context-management
-readiness.
-
-## Relationship To Memory
-
-Memory and Wiki own durable knowledge. Context management chooses what Memory, Wiki, and chat
-material belongs in the active prompt.
-
-When an active turn needs continuity, Runtime manages bounded prompt context
-from chat history, participant context, core memory files, and relevant Wiki
-pages. Background extraction and dreaming maintain Memory separately from the
-active turn path.
-
-## Related Docs
-
-* [Memory](memory.md)
-* [Memory API](../api/memory.md)
-* [Memory ADR](../adr/0009-memory-is-one-markdown-knowledge-system.md)
+* Agents read chat history themselves through `grotto message read` /
+  `grotto message search` when what inbox delivery gave them is insufficient.

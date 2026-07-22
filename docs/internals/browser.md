@@ -59,11 +59,16 @@ product, daemon, HTTP surface, or release pipeline.
 
 ## Agent surface
 
-* Granted agents get one AI SDK tool named `browser` accepting opaque
-  `args: string[]`. agent-browser (a pinned npm dependency of Runtime) owns
-  the automation verbs; Runtime forwards arguments verbatim under a pinned
-  session and a neutralized config, re-attaching to the current CDP endpoint
-  before every command (`agent-browser-cli.ts`).
+* ADR 0014 retired plugin engine tools: the engine exposes zero tools to a
+  turn except the uniform `web_fetch` host tool, so `browser` is no longer
+  wired as an AI SDK tool call. The catalog/settings surface below still
+  lists it as a Plugin-owned tool group pending its CLI-verb migration
+  ("plugin CLIs follow" per ADR 0014); do not treat that listing as proof the
+  engine can invoke it today.
+* agent-browser (a pinned npm dependency of Runtime) owns the automation
+  verbs; forwarding ran under a pinned session and a neutralized config,
+  re-attaching to the current CDP endpoint before every command
+  (`agent-browser-cli.ts`).
 * One process-wide FIFO (`command-queue.ts`) serializes browser commands
   across agents and turns. Active commands inhibit automatic recovery, and
   recovery waits a bounded period for the queue to drain.

@@ -1,8 +1,8 @@
 ---
-summary: Runtime admin and control routes for health, capabilities, events, agent execution, sessions, cron, skills, models, bindings, and files.
+summary: Runtime admin and control routes for health, capabilities, events, agent execution, presence, activity, inbox, sessions, skills, models, bindings, and files.
 read_when:
   - changing Tavern Runtime health, capabilities, admin, or control routes
-  - changing agent execution, cron, skills, sessions, models, or memory runtime APIs
+  - changing agent execution, presence, activity, inbox, skills, sessions, or model runtime APIs
   - changing packages/tavern-api/src/runtime contracts
 ---
 
@@ -20,9 +20,10 @@ It is not a second product API.
   feature health.
 - **Runtime events.** Recent event lists and websocket notifications for
   operational state.
-- **Agent execution.** Engine config and local lifecycle control.
-- **Operational records.** Agents, sessions, jobs, cron jobs, cron runs, tasks,
-  models, skills, bindings, memory settings, Wiki status, Wiki settings, and agent files.
+- **Agent execution.** Engine config, presence, activity, read-only inbox
+  visibility, stop, and session reset.
+- **Operational records.** Agents, sessions, jobs, models, skills, bindings,
+  and agent files.
 - **Runtime chat relay.** The private websocket Runtime uses for accepted chat
   work and agent dispatch. Durable chat history still lives in the Chat API.
 
@@ -34,26 +35,33 @@ It is not a second product API.
 | Runtime update                  | `/update/status`, `/update`, `/update/restart`                                                                                                                                                                                                                                                                                             |
 | Runtime events                  | `/events`, websocket `/events`                                                                                                                                                                                                                                                                                                             |
 | Agent execution                 | `/agent-engine/config`, `/agent-env`                                                                                                                                                                                                                                                                                |
-| Timezone and dispatch settings  | `/timezone/settings`, `/tasks/dispatch-settings` |
+| Agent presence, activity, inbox | `/agents/presence`, `/agents/{id}/activity`, `/agents/{id}/inbox`, `/agents/{id}/stop`, `/agents/{id}/session/reset`                                                                                                                                                                                                                       |
+| Timezone settings               | `/timezone/settings`                                                                                                                                                                                                                                                                                                                       |
 | Plugins                         | `/plugins`, `/plugins/{id}`, `/plugins/merchbase/settings`, `/plugins/merchbase/action`, `/plugins/merchbase/sales/series`                                                                                                                                                                                                                 |
-| Agents and files                | `/agents`, `/agents/{id}`, `/agents/{id}/config`, `/agents/{id}/task-settings`, `/agents/{id}/files`, `/agents/{id}/files/{path}`, `/workspace/agents/{id}/files`, `/workspace/agents/{id}/files/{path}`                                                                                                                                       |
+| Agents and files                | `/agents`, `/agents/{id}`, `/agents/{id}/config`, `/agents/{id}/files`, `/agents/{id}/files/{path}`, `/workspace/agents/{id}/files`, `/workspace/agents/{id}/files/{path}`                                                                                                                                       |
 | Sessions and execution evidence | `/agent/sessions`, `/agent/sessions/previews`, `/agent/sessions/{sessionKey}/messages`, `/agent/sessions/{sessionKey}/graph`, `/agent/sessions/{sessionKey}/prompt`, `/agent/sessions/{sessionKey}/resync`                                                                                                                                 |
 | Jobs                            | `/jobs`, `/jobs/{slug}`, `/jobs/{slug}/run`                                                                                                                                                                                                                                                                                                |
-| Cron                            | `/cron-jobs`, `/cron-jobs/{id}`, `/cron-jobs/{id}/run`, `/cron-jobs/{id}/runs`, `/cron-runs`, `/cron-runs/{id}`                                                                                                                                                                                                                            |
-| Tasks                           | `/tasks`, `/tasks/{id}`, `/tasks/{id}/dispatch`, `/labels`, `/labels/{id}`                                                                                                                                                                                                                                                                 |
 | Skills                          | `/skills`, `/skills/{id}`, `/skills/{id}/config`                                                                                                                                                                                                                                                                                           |
 | Skill hub                       | `/skills/hub/available`, `/skills/hub/preview`, `/skills/hub/scan`, `/skills/hub/install`, `/skills/hub/uninstall`, `/skills/hub/taps`, `/skills/hub/taps/{repo}`                                                                                                                                                                          |
 | Tools                           | `/tools`, `/tools/{id}/enabled`, `/tools/{id}/config`, `/tools/{id}/provider`, `/tools/{id}/env`, `/tools/{id}/post-setup`                                                                                                                                                                                                                 |
 | Advanced MCP servers            | `/mcp/servers`, `/mcp/servers/{name}`, `/mcp/servers/{name}/test`, `/mcp/servers/{name}/enabled`, `/mcp/catalog`, `/mcp/catalog/install`                                                                                                                                                                                                   |
-| Memory, Wiki, models, and access | `/memory/settings`, `/memory/jobs`, `/memory/activity`, `/wiki/status`, `/wiki/settings`, `/wiki/pages`, `/wiki/search`, `/models`, `/model-categories/settings`, `/model-capabilities/selections`, `/model-providers/catalog`, `/model-providers/enabled`, `/model-providers/{providerId}`, `/model-access`, `/model-access/api-key`, `/model-access/oauth/{providerId}/start`, `/model-access/oauth/{providerId}/poll/{sessionId}`, `/model-access/oauth/{providerId}/submit`, `/model-access/oauth/sessions/{sessionId}`, `/model-access/openrouter` |
+| Models and access               | `/models`, `/model-categories/settings`, `/model-capabilities/selections`, `/model-providers/catalog`, `/model-providers/enabled`, `/model-providers/{providerId}`, `/model-access`, `/model-access/api-key`, `/model-access/oauth/{providerId}/start`, `/model-access/oauth/{providerId}/poll/{sessionId}`, `/model-access/oauth/{providerId}/submit`, `/model-access/oauth/sessions/{sessionId}`, `/model-access/openrouter` |
 | Platform bindings               | `/bindings`, `/bindings/{id}`                                                                                                                                                                                                                                                                                                              |
 | Runtime chat projections        | `/agent/chats`, `/agent/chats/{chatId}/messages`, `/agent/chats/{chatId}/agent-sessions/current`, `/agent/chats/{chatId}/pane-state`                                                                                                                                                                                              |
 | Runtime chat relay              | websocket `/chat`                                                                                                                                                                                                                                                                                                                          |
 
 `POST /jobs/{slug}/run` is the single manual job-run interface. Runtime job
-definitions own their payload schema and default input. Memory maintenance is
-not a built-in Runtime job; Memory work belongs to agents through the managed
-`memory` skill.
+definitions own their payload schema and default input.
+
+`/agents/{id}/inbox` is read-only inbox visibility for the agent profile:
+pending targets, muted channels, and followed threads (see
+[Agent Inbox](../../specs/inbox.md)). `/agents/{id}/stop` is the agent-scoped
+interrupt — it stops the agent's running turn and clears its queued backlog
+wherever it is running, not a single chat's turn. Agents themselves reach
+Runtime through a separate agent-token CLI surface (`/api/agent/*`, not this
+admin surface) for sending, reading history, and pulling pending messages —
+see [Agent Inbox](../../specs/inbox.md) and
+[Grotto CLI](../../specs/grotto-cli.md).
 
 `/timezone/settings` (GET/PUT) owns the runtime-wide home timezone (system
 default when unset). Reads include the resolved effective timezone. Runtime
@@ -115,7 +123,7 @@ Stats, live with the feature that reads that telemetry.
 
 ## Rules
 
-- **Runtime owns operations.** Health, capabilities, agent execution, cron, sessions,
+- **Runtime owns operations.** Health, capabilities, agent execution, sessions,
   and skill state come from Tavern Runtime.
 - **Runtime owns capabilities.** Runtime stores capability health and exposes
   the capability API. Jobs and app surfaces can use capability health to decide

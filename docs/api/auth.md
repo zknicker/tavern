@@ -78,8 +78,8 @@ Runtime-token and owner sessions have full Runtime access. Member sessions may
 use the Tavern `/api/*` chat surface and read app-facing identity, capabilities,
 events, agents, models, and Mac app inventory. Runtime administration remains
 owner-only, including model access, agent environment, Plugins, MCP, updates,
-development routes, Memory settings, and timezone settings. Verified
-non-members remain limited to identity introspection and invite redemption.
+development routes, and timezone settings. Verified non-members remain limited
+to identity introspection and invite redemption.
 
 Clients use Tavern API or TypeScript SDK surfaces instead of reading local
 SQLite files, runtime stores, or executor state directly.

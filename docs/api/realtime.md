@@ -1,9 +1,9 @@
 ---
-summary: Realtime contract for durable chat events, response activity updates, live websocket notifications, reconnect refetch, and app stream boundaries.
+summary: Realtime contract for durable chat events, the tRPC app-invalidation event set, the ephemeral composition stream, reconnect refetch, and app stream boundaries.
 read_when:
   - changing websocket subscriptions or reconnect behavior
-  - adding a durable event type or response activity signal
-  - changing response activity, progress, or realtime recovery semantics
+  - adding a durable event type or a new tRPC invalidation event
+  - changing the composition stream, presence, or realtime recovery semantics
 ---
 
 # Realtime
@@ -18,11 +18,10 @@ Clients recover by refetching durable resources through normal Tavern API reads.
 | Component | Owner | Role |
 | --- | --- | --- |
 | `chat_events` | Tavern Runtime | Durable cursor-backed event log |
-| `chat_responses` | Tavern Runtime | Durable response lifecycle |
-| `chat_response_activity` | Tavern Runtime | Durable response work rows |
+| `chat_responses` / `chat_response_activity` | Tavern Runtime | Durable response/activity rows (real agent turns no longer populate them — see [Chat API](chat.md)) |
 | `chat_artifacts` | Tavern Runtime | Durable renderable outputs |
 | Event list | Tavern Runtime | Inspectable recent events derived from `chat_events` |
-| App websocket | Tavern App | UI invalidation and client notifications |
+| App websocket | Tavern App | UI invalidation and client notifications (`agent.updated`, `chat.updated`, `chat.log.updated`, `model.updated`, `session.updated`, `skill.updated`, `pane.updated`, `agent-runtime.updated`, `agent-runtime-capability.updated`, `engine-restart.updated`, and similar) |
 
 App websocket events are not the durable event source. They can mirror Runtime
 events, but missed app notifications recover through Tavern API reads.
@@ -86,19 +85,17 @@ Chat events:
 * `artifact.created`
 * `chat.read`
 
-Automation, Memory, skill, and stats events use the same durable event log when
-they affect client-visible Runtime state. Wiki page-change notifications are
-app invalidation hints; clients recover by refetching Memory reads.
+Automation, skill, and stats events use the same durable event log when they
+affect client-visible Runtime state.
 
-Activity events project to live `turn.progress` steps for app patching. The
-step kind comes from the durable activity: activities carrying
-`metadata.runtime.notice` project as `notice` steps, activities carrying
-`metadata.subagent` source facts project as `worker` steps, and `widget`
-activities project as `widget` steps with the render payload for
-immediate inline rendering. Activities carrying `metadata.clarification`
-project as `tool` steps named `clarify` with a typed `clarification` payload
-for choices, answer state, disposition, and deadline. The projected step id
-equals the activity id, so live rows and durable rows reconcile in place.
+These chat-level events (`message.*`, `response.*`, `activity.*`,
+`artifact.created`) are separate from the tRPC invalidation events the app
+websocket carries (`agent.updated`, `chat.updated`, `session.updated`, and so
+on) — see [Components](#components). Live in-chat turn progress does not ride
+this event log: the chat timeline carries durable messages only, and
+execution evidence surfaces on the agent profile instead (see
+[chat-timeline](../../specs/chat-timeline.md) and
+[agent-activity](../../specs/agent-activity.md)).
 
 Read events are private to the reader. Private events use `private` plus
 `recipients`, and Runtime filters them during event list and websocket delivery.
@@ -110,17 +107,12 @@ under load and are not replayed after disconnect.
 
 Examples:
 
-* transient active-turn indicators
+* the ephemeral composition stream (`agent.composition` events) — a
+  provisional bubble for an in-flight `grotto message send`, never persisted
+  or replayed (see [Agent Inbox](../../specs/inbox.md))
+* agent presence (busy/idle)
 * short-lived hover/debug state
 * app-only invalidation hints
-* Wiki page-change invalidation hints
-
-Tool progress, assistant progress, and provider-exposed thinking summaries
-are not ephemeral notifications in Tavern chat. Runtime persists them as
-responses, response activity, or artifacts, then emits durable events.
-Engine spinner status is separate: Runtime may publish it as live
-`turn.statusUpdated` rotation signals, but its text is ignored and it is not
-durable chat activity.
 
 ## Reconnect Recovery
 
@@ -131,7 +123,7 @@ Reconnect flow:
 
 1. Keep rendering cached query data while the socket reconnects.
 2. When the websocket reconnects, invalidate active Runtime-backed queries.
-3. Refetch chat history, responses, activity, artifacts, agents, sessions, cron,
+3. Refetch chat history, artifacts, agents, presence, activity, sessions,
    skills, stats, or other visible resources through their normal API reads.
 4. Resume applying live notifications.
 
@@ -155,9 +147,9 @@ invalidation. Those subscriptions are app notifications.
 Product state still comes from:
 
 * `GET /api/chats/{chat_id}/messages`
-* response, activity, and artifact reads for the chat timeline
-* focused resource reads for automations, Memory,
-  skills, and stats
+* artifact reads for the chat timeline
+* focused resource reads for automations, skills, and stats
+* the agent activity feed, presence, and inbox reads for execution evidence
 
 ## What Is Intentionally Missing
 

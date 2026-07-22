@@ -23,8 +23,8 @@ Tavern's shape is:
   durable Chat messages, responses, activity, artifacts, receipts, events, and
   errors.
 - **Typed Runtime admin contracts.** `packages/tavern-api/src/runtime/*` owns
-  health, status, agents, sessions, cron, skills, models, memory, files, and
-  bindings.
+  health, status, agents, presence, activity, inbox, sessions, skills, models,
+  files, and bindings.
 - **Runtime handlers.** Tavern Runtime returns Tavern API-shaped payloads.
 - **SDK wrapper.** TypeScript clients should import the SDK instead of reading
   app caches or Runtime tables directly.
@@ -32,7 +32,7 @@ Tavern's shape is:
 ## Contract Rules
 
 - Product nouns come first: Chat, message, participant, Agent session, Agent
-  turn, model, tool, Memory, automation.
+  turn, model, tool, automation.
 - Runtime is the source of truth for values that affect execution.
 - Provider-specific execution details stay metadata unless the product needs a
   stable cross-provider field.

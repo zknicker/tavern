@@ -20,9 +20,9 @@ source of truth for agent behavior.
 
 * **API procedures stay thin.** Validate input, call product logic, and return a
   narrow result.
-* **Product logic owns product nouns.** Chat, agents, memory, automations,
-  skills, stats, and settings live under their capability, not under
-  generic service folders.
+* **Product logic owns product nouns.** Chat, agents, automations, skills,
+  stats, and settings live under their capability, not under generic service
+  folders.
 * **Chat history is runtime-owned.** Tavern Runtime owns chats, messages,
   participants, sequence, events, reads, soft deletes, and the product timeline.
 * **Agent records are runtime-owned.** Tavern App lists, reads, and edits agents
@@ -30,9 +30,9 @@ source of truth for agent behavior.
   presentation overlays, but it does not decide whether an agent exists.
 * **Agent execution settings are runtime-owned.** Provider setup, executable
   model inventory, selected model, skill assignments, Plugin grants,
-  instructions, sessions, turns, and response activity come from Runtime. App
-  settings screens invoke Runtime API mutations; they do not maintain a
-  separate executable config.
+  instructions, sessions, turns, presence, and the activity feed come from
+  Runtime. App settings screens invoke Runtime API mutations; they do not
+  maintain a separate executable config.
 * **Runtime adapters stay behind adapters.** Agent-engine payloads and
   plugin-specific details do not leak into product domains.
 * **Settings save through Runtime.** App settings call narrow mutations such as
@@ -68,10 +68,10 @@ is disconnected or version-mismatched. Runtime health, update, and capability
 problems surface inside the normal app shell.
 
 Runtime-owned transitions, such as agent-engine readiness or model/skill
-inventory refreshes, emit `capability.updated` from Tavern Runtime.
-App-observed capability checks write through the capability status recorder,
-which emits the same app invalidation event when the persisted capability state
-changes.
+inventory refreshes, emit `agent-runtime-capability.updated` from Tavern
+Runtime. App-observed capability checks write through the capability status
+recorder, which emits the same app invalidation event when the persisted
+capability state changes.
 
 Do not use broad startup refreshes or global polling to keep capability UI
 current. The flow is current query data plus capability-specific events.

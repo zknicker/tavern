@@ -18,9 +18,9 @@ Capabilities are a readiness primitive. Jobs, micro-features, and whole app
 pages can use capability health to decide whether a feature is available,
 degraded, or blocked.
 
-Capabilities are not quality scores. Domain freshness, content quality, missing
-Memory topics, and broken Wiki links belong to domain status APIs or future
-Tasks workflows, not Runtime capability health.
+Capabilities are not quality scores. Domain freshness and content quality
+belong to domain status APIs or future Tasks workflows, not Runtime
+capability health.
 
 The app only renders capability state. It does not decide whether a Runtime
 capability is healthy.
@@ -206,8 +206,7 @@ event that does not refresh the cache leaves the app on the snapshot taken at
 connect time (for example, engine checks still warming during startup).
 
 Frontend controls must render from the refreshed capability record. Do not
-disable sends, cron actions, or other agent-backed actions from app-local
-connection status.
+disable sends or other agent-backed actions from app-local connection status.
 
 ## Capability Examples
 
@@ -219,15 +218,9 @@ and external dependencies.
 | `dashboardServer` | Runtime can reach agent-engine dashboard status. |
 | `apiServer` | Runtime can make an authenticated agent-engine API call. |
 | `gateway` | Runtime can open the agent-engine event stream. |
-| `memory` | Memory is enabled, and each registered agent workspace can hold core `USER.md` and `MEMORY.md` files. |
-| `wiki` | The configured Wiki root can be read and Wiki tools are available. Runtime reports write access in capability metadata because Wiki maintenance needs it, but read-only roots remain browseable. |
-| `wikiRecall` | The Wiki recall index is provisioned or actively provisioning over the Wiki root. |
-| `memoryExtraction` | Background Memory extraction can run with Fast-category direct model access. |
-| `memoryDreaming` | Background Memory dreaming can run with Standard-category direct model access. |
 | `modelExecution` | Runtime has at least one usable agent execution model for the relevant agent or action. |
 | `imageGeneration` | A supported API-key image model or Codex subscription image route is selected and ready. |
 | `skills` | Runtime can reach skill inventory. App-side capability methods under `skills` also track the skill hub (`skill-hub.*`), tool setup, and advanced MCP management (`mcp.*`) surfaces. |
-| `autoDispatch` | Runtime task storage and the auto-dispatch interval are running. |
 | `webAccess` | Runtime supports per-agent web access (always healthy on Runtimes that ship it; the id gates the app surface on older Runtimes). |
 | `plugin.merchbase` | Runtime has an enabled MerchBase Plugin, an API key, and can read the configured MerchBase account. |
 

@@ -3,7 +3,7 @@ summary: Tavern Runtime's agent-engine contract for chats, Agent sessions, AI SD
 read_when:
   - changing Tavern Runtime agent execution
   - changing AI SDK HarnessAgent execution
-  - changing agent instructions, SOUL, runtime skills, tools, busy delivery, or turn activity
+  - changing agent instructions, runtime skills, tools, inbox delivery, or turn evidence
   - changing model provider setup, model defaults, or Agent session model selection
   - changing deterministic e2e executor behavior
 ---
@@ -13,7 +13,7 @@ read_when:
 Tavern Runtime is the agent engine boundary. It owns canonical chats, chat
 participants, Agent seats, Agent sessions, Agent turns, model provider setup,
 executable model inventory, Runtime profiles, instruction composition, tool
-exposure, Memory reads, and turn routing.
+exposure, inbox delivery, and turn routing.
 
 Tavern App and Tavern Server are clients. They may proxy Runtime data and shape
 it for the UI, but they must not own executable agent state. A direct Runtime
@@ -51,14 +51,18 @@ AgentSession
 
 The Agent seat is stable Tavern product state. The Agent session is
 agent-global (ADR 0011, `specs/sessions.md`): one ongoing session per agent
-backs every chat that agent sits in, with a per-(session, chat) seen ledger
-tracking what has been model-visible in each chat. A fresh session starts
-only on a model switch, a manual reset from agent settings, or after ~7
-fully idle days; starting one archives the previous active session.
+backs every chat that agent sits in. Turns float on the session rather than
+anchoring to a chat (ADR 0014); a two-cursor inbox ledger per (session,
+target) tracks what has been delivered and what is provably model-visible
+(`specs/inbox.md`). A fresh session starts only on a model switch, a manual
+reset from agent settings, or after ~7 fully idle days; starting one archives
+the previous active session.
 
 A channel with multiple agents is not one engine session. Each agent runs
-its own global session. Human-only channel messages are valid chat messages
-and do not invoke an agent unless addressing rules route them to an agent.
+its own global session. A durable message never invokes an agent directly —
+Runtime's delivery planner queues it per attention rules, and an idle
+agent's next drain turn (or a busy agent's content-free notice) is how it
+reaches execution (`specs/inbox.md`).
 
 ## Execution
 
@@ -76,52 +80,37 @@ Provider adapters are internal implementation choices:
 - `@ai-sdk/harness-codex`
 - `@ai-sdk/harness-pi` for OpenAI and OpenAI-compatible API-key routes
 
-The harness executor creates a session, sends the prompt, and consumes the
-turn's part stream while it runs: tool calls persist as `running` activity when
-they start and `completed`/`failed` when they resolve, reasoning segments
-persist as `reasoning` activity when they end, and assistant text segments
-persist as commentary activity as soon as a later part proves they are not the
-final answer. The last text segment becomes the assistant reply. After
-the turn settles it stores the opaque harness resume state on the Agent session
-and stops the session handle. The chat response row must already exist when the
-turn starts; mid-turn activity rows reference it.
-The prompt contains the current Tavern message plus catch-up context since
-the session's seen-ledger cursor for that chat
-(`agent_session_chat_cursors`); it does not replay the prior user-agent
-transcript because the harness session owns that history. Each turn's prompt
-also anchors the chat: its kind, id, and participant roster with mention
-links and bios, plus counts-only "Unread elsewhere" lines for other chats
-with unseen rows.
-When Wiki recall is provisioned, the prompt also carries a recalled-Wiki block:
-the triggering message runs a vector search over the qmd-backed recall index
-(`apps/runtime/src/wiki/recall/`), and up to
-three pages above the relevance floor inject as labeled background context.
-qmd loads at runtime via dynamic import — its native modules cannot compile
-into the single-file Runtime binary — resolving the workspace package in dev
-and the artifact-staged copy under `share/grotto/node_modules` when packaged
-(`TAVERN_RUNTIME_QMD_PATH` overrides).
+The harness executor creates a session and sends the prompt. The agent's
+final reply is not derived from the model's text output — the model speaks
+only by running `grotto message send` from inside the turn (ADR 0014); text
+emitted outside a `grotto` command is delivered to no one. After the turn
+settles, Runtime stores the opaque harness resume state on the Agent session
+and stops the session handle.
+
+A fresh session's first turn is a bare `Start.` turn. After that, an idle
+agent's next turn is a drain: it batches every pending inbox target — every
+row between that target's `seen` and `delivered` cursor, plus any pierce rows
+— as labeled envelopes closed by a verbatim trailer telling the agent to
+respond as appropriate (`specs/inbox.md`). The prompt does not replay the
+prior user-agent transcript, because the harness session owns that history;
+it carries only the batch of envelopes plus a chain-budget note when the
+drain is all agent-authored.
 Each turn prompt is time-anchored with the current time, and every included
 message carries its send time — weekday-prefixed home-timezone wall clock,
 e.g. `Sun 2026-07-05T13:22:42-04:00` (`apps/runtime/src/tavern/harness-prompt.ts`,
-timezone from `resolveHomeTimezone()`). Static per-session guidance — the home timezone, the staleness policy, and
-Tavern chat/Memory/automation tool guidance — lives in the composed agent
-instructions, not the per-turn prompt, so long sessions carry one copy
-instead of one per turn. Chat-specific facts (kind, id, roster) ride each
-turn's prompt because one global session spans many chats. Channel instructions also teach the silent reply: a turn
-whose final text is exactly `NO_REPLY` completes without delivering an
-assistant message; the response row and a "Chose not to reply" activity remain
-as evidence. The token is honored in every chat kind but taught only in
-channels.
+timezone from `resolveHomeTimezone()`). Static per-session guidance — the home
+timezone, the staleness policy, and Tavern CLI guidance — lives in the
+composed agent instructions, not the per-turn prompt, so long sessions carry
+one copy instead of one per turn.
 The composed instructions are agent-global — no chat-specific content — and
 append model-family operational guidance (`apps/runtime/src/tavern/model-instructions.ts`): tool-use
 enforcement and execution discipline for gpt/codex-class models, Google
 directives for gemini/gemma, nothing for Claude models.
-When the prompt shows catch-up rows, Runtime advances that chat's
-seen-ledger cursor to the highest sequence shown.
-Each turn also records prompt evidence — the composed instructions, the
-per-turn prompt, and the Wiki recall hits — in `agent_turns` metadata at
-turn start, served on demand at `GET /api/turns/{run_id}/prompt`. The app's
-turn drawer shows the recall matches; dev mode (desktop Developer menu) adds
+When a drain's envelopes are shown, Runtime advances each embedded target's
+`seen` cursor to the sequence shown at turn settle.
+Each turn also records prompt evidence — the composed instructions and the
+per-turn prompt — in `agent_turns` metadata at turn start, served on demand
+at `GET /api/turns/{run_id}/prompt`. Dev mode (desktop Developer menu) adds
 the raw prompt blob.
 Turns also record workspace file-change evidence: a bounded snapshot brackets
 the turn, and the compared pair settles as `agent_turn_file_changes` rows plus
@@ -213,10 +202,13 @@ Sessions are never mutated to a different model in place.
 
 ## Instructions And Tools
 
-Runtime composes the bootstrapped Agent's instructions from Tavern-owned agent
-files and settings, including `NOTES.md`, `SOUL.md`, tools, and Memory context.
-Skills are assigned execution resources, not instruction text. The workspace
-lives under the Runtime data root:
+Runtime composes the bootstrapped Agent's instructions from Tavern-owned
+managed instruction text and the agent's description (the personality
+surface) — there is no separate identity file. Durable per-agent notes are
+the agent's own workspace files (`MEMORY.md` and notes/), which it maintains
+itself; Runtime does not inject them into the prompt. Skills are assigned
+execution resources, not instruction text. The workspace lives under the
+Runtime data root:
 
 ```text
 .tavern/agents/<agent-id>/workspace
@@ -235,24 +227,18 @@ current turn. Runtime intersects those references with the addressed Agent's
 that is not assigned to that Agent produces no hidden prompt context and does
 not grant access.
 
-Harness tools come from the selected executor. Runtime exposes built-ins through
-`GET /tools` as enabled, configured, read-only diagnostics, but Tavern does not
-surface a user-facing Tools page or per-agent tool grant editor. Agent-specific
-access is expressed through skill assignments, Plugin grants, sandbox mode, and
-approval policy.
+The engine exposes zero tools to a turn except the uniform `web_fetch` host
+tool (ADR 0014); every other agent capability — messaging, reading chat
+history, channel attention, skills, Plugins — arrives as a CLI verb on PATH
+instead of a tool-schema addition. Harness executors' own native tools
+(shell, file edit, and so on) still run under sandbox mode and approval
+policy; Runtime exposes built-ins through `GET /tools` as enabled,
+configured, read-only diagnostics, but Tavern does not surface a user-facing
+Tools page or per-agent tool grant editor.
 
-When the `imageGeneration` capability is ready, Runtime adds `image_generate` to
-each harness turn. The tool uses the selected direct image model and writes its
-output into the active agent workspace.
-
-Runtime also exposes read-only Tavern chat tools to harness turns:
-
-- `chat_messages_list` lists current-chat messages by sequence cursor.
-- `chat_messages_search` searches current-chat message content.
-- `chat_message_get` reads one current-chat message by id.
-
-These tools are same-chat only. They are the escape hatch for older Tavern
-history that should not be automatically injected into every prompt.
+Agents read chat history themselves through `grotto message read` and
+`grotto message search` rather than a tool call — same-chat and cross-chat,
+bounded to what the CLI resolves.
 
 Web access is a per-agent opt-in (`webAccessEnabled`, default off). When on,
 Runtime enables the executor's provider-native web search where the model
@@ -263,13 +249,12 @@ size-capped markdown. Native page-fetch tools stay disabled even when web
 access is on so page reads share one size cap and injection posture. When
 off, no web tools reach the turn.
 
-Runtime writes product facts through Tavern stores:
-
-- `chat_messages`
-- `chat_responses`
-- `chat_response_activity`
-- `chat_deliveries`
-- `agent_turns`
+Runtime writes product facts through Tavern stores. The agent itself writes
+`chat_messages` (via `grotto message send`); Runtime writes `agent_turns` and
+`agent_turn_file_changes` as the durable execution record.
+`chat_responses` / `chat_response_activity` / `chat_deliveries` remain
+schema-backed but are not written for real turns (see
+[data model](data-model.md)).
 
 Provider-specific traces, model usage, finish reasons, and opaque resume state
 remain execution evidence in metadata.
