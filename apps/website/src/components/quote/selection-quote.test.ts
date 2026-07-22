@@ -6,7 +6,7 @@ describe('selection quote', () => {
     test('quotes every selected line and appends the grotto:// source link', () => {
         const insert = buildQuoteInsert('first line\nsecond line', {
             href: 'grotto://workspace/projects/alpha.md',
-            label: 'Projects/Alpha.md',
+            label: 'projects/alpha.md',
         });
         expect(insert).toBe(
             '> first line\n> second line\n\n[projects/alpha.md](grotto://workspace/projects/alpha.md)\n\n'
