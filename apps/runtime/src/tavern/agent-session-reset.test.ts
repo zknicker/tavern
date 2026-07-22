@@ -9,7 +9,7 @@ import { resetAgentSession } from './agent-session-reset.ts';
 import { ensureCurrentAgentSession, readCurrentAgentSession } from './agent-session-store.ts';
 import { agentTokenPath, mintAgentToken, readAgentToken } from './agent-tokens.ts';
 import { upsertStoredAgent } from './agents-store.ts';
-import { listActivityForResponses, listResponses } from './chat-api/index.ts';
+import { listMessages } from './chat-api/index.ts';
 
 describe('agent session reset', () => {
     let workspaceDir: string;
@@ -65,27 +65,20 @@ describe('agent session reset', () => {
         expect(entries).not.toContain('NOTES.md');
     });
 
-    it('lands a durable new_session notice in the agent DM', async () => {
+    it('lands a durable system receipt in the agent DM', async () => {
         ensureCurrentAgentSession({ agentId: 'agt_otto' });
 
         const { session } = await resetAgentSession({ agentId: 'agt_otto' });
 
-        // The notice lands in the agent's built-in DM (bootstrapped with
-        // the agent), the agent's home surface.
-        const responses = listResponses('cht_agt_otto_dm', { limit: 10 });
-        expect(responses.responses).toHaveLength(1);
-        const activities = listActivityForResponses(
-            responses.responses.map((response) => response.id),
-            getDb()
-        );
-        expect(activities).toHaveLength(1);
-        const notice = (
-            activities[0]?.metadata as {
-                runtime?: { notice?: { kind?: string; sessionId?: string } };
-            }
-        ).runtime?.notice;
-        expect(notice?.kind).toBe('new_session');
-        expect(notice?.sessionId).toBe(session.id);
+        // The receipt lands as a system message in the agent's built-in DM
+        // (bootstrapped with the agent), the agent's home surface.
+        const rows = listMessages('cht_agt_otto_dm', { limit: 10 });
+        const receipt = rows.messages.find((message) => message.role === 'system');
+        expect(receipt?.content).toContain('Started a fresh session');
+        const runtime = (receipt?.metadata as { runtime?: { notice?: string; sessionId?: string } })
+            .runtime;
+        expect(runtime?.notice).toBe('new_session');
+        expect(runtime?.sessionId).toBe(session.id);
     });
 
     it('rotates the mode-0600 agent token', async () => {

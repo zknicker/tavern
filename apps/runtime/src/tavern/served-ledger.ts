@@ -16,6 +16,18 @@ export function readServedCursor(sessionId: string, chatId: string, db: Database
     return row?.served_up_to_seq ?? 0;
 }
 
+/** Every served cursor for a session, for the runner's settle-time proofs. */
+export function listServedCursors(sessionId: string, db: Database = getDb()) {
+    const rows = db
+        .prepare(
+            `SELECT chat_id, served_up_to_seq
+             FROM agent_session_served_cursors
+             WHERE session_id = $sessionId`
+        )
+        .all(namedParams({ sessionId })) as Array<{ chat_id: string; served_up_to_seq: number }>;
+    return new Map(rows.map((row) => [row.chat_id, row.served_up_to_seq]));
+}
+
 /** Monotonic. Pull responses and hold displays are the only callers. */
 export function advanceServedCursor(
     input: { chatId: string; now?: string; seq: number; sessionId: string },

@@ -152,7 +152,6 @@ function executorInput(
             workspaceFolder: '.tavern/agents/agt_primary/workspace',
             ...agentOverrides,
         } satisfies AgentRuntimeAgent,
-        agentParticipantId: 'agt_primary',
         agentSession: {
             agentId: 'agt_primary',
             archivedAt: null,
@@ -166,11 +165,7 @@ function executorInput(
             status: 'active',
             updatedAt: now,
         },
-        attachments: [],
-        chatId: 'cht_general',
-        content: 'hello',
-        requestMessageId: 'msg_1',
-        responseId: 'rsp_run_1',
+        prompt: 'hello',
         runId: 'run_1',
     };
 }

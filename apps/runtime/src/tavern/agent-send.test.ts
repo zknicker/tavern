@@ -14,7 +14,7 @@ import {
     listMessages,
     setThreadFollow,
 } from './chat-api/index.ts';
-import { readSeenCursor } from './seen-ledger.ts';
+import { readSeenCursor } from './inbox-cursors.ts';
 import { readServedCursor } from './served-ledger.ts';
 
 describe('agent attested sends', () => {

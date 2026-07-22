@@ -6,7 +6,7 @@ import { formatAgentTarget } from './agent-targets.ts';
 import { getChat, latestMessageSequence } from './chat-api/index.ts';
 import { rowToMessage } from './chat-api/messages.ts';
 import type { MessageRow } from './chat-api/types.ts';
-import { advanceSeenCursor, readSeenCursor } from './seen-ledger.ts';
+import { advanceSeenCursor, readSeenCursor } from './inbox-cursors.ts';
 import { advanceServedCursor, readServedCursor } from './served-ledger.ts';
 
 export const maxHoldContextMessages = 12;

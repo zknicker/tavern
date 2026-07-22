@@ -3,20 +3,13 @@ import { log } from '../log.ts';
 import { getAgentWorkspaceSource } from '../workspace/instructions.ts';
 import type { WorkspaceSnapshot } from '../workspace/snapshot.ts';
 import { captureWorkspaceSnapshot, diffWorkspaceSnapshots } from '../workspace/snapshot.ts';
-import { upsertResponseActivity } from './chat-api/index.ts';
 import { recordAgentTurnFileChanges } from './turn-file-changes.ts';
 
-// Turn file-change evidence: a workspace snapshot brackets every turn, and the
-// compared pair settles as a workspace_changes tool activity plus durable
-// before/after rows. Snapshot-compare (not tool-call derivation) because
-// harness file-tool names differ per adapter and shell writes are invisible
-// to tool arguments.
-
-export const workspaceChangesToolName = 'workspace_changes';
-
-export function fileChangesActivityIdForRun(runId: string) {
-    return `act_${runId.replace(/[^A-Za-z0-9_-]/gu, '_')}_files`;
-}
+// Turn file-change evidence: a workspace snapshot brackets every turn, and
+// the compared pair settles as durable before/after rows keyed by runId —
+// agent-level execution evidence for the agent detail panel (I1).
+// Snapshot-compare (not tool-call derivation) because harness file-tool
+// names differ per adapter and shell writes are invisible to tool arguments.
 
 // Best-effort: a turn without a resolvable workspace simply has no file
 // evidence. Never blocks the turn.
@@ -37,76 +30,28 @@ export async function captureTurnWorkspaceBaseline(
 
 export async function settleTurnFileEvidence(input: {
     agentId: string;
-    agentSessionId: string;
     baseline: null | WorkspaceSnapshot;
-    chatId: string;
-    requestMessageId: string;
-    responseId: string;
     runId: string;
-}): Promise<null | string> {
+}): Promise<void> {
     if (!input.baseline) {
-        return null;
+        return;
     }
     try {
         const source = getAgentWorkspaceSource(getDb(), input.agentId);
         if (!source) {
-            return null;
+            return;
         }
         const after = await captureWorkspaceSnapshot(source.workspaceDir);
         const changes = diffWorkspaceSnapshots(input.baseline, after);
         if (changes.length === 0) {
-            return null;
+            return;
         }
-
-        const evidence = recordAgentTurnFileChanges({
+        recordAgentTurnFileChanges({
             changes,
             runId: input.runId,
             truncated: input.baseline.truncated || after.truncated,
         });
-        const now = evidence.capturedAt;
-        const activityId = fileChangesActivityIdForRun(input.runId);
-        upsertResponseActivity(input.chatId, input.responseId, {
-            completed_at: now,
-            id: activityId,
-            kind: 'tool_call',
-            metadata: {
-                runtime: {
-                    agentId: input.agentId,
-                    agentSessionId: input.agentSessionId,
-                    engine: 'agent-engine',
-                    messageId: input.requestMessageId,
-                    runId: input.runId,
-                    source: 'agent-engine',
-                },
-                tool: {
-                    // The drawer fetches before/after contents on demand via
-                    // the turn file-changes route keyed by this runId.
-                    arguments: {
-                        changes: evidence.changes.map((change) => ({
-                            additions: change.additions,
-                            change: change.change,
-                            deletions: change.deletions,
-                            omitted: change.omitted,
-                            path: change.path,
-                        })),
-                        runId: input.runId,
-                        truncated: evidence.truncated,
-                    },
-                    name: workspaceChangesToolName,
-                },
-                toolName: workspaceChangesToolName,
-            },
-            started_at: now,
-            status: 'completed',
-            title: changedFilesTitle(evidence.changes.length),
-        });
-        return activityId;
     } catch (error) {
         log.warn('Turn file-change evidence failed', { err: error, runId: input.runId });
-        return null;
     }
-}
-
-function changedFilesTitle(count: number) {
-    return count === 1 ? 'Changed 1 file' : `Changed ${count} files`;
 }

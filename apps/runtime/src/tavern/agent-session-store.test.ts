@@ -11,8 +11,8 @@ import {
 } from './agent-session-store';
 import { upsertStoredAgent } from './agents-store';
 import { createChat, upsertResponse } from './chat-api';
+import { advanceSeenCursor, readSeenCursor } from './inbox-cursors';
 import { handleTavernRuntimeRequest } from './router';
-import { advanceSeenCursor, readSeenCursor } from './seen-ledger';
 
 describe('Tavern Runtime agent sessions', () => {
     beforeEach(() => {

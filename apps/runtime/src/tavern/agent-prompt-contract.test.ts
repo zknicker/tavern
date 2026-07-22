@@ -1005,7 +1005,6 @@ function executorInput(fixture: 'full' | 'minimal', workspaceFolder: string): Ag
             webAccessEnabled: fixture === 'full',
             workspaceFolder,
         },
-        agentParticipantId: 'agt_primary',
         agentSession: {
             agentId: 'agt_primary',
             archivedAt: null,
@@ -1019,11 +1018,7 @@ function executorInput(fixture: 'full' | 'minimal', workspaceFolder: string): Ag
             status: 'active',
             updatedAt: now,
         },
-        attachments: [],
-        chatId: 'cht_contract',
-        content: 'contract fixture',
-        requestMessageId: 'msg_contract',
-        responseId: 'rsp_contract',
+        prompt: 'contract fixture',
         runId: 'run_contract',
     };
 }

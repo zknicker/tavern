@@ -1,39 +1,49 @@
+import { randomUUID } from 'node:crypto';
+import type { AgentRuntimeAgentSession } from '@tavern/api';
 import { readConfigValue } from '../config.ts';
 import { log } from '../log.ts';
-import { scheduleMemoryExtractionForTurn } from '../memory/extraction.ts';
-import { isTaskDispatchRun } from '../tasks/dispatch-store.ts';
-import { recoverTaskDispatchForTurn } from '../tasks/recovery.ts';
 import { createAgentEngineExecutor } from './agent-engine-executor.ts';
 import type { AgentExecutor, AgentExecutorInput } from './agent-executor.ts';
 import { ensureCurrentAgentSession } from './agent-session-store.ts';
 import {
+    type AgentTurn,
     cancelAgentTurn,
     claimNextAgentTurnForAgent,
     completeAgentTurn,
     createAgentTurn,
     failAgentTurn,
+    findRunningAgentTurnForAgent,
     getAgentTurn,
+    hasQueuedAgentTurn,
+    listAgentTurnsForSession,
 } from './agent-turn-store.ts';
-import { upsertResponse } from './chat-api/index.ts';
-import { collectAgentEvaluationDispatches } from './evaluation-dispatch.ts';
+import { getStoredAgent } from './agents-store.ts';
+import { registerInboxWakeSink } from './delivery-planner.ts';
+import { advanceSeenCursor, clearInboxPierces, listPendingInboxTargets } from './inbox-cursors.ts';
+import { composeDrainDelivery, type DrainDelivery } from './inbox-drain.ts';
+import { noticeBusyAgent } from './inbox-notices.ts';
+import { listServedCursors } from './served-ledger.ts';
 import { registerTurnDelivery } from './turn-delivery.ts';
 import { captureTurnWorkspaceBaseline, settleTurnFileEvidence } from './turn-file-evidence.ts';
-import { recordAgentTurnOutcomeNote } from './turn-outcome-notes.ts';
 
-interface ActiveTurn {
-    agentId: string;
-    input: AgentExecutorInput;
-}
+// Floating turn runner (I1): one turn at a time per agent, anchored to the
+// session. A wake on an idle agent claims one drain turn that delivers ALL
+// pending targets batched; a wake on a busy agent flows into the content-free
+// notice pipeline (I2). Sessions that never ran get a bare Start. turn first
+// (ws2-turn-shapes.md §1). Chain budgets bound agent-to-agent ping-pong:
+// consecutive drains with no human envelope stop at the budget and resume on
+// the next human message.
 
 type SettledTurnStatus = 'cancelled' | 'completed' | 'failed';
 
 const defaultAgentTurnTimeoutMs = 5 * 60 * 1000;
-// Dispatched task turns do real multi-minute work; they get a longer watchdog
-// than interactive chat turns, which the user can see and stop directly.
-const defaultTaskTurnTimeoutMs = 30 * 60 * 1000;
-const activeTurns = new Map<string, ActiveTurn>();
+// Top-tier thinking legitimately runs past the interactive watchdog (K3 at
+// max regularly takes 7-10 minutes); those turns get a longer leash.
+const extendedTurnTimeoutMs = 30 * 60 * 1000;
+const agentChainBudget = 16;
+
 const activeAgentRuns = new Map<string, string>();
-const queuedTurnInputs = new Map<string, AgentExecutorInput>();
+const agentChainSpend = new Map<string, number>();
 const turnWaiters = new Map<
     string,
     Array<(result: { error?: string; status: SettledTurnStatus }) => void>
@@ -44,26 +54,39 @@ let executor: AgentExecutor = createAgentEngineExecutor();
 // a stale turn against the new world. Never changes in production.
 let executorEpoch = 0;
 
-export function enqueueAgentTurn(
-    input: AgentExecutorInput,
-    options: { turnMetadata?: Record<string, unknown> } = {}
-) {
-    queuedTurnInputs.set(input.runId, input);
-    createAgentTurn({
-        agentId: input.agent.id,
-        agentParticipantId: input.agentParticipantId,
-        agentSessionId: input.agentSession.id,
-        chatId: input.chatId,
-        id: input.runId,
-        metadata: {
-            trigger: 'message',
-            ...options.turnMetadata,
-        },
-        responseId: input.responseId,
-        triggerMessageId: input.requestMessageId,
-    });
+// The planner wakes agents; the runner decides drain vs notice. Notices ride
+// the executor's mid-turn input channel via the turn-delivery registry.
+registerInboxWakeSink({ wakeAgent });
+registerTurnDelivery((runId, text) => executor.deliverUserMessage?.(runId, text) ?? false);
 
-    void drainAgent(input);
+export function wakeAgent(agentId: string) {
+    const running = findRunningAgentTurnForAgent(agentId);
+    if (running) {
+        void noticeBusyAgent({ agentId, runId: running.id });
+        return;
+    }
+    scheduleAgentDrain(agentId);
+}
+
+export function scheduleAgentDrain(agentId: string) {
+    const session = ensureCurrentAgentSession({ agentId });
+    ensureStartTurn(agentId, session);
+    if (!hasQueuedAgentTurn(agentId)) {
+        createAgentTurn({
+            agentId,
+            agentSessionId: session.id,
+            id: newRunId(),
+            kind: 'drain',
+        });
+    }
+    void drainAgent(agentId);
+}
+
+/** Session resets boot the fresh session with its Start. turn eagerly. */
+export function scheduleAgentStart(agentId: string) {
+    const session = ensureCurrentAgentSession({ agentId });
+    ensureStartTurn(agentId, session);
+    void drainAgent(agentId);
 }
 
 export async function stopAgentTurn(runId: string) {
@@ -72,51 +95,19 @@ export async function stopAgentTurn(runId: string) {
         return false;
     }
 
-    const active = activeTurns.get(runId);
+    const wasActive = activeAgentRuns.get(turn.agentId) === runId;
     const cancelled = cancelAgentTurn({ id: runId });
     if (!cancelled) {
         return false;
     }
-    if (active) {
+    if (wasActive) {
         await Promise.resolve(executor.stop?.(runId)).catch(() => {});
+        clearActiveTurn(runId, turn.agentId);
     }
-
-    queuedTurnInputs.delete(runId);
-    upsertResponse(cancelled.chatId, {
-        completed_at: cancelled.completedAt ?? new Date().toISOString(),
-        id: cancelled.responseId,
-        metadata: {
-            runtime: {
-                agentId: cancelled.agentId,
-                agentSessionId: cancelled.agentSessionId,
-                engine: 'agent-engine',
-                messageId: cancelled.triggerMessageId,
-                runId: cancelled.id,
-                source: 'agent-engine',
-            },
-        },
-        participant_id: cancelled.agentParticipantId,
-        request_message_id: cancelled.triggerMessageId,
-        status: 'cancelled',
-        summary: 'Turn stopped.',
-    });
-
-    if (active) {
-        clearActiveTurn(runId, active.agentId);
-        notifyTurnSettled(runId, { status: 'cancelled' });
-        void drainAgent(active.input);
-    } else {
-        notifyTurnSettled(runId, { status: 'cancelled' });
-    }
-    recoverTaskDispatchForTurn(runId, { status: 'cancelled' });
-    recordTurnOutcome(cancelled, { status: 'cancelled' });
-
+    notifyTurnSettled(runId, { status: 'cancelled' });
+    void drainAgent(turn.agentId);
     return true;
 }
-
-// Busy delivery reaches the current executor through the registry so the
-// message fan-out module never imports the runner (specs/steering.md).
-registerTurnDelivery((runId, text) => executor.deliverUserMessage?.(runId, text) ?? false);
 
 export function waitForAgentTurnSettlement(runId: string): Promise<{
     error?: string;
@@ -141,9 +132,8 @@ export function waitForAgentTurnSettlement(runId: string): Promise<{
 export function resetAgentExecutorForTesting(nextExecutor?: AgentExecutor) {
     executor = nextExecutor ?? createAgentEngineExecutor();
     executorEpoch += 1;
-    activeTurns.clear();
     activeAgentRuns.clear();
-    queuedTurnInputs.clear();
+    agentChainSpend.clear();
 }
 
 export function setAgentExecutorForTesting(nextExecutor: AgentExecutor) {
@@ -153,150 +143,159 @@ export function setAgentExecutorForTesting(nextExecutor: AgentExecutor) {
     return () => {
         executor = previous;
         executorEpoch += 1;
-        activeTurns.clear();
         activeAgentRuns.clear();
-        queuedTurnInputs.clear();
+        agentChainSpend.clear();
     };
 }
 
-// One turn at a time per agent, across all chats. Claiming again after every
-// settle is the auto-drain loop: the queued-turn backlog is the inbox
-// (specs/sessions.md).
-async function drainAgent(input: AgentExecutorInput) {
-    const agentId = input.agent.id;
+// A session that never delivered a turn owes the bare Start. message first;
+// after a reset the fresh-session line rides the same message.
+function ensureStartTurn(agentId: string, session: AgentRuntimeAgentSession) {
+    if (session.lastTurnAt || session.runtimeSessionId) {
+        return;
+    }
+    const existing = listAgentTurnsForSession(session.id);
+    if (existing.length > 0) {
+        return;
+    }
+    createAgentTurn({
+        agentId,
+        agentSessionId: session.id,
+        id: newRunId(),
+        kind: 'start',
+    });
+}
+
+function startTurnPrompt(session: AgentRuntimeAgentSession) {
+    if (session.generation <= 1) {
+        return 'Start.';
+    }
+    return [
+        'Start.',
+        'Fresh session: your previous conversation context is gone. Your workspace and MEMORY.md are intact — MEMORY.md is your recovery point.',
+    ].join('\n');
+}
+
+async function drainAgent(agentId: string) {
     if (activeAgentRuns.has(agentId)) {
         return;
     }
-
     const turn = claimNextAgentTurnForAgent({ agentId });
     if (!turn) {
         return;
     }
-
-    const turnInput = withCurrentAgentSessionState(queuedTurnInputs.get(turn.id) ?? input);
     activeAgentRuns.set(agentId, turn.id);
-    activeTurns.set(turn.id, { agentId, input: turnInput });
+
+    const agent = getStoredAgent(agentId);
+    if (!agent) {
+        failAgentTurn({ error: `Agent "${agentId}" no longer exists.`, id: turn.id });
+        clearActiveTurn(turn.id, agentId);
+        return;
+    }
+    // The claimed turn may predate a session reset or model switch; the
+    // current session binding always wins.
+    const session = ensureCurrentAgentSession({ agentId });
+
+    const delivery =
+        turn.kind === 'drain' ? composeDrainDelivery({ agentId, sessionId: session.id }) : null;
+    if (turn.kind === 'drain' && !delivery) {
+        // Raced pulls or resets consumed the backlog: nothing to deliver.
+        cancelAgentTurn({ id: turn.id });
+        clearActiveTurn(turn.id, agentId);
+        notifyTurnSettled(turn.id, { status: 'cancelled' });
+        void drainAgent(agentId);
+        return;
+    }
+    if (delivery && !spendChainBudget(session.id, delivery)) {
+        cancelAgentTurn({ id: turn.id });
+        clearActiveTurn(turn.id, agentId);
+        notifyTurnSettled(turn.id, { status: 'cancelled' });
+        log.warn('Agent drain suppressed by chain budget', { agentId, runId: turn.id });
+        return;
+    }
+
+    const input: AgentExecutorInput = {
+        agent,
+        agentSession: session,
+        prompt: delivery?.prompt ?? startTurnPrompt(session),
+        runId: turn.id,
+    };
 
     // Workspace snapshots bracket the turn: the baseline strictly precedes
     // execution so the compared pair is exact file-change evidence.
     const drainEpoch = executorEpoch;
+    const servedSnapshot = listServedCursors(session.id);
     const workspaceBaseline = await captureTurnWorkspaceBaseline(agentId);
     if (drainEpoch !== executorEpoch) {
         clearActiveTurn(turn.id, agentId);
         return;
     }
-    let fileEvidencePromise: Promise<null | string> | undefined;
-    const settleFileEvidence = () => {
-        fileEvidencePromise ??= settleTurnFileEvidence({
-            agentId,
-            agentSessionId: turnInput.agentSession.id,
-            baseline: workspaceBaseline,
-            chatId: turnInput.chatId,
-            requestMessageId: turnInput.requestMessageId,
-            responseId: turnInput.responseId,
-            runId: turnInput.runId,
-        });
-        return fileEvidencePromise;
-    };
 
     try {
-        const result = await executeAgentTurnWithTimeout(turnInput);
-        const fileActivityId = await settleFileEvidence();
-        const current = getAgentTurn(turn.id);
-        if (current?.status === 'running') {
-            const completedTurn = completeAgentTurn({
-                activityIds: fileActivityId
-                    ? [...result.activityIds, fileActivityId]
-                    : result.activityIds,
-                id: turn.id,
-                outputMessageIds: result.outputMessageIds,
-            });
+        const result = await executeAgentTurnWithTimeout(input);
+        await settleTurnFileEvidence({ agentId, baseline: workspaceBaseline, runId: turn.id });
+        if (getAgentTurn(turn.id)?.status === 'running') {
+            completeAgentTurn({ contextTokens: result.contextTokens, id: turn.id });
+            settleTurnCursors(session.id, delivery, servedSnapshot);
             notifyTurnSettled(turn.id, { status: 'completed' });
-            recoverTaskDispatchForTurn(turn.id, { status: 'completed' });
-            recordTurnOutcome(completedTurn, { status: 'completed' });
-            try {
-                scheduleMemoryExtractionForTurn(completedTurn);
-            } catch {
-                // Memory extraction is a best-effort background side effect.
-            }
-            try {
-                // Every message this turn delivered dispatches evaluation
-                // turns on the other agent seats. See specs/addressing.md.
-                for (const dispatch of collectAgentEvaluationDispatches(completedTurn)) {
-                    enqueueAgentTurn(dispatch.input, { turnMetadata: dispatch.turnMetadata });
-                }
-            } catch (error) {
-                log.warn('Agent evaluation dispatch failed', { err: error, runId: turn.id });
-            }
         }
     } catch (error) {
-        const fileActivityId = await settleFileEvidence();
-        const current = getAgentTurn(turn.id);
-        if (current?.status === 'running') {
+        await settleTurnFileEvidence({ agentId, baseline: workspaceBaseline, runId: turn.id });
+        if (getAgentTurn(turn.id)?.status === 'running') {
             const errorMessage = formatTurnError(error);
-            const failedTurn = failAgentTurn({
-                activityIds: fileActivityId ? [...current.activityIds, fileActivityId] : undefined,
-                error: errorMessage,
-                id: turn.id,
-            });
+            failAgentTurn({ error: errorMessage, id: turn.id });
+            // No cursor advancement: a failed turn's envelopes were not
+            // provably seen, so catch-up re-delivers from `seen` (I3).
             notifyTurnSettled(turn.id, { error: errorMessage, status: 'failed' });
-            recoverTaskDispatchForTurn(turn.id, { error: errorMessage, status: 'failed' });
-            recordTurnOutcome(failedTurn, { error: errorMessage, status: 'failed' });
-            upsertResponse(turnInput.chatId, {
-                id: turnInput.responseId,
-                metadata: {
-                    runtime: {
-                        agentId: turnInput.agent.id,
-                        agentSessionId: turnInput.agentSession.id,
-                        engine: 'agent-engine',
-                        // The failure banner reads this; without it the app
-                        // falls back to a generic "failed to produce a reply".
-                        error: errorMessage,
-                        messageId: turnInput.requestMessageId,
-                        runId: turnInput.runId,
-                        source: 'agent-engine',
-                    },
-                },
-                participant_id: turnInput.agentParticipantId,
-                request_message_id: turnInput.requestMessageId,
-                status: 'failed',
-                summary: errorMessage,
-            });
         }
     } finally {
-        // Stopped turns skip both settle branches above; evidence still lands
-        // before the next turn's baseline is captured.
-        await settleFileEvidence();
-        queuedTurnInputs.delete(turn.id);
         clearActiveTurn(turn.id, agentId);
-        void drainAgent(turnInput);
+        // Only a completed turn earns an immediate re-drain of the remaining
+        // backlog. A failed turn must not hot-loop retries — its pending rows
+        // wait for the next external wake, with the error on the turn record.
+        if (
+            getAgentTurn(turn.id)?.status === 'completed' &&
+            listPendingInboxTargets(session.id).length > 0
+        ) {
+            scheduleAgentDrain(agentId);
+        } else {
+            void drainAgent(agentId);
+        }
     }
 }
 
-// Queued inputs are captured at enqueue time, often while the agent's prior
-// turn is still running. The session binding they carry (resume state, and
-// possibly the session itself after a reset or model switch) goes stale the
-// moment that turn settles, so the claimed turn re-resolves the agent's
-// current session before executing.
-function withCurrentAgentSessionState(input: AgentExecutorInput): AgentExecutorInput {
-    try {
-        return { ...input, agentSession: ensureCurrentAgentSession({ agentId: input.agent.id }) };
-    } catch {
-        return input;
-    }
-}
-
-// Outcome notes are a best-effort signal back to the seat that dispatched
-// this turn by mention; a write failure must not fail the settle path.
-function recordTurnOutcome(
-    turn: Parameters<typeof recordAgentTurnOutcomeNote>[0],
-    result: Parameters<typeof recordAgentTurnOutcomeNote>[1]
+// Settle-time proofs (I3): envelopes embedded in the delivered prompt and
+// pull outputs the turn committed (served cursor movement during the turn)
+// advance `seen`; consumed pierce rows clear.
+function settleTurnCursors(
+    sessionId: string,
+    delivery: DrainDelivery | null,
+    servedSnapshot: Map<string, number>
 ) {
-    try {
-        recordAgentTurnOutcomeNote(turn, result);
-    } catch (error) {
-        log.warn('Turn outcome note was not recorded', { err: error, runId: turn.id });
+    for (const [chatId, seq] of delivery?.embeddedSeqByChatId ?? []) {
+        advanceSeenCursor({ chatId, seq, sessionId });
     }
+    if (delivery && delivery.pierceMessageIds.length > 0) {
+        clearInboxPierces({ messageIds: delivery.pierceMessageIds, sessionId });
+    }
+    for (const [chatId, servedSeq] of listServedCursors(sessionId)) {
+        if (servedSeq > (servedSnapshot.get(chatId) ?? 0)) {
+            advanceSeenCursor({ chatId, seq: servedSeq, sessionId });
+        }
+    }
+}
+
+// Consecutive drains with no human envelope spend the session's chain
+// budget; a human envelope resets it. At the ceiling the drain is suppressed
+// (cursors untouched) until the next human message wakes the agent again.
+function spendChainBudget(sessionId: string, delivery: DrainDelivery) {
+    if (delivery.hasHumanEnvelope) {
+        agentChainSpend.delete(sessionId);
+        return true;
+    }
+    const spent = (agentChainSpend.get(sessionId) ?? 0) + 1;
+    agentChainSpend.set(sessionId, spent);
+    return spent <= agentChainBudget;
 }
 
 function notifyTurnSettled(
@@ -318,10 +317,13 @@ function isSettledTurnStatus(status: string): status is SettledTurnStatus {
 }
 
 function clearActiveTurn(runId: string, agentId: string) {
-    activeTurns.delete(runId);
     if (activeAgentRuns.get(agentId) === runId) {
         activeAgentRuns.delete(agentId);
     }
+}
+
+function newRunId() {
+    return `run_${randomUUID().replaceAll('-', '')}`;
 }
 
 function executeAgentTurnWithTimeout(input: AgentExecutorInput) {
@@ -343,21 +345,12 @@ function executeAgentTurnWithTimeout(input: AgentExecutorInput) {
 }
 
 function resolveAgentTurnTimeoutMs(input: AgentExecutorInput) {
-    if (isTaskDispatchRun(input.runId)) {
-        const configuredTask = Number(readConfigValue('TAVERN_TASK_TURN_TIMEOUT_MS'));
-        return Number.isFinite(configuredTask) && configuredTask > 0
-            ? configuredTask
-            : defaultTaskTurnTimeoutMs;
-    }
     const configured = Number(readConfigValue('TAVERN_AGENT_TURN_TIMEOUT_MS'));
     if (Number.isFinite(configured) && configured > 0) {
         return configured;
     }
-    // Top-tier thinking legitimately runs past the interactive watchdog
-    // (K3 at max regularly takes 7-10 minutes), so those turns get the
-    // task-tier timeout instead of being killed mid-thought.
     if (input.agent.thinkingDefault === 'xhigh' || input.agent.thinkingDefault === 'max') {
-        return defaultTaskTurnTimeoutMs;
+        return extendedTurnTimeoutMs;
     }
     return defaultAgentTurnTimeoutMs;
 }
@@ -391,3 +384,5 @@ function formatTurnError(error: unknown) {
         return 'Agent turn failed with an unserializable error.';
     }
 }
+
+export type { AgentTurn };
