@@ -79,7 +79,6 @@ export function startTavernRuntimeServer(
     const server = http.createServer(async (request, response) => {
         try {
             const baseUrl = `http://127.0.0.1:${port}`;
-            const requestUrl = new URL(request.url ?? '/', baseUrl);
             const fetchRequest = await toFetchRequest(request, baseUrl, {});
             const pathname = new URL(fetchRequest.url).pathname;
             // Health route is unauthenticated so the app can probe reachability before pairing.
