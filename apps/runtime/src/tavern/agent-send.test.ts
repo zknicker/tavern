@@ -273,6 +273,38 @@ describe('agent attested sends', () => {
         expect(followUp.state).toBe('sent');
     });
 
+    it('reports unseen replies from followed threads on a fresh send', () => {
+        peerMessage('msg_70000000000000000000000000000001', 'thread anchor');
+        const opened = sendAgentMessage('agt_otto', {
+            content: 'opening reply',
+            target: '#general:70000000',
+        });
+        if (opened.state !== 'sent') {
+            throw new Error('Expected the thread send to commit.');
+        }
+        createMessage(opened.message.chat_id, {
+            author_id: 'usr_tavern',
+            content: 'new thread detail',
+            id: 'msg_70000000000000000000000000000002',
+            role: 'user',
+        });
+
+        const sent = sendAgentMessage('agt_otto', {
+            content: 'back in channel',
+            target: '#general',
+        });
+
+        if (sent.state !== 'sent') {
+            throw new Error('Expected the parent send to commit.');
+        }
+        expect(sent.recentUnread).toContainEqual(
+            expect.objectContaining({
+                message: expect.objectContaining({ content: 'new thread detail' }),
+                target: '#general:70000000',
+            })
+        );
+    });
+
     it('never acks recentUnread rows a crowded chat did not fully show', () => {
         const seedChannel = (id: string, title: string) =>
             createChat({

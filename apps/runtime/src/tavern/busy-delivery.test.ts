@@ -13,6 +13,7 @@ import {
 import {
     createChat,
     createMessage,
+    ensureThreadChat,
     getMessage,
     listActivityForResponses,
     upsertResponse,
@@ -96,6 +97,28 @@ describe('busy delivery', () => {
         expect(deliveries[0]?.text).toContain('"Side" (chatId: cht_side)');
         expect(deliveries[0]?.text).toContain('side news one');
         expect(readSeenCursor('ags_agt_wren_1', 'cht_side')).toBe(0);
+    });
+
+    it('delivers thread messages through the parent agent seats', async () => {
+        seedRunningTurn('agt_wren', 'run_wren');
+        const anchor = seedUserMessage('msg_thread_anchor', 'side question');
+        const thread = ensureThreadChat({
+            anchorMessageId: anchor.id,
+            parentChatId: 'cht_general',
+        });
+        createMessage(thread.id, {
+            author_id: 'usr_tavern',
+            content: 'thread update',
+            id: 'msg_thread_update',
+            role: 'user',
+        });
+        const message = getMessage('msg_thread_update');
+        if (!message) {
+            throw new Error('thread message missing');
+        }
+
+        expect(await deliverToBusySeats(thread.id, message)).toEqual(['run_wren']);
+        expect(deliveries[0]?.text).toContain('thread update');
     });
 
     it('dedupes per chat, not per bare sequence number', async () => {

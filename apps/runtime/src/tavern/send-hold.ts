@@ -28,7 +28,8 @@ export function resolveSendHold(
     },
     db: Database = getDb()
 ): SendHoldDecision | null {
-    if (getChat(input.chatId, db)?.kind !== 'channel') {
+    const kind = getChat(input.chatId, db)?.kind;
+    if (kind !== 'channel' && kind !== 'thread') {
         return null;
     }
     const horizon = Math.max(
@@ -88,10 +89,24 @@ export function collectRecentUnread(
         .prepare(
             `SELECT DISTINCT chats.id
              FROM chats
-             JOIN chat_participants ON chat_participants.chat_id = chats.id
-             WHERE chat_participants.id = $participantId
-               AND chats.id != $excludeChatId
-               AND chats.kind IN ('channel', 'dm')`
+             JOIN chat_participants
+               ON chat_participants.chat_id = COALESCE(chats.parent_chat_id, chats.id)
+              AND chat_participants.id = $participantId
+              AND chat_participants.kind = 'agent'
+             WHERE chats.id != $excludeChatId
+               AND (
+                    chats.kind IN ('channel', 'dm')
+                    OR (
+                        chats.kind = 'thread'
+                        AND EXISTS (
+                            SELECT 1 FROM thread_follows
+                            WHERE thread_follows.thread_chat_id = chats.id
+                              AND thread_follows.participant_id = $participantId
+                              AND thread_follows.followed = 1
+                        )
+                    )
+               )
+             `
         )
         .all(
             namedParams({ excludeChatId: input.excludeChatId, participantId: input.participantId })

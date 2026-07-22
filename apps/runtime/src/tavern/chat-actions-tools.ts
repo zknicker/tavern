@@ -121,7 +121,10 @@ export function createTavernChatActionTools(input: {
             inputSchema: z.object({}),
             execute: () => ({
                 chats: listChatsForAgentParticipant(participantId)
-                    .filter((chat) => !isArchivedChat(chat))
+                    .filter((chat) => {
+                        const accessChat = membershipChat(chat);
+                        return accessChat ? !isArchivedChat(accessChat) : false;
+                    })
                     .map((chat) => ({
                         current: chat.id === input.chatId,
                         id: chat.id,
