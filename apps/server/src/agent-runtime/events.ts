@@ -57,3 +57,9 @@ export function subscribeToObservedAgentRuntimeTurnCancelled(signal?: AbortSigna
 export function subscribeToObservedAgentRuntimeTurnFailed(signal?: AbortSignal) {
     return subscribeToObservedAgentRuntimeEventType('turn.failed', signal);
 }
+
+// Ephemeral composition stream (I1): volatile class — relayed live, never
+// persisted, never replayed on reconnect.
+export function subscribeToObservedAgentRuntimeComposition(signal?: AbortSignal) {
+    return subscribeToObservedAgentRuntimeEventType('agent.composition', signal);
+}

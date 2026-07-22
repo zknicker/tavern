@@ -2263,11 +2263,11 @@ export const agentRuntimeResetAgentSessionResultSchema = z.object({
 // projected from the turn queue. Busy anchors to the running turn's chat
 // (or the oldest queued chat mid-drain); chatTitle is presentation sugar so
 // clients never join chats to render a status line.
+// Floating turns (I1): presence is one busy/idle fact per agent — turns
+// anchor to the session, never a chat, so there is no chat anchor here.
 export const agentRuntimeAgentPresenceSchema = z.object({
     agentId: z.string().trim().min(1),
-    chatId: z.string().trim().min(1).nullable(),
-    chatTitle: z.string().nullable(),
-    // Total unsettled turns (running + queued) across all chats.
+    // Total unsettled turns (running + queued).
     pendingTurns: z.number().int().nonnegative(),
     since: z.string().datetime().nullable(),
     state: z.enum(['busy', 'idle']),
@@ -2282,20 +2282,15 @@ export const agentRuntimeAgentPresenceListSchema = z.object({
 // rendering contract; `detail` carries the per-kind context (sender label,
 // automation name, task title, or fresh-session reason).
 export const agentRuntimeAgentActivityKindSchema = z.enum([
-    'automation_fired',
-    'declined',
+    'completed',
     'failed',
     'message_received',
     'new_session',
-    'replied',
     'stopped',
-    'task_dispatched',
 ]);
 
 export const agentRuntimeAgentActivityEntrySchema = z.object({
     at: z.string().datetime(),
-    chatId: z.string().nullable(),
-    chatTitle: z.string().nullable(),
     detail: z.string().nullable(),
     kind: agentRuntimeAgentActivityKindSchema,
     turnId: z.string().nullable(),
@@ -2757,6 +2752,7 @@ export const agentRuntimeEventTypeSchema = z.enum([
     'turn.failed',
     'session.invalidated',
     'session.updated',
+    'agent.composition',
 ]);
 
 export const agentRuntimeAgentUpdatedEventSchema = z.object({
@@ -2856,6 +2852,21 @@ export const agentRuntimePaneUpdatedEventSchema = z.object({
     revision: z.number().int().nonnegative(),
     timestamp: z.string().datetime(),
     type: z.literal('pane.updated'),
+});
+
+// Ephemeral composition stream (I1): a provisional bubble for an in-flight
+// `grotto message send`. Volatile event class — never persisted, never
+// replayed; the durable message's compositionId metadata echo is the commit
+// signal, `retracted` is the freshness-hold path, and clients TTL-fade a
+// composition that stops updating.
+export const agentRuntimeCompositionEventSchema = z.object({
+    agentId: z.string().trim().min(1),
+    compositionId: z.string().trim().min(1),
+    state: z.enum(['composing', 'retracted']),
+    target: z.string(),
+    text: z.string(),
+    timestamp: z.string().datetime(),
+    type: z.literal('agent.composition'),
 });
 
 export const agentRuntimeLabelUpdatedEventSchema = z.object({
@@ -3015,6 +3026,7 @@ export const agentRuntimeEventSchema = z.discriminatedUnion('type', [
     agentRuntimeTurnFailedEventSchema,
     agentRuntimeSessionInvalidatedEventSchema,
     agentRuntimeSessionUpdatedEventSchema,
+    agentRuntimeCompositionEventSchema,
 ]);
 
 export const agentRuntimeEventListSchema = z.object({
@@ -3077,6 +3089,7 @@ export type AgentRuntimeSetChatPaneStateResult = z.infer<
     typeof agentRuntimeSetChatPaneStateResultSchema
 >;
 export type AgentRuntimePaneUpdatedEvent = z.infer<typeof agentRuntimePaneUpdatedEventSchema>;
+export type AgentRuntimeCompositionEvent = z.infer<typeof agentRuntimeCompositionEventSchema>;
 export type ChatPaneTarget = z.infer<typeof chatPaneTargetSchema>;
 export type AgentRuntimeEvent = z.infer<typeof agentRuntimeEventSchema>;
 export type AgentRuntimeEngineRestartPhase = z.infer<typeof agentRuntimeEngineRestartPhaseSchema>;

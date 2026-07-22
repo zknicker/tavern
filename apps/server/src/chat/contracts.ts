@@ -212,7 +212,6 @@ export const updateChatSystemPromptResultSchema = z.object({
 
 export const sendChatMessageInputSchema = z
     .object({
-        agentId: z.string().trim().min(1).optional(),
         attachments: z.array(sessionMessageAttachmentSchema).optional(),
         chatId: z.string().trim().min(1),
         clientMessageId: z.string().trim().min(1).optional(),
@@ -230,17 +229,13 @@ export const sendChatMessageInputSchema = z
         path: ['content'],
     });
 
+// Delivery is planner-owned (I1): the server creates the durable message
+// and the Runtime's inbox delivery wakes agents — sends return no turns.
 export const sendChatMessageResultSchema = z.object({
     acceptedAt: z.string().datetime(),
     chatId: z.string().trim().min(1),
     clientMessageId: z.string().trim().min(1),
     threadChatId: z.string().trim().min(1).nullable(),
-    turns: z.array(
-        z.object({
-            agentId: z.string().trim().min(1),
-            runId: z.string().trim().min(1),
-        })
-    ),
     status: z.literal('accepted'),
 });
 

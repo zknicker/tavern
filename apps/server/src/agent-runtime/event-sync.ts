@@ -195,6 +195,12 @@ export async function applyObservedAgentRuntimeEvent(
             emitEngineRestartUpdated({ phase: event.phase });
             return;
         }
+        case 'agent.composition': {
+            // Volatile relay only (I1): no invalidation, no persistence — the
+            // subscription fans the event to clients and nothing else reacts.
+            emitObservedAgentRuntimeEvent(event);
+            return;
+        }
         case 'capability.updated': {
             emitObservedAgentRuntimeEvent(event);
             if (!connection) {
