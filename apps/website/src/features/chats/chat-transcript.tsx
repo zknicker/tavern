@@ -43,6 +43,7 @@ export function ChatTranscript({
     agentStatusCharacter = null,
     canRequestMention = true,
     chatId,
+    compositionTarget,
     composerId,
     conversationLayout = directConversationMessageLayout,
     currentSessionKey,
@@ -59,6 +60,7 @@ export function ChatTranscript({
     agentStatusCharacter?: AgentCharacter | null;
     canRequestMention?: boolean;
     chatId?: string;
+    compositionTarget?: string | null;
     composerId?: string;
     conversationLayout?: ConversationMessageLayout;
     currentSessionKey?: string | null;
@@ -199,6 +201,7 @@ export function ChatTranscript({
                     {chatId ? (
                         <ChatCompositionBubbles
                             chatId={chatId}
+                            compositionTarget={compositionTarget}
                             messageCompositionIds={messageCompositionIds}
                         />
                     ) : null}

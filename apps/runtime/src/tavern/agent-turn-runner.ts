@@ -127,7 +127,7 @@ export async function stopAgentTurn(runId: string) {
     if (!cancelled) {
         return false;
     }
-    resetInboxPiercesForRun({ runId, sessionId: turn.agentSessionId });
+    resetInboxPiercesForRun({ runId });
     publishAgentTurnStateChange(turn.agentId);
     if (wasActive) {
         await Promise.resolve(executor.stop?.(runId)).catch(() => {});
@@ -270,7 +270,7 @@ async function drainAgent(agentId: string) {
         if (getAgentTurn(turn.id)?.status === 'running') {
             completeAgentTurn({ contextTokens: result.contextTokens, id: turn.id });
             settleTurnCursors(session.id, delivery, servedSnapshot);
-            clearInboxPiercesForRun({ runId: turn.id, sessionId: session.id });
+            clearInboxPiercesForRun({ runId: turn.id });
             publishAgentTurnStateChange(agentId);
             notifyTurnSettled(turn.id, { status: 'completed' });
         }
@@ -279,7 +279,7 @@ async function drainAgent(agentId: string) {
         if (getAgentTurn(turn.id)?.status === 'running') {
             const errorMessage = formatTurnError(error);
             failAgentTurn({ error: errorMessage, id: turn.id });
-            resetInboxPiercesForRun({ runId: turn.id, sessionId: session.id });
+            resetInboxPiercesForRun({ runId: turn.id });
             publishAgentTurnStateChange(agentId);
             // No cursor advancement: a failed turn's envelopes were not
             // provably seen, so catch-up re-delivers from `seen` (I3).

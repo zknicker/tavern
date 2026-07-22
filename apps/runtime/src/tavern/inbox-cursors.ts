@@ -156,23 +156,23 @@ export function markInboxPiercesServed(
 }
 
 export function resetInboxPiercesForRun(
-    input: { runId: string; sessionId: string },
+    input: { runId: string },
     db: Database = getDb()
 ) {
     db.prepare(
         `UPDATE agent_inbox_pierces
          SET served_run_id = NULL
-         WHERE session_id = $sessionId AND served_run_id = $runId`
+         WHERE served_run_id = $runId`
     ).run(namedParams(input));
 }
 
 export function clearInboxPiercesForRun(
-    input: { runId: string; sessionId: string },
+    input: { runId: string },
     db: Database = getDb()
 ) {
     db.prepare(
         `DELETE FROM agent_inbox_pierces
-         WHERE session_id = $sessionId AND served_run_id = $runId`
+         WHERE served_run_id = $runId`
     ).run(namedParams(input));
 }
 

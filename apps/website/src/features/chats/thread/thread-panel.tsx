@@ -123,6 +123,7 @@ export function ThreadPanel({
                             anchorMessageId={state.anchorMessageId}
                             anchorRow={anchorRow}
                             chat={chat}
+                            compositionTarget={titles.target}
                             open={open}
                             replyCount={thread?.replyCount ?? 0}
                             threadChatId={threadChatId}
@@ -160,6 +161,7 @@ function SyncedThreadBody({
     anchorMessageId,
     anchorRow,
     chat,
+    compositionTarget,
     open,
     replyCount,
     threadChatId,
@@ -168,6 +170,7 @@ function SyncedThreadBody({
     anchorMessageId: string;
     anchorRow: TranscriptMessageRow;
     chat: ChatListItem;
+    compositionTarget: string | null;
     open: boolean;
     replyCount: number;
     threadChatId: string;
@@ -181,6 +184,7 @@ function SyncedThreadBody({
                 <ChatTranscript
                     canRequestMention={!chat.archived}
                     chatId={threadChatId}
+                    compositionTarget={compositionTarget}
                     composerId={`${chat.id}:thread:${anchorMessageId}`}
                     conversationLayout={getChatMessageLayout(chat)}
                     leadingContent={

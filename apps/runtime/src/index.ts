@@ -69,9 +69,6 @@ async function main(): Promise<void> {
     if (recovery.recoveredTurnCount > 0) {
         log.info('Recovered interrupted agent turns', { count: recovery.recoveredTurnCount });
     }
-    for (const agentId of recovery.agentIdsToWake) {
-        wakeAgent(agentId);
-    }
     const demoSeed = seedDevelopmentChatDemos({ db });
     if (demoSeed.seeded > 0) {
         log.info('Development chat demos ready', { count: demoSeed.seeded });
@@ -105,6 +102,9 @@ async function main(): Promise<void> {
 
     runtimeServer = startTavernRuntimeServer();
     setAgentCliServerUrl(runtimeServer.url);
+    for (const agentId of recovery.agentIdsToWake) {
+        wakeAgent(agentId);
+    }
     log.info('Grotto Runtime running', { url: runtimeServer.url.toString() });
 
     await refreshRuntimeCapabilities({

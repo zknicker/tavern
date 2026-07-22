@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from 'vitest';
 import { closeDb, initTestDb } from '../db/connection';
 import { ensureRuntimeSchema } from '../db/schema';
-import { ensureCurrentAgentSession } from './agent-session-store';
+import { ensureCurrentAgentSession, startNewAgentSession } from './agent-session-store';
 import { claimNextAgentTurnForAgent, createAgentTurn, getAgentTurn } from './agent-turn-store';
 import { agentDmChatId } from './bootstrap-chats';
 import {
@@ -33,15 +33,17 @@ describe('turn recovery', () => {
         });
         claimNextAgentTurnForAgent({ agentId: agent.id });
 
+        const currentSession = startNewAgentSession({ agentId: agent.id });
+        expect(currentSession.id).not.toBe(session.id);
         recordInboxPierce({
             chatId: agentDmChatId(agent.id),
             messageId: 'msg_pierce',
-            sessionId: session.id,
+            sessionId: currentSession.id,
         });
         markInboxPiercesServed({
             messageIds: ['msg_pierce'],
             runId: 'run_stuck',
-            sessionId: session.id,
+            sessionId: currentSession.id,
         });
 
         const recovery = recoverInterruptedAgentTurns();
@@ -53,7 +55,7 @@ describe('turn recovery', () => {
             metadata: { error: 'Interrupted by an agent runtime restart.' },
             status: 'failed',
         });
-        expect(listInboxPierces(session.id, { excludeServed: true })).toEqual([
+        expect(listInboxPierces(currentSession.id, { excludeServed: true })).toEqual([
             { chatId: agentDmChatId(agent.id), messageId: 'msg_pierce' },
         ]);
     });

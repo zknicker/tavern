@@ -15,6 +15,7 @@ import { createAgentParticipantId, createMessageId } from './chat-api/ids.ts';
 import { createChat, createMessage, ensureThreadChat, setThreadFollow } from './chat-api/index.ts';
 import { planMessageDelivery, registerInboxWakeSink } from './delivery-planner.ts';
 import {
+    advanceDeliveredCursor,
     advanceSeenCursor,
     listInboxPierces,
     listPendingInboxTargets,
@@ -159,6 +160,35 @@ describe('inbox delivery (I1/I2/I3)', () => {
         expect(second?.prompt).toContain('backlog 41');
         expect(second?.prompt).toContain('backlog 45');
         expect(second?.embeddedSeqByChatId.get('cht_general')).toBe(messages[44]?.sequence);
+    });
+
+    it('applies the drain limit after filtering undeliverable rows', () => {
+        for (let index = 0; index < 20; index += 1) {
+            sendHuman(`deleted ${index + 1}`);
+        }
+        for (let index = 0; index < 20; index += 1) {
+            sendAgent(ottoId, `self ${index + 1}`);
+        }
+        const live = sendHuman('newer live message');
+        const session = sessionFor(ottoId);
+        getDb()
+            .prepare(
+                `UPDATE chat_messages
+                 SET deleted_at = '2026-07-22T00:00:00.000Z'
+                 WHERE chat_id = 'cht_general' AND sequence <= 20`
+            )
+            .run();
+        advanceDeliveredCursor({
+            chatId: 'cht_general',
+            seq: live.sequence,
+            sessionId: session.id,
+        });
+
+        const delivery = composeDrainDelivery({ agentId: ottoId, sessionId: session.id });
+
+        expect(delivery?.envelopeCount).toBe(1);
+        expect(delivery?.prompt).toContain('newer live message');
+        expect(delivery?.embeddedSeqByChatId.get('cht_general')).toBe(live.sequence);
     });
 
     it('uses the singular header for one envelope', () => {

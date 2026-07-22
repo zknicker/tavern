@@ -30,7 +30,7 @@ export function recoverInterruptedAgentTurns(db: Database = getDb()) {
 
     for (const row of rows) {
         failAgentTurn({ error: interruptedSummary, id: row.id }, db);
-        resetInboxPiercesForRun({ runId: row.id, sessionId: row.agent_session_id }, db);
+        resetInboxPiercesForRun({ runId: row.id }, db);
         if (hasPendingInbox(row.agent_session_id, db)) {
             agentIdsToWake.add(row.agent_id);
         }

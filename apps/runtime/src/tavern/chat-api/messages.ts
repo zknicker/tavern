@@ -106,6 +106,7 @@ export function listRecentMessagesBetween(
     input: {
         afterSequence: number;
         beforeSequence: number;
+        deliverableTo?: { agentId: string; participantId: string };
         direction?: 'asc' | 'desc';
         limit?: number;
     },
@@ -113,6 +114,11 @@ export function listRecentMessagesBetween(
 ): TavernChatMessage[] {
     const limit = clampLimit(input.limit);
     const direction = input.direction ?? 'desc';
+    const deliverabilityFilter = input.deliverableTo
+        ? `AND deleted_at IS NULL
+               AND role IN ('assistant', 'user', 'system')
+               AND author_id NOT IN ($agentId, $participantId)`
+        : '';
     const rows = db
         .prepare(
             `SELECT *
@@ -120,6 +126,7 @@ export function listRecentMessagesBetween(
              WHERE chat_id = $chatId
                AND sequence > $afterSequence
                AND sequence < $beforeSequence
+               ${deliverabilityFilter}
              ORDER BY sequence ${direction === 'asc' ? 'ASC' : 'DESC'}
              LIMIT $limit`
         )
@@ -129,6 +136,7 @@ export function listRecentMessagesBetween(
                 beforeSequence: input.beforeSequence,
                 chatId,
                 limit,
+                ...input.deliverableTo,
             })
         ) as MessageRow[];
 

@@ -27,17 +27,56 @@ type Agent = AgentListOutput['agents'][number];
  */
 export function ChatCompositionBubbles({
     chatId,
+    compositionTarget,
+    messageCompositionIds,
+}: {
+    chatId: string;
+    compositionTarget?: string | null;
+    messageCompositionIds: ReadonlySet<string>;
+}) {
+    if (compositionTarget !== undefined) {
+        return (
+            <TargetedChatCompositionBubbles
+                messageCompositionIds={messageCompositionIds}
+                target={compositionTarget}
+            />
+        );
+    }
+
+    return (
+        <ChatListCompositionBubbles chatId={chatId} messageCompositionIds={messageCompositionIds} />
+    );
+}
+
+function ChatListCompositionBubbles({
+    chatId,
     messageCompositionIds,
 }: {
     chatId: string;
     messageCompositionIds: ReadonlySet<string>;
 }) {
-    const { compositions, dropComposition } = useChatCompositions();
-    const agents = useAgentList().data?.agents ?? [];
     const chats = buildChatList(useChatList().data);
-    const dark = useResolvedThemeOptional() === 'dark';
     const chat = chats.find((entry) => entry.id === chatId) ?? null;
     const target = chat ? resolveChatCompositionTarget(chat) : null;
+
+    return (
+        <TargetedChatCompositionBubbles
+            messageCompositionIds={messageCompositionIds}
+            target={target}
+        />
+    );
+}
+
+function TargetedChatCompositionBubbles({
+    messageCompositionIds,
+    target,
+}: {
+    messageCompositionIds: ReadonlySet<string>;
+    target: string | null;
+}) {
+    const { compositions, dropComposition } = useChatCompositions();
+    const agents = useAgentList().data?.agents ?? [];
+    const dark = useResolvedThemeOptional() === 'dark';
 
     React.useEffect(() => {
         for (const compositionId of messageCompositionIds) {
