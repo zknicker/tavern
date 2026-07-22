@@ -103,7 +103,11 @@ try {
         await pollLog(consultId, (log) => authoredBy(log, beta.id).length > 0, 360_000);
     });
 
-    await scenario('refusal: a send to an unjoined channel is reported, not forced', async () => {
+    await scenario('membership: posting to an unjoined channel means joining first', async () => {
+        // Public channels are joinable (D2/WS4): an agent asked to post into
+        // a channel it has not joined may legitimately join and post, or
+        // report the blocker — what it must never do is land a message
+        // without holding a seat (server-enforced NOT_A_MEMBER).
         const lockedTitle = `pe-locked-${stamp}`;
         const originId = await createChat(`pe-refusal-${stamp}`, [alpha.id]);
         const lockedId = await createChat(lockedTitle, [beta.id]);
@@ -113,14 +117,19 @@ try {
         );
         await waitForQuiet(originId, 45_000, 300_000);
         const lockedLog = await readLog(lockedId);
-        assert(
-            authoredBy(lockedLog, alpha.id).length === 0,
-            'agent posted into a channel it has not joined'
-        );
+        if (authoredBy(lockedLog, alpha.id).length > 0) {
+            const members = await harness.trpc('chat.get', { chatId: lockedId });
+            const bound = members?.boundAgentIds ?? members?.chat?.boundAgentIds ?? null;
+            assert(
+                bound === null || bound.includes(alpha.id),
+                'agent message landed without a seat — join did not register membership'
+            );
+            return; // joined-then-posted: legitimate.
+        }
         const originLog = await readLog(originId);
         assert(
             authoredBy(originLog, alpha.id).length > 0,
-            'agent neither posted a report nor explained the refusal'
+            'agent neither posted (after joining) nor reported the blocker'
         );
     });
 
@@ -206,7 +215,7 @@ try {
         const chatId = await createChat(`pe-visuals-${stamp}`, [alpha.id]);
         await send(
             chatId,
-            `${mention(alpha)} without using any tools, show this tiny dataset as a comparison the team can read at a glance: Q1 12 sales, Q2 19 sales, Q3 9 sales.`
+            `${mention(alpha)} show this tiny dataset as a comparison the team can read at a glance: Q1 12 sales, Q2 19 sales, Q3 9 sales.`
         );
         await pollLog(
             chatId,

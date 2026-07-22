@@ -37,6 +37,7 @@ export function joinAgentChannel(agentId: string, input: AgentChannelActionReque
                 participantId,
             })
         );
+    syncChatMetadataAgentIds(chat.id, agentId, 'add');
     return { joined: true, target: input.target };
 }
 
@@ -46,7 +47,38 @@ export function leaveAgentChannel(agentId: string, input: AgentChannelActionRequ
     getDb()
         .prepare('DELETE FROM chat_participants WHERE chat_id = $chatId AND id = $participantId')
         .run(namedParams({ chatId: chat.id, participantId }));
+    syncChatMetadataAgentIds(chat.id, agentId, 'remove');
     return { left: true, target: input.target };
+}
+
+// The app roster reads metadata.tavern.agentIds; a CLI join/leave must keep
+// it aligned with the canonical participant seats.
+function syncChatMetadataAgentIds(chatId: string, agentId: string, action: 'add' | 'remove') {
+    const db = getDb();
+    const row = db
+        .prepare('SELECT metadata_json FROM chats WHERE id = $chatId')
+        .get(namedParams({ chatId })) as { metadata_json: string } | null;
+    if (!row) {
+        return;
+    }
+    const metadata = JSON.parse(row.metadata_json) as Record<string, unknown>;
+    const tavern =
+        typeof metadata.tavern === 'object' && metadata.tavern !== null
+            ? (metadata.tavern as Record<string, unknown>)
+            : null;
+    if (!tavern || !Array.isArray(tavern.agentIds)) {
+        return;
+    }
+    const agentIds = new Set(tavern.agentIds.filter((id): id is string => typeof id === 'string'));
+    if (action === 'add') {
+        agentIds.add(agentId);
+    } else {
+        agentIds.delete(agentId);
+    }
+    tavern.agentIds = [...agentIds];
+    db.prepare('UPDATE chats SET metadata_json = $metadataJson WHERE id = $chatId').run(
+        namedParams({ chatId, metadataJson: JSON.stringify(metadata) })
+    );
 }
 
 export function muteAgentChannel(agentId: string, input: AgentChannelActionRequest) {
