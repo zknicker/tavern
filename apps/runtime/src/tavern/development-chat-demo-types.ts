@@ -29,6 +29,10 @@ export const demoAgentId = 'agt_primary';
 export const demoSecondAgentId = 'agt_wren';
 export const demoSecondAgentName = 'Wren';
 export const demoUserParticipantId = 'usr_demo';
+// The seeded human's handle (D2: names ARE the handles). Distinct from the
+// operator's "You" seat so grotto CLI reads and the server-info roster never
+// collapse the two.
+export const demoUserHandle = 'Sam';
 // The app owner (local human participant, see the server's
 // `localHumanParticipantId`). Messages authored here render as the viewer's own
 // right-anchored, avatar-less bubbles instead of the left roster.
