@@ -14,12 +14,8 @@ export const tavernEventNames = {
     agentUpdated: 'agent.updated',
     chatLogUpdated: 'chat.log.updated',
     chatUpdated: 'chat.updated',
-    cronUpdated: 'cron.updated',
-    labelsUpdated: 'labels.updated',
-    tasksUpdated: 'tasks.updated',
     engineRestartUpdated: 'engine-restart.updated',
     jobsUpdated: 'jobs.updated',
-    memoryJobsUpdated: 'memoryJobs.updated',
     modelUpdated: 'model.updated',
     paneUpdated: 'pane.updated',
     openRouterSettingsUpdated: 'open-router-settings.updated',
@@ -28,7 +24,6 @@ export const tavernEventNames = {
     sessionUpdated: 'session.updated',
     skillUpdated: 'skill.updated',
     usageLiveUpdated: 'usage.live.updated',
-    wikiUpdated: 'wiki.updated',
     workersUpdated: 'workers.updated',
 } as const;
 
@@ -122,18 +117,6 @@ export function emitModelUpdated() {
     emitTavernEvent(tavernEventNames.modelUpdated);
 }
 
-export function emitCronUpdated() {
-    emitTavernEvent(tavernEventNames.cronUpdated);
-}
-
-export function emitLabelsUpdated() {
-    emitTavernEvent(tavernEventNames.labelsUpdated);
-}
-
-export function emitTasksUpdated() {
-    emitTavernEvent(tavernEventNames.tasksUpdated);
-}
-
 export function emitOpenRouterSettingsUpdated() {
     emitTavernEvent(tavernEventNames.openRouterSettingsUpdated);
 }
@@ -156,25 +139,6 @@ export function emitPaneUpdated(input: { chatId: string; revision?: number }) {
         chatId: input.chatId,
         ...(input.revision === undefined ? {} : { revision: input.revision }),
     });
-}
-
-export function emitWikiUpdated(input: {
-    paths?: string[];
-    reason?: string;
-    scope: 'content' | 'root';
-    timestamp?: string;
-}) {
-    emitTavernEvent(tavernEventNames.wikiUpdated, {
-        ...createInvalidationEvent(),
-        paths: input.paths ?? [],
-        reason: input.reason,
-        scope: input.scope,
-        timestamp: input.timestamp,
-    });
-}
-
-export function emitMemoryJobsUpdated() {
-    emitTavernEvent(tavernEventNames.memoryJobsUpdated);
 }
 
 export function emitWorkersUpdated() {

@@ -13,29 +13,15 @@ import {
     emitAgentUpdated,
     emitChatLogUpdated,
     emitChatUpdated,
-    emitCronUpdated,
     emitEngineRestartUpdated,
-    emitLabelsUpdated,
-    emitMemoryJobsUpdated,
     emitModelUpdated,
     emitPaneUpdated,
     emitSessionUpdated,
-    emitTasksUpdated,
-    emitWikiUpdated,
     emitWorkersUpdated,
 } from '../api/invalidation-events.ts';
 import { enqueueRuntimeSkillInventoryRefresh } from '../skills/inventory-job.ts';
 import { listReachableAgentRuntimeConnections } from '../storage/agent-runtime-connections.ts';
-import {
-    syncAgentRuntimeAgents,
-    syncAgentRuntimeCron,
-    syncAgentRuntimeTasks,
-} from '../sync/agent-runtime-sync.ts';
-import {
-    clearTurnSessionActive,
-    hasActiveTurnSession,
-    markTurnSessionActive,
-} from './active-turn-sessions.ts';
+import { syncAgentRuntimeAgents } from '../sync/agent-runtime-sync.ts';
 import {
     createAgentRuntimeClientForConnection,
     createTavernClientForConnection,
@@ -129,65 +115,9 @@ export async function applyObservedAgentRuntimeEvent(
             queueRuntimeSkillInventoryRefresh();
             return;
         }
-        case 'cron.updated':
-        case 'cron.deleted': {
-            emitObservedAgentRuntimeEvent(event);
-            debugTurnEvent(event);
-            void syncAgentRuntimeCron().catch((error) => {
-                console.warn('[tavern] failed to sync cron event', error);
-            });
-            emitCronUpdated();
-            return;
-        }
-        case 'task.updated':
-        case 'task.deleted': {
-            emitObservedAgentRuntimeEvent(event);
-            debugTurnEvent(event);
-            void syncAgentRuntimeTasks().catch((error) => {
-                console.warn('[tavern] failed to sync task event', error);
-            });
-            emitTasksUpdated();
-            return;
-        }
-        case 'label.updated':
-        case 'label.deleted': {
-            emitObservedAgentRuntimeEvent(event);
-            debugTurnEvent(event);
-            void syncAgentRuntimeTasks().catch((error) => {
-                console.warn('[tavern] failed to sync label event', error);
-            });
-            emitLabelsUpdated();
-            emitTasksUpdated();
-            return;
-        }
-        case 'cron.runStarted':
-        case 'cron.runFinished': {
-            emitObservedAgentRuntimeEvent(event);
-            debugTurnEvent(event);
-            void syncAgentRuntimeCron().catch((error) => {
-                console.warn('[tavern] failed to sync cron run event', error);
-            });
-            emitCronUpdated();
-            return;
-        }
-        case 'memoryJob.updated': {
-            emitObservedAgentRuntimeEvent(event);
-            emitMemoryJobsUpdated();
-            return;
-        }
         case 'pane.updated': {
             emitObservedAgentRuntimeEvent(event);
             emitPaneUpdated({ chatId: event.chatId, revision: event.revision });
-            return;
-        }
-        case 'wiki.changed': {
-            emitObservedAgentRuntimeEvent(event);
-            emitWikiUpdated({
-                paths: event.paths,
-                reason: event.reason,
-                scope: event.scope,
-                timestamp: event.timestamp,
-            });
             return;
         }
         case 'engine.restart': {
@@ -214,55 +144,12 @@ export async function applyObservedAgentRuntimeEvent(
             });
             return;
         }
-        case 'turn.progress': {
-            markTurnSessionActive(event.turn.sessionKey);
-            emitObservedAgentRuntimeEvent(event);
-            debugTurnEvent(event);
-            return;
-        }
-        case 'turn.started': {
-            markTurnSessionActive(event.turn.sessionKey);
-            emitObservedAgentRuntimeEvent(event);
-            debugTurnEvent(event);
-            return;
-        }
-        case 'turn.replyUpdated': {
-            markTurnSessionActive(event.turn.sessionKey);
-            emitObservedAgentRuntimeEvent(event);
-            debugTurnEvent(event);
-            return;
-        }
-        case 'turn.statusUpdated': {
-            markTurnSessionActive(event.turn.sessionKey);
-            emitObservedAgentRuntimeEvent(event);
-            debugTurnEvent(event);
-            return;
-        }
-        case 'turn.completed':
-        case 'turn.cancelled':
-        case 'turn.failed': {
-            clearTurnSessionActive(event.turn.sessionKey);
-            emitObservedAgentRuntimeEvent(event);
-            debugTurnEvent(event);
-            const parentChatId = await resolveThreadParentChatId(event.turn.chatId, connection);
-            emitChatUpdated({ chatId: parentChatId ?? event.turn.chatId });
-            emitSessionUpdated({ sessionKey: event.turn.sessionKey });
-            emitChatLogUpdated({ sessionKey: event.turn.sessionKey });
-            if (parentChatId) {
-                emitChatLogUpdated({ chatId: parentChatId });
-            }
-            return;
-        }
         case 'session.invalidated':
         case 'session.updated': {
             const sessionKey =
                 event.type === 'session.updated' ? event.session.key : event.sessionKey;
             emitObservedAgentRuntimeEvent(event);
             debugTurnEvent(event);
-            if (hasActiveTurnSession(sessionKey)) {
-                emitWorkersUpdated();
-                return;
-            }
             emitWorkersUpdated();
             emitSessionUpdated({ sessionKey });
             emitChatLogUpdated({ sessionKey });
@@ -418,7 +305,6 @@ function connectRuntimeEvents(connection: RuntimeConnectionRecord, revision: num
             void confirmAgentRuntimeConnection().catch((error) => {
                 console.warn('[tavern] failed to refresh runtime capabilities', error);
             });
-            emitCronUpdated();
         })
         .catch((error) => {
             if (revision !== connectionRevision) {
@@ -455,8 +341,6 @@ export async function applyCatchUpRuntimeEvent(
     event: AgentRuntimeEvent,
     connection?: RuntimeConnectionRecord
 ) {
-    clearCatchUpTerminalTurn(event);
-
     if (!shouldApplyCatchUpRuntimeEvent(event)) {
         return;
     }
@@ -476,18 +360,6 @@ export function shouldApplyCatchUpRuntimeEvent(event: AgentRuntimeEvent) {
             return false;
         default:
             return true;
-    }
-}
-
-function clearCatchUpTerminalTurn(event: AgentRuntimeEvent) {
-    switch (event.type) {
-        case 'turn.cancelled':
-        case 'turn.completed':
-        case 'turn.failed':
-            clearTurnSessionActive(event.turn.sessionKey);
-            return;
-        default:
-            return;
     }
 }
 

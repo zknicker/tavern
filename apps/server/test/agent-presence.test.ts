@@ -12,8 +12,6 @@ test('listAgentPresence proxies the Runtime projection', async () => {
     const presence = [
         {
             agentId: 'agent-1',
-            chatId: 'cht_room',
-            chatTitle: 'Launch prep',
             pendingTurns: 1,
             since: '2026-07-15T12:00:00.000Z',
             state: 'busy' as const,
@@ -51,8 +49,6 @@ test('listAgentPresence degrades to idle when Runtime is unreachable', async () 
     assert.deepEqual(await listAgentPresence(), [
         {
             agentId: 'agent-1',
-            chatId: null,
-            chatTitle: null,
             pendingTurns: 0,
             since: null,
             state: 'idle',

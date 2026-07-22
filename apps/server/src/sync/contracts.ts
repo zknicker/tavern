@@ -1,14 +1,6 @@
 import { z } from 'zod';
 
-export const syncPrimitiveKindSchema = z.enum([
-    'agent',
-    'chat',
-    'cron',
-    'cronRun',
-    'session',
-    'skill',
-    'task',
-]);
+export const syncPrimitiveKindSchema = z.enum(['agent', 'chat', 'session', 'skill']);
 
 function normalizeSyncPrimitiveStatus(value: unknown) {
     switch (value) {

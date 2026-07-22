@@ -11,7 +11,6 @@ import { enqueueRuntimeSkillInventoryRefresh } from '../../skills/inventory-job.
 import {
     emitAgentInvalidationCascade,
     emitAgentRuntimeUpdated,
-    emitCronUpdated,
     emitSkillInvalidationCascade,
 } from '../invalidation-events.ts';
 import { publicProcedure } from '../trpc.ts';
@@ -60,7 +59,6 @@ export const connectAgentRuntimeRoute = publicProcedure
             });
             void enqueueRuntimeSkillInventoryRefresh().catch(() => undefined);
             emitAgentInvalidationCascade();
-            emitCronUpdated();
             emitAgentRuntimeUpdated();
             emitSkillInvalidationCascade();
 
@@ -70,7 +68,6 @@ export const connectAgentRuntimeRoute = publicProcedure
 
             refreshAgentRuntimeEventSync();
             emitAgentInvalidationCascade();
-            emitCronUpdated();
             emitAgentRuntimeUpdated();
             emitSkillInvalidationCascade();
 

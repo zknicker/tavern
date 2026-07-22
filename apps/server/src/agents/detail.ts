@@ -1,6 +1,4 @@
 import { TRPCError } from '@trpc/server';
-import type { CronJobSummary } from '../cron/contracts.ts';
-import { listCronJobs } from '../cron/list.ts';
 import { sessionSchema } from '../sessions/contracts.ts';
 import {
     listRuntimeSessionPreviewsForKeys,
@@ -10,26 +8,6 @@ import { listLogs } from '../storage/logs.ts';
 import { getAgent } from './catalog.ts';
 import type { AgentDetail } from './contracts.ts';
 import { buildAgentPalette, resolveAgentName } from './palette.ts';
-
-function mapAgentCronJobs(agentId: string, records: CronJobSummary[]): AgentDetail['cronJobs'] {
-    return records
-        .filter((record) => record.agentId === agentId)
-        .map((record) => {
-            return {
-                cadence: JSON.stringify(record.schedule),
-                description: record.description ?? '',
-                id: record.id,
-                lastRunAt: record.state.lastRunAtMs
-                    ? new Date(record.state.lastRunAtMs).toISOString()
-                    : record.updatedAt,
-                name: record.name,
-                schedule: JSON.stringify(record.schedule),
-                state: record.enabled ? 'enabled' : 'paused',
-                successRate: record.state.lastRunStatus ?? 'unknown',
-                target: record.agentId,
-            };
-        });
-}
 
 export async function getAgentDetail(agentId: string): Promise<AgentDetail> {
     const agent = await getAgent(agentId);
@@ -41,12 +19,7 @@ export async function getAgentDetail(agentId: string): Promise<AgentDetail> {
         });
     }
 
-    const [runtimeSessions, cronJobList, logs] = await Promise.all([
-        listRuntimeSessions(),
-        listCronJobs(),
-        listLogs(),
-    ]);
-    const cronJobRecords = cronJobList.jobs;
+    const [runtimeSessions, logs] = await Promise.all([listRuntimeSessions(), listLogs()]);
     const palette = buildAgentPalette(agent);
     const sessionsForAgent = runtimeSessions.filter((session) => session.agentId === agentId);
     const previewsBySessionKey = await listRuntimeSessionPreviewsForKeys(
@@ -101,7 +74,6 @@ export async function getAgentDetail(agentId: string): Promise<AgentDetail> {
             accentFrom: palette.accentFrom,
             accentTo: palette.accentTo,
             chatCount: new Set(sessionsForAgent.map((session) => session.chatId)).size,
-            cronCount: cronJobRecords.filter((record) => record.agentId === agentId).length,
             description: 'Runtime-backed agent.',
             id: agent.id,
             kind: 'agent',
@@ -116,7 +88,6 @@ export async function getAgentDetail(agentId: string): Promise<AgentDetail> {
             sessionCount: sessions.length,
             title: agent.name,
         },
-        cronJobs: mapAgentCronJobs(agentId, cronJobRecords),
         logs: logs.filter((log) => log.source.includes(agentId) || log.message.includes(agentId)),
         memories: [],
         sessions,

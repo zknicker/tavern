@@ -513,261 +513,6 @@ test('getChatLogPage preserves completed openai-codex provider metadata', async 
     });
 });
 
-test('listRuntimeChatRows maps Tavern API artifacts into chat timeline rows', async () => {
-    await saveAgentRuntimeConnection({
-        baseUrl: 'http://runtime.test',
-        enabled: true,
-        id: 'runtime-1',
-        isActive: true,
-        lastCheckedAt: '2026-05-18T12:00:00.000Z',
-        lastError: null,
-        name: 'Runtime',
-    });
-
-    globalThis.fetch = (async (input, init) => {
-        const request = new Request(input, init);
-        const url = new URL(request.url);
-
-        if (url.pathname === '/api/chats/cht_1/timeline') {
-            return Response.json({
-                messages: [],
-                activity: [],
-                artifacts: [
-                    {
-                        activity_id: 'act_tool_1',
-                        chat_id: 'cht_1',
-                        content_ref: 'file:///tmp/report.md',
-                        content_text: '# Report',
-                        created_at: '2026-05-18T12:00:03.000Z',
-                        id: 'art_report_1',
-                        kind: 'document',
-                        message_id: null,
-                        metadata: { runtime: { source: 'agent-engine' } },
-                        mime_type: 'text/markdown',
-                        response_id: 'rsp_run_1',
-                        title: 'Report',
-                        updated_at: '2026-05-18T12:00:03.000Z',
-                    },
-                ],
-                next_before_sequence: null,
-                threads: [],
-                total_messages: 0,
-                responses: [
-                    {
-                        chat_id: 'cht_1',
-                        completed_at: '2026-05-18T12:00:03.000Z',
-                        created_at: '2026-05-18T12:00:01.500Z',
-                        id: 'rsp_run_1',
-                        metadata: {},
-                        participant_id: 'agt_main',
-                        request_message_id: null,
-                        response_message_id: null,
-                        status: 'completed',
-                        summary: null,
-                        updated_at: '2026-05-18T12:00:03.000Z',
-                    },
-                ],
-            });
-        }
-
-        throw new Error(`Unexpected Tavern API request: ${url.pathname}`);
-    }) as typeof fetch;
-
-    const rows = (await getRuntimeChatTimelinePage('cht_1'))?.rows ?? null;
-
-    expect(rows).toEqual([
-        {
-            artifact: {
-                artifactType: 'document',
-                createdAt: '2026-05-18T12:00:03.000Z',
-                id: 'art_report_1',
-                mimeType: 'text/markdown',
-                path: 'file:///tmp/report.md',
-                payload: {
-                    contentRef: 'file:///tmp/report.md',
-                    contentText: '# Report',
-                    metadata: { runtime: { source: 'agent-engine' } },
-                    title: 'Report',
-                },
-            },
-            id: 'art_report_1',
-            kind: 'system',
-            responseId: 'rsp_run_1',
-            systemKind: 'artifact',
-            timestamp: '2026-05-18T12:00:03.000Z',
-        },
-    ]);
-});
-
-test('listRuntimeChatRows keeps response artifacts while filtering their producing activity', async () => {
-    await saveAgentRuntimeConnection({
-        baseUrl: 'http://runtime.test',
-        enabled: true,
-        id: 'runtime-1',
-        isActive: true,
-        lastCheckedAt: '2026-05-18T12:00:00.000Z',
-        lastError: null,
-        name: 'Runtime',
-    });
-
-    globalThis.fetch = (async (input, init) => {
-        const request = new Request(input, init);
-        const url = new URL(request.url);
-
-        if (url.pathname === '/api/chats/cht_1/timeline') {
-            return Response.json({
-                messages: [
-                    chatMessage({
-                        authorId: 'usr_owner',
-                        authorKind: 'user',
-                        authorLabel: 'You',
-                        content: 'Write the report.',
-                        id: 'msg_user',
-                        role: 'user',
-                        sequence: 1,
-                    }),
-                ],
-                activity: [
-                    responseActivity({
-                        detail: 'Generated report.md',
-                        id: 'act_tool_1',
-                        kind: 'tool_call',
-                        responseId: 'rsp_run_1',
-                        startedAt: '2026-05-18T12:00:02.000Z',
-                        title: 'Ran a command',
-                    }),
-                ],
-                artifacts: [
-                    {
-                        activity_id: 'act_tool_1',
-                        chat_id: 'cht_1',
-                        content_ref: 'file:///tmp/report.md',
-                        content_text: '# Report',
-                        created_at: '2026-05-18T12:00:03.000Z',
-                        id: 'art_report_1',
-                        kind: 'document',
-                        message_id: null,
-                        metadata: {},
-                        mime_type: 'text/markdown',
-                        response_id: 'rsp_run_1',
-                        title: 'Report',
-                        updated_at: '2026-05-18T12:00:03.000Z',
-                    },
-                ],
-                next_before_sequence: null,
-                threads: [],
-                total_messages: 0,
-                responses: [
-                    {
-                        chat_id: 'cht_1',
-                        completed_at: '2026-05-18T12:00:04.000Z',
-                        created_at: '2026-05-18T12:00:01.500Z',
-                        id: 'rsp_run_1',
-                        metadata: {},
-                        participant_id: 'agt_main',
-                        request_message_id: 'msg_user',
-                        response_message_id: null,
-                        status: 'completed',
-                        summary: null,
-                        updated_at: '2026-05-18T12:00:04.000Z',
-                    },
-                ],
-            });
-        }
-
-        throw new Error(`Unexpected Tavern API request: ${url.pathname}`);
-    }) as typeof fetch;
-
-    const rows = (await getRuntimeChatTimelinePage('cht_1'))?.rows ?? [];
-
-    expect(rows.map((row) => row.id)).toEqual(['msg_user', 'art_report_1']);
-});
-
-test('listRuntimeChatRows maps runtime notice activity into system rows', async () => {
-    await saveAgentRuntimeConnection({
-        baseUrl: 'http://runtime.test',
-        enabled: true,
-        id: 'runtime-1',
-        isActive: true,
-        lastCheckedAt: '2026-05-18T12:00:00.000Z',
-        lastError: null,
-        name: 'Runtime',
-    });
-
-    globalThis.fetch = (async (input, init) => {
-        const request = new Request(input, init);
-        const url = new URL(request.url);
-
-        if (url.pathname === '/api/chats/cht_1/timeline') {
-            return Response.json({
-                messages: [],
-                activity: [
-                    responseActivity({
-                        detail: 'd348a369-223c-42a7-8220-67c7340810c2',
-                        id: 'act_notice_1',
-                        kind: 'custom',
-                        metadata: {
-                            runtime: {
-                                notice: {
-                                    detail: 'd348a369-223c-42a7-8220-67c7340810c2',
-                                    kind: 'new_session',
-                                    sessionId: 'd348a369-223c-42a7-8220-67c7340810c2',
-                                    text: 'New session: d348a369-223c-42a7-8220-67c7340810c2',
-                                    title: 'Started new session',
-                                },
-                            },
-                        },
-                        responseId: 'rsp_run_1',
-                        title: 'Started new session',
-                    }),
-                ],
-                artifacts: [],
-                next_before_sequence: null,
-                threads: [],
-                total_messages: 0,
-                responses: [
-                    {
-                        chat_id: 'cht_1',
-                        completed_at: '2026-05-18T12:00:03.000Z',
-                        created_at: '2026-05-18T12:00:01.500Z',
-                        id: 'rsp_run_1',
-                        metadata: {},
-                        participant_id: 'agt_main',
-                        request_message_id: null,
-                        response_message_id: null,
-                        status: 'completed',
-                        summary: null,
-                        updated_at: '2026-05-18T12:00:03.000Z',
-                    },
-                ],
-            });
-        }
-
-        throw new Error(`Unexpected Tavern API request: ${url.pathname}`);
-    }) as typeof fetch;
-
-    const rows = (await getRuntimeChatTimelinePage('cht_1'))?.rows ?? null;
-
-    expect(rows).toEqual([
-        {
-            id: 'act_notice_1',
-            kind: 'system',
-            responseId: 'rsp_run_1',
-            runtimeNotice: {
-                agentId: null,
-                compactionCount: null,
-                detail: 'd348a369-223c-42a7-8220-67c7340810c2',
-                kind: 'new_session',
-                sessionId: 'd348a369-223c-42a7-8220-67c7340810c2',
-                text: 'New session: d348a369-223c-42a7-8220-67c7340810c2',
-                title: 'Started new session',
-            },
-            systemKind: 'runtimeNotice',
-            timestamp: '2026-05-18T12:00:02.000Z',
-        },
-    ]);
-});
-
 test('listRuntimeChatRows keeps status notices off the timeline', async () => {
     await saveAgentRuntimeConnection({
         baseUrl: 'http://runtime.test',
@@ -1052,7 +797,7 @@ test('listRuntimeChatRows keeps only the request message while a turn narrates',
     expect(rows?.map((row) => row.id)).toEqual(['msg_user']);
 });
 
-test('listRuntimeChatTimeline exposes running responses as active replies after reload', async () => {
+test('listRuntimeChatTimeline keeps the request message while a response is still running', async () => {
     await saveAgentRuntimeConnection({
         baseUrl: 'http://runtime.test',
         enabled: true,
@@ -1116,16 +861,6 @@ test('listRuntimeChatTimeline exposes running responses as active replies after 
     const timeline = await getRuntimeChatTimelinePage('cht_1');
 
     expect(timeline?.rows.map((row) => row.id)).toEqual(['msg_user']);
-    expect(timeline?.activeReplies).toEqual([
-        {
-            agentId: 'main',
-            isThinking: true,
-            runId: 'run_1',
-            sessionKey: 'session_1',
-            startedAt: '2026-05-18T12:00:01.500Z',
-            text: '',
-        },
-    ]);
 });
 
 test('older timeline pages forward the cursor and never carry live turn state', async () => {
@@ -1177,8 +912,7 @@ test('older timeline pages forward the cursor and never carry live turn state', 
     const page = await getRuntimeChatTimelinePage('cht_1', { beforeSequence: 9, limit: 50 });
 
     expect(requests).toEqual(['/api/chats/cht_1/timeline?before_sequence=9&limit=50']);
-    expect(page?.activeReplies).toEqual([]);
-    expect(page?.failedTurns).toEqual([]);
+    expect(page?.rows).toEqual([]);
     expect(page?.nextBeforeSequence).toBe(3);
     expect(page?.totalMessages).toBe(12);
 });

@@ -30,7 +30,6 @@ import {
     syncAgentsForRuntime,
     updateAgentEnabledSkillIds,
 } from '../storage/agents.ts';
-import type { AgentDetail, DashboardData } from './contracts.ts';
 import { buildAgentPalette, resolveAgentDefaultPrimaryColor, resolveAgentName } from './palette.ts';
 
 export {
@@ -40,7 +39,6 @@ export {
     querySenderLabelDiscordIds,
 } from './discord-bindings.ts';
 
-const agentTargetPattern = /^agent:([^:]+)/;
 const hexColorPattern = /^#[0-9a-f]{6}$/i;
 const fallbackAgentUpdatedAt = new Date(0).toISOString();
 
@@ -111,11 +109,6 @@ export interface AgentCatalogItem {
     userInstructions: string;
     usesAllSkills: boolean;
     webAccessEnabled: boolean;
-}
-
-interface LiveSessionLike {
-    agentId: string;
-    channel: string;
 }
 
 function parseEnabledSkillIds(agent: AgentRecord) {
@@ -246,51 +239,6 @@ export async function requirePrimaryAgent() {
     }
 
     return agent;
-}
-
-export function buildDashboardAgents(input: {
-    agents: Agent[];
-    cronJobs: AgentDetail['cronJobs'];
-    sessions: LiveSessionLike[];
-}): DashboardData['agents'] {
-    return [...input.agents]
-        .sort((left, right) => resolveAgentName(left).localeCompare(resolveAgentName(right)))
-        .map((agent, index) => {
-            const palette = buildAgentPalette(agent);
-            const sessions = input.sessions.filter((session) => session.agentId === agent.id);
-            const cronCount = input.cronJobs.filter(
-                (job) => deriveTargetAgentId(job.target) === agent.id
-            ).length;
-
-            return {
-                accentFrom: palette.accentFrom,
-                accentTo: palette.accentTo,
-                chatCount: new Set(sessions.map((session) => session.channel)).size,
-                cronCount,
-                description: 'Runtime-backed agent.',
-                id: agent.id,
-                kind: 'agent',
-                layout: {
-                    x: ((index % 3) + 1) * 25,
-                    y: Math.floor(index / 3) * 28 + 20,
-                },
-                memoryCount: 0,
-                name: resolveAgentName(agent),
-                parentId: null,
-                peerIds: [],
-                sessionCount: sessions.length,
-                title: agent.name,
-            } satisfies DashboardData['agents'][number];
-        });
-}
-
-export function deriveTargetAgentId(target: string) {
-    if (target === 'agent-runtime') {
-        return null;
-    }
-
-    const match = target.match(agentTargetPattern);
-    return match?.[1] ?? target;
 }
 
 export async function saveCatalogAgentSettings(

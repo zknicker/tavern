@@ -10,13 +10,6 @@ import { listChatLogRoute } from './log-list.ts';
 import { onChatLogUpdate } from './log-on-update.ts';
 import { markChatReadRoute } from './mark-read.ts';
 import { onChatComposition } from './on-composition.ts';
-import { onChatTurnCancelled } from './on-turn-cancelled.ts';
-import { onChatTurnCompleted } from './on-turn-completed.ts';
-import { onChatTurnFailed } from './on-turn-failed.ts';
-import { onChatTurnProgress } from './on-turn-progress.ts';
-import { onChatTurnReplyUpdated } from './on-turn-reply-updated.ts';
-import { onChatTurnStarted } from './on-turn-started.ts';
-import { onChatTurnStatusUpdated } from './on-turn-status-updated.ts';
 import { onChatUpdate } from './on-update.ts';
 import { sendChatMessageRoute } from './send.ts';
 import { startChatRoute } from './start.ts';
@@ -58,13 +51,6 @@ export const chatRouter = createRouter({
     markRead: markChatReadRoute,
     onComposition: onChatComposition,
     onUpdate: onChatUpdate,
-    onTurnCancelled: onChatTurnCancelled,
-    onTurnCompleted: onChatTurnCompleted,
-    onTurnFailed: onChatTurnFailed,
-    onTurnProgress: onChatTurnProgress,
-    onTurnReplyUpdated: onChatTurnReplyUpdated,
-    onTurnStarted: onChatTurnStarted,
-    onTurnStatusUpdated: onChatTurnStatusUpdated,
     send: sendChatMessageRoute,
     start: startChatRoute,
     stop: stopChatTurnRoute,

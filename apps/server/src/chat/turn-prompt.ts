@@ -6,14 +6,13 @@ export interface ChatTurnPromptEvidence {
     capturedAt: string;
     instructions: string;
     prompt: string;
-    recall: Array<{ path: string; score: number; snippet: string; title: string }>;
     runId: string;
 }
 
 /**
- * Runtime-owned prompt evidence for one agent turn: the composed instructions,
- * the per-turn prompt, and the Wiki recall hits injected into it. Null when
- * no Runtime is connected or the turn has no captured evidence.
+ * Runtime-owned prompt evidence for one agent turn: the composed instructions
+ * and the per-turn prompt. Null when no Runtime is connected or the turn has
+ * no captured evidence.
  */
 export async function getChatTurnPrompt(runId: string): Promise<ChatTurnPromptEvidence | null> {
     const connection = await getActiveAgentRuntimeConnection();
@@ -28,7 +27,6 @@ export async function getChatTurnPrompt(runId: string): Promise<ChatTurnPromptEv
             capturedAt: evidence.captured_at,
             instructions: evidence.instructions,
             prompt: evidence.prompt,
-            recall: evidence.recall,
             runId: evidence.run_id,
         };
     } catch (error) {

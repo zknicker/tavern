@@ -91,11 +91,8 @@ function page(input: {
     rows: RuntimeChatTimelinePage['rows'];
 }): RuntimeChatTimelinePage {
     return {
-        activeReplies: [],
-        failedTurns: [],
         nextBeforeSequence: input.nextBeforeSequence,
         rows: input.rows,
-        settledRunIds: [],
         totalMessages: 2,
     };
 }

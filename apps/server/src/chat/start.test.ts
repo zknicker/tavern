@@ -18,12 +18,6 @@ test('startTavernChat stores the deterministic Tavern chat name', async () => {
         clientMessageId: 'msg_1',
         status: 'accepted',
         threadChatId: null,
-        turns: [
-            {
-                agentId: 'claw',
-                runId: 'run-1',
-            },
-        ],
     });
 
     const result = await startTavernChat({
@@ -37,12 +31,6 @@ test('startTavernChat stores the deterministic Tavern chat name', async () => {
         clientMessageId: 'msg_1',
         status: 'accepted',
         threadChatId: null,
-        turns: [
-            {
-                agentId: 'claw',
-                runId: 'run-1',
-            },
-        ],
     });
     assert.deepEqual(createTavernChat.mock.calls, [
         [
@@ -57,11 +45,9 @@ test('startTavernChat stores the deterministic Tavern chat name', async () => {
     assert.deepEqual(sendTavernChatMessage.mock.calls, [
         [
             {
-                agentId: 'claw',
                 chatId: '220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
                 content: 'Hey!',
             },
-            undefined,
             { clerkSessionToken: null },
         ],
     ]);
@@ -77,12 +63,6 @@ test('startTavernChat can defer agent resolution to chat creation', async () => 
         clientMessageId: 'msg_1',
         status: 'accepted',
         threadChatId: null,
-        turns: [
-            {
-                agentId: 'claw',
-                runId: 'run-1',
-            },
-        ],
     });
 
     await startTavernChat({
@@ -102,11 +82,9 @@ test('startTavernChat can defer agent resolution to chat creation', async () => 
     assert.deepEqual(sendTavernChatMessage.mock.calls, [
         [
             {
-                agentId: undefined,
                 chatId: '220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
                 content: 'Hey!',
             },
-            undefined,
             { clerkSessionToken: null },
         ],
     ]);
@@ -122,12 +100,6 @@ test('startTavernChat preserves the optimistic first message identity', async ()
         clientMessageId: 'msg_draft_1',
         status: 'accepted',
         threadChatId: null,
-        turns: [
-            {
-                agentId: 'claw',
-                runId: 'run-1',
-            },
-        ],
     });
 
     await startTavernChat({
@@ -139,12 +111,10 @@ test('startTavernChat preserves the optimistic first message identity', async ()
     assert.deepEqual(sendTavernChatMessage.mock.calls, [
         [
             {
-                agentId: 'claw',
                 chatId: '220f46ed-2d7c-41dd-9d7e-d02691f1afc3',
                 clientMessageId: 'msg_draft_1',
                 content: 'Hey!',
             },
-            undefined,
             { clerkSessionToken: null },
         ],
     ]);

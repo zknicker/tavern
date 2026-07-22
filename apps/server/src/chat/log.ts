@@ -19,23 +19,17 @@ export async function getChatLogPage(
 
     if (page === null) {
         return chatLogPageSchema.parse({
-            activeReplies: [],
-            failedTurns: [],
             limit: input.limit,
             nextBeforeSequence: null,
             rows: [],
-            settledRunIds: [],
             totalMessages: 0,
         });
     }
 
     return chatLogPageSchema.parse({
-        activeReplies: page.activeReplies,
-        failedTurns: page.failedTurns,
         limit: input.limit,
         nextBeforeSequence: page.nextBeforeSequence,
         rows: page.rows,
-        settledRunIds: page.settledRunIds,
         totalMessages: page.totalMessages,
     });
 }

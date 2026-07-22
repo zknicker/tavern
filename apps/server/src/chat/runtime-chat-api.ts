@@ -15,14 +15,14 @@ import type { ChatLogPage } from './contracts.ts';
 import { workerRowFromSubagentActivity } from './runtime-worker-rows.ts';
 
 export interface RuntimeChatTimelinePage {
-    activeReplies: ChatLogPage['activeReplies'];
-    failedTurns: ChatLogPage['failedTurns'];
     nextBeforeSequence: number | null;
     rows: ChatLogPage['rows'];
-    settledRunIds: ChatLogPage['settledRunIds'];
     totalMessages: number;
 }
 
+// Chat timeline = durable messages only (specs/chat-timeline.md). Tool,
+// reasoning, worker, artifact, and turn-status projections are execution
+// evidence served per turn by chat.turn.evidence — they never ride this page.
 export async function getRuntimeChatTimelinePage(
     chatId: string,
     input: { beforeSequence?: number; limit?: number; readerId?: string } = {}
@@ -33,7 +33,6 @@ export async function getRuntimeChatTimelinePage(
         return null;
     }
 
-    const isLatestPage = input.beforeSequence === undefined;
     const client = createTavernClientForConnection(connection);
     const [agents, page] = await Promise.all([
         listAgents(),
@@ -44,90 +43,27 @@ export async function getRuntimeChatTimelinePage(
         }),
     ]);
     const agentsById = new Map(agents.map((agent) => [agent.id, agent]));
-    const { activity, artifacts, messages, responses } = visibleTimelineSources({
-        activity: page.activity,
-        artifacts: page.artifacts,
+    const { messages, responses } = visibleTimelineSources({
         messages: page.messages,
         responses: page.responses,
     });
-    const responsesById = new Map(responses.map((response) => [response.id, response]));
     const responseIdByMessageId = mapResponseIdsByMessageId(responses);
     const threadsByAnchorMessageId = new Map(
         page.threads.map((thread) => [thread.anchor_message_id, thread])
     );
-
-    const finalReplyTextByRunId = new Map(
-        messages
-            .filter((message) => message.chat_id === chatId && message.role === 'assistant')
-            .map((message) => [runtimeMetadataString(message, 'runId'), messageText(message)])
-            .filter((entry): entry is [string, string] => Boolean(entry[0]))
-    );
-    const agentNamesById = new Map(agents.map((agent) => [agent.id, agent.name]));
-    const messageRows = messages.flatMap((message) =>
+    const rows = messages.flatMap((message) =>
         messageToChatRows(message, agentsById, responseIdByMessageId, threadsByAnchorMessageId)
     );
-    // The timeline carries conversation units only (specs/chat-timeline.md);
-    // tool, reasoning, worker, and narration rows are turn evidence served by
-    // chat.turn.evidence.
-    const activityRows = activity
-        .flatMap((entry) =>
-            activityToChatRows(entry, responsesById, finalReplyTextByRunId, agentNamesById)
-        )
-        .filter(isTimelineActivityRow);
-    const artifactRows = artifacts.map(artifactToChatRow);
-    const turnStatusRows = responses.flatMap(cancelledResponseToChatRow);
-    const rows = [...messageRows, ...activityRows, ...artifactRows, ...turnStatusRows];
-    // Active, failed, and settled turn states describe the newest history;
-    // the latest page is the only one whose responses can carry them.
-    const activeReplies = isLatestPage ? activeRepliesFromResponses(responses) : [];
-    const failedTurns = isLatestPage ? failedTurnsFromResponses(responses) : [];
-    const settledRunIds = isLatestPage ? settledRunIdsFromResponses(responses) : [];
-    const sortedRows = rows.sort((left, right) => {
-        const timestampDelta = rowTimestamp(left) - rowTimestamp(right);
-
-        return timestampDelta || rowSortRank(left) - rowSortRank(right);
-    });
 
     return {
-        activeReplies,
-        failedTurns,
         nextBeforeSequence: page.next_before_sequence,
-        rows: sortedRows,
-        settledRunIds,
+        rows,
         totalMessages: page.total_messages,
     };
 }
 
-// Conversation-visible activity projections: widgets are part of the
-// contribution, clarifications are conversational questions, and only
-// durable context-boundary notices (new session, compaction) ride the
-// timeline. Status notices — busy delivery, holds, wait-idle — are
-// execution evidence for the turn drawer, like everything else.
-export function isTimelineActivityRow(row: ChatLogPage['rows'][number]) {
-    if (row.kind === 'widget') {
-        return true;
-    }
-    if (row.kind === 'system') {
-        return (
-            row.systemKind === 'runtimeNotice' &&
-            row.runtimeNotice != null &&
-            row.runtimeNotice.kind !== 'status'
-        );
-    }
-    if (row.kind === 'tool') {
-        // The changed-files summary is contribution outcome, like an artifact
-        // card: the chip rides the timeline while file contents stay evidence.
-        return Boolean(row.clarification) || row.toolCall.name === 'workspace_changes';
-    }
-    if (row.kind === 'message') {
-        return row.actor?.kind === 'participant';
-    }
-    return false;
-}
-
 // Soft-deleted rows stay durable in Runtime (sequence slots are stable) but
-// never reach the timeline: dismissed cards, dismissed failures, cleared
-// chats. Activity and artifacts follow their response.
+// never reach the timeline: dismissed cards, cleared chats.
 // A message can be one response's reply and the next response's trigger
 // (agent-triggered turns). The producing response owns the row, so reply
 // mappings overwrite request mappings.
@@ -150,21 +86,12 @@ export function mapResponseIdsByMessageId(responses: TavernChatResponse[]) {
 }
 
 export function visibleTimelineSources(input: {
-    activity: readonly TavernResponseActivity[];
-    artifacts: readonly TavernArtifact[];
     messages: readonly TavernChatMessage[];
     responses: readonly TavernChatResponse[];
 }) {
-    const responses = input.responses.filter((response) => !response.deleted_at);
-    const liveResponseIds = new Set(responses.map((response) => response.id));
-
     return {
-        activity: input.activity.filter((entry) => liveResponseIds.has(entry.response_id)),
-        artifacts: input.artifacts.filter(
-            (artifact) => !artifact.response_id || liveResponseIds.has(artifact.response_id)
-        ),
         messages: input.messages.filter((message) => !message.deleted_at),
-        responses,
+        responses: input.responses.filter((response) => !response.deleted_at),
     };
 }
 
@@ -191,61 +118,15 @@ export function artifactToChatRow(artifact: TavernArtifact): ChatLogPage['rows']
     };
 }
 
-export function cancelledResponseToChatRow(response: TavernChatResponse): ChatLogPage['rows'] {
-    if (
-        response.status !== 'cancelled' ||
-        response.response_message_id ||
-        runtimeMetadataString(response, 'source') === 'command'
-    ) {
-        return [];
-    }
-
-    return [
-        {
-            id: `${response.id}:cancelled`,
-            kind: 'system' as const,
-            responseId: response.id,
-            systemKind: 'turnStatus' as const,
-            timestamp: response.completed_at ?? response.updated_at,
-            turnStatus: {
-                agentId: runtimeMetadataString(response, 'agentId') ?? response.participant_id,
-                runId: runtimeMetadataString(response, 'runId') ?? response.id,
-                sessionKey:
-                    runtimeMetadataString(response, 'agentSessionId') ??
-                    runtimeMetadataString(response, 'sessionKey') ??
-                    response.id,
-                status: 'stopped' as const,
-                text: response.summary?.trim() || 'Response stopped.',
-            },
-        },
-    ];
-}
-
+// System-role messages (thread-notice, new-session receipts, ...) render as
+// plain message rows like everything else — their content carries the
+// receipt text (specs/chat-timeline.md).
 export function messageToChatRows(
     message: TavernChatMessage,
     agentsById: Map<string, Awaited<ReturnType<typeof listAgents>>[number]>,
     responseIdByMessageId: ReadonlyMap<string, string>,
     threadsByAnchorMessageId: ReadonlyMap<string, TavernThreadSummary>
 ): ChatLogPage['rows'] {
-    if (message.role === 'system' && runtimeMetadataString(message, 'source') === 'thread-notice') {
-        return [
-            {
-                id: message.id,
-                kind: 'system',
-                runtimeNotice: {
-                    agentId: runtimeMetadataString(message, 'agentId'),
-                    detail: null,
-                    kind: 'status',
-                    sessionId: null,
-                    text: messageText(message),
-                    title: 'Thread unfollowed',
-                },
-                systemKind: 'runtimeNotice',
-                timestamp: message.created_at,
-            },
-        ];
-    }
-
     const sourceAgentId = runtimeMetadataString(message, 'agentId') ?? message.author.id;
     const agent = message.author.kind === 'agent' ? agentsById.get(sourceAgentId) : null;
     const actor =
@@ -658,105 +539,6 @@ export function messageText(message: TavernChatMessage) {
     return message.content;
 }
 
-// Every in-flight run is a live reply: each agent runs one turn at a time
-// across all chats, so concurrent entries belong to different agents.
-function activeRepliesFromResponses(
-    responses: readonly TavernChatResponse[]
-): ChatLogPage['activeReplies'] {
-    return responses
-        .filter(
-            (response) =>
-                (response.status === 'queued' || response.status === 'running') &&
-                !response.response_message_id
-        )
-        .map((response) => ({
-            agentId: runtimeMetadataString(response, 'agentId') ?? response.participant_id,
-            isThinking: true,
-            runId: runtimeMetadataString(response, 'runId') ?? response.id,
-            sessionKey: responseSessionKey(response),
-            startedAt: runtimeMetadataString(response, 'startedAt') ?? response.created_at,
-            text: response.summary ?? '',
-            ...(runtimeMetadataString(response, 'trigger') === 'evaluation'
-                ? { trigger: 'evaluation' as const }
-                : {}),
-        }))
-        .sort((left, right) => Date.parse(left.startedAt) - Date.parse(right.startedAt));
-}
-
-// One failure banner per agent seat (participant): a seat's failure stays
-// visible until that agent runs again in this chat, regardless of what other
-// agents do. Session rotation keeps the participant, so it never resurrects
-// older failures.
-export function failedTurnsFromResponses(
-    responses: readonly TavernChatResponse[]
-): ChatLogPage['failedTurns'] {
-    // Historical composer-command evidence (source 'command') predates the
-    // agent drawer and never drives the failed-turn banner.
-    const latestBySeat = new Map<string, TavernChatResponse>();
-
-    for (const response of responses) {
-        if (runtimeMetadataString(response, 'source') === 'command') {
-            continue;
-        }
-
-        const seatKey = response.participant_id;
-        const current = latestBySeat.get(seatKey);
-
-        if (!current || Date.parse(response.updated_at) > Date.parse(current.updated_at)) {
-            latestBySeat.set(seatKey, response);
-        }
-    }
-
-    return [...latestBySeat.values()]
-        .filter((response) => response.status === 'failed' && !response.response_message_id)
-        .map((failedResponse) => ({
-            error:
-                runtimeMetadataString(failedResponse, 'error') ??
-                readString(failedResponse.metadata.error) ??
-                'Agent failed to produce a reply.',
-            responseId: failedResponse.id,
-            turn: {
-                agentId:
-                    runtimeMetadataString(failedResponse, 'agentId') ??
-                    failedResponse.participant_id,
-                chatId: failedResponse.chat_id,
-                runId: runtimeMetadataString(failedResponse, 'runId') ?? failedResponse.id,
-                sessionKey: responseSessionKey(failedResponse),
-                startedAt:
-                    runtimeMetadataString(failedResponse, 'startedAt') ?? failedResponse.created_at,
-            },
-        }))
-        .sort((left, right) => Date.parse(left.turn.startedAt) - Date.parse(right.turn.startedAt));
-}
-
-// Runs whose responses reached a terminal status. Clients retain a live
-// reply they saw start until something terminal shows up for it; a silent
-// turn leaves no durable reply or failure to match, so the page states
-// settlement directly. Responses without runtime run identity (session
-// resets, command evidence) are not turns and carry no signal.
-export function settledRunIdsFromResponses(responses: readonly TavernChatResponse[]): string[] {
-    return responses.flatMap((response) => {
-        if (
-            response.status !== 'completed' &&
-            response.status !== 'cancelled' &&
-            response.status !== 'failed'
-        ) {
-            return [];
-        }
-
-        const runId = runtimeMetadataString(response, 'runId');
-        return runId ? [runId] : [];
-    });
-}
-
-function responseSessionKey(response: TavernChatResponse) {
-    return (
-        runtimeMetadataString(response, 'agentSessionId') ??
-        runtimeMetadataString(response, 'sessionKey') ??
-        response.id
-    );
-}
-
 export function runtimeMetadataString(
     message: TavernChatMessage | TavernChatResponse | TavernResponseActivity | null,
     key: string
@@ -769,33 +551,4 @@ export function runtimeMetadataString(
 
     const value = (runtime as Record<string, unknown>)[key];
     return typeof value === 'string' ? value : null;
-}
-
-function rowTimestamp(row: ChatLogPage['rows'][number]) {
-    const timestamp =
-        row.kind === 'message'
-            ? row.message.timestamp
-            : row.kind === 'tool' || row.kind === 'widget'
-              ? (row.startedAt ?? row.completedAt)
-              : row.kind === 'worker'
-                ? (row.startedAt ?? row.completedAt ?? row.worker.lastEventAt)
-                : row.timestamp;
-    const parsed = timestamp ? Date.parse(timestamp) : Number.NaN;
-
-    return Number.isNaN(parsed) ? Number.MAX_SAFE_INTEGER : parsed;
-}
-
-function rowSortRank(row: ChatLogPage['rows'][number]) {
-    if (row.kind === 'message') {
-        if (isActivityMessageRow(row)) {
-            return 1;
-        }
-        return row.message.senderType === 'user' ? 0 : 2;
-    }
-
-    return 1;
-}
-
-function isActivityMessageRow(row: Extract<ChatLogPage['rows'][number], { kind: 'message' }>) {
-    return row.id.startsWith('act_');
 }

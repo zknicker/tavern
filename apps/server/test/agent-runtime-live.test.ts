@@ -65,27 +65,3 @@ test('applyObservedAgentRuntimeEvent invalidates agent queries on agent updates'
 
     assert.equal(invalidateSpy.mock.calls.length, 1);
 });
-
-test('applyObservedAgentRuntimeEvent invalidates runtime-owned cron queries on update', async () => {
-    const cronSpy = spyOn(invalidationEvents, 'emitCronUpdated').mockImplementation();
-
-    await applyObservedAgentRuntimeEvent({
-        cronJobId: 'cron:daily-standup',
-        timestamp: '2026-04-06T12:10:01.000Z',
-        type: 'cron.updated',
-    });
-
-    assert.equal(cronSpy.mock.calls.length, 1);
-});
-
-test('applyObservedAgentRuntimeEvent invalidates runtime-owned cron queries on delete', async () => {
-    const cronSpy = spyOn(invalidationEvents, 'emitCronUpdated').mockImplementation();
-
-    await applyObservedAgentRuntimeEvent({
-        cronJobId: 'cron:daily-standup',
-        timestamp: '2026-04-06T12:10:01.000Z',
-        type: 'cron.deleted',
-    });
-
-    assert.equal(cronSpy.mock.calls.length, 1);
-});

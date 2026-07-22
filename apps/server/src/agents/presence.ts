@@ -20,8 +20,6 @@ export async function listAgentPresence(): Promise<AgentPresence[]> {
     return agents
         .map((agent) => ({
             agentId: agent.id,
-            chatId: null,
-            chatTitle: null,
             pendingTurns: 0,
             since: null,
             state: 'idle' as const,
