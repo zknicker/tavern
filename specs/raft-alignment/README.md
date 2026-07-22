@@ -480,6 +480,18 @@ deployment, so intermediate brokenness is not a constraint.
   injection, Wiki, cron product + `cron_*`/`wiki_*`/memory surfaces (D3/D3b/D4); manual cutover
   seeds existing core memory into agent workspaces. Coordinated cut, likely folded into WS2's
   landing window.
+- **WS5.5 — Plugin CLIs.** Per-plugin CLI wrappers on the agent PATH (Raft `integration
+  env/invoke` pattern): runtime-held credentials, injected like the grotto wrapper, one CLI per
+  granted plugin (MerchBase, Google, Browser) plus image generation. Replaces the plugin engine
+  tools deleted at the flip (flip ruling: delete now, CLIs later — plugins go dark in dev
+  between flip and WS5.5). The `## Plugins` prompt section composes only when a plugin CLI
+  exists; never at the flip.
+- **Release blockers (flip → mini):** the flip may not ride a release to the mini without
+  **WS5** (task surface — flip deletes the old product wholesale; WS5 ports the landed
+  board/list/calendar/label/priority components onto task-messages, resurrecting from git
+  history, not rewriting) and **WS5.5** (plugin CLIs — MerchBase readouts are live daily usage
+  on the mini). Also riding that release: mini cutover (Blippy/Tiny tokens, operator handle,
+  retired-skill-id SQLite edit, PRD-89 mini verification).
 - **WS9 — Shell + agent panel reorganization.** U1 rail taxonomy, U2 Members page + 6-tab agent
   profile (absorbs the agent drawer and per-agent settings), per-conversation Chat|Tasks|Files
   tabs (U3), Activity inbox page (with WS4), Search page. Largely parallel to WS3–WS5; shares
