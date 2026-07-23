@@ -49,12 +49,14 @@ For each new Widget:
      entry into a compile error — that is the reminder, not this checklist.
    - Plugin-owned entries live beside their schema (see
      `widgets/merchbase/contracts.ts`) and are imported into the map.
-4. Runtime needs no per-widget wiring: fence parsing in
-   `apps/runtime/src/widgets/render.ts` covers all registered widgets, and
-   `availableWidgetNamesForAgent` gates the prompt. A core widget (owned by no
-   Plugin) is available to every agent automatically; a plugin widget appears
-   only when the Plugin is enabled and granted (via the manifest `widgets`
-   field), so no gating code is needed per widget.
+4. Runtime needs no per-widget wiring; `availableWidgetNamesForAgent` gates
+   the prompt. A core widget (owned by no Plugin) is available to every agent
+   automatically; a plugin widget appears only when the Plugin is enabled and
+   granted (via the manifest `widgets` field), so no gating code is needed per
+   widget. Note (post-flip): only ```` ```visual ```` fences render today —
+   they parse client-side from message content (`splitVisualFences`), not in
+   Runtime. The `widget`-activity → server-row pipeline is dormant; see
+   `docs/internals/widgets.md` before adding a non-visual widget.
 5. Add the Website renderer:
    - a thin `Widget*` wrapper in `apps/website/src/widgets/` mapping fence
      props onto Tavern component kit components from `apps/website/src/kit/`
@@ -71,10 +73,10 @@ For each new Widget:
 8. Add focused tests at the seams:
    - API: props parsing/normalization and `parseWidgetPayload` behavior;
      prompt assembly (`widgets/prompt.test.ts`).
-   - Runtime: fence parsing, display-content stripping, activity projection
-     (`apps/runtime/src/widgets/render.test.ts`). For a plugin widget, add a
-     grant case to `plugins/agent-capabilities.test.ts`.
-   - Website: transcript render + fallback (`chat-transcript.test.tsx`).
+   - For a plugin widget, add a grant case to
+     `plugins/agent-capabilities.test.ts`.
+   - Website: visual fence split + transcript render + fallback
+     (`chat-transcript.test.tsx`, `packages/tavern-api/src/widgets/visual`).
    - Instructions: generated prompt strings and gating
      (`apps/runtime/src/workspace/instructions.test.ts`).
 
@@ -96,7 +98,7 @@ Run the smallest lanes that cover changed seams. Common lanes:
 
 ```bash
 cd packages/tavern-api && bun test src/widgets/ && bun run typecheck
-bun run --filter @tavern/runtime test -- src/widgets/render.test.ts src/workspace/instructions.test.ts
+bun run --filter @tavern/runtime test -- src/workspace/instructions.test.ts
 cd apps/website && bun test src/features/chats src/widgets && bun run typecheck
 bun run --filter @tavern/server typecheck
 bun run lint
