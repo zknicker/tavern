@@ -1,5 +1,5 @@
 import { PlusSignIcon } from '@hugeicons-pro/core-solid-rounded';
-import { FileSearchIcon, Folder01Icon } from '@hugeicons-pro/core-stroke-rounded';
+import { FileSearchIcon } from '@hugeicons-pro/core-stroke-rounded';
 import { Icon } from '../../components/ui/icon.tsx';
 import {
     Menu,
@@ -30,13 +30,6 @@ export function ArtifactPanelSourceMenu({
             <MenuPopup align="end" className="w-64">
                 <MenuGroup>
                     <MenuGroupLabel>Open from</MenuGroupLabel>
-                    <MenuItem
-                        className="items-start gap-2 py-2"
-                        onClick={() => onOpenTarget({ kind: 'wikiDirectory', path: '' })}
-                    >
-                        <Icon className="mt-0.5" icon={Folder01Icon} />
-                        <SourceMenuText description="Browse durable Wiki pages" title="Wiki" />
-                    </MenuItem>
                     <MenuItem
                         className="items-start gap-2 py-2"
                         disabled={!agentId}

@@ -2,11 +2,12 @@ import { randomUUID } from 'node:crypto';
 import { type AgentApiRequester, createAgentApiClient } from '../agent-api-client.ts';
 import {
     agentHistoryResponseSchema,
+    agentMessageCheckResponseSchema,
     agentSendResponseSchema,
     resolvedAgentMessageSchema,
 } from '../agent-api-schemas.ts';
 import { AgentCliError } from '../agent-error.ts';
-import { formatHistoryLine } from '../agent-format.ts';
+import { formatDeliveryEnvelope, formatHistoryLine } from '../agent-format.ts';
 import { renderHistory, renderSendResponse } from '../agent-render.ts';
 import type { ParsedArgs } from '../parse.ts';
 import type { SubCommand } from '../subcommand.ts';
@@ -103,11 +104,43 @@ export const MESSAGE_SUBCOMMANDS: SubCommand[] = [
         flags: [],
         name: 'check',
         positionals: [],
-        run: () => unavailable(),
-        summary: 'Check new message delivery (arrives with inbox cursors)',
+        run: () => runCheck(defaultDeps()),
+        summary: 'Read and acknowledge pending message deliveries',
         usage: 'grotto message check',
     },
+    {
+        examples: ['grotto message react --target "#general" --message-id 1a2b3c4d --emoji 👍'],
+        flags: [
+            { name: '--target', valueName: '<t>', description: 'Target the message lives in' },
+            { name: '--message-id', valueName: '<id>', description: 'Message to react to' },
+            { name: '--emoji', valueName: '<e>', description: 'Reaction emoji' },
+        ],
+        name: 'react',
+        positionals: [],
+        run: () => {
+            throw new AgentCliError(
+                'NOT_YET_AVAILABLE',
+                'Reactions arrive with the tasks-and-affordances workstream.',
+                { nextAction: 'grotto message send --target <t>' }
+            );
+        },
+        summary: 'React to a message (arrives with tasks and affordances)',
+        usage: 'grotto message react --target <t> --message-id <id> --emoji <e>',
+    },
 ];
+
+export async function runCheck(deps: MessageDeps): Promise<number> {
+    const response = await deps.client.request(
+        '/api/agent/events',
+        agentMessageCheckResponseSchema
+    );
+    const lines = response.messages.map((row) => formatDeliveryEnvelope(row.target, row.message));
+    const trailer = response.more
+        ? 'More messages are pending — run grotto message check again.'
+        : 'No more new messages.';
+    deps.write(`${[...lines, trailer].join('\n')}\n`);
+    return 0;
+}
 
 export async function runSend(args: ParsedArgs, deps: MessageDeps): Promise<number> {
     if (args.flags['--content']) {
@@ -200,14 +233,6 @@ export async function runResolve(args: ParsedArgs, deps: MessageDeps): Promise<n
     );
     deps.write(`${formatHistoryLine(response.message)}\n`);
     return 0;
-}
-
-function unavailable(): Promise<number> {
-    throw new AgentCliError(
-        'NOT_YET_AVAILABLE',
-        'Inbox cursor semantics arrive with the inbox workstream.',
-        { nextAction: 'grotto message read --target <t>' }
-    );
 }
 
 function heredocError(code: string, message: string): AgentCliError {

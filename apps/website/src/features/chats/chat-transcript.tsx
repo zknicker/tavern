@@ -7,13 +7,13 @@ import {
     MessageScrollerProvider,
     MessageScrollerViewport,
 } from '../../components/ui/message-scroller.tsx';
-import type { ChatActiveReply, ChatTurnFailure } from '../../hooks/chats/chat-timeline-state.ts';
 import { useChatSidePane } from '../../hooks/pane/use-chat-side-pane.ts';
 import { useMessageFlash } from '../../hooks/threads/use-message-flash.ts';
 import { openThreadPane, useThreadPane } from '../../hooks/threads/use-thread-pane.ts';
 import { markChatTiming } from '../../lib/chat-timing.ts';
 import { trpc } from '../../lib/trpc.tsx';
 import { cn } from '../../lib/utils.ts';
+import { ChatCompositionBubbles } from './chat-composition-bubble.tsx';
 import { getTranscriptItemKey } from './chat-transcript-item-utils.ts';
 import {
     buildTranscriptEntries,
@@ -40,15 +40,14 @@ const directConversationMessageLayout: ConversationMessageLayout = {
 };
 
 export function ChatTranscript({
-    activeReplies,
     agentStatusCharacter = null,
     canRequestMention = true,
     chatId,
+    compositionTarget,
     composerId,
     conversationLayout = directConversationMessageLayout,
     currentSessionKey,
     defaultOpenWorkGroups = false,
-    failedTurns = [],
     hiddenCount = 0,
     leadingContent,
     olderHistory,
@@ -58,15 +57,14 @@ export function ChatTranscript({
     threadActionsEnabled = true,
     viewportClassName,
 }: {
-    activeReplies: readonly ChatActiveReply[];
     agentStatusCharacter?: AgentCharacter | null;
     canRequestMention?: boolean;
     chatId?: string;
+    compositionTarget?: string | null;
     composerId?: string;
     conversationLayout?: ConversationMessageLayout;
     currentSessionKey?: string | null;
     defaultOpenWorkGroups?: boolean;
-    failedTurns?: readonly ChatTurnFailure[];
     hiddenCount?: number;
     leadingContent?: React.ReactNode;
     // Standalone-viewport transcripts (the thread pane) page older history
@@ -88,32 +86,27 @@ export function ChatTranscript({
         profilePaneChatId,
     });
     const mutateThreadFollow = unfollowThread.mutate;
-    const entries = React.useMemo(
-        () =>
-            buildTranscriptEntries({
-                activeReplies,
-                failedTurns,
-                rows,
-            }),
-        [activeReplies, failedTurns, rows]
-    );
+    const entries = React.useMemo(() => buildTranscriptEntries({ rows }), [rows]);
     const rawTranscriptRows = React.useMemo(
         () => buildTranscriptRenderRows(entries, hiddenCount),
         [entries, hiddenCount]
     );
     const transcriptRows = useStableTranscriptRenderRows(rawTranscriptRows);
     const latestAgentMessage = React.useMemo(() => getLatestAgentMessage(rows), [rows]);
+    // The durable message's compositionId echo is the commit signal for a
+    // provisional composition bubble (specs/chat-timeline.md).
+    const messageCompositionIds = React.useMemo(() => getMessageCompositionIds(rows), [rows]);
     // Sticky across renders: the completion handoff can clear the live reply
     // a beat before the durable reply row lands, and narration must not flash
     // back into the pane during that gap.
     const seenRepliedRunsRef = React.useRef(new Set<string>());
     const repliedRunIds = React.useMemo(() => {
-        for (const runId of getRepliedRunIds(rows, activeReplies)) {
+        for (const runId of getRepliedRunIds(rows)) {
             seenRepliedRunsRef.current.add(runId);
         }
 
         return new Set(seenRepliedRunsRef.current);
-    }, [rows, activeReplies]);
+    }, [rows]);
     const shouldAnimateItemEnter = useLiveEdgeItemEnter(chatId, transcriptRows);
     const onOpenThread = React.useCallback(
         (row: Parameters<TranscriptRenderContextValue['onOpenThread']>[0]) => {
@@ -173,26 +166,6 @@ export function ChatTranscript({
     );
 
     React.useEffect(() => {
-        for (const reply of activeReplies) {
-            markChatTiming('thinking-visible', {
-                runId: reply.runId,
-                sessionKey: reply.sessionKey,
-            });
-        }
-    }, [activeReplies]);
-
-    React.useEffect(() => {
-        for (const reply of activeReplies) {
-            if (reply.isThinking === false && reply.text?.trim()) {
-                markChatTiming('final-message-visible', {
-                    runId: reply.runId,
-                    sessionKey: reply.sessionKey,
-                });
-            }
-        }
-    }, [activeReplies]);
-
-    React.useEffect(() => {
         if (!latestAgentMessage) {
             return;
         }
@@ -219,13 +192,19 @@ export function ChatTranscript({
                                 messageId={row.id}
                             >
                                 <TranscriptRenderRowItem
-                                    activeReplies={activeReplies}
                                     agentStatusCharacter={agentStatusCharacter}
                                     row={row}
                                 />
                             </MessageScrollerItem>
                         )
                     )}
+                    {chatId ? (
+                        <ChatCompositionBubbles
+                            chatId={chatId}
+                            compositionTarget={compositionTarget}
+                            messageCompositionIds={messageCompositionIds}
+                        />
+                    ) : null}
                 </MessageScrollerContent>
             </div>
         </TranscriptRenderProvider>
@@ -327,6 +306,23 @@ function useStableTranscriptRenderRows(rows: ReturnType<typeof buildTranscriptRe
         stateRef.current = nextState;
         return nextState.result;
     }, [rows]);
+}
+
+function getMessageCompositionIds(rows: TranscriptRow[]) {
+    const ids = new Set<string>();
+
+    for (const row of rows) {
+        if (row.kind !== 'message') {
+            continue;
+        }
+
+        const compositionId = row.message.metadata?.compositionId;
+        if (typeof compositionId === 'string') {
+            ids.add(compositionId);
+        }
+    }
+
+    return ids;
 }
 
 function getLatestAgentMessage(rows: TranscriptRow[]) {

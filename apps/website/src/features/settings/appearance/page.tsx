@@ -108,20 +108,6 @@ export function AppearanceSettings() {
             <SettingsSection title="Design Lab">
                 <SettingsGroup>
                     <SettingsRow
-                        description="Iterate on the home brief's chips, wordmark, and sentence patterns."
-                        title="Brief variations"
-                    >
-                        <div className="flex justify-start md:justify-end">
-                            <Button
-                                onClick={() => navigate(appRoutes.designBrief)}
-                                size="sm"
-                                variant="outline"
-                            >
-                                Open
-                            </Button>
-                        </div>
-                    </SettingsRow>
-                    <SettingsRow
                         description="Every agent character across the full set of facial expressions."
                         title="Agent faces"
                     >

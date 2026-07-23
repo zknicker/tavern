@@ -2,7 +2,6 @@ import { describe, expect, test } from 'bun:test';
 import type { AgentRuntimeConnectionOutput } from '../../lib/trpc.tsx';
 import { getRuntimeVersionMismatchDescription } from './runtime-version-gate.ts';
 import {
-    agentCapabilityRequirements,
     formatCapabilityDisabledReason,
     getCapability,
     routeTabCapabilityRequirements,
@@ -37,10 +36,6 @@ describe('Runtime capability gates', () => {
         expect(formatCapabilityDisabledReason(capability)).toBe('Grotto update required.');
     });
 
-    test('keeps Memories settings reachable without Wiki readiness', () => {
-        expect(settingsCapabilityRequirements.memories).toEqual([]);
-    });
-
     test('gates Plugins settings on Runtime API access', () => {
         expect(settingsCapabilityRequirements.plugins).toEqual(['apiServer']);
     });
@@ -60,20 +55,9 @@ describe('Runtime capability gates', () => {
         expect(settingsCapabilityRequirements.models).toEqual(['apiServer']);
     });
 
-    test('keeps workspace instruction files editable without agent runtime capabilities', () => {
-        expect(settingsCapabilityRequirements['notes-md']).toEqual([]);
-        expect(settingsCapabilityRequirements['soul-md']).toEqual([]);
-    });
-
-    test('gates Reminders on agent runtime capabilities', () => {
-        expect(routeTabCapabilityRequirements.reminders).toEqual([
-            ...agentCapabilityRequirements,
-            'cron',
-        ]);
-    });
-
-    test('gates Tasks on the runtime API only', () => {
-        expect(routeTabCapabilityRequirements.tasks).toEqual(['apiServer']);
+    test('keeps Reminders and Tasks reachable as static honest-empty pages', () => {
+        expect(routeTabCapabilityRequirements.reminders).toEqual([]);
+        expect(routeTabCapabilityRequirements.tasks).toEqual([]);
     });
 
     test('explains old Runtime version mismatch beside green capability probes', () => {

@@ -124,9 +124,7 @@ function AgentHoverCardBody({
                         />
                     </span>
                     <span className="min-w-0 truncate text-meta text-muted-foreground">
-                        {presence?.state === 'busy'
-                            ? `Working in ${presence.chatTitle ?? 'another chat'}…`
-                            : 'Idle'}
+                        {presence?.state === 'busy' ? 'Working…' : 'Idle'}
                     </span>
                 </div>
             </div>
@@ -185,11 +183,10 @@ function AgentHoverCardBody({
 
 function activityDotClassName(kind: AgentActivityEntry['kind']) {
     switch (kind) {
-        case 'replied':
+        case 'completed':
             return 'bg-success';
         case 'failed':
             return 'bg-destructive';
-        case 'declined':
         case 'stopped':
         case 'new_session':
             return 'bg-muted-foreground/40';

@@ -1,9 +1,7 @@
-import fs from 'node:fs/promises';
-import path from 'node:path';
-import type { AgentRuntimeAgent } from '@tavern/api';
+import type { AgentRuntimeAgent, AgentRuntimeModelName } from '@tavern/api';
 import { AGENT_WORKSPACE } from '../config.ts';
 import type { Database } from '../db/sqlite.ts';
-import { isMemoryEnabled } from '../memory/settings.ts';
+import type { AgentRuntimeContextFacts } from '../workspace/instructions.ts';
 import {
     generateAgentInstructions,
     getAgentWorkspaceSource,
@@ -14,18 +12,6 @@ import { seedManagedSkills } from './skill-library.ts';
 
 export const agentEngineAgentId = 'main';
 
-const userFileName = 'USER.md';
-const memoryFileName = 'MEMORY.md';
-const soulFileName = 'SOUL.md';
-const defaultUser = '';
-const defaultMemory = '';
-const defaultSoul = `# SOUL.md
-
-You are the resident Grotto agent.
-
-Be direct, pragmatic, and useful. Keep the user's momentum. Prefer concrete action over vague narration.
-`;
-
 // PROMPT CONTRACT: this composition feeds every agent's system prompt. Text
 // or section changes must pass agent-prompt-contract.test.ts and need
 // explicit operator approval. See AGENTS.md ("Agent System Prompt Changes").
@@ -33,8 +19,11 @@ export async function prepareAgentEngineInstructions(
     db: Database,
     agent: AgentRuntimeAgent | string = agentEngineAgentId,
     options: {
+        model?: AgentRuntimeModelName;
+        runtimeContext?: AgentRuntimeContextFacts;
         seedSkills?: boolean;
         skillsDir?: string;
+        ws5CliSurface?: boolean;
     } = {}
 ) {
     const agentId = typeof agent === 'string' ? agent : agent.id;
@@ -47,22 +36,11 @@ export async function prepareAgentEngineInstructions(
             agentName,
             workspaceDir,
         });
-    const generated = await generateAgentInstructions(db, source.agentId);
-    const coreMemory = isMemoryEnabled()
-        ? await readOrSeedCoreMemoryFiles({ workspaceDir: source.workspaceDir })
-        : null;
-    const soul = await readOrSeedSoul({ workspaceDir: source.workspaceDir });
-    const instructions = composeAgentEngineInstructions({
-        agentInstructions: generated.content,
-        coreMemory,
-        soul,
-    });
-    // Freshness fingerprint input: identical composition minus core memory,
-    // which extraction rewrites after most turns and would flag every session.
-    const fingerprintContent = composeAgentEngineInstructions({
-        agentInstructions: generated.content,
-        coreMemory: null,
-        soul,
+    const generated = await generateAgentInstructions(db, source.agentId, {
+        agent: typeof agent === 'string' ? null : agent,
+        model: options.model,
+        runtimeContext: options.runtimeContext,
+        ws5CliSurface: options.ws5CliSurface,
     });
 
     if (options.seedSkills !== false) {
@@ -70,80 +48,7 @@ export async function prepareAgentEngineInstructions(
     }
 
     return {
-        content: instructions,
-        fingerprintContent,
+        content: generated.content,
         source,
     };
-}
-
-async function readOrSeedCoreMemoryFiles(input: { workspaceDir: string }) {
-    const [user, memory] = await Promise.all([
-        readOrSeedWorkspaceFile({
-            defaultContent: defaultUser,
-            fileName: userFileName,
-            workspaceDir: input.workspaceDir,
-        }),
-        readOrSeedWorkspaceFile({
-            defaultContent: defaultMemory,
-            fileName: memoryFileName,
-            workspaceDir: input.workspaceDir,
-        }),
-    ]);
-
-    return { memory, user };
-}
-
-async function readOrSeedSoul(input: { workspaceDir: string }) {
-    const soulPath = path.join(input.workspaceDir, soulFileName);
-    const existing = await fs.readFile(soulPath, 'utf8').catch(() => null);
-
-    if (existing !== null) {
-        return existing;
-    }
-
-    await fs.mkdir(path.dirname(soulPath), { recursive: true });
-    await fs.writeFile(soulPath, defaultSoul, { mode: 0o600 });
-    return defaultSoul;
-}
-
-async function readOrSeedWorkspaceFile(input: {
-    defaultContent: string;
-    fileName: string;
-    workspaceDir: string;
-}) {
-    const filePath = path.join(input.workspaceDir, input.fileName);
-    const existing = await fs.readFile(filePath, 'utf8').catch(() => null);
-
-    if (existing !== null) {
-        return existing;
-    }
-
-    await fs.mkdir(path.dirname(filePath), { recursive: true });
-    await fs.writeFile(filePath, input.defaultContent, { mode: 0o600 });
-    return input.defaultContent;
-}
-
-function composeAgentEngineInstructions(input: {
-    agentInstructions: string;
-    coreMemory: { memory: string; user: string } | null;
-    soul: string;
-}) {
-    const sections = [
-        input.agentInstructions.trim(),
-        input.coreMemory
-            ? [
-                  '## USER',
-                  'The following content comes from `USER.md` in your workspace. Edit this file directly for agent-local stable facts about the user.',
-                  input.coreMemory.user.trim(),
-                  '## MEMORY',
-                  'The following content comes from `MEMORY.md` in your workspace. Edit this file directly for agent-local durable working memory.',
-                  input.coreMemory.memory.trim(),
-              ].join('\n\n')
-            : null,
-        '## SOUL',
-        'The following content comes from `SOUL.md` in your workspace. To change your identity, voice, or personality, edit `SOUL.md` directly. Changes apply when your next session starts.',
-        input.soul.trim(),
-    ].filter((section): section is string => Boolean(section));
-
-    return sections.join('\n\n');
 }

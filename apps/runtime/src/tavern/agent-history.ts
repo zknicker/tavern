@@ -10,7 +10,6 @@ import {
     type ResolvedAgentTarget,
     resolveAgentTarget,
 } from './agent-targets.ts';
-import { isAgentChatParticipant } from './chat-actions-tools.ts';
 import { createAgentParticipantId } from './chat-api/ids.ts';
 import {
     anchorShortId,
@@ -23,7 +22,8 @@ import {
 import { searchMessageRows } from './chat-api/message-search.ts';
 import { rowToMessage } from './chat-api/messages.ts';
 import type { MessageRow } from './chat-api/types.ts';
-import { readSeenCursor } from './seen-ledger.ts';
+import { isAgentChatParticipant } from './chat-guards.ts';
+import { readSeenCursor } from './inbox-cursors.ts';
 import { advanceServedCursor } from './served-ledger.ts';
 
 export function readAgentHistory(

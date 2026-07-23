@@ -39,13 +39,11 @@ export async function startTavernChat(
     );
     const accepted = await sendTavernChatMessage(
         {
-            agentId: parsed.agentId,
             ...(parsed.attachments?.length ? { attachments: parsed.attachments } : {}),
             chatId: created.chatId,
             ...(parsed.clientMessageId ? { clientMessageId: parsed.clientMessageId } : {}),
             content: parsed.content,
         },
-        undefined,
         ctx
     );
 

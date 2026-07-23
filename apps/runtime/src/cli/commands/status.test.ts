@@ -144,13 +144,13 @@ describe('runStatusCommand', () => {
                         capabilities: [
                             {
                                 checkedAt: null,
-                                displayName: 'Memory',
+                                displayName: 'Skills',
                                 healthy: false,
-                                id: 'wiki',
+                                id: 'skills',
                                 lastHealthyAt: null,
                                 metadata: {},
                                 nextCheckAt: null,
-                                reason: 'Managed Memory skill has not been prepared.',
+                                reason: 'Managed skills have not been prepared.',
                                 state: 'degraded',
                                 technicalMessage: null,
                                 updatedAt: '2026-06-10T11:59:55.000Z',
@@ -161,8 +161,8 @@ describe('runStatusCommand', () => {
         });
         await runStatusCommand(args(), d);
         const text = captured.join('');
-        expect(text).toContain('◐ Memory');
-        expect(text).toContain('just now — Managed Memory skill has not been prepared.');
+        expect(text).toContain('◐ Skills');
+        expect(text).toContain('just now — Managed skills have not been prepared.');
     });
 
     test('--json emits one parseable document with all keys and no ANSI', async () => {

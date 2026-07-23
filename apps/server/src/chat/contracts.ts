@@ -212,7 +212,6 @@ export const updateChatSystemPromptResultSchema = z.object({
 
 export const sendChatMessageInputSchema = z
     .object({
-        agentId: z.string().trim().min(1).optional(),
         attachments: z.array(sessionMessageAttachmentSchema).optional(),
         chatId: z.string().trim().min(1),
         clientMessageId: z.string().trim().min(1).optional(),
@@ -230,17 +229,13 @@ export const sendChatMessageInputSchema = z
         path: ['content'],
     });
 
+// Delivery is planner-owned (I1): the server creates the durable message
+// and the Runtime's inbox delivery wakes agents — sends return no turns.
 export const sendChatMessageResultSchema = z.object({
     acceptedAt: z.string().datetime(),
     chatId: z.string().trim().min(1),
     clientMessageId: z.string().trim().min(1),
     threadChatId: z.string().trim().min(1).nullable(),
-    turns: z.array(
-        z.object({
-            agentId: z.string().trim().min(1),
-            runId: z.string().trim().min(1),
-        })
-    ),
     status: z.literal('accepted'),
 });
 
@@ -259,51 +254,16 @@ export const chatLogToolRowSchema = toolRowSchema;
 export const chatLogWorkerRowSchema = workerRowSchema;
 export const chatLogRowSchema = historyRowSchema;
 
-export const chatLogActiveReplySchema = z.object({
-    agentId: z.string().trim().min(1),
-    isThinking: z.boolean(),
-    runId: z.string().trim().min(1),
-    sessionKey: z.string().trim().min(1),
-    startedAt: z.string().datetime(),
-    text: z.string(),
-    // Quiet peer-evaluation turns render no thinking row until text streams
-    // (specs/addressing.md). Snapshots must carry the stamp or a refetch
-    // un-hides the turn the live event stream is keeping quiet.
-    trigger: z.literal('evaluation').optional(),
-});
-
-export const chatLogTurnFailureSchema = z.object({
-    error: z.string().trim().min(1),
-    // Live turn.failed events carry no durable response id; the durable
-    // refetch fills it in, which is what enables dismissal.
-    responseId: z.string().trim().min(1).nullable(),
-    turn: z.object({
-        agentId: z.string().trim().min(1),
-        chatId: z.string().trim().min(1),
-        runId: z.string().trim().min(1),
-        sessionKey: z.string().trim().min(1),
-        startedAt: z.string().datetime(),
-    }),
-});
-
 export const dismissChatLogRowInputSchema = z.object({
     chatId: z.string().trim().min(1),
     responseId: z.string().trim().min(1),
 });
 
 export const chatLogPageSchema = z.object({
-    // Each agent seat can run one turn at a time, so a multi-agent chat
-    // carries several concurrent live replies; ordered by startedAt.
-    activeReplies: z.array(chatLogActiveReplySchema),
-    failedTurns: z.array(chatLogTurnFailureSchema),
     limit: z.number().int().positive(),
     // Cursor for the next older turn-aligned page; null at history start.
     nextBeforeSequence: z.number().int().positive().nullable(),
     rows: z.array(chatLogRowSchema),
-    // Runs on this page whose responses have settled. A silent turn leaves
-    // no durable reply or failure row to match, so a client that missed the
-    // live completion clears its retained reply from this signal instead.
-    settledRunIds: z.array(z.string().trim().min(1)),
     totalMessages: z.number().int().nonnegative(),
 });
 

@@ -1,7 +1,7 @@
 ---
-summary: Agent records and configuration API for model choices, memory policy, skill assignment, Plugin grants, and runtime metadata boundaries.
+summary: Agent records and configuration API for model choices, skill assignment, Plugin grants, and runtime metadata boundaries.
 read_when:
-  - changing agent records, instructions, personality, model settings, Plugin grants, or per-agent skill and memory controls
+  - changing agent records, instructions, personality, model settings, Plugin grants, or per-agent skill controls
   - changing how clients list, configure, or address agents
 ---
 
@@ -11,7 +11,7 @@ The Agents API is for the workers users configure and talk to in Tavern.
 
 Agents are client-facing records. Runtime sessions and execution details
 can be attached as metadata, but the API exposes agents as named Tavern workers
-with instruction files, model, execution, memory, skill assignment, and Plugin
+with instruction settings, model, execution, skill assignment, and Plugin
 grant policy.
 
 ## Contract
@@ -25,8 +25,8 @@ grant policy.
 * Agent list and detail reads use synced Runtime records. Mounting an app screen
   must not contact the agent runtime or enqueue a background sync job just to
   discover agents.
-* Agent records expose display name, bio, model policy, memory policy, skill
-  selections, Plugin grants, workspace folder, and availability.
+* Agent records expose display name, bio, model policy, skill selections,
+  Plugin grants, workspace folder, and availability.
 * The bio is a short Runtime-owned job description (max 280 characters,
   nullable). Runtime injects each agent seat's bio into the participant roster
   of every agent turn prompt in shared chats, so co-resident agents know what
@@ -56,27 +56,24 @@ grant policy.
   Removing assignments and grants is always allowed, and existing assignments
   survive a later global disable.
 * Instruction settings use markdown source files. Runtime composes the system
-  prompt from Tavern-managed instruction text plus workspace-editable
-  `SOUL.md` and `NOTES.md`; it does not materialize a generated `AGENTS.md`
-  file in the workspace. Clients save source files through the Runtime-hosted
-  agent file API. The rendered system prompt is readable for preview through
-  the instructions read surface.
-* Tavern policy includes Memory-first lookup guidance. Managed agents
-  check Memory before external lookup when durable user, project, or prior
-  decision context may already exist.
+  prompt from Tavern-managed instruction text plus the agent's description
+  (the personality surface); it does not materialize a generated `AGENTS.md`
+  file in the workspace. There is no separate identity file — durable
+  per-agent notes are the agent's own workspace files (`MEMORY.md` and
+  notes/), which it maintains itself. Clients save source files through the
+  Runtime-hosted agent file API. The rendered system prompt is readable for
+  preview through the instructions read surface.
 * Agent settings use narrow domain mutations. Clients update agent
   name, bio, model, thinking default, and messaging bindings through agent and
   messaging APIs instead of editing or saving raw engine config JSON.
-* Task settings store each agent's auto-dispatch opt-in and review policy;
-  both default off.
 * Web settings store each agent's web access opt-in (`webAccessEnabled`,
   default off) via `PATCH /agents/{id}/web-settings`. With web access on, the
   agent gets provider-native web search when its model supports it plus the
   Runtime `web_fetch` tool; off means the tools are absent from its turns. The
   `webAccess` Runtime capability gates the app surface.
-* Instruction-affecting settings (name, bio, `SOUL.md`, `NOTES.md`) apply per
-  session: executors receive instructions once at a session's first turn, so
-  changes land when the next session starts. The current-session read returns
+* Instruction-affecting settings (name, bio, description) apply per session:
+  executors receive instructions once at a session's first turn, so changes
+  land when the next session starts. The current-session read returns
   `instructionsFresh` so clients can flag a live session running on earlier
   instructions; settings surfaces say "Takes effect on each agent's next
   session" on save.
@@ -103,10 +100,12 @@ The API covers:
 * read and update supported agent markdown files
 * read model choices and availability
 * read and update agent environment variables
-* read and update memory policy
 * read and update skill assignment
 * read and update agent Plugin grants
 * read generated instruction status when exposed for diagnostics
+* read agent presence (busy/idle), the activity feed, and read-only inbox
+  visibility (pending targets, mutes, followed threads)
+* stop an agent's running turn
 
 ## Runtime Boundary
 

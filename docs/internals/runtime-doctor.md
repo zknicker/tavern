@@ -2,7 +2,7 @@
 summary: Runtime Doctor architecture for modular startup, repair, health, and setup checks.
 read_when:
   - changing Runtime startup checks, repair flows, or health recomputation
-  - changing model provider setup, Agent default repair, Memory checks, skills, or Plugin readiness
+  - changing model provider setup or Agent default repair
   - adding a manual Check now action or scheduled Runtime maintenance
 ---
 
@@ -36,9 +36,6 @@ Doctor modules stay narrow and composable.
 | --- | --- | --- |
 | `models` | Provider access checks, executable model inventory, and `modelExecution` capability. | Runtime start, provider add/remove, credential save, OAuth change, manual check, scheduled check. |
 | `agents` | Built-in Agent DM repair and Agent default model repair from executable model inventory. | Runtime start after `models`, provider/access change after `models`, Agent settings mutation, manual check. |
-| `wiki` | Wiki root access and Wiki capability metadata. | Runtime start, Wiki settings change, manual check. |
-| `skills` | Skill inventory and tool setup readiness. | Runtime start, skill install/remove, tool setup mutation, manual check. |
-| `plugins` | Plugin configuration, credential checks, and Plugin capability health. | Runtime start, Plugin settings mutation, manual check, scheduled check. |
 
 Modules can depend on earlier modules. A provider mutation runs `models` then
 `agents`; an Agent default edit can run only `agents` for that Agent.

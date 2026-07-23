@@ -6,8 +6,7 @@ import { listRuntimeSkills } from '../agent-engine/skill-library.ts';
 import { closeDb, getDb, initTestDb } from '../db/connection.ts';
 import { ensureRuntimeSchema } from '../db/schema.ts';
 import { upsertStoredAgent } from '../tavern/agents-store.ts';
-import { createCuratorSkillTools } from './agent-tools.ts';
-import { applySkillLifecycleTransitions } from './lifecycle.ts';
+import { applySkillLifecycleTransitions, archiveAgentSkill } from './lifecycle.ts';
 import { createAgentSkill, recordSkillSource } from './store.ts';
 import { recordSkillUsage } from './telemetry.ts';
 
@@ -123,35 +122,15 @@ describe('skill lifecycle', () => {
         expect(readSource('plugin')).toMatchObject({ state: 'active' });
     });
 
-    test('curator archive tool rejects read-only skills and archives agent skills', async () => {
+    test('archiveAgentSkill rejects read-only skills and archives agent skills', async () => {
         await createSkill('Archive Me', '2026-07-01T00:00:00.000Z');
         await writeSkillDir('seeded');
         recordSkillSource({ skillId: 'seeded', source: 'seeded' });
-        const archiveTool = createCuratorSkillTools({
-            agentId: 'agt_primary',
-            skillsDir,
-        }).skill_archive as {
-            execute: (input: unknown, options: unknown) => Promise<unknown>;
-        };
 
-        await expect(
-            archiveTool.execute(
-                { absorbedInto: null, reason: 'Read-only test.', skillId: 'seeded' },
-                {}
-            )
-        ).rejects.toThrow('cannot be archived');
-        await expect(
-            archiveTool.execute(
-                {
-                    absorbedInto: 'umbrella',
-                    reason: 'Absorbed into umbrella.',
-                    skillId: 'archive-me',
-                },
-                {}
-            )
-        ).resolves.toMatchObject({
-            archive: { absorbedInto: 'umbrella', skillId: 'archive-me' },
-        });
+        await expect(archiveAgentSkill({ skillId: 'seeded', skillsDir })).rejects.toThrow(
+            'cannot be archived'
+        );
+        await archiveAgentSkill({ skillId: 'archive-me', skillsDir });
         expect(readSource('archive-me')).toMatchObject({ state: 'archived' });
         await expect(fs.stat(path.join(skillsDir, '.archive', 'archive-me'))).resolves.toBeTruthy();
     });

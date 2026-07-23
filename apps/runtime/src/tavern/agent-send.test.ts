@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { closeAgentApiTestDb, initAgentApiTestDb } from './agent-api-test-helper.ts';
+import { muteAgentChannel } from './agent-channels.ts';
 import { readAgentDraft, saveAgentDraft } from './agent-drafts.ts';
 import { readAgentHistory, searchAgentMessages } from './agent-history.ts';
 import { sendAgentMessage } from './agent-send.ts';
@@ -14,7 +15,7 @@ import {
     listMessages,
     setThreadFollow,
 } from './chat-api/index.ts';
-import { readSeenCursor } from './seen-ledger.ts';
+import { readSeenCursor } from './inbox-cursors.ts';
 import { readServedCursor } from './served-ledger.ts';
 
 describe('agent attested sends', () => {
@@ -307,6 +308,31 @@ describe('agent attested sends', () => {
         expect(readServedCursor(session.id, 'cht_ops')).toBeGreaterThan(0);
         const followUp = sendAgentMessage('agt_otto', { content: 'on it', target: '#ops' });
         expect(followUp.state).toBe('sent');
+    });
+
+    it('leaves muted channel recent unread and its cursors untouched', () => {
+        createChat({
+            id: 'cht_muted',
+            kind: 'channel',
+            participants: [human(), agent('agt_otto', 'Otto')],
+            title: 'muted',
+        });
+        muteAgentChannel('agt_otto', { target: '#muted' });
+        createMessage('cht_muted', {
+            author_id: 'usr_tavern',
+            content: 'stay unread',
+            id: 'msg_00000000000000000000000000000012',
+            role: 'user',
+        });
+
+        const sent = sendAgentMessage('agt_otto', { content: 'hello', target: '#general' });
+        if (sent.state !== 'sent') {
+            throw new Error('Expected a fresh send to commit.');
+        }
+        expect(sent.recentUnread).toEqual([]);
+        const session = ensureCurrentAgentSession({ agentId: 'agt_otto' });
+        expect(readSeenCursor(session.id, 'cht_muted')).toBe(0);
+        expect(readServedCursor(session.id, 'cht_muted')).toBe(0);
     });
 
     it('reports unseen replies from followed threads on a fresh send', () => {

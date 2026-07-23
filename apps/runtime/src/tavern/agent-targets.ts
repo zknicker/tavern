@@ -5,7 +5,6 @@ import type { Database } from '../db/sqlite.ts';
 import { namedParams } from '../db/sqlite.ts';
 import { AgentApiError, targetNotFound } from './agent-api-errors.ts';
 import { getStoredAgent } from './agents-store.ts';
-import { isAgentChatParticipant, isArchivedChat } from './chat-actions-tools.ts';
 import { createAgentParticipantId } from './chat-api/ids.ts';
 import {
     AmbiguousMessageIdError,
@@ -16,6 +15,7 @@ import {
     resolveMessageId,
     threadChatIdForAnchor,
 } from './chat-api/index.ts';
+import { isAgentChatParticipant, isArchivedChat } from './chat-guards.ts';
 import { isValidHandle } from './handles.ts';
 
 export interface ResolvedAgentTarget {

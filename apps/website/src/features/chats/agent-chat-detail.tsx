@@ -12,7 +12,6 @@ import { useThreadPane } from '../../hooks/threads/use-thread-pane.ts';
 import { useViewportBelow } from '../../hooks/use-viewport-below.ts';
 import { appRoutes } from '../../lib/app-routes.ts';
 import { MissingAgentState } from '../agents/missing-agent-state.tsx';
-import { Tasks } from '../tasks/tasks.tsx';
 import { ArchivedChatBar } from './archived-chat-bar.tsx';
 import { ArtifactPanelOpenProvider } from './artifact-panel-context.tsx';
 import { getActiveRunIds } from './chat-active-runs.ts';
@@ -140,9 +139,7 @@ function SyncedAgentChatDetail({ chat, chatId }: { chat: ChatListItem; chatId: s
                 activeReplies={timeline.activeReplies}
                 agentStatusCharacter={agent?.effectiveCharacter ?? null}
                 body={
-                    activeViewTab === 'tasks' ? (
-                        <Tasks conversationId={chatId} embedded />
-                    ) : activeViewTab === 'files' ? (
+                    activeViewTab === 'files' ? (
                         <ChatFilesTab chatId={chatId} enabled={activeViewTab === 'files'} />
                     ) : undefined
                 }
@@ -151,7 +148,6 @@ function SyncedAgentChatDetail({ chat, chatId }: { chat: ChatListItem; chatId: s
                 conversationLayout={conversationLayout}
                 emptyLabel="No synced messages for this chat yet."
                 error={timeline.error}
-                failedTurns={timeline.failedTurns}
                 fetchOlderHistory={timeline.fetchOlderHistory}
                 footer={
                     activeViewTab !== 'chat' ? null : chat.archived ? (
@@ -163,7 +159,6 @@ function SyncedAgentChatDetail({ chat, chatId }: { chat: ChatListItem; chatId: s
                         <ChatDetailFooter
                             activeReplies={timeline.activeReplies}
                             agents={agents}
-                            chat={chat}
                             chatId={chat.id}
                             rows={rows}
                             turnEvidence={timeline.turnEvidence}

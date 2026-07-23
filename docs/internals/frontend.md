@@ -24,7 +24,7 @@ capability lives; keep route and feature folders for page assembly.
 
 ## Rules
 
-* Promote shared chat, agent, memory, automation, or stats UI to the matching
+* Promote shared chat, agent, automation, or stats UI to the matching
   `components/<capability>` or `hooks/<capability>` folder.
 * Keep global command menu actions under `src/commands`. Command modules own
   search labels, keywords, disabled reasons, and route/action callbacks; the

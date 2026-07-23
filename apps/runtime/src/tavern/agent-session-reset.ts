@@ -4,12 +4,8 @@ import { registerAgentWorkspace } from '../workspace/instructions.ts';
 import { startNewAgentSession } from './agent-session-store.ts';
 import { rotateAgentToken } from './agent-tokens.ts';
 import { getStoredAgent } from './agents-store.ts';
-import { createAgentParticipantId } from './chat-api/ids.ts';
-import {
-    listChatsForAgentParticipant,
-    upsertResponse,
-    upsertResponseActivity,
-} from './chat-api/index.ts';
+import { createAgentParticipantId, createMessageId } from './chat-api/ids.ts';
+import { createMessage, listChatsForAgentParticipant } from './chat-api/index.ts';
 
 // Manual reset contract (specs/sessions.md): human-initiated, agent-scoped.
 // "Session reset" starts a fresh global session; workspace and memory
@@ -55,42 +51,27 @@ async function wipeAgentWorkspace(agentId: string) {
     });
 }
 
-// Evidence lands in the agent's built-in DM — the agent's home surface —
-// since the reset is agent-scoped, not chat-scoped.
+// Evidence lands as a durable system message in the agent's built-in DM —
+// the agent's home surface — since the reset is agent-scoped, not
+// chat-scoped. (Quiet system receipt; per-turn response rows retired, I1.)
 function recordSessionResetNotice(input: { agentId: string; sessionId: string; text: string }) {
     const participantId = createAgentParticipantId(input.agentId);
     const dm = listChatsForAgentParticipant(participantId).find((chat) => chat.kind === 'dm');
     if (!dm) {
         return;
     }
-    const responseId = `rsp_session_${crypto.randomUUID()}`;
-    const text = input.text;
-
-    upsertResponse(dm.id, {
-        id: responseId,
-        metadata: { runtime: { agentId: input.agentId, source: 'session-reset' } },
-        participant_id: participantId,
-        status: 'completed',
-    });
-    upsertResponseActivity(dm.id, responseId, {
-        detail: text,
-        id: `act_${responseId}`,
-        kind: 'custom',
+    createMessage(dm.id, {
+        author_id: 'sys_session_reset',
+        content: input.text,
+        id: createMessageId(),
         metadata: {
             runtime: {
                 agentId: input.agentId,
-                notice: {
-                    detail: text,
-                    id: 'runtime_notice_session_reset',
-                    kind: 'new_session',
-                    sessionId: input.sessionId,
-                    text,
-                    title: 'New session',
-                },
+                notice: 'new_session',
+                sessionId: input.sessionId,
                 source: 'session-reset',
             },
         },
-        status: 'completed',
-        title: 'New session',
+        role: 'system',
     });
 }

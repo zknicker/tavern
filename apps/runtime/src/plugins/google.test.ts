@@ -9,7 +9,6 @@ import {
     saveGoogleSettings,
     startGoogleOAuth,
 } from './google';
-import { createGoogleToolsForAgent } from './google-tools';
 import { getPlugin, writePluginSecret } from './store';
 
 describe('Google Plugin settings', () => {
@@ -68,48 +67,6 @@ describe('Google Plugin settings', () => {
         const settings = disconnectGoogleOAuth();
 
         expect(settings).toMatchObject({ connected: false, enabled: false });
-    });
-
-    test('exposes Calendar tools only after grant and OAuth connection', () => {
-        connectGoogle();
-        saveGoogleSettings({
-            calendarEnabled: true,
-            enabled: true,
-        });
-
-        expect(getGoogleSettings()).toMatchObject({
-            connected: true,
-            connectedAccountEmail: 'zach@example.com',
-            missingCalendarScopes: [],
-        });
-        expect(
-            Object.keys(
-                createGoogleToolsForAgent({
-                    enabledPluginIds: ['google'],
-                    enabledSkillIds: [],
-                    id: 'agt_primary',
-                    isAdmin: true,
-                    name: 'Tavern',
-                    primaryColor: null,
-                    workspaceFolder: '/tmp/tavern-agent',
-                })
-            )
-        ).toEqual([
-            'google_calendar_events_list',
-            'google_calendar_events_search',
-            'google_calendar_event_create',
-        ]);
-        expect(
-            createGoogleToolsForAgent({
-                enabledPluginIds: [],
-                enabledSkillIds: [],
-                id: 'agt_primary',
-                isAdmin: true,
-                name: 'Tavern',
-                primaryColor: null,
-                workspaceFolder: '/tmp/tavern-agent',
-            })
-        ).toEqual({});
     });
 
     test('completes OAuth through a caller-owned loopback redirect', async () => {

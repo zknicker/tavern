@@ -44,6 +44,7 @@ export function buildAgentToolEnvironment(
         wrapperPath,
         wrapperScript({
             agentId,
+            binDir,
             entrypoint: options.entrypoint ?? resolveAgentCliEntrypoint(),
             serverUrl,
             tokenFile,
@@ -104,6 +105,7 @@ function normalizeHostForUrl(host: string): string {
 
 function wrapperScript(input: {
     agentId: string;
+    binDir: string;
     entrypoint: AgentCliEntrypoint;
     serverUrl: string;
     tokenFile: string;
@@ -111,11 +113,18 @@ function wrapperScript(input: {
     const command = [input.entrypoint.executable, ...input.entrypoint.args]
         .map(shellQuote)
         .join(' ');
+    const compositionIdFile = shellQuote(path.join(input.binDir, 'composition-id'));
     return [
         '#!/bin/sh',
         `export GROTTO_AGENT_ID=${shellQuote(input.agentId)}`,
         `export GROTTO_SERVER_URL=${shellQuote(input.serverUrl)}`,
         `export GROTTO_AGENT_TOKEN_FILE=${shellQuote(input.tokenFile)}`,
+        // The harness observer parks a composition id per in-flight send
+        // (I1); the wrapper forwards it so the CLI can tag the send.
+        `if [ -f ${compositionIdFile} ]; then`,
+        `  GROTTO_COMPOSITION_ID=$(cat ${compositionIdFile} 2>/dev/null)`,
+        '  export GROTTO_COMPOSITION_ID',
+        'fi',
         `exec ${command} "$@"`,
         '',
     ].join('\n');

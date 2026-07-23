@@ -55,6 +55,35 @@ export const agentSendResponseSchema: z.ZodType<TavernAgentSendResponse> = z.dis
     ]
 );
 
+export const agentMessageCheckResponseSchema = z.object({
+    messages: z.array(z.object({ message: agentMessageSchema, target: z.string().min(1) })),
+    more: z.boolean(),
+});
+
+export const agentInboxCheckResponseSchema = z.object({
+    rows: z.array(
+        z.object({
+            chatId: z.string().min(1),
+            dm: z.boolean(),
+            firstShortId: z.string().min(1),
+            latestSender: z.string().min(1),
+            latestShortId: z.string().min(1),
+            mentioned: z.boolean(),
+            pendingCount: z.number().int().positive(),
+            target: z.string().min(1),
+            thread: z.boolean(),
+        })
+    ),
+    totalPending: z.number().int().nonnegative(),
+});
+
+export const agentChannelActionResponseSchema = z.object({
+    joined: z.boolean().optional(),
+    left: z.boolean().optional(),
+    muted: z.boolean().optional(),
+    target: z.string().min(1),
+});
+
 export const agentHistoryResponseSchema = z.object({
     has_more: z.boolean(),
     has_newer: z.boolean(),

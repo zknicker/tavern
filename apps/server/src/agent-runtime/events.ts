@@ -30,30 +30,8 @@ async function* subscribeToObservedAgentRuntimeEventType<TType extends AgentRunt
     }
 }
 
-export function subscribeToObservedAgentRuntimeTurnStarted(signal?: AbortSignal) {
-    return subscribeToObservedAgentRuntimeEventType('turn.started', signal);
-}
-
-export function subscribeToObservedAgentRuntimeTurnProgress(signal?: AbortSignal) {
-    return subscribeToObservedAgentRuntimeEventType('turn.progress', signal);
-}
-
-export function subscribeToObservedAgentRuntimeTurnReplyUpdated(signal?: AbortSignal) {
-    return subscribeToObservedAgentRuntimeEventType('turn.replyUpdated', signal);
-}
-
-export function subscribeToObservedAgentRuntimeTurnStatusUpdated(signal?: AbortSignal) {
-    return subscribeToObservedAgentRuntimeEventType('turn.statusUpdated', signal);
-}
-
-export function subscribeToObservedAgentRuntimeTurnCompleted(signal?: AbortSignal) {
-    return subscribeToObservedAgentRuntimeEventType('turn.completed', signal);
-}
-
-export function subscribeToObservedAgentRuntimeTurnCancelled(signal?: AbortSignal) {
-    return subscribeToObservedAgentRuntimeEventType('turn.cancelled', signal);
-}
-
-export function subscribeToObservedAgentRuntimeTurnFailed(signal?: AbortSignal) {
-    return subscribeToObservedAgentRuntimeEventType('turn.failed', signal);
+// Ephemeral composition stream (I1): volatile class — relayed live, never
+// persisted, never replayed on reconnect.
+export function subscribeToObservedAgentRuntimeComposition(signal?: AbortSignal) {
+    return subscribeToObservedAgentRuntimeEventType('agent.composition', signal);
 }

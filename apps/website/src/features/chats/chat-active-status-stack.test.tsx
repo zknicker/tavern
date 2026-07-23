@@ -206,39 +206,11 @@ test('ChatDetailFooter renders active status before the detail composer', () => 
     assert.doesNotMatch(markup, /max-w-\[60rem\]/);
 });
 
-test('status text: queued elsewhere is cute, streaming is typing, default thinks', () => {
-    assert.equal(
-        formatActiveStatusText({
-            activeReply,
-            agentName: 'Blippy',
-            queuedElsewhere: { chatTitle: 'Launch prep', others: 0 },
-            rows: [],
-        }),
-        'Blippy is wrapping up in Launch prep'
-    );
-    assert.equal(
-        formatActiveStatusText({
-            activeReply,
-            agentName: 'Blippy',
-            queuedElsewhere: { chatTitle: 'Launch prep', others: 3 },
-            rows: [],
-        }),
-        'Blippy is wrapping up in Launch prep, and 3 others'
-    );
-    assert.equal(
-        formatActiveStatusText({
-            activeReply,
-            agentName: 'Blippy',
-            queuedElsewhere: { chatTitle: null, others: 1 },
-            rows: [],
-        }),
-        'Blippy is wrapping up, and 1 other'
-    );
+test('status text: streaming is typing, default thinks', () => {
     assert.equal(
         formatActiveStatusText({
             activeReply: { ...activeReply, isThinking: false, text: 'On it —' },
             agentName: 'Blippy',
-            queuedElsewhere: null,
             rows: [],
         }),
         'Blippy is typing...'
@@ -247,7 +219,6 @@ test('status text: queued elsewhere is cute, streaming is typing, default thinks
         formatActiveStatusText({
             activeReply,
             agentName: 'Blippy',
-            queuedElsewhere: null,
             rows: [],
         }),
         'Blippy is thinking...'

@@ -37,7 +37,7 @@ describe('global help', () => {
         for (const section of ['Messages', 'Inbox', 'Directory']) {
             expect(out).toContain(section);
         }
-        for (const hidden of ['Maintenance', 'Wiki', 'Engine', '  update', '  restart']) {
+        for (const hidden of ['Maintenance', 'Engine', '  update', '  restart']) {
             expect(out).not.toContain(hidden);
         }
     });
@@ -48,15 +48,7 @@ describe('global help', () => {
         const out = read();
 
         expect(out).toContain('Grotto Runtime v');
-        const sectionOrder = [
-            'Usage',
-            'Server',
-            'Status',
-            'Maintenance',
-            'Wiki',
-            'Engine',
-            'Environment',
-        ];
+        const sectionOrder = ['Usage', 'Server', 'Status', 'Maintenance', 'Engine', 'Environment'];
         let last = -1;
         for (const section of sectionOrder) {
             const at = out.indexOf(section);

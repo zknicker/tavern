@@ -37,9 +37,16 @@ describe('agent CLI wrapper', () => {
         expect(result.wrapperPath).toBe(path.join(runtimeRoot, 'agent-bin', 'agt_wren', 'grotto'));
         expect(fs.statSync(result.wrapperPath).mode & 0o777).toBe(0o755);
         expect(fs.statSync(result.tokenFile).mode & 0o777).toBe(0o600);
-        expect(fs.readFileSync(result.wrapperPath, 'utf8')).toBe(
-            `#!/bin/sh\nexport GROTTO_AGENT_ID='agt_wren'\nexport GROTTO_SERVER_URL='http://127.0.0.1:18790'\nexport GROTTO_AGENT_TOKEN_FILE='${result.tokenFile}'\nexec '/usr/local/bin/bun' '/app/src/index.ts' "$@"\n`
-        );
+        const script = fs.readFileSync(result.wrapperPath, 'utf8');
+        expect(script.startsWith('#!/bin/sh\n')).toBe(true);
+        expect(script).toContain("export GROTTO_AGENT_ID='agt_wren'");
+        expect(script).toContain("export GROTTO_SERVER_URL='http://127.0.0.1:18790'");
+        expect(script).toContain(`export GROTTO_AGENT_TOKEN_FILE='${result.tokenFile}'`);
+        // The harness observer parks a composition id per in-flight send; the
+        // wrapper forwards it when present (I1).
+        expect(script).toContain('GROTTO_COMPOSITION_ID=$(cat ');
+        expect(script).toContain('export GROTTO_COMPOSITION_ID');
+        expect(script.endsWith(`exec '/usr/local/bin/bun' '/app/src/index.ts' "$@"\n`)).toBe(true);
         expect(result.env).toEqual({
             GROTTO_AGENT_ID: 'agt_wren',
             GROTTO_AGENT_TOKEN_FILE: result.tokenFile,

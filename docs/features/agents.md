@@ -36,10 +36,12 @@ can continue to feel primary-agent-first.
   name; it does not tint the avatar. To add or change a character, see
   [Agent avatars](../internals/agent-avatars.md).
 * **Instruction files.** Runtime composes the agent's system prompt from
-  Tavern-managed instruction text, `NOTES.md`, and `SOUL.md`. `SOUL.md` stores
-  identity and personality, and `NOTES.md` stores durable operating notes; both
-  are edited from Workspace with the rest of the managed agent files. Tavern
-  does not write a generated `AGENTS.md` file into the agent workspace.
+  Tavern-managed instruction text and the agent's description — the
+  personality surface (see [Context management](context-management.md)).
+  There is no separate identity file to edit; durable per-agent notes are the
+  agent's own workspace files (`MEMORY.md` and notes/), which it maintains
+  itself. Tavern does not write a generated `AGENTS.md` file into the agent
+  workspace.
 * **New chats.** Starting a direct chat belongs to the normal New Chat flow, not
   an agent landing page.
 * **Agent skills and Plugins.** Runtime stores per-agent enabled skill ids.

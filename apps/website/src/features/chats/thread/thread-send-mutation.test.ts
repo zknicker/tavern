@@ -4,11 +4,10 @@ import {
     createChatSendMutationHandlers,
 } from '../../../hooks/chats/chat-send-mutation.ts';
 
-test('thread sends do not add optimistic messages or turns to the parent timeline', async () => {
+test('thread sends do not add an optimistic message to the parent timeline', async () => {
     const timelineCalls: string[] = [];
     const mutation = createChatSendMutationHandlers(createMutationUtils(timelineCalls));
     const input = {
-        agentId: 'agent-1',
         chatId: 'parent-chat',
         clientMessageId: 'msg_reply',
         content: 'thread reply',
@@ -17,22 +16,12 @@ test('thread sends do not add optimistic messages or turns to the parent timelin
     const context = await mutation.onMutate(input);
 
     expect(context).toEqual({
-        optimisticRunIds: [],
         timelineChatId: null,
         timelineMessageId: 'msg_reply',
     });
     expect(timelineCalls).toEqual([]);
 
-    await mutation.onSuccess(
-        {
-            acceptedAt: '2026-07-21T16:00:00.000Z',
-            chatId: 'parent-chat',
-            threadChatId: 'cht_thr_anchor',
-            turns: [{ agentId: 'agent-1', runId: 'run_reply_agent-1' }],
-        },
-        input,
-        context
-    );
+    await mutation.onSuccess({ chatId: 'parent-chat' });
 
     expect(timelineCalls).toEqual([]);
 });
@@ -54,11 +43,6 @@ function createMutationUtils(timelineCalls: string[]): ChatSendMutationUtils {
         timelineMessage: {
             add: () => timelineCalls.push('message:add'),
             remove: () => timelineCalls.push('message:remove'),
-            setSession: () => timelineCalls.push('message:set-session'),
-        },
-        timelineTurn: {
-            clear: () => timelineCalls.push('turn:clear'),
-            start: () => timelineCalls.push('turn:start'),
         },
     };
 }

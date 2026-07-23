@@ -79,16 +79,13 @@ function ActivityRow({ entry }: { entry: AgentActivityEntry }) {
 
 function activityDotClassName(kind: AgentActivityEntry['kind']) {
     switch (kind) {
-        case 'declined':
         case 'failed':
             return 'bg-destructive';
-        case 'replied':
-        case 'task_dispatched':
+        case 'completed':
             return 'bg-primary';
         case 'new_session':
         case 'stopped':
             return 'bg-muted-foreground';
-        case 'automation_fired':
         case 'message_received':
             return 'bg-accent ring-1 ring-border';
     }

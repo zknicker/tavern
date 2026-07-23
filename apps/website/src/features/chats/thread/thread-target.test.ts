@@ -1,4 +1,5 @@
 import { expect, test } from 'bun:test';
+import { resolveChatCompositionTarget } from '../chat-composition-target.ts';
 import { threadPaneTitles } from './thread-target.ts';
 
 const baseChat = {
@@ -76,4 +77,14 @@ test('threadPaneTitles omits the copyable target for task threads', () => {
         header: 'Thread — T-1: Fix',
         target: null,
     });
+});
+
+test('resolveChatCompositionTarget keeps the full thread target', () => {
+    expect(
+        resolveChatCompositionTarget({
+            ...baseChat,
+            conversationKind: 'channel',
+            id: 'cht_thr_12345678abcdef0012345678abcdef00',
+        })
+    ).toBe('#general:12345678');
 });

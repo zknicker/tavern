@@ -25,29 +25,22 @@ This catalog is the rendering contract. Implementations must produce
 exactly these entry kinds with these label shapes; label copy lives in one
 module whose unit tests mirror this table.
 
+Turns float on the session (ADR 0014): entries carry no chat anchor, and
+replies are ordinary CLI sends visible in chat, not turn outcomes.
+
 | Kind | Label template | Source |
 | --- | --- | --- |
-| `message_received` | `Message received in <chat> — from <sender>` | Turn with a message trigger: anchor chat + trigger message author |
-| `replied` | `Replied in <chat>` | Turn completed with a delivered reply |
-| `declined` | `Chose not to reply in <chat>` | Turn completed silently (`NO_REPLY`) |
-| `failed` | `Turn failed in <chat>` | Turn status `failed` |
-| `stopped` | `Stopped in <chat>` | Turn status `cancelled` (human stop) |
-| `automation_fired` | `Automation fired: <name> — in <chat>` | Turn whose trigger message is an automation delivery |
-| `task_dispatched` | `Task dispatched: <title>` | Turn whose trigger message is a task dispatch |
-| `new_session` | `Started fresh session` (+ ` — <reason>` when known: model switch, manual reset, full reset, idle) | Durable `new_session` notices |
+| `message_received` | `Messages received` (detail: `Session start` for Start. turns) | Drain or start turn created |
+| `completed` | `Turn completed` | Turn status `completed` |
+| `failed` | `Turn failed` (+ error detail) | Turn status `failed` |
+| `stopped` | `Stopped` | Turn status `cancelled` (human stop) |
+| `new_session` | `Started fresh session` (+ ` — <reason>` when known) | System reset receipts in the agent DM |
 
 Rules:
 
-- One turn yields at most two entries: its arrival (`message_received`,
-  `automation_fired`, or `task_dispatched`) and its outcome (`replied`,
-  `declined`, `failed`, `stopped`). A still-running turn shows only its
-  arrival entry — the live presence line, not the feed, says "working".
-- `<chat>` is the chat title (fallback: chat id). `<sender>` is the trigger
-  message author's display label. Cross-chat context is the point: entries
-  without a place are not acceptable.
-- Evaluation turns (default-evaluate fan-out) are `message_received`
-  entries like any other; the feed does not distinguish addressed from
-  evaluated.
+- One turn yields at most two entries: its arrival and its outcome. A
+  still-running turn shows only its arrival entry — the live presence
+  line, not the feed, says "working".
 - Entries are newest-first, timestamped with wall-clock times, default
   limit 20 (hover card shows the top 3–5).
 
@@ -65,9 +58,8 @@ Rules:
 ## Contract
 
 - Runtime owns the projection (`GET /agents/{id}/activity`), assembled
-  from `agent_turns` (timestamps, status, anchor chat, trigger message)
-  and durable session notices. Trigger provenance (automation, task)
-  comes from the trigger message's runtime metadata.
+  from `agent_turns` (timestamps, kind, status, error metadata) and the
+  durable session-reset receipts in the agent's built-in DM.
 - The read is on-demand and bounded; nothing is stored per entry. Without
   a reachable Runtime the feed is absent, like presence.
 - Turn-grained only: tool calls, reasoning, and narration never appear in

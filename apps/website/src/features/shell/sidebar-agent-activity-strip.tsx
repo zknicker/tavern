@@ -5,7 +5,6 @@ import { useAgentList } from '../../hooks/agents/use-agent-list.ts';
 import { useAgentPresence } from '../../hooks/agents/use-agent-presence.ts';
 import type { ChatTimelineState } from '../../hooks/chats/chat-timeline-state.ts';
 import { useChatList } from '../../hooks/chats/use-chat-list.ts';
-import { useChatRuntimeTimelineStates } from '../../hooks/chats/use-timeline-context.tsx';
 import { appRoutes } from '../../lib/app-routes.ts';
 import { cn } from '../../lib/utils.ts';
 import { resolveAgentInk } from '../agents/agent-color-presets.ts';
@@ -25,7 +24,6 @@ export function SidebarAgentActivityStrip() {
     const agents = useAgentList().data?.agents ?? [];
     const presence = useAgentPresence().data?.presence ?? [];
     const chats = buildChatList(useChatList().data);
-    const timelineStates = useChatRuntimeTimelineStates();
     const busyAgents = presence.filter((entry) => entry.state === 'busy');
     const agentById = React.useMemo(
         () => new Map(agents.map((agent) => [agent.id, agent])),
@@ -43,14 +41,11 @@ export function SidebarAgentActivityStrip() {
             <div className="flex flex-col gap-0.5">
                 {busyAgents.slice(0, maximumVisibleAgents).map((entry) => {
                     const agent = agentById.get(entry.agentId);
-                    const label = resolveAgentActivityLabel({
-                        agentId: entry.agentId,
-                        agentName: agent?.name ?? 'Agent',
-                        fallbackLabel:
-                            resolveDmPresenceLabel(entry, currentChatId ?? '') ?? 'Working…',
-                        timeline: entry.chatId ? timelineStates[entry.chatId] : undefined,
-                    });
-                    const navigableChatId = resolveNavigableActivityChatId(entry.chatId, chats);
+                    // Presence carries no chat anchor (specs/presence.md), so
+                    // the strip can no longer resolve a live timeline or a
+                    // chat to jump to for a busy agent.
+                    const label = resolveDmPresenceLabel(entry, currentChatId ?? '') ?? 'Working…';
+                    const navigableChatId = resolveNavigableActivityChatId(null, chats);
 
                     return (
                         <button
@@ -116,7 +111,6 @@ export function resolveAgentActivityLabel(input: {
     return formatActiveStatusText({
         activeReply,
         agentName: input.agentName,
-        queuedElsewhere: null,
         rows: [...input.timeline.timeline, ...Object.values(input.timeline.turnEvidence).flat()],
     });
 }

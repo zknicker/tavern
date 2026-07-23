@@ -1,17 +1,17 @@
 ---
-summary: Tavern Runtime internals for chat storage, Agent seats, Agent sessions, AI SDK execution, persistence, ingestion paths, and tool boundaries.
+summary: Tavern Runtime internals for chat storage, Agent seats, Agent sessions, AI SDK execution, persistence, inbox delivery, and tool boundaries.
 read_when:
   - changing the always-on chat server
   - changing agent execution or Runtime ownership
-  - changing ingestion paths, execution evidence, managed workspace instructions, or agent-facing Tavern tools
+  - changing inbox delivery, execution evidence, managed workspace instructions, or agent-facing Tavern tools
 ---
 
 # Runtime
 
 Tavern Runtime is the always-on local service behind Tavern. It owns canonical
-Chat records, participants, deliveries, reads, responses, activity, Agent
-sessions, Agent turns, Memory reads, tool inventory, model provider setup,
-executable model inventory, and agent execution.
+Chat records, participants, reads, inbox delivery, Agent sessions, Agent
+turns, tool inventory, model provider setup, executable model inventory, and
+agent execution.
 
 Tavern App is one frontend. Discord, Telegram, webhooks, SDK clients, and
 future surfaces are also frontends. They all talk to Runtime through Tavern Chat
@@ -19,12 +19,13 @@ and Agent-session contracts.
 
 ## Ownership
 
-- **Runtime owns Chat state.** Messages, participants, responses, activity,
-  artifacts, deliveries, and reads live in Runtime SQLite.
+- **Runtime owns Chat state.** Messages, participants, reads, and inbox
+  delivery cursors live in Runtime SQLite.
 - **Runtime owns Agent routing.** A Chat agent participant is an Agent seat with
   a current Agent session binding.
 - **Runtime owns execution.** It resolves the current Agent session, chooses the
-  model executor, runs the turn, and writes Tavern-native messages/activity.
+  model executor, runs the turn, and lets the agent write its own reply
+  messages through the Grotto CLI (`grotto message send`).
 - **Runtime owns model selection.** Agent profiles store defaults for new
   sessions; Agent sessions store effective models for that Chat.
 - **Runtime owns tools.** Enabled tools are auto-approved and run inside the
@@ -53,48 +54,38 @@ Durable Runtime state includes:
 - `chats`
 - `chat_participants`
 - `chat_messages`
-- `chat_responses`
-- `chat_response_activity`
-- `chat_deliveries`
 - `agent_sessions`
 - `agent_turns`
-- `agent_served_chat_cursors`
+- `agent_turn_file_changes`
+- `agent_inbox_cursors`, `agent_session_served_cursors`
+- `agent_channel_mutes`, `agent_inbox_pierces`, `thread_follows`
 - `agent_message_drafts`
 - `agent_runtime_profiles`
 - model provider, access, inventory, and selection tables
+
+`chat_responses`, `chat_response_activity`, and `chat_deliveries` remain
+real, schema-backed tables the Chat API can still write and read, but real
+agent turns no longer populate them (see [Chat API](../api/chat.md)).
 
 Active stream handles, process handles, cancellation controllers, and executor
 promises are transient Runtime memory. Reconnect recovery reads durable Chat
 state and active turn state rather than trusting the browser stream as history.
 
-Runtime starts the task auto-dispatch interval beside the cron scheduler. The
-dispatcher reads Runtime-owned global and per-agent settings, derives liveness
-from durable Agent turn state, and stops with the Runtime process.
-
 ## Ingestion
 
-All frontends create Tavern Chat messages. Agent execution starts only when
-Runtime addressing rules route a message to an Agent seat:
+All frontends create Tavern Chat messages. Agents never write chat replies
+directly — Runtime's delivery planner is the only path from a durable message
+to agent execution:
 
-- one-to-one Agent DMs invoke the Agent implicitly
-- channel messages invoke Agents by mention
-- an Agent's delivered final reply can mention co-resident Agents; each
-  mention dispatches a turn on that seat, bounded by chain limits
-  ([agent-mentions](../../specs/agent-mentions.md))
-- future automations or channel-listener settings may create Agent turns
-
-Runtime writes assistant replies as normal Chat messages authored by the Agent
-participant. Tool calls, thinking, rich responses, and command output are
-execution evidence stored as response activity. Agents can also post directly
-into another chat where they hold a seat via the `chat_send` tool
-(`chats_list` enumerates their chats); the post starts no turn for its
-author, and its mentions of the target chat's agents dispatch chain-bounded
-turns there when the posting turn completes. Agents present reviewable work
-with the `pane_open` tool: it takes a `grotto://workspace/<path>` or
-`grotto://wiki/<path>` link and opens or focuses that tab in the current
-chat's Runtime-owned artifact pane record, seat-gated and target-validated
-([agent-app-control](../../specs/agent-app-control.md)); the call is stored
-as response activity like any other tool.
+- A `message.created` event is planned per attention rules: joined channels,
+  followed threads, and DMs deliver ordinarily; a channel mute suppresses the
+  channel and its threads; a personal @mention pierces a mute as a single
+  delivery. See [Agent Inbox](../../specs/inbox.md).
+- An idle agent gets a drain turn batching every pending target; a busy agent
+  gets a content-free notice instead.
+- Agents speak only by running `grotto message send` from inside a turn — the
+  engine exposes no chat-sending tool. See
+  [ADR 0014](../adr/0014-cli-is-the-agents-only-output-channel.md).
 
 ## Boundaries
 

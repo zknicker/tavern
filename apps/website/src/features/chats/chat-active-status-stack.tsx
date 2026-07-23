@@ -5,7 +5,6 @@ import { Icon } from '../../components/ui/icon.tsx';
 import type { ChatActiveReply, ChatTimelineState } from '../../hooks/chats/chat-timeline-state.ts';
 import type { AgentListOutput } from '../../lib/trpc.tsx';
 import { cn } from '../../lib/utils.ts';
-import { useAgentPresenceEntry } from './agent-presence.tsx';
 import { getAgentStatusLabel, resolveAgentStatusExpression } from './agent-status-expression.ts';
 import { AgentStatusIndicator } from './agent-status-indicator.tsx';
 import {
@@ -152,7 +151,6 @@ export function ChatActiveStatusStack({
                                         <ChatActiveStatusRow
                                             activeReplies={activeReplies}
                                             agents={agents}
-                                            chatId={chatId}
                                             onViewDetails={() => setDrawerRunId(reply.runId)}
                                             reply={reply}
                                             rows={rowsWithEvidence}
@@ -185,38 +183,21 @@ export function ChatActiveStatusStack({
 function ChatActiveStatusRow({
     activeReplies,
     agents,
-    chatId,
     onViewDetails,
     reply,
     rows,
 }: {
     activeReplies: readonly ChatActiveReply[];
     agents: AgentListOutput['agents'];
-    chatId?: string;
     onViewDetails: () => void;
     reply: ChatActiveReply;
     rows: TranscriptRow[];
 }) {
     const agent = agents.find((entry) => entry.id === reply.agentId) ?? null;
-    const presence = useAgentPresenceEntry(reply.agentId);
     const turnEntry = React.useMemo(
         () => findActiveTurnEntry({ activeReplies, rows, runId: reply.runId }),
         [activeReplies, reply.runId, rows]
     );
-    // The turn here is waiting while the agent finishes a turn anchored in
-    // another chat: say so instead of pretending to think about this one.
-    const queuedElsewhere =
-        (reply.text ?? '').trim().length === 0 &&
-        presence?.state === 'busy' &&
-        presence.chatId !== null &&
-        chatId !== undefined &&
-        presence.chatId !== chatId
-            ? {
-                  chatTitle: presence.chatTitle,
-                  // Beyond the anchoring turn and this chat's own turn.
-                  others: Math.max(presence.pendingTurns - 2, 0),
-              }
-            : null;
 
     return (
         <ChatActiveStatusItem
@@ -225,7 +206,6 @@ function ChatActiveStatusRow({
             agentName={agent?.name ?? 'Agent'}
             agentPrimaryColor={agent?.effectivePrimaryColor ?? null}
             onViewDetails={onViewDetails}
-            queuedElsewhere={queuedElsewhere}
             rows={rows}
             workIcon={getWorkGroupIcon(turnEntry?.items.filter(isActivityItem) ?? [])}
             workSummary={formatTurnWorkSummary(turnEntry)}
@@ -239,7 +219,6 @@ function ChatActiveStatusItem({
     agentName,
     agentPrimaryColor,
     onViewDetails,
-    queuedElsewhere,
     rows,
     workIcon,
     workSummary,
@@ -249,7 +228,6 @@ function ChatActiveStatusItem({
     agentName: string;
     agentPrimaryColor: string | null;
     onViewDetails: () => void;
-    queuedElsewhere: { chatTitle: string | null; others: number } | null;
     rows: TranscriptRow[];
     workIcon: React.ComponentProps<typeof Icon>['icon'] | null;
     workSummary: string | null;
@@ -257,7 +235,7 @@ function ChatActiveStatusItem({
     // Dwell between summary changes so fast tool bursts read as discrete
     // updates; label changes roll in with the drawers' slot-text treatment.
     const stableSummary = useStableWorkGroupLabel(workSummary, true);
-    const statusText = formatActiveStatusText({ activeReply, agentName, queuedElsewhere, rows });
+    const statusText = formatActiveStatusText({ activeReply, agentName, rows });
 
     return (
         <button
@@ -328,23 +306,12 @@ function coalesceRepliesByAgent(replies: readonly ChatActiveReply[]) {
 export function formatActiveStatusText({
     activeReply,
     agentName,
-    queuedElsewhere,
     rows,
 }: {
     activeReply: ChatActiveReply;
     agentName: string;
-    queuedElsewhere: { chatTitle: string | null; others: number } | null;
     rows: TranscriptRow[];
 }) {
-    if (queuedElsewhere) {
-        const where = queuedElsewhere.chatTitle ? ` in ${queuedElsewhere.chatTitle}` : '';
-        const others =
-            queuedElsewhere.others > 0
-                ? `, and ${queuedElsewhere.others} other${queuedElsewhere.others === 1 ? '' : 's'}`
-                : '';
-        return `${agentName} is wrapping up${where}${others}`;
-    }
-
     const emotion = resolveAgentStatusExpression({
         activeReply,
         rows,

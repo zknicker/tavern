@@ -5,8 +5,6 @@ import { Tabs } from '../../components/ui/tabs.tsx';
 import type { ChatArtifactPanelState } from '../../hooks/pane/use-chat-pane-state.ts';
 import { cn } from '../../lib/utils.ts';
 import { ArtifactPanelChrome } from './chat-artifact-panel-chrome.tsx';
-import { WikiBrowserContent } from './chat-artifact-wiki-content.tsx';
-import { ChatArtifactWikiPage } from './chat-artifact-wiki-page.tsx';
 import { WorkspaceBrowserContent } from './chat-artifact-workspace-content.tsx';
 import { ChatSidePaneShell } from './chat-side-pane-shell.tsx';
 import {
@@ -82,7 +80,7 @@ function ArtifactPanelBody({
                     />
                 ) : (
                     <ArtifactPanelEmpty
-                        detail="Open a workspace file or Wiki page from the + menu, or click a linked output in chat."
+                        detail="Open a workspace file from the + menu, or click a linked output in chat."
                         title="No artifacts open"
                     />
                 )}
@@ -109,14 +107,6 @@ function ArtifactPanelContent({
         },
         [onOpenTarget]
     );
-
-    if (target.kind === 'wikiPage') {
-        return <ChatArtifactWikiPage path={target.path} />;
-    }
-
-    if (target.kind === 'wikiDirectory') {
-        return <WikiBrowserContent initialDirectoryPath={target.path} />;
-    }
 
     // The workspace is one unified tab: file content plus the workspace tree.
     // Picking a file in the tree morphs this tab's target in place, so the

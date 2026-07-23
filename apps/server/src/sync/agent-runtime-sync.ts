@@ -1,31 +1,21 @@
 import { setTimeout as delay } from 'node:timers/promises';
-import type { AgentRuntimeAgent, AgentRuntimeCron } from '@tavern/api';
-import {
-    recordCapabilityFailure,
-    recordCapabilitySuccess,
-    withCapabilityStatus,
-} from '../agent-runtime/capability-status.ts';
+import type { AgentRuntimeAgent } from '@tavern/api';
+import { withCapabilityStatus } from '../agent-runtime/capability-status.ts';
 import type { TavernAgentRuntimeClient } from '../agent-runtime/client.ts';
 import { createAgentRuntimeClientForConnection } from '../agent-runtime/client-factory.ts';
 import {
     emitAgentUpdated,
     emitChatLogUpdated,
     emitChatUpdated,
-    emitCronUpdated,
     emitSessionUpdated,
     emitSkillUpdated,
-    emitTasksUpdated,
 } from '../api/invalidation-events.ts';
-import { toCronRunInsert } from '../cron/runtime-run-record.ts';
 import { syncChatParticipantsForRuntime } from '../participants/chat-participants.ts';
 import {
     listReachableAgentRuntimeConnections,
     markAgentRuntimeConnectionSync,
 } from '../storage/agent-runtime-connections.ts';
 import { syncAgentsForRuntime } from '../storage/agents.ts';
-import { syncCronJobsForRuntime } from '../storage/cron-jobs.ts';
-import { upsertCronRuns } from '../storage/cron-runs.ts';
-import { syncTasksForRuntime } from '../storage/tasks.ts';
 import type { SyncPrimitiveKind } from './contracts.ts';
 import { savePrimitiveSyncState } from './primitive-sync-state.ts';
 
@@ -150,14 +140,6 @@ export async function syncAgentRuntimeSessionMessagesWithRetry(input: {
     }
 
     return lastResult;
-}
-
-export async function syncAgentRuntimeCron(input?: SyncInput) {
-    return await syncPrimitiveAcrossRuntimes('cron', input, syncCronForConnection);
-}
-
-export async function syncAgentRuntimeTasks(input?: SyncInput) {
-    return await syncPrimitiveAcrossRuntimes('task', input, syncTasksForConnection);
 }
 
 async function syncPrimitiveAcrossRuntimes(
@@ -360,124 +342,10 @@ function hasChanged(result: { deleted?: number; synced: number }) {
     return result.synced > 0 || (result.deleted ?? 0) > 0;
 }
 
-async function syncTasksForConnection(input: RuntimeSyncInput) {
-    const client = createAgentRuntimeClientForConnection(input.runtime);
-    const syncedAt = new Date().toISOString();
-    const tasks = (
-        await withCapabilityStatus(
-            {
-                capability: 'apiServer',
-                method: 'tasks.list',
-                runtimeId: input.runtime.id,
-            },
-            async () => await client.listTasks()
-        )
-    ).tasks;
-    const result = await syncTasksForRuntime({
-        runtimeId: input.runtime.id,
-        syncedAt,
-        tasks,
-    });
-
-    await input.log?.(
-        `Synced ${result.synced} tasks from ${input.runtime.name}; deleted ${result.deleted} missing tasks.`
-    );
-
-    return result;
-}
-
-async function syncCronForConnection(input: RuntimeSyncInput) {
-    const client = createAgentRuntimeClientForConnection(input.runtime);
-    const syncedAt = new Date().toISOString();
-    const summaries = (
-        await withCapabilityStatus(
-            {
-                capability: 'apiServer',
-                method: 'cron.list',
-                runtimeId: input.runtime.id,
-            },
-            async () => await client.listCronJobs()
-        )
-    ).jobs;
-    const jobs = await withCapabilityStatus(
-        {
-            capability: 'apiServer',
-            method: 'cron.list',
-            runtimeId: input.runtime.id,
-        },
-        async () => await Promise.all(summaries.map((job) => client.getCronJob(job.id)))
-    );
-    const fullJobs = jobs.filter((job): job is AgentRuntimeCron => Boolean(job));
-    const jobResult = await syncCronJobsForRuntime({
-        jobs: fullJobs,
-        runtimeId: input.runtime.id,
-        syncedAt,
-    });
-    const runs = await syncCronRunsForConnection({
-        client,
-        jobs: fullJobs,
-        log: input.log,
-        runtime: input.runtime,
-    });
-
-    await upsertCronRuns(
-        runs.map((run) =>
-            toCronRunInsert({
-                job: fullJobs.find((candidate) => candidate.id === run.jobId),
-                run,
-                runtimeId: input.runtime.id,
-                syncedAt,
-            })
-        )
-    );
-    await input.log?.(
-        `Synced ${jobResult.synced} cron jobs and ${runs.length} cron runs from ${input.runtime.name}; deleted ${jobResult.deleted} missing cron jobs.`
-    );
-
-    return {
-        deleted: jobResult.deleted,
-        synced: jobResult.synced + runs.length,
-    };
-}
-
-async function syncCronRunsForConnection(input: {
-    client: ReturnType<typeof createAgentRuntimeClientForConnection>;
-    jobs: AgentRuntimeCron[];
-    log?: SyncLog;
-    runtime: RuntimeConnectionRecord;
-}) {
-    try {
-        const runLists = await Promise.all(
-            input.jobs.map((job) => input.client.listCronRuns(job.id))
-        );
-        await recordCapabilitySuccess({
-            capability: 'apiServer',
-            method: 'cron.runs',
-            runtimeId: input.runtime.id,
-        });
-
-        return runLists.flatMap((response) => response.runs);
-    } catch (error) {
-        await recordCapabilityFailure({
-            capability: 'apiServer',
-            error,
-            method: 'cron.runs',
-            runtimeId: input.runtime.id,
-        });
-        const message = error instanceof Error ? error.message : String(error);
-        await input.log?.(`Skipped cron run history sync from ${input.runtime.name}: ${message}`);
-
-        return [];
-    }
-}
-
 function emitForPrimitive(kind: SyncPrimitiveKind) {
     switch (kind) {
         case 'agent':
             emitAgentUpdated();
-            return;
-        case 'cron':
-            emitCronUpdated();
             return;
         case 'chat':
             emitChatUpdated();
@@ -486,14 +354,8 @@ function emitForPrimitive(kind: SyncPrimitiveKind) {
             emitSessionUpdated();
             emitChatLogUpdated();
             return;
-        case 'cronRun':
-            emitCronUpdated();
-            return;
         case 'skill':
             emitSkillUpdated();
-            return;
-        case 'task':
-            emitTasksUpdated();
             return;
     }
 }

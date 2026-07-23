@@ -7,7 +7,7 @@ import {
     routeTabCapabilityRequirements,
     useCapability,
 } from '../../hooks/connections/use-capability.ts';
-import { useActivityUnseen, useTasksUnseen } from '../../hooks/shell/use-rail-unseen.ts';
+import { useActivityUnseen } from '../../hooks/shell/use-rail-unseen.ts';
 import { routeTabs, useRouteTab } from '../../hooks/shell/use-route-tab.ts';
 import { appRoutes } from '../../lib/app-routes.ts';
 import { cn } from '../../lib/utils.ts';
@@ -24,7 +24,6 @@ export function AppIconRail() {
     const { activeTab, setActiveTab } = useRouteTab();
     const capability = useCapability();
     const activityUnseen = useActivityUnseen();
-    const tasksUnseen = useTasksUnseen();
     const isSettingsActive = location.pathname.startsWith(appRoutes.settings);
 
     return (
@@ -47,10 +46,7 @@ export function AppIconRail() {
                                 setActiveTab(tab.id);
                             }
                         }}
-                        unseen={
-                            (tab.id === 'activity' && activityUnseen) ||
-                            (tab.id === 'tasks' && tasksUnseen)
-                        }
+                        unseen={tab.id === 'activity' && activityUnseen}
                     >
                         <RouteTabIcon className="size-4.5" tab={tab.id} />
                     </RailButton>

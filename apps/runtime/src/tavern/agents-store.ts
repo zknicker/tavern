@@ -90,14 +90,12 @@ export function deleteStoredAgent(agentId: string, db: Database = getDb()) {
 
 export function updateStoredAgent(input: {
     agentId: string;
-    autoDispatchEnabled?: boolean;
     webAccessEnabled?: boolean;
     bio?: string | null;
     db?: Database;
     enabledPluginIds?: AgentRuntimePluginId[];
     enabledSkillIds?: string[];
     name?: string;
-    taskReviewPolicy?: boolean;
     thinkingDefault?: AgentRuntimeAgent['thinkingDefault'];
 }) {
     const db = input.db ?? getDb();
@@ -109,9 +107,6 @@ export function updateStoredAgent(input: {
     return upsertStoredAgent({
         agent: {
             ...existing,
-            ...(input.autoDispatchEnabled === undefined
-                ? {}
-                : { autoDispatchEnabled: input.autoDispatchEnabled }),
             ...(input.webAccessEnabled === undefined
                 ? {}
                 : { webAccessEnabled: input.webAccessEnabled }),
@@ -123,9 +118,6 @@ export function updateStoredAgent(input: {
                 ? {}
                 : { enabledPluginIds: input.enabledPluginIds }),
             ...(input.name === undefined ? {} : { name: input.name }),
-            ...(input.taskReviewPolicy === undefined
-                ? {}
-                : { taskReviewPolicy: input.taskReviewPolicy }),
             ...(input.thinkingDefault === undefined
                 ? {}
                 : { thinkingDefault: input.thinkingDefault }),
@@ -196,7 +188,6 @@ function rowToAgent(row: AgentRow, db: Database): AgentRuntimeAgent {
     const raw = parseRawAgent(row.raw_json);
 
     return agentRuntimeAgentSchema.parse({
-        autoDispatchEnabled: raw?.autoDispatchEnabled ?? false,
         webAccessEnabled: raw?.webAccessEnabled ?? false,
         ...(raw?.bio == null ? {} : { bio: raw.bio }),
         enabledPluginIds: listAgentPluginGrantIds(row.id, db),
@@ -205,7 +196,6 @@ function rowToAgent(row: AgentRow, db: Database): AgentRuntimeAgent {
         isAdmin: row.is_admin === 1,
         name: row.name,
         primaryColor: row.primary_color,
-        taskReviewPolicy: raw?.taskReviewPolicy ?? false,
         ...(raw?.thinkingDefault === undefined ? {} : { thinkingDefault: raw.thinkingDefault }),
         workspaceFolder: row.workspace_folder,
     });
@@ -311,7 +301,6 @@ function listAgentPluginGrantIds(agentId: string, db: Database = getDb()) {
 
 function stableAgentJson(agent: AgentRuntimeAgent) {
     return JSON.stringify({
-        autoDispatchEnabled: agent.autoDispatchEnabled ?? false,
         webAccessEnabled: agent.webAccessEnabled ?? false,
         ...(agent.bio == null ? {} : { bio: agent.bio }),
         enabledPluginIds: agent.enabledPluginIds ?? [],
@@ -320,7 +309,6 @@ function stableAgentJson(agent: AgentRuntimeAgent) {
         isAdmin: agent.isAdmin,
         name: agent.name,
         primaryColor: agent.primaryColor,
-        taskReviewPolicy: agent.taskReviewPolicy ?? false,
         ...(agent.thinkingDefault === undefined ? {} : { thinkingDefault: agent.thinkingDefault }),
         workspaceFolder: agent.workspaceFolder,
     });

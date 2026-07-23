@@ -3,7 +3,6 @@ import test from 'node:test';
 import type { ChatListItem } from '../features/chats/chat-list-data.ts';
 import type { CapabilityView } from '../hooks/connections/use-capability.ts';
 import { buildChatNavigationCommandGroups } from './chat-navigation-commands.ts';
-import { buildCreateCommandGroup } from './create-commands.ts';
 import { buildCurrentChatCommandGroup, getCurrentChatId } from './current-chat-commands.ts';
 import { buildDeveloperCommandGroup } from './developer-commands.ts';
 import { buildNavigationCommandGroup } from './navigation-commands.ts';
@@ -37,7 +36,6 @@ test('global command groups expose the first slice of Grotto actions', () => {
     const context = createContext();
     const groups = [
         buildNavigationCommandGroup(context),
-        buildCreateCommandGroup(context),
         buildSettingsCommandGroup(context),
         buildDeveloperCommandGroup(context),
     ];
@@ -45,13 +43,11 @@ test('global command groups expose the first slice of Grotto actions', () => {
 
     assert.deepEqual(
         groups.map((group) => group.title),
-        ['Navigation', 'Create', 'Settings', 'Developer']
+        ['Navigation', 'Settings', 'Developer']
     );
     assert.ok(commandTitles.includes('Search'));
     assert.ok(commandTitles.includes('Chat'));
     assert.ok(commandTitles.includes('Activity'));
-    assert.ok(commandTitles.includes('New Task'));
-    assert.ok(commandTitles.includes('New Reminder'));
     assert.ok(commandTitles.includes('Grotto Runtime'));
     assert.ok(commandTitles.includes('Members'));
     assert.ok(commandTitles.includes('Turn Dev Mode On'));

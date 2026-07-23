@@ -1,30 +1,28 @@
 import type { AgentRuntimeAgent, AgentRuntimeAgentSession } from '@tavern/api';
+
+// Floating turns (I1): a turn anchors to the agent's global session, never a
+// chat. The runner composes the full per-turn prompt (Start. / drain
+// delivery, ws2-turn-shapes.md) before execution; the executor only runs it.
+// The agent's replies leave exclusively through `grotto message send` (D1) —
+// an executor result carries no output messages.
 export interface AgentExecutorInput {
     agent: AgentRuntimeAgent;
-    /** The agent's seat in the trigger chat: authorship for this turn. */
-    agentParticipantId: string;
     /** The agent's global session (specs/sessions.md). */
     agentSession: AgentRuntimeAgentSession;
-    attachments: Record<string, unknown>[];
-    chatId: string;
-    content: string;
-    metadata?: Record<string, unknown>;
-    requestMessageId: string;
-    responseId: string;
+    prompt: string;
     runId: string;
 }
 
 export interface AgentExecutorResult {
-    activityIds: string[];
-    outputMessageIds: string[];
+    contextTokens: number | null;
 }
 
 export interface AgentExecutor {
     /**
      * Deliver a user-visible text into a running turn's engine session.
      * Resolves true only when the engine accepted it; false means the turn
-     * is not running or the engine has no mid-turn input, and the message
-     * waits for the seat's context cursor (specs/steering.md).
+     * is not running or the engine has no mid-turn input, and the pending
+     * rows wait for the next drain (I2).
      */
     deliverUserMessage?(runId: string, text: string): Promise<boolean> | boolean;
     execute(input: AgentExecutorInput): Promise<AgentExecutorResult>;

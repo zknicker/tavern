@@ -8,8 +8,6 @@ import { closeDb, getDb, initTestDb } from '../db/connection';
 import { ensureRuntimeSchema } from '../db/schema';
 import { namedParams } from '../db/sqlite';
 import { toAgentMessage } from './agent-messages';
-import { readPastAgentSessionSummaries } from './agent-session-stats';
-import { startNewAgentSession } from './agent-session-store';
 import { getStoredAgent } from './agents-store';
 import { getChat, getMessage } from './chat-api';
 import { developmentChatDemos } from './development-chat-demo-definitions';
@@ -26,76 +24,7 @@ describe('development chat demo sessions', () => {
         closeDb();
     });
 
-    it('seeds archived demo sessions with turn lineage on a fresh database', () => {
-        seedDevelopmentChatDemos({ db: getDb(), enabled: true });
-
-        const pastSessions = readPastAgentSessionSummaries({
-            agentId: 'agt_primary',
-            currentSessionId: null,
-        });
-
-        expect(pastSessions).toHaveLength(4);
-        expect(new Set(pastSessions.map((session) => session.status))).toEqual(
-            new Set(['archived'])
-        );
-        for (const session of pastSessions) {
-            expect(session.turnCount).toBeGreaterThan(0);
-        }
-        // Newest first.
-        expect(pastSessions.map((session) => session.createdAt)).toEqual(
-            [...pastSessions.map((session) => session.createdAt)].sort().reverse()
-        );
-    });
-
-    it('never rewrites a live session row or ties demo turns to it', () => {
-        seedDevelopmentChatDemos({ db: getDb(), enabled: true });
-        // A real live session coexists with the seeded demo lineage; the
-        // seeder must never touch it.
-        const live = startNewAgentSession({
-            agentId: 'agt_primary',
-            now: '2026-07-06T12:00:00.000Z',
-        });
-        // Real sessions continue after the seeded demo lineage.
-        expect(live.id).toBe('ags_agt_primary_5');
-
-        seedDevelopmentChatDemos({ db: getDb(), enabled: true });
-
-        const liveRow = getDb()
-            .prepare('SELECT status, created_at FROM agent_sessions WHERE id = $id')
-            .get(namedParams({ id: live.id })) as { created_at: string; status: string };
-        expect(liveRow).toMatchObject({
-            created_at: '2026-07-06T12:00:00.000Z',
-            status: 'active',
-        });
-
-        // Demo turn lineage lands only on the seeder-authored archived rows.
-        const pastSessions = readPastAgentSessionSummaries({
-            agentId: 'agt_primary',
-            currentSessionId: live.id,
-        });
-        expect(pastSessions.map((session) => session.id)).toEqual([
-            'ags_agt_primary_demo_4',
-            'ags_agt_primary_demo_3',
-            'ags_agt_primary_demo_2',
-            'ags_agt_primary_demo_1',
-        ]);
-        for (const session of pastSessions) {
-            expect(session.turnCount).toBeGreaterThan(0);
-        }
-
-        const liveTurnCount = getDb()
-            .prepare(
-                `SELECT COUNT(*) AS count FROM chat_responses
-                 WHERE chat_id = $chatId
-                   AND json_extract(metadata_json, '$.runtime.agentSessionId') = $sessionId`
-            )
-            .get(namedParams({ chatId: developmentChatDemoId, sessionId: live.id })) as {
-            count: number;
-        };
-        expect(liveTurnCount.count).toBe(0);
-    });
-
-    it('seeds the team demo with two named agent seats and per-seat turns', () => {
+    it('seeds the team demo with two named agent seats and per-seat messages', () => {
         seedDevelopmentChatDemos({ db: getDb(), enabled: true });
 
         // Both seats are real stored agents with the current default names.
@@ -108,23 +37,15 @@ describe('development chat demo sessions', () => {
             new Set([demoAgentId, demoSecondAgentId])
         );
 
-        // One completed turn per seat, each tied to that seat's own session.
-        const responses = getDb()
-            .prepare(
-                `SELECT participant_id,
-                        json_extract(metadata_json, '$.runtime.agentSessionId') AS session_id
-                 FROM chat_responses WHERE chat_id = $chatId`
-            )
-            .all(namedParams({ chatId: developmentChatTeamDemoId })) as {
-            participant_id: string;
-            session_id: string | null;
+        // One assistant message per seat.
+        const messages = getDb()
+            .prepare('SELECT author_id FROM chat_messages WHERE chat_id = $chatId AND role = $role')
+            .all(namedParams({ chatId: developmentChatTeamDemoId, role: 'assistant' })) as {
+            author_id: string;
         }[];
-        expect(new Set(responses.map((row) => row.participant_id))).toEqual(
+        expect(new Set(messages.map((row) => row.author_id))).toEqual(
             new Set([demoAgentId, demoSecondAgentId])
         );
-        for (const row of responses) {
-            expect(row.session_id).toContain(row.participant_id);
-        }
     });
 
     // Seed lint: seeds bypass write-time handle validation (direct inserts),
@@ -180,38 +101,24 @@ describe('development chat demo sessions', () => {
         expect(labelFor(developmentChatDemoId, 'usr_demo')).toBe('Observed');
     });
 
-    it('seeds the visuals gallery channel with one widget activity per turn', () => {
+    it('seeds the visuals gallery channel with assistant messages carrying visual fences', () => {
         seedDevelopmentChatDemos({ db: getDb(), enabled: true });
         // Idempotent across restarts: reseeding leaves the same stable rows.
         seedDevelopmentChatDemos({ db: getDb(), enabled: true });
 
         expect(getChat(developmentChatVisualsDemoId)?.title).toBe('visuals');
 
-        const activities = getDb()
+        const messages = getDb()
             .prepare(
-                `SELECT id, json_extract(metadata_json, '$.widget.component') AS component
-                 FROM chat_response_activity
-                 WHERE chat_id = $chatId AND kind = 'widget'
+                `SELECT content FROM chat_messages
+                 WHERE chat_id = $chatId AND role = 'assistant'
                  ORDER BY id ASC`
             )
-            .all(namedParams({ chatId: developmentChatVisualsDemoId })) as {
-            component: string;
-            id: string;
-        }[];
+            .all(namedParams({ chatId: developmentChatVisualsDemoId })) as { content: string }[];
 
-        // Five generative visuals (chart, native table, diagram, tall/collapse,
-        // malformed degradation), the artifact card, plus the retired-widget
-        // replay fallback payload.
-        expect(activities.map((row) => row.component).sort()).toEqual(
-            [
-                'tavern.widget.artifact',
-                'tavern.widget.bar-chart',
-                'tavern.widget.visual',
-                'tavern.widget.visual',
-                'tavern.widget.visual',
-                'tavern.widget.visual',
-                'tavern.widget.visual',
-            ].sort()
-        );
+        expect(messages.length).toBeGreaterThan(0);
+        for (const message of messages) {
+            expect(message.content).toContain('```visual');
+        }
     });
 });

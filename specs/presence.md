@@ -20,12 +20,11 @@ invented:
 
 - `state: busy` when the agent has any unsettled turn (running or queued;
   queued counts so mid-drain gaps never flicker idle). Otherwise `idle`.
-- `chatId`/`chatTitle`: the running turn's anchor chat, or the oldest
-  queued chat while nothing runs. Title is presentation sugar so clients
-  never join chats to render a status line.
-- `pendingTurns`: total unsettled turns across all chats — the queue-depth
-  hint behind "wrapping up in <chat>, and N others".
-- `since`: when the anchoring turn started (or was created, if queued).
+- `pendingTurns`: total unsettled turns — the queue-depth hint.
+- `since`: when the current turn started (or was created, if queued).
+
+Turns float on the session (ADR 0014), so presence carries no chat anchor:
+there is no "which chat is it working in" fact anymore.
 
 Served at Runtime `GET /agents/presence` for every stored agent; the server
 proxies it as `agent.presence`. Without a reachable Runtime every agent
@@ -36,13 +35,7 @@ is no per-token churn.
 ## Surfaces
 
 - **DM topbar**: presence dot next to the agent's name — green idle (dot
-  only, no text), amber busy with a label: "Replying…" when the turn is
-  anchored here, "Working in <chat>…" when anchored elsewhere.
-- **Busy-elsewhere composer hint**: when a seated agent's turn is anchored
-  in a different chat, a quiet line above the composer — "<Agent> is busy
-  in <chat> — your message is queued and answers next." Hidden the moment a
-  turn runs in this chat; the active status stack ("thinking…") owns that
-  state and is unchanged by presence.
+  only, no text), amber busy with a "Working…" label.
 - **Sidebar rows**: each row's right edge carries its indicators; rows show
   no relative-time or "no activity yet" text.
   - Every chat kind shows an unread pill when the operator's read receipt
@@ -51,8 +44,7 @@ is no per-token churn.
     on each new message while open — via `chat.markRead`, which the runtime
     resolves read-to-latest at write time.
   - Agent DM rows anchor a presence dot to the agent face: green while the
-    agent is idle, easing to amber while it is busy anywhere (agent
-    presence, plus this chat's local optimistic turn). No spinner — motion
+    agent is idle, easing to amber while it is busy anywhere. No spinner — motion
     at rest in the sidebar reads as distraction — and the dot stays off
     the right edge so it never crowds the unread pill.
   - Channel rows never show a presence indicator: agent-global busy

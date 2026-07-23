@@ -13,13 +13,11 @@ const defaultSeededSkillIds = [tavernAgentSkillId, tasksSkillId, visualsSkillId]
 
 export function primaryManagedAgent(): AgentRuntimeAgent {
     return {
-        autoDispatchEnabled: false,
         enabledSkillIds: [...defaultSeededSkillIds],
         id: defaultAgentEngineAgentId,
         isAdmin: true,
         name: defaultAgentDisplayName,
         primaryColor: null,
-        taskReviewPolicy: false,
         workspaceFolder: AGENT_WORKSPACE,
     };
 }

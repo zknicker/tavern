@@ -2,7 +2,6 @@ import { randomUUID } from 'node:crypto';
 import type {
     AgentRuntimeSaveDiscordBinding,
     AgentRuntimeThinkingLevel,
-    AgentRuntimeUpdateAgentTaskSettings,
     AgentRuntimeUpdateAgentWebSettings,
 } from '@tavern/api';
 import type { TavernAgentRuntimeClient } from '../agent-runtime/client.ts';
@@ -106,23 +105,6 @@ export async function updateAgentThinkingDefault(input: {
         emitAgentUpdated();
         emitModelUpdated();
         return result;
-    } finally {
-        client.close();
-    }
-}
-
-export async function updateAgentTaskSettings(
-    input: AgentRuntimeUpdateAgentTaskSettings & { agentId: string }
-) {
-    const { client, runtimeId } = await createClientForAgent(input.agentId);
-    try {
-        const agent = await client.updateAgentTaskSettings(input.agentId, {
-            autoDispatchEnabled: input.autoDispatchEnabled,
-            taskReviewPolicy: input.taskReviewPolicy,
-        });
-        await refreshAgentSnapshot({ client, runtimeId });
-        emitAgentUpdated();
-        return agent;
     } finally {
         client.close();
     }

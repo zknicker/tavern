@@ -343,8 +343,6 @@ function deleteRuntimeData(runtimeId: string) {
 
         deleteColumnValue('agent_profiles', 'runtime_id', runtimeId);
         deleteColumnValue('agents', 'runtime_id', runtimeId);
-        deleteColumnValue('cron_jobs', 'runtime_id', runtimeId);
-        deleteColumnValue('cron_runs', 'runtime_id', runtimeId);
         deleteColumnValue('session_runs', 'runtime', runtimeId);
         deleteColumnValue('skills', 'runtime_id', runtimeId);
         deleteColumnValue('sync_state', 'id', formatSkillInventorySyncStateId(runtimeId));
@@ -363,10 +361,6 @@ function inferLatestRuntimeId() {
             SELECT runtime_id AS runtimeId
             FROM (
                 SELECT runtime_id, updated_at FROM agents
-                UNION ALL
-                SELECT runtime_id, updated_at FROM cron_jobs
-                UNION ALL
-                SELECT runtime_id, synced_at AS updated_at FROM cron_runs WHERE runtime_id IS NOT NULL
                 UNION ALL
                 SELECT runtime AS runtime_id, updated_at FROM session_runs WHERE runtime IS NOT NULL
             )

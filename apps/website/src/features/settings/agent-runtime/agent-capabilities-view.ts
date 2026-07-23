@@ -39,8 +39,6 @@ const capabilityCategories: Partial<Record<CapabilityId, CapabilityCategoryId>> 
     'plugin.google.calendar': 'plugins',
     'plugin.merchbase': 'plugins',
     skills: 'extensions',
-    wiki: 'knowledge',
-    wikiRecall: 'knowledge',
 };
 
 const capabilityDisplayOrder: CapabilityId[] = [
@@ -52,8 +50,6 @@ const capabilityDisplayOrder: CapabilityId[] = [
     'memory',
     'memoryExtraction',
     'memoryDreaming',
-    'wiki',
-    'wikiRecall',
     'modelExecution',
     'skills',
     'plugin.merchbase',
@@ -90,13 +86,10 @@ const capabilityDescriptions: Partial<Record<CapabilityId, string>> = {
         'Background dreaming can promote stable evidence into Wiki and per-agent Memory using the Standard background model.',
     memoryExtraction:
         'Background extraction can distill settled conversations into per-agent episodic evidence using the Fast background model.',
-    wikiRecall:
-        'Your Wiki pages are indexed automatically whenever they change, so agents instantly recall relevant shared knowledge in every conversation. First-time setup downloads a small on-device model.',
     modelExecution: 'At least one AI model is connected and ready to run agent turns.',
     'plugin.browser': 'Managed Chrome browser for agent web automation.',
     'plugin.google.calendar': 'Google Calendar access for your agents.',
     'plugin.merchbase': 'MerchBase sales and product data tools for your agents.',
-    wiki: 'The shared Wiki — durable Markdown pages your agents read, write, and cite.',
     skills: 'Reusable skills agents load for specialized tasks.',
 };
 

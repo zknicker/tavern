@@ -370,16 +370,6 @@ test('applyObservedAgentRuntimeEvent queues runtime skill refreshes after skill 
     expect(emitSkillInvalidationCascade).toHaveBeenCalledTimes(0);
 });
 
-test('applyObservedAgentRuntimeEvent invalidates memory job history after memory job updates', async () => {
-    await applyObservedAgentRuntimeEvent({
-        jobId: 'memjob_1',
-        timestamp: '2026-05-12T19:00:00.000Z',
-        type: 'memoryJob.updated',
-    });
-
-    expect(emitMemoryJobsUpdated).toHaveBeenCalledTimes(1);
-});
-
 test('applyObservedAgentRuntimeEvent invalidates rendered agent instructions', async () => {
     await applyObservedAgentRuntimeEvent({
         agentId: 'main',
@@ -399,83 +389,6 @@ test('applyObservedAgentRuntimeEvent invalidates rendered agent instructions', a
         type: 'workspace.instructions.updated',
     });
     expect(emitAgentInstructionsUpdated).toHaveBeenCalledWith({ agentId: 'main' });
-});
-
-test('applyObservedAgentRuntimeEvent forwards completed turns without fetching session history', async () => {
-    const listSessions = mock(async () => ({
-        sessions: [
-            {
-                agentId: 'agent:test',
-                chatId: tavernChatId,
-                key: 'session-1',
-                lastActivityAt: '2026-05-12T19:00:02.000Z',
-                messageCount: 1,
-                parentSessionKey: null,
-                platform: 'tavern',
-                sessionId: 'session-1',
-                sessionRole: 'main' as const,
-                startedAt: '2026-05-12T19:00:00.000Z',
-                title: 'Test',
-            },
-        ],
-    }));
-    const listSessionMessages = mock(async () => ({
-        messages: [
-            {
-                agentId: 'agent:test',
-                attachments: [],
-                chatId: tavernChatId,
-                content: 'Done.',
-                id: 'assistant-message-1',
-                metadata: {},
-                participant: null,
-                sender: 'agent:test',
-                senderName: 'Agent',
-                senderType: 'agent' as const,
-                sessionKey: 'session-1',
-                timestamp: '2026-05-12T19:00:02.000Z',
-            },
-        ],
-    }));
-    const client = { listSessionMessages, listSessions };
-    createAgentRuntimeClientForConnection.mockReturnValue(client as never);
-
-    await applyObservedAgentRuntimeEvent(
-        {
-            timestamp: '2026-05-12T19:00:00.000Z',
-            turn: {
-                agentId: 'agent:test',
-                chatId: tavernChatId,
-                runId: 'run-1',
-                sessionKey: 'session-1',
-                startedAt: '2026-05-12T19:00:00.000Z',
-            },
-            type: 'turn.completed',
-        },
-        {
-            baseUrl: 'http://runtime.test',
-            id: 'runtime-1',
-        } as never
-    );
-    await flushAsyncEventSync();
-
-    expect(listSessions).not.toHaveBeenCalled();
-    expect(listSessionMessages).not.toHaveBeenCalled();
-    expect(tavernApiRequests).toEqual([]);
-    expect(emitObservedAgentRuntimeEvent).toHaveBeenCalledWith({
-        timestamp: '2026-05-12T19:00:00.000Z',
-        turn: {
-            agentId: 'agent:test',
-            chatId: tavernChatId,
-            runId: 'run-1',
-            sessionKey: 'session-1',
-            startedAt: '2026-05-12T19:00:00.000Z',
-        },
-        type: 'turn.completed',
-    });
-    expect(emitChatUpdated).toHaveBeenCalledWith({ chatId: tavernChatId });
-    expect(emitSessionUpdated).toHaveBeenCalledWith({ sessionKey: 'session-1' });
-    expect(emitChatLogUpdated).toHaveBeenCalledWith({ sessionKey: 'session-1' });
 });
 
 test('thread message events invalidate the thread and its parent with memoized resolution', async () => {
@@ -537,111 +450,12 @@ test('thread message events invalidate the thread and its parent with memoized r
     ]);
 });
 
-test('applyObservedAgentRuntimeEvent does not sync history for live reply updates', async () => {
-    const listSessionMessages = mock(async () => ({ messages: [] }));
-    const listSessions = mock(async () => ({ sessions: [] }));
-    const client = { listSessionMessages, listSessions };
-    createAgentRuntimeClientForConnection.mockReturnValue(client as never);
-
-    await applyObservedAgentRuntimeEvent(
-        {
-            isThinking: false,
-            replace: true,
-            text: 'Ready.',
-            timestamp: '2026-05-12T19:00:00.000Z',
-            turn: {
-                agentId: 'agent:test',
-                chatId: tavernChatId,
-                runId: 'run-1',
-                sessionKey: 'session-1',
-                startedAt: '2026-05-12T19:00:00.000Z',
-            },
-            type: 'turn.replyUpdated',
-        },
-        {
-            baseUrl: 'http://runtime.test',
-            id: 'runtime-1',
-        } as never
-    );
-    await Promise.resolve();
-
-    expect(createAgentRuntimeClientForConnection).not.toHaveBeenCalled();
-    expect(listSessions).not.toHaveBeenCalled();
-    expect(listSessionMessages).not.toHaveBeenCalled();
-    expect(tavernApiRequests).toEqual([]);
-    expect(emitObservedAgentRuntimeEvent).toHaveBeenCalledWith({
-        isThinking: false,
-        replace: true,
-        text: 'Ready.',
-        timestamp: '2026-05-12T19:00:00.000Z',
-        turn: {
-            agentId: 'agent:test',
-            chatId: tavernChatId,
-            runId: 'run-1',
-            sessionKey: 'session-1',
-            startedAt: '2026-05-12T19:00:00.000Z',
-        },
-        type: 'turn.replyUpdated',
-    });
-});
-
-test('applyObservedAgentRuntimeEvent defers invalidated session sync while a turn is active', async () => {
-    const listSessions = mock(async () => ({
-        sessions: [
-            {
-                agentId: 'agent:test',
-                chatId: tavernChatId,
-                key: 'session-1',
-                lastActivityAt: '2026-05-12T19:00:02.000Z',
-                messageCount: 1,
-                parentSessionKey: null,
-                platform: 'tavern',
-                sessionId: 'session-1',
-                sessionRole: 'main' as const,
-                startedAt: '2026-05-12T19:00:00.000Z',
-                title: 'Test',
-            },
-        ],
-    }));
-    const listSessionMessages = mock(async () => ({
-        messages: [
-            {
-                agentId: 'agent:test',
-                attachments: [],
-                chatId: tavernChatId,
-                content: 'Done.',
-                id: 'assistant-message-1',
-                metadata: {},
-                participant: null,
-                sender: 'agent:test',
-                senderName: 'Agent',
-                senderType: 'agent' as const,
-                sessionKey: 'session-1',
-                timestamp: '2026-05-12T19:00:02.000Z',
-            },
-        ],
-    }));
-    const client = { listSessionMessages, listSessions };
-    createAgentRuntimeClientForConnection.mockReturnValue(client as never);
+test('applyObservedAgentRuntimeEvent invalidates workers and the session on session.invalidated', async () => {
     const connection = {
         baseUrl: 'http://runtime.test',
         id: 'runtime-1',
     } as never;
 
-    await applyObservedAgentRuntimeEvent(
-        {
-            timestamp: '2026-05-12T19:00:00.000Z',
-            turn: {
-                agentId: 'agent:test',
-                chatId: tavernChatId,
-                runId: 'run-1',
-                sessionKey: 'session-1',
-                startedAt: '2026-05-12T19:00:00.000Z',
-            },
-            type: 'turn.started',
-        },
-        connection
-    );
     await applyObservedAgentRuntimeEvent(
         {
             sessionKey: 'session-1',
@@ -652,47 +466,9 @@ test('applyObservedAgentRuntimeEvent defers invalidated session sync while a tur
     );
     await flushAsyncEventSync();
 
-    expect(createAgentRuntimeClientForConnection).not.toHaveBeenCalled();
-    expect(listSessions).not.toHaveBeenCalled();
-    expect(listSessionMessages).not.toHaveBeenCalled();
     expect(emitWorkersUpdated).toHaveBeenCalledTimes(1);
-    expect(emitSessionUpdated).not.toHaveBeenCalled();
-
-    await applyObservedAgentRuntimeEvent(
-        {
-            timestamp: '2026-05-12T19:00:02.000Z',
-            turn: {
-                agentId: 'agent:test',
-                chatId: tavernChatId,
-                runId: 'run-1',
-                sessionKey: 'session-1',
-                startedAt: '2026-05-12T19:00:00.000Z',
-            },
-            type: 'turn.completed',
-        },
-        connection
-    );
-    await flushAsyncEventSync();
-
-    expect(listSessions).not.toHaveBeenCalled();
-    expect(listSessionMessages).not.toHaveBeenCalled();
-
-    createAgentRuntimeClientForConnection.mockClear();
-    listSessions.mockClear();
-    listSessionMessages.mockClear();
-
-    await applyObservedAgentRuntimeEvent(
-        {
-            sessionKey: 'session-1',
-            timestamp: '2026-05-12T19:00:03.000Z',
-            type: 'session.invalidated',
-        },
-        connection
-    );
-    await flushAsyncEventSync();
-
-    expect(listSessions).not.toHaveBeenCalled();
-    expect(listSessionMessages).not.toHaveBeenCalled();
+    expect(emitSessionUpdated).toHaveBeenCalledWith({ sessionKey: 'session-1' });
+    expect(emitChatLogUpdated).toHaveBeenCalledWith({ sessionKey: 'session-1' });
 });
 
 async function flushAsyncEventSync() {

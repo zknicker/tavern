@@ -1,12 +1,20 @@
 import { ZodError } from 'zod';
 import { AgentApiError } from './agent-api-errors.ts';
 import {
+    agentChannelActionRequestSchema,
+    joinAgentChannel,
+    leaveAgentChannel,
+    muteAgentChannel,
+    unmuteAgentChannel,
+} from './agent-channels.ts';
+import {
     readAgentChannelInfo,
     readAgentChannelMembers,
     readAgentServerInfo,
 } from './agent-directory.ts';
 import { readAgentDraft } from './agent-drafts.ts';
 import { getAgentMessage, readAgentHistory, searchAgentMessages } from './agent-history.ts';
+import { checkAgentInbox, checkAgentMessages } from './agent-inbox-api.ts';
 import { agentSendRequestSchema, sendAgentMessage } from './agent-send.ts';
 import { agentThreadUnfollowRequestSchema, unfollowAgentThread } from './agent-threads.ts';
 import { AmbiguousMessageIdError } from './chat-api/index.ts';
@@ -95,6 +103,27 @@ async function route(request: Request, url: URL, agentId: string): Promise<Respo
     }
     if (request.method === 'GET' && url.pathname === '/api/agent/channels/members') {
         return json(readAgentChannelMembers(agentId, requiredParam(url, 'target')));
+    }
+    if (request.method === 'GET' && url.pathname === '/api/agent/events') {
+        return json(checkAgentMessages(agentId));
+    }
+    if (request.method === 'GET' && url.pathname === '/api/agent/inbox') {
+        return json(checkAgentInbox(agentId));
+    }
+    const channelAction = url.pathname.match(/^\/api\/agent\/channels\/(join|leave|mute|unmute)$/u);
+    if (request.method === 'POST' && channelAction?.[1]) {
+        const input = agentChannelActionRequestSchema.parse(await readJson(request));
+        const action = channelAction[1];
+        if (action === 'join') {
+            return json(joinAgentChannel(agentId, input));
+        }
+        if (action === 'leave') {
+            return json(leaveAgentChannel(agentId, input));
+        }
+        if (action === 'mute') {
+            return json(muteAgentChannel(agentId, input));
+        }
+        return json(unmuteAgentChannel(agentId, input));
     }
     return agentError('TARGET_NOT_FOUND', 'Agent API route was not found.', 404);
 }

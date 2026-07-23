@@ -1,11 +1,11 @@
 import * as z from 'zod';
 import { AgentApiError } from './agent-api-errors.ts';
+import { retractComposition } from './agent-compositions.ts';
 import { clearAgentDraft, readAgentDraft, saveAgentDraft } from './agent-drafts.ts';
 import { countFormalMentions, toAgentMessage } from './agent-messages.ts';
 import { ensureCurrentAgentSession } from './agent-session-store.ts';
 import { resolveAgentTarget } from './agent-targets.ts';
 import { getStoredAgent } from './agents-store.ts';
-import { isArchivedChat } from './chat-actions-tools.ts';
 import { createAgentParticipantId } from './chat-api/ids.ts';
 import {
     createMessage,
@@ -13,6 +13,7 @@ import {
     findMessageByNonce,
     membershipChat,
 } from './chat-api/index.ts';
+import { isArchivedChat } from './chat-guards.ts';
 import { collectRecentUnread, resolveSendHold } from './send-hold.ts';
 
 export const agentSendRequestSchema = z
@@ -112,6 +113,11 @@ export function sendAgentMessage(
               sessionId: session.id,
           });
     if (hold) {
+        // A held send never publishes its composition commit — the app's
+        // provisional bubble retracts (I1 freshness-hold path).
+        if (input.compositionId) {
+            retractComposition({ agentId, compositionId: input.compositionId });
+        }
         const draft = saveAgentDraft({
             agentId,
             attachmentIds: outgoing.attachmentIds,

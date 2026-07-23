@@ -122,64 +122,6 @@ test('identity admin methods use runtime-token routes', async () => {
     ]);
 });
 
-test('listCapabilities parses Wiki capability rows', async () => {
-    const now = new Date().toISOString();
-    const fetchMock = mock(async (input: RequestInfo | URL) => {
-        assert.equal(String(input), `http://runtime.test${agentRuntimeRoutes.capabilities}`);
-        return Response.json({
-            capabilities: [
-                {
-                    checkedAt: now,
-                    displayName: 'dashboard server',
-                    healthy: true,
-                    id: 'dashboardServer',
-                    lastHealthyAt: now,
-                    metadata: {},
-                    nextCheckAt: now,
-                    reason: null,
-                    state: 'healthy',
-                    technicalMessage: null,
-                    updatedAt: now,
-                },
-                {
-                    checkedAt: now,
-                    displayName: 'Memory',
-                    healthy: true,
-                    id: 'wiki',
-                    lastHealthyAt: now,
-                    metadata: { wikiPath: '/Users/zknicker/.grotto/runtime/wiki' },
-                    nextCheckAt: now,
-                    reason: null,
-                    state: 'healthy',
-                    technicalMessage: null,
-                    updatedAt: now,
-                },
-            ],
-            health: {
-                ok: true,
-                status: 'healthy',
-                timestamp: now,
-            },
-            info: {
-                agentRuntimeId: 'runtime-1',
-                name: 'Tavern Runtime',
-                protocolVersion: 1,
-                version: '1.2.9',
-            },
-        });
-    });
-    globalThis.fetch = fetchMock as typeof fetch;
-
-    const client = createAgentRuntimeClient('http://runtime.test');
-    const capabilities = await client.listCapabilities();
-
-    assert.deepEqual(
-        capabilities.capabilities.map((capability) => capability.id),
-        ['dashboardServer', 'wiki']
-    );
-    assert.equal(capabilities.info.version, '1.2.9');
-});
-
 test('listEvents sends durable cursor filters to Runtime', async () => {
     const fetchMock = mock(async (input: RequestInfo | URL) => {
         const url = new URL(String(input));
@@ -205,29 +147,6 @@ test('listEvents sends durable cursor filters to Runtime', async () => {
         events.events.map((event) => event.type),
         ['chat.historyChanged']
     );
-});
-
-test('getMemoryActivity reads the Memory activity rollup', async () => {
-    const fetchMock = mock(async (input: RequestInfo | URL) => {
-        assert.equal(String(input), `http://runtime.test${agentRuntimeRoutes.memoryActivity}`);
-        return Response.json({
-            activities: [
-                {
-                    enabled: true,
-                    kind: 'extraction',
-                    lastRun: null,
-                    nextRun: { kind: 'waiting', waitingOn: 'chat activity' },
-                },
-            ],
-        });
-    });
-    globalThis.fetch = fetchMock as typeof fetch;
-
-    const client = createAgentRuntimeClient('http://runtime.test');
-    const result = await client.getMemoryActivity();
-
-    assert.equal(result.activities[0]?.kind, 'extraction');
-    assert.equal(result.activities[0]?.nextRun?.kind, 'waiting');
 });
 
 test('getCurrentAgentSession reads the current global agent session via a chat', async () => {
@@ -262,31 +181,4 @@ test('getCurrentAgentSession reads the current global agent session via a chat',
     });
 
     assert.equal(result.session?.effectiveModel.model, 'gpt-4.1-mini');
-});
-
-test('task attachment methods read bytes and delete one attachment', async () => {
-    const requests: Array<{ method: string; url: string }> = [];
-    const route = agentRuntimeRoutes.taskAttachment('tsk_1', 'att_1');
-    const fetchMock = mock(async (input: RequestInfo | URL, init?: RequestInit) => {
-        requests.push({ method: init?.method ?? 'GET', url: String(input) });
-        return init?.method === 'DELETE'
-            ? Response.json({ deleted: true, id: 'att_1' })
-            : Response.json({
-                  contentBase64: Buffer.from('deliverable').toString('base64'),
-                  filename: 'result.txt',
-                  mediaType: 'text/plain',
-              });
-    });
-    globalThis.fetch = fetchMock as typeof fetch;
-
-    const client = createAgentRuntimeClient('http://runtime.test');
-    const attachment = await client.getTaskAttachment('tsk_1', 'att_1');
-    const deleted = await client.deleteTaskAttachment('tsk_1', 'att_1');
-
-    assert.equal(attachment.filename, 'result.txt');
-    assert.deepEqual(deleted, { deleted: true, id: 'att_1' });
-    assert.deepEqual(requests, [
-        { method: 'GET', url: `http://runtime.test${route}` },
-        { method: 'DELETE', url: `http://runtime.test${route}` },
-    ]);
 });

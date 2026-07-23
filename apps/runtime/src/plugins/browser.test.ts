@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import type { AgentRuntimeAgent } from '@tavern/api';
 import { agentRuntimeMutationHeaders, agentRuntimeMutationOrigins } from '@tavern/api';
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { closeDb, initTestDb } from '../db/connection';
@@ -12,9 +13,7 @@ import {
     getBrowserSettings,
     saveBrowserSettings,
 } from './browser';
-import type { AgentBrowserResult } from './browser/agent-browser-cli.ts';
 import { stopBrowserService } from './browser/service.ts';
-import { createBrowserToolsForAgent } from './browser-tools';
 import { handlePluginsRequest } from './routes';
 
 const detectionMock = vi.hoisted(() => ({
@@ -36,7 +35,7 @@ function agentWithPlugins(pluginIds: string[]) {
         enabledPluginIds: pluginIds,
         id: 'agent-1',
         name: 'Agent',
-    } as Parameters<typeof createBrowserToolsForAgent>[0];
+    } as AgentRuntimeAgent;
 }
 
 beforeEach(() => {
@@ -189,45 +188,5 @@ describe('Browser managed skill', () => {
         expect(content).not.toContain('--cdp');
         expect(content).not.toContain('--session');
         expect(content).not.toContain('eval --stdin');
-    });
-});
-
-describe('Browser tool gating', () => {
-    const runner = {
-        run: vi.fn(
-            (): Promise<AgentBrowserResult> =>
-                Promise.resolve({ exitCode: 0, ok: true, stderr: '', stdout: 'done' })
-        ),
-    };
-
-    test('is absent without a per-agent grant', async () => {
-        await saveBrowserSettings({ enabled: true });
-        expect(createBrowserToolsForAgent(agentWithPlugins([]), runner)).toEqual({});
-        expect(createBrowserToolsForAgent(agentWithPlugins(['merchbase']), runner)).toEqual({});
-    });
-
-    test('is absent when the Plugin is disabled even with a grant', () => {
-        expect(createBrowserToolsForAgent(agentWithPlugins(['browser']), runner)).toEqual({});
-    });
-
-    test('materializes one browser tool for a granted agent', async () => {
-        await saveBrowserSettings({ enabled: true });
-        const tools = createBrowserToolsForAgent(agentWithPlugins(['browser']), runner);
-        expect(Object.keys(tools)).toEqual(['browser']);
-    });
-
-    test('fails fast with the capability reason when supervision is not running', async () => {
-        await saveBrowserSettings({ enabled: true });
-        const tools = createBrowserToolsForAgent(agentWithPlugins(['browser']), runner);
-        const browserTool = tools.browser as unknown as {
-            execute: (
-                input: { args: string[] },
-                options: Record<string, unknown>
-            ) => Promise<{ error?: string; ok: boolean }>;
-        };
-        const result = await browserTool.execute({ args: ['open', 'https://example.com'] }, {});
-        expect(result.ok).toBe(false);
-        expect(result.error).toBe('Install Google Chrome to enable Browser.');
-        expect(runner.run).not.toHaveBeenCalled();
     });
 });

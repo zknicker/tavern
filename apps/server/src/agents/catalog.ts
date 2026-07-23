@@ -30,7 +30,6 @@ import {
     syncAgentsForRuntime,
     updateAgentEnabledSkillIds,
 } from '../storage/agents.ts';
-import type { AgentDetail, DashboardData } from './contracts.ts';
 import { buildAgentPalette, resolveAgentDefaultPrimaryColor, resolveAgentName } from './palette.ts';
 
 export {
@@ -40,12 +39,10 @@ export {
     querySenderLabelDiscordIds,
 } from './discord-bindings.ts';
 
-const agentTargetPattern = /^agent:([^:]+)/;
 const hexColorPattern = /^#[0-9a-f]{6}$/i;
 const fallbackAgentUpdatedAt = new Date(0).toISOString();
 
 export interface Agent {
-    autoDispatchEnabled: boolean;
     bio: string | null;
     character: AgentCharacter | null;
     enabledPluginIds: NonNullable<AgentRuntimeAgent['enabledPluginIds']>;
@@ -54,7 +51,6 @@ export interface Agent {
     name: string;
     primaryColor: string | null;
     runtimeId: string;
-    taskReviewPolicy: boolean;
     updatedAt: string;
     userInstructions: string;
     webAccessEnabled: boolean;
@@ -92,7 +88,6 @@ export const agentUserInstructionsSchema = z.string().max(20_000).nullable();
 export const agentCharacterProfileSchema = agentCharacterSchema.nullable();
 
 export interface AgentCatalogItem {
-    autoDispatchEnabled: boolean;
     bio: string | null;
     character: AgentCharacter | null;
     defaultCharacter: AgentCharacter;
@@ -105,17 +100,11 @@ export interface AgentCatalogItem {
     name: string;
     primaryColor: string | null;
     runtimeId: string;
-    taskReviewPolicy: boolean;
     title: string;
     updatedAt: string;
     userInstructions: string;
     usesAllSkills: boolean;
     webAccessEnabled: boolean;
-}
-
-interface LiveSessionLike {
-    agentId: string;
-    channel: string;
 }
 
 function parseEnabledSkillIds(agent: AgentRecord) {
@@ -132,7 +121,6 @@ function parseCharacter(value: string | null | undefined): AgentCharacter | null
 function toAgent(agent: AgentRecord, profile: AgentProfileLike | null): Agent {
     const runtimeAgent = parseAgentRawJson(agent);
     return {
-        autoDispatchEnabled: runtimeAgent.autoDispatchEnabled === true,
         webAccessEnabled: runtimeAgent.webAccessEnabled === true,
         bio: parseAgentRawJson(agent).bio ?? null,
         character: parseCharacter(profile?.character),
@@ -142,7 +130,6 @@ function toAgent(agent: AgentRecord, profile: AgentProfileLike | null): Agent {
         name: agent.name,
         primaryColor: profile?.primaryColor ?? agent.primaryColor ?? null,
         runtimeId: agent.runtimeId,
-        taskReviewPolicy: runtimeAgent.taskReviewPolicy === true,
         updatedAt: profile?.updatedAt ?? fallbackAgentUpdatedAt,
         userInstructions: profile?.userInstructions ?? '',
     };
@@ -191,7 +178,6 @@ export function toAgentCatalogItem(
     const defaultCharacter = resolveAgentDefaultCharacter(agent.id);
 
     return {
-        autoDispatchEnabled: agent.autoDispatchEnabled,
         webAccessEnabled: agent.webAccessEnabled,
         bio: agent.bio,
         character: agent.character,
@@ -205,7 +191,6 @@ export function toAgentCatalogItem(
         name: resolveAgentName(agent),
         primaryColor: agent.primaryColor,
         runtimeId: agent.runtimeId,
-        taskReviewPolicy: agent.taskReviewPolicy,
         title: agent.name,
         updatedAt: agent.updatedAt,
         userInstructions: agent.userInstructions,
@@ -246,51 +231,6 @@ export async function requirePrimaryAgent() {
     }
 
     return agent;
-}
-
-export function buildDashboardAgents(input: {
-    agents: Agent[];
-    cronJobs: AgentDetail['cronJobs'];
-    sessions: LiveSessionLike[];
-}): DashboardData['agents'] {
-    return [...input.agents]
-        .sort((left, right) => resolveAgentName(left).localeCompare(resolveAgentName(right)))
-        .map((agent, index) => {
-            const palette = buildAgentPalette(agent);
-            const sessions = input.sessions.filter((session) => session.agentId === agent.id);
-            const cronCount = input.cronJobs.filter(
-                (job) => deriveTargetAgentId(job.target) === agent.id
-            ).length;
-
-            return {
-                accentFrom: palette.accentFrom,
-                accentTo: palette.accentTo,
-                chatCount: new Set(sessions.map((session) => session.channel)).size,
-                cronCount,
-                description: 'Runtime-backed agent.',
-                id: agent.id,
-                kind: 'agent',
-                layout: {
-                    x: ((index % 3) + 1) * 25,
-                    y: Math.floor(index / 3) * 28 + 20,
-                },
-                memoryCount: 0,
-                name: resolveAgentName(agent),
-                parentId: null,
-                peerIds: [],
-                sessionCount: sessions.length,
-                title: agent.name,
-            } satisfies DashboardData['agents'][number];
-        });
-}
-
-export function deriveTargetAgentId(target: string) {
-    if (target === 'agent-runtime') {
-        return null;
-    }
-
-    const match = target.match(agentTargetPattern);
-    return match?.[1] ?? target;
 }
 
 export async function saveCatalogAgentSettings(
@@ -580,7 +520,6 @@ function toAgentFromAgentRuntimeAgent(input: {
     runtimeId: string;
 }): Agent {
     return {
-        autoDispatchEnabled: input.agent.autoDispatchEnabled === true,
         webAccessEnabled: input.agent.webAccessEnabled === true,
         bio: input.agent.bio ?? null,
         character: parseCharacter(input.profile?.character),
@@ -590,7 +529,6 @@ function toAgentFromAgentRuntimeAgent(input: {
         name: input.agent.name,
         primaryColor: input.profile?.primaryColor ?? input.agent.primaryColor ?? null,
         runtimeId: input.runtimeId,
-        taskReviewPolicy: input.agent.taskReviewPolicy === true,
         updatedAt: input.profile?.updatedAt ?? fallbackAgentUpdatedAt,
         userInstructions: input.profile?.userInstructions ?? '',
     };

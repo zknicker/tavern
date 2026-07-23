@@ -123,6 +123,7 @@ export function ThreadPanel({
                             anchorMessageId={state.anchorMessageId}
                             anchorRow={anchorRow}
                             chat={chat}
+                            compositionTarget={titles.target}
                             open={open}
                             replyCount={thread?.replyCount ?? 0}
                             threadChatId={threadChatId}
@@ -131,7 +132,6 @@ export function ThreadPanel({
                         <>
                             <div className="min-h-0 flex-1">
                                 <ChatTranscript
-                                    activeReplies={[]}
                                     leadingContent={
                                         <ThreadLeadingContent
                                             anchorRow={anchorRow}
@@ -161,6 +161,7 @@ function SyncedThreadBody({
     anchorMessageId,
     anchorRow,
     chat,
+    compositionTarget,
     open,
     replyCount,
     threadChatId,
@@ -169,6 +170,7 @@ function SyncedThreadBody({
     anchorMessageId: string;
     anchorRow: TranscriptMessageRow;
     chat: ChatListItem;
+    compositionTarget: string | null;
     open: boolean;
     replyCount: number;
     threadChatId: string;
@@ -180,12 +182,11 @@ function SyncedThreadBody({
         <>
             <div className="min-h-0 flex-1">
                 <ChatTranscript
-                    activeReplies={timeline.activeReplies}
                     canRequestMention={!chat.archived}
                     chatId={threadChatId}
+                    compositionTarget={compositionTarget}
                     composerId={`${chat.id}:thread:${anchorMessageId}`}
                     conversationLayout={getChatMessageLayout(chat)}
-                    failedTurns={timeline.failedTurns}
                     leadingContent={
                         <ThreadLeadingContent anchorRow={anchorRow} replyCount={replyCount} />
                     }
@@ -292,7 +293,7 @@ function findAnchorRow(rows: NonNullable<ChatLogOutput>['rows'], messageId: stri
 }
 
 function findAnchorEntryId(rows: NonNullable<ChatLogOutput>['rows'], messageId: string) {
-    const entries = buildTranscriptEntries({ activeReplies: [], rows });
+    const entries = buildTranscriptEntries({ rows });
     return (
         entries.find(
             (entry) =>

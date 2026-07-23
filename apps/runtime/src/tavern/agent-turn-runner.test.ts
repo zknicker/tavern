@@ -1,270 +1,269 @@
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import path from 'node:path';
-import type { AgentRuntimeAgentSession } from '@tavern/api';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { closeDb, getDb, initTestDb } from '../db/connection';
-import { ensureRuntimeSchema } from '../db/schema';
-import { saveAgentModelSelectionIntent } from '../models/selection-service';
-import { registerAgentWorkspace } from '../workspace/instructions';
-import type { AgentExecutorInput } from './agent-executor';
-import { ensureCurrentAgentSession, updateAgentSessionRuntimeState } from './agent-session-store';
+import { closeDb, initTestDb } from '../db/connection.ts';
+import { ensureRuntimeSchema } from '../db/schema.ts';
+import { muteAgentChannel } from './agent-channels.ts';
+import type { AgentExecutorInput } from './agent-executor.ts';
+import { checkAgentMessages } from './agent-inbox-api.ts';
+import { ensureCurrentAgentSession, startNewAgentSession } from './agent-session-store.ts';
 import {
-    enqueueAgentTurn,
     setAgentExecutorForTesting,
-    waitForAgentTurnSettlement,
-} from './agent-turn-runner';
-import { claimNextAgentTurnForAgent, createAgentTurn, getAgentTurn } from './agent-turn-store';
-import { getStoredAgent, upsertStoredAgent } from './agents-store';
-import { createChat, createMessage, getResponseActivity, upsertResponse } from './chat-api';
-import { getAgentTurnFileEvidence } from './turn-file-changes';
-import { fileChangesActivityIdForRun } from './turn-file-evidence';
+    stopAgentTurns,
+    wakeAgent,
+} from './agent-turn-runner.ts';
+import {
+    createAgentTurn,
+    hasUnsettledAgentTurnsForAgent,
+    listAgentTurnsForSession,
+} from './agent-turn-store.ts';
+import { upsertStoredAgent } from './agents-store.ts';
+import { createAgentParticipantId, createMessageId } from './chat-api/ids.ts';
+import { createChat, createMessage } from './chat-api/index.ts';
+import { planMessageDelivery } from './delivery-planner.ts';
+import { listInboxPierces, readInboxCursor } from './inbox-cursors.ts';
+import { subscribeToRuntimeEvents } from './runtime-events.ts';
 
-describe('Tavern Runtime agent turn runner', () => {
-    let restoreExecutor: (() => void) | null = null;
+const agentId = 'agt_runner';
+
+describe('floating turn runner (I1)', () => {
+    const executed: AgentExecutorInput[] = [];
+    const stoppedRunIds: string[] = [];
+    let blockNextDrain = false;
+    let failDrains = false;
+    let pullDuringDrain = false;
+    let releaseBlockedDrain: (() => void) | undefined;
+    let restoreExecutor: (() => void) | undefined;
 
     beforeEach(() => {
         ensureRuntimeSchema(initTestDb());
+        executed.length = 0;
+        stoppedRunIds.length = 0;
+        blockNextDrain = false;
+        failDrains = false;
+        pullDuringDrain = false;
+        releaseBlockedDrain = undefined;
+        restoreExecutor = setAgentExecutorForTesting({
+            execute: (input) => {
+                executed.push(input);
+                const isDrain = input.prompt.startsWith('New message');
+                if (pullDuringDrain && isDrain) {
+                    checkAgentMessages(agentId);
+                }
+                if (blockNextDrain && isDrain) {
+                    blockNextDrain = false;
+                    return new Promise((resolve) => {
+                        releaseBlockedDrain = () => resolve({ contextTokens: 123 });
+                    });
+                }
+                if (failDrains && isDrain) {
+                    return Promise.reject(new Error('boom'));
+                }
+                return Promise.resolve({ contextTokens: 123 });
+            },
+            stop: (runId) => {
+                stoppedRunIds.push(runId);
+                releaseBlockedDrain?.();
+                return true;
+            },
+        });
+        upsertStoredAgent({
+            agent: {
+                enabledSkillIds: [],
+                id: agentId,
+                isAdmin: false,
+                name: 'Runner',
+                primaryColor: null,
+                workspaceFolder: '/tmp/agt_runner',
+            },
+        });
+        createChat({
+            id: 'cht_run',
+            kind: 'channel',
+            participants: [
+                { id: 'usr_tavern', kind: 'user', label: 'zach', metadata: {} },
+                {
+                    id: createAgentParticipantId(agentId),
+                    kind: 'agent',
+                    label: 'Runner',
+                    metadata: { agentId },
+                },
+            ],
+            title: 'run',
+        });
     });
 
     afterEach(() => {
         restoreExecutor?.();
-        restoreExecutor = null;
         closeDb();
     });
 
-    it('executes a queued turn with the session state its predecessor persisted', async () => {
-        // A mention enqueues the seat's next turn while the current one is
-        // still running, so the queued input carries a session snapshot from
-        // before that turn persisted its engine session. The claimed turn
-        // must re-read the session row — otherwise the trailing turn starts
-        // a fresh engine session and silently drops the seat's context chain.
-        const staleSession = seedSeat();
-        const executedSessions: AgentRuntimeAgentSession[] = [];
-        let releaseFirstTurn = () => {};
-        const firstTurnGate = new Promise<void>((resolve) => {
-            releaseFirstTurn = resolve;
+    it('runs Start. first on a fresh session, then one batched drain', async () => {
+        const first = send('hello');
+        const second = send('again');
+        planMessageDelivery('cht_run', first);
+        planMessageDelivery('cht_run', second);
+        wakeAgent(agentId);
+
+        const session = ensureCurrentAgentSession({ agentId });
+        await settled(session.id, 2);
+        const turns = listAgentTurnsForSession(session.id);
+        expect(turns[0]?.kind).toBe('start');
+        expect(turns[0]?.status).toBe('completed');
+        expect(executed[0]?.prompt).toBe('Start.');
+        const drainPrompt = executed[1]?.prompt ?? '';
+        expect(drainPrompt.startsWith('New messages received:')).toBe(true);
+        expect(drainPrompt).toContain('hello');
+        expect(drainPrompt).toContain('again');
+        // Embedded envelopes advanced `seen` at settle (I3).
+        expect(readInboxCursor(session.id, 'cht_run').seenUpToSeq).toBe(second.sequence);
+    });
+
+    it('leaves cursors untouched when the drain fails, so catch-up re-delivers', async () => {
+        failDrains = true;
+        const message = send('will fail');
+        planMessageDelivery('cht_run', message);
+        const session = ensureCurrentAgentSession({ agentId });
+        wakeAgent(agentId);
+        await settled(session.id, 2);
+
+        const turns = listAgentTurnsForSession(session.id);
+        expect(turns.some((turn) => turn.kind === 'drain' && turn.status === 'failed')).toBe(true);
+        // No proof, no advancement (I3): the failed drain's envelopes were
+        // never provably seen, so the pending rows re-deliver from `seen`.
+        expect(readInboxCursor(session.id, 'cht_run').seenUpToSeq).toBe(0);
+        expect(readInboxCursor(session.id, 'cht_run').deliveredUpToSeq).toBe(message.sequence);
+    });
+
+    it('cancels queued work before the running turn without starting a replacement', async () => {
+        const session = await bootIdleSession();
+        blockNextDrain = true;
+        const message = send('block this drain');
+        planMessageDelivery('cht_run', message);
+        wakeAgent(agentId);
+        await waitFor(() => executed.some((input) => input.prompt.includes('block this drain')));
+        const running = listAgentTurnsForSession(session.id).find(
+            (turn) => turn.status === 'running'
+        );
+        createAgentTurn({
+            agentId,
+            agentSessionId: session.id,
+            id: 'run_queued_after_running',
+            kind: 'drain',
         });
 
-        restoreExecutor = setAgentExecutorForTesting({
-            execute: async (input) => {
-                executedSessions.push(input.agentSession);
-                if (input.runId === 'run_1') {
-                    await firstTurnGate;
-                    updateAgentSessionRuntimeState({
-                        id: input.agentSession.id,
-                        resumeState: { harness: 'state-from-turn-1' },
-                        runtimeSessionId: 'ses_engine_1',
-                    });
-                }
-                return { activityIds: [], outputMessageIds: [] };
-            },
+        await stopAgentTurns(agentId);
+        await settled(session.id, 4);
+
+        const turns = listAgentTurnsForSession(session.id);
+        expect(running?.status).toBe('running');
+        expect(turns.find((turn) => turn.id === running?.id)?.status).toBe('cancelled');
+        expect(turns.find((turn) => turn.id === 'run_queued_after_running')?.status).toBe(
+            'cancelled'
+        );
+        expect(stoppedRunIds).toEqual([running?.id]);
+        expect(executed.filter((input) => input.prompt.includes('block this drain'))).toHaveLength(
+            1
+        );
+    });
+
+    it('rechecks the current session for pending work after a turn settles', async () => {
+        const original = await bootIdleSession();
+        blockNextDrain = true;
+        const oldMessage = send('old session work');
+        planMessageDelivery('cht_run', oldMessage);
+        wakeAgent(agentId);
+        await waitFor(() => executed.some((input) => input.prompt.includes('old session work')));
+
+        const current = startNewAgentSession({ agentId });
+        const freshMessage = send('fresh session work');
+        planMessageDelivery('cht_run', freshMessage);
+        releaseBlockedDrain?.();
+
+        await settled(current.id, 2);
+        expect(original.id).not.toBe(current.id);
+        expect(executed.some((input) => input.prompt.includes('fresh session work'))).toBe(true);
+        expect(readInboxCursor(current.id, 'cht_run').seenUpToSeq).toBe(freshMessage.sequence);
+    });
+
+    it('publishes presence updates when a turn is claimed and settled', async () => {
+        const presence: boolean[] = [];
+        const unsubscribe = subscribeToRuntimeEvents((event) => {
+            if (event.type === 'agent.updated' && event.agentId === agentId) {
+                presence.push(hasUnsettledAgentTurnsForAgent(agentId));
+            }
         });
+        const message = send('presence work');
+        planMessageDelivery('cht_run', message);
 
-        enqueueAgentTurn(turnInput({ index: 1, session: staleSession }));
-        // Mimics mention dispatch: enqueued mid-turn with the same stale snapshot.
-        enqueueAgentTurn(turnInput({ index: 2, session: staleSession }));
-        releaseFirstTurn();
+        wakeAgent(agentId);
+        const session = ensureCurrentAgentSession({ agentId });
+        await settled(session.id, 2);
+        unsubscribe();
 
-        await waitForAgentTurnSettlement('run_2');
-
-        expect(executedSessions).toHaveLength(2);
-        expect(executedSessions[0]?.runtimeSessionId).toBeNull();
-        expect(executedSessions[1]).toMatchObject({
-            id: staleSession.id,
-            resumeState: { harness: 'state-from-turn-1' },
-            runtimeSessionId: 'ses_engine_1',
-        });
+        expect(presence).toContain(true);
+        expect(presence.at(-1)).toBe(false);
     });
 
-    it('claims the oldest queued turn across chats, one at a time (auto-drain order)', () => {
-        upsertStoredAgent({
-            agent: {
-                enabledSkillIds: [],
-                id: 'agt_drain',
-                isAdmin: false,
-                name: 'Drain',
-                primaryColor: null,
-                workspaceFolder: '/tmp/agt_drain',
-            },
-        });
-        const session = ensureCurrentAgentSession({ agentId: 'agt_drain' });
-        for (const chatId of ['cht_drain_a', 'cht_drain_b']) {
-            createChat({
-                id: chatId,
-                kind: 'channel',
-                participants: [
-                    { id: 'usr_tavern', kind: 'user', label: 'You', metadata: {} },
-                    {
-                        id: 'agt_drain',
-                        kind: 'agent',
-                        label: 'Drain',
-                        metadata: { agentId: 'agt_drain' },
-                    },
-                ],
-                title: chatId,
-            });
-        }
-        const seed = (runId: string, chatId: string) => {
-            createMessage(chatId, {
-                author_id: 'usr_tavern',
-                content: `work ${runId}`,
-                id: `msg_${runId}`,
-                role: 'user',
-            });
-            upsertResponse(chatId, {
-                id: `rsp_${runId}`,
-                participant_id: 'agt_drain',
-                request_message_id: `msg_${runId}`,
-                status: 'queued',
-            });
-            createAgentTurn({
-                agentId: 'agt_drain',
-                agentParticipantId: 'agt_drain',
-                agentSessionId: session.id,
-                chatId,
-                id: runId,
-                responseId: `rsp_${runId}`,
-                triggerMessageId: `msg_${runId}`,
-            });
-        };
-        // Enqueued in b, a, b order: the claim must walk strictly oldest
-        // first across chats — no chat priority, no preemption
-        // (specs/sessions.md attention).
-        seed('run_1', 'cht_drain_b');
-        seed('run_2', 'cht_drain_a');
-        seed('run_3', 'cht_drain_b');
+    it('restores served pierces after failure and clears them after completion', async () => {
+        const session = await bootIdleSession();
+        muteAgentChannel(agentId, { target: '#run' });
+        pullDuringDrain = true;
+        failDrains = true;
+        const mention = send('ping @Runner');
+        planMessageDelivery('cht_run', mention);
 
-        const first = claimNextAgentTurnForAgent({ agentId: 'agt_drain' });
-        expect(first?.id).toBe('run_1');
-        // One turn at a time: nothing else claims while run_1 runs.
-        expect(claimNextAgentTurnForAgent({ agentId: 'agt_drain' })).toBeNull();
+        wakeAgent(agentId);
+        await waitFor(() =>
+            listAgentTurnsForSession(session.id).some(
+                (turn) => turn.kind === 'drain' && turn.status === 'failed'
+            )
+        );
+        expect(listInboxPierces(session.id, { excludeServed: true })).toEqual([
+            { chatId: 'cht_run', messageId: mention.id },
+        ]);
+
+        failDrains = false;
+        wakeAgent(agentId);
+        await waitFor(() =>
+            listAgentTurnsForSession(session.id).some(
+                (turn) => turn.kind === 'drain' && turn.status === 'completed'
+            )
+        );
+        expect(listInboxPierces(session.id)).toEqual([]);
     });
 
-    it('settles workspace file-change evidence when a turn writes files', async () => {
-        const session = seedSeat();
-        const workspaceDir = await mkdtemp(path.join(tmpdir(), 'tavern-turn-ws-'));
-        try {
-            await writeFile(path.join(workspaceDir, 'NOTES.md'), 'before\n');
-            registerAgentWorkspace(getDb(), { agentId: 'agt_primary', workspaceDir });
-
-            restoreExecutor = setAgentExecutorForTesting({
-                execute: async () => {
-                    await writeFile(path.join(workspaceDir, 'NOTES.md'), 'after\nmore\n');
-                    await writeFile(path.join(workspaceDir, 'report.md'), 'fresh\n');
-                    return { activityIds: [], outputMessageIds: [] };
-                },
-            });
-
-            enqueueAgentTurn(turnInput({ index: 1, session }));
-            await waitForAgentTurnSettlement('run_1');
-
-            const evidence = getAgentTurnFileEvidence('run_1');
-            expect(evidence?.truncated).toBe(false);
-            expect(evidence?.changes.map((change) => [change.path, change.change])).toEqual([
-                ['NOTES.md', 'modified'],
-                ['report.md', 'created'],
-            ]);
-
-            const activityId = fileChangesActivityIdForRun('run_1');
-            const activity = getResponseActivity(activityId);
-            expect(activity).toMatchObject({
-                kind: 'tool_call',
-                status: 'completed',
-                title: 'Changed 2 files',
-            });
-            expect(activity?.metadata).toMatchObject({ toolName: 'workspace_changes' });
-            expect(getAgentTurn('run_1')?.activityIds).toContain(activityId);
-        } finally {
-            await rm(workspaceDir, { force: true, recursive: true });
-        }
-    });
-
-    it('leaves turns without file work free of change evidence', async () => {
-        const session = seedSeat();
-        const workspaceDir = await mkdtemp(path.join(tmpdir(), 'tavern-turn-ws-'));
-        try {
-            registerAgentWorkspace(getDb(), { agentId: 'agt_primary', workspaceDir });
-            restoreExecutor = setAgentExecutorForTesting({
-                execute: () => Promise.resolve({ activityIds: [], outputMessageIds: [] }),
-            });
-
-            enqueueAgentTurn(turnInput({ index: 1, session }));
-            await waitForAgentTurnSettlement('run_1');
-
-            expect(getAgentTurnFileEvidence('run_1')).toBeNull();
-            expect(getResponseActivity(fileChangesActivityIdForRun('run_1'))).toBeNull();
-        } finally {
-            await rm(workspaceDir, { force: true, recursive: true });
-        }
-    });
-});
-
-function seedSeat() {
-    upsertStoredAgent({
-        agent: {
-            enabledSkillIds: [],
-            id: 'agt_primary',
-            isAdmin: true,
-            name: 'Tavern',
-            primaryColor: null,
-            workspaceFolder: '.tavern/agents/agt_primary/workspace',
-        },
-        syncedAt: '2026-07-14T12:00:00.000Z',
-    });
-    saveAgentModelSelectionIntent({
-        agentId: 'agt_primary',
-        modelName: { model: 'gpt-4.1-mini', provider: 'openai' },
-    });
-    createChat({
-        id: 'cht_1',
-        kind: 'channel',
-        title: 'general',
-        participants: [
-            { id: 'usr_tavern', kind: 'user', label: 'You', metadata: {} },
-            {
-                id: 'agt_primary',
-                kind: 'agent',
-                label: 'Tavern',
-                metadata: { agentId: 'agt_primary' },
-            },
-        ],
-    });
-
-    return ensureCurrentAgentSession({ agentId: 'agt_primary', now: '2026-07-14T12:00:00.000Z' });
-}
-
-function turnInput(input: {
-    index: number;
-    session: AgentRuntimeAgentSession;
-}): AgentExecutorInput {
-    const agent = getStoredAgent('agt_primary');
-    if (!agent) {
-        throw new Error('Test agent is missing.');
+    function send(content: string) {
+        return createMessage('cht_run', {
+            author_id: 'usr_tavern',
+            content,
+            id: createMessageId(),
+            role: 'user',
+        }).message;
     }
 
-    createMessage('cht_1', {
-        author_id: 'usr_tavern',
-        content: `trigger ${input.index}`,
-        id: `msg_${input.index}`,
-        role: 'user',
-    });
-    upsertResponse('cht_1', {
-        id: `rsp_${input.index}`,
-        participant_id: 'agt_primary',
-        request_message_id: `msg_${input.index}`,
-        status: 'running',
-    });
+    async function bootIdleSession() {
+        wakeAgent(agentId);
+        const session = ensureCurrentAgentSession({ agentId });
+        await settled(session.id, 2);
+        return session;
+    }
 
-    return {
-        agent,
-        agentParticipantId: 'agt_primary',
-        agentSession: input.session,
-        attachments: [],
-        chatId: 'cht_1',
-        content: `trigger ${input.index}`,
-        requestMessageId: `msg_${input.index}`,
-        responseId: `rsp_${input.index}`,
-        runId: `run_${input.index}`,
-    };
+    async function settled(sessionId: string, minTurns: number) {
+        await waitFor(() => {
+            const turns = listAgentTurnsForSession(sessionId);
+            return (
+                turns.length >= minTurns &&
+                turns.every((turn) => turn.status !== 'queued' && turn.status !== 'running')
+            );
+        });
+    }
+});
+
+async function waitFor(check: () => boolean, timeoutMs = 3000) {
+    const startedAt = Date.now();
+    while (!check()) {
+        if (Date.now() - startedAt > timeoutMs) {
+            throw new Error('Timed out waiting for condition.');
+        }
+        await new Promise((resolve) => setTimeout(resolve, 10));
+    }
 }

@@ -4,7 +4,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { AgentCapabilitiesSummary, CapabilityTooltipContent } from './agent-capabilities-table.tsx';
 
 function capability(input: {
-    capability: 'apiServer' | 'dashboardServer' | 'gateway' | 'modelExecution' | 'skills' | 'wiki';
+    capability: 'apiServer' | 'dashboardServer' | 'gateway' | 'modelExecution' | 'skills';
     displayName?: string;
     state?: 'degraded' | 'healthy' | 'unknown' | 'unavailable';
 }) {
@@ -29,7 +29,7 @@ test('AgentCapabilitiesSummary renders per-capability refresh actions', () => {
         <AgentCapabilitiesSummary
             capabilities={[
                 {
-                    capability: 'wiki',
+                    capability: 'skills',
                     checkedAt: '2026-05-28T12:00:00.000Z',
                     displayName: 'Memory',
                     errorCode: null,
@@ -88,9 +88,9 @@ test('AgentCapabilitiesSummary renders a provisioning progress bar from capabili
         <AgentCapabilitiesSummary
             capabilities={[
                 {
-                    capability: 'wikiRecall',
+                    capability: 'skills',
                     checkedAt: '2026-05-28T12:00:00.000Z',
-                    displayName: 'Wiki recall',
+                    displayName: 'Skills',
                     errorCode: null,
                     lastHealthyAt: null,
                     metadataJson: '{"phase":"downloading-model","progress":0.42}',
@@ -105,7 +105,7 @@ test('AgentCapabilitiesSummary renders a provisioning progress bar from capabili
         />
     );
 
-    assert.match(markup, /Wiki recall/);
+    assert.match(markup, /Skills/);
     assert.match(markup, /progressbar/);
     assert.match(markup, /42%/);
 });
@@ -115,9 +115,9 @@ test('AgentCapabilitiesSummary ignores progress metadata on healthy capabilities
         <AgentCapabilitiesSummary
             capabilities={[
                 {
-                    capability: 'wikiRecall',
+                    capability: 'skills',
                     checkedAt: '2026-05-28T12:00:00.000Z',
-                    displayName: 'Wiki recall',
+                    displayName: 'Skills',
                     errorCode: null,
                     lastHealthyAt: null,
                     metadataJson: '{"phase":"ready"}',
@@ -139,9 +139,9 @@ test('CapabilityTooltipContent leads with the customer-facing capability explain
     const markup = renderToStaticMarkup(
         <CapabilityTooltipContent
             capability={{
-                capability: 'wikiRecall',
+                capability: 'skills',
                 checkedAt: '2026-05-28T12:00:00.000Z',
-                displayName: 'Wiki recall',
+                displayName: 'Skills',
                 errorCode: null,
                 lastHealthyAt: null,
                 metadataJson: '{"phase":"ready"}',
@@ -155,6 +155,6 @@ test('CapabilityTooltipContent leads with the customer-facing capability explain
         />
     );
 
-    assert.match(markup, /indexed automatically whenever they change/);
+    assert.match(markup, /Reusable skills agents load/);
     assert.match(markup, /Healthy/);
 });

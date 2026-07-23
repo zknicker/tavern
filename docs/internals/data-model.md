@@ -1,5 +1,5 @@
 ---
-summary: Tavern data model for Runtime chat tables, responses, activity, artifacts, wiki ids, transactions, execution evidence, app cache, FTS, and invariants.
+summary: Tavern data model for Runtime chat tables, inbox delivery, execution evidence, artifacts, app cache, FTS, and invariants.
 read_when:
   - changing SQLite tables, ids, sync invariants, or runtime transcript storage
   - changing chat/session/message identity, event recovery, or sync semantics
@@ -12,9 +12,9 @@ Tavern Runtime is the always-on chat server.
 Agents participate in Tavern chats as Runtime-owned chat participants. An agent
 participant is an Agent seat, and the seat points at its current Agent session.
 The engine owns model calls, tools, files, and native execution details. Tavern
-Runtime owns chats, participants, Agent sessions, messages, responses, activity,
-artifacts, sequence, events, reads, soft deletes, automations, deliveries, and
-the product timeline.
+Runtime owns chats, participants, Agent sessions, Agent turns, messages,
+artifacts, sequence, events, reads, soft deletes, automations, inbox
+delivery, and the product timeline.
 
 ## Source Files
 
@@ -22,10 +22,9 @@ the product timeline.
 | ------------------------ | --------------------------------------------------- | ------------------------------------------------------------------------------------------- |
 | Runtime schema           | `apps/runtime/src/db/schema.ts`                     | Runtime SQLite schema and fresh setup                                                       |
 | Runtime chat store       | `apps/runtime/src/tavern/chat-api/`                 | OpenAPI-backed chat, message, response, activity, artifact, delivery, read, and event store |
-| Runtime channel relay    | `apps/runtime/src/tavern/channel-relay.ts`          | Durable message acceptance and agent turn startup                                           |
+| Runtime delivery planner | `apps/runtime/src/tavern/delivery-planner.ts`       | Attention-rule delivery planning and agent wake (specs/inbox.md)                            |
 | Runtime agent sessions   | `apps/runtime/src/tavern/agent-session-store.ts`    | Agent global session state and lazy model-switch rotation                                  |
 | Runtime model profiles   | `apps/runtime/src/models/runtime-profile-store.ts`  | Per-agent default execution model for new Agent sessions                                     |
-| Wiki store               | `apps/runtime/src/wiki/`                 | Runtime read API over the user's Wiki Markdown files                                         |
 | Runtime chat tests       | `apps/runtime/src/tavern/chat-api-store.test.ts`    | Contract, identity, sequence, event, read, and route behavior                               |
 | Runtime timeline tests   | `apps/runtime/src/tavern/chat-api-timeline.test.ts` | Turn-aligned history pages, cursor stability, and window alignment                          |
 | App schema               | `apps/server/src/db/bootstrap.ts`                   | App SQLite fresh setup                                                                      |
@@ -37,9 +36,8 @@ the product timeline.
 
 | Store                    | Owner                                      | Contents                                                                                                                          |
 | ------------------------ | ------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------- |
-| Runtime SQLite           | Tavern Runtime                             | Canonical chat model, automation delivery, agent seats, Agent sessions, cursor-backed events, read markers, runtime metadata |
+| Runtime SQLite           | Tavern Runtime                             | Canonical chat model, automation delivery, agent seats, Agent sessions, inbox delivery cursors, cursor-backed events, read markers, runtime metadata |
 | App SQLite               | Tavern App                                 | Client cache, app-shell preferences, and presentation state                                                                       |
-| Wiki                     | Wiki tools and agent file tools            | Markdown pages under the configured Wiki root                                                                                     |
 | Agent execution evidence | Tavern Runtime                             | Sessions, turns, tools, model calls, transcripts, and files                                                                       |
 
 Runtime SQLite is the product source of truth for chat. App SQLite can cache for
@@ -74,8 +72,6 @@ Read markers are scoped records, not standalone product ids.
 Engine ids and runtime agent ids remain source ids. Store them in runtime
 metadata or source fields, not as Tavern product ids unless Tavern minted them.
 
-Wiki page identity is the Markdown path relative to the configured Wiki root.
-
 ## Runtime Chat Tables
 
 ```text
@@ -89,12 +85,25 @@ chat_artifacts
 chat_deliveries
 chat_events
 chat_reads
+agent_inbox_cursors
+agent_channel_mutes
+agent_inbox_pierces
+agent_session_served_cursors
 ```
 
 These tables live in Runtime SQLite and back the OpenAPI chat contract.
 Runtime derives `chat.last_activity_at` from the latest undeleted
 `chat_messages.created_at`; `chats.updated_at` remains metadata/container
 update time.
+
+`chat_responses`, `chat_response_activity`, and `chat_deliveries` remain real,
+schema-backed tables — agents no longer write through them for live
+execution (ADR 0014: agents write reply messages themselves via
+`grotto message send`, and `agent_turns` is the durable execution record).
+They stay wired for seeded chat demos and external clients. `agent_inbox_*`
+and `agent_session_served_cursors` are the current delivery/freshness ledger
+(specs/inbox.md), replacing the retired `agent_session_chat_cursors` /
+`agent_served_chat_cursors` per-chat model.
 
 Agent sessions also live in Runtime SQLite. They are execution routing state,
 not chat history.
@@ -302,8 +311,10 @@ idx_chat_messages_agent_session(agent_session_id)
 Rules:
 
 - Message creation is durable before model work starts.
-- A channel message starts no agent work unless its content includes explicit
-  `agent://` rich references for one or more agent participants in that chat.
+- A durable message never starts a turn directly. Inbox delivery planning
+  queues it per attention rules for every joined/following agent regardless
+  of mentions, and an idle agent's next drain turn picks it up
+  (specs/inbox.md).
 - An agent DM addresses its one agent participant implicitly.
 - Sequence is assigned in the message insert transaction.
 - Duplicate `message.id` returns the existing message.
@@ -359,50 +370,46 @@ Rules:
 
 ## `agent_turns`
 
-Durable execution records for one Agent seat handling one triggering message.
+Durable, floating execution records (ADR 0014). A turn anchors to the
+agent's global session, never a chat or a triggering message — inbox
+delivery decides what content the agent sees; the turn record just tracks
+that an execution happened.
 
 ```text
 agent_turns
-  id                      TEXT PRIMARY KEY        -- run_...
-  chat_id                 TEXT NOT NULL
-  agent_session_id        TEXT NOT NULL
-  agent_participant_id    TEXT NOT NULL
-  agent_id                TEXT NOT NULL
-  trigger_message_id      TEXT NOT NULL
-  response_id             TEXT NOT NULL
-  status                  TEXT NOT NULL           -- queued, running, completed, failed, cancelled
-  attempt                 INTEGER NOT NULL
-  output_message_ids_json TEXT NOT NULL DEFAULT '[]'
-  activity_ids_json       TEXT NOT NULL DEFAULT '[]'
-  metadata_json           TEXT NOT NULL DEFAULT '{}'
-  created_at              TEXT NOT NULL
-  updated_at              TEXT NOT NULL
-  started_at              TEXT
-  completed_at            TEXT
+  id                 TEXT PRIMARY KEY        -- run_...
+  agent_id           TEXT NOT NULL
+  agent_session_id   TEXT NOT NULL
+  kind               TEXT NOT NULL           -- start, drain
+  status             TEXT NOT NULL           -- queued, running, completed, failed, cancelled
+  metadata_json      TEXT NOT NULL DEFAULT '{}'
+  created_at         TEXT NOT NULL
+  updated_at         TEXT NOT NULL
+  started_at         TEXT
+  completed_at       TEXT
 ```
 
 Indexes:
 
 ```text
 idx_agent_turns_session_status(agent_session_id, status, created_at)
-idx_agent_turns_chat_updated(chat_id, updated_at)
+idx_agent_turns_agent_created(agent_id, created_at)
 ```
 
 Rules:
 
-- A turn is owned by one Agent session and one Agent seat.
-- A turn points at the durable triggering message and response row.
-- `output_message_ids_json` records durable assistant message ids produced by
-  the turn.
-- `activity_ids_json` records durable response activity ids produced by the
-  turn.
-- One Agent seat may have at most one running turn for its current Agent
-  session. Later addressed messages queue as `queued` turns.
-- Different Agent seats may have running turns concurrently.
+- A turn is owned by one Agent session. `kind: start` is the bare `Start.`
+  turn a fresh session gets first; `kind: drain` delivers one or more
+  pending inbox targets as batched envelopes.
+- An agent has at most one running/queued turn per session at a time; the
+  agent activity feed and presence project from this table
+  (specs/agent-activity.md, specs/presence.md).
+- Prompt evidence and errors ride `metadata_json`; file-change evidence is
+  `agent_turn_file_changes`, keyed by this table's `id` as `run_id`.
 - Active streaming and cancellation handles are transient Runtime memory, not
   chat history.
-- Stop transitions a queued or running turn to `cancelled` and settles the
-  linked response as `cancelled`.
+- Stop transitions a queued or running turn to `cancelled` — agent-scoped,
+  not tied to any one chat.
 
 ## `agent_turn_file_changes`
 
@@ -635,35 +642,64 @@ Uniqueness:
 UNIQUE(agent_id, generation)
 ```
 
-## `agent_session_chat_cursors`
+## `agent_inbox_cursors`
 
-The seen ledger: one durable cursor per `(session, chat)` recording the
-highest message sequence provably model-visible in that chat. Prompt
-catch-up and hold envelopes advance it; notices, busy deliveries, and chat
-tool reads never do. Advancement is monotonic (`MAX`).
+The two-cursor ledger (specs/inbox.md): one durable row per `(session,
+chat)` tracking what the inbox has queued (`delivered`) versus what is
+provably model-visible (`seen`). `delivered` is transport state — muted
+targets never advance it. `seen` is the sole model-seen authority for
+freshness holds and catch-up: prompt-embedded envelopes advance it at turn
+settle, pull outputs advance it when the tool result commits, hold catch-up
+rows advance it when shown. Notices and wakes advance neither.
 
 ```text
-agent_session_chat_cursors
-  session_id      TEXT NOT NULL
-  chat_id         TEXT NOT NULL
-  seen_up_to_seq  INTEGER NOT NULL DEFAULT 0
-  updated_at      TEXT NOT NULL
+agent_inbox_cursors
+  session_id           TEXT NOT NULL
+  chat_id              TEXT NOT NULL
+  delivered_up_to_seq  INTEGER NOT NULL DEFAULT 0
+  seen_up_to_seq       INTEGER NOT NULL DEFAULT 0
+  updated_at           TEXT NOT NULL
   PRIMARY KEY (session_id, chat_id)
 ```
 
-## `agent_served_chat_cursors`
+## `agent_channel_mutes` And `agent_inbox_pierces`
 
-Server-served pull horizon per `(agent, chat)`. History and freshness-hold
-responses advance it monotonically. It supplements freshness decisions only
-and never replaces the session seen cursor for catch-up or re-delivery.
+Agent-owned attention state. A channel mute suppresses ordinary delivery
+from that channel and its threads without leaving; a personal @mention
+pierces a mute or an unfollowed thread as a single message that does not
+re-follow and never advances the muted target's `delivered` cursor.
 
 ```text
-agent_served_chat_cursors
-  agent_id          TEXT NOT NULL
+agent_channel_mutes
+  agent_id   TEXT NOT NULL
+  chat_id    TEXT NOT NULL
+  created_at TEXT NOT NULL
+  PRIMARY KEY (agent_id, chat_id)
+
+agent_inbox_pierces
+  session_id TEXT NOT NULL
+  chat_id    TEXT NOT NULL
+  message_id TEXT NOT NULL
+  created_at TEXT NOT NULL
+  PRIMARY KEY (session_id, chat_id, message_id)
+```
+
+## `agent_session_served_cursors`
+
+Server-served pull horizon per `(session, chat)`, session-scoped like the
+seen ledger. Pulls (`grotto message check`) advance it immediately so a
+pull-then-send never spuriously holds. It supplements freshness-hold
+decisions only and never replaces `seen` for catch-up or re-delivery; a
+turn that pulled and died leaves `served > seen`, and catch-up re-delivers
+from `seen` (duplicate envelopes after crashes are by design).
+
+```text
+agent_session_served_cursors
+  session_id        TEXT NOT NULL
   chat_id           TEXT NOT NULL
   served_up_to_seq  INTEGER NOT NULL DEFAULT 0
   updated_at        TEXT NOT NULL
-  PRIMARY KEY (agent_id, chat_id)
+  PRIMARY KEY (session_id, chat_id)
 ```
 
 ## `agent_message_drafts`
@@ -682,77 +718,6 @@ agent_message_drafts
   saved_at             TEXT NOT NULL
   PRIMARY KEY (agent_id, chat_id)
 ```
-
-## Runtime Execution Evidence
-
-Agent execution evidence links to Tavern messages through the Agent session.
-The engine session id is execution evidence, not product routing identity.
-
-```text
-runtime_turns
-  id                    TEXT PRIMARY KEY
-  conversation_id       TEXT NOT NULL
-  request_message_id    TEXT
-  response_id           TEXT
-  response_message_id   TEXT
-  agent_id              TEXT NOT NULL
-  agent_session_id      TEXT NOT NULL
-  engine_run_id         TEXT
-  status                TEXT NOT NULL
-  started_at            TEXT
-  finished_at           TEXT
-
-runtime_transcript_messages
-  id                    TEXT PRIMARY KEY
-  conversation_id       TEXT
-  message_id            TEXT
-  agent_session_id      TEXT NOT NULL
-  engine_session_id     TEXT
-  engine_message_id     TEXT
-  seq                   INTEGER
-  role                  TEXT NOT NULL
-  content_text          TEXT
-  raw_json              TEXT NOT NULL
-  synced_at             TEXT NOT NULL
-
-runtime_tool_calls
-  id                    TEXT PRIMARY KEY
-  chat_id               TEXT
-  response_id           TEXT
-  activity_id           TEXT
-  message_id            TEXT
-  agent_session_id      TEXT NOT NULL
-  run_id                TEXT
-  tool_call_id          TEXT
-  tool_name             TEXT NOT NULL
-  status                TEXT
-  raw_json              TEXT NOT NULL
-  updated_at            TEXT NOT NULL
-```
-
-Agent transcript messages, tool calls, links, and artifacts are runtime
-evidence. Sync paths map user-visible work into responses, response activity,
-and artifacts by stable ids. They enrich the UI, but they do not replace
-canonical chat history.
-
-## Wiki Files
-
-Tavern Runtime does not store Wiki page tables. It resolves the Wiki root and
-reads Markdown files directly.
-
-```text
-INDEX.md
-projects/example.md
-research/example/...
-```
-
-Rules:
-
-- Runtime never creates a second canonical copy of Wiki pages.
-- Page identity is the Markdown path relative to the Wiki root.
-- Frontmatter parsing is light and display-oriented.
-- Wikilinks and backlinks are derived from Markdown bodies.
-- Imports, research, and maintenance are agent workflows, not Runtime jobs.
 
 ## Transaction Rules
 
@@ -803,31 +768,18 @@ App tables are cache, presentation, or execution evidence:
 | `session_tool_calls`    | tool evidence linked to `chat_response_activity`         |
 | `session_artifacts`     | candidate `chat_artifacts`                               |
 | `session_deliveries`    | `chat_deliveries` or runtime delivery evidence           |
-| `cron_jobs`             | `automations`                                            |
-| `cron_runs`             | `automation_runs`                                        |
-| `tasks`                 | tracked tasks and epics mirror                           |
 
-Tracked tasks are canonical in the Runtime `tasks` table: tasks and epics share
-one table and one sequential T-number sequence (`number`), with status,
-priority, assignee (the local owner or an agent), parent epic link, and
-first-class labels. Dispatch bookkeeping stores the last trigger, attempt
-count, and active Agent turn id. Runtime stores labels in `labels` and task membership in
-`task_labels`; task payloads include full label objects ordered by name.
-`task_attachments` stores attachment metadata with a cascading task foreign key
-and a case-insensitive filename unique key. Attachment bytes live outside
-SQLite under the Runtime artifacts root at `tasks/<task-id>/<filename>`. The app
-cache mirrors full task records per runtime keyed on (`runtime_id`,
-`runtime_task_id`).
+The first task tracker (`tasks`, `labels`, `task_dependencies`, `task_labels`,
+`task_attachments`) and the cron automation tables (`cron_jobs`, `cron_runs`)
+were retired with ADR 0014; their schema rows remain but no route or app
+surface reads or writes them. Chat-first tasks return with the tasks
+workstream.
 
 ## FTS
 
-Search has first-class indexing for:
-
-- chat messages
-- Wiki pages and files
-
-SQLite FTS mirrors durable text fields through triggers or explicit
-transactional writes. Search indexes are derived state, not the source of truth.
+Search has first-class indexing for chat messages. SQLite FTS mirrors durable
+text fields through triggers or explicit transactional writes. Search indexes
+are derived state, not the source of truth.
 
 ## Invariants
 
@@ -844,9 +796,7 @@ transactional writes. Search indexes are derived state, not the source of truth.
   and run ids.
 - Reconciliation never uses content/timestamp duplicate detection.
 - Events notify; runtime durable reads recover.
-- Response activity is durable and statusful.
 - App-local progress hints never become a second chat history.
-- Memory reads fail visibly when the configured root is missing or unreadable.
 
 ## Related Docs
 
@@ -856,4 +806,4 @@ transactional writes. Search indexes are derived state, not the source of truth.
 - [Tavern Runtime](runtime.md)
 - [Architecture overview](architecture-overview.md)
 - [Tavern Runtime Chat Server](../../specs/runtime-chat-server.md)
-- [Memories](../../specs/memories.md)
+- [Agent Inbox](../../specs/inbox.md)

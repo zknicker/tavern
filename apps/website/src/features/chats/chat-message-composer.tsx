@@ -198,7 +198,6 @@ export function ChatMessageComposer({
         setAttachmentError(null);
 
         const result = await sendMessage.mutateAsync({
-            ...(needsAgentTarget ? { agentId } : {}),
             ...(submittedAttachments.length ? { attachments: submittedAttachments } : {}),
             chatId,
             clientMessageId: `msg_${crypto.randomUUID()}`,

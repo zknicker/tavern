@@ -1,14 +1,12 @@
-import * as React from 'react';
-import { ListPageSkeleton } from '../../features/shell/page-skeletons.tsx';
-import { Tasks } from '../../features/tasks/tasks.tsx';
-import { useMarkTasksSeen } from '../../hooks/shell/use-mark-tasks-seen.ts';
+import { CheckListIcon } from '@hugeicons-pro/core-stroke-rounded';
+import { WorkstreamEmptyPage } from '../../features/shell/workstream-empty-page.tsx';
 
 export function TasksPage() {
-    useMarkTasksSeen();
-
     return (
-        <React.Suspense fallback={<ListPageSkeleton />}>
-            <Tasks />
-        </React.Suspense>
+        <WorkstreamEmptyPage
+            description="Tasks return with the chat-first tasks workstream."
+            icon={CheckListIcon}
+            title="Tasks"
+        />
     );
 }

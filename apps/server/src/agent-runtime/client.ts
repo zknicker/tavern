@@ -5,14 +5,14 @@ import {
     type AgentRuntimeAgentEnv,
     type AgentRuntimeAgentFileContent,
     type AgentRuntimeAgentFileList,
+    type AgentRuntimeAgentInbox,
     type AgentRuntimeAgentPluginGrant,
     type AgentRuntimeAgentPluginGrantList,
     type AgentRuntimeAgentPresenceList,
+    type AgentRuntimeAgentStopResult,
     type AgentRuntimeApplyAgentEngineConfig,
     type AgentRuntimeArchiveAgent,
     type AgentRuntimeArchiveBinding,
-    type AgentRuntimeArchiveCron,
-    type AgentRuntimeAutoDispatchSettings,
     type AgentRuntimeBinding,
     type AgentRuntimeBrowserActionResult,
     type AgentRuntimeBrowserSettings,
@@ -24,17 +24,10 @@ import {
     type AgentRuntimeChatPaneState,
     type AgentRuntimeCompleteGoogleOAuth,
     type AgentRuntimeCreateAgent,
-    type AgentRuntimeCreateCron,
     type AgentRuntimeCreateMessage,
-    type AgentRuntimeCreateTask,
-    type AgentRuntimeCreateTaskLabel,
-    type AgentRuntimeCron,
-    type AgentRuntimeCronList,
-    type AgentRuntimeCronRun,
     type AgentRuntimeCurrentAgentSessionResult,
     type AgentRuntimeDeleteDiscordBinding,
     type AgentRuntimeDiscordBinding,
-    type AgentRuntimeDispatchTaskResult,
     type AgentRuntimeEventList,
     type AgentRuntimeGoogleCalendarEventsList,
     type AgentRuntimeGoogleCalendarEventsListInput,
@@ -52,7 +45,6 @@ import {
     type AgentRuntimeMcpServerCreate,
     type AgentRuntimeMcpServerList,
     type AgentRuntimeMcpServerTestResult,
-    type AgentRuntimeMemorySettings,
     type AgentRuntimeMerchbaseActionInput,
     type AgentRuntimeMerchbaseActionResult,
     type AgentRuntimeMerchbaseSalesSeries,
@@ -75,18 +67,14 @@ import {
     type AgentRuntimeRenderedWorkspaceInstructions,
     type AgentRuntimeResetAgentSession,
     type AgentRuntimeResetAgentSessionResult,
-    type AgentRuntimeRunCron,
     type AgentRuntimeRunJob,
     type AgentRuntimeRunJobInput,
     type AgentRuntimeSaveAgentEnv,
     type AgentRuntimeSaveAgentEnvResult,
     type AgentRuntimeSaveAgentFile,
-    type AgentRuntimeSaveAutoDispatchSettings,
     type AgentRuntimeSaveBrowserSettings,
     type AgentRuntimeSaveDiscordBinding,
     type AgentRuntimeSaveGoogleSettings,
-    type AgentRuntimeSaveMemorySettings,
-    type AgentRuntimeSaveMemorySettingsResult,
     type AgentRuntimeSaveMerchbaseSettings,
     type AgentRuntimeSaveModelCapabilitySelections,
     type AgentRuntimeSaveModelCategorySettings,
@@ -96,8 +84,6 @@ import {
     type AgentRuntimeSaveOpenRouterSettings,
     type AgentRuntimeSaveTimezoneSettings,
     type AgentRuntimeSaveTimezoneSettingsResult,
-    type AgentRuntimeSaveWikiSettings,
-    type AgentRuntimeSaveWikiSettingsResult,
     type AgentRuntimeSaveWorkspaceInstructions,
     type AgentRuntimeSessionGraph,
     type AgentRuntimeSessionList,
@@ -107,7 +93,6 @@ import {
     type AgentRuntimeSessionResync,
     type AgentRuntimeSetChatPaneStateRequest,
     type AgentRuntimeSetChatPaneStateResult,
-    type AgentRuntimeSetTaskWorkChat,
     type AgentRuntimeSkill,
     type AgentRuntimeSkillHubActionResult,
     type AgentRuntimeSkillHubAvailable,
@@ -124,11 +109,6 @@ import {
     type AgentRuntimeStopTurn,
     type AgentRuntimeStopTurnResult,
     type AgentRuntimeSubmitModelProviderOAuth,
-    type AgentRuntimeTask,
-    type AgentRuntimeTaskAttachmentContent,
-    type AgentRuntimeTaskLabel,
-    type AgentRuntimeTaskLabelList,
-    type AgentRuntimeTaskList,
     type AgentRuntimeTimezoneSettings,
     type AgentRuntimeTool,
     type AgentRuntimeToolConfig,
@@ -143,17 +123,12 @@ import {
     type AgentRuntimeUpdateAgentModel,
     type AgentRuntimeUpdateAgentName,
     type AgentRuntimeUpdateAgentPluginGrant,
-    type AgentRuntimeUpdateAgentTaskSettings,
     type AgentRuntimeUpdateAgentThinkingDefault,
     type AgentRuntimeUpdateAgentWebSettings,
-    type AgentRuntimeUpdateCron,
     type AgentRuntimeUpdateModelProvider,
     type AgentRuntimeUpdateSkillEnabled,
-    type AgentRuntimeUpdateTask,
-    type AgentRuntimeUpdateTaskLabel,
     type AgentRuntimeUpdateToolEnabled,
     type AgentRuntimeUpsertBinding,
-    type AgentRuntimeWikiSettings,
     type AgentRuntimeWorkspaceFileContent,
     type AgentRuntimeWorkspaceFileList,
     type AgentRuntimeWorkspaceFileListInput,
@@ -163,16 +138,16 @@ import {
     agentRuntimeAgentEnvSchema,
     agentRuntimeAgentFileContentSchema,
     agentRuntimeAgentFileListSchema,
+    agentRuntimeAgentInboxSchema,
     agentRuntimeAgentListSchema,
     agentRuntimeAgentPluginGrantListSchema,
     agentRuntimeAgentPluginGrantSchema,
     agentRuntimeAgentPresenceListSchema,
     agentRuntimeAgentSchema,
+    agentRuntimeAgentStopResultSchema,
     agentRuntimeApplyAgentEngineConfigSchema,
     agentRuntimeArchiveAgentSchema,
     agentRuntimeArchiveBindingSchema,
-    agentRuntimeArchiveCronSchema,
-    agentRuntimeAutoDispatchSettingsSchema,
     agentRuntimeBindingListSchema,
     agentRuntimeBindingSchema,
     agentRuntimeBrowserActionResultSchema,
@@ -185,18 +160,10 @@ import {
     agentRuntimeChatPaneStateSchema,
     agentRuntimeCompleteGoogleOAuthSchema,
     agentRuntimeCreateAgentSchema,
-    agentRuntimeCreateCronSchema,
     agentRuntimeCreateMessageSchema,
-    agentRuntimeCreateTaskLabelSchema,
-    agentRuntimeCreateTaskSchema,
-    agentRuntimeCronListSchema,
-    agentRuntimeCronRunListSchema,
-    agentRuntimeCronRunSchema,
-    agentRuntimeCronSchema,
     agentRuntimeCurrentAgentSessionResultSchema,
     agentRuntimeDeleteDiscordBindingSchema,
     agentRuntimeDiscordBindingListSchema,
-    agentRuntimeDispatchTaskResultSchema,
     agentRuntimeErrorSchema,
     agentRuntimeGoogleCalendarEventsListInputSchema,
     agentRuntimeGoogleCalendarEventsListSchema,
@@ -214,7 +181,6 @@ import {
     agentRuntimeMcpServerListSchema,
     agentRuntimeMcpServerSchema,
     agentRuntimeMcpServerTestResultSchema,
-    agentRuntimeMemorySettingsSchema,
     agentRuntimeMerchbaseActionInputSchema,
     agentRuntimeMerchbaseActionResultSchema,
     agentRuntimeMerchbaseSalesSeriesInputSchema,
@@ -244,18 +210,14 @@ import {
     agentRuntimeResetAgentSessionResultSchema,
     agentRuntimeResetAgentSessionSchema,
     agentRuntimeRoutes,
-    agentRuntimeRunCronSchema,
     agentRuntimeRunJobInputSchema,
     agentRuntimeRunJobSchema,
     agentRuntimeSaveAgentEnvResultSchema,
     agentRuntimeSaveAgentEnvSchema,
     agentRuntimeSaveAgentFileSchema,
-    agentRuntimeSaveAutoDispatchSettingsSchema,
     agentRuntimeSaveBrowserSettingsSchema,
     agentRuntimeSaveDiscordBindingSchema,
     agentRuntimeSaveGoogleSettingsSchema,
-    agentRuntimeSaveMemorySettingsResultSchema,
-    agentRuntimeSaveMemorySettingsSchema,
     agentRuntimeSaveMerchbaseSettingsSchema,
     agentRuntimeSaveModelCapabilitySelectionsSchema,
     agentRuntimeSaveModelCategorySettingsResultSchema,
@@ -265,8 +227,6 @@ import {
     agentRuntimeSaveOpenRouterSettingsSchema,
     agentRuntimeSaveTimezoneSettingsResultSchema,
     agentRuntimeSaveTimezoneSettingsSchema,
-    agentRuntimeSaveWikiSettingsResultSchema,
-    agentRuntimeSaveWikiSettingsSchema,
     agentRuntimeSaveWorkspaceInstructionsSchema,
     agentRuntimeSessionGraphSchema,
     agentRuntimeSessionListSchema,
@@ -276,7 +236,6 @@ import {
     agentRuntimeSessionResyncSchema,
     agentRuntimeSetChatPaneStateRequestSchema,
     agentRuntimeSetChatPaneStateResultSchema,
-    agentRuntimeSetTaskWorkChatSchema,
     agentRuntimeSkillHubActionResultSchema,
     agentRuntimeSkillHubAvailableSchema,
     agentRuntimeSkillHubInstallInputSchema,
@@ -293,11 +252,6 @@ import {
     agentRuntimeStopTurnResultSchema,
     agentRuntimeStopTurnSchema,
     agentRuntimeSubmitModelProviderOAuthSchema,
-    agentRuntimeTaskAttachmentContentSchema,
-    agentRuntimeTaskLabelListSchema,
-    agentRuntimeTaskLabelSchema,
-    agentRuntimeTaskListSchema,
-    agentRuntimeTaskSchema,
     agentRuntimeTimezoneSettingsSchema,
     agentRuntimeToolConfigSchema,
     agentRuntimeToolEnvUpdateResultSchema,
@@ -311,32 +265,17 @@ import {
     agentRuntimeUpdateAgentModelSchema,
     agentRuntimeUpdateAgentNameSchema,
     agentRuntimeUpdateAgentPluginGrantSchema,
-    agentRuntimeUpdateAgentTaskSettingsSchema,
     agentRuntimeUpdateAgentThinkingDefaultSchema,
     agentRuntimeUpdateAgentWebSettingsSchema,
-    agentRuntimeUpdateCronSchema,
     agentRuntimeUpdateModelProviderSchema,
     agentRuntimeUpdateSchema,
     agentRuntimeUpdateSkillEnabledSchema,
-    agentRuntimeUpdateTaskLabelSchema,
-    agentRuntimeUpdateTaskSchema,
     agentRuntimeUpdateToolEnabledSchema,
     agentRuntimeUpsertBindingSchema,
-    agentRuntimeWikiSettingsSchema,
     agentRuntimeWorkspaceFileContentSchema,
     agentRuntimeWorkspaceFileListInputSchema,
     agentRuntimeWorkspaceFileListSchema,
     agentRuntimeWorkspaceInstructionsSchema,
-    type MemoryActivityList,
-    type MemoryDreamResult,
-    type MemoryJobDetail,
-    type MemoryJobKind,
-    type MemoryJobList,
-    type MemoryJobStatus,
-    memoryActivityListSchema,
-    memoryDreamResultSchema,
-    memoryJobDetailSchema,
-    memoryJobListSchema,
     type RuntimeIdentityMe,
     type RuntimeIdentityMutationResult,
     type RuntimeInviteCreateResult,
@@ -348,38 +287,6 @@ import {
     runtimeInviteCreateResultSchema,
     runtimeInviteListSchema,
     runtimeMemberListSchema,
-    type WikiAttachment,
-    type WikiAttachmentContent,
-    type WikiBacklinkList,
-    type WikiCreatePage,
-    type WikiMovePath,
-    type WikiPage,
-    type WikiPageHistory,
-    type WikiPageList,
-    type WikiPageRevision,
-    type WikiPathInput,
-    type WikiPathMutationResult,
-    type WikiSavePage,
-    type WikiSearchInput,
-    type WikiSearchResult,
-    type WikiStatus,
-    type WikiUploadAttachment,
-    wikiAttachmentContentSchema,
-    wikiAttachmentSchema,
-    wikiBacklinkListSchema,
-    wikiCreatePageSchema,
-    wikiMovePathSchema,
-    wikiPageHistorySchema,
-    wikiPageListSchema,
-    wikiPageRevisionSchema,
-    wikiPageSchema,
-    wikiPathInputSchema,
-    wikiPathMutationResultSchema,
-    wikiSavePageSchema,
-    wikiSearchInputSchema,
-    wikiSearchResultSchema,
-    wikiStatusSchema,
-    wikiUploadAttachmentSchema,
 } from '@tavern/api';
 import { z } from 'zod';
 
@@ -414,15 +321,9 @@ export interface TavernAgentRuntimeClient {
         sessionId: string,
         input: AgentRuntimeCompleteGoogleOAuth
     ): Promise<AgentRuntimeGoogleOAuthPoll>;
-    createCronJob(input: AgentRuntimeCreateCron): Promise<AgentRuntimeCron>;
     createIdentityInvite(): Promise<RuntimeInviteCreateResult>;
-    createTask(input: AgentRuntimeCreateTask): Promise<AgentRuntimeTask>;
-    createTaskLabel(input: AgentRuntimeCreateTaskLabel): Promise<AgentRuntimeTaskLabel>;
-    createWikiFolder(input: WikiPathInput): Promise<WikiPathMutationResult>;
-    createWikiPage(input: WikiCreatePage): Promise<WikiPathMutationResult>;
     deleteAgent(agentId: string): Promise<AgentRuntimeArchiveAgent>;
     deleteBinding(bindingId: string): Promise<AgentRuntimeArchiveBinding>;
-    deleteCronJob(jobId: string): Promise<AgentRuntimeArchiveCron>;
     deleteDiscordBinding(
         bindingId: string,
         input: AgentRuntimeDeleteDiscordBinding
@@ -430,25 +331,15 @@ export interface TavernAgentRuntimeClient {
     deleteIdentityInvite(inviteId: string): Promise<RuntimeIdentityMutationResult>;
     deleteOpenAiSettings(): Promise<AgentRuntimeOpenAiSettings>;
     deleteOpenRouterSettings(): Promise<AgentRuntimeOpenRouterSettings>;
-    deleteTask(taskId: string): Promise<{ deleted: boolean; id: string }>;
-    deleteTaskAttachment(
-        taskId: string,
-        attachmentId: string
-    ): Promise<{ deleted: boolean; id: string }>;
-    deleteTaskLabel(labelId: string): Promise<{ deleted: boolean; id: string }>;
-    deleteWikiFolder(input: WikiPathInput): Promise<WikiPathMutationResult>;
-    deleteWikiPage(input: WikiPathInput): Promise<WikiPathMutationResult>;
     disconnectGoogleOAuth(): Promise<AgentRuntimeGoogleSettings>;
-    dispatchTask(taskId: string, agentId: string): Promise<AgentRuntimeDispatchTaskResult>;
     getAgentConfig(agentId: string): Promise<AgentRuntimeAgent>;
     getAgentEngineConfig(): Promise<AgentRuntimeAgentEngineConfigSnapshot>;
     getAgentEnv(): Promise<AgentRuntimeAgentEnv>;
     getAgentFile(agentId: string, path: string): Promise<AgentRuntimeAgentFileContent>;
-    getAutoDispatchSettings(): Promise<AgentRuntimeAutoDispatchSettings>;
+    getAgentInbox(agentId: string): Promise<AgentRuntimeAgentInbox>;
     getBrowserSettings(): Promise<AgentRuntimeBrowserSettings>;
     getCapability(id: AgentRuntimeCapabilityHealthId): Promise<AgentRuntimeCapabilityHealth>;
     getChatPaneState(chatId: string): Promise<AgentRuntimeChatPaneState>;
-    getCronJob(jobId: string): Promise<AgentRuntimeCron>;
     getCurrentAgentSession(input: {
         agentId?: string;
         chatId: string;
@@ -456,9 +347,6 @@ export interface TavernAgentRuntimeClient {
     getGoogleSettings(): Promise<AgentRuntimeGoogleSettings>;
     getIdentityMe(userSessionToken: string): Promise<RuntimeIdentityMe>;
     getMcpCatalog(): Promise<AgentRuntimeMcpCatalog>;
-    getMemoryActivity(): Promise<MemoryActivityList>;
-    getMemoryJob(jobId: string): Promise<MemoryJobDetail | null>;
-    getMemorySettings(): Promise<AgentRuntimeMemorySettings>;
     getMerchbaseSettings(): Promise<AgentRuntimeMerchbaseSettings>;
     getModelAccess(): Promise<AgentRuntimeModelAccess>;
     getModelCapabilitySelections(): Promise<AgentRuntimeModelCapabilitySelectionSettings>;
@@ -474,20 +362,9 @@ export interface TavernAgentRuntimeClient {
     getSessionPrompt(sessionKey: string): Promise<AgentRuntimeSessionPrompt | null>;
     getSkill(skillId: string): Promise<AgentRuntimeSkill>;
     getSkillHubAvailable(): Promise<AgentRuntimeSkillHubAvailable>;
-    getTask(taskId: string): Promise<AgentRuntimeTask>;
-    getTaskAttachment(
-        taskId: string,
-        attachmentId: string
-    ): Promise<AgentRuntimeTaskAttachmentContent>;
     getTimezoneSettings(): Promise<AgentRuntimeTimezoneSettings>;
     getToolConfig(toolId: string): Promise<AgentRuntimeToolConfig>;
     getUpdateStatus(): Promise<AgentRuntimeUpdate>;
-    getWikiAttachment(path: string): Promise<WikiAttachmentContent | null>;
-    getWikiPage(input: { path: string }): Promise<WikiPage | null>;
-    getWikiPageHistory(input: { limit?: number; path: string }): Promise<WikiPageHistory>;
-    getWikiPageRevision(input: { commit: string; path: string }): Promise<WikiPageRevision>;
-    getWikiSettings(): Promise<AgentRuntimeWikiSettings>;
-    getWikiStatus(): Promise<WikiStatus>;
     getWorkspaceFile(agentId: string, path: string): Promise<AgentRuntimeWorkspaceFileContent>;
     getWorkspaceInstructions(agentId: string): Promise<AgentRuntimeRenderedWorkspaceInstructions>;
     installMcpCatalogEntry(
@@ -504,15 +381,12 @@ export interface TavernAgentRuntimeClient {
     listBindings(): Promise<{ bindings: AgentRuntimeBinding[] }>;
     listCapabilities(): Promise<AgentRuntimeCapabilityHealthList>;
     listChats(): Promise<{ chats: AgentRuntimeChat[] }>;
-    listCronJobs(): Promise<AgentRuntimeCronList>;
-    listCronRuns(jobId?: string): Promise<{ runs: AgentRuntimeCronRun[] }>;
     listDiscordBindings(): Promise<{ bindings: AgentRuntimeDiscordBinding[] }>;
     listEvents(input?: AgentRuntimeListEventsInput): Promise<AgentRuntimeEventList>;
     listIdentityInvites(): Promise<RuntimeInviteList>;
     listIdentityMembers(): Promise<RuntimeMemberList>;
     listMacApps(options?: { limit?: number; query?: string }): Promise<AgentRuntimeMacAppList>;
     listMcpServers(): Promise<AgentRuntimeMcpServerList>;
-    listMemoryJobs(input?: AgentRuntimeListMemoryJobsInput): Promise<MemoryJobList>;
     listPlugins(): Promise<AgentRuntimePluginList>;
     listRuntimeJobs(): Promise<AgentRuntimeJobList>;
     listSessionMessages(
@@ -527,16 +401,11 @@ export interface TavernAgentRuntimeClient {
     listSkills(
         options?: AgentRuntimeListSkillsOptions
     ): Promise<{ skills: AgentRuntimeSkillSummary[] }>;
-    listTaskLabels(): Promise<AgentRuntimeTaskLabelList>;
-    listTasks(): Promise<AgentRuntimeTaskList>;
     listTools(): Promise<AgentRuntimeToolList>;
-    listWikiBacklinks(input: { path: string }): Promise<WikiBacklinkList>;
-    listWikiPages(): Promise<WikiPageList>;
     listWorkspaceFiles(
         agentId: string,
         input?: AgentRuntimeWorkspaceFileListInput
     ): Promise<AgentRuntimeWorkspaceFileList>;
-    moveWikiPath(input: WikiMovePath): Promise<WikiPathMutationResult>;
     openBrowser(): Promise<AgentRuntimeBrowserActionResult>;
     pollGoogleOAuth(input: AgentRuntimeGoogleOAuthPollInput): Promise<AgentRuntimeGoogleOAuthPoll>;
     pollModelProviderOAuth(input: AgentRuntimePollModelProviderOAuth): Promise<unknown>;
@@ -567,8 +436,6 @@ export interface TavernAgentRuntimeClient {
     restartBrowser(): Promise<AgentRuntimeBrowserActionResult>;
     restartForUpdate(): Promise<AgentRuntimeUpdate>;
     resyncSession(sessionKey: string): Promise<AgentRuntimeSessionResync>;
-    runCronJob(jobId: string, input?: AgentRuntimeRunCron): Promise<AgentRuntimeCronRun>;
-    runMemoryDream(agentId: string): Promise<MemoryDreamResult>;
     runRuntimeJob(
         slug: AgentRuntimeJobSlug,
         input?: AgentRuntimeRunJobInput
@@ -583,9 +450,6 @@ export interface TavernAgentRuntimeClient {
         path: string,
         input: AgentRuntimeSaveAgentFile
     ): Promise<AgentRuntimeAgentFileContent>;
-    saveAutoDispatchSettings(
-        input: AgentRuntimeSaveAutoDispatchSettings
-    ): Promise<AgentRuntimeAutoDispatchSettings>;
     saveBrowserSettings(
         input: AgentRuntimeSaveBrowserSettings
     ): Promise<AgentRuntimeBrowserSettings>;
@@ -593,9 +457,6 @@ export interface TavernAgentRuntimeClient {
         input: AgentRuntimeSaveDiscordBinding
     ): Promise<AgentRuntimeAgentEngineConfigSnapshot>;
     saveGoogleSettings(input: AgentRuntimeSaveGoogleSettings): Promise<AgentRuntimeGoogleSettings>;
-    saveMemorySettings(
-        input: AgentRuntimeSaveMemorySettings
-    ): Promise<AgentRuntimeSaveMemorySettingsResult>;
     saveMerchbaseSettings(
         input: AgentRuntimeSaveMerchbaseSettings
     ): Promise<AgentRuntimeMerchbaseSettings>;
@@ -617,16 +478,11 @@ export interface TavernAgentRuntimeClient {
         toolId: string,
         input: AgentRuntimeToolEnvUpdate
     ): Promise<AgentRuntimeToolEnvUpdateResult>;
-    saveWikiPage(input: WikiSavePage): Promise<WikiPathMutationResult>;
-    saveWikiSettings(
-        input: AgentRuntimeSaveWikiSettings
-    ): Promise<AgentRuntimeSaveWikiSettingsResult>;
     saveWorkspaceInstructions(
         agentId: string,
         input: AgentRuntimeSaveWorkspaceInstructions
     ): Promise<AgentRuntimeWorkspaceInstructions>;
     scanSkillHubSkill(identifier: string): Promise<AgentRuntimeSkillHubScan>;
-    searchWiki(input: WikiSearchInput): Promise<WikiSearchResult>;
     selectToolProvider(
         toolId: string,
         input: AgentRuntimeToolProviderSelect
@@ -645,10 +501,10 @@ export interface TavernAgentRuntimeClient {
         providerId: string,
         input: AgentRuntimeUpdateModelProvider
     ): Promise<AgentRuntimeModelProviderCatalogEntry>;
-    setTaskWorkChat(taskId: string, input: AgentRuntimeSetTaskWorkChat): Promise<AgentRuntimeTask>;
     startGoogleOAuth(input?: AgentRuntimeStartGoogleOAuth): Promise<AgentRuntimeGoogleOAuthStart>;
     startModelProviderOAuth(input: AgentRuntimeStartModelProviderOAuth): Promise<unknown>;
     startUpdate(input?: { targetVersion?: null | string }): Promise<AgentRuntimeUpdate>;
+    stopAgent(agentId: string): Promise<AgentRuntimeAgentStopResult>;
     stopChatTurn(chatId: string, input: AgentRuntimeStopTurn): Promise<AgentRuntimeStopTurnResult>;
     submitModelProviderOAuth(input: AgentRuntimeSubmitModelProviderOAuth): Promise<unknown>;
     testMcpServer(name: string): Promise<AgentRuntimeMcpServerTestResult>;
@@ -667,10 +523,6 @@ export interface TavernAgentRuntimeClient {
         agentId: string,
         input: AgentRuntimeUpdateAgentName
     ): Promise<AgentRuntimeAgentEngineConfigSnapshot>;
-    updateAgentTaskSettings(
-        agentId: string,
-        input: AgentRuntimeUpdateAgentTaskSettings
-    ): Promise<AgentRuntimeAgent>;
     updateAgentThinkingDefault(
         agentId: string,
         input: AgentRuntimeUpdateAgentThinkingDefault
@@ -679,21 +531,14 @@ export interface TavernAgentRuntimeClient {
         agentId: string,
         input: AgentRuntimeUpdateAgentWebSettings
     ): Promise<AgentRuntimeAgent>;
-    updateCronJob(jobId: string, input: AgentRuntimeUpdateCron): Promise<AgentRuntimeCron>;
     updateSkillEnabled(
         skillId: string,
         input: AgentRuntimeUpdateSkillEnabled
     ): Promise<AgentRuntimeSkill>;
-    updateTask(taskId: string, input: AgentRuntimeUpdateTask): Promise<AgentRuntimeTask>;
-    updateTaskLabel(
-        labelId: string,
-        input: AgentRuntimeUpdateTaskLabel
-    ): Promise<AgentRuntimeTaskLabel>;
     updateToolEnabled(
         toolId: string,
         input: AgentRuntimeUpdateToolEnabled
     ): Promise<AgentRuntimeTool>;
-    uploadWikiAttachment(input: WikiUploadAttachment): Promise<WikiAttachment>;
     upsertAgent(input: AgentRuntimeCreateAgent): Promise<AgentRuntimeAgent>;
     upsertBinding(input: AgentRuntimeUpsertBinding): Promise<AgentRuntimeBinding>;
 }
@@ -715,14 +560,6 @@ export interface AgentRuntimeListSessionPreviewsInput {
 
 export interface AgentRuntimeListSkillsOptions {
     agentId?: string;
-}
-
-export interface AgentRuntimeListMemoryJobsInput {
-    agentId?: string;
-    kind?: MemoryJobKind[];
-    limit?: number;
-    sinceDays?: number;
-    status?: MemoryJobStatus[];
 }
 
 interface AgentRuntimeClientOptions {
@@ -767,20 +604,6 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
 
     close() {}
 
-    async postWikiQuery<T>(route: string, input: unknown, schema: z.ZodType<T>): Promise<T> {
-        const response = await fetch(`${this.#baseUrl}${route}`, {
-            body: JSON.stringify(input),
-            headers: { ...this.#authHeaders, 'content-type': 'application/json' },
-            method: 'POST',
-        });
-
-        if (!response.ok) {
-            await readErrorResponse(response);
-        }
-
-        return schema.parse(await response.json());
-    }
-
     async upsertAgent(input: AgentRuntimeCreateAgent) {
         const payload = agentRuntimeCreateAgentSchema.parse(input);
         const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.agents}`, {
@@ -824,6 +647,30 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         }
 
         return agentRuntimeAgentPresenceListSchema.parse(await response.json());
+    }
+
+    async getAgentInbox(agentId: string) {
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.agentInbox(agentId)}`, {
+            headers: this.#authHeaders,
+        });
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+        return agentRuntimeAgentInboxSchema.parse(await response.json());
+    }
+
+    async stopAgent(agentId: string) {
+        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.agentStop(agentId)}`, {
+            headers: {
+                ...this.#authHeaders,
+                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
+            },
+            method: 'POST',
+        });
+        if (!response.ok) {
+            await readErrorResponse(response);
+        }
+        return agentRuntimeAgentStopResultSchema.parse(await response.json());
     }
 
     async getAgentConfig(agentId: string) {
@@ -1001,321 +848,6 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         return agentRuntimeArchiveAgentSchema.parse(await response.json());
     }
 
-    async createCronJob(input: AgentRuntimeCreateCron) {
-        const payload = agentRuntimeCreateCronSchema.parse(input);
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.cronJobs}`, {
-            body: JSON.stringify(payload),
-            headers: {
-                ...this.#authHeaders,
-                'content-type': 'application/json',
-                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
-            },
-            method: 'POST',
-        });
-
-        if (!response.ok) {
-            await readErrorResponse(response);
-        }
-
-        return agentRuntimeCronSchema.parse(await response.json());
-    }
-
-    async getCronJob(jobId: string) {
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.cronJob(jobId)}`, {
-            headers: this.#authHeaders,
-        });
-
-        if (!response.ok) {
-            await readErrorResponse(response);
-        }
-
-        return agentRuntimeCronSchema.parse(await response.json());
-    }
-
-    async listCronJobs() {
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.cronJobs}`, {
-            headers: this.#authHeaders,
-        });
-
-        if (!response.ok) {
-            await readErrorResponse(response);
-        }
-
-        return agentRuntimeCronListSchema.parse(await response.json());
-    }
-
-    async listCronRuns(jobId?: string) {
-        const route = jobId ? agentRuntimeRoutes.cronJobRuns(jobId) : agentRuntimeRoutes.cronRuns;
-        const response = await fetch(`${this.#baseUrl}${route}`, { headers: this.#authHeaders });
-
-        if (!response.ok) {
-            await readErrorResponse(response);
-        }
-
-        return agentRuntimeCronRunListSchema.parse(await response.json());
-    }
-
-    async updateCronJob(jobId: string, input: AgentRuntimeUpdateCron) {
-        const payload = agentRuntimeUpdateCronSchema.parse(input);
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.cronJob(jobId)}`, {
-            body: JSON.stringify(payload),
-            headers: {
-                ...this.#authHeaders,
-                'content-type': 'application/json',
-                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
-            },
-            method: 'PATCH',
-        });
-
-        if (!response.ok) {
-            await readErrorResponse(response);
-        }
-
-        return agentRuntimeCronSchema.parse(await response.json());
-    }
-
-    async deleteCronJob(jobId: string) {
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.cronJob(jobId)}`, {
-            headers: {
-                ...this.#authHeaders,
-                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
-            },
-            method: 'DELETE',
-        });
-
-        if (!response.ok) {
-            await readErrorResponse(response);
-        }
-
-        return agentRuntimeArchiveCronSchema.parse(await response.json());
-    }
-
-    async createTask(input: AgentRuntimeCreateTask) {
-        const payload = agentRuntimeCreateTaskSchema.parse(input);
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.tasks}`, {
-            body: JSON.stringify(payload),
-            headers: {
-                ...this.#authHeaders,
-                'content-type': 'application/json',
-                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
-            },
-            method: 'POST',
-        });
-
-        if (!response.ok) {
-            await readErrorResponse(response);
-        }
-
-        return agentRuntimeTaskSchema.parse(await response.json());
-    }
-
-    async dispatchTask(taskId: string, agentId: string) {
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.taskDispatch(taskId)}`, {
-            body: JSON.stringify({ agentId }),
-            headers: {
-                ...this.#authHeaders,
-                'content-type': 'application/json',
-                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
-            },
-            method: 'POST',
-        });
-        if (!response.ok) {
-            await readErrorResponse(response);
-        }
-        return agentRuntimeDispatchTaskResultSchema.parse(await response.json());
-    }
-
-    async getTask(taskId: string) {
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.task(taskId)}`, {
-            headers: this.#authHeaders,
-        });
-
-        if (!response.ok) {
-            await readErrorResponse(response);
-        }
-
-        return agentRuntimeTaskSchema.parse(await response.json());
-    }
-
-    async getTaskAttachment(taskId: string, attachmentId: string) {
-        const response = await fetch(
-            `${this.#baseUrl}${agentRuntimeRoutes.taskAttachment(taskId, attachmentId)}`,
-            { headers: this.#authHeaders }
-        );
-        if (!response.ok) {
-            await readErrorResponse(response);
-        }
-        return agentRuntimeTaskAttachmentContentSchema.parse(await response.json());
-    }
-
-    async listTasks() {
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.tasks}`, {
-            headers: this.#authHeaders,
-        });
-
-        if (!response.ok) {
-            await readErrorResponse(response);
-        }
-
-        return agentRuntimeTaskListSchema.parse(await response.json());
-    }
-
-    async updateTask(taskId: string, input: AgentRuntimeUpdateTask) {
-        const payload = agentRuntimeUpdateTaskSchema.parse(input);
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.task(taskId)}`, {
-            body: JSON.stringify(payload),
-            headers: {
-                ...this.#authHeaders,
-                'content-type': 'application/json',
-                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
-            },
-            method: 'PATCH',
-        });
-
-        if (!response.ok) {
-            await readErrorResponse(response);
-        }
-
-        return agentRuntimeTaskSchema.parse(await response.json());
-    }
-
-    async setTaskWorkChat(taskId: string, input: AgentRuntimeSetTaskWorkChat) {
-        const payload = agentRuntimeSetTaskWorkChatSchema.parse(input);
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.taskWorkChat(taskId)}`, {
-            body: JSON.stringify(payload),
-            headers: {
-                ...this.#authHeaders,
-                'content-type': 'application/json',
-                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
-            },
-            method: 'POST',
-        });
-
-        if (!response.ok) {
-            await readErrorResponse(response);
-        }
-
-        return agentRuntimeTaskSchema.parse(await response.json());
-    }
-
-    async deleteTask(taskId: string) {
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.task(taskId)}`, {
-            headers: {
-                ...this.#authHeaders,
-                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
-            },
-            method: 'DELETE',
-        });
-
-        if (!response.ok) {
-            await readErrorResponse(response);
-        }
-
-        return (await response.json()) as { deleted: boolean; id: string };
-    }
-
-    async deleteTaskAttachment(taskId: string, attachmentId: string) {
-        const response = await fetch(
-            `${this.#baseUrl}${agentRuntimeRoutes.taskAttachment(taskId, attachmentId)}`,
-            {
-                headers: {
-                    ...this.#authHeaders,
-                    [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
-                },
-                method: 'DELETE',
-            }
-        );
-        if (!response.ok) {
-            await readErrorResponse(response);
-        }
-        return (await response.json()) as { deleted: boolean; id: string };
-    }
-
-    async listTaskLabels() {
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.labels}`, {
-            headers: this.#authHeaders,
-        });
-
-        if (!response.ok) {
-            await readErrorResponse(response);
-        }
-
-        return agentRuntimeTaskLabelListSchema.parse(await response.json());
-    }
-
-    async createTaskLabel(input: AgentRuntimeCreateTaskLabel) {
-        const payload = agentRuntimeCreateTaskLabelSchema.parse(input);
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.labels}`, {
-            body: JSON.stringify(payload),
-            headers: {
-                ...this.#authHeaders,
-                'content-type': 'application/json',
-                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
-            },
-            method: 'POST',
-        });
-
-        if (!response.ok) {
-            await readErrorResponse(response);
-        }
-
-        return agentRuntimeTaskLabelSchema.parse(await response.json());
-    }
-
-    async updateTaskLabel(labelId: string, input: AgentRuntimeUpdateTaskLabel) {
-        const payload = agentRuntimeUpdateTaskLabelSchema.parse(input);
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.label(labelId)}`, {
-            body: JSON.stringify(payload),
-            headers: {
-                ...this.#authHeaders,
-                'content-type': 'application/json',
-                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
-            },
-            method: 'PATCH',
-        });
-
-        if (!response.ok) {
-            await readErrorResponse(response);
-        }
-
-        return agentRuntimeTaskLabelSchema.parse(await response.json());
-    }
-
-    async deleteTaskLabel(labelId: string) {
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.label(labelId)}`, {
-            headers: {
-                ...this.#authHeaders,
-                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
-            },
-            method: 'DELETE',
-        });
-
-        if (!response.ok) {
-            await readErrorResponse(response);
-        }
-
-        return (await response.json()) as { deleted: boolean; id: string };
-    }
-
-    async runCronJob(jobId: string, input?: AgentRuntimeRunCron) {
-        const payload = agentRuntimeRunCronSchema.parse(input ?? {});
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.cronJobRun(jobId)}`, {
-            body: JSON.stringify(payload),
-            headers: {
-                ...this.#authHeaders,
-                'content-type': 'application/json',
-                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
-            },
-            method: 'POST',
-        });
-
-        if (!response.ok) {
-            await readErrorResponse(response);
-        }
-
-        return agentRuntimeCronRunSchema.parse(await response.json());
-    }
-
     async listRuntimeJobs() {
         const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.jobs}`, {
             headers: this.#authHeaders,
@@ -1326,47 +858,6 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         }
 
         return agentRuntimeJobListSchema.parse(await response.json());
-    }
-
-    async listMemoryJobs(input: AgentRuntimeListMemoryJobsInput = {}) {
-        const params = new URLSearchParams();
-        if (input.agentId) {
-            params.set('agentId', input.agentId);
-        }
-        if (input.kind && input.kind.length > 0) {
-            params.set('kind', input.kind.join(','));
-        }
-        if (input.limit) {
-            params.set('limit', String(input.limit));
-        }
-        if (input.sinceDays) {
-            params.set('sinceDays', String(input.sinceDays));
-        }
-        if (input.status && input.status.length > 0) {
-            params.set('status', input.status.join(','));
-        }
-        const suffix = params.size > 0 ? `?${params.toString()}` : '';
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.memoryJobs}${suffix}`, {
-            headers: this.#authHeaders,
-        });
-
-        if (!response.ok) {
-            await readErrorResponse(response);
-        }
-
-        return memoryJobListSchema.parse(await response.json());
-    }
-
-    async getMemoryActivity() {
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.memoryActivity}`, {
-            headers: this.#authHeaders,
-        });
-
-        if (!response.ok) {
-            await readErrorResponse(response);
-        }
-
-        return memoryActivityListSchema.parse(await response.json());
     }
 
     async listCapabilities() {
@@ -1523,280 +1014,6 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         return agentRuntimeRunJobSchema.parse(await response.json());
     }
 
-    async getWikiStatus() {
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.wikiStatus}`, {
-            headers: this.#authHeaders,
-        });
-
-        if (!response.ok) {
-            await readErrorResponse(response);
-        }
-
-        return wikiStatusSchema.parse(await response.json());
-    }
-
-    async getWikiSettings() {
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.wikiSettings}`, {
-            headers: this.#authHeaders,
-        });
-
-        if (!response.ok) {
-            await readErrorResponse(response);
-        }
-
-        return agentRuntimeWikiSettingsSchema.parse(await response.json());
-    }
-
-    async saveWikiSettings(input: AgentRuntimeSaveWikiSettings) {
-        const payload = agentRuntimeSaveWikiSettingsSchema.parse(input);
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.wikiSettings}`, {
-            body: JSON.stringify(payload),
-            headers: {
-                ...this.#authHeaders,
-                'content-type': 'application/json',
-                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
-            },
-            method: 'PUT',
-        });
-
-        if (!response.ok) {
-            await readErrorResponse(response);
-        }
-
-        return agentRuntimeSaveWikiSettingsResultSchema.parse(await response.json());
-    }
-
-    async createWikiPage(input: WikiCreatePage) {
-        const payload = wikiCreatePageSchema.parse(input);
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.wikiPages}`, {
-            body: JSON.stringify(payload),
-            headers: {
-                ...this.#authHeaders,
-                'content-type': 'application/json',
-                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
-            },
-            method: 'POST',
-        });
-
-        if (!response.ok) {
-            await readErrorResponse(response);
-        }
-
-        return wikiPathMutationResultSchema.parse(await response.json());
-    }
-
-    async saveWikiPage(input: WikiSavePage) {
-        const payload = wikiSavePageSchema.parse(input);
-        const response = await fetch(
-            `${this.#baseUrl}${agentRuntimeRoutes.wikiPage(payload.path)}`,
-            {
-                body: JSON.stringify({ body: payload.body, expectedHash: payload.expectedHash }),
-                headers: {
-                    ...this.#authHeaders,
-                    'content-type': 'application/json',
-                    [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
-                },
-                method: 'PUT',
-            }
-        );
-
-        if (!response.ok) {
-            await readErrorResponse(response);
-        }
-
-        return wikiPathMutationResultSchema.parse(await response.json());
-    }
-
-    async uploadWikiAttachment(input: WikiUploadAttachment) {
-        const payload = wikiUploadAttachmentSchema.parse(input);
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.wikiAttachments}`, {
-            body: JSON.stringify(payload),
-            headers: {
-                ...this.#authHeaders,
-                'content-type': 'application/json',
-                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
-            },
-            method: 'POST',
-        });
-
-        if (!response.ok) {
-            await readErrorResponse(response);
-        }
-
-        return wikiAttachmentSchema.parse(await response.json());
-    }
-
-    async getWikiAttachment(attachmentPath: string) {
-        const response = await fetch(
-            `${this.#baseUrl}${agentRuntimeRoutes.wikiAttachment(attachmentPath)}`,
-            { headers: this.#authHeaders }
-        );
-
-        if (response.status === 404) {
-            return null;
-        }
-        if (!response.ok) {
-            await readErrorResponse(response);
-        }
-
-        return wikiAttachmentContentSchema.parse(await response.json());
-    }
-
-    async createWikiFolder(input: WikiPathInput) {
-        const payload = wikiPathInputSchema.parse(input);
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.wikiFolders}`, {
-            body: JSON.stringify(payload),
-            headers: {
-                ...this.#authHeaders,
-                'content-type': 'application/json',
-                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
-            },
-            method: 'POST',
-        });
-
-        if (!response.ok) {
-            await readErrorResponse(response);
-        }
-
-        return wikiPathMutationResultSchema.parse(await response.json());
-    }
-
-    async listWikiPages() {
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.wikiPages}`, {
-            headers: this.#authHeaders,
-        });
-
-        if (!response.ok) {
-            await readErrorResponse(response);
-        }
-
-        return wikiPageListSchema.parse(await response.json());
-    }
-
-    async getWikiPage(input: { path: string }) {
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.wikiPage(input.path)}`, {
-            headers: this.#authHeaders,
-        });
-
-        if (response.status === 404) {
-            return null;
-        }
-        if (!response.ok) {
-            await readErrorResponse(response);
-        }
-
-        return wikiPageSchema.parse(await response.json());
-    }
-
-    async getWikiPageHistory(input: { limit?: number; path: string }) {
-        const url = new URL(`${this.#baseUrl}${agentRuntimeRoutes.wikiPageHistory(input.path)}`);
-        if (input.limit !== undefined) {
-            url.searchParams.set('limit', String(input.limit));
-        }
-        const response = await fetch(url, { headers: this.#authHeaders });
-
-        if (!response.ok) {
-            await readErrorResponse(response);
-        }
-
-        return wikiPageHistorySchema.parse(await response.json());
-    }
-
-    async getWikiPageRevision(input: { commit: string; path: string }) {
-        const response = await fetch(
-            `${this.#baseUrl}${agentRuntimeRoutes.wikiPageRevision(input.path, input.commit)}`,
-            { headers: this.#authHeaders }
-        );
-
-        if (!response.ok) {
-            await readErrorResponse(response);
-        }
-
-        return wikiPageRevisionSchema.parse(await response.json());
-    }
-
-    async deleteWikiPage(input: WikiPathInput) {
-        const payload = wikiPathInputSchema.parse(input);
-        const response = await fetch(
-            `${this.#baseUrl}${agentRuntimeRoutes.wikiPage(payload.path)}`,
-            {
-                headers: {
-                    ...this.#authHeaders,
-                    [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
-                },
-                method: 'DELETE',
-            }
-        );
-
-        if (!response.ok) {
-            await readErrorResponse(response);
-        }
-
-        return wikiPathMutationResultSchema.parse(await response.json());
-    }
-
-    async deleteWikiFolder(input: WikiPathInput) {
-        const payload = wikiPathInputSchema.parse(input);
-        const response = await fetch(
-            `${this.#baseUrl}${agentRuntimeRoutes.wikiFolder(payload.path)}`,
-            {
-                headers: {
-                    ...this.#authHeaders,
-                    [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
-                },
-                method: 'DELETE',
-            }
-        );
-
-        if (!response.ok) {
-            await readErrorResponse(response);
-        }
-
-        return wikiPathMutationResultSchema.parse(await response.json());
-    }
-
-    async moveWikiPath(input: WikiMovePath) {
-        const payload = wikiMovePathSchema.parse(input);
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.wikiMovePath}`, {
-            body: JSON.stringify(payload),
-            headers: {
-                ...this.#authHeaders,
-                'content-type': 'application/json',
-                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
-            },
-            method: 'POST',
-        });
-
-        if (!response.ok) {
-            await readErrorResponse(response);
-        }
-
-        return wikiPathMutationResultSchema.parse(await response.json());
-    }
-
-    async searchWiki(input: WikiSearchInput) {
-        return await this.postWikiQuery(
-            agentRuntimeRoutes.wikiSearch,
-            wikiSearchInputSchema.parse(input),
-            wikiSearchResultSchema
-        );
-    }
-
-    async listWikiBacklinks(input: { path: string }) {
-        const response = await fetch(
-            `${this.#baseUrl}${agentRuntimeRoutes.wikiBacklinks(input.path)}`,
-            {
-                headers: this.#authHeaders,
-            }
-        );
-
-        if (!response.ok) {
-            await readErrorResponse(response);
-        }
-
-        return wikiBacklinkListSchema.parse(await response.json());
-    }
-
     async getModels() {
         const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.models}`, {
             headers: this.#authHeaders,
@@ -1920,26 +1137,6 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         }
 
         return agentRuntimeAgentEngineConfigSnapshotSchema.parse(await response.json());
-    }
-
-    async updateAgentTaskSettings(agentId: string, input: AgentRuntimeUpdateAgentTaskSettings) {
-        const payload = agentRuntimeUpdateAgentTaskSettingsSchema.parse(input);
-        const response = await fetch(
-            `${this.#baseUrl}${agentRuntimeRoutes.agentTaskSettings(agentId)}`,
-            {
-                body: JSON.stringify(payload),
-                headers: {
-                    ...this.#authHeaders,
-                    'content-type': 'application/json',
-                    [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
-                },
-                method: 'PATCH',
-            }
-        );
-        if (!response.ok) {
-            await readErrorResponse(response);
-        }
-        return agentRuntimeAgentSchema.parse(await response.json());
     }
 
     async updateAgentWebSettings(agentId: string, input: AgentRuntimeUpdateAgentWebSettings) {
@@ -2323,33 +1520,6 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         return agentRuntimeTimezoneSettingsSchema.parse(await response.json());
     }
 
-    async getAutoDispatchSettings() {
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.taskDispatchSettings}`, {
-            headers: this.#authHeaders,
-        });
-        if (!response.ok) {
-            await readErrorResponse(response);
-        }
-        return agentRuntimeAutoDispatchSettingsSchema.parse(await response.json());
-    }
-
-    async saveAutoDispatchSettings(input: AgentRuntimeSaveAutoDispatchSettings) {
-        const payload = agentRuntimeSaveAutoDispatchSettingsSchema.parse(input);
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.taskDispatchSettings}`, {
-            body: JSON.stringify(payload),
-            headers: {
-                ...this.#authHeaders,
-                'content-type': 'application/json',
-                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
-            },
-            method: 'PUT',
-        });
-        if (!response.ok) {
-            await readErrorResponse(response);
-        }
-        return agentRuntimeAutoDispatchSettingsSchema.parse(await response.json());
-    }
-
     async saveTimezoneSettings(input: AgentRuntimeSaveTimezoneSettings) {
         const payload = agentRuntimeSaveTimezoneSettingsSchema.parse(input);
         const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.timezoneSettings}`, {
@@ -2367,73 +1537,6 @@ class HttpTavernAgentRuntimeClient implements TavernAgentRuntimeClient {
         }
 
         return agentRuntimeSaveTimezoneSettingsResultSchema.parse(await response.json());
-    }
-
-    async getMemorySettings() {
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.memorySettings}`, {
-            headers: this.#authHeaders,
-        });
-
-        if (!response.ok) {
-            await readErrorResponse(response);
-        }
-
-        return agentRuntimeMemorySettingsSchema.parse(await response.json());
-    }
-
-    async getMemoryJob(jobId: string) {
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.memoryJob(jobId)}`, {
-            headers: this.#authHeaders,
-        });
-
-        if (response.status === 404) {
-            return null;
-        }
-        if (!response.ok) {
-            await readErrorResponse(response);
-        }
-
-        return memoryJobDetailSchema.parse(await response.json());
-    }
-
-    async runMemoryDream(agentId: string) {
-        const response = await fetch(
-            `${this.#baseUrl}${agentRuntimeRoutes.memoryAgentDream(agentId)}`,
-            {
-                body: JSON.stringify({ agentId }),
-                headers: {
-                    ...this.#authHeaders,
-                    'content-type': 'application/json',
-                    [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
-                },
-                method: 'POST',
-            }
-        );
-
-        if (!response.ok) {
-            await readErrorResponse(response);
-        }
-
-        return memoryDreamResultSchema.parse(await response.json());
-    }
-
-    async saveMemorySettings(input: AgentRuntimeSaveMemorySettings) {
-        const payload = agentRuntimeSaveMemorySettingsSchema.parse(input);
-        const response = await fetch(`${this.#baseUrl}${agentRuntimeRoutes.memorySettings}`, {
-            body: JSON.stringify(payload),
-            headers: {
-                ...this.#authHeaders,
-                'content-type': 'application/json',
-                [agentRuntimeMutationHeaders.origin]: agentRuntimeMutationOrigins.tavern,
-            },
-            method: 'PUT',
-        });
-
-        if (!response.ok) {
-            await readErrorResponse(response);
-        }
-
-        return agentRuntimeSaveMemorySettingsResultSchema.parse(await response.json());
     }
 
     async getModelCategorySettings() {

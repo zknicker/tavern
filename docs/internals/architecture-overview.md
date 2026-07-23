@@ -32,8 +32,8 @@ flowchart LR
 | --- | --- |
 | Tavern App | Electron shell, React routes, local presentation, optimistic UI, and app-local cache. |
 | Tavern Server | Thin tRPC facade, app cache, connection setup, and UI-friendly projections. |
-| Tavern API / SDK | Stable contracts for chats, realtime, agents, models, tools, memory, jobs, and Runtime admin. |
-| Tavern Runtime | Canonical Chats, messages, participants, Agent sessions, Agent turns, model provider setup, executable model inventory, tools, Memory reads, and execution. |
+| Tavern API / SDK | Stable contracts for chats, realtime, agents, models, tools, jobs, and Runtime admin. |
+| Tavern Runtime | Canonical Chats, messages, participants, Agent sessions, Agent turns, model provider setup, executable model inventory, tools, inbox delivery, and execution. |
 | Agent engine | Runtime-internal execution through AI SDK HarnessAgent adapters. |
 
 ## Product Model
@@ -61,7 +61,7 @@ Runtime is the source of truth for values that affect execution:
 - Plugin grants
 - sandbox mode
 - turn queue and turn status
-- response activity and assistant messages
+- inbox delivery cursors and assistant messages
 
 Tavern App and Server must not reconstruct those values from UI state or a
 random chatroom. Settings that change execution call Runtime. Headless clients
@@ -74,8 +74,10 @@ Runtime executes every Agent turn through model record `executionKind: harness`.
 - Claude Code and Codex use their native AI SDK harness adapters.
 - OpenAI and OpenAI-compatible API-key models use the Pi harness adapter.
 
-Executors write Tavern-native messages and activity through Runtime stores.
-Provider-specific details remain metadata.
+Executors write their own reply messages by running `grotto message send`
+(ADR 0014) rather than through a Runtime chat-write API. Execution evidence
+(prompt, file changes) is recorded as turn metadata and surfaced on the agent
+profile, not as chat activity. Provider-specific details remain metadata.
 
 ## Recovery
 

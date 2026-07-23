@@ -45,7 +45,6 @@ export type TavernThreadSummary = TavernApiSchema<'ThreadSummary'>;
 export type TavernTurnPromptEvidence = TavernApiSchema<'TurnPromptEvidence'>;
 export type TavernTurnFileChange = TavernApiSchema<'TurnFileChange'>;
 export type TavernTurnFileChangeEvidence = TavernApiSchema<'TurnFileChangeEvidence'>;
-export type TavernTurnPromptRecallHit = TavernApiSchema<'TurnPromptRecallHit'>;
 export type TavernUpsertArtifactRequest = TavernApiSchema<'UpsertArtifactRequest'>;
 export type TavernUpsertResponseActivityRequest = TavernApiSchema<'UpsertResponseActivityRequest'>;
 export type TavernUpsertResponseRequest = TavernApiSchema<'UpsertResponseRequest'>;

@@ -1,5 +1,6 @@
 import { FileEmpty02Icon } from '@hugeicons-pro/core-stroke-rounded';
 import type * as React from 'react';
+import { WikiMarkdownViewer } from '../../components/markdown/markdown-viewer.tsx';
 import { Badge } from '../../components/ui/badge.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import { Spinner } from '../../components/ui/spinner.tsx';
@@ -7,7 +8,6 @@ import { useSkillEnabledSet } from '../../hooks/skills/use-skill-enabled-set.ts'
 import { useSkillHubPreview } from '../../hooks/skills/use-skill-hub-preview.ts';
 import { useSkillHubScan } from '../../hooks/skills/use-skill-hub-scan.ts';
 import { useSkillPreview } from '../../hooks/skills/use-skill-preview.ts';
-import { WikiMarkdownViewer } from '../wiki/wiki-markdown-viewer.tsx';
 import { SkillDetailActions, type SkillEnablementController } from './skill-detail-actions.tsx';
 import { formatSkillName } from './skill-name-format.ts';
 import {

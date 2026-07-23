@@ -113,7 +113,7 @@ export function createEvalHarness({ evalName }) {
     // Reusable chats are identified by their title with the run stamp
     // stripped, so scenario call sites keep their stamped titles untouched.
     function stripStamp(title) {
-        return title.replace(/ \d{4}-\d{2}-\d{2}-\d{2}-\d{2}$/u, '');
+        return title.replace(/[ -]\d{4}-\d{2}-\d{2}-\d{2}-\d{2}$/u, '');
     }
 
     async function findReusableChat(displayName) {

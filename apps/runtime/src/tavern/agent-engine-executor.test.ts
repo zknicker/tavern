@@ -16,17 +16,17 @@ describe('agent engine executor', () => {
         { model: 'gpt-4.1-mini', provider: 'openai' },
         { model: 'local-model', provider: 'openai-compatible' },
     ] as const)('executes %o through the harness executor', async (model) => {
-        const harness = fakeExecutor('harness');
+        const harness = fakeExecutor();
         const executor = createAgentEngineExecutorForTesting(harness);
 
         const result = await executor.execute(executorInput(model));
 
-        expect(result.outputMessageIds).toEqual(['msg_harness']);
+        expect(result.contextTokens).toBe(42);
         expect(harness.execute).toHaveBeenCalledTimes(1);
     });
 
     it('stops active harness turns', async () => {
-        const harness = fakeExecutor('harness', true);
+        const harness = fakeExecutor(true);
         const executor = createAgentEngineExecutorForTesting(harness);
 
         await expect(executor.stop?.('run_1')).resolves.toBe(true);
@@ -34,11 +34,10 @@ describe('agent engine executor', () => {
     });
 });
 
-function fakeExecutor(name: string, stopResult = false): AgentExecutor {
+function fakeExecutor(stopResult = false): AgentExecutor {
     return {
         execute: vi.fn(async () => ({
-            activityIds: [],
-            outputMessageIds: [`msg_${name}`],
+            contextTokens: 42,
         })),
         stop: vi.fn(async () => stopResult),
     };
@@ -54,7 +53,6 @@ function executorInput(model: AgentRuntimeModelName) {
             primaryColor: null,
             workspaceFolder: '.tavern/agents/agt_primary/workspace',
         } satisfies AgentRuntimeAgent,
-        agentParticipantId: 'agt_primary',
         agentSession: {
             agentId: 'agt_primary',
             archivedAt: null,
@@ -68,11 +66,7 @@ function executorInput(model: AgentRuntimeModelName) {
             status: 'active',
             updatedAt: now,
         } satisfies AgentRuntimeAgentSession,
-        attachments: [],
-        chatId: 'cht_general',
-        content: 'hello',
-        requestMessageId: 'msg_1',
-        responseId: 'rsp_run_1',
+        prompt: 'hello',
         runId: 'run_1',
     };
 }

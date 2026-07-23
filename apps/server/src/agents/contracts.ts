@@ -6,7 +6,6 @@ import {
 import {
     agentKindSchema,
     agentPresenceStateSchema,
-    cronStateSchema,
     logLevelSchema,
     sessionStateSchema,
 } from '../contracts/shared.ts';
@@ -39,7 +38,6 @@ export const agentSchema = z.object({
     chatCount: z.number().int().nonnegative(),
     memoryCount: z.number().int().nonnegative(),
     sessionCount: z.number().int().nonnegative(),
-    cronCount: z.number().int().nonnegative(),
     layout: z.object({
         x: z.number(),
         y: z.number(),
@@ -71,21 +69,8 @@ export const subAgentSchema = z.object({
     lastActiveAt: z.string(),
 });
 
-export const cronJobSchema = z.object({
-    id: z.string(),
-    cadence: z.string(),
-    description: z.string(),
-    lastRunAt: z.string(),
-    name: z.string(),
-    schedule: z.string(),
-    state: cronStateSchema,
-    successRate: z.string(),
-    target: z.string(),
-});
-
 export const agentDetailSchema = z.object({
     agent: agentSchema,
-    cronJobs: z.array(cronJobSchema),
     logs: z.array(logEntrySchema),
     memories: z.array(memorySchema),
     sessions: z.array(sessionSchema),
@@ -98,8 +83,6 @@ export const globalSubAgentSchema = subAgentSchema.extend({
 
 export const agentPresenceSchema = z.object({
     agentId: z.string(),
-    chatId: z.string().nullable(),
-    chatTitle: z.string().nullable(),
     pendingTurns: z.number(),
     since: z.string().nullable(),
     state: agentPresenceStateSchema,
@@ -107,7 +90,6 @@ export const agentPresenceSchema = z.object({
 
 export const globalDashboardSchema = z.object({
     agents: z.array(agentSchema),
-    cronJobs: z.array(cronJobSchema),
     logs: z.array(logEntrySchema),
     sessions: z.array(globalSessionSchema),
     subAgents: z.array(globalSubAgentSchema),

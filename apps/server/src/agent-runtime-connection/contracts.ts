@@ -5,8 +5,6 @@ export const agentRuntimeCapabilities = [
     'claudeAuth',
     'codexOAuth',
     'memory',
-    'wiki',
-    'wikiRecall',
     'memoryExtraction',
     'memoryDreaming',
     'dashboardServer',

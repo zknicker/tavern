@@ -202,7 +202,7 @@ CREATE TABLE IF NOT EXISTS chat_participants (
 );
 
 -- One global session per agent spanning all its chats (specs/sessions.md,
--- ADR 0011). Chat-scoped state lives in agent_session_chat_cursors.
+-- ADR 0011). Chat-scoped state lives in agent_inbox_cursors.
 CREATE TABLE IF NOT EXISTS agent_sessions (
   id                     TEXT PRIMARY KEY,
   agent_id               TEXT NOT NULL,
@@ -228,15 +228,43 @@ CREATE INDEX IF NOT EXISTS idx_agent_sessions_agent
 CREATE UNIQUE INDEX IF NOT EXISTS idx_agent_sessions_one_active
   ON agent_sessions(agent_id) WHERE status = 'active';
 
--- Seen ledger (specs/sessions.md): per-(session, chat) cursor of the highest
--- message sequence provably model-visible. Prompt catch-up and hold
--- envelopes advance it; notices and busy deliveries never do.
-CREATE TABLE IF NOT EXISTS agent_session_chat_cursors (
-  session_id     TEXT NOT NULL,
-  chat_id        TEXT NOT NULL,
-  seen_up_to_seq INTEGER NOT NULL DEFAULT 0 CHECK (seen_up_to_seq >= 0),
-  updated_at     TEXT NOT NULL,
+-- Two-cursor inbox ledger (I3): per (session, target) 'delivered' is inbox
+-- transport state (muted targets never advance it) and 'seen' is the sole
+-- model-seen authority for freshness holds and catch-up. Proof-based
+-- advancement only: prompt-embedded envelopes at turn settle, CLI pull
+-- outputs when the tool result commits, hold catch-up rows. Notices and
+-- wakes advance nothing.
+CREATE TABLE IF NOT EXISTS agent_inbox_cursors (
+  session_id       TEXT NOT NULL,
+  chat_id          TEXT NOT NULL,
+  delivered_up_to_seq INTEGER NOT NULL DEFAULT 0 CHECK (delivered_up_to_seq >= 0),
+  seen_up_to_seq   INTEGER NOT NULL DEFAULT 0 CHECK (seen_up_to_seq >= 0),
+  updated_at       TEXT NOT NULL,
   PRIMARY KEY (session_id, chat_id),
+  FOREIGN KEY(chat_id) REFERENCES chats(id) ON DELETE CASCADE
+);
+
+-- Channel mutes are agent-owned attention state (I1): mute suppresses
+-- ordinary delivery from a channel and its threads without leaving.
+CREATE TABLE IF NOT EXISTS agent_channel_mutes (
+  agent_id   TEXT NOT NULL,
+  chat_id    TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  PRIMARY KEY (agent_id, chat_id),
+  FOREIGN KEY(agent_id) REFERENCES agents(id) ON DELETE CASCADE,
+  FOREIGN KEY(chat_id) REFERENCES chats(id) ON DELETE CASCADE
+);
+
+-- Personal @mentions pierce mutes/unfollows as single messages that do not
+-- re-follow (I1). Pierce rows queue exactly those messages for the next
+-- drain without moving the muted target's delivered cursor.
+CREATE TABLE IF NOT EXISTS agent_inbox_pierces (
+  session_id TEXT NOT NULL,
+  chat_id    TEXT NOT NULL,
+  message_id TEXT NOT NULL,
+  served_run_id TEXT,
+  created_at TEXT NOT NULL,
+  PRIMARY KEY (session_id, chat_id, message_id),
   FOREIGN KEY(chat_id) REFERENCES chats(id) ON DELETE CASCADE
 );
 
@@ -264,34 +292,28 @@ CREATE TABLE IF NOT EXISTS agent_message_drafts (
   FOREIGN KEY(chat_id) REFERENCES chats(id) ON DELETE CASCADE
 );
 
+-- Floating turns (I1): a turn anchors to the agent's global session, never a
+-- chat. 'kind' is the turn shape — 'start' for the bare Start. turn, 'drain'
+-- for inbox deliveries. Prompt evidence and errors ride metadata_json.
 CREATE TABLE IF NOT EXISTS agent_turns (
   id                      TEXT PRIMARY KEY,
-  chat_id                 TEXT NOT NULL,
-  agent_session_id        TEXT NOT NULL,
-  agent_participant_id    TEXT NOT NULL,
   agent_id                TEXT NOT NULL,
-  trigger_message_id      TEXT NOT NULL,
-  response_id             TEXT NOT NULL,
+  agent_session_id        TEXT NOT NULL,
+  kind                    TEXT NOT NULL CHECK (kind IN ('start', 'drain')),
   status                  TEXT NOT NULL CHECK (status IN ('queued', 'running', 'completed', 'failed', 'cancelled')),
-  attempt                 INTEGER NOT NULL CHECK (attempt > 0),
-  output_message_ids_json TEXT NOT NULL DEFAULT '[]',
-  activity_ids_json       TEXT NOT NULL DEFAULT '[]',
   metadata_json           TEXT NOT NULL DEFAULT '{}',
   created_at              TEXT NOT NULL,
   updated_at              TEXT NOT NULL,
   started_at              TEXT,
   completed_at            TEXT,
-  FOREIGN KEY(chat_id) REFERENCES chats(id) ON DELETE CASCADE,
-  FOREIGN KEY(agent_session_id) REFERENCES agent_sessions(id) ON DELETE CASCADE,
-  FOREIGN KEY(trigger_message_id) REFERENCES chat_messages(id) ON DELETE CASCADE,
-  FOREIGN KEY(response_id) REFERENCES chat_responses(id) ON DELETE CASCADE
+  FOREIGN KEY(agent_session_id) REFERENCES agent_sessions(id) ON DELETE CASCADE
 );
 
 CREATE INDEX IF NOT EXISTS idx_agent_turns_session_status
   ON agent_turns(agent_session_id, status, created_at);
 
-CREATE INDEX IF NOT EXISTS idx_agent_turns_chat_updated
-  ON agent_turns(chat_id, updated_at);
+CREATE INDEX IF NOT EXISTS idx_agent_turns_agent_created
+  ON agent_turns(agent_id, created_at);
 
 -- Per-turn workspace file-change evidence: the files a turn created, modified,
 -- or deleted in the agent workspace, with bounded before/after text for diff
@@ -312,28 +334,6 @@ CREATE TABLE IF NOT EXISTS agent_turn_file_changes (
   PRIMARY KEY (run_id, path),
   FOREIGN KEY(run_id) REFERENCES agent_turns(id) ON DELETE CASCADE
 );
-
--- Compact outcome signals for mention-dispatched turns: when a turn an agent
--- dispatched by mention settles, the requesting agent's seat receives one note
--- in its next prompt instead of polling transcripts.
-CREATE TABLE IF NOT EXISTS agent_turn_outcome_notes (
-  id                 TEXT PRIMARY KEY,
-  turn_id            TEXT NOT NULL,
-  recipient_agent_id TEXT NOT NULL,
-  recipient_chat_id  TEXT NOT NULL,
-  target_agent_id    TEXT NOT NULL,
-  target_chat_id     TEXT NOT NULL,
-  status             TEXT NOT NULL CHECK (status IN ('completed', 'failed', 'stopped', 'no_reply')),
-  reply_message_id   TEXT,
-  error              TEXT,
-  created_at         TEXT NOT NULL,
-  consumed_at        TEXT,
-  consumed_by_run_id TEXT,
-  FOREIGN KEY(turn_id) REFERENCES agent_turns(id) ON DELETE CASCADE
-);
-
-CREATE INDEX IF NOT EXISTS idx_agent_turn_outcome_notes_recipient
-  ON agent_turn_outcome_notes(recipient_agent_id, recipient_chat_id, consumed_at);
 
 CREATE TABLE IF NOT EXISTS cron_jobs (
   id                   TEXT PRIMARY KEY,
@@ -759,6 +759,11 @@ export function ensureRuntimeSchema(db: Database): void {
         column: 'followed',
         definition: 'INTEGER NOT NULL DEFAULT 1 CHECK (followed IN (0, 1))',
         table: 'thread_follows',
+    });
+    ensureColumn(db, {
+        column: 'served_run_id',
+        definition: 'TEXT',
+        table: 'agent_inbox_pierces',
     });
     db.exec(
         'CREATE INDEX IF NOT EXISTS idx_chats_parent ON chats(parent_chat_id) WHERE parent_chat_id IS NOT NULL'

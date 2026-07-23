@@ -2,20 +2,21 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import {
     type AgentRuntimeAgent,
-    type AgentRuntimeCreateMessage,
+    agentRuntimeAgentInboxSchema,
     agentRuntimeAgentPluginGrantListSchema,
     agentRuntimeAgentPluginGrantSchema,
+    agentRuntimeAgentStopResultSchema,
     agentRuntimeArchiveAgentSchema,
     agentRuntimeCreateAgentSchema,
     agentRuntimePluginIdSchema,
     agentRuntimeRoutes,
     agentRuntimeSkillListSchema,
     agentRuntimeSkillSchema,
+    agentRuntimeStopTurnResultSchema,
     agentRuntimeUpdateAgentBioSchema,
     agentRuntimeUpdateAgentModelSchema,
     agentRuntimeUpdateAgentNameSchema,
     agentRuntimeUpdateAgentPluginGrantSchema,
-    agentRuntimeUpdateAgentTaskSettingsSchema,
     agentRuntimeUpdateAgentThinkingDefaultSchema,
     agentRuntimeUpdateAgentWebSettingsSchema,
     agentRuntimeUpdateSkillEnabledSchema,
@@ -23,7 +24,6 @@ import {
 } from '@tavern/api';
 import { ZodError } from 'zod';
 import { defaultAgentEngineAgentId } from '../agent-engine/constants.ts';
-import { unsupportedAgentEngineSurface } from '../agent-engine/errors.ts';
 import {
     getRuntimeSkill,
     listRuntimeSkills,
@@ -39,11 +39,9 @@ import {
     resolveAgentModelSelection,
     saveAgentModelSelectionIntent,
 } from '../models/selection-service.ts';
-import {
-    generateRegisteredAgentInstructions,
-    registerAgentWorkspace,
-} from '../workspace/instructions.ts';
-import { agentNotesFileName } from '../workspace/managed-instructions.ts';
+import { registerAgentWorkspace } from '../workspace/instructions.ts';
+import { readAgentInboxVisibility } from './agent-inbox-api.ts';
+import { stopAgentTurn, stopAgentTurns } from './agent-turn-runner.ts';
 import {
     deleteStoredAgent,
     getStoredAgent,
@@ -53,7 +51,6 @@ import {
     updateStoredAgent,
     upsertStoredAgent,
 } from './agents-store.ts';
-import { sendTavernChannelMessage, stopTavernChannelTurn } from './channel-relay.ts';
 import { HandleValidationError } from './handles.ts';
 import { badRequest, json } from './http.ts';
 import { primaryManagedAgent } from './managed-agent.ts';
@@ -84,7 +81,6 @@ async function dispatchAgentEngineStatic({ request, url }: { request: Request; u
         const input = agentRuntimeCreateAgentSchema.parse(await readJson(request));
         const agent = upsertStoredAgent({
             agent: {
-                autoDispatchEnabled: input.autoDispatchEnabled ?? false,
                 webAccessEnabled: input.webAccessEnabled ?? false,
                 bio: input.bio ?? null,
                 enabledSkillIds: input.enabledSkillIds ?? [
@@ -97,7 +93,6 @@ async function dispatchAgentEngineStatic({ request, url }: { request: Request; u
                 isAdmin: input.isAdmin ?? false,
                 name: input.name,
                 primaryColor: input.primaryColor ?? null,
-                taskReviewPolicy: input.taskReviewPolicy ?? false,
                 workspaceFolder: resolveAgentWorkspaceFolder(input),
             },
         });
@@ -125,21 +120,6 @@ async function dispatchAgentEngineStatic({ request, url }: { request: Request; u
         ensurePrimaryAgent();
         const agent = getStoredAgent(segments[1]);
         return agent ? withResolvedModelName(agent) : undefined;
-    }
-    if (
-        method === 'PATCH' &&
-        segments[0] === 'agents' &&
-        segments[1] &&
-        segments[2] === 'task-settings' &&
-        !segments[3]
-    ) {
-        const payload = agentRuntimeUpdateAgentTaskSettingsSchema.parse(await readJson(request));
-        const updatedAgent = updateStoredAgent({
-            agentId: segments[1],
-            autoDispatchEnabled: payload.autoDispatchEnabled,
-            taskReviewPolicy: payload.taskReviewPolicy,
-        });
-        return updatedAgent ? withResolvedModelName(updatedAgent) : undefined;
     }
     if (
         method === 'PATCH' &&
@@ -187,6 +167,14 @@ async function dispatchAgentEngineStatic({ request, url }: { request: Request; u
         }
         return agentEngineAgentConfigSnapshot();
     }
+    if (method === 'POST' && segments[0] === 'agents' && segments[1] && segments[2] === 'stop') {
+        const agentId = segments[1];
+        const stopped = await stopAgentTurns(agentId);
+        return agentRuntimeAgentStopResultSchema.parse({ agentId, stopped });
+    }
+    if (method === 'GET' && segments[0] === 'agents' && segments[1] && segments[2] === 'inbox') {
+        return agentRuntimeAgentInboxSchema.parse(readAgentInboxVisibility(segments[1]));
+    }
     if (method === 'GET' && segments[0] === 'agents' && segments[1] && segments[2] === 'plugins') {
         const agentId = segments[1];
         if (agentId === defaultAgentEngineAgentId) {
@@ -227,34 +215,8 @@ async function dispatchAgentEngineStatic({ request, url }: { request: Request; u
             updatedAt: new Date().toISOString(),
         });
     }
-    if (method === 'GET' && segments[0] === 'agents' && segments[1] && segments[2] === 'files') {
-        const agentId = segments[1];
-        if (segments[3]) {
-            return await readAgentEngineAgentFile(agentId, segments[3]);
-        }
-        return {
-            files: await Promise.all(
-                agentEngineAgentFiles(agentId).map(readAgentEngineAgentFileSummary)
-            ),
-        };
-    }
-    if (method === 'PUT' && segments[0] === 'agents' && segments[1] && segments[2] === 'files') {
-        const agentId = segments[1];
-        const filePath = segments[3];
-        if (!filePath) {
-            return undefined;
-        }
-        const file = resolveAgentEngineAgentFile(agentId, filePath);
-        const body = (await readJson(request)) as { content?: unknown };
-        await fs.mkdir(path.dirname(file.storagePath), { recursive: true });
-        await fs.writeFile(file.storagePath, String(body.content ?? ''), {
-            mode: 0o600,
-        });
-        if (filePath === agentNotesFileName) {
-            await generateRegisteredAgentInstructions(getDb(), agentId);
-        }
-        return await readAgentEngineAgentFile(agentId, filePath);
-    }
+    // The managed agent-file surface (NOTES.md / SOUL.md editors) retired
+    // with the flip: notes injection died with D3 and SOUL with ruling W2.
     if (method === 'GET' && url.pathname === agentRuntimeRoutes.models) {
         return await listAgentModels();
     }
@@ -311,34 +273,17 @@ async function dispatchAgentEngineStatic({ request, url }: { request: Request; u
     }
     if (method === 'POST' && segments[0] === 'agent' && segments[1] === 'chats') {
         const chatId = segments[2];
-        if (chatId && segments[3] === 'messages') {
-            const input = (await readJson(request)) as AgentRuntimeCreateMessage;
-            if (isTavernChannelMessage(input)) {
-                return await sendTavernChannelMessage(chatId, input);
-            }
-            return unsupportedPayload('Non-Grotto agent chat messages');
-        }
         if (chatId && segments[3] === 'turns' && segments[4] && segments[5] === 'stop') {
-            return await stopTavernChannelTurn({ runId: segments[4] });
+            const runId = segments[4];
+            const stopped = await stopAgentTurn(runId);
+            return agentRuntimeStopTurnResultSchema.parse({ runId, stopped });
         }
     }
     return undefined;
 }
 
-function isTavernChannelMessage(input: AgentRuntimeCreateMessage) {
-    if (!input.target) {
-        return false;
-    }
-
-    return input.target.type === 'tavern';
-}
-
 async function readJson(request: Request): Promise<unknown> {
     return await request.json().catch(() => ({}));
-}
-
-function unsupportedPayload(message: string) {
-    return unsupportedAgentEngineSurface(message);
 }
 
 async function savePatchedModel(agentId: string, input: unknown) {
@@ -441,66 +386,4 @@ function agentEngineAgentConfigSnapshot() {
         raw: null,
         valid: true,
     };
-}
-
-function agentEngineAgentFiles(agentId: string) {
-    const agent =
-        agentId === defaultAgentEngineAgentId ? ensurePrimaryAgent() : getStoredAgent(agentId);
-    if (!agent) {
-        throw unsupportedAgentEngineSurface(`agent "${agentId}"`);
-    }
-    return [
-        {
-            mediaType: 'text/markdown',
-            path: agentNotesFileName,
-            storagePath: path.join(agent.workspaceFolder, agentNotesFileName),
-        },
-        {
-            mediaType: 'text/markdown',
-            path: 'SOUL.md',
-            storagePath: path.join(agent.workspaceFolder, 'SOUL.md'),
-        },
-    ];
-}
-
-async function readAgentEngineAgentFile(agentId: string, filePath: string) {
-    const file = resolveAgentEngineAgentFile(agentId, filePath);
-    const stats = await readFileStats(file.storagePath);
-    return {
-        content: await fs.readFile(file.storagePath, 'utf8').catch(() => ''),
-        mediaType: file.mediaType,
-        path: file.path,
-        sizeBytes: stats?.size ?? 0,
-        updatedAt: stats?.updatedAt ?? null,
-    };
-}
-
-async function readAgentEngineAgentFileSummary(
-    file: ReturnType<typeof agentEngineAgentFiles>[number]
-) {
-    const stats = await readFileStats(file.storagePath);
-    return {
-        mediaType: file.mediaType,
-        path: file.path,
-        sizeBytes: stats?.size ?? 0,
-        updatedAt: stats?.updatedAt ?? null,
-    };
-}
-
-function resolveAgentEngineAgentFile(agentId: string, filePath: string) {
-    const file = agentEngineAgentFiles(agentId).find((candidate) => candidate.path === filePath);
-    if (!file) {
-        throw unsupportedAgentEngineSurface(`agent file "${filePath}"`);
-    }
-    return file;
-}
-
-async function readFileStats(filePath: string) {
-    const stats = await fs.stat(filePath).catch(() => null);
-    return stats
-        ? {
-              size: stats.size,
-              updatedAt: stats.mtime.toISOString(),
-          }
-        : null;
 }

@@ -18,7 +18,7 @@ test('lists installed skills with available and sources management', async ({ pa
     // The available catalog lives in the add-from-library dialog.
     await page.getByRole('button', { name: 'Add from library' }).click();
     const libraryDialog = page.getByRole('dialog', { name: 'Add from library' });
-    await expect(libraryDialog.getByText('Grotto Workflow', { exact: true })).toBeVisible();
+    await expect(libraryDialog.getByText('Tavern Workflow', { exact: true })).toBeVisible();
     await expect(libraryDialog.getByText('Built-in', { exact: true }).first()).toBeVisible();
     await page.keyboard.press('Escape');
 });

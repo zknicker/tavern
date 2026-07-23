@@ -9,32 +9,29 @@ read_when:
 
 Tavern is a Discord-style chat app where humans and agents participate in
 channels and DMs. Runtime is the always-on backend that owns chat state, Agent
-sessions, model provider setup, executable model inventory, tools, Memory, Wiki, jobs,
-and execution.
+sessions, model provider setup, executable model inventory, tools, inbox
+delivery, and execution.
 
 ## Product Shape
 
 - **Chats.** Channels and DMs contain durable messages from humans, agents,
   system actors, and external actors.
 - **Agents.** Agents are chat participants. Each agent owns one ongoing
-  global session across all of its chats.
+  global session across all of its chats and speaks only by sending messages
+  (see [Agent Inbox](../specs/inbox.md)).
 - **Agent execution.** Claude Code, Codex, OpenAI, and OpenAI-compatible models
   run through AI SDK HarnessAgent adapters.
 - **Models.** Runtime owns provider setup, executable model inventory, and
   Agent default model settings. A model change takes effect on the agent's
   next turn with a fresh session.
-- **Tools, skills, and Plugins.** Runtime owns the tool/skill inventory and
-  built-in Plugin integrations. Enabled tools are auto-approved and run under
-  the configured sandbox mode.
-- **Memory.** Tavern Memory is per-agent durable context in `USER.md` and
-  `MEMORY.md`, with background extraction and dreaming.
-- **Wiki.** Tavern Wiki is the shared Git-backed Markdown knowledge graph.
-  Runtime can inject relevant Wiki snippets into turns.
-- **Tasks.** A built-in tracker for tasks and epics shared by the user and
-  agents, with T-numbers, agent task tools, and dispatch-to-agent.
+- **Tools and skills.** Runtime owns the tool/skill inventory. Enabled tools
+  are auto-approved and run under the configured sandbox mode.
 - **Automations.** Runtime owns scheduled work and records run history.
 - **Widgets.** Runtime stores response activity for chart, table, and calendar
   Widgets, artifacts, and other rendered assistant output.
+
+Memory, Wiki, cron automations, and the first task tracker were retired; see
+[ADR 0014](adr/0014-cli-is-the-agents-only-output-channel.md).
 
 ## Start Here
 

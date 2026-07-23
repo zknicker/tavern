@@ -55,12 +55,12 @@ test('ChatMarkdownText renders compact heading blocks', () => {
 test('ChatMarkdownText renders Tavern resource links', () => {
     const markup = renderToStaticMarkup(
         <ArtifactPanelOpenProvider onOpen={() => undefined}>
-            <ChatMarkdownText content="[INDEX.md](grotto://wiki/INDEX.md)" />
+            <ChatMarkdownText content="[preview.html](grotto://workspace/out/preview.html)" />
         </ArtifactPanelOpenProvider>
     );
 
-    expect(markup).toContain('href="grotto://wiki/INDEX.md"');
-    expect(markup).toContain('INDEX.md');
+    expect(markup).toContain('href="grotto://workspace/out/preview.html"');
+    expect(markup).toContain('preview.html');
 });
 
 test('ChatMarkdownText keeps heading markers literal inside fenced text', () => {

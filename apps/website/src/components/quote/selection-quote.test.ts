@@ -5,11 +5,11 @@ import { buildQuoteInsert } from './selection-quote.tsx';
 describe('selection quote', () => {
     test('quotes every selected line and appends the grotto:// source link', () => {
         const insert = buildQuoteInsert('first line\nsecond line', {
-            href: 'grotto://wiki/Projects/Alpha.md',
-            label: 'Projects/Alpha.md',
+            href: 'grotto://workspace/projects/alpha.md',
+            label: 'projects/alpha.md',
         });
         expect(insert).toBe(
-            '> first line\n> second line\n\n[Projects/Alpha.md](grotto://wiki/Projects/Alpha.md)\n\n'
+            '> first line\n> second line\n\n[projects/alpha.md](grotto://workspace/projects/alpha.md)\n\n'
         );
     });
 

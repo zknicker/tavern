@@ -2,11 +2,12 @@ import type { TavernChatMessage } from '@tavern/api';
 import { getDb } from '../db/connection.ts';
 import type { Database } from '../db/sqlite.ts';
 import { namedParams } from '../db/sqlite.ts';
+import { attentionParentChatId, isChannelMuted } from './agent-attention.ts';
 import { formatAgentTarget } from './agent-targets.ts';
 import { getChat, latestMessageSequence } from './chat-api/index.ts';
 import { rowToMessage } from './chat-api/messages.ts';
 import type { MessageRow } from './chat-api/types.ts';
-import { advanceSeenCursor, readSeenCursor } from './seen-ledger.ts';
+import { advanceSeenCursor, readSeenCursor } from './inbox-cursors.ts';
 import { advanceServedCursor, readServedCursor } from './served-ledger.ts';
 
 export const maxHoldContextMessages = 12;
@@ -117,6 +118,12 @@ export function collectRecentUnread(
     for (const chatId of chatIds) {
         const chat = getChat(chatId, db);
         if (!chat) {
+            continue;
+        }
+        if (
+            chat.kind !== 'dm' &&
+            isChannelMuted({ agentId: input.agentId, chatId: attentionParentChatId(chat) }, db)
+        ) {
             continue;
         }
         const target = formatAgentTarget(input.agentId, chat, db);

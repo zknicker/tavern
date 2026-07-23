@@ -26,7 +26,6 @@ import { useConnectAgentRuntime } from '../../../hooks/connections/use-connect-a
 import { appRoutes } from '../../../lib/app-routes.ts';
 import { type AgentRuntimeConnectionOutput, trpc } from '../../../lib/trpc.tsx';
 import { AgentCapabilitiesSummary } from './agent-capabilities-table.tsx';
-import { AutoDispatchSection } from './auto-dispatch-section.tsx';
 import { TimezoneSection } from './timezone-section.tsx';
 
 interface AgentRuntimeSettingsPanelProps {
@@ -332,7 +331,6 @@ export function AgentRuntimeSettingsPanel({
                 <RuntimeConnectionContent connection={runtime} />
             </SettingsSection>
             <TimezoneSection />
-            <AutoDispatchSection />
             {runtime && !runtime.lastError ? (
                 <SettingsSection title="Status">
                     <RuntimeCapabilitiesGroup connection={runtime} />

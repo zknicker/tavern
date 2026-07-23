@@ -28,7 +28,6 @@ export function useChatStart() {
                 logTiming('client.createChat', { chatId: created.chatId });
 
                 sendMessage.mutate({
-                    agentId: input.agentId,
                     chatId: created.chatId,
                     clientMessageId: `msg_${crypto.randomUUID()}`,
                     content: input.content,

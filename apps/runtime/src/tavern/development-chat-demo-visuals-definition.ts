@@ -1,88 +1,50 @@
-import { widgetDemoRenderInput } from './development-chat-demo-basic-definitions';
-
 /**
  * Generative-visual turns for the visuals gallery channel: a token-styled
  * chart, a bare native-styled table, a diagram, a tall visual that exercises
  * the collapse affordance, and a malformed body that proves error-tolerant
  * degradation. Bodies follow the visuals skill (theme tokens only,
- * content-first ordering).
+ * content-first ordering). Each turn's assistant reply carries its
+ * ```visual fence inline — the reply text doesn't add anything beyond the
+ * visual itself, so the message body is just the fence.
  */
-export function visualDemoTurns() {
+export interface VisualDemoTurn {
+    html: string;
+    request: string;
+    slug: string;
+    title: string;
+}
+
+export function visualDemoTurns(): VisualDemoTurn[] {
     return [
         {
-            reply: 'Drew it as an inline visual.',
+            html: chartVisualHtml,
             request: 'Draw weekly sales as a bespoke chart visual.',
             slug: 'visual_chart',
-            widgets: [
-                {
-                    fallbackText: 'Weekly sales',
-                    title: 'Visual',
-                    widget: widgetDemoRenderInput('visual', 'Weekly sales', {
-                        html: chartVisualHtml,
-                        title: 'Weekly sales',
-                    }),
-                },
-            ],
+            title: 'Weekly sales',
         },
         {
-            reply: 'Rendered as a bare HTML table; the frame styles it natively.',
+            html: tableVisualHtml,
             request: 'Show regional revenue as a plain table.',
             slug: 'visual_table',
-            widgets: [
-                {
-                    fallbackText: 'Regional revenue',
-                    title: 'Visual',
-                    widget: widgetDemoRenderInput('visual', 'Regional revenue', {
-                        html: tableVisualHtml,
-                        title: 'Regional revenue',
-                    }),
-                },
-            ],
+            title: 'Regional revenue',
         },
         {
-            reply: 'Here is the pipeline as a diagram visual.',
+            html: diagramVisualHtml,
             request: 'Diagram the deploy pipeline.',
             slug: 'visual_diagram',
-            widgets: [
-                {
-                    fallbackText: 'Deploy pipeline',
-                    title: 'Visual',
-                    widget: widgetDemoRenderInput('visual', 'Deploy pipeline', {
-                        html: diagramVisualHtml,
-                        title: 'Deploy pipeline',
-                    }),
-                },
-            ],
+            title: 'Deploy pipeline',
         },
         {
-            reply: 'Full quarter timeline below; it collapses until expanded.',
+            html: tallVisualHtml(),
             request: 'Show the release timeline for the whole quarter.',
             slug: 'visual_tall',
-            widgets: [
-                {
-                    fallbackText: 'Q3 release timeline',
-                    title: 'Visual',
-                    widget: widgetDemoRenderInput('visual', 'Q3 release timeline', {
-                        html: tallVisualHtml(),
-                        title: 'Q3 release timeline',
-                    }),
-                },
-            ],
+            title: 'Q3 release timeline',
         },
         {
-            reply: 'This body is deliberately malformed; the sandbox renders what it can.',
+            html: malformedVisualHtml,
             request: 'Render a visual with broken HTML.',
             slug: 'visual_malformed',
-            widgets: [
-                {
-                    fallbackText: 'Broken markup demo',
-                    title: 'Visual',
-                    widget: widgetDemoRenderInput('visual', 'Broken markup demo', {
-                        html: malformedVisualHtml,
-                        title: 'Broken markup demo',
-                    }),
-                },
-            ],
+            title: 'Broken markup demo',
         },
     ];
 }

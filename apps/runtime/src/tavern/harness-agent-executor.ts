@@ -18,32 +18,16 @@ import {
     readAssignedSkillBundles,
 } from '../agent-engine/skill-library.ts';
 import { readConfigValue } from '../config.ts';
-import { createTavernCronTools } from '../cron/agent-tools.ts';
-import { isRuntimeCronReady } from '../cron/manager-state.ts';
-import { createImageGenerationTools } from '../images/agent-tools.ts';
 import { log } from '../log.ts';
 import {
     ensureFreshClaudeCredentials,
     getClaudeHarnessAuth,
 } from '../model-access/claude-settings.ts';
 import { ensureFreshKimiCredentials, getKimiHarnessAuth } from '../model-access/kimi-settings.ts';
-import { imageGenerationReadiness } from '../models/capability-selections.ts';
 import { readAnthropicApiKey } from '../models/provider-registry.ts';
 import { kimiCodingBaseUrl, kimiCodingModelDefinitions } from '../models/provider-sources/kimi.ts';
-import { createBrowserToolsForAgent } from '../plugins/browser-tools.ts';
-import { createGoogleToolsForAgent } from '../plugins/google-tools.ts';
-import { createMerchbaseToolsForAgent } from '../plugins/merchbase-tools.ts';
-import { createTavernSkillTools } from '../skills/agent-tools.ts';
 import { recordInjectedSkillUsage } from '../skills/telemetry.ts';
-import { createTavernTaskTools } from '../tasks/agent-tools.ts';
 import { createWebToolsForAgent } from '../web/agent-tools.ts';
-import {
-    parseWidgetsFromAssistantContent,
-    widgetActivity,
-    widgetActivityIdForRun,
-} from '../widgets/render.ts';
-import { createTavernWikiTools } from '../wiki/agent-tools.ts';
-import { recallTurnWiki } from '../wiki/recall/recall.ts';
 import type { AgentExecutor, AgentExecutorInput } from './agent-executor.ts';
 import { buildAgentInstructionBundle } from './agent-instructions.ts';
 import {
@@ -51,31 +35,8 @@ import {
     updateAgentSessionRuntimeState,
 } from './agent-session-store.ts';
 import { recordAgentTurnPromptEvidence } from './agent-turn-store.ts';
-import { createTavernChatActionTools } from './chat-actions-tools.ts';
-import {
-    createDelivery,
-    discardStreamingMessage,
-    getMessage,
-    upsertResponse,
-    upsertResponseActivity,
-} from './chat-api/index.ts';
-import { createTavernChatTools } from './chat-context-tools.ts';
-import { createTavernChatWaitTools } from './chat-wait-idle-tool.ts';
-import { recordFreshnessHoldNotice, resolveFreshnessHold } from './freshness-gate.ts';
 import { withRuntimeBridgeBootstrap } from './harness-bridge-bootstrap.ts';
-import { harnessPrompt, promptCursorSequence } from './harness-prompt.ts';
-import {
-    assistantFinalAnswerPhase,
-    assistantMessageIdForRun,
-    isSilentReplyText,
-    persistHarnessTurnStream,
-} from './harness-turn-stream.ts';
-import { createTavernPaneTools } from './pane-tools.ts';
-import { advanceSeenCursor } from './seen-ledger.ts';
-
-export type { HarnessAssistantMessagePhase } from './harness-turn-stream.ts';
-
-const emptyAssistantMessageDiagnostic = 'No reply: the model returned empty content.';
+import { observeHarnessTurnStream } from './harness-stream-observer.ts';
 
 interface ActiveHarnessTurn {
     controller: AbortController;
@@ -125,7 +86,6 @@ async function executeHarnessTurn(
     activeTurn: ActiveHarnessTurn
 ) {
     const startedAt = new Date().toISOString();
-    const runtime = runtimeMetadata(input);
 
     // Sign-in tokens refresh before the turn so the harness always receives
     // a live credential (specs/model-access.md).
@@ -141,16 +101,13 @@ async function executeHarnessTurn(
     // drop them on resumed turns, so only non-resume turns deliver them.
     const instructionsDelivered = !input.agentSession.resumeState;
     const skills = await readHarnessAgentSkills(input);
-    const recall = await recallTurnWiki(input.content);
-    const prompt = harnessPrompt(input, recall?.block);
     try {
         recordAgentTurnPromptEvidence({
             evidence: {
                 capturedAt: startedAt,
                 instructions,
                 instructionsDelivered,
-                prompt,
-                recall: recall?.hits ?? [],
+                prompt: input.prompt,
             },
             id: input.runId,
         });
@@ -165,8 +122,6 @@ async function executeHarnessTurn(
         skills,
     });
     let session: HarnessAgentSession | undefined;
-    let turnStream: Awaited<ReturnType<typeof persistHarnessTurnStream>>;
-    let fallbackText = '';
     try {
         const sessionId = input.agentSession.runtimeSessionId ?? input.agentSession.id;
         const resumeFrom = input.agentSession.resumeState as
@@ -188,44 +143,15 @@ async function executeHarnessTurn(
         }
         activeTurn.session = session;
 
-        const streamTarget = {
-            authorId: input.agentParticipantId,
-            chatId: input.chatId,
-            model: input.agentSession.effectiveModel,
-            responseId: input.responseId,
-            runId: input.runId,
-            runtime,
-        };
         const turn = await agent.stream({
             abortSignal,
-            prompt,
+            prompt: input.prompt,
             session,
         });
-        turnStream = await persistHarnessTurnStream(streamTarget, turn.fullStream);
-        if (!turnStream.finalText) {
-            fallbackText = (await turn.text).trim();
-        }
-        // Freshness gate (specs/steering.md): hold a stale channel reply
-        // once, show the rows that landed mid-turn, and let the agent
-        // deliver, revise, or decline before anything durable ships.
-        const draft = turnStream.finalText || fallbackText;
-        const hold = draft && !isSilentReplyText(draft) ? resolveFreshnessHold(input, draft) : null;
-        if (hold) {
-            recordFreshnessHoldNotice(input, hold);
-            const heldTurn = await agent.stream({
-                abortSignal,
-                prompt: hold.prompt,
-                session,
-            });
-            const heldStream = await persistHarnessTurnStream(streamTarget, heldTurn.fullStream);
-            const revised = heldStream.finalText || (await heldTurn.text).trim();
-            turnStream = {
-                activityIds: [...turnStream.activityIds, ...heldStream.activityIds],
-                contextTokens: heldStream.contextTokens ?? turnStream.contextTokens,
-                finalText: revised || draft,
-            };
-            fallbackText = '';
-        }
+        const observation = await observeHarnessTurnStream(
+            { agentId: input.agent.id },
+            turn.fullStream
+        );
         const resumeState = await session.stop();
         activeTurn.session = undefined;
         updateAgentSessionRuntimeState({
@@ -233,165 +159,12 @@ async function executeHarnessTurn(
             resumeState: resumeState as Record<string, unknown>,
             runtimeSessionId: session.sessionId,
         });
-        // The prompt's catch-up and trigger are now model-visible: advance
-        // the trigger chat's seen cursor (specs/sessions.md).
-        advanceSeenCursor({
-            chatId: input.chatId,
-            seq: promptCursorSequence(input),
-            sessionId: input.agentSession.id,
-        });
+        return { contextTokens: observation.contextTokens };
     } catch (error) {
         activeTurn.session = undefined;
         await session?.destroy().catch(() => {});
         throw formatHarnessExecutionError(input, error);
     }
-
-    const completedAt = new Date().toISOString();
-    const activityIds = turnStream.activityIds;
-    const responseContent = turnStream.finalText || fallbackText || emptyAssistantMessageDiagnostic;
-    if (isSilentReplyText(responseContent)) {
-        return completeSilentHarnessTurn(input, {
-            activityIds,
-            completedAt,
-            contextTokens: turnStream.contextTokens,
-            runtime,
-            startedAt,
-        });
-    }
-    const parsedWidgets = parseWidgetsFromAssistantContent(responseContent);
-    const messageContent = parsedWidgets?.displayContent ?? responseContent;
-    const messageId = assistantMessageIdForRun(input.runId);
-    const deliveryId = deliveryIdForRun(input.runId);
-    const receipt = createDelivery(input.chatId, {
-        agent_id: input.agentParticipantId,
-        id: deliveryId,
-        message: {
-            attachments: [],
-            author_id: input.agentParticipantId,
-            content: messageContent,
-            id: messageId,
-            metadata: {
-                runtime: {
-                    ...runtime,
-                    messagePhase: assistantFinalAnswerPhase,
-                    model: input.agentSession.effectiveModel,
-                },
-            },
-            role: 'assistant',
-        },
-        metadata: {
-            runtime: {
-                ...runtime,
-                model: input.agentSession.effectiveModel,
-            },
-        },
-        turn_id: input.runId,
-    });
-
-    const allActivityIds = [...activityIds];
-    for (const [index, widget] of (parsedWidgets?.widgets ?? []).entries()) {
-        const activityId = widgetActivityIdForRun(input.runId, index);
-        upsertResponseActivity(
-            input.chatId,
-            input.responseId,
-            widgetActivity({
-                activityId,
-                agentId: input.agent.id,
-                messageId,
-                runId: input.runId,
-                sessionKey: input.agentSession.id,
-                source: 'agent-engine',
-                startedAt,
-                timestamp: completedAt,
-                widget,
-            })
-        );
-        allActivityIds.push(activityId);
-    }
-
-    upsertResponse(input.chatId, {
-        completed_at: completedAt,
-        id: input.responseId,
-        metadata: {
-            runtime: {
-                ...runtime,
-                completedAt,
-                ...(turnStream.contextTokens !== null
-                    ? { contextTokens: turnStream.contextTokens }
-                    : {}),
-                model: input.agentSession.effectiveModel,
-            },
-        },
-        participant_id: input.agentParticipantId,
-        request_message_id: input.requestMessageId,
-        response_message_id: receipt.message.id,
-        status: 'completed',
-        summary: 'Agent response completed.',
-    });
-
-    return {
-        activityIds: allActivityIds,
-        outputMessageIds: [receipt.message.id],
-    };
-}
-
-// A silent turn completes without a delivery: no assistant message lands in
-// the chat, and the response row plus one activity row remain as evidence
-// that the agent read the message and chose not to reply.
-function completeSilentHarnessTurn(
-    input: AgentExecutorInput,
-    turn: {
-        activityIds: string[];
-        completedAt: string;
-        contextTokens: number | null;
-        runtime: Record<string, unknown>;
-        startedAt: string;
-    }
-) {
-    const activityId = silentReplyActivityIdForRun(input.runId);
-    // A silent reply leaves no timeline unit: retract the streaming post if
-    // narration already created one (specs/chat-timeline.md).
-    const postId = assistantMessageIdForRun(input.runId);
-    if (getMessage(postId)) {
-        discardStreamingMessage(input.chatId, postId);
-    }
-    upsertResponseActivity(input.chatId, input.responseId, {
-        completed_at: turn.completedAt,
-        id: activityId,
-        kind: 'custom',
-        metadata: {
-            runtime: { ...turn.runtime, model: input.agentSession.effectiveModel },
-        },
-        started_at: turn.startedAt,
-        status: 'completed',
-        summary: 'Read the message and chose not to reply.',
-        title: 'Chose not to reply',
-    });
-    upsertResponse(input.chatId, {
-        completed_at: turn.completedAt,
-        id: input.responseId,
-        metadata: {
-            runtime: {
-                ...turn.runtime,
-                completedAt: turn.completedAt,
-                ...(turn.contextTokens !== null ? { contextTokens: turn.contextTokens } : {}),
-                model: input.agentSession.effectiveModel,
-            },
-        },
-        participant_id: input.agentParticipantId,
-        request_message_id: input.requestMessageId,
-        status: 'completed',
-        summary: 'Chose not to reply.',
-    });
-
-    return {
-        activityIds: [...turn.activityIds, activityId],
-        outputMessageIds: [],
-    };
-}
-
-export function silentReplyActivityIdForRun(runId: string) {
-    return `act_${sanitizeId(runId)}_silent_reply`;
 }
 
 let harnessAgentFactory: typeof createHarnessAgent = createHarnessAgent;
@@ -413,33 +186,11 @@ function createHarnessAgent(
     }
 ) {
     const harness = createHarness(input);
+    // Zero engine tools (D5): the CLI on PATH is the agent's whole surface.
+    // web_fetch stays as the one named host-tool exception — the uniform
+    // Tavern fetch tool with one size-cap and injection posture — pending a
+    // WS2-gate note in the PR.
     const tools = {
-        ...createTavernChatTools({
-            agentId: input.agent.id,
-            chatId: input.chatId,
-        }),
-        ...createTavernChatActionTools({
-            agentId: input.agent.id,
-            chatId: input.chatId,
-            runId: input.runId,
-            sessionId: input.agentSession.id,
-        }),
-        ...createTavernChatWaitTools({
-            agentId: input.agent.id,
-            chatId: input.chatId,
-            runId: input.runId,
-        }),
-        ...createTavernWikiTools(),
-        ...createTavernPaneTools({ agentId: input.agent.id, chatId: input.chatId }),
-        ...(isRuntimeCronReady() ? createTavernCronTools({ agentId: input.agent.id }) : {}),
-        ...(imageGenerationReadiness().ready
-            ? createImageGenerationTools({ workspaceFolder: input.agent.workspaceFolder })
-            : {}),
-        ...createTavernTaskTools({ agentId: input.agent.id, chatId: input.chatId }),
-        ...createTavernSkillTools({ agentId: input.agent.id }),
-        ...createGoogleToolsForAgent(input.agent),
-        ...createMerchbaseToolsForAgent(input.agent),
-        ...createBrowserToolsForAgent(input.agent),
         ...createWebToolsForAgent(input.agent),
     };
     return new HarnessAgent({
@@ -452,7 +203,7 @@ function createHarnessAgent(
         // the workspace's parent and workDir names the workspace folder, so
         // the composed session work directory IS the workspace. The harness
         // default (an invisible per-session directory) hides agent files from
-        // workspace browsing, the artifact panel, and task materialization.
+        // workspace browsing and the artifact panel.
         sandboxConfig: { workDir: path.basename(input.agent.workspaceFolder) },
         skills: options.skills,
         tools,
@@ -526,7 +277,10 @@ export function createHarnessForModel(input: {
                 // web_fetch is the uniform Tavern fetch tool across providers,
                 // so page reads keep one size-cap and injection posture.
                 disallowedTools: input.webSearch ? ['WebFetch'] : ['WebSearch', 'WebFetch'],
-                maxTurns: 8,
+                // CLI-only output (D1) makes every send/check/read a tool
+                // call, so turns legitimately run long tool loops; the turn
+                // watchdog is the real bound, this only stops runaways.
+                maxTurns: 50,
                 model: modelName.model,
                 thinking: claudeThinking(input.thinkingDefault),
             }) as HarnessV1<ToolSet>;
@@ -772,25 +526,6 @@ function piThinkingLevel(value: AgentRuntimeThinkingLevel | null | undefined) {
         return 'xhigh';
     }
     return undefined;
-}
-
-function runtimeMetadata(input: AgentExecutorInput) {
-    return {
-        agentId: input.agent.id,
-        agentSessionId: input.agentSession.id,
-        engine: 'agent-engine',
-        messageId: input.requestMessageId,
-        runId: input.runId,
-        source: 'agent-engine',
-    };
-}
-
-function deliveryIdForRun(runId: string) {
-    return `del_${sanitizeId(runId)}_assistant`;
-}
-
-function sanitizeId(value: string) {
-    return value.replace(/[^A-Za-z0-9_-]/g, '_');
 }
 
 function errorMessage(error: unknown) {

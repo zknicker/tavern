@@ -1,4 +1,4 @@
-import type { ChatActiveReply, ChatTurnFailure } from '../../hooks/chats/chat-timeline-state.ts';
+import type { ChatActiveReply } from '../../hooks/chats/chat-timeline-state.ts';
 import type { ChatLogOutput, SessionHistoryOutput } from '../../lib/trpc.tsx';
 import { getTranscriptItemKey } from './chat-transcript-item-utils.ts';
 
@@ -16,10 +16,14 @@ export interface ConversationMessageLayout {
     showHumanIdentity: boolean;
 }
 
+// activeReply/activeStatus items feed the status stack's turn drawer
+// (chat-active-turn.ts), which builds its own entries from the agent's live
+// activeReplies. The main transcript no longer feeds activeReplies in here
+// (specs/chat-timeline.md; no turn.* event ever populates one), so these
+// kinds never appear in the pane itself.
 export type TranscriptItem =
     | { kind: 'activeReply'; reply: ChatActiveReply }
     | { kind: 'activeStatus'; reply: ChatActiveReply; status: 'thinking' }
-    | { failure: ChatTurnFailure; kind: 'failure' }
     | { kind: 'row'; row: TranscriptRow };
 
 export interface TranscriptSystemEntry {
@@ -53,8 +57,7 @@ const turnMaxGapMs = 5 * 60 * 1000;
 // Consecutive user messages still read as one block, which is presentation
 // adjacency, not turn reconstruction.
 export function buildTranscriptEntries(input: {
-    activeReplies: readonly ChatActiveReply[];
-    failedTurns?: readonly ChatTurnFailure[];
+    activeReplies?: readonly ChatActiveReply[];
     rows: TranscriptRow[];
 }) {
     const items = buildTranscriptItems(input);
@@ -222,10 +225,6 @@ export function getItemRunId(item: TranscriptItem) {
         return item.reply.runId;
     }
 
-    if (item.kind === 'failure') {
-        return item.failure.turn.runId;
-    }
-
     if (item.row.kind === 'message') {
         const fromMetadata = runtimeMetadataRunId(item.row.message.metadata);
 
@@ -276,15 +275,14 @@ function isLikelyRunId(value: string) {
 }
 
 function buildTranscriptItems(input: {
-    activeReplies: readonly ChatActiveReply[];
-    failedTurns?: readonly ChatTurnFailure[];
+    activeReplies?: readonly ChatActiveReply[];
     rows: TranscriptRow[];
 }) {
     // Once a turn's durable reply is in the rows, its live reply items are
     // redundant: rendering both creates sibling segments with one `reply:`
     // key, which restructures the turn (and replays animations) during the
     // completion handoff.
-    const activeReplies = input.activeReplies.filter(
+    const activeReplies = (input.activeReplies ?? []).filter(
         (reply) =>
             !(
                 hasDurableReplyRow(input.rows, reply.runId) ||
@@ -308,10 +306,6 @@ function buildTranscriptItems(input: {
         } else {
             items.push({ kind: 'activeStatus', reply, status: 'thinking' });
         }
-    }
-
-    for (const failure of input.failedTurns ?? []) {
-        items.push({ failure, kind: 'failure' });
     }
 
     // Append-only from the reader's seat (specs/chat-timeline.md): a turn's
@@ -415,13 +409,10 @@ export function isActivityBackedMessageRow(row: TranscriptRow) {
 
 /**
  * Runs whose final reply is already in the transcript — from a durable agent
- * message or the streamed active reply. Narration for these runs has been
- * superseded and stays out of the chat pane.
+ * message. Narration for these runs has been superseded and stays out of the
+ * chat pane.
  */
-export function getRepliedRunIds(
-    rows: TranscriptRow[],
-    activeReplies: readonly ChatActiveReply[]
-): ReadonlySet<string> {
+export function getRepliedRunIds(rows: TranscriptRow[]): ReadonlySet<string> {
     const runIds = new Set<string>();
 
     for (const row of rows) {
@@ -438,17 +429,11 @@ export function getRepliedRunIds(
         }
     }
 
-    for (const reply of activeReplies) {
-        if (reply.text?.trim()) {
-            runIds.add(reply.runId);
-        }
-    }
-
     return runIds;
 }
 
 function getItemParticipant(item: TranscriptItem): 'agent' | 'system' | 'user' {
-    if (item.kind === 'activeReply' || item.kind === 'activeStatus' || item.kind === 'failure') {
+    if (item.kind === 'activeReply' || item.kind === 'activeStatus') {
         return 'agent';
     }
 
@@ -480,10 +465,6 @@ function getTurnKey(item: TranscriptItem, participant: 'agent' | 'user') {
 function getItemActor(item: TranscriptItem): TranscriptActor {
     if (item.kind === 'activeReply' || item.kind === 'activeStatus') {
         return { id: item.reply.agentId, kind: 'agent' };
-    }
-
-    if (item.kind === 'failure') {
-        return { id: item.failure.turn.agentId, kind: 'agent' };
     }
 
     if (item.row.kind === 'system' && item.row.systemKind === 'turnStatus') {
@@ -591,10 +572,6 @@ export function getItemSessionKey(item: TranscriptItem) {
         return item.reply.sessionKey;
     }
 
-    if (item.kind === 'failure') {
-        return item.failure.turn.sessionKey;
-    }
-
     const { row } = item;
 
     if (row.kind === 'message') {
@@ -616,10 +593,6 @@ export function getItemSessionKey(item: TranscriptItem) {
 export function getItemTimestamp(item: TranscriptItem) {
     if (item.kind === 'activeReply' || item.kind === 'activeStatus') {
         return item.reply.startedAt;
-    }
-
-    if (item.kind === 'failure') {
-        return item.failure.turn.startedAt;
     }
 
     const { row } = item;

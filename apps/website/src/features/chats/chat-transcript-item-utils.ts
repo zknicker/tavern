@@ -54,7 +54,7 @@ function flushActivitySegment(segments: AgentItemSegment[], items: TranscriptIte
 }
 
 export function isTranscriptActivityItem(item: TranscriptItem) {
-    if (item.kind === 'activeReply' || item.kind === 'activeStatus' || item.kind === 'failure') {
+    if (item.kind === 'activeReply' || item.kind === 'activeStatus') {
         return false;
     }
 
@@ -77,10 +77,6 @@ export function getTranscriptItemKey(item: TranscriptItem) {
 
     if (item.kind === 'activeStatus') {
         return `active-status:${item.reply.runId}:${item.status}`;
-    }
-
-    if (item.kind === 'failure') {
-        return `failure:${item.failure.turn.runId}`;
     }
 
     const replyRunId = getDurableReplyRunId(item.row);

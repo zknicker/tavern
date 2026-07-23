@@ -5,7 +5,6 @@ import type { WorkspaceFileChange } from '../workspace/snapshot';
 import { ensureCurrentAgentSession } from './agent-session-store';
 import { createAgentTurn } from './agent-turn-store';
 import { upsertStoredAgent } from './agents-store';
-import { createChat, createMessage, upsertResponse } from './chat-api';
 import { getAgentTurnFileEvidence, recordAgentTurnFileChanges } from './turn-file-changes';
 
 describe('Tavern Runtime turn file changes', () => {
@@ -102,35 +101,11 @@ function seedTurn(runId: string) {
         },
     });
     const session = ensureCurrentAgentSession({ agentId: 'agt_files' });
-    createChat({
-        id: 'cht_files',
-        kind: 'channel',
-        participants: [
-            { id: 'usr_tavern', kind: 'user', label: 'You', metadata: {} },
-            { id: 'agt_files', kind: 'agent', label: 'Files', metadata: { agentId: 'agt_files' } },
-        ],
-        title: 'files',
-    });
-    createMessage('cht_files', {
-        author_id: 'usr_tavern',
-        content: 'trigger',
-        id: 'msg_files_1',
-        role: 'user',
-    });
-    upsertResponse('cht_files', {
-        id: 'rsp_files_1',
-        participant_id: 'agt_files',
-        request_message_id: 'msg_files_1',
-        status: 'running',
-    });
     createAgentTurn({
         agentId: 'agt_files',
-        agentParticipantId: 'agt_files',
         agentSessionId: session.id,
-        chatId: 'cht_files',
         id: runId,
-        responseId: 'rsp_files_1',
-        triggerMessageId: 'msg_files_1',
+        kind: 'drain',
     });
 }
 

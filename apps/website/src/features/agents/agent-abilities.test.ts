@@ -73,7 +73,6 @@ function createAgent(input: {
     enabledSkillIds?: string[];
 }): AgentListOutput['agents'][number] {
     return {
-        autoDispatchEnabled: false,
         webAccessEnabled: false,
         bio: null,
         character: null,
@@ -87,7 +86,6 @@ function createAgent(input: {
         name: 'Alpha',
         primaryColor: null,
         runtimeId: 'runtime-local',
-        taskReviewPolicy: false,
         title: 'Alpha',
         updatedAt: '2026-07-01T00:00:00.000Z',
         userInstructions: '',

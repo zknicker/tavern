@@ -12,7 +12,7 @@ import {
 import { TranscriptEntryView } from './chat-transcript-turn.tsx';
 
 interface TranscriptRenderRowProps {
-    activeReplies: readonly ChatActiveReply[];
+    activeReplies?: readonly ChatActiveReply[];
     agentStatusCharacter?: AgentCharacter | null;
     row: TranscriptRenderRow;
 }
@@ -24,7 +24,7 @@ interface TranscriptRenderRowViewProps {
 }
 
 export function TranscriptRenderRowItem({
-    activeReplies,
+    activeReplies = [],
     row,
     ...props
 }: TranscriptRenderRowProps) {
@@ -171,8 +171,6 @@ function areItemsEqual(previous: TranscriptItem, next: TranscriptItem | undefine
                 previous.reply === next.reply &&
                 previous.status === next.status
             );
-        case 'failure':
-            return next.kind === 'failure' && previous.failure === next.failure;
         default:
             return false;
     }

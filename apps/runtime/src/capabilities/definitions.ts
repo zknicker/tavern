@@ -1,5 +1,3 @@
-import fs from 'node:fs';
-import path from 'node:path';
 import type {
     AgentRuntimeCapabilityHealth,
     AgentRuntimeCapabilityHealthId,
@@ -19,27 +17,17 @@ import {
 } from '@tavern/api/plugins/merchbase';
 import { fallbackBinDirectories, findExecutable } from '../cli-path.ts';
 import { AGENT_WORKSPACE } from '../config.ts';
-import { isRuntimeCronReady } from '../cron/scheduler.ts';
-import { getDb, hasTable } from '../db/connection.ts';
 import { isClerkConfigured } from '../identity/clerk-session.ts';
 import { getOwner } from '../identity/members.ts';
-import { isMemoryEnabled } from '../memory/settings.ts';
 import { loadClaudeSettings } from '../model-access/claude-settings.ts';
 import { loadVaultBackedCodexCredentials } from '../model-access/codex-settings.ts';
 import { hasHostClaudeLogin } from '../model-access/host-claude-login.ts';
-import { imageGenerationReadiness } from '../models/capability-selections.ts';
 import { listAgentModels } from '../models/catalog-service.ts';
-import { resolveModelCategorySelection } from '../models/category-settings.ts';
-import { createLanguageModelForRuntime } from '../models/language-model.ts';
 import { resolveAgentModelSummary } from '../models/model-access.ts';
 import { checkBrowserCapability } from '../plugins/browser.ts';
 import { checkGoogleCalendarCapability } from '../plugins/google.ts';
 import { checkMerchbaseCapability } from '../plugins/merchbase.ts';
-import { isTaskDispatcherReady } from '../tasks/dispatcher.ts';
-import { listStoredAgents } from '../tavern/agents-store.ts';
 import { isDevToolkitEnabled } from '../tavern/development-turn-simulator.ts';
-import { auditRecallIndex, getRecallProvisioningStatus } from '../wiki/recall/recall-index.ts';
-import { resolveWikiConfig } from '../wiki/store.ts';
 
 export interface RuntimeCapabilityCheckResult {
     metadata?: Record<string, unknown>;
@@ -80,61 +68,6 @@ export const runtimeCapabilityDefinitions: RuntimeCapabilityDefinition[] = [
         id: 'codexOAuth',
         refresh: {
             intervalMs: 15 * minuteMs,
-            runOnStart: true,
-        },
-    },
-    {
-        async check() {
-            return await checkMemoryCapability();
-        },
-        displayName: 'Memory',
-        id: 'memory',
-        refresh: {
-            intervalMs: 5 * minuteMs,
-            runOnStart: true,
-        },
-    },
-    {
-        async check() {
-            return await checkWikiCapability();
-        },
-        displayName: 'Wiki',
-        id: 'wiki',
-        refresh: {
-            intervalMs: 5 * minuteMs,
-            runOnStart: true,
-        },
-    },
-    {
-        async check() {
-            return await checkMemoryModelCapability('fast', 'Memory extraction');
-        },
-        displayName: 'Memory extraction',
-        id: 'memoryExtraction',
-        refresh: {
-            intervalMs: 5 * minuteMs,
-            runOnStart: true,
-        },
-    },
-    {
-        async check() {
-            return await checkMemoryModelCapability('standard', 'Memory dreaming');
-        },
-        displayName: 'Memory dreaming',
-        id: 'memoryDreaming',
-        refresh: {
-            intervalMs: 5 * minuteMs,
-            runOnStart: true,
-        },
-    },
-    {
-        check() {
-            return checkWikiRecallCapability();
-        },
-        displayName: 'Wiki recall',
-        id: 'wikiRecall',
-        refresh: {
-            intervalMs: 5 * minuteMs,
             runOnStart: true,
         },
     },
@@ -183,44 +116,11 @@ export const runtimeCapabilityDefinitions: RuntimeCapabilityDefinition[] = [
         },
     },
     {
-        check() {
-            return checkImageGenerationCapability();
-        },
-        displayName: 'Image generation',
-        id: 'imageGeneration',
-        refresh: {
-            intervalMs: 5 * minuteMs,
-            runOnStart: true,
-        },
-    },
-    {
         async check() {
             return checkAgentEngineCapability({ capability: 'skills' });
         },
         displayName: 'Skills',
         id: 'skills',
-        refresh: {
-            intervalMs: 5 * minuteMs,
-            runOnStart: true,
-        },
-    },
-    {
-        check() {
-            return checkCronCapability();
-        },
-        displayName: 'Cron',
-        id: 'cron',
-        refresh: {
-            intervalMs: 5 * minuteMs,
-            runOnStart: true,
-        },
-    },
-    {
-        check() {
-            return checkAutoDispatchCapability();
-        },
-        displayName: 'Auto-dispatch',
-        id: 'autoDispatch',
         refresh: {
             intervalMs: 5 * minuteMs,
             runOnStart: true,
@@ -294,23 +194,6 @@ export const runtimeCapabilityDefinitions: RuntimeCapabilityDefinition[] = [
     },
 ];
 
-function checkAutoDispatchCapability(): RuntimeCapabilityCheckResult {
-    try {
-        if (!hasTable(getDb(), 'tasks')) {
-            return { reason: 'Task storage is not ready.', state: 'unavailable' };
-        }
-        return isTaskDispatcherReady()
-            ? { state: 'healthy' }
-            : { reason: 'Task dispatcher is not running.', state: 'unavailable' };
-    } catch (error) {
-        return {
-            reason: 'Auto-dispatch is not ready.',
-            state: 'unavailable',
-            technicalMessage: error instanceof Error ? error.message : String(error),
-        };
-    }
-}
-
 function checkIdentityCapability(): RuntimeCapabilityCheckResult {
     try {
         if (!isClerkConfigured()) {
@@ -338,257 +221,6 @@ function checkWebAccessCapability(): RuntimeCapabilityCheckResult {
     // This makes older Runtimes read as unavailable to the app. Web fetch has no external
     // dependency; provider-native search readiness is a per-model fact.
     return { state: 'healthy' };
-}
-
-function checkImageGenerationCapability(): RuntimeCapabilityCheckResult {
-    try {
-        const readiness = imageGenerationReadiness();
-        return readiness.ready
-            ? { state: 'healthy' }
-            : { reason: readiness.reason, state: 'unavailable' };
-    } catch (error) {
-        return {
-            reason: 'Image generation is not ready.',
-            state: 'unavailable',
-            technicalMessage: error instanceof Error ? error.message : String(error),
-        };
-    }
-}
-
-function checkCronCapability(): RuntimeCapabilityCheckResult {
-    try {
-        const db = getDb();
-        const storageReady = hasTable(db, 'cron_jobs') && hasTable(db, 'cron_runs');
-        if (!storageReady) {
-            return {
-                reason: 'Cron storage is not ready.',
-                state: 'unavailable',
-            };
-        }
-        if (!isRuntimeCronReady()) {
-            return {
-                reason: 'Cron scheduler is not running.',
-                state: 'unavailable',
-            };
-        }
-        return { state: 'healthy' };
-    } catch (error) {
-        return {
-            reason: 'Cron is not ready.',
-            state: 'unavailable',
-            technicalMessage: error instanceof Error ? error.message : String(error),
-        };
-    }
-}
-
-async function checkMemoryModelCapability(
-    category: 'fast' | 'standard',
-    displayName: string
-): Promise<RuntimeCapabilityCheckResult> {
-    if (!isMemoryEnabled()) {
-        return {
-            metadata: { enabled: false },
-            reason: 'Memory is off.',
-            state: 'unavailable',
-        };
-    }
-
-    const model = resolveModelCategorySelection(category);
-    const metadata = { [category]: `${model.provider}/${model.model}` };
-
-    try {
-        await createLanguageModelForRuntime(model);
-    } catch (error) {
-        return {
-            metadata,
-            reason: `${displayName} needs a direct model connection. Add an OpenAI or OpenRouter key, or choose a background model in Settings → Models.`,
-            state: 'unavailable',
-            technicalMessage:
-                error instanceof Error
-                    ? `${category}: ${error.message}`
-                    : `${category}: model unavailable`,
-        };
-    }
-
-    return { metadata, state: 'healthy' };
-}
-
-async function checkMemoryCapability(): Promise<RuntimeCapabilityCheckResult> {
-    const enabled = isMemoryEnabled();
-    const agents = listStoredAgents().agents;
-    const metadata = {
-        agentCount: agents.length,
-        enabled,
-    };
-
-    if (!enabled) {
-        return {
-            metadata,
-            reason: 'Memory is off.',
-            state: 'unavailable',
-        };
-    }
-
-    const inaccessible = agents.find((agent) => !canUseWorkspaceForMemory(agent.workspaceFolder));
-    if (inaccessible) {
-        return {
-            metadata: {
-                ...metadata,
-                workspaceFolder: inaccessible.workspaceFolder,
-            },
-            reason: `Memory workspace for ${inaccessible.name} is not readable, writable, and traversable.`,
-            state: 'unavailable',
-            technicalMessage: inaccessible.workspaceFolder,
-        };
-    }
-
-    return { metadata, state: 'healthy' };
-}
-
-async function checkWikiCapability(): Promise<RuntimeCapabilityCheckResult> {
-    const config = await resolveWikiConfig();
-    const wikiPath = config.wikiPath;
-    const metadata = {
-        configSource: config.source,
-        wikiPath,
-    };
-    try {
-        if (fs.existsSync(wikiPath)) {
-            const stat = fs.statSync(wikiPath);
-            if (!stat.isDirectory()) {
-                return {
-                    reason: 'Wiki path is not a directory.',
-                    state: 'unavailable',
-                    technicalMessage: wikiPath,
-                };
-            }
-            fs.accessSync(wikiPath, fs.constants.R_OK);
-            const writable = canAccess(wikiPath, fs.constants.W_OK);
-            return { metadata: { ...metadata, writable }, state: 'healthy' };
-        }
-
-        fs.accessSync(path.dirname(wikiPath), fs.constants.R_OK | fs.constants.W_OK);
-        return {
-            metadata: { ...metadata, missing: true },
-            state: 'healthy',
-        };
-    } catch (error) {
-        return {
-            reason: 'Wiki path is not readable.',
-            state: 'unavailable',
-            technicalMessage: error instanceof Error ? error.message : String(error),
-        };
-    }
-}
-
-// Per-turn recall readiness: the recall index over Wiki pages plus
-// its locally provisioned embedding model. Progress rides capability metadata
-// so the app can render a provisioning bar without a contract shape change.
-// The ready-state check is an active drift audit: recall that silently fell
-// behind the pages (lost watcher events) reports pending work, not healthy.
-async function checkWikiRecallCapability(): Promise<RuntimeCapabilityCheckResult> {
-    const status = getRecallProvisioningStatus();
-    const percent = status.progress === null ? null : `${Math.round(status.progress * 100)}%`;
-    const metadata = {
-        phase: status.phase,
-        ...(status.progress === null ? {} : { progress: status.progress }),
-    };
-
-    switch (status.phase) {
-        case 'ready':
-            return await auditReadyWikiRecall(metadata);
-        case 'downloading-model':
-            return {
-                metadata,
-                reason: `Downloading the recall model${percent ? ` (${percent})` : ''}.`,
-                state: 'degraded',
-            };
-        case 'embedding':
-            return {
-                metadata,
-                reason: `Indexing Wiki pages for recall${percent ? ` (${percent})` : ''}.`,
-                state: 'degraded',
-            };
-        case 'updating':
-            return {
-                metadata,
-                reason: 'Preparing the recall index.',
-                state: 'degraded',
-            };
-        case 'degraded':
-            return {
-                metadata,
-                reason: 'Recall is keyword-only; semantic recall is unavailable.',
-                state: 'degraded',
-                technicalMessage: status.reason,
-            };
-        default:
-            return {
-                metadata,
-                reason: 'Recall has not been provisioned yet.',
-                state: 'degraded',
-            };
-    }
-}
-
-async function auditReadyWikiRecall(
-    metadata: Record<string, unknown>
-): Promise<RuntimeCapabilityCheckResult> {
-    try {
-        const audit = await auditRecallIndex();
-        const auditMetadata = {
-            ...metadata,
-            pendingEmbeddings: audit.pendingEmbeddings,
-            totalPages: audit.totalPages,
-        };
-        if (audit.pendingEmbeddings > 0) {
-            return {
-                metadata: auditMetadata,
-                reason: `Indexing ${audit.pendingEmbeddings} changed ${audit.pendingEmbeddings === 1 ? 'page' : 'pages'} for recall.`,
-                state: 'degraded',
-            };
-        }
-        return { metadata: auditMetadata, state: 'healthy' };
-    } catch (error) {
-        return {
-            metadata,
-            reason: 'Recall index could not be audited.',
-            state: 'degraded',
-            technicalMessage: error instanceof Error ? error.message : String(error),
-        };
-    }
-}
-
-function canAccess(targetPath: string, mode: number): boolean {
-    try {
-        fs.accessSync(targetPath, mode);
-        return true;
-    } catch {
-        return false;
-    }
-}
-
-function canUseWorkspaceForMemory(workspaceFolder: string): boolean {
-    try {
-        const targetPath = path.resolve(workspaceFolder);
-        const memoryDirectoryMode = fs.constants.R_OK | fs.constants.W_OK | fs.constants.X_OK;
-        if (fs.existsSync(targetPath)) {
-            const stat = fs.statSync(targetPath);
-            return stat.isDirectory() && canAccess(targetPath, memoryDirectoryMode);
-        }
-
-        return canAccess(nearestExistingParent(targetPath), memoryDirectoryMode);
-    } catch {
-        return false;
-    }
-}
-
-function nearestExistingParent(targetPath: string): string {
-    let current = path.dirname(targetPath);
-    while (!(fs.existsSync(current) || path.dirname(current) === current)) {
-        current = path.dirname(current);
-    }
-    return current;
 }
 
 // Dev-stack-only helpers (simulated turns). Healthy only when the runtime

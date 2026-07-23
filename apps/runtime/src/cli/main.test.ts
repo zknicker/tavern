@@ -90,17 +90,17 @@ describe('dispatch', () => {
 
     test('group --help → group help, exit 0', async () => {
         const read = capture('stdout');
-        const result = await dispatch(['wiki', '--help']);
+        const result = await dispatch(['engine', '--help']);
         expect(result).toEqual({ kind: 'exit', code: 0 });
-        expect(read()).toContain('grotto wiki');
+        expect(read()).toContain('grotto engine');
     });
 
     test('subcommand --help → that subcommand help, not group help, exit 0', async () => {
         const read = capture('stdout');
-        const result = await dispatch(['wiki', 'list', '--help']);
+        const result = await dispatch(['engine', 'status', '--help']);
         expect(result).toEqual({ kind: 'exit', code: 0 });
         const out = read();
-        expect(out).toContain('grotto wiki list');
+        expect(out).toContain('grotto engine status');
         expect(out).not.toContain('<status|list|get|search>');
     });
 
@@ -147,13 +147,12 @@ describe('dispatch', () => {
         }
     });
 
-    test('message and inbox check fail honestly with the canonical contract', async () => {
+    test('message react fails honestly with the canonical contract', async () => {
         const read = capture('stderr');
-        await expect(dispatch(['message', 'check'])).resolves.toEqual({ kind: 'exit', code: 1 });
-        await expect(dispatch(['inbox', 'check'])).resolves.toEqual({ kind: 'exit', code: 1 });
+        await expect(dispatch(['message', 'react'])).resolves.toEqual({ kind: 'exit', code: 1 });
         const out = read();
-        expect(out.match(/Code: NOT_YET_AVAILABLE/g)).toHaveLength(2);
-        expect(out).toContain('Next action: grotto message read --target <t>');
+        expect(out).toContain('Code: NOT_YET_AVAILABLE');
+        expect(out).toContain('Next action: grotto message send --target <t>');
     });
 
     test('inbox check exposes real subcommand help', async () => {
@@ -163,6 +162,6 @@ describe('dispatch', () => {
             code: 0,
         });
         expect(read()).toContain('grotto inbox check');
-        expect(read()).toContain('arrives with inbox cursors');
+        expect(read()).toContain('List pending targets without draining them');
     });
 });

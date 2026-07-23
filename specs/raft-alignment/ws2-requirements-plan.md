@@ -38,6 +38,12 @@ once WS5 flips it, so the gate itself is contract-tested in both states. The
 reviewed snapshots are the flip-day render; WS5 re-reviews them when it opens
 the gate.
 
+**Gate #1 amendment (2026-07-22, at implementation):** the
+`URL wrapping near non-ASCII text` row is REMOVED (operator-ruled, adaptation
+#20) and `## Initial role` is conditional — the full fixture carries a
+description and a minimal-fixture absence row proves the empty-description
+omission (adaptation #21).
+
 **W2 amendment (2026-07-21, post-merge):** SOUL and the `## Skills` listing are
 retired (README ruling W2). The `### Skills, outputs, visuals` requirements lose
 their skills-listing entries (family-9 Communication entry remains, `phase: 'ws5'`);
