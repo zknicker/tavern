@@ -1,11 +1,14 @@
 import type { TavernCreateMessageRequest } from '@tavern/api';
-import { obsoleteDevelopmentChatDemoIds } from '@tavern/api/development-chat-demos';
+import {
+    developmentChatTeamDemoId,
+    obsoleteDevelopmentChatDemoIds,
+} from '@tavern/api/development-chat-demos';
 import { AGENT_WORKSPACE } from '../config';
 import type { Database } from '../db/sqlite';
 import { namedParams } from '../db/sqlite';
 import { registerAgentWorkspace } from '../workspace/instructions';
 import { getStoredAgent, upsertStoredAgent } from './agents-store';
-import { createChat, createMessage, getMessage } from './chat-api';
+import { createChat, createMessage, getMessage, promoteMessageToTask } from './chat-api';
 import { developmentChatDemos } from './development-chat-demo-definitions';
 import {
     type DevelopmentDemoMessage,
@@ -17,6 +20,7 @@ import {
     demoUserParticipantId,
 } from './development-chat-demo-types';
 import { ensurePrimaryManagedAgent } from './managed-agent';
+import { createReminder, listReminders } from './reminder-store';
 
 // Seeding is create-only for rows a user or real turn may have touched:
 // existing dev DBs keep their chat titles and any already-observed participant
@@ -68,7 +72,49 @@ export function seedDevelopmentChatDemos({
         }
     }
 
+    seedDemoTaskAndReminder(db);
+
     return { seeded: developmentChatDemos.length };
+}
+
+// Populate the Tasks and Reminders surfaces on a fresh reseed so both are
+// reviewable in dev. Metadata only: no receipt system message and no wake, so
+// seeding never spends a model turn. Idempotent by construction — the task
+// keys on its anchor message, the reminder on the owner's existing rows.
+function seedDemoTaskAndReminder(db: Database) {
+    const anchorId = 'msg_demo_team_request';
+    if (!getMessage(anchorId, db)) {
+        return;
+    }
+    const hasTask = db
+        .prepare('SELECT 1 FROM message_tasks WHERE message_id = $anchorId')
+        .get(namedParams({ anchorId })) as unknown;
+    if (!hasTask) {
+        // The owner reserves the weekly review for Wren: a todo task the
+        // assignee must still claim (D8 reservation semantics).
+        promoteMessageToTask(
+            {
+                actorId: demoOwnerParticipantId,
+                assigneeId: demoSecondAgentId,
+                messageId: anchorId,
+                origin: 'converted',
+            },
+            db
+        );
+    }
+    if (listReminders({ ownerAgentId: demoAgentId }, db).length === 0) {
+        createReminder(
+            {
+                anchorChatId: developmentChatTeamDemoId,
+                anchorMessageId: anchorId,
+                fireAtMs: Date.parse('2026-06-19T16:00:00.000Z'),
+                ownerAgentId: demoAgentId,
+                repeat: 'weekly:mon@09:00',
+                title: 'Check the release-note draft before the weekly review',
+            },
+            db
+        );
+    }
 }
 
 // The second demo seat. A stored agent like any other — the roster, facepile,

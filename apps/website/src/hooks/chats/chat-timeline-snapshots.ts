@@ -8,6 +8,7 @@ import {
     normalizeActiveReply,
     upsertActiveReply,
 } from './chat-timeline-reply.ts';
+import { areSameTimeline } from './chat-timeline-row-equality.ts';
 import {
     hasTurnStatusRow,
     isOptimisticStopRow,
@@ -199,58 +200,6 @@ function areSameActiveTurns(
         left === right ||
         (left.length === right.length &&
             left.every((turn, index) => turn.runId === right[index]?.runId))
-    );
-}
-
-function areSameTimeline(left: ChatTimeline, right: ChatTimeline) {
-    if (left === right) {
-        return true;
-    }
-
-    if (left.length !== right.length) {
-        return false;
-    }
-
-    // Row ids alone miss in-place row changes: a refetch that only moves a
-    // message's thread summary (new reply, follow toggle) must not be
-    // swallowed as "same timeline".
-    return left.every((row, index) => {
-        const other = right[index];
-
-        if (!other || row.id !== other.id) {
-            return false;
-        }
-
-        if (row.kind === 'message' && other.kind === 'message') {
-            return isSameThreadSummary(row.thread ?? null, other.thread ?? null);
-        }
-
-        return true;
-    });
-}
-
-type MessageThreadSummary = NonNullable<
-    Extract<ChatTimeline[number], { kind: 'message' }>['thread']
->;
-
-function isSameThreadSummary(
-    left: MessageThreadSummary | null,
-    right: MessageThreadSummary | null
-) {
-    if (left === right) {
-        return true;
-    }
-
-    if (!(left && right)) {
-        return false;
-    }
-
-    return (
-        left.replyCount === right.replyCount &&
-        left.unreadCount === right.unreadCount &&
-        left.followed === right.followed &&
-        left.latestReplyAt === right.latestReplyAt &&
-        left.threadChatId === right.threadChatId
     );
 }
 

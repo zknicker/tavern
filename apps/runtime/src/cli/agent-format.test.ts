@@ -62,6 +62,38 @@ describe('agent message formatting', () => {
         );
     });
 
+    test('renders hydrated attachment details before the task suffix', () => {
+        const output = formatHistoryLine({
+            ...humanMessage,
+            attachments: [
+                { byteSize: 5, filename: 'hello.txt', id: 'att_123', mediaType: 'text/plain' },
+            ],
+            task: {
+                assignee: null,
+                claimed_at: null,
+                created_at: humanMessage.created_at,
+                labels: [],
+                number: 1,
+                origin: 'composed',
+                priority: 'none',
+                status: 'todo',
+                updated_at: humanMessage.created_at,
+            },
+        });
+        expect(output).toContain(
+            ' [1 attachment: hello.txt (id:att_123) — use grotto attachment view to download] [task #1 status=todo]'
+        );
+    });
+
+    test('renders only an attachment count for inline app attachments', () => {
+        expect(
+            formatDeliveryEnvelope('#general', {
+                ...humanMessage,
+                attachments: [{}],
+            }).endsWith(': hello [1 attachment]')
+        ).toBe(true);
+    });
+
     test('renders history teaching and pagination', () => {
         expect(
             renderHistory({

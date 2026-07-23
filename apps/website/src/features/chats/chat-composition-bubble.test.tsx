@@ -1,5 +1,5 @@
-import assert from 'node:assert/strict';
 import { mock, test } from 'bun:test';
+import assert from 'node:assert/strict';
 import { renderToStaticMarkup } from 'react-dom/server';
 
 const compositions = new Map([

@@ -440,7 +440,11 @@ function getItemParticipant(item: TranscriptItem): 'agent' | 'system' | 'user' {
     const { row } = item;
 
     if (row.kind === 'message') {
-        return row.message.senderType === 'user' ? 'user' : 'agent';
+        return row.message.senderType === 'system'
+            ? 'system'
+            : row.message.senderType === 'user'
+              ? 'user'
+              : 'agent';
     }
 
     if (row.kind === 'tool' || row.kind === 'widget' || row.kind === 'worker') {

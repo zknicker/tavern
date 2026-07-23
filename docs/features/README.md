@@ -18,6 +18,8 @@ implementation ownership, and runtime details live under
 | Context management | [Context management](context-management.md) |
 | Rich references | [Rich references](rich-references.md) |
 | Clarifications | [Clarifications](clarifications.md) |
+| Tasks | [Tasks](tasks.md) |
+| Reminders | [Reminders](reminders.md) |
 | Skills and Tools | [Skills and Tools](skills.md) |
 | Plugins | [Plugins](plugins.md) |
 | Stats | [Stats](stats.md) |
@@ -26,3 +28,5 @@ implementation ownership, and runtime details live under
 Memory, Wiki, cron automations, and the first task tracker were retired; see
 [ADR 0014](../adr/0014-cli-is-the-agents-only-output-channel.md). Agents
 speak only by sending messages (see [Agent Inbox](../../specs/inbox.md)).
+Chat-first [Tasks](tasks.md) and [Reminders](reminders.md) are their
+successors.

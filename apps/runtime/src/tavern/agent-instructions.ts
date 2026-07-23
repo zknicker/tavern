@@ -19,8 +19,6 @@ export interface BuildAgentInstructionOptions {
     runtimeContext?: AgentRuntimeContextFacts;
     seedSkills?: boolean;
     skillsDir?: string;
-    /** Contract-test override for the WS5 CLI-surface gate. */
-    ws5CliSurface?: boolean;
 }
 
 // The subset of executor input that instruction composition reads. One
@@ -49,7 +47,6 @@ export async function buildAgentInstructionBundle(
         runtimeContext: options.runtimeContext,
         seedSkills: options.seedSkills,
         skillsDir: options.skillsDir,
-        ws5CliSurface: options.ws5CliSurface,
     });
     const modelSections = modelOperationalInstructions(input.agentSession.effectiveModel);
     const instructions = [prepared.content, ...(modelSections ? [modelSections] : [])].join('\n\n');

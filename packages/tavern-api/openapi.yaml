@@ -1311,6 +1311,95 @@ components:
             - type: 'null'
         metadata:
           $ref: '#/components/schemas/JsonObject'
+        task:
+          oneOf:
+            - $ref: '#/components/schemas/MessageTask'
+            - type: 'null'
+        reactions:
+          type: array
+          items:
+            $ref: '#/components/schemas/MessageReaction'
+    MessageTask:
+      type: object
+      additionalProperties: false
+      required:
+        - number
+        - status
+        - assignee
+        - claimed_at
+        - priority
+        - labels
+        - origin
+        - created_at
+        - updated_at
+      properties:
+        number:
+          type: integer
+          minimum: 1
+        status:
+          type: string
+          enum: [todo, in_progress, in_review, done, closed]
+        assignee:
+          oneOf:
+            - $ref: '#/components/schemas/TaskActor'
+            - type: 'null'
+        claimed_at:
+          oneOf:
+            - $ref: '#/components/schemas/Timestamp'
+            - type: 'null'
+        priority:
+          type: string
+          enum: [none, urgent, high, medium, low]
+        labels:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaskLabel'
+        origin:
+          type: string
+          enum: [composed, converted]
+        created_at:
+          $ref: '#/components/schemas/Timestamp'
+        updated_at:
+          $ref: '#/components/schemas/Timestamp'
+    TaskActor:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - handle
+      properties:
+        id:
+          type: string
+        handle:
+          type: [string, 'null']
+    TaskLabel:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - name
+        - color
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        color:
+          type: string
+          enum: [red, orange, amber, green, teal, blue, purple, pink, gray]
+    MessageReaction:
+      type: object
+      additionalProperties: false
+      required:
+        - emoji
+        - actors
+      properties:
+        emoji:
+          type: string
+        actors:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaskActor'
     CreateMessageRequest:
       type: object
       additionalProperties: false

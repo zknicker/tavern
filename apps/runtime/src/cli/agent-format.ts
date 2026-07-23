@@ -31,7 +31,7 @@ export function formatHistoryLine(message: AgentCliMessage): string {
         ...(message.replyCount !== undefined ? [`replyCount=${message.replyCount}`] : []),
         ...(message.replyTarget ? [`replyTarget=${message.replyTarget}`] : []),
     ];
-    return `[${attributes.join(' ')}] ${formatSender(message)}: ${message.content}`;
+    return `[${attributes.join(' ')}] ${formatSender(message)}: ${message.content}${attachmentSuffix(message)}${taskSuffix(message)}`;
 }
 
 export function formatDeliveryEnvelope(target: string, message: AgentCliMessage): string {
@@ -41,7 +41,36 @@ export function formatDeliveryEnvelope(target: string, message: AgentCliMessage)
         `time=${formatLocalTime(message.created_at)}`,
         `type=${message.sender.type}`,
     ];
-    return `[${attributes.join(' ')}] ${formatSender(message)}: ${message.content}`;
+    return `[${attributes.join(' ')}] ${formatSender(message)}: ${message.content}${attachmentSuffix(message)}${taskSuffix(message)}`;
+}
+
+export function attachmentSuffix(message: AgentCliMessage): string {
+    if (message.attachments.length === 0) {
+        return '';
+    }
+    const described = message.attachments.flatMap((attachment) => {
+        const id = attachment.id;
+        const filename = attachment.filename;
+        return typeof id === 'string' && typeof filename === 'string'
+            ? [`${filename} (id:${id})`]
+            : [];
+    });
+    const count = message.attachments.length;
+    const noun = count === 1 ? 'attachment' : 'attachments';
+    if (described.length !== count) {
+        return ` [${count} ${noun}]`;
+    }
+    return ` [${count} ${noun}: ${described.join(', ')} — use grotto attachment view to download]`;
+}
+
+/** Task-messages ride every surface with their metadata suffix (D8). */
+export function taskSuffix(message: AgentCliMessage): string {
+    const task = message.task;
+    if (!task) {
+        return '';
+    }
+    const assignee = task.assignee?.handle ? ` assignee=@${task.assignee.handle}` : '';
+    return ` [task #${task.number} status=${task.status}${assignee}]`;
 }
 
 export function formatSender(message: AgentCliMessage): string {

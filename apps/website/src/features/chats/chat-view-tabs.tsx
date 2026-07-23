@@ -1,8 +1,13 @@
-import { Attachment01Icon, BubbleChatIcon } from '@hugeicons-pro/core-stroke-rounded';
+import {
+    Attachment01Icon,
+    BubbleChatIcon,
+    CheckListIcon,
+} from '@hugeicons-pro/core-stroke-rounded';
 import { TabsSubtle, TabsSubtleItem, TabsSubtleList } from '../../components/ui/tabs-subtle.tsx';
 
 const chatViewTabs = [
     { icon: BubbleChatIcon, label: 'Chat', value: 'chat' },
+    { icon: CheckListIcon, label: 'Tasks', value: 'tasks' },
     { icon: Attachment01Icon, label: 'Files', value: 'files' },
 ] as const;
 

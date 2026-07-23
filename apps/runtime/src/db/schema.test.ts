@@ -194,101 +194,33 @@ INSERT INTO thread_follows (thread_chat_id, participant_id, created_at)
         });
     });
 
-    it('migrates legacy task labels into records and repairs task constraints', () => {
+    it('creates the WS5 task, reminder, reaction, and attachment tables', () => {
         const db = initTestDb();
-        createLegacyTasksTable(db);
-        db.exec('PRAGMA foreign_keys = OFF');
-        db.prepare(
-            `INSERT INTO tasks (
-                id, number, kind, title, description, status, priority,
-                labels_json, created_at, updated_at
-             )
-             VALUES (
-                'tsk_old', 1, 'task', 'Old task', 'Keep this row', 'todo',
-                'high', '["legacy", "Shared"]', '2026-07-02T20:00:00.000Z',
-                '2026-07-02T20:00:00.000Z'
-             )`
-        ).run();
-        db.prepare(
-            `INSERT INTO tasks (
-                id, number, kind, title, description, status, priority,
-                labels_json, created_at, updated_at
-             )
-             VALUES (
-                'tsk_other', 2, 'task', 'Other task', NULL, 'todo',
-                'none', '["shared", "Bug"]', '2026-07-02T20:00:00.000Z',
-                '2026-07-02T20:00:00.000Z'
-             )`
-        ).run();
-        db.exec('PRAGMA foreign_keys = ON');
-
         ensureRuntimeSchema(db);
-        db.prepare(
-            `INSERT INTO tasks (
-                id, number, kind, title, status, priority, created_at, updated_at
-             )
-             VALUES (
-                'tsk_blocked', 3, 'task', 'Blocked task', 'blocked',
-                'none', '2026-07-02T20:01:00.000Z',
-                '2026-07-02T20:01:00.000Z'
-             )`
-        ).run();
 
-        expect(tableSql(db, 'tasks')).toContain("'review'");
-        expect(tableSql(db, 'tasks')).not.toContain('labels_json');
-        expect(
-            db
-                .prepare(
-                    `SELECT id, status, title, description, origin_chat_id, scheduled_for
-                     FROM tasks ORDER BY number`
-                )
-                .all()
-        ).toEqual([
-            {
-                description: 'Keep this row',
-                id: 'tsk_old',
-                origin_chat_id: null,
-                scheduled_for: null,
-                status: 'todo',
-                title: 'Old task',
-            },
-            {
-                description: null,
-                id: 'tsk_other',
-                origin_chat_id: null,
-                scheduled_for: null,
-                status: 'todo',
-                title: 'Other task',
-            },
-            {
-                description: null,
-                id: 'tsk_blocked',
-                origin_chat_id: null,
-                scheduled_for: null,
-                status: 'blocked',
-                title: 'Blocked task',
-            },
-        ]);
-        expect(
-            db.prepare('SELECT id, name, color FROM labels ORDER BY lower(name)').all()
-        ).toMatchObject([{ name: 'Bug' }, { name: 'legacy' }, { name: 'Shared' }]);
-        expect(
-            db
-                .prepare(
-                    `SELECT t.id AS task_id, l.name
-                     FROM task_labels tl
-                     JOIN tasks t ON t.id = tl.task_id
-                     JOIN labels l ON l.id = tl.label_id
-                     ORDER BY t.number, lower(l.name)`
-                )
-                .all()
-        ).toEqual([
-            { name: 'legacy', task_id: 'tsk_old' },
-            { name: 'Shared', task_id: 'tsk_old' },
-            { name: 'Bug', task_id: 'tsk_other' },
-            { name: 'Shared', task_id: 'tsk_other' },
-        ]);
-        expect(tableSql(db, 'task_dependencies')).toContain('depends_on_task_id');
+        for (const table of [
+            'message_tasks',
+            'labels',
+            'reminders',
+            'reminder_runs',
+            'message_reactions',
+            'attachments',
+        ]) {
+            expect(tableSql(db, table), table).not.toBe('');
+        }
+        // The pre-flip tracker and cron product tables are retired; fresh
+        // databases must not recreate them (live databases drop them at the
+        // WS5 manual cutover).
+        for (const table of [
+            'tasks',
+            'task_dependencies',
+            'task_labels',
+            'task_attachments',
+            'cron_jobs',
+            'cron_runs',
+        ]) {
+            expect(tableSql(db, table), table).toBe('');
+        }
     });
 });
 
@@ -362,34 +294,6 @@ CREATE TABLE chats (
   updated_at            TEXT NOT NULL,
   last_message_sequence INTEGER NOT NULL DEFAULT 0
 );
-`);
-}
-
-function createLegacyTasksTable(db: Database) {
-    db.exec(`
-CREATE TABLE tasks (
-  id                TEXT PRIMARY KEY,
-  number            INTEGER NOT NULL UNIQUE,
-  kind              TEXT NOT NULL DEFAULT 'task' CHECK (kind IN ('task', 'epic')),
-  title             TEXT NOT NULL,
-  description       TEXT,
-  status            TEXT NOT NULL DEFAULT 'backlog' CHECK (status IN ('backlog', 'todo', 'in_progress', 'done', 'canceled')),
-  priority          TEXT NOT NULL DEFAULT 'none' CHECK (priority IN ('none', 'urgent', 'high', 'medium', 'low')),
-  assignee_kind     TEXT CHECK (assignee_kind IS NULL OR assignee_kind IN ('user', 'agent')),
-  assignee_agent_id TEXT,
-  epic_id           TEXT,
-  labels_json       TEXT NOT NULL DEFAULT '[]',
-  created_at        TEXT NOT NULL,
-  updated_at        TEXT NOT NULL,
-  FOREIGN KEY(epic_id) REFERENCES tasks(id) ON DELETE SET NULL,
-  FOREIGN KEY(assignee_agent_id) REFERENCES agents(id) ON DELETE SET NULL
-);
-
-CREATE INDEX IF NOT EXISTS idx_tasks_status
-  ON tasks(status);
-
-CREATE INDEX IF NOT EXISTS idx_tasks_epic
-  ON tasks(epic_id);
 `);
 }
 

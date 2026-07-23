@@ -88,8 +88,6 @@ interface PromptRequirement {
     absent?: true;
     capability: string;
     expected: RegExp | string;
-    /** ws5 rows must be ABSENT while the gate is closed and present once open. */
-    phase?: 'ws5';
     prompt: 'full' | 'minimal';
 }
 
@@ -238,41 +236,35 @@ const REQUIREMENTS: PromptRequirement[] = [
         expected: 'always reuse the exact `target` from the received message',
         prompt: 'full',
     },
-    // Reminders (WS5-gated).
+    // Reminders (D4, landed with WS5).
     {
         capability: 'reminders are author-owned wake signals',
         expected: 'wakes the author who scheduled it, not other people',
-        phase: 'ws5',
         prompt: 'full',
     },
     {
         capability: 'reminder over long sleep',
         expected: 'instead of keeping the current turn alive with a long sleep',
-        phase: 'ws5',
         prompt: 'full',
     },
     {
         capability: 'reminder over native cron tools',
         expected: 'rather than runtime-native wake or cron tools',
-        phase: 'ws5',
         prompt: 'full',
     },
     {
         capability: 'snooze/update over cancel',
         expected: 'prefer `grotto reminder snooze` to push it later',
-        phase: 'ws5',
         prompt: 'full',
     },
     {
         capability: 'script reminders for watchdogs',
         expected: 'Prefer script reminders for watchdogs',
-        phase: 'ws5',
         prompt: 'full',
     },
     {
         capability: 'script quiet tick',
         expected: 'empty output records a quiet tick',
-        phase: 'ws5',
         prompt: 'full',
     },
     // Threads.
@@ -339,73 +331,62 @@ const REQUIREMENTS: PromptRequirement[] = [
         expected: 'if you cannot find it, say that explicitly',
         prompt: 'full',
     },
-    // Tasks (WS5-gated).
+    // Tasks (D8, landed with WS5).
     {
         capability: 'claim before work',
         expected: 'Always claim a task via `grotto task claim` before starting work',
-        phase: 'ws5',
         prompt: 'full',
     },
     {
         capability: 'claim decision rule',
         expected: 'requires you to take action beyond just replying',
-        phase: 'ws5',
         prompt: 'full',
     },
     {
         capability: 'task envelope suffix taught',
         expected: '[task #3 status=in_progress]',
-        phase: 'ws5',
         prompt: 'full',
     },
     {
         capability: 'status flow with closed',
         expected: '`todo` → `in_progress` → `in_review` → `done`',
-        phase: 'ws5',
         prompt: 'full',
     },
     {
         capability: 'closed status reversible',
         expected: 'set to `closed` (reversible)',
-        phase: 'ws5',
         prompt: 'full',
     },
     {
         capability: 'assignee independent of status',
         expected: 'independent from status',
-        phase: 'ws5',
         prompt: 'full',
     },
     {
         capability: 'in_review before done',
         expected: 'set status to `in_review` so a human can validate',
-        phase: 'ws5',
         prompt: 'full',
     },
     {
         capability: 'task is a message, not a store',
         expected: 'not a separate source of truth',
-        phase: 'ws5',
         prompt: 'full',
     },
     {
         capability: 'reuse over create',
         expected: 'just claim that existing message/task instead of creating a new one',
-        phase: 'ws5',
         prompt: 'full',
     },
     {
         capability: 'parallel task splitting',
         expected: 'structure them so agents can work **in parallel**',
-        phase: 'ws5',
         prompt: 'full',
     },
-    // Skills (WS5-gated: management is CLI family 9; discovery is
-    // harness-native per W2, so the list entry is the only prompt surface).
+    // Skills (management is CLI family 9; discovery is harness-native per
+    // W2, so the list entry is the only prompt surface).
     {
         capability: 'skill CLI family taught',
         expected: '**Skills** — `grotto skill list`',
-        phase: 'ws5',
         prompt: 'full',
     },
     // Mentions, style, etiquette, formatting.
@@ -469,7 +450,6 @@ const REQUIREMENTS: PromptRequirement[] = [
     {
         capability: 'task #N ref form',
         expected: 'always write "task #N", not bare "#N"',
-        phase: 'ws5',
         prompt: 'full',
     },
     {
@@ -785,11 +765,11 @@ const VISUALS_SKILL_REQUIREMENTS: Array<{
     },
 ];
 
-// Character ceilings sliced from the end-state render (WS5 gate forced open,
-// per ws2-requirements-plan.md "Budgets") so the ceilings stay meaningful
-// across the gate. channelTotal 32,500 is the operator-ruled flip budget
-// (supersedes D7's 28k after the Raft prompt-length audit); raising any
-// number is a deliberate spend decision — confirm with the operator.
+// Character ceilings sliced from the end-state render (families 5–9 open,
+// per ws2-requirements-plan.md "Budgets"). channelTotal 32,500 is the
+// operator-ruled flip budget (supersedes D7's 28k after the Raft
+// prompt-length audit); raising any number is a deliberate spend decision —
+// confirm with the operator.
 const promptBudgets = {
     capabilities: 300,
     channelTotal: 32_500,
@@ -840,39 +820,18 @@ describe('agent prompt contract', () => {
         ]);
     });
 
-    it('keeps every prompt-taught capability present and the WS5 gate honest', async () => {
+    it('keeps every prompt-taught capability present', async () => {
         const prompts = {
             full: await renderPrompt('full'),
-            fullWs5: await renderPrompt('full', { ws5CliSurface: true }),
             minimal: await renderPrompt('minimal'),
         };
 
         const failures = REQUIREMENTS.filter((requirement) => {
-            if (requirement.phase === 'ws5') {
-                // Gated capabilities stay verifiably absent at the flip and
-                // verifiably present once the WS5 gate opens.
-                return (
-                    matches(prompts[requirement.prompt], requirement.expected) ||
-                    !matches(prompts.fullWs5, requirement.expected)
-                );
-            }
             const present = matches(prompts[requirement.prompt], requirement.expected);
             return requirement.absent ? present : !present;
         }).map((requirement) => requirement.capability);
 
         expect(failures, 'Prompt lost capabilities — see PROMPT CONTRACT header').toEqual([]);
-    });
-
-    it('keeps the enforced dead list absent from the end-state render too', async () => {
-        const fullWs5 = await renderPrompt('full', { ws5CliSurface: true });
-
-        const failures = REQUIREMENTS.filter(
-            (requirement) => requirement.absent && requirement.prompt === 'full'
-        )
-            .filter((requirement) => matches(fullWs5, requirement.expected))
-            .map((requirement) => requirement.capability);
-
-        expect(failures, 'Dead capability reappeared behind the WS5 gate').toEqual([]);
     });
 
     it('keeps every skill-taught visuals capability present', () => {
@@ -890,18 +849,18 @@ describe('agent prompt contract', () => {
         expect(missing, 'Visuals skill lost capabilities — see PROMPT CONTRACT header').toEqual([]);
     });
 
-    it('matches the reviewed full prompt snapshot (flip-day render)', async () => {
+    it('matches the reviewed full prompt snapshot', async () => {
         const prompt = normalize(await renderPrompt('full'), workspaceDir);
         await expect(prompt).toMatchFileSnapshot('./__prompt-snapshots__/full-prompt.md');
     });
 
-    it('matches the reviewed minimal prompt snapshot (flip-day render)', async () => {
+    it('matches the reviewed minimal prompt snapshot', async () => {
         const prompt = normalize(await renderPrompt('minimal'), workspaceDir);
         await expect(prompt).toMatchFileSnapshot('./__prompt-snapshots__/minimal-prompt.md');
     });
 
-    it('stays inside the prompt character budgets (end-state render)', async () => {
-        const prompt = await renderPrompt('full', { ws5CliSurface: true });
+    it('stays inside the prompt character budgets', async () => {
+        const prompt = await renderPrompt('full');
         const slice = (from: string, to: string | null) => {
             const start = prompt.indexOf(from);
             expect(start, `budget slice start "${from}"`).toBeGreaterThan(-1);
@@ -973,15 +932,11 @@ describe('agent prompt contract', () => {
         expect(prompt.trimEnd().endsWith('This may evolve.')).toBe(true);
     });
 
-    async function renderPrompt(
-        fixture: 'full' | 'minimal',
-        options: { ws5CliSurface?: boolean } = {}
-    ) {
+    async function renderPrompt(fixture: 'full' | 'minimal') {
         return await buildAgentInstructions(executorInput(fixture, workspaceDir), {
             db: getDb(),
             runtimeContext: contractRuntimeContext,
             skillsDir,
-            ...options,
         });
     }
 });

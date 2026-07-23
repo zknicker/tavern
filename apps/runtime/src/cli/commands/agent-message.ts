@@ -3,11 +3,12 @@ import { type AgentApiRequester, createAgentApiClient } from '../agent-api-clien
 import {
     agentHistoryResponseSchema,
     agentMessageCheckResponseSchema,
+    agentReactionResponseSchema,
     agentSendResponseSchema,
     resolvedAgentMessageSchema,
 } from '../agent-api-schemas.ts';
 import { AgentCliError } from '../agent-error.ts';
-import { formatDeliveryEnvelope, formatHistoryLine } from '../agent-format.ts';
+import { formatDeliveryEnvelope, formatHistoryLine, shortMessageId } from '../agent-format.ts';
 import { renderHistory, renderSendResponse } from '../agent-render.ts';
 import type { ParsedArgs } from '../parse.ts';
 import type { SubCommand } from '../subcommand.ts';
@@ -109,23 +110,21 @@ export const MESSAGE_SUBCOMMANDS: SubCommand[] = [
         usage: 'grotto message check',
     },
     {
-        examples: ['grotto message react --target "#general" --message-id 1a2b3c4d --emoji 👍'],
+        examples: [
+            'grotto message react --message-id 1a2b3c4d --emoji 👍',
+            'grotto message react --message-id 1a2b3c4d --emoji 👍 --remove',
+        ],
         flags: [
-            { name: '--target', valueName: '<t>', description: 'Target the message lives in' },
             { name: '--message-id', valueName: '<id>', description: 'Message to react to' },
             { name: '--emoji', valueName: '<e>', description: 'Reaction emoji' },
+            { name: '--remove', description: 'Remove your matching reaction' },
         ],
         name: 'react',
         positionals: [],
-        run: () => {
-            throw new AgentCliError(
-                'NOT_YET_AVAILABLE',
-                'Reactions arrive with the tasks-and-affordances workstream.',
-                { nextAction: 'grotto message send --target <t>' }
-            );
-        },
-        summary: 'React to a message (arrives with tasks and affordances)',
-        usage: 'grotto message react --target <t> --message-id <id> --emoji <e>',
+        run: (args) => runReact(args, defaultDeps()),
+        summary:
+            'React only when a human asks or as a clear acknowledgement; never auto-react to routine events',
+        usage: 'grotto message react --message-id <id> --emoji <e> [--remove]',
     },
 ];
 
@@ -232,6 +231,27 @@ export async function runResolve(args: ParsedArgs, deps: MessageDeps): Promise<n
         resolvedAgentMessageSchema
     );
     deps.write(`${formatHistoryLine(response.message)}\n`);
+    return 0;
+}
+
+export async function runReact(args: ParsedArgs, deps: MessageDeps): Promise<number> {
+    const messageId = args.values['--message-id'];
+    const emoji = args.values['--emoji'];
+    if (!messageId) {
+        throw new AgentCliError('INVALID_ARG', 'Provide --message-id.');
+    }
+    if (!emoji) {
+        throw new AgentCliError('INVALID_ARG', 'Provide --emoji.');
+    }
+    const remove = Boolean(args.flags['--remove']);
+    const response = await deps.client.request(
+        '/api/agent/messages/react',
+        agentReactionResponseSchema,
+        { body: { emoji, messageId, ...(remove ? { remove: true } : {}) }, method: 'POST' }
+    );
+    deps.write(
+        `${remove ? 'Removed' : 'Reacted'} ${emoji} ${remove ? 'from' : 'to'} msg ${shortMessageId(response.message.id)}.\n`
+    );
     return 0;
 }
 

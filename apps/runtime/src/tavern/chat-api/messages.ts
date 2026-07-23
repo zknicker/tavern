@@ -10,6 +10,7 @@ import { assertChatExists } from './chats';
 import { currentCursor, insertEvent, publish } from './events';
 import { assertTavernIdPrefix } from './ids';
 import { clampLimit } from './limits';
+import { reactionsForMessage, taskForMessage } from './message-annotations';
 import { searchMessageRows } from './message-search.ts';
 import { assertThreadWritable, autoFollowMentions, autoFollowOnPost } from './threads';
 import type { MessageReceipt, MessageRow, ParticipantRow } from './types';
@@ -331,6 +332,8 @@ export function findExistingMessage(
 
 export function rowToMessage(row: MessageRow, db: Database): TavernChatMessage {
     const author = getParticipant(row.chat_id, row.author_id, db);
+    const task = taskForMessage(row.id, db);
+    const reactions = reactionsForMessage(row.id, db);
     return {
         attachments: parseStoredAttachments(row.attachment_json),
         author,
@@ -344,6 +347,8 @@ export function rowToMessage(row: MessageRow, db: Database): TavernChatMessage {
         nonce: row.nonce,
         role: row.role,
         sequence: row.sequence,
+        ...(task ? { task } : {}),
+        ...(reactions.length > 0 ? { reactions } : {}),
     };
 }
 

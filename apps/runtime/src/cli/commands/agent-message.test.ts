@@ -2,7 +2,7 @@ import { describe, expect, test, vi } from 'vitest';
 import type { AgentApiRequester } from '../agent-api-client.ts';
 import { AgentCliError } from '../agent-error.ts';
 import type { ParsedArgs } from '../parse.ts';
-import { MESSAGE_SUBCOMMANDS, runRead, runSend } from './agent-message.ts';
+import { MESSAGE_SUBCOMMANDS, runReact, runRead, runSend } from './agent-message.ts';
 
 const message = {
     chat_id: 'cht_general',
@@ -117,5 +117,23 @@ describe('agent message read', () => {
             deps
         ).catch((caught) => caught);
         expect(error).toMatchObject({ code: 'INVALID_ARG' });
+    });
+});
+
+describe('agent message react', () => {
+    test('validates required args and prints the short message id', async () => {
+        const { deps, output, request } = harness({ message });
+        await expect(runReact(args({ values: {} }), deps)).rejects.toMatchObject({
+            code: 'INVALID_ARG',
+        });
+
+        await expect(
+            runReact(args({ values: { '--emoji': '👍', '--message-id': '1a2b3c4d' } }), deps)
+        ).resolves.toBe(0);
+        expect(request).toHaveBeenCalledWith('/api/agent/messages/react', expect.anything(), {
+            body: { emoji: '👍', messageId: '1a2b3c4d' },
+            method: 'POST',
+        });
+        expect(output.join('')).toContain('Reacted 👍 to msg 1a2b3c4d.');
     });
 });

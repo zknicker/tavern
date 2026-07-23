@@ -796,3 +796,38 @@ were responsive fallbacks. Re-verified at 1680x1000:
    Administration, Connected Apps; About — About, Release Notes; prominent Log out card.
 5. Unverified at width: the task-board→thread modal entry (§5) — may remain a modal by design
    from that context.
+
+---
+
+## WS5 LIVE RE-VERIFICATION (2026-07-22, arcade server, desktop width)
+
+Second live pass focused on the WS5 surfaces (operator mandate: live app wins over these notes).
+Captured via accessibility tree + screenshots; one reversible 👍 reaction was added and removed on
+an old test message.
+
+1. **Right-click context menu — exact contents and order** (plain channel message):
+   a quick-react strip of **SEVEN** emoji (the §5 note said six) with aria labels "React with X":
+   👍 ❤️ 🎉 👀 🔥 😂 ✅ — then `Copy Link`, `Copy Markdown`, `Select Message`, separator,
+   `Open Thread`, `Save Message`, `Convert to Task`. ("Unfollow Thread" appears additionally only
+   on followed-thread anchors, per §5.)
+2. **Hover cluster** order confirmed: Reply in thread / Add Reaction / Save Message. The
+   Add Reaction popover is the same 7-emoji strip plus one trailing full-picker slot.
+3. **Reactions**: pill = emoji + count chip directly under the message body; own reaction gets a
+   filled/highlighted style; clicking the pill toggles it off; aria label is
+   "👍 reaction from Zach Knickerbocker" (actor names ride the label).
+4. **Task chip**: aria "Change status for task #1 @Cindy"; clicking opens the 5-status dropdown
+   (Todo / In Progress / In Review / Done / Closed) with a checkmark on the current status.
+5. **Status colors, complete**: todo=orange, in_progress=blue, in_review=purple, **done=green**,
+   **closed=gray/black** (the original pass could not see done/closed pills).
+6. **Board view**: horizontally scrollable status columns; header = status pill + count +
+   collapse chevron; done/closed columns default collapsed (chevron-right) in BOTH board and
+   list views; empty columns show dashed-border "No <status> tasks." boxes; card = "#N" small
+   line + bold title + status pill (pencil) bottom-right.
+7. **Composer**: As Task checkbox aria is exactly "Send as task (⌘/Ctrl-Shift-Enter)".
+8. **Creator popover** verified as §2 described (header, search, italic "Created by me",
+   avatar list).
+9. **Agent profile Reminders tab** re-confirmed empty-state copy: "No reminders yet / This agent
+   hasn't scheduled anything. To set one, just tell your agent: 'remind me tomorrow to follow
+   up.'" Populated reminder rows remain unobserved (no reminders exist on arcade).
+10. **First-channel system line** observed at history top: "#all is now live — Bob just joined
+    the team…" quiet centered line — same treatment as task receipts.

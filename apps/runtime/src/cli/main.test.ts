@@ -147,12 +147,15 @@ describe('dispatch', () => {
         }
     });
 
-    test('message react fails honestly with the canonical contract', async () => {
-        const read = capture('stderr');
-        await expect(dispatch(['message', 'react'])).resolves.toEqual({ kind: 'exit', code: 1 });
+    test('message react help teaches reaction etiquette', async () => {
+        const read = capture('stdout');
+        await expect(dispatch(['message', 'react', '--help'])).resolves.toEqual({
+            kind: 'exit',
+            code: 0,
+        });
         const out = read();
-        expect(out).toContain('Code: NOT_YET_AVAILABLE');
-        expect(out).toContain('Next action: grotto message send --target <t>');
+        expect(out).toContain('only when a human asks or as a clear acknowledgement');
+        expect(out).toContain('never auto-react to routine events');
     });
 
     test('inbox check exposes real subcommand help', async () => {

@@ -719,6 +719,36 @@ export interface components {
             created_at: components["schemas"]["Timestamp"];
             deleted_at: components["schemas"]["Timestamp"] | null;
             metadata: components["schemas"]["JsonObject"];
+            task?: components["schemas"]["MessageTask"] | null;
+            reactions?: components["schemas"]["MessageReaction"][];
+        };
+        MessageTask: {
+            number: number;
+            /** @enum {string} */
+            status: "todo" | "in_progress" | "in_review" | "done" | "closed";
+            assignee: components["schemas"]["TaskActor"] | null;
+            claimed_at: components["schemas"]["Timestamp"] | null;
+            /** @enum {string} */
+            priority: "none" | "urgent" | "high" | "medium" | "low";
+            labels: components["schemas"]["TaskLabel"][];
+            /** @enum {string} */
+            origin: "composed" | "converted";
+            created_at: components["schemas"]["Timestamp"];
+            updated_at: components["schemas"]["Timestamp"];
+        };
+        TaskActor: {
+            id: string;
+            handle: string | null;
+        };
+        TaskLabel: {
+            id: string;
+            name: string;
+            /** @enum {string} */
+            color: "red" | "orange" | "amber" | "green" | "teal" | "blue" | "purple" | "pink" | "gray";
+        };
+        MessageReaction: {
+            emoji: string;
+            actors: components["schemas"]["TaskActor"][];
         };
         CreateMessageRequest: {
             id: components["schemas"]["MessageId"];

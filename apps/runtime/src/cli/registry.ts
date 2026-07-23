@@ -1,9 +1,14 @@
 import runtimePackage from '../../package.json';
 import {
+    attachmentCommand,
     channelCommand,
     inboxCommand,
     messageCommand,
+    profileCommand,
+    reminderCommand,
     serverInfoCommand,
+    skillCommand,
+    taskCommand,
     threadCommand,
 } from './agent-commands.ts';
 import type { ParsedArgs } from './parse';
@@ -21,6 +26,11 @@ export type CliSection =
     | 'Messages'
     | 'Inbox'
     | 'Directory'
+    | 'Tasks'
+    | 'Attachments'
+    | 'Profile'
+    | 'Reminders'
+    | 'Skills'
     | 'Server'
     | 'Status'
     | 'Maintenance'
@@ -28,7 +38,16 @@ export type CliSection =
 
 /** Section render order in global help. */
 export const SECTION_ORDER: CliSection[] = ['Server', 'Status', 'Maintenance', 'Engine'];
-export const AGENT_SECTION_ORDER: CliSection[] = ['Messages', 'Inbox', 'Directory'];
+export const AGENT_SECTION_ORDER: CliSection[] = [
+    'Messages',
+    'Inbox',
+    'Directory',
+    'Tasks',
+    'Attachments',
+    'Profile',
+    'Reminders',
+    'Skills',
+];
 
 /** A registered top-level command or command group. */
 export interface CliCommand {
@@ -208,6 +227,11 @@ export const COMMANDS: CliCommand[] = [
     serverInfoCommand,
     channelCommand,
     threadCommand,
+    taskCommand,
+    reminderCommand,
+    attachmentCommand,
+    profileCommand,
+    skillCommand,
     serveCommand,
     claimCommand,
     statusCommand,

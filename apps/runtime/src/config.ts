@@ -82,6 +82,10 @@ export function getAgentTokensDir(): string {
     return path.join(getRuntimeRoot(), 'agent-tokens');
 }
 
+export function getAttachmentsDir(): string {
+    return path.join(getRuntimeRoot(), 'attachments');
+}
+
 function resolveRuntimeApiToken(): string {
     const configured = readConfigValue('TAVERN_RUNTIME_TOKEN');
     if (configured) {

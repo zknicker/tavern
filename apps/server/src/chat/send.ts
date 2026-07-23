@@ -1,7 +1,11 @@
 import { randomUUID } from 'node:crypto';
 import { createTavernClientForConnection } from '../agent-runtime/client-factory.ts';
 import type { ApiContext } from '../api/context.ts';
-import { emitChatLogUpdated, emitChatUpdated } from '../api/invalidation-events.ts';
+import {
+    emitChatLogUpdated,
+    emitChatUpdated,
+    emitTasksUpdated,
+} from '../api/invalidation-events.ts';
 import { resolveActingUserId } from '../identity/acting-user.ts';
 import { getAgentRuntimeConnection } from '../storage/agent-runtime-connections.ts';
 import {
@@ -62,6 +66,16 @@ export async function sendTavernChatMessage(
         nonce: clientMessageId,
         role: 'user',
     });
+    if (parsed.asTask && !threadChat && (chat.scope === 'channel' || chat.scope === 'dm')) {
+        await tavernApi.request(
+            `/api/messages/${encodeURIComponent(messageReceipt.message.id)}/task`,
+            {
+                body: { origin: 'composed' },
+                method: 'POST',
+            }
+        );
+        emitTasksUpdated();
+    }
     if (threadChat) {
         // Human thread replies never project a runtime message event (no turn
         // metadata), so the server emits the refresh itself: thread log,

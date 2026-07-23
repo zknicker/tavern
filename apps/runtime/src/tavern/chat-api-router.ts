@@ -37,6 +37,7 @@ import {
     upsertResponseActivity,
 } from './chat-api';
 import { badRequest, json, notFound, readJson } from './http';
+import { routeTaskReminderSurfaces } from './task-reminder-routes';
 import { getAgentTurnFileEvidence } from './turn-file-changes';
 
 export async function handleTavernApiRequest(request: Request): Promise<Response | null> {
@@ -46,7 +47,7 @@ export async function handleTavernApiRequest(request: Request): Promise<Response
     }
 
     try {
-        return await route(request, url);
+        return (await routeTaskReminderSurfaces(request, url)) ?? (await route(request, url));
     } catch (error) {
         return badRequest(error instanceof Error ? error.message : 'Invalid Grotto API request.');
     }

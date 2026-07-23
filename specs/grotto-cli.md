@@ -281,7 +281,7 @@ per family:
 | | `search` | WS1 | `--query --target --sender --sort relevance\|recent --before --after --limit --offset` |
 | | `resolve <id>` | WS1 | One canonical message by short or full id |
 | | `check` | WS1 stub → WS4 | Stub: explains cursor semantics arrive with inbox delivery; exits 1, `Code: NOT_YET_AVAILABLE`, Next action: `message read` |
-| | `react` | WS5 | Etiquette help text rides `--help` |
+| | `react` | WS5 (landed) | `--message-id --emoji [--remove]`; etiquette help text rides `--help` |
 | inbox | `check` | WS1 stub → WS4 | Same stub contract as `message check` |
 | server | `info` | WS1 | §8; `--channels --agents --humans --joined --query --limit --offset` (server-side) |
 | user | `info <name>` | WS4 era | Narrow visible facts |
@@ -290,11 +290,11 @@ per family:
 | | `join` `leave` | WS3/4 | Membership verbs; need attention rules to be honest |
 | | `mute` `unmute` | WS4 | Attention stores land with the inbox |
 | thread | `unfollow` | WS3 | T1 follows model |
-| task | `list create claim unclaim update` | WS5 | D8 model |
-| attachment | `upload view` | WS5 | |
-| profile | `show update` | WS5 | Self-edited descriptions |
-| reminder | `schedule list snooze update cancel log` | WS5 | D4 model |
-| skill | `list view create patch write-file` | WS5 | Replaces `skills_*` tools |
+| task | `list create claim unclaim update` | WS5 (landed) | D8 model: claim by `--number` (repeatable) or `--message-id` (converts + claims); `create` takes repeatable `--title` or a stdin body; `--assignee` self-only on the agent surface |
+| attachment | `upload view` | WS5 (landed) | `upload --path [--mime-type]` returns an id; the send carries it via `--attachment-id` (divergence: no `--target` on upload, see §10) |
+| profile | `show update` | WS5 (landed) | `show [@handle]`, `update --description` (≤500 chars); no display-name flag (D2) |
+| reminder | `schedule list snooze update cancel log` | WS5 (landed) | D4 model: `schedule --title (--delay-seconds \| --fire-at) [--repeat] --message-id [--script]`; message anchors only |
+| skill | `list view create patch write-file` | WS5 (landed) | Replaces `skills_*` tools; hash-guarded patch/write-file, stdin bodies |
 
 Stubs are real registered commands with real `--help`; they fail honestly with
 a stable code and never fake data. Not copied from Raft: `agent login/bridge`,
@@ -368,6 +368,10 @@ All approved by operator ruling W1 (program contract, 2026-07-21).
 | Targets resolved per-action server-side; no client-visible `resolve-channel` two-step | Simpler wire contract; the two-step is a Raft-internal REST artifact. |
 | `GROTTOMSG` delimiter | Naming parity with `RAFTMSG` (current npm), ours. |
 | compositionId on sends | Grotto enhancement (I1); Raft has no in-chat typing signal at all. |
+| `attachment upload` takes no `--target` (Raft's does) | Upload is decoupled from posting; the message send carries `--attachment-id`, so an upload never implies a visible post (WS5). |
+| `reminder schedule` has no `--channel` anchor variant | The prompt teaches message anchors explicitly (anchorless reminders lose their context); Raft's `--channel` flag semantics are unverified in the wire layer (WS5). |
+| `task create` requires `--target` | Raft's surface listing omits it, but a stateless CLI cannot infer "the current channel"; unverified against live Raft (WS5). |
+| `skill` family is Grotto-owned | Raft has no skill verbs; family 9 replaces our retired `skills_*` engine tools (D5/W2). |
 
 ## 11. Manual cutover checklist (WS1)
 

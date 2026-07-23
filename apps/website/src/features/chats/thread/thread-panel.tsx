@@ -184,8 +184,8 @@ function SyncedThreadBody({
                 <ChatTranscript
                     canRequestMention={!chat.archived}
                     chatId={threadChatId}
-                    compositionTarget={compositionTarget}
                     composerId={`${chat.id}:thread:${anchorMessageId}`}
+                    compositionTarget={compositionTarget}
                     conversationLayout={getChatMessageLayout(chat)}
                     leadingContent={
                         <ThreadLeadingContent anchorRow={anchorRow} replyCount={replyCount} />

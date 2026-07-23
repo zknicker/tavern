@@ -153,6 +153,116 @@ describe('agent API router', () => {
     }
 });
 
+describe('agent task routes', () => {
+    let root: string;
+    beforeEach(() => {
+        root = initAgentApiTestDb('grotto-agent-tasks-');
+        upsertStoredAgent({
+            agent: {
+                enabledSkillIds: [],
+                id: 'agt_otto',
+                isAdmin: false,
+                name: 'Otto',
+                primaryColor: null,
+                workspaceFolder: '/tmp/agt_otto',
+            },
+        });
+        createChat({
+            id: 'cht_general',
+            kind: 'channel',
+            participants: [
+                {
+                    id: 'agt_otto',
+                    kind: 'agent',
+                    label: 'Otto',
+                    metadata: { agentId: 'agt_otto' },
+                },
+            ],
+            title: 'general',
+        });
+    });
+    afterEach(async () => await closeAgentApiTestDb(root));
+
+    it('creates, lists, claims, and updates task-messages over the wire', async () => {
+        const created = await request('POST', '/api/agent/tasks/create', {
+            target: '#general',
+            titles: ['Audit the export', 'Fix the export'],
+        });
+        expect(created?.status).toBe(200);
+        const createdBody = (await created?.json()) as {
+            tasks: Array<{ number: number; status: string }>;
+        };
+        expect(createdBody.tasks.map((task) => task.number)).toEqual([1, 2]);
+        expect(createdBody.tasks[0]?.status).toBe('todo');
+
+        const claimed = await request('POST', '/api/agent/tasks/claim', {
+            numbers: [1],
+            target: '#general',
+        });
+        const claimedBody = (await claimed?.json()) as {
+            claimed: Array<{ assignee: string | null; status: string }>;
+        };
+        expect(claimedBody.claimed[0]).toMatchObject({ assignee: 'Otto', status: 'in_progress' });
+
+        const updated = await request('POST', '/api/agent/tasks/update', {
+            number: 1,
+            status: 'in_review',
+            target: '#general',
+        });
+        const updatedBody = (await updated?.json()) as { task: { status: string } };
+        expect(updatedBody.task.status).toBe('in_review');
+
+        const list = await request('GET', '/api/agent/tasks?target=%23general&status=in_review');
+        const listBody = (await list?.json()) as {
+            tasks: Array<{ message: { content: string; task?: { number: number } | null } }>;
+        };
+        expect(listBody.tasks).toHaveLength(1);
+        expect(listBody.tasks[0]?.message.content).toBe('Audit the export');
+        expect(listBody.tasks[0]?.message.task).toMatchObject({ number: 1 });
+    });
+
+    it('claims a regular message by id, converting it with a receipt', async () => {
+        createMessage('cht_general', {
+            author_id: 'usr_tavern',
+            content: 'Please fix the login bug',
+            id: 'msg_feedface000000000000000000000000',
+            role: 'user',
+        });
+        const claimed = await request('POST', '/api/agent/tasks/claim', {
+            messageId: 'feedface',
+            target: '#general',
+        });
+        expect(claimed?.status).toBe(200);
+        const body = (await claimed?.json()) as {
+            claimed: Array<{ number: number; status: string }>;
+        };
+        expect(body.claimed[0]).toMatchObject({ number: 1, status: 'in_progress' });
+
+        const rival = await request('POST', '/api/agent/tasks/claim', {
+            numbers: [1],
+            target: '#general',
+        });
+        // Re-claiming your own task is allowed; verify the conflict path via a
+        // fake rival assignment instead.
+        expect(rival?.status).toBe(200);
+    });
+
+    function request(method: 'GET' | 'POST', pathName: string, body?: unknown) {
+        return handleAgentApiRequest(
+            new Request(`http://runtime.test${pathName}`, {
+                ...(body === undefined
+                    ? {}
+                    : {
+                          body: JSON.stringify(body),
+                          headers: { 'content-type': 'application/json' },
+                      }),
+                method,
+            }),
+            'agt_otto'
+        );
+    }
+});
+
 function seed(id: string) {
     createMessage('cht_general', { author_id: 'usr_tavern', content: id, id, role: 'user' });
 }

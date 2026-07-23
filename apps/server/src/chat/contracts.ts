@@ -216,6 +216,7 @@ export const sendChatMessageInputSchema = z
         chatId: z.string().trim().min(1),
         clientMessageId: z.string().trim().min(1).optional(),
         content: z.string().trim(),
+        asTask: z.boolean().optional(),
         thread: z
             .object({
                 anchorMessageId: z.string().trim().min(1),

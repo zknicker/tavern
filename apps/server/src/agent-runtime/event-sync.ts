@@ -16,7 +16,9 @@ import {
     emitEngineRestartUpdated,
     emitModelUpdated,
     emitPaneUpdated,
+    emitRemindersUpdated,
     emitSessionUpdated,
+    emitTasksUpdated,
     emitWorkersUpdated,
 } from '../api/invalidation-events.ts';
 import { enqueueRuntimeSkillInventoryRefresh } from '../skills/inventory-job.ts';
@@ -61,6 +63,9 @@ export async function applyObservedAgentRuntimeEvent(
             if (parentChatId) {
                 emitChatLogUpdated({ chatId: parentChatId });
             }
+            // Chat activity is the honest refresh signal for agent-side task and reminder actions.
+            emitTasksUpdated();
+            emitRemindersUpdated();
             return;
         }
         case 'chat.messageAccepted': {
@@ -74,6 +79,9 @@ export async function applyObservedAgentRuntimeEvent(
                 emitChatUpdated();
                 emitChatLogUpdated();
             }
+            // Chat activity is the honest refresh signal for agent-side task and reminder actions.
+            emitTasksUpdated();
+            emitRemindersUpdated();
             return;
         }
         case 'chat.read': {

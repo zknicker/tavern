@@ -1,5 +1,6 @@
 import * as z from 'zod';
 import { AgentApiError } from './agent-api-errors.ts';
+import { readAttachment } from './agent-attachments.ts';
 import { retractComposition } from './agent-compositions.ts';
 import { clearAgentDraft, readAgentDraft, saveAgentDraft } from './agent-drafts.ts';
 import { countFormalMentions, toAgentMessage } from './agent-messages.ts';
@@ -95,6 +96,18 @@ export function sendAgentMessage(
               content: plainContent ?? '',
               reholdCount: storedDraft?.reholdCount ?? 0,
           };
+    const attachments = outgoing.attachmentIds.map((id) => {
+        const attachment = readAttachment(id);
+        if (!attachment) {
+            throw new AgentApiError('TARGET_NOT_FOUND', `Attachment ${id} was not found.`, 404);
+        }
+        return {
+            byteSize: attachment.byte_size,
+            filename: attachment.filename,
+            id: attachment.id,
+            mediaType: attachment.media_type,
+        };
+    });
     if (input.continueAnyway && outgoing.reholdCount < 2) {
         // The escape hatch is earned by repeated holds; the server enforces it,
         // not just the CLI's teaching.
@@ -143,7 +156,7 @@ export function sendAgentMessage(
         runtime: { agentId, source: 'agent-api' },
     };
     const receipt = createMessage(resolved.chat.id, {
-        attachments: outgoing.attachmentIds.map((id) => ({ id })),
+        attachments,
         author_id: participantId,
         content: outgoing.content,
         id: createMessageId(),

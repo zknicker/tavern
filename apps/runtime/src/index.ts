@@ -20,6 +20,7 @@ import { installInboxDelivery } from './tavern/delivery-planner.ts';
 import { demoAgentId } from './tavern/development-chat-demo-types.ts';
 import { seedDevelopmentChatDemos } from './tavern/development-chat-demos.ts';
 import { ensurePrimaryManagedAgent } from './tavern/managed-agent.ts';
+import { installReminderScheduler } from './tavern/reminder-scheduler.ts';
 import { startTavernRuntimeServer } from './tavern/server.ts';
 import { recoverInterruptedAgentTurns } from './tavern/turn-recovery.ts';
 import { seedDevelopmentWorkspaceDemos } from './workspace/development-demos.ts';
@@ -86,6 +87,8 @@ async function main(): Promise<void> {
     log.info('Runtime jobs ready');
     installInboxDelivery();
     log.info('Inbox delivery ready');
+    installReminderScheduler();
+    log.info('Reminder scheduler ready');
 
     // Browser supervision never blocks Runtime startup: launch or adoption
     // failures surface only through `plugin.browser` capability health.

@@ -12,6 +12,7 @@ import { useThreadPane } from '../../hooks/threads/use-thread-pane.ts';
 import { useViewportBelow } from '../../hooks/use-viewport-below.ts';
 import { appRoutes } from '../../lib/app-routes.ts';
 import { MissingAgentState } from '../agents/missing-agent-state.tsx';
+import { TasksSurface } from '../tasks/tasks-surface.tsx';
 import { ArchivedChatBar } from './archived-chat-bar.tsx';
 import { ArtifactPanelOpenProvider } from './artifact-panel-context.tsx';
 import { getActiveRunIds } from './chat-active-runs.ts';
@@ -139,7 +140,9 @@ function SyncedAgentChatDetail({ chat, chatId }: { chat: ChatListItem; chatId: s
                 activeReplies={timeline.activeReplies}
                 agentStatusCharacter={agent?.effectiveCharacter ?? null}
                 body={
-                    activeViewTab === 'files' ? (
+                    activeViewTab === 'tasks' ? (
+                        <TasksSurface chatId={chatId} />
+                    ) : activeViewTab === 'files' ? (
                         <ChatFilesTab chatId={chatId} enabled={activeViewTab === 'files'} />
                     ) : undefined
                 }

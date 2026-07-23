@@ -16,6 +16,13 @@ export {
     localHumanParticipantId,
     messageShortId,
 } from './ids';
+export type { TaskLabelColor } from './labels';
+export { deleteLabel, ensureLabels, listLabels, taskLabelColors, updateLabel } from './labels';
+export {
+    reactionsForMessage,
+    taskActor,
+    taskForMessage,
+} from './message-annotations';
 export { AmbiguousMessageIdError, resolveMessageId } from './message-resolution';
 export {
     createMessage,
@@ -29,6 +36,7 @@ export {
     searchMessages,
     updateStreamingMessage,
 } from './messages';
+export { ReactionError, setMessageReaction } from './reactions';
 export { markRead } from './reads';
 export {
     getResponse,
@@ -40,6 +48,19 @@ export {
     upsertResponse,
     upsertResponseActivity,
 } from './responses';
+export type { TaskListItem, TaskPriority, TaskStatus } from './tasks';
+export {
+    claimTask,
+    listTasks,
+    promoteMessageToTask,
+    recordTaskReceipt,
+    TaskRuleError,
+    taskPriorities,
+    taskStatuses,
+    unclaimTask,
+    updateTaskFields,
+    updateTaskStatus,
+} from './tasks';
 export {
     anchorShortId,
     autoFollowMentions,

@@ -16,13 +16,16 @@ export const tavernEventNames = {
     chatUpdated: 'chat.updated',
     engineRestartUpdated: 'engine-restart.updated',
     jobsUpdated: 'jobs.updated',
+    labelsUpdated: 'labels.updated',
     modelUpdated: 'model.updated',
     paneUpdated: 'pane.updated',
+    remindersUpdated: 'reminders.updated',
     openRouterSettingsUpdated: 'open-router-settings.updated',
     agentRuntimeCapabilityUpdated: 'agent-runtime-capability.updated',
     agentRuntimeUpdated: 'agent-runtime.updated',
     sessionUpdated: 'session.updated',
     skillUpdated: 'skill.updated',
+    tasksUpdated: 'tasks.updated',
     usageLiveUpdated: 'usage.live.updated',
     workersUpdated: 'workers.updated',
 } as const;
@@ -111,6 +114,18 @@ export function emitSessionUpdated(input?: { sessionKey?: string }) {
 
 export function emitJobsUpdated() {
     emitTavernEvent(tavernEventNames.jobsUpdated);
+}
+
+export function emitTasksUpdated() {
+    emitTavernEvent(tavernEventNames.tasksUpdated);
+}
+
+export function emitLabelsUpdated() {
+    emitTavernEvent(tavernEventNames.labelsUpdated);
+}
+
+export function emitRemindersUpdated() {
+    emitTavernEvent(tavernEventNames.remindersUpdated);
 }
 
 export function emitModelUpdated() {

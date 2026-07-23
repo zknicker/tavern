@@ -6,6 +6,7 @@ import * as React from 'react';
 import { requestChatComposerMention } from '../../commands/chat-composer-mention.ts';
 import { ChatMessage } from '../../components/chats/chat-message.tsx';
 import { useResolvedThemeOptional } from '../../components/theme-provider.tsx';
+import { RelativeTime } from '../../components/time/relative-time.tsx';
 import { CopyButton } from '../../components/ui/copy-button.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import {
@@ -119,6 +120,17 @@ export function TranscriptEntryView({
     turnStartedAt?: string | null;
 }) {
     if (entry.kind === 'system') {
+        if (entry.item.kind === 'row' && entry.item.row.kind === 'message') {
+            return (
+                <ThreadMessageSurface row={entry.item.row}>
+                    <p className="flex justify-center gap-2 px-5 py-2 text-center text-meta text-muted-foreground">
+                        <span>{entry.item.row.message.content}</span>
+                        <span aria-hidden="true">·</span>
+                        <RelativeTime value={entry.item.row.message.timestamp} />
+                    </p>
+                </ThreadMessageSurface>
+            );
+        }
         if (
             entry.item.kind === 'row' &&
             entry.item.row.kind === 'system' &&
