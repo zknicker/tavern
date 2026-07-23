@@ -2,14 +2,16 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { closeDb, initDb } from '../db/connection.ts';
+import { closeDb, getDb, initDb } from '../db/connection.ts';
 import { ensureRuntimeSchema } from '../db/schema.ts';
 import { upsertStoredAgent } from './agents-store.ts';
 import { createChat, listMessages } from './chat-api/index.ts';
 import { registerInboxWakeSink } from './delivery-planner.ts';
 import { nextFireAtMs, parseCadence, parseSnoozeDuration } from './reminder-cadence.ts';
 import { tickReminders } from './reminder-scheduler.ts';
+import { boundScriptText } from './reminder-script.ts';
 import {
+    cancelReminder,
     createReminder,
     getReminderOrThrow,
     listReminderRuns,
@@ -187,6 +189,49 @@ describe('reminder fires', () => {
             scriptExitCode: 1,
             scriptStderr: 'boom',
         });
+        expect(woken).toEqual([]);
+    });
+
+    it('bounds retained script output and marks truncation', () => {
+        const output = boundScriptText('x'.repeat(20_000));
+
+        expect(Buffer.byteLength(output)).toBe(16_384);
+        expect(output.endsWith('\n[truncated]')).toBe(true);
+    });
+
+    it('drops a script fire canceled while the script is running', async () => {
+        const reminder = seedReminder({ fireAtMs: Date.now() - 1000, script: 'slow' });
+
+        await tickReminders({
+            nowMs: Date.now(),
+            runScript: async () => {
+                cancelReminder(reminder.id);
+                return { exitCode: 0, stderr: '', stdout: 'too late' };
+            },
+            timezone: 'UTC',
+        });
+
+        expect(getReminderOrThrow(reminder.id).status).toBe('canceled');
+        expect(listReminderRuns({ reminderId: reminder.id })).toEqual([]);
+        expect(listMessages('cht_general').messages).toEqual([]);
+        expect(woken).toEqual([]);
+    });
+
+    it('rolls back the message when finalization fails before commit', async () => {
+        const reminder = seedReminder({ fireAtMs: Date.now() - 1000 });
+        getDb().exec(`
+            CREATE TRIGGER fail_reminder_run
+            BEFORE INSERT ON reminder_runs
+            BEGIN
+                SELECT RAISE(ABORT, 'injected finalization failure');
+            END;
+        `);
+
+        await tickReminders({ nowMs: Date.now(), timezone: 'UTC' });
+
+        expect(getReminderOrThrow(reminder.id).status).toBe('scheduled');
+        expect(listReminderRuns({ reminderId: reminder.id })).toEqual([]);
+        expect(listMessages('cht_general').messages).toEqual([]);
         expect(woken).toEqual([]);
     });
 

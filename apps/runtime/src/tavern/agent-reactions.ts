@@ -1,12 +1,10 @@
 import * as z from 'zod';
+import { getDb } from '../db/connection.ts';
+import type { Database } from '../db/sqlite.ts';
 import { AgentApiError } from './agent-api-errors.ts';
+import { getAgentMessage } from './agent-history.ts';
 import { toAgentMessage } from './agent-messages.ts';
-import {
-    AmbiguousMessageIdError,
-    ReactionError,
-    resolveMessageId,
-    setMessageReaction,
-} from './chat-api/index.ts';
+import { ReactionError, setMessageReaction } from './chat-api/index.ts';
 
 export const agentReactionRequestSchema = z
     .object({
@@ -18,32 +16,21 @@ export const agentReactionRequestSchema = z
 
 export function reactToAgentMessage(
     agentId: string,
-    input: z.infer<typeof agentReactionRequestSchema>
+    input: z.infer<typeof agentReactionRequestSchema>,
+    db: Database = getDb()
 ) {
-    let message: ReturnType<typeof resolveMessageId>;
-    try {
-        message = resolveMessageId(input.messageId);
-    } catch (error) {
-        if (error instanceof AmbiguousMessageIdError) {
-            throw new AgentApiError('AMBIGUOUS_ID', error.message, 409);
-        }
-        throw error;
-    }
-    if (!message) {
-        throw new AgentApiError(
-            'TARGET_NOT_FOUND',
-            `Message ${input.messageId} was not found.`,
-            404
-        );
-    }
+    const message = getAgentMessage(agentId, input.messageId, db).message;
     let updated: ReturnType<typeof setMessageReaction>;
     try {
-        updated = setMessageReaction({
-            actorId: agentId,
-            emoji: input.emoji,
-            messageId: message.id,
-            remove: input.remove,
-        });
+        updated = setMessageReaction(
+            {
+                actorId: agentId,
+                emoji: input.emoji,
+                messageId: message.id,
+                remove: input.remove,
+            },
+            db
+        );
     } catch (error) {
         if (error instanceof ReactionError) {
             throw new AgentApiError(

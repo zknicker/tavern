@@ -97,9 +97,13 @@ export function sendAgentMessage(
               reholdCount: storedDraft?.reholdCount ?? 0,
           };
     const attachments = outgoing.attachmentIds.map((id) => {
-        const attachment = readAttachment(id);
+        const attachment = readAttachment(agentId, id);
         if (!attachment) {
-            throw new AgentApiError('TARGET_NOT_FOUND', `Attachment ${id} was not found.`, 404);
+            throw new AgentApiError(
+                'ATTACHMENT_NOT_VISIBLE',
+                `Attachment ${id} is not visible to the caller.`,
+                403
+            );
         }
         return {
             byteSize: attachment.byte_size,

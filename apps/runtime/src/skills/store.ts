@@ -29,6 +29,7 @@ interface SkillSourceRow {
 
 const writableSource = 'agent' satisfies SkillSource;
 const supportDirectories = ['assets', 'references', 'scripts', 'templates'] as const;
+const canonicalSkillIdPattern = /^[A-Za-z0-9][A-Za-z0-9_-]*$/u;
 
 export function readSkillSource(skillId: string, db: Database = getDb()) {
     const row = db
@@ -126,7 +127,11 @@ export async function readSkillMarkdownSnapshot(input: {
     skillId: string;
     skillsDir: string;
 }): Promise<SkillSnapshot | null> {
-    const content = await fs.readFile(skillMarkdownPath(input), 'utf8').catch((error) => {
+    const filePath = await containedSkillMarkdownPath(input);
+    if (!filePath) {
+        return null;
+    }
+    const content = await fs.readFile(filePath, 'utf8').catch((error) => {
         if (isNotFoundError(error)) {
             return null;
         }
@@ -177,7 +182,10 @@ export async function patchSkillMarkdown(input: {
     skillId: string;
     skillsDir: string;
 }) {
-    const filePath = skillMarkdownPath(input);
+    const filePath = await containedSkillMarkdownPath(input);
+    if (!filePath) {
+        throw new Error(`Skill not found: ${input.skillId}`);
+    }
     const previous = await fs.readFile(filePath, 'utf8').catch((error) => {
         if (isNotFoundError(error)) {
             return null;
@@ -208,12 +216,14 @@ export async function writeSkillSupportFile(input: {
     skillId: string;
     skillsDir: string;
 }): Promise<SkillFileChange> {
-    if (!(await skillExists(path.join(input.skillsDir, input.skillId)))) {
+    const skillDir = await containedSkillDir(input);
+    if (!(skillDir && (await skillExists(skillDir)))) {
         throw new Error(`Skill not found: ${input.skillId}`);
     }
     const relativePath = normalizeSupportFilePath(input.filePath);
-    const absolutePath = resolveSkillChildPath({
+    const absolutePath = await resolveSkillWritePath({
         relativePath,
+        skillDir,
         skillId: input.skillId,
         skillsDir: input.skillsDir,
     });
@@ -239,7 +249,10 @@ export async function writeSkillSupportFile(input: {
 }
 
 export async function listSkillSupportFileSnapshots(input: { skillId: string; skillsDir: string }) {
-    const skillDir = path.join(input.skillsDir, input.skillId);
+    const skillDir = await containedSkillDir(input);
+    if (!skillDir) {
+        return [];
+    }
     const files: Array<{ hash: string; path: string }> = [];
     for (const directory of supportDirectories) {
         await collectSupportFiles(path.join(skillDir, directory), directory, files);
@@ -257,6 +270,21 @@ export function skillIdFromName(name: string) {
         throw new Error('Skill name must contain letters or numbers.');
     }
     return slug;
+}
+
+export function assertCanonicalSkillId(skillId: string) {
+    if (!canonicalSkillIdPattern.test(skillId)) {
+        throw new Error(
+            'Skill id must be one path segment containing only letters, numbers, underscores, or hyphens.'
+        );
+    }
+}
+
+export async function skillPackageIsContained(input: {
+    skillId: string;
+    skillsDir: string;
+}): Promise<boolean> {
+    return (await containedSkillMarkdownPath(input)) !== null;
 }
 
 export function sha256(content: string) {
@@ -287,10 +315,6 @@ async function skillExists(skillDir: string) {
     return stat?.isFile() === true;
 }
 
-function skillMarkdownPath(input: { skillId: string; skillsDir: string }) {
-    return path.join(input.skillsDir, input.skillId, 'SKILL.md');
-}
-
 function normalizeSupportFilePath(filePath: string) {
     if (
         filePath.includes('\\') ||
@@ -311,17 +335,115 @@ function normalizeSupportFilePath(filePath: string) {
     return normalized;
 }
 
-function resolveSkillChildPath(input: {
+async function containedSkillMarkdownPath(input: {
+    skillId: string;
+    skillsDir: string;
+}): Promise<string | null> {
+    const skillDir = await containedSkillDir(input);
+    if (!skillDir) {
+        return null;
+    }
+    const markdownPath = await fs.realpath(path.join(skillDir, 'SKILL.md')).catch((error) => {
+        if (isNotFoundError(error)) {
+            return null;
+        }
+        throw error;
+    });
+    if (!markdownPath) {
+        return null;
+    }
+    const skillsDir = await fs.realpath(input.skillsDir);
+    assertPathContained(skillsDir, markdownPath);
+    return markdownPath;
+}
+
+async function containedSkillDir(input: {
+    skillId: string;
+    skillsDir: string;
+}): Promise<string | null> {
+    assertCanonicalSkillId(input.skillId);
+    const skillsDir = await fs.realpath(input.skillsDir).catch((error) => {
+        if (isNotFoundError(error)) {
+            return null;
+        }
+        throw error;
+    });
+    if (!skillsDir) {
+        return null;
+    }
+    const skillDir = await fs.realpath(path.join(skillsDir, input.skillId)).catch((error) => {
+        if (isNotFoundError(error)) {
+            return null;
+        }
+        throw error;
+    });
+    if (!skillDir) {
+        return null;
+    }
+    assertPathContained(skillsDir, skillDir);
+    return skillDir;
+}
+
+async function resolveSkillWritePath(input: {
     relativePath: string;
+    skillDir: string;
     skillId: string;
     skillsDir: string;
 }) {
-    const skillDir = path.resolve(input.skillsDir, input.skillId);
-    const absolutePath = path.resolve(skillDir, ...input.relativePath.split('/'));
-    if (!(absolutePath === skillDir || absolutePath.startsWith(`${skillDir}${path.sep}`))) {
+    const skillsDir = await fs.realpath(input.skillsDir);
+    const absolutePath = path.resolve(input.skillDir, ...input.relativePath.split('/'));
+    assertPathContained(input.skillDir, absolutePath);
+    const existing = await fs.realpath(absolutePath).catch((error) => {
+        if (isNotFoundError(error)) {
+            return null;
+        }
+        throw error;
+    });
+    if (existing) {
+        assertPathContained(skillsDir, existing);
+        return existing;
+    }
+    const stats = await fs.lstat(absolutePath).catch((error) => {
+        if (isNotFoundError(error)) {
+            return null;
+        }
+        throw error;
+    });
+    if (stats?.isSymbolicLink()) {
         throw new Error('Skill support file path must stay inside the skill package.');
     }
-    return absolutePath;
+    const ancestor = await nearestExistingDirectory(path.dirname(absolutePath));
+    assertPathContained(skillsDir, ancestor);
+    await fs.mkdir(path.dirname(absolutePath), { recursive: true });
+    const parent = await fs.realpath(path.dirname(absolutePath));
+    assertPathContained(skillsDir, parent);
+    return path.join(parent, path.basename(absolutePath));
+}
+
+async function nearestExistingDirectory(directory: string): Promise<string> {
+    let candidate = directory;
+    while (true) {
+        const resolved = await fs.realpath(candidate).catch((error) => {
+            if (isNotFoundError(error)) {
+                return null;
+            }
+            throw error;
+        });
+        if (resolved) {
+            return resolved;
+        }
+        const parent = path.dirname(candidate);
+        if (parent === candidate) {
+            throw new Error('Skill support file path must stay inside the skill package.');
+        }
+        candidate = parent;
+    }
+}
+
+function assertPathContained(parent: string, child: string) {
+    if (!(child === parent || child.startsWith(`${parent}${path.sep}`))) {
+        throw new Error('Skill path must stay inside the skills directory.');
+    }
 }
 
 async function collectSupportFiles(

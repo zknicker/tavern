@@ -53,7 +53,7 @@ export function planMessageDelivery(chatId: string, message: TavernChatMessage) 
         return;
     }
     // Reminder traffic never enters ordinary agent delivery: a fire wakes only
-    // its owner (wakeAgentForReminder pierces directly), and schedule receipts
+    // its owner (the scheduler pierces directly), and schedule receipts
     // are human-facing surface evidence only (D4 — "wakes the author who
     // scheduled it, not other people"). Humans read both normally.
     if (reminderSource(message)) {
@@ -115,13 +115,7 @@ export function planMessageDelivery(chatId: string, message: TavernChatMessage) 
  * are irrelevant to your own alarm) plus a wake. Everyone else sees the fire
  * only by reading the surface.
  */
-export function wakeAgentForReminder(agentId: string, chatId: string, message: TavernChatMessage) {
-    const agent = getStoredAgent(agentId);
-    if (!agent) {
-        return;
-    }
-    const session = ensureCurrentAgentSession({ agentId });
-    recordInboxPierce({ chatId, messageId: message.id, sessionId: session.id });
+export function wakeAgentAfterReminder(agentId: string) {
     wakeSink?.wakeAgent(agentId);
 }
 

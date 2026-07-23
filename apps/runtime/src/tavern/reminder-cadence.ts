@@ -65,20 +65,20 @@ export function nextFireAtMs(cadence: ReminderCadence, afterMs: number, timezone
         return afterMs + cadence.everyMs;
     }
     const days = cadence.kind === 'daily' ? [0, 1, 2, 3, 4, 5, 6] : cadence.days;
-    // Walk day by day from `afterMs` until the wall-clock target lands after it.
+    const local = wallClockParts(new Date(afterMs), timezone);
+    // Calendar dates, not fixed epochs: DST changes the length of a local day.
     for (let offset = 0; offset <= 8; offset++) {
-        const probe = new Date(afterMs + offset * 86_400_000);
-        const local = wallClockParts(probe, timezone);
-        if (!days.includes(local.weekday)) {
+        const date = new Date(Date.UTC(local.year, local.month - 1, local.day + offset));
+        if (!days.includes(date.getUTCDay())) {
             continue;
         }
         const candidate = epochForWallClock(
             {
-                day: local.day,
+                day: date.getUTCDate(),
                 hour: cadence.hour,
                 minute: cadence.minute,
-                month: local.month,
-                year: local.year,
+                month: date.getUTCMonth() + 1,
+                year: date.getUTCFullYear(),
             },
             timezone
         );

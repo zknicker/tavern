@@ -201,6 +201,12 @@ export function unclaimTask(
     db: Database = getDb()
 ): TavernMessageTask {
     const row = requireTaskRow(input.chatId, input.number, db);
+    if (row.status === 'done') {
+        throw new TaskRuleError(
+            'TASK_DONE',
+            `Task #${row.number} is done; it cannot be unclaimed.`
+        );
+    }
     if (row.assignee_id !== input.actorId) {
         throw new TaskRuleError(
             'CLAIM_FAILED',
@@ -256,6 +262,7 @@ export function listTasks(
     input: {
         assigneeId?: string;
         chatId?: string;
+        chatIds?: string[];
         createdBy?: string;
         status?: TaskStatus;
     } = {},
@@ -267,6 +274,9 @@ export function listTasks(
              FROM message_tasks
              JOIN chats ON chats.id = message_tasks.chat_id
              WHERE ($chatId IS NULL OR message_tasks.chat_id = $chatId)
+               AND ($chatIdsJson IS NULL OR message_tasks.chat_id IN (
+                 SELECT value FROM json_each($chatIdsJson)
+               ))
                AND ($status IS NULL OR message_tasks.status = $status)
                AND ($assigneeId IS NULL OR message_tasks.assignee_id = $assigneeId)
                AND ($createdBy IS NULL OR message_tasks.created_by = $createdBy)
@@ -276,6 +286,7 @@ export function listTasks(
             namedParams({
                 assigneeId: input.assigneeId ?? null,
                 chatId: input.chatId ?? null,
+                chatIdsJson: input.chatIds ? JSON.stringify(input.chatIds) : null,
                 createdBy: input.createdBy ?? null,
                 status: input.status ?? null,
             })

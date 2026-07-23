@@ -7,6 +7,7 @@ import { getDb } from '../db/connection.ts';
 import type { Database } from '../db/sqlite.ts';
 import { namedParams } from '../db/sqlite.ts';
 import { AgentApiError } from './agent-api-errors.ts';
+import { createAgentParticipantId } from './chat-api/ids.ts';
 
 const MAX_ATTACHMENT_BYTES = 50 * 1024 * 1024;
 
@@ -79,10 +80,14 @@ export async function uploadAgentAttachment(
     };
 }
 
-export async function viewAgentAttachment(id: string, db: Database = getDb()) {
-    const row = readAttachment(id, db);
+export async function viewAgentAttachment(agentId: string, id: string, db: Database = getDb()) {
+    const row = readAttachment(agentId, id, db);
     if (!row) {
-        throw new AgentApiError('TARGET_NOT_FOUND', `Attachment ${id} was not found.`, 404);
+        throw new AgentApiError(
+            'ATTACHMENT_NOT_VISIBLE',
+            `Attachment ${id} is not visible to the caller.`,
+            403
+        );
     }
     const data = await fs.readFile(row.path).catch(() => null);
     if (!data) {
@@ -93,13 +98,41 @@ export async function viewAgentAttachment(id: string, db: Database = getDb()) {
     };
 }
 
-export function readAttachment(id: string, db: Database = getDb()): AttachmentRow | null {
+export function readAttachment(
+    agentId: string,
+    id: string,
+    db: Database = getDb()
+): AttachmentRow | null {
     return db
         .prepare(
-            `SELECT id, filename, media_type, byte_size, path
-             FROM attachments WHERE id = $id LIMIT 1`
+            `SELECT attachments.id, attachments.filename, attachments.media_type,
+                    attachments.byte_size, attachments.path
+             FROM attachments
+             WHERE attachments.id = $id
+               AND (
+                 attachments.uploaded_by = $agentId
+                 OR EXISTS (
+                   SELECT 1
+                   FROM chat_messages
+                   JOIN chats ON chats.id = chat_messages.chat_id
+                   JOIN chat_participants
+                     ON chat_participants.chat_id = COALESCE(chats.parent_chat_id, chats.id)
+                    AND chat_participants.id = $participantId
+                    AND chat_participants.kind = 'agent'
+                   JOIN json_each(COALESCE(chat_messages.attachment_json, '[]'))
+                     ON json_extract(json_each.value, '$.id') = attachments.id
+                   WHERE chat_messages.deleted_at IS NULL
+                 )
+               )
+             LIMIT 1`
         )
-        .get(namedParams({ id })) as AttachmentRow | null;
+        .get(
+            namedParams({
+                agentId,
+                id,
+                participantId: createAgentParticipantId(agentId),
+            })
+        ) as AttachmentRow | null;
 }
 
 function attachmentSummary(row: AttachmentRow) {

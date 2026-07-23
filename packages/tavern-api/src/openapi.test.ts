@@ -46,6 +46,27 @@ describe('Tavern OpenAPI contract', () => {
             '/api/agent/server',
             '/api/agent/channels/info',
             '/api/agent/channels/members',
+            '/api/agent/tasks',
+            '/api/agent/tasks/create',
+            '/api/agent/tasks/claim',
+            '/api/agent/tasks/unclaim',
+            '/api/agent/tasks/update',
+            '/api/agent/reminders',
+            '/api/agent/reminders/log',
+            '/api/agent/reminders/schedule',
+            '/api/agent/reminders/snooze',
+            '/api/agent/reminders/update',
+            '/api/agent/reminders/cancel',
+            '/api/agent/attachments/upload',
+            '/api/agent/attachments/{id}',
+            '/api/agent/profile',
+            '/api/agent/profile/update',
+            '/api/agent/messages/react',
+            '/api/agent/skills',
+            '/api/agent/skills/{id}',
+            '/api/agent/skills/create',
+            '/api/agent/skills/patch',
+            '/api/agent/skills/write-file',
             '/api/events',
             '/api/events/ws',
         ]);
@@ -62,6 +83,12 @@ describe('Tavern OpenAPI contract', () => {
         expect(document.components?.schemas).toHaveProperty('ThreadSummary');
         expect(document.components?.schemas).toHaveProperty('AgentSendResponse');
         expect(document.components?.schemas).toHaveProperty('AgentHistoryResponse');
+        expect(document.components?.schemas).toHaveProperty('AgentTaskRow');
+        expect(document.components?.schemas).toHaveProperty('AgentReminder');
+        expect(document.components?.schemas).toHaveProperty('AgentAttachment');
+        expect(document.components?.schemas).toHaveProperty('AgentProfile');
+        expect(document.components?.schemas).toHaveProperty('AgentReactionRequest');
+        expect(document.components?.schemas).toHaveProperty('AgentSkillSummary');
     });
 
     it('maps agent send discriminator values to their response variants', () => {

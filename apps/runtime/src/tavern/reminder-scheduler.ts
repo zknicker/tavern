@@ -1,13 +1,22 @@
 import { formatLocalTime } from '../cli/agent-format.ts';
 import { getDb } from '../db/connection.ts';
 import type { Database } from '../db/sqlite.ts';
+import { namedParams } from '../db/sqlite.ts';
 import { log } from '../log.ts';
 import { resolveHomeTimezone } from '../timezone-settings.ts';
+import { ensureCurrentAgentSession } from './agent-session-store.ts';
 import { getStoredAgent } from './agents-store.ts';
+import { insertEvent, publish } from './chat-api/events.ts';
 import { createMessageId } from './chat-api/ids.ts';
-import { createMessage } from './chat-api/index.ts';
-import { wakeAgentForReminder } from './delivery-planner.ts';
+import { insertMessage } from './chat-api/messages.ts';
+import { wakeAgentAfterReminder } from './delivery-planner.ts';
+import { recordInboxPierce } from './inbox-cursors.ts';
 import { nextFireAtMs, parseCadence } from './reminder-cadence.ts';
+import {
+    boundScriptText,
+    type ReminderScriptRunner,
+    runReminderScript,
+} from './reminder-script.ts';
 import {
     dueReminders,
     markReminderFired,
@@ -22,19 +31,6 @@ import {
 // surface and wakes the owning agent only.
 
 const TICK_INTERVAL_MS = 15_000;
-const SCRIPT_TIMEOUT_MS = 60_000;
-const SCRIPT_OUTPUT_CAP = 16_384;
-
-export interface ReminderScriptResult {
-    exitCode: number;
-    stderr: string;
-    stdout: string;
-}
-
-export type ReminderScriptRunner = (input: {
-    cwd: string;
-    script: string;
-}) => Promise<ReminderScriptResult>;
 
 let timer: ReturnType<typeof setInterval> | null = null;
 let ticking = false;
@@ -78,15 +74,6 @@ export async function tickReminders(
         try {
             await fireReminder(reminder, input, db);
         } catch (err) {
-            recordReminderRun(
-                {
-                    errorMessage: err instanceof Error ? err.message : String(err),
-                    outcome: 'error',
-                    reminderId: reminder.id,
-                },
-                db
-            );
-            advance(reminder, input, db);
             log.warn('Reminder fire failed', { err, reminderId: reminder.id });
         }
     }
@@ -97,111 +84,226 @@ async function fireReminder(
     input: { nowMs: number; runScript?: ReminderScriptRunner; timezone?: string },
     db: Database
 ): Promise<void> {
+    const claimToken = claimReminder(reminder, db);
+    if (!claimToken) {
+        return;
+    }
     let output = '';
     let scriptExitCode: number | null = null;
     let scriptStderr: string | null = null;
     if (reminder.script) {
-        const agent = getStoredAgent(reminder.ownerAgentId, db);
-        if (!agent) {
-            throw new Error('Owning agent no longer exists.');
+        try {
+            const agent = getStoredAgent(reminder.ownerAgentId, db);
+            if (!agent) {
+                throw new Error('Owning agent no longer exists.');
+            }
+            const runner = input.runScript ?? runReminderScript;
+            const result = await runner({ cwd: agent.workspaceFolder, script: reminder.script });
+            output = boundScriptText(result.stdout).trim();
+            scriptExitCode = result.exitCode;
+            scriptStderr = result.stderr ? boundScriptText(result.stderr) : null;
+        } catch (error) {
+            finalizeReminderFire(
+                reminder,
+                claimToken,
+                input,
+                {
+                    errorMessage: error instanceof Error ? error.message : String(error),
+                    outcome: 'error',
+                },
+                db
+            );
+            return;
         }
-        const runner = input.runScript ?? runReminderScript;
-        const result = await runner({ cwd: agent.workspaceFolder, script: reminder.script });
-        output = result.stdout.slice(0, SCRIPT_OUTPUT_CAP).trim();
-        scriptExitCode = result.exitCode;
-        scriptStderr = result.stderr ? result.stderr.slice(0, SCRIPT_OUTPUT_CAP) : null;
         if (!output) {
             // Quiet tick: logged, no message, no wake — the watchdog economics.
-            recordReminderRun(
+            finalizeReminderFire(
+                reminder,
+                claimToken,
+                input,
                 {
-                    outcome: result.exitCode === 0 ? 'quiet' : 'error',
-                    ...(result.exitCode === 0
+                    outcome: scriptExitCode === 0 ? 'quiet' : 'error',
+                    ...(scriptExitCode === 0
                         ? {}
-                        : { errorMessage: `Script exited ${result.exitCode}.` }),
-                    reminderId: reminder.id,
+                        : { errorMessage: `Script exited ${scriptExitCode}.` }),
                     scriptExitCode,
                     scriptStderr,
                 },
                 db
             );
-            advance(reminder, input, db);
             return;
         }
     }
     const content = output
         ? `🔔 Reminder: ${reminder.title}\n${output}`
         : `🔔 Reminder: ${reminder.title}`;
-    const receipt = createMessage(
-        reminder.anchorChatId,
+    const finalized = finalizeReminderFire(
+        reminder,
+        claimToken,
+        input,
         {
-            author_id: 'sys_reminder',
             content,
-            id: createMessageId(),
-            metadata: {
-                runtime: {
-                    reminderId: reminder.id,
-                    reminderOwnerAgentId: reminder.ownerAgentId,
-                    source: 'reminder-fire',
-                },
-            },
-            role: 'system',
-        },
-        db
-    );
-    recordReminderRun(
-        {
-            messageId: receipt.message.id,
             outcome: scriptExitCode !== null && scriptExitCode !== 0 ? 'error' : 'fired',
             ...(scriptExitCode !== null && scriptExitCode !== 0
                 ? { errorMessage: `Script exited ${scriptExitCode}.` }
                 : {}),
             output: output || null,
-            reminderId: reminder.id,
             scriptExitCode,
             scriptStderr,
         },
         db
     );
-    advance(reminder, input, db);
-    wakeAgentForReminder(reminder.ownerAgentId, reminder.anchorChatId, receipt.message);
+    if (finalized.message) {
+        wakeAgentAfterReminder(reminder.ownerAgentId);
+    }
 }
 
-function advance(
+function claimReminder(reminder: ReminderRecord, db: Database): string | null {
+    const claimToken = `firing:${crypto.randomUUID()}`;
+    const result = db
+        .prepare(
+            `UPDATE reminders
+             SET updated_at = $claimToken
+             WHERE id = $id AND status = 'scheduled' AND fire_at_ms = $fireAtMs
+               AND updated_at = $snapshotUpdatedAt`
+        )
+        .run(
+            namedParams({
+                claimToken,
+                fireAtMs: reminder.fireAtMs,
+                id: reminder.id,
+                snapshotUpdatedAt: reminder.updatedAt,
+            })
+        );
+    return result.changes === 1 ? claimToken : null;
+}
+
+function finalizeReminderFire(
     reminder: ReminderRecord,
+    claimToken: string,
     input: { nowMs: number; timezone?: string },
+    run: {
+        content?: string;
+        errorMessage?: string;
+        outcome: 'error' | 'fired' | 'quiet';
+        output?: string | null;
+        scriptExitCode?: number | null;
+        scriptStderr?: string | null;
+    },
     db: Database
-): void {
+): { message: ReturnType<typeof insertMessage> | null } {
     const cadence = reminder.repeat ? parseCadence(reminder.repeat) : null;
-    if (!cadence) {
-        markReminderFired(reminder.id, db);
-        return;
-    }
     // Late fires (runtime was off) advance from now, not from the missed
     // slot — one fire per gap, never a burst.
     const timezone = input.timezone ?? resolveHomeTimezone();
-    rescheduleReminder(reminder.id, nextFireAtMs(cadence, input.nowMs, timezone), db);
+    const nextFireAt = cadence ? nextFireAtMs(cadence, input.nowMs, timezone) : null;
+    if (!reminderClaimIntact(reminder, claimToken, db)) {
+        return { message: null };
+    }
+    const session = run.content
+        ? ensureCurrentAgentSession({ agentId: reminder.ownerAgentId, db })
+        : null;
+    let event: ReturnType<typeof insertEvent> | null = null;
+    const transaction = db.transaction(() => {
+        const claimed = db
+            .prepare(
+                `SELECT 1 FROM reminders
+                 WHERE id = $id AND status = 'scheduled' AND fire_at_ms = $fireAtMs
+                   AND updated_at = $claimToken`
+            )
+            .get(
+                namedParams({
+                    claimToken,
+                    fireAtMs: reminder.fireAtMs,
+                    id: reminder.id,
+                })
+            );
+        if (!claimed) {
+            return { message: null };
+        }
+        const message = run.content
+            ? insertMessage(
+                  reminder.anchorChatId,
+                  {
+                      author_id: 'sys_reminder',
+                      content: run.content,
+                      id: createMessageId(),
+                      metadata: {
+                          runtime: {
+                              reminderId: reminder.id,
+                              reminderOwnerAgentId: reminder.ownerAgentId,
+                              source: 'reminder-fire',
+                          },
+                      },
+                      role: 'system',
+                  },
+                  'sys_reminder',
+                  null,
+                  db
+              )
+            : null;
+        if (message) {
+            event = insertEvent(
+                {
+                    chatId: reminder.anchorChatId,
+                    event: 'message.created',
+                    payload: { message },
+                },
+                db
+            );
+        }
+        recordReminderRun(
+            {
+                errorMessage: run.errorMessage,
+                messageId: message?.id,
+                outcome: run.outcome,
+                output: run.output,
+                reminderId: reminder.id,
+                scriptExitCode: run.scriptExitCode,
+                scriptStderr: run.scriptStderr,
+            },
+            db
+        );
+        if (nextFireAt === null) {
+            markReminderFired(reminder.id, db);
+        } else {
+            rescheduleReminder(reminder.id, nextFireAt, db);
+        }
+        if (message && session) {
+            recordInboxPierce(
+                {
+                    chatId: reminder.anchorChatId,
+                    messageId: message.id,
+                    sessionId: session.id,
+                },
+                db
+            );
+        }
+        return { message };
+    });
+    const finalized = transaction();
+    if (event) {
+        publish(event);
+    }
+    return finalized;
 }
 
-async function runReminderScript(input: {
-    cwd: string;
-    script: string;
-}): Promise<ReminderScriptResult> {
-    const child = Bun.spawn(['/bin/zsh', '-lc', input.script], {
-        cwd: input.cwd,
-        stderr: 'pipe',
-        stdout: 'pipe',
-    });
-    const timeout = setTimeout(() => child.kill(), SCRIPT_TIMEOUT_MS);
-    try {
-        const [stdout, stderr, exitCode] = await Promise.all([
-            new Response(child.stdout).text(),
-            new Response(child.stderr).text(),
-            child.exited,
-        ]);
-        return { exitCode, stderr, stdout };
-    } finally {
-        clearTimeout(timeout);
-    }
+function reminderClaimIntact(reminder: ReminderRecord, claimToken: string, db: Database): boolean {
+    return Boolean(
+        db
+            .prepare(
+                `SELECT 1 FROM reminders
+                 WHERE id = $id AND status = 'scheduled' AND fire_at_ms = $fireAtMs
+                   AND updated_at = $claimToken`
+            )
+            .get(
+                namedParams({
+                    claimToken,
+                    fireAtMs: reminder.fireAtMs,
+                    id: reminder.id,
+                })
+            )
+    );
 }
 
 /** Human-facing schedule receipt posted into the anchored surface. */

@@ -11,6 +11,7 @@ import {
     claimTask,
     createMessage,
     getChat,
+    listReadableChatsForAgentParticipant,
     listTasks,
     promoteMessageToTask,
     recordTaskReceipt,
@@ -77,13 +78,12 @@ export function listAgentTasks(
     const chatId = input.target
         ? resolveAgentTarget({ agentId, target: input.target }, db).chat.id
         : undefined;
-    const participantId = createAgentParticipantId(agentId);
-    const items = listTasks({ chatId, status }, db).filter(
-        (item) =>
-            chatId !== undefined ||
-            item.message.author.id === participantId ||
-            isAgentMember(agentId, item.chatId, db)
-    );
+    const chatIds = chatId
+        ? undefined
+        : listReadableChatsForAgentParticipant(createAgentParticipantId(agentId), db).map(
+              (chat) => chat.id
+          );
+    const items = listTasks({ chatId, chatIds, status }, db);
     return {
         tasks: items.map((item) => ({
             assignee: item.task.assignee?.handle ?? null,
@@ -252,6 +252,19 @@ export function updateAgentTask(
     db: Database = getDb()
 ): { task: AgentTaskRow } {
     const resolved = resolveAgentTarget({ agentId, target: input.target }, db);
+    const existing = listTasks({ chatId: resolved.chat.id }, db).find(
+        (item) => item.task.number === input.number
+    );
+    if (!existing) {
+        throw new AgentApiError('TASK_NOT_FOUND', `No task #${input.number} in that target.`, 404);
+    }
+    if (existing.task.assignee && existing.task.assignee.id !== agentId) {
+        throw new AgentApiError(
+            'TASK_CLAIMED_BY_OTHER',
+            `Task #${input.number} is claimed by another agent.`,
+            409
+        );
+    }
     const task = wrapTaskErrors(() =>
         updateTaskStatus(
             { chatId: resolved.chat.id, number: input.number, status: input.status },
@@ -337,16 +350,4 @@ function matchesHandle(assignee: string, handle: string): boolean {
 function targetForChat(agentId: string, chatId: string, db: Database): string | null {
     const chat = getChat(chatId, db);
     return chat ? formatAgentTarget(agentId, chat, db) : null;
-}
-
-function isAgentMember(agentId: string, chatId: string, db: Database): boolean {
-    const chat = getChat(chatId, db);
-    if (!chat) {
-        return false;
-    }
-    const participantId = createAgentParticipantId(agentId);
-    return chat.participants.some(
-        (participant) =>
-            participant.id === participantId || participant.metadata.agentId === agentId
-    );
 }

@@ -126,7 +126,7 @@ async function route(
     }
     const attachmentMatch = url.pathname.match(/^\/api\/agent\/attachments\/([^/]+)$/u);
     if (request.method === 'GET' && attachmentMatch?.[1]) {
-        return json(await viewAgentAttachment(decodeURIComponent(attachmentMatch[1])));
+        return json(await viewAgentAttachment(agentId, decodeURIComponent(attachmentMatch[1])));
     }
     if (request.method === 'GET' && url.pathname === '/api/agent/skills') {
         return json(await listAgentSkills(agentId, options.skillsDir));
@@ -149,6 +149,7 @@ async function route(
     if (request.method === 'POST' && url.pathname === '/api/agent/skills/patch') {
         return json(
             await patchAgentSkill(
+                agentId,
                 agentSkillPatchRequestSchema.parse(await readJson(request)),
                 options.skillsDir
             )
@@ -157,6 +158,7 @@ async function route(
     if (request.method === 'POST' && url.pathname === '/api/agent/skills/write-file') {
         return json(
             await writeAgentSkillFile(
+                agentId,
                 agentSkillWriteFileRequestSchema.parse(await readJson(request)),
                 options.skillsDir
             )
