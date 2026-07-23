@@ -4,6 +4,7 @@ import { chatRouter } from './chat/router.ts';
 import { devRouter } from './dev/router.ts';
 import { identityRouter } from './identity/router.ts';
 import { jobsRouter } from './jobs/router.ts';
+import { labelRouter } from './label/router.ts';
 import { logRouter } from './log/router.ts';
 import { mcpRouter } from './mcp/router.ts';
 import { mentionRouter } from './mention/router.ts';
@@ -15,9 +16,11 @@ import { openRouterSettingsRouter } from './openrouter-settings/router.ts';
 import { paneRouter } from './pane/router.ts';
 import { participantRouter } from './participant/router.ts';
 import { pluginRouter } from './plugin/router.ts';
+import { reminderRouter } from './reminder/router.ts';
 import { sessionRouter } from './session/router.ts';
 import { skillRouter } from './skill/router.ts';
 import { subAgentRouter } from './sub-agent/router.ts';
+import { taskRouter } from './task/router.ts';
 import { threadRouter } from './thread/router.ts';
 import { timezoneRouter } from './timezone/router.ts';
 import { createRouter } from './trpc.ts';
@@ -31,6 +34,7 @@ export const appRouter = createRouter({
     mcp: mcpRouter,
     dev: devRouter,
     jobs: jobsRouter,
+    label: labelRouter,
     log: logRouter,
     mention: mentionRouter,
     messagingPlatform: messagingPlatformRouter,
@@ -41,11 +45,13 @@ export const appRouter = createRouter({
     pane: paneRouter,
     participant: participantRouter,
     plugin: pluginRouter,
+    reminder: reminderRouter,
     agentRuntime: agentRuntimeRouter,
     session: sessionRouter,
     skill: skillRouter,
     subAgent: subAgentRouter,
     thread: threadRouter,
+    task: taskRouter,
     timezone: timezoneRouter,
     usage: usageRouter,
     worker: workerRouter,

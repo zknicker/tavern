@@ -3,6 +3,39 @@ import * as z from 'zod';
 
 const jsonObjectSchema = z.record(z.string(), z.unknown());
 
+const taskActorSchema = z.object({
+    handle: z.string().nullable(),
+    id: z.string(),
+});
+
+const messageTaskSchema = z.object({
+    assignee: taskActorSchema.nullable(),
+    claimed_at: z.string().nullable(),
+    created_at: z.string(),
+    labels: z.array(
+        z.object({
+            color: z.enum([
+                'red',
+                'orange',
+                'amber',
+                'green',
+                'teal',
+                'blue',
+                'purple',
+                'pink',
+                'gray',
+            ]),
+            id: z.string(),
+            name: z.string(),
+        })
+    ),
+    number: z.number().int().positive(),
+    origin: z.enum(['composed', 'converted']),
+    priority: z.enum(['none', 'urgent', 'high', 'medium', 'low']),
+    status: z.enum(['todo', 'in_progress', 'in_review', 'done', 'closed']),
+    updated_at: z.string(),
+});
+
 export const agentMessageSchema = z.object({
     attachments: z.array(jsonObjectSchema),
     author: z.object({
@@ -19,6 +52,9 @@ export const agentMessageSchema = z.object({
     id: z.string().min(1),
     metadata: jsonObjectSchema,
     nonce: z.string().nullable(),
+    reactions: z
+        .array(z.object({ actors: z.array(taskActorSchema), emoji: z.string() }))
+        .optional(),
     replyCount: z.number().int().nonnegative().optional(),
     replyTarget: z.string().min(1).optional(),
     role: z.enum(['user', 'assistant', 'system']),
@@ -28,6 +64,7 @@ export const agentMessageSchema = z.object({
         type: z.enum(['human', 'agent', 'system']),
     }),
     sequence: z.number().int().positive(),
+    task: messageTaskSchema.nullable().optional(),
     threadId: z.string().min(1).optional(),
 }) satisfies z.ZodType<TavernAgentMessage>;
 
@@ -133,4 +170,53 @@ export const agentChannelMembersSchema = z.object({
 export const resolvedAgentMessageSchema = z.object({ message: agentMessageSchema });
 export const agentSearchResponseSchema = z.object({
     messages: z.array(agentMessageSchema.extend({ target: z.string().min(1) })),
+});
+
+export const agentReactionResponseSchema = z.object({ message: agentMessageSchema });
+
+export const agentProfileSchema = z.object({
+    description: z.string().nullable(),
+    handle: z.string().min(1),
+    isSelf: z.boolean(),
+});
+
+export const agentProfileResponseSchema = z.object({ profile: agentProfileSchema });
+
+export const agentAttachmentSchema = z.object({
+    byteSize: z.number().int().nonnegative(),
+    filename: z.string().min(1),
+    id: z.string().min(1),
+    mediaType: z.string().nullable(),
+});
+
+export const agentAttachmentUploadResponseSchema = z.object({
+    attachment: agentAttachmentSchema,
+});
+
+export const agentAttachmentViewResponseSchema = z.object({
+    attachment: agentAttachmentSchema.extend({ dataBase64: z.string() }),
+});
+
+export const agentSkillSummarySchema = z.object({
+    description: z.string(),
+    editable: z.boolean(),
+    enabledForYou: z.boolean(),
+    id: z.string(),
+    name: z.string(),
+});
+
+export const agentSkillListResponseSchema = z.object({ skills: z.array(agentSkillSummarySchema) });
+export const agentSkillViewResponseSchema = agentSkillSummarySchema.extend({
+    content: z.string(),
+    hash: z.string(),
+    supportFiles: z.array(z.object({ hash: z.string(), path: z.string() })),
+});
+export const agentSkillCreateResponseSchema = z.object({ skill: agentSkillSummarySchema });
+export const agentSkillChangeResponseSchema = z.object({
+    change: z.object({
+        afterHash: z.string(),
+        beforeHash: z.string().nullable(),
+        path: z.string(),
+        skillId: z.string(),
+    }),
 });

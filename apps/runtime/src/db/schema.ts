@@ -335,90 +335,26 @@ CREATE TABLE IF NOT EXISTS agent_turn_file_changes (
   FOREIGN KEY(run_id) REFERENCES agent_turns(id) ON DELETE CASCADE
 );
 
-CREATE TABLE IF NOT EXISTS cron_jobs (
-  id                   TEXT PRIMARY KEY,
-  agent_id             TEXT NOT NULL,
-  name                 TEXT NOT NULL,
-  description          TEXT,
-  enabled              INTEGER NOT NULL DEFAULT 1 CHECK (enabled IN (0, 1)),
-  schedule_json        TEXT NOT NULL,
-  delivery_json        TEXT NOT NULL,
-  payload_json         TEXT NOT NULL,
-  delete_after_run     INTEGER NOT NULL DEFAULT 0 CHECK (delete_after_run IN (0, 1)),
-  consecutive_errors   INTEGER,
-  last_duration_ms     INTEGER,
-  last_error_code      TEXT CHECK (last_error_code IS NULL OR last_error_code IN ('agent_not_found', 'execution_failed', 'control_plane_restarted')),
-  last_error_message   TEXT,
-  last_run_at_ms       INTEGER,
-  last_run_status      TEXT CHECK (last_run_status IS NULL OR last_run_status IN ('queued', 'running', 'success', 'error', 'skipped')),
-  next_run_at_ms       INTEGER,
-  running_at_ms        INTEGER,
-  created_at           TEXT NOT NULL,
-  updated_at           TEXT NOT NULL,
-  FOREIGN KEY(agent_id) REFERENCES agents(id) ON DELETE CASCADE
+CREATE TABLE IF NOT EXISTS message_tasks (
+  message_id     TEXT PRIMARY KEY,
+  chat_id        TEXT NOT NULL,
+  number         INTEGER NOT NULL,
+  status         TEXT NOT NULL DEFAULT 'todo' CHECK (status IN ('todo', 'in_progress', 'in_review', 'done', 'closed')),
+  assignee_id    TEXT,
+  claimed_at     TEXT,
+  priority       TEXT NOT NULL DEFAULT 'none' CHECK (priority IN ('none', 'urgent', 'high', 'medium', 'low')),
+  label_ids_json TEXT NOT NULL DEFAULT '[]',
+  origin         TEXT NOT NULL CHECK (origin IN ('composed', 'converted')),
+  created_by     TEXT NOT NULL,
+  created_at     TEXT NOT NULL,
+  updated_at     TEXT NOT NULL,
+  UNIQUE(chat_id, number),
+  FOREIGN KEY(message_id) REFERENCES chat_messages(id) ON DELETE CASCADE,
+  FOREIGN KEY(chat_id) REFERENCES chats(id) ON DELETE CASCADE
 );
 
-CREATE INDEX IF NOT EXISTS idx_cron_jobs_enabled_next_run
-  ON cron_jobs(enabled, next_run_at_ms);
-
-CREATE TABLE IF NOT EXISTS cron_runs (
-  id                      TEXT PRIMARY KEY,
-  job_id                  TEXT NOT NULL,
-  chat_id                 TEXT,
-  turn_id                 TEXT,
-  trigger                 TEXT NOT NULL CHECK (trigger IN ('manual', 'recovery', 'schedule')),
-  status                  TEXT NOT NULL CHECK (status IN ('queued', 'running', 'success', 'error', 'skipped')),
-  scheduled_for           TEXT NOT NULL,
-  started_at              TEXT,
-  finished_at             TEXT,
-  execution_error_code    TEXT CHECK (execution_error_code IS NULL OR execution_error_code IN ('agent_not_found', 'execution_failed', 'control_plane_restarted')),
-  execution_error_message TEXT,
-  quiet                   INTEGER NOT NULL DEFAULT 0 CHECK (quiet IN (0, 1)),
-  script_exit_code        INTEGER,
-  script_stderr           TEXT,
-  created_at              TEXT NOT NULL,
-  updated_at              TEXT NOT NULL,
-  FOREIGN KEY(chat_id) REFERENCES chats(id) ON DELETE SET NULL,
-  FOREIGN KEY(turn_id) REFERENCES agent_turns(id) ON DELETE SET NULL
-);
-
-CREATE INDEX IF NOT EXISTS idx_cron_runs_job_created
-  ON cron_runs(job_id, created_at DESC);
-
-CREATE INDEX IF NOT EXISTS idx_cron_runs_created
-  ON cron_runs(created_at DESC);
-
-CREATE TABLE IF NOT EXISTS tasks (
-  id                TEXT PRIMARY KEY,
-  number            INTEGER NOT NULL UNIQUE,
-  kind              TEXT NOT NULL DEFAULT 'task' CHECK (kind IN ('task', 'epic')),
-  title             TEXT NOT NULL,
-  description       TEXT,
-  summary           TEXT,
-  blocked_reason_kind TEXT CHECK (blocked_reason_kind IS NULL OR blocked_reason_kind IN ('needs_input', 'error')),
-  blocked_reason_message TEXT,
-  status            TEXT NOT NULL DEFAULT 'backlog' CHECK (status IN ('backlog', 'todo', 'in_progress', 'blocked', 'review', 'done', 'canceled')),
-  priority          TEXT NOT NULL DEFAULT 'none' CHECK (priority IN ('none', 'urgent', 'high', 'medium', 'low')),
-  assignee_kind     TEXT CHECK (assignee_kind IS NULL OR assignee_kind IN ('user', 'agent')),
-  assignee_agent_id TEXT,
-  epic_id           TEXT,
-  scheduled_for     TEXT,
-  origin_chat_id    TEXT,
-  work_chat_id      TEXT,
-  dispatch_trigger  TEXT CHECK (dispatch_trigger IS NULL OR dispatch_trigger IN ('manual', 'auto')),
-  dispatch_attempts INTEGER NOT NULL DEFAULT 0 CHECK (dispatch_attempts >= 0),
-  active_dispatch_run_id TEXT,
-  created_at        TEXT NOT NULL,
-  updated_at        TEXT NOT NULL,
-  FOREIGN KEY(epic_id) REFERENCES tasks(id) ON DELETE SET NULL,
-  FOREIGN KEY(assignee_agent_id) REFERENCES agents(id) ON DELETE SET NULL
-);
-
-CREATE INDEX IF NOT EXISTS idx_tasks_status
-  ON tasks(status);
-
-CREATE INDEX IF NOT EXISTS idx_tasks_epic
-  ON tasks(epic_id);
+CREATE INDEX IF NOT EXISTS idx_message_tasks_chat_status
+  ON message_tasks(chat_id, status);
 
 CREATE TABLE IF NOT EXISTS labels (
   id         TEXT PRIMARY KEY,
@@ -431,44 +367,62 @@ CREATE TABLE IF NOT EXISTS labels (
 CREATE UNIQUE INDEX IF NOT EXISTS idx_labels_lower_name
   ON labels(lower(name));
 
-CREATE TABLE IF NOT EXISTS task_dependencies (
-  task_id            TEXT NOT NULL,
-  depends_on_task_id TEXT NOT NULL,
-  PRIMARY KEY(task_id, depends_on_task_id),
-  FOREIGN KEY(task_id) REFERENCES tasks(id) ON DELETE CASCADE,
-  FOREIGN KEY(depends_on_task_id) REFERENCES tasks(id) ON DELETE CASCADE
+CREATE TABLE IF NOT EXISTS reminders (
+  id                TEXT PRIMARY KEY,
+  owner_agent_id    TEXT NOT NULL,
+  title             TEXT NOT NULL,
+  anchor_chat_id    TEXT NOT NULL,
+  anchor_message_id TEXT NOT NULL,
+  fire_at_ms        INTEGER NOT NULL,
+  repeat            TEXT,
+  script            TEXT,
+  status            TEXT NOT NULL DEFAULT 'scheduled' CHECK (status IN ('scheduled', 'fired', 'canceled')),
+  created_at        TEXT NOT NULL,
+  updated_at        TEXT NOT NULL,
+  FOREIGN KEY(owner_agent_id) REFERENCES agents(id) ON DELETE CASCADE,
+  FOREIGN KEY(anchor_chat_id) REFERENCES chats(id) ON DELETE CASCADE
 );
 
-CREATE INDEX IF NOT EXISTS idx_task_dependencies_depends_on
-  ON task_dependencies(depends_on_task_id);
+CREATE INDEX IF NOT EXISTS idx_reminders_due
+  ON reminders(status, fire_at_ms);
 
-CREATE TABLE IF NOT EXISTS task_labels (
-  task_id  TEXT NOT NULL,
-  label_id TEXT NOT NULL,
-  PRIMARY KEY(task_id, label_id),
-  FOREIGN KEY(task_id) REFERENCES tasks(id) ON DELETE CASCADE,
-  FOREIGN KEY(label_id) REFERENCES labels(id) ON DELETE CASCADE
+CREATE INDEX IF NOT EXISTS idx_reminders_owner
+  ON reminders(owner_agent_id, updated_at DESC);
+
+CREATE TABLE IF NOT EXISTS reminder_runs (
+  id               TEXT PRIMARY KEY,
+  reminder_id      TEXT NOT NULL,
+  fired_at         TEXT NOT NULL,
+  outcome          TEXT NOT NULL CHECK (outcome IN ('fired', 'quiet', 'error')),
+  output           TEXT,
+  script_exit_code INTEGER,
+  script_stderr    TEXT,
+  message_id       TEXT,
+  error_message    TEXT,
+  FOREIGN KEY(reminder_id) REFERENCES reminders(id) ON DELETE CASCADE
 );
 
-CREATE INDEX IF NOT EXISTS idx_task_labels_label
-  ON task_labels(label_id);
+CREATE INDEX IF NOT EXISTS idx_reminder_runs_reminder
+  ON reminder_runs(reminder_id, fired_at DESC);
 
-CREATE TABLE IF NOT EXISTS task_attachments (
+CREATE TABLE IF NOT EXISTS message_reactions (
+  message_id TEXT NOT NULL,
+  actor_id   TEXT NOT NULL,
+  emoji      TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  PRIMARY KEY(message_id, actor_id, emoji),
+  FOREIGN KEY(message_id) REFERENCES chat_messages(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS attachments (
   id          TEXT PRIMARY KEY,
-  task_id     TEXT NOT NULL,
   filename    TEXT NOT NULL,
   media_type  TEXT,
   byte_size   INTEGER NOT NULL CHECK (byte_size >= 0),
-  source_path TEXT NOT NULL,
-  promoted_at TEXT NOT NULL,
-  FOREIGN KEY(task_id) REFERENCES tasks(id) ON DELETE CASCADE
+  path        TEXT NOT NULL,
+  uploaded_by TEXT NOT NULL,
+  created_at  TEXT NOT NULL
 );
-
-CREATE UNIQUE INDEX IF NOT EXISTS idx_task_attachments_task_filename
-  ON task_attachments(task_id, lower(filename));
-
-CREATE INDEX IF NOT EXISTS idx_task_attachments_task
-  ON task_attachments(task_id);
 
 CREATE TABLE IF NOT EXISTS memory_extraction_cursors (
   chat_id                  TEXT NOT NULL,
@@ -804,71 +758,9 @@ export function ensureRuntimeSchema(db: Database): void {
         table: 'skill_sources',
     });
     ensureColumn(db, {
-        column: 'summary',
-        definition: 'TEXT',
-        table: 'tasks',
-    });
-    ensureColumn(db, {
-        column: 'blocked_reason_kind',
-        definition:
-            "TEXT CHECK (blocked_reason_kind IS NULL OR blocked_reason_kind IN ('needs_input', 'error'))",
-        table: 'tasks',
-    });
-    ensureColumn(db, {
-        column: 'blocked_reason_message',
-        definition: 'TEXT',
-        table: 'tasks',
-    });
-    ensureColumn(db, {
-        column: 'scheduled_for',
-        definition: 'TEXT',
-        table: 'tasks',
-    });
-    ensureColumn(db, {
-        column: 'origin_chat_id',
-        definition: 'TEXT',
-        table: 'tasks',
-    });
-    ensureColumn(db, {
-        column: 'work_chat_id',
-        definition: 'TEXT',
-        table: 'tasks',
-    });
-    ensureColumn(db, {
-        column: 'dispatch_trigger',
-        definition:
-            "TEXT CHECK (dispatch_trigger IS NULL OR dispatch_trigger IN ('manual', 'auto'))",
-        table: 'tasks',
-    });
-    ensureColumn(db, {
-        column: 'dispatch_attempts',
-        definition: 'INTEGER NOT NULL DEFAULT 0 CHECK (dispatch_attempts >= 0)',
-        table: 'tasks',
-    });
-    ensureColumn(db, {
-        column: 'active_dispatch_run_id',
-        definition: 'TEXT',
-        table: 'tasks',
-    });
-    ensureColumn(db, {
         column: 'attempts',
         definition: 'INTEGER NOT NULL DEFAULT 0 CHECK (attempts >= 0)',
         table: 'memory_extraction_debounces',
-    });
-    ensureColumn(db, {
-        column: 'quiet',
-        definition: 'INTEGER NOT NULL DEFAULT 0 CHECK (quiet IN (0, 1))',
-        table: 'cron_runs',
-    });
-    ensureColumn(db, {
-        column: 'script_exit_code',
-        definition: 'INTEGER',
-        table: 'cron_runs',
-    });
-    ensureColumn(db, {
-        column: 'script_stderr',
-        definition: 'TEXT',
-        table: 'cron_runs',
     });
 }
 

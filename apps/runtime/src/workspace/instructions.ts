@@ -46,8 +46,6 @@ export interface GenerateAgentInstructionOptions {
     agent?: AgentRuntimeAgent | null;
     model?: AgentRuntimeModelName;
     runtimeContext?: AgentRuntimeContextFacts;
-    /** Contract-test override for the WS5 CLI-surface gate. */
-    ws5CliSurface?: boolean;
 }
 
 const defaultAgentId = 'main';
@@ -159,7 +157,6 @@ export async function generateAgentInstructions(
         runtimeVersion: facts.runtimeVersion,
         webAccess: resolveWebAccessVariant(agent, options.model, source.agentId),
         workspacePath: source.workspaceDir,
-        ...(options.ws5CliSurface === undefined ? {} : { ws5CliSurface: options.ws5CliSurface }),
     });
     const previousHash = readRenderedInstructionHash(db, source.agentId);
     const renderedAt = new Date().toISOString();

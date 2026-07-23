@@ -1,5 +1,5 @@
 ---
-summary: Visual and artifact architecture — tagged fences, generative visuals in sandboxed iframes, durable widget activity, legacy catalog replay, and chat rendering.
+summary: Visual and artifact architecture — tagged fences, generative visuals in sandboxed iframes, message-backed visual rendering, dormant widget-activity pipeline, legacy catalog replay, and chat rendering.
 read_when:
   - changing visual or artifact persistence, fence parsing, or renderer behavior
   - changing the visual sandbox, its CSP or CDN allowlist, or the theme-token injection
@@ -30,14 +30,16 @@ registration), with optional info-string text as the title:
 ```
 ````
 
-- **Fence contract.** Closed fences parse from final assistant content in
-  document order (`apps/runtime/src/widgets/render.ts`, shared grammar in
+- **Fence contract.** Fences parse client-side from the message content in
+  document order via `splitVisualFences` (shared grammar in
   `packages/tavern-api/src/widgets/visual/contracts.ts`). Body limit 60k
   chars; an empty body strips as invalid. Fallback text is the info-string
   title, else the document `<title>`, else the first h1-h3.
-- **Persistence.** A visual rides the widget render envelope as
-  `tavern.widget.visual` with props `{ html, title? }` — replay renders the
-  stored snapshot. Data is embedded at generation time; visuals never fetch
+- **Persistence.** The durable message content IS the visual: the fence stays
+  in the message body and the transcript splits it out at render time — there
+  is no separate widget-render snapshot. Live and durable replies render
+  through the same `splitVisualFences` path, so a visual survives without any
+  Runtime projection. Data is embedded at generation time; visuals never fetch
   live app data.
 - **Streaming.** While a `visual` fence is open mid-turn, Runtime updates the
   streaming post on a 500ms throttle (`harness-turn-stream.ts`), and the app
@@ -131,6 +133,13 @@ completes.
 
 ## Storage
 
+> **Dormant post-flip.** The flip removed per-turn response activities, so
+> Runtime no longer writes `widget` activity and no `widget` chat rows are
+> projected today. Visuals render entirely from message content (see
+> **Persistence** above); the activity/row pipeline below describes the
+> pre-flip contract that the artifact widget path still assumes, and is
+> retained pending the artifacts decision. Do not wire new widgets to it.
+
 Runtime stores each valid fence as response activity:
 
 ```ts
@@ -160,11 +169,12 @@ one-time Runtime schema repair; old chats keep their prose.
 ## Ownership
 
 Canonical names, props schemas, and the render envelope live in
-`packages/tavern-api/src/widgets`. Runtime owns fence parsing of final
-assistant content and writing `widget` activity
-(`apps/runtime/src/widgets/render.ts`). Server owns row projection
-(`apps/server/src/widgets/widgets.ts`). Website owns the renderers
-(`apps/website/src/widgets`): the visual iframe card, the artifact card, and
-the fallback card. The pane's HTML preview and host token injection live
-with the other pane renderers in `apps/website/src/features/chats/` (see
-[artifacts.md](artifacts.md)).
+`packages/tavern-api/src/widgets`. Visuals parse and render on the Website:
+`splitVisualFences` (`packages/tavern-api/src/widgets/visual`) splits fences
+from message content and `chat-transcript-turn.tsx` renders the iframe card —
+Runtime no longer parses fences or writes `widget` activity. Server still
+holds the dormant row projection (`apps/server/src/widgets/widgets.ts`) and
+Website the `widget`-row renderers (`apps/website/src/widgets`: artifact card
+and fallback card) for the pipeline noted under **Storage**. The pane's HTML
+preview and host token injection live with the other pane renderers in
+`apps/website/src/features/chats/` (see [artifacts.md](artifacts.md)).

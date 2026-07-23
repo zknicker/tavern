@@ -6,11 +6,14 @@ import {
     useRuntimeCapabilityEvents,
     useRuntimeConnectionEvents,
 } from '../hooks/connections/use-runtime-events.ts';
+import { useLabelEvents } from '../hooks/labels/use-label-events.ts';
 import { useModelEvents } from '../hooks/models/use-model-events.ts';
 import { useUsageEvents } from '../hooks/models/use-usage-events.ts';
 import { usePaneEvents } from '../hooks/pane/use-pane-events.ts';
+import { useReminderEvents } from '../hooks/reminders/use-reminder-events.ts';
 import { useSessionEvents } from '../hooks/sessions/use-session-events.ts';
 import { useSkillEvents } from '../hooks/skills/use-events.ts';
+import { useTaskEvents } from '../hooks/tasks/use-task-events.ts';
 import { useWorkerEvents } from '../hooks/workers/use-worker-events.ts';
 
 export function TrpcEventListeners() {
@@ -26,6 +29,9 @@ export function TrpcEventListeners() {
     useSkillEvents();
     useUsageEvents();
     useWorkerEvents();
+    useTaskEvents();
+    useLabelEvents();
+    useReminderEvents();
 
     return null;
 }

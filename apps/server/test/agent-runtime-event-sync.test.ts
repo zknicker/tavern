@@ -26,6 +26,7 @@ const emitSessionUpdated = mock(() => undefined);
 const emitWikiUpdated = mock(() => undefined);
 const emitSkillInvalidationCascade = mock(() => undefined);
 const emitSkillUpdated = mock(() => undefined);
+const emitRemindersUpdated = mock(() => undefined);
 const emitTasksUpdated = mock(() => undefined);
 const emitTavernEvent = mock(() => undefined);
 const emitUsageLiveUpdated = mock(() => undefined);
@@ -94,6 +95,7 @@ mock.module('../src/api/invalidation-events.ts', () => ({
     emitWikiUpdated,
     emitSkillInvalidationCascade,
     emitSkillUpdated,
+    emitRemindersUpdated,
     emitTasksUpdated,
     emitTavernEvent,
     emitUsageLiveUpdated,

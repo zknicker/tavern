@@ -7,11 +7,7 @@ import { formatAgentTarget } from './agent-targets.ts';
 import { findRunningAgentTurnForAgent } from './agent-turn-store.ts';
 import { createAgentParticipantId } from './chat-api/ids.ts';
 import { getChat } from './chat-api/index.ts';
-import {
-    clearInboxPierces,
-    listInboxCursors,
-    markInboxPiercesServed,
-} from './inbox-cursors.ts';
+import { clearInboxPierces, listInboxCursors, markInboxPiercesServed } from './inbox-cursors.ts';
 import { collectPendingInboxRows } from './inbox-drain.ts';
 import { collectInboxTargetSummaries, type InboxTargetSummary } from './inbox-notices.ts';
 import { advanceServedCursor } from './served-ledger.ts';

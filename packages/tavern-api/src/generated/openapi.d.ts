@@ -464,6 +464,363 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/agent/tasks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List task-messages visible to the calling agent. */
+        get: operations["listAgentTasks"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/agent/tasks/create": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create one or more task-messages. */
+        post: operations["createAgentTasks"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/agent/tasks/claim": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Claim task-messages for the calling agent. */
+        post: operations["claimAgentTasks"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/agent/tasks/unclaim": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Release one task claimed by the calling agent. */
+        post: operations["unclaimAgentTask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/agent/tasks/update": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Update one task status. */
+        post: operations["updateAgentTask"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/agent/reminders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List reminders owned by the calling agent. */
+        get: operations["listAgentReminders"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/agent/reminders/log": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read reminder fire history. */
+        get: operations["readAgentReminderLog"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/agent/reminders/schedule": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Schedule a reminder anchored to a readable message. */
+        post: operations["scheduleAgentReminder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/agent/reminders/snooze": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Snooze an owned reminder. */
+        post: operations["snoozeAgentReminder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/agent/reminders/update": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Update one field of an owned reminder. */
+        post: operations["updateAgentReminder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/agent/reminders/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel an owned reminder. */
+        post: operations["cancelAgentReminder"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/agent/attachments/upload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Upload an attachment for a later message. */
+        post: operations["uploadAgentAttachment"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/agent/attachments/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read a visible attachment. */
+        get: operations["viewAgentAttachment"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/agent/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read the caller or another participant profile. */
+        get: operations["readAgentProfile"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/agent/profile/update": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Update the calling agent's description. */
+        post: operations["updateAgentProfile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/agent/messages/react": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add or remove a reaction on a readable message. */
+        post: operations["reactToAgentMessage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/agent/skills": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List skills visible to the calling agent. */
+        get: operations["listAgentSkills"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/agent/skills/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Read a skill and its file hashes. */
+        get: operations["viewAgentSkill"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/agent/skills/create": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create an agent-authored skill. */
+        post: operations["createAgentSkill"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/agent/skills/patch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Replace an owned skill's SKILL.md. */
+        post: operations["patchAgentSkill"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/agent/skills/write-file": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Write an owned skill support file. */
+        post: operations["writeAgentSkillFile"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/events": {
         parameters: {
             query?: never;
@@ -618,6 +975,194 @@ export interface components {
             target: string;
             members: components["schemas"]["AgentChannelMember"][];
         };
+        /** @enum {string} */
+        AgentTaskStatus: "todo" | "in_progress" | "in_review" | "done" | "closed";
+        AgentTaskRow: {
+            assignee: string | null;
+            message: components["schemas"]["AgentMessage"];
+            number: number;
+            status: components["schemas"]["AgentTaskStatus"];
+            target: string | null;
+        };
+        AgentTaskListResponse: {
+            tasks: components["schemas"]["AgentTaskRow"][];
+        };
+        AgentTaskCreateResponse: {
+            tasks: components["schemas"]["AgentTaskRow"][];
+        };
+        AgentTaskClaimResponse: {
+            claimed: components["schemas"]["AgentTaskRow"][];
+        };
+        AgentTaskSingleResponse: {
+            task: components["schemas"]["AgentTaskRow"];
+        };
+        AgentTaskCreateRequest: {
+            assignee?: string;
+            content?: string;
+            target: string;
+            titles?: string[];
+        };
+        AgentTaskClaimRequest: {
+            messageId?: string;
+            numbers?: number[];
+            target: string;
+        } & (unknown | unknown);
+        AgentTaskUnclaimRequest: {
+            number: number;
+            target: string;
+        };
+        AgentTaskUpdateRequest: {
+            number: number;
+            status: components["schemas"]["AgentTaskStatus"];
+            target: string;
+        };
+        AgentReminder: {
+            anchorTarget: string;
+            /** Format: date-time */
+            fireAt: string;
+            id: string;
+            repeat: string | null;
+            script: boolean;
+            status: string;
+            title: string;
+        };
+        AgentReminderSingleResponse: {
+            reminder: components["schemas"]["AgentReminder"];
+        };
+        AgentReminderListResponse: {
+            reminders: components["schemas"]["AgentReminder"][];
+        };
+        AgentReminderRun: {
+            /** Format: date-time */
+            firedAt: string;
+            id: string;
+            outcome: string;
+            output: string | null;
+            reminderId: string;
+            scriptExitCode: number | null;
+        };
+        AgentReminderLogResponse: {
+            runs: components["schemas"]["AgentReminderRun"][];
+        };
+        AgentReminderScheduleRequest: {
+            delaySeconds?: number;
+            fireAt?: string;
+            messageId: string;
+            repeat?: string;
+            script?: string;
+            title: string;
+        } & (unknown | unknown);
+        AgentReminderSnoozeRequest: {
+            by: string;
+            id: string;
+        };
+        AgentReminderUpdateRequest: {
+            fireAt?: string;
+            id: string;
+            repeat?: string | null;
+            script?: string | null;
+            title?: string;
+        } & (unknown | unknown | unknown | unknown);
+        AgentReminderCancelRequest: {
+            id: string;
+        };
+        AgentAttachment: {
+            byteSize: number;
+            filename: string;
+            id: string;
+            mediaType: string | null;
+        };
+        AgentAttachmentUploadRequest: {
+            /** Format: byte */
+            dataBase64: string;
+            filename: string;
+            mediaType?: string;
+        };
+        AgentAttachmentUploadResponse: {
+            attachment: components["schemas"]["AgentAttachment"];
+        };
+        AgentAttachmentView: {
+            byteSize: number;
+            /** Format: byte */
+            dataBase64: string;
+            filename: string;
+            id: string;
+            mediaType: string | null;
+        };
+        AgentAttachmentViewResponse: {
+            attachment: components["schemas"]["AgentAttachmentView"];
+        };
+        AgentProfile: {
+            description: string | null;
+            handle: string;
+            isSelf: boolean;
+        };
+        AgentProfileResponse: {
+            profile: components["schemas"]["AgentProfile"];
+        };
+        AgentProfileUpdateRequest: {
+            description: string;
+        };
+        AgentReactionRequest: {
+            emoji: string;
+            messageId: string;
+            remove?: boolean;
+        };
+        AgentReactionResponse: {
+            message: components["schemas"]["AgentMessage"];
+        };
+        AgentSkillId: string;
+        AgentSkillSummary: {
+            description: string;
+            editable: boolean;
+            enabledForYou: boolean;
+            id: components["schemas"]["AgentSkillId"];
+            name: string;
+        };
+        AgentSkillListResponse: {
+            skills: components["schemas"]["AgentSkillSummary"][];
+        };
+        AgentSkillViewResponse: {
+            content: string;
+            description: string;
+            editable: boolean;
+            enabledForYou: boolean;
+            hash: string;
+            id: components["schemas"]["AgentSkillId"];
+            name: string;
+            supportFiles: {
+                hash: string;
+                path: string;
+            }[];
+        };
+        AgentSkillCreateRequest: {
+            content: string;
+            description: string;
+            name: string;
+        };
+        AgentSkillCreateResponse: {
+            skill: components["schemas"]["AgentSkillSummary"];
+        };
+        AgentSkillPatchRequest: {
+            content: string;
+            expectedHash: string;
+            skillId: components["schemas"]["AgentSkillId"];
+        };
+        AgentSkillWriteFileRequest: {
+            content: string;
+            expectedHash: string | null;
+            filePath: string;
+            skillId: components["schemas"]["AgentSkillId"];
+        };
+        AgentSkillChange: {
+            afterHash: string;
+            beforeHash: string | null;
+            path: string;
+            skillId: components["schemas"]["AgentSkillId"];
+        };
+        AgentSkillChangeResponse: {
+            change: components["schemas"]["AgentSkillChange"];
+        };
         Id: string;
         ChatId: string;
         MessageId: string;
@@ -719,6 +1264,36 @@ export interface components {
             created_at: components["schemas"]["Timestamp"];
             deleted_at: components["schemas"]["Timestamp"] | null;
             metadata: components["schemas"]["JsonObject"];
+            task?: components["schemas"]["MessageTask"] | null;
+            reactions?: components["schemas"]["MessageReaction"][];
+        };
+        MessageTask: {
+            number: number;
+            /** @enum {string} */
+            status: "todo" | "in_progress" | "in_review" | "done" | "closed";
+            assignee: components["schemas"]["TaskActor"] | null;
+            claimed_at: components["schemas"]["Timestamp"] | null;
+            /** @enum {string} */
+            priority: "none" | "urgent" | "high" | "medium" | "low";
+            labels: components["schemas"]["TaskLabel"][];
+            /** @enum {string} */
+            origin: "composed" | "converted";
+            created_at: components["schemas"]["Timestamp"];
+            updated_at: components["schemas"]["Timestamp"];
+        };
+        TaskActor: {
+            id: string;
+            handle: string | null;
+        };
+        TaskLabel: {
+            id: string;
+            name: string;
+            /** @enum {string} */
+            color: "red" | "orange" | "amber" | "green" | "teal" | "blue" | "purple" | "pink" | "gray";
+        };
+        MessageReaction: {
+            emoji: string;
+            actors: components["schemas"]["TaskActor"][];
         };
         CreateMessageRequest: {
             id: components["schemas"]["MessageId"];
@@ -1837,6 +2412,517 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AgentChannelMembers"];
+                };
+            };
+            default: components["responses"]["AgentError"];
+        };
+    };
+    listAgentTasks: {
+        parameters: {
+            query?: {
+                target?: string;
+                status?: "all" | "todo" | "in_progress" | "in_review" | "done" | "closed";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Visible task-messages. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentTaskListResponse"];
+                };
+            };
+            default: components["responses"]["AgentError"];
+        };
+    };
+    createAgentTasks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentTaskCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Created task-messages. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentTaskCreateResponse"];
+                };
+            };
+            default: components["responses"]["AgentError"];
+        };
+    };
+    claimAgentTasks: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentTaskClaimRequest"];
+            };
+        };
+        responses: {
+            /** @description Claimed task-messages. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentTaskClaimResponse"];
+                };
+            };
+            default: components["responses"]["AgentError"];
+        };
+    };
+    unclaimAgentTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentTaskUnclaimRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated task-message. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentTaskSingleResponse"];
+                };
+            };
+            default: components["responses"]["AgentError"];
+        };
+    };
+    updateAgentTask: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentTaskUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated task-message. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentTaskSingleResponse"];
+                };
+            };
+            default: components["responses"]["AgentError"];
+        };
+    };
+    listAgentReminders: {
+        parameters: {
+            query?: {
+                status?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Owned reminders. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentReminderListResponse"];
+                };
+            };
+            default: components["responses"]["AgentError"];
+        };
+    };
+    readAgentReminderLog: {
+        parameters: {
+            query?: {
+                id?: string;
+                limit?: components["parameters"]["Limit"];
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Reminder runs. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentReminderLogResponse"];
+                };
+            };
+            default: components["responses"]["AgentError"];
+        };
+    };
+    scheduleAgentReminder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentReminderScheduleRequest"];
+            };
+        };
+        responses: {
+            /** @description Scheduled reminder. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentReminderSingleResponse"];
+                };
+            };
+            default: components["responses"]["AgentError"];
+        };
+    };
+    snoozeAgentReminder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentReminderSnoozeRequest"];
+            };
+        };
+        responses: {
+            /** @description Snoozed reminder. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentReminderSingleResponse"];
+                };
+            };
+            default: components["responses"]["AgentError"];
+        };
+    };
+    updateAgentReminder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentReminderUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated reminder. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentReminderSingleResponse"];
+                };
+            };
+            default: components["responses"]["AgentError"];
+        };
+    };
+    cancelAgentReminder: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentReminderCancelRequest"];
+            };
+        };
+        responses: {
+            /** @description Canceled reminder. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentReminderSingleResponse"];
+                };
+            };
+            default: components["responses"]["AgentError"];
+        };
+    };
+    uploadAgentAttachment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentAttachmentUploadRequest"];
+            };
+        };
+        responses: {
+            /** @description Uploaded attachment. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentAttachmentUploadResponse"];
+                };
+            };
+            default: components["responses"]["AgentError"];
+        };
+    };
+    viewAgentAttachment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Attachment content. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentAttachmentViewResponse"];
+                };
+            };
+            default: components["responses"]["AgentError"];
+        };
+    };
+    readAgentProfile: {
+        parameters: {
+            query?: {
+                target?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Participant profile. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentProfileResponse"];
+                };
+            };
+            default: components["responses"]["AgentError"];
+        };
+    };
+    updateAgentProfile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentProfileUpdateRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated profile. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentProfileResponse"];
+                };
+            };
+            default: components["responses"]["AgentError"];
+        };
+    };
+    reactToAgentMessage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentReactionRequest"];
+            };
+        };
+        responses: {
+            /** @description Updated message. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentReactionResponse"];
+                };
+            };
+            default: components["responses"]["AgentError"];
+        };
+    };
+    listAgentSkills: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Visible skill summaries. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentSkillListResponse"];
+                };
+            };
+            default: components["responses"]["AgentError"];
+        };
+    };
+    viewAgentSkill: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                id: components["schemas"]["AgentSkillId"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Skill content and hashes. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentSkillViewResponse"];
+                };
+            };
+            default: components["responses"]["AgentError"];
+        };
+    };
+    createAgentSkill: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentSkillCreateRequest"];
+            };
+        };
+        responses: {
+            /** @description Created skill. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentSkillCreateResponse"];
+                };
+            };
+            default: components["responses"]["AgentError"];
+        };
+    };
+    patchAgentSkill: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentSkillPatchRequest"];
+            };
+        };
+        responses: {
+            /** @description Skill file change. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentSkillChangeResponse"];
+                };
+            };
+            default: components["responses"]["AgentError"];
+        };
+    };
+    writeAgentSkillFile: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentSkillWriteFileRequest"];
+            };
+        };
+        responses: {
+            /** @description Skill file change. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentSkillChangeResponse"];
                 };
             };
             default: components["responses"]["AgentError"];

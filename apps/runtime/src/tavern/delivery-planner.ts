@@ -52,6 +52,13 @@ export function planMessageDelivery(chatId: string, message: TavernChatMessage) 
     if (message.role !== 'assistant' && message.role !== 'user' && message.role !== 'system') {
         return;
     }
+    // Reminder traffic never enters ordinary agent delivery: a fire wakes only
+    // its owner (the scheduler pierces directly), and schedule receipts
+    // are human-facing surface evidence only (D4 — "wakes the author who
+    // scheduled it, not other people"). Humans read both normally.
+    if (reminderSource(message)) {
+        return;
+    }
     const chat = getChat(chatId);
     if (!chat || chat.kind === 'task') {
         return;
@@ -101,6 +108,24 @@ export function planMessageDelivery(chatId: string, message: TavernChatMessage) 
             wakeSink?.wakeAgent(agentId);
         }
     }
+}
+
+/**
+ * A reminder fire wakes exactly its owner: a pierce row (mutes and follows
+ * are irrelevant to your own alarm) plus a wake. Everyone else sees the fire
+ * only by reading the surface.
+ */
+export function wakeAgentAfterReminder(agentId: string) {
+    wakeSink?.wakeAgent(agentId);
+}
+
+function reminderSource(message: TavernChatMessage): boolean {
+    const runtime = message.metadata.runtime;
+    if (!runtime || typeof runtime !== 'object' || Array.isArray(runtime)) {
+        return false;
+    }
+    const source = (runtime as Record<string, unknown>).source;
+    return source === 'reminder-fire' || source === 'reminder-receipt';
 }
 
 function isMessageAuthor(message: TavernChatMessage, agentId: string) {

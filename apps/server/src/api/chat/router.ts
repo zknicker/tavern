@@ -11,6 +11,7 @@ import { onChatLogUpdate } from './log-on-update.ts';
 import { markChatReadRoute } from './mark-read.ts';
 import { onChatComposition } from './on-composition.ts';
 import { onChatUpdate } from './on-update.ts';
+import { reactToChatMessageRoute } from './react.ts';
 import { sendChatMessageRoute } from './send.ts';
 import { startChatRoute } from './start.ts';
 import { stopChatTurnRoute } from './stop.ts';
@@ -51,6 +52,7 @@ export const chatRouter = createRouter({
     markRead: markChatReadRoute,
     onComposition: onChatComposition,
     onUpdate: onChatUpdate,
+    react: reactToChatMessageRoute,
     send: sendChatMessageRoute,
     start: startChatRoute,
     stop: stopChatTurnRoute,

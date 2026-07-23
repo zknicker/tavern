@@ -9,6 +9,7 @@ import {
     useChatComposerInsertRequest,
 } from '../../commands/chat-composer-insert.ts';
 import { useChatComposerMentionRequest } from '../../commands/chat-composer-mention.ts';
+import { Checkbox } from '../../components/ui/checkbox.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import {
     PromptInput,
@@ -92,6 +93,7 @@ export function ChatMessageComposer({
     const composerDraft = useChatComposerDraftState({ boundAgentIds, chatId: draftKey });
     const fileInputRef = React.useRef<HTMLInputElement | null>(null);
     const [attachmentError, setAttachmentError] = React.useState<string | null>(null);
+    const [asTask, setAsTask] = React.useState(false);
     const { agentId, attachments, content, mentions } = composerDraft.draft;
     const { setAttachments, setContent, setMentions } = composerDraft;
     const isCompact = variant === 'compact';
@@ -136,6 +138,11 @@ export function ChatMessageComposer({
         onSubmit: () => {
             void handleSubmit();
         },
+        onSubmitAsTask: threadTarget
+            ? undefined
+            : () => {
+                  void handleSubmit(undefined, true);
+              },
         onMentionsChange: setMentions,
     });
     const focusTextEditorRef = React.useRef(mentionComposer.focusTextEditor);
@@ -183,7 +190,7 @@ export function ChatMessageComposer({
     );
     useChatComposerMentionRequest(canAutoFocusComposer ? draftKey : null, handleComposerMention);
 
-    async function handleSubmit(event?: React.FormEvent<HTMLFormElement>) {
+    async function handleSubmit(event?: React.FormEvent<HTMLFormElement>, forceAsTask = false) {
         event?.preventDefault();
 
         if (!canSubmit) {
@@ -202,8 +209,12 @@ export function ChatMessageComposer({
             chatId,
             clientMessageId: `msg_${crypto.randomUUID()}`,
             content: submission.content,
+            ...(!threadTarget && (forceAsTask || asTask) ? { asTask: true } : {}),
             ...(threadTarget ? { thread: threadTarget } : {}),
         });
+        if (!threadTarget) {
+            setAsTask(false);
+        }
 
         if (threadTarget && result.threadChatId) {
             setThreadPaneChatId(chatId, threadTarget.anchorMessageId, result.threadChatId);
@@ -327,6 +338,16 @@ export function ChatMessageComposer({
                     />
                 </PromptInputTools>
                 <PromptInputActions>
+                    {threadTarget ? null : (
+                        <label className="mr-1 inline-flex items-center gap-1.5 text-meta text-muted-foreground">
+                            <Checkbox
+                                aria-label="Send as task (⌘/Ctrl-Shift-Enter)"
+                                checked={asTask}
+                                onCheckedChange={(checked) => setAsTask(checked === true)}
+                            />
+                            As Task
+                        </label>
+                    )}
                     {contextFullness ? (
                         <ChatComposerContextFullness fullness={contextFullness} />
                     ) : null}

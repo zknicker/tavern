@@ -400,6 +400,34 @@ test('ChatTranscript renders visual widget rows in a sandboxed iframe', () => {
     assert.doesNotMatch(markup, /Widget unavailable/);
 });
 
+test('ChatTranscript renders durable message ```visual fences as visual cards', () => {
+    const markup = renderTranscript([
+        {
+            actor: { id: 'tiny', kind: 'agent' },
+            connectsToNext: false,
+            connectsToPrevious: false,
+            id: 'message-visual',
+            isFirstInGroup: true,
+            kind: 'message',
+            message: {
+                tavernAgentId: 'tiny',
+                content: 'Here is the chart.\n```visual Weekly sales\n<h1>Weekly sales</h1>\n```',
+                id: 'message-visual',
+                sender: 'Tiny',
+                senderType: 'agent',
+                sourceSessionId: null,
+                sourceSessionKey: 'agent:tiny:session-1',
+                timestamp: '2026-03-31T15:00:03.000Z',
+            },
+        },
+    ]);
+
+    assert.match(markup, /Here is the chart\./);
+    assert.match(markup, /<iframe/);
+    assert.doesNotMatch(markup, /```visual/);
+    assert.doesNotMatch(markup, /allow-same-origin/);
+});
+
 test('ChatTranscript renders artifact widgets as compact open-in-pane cards', () => {
     const row = widgetRow('ui-artifact');
 

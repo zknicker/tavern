@@ -27,8 +27,8 @@ Plugin or runtime experiment.
   setup blockers; saves that add unavailable skills are rejected.
 * Setup requirements and source state are visible.
 * A skill can be visible while Runtime reports setup blockers.
-* Disk-backed skills are writable regardless of source. Plugin-owned skills are
-  not disk files and remain non-editable.
+* Agent-authored skills are writable only by their creating agent. Other
+  disk-backed and Plugin-owned skills remain non-editable on the agent surface.
 * Hub installs record the installed content hash. Reinstalling an edited hub
   skill returns a conflict unless `force` is set. Available hub entries report
   `edited` and `updateAvailable` from the installed hash.

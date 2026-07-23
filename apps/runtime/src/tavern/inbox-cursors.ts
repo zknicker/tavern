@@ -155,10 +155,7 @@ export function markInboxPiercesServed(
     }
 }
 
-export function resetInboxPiercesForRun(
-    input: { runId: string },
-    db: Database = getDb()
-) {
+export function resetInboxPiercesForRun(input: { runId: string }, db: Database = getDb()) {
     db.prepare(
         `UPDATE agent_inbox_pierces
          SET served_run_id = NULL
@@ -166,10 +163,7 @@ export function resetInboxPiercesForRun(
     ).run(namedParams(input));
 }
 
-export function clearInboxPiercesForRun(
-    input: { runId: string },
-    db: Database = getDb()
-) {
+export function clearInboxPiercesForRun(input: { runId: string }, db: Database = getDb()) {
     db.prepare(
         `DELETE FROM agent_inbox_pierces
          WHERE served_run_id = $runId`

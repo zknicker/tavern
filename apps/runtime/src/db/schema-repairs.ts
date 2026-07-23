@@ -1,29 +1,5 @@
 import type { Database } from './sqlite';
 
-const LABELS_TABLES = `
-CREATE TABLE IF NOT EXISTS labels (
-  id         TEXT PRIMARY KEY,
-  name       TEXT NOT NULL,
-  color      TEXT NOT NULL CHECK (color IN ('red', 'orange', 'amber', 'green', 'teal', 'blue', 'purple', 'pink', 'gray')),
-  created_at TEXT NOT NULL,
-  updated_at TEXT NOT NULL
-);
-
-CREATE UNIQUE INDEX IF NOT EXISTS idx_labels_lower_name
-  ON labels(lower(name));
-
-CREATE TABLE IF NOT EXISTS task_labels (
-  task_id  TEXT NOT NULL,
-  label_id TEXT NOT NULL,
-  PRIMARY KEY(task_id, label_id),
-  FOREIGN KEY(task_id) REFERENCES tasks(id) ON DELETE CASCADE,
-  FOREIGN KEY(label_id) REFERENCES labels(id) ON DELETE CASCADE
-);
-
-CREATE INDEX IF NOT EXISTS idx_task_labels_label
-  ON task_labels(label_id);
-`;
-
 const CHAT_RESPONSE_ACTIVITY_TABLE = `
 CREATE TABLE chat_response_activity (
   id             TEXT PRIMARY KEY,
@@ -112,47 +88,11 @@ CREATE TABLE skill_sources (
   archived_at         TEXT
 )`;
 
-const TASKS_TABLE = `
-CREATE TABLE tasks (
-  id                TEXT PRIMARY KEY,
-  number            INTEGER NOT NULL UNIQUE,
-  kind              TEXT NOT NULL DEFAULT 'task' CHECK (kind IN ('task', 'epic')),
-  title             TEXT NOT NULL,
-  description       TEXT,
-  summary           TEXT,
-  blocked_reason_kind TEXT CHECK (blocked_reason_kind IS NULL OR blocked_reason_kind IN ('needs_input', 'error')),
-  blocked_reason_message TEXT,
-  status            TEXT NOT NULL DEFAULT 'backlog' CHECK (status IN ('backlog', 'todo', 'in_progress', 'blocked', 'review', 'done', 'canceled')),
-  priority          TEXT NOT NULL DEFAULT 'none' CHECK (priority IN ('none', 'urgent', 'high', 'medium', 'low')),
-  assignee_kind     TEXT CHECK (assignee_kind IS NULL OR assignee_kind IN ('user', 'agent')),
-  assignee_agent_id TEXT,
-  epic_id           TEXT,
-  scheduled_for     TEXT,
-  work_chat_id      TEXT,
-  dispatch_trigger  TEXT CHECK (dispatch_trigger IS NULL OR dispatch_trigger IN ('manual', 'auto')),
-  dispatch_attempts INTEGER NOT NULL DEFAULT 0 CHECK (dispatch_attempts >= 0),
-  active_dispatch_run_id TEXT,
-  created_at        TEXT NOT NULL,
-  updated_at        TEXT NOT NULL,
-  FOREIGN KEY(epic_id) REFERENCES tasks(id) ON DELETE SET NULL,
-  FOREIGN KEY(assignee_agent_id) REFERENCES agents(id) ON DELETE SET NULL
-)`;
-
-const TASKS_INDEXES = `
-CREATE INDEX IF NOT EXISTS idx_tasks_status
-  ON tasks(status);
-
-CREATE INDEX IF NOT EXISTS idx_tasks_epic
-  ON tasks(epic_id);
-`;
-
 export function repairRuntimeSchema(db: Database): void {
     ensureChatResponseActivityWidgetKind(db);
     ensureChatsKinds(db);
     ensureMemoryJobsSkillReviewKind(db);
     ensureSkillSourcesPluginSource(db);
-    ensureTaskLabelRecords(db);
-    ensureTasksBlockedAndReviewStatus(db);
     hydrateAgentSkillAssignments(db);
 }
 
@@ -345,146 +285,6 @@ DROP TABLE temp.skill_sources_rebuild;
     }
 }
 
-function ensureTaskLabelRecords(db: Database): void {
-    const sql = tableSql(db, 'tasks');
-    if (!sql) {
-        return;
-    }
-
-    db.exec(LABELS_TABLES);
-    const columns = tableColumns(db, 'tasks');
-    if (!columns.has('labels_json')) {
-        return;
-    }
-
-    let transactionOpen = false;
-    db.exec('PRAGMA foreign_keys = OFF');
-    try {
-        db.exec('BEGIN IMMEDIATE');
-        transactionOpen = true;
-        db.exec(LABELS_TABLES);
-        migrateTaskLabelJsonRows(db);
-        db.exec(`
-DROP TABLE IF EXISTS temp.tasks_rebuild;
-CREATE TEMP TABLE tasks_rebuild AS
-  SELECT id, number, ${columnExpression(columns, 'kind', "'task'")} AS kind,
-         title, ${columnExpression(columns, 'description', 'NULL')} AS description,
-         ${columnExpression(columns, 'summary', 'NULL')} AS summary,
-         ${columnExpression(columns, 'blocked_reason_kind', 'NULL')} AS blocked_reason_kind,
-         ${columnExpression(columns, 'blocked_reason_message', 'NULL')} AS blocked_reason_message,
-         status, priority, ${columnExpression(columns, 'assignee_kind', 'NULL')} AS assignee_kind,
-         ${columnExpression(columns, 'assignee_agent_id', 'NULL')} AS assignee_agent_id,
-         ${columnExpression(columns, 'epic_id', 'NULL')} AS epic_id,
-         ${columnExpression(columns, 'scheduled_for', 'NULL')} AS scheduled_for,
-         ${columnExpression(columns, 'work_chat_id', 'NULL')} AS work_chat_id,
-         created_at, updated_at
-  FROM tasks;
-DROP TABLE tasks;
-${TASKS_TABLE};
-INSERT INTO tasks
-  (id, number, kind, title, description, summary, blocked_reason_kind,
-   blocked_reason_message, status, priority, assignee_kind, assignee_agent_id,
-   epic_id, scheduled_for, work_chat_id, created_at, updated_at)
-  SELECT id, number, kind, title, description, summary, blocked_reason_kind,
-         blocked_reason_message, status, priority, assignee_kind,
-         assignee_agent_id, epic_id, scheduled_for, work_chat_id, created_at, updated_at
-  FROM tasks_rebuild;
-DROP TABLE temp.tasks_rebuild;
-${TASKS_INDEXES}
-`);
-        db.exec('COMMIT');
-        transactionOpen = false;
-    } catch (error) {
-        if (transactionOpen) {
-            db.exec('ROLLBACK');
-        }
-        throw error;
-    } finally {
-        db.exec('PRAGMA foreign_keys = ON');
-    }
-}
-
-function migrateTaskLabelJsonRows(db: Database): void {
-    const rows = db
-        .prepare('SELECT id, labels_json, created_at, updated_at FROM tasks')
-        .all() as Array<{
-        created_at: string;
-        id: string;
-        labels_json: string;
-        updated_at: string;
-    }>;
-    const insertLabel = db.prepare(
-        `INSERT OR IGNORE INTO labels (id, name, color, created_at, updated_at)
-         VALUES ($id, $name, $color, $createdAt, $updatedAt)`
-    );
-    const selectLabel = db.prepare('SELECT id FROM labels WHERE lower(name) = lower($name)');
-    const insertTaskLabel = db.prepare(
-        `INSERT OR IGNORE INTO task_labels (task_id, label_id)
-         VALUES ($taskId, $labelId)`
-    );
-
-    for (const row of rows) {
-        for (const labelName of uniqueLabelNames(parseStringArray(row.labels_json))) {
-            insertLabel.run({
-                $color: colorForLabelName(labelName),
-                $createdAt: row.created_at,
-                $id: createLabelId(),
-                $name: labelName,
-                $updatedAt: row.updated_at,
-            });
-            const label = selectLabel.get({ $name: labelName }) as { id: string } | null;
-            if (label) {
-                insertTaskLabel.run({ $labelId: label.id, $taskId: row.id });
-            }
-        }
-    }
-}
-
-function ensureTasksBlockedAndReviewStatus(db: Database): void {
-    const sql = tableSql(db, 'tasks');
-
-    if (!sql || sql.includes("'review'")) {
-        return;
-    }
-
-    let transactionOpen = false;
-    db.exec('PRAGMA foreign_keys = OFF');
-    try {
-        db.exec('BEGIN IMMEDIATE');
-        transactionOpen = true;
-        db.exec(`
-DROP TABLE IF EXISTS temp.tasks_rebuild;
-CREATE TEMP TABLE tasks_rebuild AS
-  SELECT id, number, kind, title, description, NULL AS summary,
-         NULL AS blocked_reason_kind, NULL AS blocked_reason_message,
-         status, priority, assignee_kind, assignee_agent_id, epic_id,
-         NULL AS scheduled_for, NULL AS work_chat_id, created_at, updated_at
-  FROM tasks;
-DROP TABLE tasks;
-${TASKS_TABLE};
-INSERT INTO tasks
-  (id, number, kind, title, description, summary, blocked_reason_kind,
-   blocked_reason_message, status, priority, assignee_kind, assignee_agent_id,
-   epic_id, scheduled_for, work_chat_id, created_at, updated_at)
-  SELECT id, number, kind, title, description, summary, blocked_reason_kind,
-         blocked_reason_message, status, priority, assignee_kind,
-         assignee_agent_id, epic_id, scheduled_for, work_chat_id, created_at, updated_at
-  FROM tasks_rebuild;
-DROP TABLE temp.tasks_rebuild;
-${TASKS_INDEXES}
-`);
-        db.exec('COMMIT');
-        transactionOpen = false;
-    } catch (error) {
-        if (transactionOpen) {
-            db.exec('ROLLBACK');
-        }
-        throw error;
-    } finally {
-        db.exec('PRAGMA foreign_keys = ON');
-    }
-}
-
 function tableSql(db: Database, name: string): string | null {
     const row = db
         .prepare('SELECT sql FROM sqlite_master WHERE type = $type AND name = $name')
@@ -557,32 +357,4 @@ function parseStringArray(value: string): string[] {
     }
 
     return [];
-}
-
-function uniqueLabelNames(names: string[]): string[] {
-    const byKey = new Map<string, string>();
-    for (const name of names) {
-        const normalized = name.trim();
-        if (!normalized) {
-            continue;
-        }
-        const key = normalized.toLowerCase();
-        if (!byKey.has(key)) {
-            byKey.set(key, normalized);
-        }
-    }
-    return Array.from(byKey.values());
-}
-
-function colorForLabelName(name: string) {
-    const colors = ['red', 'orange', 'amber', 'green', 'teal', 'blue', 'purple', 'pink', 'gray'];
-    let hash = 0;
-    for (const char of name.trim().toLowerCase()) {
-        hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
-    }
-    return colors[hash % colors.length] ?? 'gray';
-}
-
-function createLabelId() {
-    return `lbl_${crypto.randomUUID()}`;
 }

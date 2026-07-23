@@ -136,6 +136,78 @@ test('applyLogSnapshot carries an updated thread summary on unchanged row ids', 
     expect(row?.kind === 'message' ? row.thread?.replyCount : null).toBe(2);
 });
 
+test('applyLogSnapshot carries updated reactions on unchanged row ids', () => {
+    const withReactions = (
+        reactions: Extract<ChatLogRow, { kind: 'message' }>['message']['reactions']
+    ): ChatLogRow => {
+        const base = agentMessage('anchor-1', '16:08:10') as Extract<
+            ChatLogRow,
+            { kind: 'message' }
+        >;
+        return { ...base, message: { ...base.message, reactions } };
+    };
+    const loaded = applyLogSnapshot(emptyTimelineState(), {
+        limit: 3,
+        nextBeforeSequence: null,
+        rows: [withReactions([])],
+        totalMessages: 1,
+    });
+
+    const next = applyLogSnapshot(loaded, {
+        limit: 3,
+        nextBeforeSequence: null,
+        rows: [withReactions([{ actors: [{ handle: 'zach', id: 'usr_tavern' }], emoji: '👍' }])],
+        totalMessages: 1,
+    });
+
+    const row = next.timeline[0];
+    expect(row?.kind === 'message' ? row.message.reactions : null).toEqual([
+        { actors: [{ handle: 'zach', id: 'usr_tavern' }], emoji: '👍' },
+    ]);
+});
+
+test('applyLogSnapshot carries an updated task on unchanged row ids', () => {
+    const withTask = (status: 'in_progress' | 'todo', updatedAt: string): ChatLogRow => {
+        const base = agentMessage('anchor-1', '16:08:10') as Extract<
+            ChatLogRow,
+            { kind: 'message' }
+        >;
+        return {
+            ...base,
+            message: {
+                ...base.message,
+                task: {
+                    assignee: null,
+                    claimed_at: null,
+                    created_at: '2026-04-21T16:08:10.000Z',
+                    labels: [],
+                    number: 7,
+                    origin: 'composed',
+                    priority: 'none',
+                    status,
+                    updated_at: updatedAt,
+                },
+            },
+        };
+    };
+    const loaded = applyLogSnapshot(emptyTimelineState(), {
+        limit: 3,
+        nextBeforeSequence: null,
+        rows: [withTask('todo', '2026-04-21T16:08:10.000Z')],
+        totalMessages: 1,
+    });
+
+    const next = applyLogSnapshot(loaded, {
+        limit: 3,
+        nextBeforeSequence: null,
+        rows: [withTask('in_progress', '2026-04-21T16:09:00.000Z')],
+        totalMessages: 1,
+    });
+
+    const row = next.timeline[0];
+    expect(row?.kind === 'message' ? row.message.task?.status : null).toBe('in_progress');
+});
+
 function agentMessage(id: string, time: string): ChatLogRow {
     return messageRow(id, time, 'agent');
 }

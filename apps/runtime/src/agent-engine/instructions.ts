@@ -23,7 +23,6 @@ export async function prepareAgentEngineInstructions(
         runtimeContext?: AgentRuntimeContextFacts;
         seedSkills?: boolean;
         skillsDir?: string;
-        ws5CliSurface?: boolean;
     } = {}
 ) {
     const agentId = typeof agent === 'string' ? agent : agent.id;
@@ -40,7 +39,6 @@ export async function prepareAgentEngineInstructions(
         agent: typeof agent === 'string' ? null : agent,
         model: options.model,
         runtimeContext: options.runtimeContext,
-        ws5CliSurface: options.ws5CliSurface,
     });
 
     if (options.seedSkills !== false) {

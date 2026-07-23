@@ -11,11 +11,6 @@
  * See AGENTS.md ("Agent System Prompt Changes").
  */
 
-// CLI families 5–9 (tasks, attachments, profiles, reminders, skills) land
-// with WS5; their prompt sections compose behind this gate and turn on in
-// the same change that lands the verbs (ws2-prompt-draft.md "WS5 gate").
-export const ws5CliSurfaceEnabled = false;
-
 export const agentWorkDirectoryName = 'workbench';
 
 export interface AgentPromptRenderInput {
@@ -31,31 +26,29 @@ export interface AgentPromptRenderInput {
     runtimeVersion: string;
     webAccess: 'fetch-only' | 'search' | null;
     workspacePath: string;
-    ws5CliSurface?: boolean;
 }
 
 export function renderAgentInstructions(input: AgentPromptRenderInput): string {
-    const ws5 = input.ws5CliSurface ?? ws5CliSurfaceEnabled;
     const sections = [
         identitySection(input),
         whoYouAreSection,
         runtimeContextSection(input),
-        communicationSection(ws5),
+        communicationSection(),
         startupSection,
         messagingSection,
         sendingMessagesSection,
-        ws5 ? remindersSection : null,
+        remindersSection,
         threadsSection,
         discoveringSection,
         channelAwarenessSection,
         readingHistorySection,
         historicalReferencesSection,
-        ws5 ? tasksSection : null,
-        ws5 ? splittingTasksSection : null,
+        tasksSection,
+        splittingTasksSection,
         mentionsSection(input),
         communicationStyleSection,
-        etiquetteSection(ws5),
-        formattingRefsSection(ws5),
+        etiquetteSection(),
+        formattingRefsSection(),
         workspaceMemorySection,
         capabilitiesSection,
         outputsSection,
@@ -91,31 +84,23 @@ This is authoritative context injected by Grotto. Do not infer computer identity
 - Home timezone: ${input.homeTimezone}`;
 }
 
-function communicationSection(ws5: boolean) {
+function communicationSection() {
     const families = [
         '1. **Messages** — `grotto message check`, `grotto message send`, `grotto message read`, `grotto message search`, `grotto message resolve`, `grotto message react`.',
         '2. **Server and channel awareness** — `grotto server info`, `grotto channel info`, `grotto channel members`.',
         '3. **Your channel/thread attention** — `grotto channel join`, `grotto channel leave`, `grotto channel mute`, `grotto channel unmute`, `grotto thread unfollow`.',
         '4. **Inbox** — `grotto inbox check`.',
-        ...(ws5
-            ? [
-                  '5. **Tasks** — `grotto task list`, `grotto task create`, `grotto task claim`, `grotto task unclaim`, `grotto task update`.',
-                  '6. **Attachments** — `grotto attachment upload`, `grotto attachment view`.',
-                  '7. **Profiles** — `grotto profile show`, `grotto profile update`.',
-                  '8. **Reminders** — `grotto reminder schedule`, `grotto reminder list`, `grotto reminder snooze`, `grotto reminder update`, `grotto reminder cancel`, `grotto reminder log`.',
-                  '9. **Skills** — `grotto skill list`, `grotto skill view`, `grotto skill create`, `grotto skill patch`, `grotto skill write-file`.',
-              ]
-            : []),
+        '5. **Tasks** — `grotto task list`, `grotto task create`, `grotto task claim`, `grotto task unclaim`, `grotto task update`.',
+        '6. **Attachments** — `grotto attachment upload`, `grotto attachment view`.',
+        '7. **Profiles** — `grotto profile show`, `grotto profile update`.',
+        '8. **Reminders** — `grotto reminder schedule`, `grotto reminder list`, `grotto reminder snooze`, `grotto reminder update`, `grotto reminder cancel`, `grotto reminder log`.',
+        '9. **Skills** — `grotto skill list`, `grotto skill view`, `grotto skill create`, `grotto skill patch`, `grotto skill write-file`.',
     ].join('\n');
     const criticalRules = [
         '- Always communicate through `grotto` CLI commands. This is your only output channel: text you produce outside a `grotto` command is not delivered to anyone.',
         '- Use only the provided `grotto` CLI commands for messaging.',
         '- Do not combine multiple `grotto` CLI commands in one shell command. Run one `grotto` command per tool call, read its output, then decide the next command.',
-        ...(ws5
-            ? [
-                  '- Always claim a task via `grotto task claim` before starting work on it. If the claim fails, do not work on that task unless an owner/admin explicitly redirects it to you.',
-              ]
-            : []),
+        '- Always claim a task via `grotto task claim` before starting work on it. If the claim fails, do not work on that task unless an owner/admin explicitly redirects it to you.',
     ].join('\n');
 
     return `## Communication — grotto CLI ONLY
@@ -314,15 +299,11 @@ Keep the user informed. They cannot see your internal reasoning, so:
 - When done, summarize the result.
 - Keep updates concise — one or two sentences. Don't flood the chat.`;
 
-function etiquetteSection(ws5: boolean) {
+function etiquetteSection() {
     const bullets = [
         '- **Respect ongoing conversations.** If a human is having a back-and-forth with another person (human or agent) on a topic, their follow-up messages are directed at that person — only join if you are explicitly @mentioned or clearly addressed.',
         "- **Only the person doing the work should report on it.** If someone else completed a task or submitted a PR, don't echo or summarize their work — let them respond to questions about it.",
-        ...(ws5
-            ? [
-                  '- **Claim before you start.** Always call `grotto task claim` before doing any work on a task. If the claim fails, do not work on that task unless an owner/admin explicitly redirects it to you.',
-              ]
-            : []),
+        '- **Claim before you start.** Always call `grotto task claim` before doing any work on a task. If the claim fails, do not work on that task unless an owner/admin explicitly redirects it to you.',
         '- **Answer your DMs.** A DM is addressed to you — acknowledge it briefly even when it is an FYI that needs no action.',
         '- **DM knowledge is not room knowledge.** What someone shares in a DM was shared with you, not with every room. Carry the knowledge, but do not volunteer private specifics in other chats; when in doubt, ask first.',
         '- **Before stopping, check for concrete blockers you own.** If you still owe a specific handoff, review, decision, or reply that is currently blocking a specific person, send one minimal actionable message to that person or channel before stopping.',
@@ -331,16 +312,12 @@ function etiquetteSection(ws5: boolean) {
     return `### Conversation etiquette\n\n${bullets}`;
 }
 
-function formattingRefsSection(ws5: boolean) {
+function formattingRefsSection() {
     const refs = [
         '- @alice — links to a user',
         '- #general — links to a channel',
         '- #engineering:b885b5ae — links to a specific thread (channel name + msg ID suffix)',
-        ...(ws5
-            ? [
-                  '- task #123 — links to a task (always write "task #N", not bare "#N" which is ambiguous with PRs/issues)',
-              ]
-            : []),
+        '- task #123 — links to a task (always write "task #N", not bare "#N" which is ambiguous with PRs/issues)',
     ].join('\n');
     return `### Formatting — Mentions & Channel Refs
 

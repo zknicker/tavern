@@ -4,6 +4,34 @@ import { actorRefSchema } from '../../actors/contracts.ts';
 import { dashboardSessionSenderTypeSchema } from '../../contracts/shared.ts';
 import { normalizedModelSchema } from '../../model/identity.ts';
 
+export const taskActorSchema = z.object({
+    handle: z.string().nullable(),
+    id: z.string(),
+});
+
+export const taskLabelSchema = z.object({
+    color: z.enum(['red', 'orange', 'amber', 'green', 'teal', 'blue', 'purple', 'pink', 'gray']),
+    id: z.string(),
+    name: z.string(),
+});
+
+export const messageTaskSchema = z.object({
+    assignee: taskActorSchema.nullable(),
+    claimed_at: z.string().nullable(),
+    created_at: z.string(),
+    labels: z.array(taskLabelSchema),
+    number: z.number().int().positive(),
+    origin: z.enum(['composed', 'converted']),
+    priority: z.enum(['none', 'urgent', 'high', 'medium', 'low']),
+    status: z.enum(['todo', 'in_progress', 'in_review', 'done', 'closed']),
+    updated_at: z.string(),
+});
+
+export const messageReactionSchema = z.object({
+    actors: z.array(taskActorSchema),
+    emoji: z.string(),
+});
+
 export const sessionMessageMetadataSchema = z
     .object({
         api: z.string().optional(),
@@ -97,9 +125,11 @@ export const sessionMessageSchema = z.object({
     content: z.string(),
     id: z.string(),
     metadata: sessionMessageMetadataSchema.optional(),
+    reactions: z.array(messageReactionSchema).optional(),
     sender: z.string(),
     senderType: dashboardSessionSenderTypeSchema,
     timestamp: z.string(),
+    task: messageTaskSchema.nullable().optional(),
 });
 
 export const sessionThinkingSchema = z.object({

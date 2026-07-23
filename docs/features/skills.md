@@ -55,9 +55,8 @@ agent's enabled skill ids; it does not copy the skill package.
 Agents can author skills into the same shared library. Agent-authored skills
 are auto-enabled for the creating agent, visible to other agents on the Skills
 settings page, and assigned to other agents through normal skill enablement.
-Every skill package on disk is writable by agents and workers, whether it was
-seeded, hub-installed, agent-created, or operator-placed. Plugin-provided skills
-materialize to disk from the Plugin's current definition and can be edited.
+Agents can edit only skills they created. Seeded, hub-installed, Plugin,
+operator-placed, and other agents' skills are read-only on the agent surface.
 Managed seeded, hub, and Plugin skills show available-update state and can be
 restored to Tavern's current version. Seeded skills are managed artifacts:
 Runtime replaces local edits with its current defaults when it prepares them.

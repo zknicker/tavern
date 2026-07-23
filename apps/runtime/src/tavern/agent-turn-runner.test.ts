@@ -5,11 +5,7 @@ import { muteAgentChannel } from './agent-channels.ts';
 import type { AgentExecutorInput } from './agent-executor.ts';
 import { checkAgentMessages } from './agent-inbox-api.ts';
 import { ensureCurrentAgentSession, startNewAgentSession } from './agent-session-store.ts';
-import {
-    setAgentExecutorForTesting,
-    stopAgentTurns,
-    wakeAgent,
-} from './agent-turn-runner.ts';
+import { setAgentExecutorForTesting, stopAgentTurns, wakeAgent } from './agent-turn-runner.ts';
 import {
     createAgentTurn,
     hasUnsettledAgentTurnsForAgent,

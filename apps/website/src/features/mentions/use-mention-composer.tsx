@@ -2,6 +2,7 @@ import { parseAgentReferenceTarget } from '@tavern/api/rich-references';
 import * as React from 'react';
 import { queryPolicy } from '../../lib/query-policy.ts';
 import { type AgentListOutput, trpc } from '../../lib/trpc.tsx';
+import { shouldSubmitChatComposerAsTaskKey } from '../chats/chat-composer-keyboard.ts';
 import { MentionEditor, type MentionEditorHandle } from './mention-editor.tsx';
 import { MentionPicker } from './mention-picker.tsx';
 import type { ActiveMentionQuery, Mention, MentionOption } from './mention-types.ts';
@@ -31,6 +32,7 @@ export function useMentionComposer({
     mentionableAgentIds = [],
     onTextChange,
     onSubmit,
+    onSubmitAsTask,
     onMentionsChange,
 }: {
     agentId: string;
@@ -39,6 +41,7 @@ export function useMentionComposer({
     mentionableAgentIds?: readonly string[];
     onTextChange: (content: string) => void;
     onSubmit?: () => void;
+    onSubmitAsTask?: () => void;
     onMentionsChange?: (mentions: Mention[]) => void;
 }) {
     const utils = trpc.useUtils();
@@ -180,6 +183,20 @@ export function useMentionComposer({
     }
 
     function handleSubmitKeyDown(event: KeyboardEvent) {
+        if (
+            onSubmitAsTask &&
+            shouldSubmitChatComposerAsTaskKey({
+                ctrlKey: event.ctrlKey,
+                key: event.key,
+                metaKey: event.metaKey,
+                nativeEvent: { isComposing: event.isComposing },
+                shiftKey: event.shiftKey,
+            })
+        ) {
+            event.preventDefault();
+            onSubmitAsTask();
+            return true;
+        }
         if (
             event.key !== 'Enter' ||
             event.metaKey ||

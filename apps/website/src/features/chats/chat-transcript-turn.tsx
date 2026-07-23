@@ -6,6 +6,7 @@ import * as React from 'react';
 import { requestChatComposerMention } from '../../commands/chat-composer-mention.ts';
 import { ChatMessage } from '../../components/chats/chat-message.tsx';
 import { useResolvedThemeOptional } from '../../components/theme-provider.tsx';
+import { RelativeTime } from '../../components/time/relative-time.tsx';
 import { CopyButton } from '../../components/ui/copy-button.tsx';
 import { Icon } from '../../components/ui/icon.tsx';
 import {
@@ -119,6 +120,17 @@ export function TranscriptEntryView({
     turnStartedAt?: string | null;
 }) {
     if (entry.kind === 'system') {
+        if (entry.item.kind === 'row' && entry.item.row.kind === 'message') {
+            return (
+                <ThreadMessageSurface row={entry.item.row}>
+                    <p className="flex justify-center gap-2 px-5 py-2 text-center text-meta text-muted-foreground">
+                        <span>{entry.item.row.message.content}</span>
+                        <span aria-hidden="true">·</span>
+                        <RelativeTime value={entry.item.row.message.timestamp} />
+                    </p>
+                </ThreadMessageSurface>
+            );
+        }
         if (
             entry.item.kind === 'row' &&
             entry.item.row.kind === 'system' &&
@@ -818,7 +830,7 @@ function AgentTurnItem({
 
         return (
             <ThreadMessageSurface row={item.row}>
-                <AssistantReplyText
+                <AssistantReplyBody
                     message={item.row.message}
                     {...(narration
                         ? {
@@ -926,18 +938,22 @@ function AssistantReplyText({
     );
 }
 
-// A live reply may carry ```visual fences: fence bodies render as streaming
-// visual cards below the prose — matching the durable layout, where widget
-// rows follow the post — and never as raw fence text. An unclosed trailing
-// fence is an in-progress visual whose body grows as content arrives.
+// Any assistant reply — streaming or durable — may carry ```visual fences:
+// fence bodies render as visual cards below the prose, never as raw fence
+// text. Message content is the single source of truth for visuals; there is
+// no separate durable widget projection. An unclosed trailing fence is an
+// in-progress visual whose body grows as content arrives.
 function AssistantReplyBody(props: {
     animateEnter?: boolean;
-    content: string;
+    content?: string;
+    message?: TranscriptMessage;
     revealKey?: string;
     revealText?: boolean;
     slotKey?: string | null;
 }) {
-    const segments = splitVisualFences(props.content);
+    const fullContent =
+        props.content ?? (props.message ? getTranscriptMessageContent(props.message) : '');
+    const segments = splitVisualFences(fullContent);
     const slot = props.slotKey ?? props.revealKey ?? 'visual';
     // The Nth fence in the reply is that visual's stable identity: content
     // only appends while streaming, so ordinals never reorder.
@@ -962,9 +978,14 @@ function AssistantReplyBody(props: {
         .join('')
         .trim();
 
+    // Keep the message shell when there is prose OR attachments — a durable
+    // reply that is only a visual fence still carries its attached files, and
+    // those render through the text body, not the cards.
+    const hasAttachments = (props.message?.attachments?.length ?? 0) > 0;
+
     return (
         <>
-            {prose ? <AssistantReplyText {...props} content={prose} /> : null}
+            {prose || hasAttachments ? <AssistantReplyText {...props} content={prose} /> : null}
             {cards}
         </>
     );

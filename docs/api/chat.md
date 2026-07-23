@@ -36,9 +36,18 @@ execution evidence linked to Tavern messages.
 
 A `chat` is a Runtime-owned conversation container. Tavern-owned chats use
 `kind: "channel"` for shared room-style conversations, `kind: "dm"` for
-one-to-one direct messages, `kind: "task"` for dispatched task work chats, and
-`kind: "thread"` for message-anchored child conversations. Thread access comes
-from the parent chat; threads have no independent membership.
+one-to-one direct messages, and `kind: "thread"` for message-anchored child
+conversations. Thread access comes from the parent chat; threads have no
+independent membership. (`kind: "task"` chats belonged to the retired pre-flip
+tracker; the enum value survives only until the manual cutover deletes the old
+rows — nothing creates them.)
+
+A message may carry `task` (chat-first task metadata: number, status,
+assignee, priority, labels — see [Tasks](../features/tasks.md)) and
+`reactions` (emoji + actor lists). The operator surface mutates them through
+`/api/tasks`, `/api/messages/{id}/task`, `/api/messages/{id}/reactions`,
+`/api/labels`, and reads reminders through `/api/reminders` (cancel-only —
+see [Reminders](../features/reminders.md)).
 Runtime does not bootstrap channels in a normal workspace. Each Runtime-managed
 agent has one built-in DM with the local human operator. Built-in agent DMs are
 removed from the app chat list when their agent is deleted, and clients must not

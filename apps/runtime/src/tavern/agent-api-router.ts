@@ -1,6 +1,11 @@
 import { ZodError } from 'zod';
 import { AgentApiError } from './agent-api-errors.ts';
 import {
+    agentAttachmentUploadRequestSchema,
+    uploadAgentAttachment,
+    viewAgentAttachment,
+} from './agent-attachments.ts';
+import {
     agentChannelActionRequestSchema,
     joinAgentChannel,
     leaveAgentChannel,
@@ -15,21 +20,62 @@ import {
 import { readAgentDraft } from './agent-drafts.ts';
 import { getAgentMessage, readAgentHistory, searchAgentMessages } from './agent-history.ts';
 import { checkAgentInbox, checkAgentMessages } from './agent-inbox-api.ts';
+import {
+    agentProfileUpdateRequestSchema,
+    readAgentProfile,
+    updateAgentProfile,
+} from './agent-profile.ts';
+import { agentReactionRequestSchema, reactToAgentMessage } from './agent-reactions.ts';
+import {
+    agentReminderCancelRequestSchema,
+    agentReminderScheduleRequestSchema,
+    agentReminderSnoozeRequestSchema,
+    agentReminderUpdateRequestSchema,
+    cancelAgentReminder,
+    listAgentReminders,
+    readAgentReminderLog,
+    scheduleAgentReminder,
+    snoozeAgentReminder,
+    updateAgentReminder,
+} from './agent-reminders.ts';
 import { agentSendRequestSchema, sendAgentMessage } from './agent-send.ts';
+import {
+    agentSkillCreateRequestSchema,
+    agentSkillPatchRequestSchema,
+    agentSkillWriteFileRequestSchema,
+    createAgentAuthoredSkill,
+    listAgentSkills,
+    patchAgentSkill,
+    viewAgentSkill,
+    writeAgentSkillFile,
+} from './agent-skills.ts';
+import {
+    agentTaskClaimRequestSchema,
+    agentTaskCreateRequestSchema,
+    agentTaskListRequest,
+    agentTaskUnclaimRequestSchema,
+    agentTaskUpdateRequestSchema,
+    claimAgentTasks,
+    createAgentTasks,
+    listAgentTasks,
+    unclaimAgentTask,
+    updateAgentTask,
+} from './agent-tasks.ts';
 import { agentThreadUnfollowRequestSchema, unfollowAgentThread } from './agent-threads.ts';
 import { AmbiguousMessageIdError } from './chat-api/index.ts';
 import { json, readJson } from './http.ts';
 
 export async function handleAgentApiRequest(
     request: Request,
-    agentId: string
+    agentId: string,
+    options: { attachmentsDir?: string; skillsDir?: string } = {}
 ): Promise<Response | null> {
     const url = new URL(request.url);
     if (!url.pathname.startsWith('/api/agent/')) {
         return null;
     }
     try {
-        return await route(request, url, agentId);
+        return await route(request, url, agentId, options);
     } catch (error) {
         if (error instanceof AmbiguousMessageIdError) {
             return agentError('AMBIGUOUS_ID', error.message, 409, 'Use the full message id.');
@@ -44,9 +90,79 @@ export async function handleAgentApiRequest(
     }
 }
 
-async function route(request: Request, url: URL, agentId: string): Promise<Response> {
+async function route(
+    request: Request,
+    url: URL,
+    agentId: string,
+    options: { attachmentsDir?: string; skillsDir?: string }
+): Promise<Response> {
     if (request.method === 'POST' && url.pathname === '/api/agent/messages/send') {
         return handleSend(request, agentId);
+    }
+    if (request.method === 'POST' && url.pathname === '/api/agent/messages/react') {
+        return json(
+            reactToAgentMessage(agentId, agentReactionRequestSchema.parse(await readJson(request)))
+        );
+    }
+    if (request.method === 'GET' && url.pathname === '/api/agent/profile') {
+        return json(readAgentProfile(agentId, url.searchParams.get('target')));
+    }
+    if (request.method === 'POST' && url.pathname === '/api/agent/profile/update') {
+        return json(
+            updateAgentProfile(
+                agentId,
+                agentProfileUpdateRequestSchema.parse(await readJson(request))
+            )
+        );
+    }
+    if (request.method === 'POST' && url.pathname === '/api/agent/attachments/upload') {
+        return json(
+            await uploadAgentAttachment(
+                agentId,
+                agentAttachmentUploadRequestSchema.parse(await readJson(request)),
+                { attachmentsDir: options.attachmentsDir }
+            )
+        );
+    }
+    const attachmentMatch = url.pathname.match(/^\/api\/agent\/attachments\/([^/]+)$/u);
+    if (request.method === 'GET' && attachmentMatch?.[1]) {
+        return json(await viewAgentAttachment(agentId, decodeURIComponent(attachmentMatch[1])));
+    }
+    if (request.method === 'GET' && url.pathname === '/api/agent/skills') {
+        return json(await listAgentSkills(agentId, options.skillsDir));
+    }
+    const skillMatch = url.pathname.match(/^\/api\/agent\/skills\/([^/]+)$/u);
+    if (request.method === 'GET' && skillMatch?.[1]) {
+        return json(
+            await viewAgentSkill(agentId, decodeURIComponent(skillMatch[1]), options.skillsDir)
+        );
+    }
+    if (request.method === 'POST' && url.pathname === '/api/agent/skills/create') {
+        return json(
+            await createAgentAuthoredSkill(
+                agentId,
+                agentSkillCreateRequestSchema.parse(await readJson(request)),
+                options.skillsDir
+            )
+        );
+    }
+    if (request.method === 'POST' && url.pathname === '/api/agent/skills/patch') {
+        return json(
+            await patchAgentSkill(
+                agentId,
+                agentSkillPatchRequestSchema.parse(await readJson(request)),
+                options.skillsDir
+            )
+        );
+    }
+    if (request.method === 'POST' && url.pathname === '/api/agent/skills/write-file') {
+        return json(
+            await writeAgentSkillFile(
+                agentId,
+                agentSkillWriteFileRequestSchema.parse(await readJson(request)),
+                options.skillsDir
+            )
+        );
     }
     if (request.method === 'GET' && url.pathname === '/api/agent/history') {
         return json(
@@ -109,6 +225,84 @@ async function route(request: Request, url: URL, agentId: string): Promise<Respo
     }
     if (request.method === 'GET' && url.pathname === '/api/agent/inbox') {
         return json(checkAgentInbox(agentId));
+    }
+    if (request.method === 'GET' && url.pathname === '/api/agent/tasks') {
+        return json(
+            listAgentTasks(
+                agentId,
+                agentTaskListRequest.parse({
+                    status: url.searchParams.get('status') ?? undefined,
+                    target: url.searchParams.get('target') ?? undefined,
+                })
+            )
+        );
+    }
+    if (request.method === 'POST' && url.pathname === '/api/agent/tasks/create') {
+        return json(
+            createAgentTasks(agentId, agentTaskCreateRequestSchema.parse(await readJson(request)))
+        );
+    }
+    if (request.method === 'POST' && url.pathname === '/api/agent/tasks/claim') {
+        return json(
+            claimAgentTasks(agentId, agentTaskClaimRequestSchema.parse(await readJson(request)))
+        );
+    }
+    if (request.method === 'POST' && url.pathname === '/api/agent/tasks/unclaim') {
+        return json(
+            unclaimAgentTask(agentId, agentTaskUnclaimRequestSchema.parse(await readJson(request)))
+        );
+    }
+    if (request.method === 'POST' && url.pathname === '/api/agent/tasks/update') {
+        return json(
+            updateAgentTask(agentId, agentTaskUpdateRequestSchema.parse(await readJson(request)))
+        );
+    }
+    if (request.method === 'GET' && url.pathname === '/api/agent/reminders') {
+        return json(
+            listAgentReminders(agentId, {
+                statuses: url.searchParams.get('status') ?? undefined,
+            })
+        );
+    }
+    if (request.method === 'GET' && url.pathname === '/api/agent/reminders/log') {
+        return json(
+            readAgentReminderLog(agentId, {
+                id: url.searchParams.get('id') ?? undefined,
+                limit: numberParam(url, 'limit'),
+            })
+        );
+    }
+    if (request.method === 'POST' && url.pathname === '/api/agent/reminders/schedule') {
+        return json(
+            scheduleAgentReminder(
+                agentId,
+                agentReminderScheduleRequestSchema.parse(await readJson(request))
+            )
+        );
+    }
+    if (request.method === 'POST' && url.pathname === '/api/agent/reminders/snooze') {
+        return json(
+            snoozeAgentReminder(
+                agentId,
+                agentReminderSnoozeRequestSchema.parse(await readJson(request))
+            )
+        );
+    }
+    if (request.method === 'POST' && url.pathname === '/api/agent/reminders/update') {
+        return json(
+            updateAgentReminder(
+                agentId,
+                agentReminderUpdateRequestSchema.parse(await readJson(request))
+            )
+        );
+    }
+    if (request.method === 'POST' && url.pathname === '/api/agent/reminders/cancel') {
+        return json(
+            cancelAgentReminder(
+                agentId,
+                agentReminderCancelRequestSchema.parse(await readJson(request))
+            )
+        );
     }
     const channelAction = url.pathname.match(/^\/api\/agent\/channels\/(join|leave|mute|unmute)$/u);
     if (request.method === 'POST' && channelAction?.[1]) {

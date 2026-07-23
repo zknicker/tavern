@@ -1,12 +1,5 @@
-import { CheckListIcon } from '@hugeicons-pro/core-stroke-rounded';
-import { WorkstreamEmptyPage } from '../../features/shell/workstream-empty-page.tsx';
+import { TasksSurface } from '../../features/tasks/tasks-surface.tsx';
 
 export function TasksPage() {
-    return (
-        <WorkstreamEmptyPage
-            description="Tasks return with the chat-first tasks workstream."
-            icon={CheckListIcon}
-            title="Tasks"
-        />
-    );
+    return <TasksSurface />;
 }

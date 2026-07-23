@@ -702,6 +702,417 @@ paths:
                 $ref: '#/components/schemas/AgentChannelMembers'
         default:
           $ref: '#/components/responses/AgentError'
+  /api/agent/tasks:
+    get:
+      operationId: listAgentTasks
+      tags: [Agent CLI]
+      summary: List task-messages visible to the calling agent.
+      parameters:
+        - name: target
+          in: query
+          schema: { type: string, minLength: 1 }
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [all, todo, in_progress, in_review, done, closed]
+      responses:
+        '200':
+          description: Visible task-messages.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentTaskListResponse'
+        default:
+          $ref: '#/components/responses/AgentError'
+  /api/agent/tasks/create:
+    post:
+      operationId: createAgentTasks
+      tags: [Agent CLI]
+      summary: Create one or more task-messages.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentTaskCreateRequest'
+      responses:
+        '200':
+          description: Created task-messages.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentTaskCreateResponse'
+        default:
+          $ref: '#/components/responses/AgentError'
+  /api/agent/tasks/claim:
+    post:
+      operationId: claimAgentTasks
+      tags: [Agent CLI]
+      summary: Claim task-messages for the calling agent.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentTaskClaimRequest'
+      responses:
+        '200':
+          description: Claimed task-messages.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentTaskClaimResponse'
+        default:
+          $ref: '#/components/responses/AgentError'
+  /api/agent/tasks/unclaim:
+    post:
+      operationId: unclaimAgentTask
+      tags: [Agent CLI]
+      summary: Release one task claimed by the calling agent.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentTaskUnclaimRequest'
+      responses:
+        '200':
+          description: Updated task-message.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentTaskSingleResponse'
+        default:
+          $ref: '#/components/responses/AgentError'
+  /api/agent/tasks/update:
+    post:
+      operationId: updateAgentTask
+      tags: [Agent CLI]
+      summary: Update one task status.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentTaskUpdateRequest'
+      responses:
+        '200':
+          description: Updated task-message.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentTaskSingleResponse'
+        default:
+          $ref: '#/components/responses/AgentError'
+  /api/agent/reminders:
+    get:
+      operationId: listAgentReminders
+      tags: [Agent CLI]
+      summary: List reminders owned by the calling agent.
+      parameters:
+        - name: status
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: Owned reminders.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentReminderListResponse'
+        default:
+          $ref: '#/components/responses/AgentError'
+  /api/agent/reminders/log:
+    get:
+      operationId: readAgentReminderLog
+      tags: [Agent CLI]
+      summary: Read reminder fire history.
+      parameters:
+        - name: id
+          in: query
+          schema: { type: string, minLength: 1 }
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Reminder runs.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentReminderLogResponse'
+        default:
+          $ref: '#/components/responses/AgentError'
+  /api/agent/reminders/schedule:
+    post:
+      operationId: scheduleAgentReminder
+      tags: [Agent CLI]
+      summary: Schedule a reminder anchored to a readable message.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentReminderScheduleRequest'
+      responses:
+        '200':
+          description: Scheduled reminder.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentReminderSingleResponse'
+        default:
+          $ref: '#/components/responses/AgentError'
+  /api/agent/reminders/snooze:
+    post:
+      operationId: snoozeAgentReminder
+      tags: [Agent CLI]
+      summary: Snooze an owned reminder.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentReminderSnoozeRequest'
+      responses:
+        '200':
+          description: Snoozed reminder.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentReminderSingleResponse'
+        default:
+          $ref: '#/components/responses/AgentError'
+  /api/agent/reminders/update:
+    post:
+      operationId: updateAgentReminder
+      tags: [Agent CLI]
+      summary: Update one field of an owned reminder.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentReminderUpdateRequest'
+      responses:
+        '200':
+          description: Updated reminder.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentReminderSingleResponse'
+        default:
+          $ref: '#/components/responses/AgentError'
+  /api/agent/reminders/cancel:
+    post:
+      operationId: cancelAgentReminder
+      tags: [Agent CLI]
+      summary: Cancel an owned reminder.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentReminderCancelRequest'
+      responses:
+        '200':
+          description: Canceled reminder.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentReminderSingleResponse'
+        default:
+          $ref: '#/components/responses/AgentError'
+  /api/agent/attachments/upload:
+    post:
+      operationId: uploadAgentAttachment
+      tags: [Agent CLI]
+      summary: Upload an attachment for a later message.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentAttachmentUploadRequest'
+      responses:
+        '200':
+          description: Uploaded attachment.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentAttachmentUploadResponse'
+        default:
+          $ref: '#/components/responses/AgentError'
+  /api/agent/attachments/{id}:
+    get:
+      operationId: viewAgentAttachment
+      tags: [Agent CLI]
+      summary: Read a visible attachment.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, minLength: 1 }
+      responses:
+        '200':
+          description: Attachment content.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentAttachmentViewResponse'
+        default:
+          $ref: '#/components/responses/AgentError'
+  /api/agent/profile:
+    get:
+      operationId: readAgentProfile
+      tags: [Agent CLI]
+      summary: Read the caller or another participant profile.
+      parameters:
+        - name: target
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: Participant profile.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentProfileResponse'
+        default:
+          $ref: '#/components/responses/AgentError'
+  /api/agent/profile/update:
+    post:
+      operationId: updateAgentProfile
+      tags: [Agent CLI]
+      summary: Update the calling agent's description.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentProfileUpdateRequest'
+      responses:
+        '200':
+          description: Updated profile.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentProfileResponse'
+        default:
+          $ref: '#/components/responses/AgentError'
+  /api/agent/messages/react:
+    post:
+      operationId: reactToAgentMessage
+      tags: [Agent CLI]
+      summary: Add or remove a reaction on a readable message.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentReactionRequest'
+      responses:
+        '200':
+          description: Updated message.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentReactionResponse'
+        default:
+          $ref: '#/components/responses/AgentError'
+  /api/agent/skills:
+    get:
+      operationId: listAgentSkills
+      tags: [Agent CLI]
+      summary: List skills visible to the calling agent.
+      responses:
+        '200':
+          description: Visible skill summaries.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentSkillListResponse'
+        default:
+          $ref: '#/components/responses/AgentError'
+  /api/agent/skills/{id}:
+    get:
+      operationId: viewAgentSkill
+      tags: [Agent CLI]
+      summary: Read a skill and its file hashes.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            $ref: '#/components/schemas/AgentSkillId'
+      responses:
+        '200':
+          description: Skill content and hashes.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentSkillViewResponse'
+        default:
+          $ref: '#/components/responses/AgentError'
+  /api/agent/skills/create:
+    post:
+      operationId: createAgentSkill
+      tags: [Agent CLI]
+      summary: Create an agent-authored skill.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentSkillCreateRequest'
+      responses:
+        '200':
+          description: Created skill.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentSkillCreateResponse'
+        default:
+          $ref: '#/components/responses/AgentError'
+  /api/agent/skills/patch:
+    post:
+      operationId: patchAgentSkill
+      tags: [Agent CLI]
+      summary: Replace an owned skill's SKILL.md.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentSkillPatchRequest'
+      responses:
+        '200':
+          description: Skill file change.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentSkillChangeResponse'
+        default:
+          $ref: '#/components/responses/AgentError'
+  /api/agent/skills/write-file:
+    post:
+      operationId: writeAgentSkillFile
+      tags: [Agent CLI]
+      summary: Write an owned skill support file.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AgentSkillWriteFileRequest'
+      responses:
+        '200':
+          description: Skill file change.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AgentSkillChangeResponse'
+        default:
+          $ref: '#/components/responses/AgentError'
   /api/events:
     get:
       operationId: listEvents
@@ -1019,6 +1430,371 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/AgentChannelMember'
+    AgentTaskStatus:
+      type: string
+      enum: [todo, in_progress, in_review, done, closed]
+    AgentTaskRow:
+      type: object
+      additionalProperties: false
+      required: [assignee, message, number, status, target]
+      properties:
+        assignee: { type: [string, 'null'] }
+        message:
+          $ref: '#/components/schemas/AgentMessage'
+        number: { type: integer, minimum: 1 }
+        status:
+          $ref: '#/components/schemas/AgentTaskStatus'
+        target: { type: [string, 'null'] }
+    AgentTaskListResponse:
+      type: object
+      additionalProperties: false
+      required: [tasks]
+      properties:
+        tasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/AgentTaskRow'
+    AgentTaskCreateResponse:
+      type: object
+      additionalProperties: false
+      required: [tasks]
+      properties:
+        tasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/AgentTaskRow'
+    AgentTaskClaimResponse:
+      type: object
+      additionalProperties: false
+      required: [claimed]
+      properties:
+        claimed:
+          type: array
+          items:
+            $ref: '#/components/schemas/AgentTaskRow'
+    AgentTaskSingleResponse:
+      type: object
+      additionalProperties: false
+      required: [task]
+      properties:
+        task:
+          $ref: '#/components/schemas/AgentTaskRow'
+    AgentTaskCreateRequest:
+      type: object
+      additionalProperties: false
+      required: [target]
+      properties:
+        assignee: { type: string, minLength: 1 }
+        content: { type: string }
+        target: { type: string, minLength: 1 }
+        titles:
+          type: array
+          maxItems: 20
+          items: { type: string, minLength: 1 }
+    AgentTaskClaimRequest:
+      type: object
+      additionalProperties: false
+      required: [target]
+      properties:
+        messageId: { type: string, minLength: 1 }
+        numbers:
+          type: array
+          minItems: 1
+          maxItems: 20
+          items: { type: integer, minimum: 1 }
+        target: { type: string, minLength: 1 }
+      oneOf:
+        - required: [messageId]
+          not:
+            required: [numbers]
+        - required: [numbers]
+          not:
+            required: [messageId]
+    AgentTaskUnclaimRequest:
+      type: object
+      additionalProperties: false
+      required: [number, target]
+      properties:
+        number: { type: integer, minimum: 1 }
+        target: { type: string, minLength: 1 }
+    AgentTaskUpdateRequest:
+      type: object
+      additionalProperties: false
+      required: [number, status, target]
+      properties:
+        number: { type: integer, minimum: 1 }
+        status:
+          $ref: '#/components/schemas/AgentTaskStatus'
+        target: { type: string, minLength: 1 }
+    AgentReminder:
+      type: object
+      additionalProperties: false
+      required: [anchorTarget, fireAt, id, repeat, script, status, title]
+      properties:
+        anchorTarget: { type: string }
+        fireAt: { type: string, format: date-time }
+        id: { type: string }
+        repeat: { type: [string, 'null'] }
+        script: { type: boolean }
+        status: { type: string }
+        title: { type: string }
+    AgentReminderSingleResponse:
+      type: object
+      additionalProperties: false
+      required: [reminder]
+      properties:
+        reminder:
+          $ref: '#/components/schemas/AgentReminder'
+    AgentReminderListResponse:
+      type: object
+      additionalProperties: false
+      required: [reminders]
+      properties:
+        reminders:
+          type: array
+          items:
+            $ref: '#/components/schemas/AgentReminder'
+    AgentReminderRun:
+      type: object
+      additionalProperties: false
+      required: [firedAt, id, outcome, output, reminderId, scriptExitCode]
+      properties:
+        firedAt: { type: string, format: date-time }
+        id: { type: string }
+        outcome: { type: string }
+        output: { type: [string, 'null'] }
+        reminderId: { type: string }
+        scriptExitCode: { type: [integer, 'null'] }
+    AgentReminderLogResponse:
+      type: object
+      additionalProperties: false
+      required: [runs]
+      properties:
+        runs:
+          type: array
+          items:
+            $ref: '#/components/schemas/AgentReminderRun'
+    AgentReminderScheduleRequest:
+      type: object
+      additionalProperties: false
+      required: [messageId, title]
+      properties:
+        delaySeconds: { type: integer, minimum: 1 }
+        fireAt: { type: string, minLength: 1 }
+        messageId: { type: string, minLength: 1 }
+        repeat: { type: string, minLength: 1 }
+        script: { type: string, minLength: 1 }
+        title: { type: string, minLength: 1, maxLength: 300 }
+      oneOf:
+        - required: [delaySeconds]
+          not:
+            required: [fireAt]
+        - required: [fireAt]
+          not:
+            required: [delaySeconds]
+    AgentReminderSnoozeRequest:
+      type: object
+      additionalProperties: false
+      required: [by, id]
+      properties:
+        by: { type: string, minLength: 1 }
+        id: { type: string, minLength: 1 }
+    AgentReminderUpdateRequest:
+      type: object
+      additionalProperties: false
+      minProperties: 2
+      maxProperties: 2
+      required: [id]
+      properties:
+        fireAt: { type: string, minLength: 1 }
+        id: { type: string, minLength: 1 }
+        repeat: { type: [string, 'null'], minLength: 1 }
+        script: { type: [string, 'null'], minLength: 1 }
+        title: { type: string, minLength: 1, maxLength: 300 }
+      oneOf:
+        - required: [fireAt]
+        - required: [repeat]
+        - required: [script]
+        - required: [title]
+    AgentReminderCancelRequest:
+      type: object
+      additionalProperties: false
+      required: [id]
+      properties:
+        id: { type: string, minLength: 1 }
+    AgentAttachment:
+      type: object
+      additionalProperties: false
+      required: [byteSize, filename, id, mediaType]
+      properties:
+        byteSize: { type: integer, minimum: 0 }
+        filename: { type: string, minLength: 1 }
+        id: { type: string, minLength: 1 }
+        mediaType: { type: [string, 'null'] }
+    AgentAttachmentUploadRequest:
+      type: object
+      additionalProperties: false
+      required: [dataBase64, filename]
+      properties:
+        dataBase64: { type: string, format: byte }
+        filename: { type: string, minLength: 1 }
+        mediaType: { type: string, minLength: 1 }
+    AgentAttachmentUploadResponse:
+      type: object
+      additionalProperties: false
+      required: [attachment]
+      properties:
+        attachment:
+          $ref: '#/components/schemas/AgentAttachment'
+    AgentAttachmentView:
+      type: object
+      additionalProperties: false
+      required: [byteSize, dataBase64, filename, id, mediaType]
+      properties:
+        byteSize: { type: integer, minimum: 0 }
+        dataBase64: { type: string, format: byte }
+        filename: { type: string, minLength: 1 }
+        id: { type: string, minLength: 1 }
+        mediaType: { type: [string, 'null'] }
+    AgentAttachmentViewResponse:
+      type: object
+      additionalProperties: false
+      required: [attachment]
+      properties:
+        attachment:
+          $ref: '#/components/schemas/AgentAttachmentView'
+    AgentProfile:
+      type: object
+      additionalProperties: false
+      required: [description, handle, isSelf]
+      properties:
+        description: { type: [string, 'null'] }
+        handle: { type: string, minLength: 1 }
+        isSelf: { type: boolean }
+    AgentProfileResponse:
+      type: object
+      additionalProperties: false
+      required: [profile]
+      properties:
+        profile:
+          $ref: '#/components/schemas/AgentProfile'
+    AgentProfileUpdateRequest:
+      type: object
+      additionalProperties: false
+      required: [description]
+      properties:
+        description: { type: string, minLength: 1, maxLength: 500 }
+    AgentReactionRequest:
+      type: object
+      additionalProperties: false
+      required: [emoji, messageId]
+      properties:
+        emoji: { type: string, minLength: 1 }
+        messageId: { type: string, minLength: 1 }
+        remove: { type: boolean }
+    AgentReactionResponse:
+      type: object
+      additionalProperties: false
+      required: [message]
+      properties:
+        message:
+          $ref: '#/components/schemas/AgentMessage'
+    AgentSkillId:
+      type: string
+      pattern: '^[A-Za-z0-9][A-Za-z0-9_-]*$'
+    AgentSkillSummary:
+      type: object
+      additionalProperties: false
+      required: [description, editable, enabledForYou, id, name]
+      properties:
+        description: { type: string }
+        editable: { type: boolean }
+        enabledForYou: { type: boolean }
+        id:
+          $ref: '#/components/schemas/AgentSkillId'
+        name: { type: string }
+    AgentSkillListResponse:
+      type: object
+      additionalProperties: false
+      required: [skills]
+      properties:
+        skills:
+          type: array
+          items:
+            $ref: '#/components/schemas/AgentSkillSummary'
+    AgentSkillViewResponse:
+      type: object
+      additionalProperties: false
+      required: [content, description, editable, enabledForYou, hash, id, name, supportFiles]
+      properties:
+        content: { type: string }
+        description: { type: string }
+        editable: { type: boolean }
+        enabledForYou: { type: boolean }
+        hash: { type: string }
+        id:
+          $ref: '#/components/schemas/AgentSkillId'
+        name: { type: string }
+        supportFiles:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [hash, path]
+            properties:
+              hash: { type: string }
+              path: { type: string }
+    AgentSkillCreateRequest:
+      type: object
+      additionalProperties: false
+      required: [content, description, name]
+      properties:
+        content: { type: string, minLength: 1 }
+        description: { type: string, minLength: 1 }
+        name: { type: string, minLength: 1 }
+    AgentSkillCreateResponse:
+      type: object
+      additionalProperties: false
+      required: [skill]
+      properties:
+        skill:
+          $ref: '#/components/schemas/AgentSkillSummary'
+    AgentSkillPatchRequest:
+      type: object
+      additionalProperties: false
+      required: [content, expectedHash, skillId]
+      properties:
+        content: { type: string, minLength: 1 }
+        expectedHash: { type: string, minLength: 1 }
+        skillId:
+          $ref: '#/components/schemas/AgentSkillId'
+    AgentSkillWriteFileRequest:
+      type: object
+      additionalProperties: false
+      required: [content, expectedHash, filePath, skillId]
+      properties:
+        content: { type: string }
+        expectedHash: { type: [string, 'null'], minLength: 1 }
+        filePath: { type: string, minLength: 1 }
+        skillId:
+          $ref: '#/components/schemas/AgentSkillId'
+    AgentSkillChange:
+      type: object
+      additionalProperties: false
+      required: [afterHash, beforeHash, path, skillId]
+      properties:
+        afterHash: { type: string }
+        beforeHash: { type: [string, 'null'] }
+        path: { type: string }
+        skillId:
+          $ref: '#/components/schemas/AgentSkillId'
+    AgentSkillChangeResponse:
+      type: object
+      additionalProperties: false
+      required: [change]
+      properties:
+        change:
+          $ref: '#/components/schemas/AgentSkillChange'
     Id:
       type: string
       minLength: 1
@@ -1311,6 +2087,95 @@ components:
             - type: 'null'
         metadata:
           $ref: '#/components/schemas/JsonObject'
+        task:
+          oneOf:
+            - $ref: '#/components/schemas/MessageTask'
+            - type: 'null'
+        reactions:
+          type: array
+          items:
+            $ref: '#/components/schemas/MessageReaction'
+    MessageTask:
+      type: object
+      additionalProperties: false
+      required:
+        - number
+        - status
+        - assignee
+        - claimed_at
+        - priority
+        - labels
+        - origin
+        - created_at
+        - updated_at
+      properties:
+        number:
+          type: integer
+          minimum: 1
+        status:
+          type: string
+          enum: [todo, in_progress, in_review, done, closed]
+        assignee:
+          oneOf:
+            - $ref: '#/components/schemas/TaskActor'
+            - type: 'null'
+        claimed_at:
+          oneOf:
+            - $ref: '#/components/schemas/Timestamp'
+            - type: 'null'
+        priority:
+          type: string
+          enum: [none, urgent, high, medium, low]
+        labels:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaskLabel'
+        origin:
+          type: string
+          enum: [composed, converted]
+        created_at:
+          $ref: '#/components/schemas/Timestamp'
+        updated_at:
+          $ref: '#/components/schemas/Timestamp'
+    TaskActor:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - handle
+      properties:
+        id:
+          type: string
+        handle:
+          type: [string, 'null']
+    TaskLabel:
+      type: object
+      additionalProperties: false
+      required:
+        - id
+        - name
+        - color
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        color:
+          type: string
+          enum: [red, orange, amber, green, teal, blue, purple, pink, gray]
+    MessageReaction:
+      type: object
+      additionalProperties: false
+      required:
+        - emoji
+        - actors
+      properties:
+        emoji:
+          type: string
+        actors:
+          type: array
+          items:
+            $ref: '#/components/schemas/TaskActor'
     CreateMessageRequest:
       type: object
       additionalProperties: false

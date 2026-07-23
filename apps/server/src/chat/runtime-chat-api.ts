@@ -153,6 +153,7 @@ export function messageToChatRows(
             content: messageText(message),
             id: message.id,
             metadata: message.metadata,
+            reactions: message.reactions,
             sender: agent?.name ?? message.author.label ?? message.author.id,
             senderType:
                 message.role === 'assistant'
@@ -162,6 +163,7 @@ export function messageToChatRows(
             sourceSessionKey: runtimeMetadataString(message, 'sessionKey') ?? '',
             tavernAgentId: message.author.kind === 'agent' ? sourceAgentId : null,
             timestamp: message.created_at,
+            task: message.task,
         },
     };
 
