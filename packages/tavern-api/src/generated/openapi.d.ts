@@ -1081,9 +1081,13 @@ export interface components {
         AgentAttachmentUploadResponse: {
             attachment: components["schemas"]["AgentAttachment"];
         };
-        AgentAttachmentView: components["schemas"]["AgentAttachment"] & {
+        AgentAttachmentView: {
+            byteSize: number;
             /** Format: byte */
             dataBase64: string;
+            filename: string;
+            id: string;
+            mediaType: string | null;
         };
         AgentAttachmentViewResponse: {
             attachment: components["schemas"]["AgentAttachmentView"];
@@ -1118,9 +1122,14 @@ export interface components {
         AgentSkillListResponse: {
             skills: components["schemas"]["AgentSkillSummary"][];
         };
-        AgentSkillViewResponse: components["schemas"]["AgentSkillSummary"] & {
+        AgentSkillViewResponse: {
             content: string;
+            description: string;
+            editable: boolean;
+            enabledForYou: boolean;
             hash: string;
+            id: components["schemas"]["AgentSkillId"];
+            name: string;
             supportFiles: {
                 hash: string;
                 path: string;

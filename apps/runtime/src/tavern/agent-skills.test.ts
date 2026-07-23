@@ -8,6 +8,7 @@ import {
     listAgentSkills,
     patchAgentSkill,
     viewAgentSkill,
+    writeAgentSkillFile,
 } from './agent-skills.ts';
 import { upsertStoredAgent } from './agents-store.ts';
 
@@ -101,6 +102,73 @@ describe('agent skill ownership and paths', () => {
         await expect(viewAgentSkill('agt_one', 'a/b', skillsDir)).rejects.toMatchObject({
             code: 'INVALID_ARG',
         });
+    });
+
+    it('rejects cross-skill symlinks for patches and support files', async () => {
+        await createAgentAuthoredSkill(
+            'agt_one',
+            { content: '# One\n', description: 'One', name: 'one' },
+            skillsDir
+        );
+        await createAgentAuthoredSkill(
+            'agt_two',
+            { content: '# Two\n', description: 'Two', name: 'two' },
+            skillsDir
+        );
+        const two = await viewAgentSkill('agt_two', 'two', skillsDir);
+        await fs.rm(path.join(skillsDir, 'one', 'SKILL.md'));
+        await fs.symlink(
+            path.join(skillsDir, 'two', 'SKILL.md'),
+            path.join(skillsDir, 'one', 'SKILL.md')
+        );
+
+        await expect(
+            patchAgentSkill(
+                'agt_one',
+                {
+                    content: '# Stolen\n',
+                    expectedHash: two.hash,
+                    skillId: 'one',
+                },
+                skillsDir
+            )
+        ).rejects.toMatchObject({ code: 'SKILL_PATCH_FAILED' });
+
+        await fs.mkdir(path.join(skillsDir, 'two', 'references'));
+        await fs.symlink(
+            path.join(skillsDir, 'two', 'references'),
+            path.join(skillsDir, 'one', 'references')
+        );
+        await expect(
+            writeAgentSkillFile(
+                'agt_one',
+                {
+                    content: 'stolen',
+                    expectedHash: null,
+                    filePath: 'references/stolen.md',
+                    skillId: 'one',
+                },
+                skillsDir
+            )
+        ).rejects.toMatchObject({ code: 'SKILL_WRITE_FAILED' });
+
+        await fs.symlink(path.join(skillsDir, 'two'), path.join(skillsDir, 'alias'));
+        recordSkillSource({
+            createdByAgentId: 'agt_one',
+            skillId: 'alias',
+            source: 'agent',
+        });
+        await expect(
+            patchAgentSkill(
+                'agt_one',
+                {
+                    content: '# Stolen\n',
+                    expectedHash: two.hash,
+                    skillId: 'alias',
+                },
+                skillsDir
+            )
+        ).rejects.toMatchObject({ code: 'SKILL_PATCH_FAILED' });
     });
 
     function seedAgent(id: string, name: string) {

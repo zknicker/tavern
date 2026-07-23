@@ -224,8 +224,6 @@ export async function writeSkillSupportFile(input: {
     const absolutePath = await resolveSkillWritePath({
         relativePath,
         skillDir,
-        skillId: input.skillId,
-        skillsDir: input.skillsDir,
     });
     const previous = await fs.readFile(absolutePath, 'utf8').catch((error) => {
         if (isNotFoundError(error)) {
@@ -352,8 +350,7 @@ async function containedSkillMarkdownPath(input: {
     if (!markdownPath) {
         return null;
     }
-    const skillsDir = await fs.realpath(input.skillsDir);
-    assertPathContained(skillsDir, markdownPath);
+    assertPathContained(skillDir, markdownPath);
     return markdownPath;
 }
 
@@ -371,26 +368,25 @@ async function containedSkillDir(input: {
     if (!skillsDir) {
         return null;
     }
-    const skillDir = await fs.realpath(path.join(skillsDir, input.skillId)).catch((error) => {
+    const unresolvedSkillDir = path.join(skillsDir, input.skillId);
+    const stats = await fs.lstat(unresolvedSkillDir).catch((error) => {
         if (isNotFoundError(error)) {
             return null;
         }
         throw error;
     });
-    if (!skillDir) {
+    if (!stats) {
         return null;
     }
+    if (stats.isSymbolicLink()) {
+        throw new Error('Skill package root must not be a symbolic link.');
+    }
+    const skillDir = await fs.realpath(unresolvedSkillDir);
     assertPathContained(skillsDir, skillDir);
     return skillDir;
 }
 
-async function resolveSkillWritePath(input: {
-    relativePath: string;
-    skillDir: string;
-    skillId: string;
-    skillsDir: string;
-}) {
-    const skillsDir = await fs.realpath(input.skillsDir);
+async function resolveSkillWritePath(input: { relativePath: string; skillDir: string }) {
     const absolutePath = path.resolve(input.skillDir, ...input.relativePath.split('/'));
     assertPathContained(input.skillDir, absolutePath);
     const existing = await fs.realpath(absolutePath).catch((error) => {
@@ -400,7 +396,7 @@ async function resolveSkillWritePath(input: {
         throw error;
     });
     if (existing) {
-        assertPathContained(skillsDir, existing);
+        assertPathContained(input.skillDir, existing);
         return existing;
     }
     const stats = await fs.lstat(absolutePath).catch((error) => {
@@ -412,15 +408,14 @@ async function resolveSkillWritePath(input: {
     if (stats?.isSymbolicLink()) {
         throw new Error('Skill support file path must stay inside the skill package.');
     }
-    const ancestor = await nearestExistingDirectory(path.dirname(absolutePath));
-    assertPathContained(skillsDir, ancestor);
+    await assertSkillAncestorsContained(input.skillDir, path.dirname(absolutePath));
     await fs.mkdir(path.dirname(absolutePath), { recursive: true });
     const parent = await fs.realpath(path.dirname(absolutePath));
-    assertPathContained(skillsDir, parent);
+    assertPathContained(input.skillDir, parent);
     return path.join(parent, path.basename(absolutePath));
 }
 
-async function nearestExistingDirectory(directory: string): Promise<string> {
+async function assertSkillAncestorsContained(skillDir: string, directory: string) {
     let candidate = directory;
     while (true) {
         const resolved = await fs.realpath(candidate).catch((error) => {
@@ -430,7 +425,10 @@ async function nearestExistingDirectory(directory: string): Promise<string> {
             throw error;
         });
         if (resolved) {
-            return resolved;
+            assertPathContained(skillDir, resolved);
+        }
+        if (candidate === skillDir) {
+            return;
         }
         const parent = path.dirname(candidate);
         if (parent === candidate) {

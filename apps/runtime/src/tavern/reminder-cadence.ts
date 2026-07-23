@@ -133,22 +133,34 @@ function epochForWallClock(
     target: { day: number; hour: number; minute: number; month: number; year: number },
     timezone: string
 ): number {
+    const targetValue = wallClockValue(target);
     let guess = Date.UTC(target.year, target.month - 1, target.day, target.hour, target.minute);
     for (let pass = 0; pass < 2; pass++) {
         const seen = wallClockParts(new Date(guess), timezone);
-        const seenUtc = Date.UTC(seen.year, seen.month - 1, seen.day, seen.hour, seen.minute);
-        const wantUtc = Date.UTC(
-            target.year,
-            target.month - 1,
-            target.day,
-            target.hour,
-            target.minute
-        );
-        const diff = wantUtc - seenUtc;
+        const diff = targetValue - wallClockValue(seen);
         if (diff === 0) {
             return guess;
         }
         guess += diff;
     }
+    let seenValue = wallClockValue(wallClockParts(new Date(guess), timezone));
+    if (seenValue < targetValue) {
+        // Nonexistent spring-forward wall times shift to the first post-jump equivalent.
+        guess += targetValue - seenValue;
+        seenValue = wallClockValue(wallClockParts(new Date(guess), timezone));
+    }
+    if (seenValue < targetValue) {
+        throw new Error('Resolved reminder time is earlier than its requested wall-clock time.');
+    }
     return guess;
+}
+
+function wallClockValue(parts: {
+    day: number;
+    hour: number;
+    minute: number;
+    month: number;
+    year: number;
+}) {
+    return Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute);
 }

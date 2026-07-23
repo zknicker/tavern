@@ -69,9 +69,23 @@ async function readBoundedText(stream: ReadableStream<Uint8Array>): Promise<stri
 
 function decodeBounded(bytes: Uint8Array, truncated: boolean): string {
     if (!truncated) {
-        return new TextDecoder().decode(bytes);
+        return truncateUtf8Text(new TextDecoder().decode(bytes), SCRIPT_OUTPUT_CAP);
     }
-    const marker = Buffer.from('\n[truncated]');
-    const visible = bytes.subarray(0, Math.max(0, SCRIPT_OUTPUT_CAP - marker.byteLength));
-    return `${new TextDecoder().decode(visible)}${marker.toString()}`;
+    const marker = '\n[truncated]';
+    const visibleLimit = SCRIPT_OUTPUT_CAP - Buffer.byteLength(marker);
+    const visible = new TextDecoder().decode(bytes.subarray(0, visibleLimit), { stream: true });
+    const output = `${truncateUtf8Text(visible, visibleLimit)}${marker}`;
+    if (Buffer.byteLength(output) > SCRIPT_OUTPUT_CAP) {
+        throw new Error('Reminder script output exceeded its byte cap.');
+    }
+    return output;
+}
+
+function truncateUtf8Text(value: string, maxBytes: number) {
+    const bytes = Buffer.from(value);
+    let end = Math.min(bytes.byteLength, maxBytes);
+    while (end < bytes.byteLength && end > 0 && (bytes[end] & 0xc0) === 0x80) {
+        end -= 1;
+    }
+    return bytes.subarray(0, end).toString();
 }

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import Ajv2020 from 'ajv/dist/2020.js';
 import { parse } from 'yaml';
 
 const openApiPath = fileURLToPath(new URL('../openapi.yaml', import.meta.url));
@@ -102,5 +103,43 @@ describe('Tavern OpenAPI contract', () => {
             },
             propertyName: 'state',
         });
+    });
+
+    it('validates extended agent success payloads and rejects empty task claims', () => {
+        const ajv = new Ajv2020({
+            allowUnionTypes: true,
+            formats: { byte: true },
+            strictSchema: false,
+        });
+        const validate = (schema: string, payload: unknown) =>
+            ajv.compile({
+                $ref: `#/components/schemas/${schema}`,
+                components: document.components,
+            })(payload);
+
+        expect(
+            validate('AgentAttachmentViewResponse', {
+                attachment: {
+                    byteSize: 2,
+                    dataBase64: 'aGk=',
+                    filename: 'hello.txt',
+                    id: 'att_1',
+                    mediaType: 'text/plain',
+                },
+            })
+        ).toBe(true);
+        expect(
+            validate('AgentSkillViewResponse', {
+                content: '# Audit\n',
+                description: 'Audit',
+                editable: true,
+                enabledForYou: true,
+                hash: 'abc123',
+                id: 'audit',
+                name: 'audit',
+                supportFiles: [{ hash: 'def456', path: 'references/checklist.md' }],
+            })
+        ).toBe(true);
+        expect(validate('AgentTaskClaimRequest', { numbers: [], target: '#general' })).toBe(false);
     });
 });
