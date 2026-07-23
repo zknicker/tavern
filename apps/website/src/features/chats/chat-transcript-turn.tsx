@@ -978,9 +978,14 @@ function AssistantReplyBody(props: {
         .join('')
         .trim();
 
+    // Keep the message shell when there is prose OR attachments — a durable
+    // reply that is only a visual fence still carries its attached files, and
+    // those render through the text body, not the cards.
+    const hasAttachments = (props.message?.attachments?.length ?? 0) > 0;
+
     return (
         <>
-            {prose ? <AssistantReplyText {...props} content={prose} /> : null}
+            {prose || hasAttachments ? <AssistantReplyText {...props} content={prose} /> : null}
             {cards}
         </>
     );

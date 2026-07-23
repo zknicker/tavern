@@ -411,8 +411,7 @@ test('ChatTranscript renders durable message ```visual fences as visual cards', 
             kind: 'message',
             message: {
                 tavernAgentId: 'tiny',
-                content:
-                    'Here is the chart.\n```visual Weekly sales\n<h1>Weekly sales</h1>\n```',
+                content: 'Here is the chart.\n```visual Weekly sales\n<h1>Weekly sales</h1>\n```',
                 id: 'message-visual',
                 sender: 'Tiny',
                 senderType: 'agent',
