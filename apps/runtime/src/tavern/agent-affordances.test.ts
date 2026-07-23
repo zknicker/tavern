@@ -137,13 +137,16 @@ describe('agent affordance routes', () => {
             },
         });
 
+        // A missing id is indistinguishable from one the caller can't see:
+        // both resolve through the visibility query and fail closed, so
+        // attachment existence never leaks.
         const missing = await request('POST', '/api/agent/messages/send', {
             attachmentIds: ['att_missing'],
             content: 'missing',
             target: '#general',
         });
-        expect(missing?.status).toBe(404);
-        await expect(missing?.json()).resolves.toMatchObject({ code: 'TARGET_NOT_FOUND' });
+        expect(missing?.status).toBe(403);
+        await expect(missing?.json()).resolves.toMatchObject({ code: 'ATTACHMENT_NOT_VISIBLE' });
     });
 
     it('lists, creates, views, and patches skills in a temporary library', async () => {
