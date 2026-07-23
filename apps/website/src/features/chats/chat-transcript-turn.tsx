@@ -830,7 +830,7 @@ function AgentTurnItem({
 
         return (
             <ThreadMessageSurface row={item.row}>
-                <AssistantReplyText
+                <AssistantReplyBody
                     message={item.row.message}
                     {...(narration
                         ? {
@@ -938,18 +938,22 @@ function AssistantReplyText({
     );
 }
 
-// A live reply may carry ```visual fences: fence bodies render as streaming
-// visual cards below the prose — matching the durable layout, where widget
-// rows follow the post — and never as raw fence text. An unclosed trailing
-// fence is an in-progress visual whose body grows as content arrives.
+// Any assistant reply — streaming or durable — may carry ```visual fences:
+// fence bodies render as visual cards below the prose, never as raw fence
+// text. Message content is the single source of truth for visuals; there is
+// no separate durable widget projection. An unclosed trailing fence is an
+// in-progress visual whose body grows as content arrives.
 function AssistantReplyBody(props: {
     animateEnter?: boolean;
-    content: string;
+    content?: string;
+    message?: TranscriptMessage;
     revealKey?: string;
     revealText?: boolean;
     slotKey?: string | null;
 }) {
-    const segments = splitVisualFences(props.content);
+    const fullContent =
+        props.content ?? (props.message ? getTranscriptMessageContent(props.message) : '');
+    const segments = splitVisualFences(fullContent);
     const slot = props.slotKey ?? props.revealKey ?? 'visual';
     // The Nth fence in the reply is that visual's stable identity: content
     // only appends while streaming, so ordinals never reorder.
