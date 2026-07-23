@@ -67,7 +67,7 @@ upgrades transport only, contracts unchanged.
   token a result spends has to earn its place.
 - **Verification standard:** any claim "Raft does X" in a spec or issue must be grounded in the
   wire layer — the recovered daemon source, npm bundle, CLI help output, or captured
-  transcripts — not extrapolated from docs/blog prose. The audit that produced the T1/D2/D6
+  transcripts — not extrapolated from docs/blog prose. Raft binaries SELF-UPGRADE: verify the installed version before citing a strings dump (a v1.0.7 dump nearly produced a false verdict against v1.0.13 behavior). The audit that produced the T1/D2/D6
   amendments is the cautionary precedent.
 
 **Execution rules** (every workstream thread inherits these):
@@ -411,6 +411,18 @@ operator's arcade server 2026-07-21) against our current frontend
   full-pane takeover with a back-chevron. Detail also confirmed at width: avatar-click opens
   the agent profile pane, name-click inserts an @mention (adopted).
 
+
+**Backlog (observations, not workstreams):** stall-state presence (orange-dot "stalled"
+distinct from "working", per Raft's runtime_stalled taxonomy — WS4-era); session-age
+economics (track cost/turn vs session age post-flip before touching compaction cadence);
+runtime upgrades stay operator-TRIGGERED (Raft: an update button in the app fires the
+server-staged upgrade — not automatic); our existing update surface (Settings → Updates /
+sidebar update item) needs to work better and, on update, regenerate the per-agent CLI
+wrappers so agents pick up the new `grotto` in their next turn shell — today CLI and runtime
+are one binary, so wrapper regeneration IS the CLI update; revisit if an npm-shaped external
+CLI ships with WS6. Heartbeat: skipped by ruling — future path is a server-side recurring
+wake gated on `delivered > seen`.
+
 ## Existing specs impacted
 
 Rewritten or retired by this program (each within the workstream that lands the change; until
@@ -468,7 +480,11 @@ deployment, so intermediate brokenness is not a constraint.
   WS6 blocker.
 - **WS5 — Tasks + reminders + affordances.** D8 tasks (with board view, priorities, labels),
   D4 reminders (+ script payloads; Automations page → Reminders view), reactions, profile
-  self-editing.
+  self-editing. **UI ports, not rewrites** (operator ruling): the polished pre-flip surfaces
+  are the parts shelf — tasks board/list/calendar/label/priority components repoint onto
+  task-messages; the automations page anatomy (filter sidebar, status rows, run-history
+  drawers ≈ `reminder log`, editor panes) becomes the Reminders operator view. Port source =
+  the last pre-flip main sha (pin it in the WS5 kickoff when the flip merges).
 - **WS6 — grotto.sh server split.** Move the chat surface to the hosted server + DB (drizzle
   migrations); grotto-runtime becomes the machine attachment (claim/attach, wake delivery,
   lifecycle); Clerk Owner/Admin/Member roles, invites; agent credential minting; later external
@@ -480,6 +496,18 @@ deployment, so intermediate brokenness is not a constraint.
   injection, Wiki, cron product + `cron_*`/`wiki_*`/memory surfaces (D3/D3b/D4); manual cutover
   seeds existing core memory into agent workspaces. Coordinated cut, likely folded into WS2's
   landing window.
+- **WS5.5 — Plugin CLIs.** Per-plugin CLI wrappers on the agent PATH (Raft `integration
+  env/invoke` pattern): runtime-held credentials, injected like the grotto wrapper, one CLI per
+  granted plugin (MerchBase, Google, Browser) plus image generation. Replaces the plugin engine
+  tools deleted at the flip (flip ruling: delete now, CLIs later — plugins go dark in dev
+  between flip and WS5.5). The `## Plugins` prompt section composes only when a plugin CLI
+  exists; never at the flip.
+- **Release blockers (flip → mini):** the flip may not ride a release to the mini without
+  **WS5** (task surface — flip deletes the old product wholesale; WS5 ports the landed
+  board/list/calendar/label/priority components onto task-messages, resurrecting from git
+  history, not rewriting) and **WS5.5** (plugin CLIs — MerchBase readouts are live daily usage
+  on the mini). Also riding that release: mini cutover (Blippy/Tiny tokens, operator handle,
+  retired-skill-id SQLite edit, PRD-89 mini verification).
 - **WS9 — Shell + agent panel reorganization.** U1 rail taxonomy, U2 Members page + 6-tab agent
   profile (absorbs the agent drawer and per-agent settings), per-conversation Chat|Tasks|Files
   tabs (U3), Activity inbox page (with WS4), Search page. Largely parallel to WS3–WS5; shares

@@ -97,6 +97,17 @@ export function createAppRouter() {
                                             ),
                                         },
                                         {
+                                            // Dev hack page for agent avatar faces + expressions.
+                                            path: 'design/faces',
+                                            lazy: lazyRoute(
+                                                () =>
+                                                    import(
+                                                        './routes/app/agent-faces-demo-page.tsx'
+                                                    ),
+                                                'AgentFacesDemoPage'
+                                            ),
+                                        },
+                                        {
                                             path: 'stats',
                                             element: (
                                                 <Navigate replace to={appRoutes.settingsStats} />

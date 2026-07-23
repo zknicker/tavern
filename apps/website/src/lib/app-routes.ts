@@ -13,6 +13,8 @@ export const appRoutes = {
     memberAgent(agentId: string) {
         return `/members/agents/${encodeURIComponent(agentId)}`;
     },
+
+    designFaces: '/design/faces',
     workspace: '/workspace',
     settings: '/settings',
     settingsAgentRuntime: '/settings/agent-runtime',
